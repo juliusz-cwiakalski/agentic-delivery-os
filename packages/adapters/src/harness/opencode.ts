@@ -365,33 +365,42 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     }
     const environment = options.buildEnvironment(descriptor);
     if (!environment.ok) return environment;
-    const result = await options.runner(
+    const stream = options.starter(
       options.command,
       [...(options.resumeArgs ?? []), input.handle.sessionId],
-      {
-        cwd: descriptor.workDirectory,
-        env: environment.value,
-        timeout,
-        stdin: input.prompt,
-      },
+      streamOptions(descriptor.workDirectory, environment.value, input.prompt),
     );
-    if (result.timedOut || result.status !== 0) {
+    const outcome = await acquireFromStream(
+      stream,
+      (sessionId) => sessionId === input.handle.sessionId,
+    );
+    if (outcome.kind === "mismatch") {
+      stream.kill();
       return failure("harness.session.unknown", {
-        status: result.status,
-        summary: "resume target is unknown or refused",
+        summary: "resumed stream identified a different session than the caller's handle",
       });
     }
+    if (outcome.kind === "absent") {
+      stream.kill();
+      return failure("harness.session.unknown", {
+        status: outcome.result.status,
+        summary: outcome.result.timedOut
+          ? "harness resume timed out waiting for the session identifier (acquisition timeout)"
+          : "resume target is unknown or refused",
+      });
+    }
+    const handle: HarnessSessionHandle = {
+      ...input.handle,
+      treeRoot: record?.handle.treeRoot ?? input.handle.treeRoot,
+    };
     if (record !== undefined) {
       sessions.set(input.handle.sessionId, {
-        handle: { ...record.handle, treeRoot: input.handle.treeRoot },
-        completion: record.completion,
+        handle,
         descriptor: record.descriptor,
+        completion: outcome.completion,
       });
     }
-    return {
-      ok: true,
-      value: { ...input.handle, treeRoot: record?.handle.treeRoot ?? input.handle.treeRoot },
-    };
+    return { ok: true, value: handle };
   };
 
   return {

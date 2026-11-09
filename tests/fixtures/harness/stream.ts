@@ -265,13 +265,15 @@ const createFakeStream = (
  * aggregate getters describe every stream the fake created.
  */
 export const createFakeStreamStarter = (
-  script: StreamScript = {},
+  script: StreamScript | readonly StreamScript[] = {},
   clock?: VirtualClock,
 ): FakeStreamStarter => {
+  const scripts: readonly StreamScript[] = Array.isArray(script) ? script : [script];
   const streams: MutableFakeStream[] = [];
   const invocations: RecordedInvocation[] = [];
 
   const starter: HarnessSpawnStarter = (file, args, options) => {
+    const index = invocations.length;
     invocations.push({
       file,
       args: [...args],
@@ -282,7 +284,8 @@ export const createFakeStreamStarter = (
         ...(options.stdin === undefined ? {} : { stdin: options.stdin }),
       },
     });
-    const mutable = createFakeStream(file, args, options, script, clock);
+    const selected = scripts[index] ?? scripts[scripts.length - 1] ?? {};
+    const mutable = createFakeStream(file, args, options, selected, clock);
     streams.push(mutable);
     return {
       lines: mutable.lines,

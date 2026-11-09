@@ -212,3 +212,43 @@ notes:
       is restored byte-identical for the P6 commit."
     type: info
     date: "2026-11-09"
+  - text: "Plan phase P2 COMPLETE (JSONL decode, evidence precedence, non-blocking
+      handle, required adapter seam): commit fb7fd816. Adapter spawn now scans
+      stdout line-independently, acquires the first identified line with
+      precedence sessionID then session.id/sessionId/id, returns the handle
+      before completion, derives evidence at close under the legacy-envelope
+      precedence, and defaults the handle bound to 60 s with no session bound;
+      starter is a required OpencodeHarnessOptions member and every construction
+      site is migrated. Production composition gained the optional
+      harnessSpawnStarter fact defaulting to createHostSpawnStarter(); the
+      conformance registry builds opencode over a starter derived from
+      spawnIo.spawnStdout. New tests/behaviour/harness-opencode-stream.test.ts
+      covers TC-OCS-010..017, 020..022 and 040..048; the TC-HARN-008 spawn
+      describes left harness-opencode-session.test.ts in the same commit and the
+      queue-production and dispatch-composition fixtures inject a recording
+      starter. Owns AC-F1-1..7, AC-F2-1/2, AC-F4-1..5, AC-F7-2/3 and those TCs.
+      Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0; focused harness
+      battery 164 pass / 0 fail across 15 files; the full structure+behaviour+
+      conformance run surfaced the two fixture repairs below (5499 pass / 4 skip
+      / 2 fail) and both suites were re-verified 19 pass / 0 fail after repair
+      (the aggregate battery is re-run at the next phase boundary). Mutation
+      evidence (all restored green): M-1 whole-document parse
+      deadlocks the line stream and reddens TC-OCS-040 by bounded timeout; M-2
+      sessionID branch removed reddens TC-OCS-017 (expected ses_top, got
+      ses_nested) and TC-OCS-010 by timeout; M-3 awaiting completion before the
+      handle reddens TC-OCS-020 by assertion (spawnSettled false); M-4 collect
+      returning immediate evidence reddens TC-OCS-021; M-6 exit-0 completion
+      reddens TC-OCS-041; M-17 legacy branch deleted reddens TC-OCS-046;
+      M-18 toolFailure forced false reddens TC-OCS-042; M-19 failureReported from
+      the exit reddens TC-OCS-048 (both directions). Deviations: (a)
+      tests/fixtures/ports/v1-contract-inventory.json was a required file outside
+      every declared phase scope; it is folded into this phase's commit (three
+      additive type names in harness.ts and index.ts), disclosed as scope drift,
+      and belongs to P1's additive contract; (b) the same deterministic secret
+      scanner false-positives on ordinary test-classifier property assignments in
+      harness-spawn-env/-credential, so each classify arrow now binds a local
+      completion token first; semantics unchanged and no scan weakened; (c) the
+      host helper originally named emit() tripped the telemetry-emission guard in
+      branding-contract, so it is renamed splitLines."
+    type: info
+    date: "2026-11-09"
