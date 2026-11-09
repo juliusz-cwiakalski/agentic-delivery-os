@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239"]
+  related_changes: ["GH-239", "GH-275"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -37,6 +37,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 ### Command and ledger tests
 
 - `tests/behaviour/dispatch-harness-lease.test.ts` — harness resolution, lease claim, pre-session refusals, and spawn-refused recording.
+- `tests/behaviour/dispatch-harness-acquisition.test.ts` — the real opencode adapter over a scripted JSONL stream through the dispatch composition: the handle is returned before the session completes, `collect` stays pending across at least two liveness polls, the recorded call order is spawn → collect → liveness → classify, and a pre-session failure still collapses to `dispatch.session.spawn-failed`.
 - `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, a transient stall cleared by later progress, and routing of a stall still current when collection resolves through restart admission with no silent second spawn.
 - `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the post-spawn collection failure, four-key text order, and classified failures.
 - `tests/behaviour/dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — one attempt record per classified dispatch and one per attempt-stage failure.
@@ -106,6 +107,8 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Given** a running session whose evidence collection is pending
 - **When** the watcher polls at `lane.liveness-interval`
 - **Then** an advancing session records `progressing` and never stalls, and the verdict trail is recorded as attempt evidence.
+- **And given** a healthy spawn that identifies its session on the first stream line
+- **Then** the spawn returns its handle before the session completes, and `collect` remains pending while liveness polls.
 - **And given** two consecutive sourced no-advance readings followed by an advancing observation and completed evidence
 - **Then** the transient stall clears, both verdicts stay recorded as liveness evidence, and the completed session classifies normally rather than `max-restarts`, even when the restart count has reached the bound.
 - **And given** a stall still current when evidence collection resolves

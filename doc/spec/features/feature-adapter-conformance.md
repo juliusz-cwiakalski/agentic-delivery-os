@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-ADAPTER-CONFORMANCE
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-06
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os provider adapters
-summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its six-scenario classification floor and liveness read."
+summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its streaming-starter registration, six-scenario classification floor, and liveness read."
 links:
-  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233"]
+  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233", "GH-275"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008"]
 ---
 
@@ -38,7 +38,7 @@ The conformance adapter registry is the sole participant list. It registers exac
 
 ## Harness conformance registry
 
-The harness conformance registry lives beside the provider registry in the testkit package (`packages/testkit/src/conformance/harness.ts`). `HARNESS_CONFORMANCE_REGISTRY` is the sole participant list for harness flows and registers exactly the two shipped harness kinds — `opencode` and `claude-code`. Each registration carries the adapter's capability declaration, a spawn/collect builder over injected harness I/O and injected seams (environment builder, classifier, liveness assembler, clock, timeout), and its supported scenario ids.
+The harness conformance registry lives beside the provider registry in the testkit package (`packages/testkit/src/conformance/harness.ts`). `HARNESS_CONFORMANCE_REGISTRY` is the sole participant list for harness flows and registers exactly the two shipped harness kinds — `opencode` and `claude-code`. Each registration carries the adapter's capability declaration, a spawn/collect builder over injected harness I/O and injected seams (environment builder, classifier, liveness assembler, streaming spawn starter, clock, timeout), and its supported scenario ids.
 
 `HARNESS_CONFORMANCE_SCENARIOS` is the fixed six-scenario classification floor: `completed`, `tool-failure`, `premature-end`, `harness-failure`, `spawn-refusal`, and `timeout`. Classification runs through the one shared harness-neutral classifier, so the same injected scenario yields the same delivery-result token for either harness. The registry imports the delivery-result token type from core contracts and never re-declares the taxonomy. A coverage meta-check fails a registered harness with a missing scenario, a duplicate registration, an unregistered closed-vocabulary kind, or a kind that is registered but absent from the vocabulary. A liveness read over injected facts proves the harness-agnostic liveness shape and its declared absences without adding a runtime signal source.
 
