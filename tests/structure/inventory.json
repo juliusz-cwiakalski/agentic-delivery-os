@@ -238,6 +238,7 @@
     "src/gitlab/normalize.ts",
     "src/harness/claude.ts",
     "src/harness/index.ts",
+    "src/harness/liveness.ts",
     "src/harness/opencode.ts",
     "src/harness/review-deferrals.ts",
     "src/harness/sqlite-loader.ts",

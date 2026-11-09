@@ -24,6 +24,10 @@ export {
   HARNESS_REVIEW_DEFERRALS,
 } from "./review-deferrals.js";
 export {
+  type CoordinatorTurnFacts,
+  mapCoordinatorNewTurn,
+} from "./liveness.js";
+export {
   attemptWrite,
   createBunSqliteStoreOpener,
   type HarnessOpenedStore,

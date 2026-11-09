@@ -163,7 +163,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/daemon-lane.ts": ["classifyLaneProgress", "nextSpawnOrdinal", "shapeDaemonLane"],
   "adapters/src/daemon/clock.ts": ["createNodeClock"],
-  "adapters/src/daemon/process.ts": ["createNodeProcessPort"],
+  "adapters/src/daemon/process.ts": ["createNodeProcessPort", "killCoordinatorProcess"],
+  "adapters/src/harness/liveness.ts": ["mapCoordinatorNewTurn"],
   "adapters/src/daemon/wake.ts": ["createEventLogWake"],
   "cli/src/commands/dispatch.ts": ["createDispatchCommandDefinition"],
   "cli/src/output/dispatch-text.ts": [

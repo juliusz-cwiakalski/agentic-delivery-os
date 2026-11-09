@@ -16,7 +16,12 @@ export {
 export { createUnixTransport, type UnixTransportOptions } from "./unix.js";
 export { createNodeClock } from "./clock.js";
 export { createEventLogWake, type EventLogWake, type EventLogWakeOptions } from "./wake.js";
-export { createNodeProcessPort, type NodeProcessPortOptions } from "./process.js";
+export {
+  createNodeProcessPort,
+  killCoordinatorProcess,
+  type KillCoordinatorProcessInput,
+  type NodeProcessPortOptions,
+} from "./process.js";
 export { createLaneExecutor, type LaneExecutorAdapterOptions } from "./lane-executor.js";
 export {
   absentSupervisorDescriptor,
