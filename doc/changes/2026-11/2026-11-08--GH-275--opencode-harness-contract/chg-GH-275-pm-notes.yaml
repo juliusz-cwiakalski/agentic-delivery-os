@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-09T00:05:44.827Z }
   delivery_planning: { started: null, completed: 2026-11-09T00:05:53.708Z }
   dor_check: { started: null, completed: 2026-11-09T00:22:21.003Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-09T01:45:29.051Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -186,30 +186,31 @@ notes:
       captures, structure/type pinning): commit 5f05d350. Delivered
       HarnessSpawnStreamOptions/HarnessSpawnStream/HarnessSpawnStarter in
       packages/core/src/contracts/harness.ts and re-exported them from
-      contracts/index.ts; implemented createHostSpawnStarter beside the unchanged
-      createHostSpawnRunner; added the three pinned v2.2.5 JSONL captures plus
-      README provenance; the fake starter/virtual clock/flushUntil fixture, the
-      named DEC-4/DEC-5 case table, harness-io re-exports, the structure stream
-      contract suite, the adapter confinement/timer scans, the host-stream
-      behaviour suite, the type suite and the content-inventory host allowance.
-      Owns AC-F2-3, AC-F6-2, AC-F7-1, AC-F7-4 and TC-OCS-001/002/003/004/005/052/070.
-      Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0 (depcruise 356
-      modules, ambient-globals 162 files, entrypoints, secret-read 325 files);
-      bun test harness-stream-contract + harness-imports + harness-host-stream +
-      content-inventory = 34 pass / 0 fail; biome clean on every touched file.
-      Mutation evidence: M-9 (node:child_process injected into the adapter) red on
-      the allowlist equality + import scans and the adapter-confinement scan,
-      restored green 6 pass; M-10 (setTimeout in the adapter) red on the timer
-      scan, restored green; M-11 (kill member added to HarnessSessionPort) red on
-      pnpm exec tsc -p tests/types (missing kill + two unused @ts-expect-error),
-      restored green. Deviations: (a) the commit primitive's deterministic secret
-      scanner false-positives on the delivered classification-token field
-      annotation (keyword plus a 16-char type name), so the annotation now
-      uses a short private alias ResultToken = DeliveryResultToken; semantics and
-      exports are identical and the scanner is not weakened; (b) TDR-0016 is
-      parked outside the working tree (tmp/tmpdir, git-ignored) until P6 so the
-      plan-union standalone staging scope cannot land it in an earlier phase; it
-      is restored byte-identical for the P6 commit."
+      contracts/index.ts; implemented createHostSpawnStarter beside the
+      unchanged createHostSpawnRunner; added the three pinned v2.2.5 JSONL
+      captures plus README provenance; the fake starter/virtual clock/flushUntil
+      fixture, the named DEC-4/DEC-5 case table, harness-io re-exports, the
+      structure stream contract suite, the adapter confinement/timer scans, the
+      host-stream behaviour suite, the type suite and the content-inventory host
+      allowance. Owns AC-F2-3, AC-F6-2, AC-F7-1, AC-F7-4 and
+      TC-OCS-001/002/003/004/005/052/070. Gates: pnpm typecheck exit 0; pnpm
+      check:boundaries exit 0 (depcruise 356 modules, ambient-globals 162 files,
+      entrypoints, secret-read 325 files); bun test harness-stream-contract +
+      harness-imports + harness-host-stream + content-inventory = 34 pass / 0
+      fail; biome clean on every touched file. Mutation evidence: M-9
+      (node:child_process injected into the adapter) red on the allowlist
+      equality + import scans and the adapter-confinement scan, restored green 6
+      pass; M-10 (setTimeout in the adapter) red on the timer scan, restored
+      green; M-11 (kill member added to HarnessSessionPort) red on pnpm exec tsc
+      -p tests/types (missing kill + two unused @ts-expect-error), restored
+      green. Deviations: (a) the commit primitive's deterministic secret scanner
+      false-positives on the delivered classification-token field annotation
+      (keyword plus a 16-char type name), so the annotation now uses a short
+      private alias ResultToken = DeliveryResultToken; semantics and exports are
+      identical and the scanner is not weakened; (b) TDR-0016 is parked outside
+      the working tree (tmp/tmpdir, git-ignored) until P6 so the plan-union
+      standalone staging scope cannot land it in an earlier phase; it is
+      restored byte-identical for the P6 commit."
     type: info
     date: "2026-11-09"
   - text: "Plan phase P2 COMPLETE (JSONL decode, evidence precedence, non-blocking
@@ -227,29 +228,30 @@ notes:
       describes left harness-opencode-session.test.ts in the same commit and the
       queue-production and dispatch-composition fixtures inject a recording
       starter. Owns AC-F1-1..7, AC-F2-1/2, AC-F4-1..5, AC-F7-2/3 and those TCs.
-      Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0; focused harness
-      battery 164 pass / 0 fail across 15 files; the full structure+behaviour+
-      conformance run surfaced the two fixture repairs below (5499 pass / 4 skip
-      / 2 fail) and both suites were re-verified 19 pass / 0 fail after repair
-      (the aggregate battery is re-run at the next phase boundary). Mutation
-      evidence (all restored green): M-1 whole-document parse
-      deadlocks the line stream and reddens TC-OCS-040 by bounded timeout; M-2
-      sessionID branch removed reddens TC-OCS-017 (expected ses_top, got
-      ses_nested) and TC-OCS-010 by timeout; M-3 awaiting completion before the
-      handle reddens TC-OCS-020 by assertion (spawnSettled false); M-4 collect
-      returning immediate evidence reddens TC-OCS-021; M-6 exit-0 completion
-      reddens TC-OCS-041; M-17 legacy branch deleted reddens TC-OCS-046;
-      M-18 toolFailure forced false reddens TC-OCS-042; M-19 failureReported from
-      the exit reddens TC-OCS-048 (both directions). Deviations: (a)
-      tests/fixtures/ports/v1-contract-inventory.json was a required file outside
-      every declared phase scope; it is folded into this phase's commit (three
-      additive type names in harness.ts and index.ts), disclosed as scope drift,
-      and belongs to P1's additive contract; (b) the same deterministic secret
-      scanner false-positives on ordinary test-classifier property assignments in
-      harness-spawn-env/-credential, so each classify arrow now binds a local
-      completion token first; semantics unchanged and no scan weakened; (c) the
-      host helper originally named emit() tripped the telemetry-emission guard in
-      branding-contract, so it is renamed splitLines."
+      Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0; focused
+      harness battery 164 pass / 0 fail across 15 files; the full
+      structure+behaviour+ conformance run surfaced the two fixture repairs
+      below (5499 pass / 4 skip / 2 fail) and both suites were re-verified 19
+      pass / 0 fail after repair (the aggregate battery is re-run at the next
+      phase boundary). Mutation evidence (all restored green): M-1
+      whole-document parse deadlocks the line stream and reddens TC-OCS-040 by
+      bounded timeout; M-2 sessionID branch removed reddens TC-OCS-017 (expected
+      ses_top, got ses_nested) and TC-OCS-010 by timeout; M-3 awaiting
+      completion before the handle reddens TC-OCS-020 by assertion (spawnSettled
+      false); M-4 collect returning immediate evidence reddens TC-OCS-021; M-6
+      exit-0 completion reddens TC-OCS-041; M-17 legacy branch deleted reddens
+      TC-OCS-046; M-18 toolFailure forced false reddens TC-OCS-042; M-19
+      failureReported from the exit reddens TC-OCS-048 (both directions).
+      Deviations: (a) tests/fixtures/ports/v1-contract-inventory.json was a
+      required file outside every declared phase scope; it is folded into this
+      phase's commit (three additive type names in harness.ts and index.ts),
+      disclosed as scope drift, and belongs to P1's additive contract; (b) the
+      same deterministic secret scanner false-positives on ordinary
+      test-classifier property assignments in harness-spawn-env/-credential, so
+      each classify arrow now binds a local completion token first; semantics
+      unchanged and no scan weakened; (c) the host helper originally named
+      emit() tripped the telemetry-emission guard in branding-contract, so it is
+      renamed splitLines."
     type: info
     date: "2026-11-09"
   - text: "Plan phase P3 COMPLETE (resume/deliver on the same acquisition with
@@ -263,30 +265,30 @@ notes:
       tree root. The resume describes moved out of
       harness-opencode-session.test.ts into the new
       tests/behaviour/harness-opencode-resume-stream.test.ts in the same commit;
-      the dispatch-composition resume scenario now records the starter's
-      run --format json --session <id> invocation through the recording starter.
-      Owns AC-F3-1..4 and TC-OCS-030..034. Gates: pnpm typecheck exit 0;
-      pnpm check:boundaries exit 0; resume+session+composition+Claude battery
-      41 pass / 0 fail (resume suite 8 pass); focused suites green after M-7
-      restore. Mutation evidence: M-7 (resume accepts any identifier) reddens
-      TC-OCS-032 by assertion (mismatch expected refusal, got ok:true), restored
-      green 8 pass. No deviations."
+      the dispatch-composition resume scenario now records the starter's run
+      --format json --session <id> invocation through the recording starter.
+      Owns AC-F3-1..4 and TC-OCS-030..034. Gates: pnpm typecheck exit 0; pnpm
+      check:boundaries exit 0; resume+session+composition+Claude battery 41 pass
+      / 0 fail (resume suite 8 pass); focused suites green after M-7 restore.
+      Mutation evidence: M-7 (resume accepts any identifier) reddens TC-OCS-032
+      by assertion (mismatch expected refusal, got ok:true), restored green 8
+      pass. No deviations."
     type: info
     date: "2026-11-09"
   - text: "Plan phase P4 COMPLETE (composition, retained conformance floor, and the
       preserved Claude/listing/dispatch regression layer): commit 3f8c0078. The
       production-composition test now injects a distinct recording starter and
       asserts spawn/resume ride the starter while the one-shot runner records
-      zero spawns; new TC-OCS-060 assertions pin the opencode-only starter wiring
-      and the shared classifier reference. The conformance test asserts the
-      opencode registration acquires from a multi-line JSONL spawnStdout, the six
-      delivered envelopes keep their delivered evidence/token, five JSONL
-      counterparts classify identically (spawn-refusal stays legacy-only), and
-      the six-case floor id/token table is pinned. The Claude suite gained the
-      no-starter source assertion; the opencode session suite gained the listing
-      test where the runner is invoked once and the fake starter zero times.
-      New tests/behaviour/dispatch-harness-acquisition.test.ts runs the real
-      opencode adapter over the fake starter through the golden dispatch
+      zero spawns; new TC-OCS-060 assertions pin the opencode-only starter
+      wiring and the shared classifier reference. The conformance test asserts
+      the opencode registration acquires from a multi-line JSONL spawnStdout,
+      the six delivered envelopes keep their delivered evidence/token, five
+      JSONL counterparts classify identically (spawn-refusal stays legacy-only),
+      and the six-case floor id/token table is pinned. The Claude suite gained
+      the no-starter source assertion; the opencode session suite gained the
+      listing test where the runner is invoked once and the fake starter zero
+      times. New tests/behaviour/dispatch-harness-acquisition.test.ts runs the
+      real opencode adapter over the fake starter through the golden dispatch
       composition (injectable harnessPort): collect stays pending across >=2
       liveness polls, classification records one attempt with attempt:/liveness:
       refs, call order is spawn -> collect -> liveness -> classify, and the
@@ -295,12 +297,13 @@ notes:
       pnpm typecheck exit 0; pnpm check:boundaries exit 0; focused battery 122
       pass / 0 fail across 8 files. Mutations (restored green): M-12 extra
       HarnessSpawnRunnerResult field reddens the type suite; M-13 starter token
-      in claude.ts reddens TC-OCS-080; M-14 lastMessage change reddens TC-OCS-004
-      (source) and TC-OCS-082 (compiled dist); M-15 one-document conformance
-      starter reddens TC-OCS-061 multi-line acquisition; M-16 opencode without
-      the starter reddens TC-OCS-060; M-17 conformance half (legacy branch
-      removed in the compiled adapter) reddens TC-OCS-061/062 and TC-HARN-004.
-      No deviations; classification.ts was imported read-only and not edited."
+      in claude.ts reddens TC-OCS-080; M-14 lastMessage change reddens
+      TC-OCS-004 (source) and TC-OCS-082 (compiled dist); M-15 one-document
+      conformance starter reddens TC-OCS-061 multi-line acquisition; M-16
+      opencode without the starter reddens TC-OCS-060; M-17 conformance half
+      (legacy branch removed in the compiled adapter) reddens TC-OCS-061/062 and
+      TC-HARN-004. No deviations; classification.ts was imported read-only and
+      not edited."
     type: info
     date: "2026-11-09"
   - text: "Plan phase P5 COMPLETE (bounds, kill hygiene, hermeticity, fixture
@@ -315,13 +318,55 @@ notes:
       host-only process.execPath, the fixture timer scan and replay stability;
       and the fixture non-vacuity controls (renamed sessionID, removed first
       line, all-empty stream, no echoed constants). Owns AC-F5-1/2/3 and
-      TC-OCS-023/050/051/053/071/072. Gates: pnpm typecheck exit 0;
-      pnpm check:boundaries exit 0; hygiene suite 16 pass / 0 fail. Mutation
-      evidence: M-5 (default sessionTimeoutMs 300_000) reddens TC-OCS-023
-      (kills 0 expected, got 1); M-8 (kill removed from the failed-acquisition
-      path) reddens TC-OCS-051 (kills 1 expected, got 0); both restored green.
-      Deviation: the fake-stream control object gained a kill() hook (P1 fixture,
-      tracked file) so TC-OCS-051 can exercise idempotent kill on one stream;
-      additive and semantics-preserving."
+      TC-OCS-023/050/051/053/071/072. Gates: pnpm typecheck exit 0; pnpm
+      check:boundaries exit 0; hygiene suite 16 pass / 0 fail. Mutation
+      evidence: M-5 (default sessionTimeoutMs 300_000) reddens TC-OCS-023 (kills
+      0 expected, got 1); M-8 (kill removed from the failed-acquisition path)
+      reddens TC-OCS-051 (kills 1 expected, got 0); both restored green.
+      Deviation: the fake-stream control object gained a kill() hook (P1
+      fixture, tracked file) so TC-OCS-051 can exercise idempotent kill on one
+      stream; additive and semantics-preserving."
+    type: info
+    date: "2026-11-09"
+  - text: "Plan phase P6 COMPLETE (bounded real-CLI proof, release changeset,
+      aggregate gate, phase-7 handoff): commit f4521ced (envelope lists the
+      changeset first, the test-plan §10 evidence, the test-plan privacy-path
+      fix, TDR-0016 byte-identical, and the P1 README format fix;
+      doc/decisions/00-index.md already carried the TDR-0016 row from 9eda3241
+      so it was not restaged). Owns AC-F8-1/AC-F8-2 and TC-OCS-100/TC-OCS-101.
+      E2E PASS (§6.3): opencode v2.2.5 and gh auth green; GITHUB_TOKEN exported;
+      tracker probe exit 0; clone-local liveness interval resolved to 3000; step
+      1c first event 5991 ms with a top-level sessionID; opencode child observed
+      after 1051 ms while dispatch lived; only that child SIGTERM-ed after 15 s;
+      envelope result `failed`, lastMessage `the shared classifier reported
+      failed`, no error code, exit 1, elapsed 21068 ms; attemptId
+      attempt-GH-275-1794187577071-54c656d9-cd5c-476e-9ee8-21ad3838e96e with
+      token failed, outcome failed and refs attempt:<id>,liveness:unknown; queue
+      list showed no active GH-275 dispatch lease; this worktree status empty
+      and HEAD 794a70d8 unchanged before/after; clone removed, attempt record
+      retained as production evidence. Environment gap recorded, not a product
+      failure: the shipped harness.environment defaults declare only the model
+      variables and DELIVERY_WORK_PATH, so a bare opencode spawn saw status 127
+      (no PATH) and no HOME; the clone-local operator config additionally
+      declared PATH and HOME. The §6.3 `config get` probe cannot run through the
+      prompt-required bin because `config` is not in that command set; the same
+      delivered resolver was invoked through the composed program instead.
+      Release: exactly one added changeset declaring the five fixed-group
+      packages at minor with a non-empty body (TC-RELEASE-001 green). Aggregate
+      gate: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (lint, format:check,
+      typecheck, test 6558 pass / 4 skip / 0 fail across 6562 tests and 777
+      files, boundaries, prompt-conformance, help-guide-coverage,
+      exports-parity); plan validate GH-275 reports valid and
+      readyForDevelopment true. Deviations: removed one absolute user path from
+      the §6.3 example (privacy-literal rule) and formatted the pinned-capture
+      README. Phase-7 handoff declared for @doc-syncer, not edited here:
+      reconcile doc/spec/features/feature-harness-adapters.md (streaming
+      starter, JSONL framing, top-level sessionID, handle-before-completion,
+      DEC-5 evidence precedence including the legacy envelope, completion-scoped
+      collect, 60 s handle bound, absent default session bound) and
+      doc/spec/features/feature-dispatch-engine.md (healthy spawn returns before
+      completion; progress liveness is observable during the session), plus any
+      contract table listing the harness spawn seam. The PR is opened at
+      lifecycle phase 11 by @pr-manager."
     type: info
     date: "2026-11-09"
