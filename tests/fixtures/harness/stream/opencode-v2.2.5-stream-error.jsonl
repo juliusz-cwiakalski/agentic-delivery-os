@@ -1,0 +1,2 @@
+{"type":"step_start","timestamp":1762560200000,"sessionID":"ses_0a9b8c7d6e5f40312f1e2d3c4b5a6978","part":{"type":"step-start","id":"prt_21","messageID":"msg_21"}}
+{"type":"error","timestamp":1762560200120,"sessionID":"ses_0a9b8c7d6e5f40312f1e2d3c4b5a6978","error":{"type":"provider","message":"synthetic stream failure"}}

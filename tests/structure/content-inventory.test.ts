@@ -679,7 +679,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readHarnessCaptureOutcomes",
     "readHarnessTelemetry",
   ],
-  "adapters/src/host/index.ts": ["createHostSpawnRunner"],
+  "adapters/src/host/index.ts": ["createHostSpawnRunner", "createHostSpawnStarter"],
   "adapters/src/harness/opencode.ts": [
     "OPENCODE_CAPABILITIES",
     "createOpencodeInstance",
