@@ -358,3 +358,23 @@ notes:
       iteration 4."
     type: "decision"
     date: "2026-11-09"
+  - text: "DoR iteration 4 returned NOT_READY with one blocking finding (BF4-01,
+      critical) and four advisories. BF4-01 is purely numeric and rebase-induced:
+      the artifacts pinned the pre-rebase error-table arithmetic (22->24
+      two-segment codes, 99->105 identities) while the rebased tree delivers 36
+      two-segment codes and 115 identities, so the correct targets are 36->38 and
+      115->121. PM decision: this is not a new design defect and does not reopen
+      the contract; it is one mechanical re-pin across spec/test plan/plan plus
+      AF4-01..03, verified against the live tree, followed by a single
+      confirmation gate pass. AF4-04 (this file still saying a human decision was
+      required) is closed by the 2026-11-09 owner directive recorded above."
+    type: "decision"
+    date: "2026-11-09"
+  - text: "Blocker resolved: the 2026-11-07 DoR-iteration-3 blocker ('Human owner
+      decision required: authorize one scoped repair round or re-scope GH-241')
+      was answered by the owner directive of 2026-11-09 (Option A, scoped repair
+      round) and the repair round plus the authorized re-gate are complete. The
+      issue labels blocked/human-input-needed are cleared at the readiness-passed
+      transition."
+    type: "resolved"
+    date: "2026-11-09"
