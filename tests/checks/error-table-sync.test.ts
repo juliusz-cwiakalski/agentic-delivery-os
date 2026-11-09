@@ -13,6 +13,7 @@ import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_COLLECTOR_IDS,
+  DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
 } from "../../packages/core/src/contracts/index";
@@ -1076,8 +1077,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 81) {
-    failures.push(`table length ${live.length} != baseline + 81 (${BASELINE_ROWS.length + 81})`);
+  if (live.length !== BASELINE_ROWS.length + 87) {
+    failures.push(`table length ${live.length} != baseline + 81 (${BASELINE_ROWS.length + 87})`);
   }
   return failures;
 };
@@ -1157,7 +1158,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 81,
+      BASELINE_ROWS.length + 87,
     );
   });
 
@@ -1180,7 +1181,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 81);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 87);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1762,5 +1763,61 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
   test("the unchanged copy remains green (control)", async () => {
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});
+
+/**
+ * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
+ * documented table, the total is 121, and the corpora are non-vacuous.
+ */
+describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
+  const COORDINATOR_CODES = [
+    "coordinator.already-running",
+    "coordinator.restart-budget-exhausted",
+    "coordinator.process.capability-gap",
+    "coordinator.session.kill-failed",
+    "coordinator.escalation.publish-failed",
+    "coordinator.wake.delivery-failed",
+  ] as const;
+
+  test("the live tree is green at 121 entries and 121 documented rows", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBe(121);
+    expect(result.counts.documentedRows).toBe(121);
+    expect(result.counts.recognizedS1).toBeGreaterThan(0);
+    expect(result.counts.recognizedS3).toBeGreaterThan(0);
+    expect(result.counts.corpusRows).toBeGreaterThan(0);
+  });
+
+  test("each coordinator row is documented exactly once", () => {
+    const doc = readFile(ROOT, DOC);
+    for (const code of COORDINATOR_CODES) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("121 identities");
+  });
+
+  test("removing a documented coordinator row fails naming the code", async () => {
+    const root = makeTempRoot();
+    const row = COORDINATOR_CODES[0];
+    editFile(root, DOC, (text) =>
+      text
+        .split("\n")
+        .filter((line) => !line.startsWith(`| ${row} |`))
+        .join("\n"),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      `doc/spec/features/feature-result-contract.md: source entry ${row} is undocumented`,
+    );
+  });
+
+  test("a coordinator near-miss two-segment shape stays unrecognized", () => {
+    // A two-segment shape that is not on the exact allowlist produces no
+    // reference at all, so it can never resolve to a table row.
+    expect(scanReferences("coordinator.alreadyrunning", [...DOMAIN_KINDS])).toEqual([]);
+    const declared = scanReferences("coordinator.already-running", [...DOMAIN_KINDS]);
+    expect(declared.map((reference) => reference.code)).toEqual(["coordinator.already-running"]);
+    expect(declared.every((reference) => reference.recognized)).toBe(true);
   });
 });

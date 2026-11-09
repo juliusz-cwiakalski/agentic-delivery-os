@@ -99,6 +99,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "daemon.socket-unreachable",
   "daemon.subscriber-degraded",
   "daemon.supervisor-unsupported",
+  // GH-241 pins the two two-segment coordinator identities exactly; the other
+  // four coordinator identities are three-segment.
+  "coordinator.already-running",
+  "coordinator.restart-budget-exhausted",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -788,8 +792,9 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
+    expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(115);
+    expect(entries).toHaveLength(121);
   });
 });
 
@@ -865,7 +870,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(115);
+    expect(entries).toHaveLength(121);
     expect(db).toHaveLength(4);
   });
 
@@ -1099,7 +1104,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(115);
+    expect(entries).toHaveLength(121);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1373,7 +1378,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(36);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(38);
   });
 });
 
@@ -1600,9 +1605,10 @@ const DISPATCH_ROWS = [
 describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the two dispatch rows (GH-239)", () => {
   test("dispatch is a declared kind with exactly the four pinned identities in order", () => {
     expect(DOMAIN_KINDS).toContain("dispatch");
-    // GH-238 appends the daemon kind after dispatch; dispatch itself is unchanged.
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("dispatch");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("daemon");
+    // GH-241 appends the coordinator kind after daemon; dispatch itself is unchanged.
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("daemon");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("coordinator");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
     expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
     for (const [
@@ -1697,7 +1703,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(115);
+    expect(entries).toHaveLength(121);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1790,7 +1796,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(114);
+    expect(delivered).toHaveLength(120);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1809,7 +1815,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("115 identities");
+    expect(doc).toContain("121 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -1908,5 +1914,71 @@ describe("TC-VOCAB-002 the queue kind declares exactly five rows", () => {
         (id) => `${BOARD_COLLECTOR_ERROR_PREFIX}${id}${BOARD_COLLECTOR_ERROR_SUFFIX}`,
       ),
     );
+  });
+});
+
+/**
+ * TC-COORD-081 (GH-241): the `coordinator` kind declares exactly the six
+ * Appendix F rows, the two two-segment identities join the exact reserved
+ * allowlist, and a near-miss is still rejected.
+ */
+describe("TC-COORD-081 the coordinator kind declares exactly six rows", () => {
+  const COORDINATOR_ROWS = [
+    ["coordinator.already-running", "user", false, "not_landed", "platform-provider"],
+    ["coordinator.restart-budget-exhausted", "user", false, "not_landed", "user-validation"],
+    ["coordinator.process.capability-gap", "platform", false, "not_landed", "platform-provider"],
+    ["coordinator.session.kill-failed", "platform", true, "unknown", "platform-provider"],
+    ["coordinator.escalation.publish-failed", "platform", true, "unknown", "platform-provider"],
+    ["coordinator.wake.delivery-failed", "platform", true, "unknown", "platform-provider"],
+  ] as const;
+
+  test("exactly six rows in order with their declared class fields", () => {
+    expect(DOMAIN_KINDS.filter((kind) => kind === "coordinator")).toHaveLength(1);
+    const coordinator = entries.filter((entry) => entry.domainKind === "coordinator");
+    expect(coordinator.map((entry) => entry.code)).toEqual(
+      COORDINATOR_ROWS.map(([code]) => code),
+    );
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      projectionClass,
+    ] of COORDINATOR_ROWS) {
+      expect(classifyDomainKind("coordinator", code)).toEqual({
+        code,
+        domainKind: "coordinator",
+        category,
+        retryable,
+        consequence,
+        remediationHint: classifyDomainKind("coordinator", code).remediationHint,
+        projectionClass,
+        summary: classifyDomainKind("coordinator", code).summary,
+      });
+    }
+  });
+
+  test("exactly two codes are two-segment and the other four are three-segment", () => {
+    const coordinator = entries
+      .filter((entry) => entry.domainKind === "coordinator")
+      .map((entry) => entry.code);
+    const twoSegment = coordinator.filter((code) => code.split(".").length === 2);
+    expect(twoSegment.sort()).toEqual([
+      "coordinator.already-running",
+      "coordinator.restart-budget-exhausted",
+    ]);
+    expect(coordinator.filter((code) => code.split(".").length > 2)).toHaveLength(4);
+    for (const code of twoSegment) expect(RESERVED_TWO_SEGMENT_CODES.has(code)).toBe(true);
+  });
+
+  test("a coordinator near-miss is rejected and no wildcard is admitted", () => {
+    expect(isValidCode("coordinator.already-running")).toBe(true);
+    expect(isValidCode("coordinator.restart-budget-exhausted")).toBe(true);
+    expect(isValidCode("coordinator.alreadyrunning")).toBe(false);
+    expect(isValidCode("coordinator.unknown-code")).toBe(false);
+    expect(() => classifyDomainKind("coordinator", "coordinator.unknown-code")).toThrow();
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).some((entry) => entry.code.includes("*")),
+    ).toBe(false);
   });
 });

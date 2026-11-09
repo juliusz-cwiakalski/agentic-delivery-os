@@ -479,9 +479,16 @@ export type DaemonProcessPort = {
   }) => { readonly pid: number } | { readonly pid?: undefined; readonly code: string };
   readonly signal: (
     pid: number,
-    signal: "SIGTERM" | "SIGINT",
+    signal: "SIGTERM" | "SIGINT" | "SIGKILL",
   ) => { readonly ok: boolean; readonly detail?: string };
   readonly isAlive: (pid: number) => boolean;
+  /**
+   * GH-241 additive identity capability: the live process start time in
+   * milliseconds (or `undefined` when it cannot be observed). Present only when
+   * the adapter declares the start-time identity capability; absence at kill
+   * time is `coordinator.process.capability-gap`, never a silent signal.
+   */
+  readonly startTimeMs?: (pid: number) => number | undefined;
 };
 
 /** The lane-executor availability fact; absence means supervise-only. */

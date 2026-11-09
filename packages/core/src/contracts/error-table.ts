@@ -32,6 +32,7 @@ export const DOMAIN_KINDS = [
   "queue",
   "dispatch",
   "daemon",
+  "coordinator",
 ] as const;
 
 /**
@@ -1360,5 +1361,71 @@ export const ERROR_TABLE = [
       "Use the interactive daemon start on this platform or install a supported unit manually; no supervisor adapter is delivered here.",
     projectionClass: "platform-provider",
     summary: "No supervisor adapter is available on this platform.",
+  },
+  {
+    code: "coordinator.already-running",
+    domainKind: "coordinator",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use the running coordinator supervisor or stop it before starting another; a live holder is refused regardless of lease age, and a busy shared state fence may belong to another writer — retry once it releases.",
+    projectionClass: "platform-provider",
+    summary: "A live coordinator instance holds the state-dir instance lease.",
+  },
+  {
+    code: "coordinator.restart-budget-exhausted",
+    domainKind: "coordinator",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Review the owner escalation question, then restart with `coordinator start --foreground --fresh-budget` after an owner decision or park the coordinator for review.",
+    projectionClass: "user-validation",
+    summary: "The coordinator restart budget for the current epoch is exhausted.",
+  },
+  {
+    code: "coordinator.process.capability-gap",
+    domainKind: "coordinator",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use a process port that declares the alive, kill-with-grace, and start-time identity capabilities; nothing was signalled and no lease record was appended.",
+    projectionClass: "platform-provider",
+    summary: "The delivered process port declares no required coordinator capability.",
+  },
+  {
+    code: "coordinator.session.kill-failed",
+    domainKind: "coordinator",
+    category: "platform",
+    retryable: true,
+    consequence: "unknown",
+    remediationHint:
+      "Inspect the recorded coordinator process identity and the kill outcome; a failed or identity-mismatched kill sends no further signal and is never reported as success.",
+    projectionClass: "platform-provider",
+    summary: "The recorded coordinator process tree could not be terminated.",
+  },
+  {
+    code: "coordinator.escalation.publish-failed",
+    domainKind: "coordinator",
+    category: "platform",
+    retryable: true,
+    consequence: "unknown",
+    remediationHint:
+      "Repair the blocker channel or the shared state fence and retry the tick; no escalation receipt landed, so the exhaustion remains visible as a failed escalation.",
+    projectionClass: "platform-provider",
+    summary: "The owner exhaustion question could not be published.",
+  },
+  {
+    code: "coordinator.wake.delivery-failed",
+    domainKind: "coordinator",
+    category: "platform",
+    retryable: true,
+    consequence: "unknown",
+    remediationHint:
+      "Retry the next tick once the session can be woken; no wake record landed, so the one-wake-per-question budget is unspent and the retry cannot duplicate a record.",
+    projectionClass: "platform-provider",
+    summary: "The coordinator pickup wake could not be delivered.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
