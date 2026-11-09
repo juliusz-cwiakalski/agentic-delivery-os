@@ -116,3 +116,86 @@ describe("TC-COORD-037 temp-copy mutants trip the purity oracle", () => {
     expect(source.getText()).toContain('"evidence-unevaluable"');
   });
 });
+
+/**
+ * TC-COORD-002 / TC-COORD-085 (phase-8 mutants, GH-241): a node:fs import in the
+ * contracts tier, an ambient clock in the domain tier, and an OS-signal call in
+ * the domain tier must each trip their tier's oracle.
+ */
+const AMBIENT_MARKERS = [
+  "node:",
+  "bun:",
+  "Date.now",
+  "new Date",
+  "process.env",
+  "process.kill",
+  "child_process",
+  "execSync",
+  "fetch(",
+];
+
+const ambientViolations = (root: string, relative: string): string[] => {
+  const text = readFileSync(join(root, relative), "utf8");
+  return AMBIENT_MARKERS.filter((marker) => text.includes(marker)).map(
+    (marker) => `${relative}: ${marker}`,
+  );
+};
+
+const withTierMutant = (
+  relative: string,
+  mutate: (text: string) => string,
+  body: (root: string) => void,
+): void => {
+  const root = mkdtempSync(join(tmpdir(), "coordinator-tier-mutant-"));
+  const target = join(root, relative);
+  mkdirSync(join(target, ".."), { recursive: true });
+  writeFileSync(target, mutate(readFileSync(join(ROOT, relative), "utf8")));
+  try {
+    body(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+};
+
+describe("GH-241 phase-8 tier mutants trip their oracles", () => {
+  test("the unmutated coordinator contracts and domain are clean (control)", () => {
+    expect(ambientViolations(ROOT, "packages/core/src/contracts/coordinator.ts")).toEqual([]);
+    expect(ambientViolations(ROOT, "packages/core/src/domain/coordinator-evidence.ts")).toEqual([]);
+  });
+
+  test("a node:fs import in the contracts tier is caught", () => {
+    withTierMutant(
+      "packages/core/src/contracts/coordinator.ts",
+      (text) => `import { readFileSync } from "node:fs";\n${text}`,
+      (root) => {
+        expect(ambientViolations(root, "packages/core/src/contracts/coordinator.ts")).toEqual([
+          "packages/core/src/contracts/coordinator.ts: node:",
+        ]);
+      },
+    );
+  });
+
+  test("an ambient clock in the domain tier is caught", () => {
+    withTierMutant(
+      "packages/core/src/domain/coordinator-evidence.ts",
+      (text) => `${text}\nexport const now = Date.now();\n`,
+      (root) => {
+        expect(ambientViolations(root, "packages/core/src/domain/coordinator-evidence.ts")).toEqual(
+          ["packages/core/src/domain/coordinator-evidence.ts: Date.now"],
+        );
+      },
+    );
+  });
+
+  test("an OS-signal call in the domain tier is caught", () => {
+    withTierMutant(
+      "packages/core/src/domain/coordinator-fence.ts",
+      (text) => `${text}\nexport const kill = (pid: number) => process.kill(pid, "SIGTERM");\n`,
+      (root) => {
+        expect(ambientViolations(root, "packages/core/src/domain/coordinator-fence.ts")).toEqual([
+          "packages/core/src/domain/coordinator-fence.ts: process.kill",
+        ]);
+      },
+    );
+  });
+});
