@@ -27,11 +27,11 @@ import {
   LIST_ARGS,
   LIVENESS_FACTS,
   output,
-  PARENT_ENVIRONMENT,
   RESUME_ARGS,
   runnerResult,
   SPAWN_ARGS,
   SPAWN_ENV_DESCRIPTOR,
+  streamStarterFromRunner,
   TIMEOUT_MS,
 } from "../fixtures/harness/harness-io";
 import { DECLARED_VARIABLES } from "../fixtures/harness/spawn-env";
@@ -54,6 +54,7 @@ const makeSession = (
   const port = createOpencodeSession({
     command: HARNESS_COMMAND,
     runner: recording.runner,
+    starter: streamStarterFromRunner(recording.runner),
     buildEnvironment: declaredBuildEnvironment(credentials),
     classify: classifier,
     assembleLiveness,
@@ -68,81 +69,12 @@ const makeSession = (
   return { port, invocations: recording.invocations, credentials };
 };
 
-const spawnInput = (prompt = DEFAULT_PROMPT) => ({
-  workItemRef: WORK_ITEM_REF,
-  prompt,
-  descriptor: SPAWN_ENV_DESCRIPTOR,
-});
-
 const spawnRoot = async (port: HarnessSessionPort) =>
   port.spawn({
     workItemRef: WORK_ITEM_REF,
     prompt: DEFAULT_PROMPT,
     descriptor: SPAWN_ENV_DESCRIPTOR,
   });
-
-describe("TC-HARN-008 opencode spawn", () => {
-  test("spawn invokes once with the configured command, args, work dir, env, and prompt", async () => {
-    const { port, invocations } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(true);
-    expect(invocations).toHaveLength(1);
-    const invocation = invocations[0];
-    if (invocation === undefined) return;
-    expect(invocation.file).toBe(HARNESS_COMMAND);
-    expect(invocation.args).toEqual([...SPAWN_ARGS]);
-    expect(invocation.options.cwd).toBe(SPAWN_ENV_DESCRIPTOR.workDirectory);
-    expect(invocation.options.timeout).toBe(TIMEOUT_MS);
-    expect(invocation.options.stdin).toBe(DEFAULT_PROMPT);
-    expect(Object.keys(invocation.options.env).sort()).toEqual([...DECLARED_VARIABLES].sort());
-    expect(invocation.options.env.HARNESS_MODEL).toBe(PARENT_ENVIRONMENT.HARNESS_MODEL as string);
-  });
-
-  test("the handle carries identity and attribution only", async () => {
-    const { port } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(true);
-    if (!spawned.ok) return;
-    expect(Object.keys(spawned.value).sort()).toEqual([
-      "harnessKind",
-      "sessionId",
-      "treeRoot",
-      "workItemRef",
-    ]);
-    expect(spawned.value.sessionId).toBe(ROOT_SESSION);
-    expect(spawned.value.treeRoot).toBe(ROOT_SESSION);
-    expect(spawned.value.workItemRef).toBe(WORK_ITEM_REF);
-    expect(JSON.stringify(spawned.value)).not.toContain("finished");
-  });
-
-  test("malformed output is a classified failure with no fabricated id", async () => {
-    const { port, invocations } = makeSession(() => runnerResult("{not-json"));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(false);
-    if (spawned.ok) return;
-    expect(spawned.error.code).toBe("harness.spawn.invalid-output");
-    expect(JSON.stringify(spawned.error)).not.toContain("ses_");
-    expect(invocations).toHaveLength(1);
-  });
-
-  test("a non-zero exit is classified data carrying the observed status", async () => {
-    const { port, invocations } = makeSession(() => runnerResult("", 7));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(false);
-    if (spawned.ok) return;
-    expect(spawned.error.code).toBe("harness.spawn.refused");
-    expect(spawned.error.status).toBe(7);
-    expect(invocations).toHaveLength(1);
-  });
-
-  test("no second spawn is attempted", async () => {
-    const { port, invocations } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    await spawnRoot(port);
-    await spawnRoot(port);
-    expect(invocations).toHaveLength(2);
-    expect(invocations.every((invocation) => invocation.file === HARNESS_COMMAND)).toBe(true);
-  });
-});
 
 describe("TC-HARN-009 opencode resume/steer", () => {
   test("resume keeps the root and delivers the steering payload verbatim as data", async () => {

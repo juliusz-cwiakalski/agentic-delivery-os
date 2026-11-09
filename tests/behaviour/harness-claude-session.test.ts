@@ -19,6 +19,7 @@ import {
   HARNESS_COMMAND,
   runnerResult,
   SPAWN_ARGS,
+  streamStarterFromRunner,
   TIMEOUT_MS,
 } from "../fixtures/harness/harness-io";
 
@@ -50,6 +51,7 @@ const makeOpencode = (stdout: string): HarnessSessionPort => {
   return createOpencodeSession({
     command: HARNESS_COMMAND,
     runner: recording.runner,
+    starter: streamStarterFromRunner(recording.runner),
     buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
     classify: classifier,
     assembleLiveness,

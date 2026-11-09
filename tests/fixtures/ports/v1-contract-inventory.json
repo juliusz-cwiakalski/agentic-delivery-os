@@ -936,6 +936,9 @@
       "HarnessSpawnInput",
       "HarnessSpawnRunner",
       "HarnessSpawnRunnerResult",
+      "HarnessSpawnStarter",
+      "HarnessSpawnStream",
+      "HarnessSpawnStreamOptions",
       "HarnessVersionWarning"
     ],
     "index.ts": [
@@ -1886,6 +1889,9 @@
       "HarnessSpawnInput",
       "HarnessSpawnRunner",
       "HarnessSpawnRunnerResult",
+      "HarnessSpawnStarter",
+      "HarnessSpawnStream",
+      "HarnessSpawnStreamOptions",
       "HarnessTelemetryAppendReport",
       "HarnessTelemetryCapture",
       "HarnessTelemetryRecord",

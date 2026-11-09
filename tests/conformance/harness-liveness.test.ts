@@ -267,6 +267,7 @@ import {
   output as runnerOutput,
   runnerResult,
   SOURCED_SIGNAL_FACTS,
+  streamStarterFromRunner,
 } from "../fixtures/harness/harness-io";
 
 const sourcedSession = (io: {
@@ -284,6 +285,7 @@ const sourcedSession = (io: {
       resumeArgs: RESUME_ARGS,
       listArgs: LIST_ARGS,
       runner: recording.runner,
+      starter: streamStarterFromRunner(recording.runner),
       buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
       classify: classifier,
       assembleLiveness,

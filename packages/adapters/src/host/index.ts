@@ -162,7 +162,7 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
       resolveCompletion?.(result);
     };
 
-    const emit = (chunk: string): void => {
+    const splitLines = (chunk: string): void => {
       lineBuffer += chunk;
       let boundary = lineBuffer.indexOf("\n");
       while (boundary !== -1) {
@@ -193,7 +193,7 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
     child.stdout?.setEncoding("utf8");
     child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", (chunk: string) => {
-      emit(chunk);
+      splitLines(chunk);
       if (stdout.length + chunk.length > MAX_OUTPUT_BYTES) {
         truncated = true;
         return;

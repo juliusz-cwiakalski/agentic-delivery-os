@@ -160,8 +160,9 @@ const createFakeStream = (
   };
 
   const registerKill = (): boolean => {
-    killCount += 1;
-    return killCount === 1;
+    if (killCount > 0) return false;
+    killCount = 1;
+    return true;
   };
 
   const kill = (): void => {

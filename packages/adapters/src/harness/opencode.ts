@@ -10,6 +10,7 @@
  */
 import {
   ECONOMICS_SOURCED_SIGNAL_KINDS,
+  type EconomicsSourcedSignalReading,
   HARNESS_LIFECYCLE_CAPABILITIES,
   HARNESS_LIVENESS_KINDS,
   HARNESS_MAX_SESSIONS,
@@ -31,8 +32,11 @@ import {
   type HarnessSessionPort,
   type HarnessSpawnInput,
   type HarnessSpawnRunner,
+  type HarnessSpawnRunnerResult,
+  type HarnessSpawnStarter,
+  type HarnessSpawnStream,
+  type HarnessSpawnStreamOptions,
   type HarnessVersionWarning,
-  type EconomicsSourcedSignalReading,
 } from "@delivery-os/core/contracts";
 
 /** The opencode capability declaration (F-1, DM-4). */
@@ -59,11 +63,18 @@ export const createOpencodeInstance = (input: {
 export type OpencodeHarnessOptions = {
   readonly command: string;
   readonly runner: HarnessSpawnRunner;
+  /** The streaming spawn seam (GH-275 DEC-1); required so a spawn is never completion-gated. */
+  readonly starter: HarnessSpawnStarter;
   readonly buildEnvironment: HarnessEnvironmentBuilder;
   readonly classify: HarnessClassifier;
   readonly assembleLiveness: HarnessLivenessAssembler;
   readonly now: () => string;
+  /** The one-shot listing timeout; never applied to a spawn or resume stream. */
   readonly timeoutMs?: number;
+  /** The handle-acquisition bound; defaults to 60_000 ms. */
+  readonly handleTimeoutMs?: number;
+  /** An optional whole-session bound; absent or 0 means unbounded. */
+  readonly sessionTimeoutMs?: number;
   readonly spawnArgs?: readonly string[];
   readonly resumeArgs?: readonly string[];
   readonly listArgs?: readonly string[];
@@ -74,6 +85,7 @@ export type OpencodeHarnessOptions = {
 };
 
 const DEFAULT_TIMEOUT_MS = 300_000;
+const DEFAULT_HANDLE_TIMEOUT_MS = 60_000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -92,7 +104,13 @@ const failure = (
   },
 });
 
+/**
+ * The session identifier precedence (GH-275 DEC-4): the real CLI's top-level
+ * `sessionID` first, then the previously accepted fallback shapes. An
+ * empty-string identifier is not an identifier.
+ */
 const sessionIdOf = (value: Record<string, unknown>): string | undefined => {
+  if (typeof value.sessionID === "string" && value.sessionID.length > 0) return value.sessionID;
   const session = isRecord(value.session) ? value.session : undefined;
   if (session !== undefined && typeof session.id === "string" && session.id.length > 0) {
     return session.id;
@@ -102,6 +120,19 @@ const sessionIdOf = (value: Record<string, unknown>): string | undefined => {
   return undefined;
 };
 
+/** Parse one JSONL line independently; blank, non-JSON, and non-object lines are skipped. */
+const decodeLine = (line: string): Record<string, unknown> | undefined => {
+  const withoutCr = line.endsWith("\r") ? line.slice(0, -1) : line;
+  if (withoutCr.trim().length === 0) return undefined;
+  try {
+    const decoded: unknown = JSON.parse(withoutCr);
+    return isRecord(decoded) ? decoded : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** The delivered legacy-envelope evidence mapping (unchanged). */
 const evidenceOf = (parsed: Record<string, unknown>): HarnessEvidence => {
   const result = isRecord(parsed.result) ? parsed.result : {};
   const completion = result.completion;
@@ -115,10 +146,135 @@ const evidenceOf = (parsed: Record<string, unknown>): HarnessEvidence => {
   };
 };
 
+/**
+ * A decoded line is a legacy single-document envelope when it carries a
+ * `result` object, or one of the accepted identifier-only shapes without the
+ * real CLI's top-level `sessionID` (GH-275 F-4/DEC-5).
+ */
+const isLegacyEnvelope = (parsed: Record<string, unknown>): boolean => {
+  if (isRecord(parsed.result)) return true;
+  return typeof parsed.sessionID !== "string" && sessionIdOf(parsed) !== undefined;
+};
+
+/** The stream facts accumulated while acquiring and draining the stdout stream. */
+type StreamFacts = {
+  legacyEnvelope: Record<string, unknown> | undefined;
+  finalStepReason: string | undefined;
+  toolFailure: boolean;
+  failureReported: boolean;
+};
+
+const emptyFacts = (): StreamFacts => ({
+  legacyEnvelope: undefined,
+  finalStepReason: undefined,
+  toolFailure: false,
+  failureReported: false,
+});
+
+/** Accumulate the terminal evidence facts from one decoded line. */
+const accumulate = (facts: StreamFacts, parsed: Record<string, unknown>): void => {
+  if (facts.legacyEnvelope === undefined && isLegacyEnvelope(parsed)) {
+    facts.legacyEnvelope = parsed;
+  }
+  if (parsed.type === "step_finish") {
+    const part = isRecord(parsed.part) ? parsed.part : {};
+    facts.finalStepReason = typeof part.reason === "string" ? part.reason : undefined;
+  }
+  if (parsed.type === "tool_use") {
+    const part = isRecord(parsed.part) ? parsed.part : {};
+    const state = isRecord(part.state) ? part.state : {};
+    if (state.status === "error") facts.toolFailure = true;
+  }
+  if (parsed.type === "error") facts.failureReported = true;
+};
+
+/** Derive completion-scoped evidence from the accumulated facts and host result. */
+const evidenceFrom = (facts: StreamFacts, result: HarnessSpawnRunnerResult): HarnessEvidence => {
+  if (facts.legacyEnvelope !== undefined) {
+    return {
+      ...evidenceOf(facts.legacyEnvelope),
+      exitStatus: result.status,
+      timedOut: result.timedOut,
+    };
+  }
+  return {
+    completionMarker: facts.finalStepReason === "stop" && result.status === 0 && !result.timedOut,
+    exitStatus: result.status,
+    timedOut: result.timedOut,
+    spawnRefused: false,
+    failureReported: facts.failureReported,
+    toolFailure: facts.toolFailure,
+  };
+};
+
+type AcquisitionOutcome =
+  | {
+      readonly kind: "acquired";
+      readonly sessionId: string;
+      readonly completion: Promise<HarnessEvidence>;
+    }
+  | { readonly kind: "mismatch" }
+  | { readonly kind: "absent"; readonly result: HarnessSpawnRunnerResult };
+
+/**
+ * Decode the stream and acquire the first identified session line (GH-275 F-1,
+ * F-2, DEC-4). On acquisition it returns immediately with a completion promise
+ * that keeps draining the stream and resolves only when the process closes.
+ */
+const acquireFromStream = async (
+  stream: HarnessSpawnStream,
+  accept: (sessionId: string) => boolean,
+): Promise<AcquisitionOutcome> => {
+  const facts = emptyFacts();
+  let observedId: string | undefined;
+  let acquisitionSettled = false;
+  let resolveAcquisition: (() => void) | undefined;
+  const acquisition = new Promise<void>((resolve) => {
+    resolveAcquisition = resolve;
+  });
+  const settleAcquisition = (): void => {
+    if (acquisitionSettled) return;
+    acquisitionSettled = true;
+    resolveAcquisition?.();
+  };
+
+  const pump = (async (): Promise<void> => {
+    try {
+      for await (const line of stream.lines) {
+        const parsed = decodeLine(line);
+        if (parsed === undefined) continue;
+        accumulate(facts, parsed);
+        if (observedId !== undefined) continue;
+        const candidate = sessionIdOf(parsed);
+        if (candidate === undefined) continue;
+        observedId = candidate;
+        settleAcquisition();
+        if (!accept(candidate)) return;
+        stream.acquired();
+      }
+    } finally {
+      settleAcquisition();
+    }
+  })();
+
+  const completion = (async (): Promise<HarnessEvidence> => {
+    await pump;
+    return evidenceFrom(facts, await stream.completion);
+  })();
+
+  await acquisition;
+  if (observedId !== undefined) {
+    return accept(observedId)
+      ? { kind: "acquired", sessionId: observedId, completion }
+      : { kind: "mismatch" };
+  }
+  return { kind: "absent", result: await stream.completion };
+};
+
 type SessionRecord = {
   readonly handle: HarnessSessionHandle;
-  readonly evidence: HarnessEvidence;
   readonly descriptor: HarnessSpawnInput["descriptor"];
+  readonly completion: Promise<HarnessEvidence>;
 };
 
 /** Build the opencode session port over injected I/O seams. */
@@ -127,6 +283,21 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const capabilities = options.capabilities ?? OPENCODE_CAPABILITIES;
 
+  /** The stream options a spawn, resume, or deliver hands to the starter as data. */
+  const streamOptions = (
+    cwd: string,
+    env: Readonly<Record<string, string>>,
+    stdin?: string,
+  ): HarnessSpawnStreamOptions => ({
+    cwd,
+    env,
+    ...(stdin === undefined ? {} : { stdin }),
+    handleTimeoutMs: options.handleTimeoutMs ?? DEFAULT_HANDLE_TIMEOUT_MS,
+    ...(options.sessionTimeoutMs === undefined
+      ? {}
+      : { sessionTimeoutMs: options.sessionTimeoutMs }),
+  });
+
   const run = async (
     input: HarnessSpawnInput,
     args: readonly string[],
@@ -134,26 +305,20 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   ): Promise<HarnessResult<HarnessSessionHandle>> => {
     const environment = options.buildEnvironment(input.descriptor);
     if (!environment.ok) return environment;
-    const result = await options.runner(options.command, args, {
-      cwd: input.descriptor.workDirectory,
-      env: environment.value,
-      timeout,
-      stdin,
-    });
-    let parsed: Record<string, unknown> | undefined;
-    try {
-      const decoded: unknown = JSON.parse(result.stdout);
-      if (isRecord(decoded)) parsed = decoded;
-    } catch {
-      parsed = undefined;
-    }
-    const sessionId = parsed === undefined ? undefined : sessionIdOf(parsed);
-    if (sessionId === undefined) {
-      if (result.status !== 0 || result.timedOut) {
+    const stream = options.starter(
+      options.command,
+      args,
+      streamOptions(input.descriptor.workDirectory, environment.value, stdin),
+    );
+    const outcome = await acquireFromStream(stream, () => true);
+    if (outcome.kind !== "acquired") {
+      stream.kill();
+      const result = outcome.kind === "absent" ? outcome.result : undefined;
+      if (result !== undefined && (result.status !== 0 || result.timedOut)) {
         return failure("harness.spawn.refused", {
           status: result.status,
           summary: result.timedOut
-            ? "harness spawn timed out without machine-readable output"
+            ? "harness spawn timed out waiting for the session identifier (acquisition timeout)"
             : "harness exited non-zero without machine-readable output",
         });
       }
@@ -163,24 +328,14 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     }
     const handle: HarnessSessionHandle = {
       harnessKind: "opencode",
-      sessionId,
-      treeRoot: sessionId,
+      sessionId: outcome.sessionId,
+      treeRoot: outcome.sessionId,
       workItemRef: input.workItemRef,
     };
-    sessions.set(sessionId, {
+    sessions.set(outcome.sessionId, {
       handle,
       descriptor: input.descriptor,
-      evidence:
-        parsed === undefined
-          ? {
-              completionMarker: false,
-              exitStatus: result.status,
-              timedOut: false,
-              spawnRefused: false,
-              failureReported: false,
-              toolFailure: false,
-            }
-          : { ...evidenceOf(parsed), exitStatus: result.status, timedOut: result.timedOut },
+      completion: outcome.completion,
     });
     return { ok: true, value: handle };
   };
@@ -229,7 +384,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     if (record !== undefined) {
       sessions.set(input.handle.sessionId, {
         handle: { ...record.handle, treeRoot: input.handle.treeRoot },
-        evidence: record.evidence,
+        completion: record.completion,
         descriptor: record.descriptor,
       });
     }
@@ -250,7 +405,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
           summary: `session ${input.handle.sessionId} has no collected facts`,
         });
       }
-      return { ok: true, value: record.evidence };
+      return { ok: true, value: await record.completion };
     },
     classify: options.classify,
     liveness: async () => {

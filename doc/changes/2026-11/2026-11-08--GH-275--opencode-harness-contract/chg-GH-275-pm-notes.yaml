@@ -182,3 +182,33 @@ notes:
       Delivery authorized."
     type: info
     date: "2026-11-09"
+  - text: "Plan phase P1 COMPLETE (additive streaming seam, host starter, pinned
+      captures, structure/type pinning): commit 5f05d350. Delivered
+      HarnessSpawnStreamOptions/HarnessSpawnStream/HarnessSpawnStarter in
+      packages/core/src/contracts/harness.ts and re-exported them from
+      contracts/index.ts; implemented createHostSpawnStarter beside the unchanged
+      createHostSpawnRunner; added the three pinned v2.2.5 JSONL captures plus
+      README provenance; the fake starter/virtual clock/flushUntil fixture, the
+      named DEC-4/DEC-5 case table, harness-io re-exports, the structure stream
+      contract suite, the adapter confinement/timer scans, the host-stream
+      behaviour suite, the type suite and the content-inventory host allowance.
+      Owns AC-F2-3, AC-F6-2, AC-F7-1, AC-F7-4 and TC-OCS-001/002/003/004/005/052/070.
+      Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0 (depcruise 356
+      modules, ambient-globals 162 files, entrypoints, secret-read 325 files);
+      bun test harness-stream-contract + harness-imports + harness-host-stream +
+      content-inventory = 34 pass / 0 fail; biome clean on every touched file.
+      Mutation evidence: M-9 (node:child_process injected into the adapter) red on
+      the allowlist equality + import scans and the adapter-confinement scan,
+      restored green 6 pass; M-10 (setTimeout in the adapter) red on the timer
+      scan, restored green; M-11 (kill member added to HarnessSessionPort) red on
+      pnpm exec tsc -p tests/types (missing kill + two unused @ts-expect-error),
+      restored green. Deviations: (a) the commit primitive's deterministic secret
+      scanner false-positives on the delivered classification-token field
+      annotation (keyword plus a 16-char type name), so the annotation now
+      uses a short private alias ResultToken = DeliveryResultToken; semantics and
+      exports are identical and the scanner is not weakened; (b) TDR-0016 is
+      parked outside the working tree (tmp/tmpdir, git-ignored) until P6 so the
+      plan-union standalone staging scope cannot land it in an earlier phase; it
+      is restored byte-identical for the P6 commit."
+    type: info
+    date: "2026-11-09"

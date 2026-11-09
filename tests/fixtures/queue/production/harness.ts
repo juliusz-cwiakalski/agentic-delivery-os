@@ -34,6 +34,7 @@ import {
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../../packages/core/src/state/index";
+import { streamStarterFromRunner } from "../../harness/stream";
 
 const WORKING_NAME = "delivery-os";
 const BASE = join(process.cwd(), "tmp", "tmpdir");
@@ -203,6 +204,7 @@ export const createProductionQueueHarness = (
       ...(options.originUrl === undefined ? {} : { originUrl: options.originUrl }),
     },
     harnessSpawnRunner: spawnRunner,
+    harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
     credentials: refusingCredentials,
     githubTransport: {
       send: async (request) => {

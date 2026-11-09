@@ -62,6 +62,7 @@ import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-wind
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
+import { streamStarterFromRunner } from "../fixtures/harness/harness-io";
 
 const ROOT = process.cwd();
 
@@ -196,6 +197,7 @@ describe("the production composer builds a real harness session port", () => {
         workingName: "delivery-os",
         repositoryFacts: { originUrl: GITHUB_ORIGIN },
         harnessSpawnRunner: runner,
+        harnessSpawnStarter: streamStarterFromRunner(runner),
         // A failing credential port keeps the truth read hermetic: the provider
         // read is refused before any request leaves the process.
         credentials: {
@@ -426,6 +428,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
       workingName: "delivery-os",
       repositoryFacts: facts,
       harnessSpawnRunner: completedSessionRunner,
+      harnessSpawnStarter: streamStarterFromRunner(completedSessionRunner),
       credentials: credentialPort(scenario.credentialMissing === true),
       githubTransport: transport,
       gitChildRunner: gitRunner,
@@ -697,6 +700,7 @@ const createProductionHarness = (input: {
       ? { repositoryFacts: {} }
       : { repositoryFacts: { originUrl: input.originUrl } }),
     harnessSpawnRunner: runner,
+    harnessSpawnStarter: streamStarterFromRunner(runner),
     credentials:
       input.credentialMissing === false
         ? credentialPort(false)
