@@ -3,6 +3,7 @@ change:
   ref: GH-277
   type: fix
   status: Proposed
+  version: 1.1
   slug: harness-default-allowlist
   title: "Make the default harness spawn allowlist able to start opencode without user configuration"
   owners: [engineering]
@@ -17,7 +18,7 @@ change:
     internal: [harness adapter contract, deny-by-default spawn-environment builder, configuration layer, CLI production composition, dispatch engine, CLI dispatch output, harness and dispatch test fixtures]
     external: [opencode CLI]
 links:
-  decisions: ["TDR-0008", "TDR-0016"]
+  decisions: ["TDR-0008", "TDR-0016", "TDR-0017"]
 ---
 
 # CHANGE SPECIFICATION
@@ -60,6 +61,8 @@ The relevant delivered behaviour:
 | Dispatch error assembly | `packages/core/src/app/dispatch.ts:185-200` | `errorOf` produces only `code`, `category`, `retryable`, `consequence`, `remediationHint`, and `summary`. |
 | Dispatch result contract | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` | `DispatchEnvelopeData.error` is a `CommandResultError`, which has no detail or field slot. |
 | Dispatch text output | `packages/cli/src/output/dispatch-text.ts:28-34` | Text mode emits exactly `result`, `pr_url`, `exit_code`, and `last_message`, in that order. |
+| CLI verbose flag and human diagnostic | `packages/cli/src/index.ts:298-303`, `packages/cli/src/index.ts:317`, `packages/cli/src/output/serialize.ts:69-82`, `packages/cli/src/output/serialize.ts:97-98`, `packages/cli/src/output/serialize.ts:110-113` | `--verbose` is parsed in `runCli` and handed to the single output writer, where it selects the full envelope over the scripted one-line trim in machine mode. The shared stderr diagnostic (`diagnosticFor`) is built from a failure outcome's message, summary, and error-table code, is written only by `writeOutput` after redaction, and is emitted for a failure outcome in every mode; it carries no dispatch envelope data. |
+| Dispatch human rendering seam | `packages/cli/src/commands/dispatch.ts:133-149` | The dispatch command selects human text for data-bearing results and passes `data` to the four-key dispatch text renderer. A pre-session spawn failure returns a success envelope carrying `data`, so its human rendering is that four-key text and no stderr failure diagnostic is produced for it. |
 
 Measured evidence from the reporting environment:
 
@@ -233,9 +236,11 @@ N/A. No internal event, message, state record, or capsule event is added or chan
 |----|---------|-------------|
 | DM-1 | `harness.environment` configuration entry | Gains an optional boolean marker. An entry remains `name` plus optional `credentialRef`; the marker is valid only on a variable entry. Existing entries without the marker keep required semantics. |
 | DM-2 | Harness execution-environment descriptor variable entry | Gains the same additive optional marker. The marker is data only and introduces no behaviour in the contracts tier. Credential entries are unchanged. |
-| DM-3 | Dispatch envelope error detail | Adds an optional detail nested on the dispatch `data.error` carrying the underlying failure `kind`, `code`, and `field` when present. The delivered `CommandResultError` field set and the top-level envelope error remain unchanged. |
+| DM-3 | Dispatch envelope error detail (`DispatchEnvelopeError`) | `packages/core/src/contracts/dispatch.ts` declares `DispatchEnvelopeError` as the delivered `CommandResultError` (same six fields) plus `detail?: { readonly kind: "harness" \| "config"; readonly code: string; readonly field?: string }`. `DispatchEnvelopeData.error` is retyped from `CommandResultError` to `DispatchEnvelopeError`. `CommandResultError` itself and every other envelope stay unchanged, because every envelope's top-level error is built from the error table and widening the shared type would widen all of them. |
 
 No persisted model, state record, event-log shape, schema version, or migration is affected.
+
+The detail is additive and optional: identifiers only, single-line, at most 256 characters, and it introduces no new failure code, delivery-result token, classifier row, or error-table row (AC-F5-4, AC-F5-5). The inspection surface for DM-1/DM-2 is the delivered `config get <key> [--show-origin]` form, read as `config get harness.environment --show-origin` for the harness branch.
 
 ### 8.4 External Integrations
 
@@ -260,6 +265,7 @@ No external API, network endpoint, vendor SDK, or transport is added or changed.
 - Credential entries remain required and fail closed on an unresolved reference.
 - The `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, token, outcome, exit projection, and last message are unchanged.
 - Non-verbose dispatch text remains exactly four keys in the delivered order. The new detail is additive on the dispatch error and appears only when an underlying failure identity exists.
+- The dispatch `data.error` field is retyped to `DispatchEnvelopeError`, which keeps every delivered `CommandResultError` field and adds only an optional `detail`; a consumer that reads the six delivered fields is unaffected, and the top-level `CommandResult` envelope, `CommandResultError`, and every other envelope keep their delivered shape.
 - No CLI grammar, help entry, unrelated output envelope, error-table row, delivery-result token, classifier rule, or persisted shape changes.
 - The default behaviour changes intentionally: a zero-configuration installation no longer requires the two model variables and now forwards `PATH` and `HOME`. This is the repair, not a compatibility break for any repository consumer.
 
@@ -297,7 +303,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | RSK-4 | The diagnostic detail leaks a value or breaks the four-key text contract. | M | L | Detail carries only `kind`, `code`, and `field` identifiers; it is bounded and single-line; the existing redaction path applies; the text contract has a dedicated assertion. | L |
 | RSK-5 | A fake CLI on PATH passes while a real opencode still fails because another variable is required to boot. | H | M | The required proof includes one bounded real dispatch; any newly discovered required variable joins the default set before delivery closes; the real proof is recorded in the plan and PR. | M |
 | RSK-6 | The real dispatch proof starts a nested lifecycle that mutates this change's worktree or runs for hours. | H | M | Bound the proof to a probe-scale prompt or end the session after the handle is observed; run it outside the change worktree. | L |
-| RSK-7 | The additive optional contract marker needs a decision record under the delivered additive adapter-contract rule, and that record is missing. | M | M | Raised as OQ-1; author the record or obtain an explicit owner waiver before delivery if the rule is held to apply. | M |
+| RSK-7 | The additive optional contract marker needs a decision record under the delivered additive adapter-contract rule. | M | L | Closed: raised as OQ-1 and answered by authoring `TDR-0017` as the standalone record the rule requires; DEC-3 remains the in-change rationale, and the owner records acceptance at PR review. | L |
 | RSK-8 | The generated schema, defaults manifest, fixtures, or golden envelopes drift from the new default. | M | M | Regenerate schema and defaults-position artifacts; update the pinned default fixture and spawn-failure golden; parity checks run in the gate battery. | L |
 
 ## 12. ASSUMPTIONS
@@ -321,9 +327,9 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | Depends on | Deny-by-default spawn-environment builder | Required/optional projection and fail-closed naming live here. |
 | Depends on | CLI production composition | Maps the optional marker and keeps the `DELIVERY_WORK_PATH` record injection. |
 | Depends on | Dispatch engine and dispatch contract | Captures the underlying harness failure and adds the additive detail. |
-| Depends on | CLI dispatch output | Machine JSON already carries the envelope; verbose human output adds the bounded diagnostic. |
+| Depends on | CLI dispatch output | Machine JSON already carries the whole envelope through the shared serializer; the four-key non-verbose text is unchanged, and the bounded verbose diagnostic is rendered through the dispatch human-text seam with the `--verbose` fact. |
 | Depends on | `opencode` CLI | The real harness that must boot with the new default environment. |
-| Governed by | Additive adapter-contract rule (`TDR-0008`, `TDR-0016`) | The optional marker is a type-only additive contract field; OQ-1 asks whether a standalone record is required. |
+| Governed by | Additive adapter-contract rule (`TDR-0008`, `TDR-0016`, `TDR-0017`) | The optional marker is a type-only additive contract field. `TDR-0017` is the standalone decision record the rule requires for it; this change's decision log DEC-3 carries the in-change rationale, and `TDR-0008`/`TDR-0016` state the rule and its prior application to the same contract module. |
 | Blocks | M1-S9 engine dispatch path on a default installation | No typed dispatch can start the default harness until this lands. |
 | Blocks | Any later harness work that needs a live opencode session | Those paths remain unexercised until a default spawn succeeds. |
 
@@ -331,7 +337,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 
 | ID | Question | Context | Status |
 |---|---|---|---|
-| OQ-1 | Does the additive optional marker on the harness environment contract require a standalone decision record under the delivered additive adapter-contract rule, or is this change's decision log sufficient? | `TDR-0016` records that adapter-contract evolution is decision-record governed and that adding types to the harness contract is the class the rule covers; this change adds an optional field to `HarnessEnvironmentVariable`. The marker is type-only, additive, and reversible, which is the `ADR-0004`/`ADR-0006` precedent shape. | Decision needed: consult `@decision-advisor` before delivery; recommended resolution is a short TDR or an explicit owner waiver. |
+| OQ-1 | Does the additive optional marker on the harness environment contract require a standalone decision record under the delivered additive adapter-contract rule, or is this change's decision log sufficient? | `TDR-0016` records that adapter-contract evolution is decision-record governed and that adding types to the harness contract is the class the rule covers; this change adds an optional field to `HarnessEnvironmentVariable`. The marker is type-only, additive, and reversible, which is the `ADR-0004`/`ADR-0006` precedent shape. | Resolved 2026-11-09 by `TDR-0017`: the delivered rule governs each adapter-contract change and states no size threshold and no waiver mechanism, so a standalone record is required and `TDR-0017` is that record; §15 DEC-3 is the in-change rationale, not a waiver. |
 | OQ-2 | Does opencode require any environment variable beyond `PATH`, `HOME`, and optionally `TMPDIR` to boot on the supported POSIX profile? | The ticket names `TMPDIR` as the likely optional case, but the complete boot requirement is not established by source alone. The bounded real dispatch proof (F-8, AC-F8-1) is the evidence source; a discovered required variable must join the default set before delivery closes. | Open, evidence needed from the real dispatch proof; non-blocking for specification. |
 
 ## 15. DECISION LOG
@@ -340,7 +346,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 |---|---|---|---|
 | DEC-1 | Replace the shipped default allowlist with `PATH` and `HOME` as required, `TMPDIR` as optional, and the existing required `DELIVERY_WORK_PATH` injection. | `PATH` is required to resolve the bare `opencode` command and its subprocesses; `HOME` is required for the harness's own configuration and credential lookup; `TMPDIR` is legitimately absent on Linux and must not abort a spawn; `DELIVERY_WORK_PATH` is already injected by the composition and must remain declared. A default that cannot start the default harness is not a default. | 2026-11-09 |
 | DEC-2 | Drop `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` from the default required set. Do not map `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL` to them. | No repository production code consumes the `HARNESS_*` names, and opencode resolves model selection from its own configuration. A mapping would add an unused, privileged declared input and would imply engine-controlled model routing that this change does not deliver. The `OC_ADOS_*` names remain ambient facts, not allowlist entries. A user may still declare either `HARNESS_*` name explicitly. | 2026-11-09 |
-| DEC-3 | Add an additive optional marker to a declared variable entry. An entry without the marker is required and fails closed when absent; an entry with the marker omits an absent key and forwards a present one. The marker is variable-only; credential entries remain required and fail closed when unresolved. | The ticket requires a legitimate absence not to kill the whole spawn. Making absence the default for every entry would weaken the deny-by-default discipline; keeping the marker explicit preserves required semantics for every existing entry and limits optionality to declarations that need it. Credentials stay strictly required so optionality never becomes a silent credential bypass. | 2026-11-09 |
+| DEC-3 | Add an additive optional marker to a declared variable entry. An entry without the marker is required and fails closed when absent; an entry with the marker omits an absent key and forwards a present one. The marker is variable-only; credential entries remain required and fail closed when unresolved. | The ticket requires a legitimate absence not to kill the whole spawn. Making absence the default for every entry would weaken the deny-by-default discipline; keeping the marker explicit preserves required semantics for every existing entry and limits optionality to declarations that need it. Credentials stay strictly required so optionality never becomes a silent credential bypass. Record: `TDR-0017`, because an additive change to `packages/core/src/contracts/harness.ts` is record-governed under the `TDR-0008`/`TDR-0016` rule (see OQ-1). | 2026-11-09 |
 | DEC-4 | Carry the underlying harness failure as an additive detail on the dispatch `data.error`: `kind`, `code`, and `field` when present. Keep `dispatch.session.spawn-failed` as the identity, token, outcome, exit, retryability, consequence, remediation hint, and last message. Surface the detail in machine JSON and in verbose human output; keep non-verbose text exactly four keys. | The ticket requires the underlying kind, code, and field to be visible without source, while the delivered dispatch identity and bash-continuity text contract must stay stable. A nested additive detail preserves the error's identity and the four-key text contract; a new error identity or a changed last message would be a larger, consumer-visible break. | 2026-11-09 |
 | DEC-5 | `version_impact` is `minor` and the change ships exactly one changeset declaring `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, and `@delivery-os/opencode` at `minor`, with a non-empty body, and modifies no pre-existing changeset. | Probed `TC-RELEASE-001` (`tests/checks/privacy-release.test.ts`): a branch that touches `packages/**` with zero added changesets fails because the test asserts the publishable diff is empty in that case; more than one added changeset fails `expect(added).toHaveLength(1)`; `validateChangeset` requires exactly the five fixed-group packages at `minor`, excludes `@delivery-os/testkit`, and requires a non-empty body. This change touches multiple packages, so the gate binds. The lockstep five-package `minor` convention is the repository release rule (precedent: `.changeset/gh-273-queue-repository-binding-minor.md`). | 2026-11-09 |
 | DEC-6 | Scope the default-environment repair to the POSIX host profile and defer Windows-specific variables. | The ticket's evidence and the M1-S9 pilot are POSIX; the harness stack nowhere claims Windows dispatch parity, and adding `USERPROFILE`/`APPDATA` without a Windows acceptance path would be an unverified default. Windows variables remain a documented deferred item and a revisit trigger if Windows harness dispatch is claimed. | 2026-11-09 |
@@ -355,9 +361,11 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | Harness environment contract (`packages/core/src/contracts/harness.ts`) | Updated: additive optional marker on a variable entry; session port, evidence, outcomes, failure codes, and credentials unchanged. |
 | Deny-by-default builder (`packages/core/src/domain/harness-spawn-env.ts`) | Updated: required/optional projection; required absence still fails closed with the field; optional absence is omitted. |
 | CLI production composition (`packages/cli/src/production.ts`) | Updated: map the optional marker; keep the `DELIVERY_WORK_PATH` record injection and the bare `opencode` command. |
-| Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: additive optional detail on the dispatch error type; `CommandResultError` and the top-level envelope unchanged. |
-| Dispatch engine (`packages/core/src/app/dispatch.ts`) | Updated: preserve the underlying harness failure on the pre-session spawn path and attach the detail. |
-| CLI dispatch output (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: verbose human diagnostic for the detail; non-verbose four-key text unchanged. |
+| Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: declares `DispatchEnvelopeError` (the delivered `CommandResultError` plus an optional bounded `detail` carrying `kind`, `code`, and `field` when present) and retypes `DispatchEnvelopeData.error` to it; `CommandResultError` in `packages/core/src/contracts/result.ts` and every other envelope stay unchanged. |
+| Dispatch engine (`packages/core/src/app/dispatch.ts`) | Updated: preserve the underlying harness failure on the pre-session spawn path (lines 466-485) and populate `data.error.detail` where `errorOf` assembles the dispatch error (lines 185-200). This is where the detail is attached to data. |
+| CLI dispatch human rendering (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: `renderDispatchText` keeps exactly the four delivered keys as the non-verbose text; the dispatch command's human-text selection (lines 133-149) is the dispatch-specific seam that selects the bounded verbose diagnostic instead, and that diagnostic is rendered in the dispatch text module. No failure identity, token, or exit projection changes here. |
+| CLI flag parsing and diagnostic seam (`packages/cli/src/index.ts`, `packages/cli/src/output/serialize.ts`) | Updated: `--verbose` is parsed at `index.ts:317` and is the fact the verbose human render needs; today it is consumed only by the output writer (`serialize.ts:97-98`), where it selects the full envelope over the scripted trim in machine mode. The shared stderr diagnostic (`diagnosticFor`, `index.ts:298-303`) and the single redacted write path (`serialize.ts:110-113`) stay the only stderr channel and carry no dispatch envelope data. |
+| CLI machine output (`packages/cli/src/output/serialize.ts:46-49`) | Unchanged: the whole envelope is serialized and redacted in one place, so `data.error.detail` reaches machine JSON with no dispatch-specific serializer. |
 | Harness and dispatch test fixtures/goldens | Updated/new: pinned default configuration, spawn-failure envelope, fake CLI on PATH, required/optional cases, ambient-leak canary. |
 | Release metadata (`.changeset/gh-277-harness-default-allowlist-minor.md`) | Added: exactly one changeset with the five fixed-group packages at `minor` and a non-empty body. |
 | Current-truth documentation | Updated in the system-spec update phase: configuration layer, harness adapters, dispatch engine, result contract, adapter ports. |
@@ -387,7 +395,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | AC-F5-5 | **Given** a detail carrying a variable name but no value, **when** it is serialized or rendered, **then** it contains identifiers only, is single-line, and is bounded to 256 characters. | F-5, NFR-6 |
 | AC-F6-1 | **Given** an empty configuration, **when** the harness branch resolves, **then** the new default list resolves with `defaults` origins and the generated schema, defaults-position manifest, and source hashes pass their parity checks. | F-6, F-1 |
 | AC-F6-2 | **Given** an existing valid configuration entry written as `{ name: "X" }`, **when** it resolves, **then** it keeps required semantics and requires no migration. | F-6, F-3 |
-| AC-F6-3 | **Given** the configuration inspection surface, **when** it renders the harness branch, **then** the new defaults and the optional marker are visible as configuration data and no secret value is emitted. | F-6 |
+| AC-F6-3 | **Given** the configuration inspection surface `config get harness.environment --show-origin`, **when** it renders the harness branch, **then** the payload lists the four shipped default entries with the `optional` marker on `TMPDIR`, the reported origin is `defaults`, and no secret value is emitted. | F-6 |
 | AC-F7-1 | **Given** the regression suite, **when** it runs, **then** it contains a default-allowlist spawn with a fake CLI on `PATH` that asserts the attempt record and a result token other than `dispatch.session.spawn-failed`. | F-7, F-1 |
 | AC-F7-2 | **Given** the regression suite, **when** it runs, **then** it contains an absent-required-variable case that asserts the field name in the harness failure and in the dispatch detail. | F-7, F-3, F-5 |
 | AC-F7-3 | **Given** the regression suite, **when** it runs, **then** it contains an ambient-leak canary that asserts an undeclared parent variable is absent from the child. | F-7, F-4 |
@@ -486,6 +494,7 @@ An explicitly user-declared entry keeps its declared required or optional semant
 ### C. Diagnostic detail shape
 
 ```
+data.error                 : DispatchEnvelopeError = CommandResultError + optional detail
 data.error.code            = dispatch.session.spawn-failed        (unchanged identity)
 data.error.detail.kind     = harness | config                     (when present)
 data.error.detail.code     = harness.spawn.variable-missing | config.credential.missing | ...
@@ -493,7 +502,9 @@ data.error.detail.field    = <declared variable name>             (when present)
 data.lastMessage           = spawn failed before a session existed (unchanged)
 ```
 
-The detail is additive. It contains no values and no secrets. Non-verbose text remains:
+`DispatchEnvelopeError` is declared in `packages/core/src/contracts/dispatch.ts` and is the delivered `CommandResultError` (code, category, retryable, consequence, remediationHint, summary) plus `detail?: { kind: "harness" | "config"; code: string; field?: string }`. `CommandResultError` and every other envelope are unchanged. The detail is additive, optional, single-line, identifiers only, at most 256 characters, and introduces no new error code, delivery-result token, classifier row, or error-table row.
+
+The detail contains no values and no secrets. Non-verbose text remains:
 
 ```
 result=<token>
@@ -512,8 +523,14 @@ last_message=<bounded single line>
 | The configuration branch accepts `name`/`credentialRef`, rejects literal `value`, and rejects extra keys. | `packages/core/src/config/harness.ts:110-145`, `packages/core/src/config/catalog.ts:276-318` |
 | Production composition maps the allowlist and injects `DELIVERY_WORK_PATH`; the command is the bare name `opencode`. | `packages/cli/src/production.ts:423-447,462` |
 | Dispatch collapses a pre-session failure and discards the underlying failure. | `packages/core/src/app/dispatch.ts:466-485` |
-| The dispatch error has no detail or field slot. | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` |
-| Non-verbose text emits exactly four keys. | `packages/cli/src/output/dispatch-text.ts:28-34` |
+| The dispatch `data.error` slot is typed `CommandResultError`, which has no detail or field slot. | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` |
+| Every envelope's top-level error is assembled from the error-table entry, so widening `CommandResultError` would widen every envelope; a dispatch-specific type is required for the detail. | `packages/cli/src/index.ts:262-272` |
+| The harness failure already carries `kind` (`harness`/`config`), `code`, and optional `field`, which is the detail shape. | `packages/core/src/contracts/harness.ts:306-314` |
+| A pre-session spawn failure returns a data-bearing result (a success envelope), so no stderr failure diagnostic is produced for it. | `packages/core/src/app/dispatch.ts:347-389`, `packages/core/src/app/dispatch.ts:466-485` |
+| Non-verbose text emits exactly four keys, and the dispatch command selects that renderer as its human text. | `packages/cli/src/output/dispatch-text.ts:28-34`, `packages/cli/src/commands/dispatch.ts:133-149` |
+| `--verbose` is parsed in `runCli` and consumed only by the output writer, where it selects the full envelope over the scripted one-line trim; the shared stderr diagnostic is not verbose-gated and carries no dispatch data. | `packages/cli/src/index.ts:298-303`, `packages/cli/src/index.ts:317`, `packages/cli/src/output/serialize.ts:69-82`, `packages/cli/src/output/serialize.ts:97-98` |
+| Configuration inspection is `config get <key> [--show-origin]`, and `--show-origin` is accepted only with `get`. | `packages/cli/src/commands/config.ts:96-99`, `packages/cli/src/commands/config.ts:102-155` |
+| The standalone record for the optional marker. | `doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md` |
 | The harness failure identity already exists in the error table. | `packages/core/src/contracts/error-table.ts:1001-1011` |
 | The release invariant requires one five-package minor changeset when `packages/**` changes. | `tests/checks/privacy-release.test.ts:1-100,133-170` |
 
@@ -522,6 +539,7 @@ last_message=<bounded single line>
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-09 | `@spec-writer` | Initial specification for GH-277. |
+| 1.1 | 2026-11-09 | `@spec-writer` | Specification-phase corrections after test planning; all AC ids stable. Added `TDR-0017` to `links.decisions` and to the §13 "Governed by" row, and closed RSK-7 accordingly. Named the delivered verbose/diagnostic channel accurately: the detail is attached in `packages/core/src/app/dispatch.ts` (`errorOf`, pre-session path), machine JSON flows through the whole-envelope writer, non-verbose text is `renderDispatchText`, verbose selection is the dispatch command's human-text seam, and `--verbose` is parsed in `packages/cli/src/index.ts` and consumed only by the output writer (§2.1, §16). Named the dispatch-specific error type `DispatchEnvelopeError` (DM-3, §8.3, §8.5, §16, Appendix C), leaving `CommandResultError` and every other envelope unchanged. Named the inspection invocation `config get harness.environment --show-origin` in AC-F6-3 and §8.3. |
 
 ---
 
