@@ -374,6 +374,27 @@ export const DAEMON_BRANCH = {
   },
 } as const satisfies CatalogField;
 
+
+/**
+ * The typed `coordinator` branch (GH-241 F-10, DM-6, DEC-10; Appendix D).
+ *
+ * Six policy keys, all integers: `stuck-window` (> 0), `kill-grace` (> 0),
+ * `restart-budget` (>= 0), `resume-context-limit` (> 0), `collection-interval`
+ * (> 0), and `progress-bound` (> 0). The shipped defaults live in the defaults
+ * layer; no bound or default literal lives in a decision.
+ */
+export const COORDINATOR_BRANCH = {
+  type: "object",
+  fields: {
+    "stuck-window": { type: "number" },
+    "kill-grace": { type: "number" },
+    "restart-budget": { type: "number" },
+    "resume-context-limit": { type: "number" },
+    "collection-interval": { type: "number" },
+    "progress-bound": { type: "number" },
+  },
+} as const satisfies CatalogField;
+
 /**
  * The typed `poll` branch: a dynamic-name record over the closed platform set,
  * each member an object with base/max/spacing integer milliseconds.
@@ -417,6 +438,7 @@ export const PRODUCTION_CATALOG = {
   lane: LANE_BRANCH,
   queue: QUEUE_BRANCH,
   daemon: DAEMON_BRANCH,
+  coordinator: COORDINATOR_BRANCH,
   poll: POLL_BRANCH,
 } as const satisfies ConfigCatalog;
 
@@ -504,6 +526,92 @@ export const resolveLaneSettings = (
     return laneFailure("config.value.invalid", origins, "lane.restart-budget");
   }
   return { ok: true, value: { livenessIntervalMs: interval, restartBudget: budget } };
+};
+
+
+/** The resolved `coordinator` branch: six policy values with declared units. */
+export type CoordinatorSettings = {
+  /** Time after an expectation before a no-progress coordinator is stuck. */
+  readonly stuckWindowMs: number;
+  /** TERM-to-SIGKILL grace for the coordinator process tree. */
+  readonly killGraceMs: number;
+  /** Restarts per budget epoch; `0` admits no restarts. */
+  readonly restartBudget: number;
+  /** Context size at or above which a fresh spawn is preferred. */
+  readonly resumeContextLimit: number;
+  /** One supervision collection cycle cadence. */
+  readonly collectionIntervalMs: number;
+  /** Liveness window in which positive sourced progress vetoes a stuck verdict. */
+  readonly progressBoundMs: number;
+};
+
+/**
+ * Validate the resolved `coordinator` branch and project it into typed settings.
+ *
+ * The schema has already rejected wrong types and unknown keys; this function
+ * enforces the integer domains and reuses the delivered configuration
+ * identities (`config.key.unknown` / `config.value.invalid`).
+ */
+export const resolveCoordinatorSettings = (
+  values: Readonly<Record<string, ConfigValue>>,
+  origins: ConfigNodeOrigins = {},
+): Result<CoordinatorSettings, ConfigFailure> => {
+  const branch = values.coordinator;
+  if (!isPlainRecord(branch)) {
+    return laneFailure("config.value.invalid", origins, "coordinator");
+  }
+  const allowed = new Set<string>([
+    "stuck-window",
+    "kill-grace",
+    "restart-budget",
+    "resume-context-limit",
+    "collection-interval",
+    "progress-bound",
+  ]);
+  for (const key of Object.keys(branch)) {
+    if (!allowed.has(key)) {
+      return laneFailure("config.key.unknown", origins, `coordinator.${key}`);
+    }
+  }
+  const positive = (key: string): number | undefined => {
+    const value = branch[key];
+    return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+  };
+  const stuckWindowMs = positive("stuck-window");
+  if (stuckWindowMs === undefined) {
+    return laneFailure("config.value.invalid", origins, "coordinator.stuck-window");
+  }
+  const killGraceMs = positive("kill-grace");
+  if (killGraceMs === undefined) {
+    return laneFailure("config.value.invalid", origins, "coordinator.kill-grace");
+  }
+  const budget = branch["restart-budget"];
+  if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 0) {
+    return laneFailure("config.value.invalid", origins, "coordinator.restart-budget");
+  }
+  const resumeContextLimit = positive("resume-context-limit");
+  if (resumeContextLimit === undefined) {
+    return laneFailure("config.value.invalid", origins, "coordinator.resume-context-limit");
+  }
+  const collectionIntervalMs = positive("collection-interval");
+  if (collectionIntervalMs === undefined) {
+    return laneFailure("config.value.invalid", origins, "coordinator.collection-interval");
+  }
+  const progressBoundMs = positive("progress-bound");
+  if (progressBoundMs === undefined) {
+    return laneFailure("config.value.invalid", origins, "coordinator.progress-bound");
+  }
+  return {
+    ok: true,
+    value: {
+      stuckWindowMs,
+      killGraceMs,
+      restartBudget: budget,
+      resumeContextLimit,
+      collectionIntervalMs,
+      progressBoundMs,
+    },
+  };
 };
 
 /** The resolved `queue` branch: lease TTL and per-condition-type recheck. */

@@ -2051,6 +2051,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/config/catalog.ts": [
     "BOOTSTRAP_DESCRIPTOR",
+    "COORDINATOR_BRANCH",
     "DAEMON_BRANCH",
     "LANE_BRANCH",
     "POLL_BRANCH",
@@ -2058,6 +2059,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "QUEUE_BRANCH",
     "fieldAt",
     "catalogPaths",
+    "resolveCoordinatorSettings",
     "resolveDaemonSettings",
     "resolveLaneSettings",
     "resolvePollSettings",
