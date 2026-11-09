@@ -279,6 +279,7 @@ const HARNESS_ENVIRONMENT_ENTRY = {
   fields: {
     name: { type: "string", required: true },
     credentialRef: { type: "string" },
+    optional: { type: "boolean" },
     value: { type: "string" },
   },
 } as const satisfies CatalogField;

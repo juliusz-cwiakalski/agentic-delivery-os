@@ -9,11 +9,14 @@ import { canonicalHarnessJson } from "../../packages/core/src/domain/index";
 import {
   CANARY_CREDENTIAL_SOURCE,
   CANARY_DECOY_CREDENTIAL,
+  CREDENTIAL_DESCRIPTOR,
   CREDENTIAL_REFERENCE,
   createFakeCredentialPort,
   DECLARED_CREDENTIAL_SOURCE_KEY,
   DECLARED_CREDENTIAL_VARIABLE,
+  DECLARED_HOME_VARIABLE,
   DECLARED_MODEL_VARIABLE,
+  DECLARED_PATH_VARIABLE,
   PARENT_ENVIRONMENT,
   SPAWN_ENV_DESCRIPTOR,
 } from "../fixtures/harness/spawn-env";
@@ -185,5 +188,56 @@ describe("TC-HARN-013 session-port observation (Phase 3 completing half)", () =>
     expect(spawned.error.code).toBe("config.credential.missing");
     expect(spawned.error.reference).toBe(CREDENTIAL_REFERENCE.referenceName);
     expect(recording.invocations).toHaveLength(0);
+  });
+});
+
+describe("TC-HDA-018 credentials stay strictly required", () => {
+  test("a successful resolution enters only the declared credential name", () => {
+    const built = buildHarnessSpawnEnvironment({
+      descriptor: CREDENTIAL_DESCRIPTOR,
+      parentEnvironment: {
+        [DECLARED_PATH_VARIABLE]: "/synthetic/bin",
+        [DECLARED_HOME_VARIABLE]: "/synthetic/home",
+      },
+      credentials: createFakeCredentialPort("synthetic-credential-material-2").port,
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(Object.keys(built.value).sort()).toEqual(
+      [DECLARED_PATH_VARIABLE, DECLARED_HOME_VARIABLE, DECLARED_CREDENTIAL_VARIABLE].sort(),
+    );
+    expect(built.value[DECLARED_CREDENTIAL_VARIABLE]).toBe("synthetic-credential-material-2");
+  });
+
+  test("an unresolved reference fails closed and no runtime marker can bypass it", () => {
+    const credentials = createFakeCredentialPort();
+    credentials.setFailure();
+    // The type forbids a marker on a credential entry; this runtime probe proves
+    // the builder ignores any smuggled marker and stays fail-closed.
+    const smuggled = {
+      ...CREDENTIAL_DESCRIPTOR,
+      environment: [
+        ...CREDENTIAL_DESCRIPTOR.environment,
+        {
+          kind: "credential" as const,
+          name: "HARNESS_OPTIONAL_AUTH",
+          optional: true,
+          reference: CREDENTIAL_REFERENCE,
+        },
+      ],
+    } as unknown as typeof CREDENTIAL_DESCRIPTOR;
+    const built = buildHarnessSpawnEnvironment({
+      descriptor: smuggled,
+      parentEnvironment: {
+        [DECLARED_PATH_VARIABLE]: "/synthetic/bin",
+        [DECLARED_HOME_VARIABLE]: "/synthetic/home",
+      },
+      credentials: credentials.port,
+    });
+    expect(built.ok).toBe(false);
+    if (built.ok) return;
+    expect(built.error.code).toBe("config.credential.missing");
+    expect(built.error.field).toBe(DECLARED_CREDENTIAL_VARIABLE);
+    expect(canonicalHarnessJson(built.error)).not.toContain("synthetic-credential-material");
   });
 });

@@ -1,0 +1,4 @@
+harness:
+  environment:
+    - name: SYNTHETIC_OPTIONAL_VARIABLE
+      optional: "yes"

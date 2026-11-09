@@ -56,8 +56,9 @@ export const PRODUCTION_DEFAULTS = {
       },
     },
     environment: [
-      { name: "HARNESS_MODEL" },
-      { name: "HARNESS_SMALL_MODEL" },
+      { name: "PATH" },
+      { name: "HOME" },
+      { name: "TMPDIR", optional: true },
       { name: "DELIVERY_WORK_PATH" },
     ],
   },

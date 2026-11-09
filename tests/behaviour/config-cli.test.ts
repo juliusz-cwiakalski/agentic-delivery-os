@@ -506,3 +506,67 @@ describe("TC-CONFIG-006/024 selector and legacy composition", () => {
     expect(facts.selectedConfig).toBe("/current.yaml");
   });
 });
+
+describe("TC-HDA-022 config get harness.environment --show-origin", () => {
+  test("the shipped default renders four entries with TMPDIR optional and a defaults origin", async () => {
+    const result = await run(["get", "harness.environment", "--show-origin", "--json"], {
+      contents: {},
+    });
+    expect(result.exitCode).toBe(0);
+    const envelope = JSON.parse(result.stdout) as {
+      data: { key: string; value: Array<{ name: string; optional?: boolean }>; origin: string };
+    };
+    expect(envelope.data.key).toBe("harness.environment");
+    expect(envelope.data.value).toHaveLength(4);
+    expect(
+      envelope.data.value.filter((entry) => entry.optional !== true).map((entry) => entry.name),
+    ).toEqual(["PATH", "HOME", "DELIVERY_WORK_PATH"]);
+    expect(envelope.data.value.filter((entry) => entry.optional === true)).toEqual([
+      { name: "TMPDIR", optional: true },
+    ]);
+    expect(envelope.data.origin.startsWith("layer=defaults")).toBe(true);
+    expect(envelope.data.value.map((entry) => entry.name)).not.toContain("HARNESS_MODEL");
+    expect(result.stdout + result.stderr).not.toContain("SECRET-CANARY");
+  });
+
+  test("config debug reports a defaults origin for the branch and its entries", async () => {
+    const result = await run(["debug", "--json"], { contents: {} });
+    expect(result.exitCode).toBe(0);
+    const envelope = JSON.parse(result.stdout) as { data: { origins: Record<string, string> } };
+    for (const path of [
+      "harness.environment",
+      "harness.environment[0].name",
+      "harness.environment[2].optional",
+      "harness.environment[3].name",
+    ]) {
+      expect(envelope.data.origins[path]?.startsWith("layer=defaults"), path).toBe(true);
+    }
+  });
+
+  test("a project declaration renders the marker verbatim", async () => {
+    const result = await run(
+      ["get", "harness.environment", "--show-origin", "--project-root", REPO, "--json"],
+      {
+        contents: committed(
+          "harness:\n  environment:\n    - name: SYNTHETIC_OPTIONAL\n      optional: true\n    - name: SYNTHETIC_REQUIRED\n",
+        ),
+      },
+    );
+    expect(result.exitCode).toBe(0);
+    const envelope = JSON.parse(result.stdout) as {
+      data: { value: Array<{ name: string; optional?: boolean }> };
+    };
+    expect(envelope.data.value).toEqual([
+      { name: "SYNTHETIC_OPTIONAL", optional: true },
+      { name: "SYNTHETIC_REQUIRED" },
+    ]);
+  });
+
+  test("the inspection surface rejects an invalid flag pairing", async () => {
+    await expectConfigCode(
+      ["harness.environment", "--show-origin"],
+      { contents: {} },
+      "input.value.rejected",
+    );
+  });
+});

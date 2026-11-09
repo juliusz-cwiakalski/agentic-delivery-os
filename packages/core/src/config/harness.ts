@@ -19,9 +19,12 @@ import {
   type Result,
 } from "#contracts";
 
-/** One declared allowlist entry: a variable name or a credential reference. */
+/**
+ * One declared allowlist entry: a variable name (optionally optional) or a
+ * credential reference. The optional marker is variable-only.
+ */
 export type HarnessEnvironmentSetting =
-  | { readonly name: string }
+  | { readonly name: string; readonly optional?: boolean }
   | { readonly name: string; readonly credentialRef: string };
 
 /** The resolved harness branch. */
@@ -121,16 +124,28 @@ export const resolveHarnessSettings = (
       return failure("config.secret.forbidden", origins, path);
     }
     if (Object.hasOwn(entry, "credentialRef")) {
+      // The optional marker is variable-only; a credential entry stays required.
+      if (Object.hasOwn(entry, "optional")) {
+        return failure("config.value.invalid", origins, path);
+      }
       if (typeof entry.credentialRef !== "string" || entry.credentialRef.length === 0) {
+        return failure("config.value.invalid", origins, path);
+      }
+      if (Object.keys(entry).some((key) => key !== "name" && key !== "credentialRef")) {
         return failure("config.value.invalid", origins, path);
       }
       settings.push({ name: entry.name, credentialRef: entry.credentialRef });
       continue;
     }
-    if (Object.keys(entry).some((key) => key !== "name")) {
+    if (Object.hasOwn(entry, "optional") && typeof entry.optional !== "boolean") {
       return failure("config.value.invalid", origins, path);
     }
-    settings.push({ name: entry.name });
+    if (Object.keys(entry).some((key) => key !== "name" && key !== "optional")) {
+      return failure("config.value.invalid", origins, path);
+    }
+    settings.push(
+      entry.optional === true ? { name: entry.name, optional: true } : { name: entry.name },
+    );
   }
 
   return {
