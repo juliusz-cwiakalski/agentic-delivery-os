@@ -61,16 +61,20 @@
 # detail carrying that kind and code and no field.
 #
 # Contract-inventory pins: the widened dispatch contract surface is pinned by two
-# delivered inventories, and both are deliberate updates owned by P2. The
-# bidirectional v1 export fixture
-# `tests/fixtures/ports/v1-contract-inventory.json` must gain
-# `DispatchEnvelopeError` under `modules["dispatch.ts"]` and
-# `modules["index.ts"]`; `tests/structure/port-contract-inventory.test.ts` is the
-# unchanged comparator. The exported 256-character detail bound
-# (`DISPATCH_MAX_ERROR_DETAIL_CHARS`) is an exported constant in
-# `packages/core/src/contracts/dispatch.ts`, so it must be registered in
+# delivered inventories, and both are deliberate updates owned by P2. This change
+# declares exactly two additions to the pinned contract surface — the
+# dispatch-specific error type `DispatchEnvelopeError` and the exported
+# 256-character detail bound `DISPATCH_MAX_ERROR_DETAIL_CHARS` — both declared in
+# `packages/core/src/contracts/dispatch.ts` and re-exported from
+# `packages/core/src/contracts/index.ts`. The bidirectional v1 export fixture
+# `tests/fixtures/ports/v1-contract-inventory.json` must gain both names under
+# `modules["dispatch.ts"]` and `modules["index.ts"]`, and no export name beyond
+# those two changes; `tests/structure/port-contract-inventory.test.ts` is the
+# unchanged comparator. Because `DISPATCH_MAX_ERROR_DETAIL_CHARS` is an exported
+# constant, it must also be registered in
 # `EXECUTABLE_ALLOWANCES["core/src/contracts/dispatch.ts"]` of
-# `tests/structure/content-inventory.test.ts`; `tests/structure/inventory.json` is
+# `tests/structure/content-inventory.test.ts`; the type declaration is type-only
+# and needs no executable allowance entry, and `tests/structure/inventory.json` is
 # unaffected because no package source file is added. P2 runs both structure
 # suites as gates so a broken pin fails in P2, not only at P4's aggregate gate.
 #
@@ -237,12 +241,18 @@ phases:
       omitted, and keep its byte-equality consumer as the pin. The shared
       result-error type and every other envelope keep their delivered shape, and
       the single redacted writer and the non-verbose-gated stderr diagnostic stay
-      the only channels. Deliberate pin updates, not regressions: the
-      bidirectional v1 contract inventory fixture gains DispatchEnvelopeError
-      under dispatch.ts and the contracts/index.ts re-export, and the
+      the only channels. Deliberate pin updates, not regressions: this phase
+      declares two additions to the pinned contract surface, the
+      dispatch-specific error type DispatchEnvelopeError and the exported
+      DISPATCH_MAX_ERROR_DETAIL_CHARS bound for the 256-character detail, and the
+      bidirectional v1 contract inventory fixture gains both under
+      modules["dispatch.ts"] and modules["index.ts"] (the contracts/index.ts
+      re-export), with no export name beyond those two changing; the
       content-inventory executable allowance for core/src/contracts/dispatch.ts
-      registers the exported bound constant; tests/structure/inventory.json is
-      unaffected because no package source file is added. Gates: the
+      registers the exported bound constant, while the type declaration stays
+      type-only and needs no executable allowance entry;
+      tests/structure/inventory.json is unaffected because no package source
+      file is added. Gates: the
       envelope-detail structure suite, its type test through pnpm typecheck, the
       dispatch error-envelope suite, the golden dispatch-errors byte-equality
       suite, and the two delivered structure inventory pins (bun test
@@ -277,10 +287,15 @@ phases:
         TC-HDA-033; it also owns the M-9 and M-12 mutation records, the additive
         optional human-text context delivery, and the updated byte-pinned
         spawn-failure golden with its unchanged byte-equality consumer. It also
-        owns the two deliberate inventory pin updates: the v1 contract inventory
-        fixture gains DispatchEnvelopeError under dispatch.ts and index.ts, and
-        the content-inventory executable allowance registers the exported
+        owns the two deliberate inventory pin updates for this change's two
+        declared contract exports: the v1 contract inventory fixture gains both
+        DispatchEnvelopeError and DISPATCH_MAX_ERROR_DETAIL_CHARS under
+        modules["dispatch.ts"] and modules["index.ts"], and the
+        EXECUTABLE_ALLOWANCES entry for core/src/contracts/dispatch.ts in
+        tests/structure/content-inventory.test.ts registers the exported
         256-character detail bound, with both structure suites run as gates here.
+        The error type is a type-only declaration, so it needs no executable
+        allowance entry. No export name beyond those two changes.
         The machine-json, verbose, four-key and two-parameter compatibility
         acceptance stays with phase 3, so a red phase-3 assertion reopens this
         phase; TC-HDA-034's detail-hygiene assertions remain phase 3's, but the

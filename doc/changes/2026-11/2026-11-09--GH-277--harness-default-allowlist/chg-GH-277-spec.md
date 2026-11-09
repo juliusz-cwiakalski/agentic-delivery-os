@@ -3,7 +3,7 @@ change:
   ref: GH-277
   type: fix
   status: Proposed
-  version: 1.3
+  version: 1.4
   slug: harness-default-allowlist
   title: "Make the default harness spawn allowlist able to start opencode without user configuration"
   owners: [engineering]
@@ -214,11 +214,15 @@ Flow 6: diagnostic inspection
 
 ### 7.3 Deferred / Maybe-Later
 
-- Windows host-profile variables (`USERPROFILE`, `APPDATA`, and equivalents) in the default allowlist, if harness dispatch is claimed on Windows.
-- A configurable per-platform default allowlist or a platform-aware default provider.
-- Per-harness default allowlist overlays, if a second harness needs a materially different boot environment.
-- A richer nested failure chain for other dispatch failures beyond the pre-session spawn path.
-- Additional optional entries discovered by real operation, beyond `TMPDIR`.
+Every item below is outside delivery scope and names an owner and a home so it does not become an unowned follow-up (DoD-10).
+
+| Deferred item | Owner | Home |
+|---|---|---|
+| Windows host-profile variables (`USERPROFILE`, `APPDATA`, and equivalents) in the default allowlist, if harness dispatch is claimed on Windows. | `@pm` | This change §7.3, §12, and DEC-6; re-evaluated at PR review and again only if Windows harness dispatch is claimed, then routed as a follow-up ticket on the GH-277 tracker. |
+| A configurable per-platform default allowlist or a platform-aware default provider. | `@pm` | This change §7.3; re-evaluated at PR review; no work is scoped until a platform-aware default is requested. |
+| Per-harness default allowlist overlays, if a second harness needs a materially different boot environment. | `@pm` | This change §7.3; re-evaluated at PR review; scoped only when a second harness is proposed. |
+| A richer nested failure chain for other dispatch failures beyond the pre-session spawn path. | `@pm` | This change §7.3; re-evaluated at PR review; scoped only when a non-spawn dispatch failure needs the nested detail. |
+| Additional optional entries discovered by real operation, beyond `TMPDIR`. | `@pm` | This change §7.3 and §14 OQ-2; the bounded real-dispatch proof (F-8, AC-F8-1, `TC-HDA-100`/`TC-HDA-101`) is the closure evidence, and a later discovery reopens §7.3 and follows the default-addition rule in §22. |
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 
@@ -337,10 +341,10 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 
 ## 14. OPEN QUESTIONS
 
-| ID | Question | Context | Status |
-|---|---|---|---|
-| OQ-1 | Does the additive optional marker on the harness environment contract require a standalone decision record under the delivered additive adapter-contract rule, or is this change's decision log sufficient? | `TDR-0016` records that adapter-contract evolution is decision-record governed and that adding types to the harness contract is the class the rule covers; this change adds an optional field to `HarnessEnvironmentVariable`. The marker is type-only, additive, and reversible, which is the `ADR-0004`/`ADR-0006` precedent shape. | Resolved 2026-11-09 by `TDR-0017`: the delivered rule governs each adapter-contract change and states no size threshold and no waiver mechanism, so a standalone record is required and `TDR-0017` is that record; §15 DEC-3 is the in-change rationale, not a waiver. |
-| OQ-2 | Does opencode require any environment variable beyond `PATH`, `HOME`, and optionally `TMPDIR` to boot on the supported POSIX profile? | The ticket names `TMPDIR` as the likely optional case, but the complete boot requirement is not established by source alone. The bounded real dispatch proof (F-8, AC-F8-1) is the evidence source; a discovered required variable must join the default set before delivery closes. | Open, evidence needed from the real dispatch proof; non-blocking for specification. |
+| ID | Question | Context | Status | Owner | Home |
+|---|---|---|---|---|---|
+| OQ-1 | Does the additive optional marker on the harness environment contract require a standalone decision record under the delivered additive adapter-contract rule, or is this change's decision log sufficient? | `TDR-0016` records that adapter-contract evolution is decision-record governed and that adding types to the harness contract is the class the rule covers; this change adds an optional field to `HarnessEnvironmentVariable`. The marker is type-only, additive, and reversible, which is the `ADR-0004`/`ADR-0006` precedent shape. | Resolved 2026-11-09 by `TDR-0017`: the delivered rule governs each adapter-contract change and states no size threshold and no waiver mechanism, so a standalone record is required and `TDR-0017` is that record; §15 DEC-3 is the in-change rationale, not a waiver. | `@pm` | `TDR-0017` (§13, DEC-3); acceptance recorded at PR review (RSK-7). |
+| OQ-2 | Does opencode require any environment variable beyond `PATH`, `HOME`, and optionally `TMPDIR` to boot on the supported POSIX profile? | The ticket names `TMPDIR` as the likely optional case, but the complete boot requirement is not established by source alone. The bounded real dispatch proof (F-8, AC-F8-1) is the evidence source; a discovered required variable must join the default set before delivery closes. | Open, evidence needed from the real dispatch proof; non-blocking for specification. | `@pm` | This change §14 OQ-2 and §7.3; closed by the `TC-HDA-100`/`TC-HDA-101` evidence recorded in the plan and PR and re-checked at PR review; any discovered variable joins the default set before delivery closes (F-8). |
 
 ## 15. DECISION LOG
 
@@ -431,7 +435,7 @@ This change is done when every condition below holds and is evidenced. Each cond
 | DoD-7 | The repaired default holds: `PATH` and `HOME` required, `TMPDIR` optional, `DELIVERY_WORK_PATH` injected, no model variable declared, and no undeclared parent variable present in the child. | F-1..F-4, AC-F1-3, AC-F1-4, NFR-3 | `TC-HDA-005`, `TC-HDA-010`, `TC-HDA-012` | Phases 1, 3 |
 | DoD-8 | The diagnostic surface is delivered as pinned: the detail carries `kind` and `code` on every pre-session failure and `field` only when the failure carries one; verbose selection receives the parsed `--verbose` fact through the optional `HumanTextContext`; a two-parameter definition still compiles and behaves identically; non-verbose text stays four keys. | F-5, DM-3, DM-4, AC-F5-1..AC-F5-5 | `TC-HDA-029`..`TC-HDA-035` | Phases 2, 3 |
 | DoD-9 | Current-truth documentation is reconciled through the system-spec update phase: the configuration default/entry shape, harness adapters descriptor and spawn narrative, dispatch engine spawn-failure envelope, result-contract data-bearing error field set, and adapter-ports descriptor; the `--verbose` human-mode meaning and the `CommandDefinition.humanText` hook (with its additive optional `HumanTextContext`) are reconciled in `doc/spec/features/feature-result-contract.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/spec/features/feature-status-digest.md`, `doc/spec/features/feature-brief.md`, `doc/spec/features/feature-doctor.md`, and `doc/spec/features/feature-owner-gate-sla.md`; no stale claim remains. | §16, §22 | `@doc-syncer` reconciliation record | Lifecycle phase 7 (`system_spec_update`) |
-| DoD-10 | No orphan TODO/FIXME marker, placeholder, or unowned follow-up introduced by the change remains in the delivered tree or change artifacts; remaining follow-ups (`OQ-2` discovered boot variables, Windows parity) are named with an owner and a home. | §12, §14, §7.3 | Tree scan; review record | Phases 1–4 |
+| DoD-10 | No orphan TODO/FIXME marker, placeholder, or unowned follow-up introduced by the change remains in the delivered tree or change artifacts; remaining follow-ups (`OQ-2` discovered boot variables, Windows parity, and the other §7.3 deferred items) are named with an owner and a home, as recorded in §7.3 and §14. | §12, §14, §7.3 | Tree scan; review record | Phases 1–4 |
 | DoD-11 | The lifecycle phase registry shows the `delivery` phase complete and all four declared plan phases complete, recorded only through the `phase` command family; no phase state is hand-edited; the PR URL is recorded as a pm-notes `notes:` entry at PR creation. | Delivery process | `phase list`; per-phase pm-notes `notes:` evidence | Phases 1–4; lifecycle boundary |
 | DoD-12 | The gate battery is green on a clean tree: `pnpm typecheck`, `pnpm test`, `pnpm check:boundaries`, configuration schema/defaults parity, the secret-read boundary, and the aggregate `pnpm check` with the repo-local temp root. | NFR-9 | Gate logs | Phase 4 |
 | DoD-13 | PR posture: one pull request targets `main-tools` and stays open for human review with the required CI jobs green on the pushed HEAD; merge and owner acceptance are not claimed. | §18 | PR record and CI run | Phase 4; lifecycle phase 11 |
@@ -568,6 +572,7 @@ last_message=<bounded single line>
 | 1.1 | 2026-11-09 | `@spec-writer` | Specification-phase corrections after test planning; all AC ids stable. Added `TDR-0017` to `links.decisions` and to the §13 "Governed by" row, and closed RSK-7 accordingly. Named the delivered verbose/diagnostic channel accurately: the detail is attached in `packages/core/src/app/dispatch.ts` (`errorOf`, pre-session path), machine JSON flows through the whole-envelope writer, non-verbose text is `renderDispatchText`, verbose selection is the dispatch command's human-text seam, and `--verbose` is parsed in `packages/cli/src/index.ts` and consumed only by the output writer (§2.1, §16). Named the dispatch-specific error type `DispatchEnvelopeError` (DM-3, §8.3, §8.5, §16, Appendix C), leaving `CommandResultError` and every other envelope unchanged. Named the inspection invocation `config get harness.environment --show-origin` in AC-F6-3 and §8.3. |
 | 1.2 | 2026-11-09 | `@spec-writer` | DoR iteration 1 remediation; all AC ids stable. B-1 (undeclared public-contract change): added DM-4 for the additive optional `HumanTextContext` widening of the published `CommandDefinition.humanText` — the third parameter is optional, so existing two-parameter definitions and direct two-argument calls stay valid — with a §8.5 backward-compatibility bullet, a §16 seam declaration, a §2.1 current-state observation, an Appendix D evidence row, and an AC-F5-3 seam assertion. B-3 (unreachable detail case): stated the detail-attachment rule in F-5 and Appendix C — every pre-session failure carries a `HarnessFailure`, `kind` and `code` are always present, `field` only when carried — and aligned AC-F5-1, NFR-5, the §4.1 metric, §1, §6, and §10. B-6 (missing Definition of Done): added §17.1 binding all 29 ACs, all 29 test-plan TCs, NFR-1..NFR-9, M-1..M-20, the single added changeset, the bounded real dispatch, current-truth reconciliation, orphan-TODO cleanup, phase-registry completion, the gate battery, and PR posture to named evidence and plan phases. |
 | 1.3 | 2026-11-09 | `@spec-writer` | DoR iteration 2 remediation; all AC and DoD ids stable. B (unachievable worktree claim): reworded DoD-6 from "mutates no file" to the precise claim — no nested-lifecycle mutation and no tracked or untracked source change, `git status --porcelain` after equals the pre-run baseline (including expected uncommitted P4 artifacts such as the untracked `TDR-0017` record and the new changeset), `HEAD` unchanged, and only gitignored build outputs (`packages/*/dist`, `*.tsbuildinfo`) rewritten by the in-repo `pnpm build`. Phase-7 handoff nit: named the files that carry the `--verbose` human-mode meaning (`feature-result-contract.md`, `feature-cli-entrypoint.md`) and the `CommandDefinition.humanText` hook (`feature-status-digest.md`, `feature-brief.md`, `feature-doctor.md`, `feature-owner-gate-sla.md`) in the §16 current-truth row, DoD-9, and the §22 bullet. |
+| 1.4 | 2026-11-09 | `@spec-writer` | DoR iteration 3 remediation; all AC, DoD, and OQ ids stable. Closed the DoD-10 owner gap: §7.3 deferred items are now a table whose every item names owner `@pm` and a concrete home, and §14 gained `Owner` and `Home` columns so OQ-2 is owned by `@pm` with its home in §7.3/§14 and its closure evidence named as `TC-HDA-100`/`TC-HDA-101`; DoD-10 now points to those owner and home records. No new work, ACs, or DoD items were introduced. |
 
 ---
 
