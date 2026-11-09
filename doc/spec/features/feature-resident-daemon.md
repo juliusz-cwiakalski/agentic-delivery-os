@@ -245,8 +245,13 @@ configured rate. A one-shot read carries no resident backoff state.
 
 > **Coordinator consumption (GH-241).** Coordinator supervision consumes the
 > delivered `DaemonProcessPort` additively (`SIGKILL`, optional `startTimeMs`) and
-> the `SupervisorPort` / `DaemonSupervisorDescriptor` seam. The daemon command,
-> control surface, unit renderer, and installer carry no coordinator unit;
+> the `SupervisorPort` / `DaemonSupervisorDescriptor` seam. The shipped
+> `createNodeProcessPort` implements `startTimeMs(pid)` from the Linux
+> `/proc/<pid>/stat` start ticks plus `/proc/stat` `btime`; off Linux, or when
+> either file is unreadable, it yields no reading, so identity-verified kill
+> returns `identity-mismatch` without signalling and a coordinator cannot claim
+> the lease (its own start time is unavailable). The daemon command, control
+> surface, unit renderer, and installer carry no coordinator unit;
 > `renderSystemdUnit` is hardcoded to `daemon start --foreground`, so a coordinator
 > unit needs an additive explicit `command` vector, and coordinator
 > `install`/`uninstall` does not exist. `daemon.lock` is the daemon's own

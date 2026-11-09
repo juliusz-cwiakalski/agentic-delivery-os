@@ -69,13 +69,21 @@
 # and F-20 plus the F-19 test-strengthening set. F-11 (iteration reason
 # vocabulary) is closed by the spec v1.6 Appendix B/EVT-1 amendment (already
 # present; the spec is not edited here); F-18 is closed by this revision's
-# scope declarations. F-18 fidelity:
-# the 13 changed paths that were outside every phase are added to the owning
-# phase (doc-sync docs and the forbidden-literals registry to Phase 10; the
-# core package barrel and supporting suites to Phases 1/2/3/4/6), and the
-# eight declared-but-unchanged files are removed except config/resolver.ts,
-# which Phase 11 now owns. Phase 11 is the final phase and carries the release
-# doneArtifacts. 76/76 TCs, 50/50 ACs unchanged.
+# scope declarations. F-18 fidelity (re-derived from the delivered diff, not
+# from intent): the 13 changed paths that were outside every phase are added to
+# the owning phase (doc-sync docs and the forbidden-literals registry to Phase
+# 10; the core package barrel and supporting suites to Phases 1/2/3/4/6), and
+# the scope-fidelity pass declares the remaining 7 changed companion paths on
+# this phase: the shipped entrypoint wiring and help surface
+# (packages/cli/bin/delivery-os.ts, packages/cli/src/help.ts), the blocker
+# historyRef contract/state carrier (packages/core/src/contracts/blockers.ts,
+# packages/core/src/state/blockers.ts), and their entrypoint/help suites and
+# fixture (tests/behaviour/entrypoint-composition.test.ts,
+# tests/behaviour/entrypoint-help-coverage.test.ts,
+# tests/fixtures/help-guide/coverage.json). The one declared-but-unchanged
+# specific file (packages/core/src/config/resolver.ts) is removed, so Phase
+# 11's declared files are exactly the files it changed. Phase 11 is the final
+# phase and carries the release doneArtifacts. 76/76 TCs, 50/50 ACs unchanged.
 #
 # PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
 #   - Exactly two two-segment coordinator codes join RESERVED_TWO_SEGMENT_CODES
@@ -1152,6 +1160,7 @@ phases:
         - doc/decisions/00-index.md
         - doc/overview/architecture-overview.md
         - doc/overview/glossary.md
+        - doc/quality/test-specs/test-spec-coordinator-supervision.md
         - doc/quality/test-specs/test-spec-state-layer.md
         - doc/00-index.md
         - doc/planning/oss-tooling/cli-command-registry.md
@@ -1258,7 +1267,15 @@ phases:
   #  Cross-cutting: F-11 (iteration reason vocabulary) is closed by the spec
   #  v1.6 Appendix B/EVT-1 amendment (already present; the spec is not edited
   #  here); F-18 is closed by this revision's declared scopes (Phases 1..10 +
-  #  11) and needs no source change.
+  #  11) and needs no extra source change. This phase also owns the companion
+  #  files the remediation actually touched beyond its original declaration: the
+  #  shipped entrypoint wiring (packages/cli/bin/delivery-os.ts), the help
+  #  surface (packages/cli/src/help.ts), the blocker historyRef contract/state
+  #  carrier (packages/core/src/contracts/blockers.ts,
+  #  packages/core/src/state/blockers.ts) for F-07/F-09, and their suites and
+  #  fixture (tests/behaviour/entrypoint-composition.test.ts,
+  #  tests/behaviour/entrypoint-help-coverage.test.ts,
+  #  tests/fixtures/help-guide/coverage.json).
   #
   # Verification (re-run the affected suites and the shipped entrypoint):
   #   bun test tests/behaviour/coordinator-*.test.ts tests/checks/coordinator-*.test.ts tests/structure/coordinator-*.test.ts tests/golden/coordinator.test.ts tests/types/coordinator.type-test.ts
@@ -1284,19 +1301,25 @@ phases:
     summary: "fix(GH-241): close review-iter-1 findings F-01..F-21 (shipped composition, durable epoch, start/terminal receipts, wake outcome, escalation history, --live facts, digest-change expectation, minor fixes, test strengthening) and re-run the existing gates"
     scope:
       files:
+        - packages/cli/bin/delivery-os.ts
         - packages/cli/src/production.ts
         - packages/cli/src/edge.ts
+        - packages/cli/src/help.ts
         - packages/cli/src/help/prompt-required-commands.ts
         - packages/adapters/src/daemon/process.ts
         - packages/cli/src/commands/coordinator-loop.ts
         - packages/cli/src/output/coordinator-text.ts
         - packages/core/src/contracts/coordinator.ts
         - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/blockers.ts
         - packages/core/src/domain/status.ts
         - packages/core/src/state/coordinator.ts
+        - packages/core/src/state/blockers.ts
         - packages/core/src/config/catalog.ts
         - packages/core/src/config/defaults.ts
-        - packages/core/src/config/resolver.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/fixtures/help-guide/coverage.json
         - doc/planning/oss-tooling/milestones/m1/commands/coordinator.md
         - doc/spec/features/feature-coordinator-supervision.md
         - doc/spec/features/feature-state-layer.md

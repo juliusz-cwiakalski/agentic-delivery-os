@@ -164,8 +164,14 @@ before a session existed; it does not assert a lane-permission policy verdict.
 > **Additive process-port capabilities (GH-241).** Coordinator supervision uses
 > the delivered `DaemonProcessPort` as its only process port. The port carries
 > `SIGKILL` in its `signal` set for the grace-escalation half and an optional
-> `startTimeMs(pid)` identity capability. The harness session port carries resume,
-> spawn, and progress; resume is a decision input, never a process capability.
+> `startTimeMs(pid)` identity capability, implemented by the shipped
+> `createNodeProcessPort` from the Linux `/proc/<pid>/stat` start ticks plus
+> `/proc/stat` `btime`; off Linux, or when either file is unreadable, it yields no
+> reading and the kill path reports `identity-mismatch` rather than signalling an
+> unverified pid. The delivered harness session port carries spawn, resume,
+> deliver, collect, classify, liveness, and read-only session listing; the coordinator
+> profile uses spawn, resume, liveness, and listing, and reads progress from the
+> liveness report. Resume is a decision input, never a process capability.
 > Capability ownership is four-way and distinct: an undeclared or unavailable
 > harness **resume** selects `spawn-fresh` reason `session-interrupted` with no
 > error identity; a harness that cannot or will not **spawn** returns the

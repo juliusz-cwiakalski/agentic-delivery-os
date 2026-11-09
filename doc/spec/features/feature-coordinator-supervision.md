@@ -6,7 +6,7 @@ created: 2026-11-09
 last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
-summary: "Coordinator supervision: the coordinator start/stop/status/tick family, the append-only instance lease with a liveness-first atomic claim and one-record stale takeover, the two named state-fence rules, the recorded join-or-resume-or-spawn lifecycle decision, artifact-evidence stuck detection with the progress-bound corroborator, identity-verified kill-with-grace over the delivered DaemonProcessPort, the distinct per-epoch restart budget, loud owner-brief exhaustion escalation with a reserved render-first slot, wake-on-typed-question, the declared foreground supervision loop with its lifetime lease pair, the six additive coordinator.* records, the six coordinator config keys, the six coordinator error identities, and the deterministic delivery.coordinator.v1 observation payload."
+summary: "Coordinator supervision: the coordinator start/stop/status/tick family composed by the shipped entrypoint over the delivered harness session port, the append-only instance lease with a liveness-first atomic claim and one-record stale takeover, the two named state-fence rules, the recorded join-or-resume-or-spawn lifecycle decision, artifact-evidence stuck detection with the progress-bound corroborator, identity-verified kill-with-grace over the delivered DaemonProcessPort, the distinct per-epoch restart budget carried durably on the lease, loud owner-brief exhaustion escalation with a reserved render-first slot, wake-on-typed-question with the selected live/resume/spawn effect, the declared foreground supervision loop with its lifetime lease pair, the six additive coordinator.* records, the six coordinator config keys, the six coordinator error identities, and the deterministic delivery.coordinator.v1 observation payload."
 links:
   related_changes: ["GH-241"]
   related_decisions:
@@ -50,11 +50,15 @@ The family is part of the prompt-required production composition. The shipped
 `coordinator` command reaches the handler, composed from the shared state store,
 the injected clock and id/fence factories, the resolved coordinator settings, the
 node process port (with the `/proc` start-time identity source and its documented
-non-Linux fallback), the recorded harness-session facts and declared effects, and
-the real foreground cycle driver. `coordinator start --foreground` reports the
-acquisition instance (`state=running` identity) in its `data`, and renders the
-terminal `stopped`/`released` receipt honestly when the loop has already
-released the lifetime lease.
+non-Linux fallback), the delivered `HarnessSessionPort` selected per harness kind
+through the shared `harnessFor(kind)` factory, the recorded harness-session facts
+and declared effects, and the real foreground cycle driver. A configuration
+acquisition or resolution failure falls back to the shipped defaults, so the
+prompt-required surface always composes and this family surfaces no configuration
+identity. `coordinator start --foreground` reports the acquisition instance
+(`state=running` identity) in its `data`, and renders the terminal
+`stopped`/`released` receipt honestly when the loop has already released the
+lifetime lease.
 
 ### 1.1 Foreground loop and stop request
 
@@ -152,33 +156,55 @@ facts. Closed-out phase, merge, and answer artifacts remain and are never
 re-executed.
 
 Production composes the same delivered `HarnessSessionPort` as the resident daemon
-and dispatch surfaces — `spawn`, `deliver`/`resume`, `collect`, `liveness`, and
-`listSessions` — with a coordinator session profile (the recorded lane session
-identity, the resolved harness kind/execution descriptor, and a declared
-coordinator prompt). The `spawn` and `resume` effects therefore run against a
-real delivered adapter; no coordinator-local harness is invented, and no
-capability a selected harness kind declares is reported as a gap. The recorded
-lane ledger supplies the replace identity and process identity. Two facts remain
-genuinely absent from the delivered surface: a total context-token count (the lane
-ledger and session port expose no such reading), so the pinned lifecycle decision
-records `spawn-fresh`/`context-unknown` rather than `resume-context` in
-production; and a newly spawned handle exposes no pid, so kill-with-grace stays
-unavailable for a spawned session until a lane record carries its pid. A harness
-kind that declares resume absent (claude-code) returns the delivered
+and dispatch surfaces, selected per harness kind through the shared
+`harnessFor(kind)` factory: `spawn`, `resume`, `liveness`, and `listSessions`
+(the last only when a resume has no recorded session identity). A coordinator
+session profile supplies the recorded lane session identity, the resolved harness
+kind and execution descriptor, and a declared coordinator prompt. The `spawn` and
+`resume` effects therefore run against a real delivered adapter; no
+coordinator-local harness is invented, and no capability a selected harness kind
+declares is reported as a gap. `deliver` and `collect` are not invoked by this
+profile.
+
+Four facts remain genuinely absent from the delivered surface, and each is
+disclosed rather than fabricated:
+
+- **No total context-token source.** Neither the lane ledger nor the session port
+  exposes a total-context reading, so the production session facts carry
+  `contextTokens: null` and an unclean recorded session always records
+  `spawn-fresh` with reason `context-unknown`; `resume-context` is unreachable in
+  production.
+- **No durable coordinator session identity.** The session handle lives in the
+  invoking process and the coordinator appends no `daemon.lane` record, so its
+  session facts fall back to the newest recorded daemon lane row — the only
+  durable session, replacement, and process identity it can read. A later
+  invocation with no such row starts a fresh session and consumes one ordinal.
+- **No pid on a spawned handle.** `HarnessSessionHandle` carries no pid, so
+  kill-with-grace stays unavailable for a coordinator-spawned session until a lane
+  record supplies its pid and start time; the kill path reports the process
+  capability gap instead of signalling an unverified pid.
+- **No sourced progress reading.** The production harness instances are
+  constructed without injected `livenessFacts` or `sourcedSignals`, so the
+  projected new-turn fact is `unknown` and the `progress-bound` prefill veto
+  cannot fire.
+
+A harness kind that declares resume absent (claude-code) returns the delivered
 `harness.capability.gap` from the adapter rather than a fabricated resume.
 
 ## 4. Artifact-evidence stuck detection
 
-The active expectation is the latest recorded iteration that is not a
-collection-cycle `join-live` (a real lifecycle decision or an explicit
-`decision: none`, reason `expectation`, record). A live cycle records a fresh
-`decision: none` expectation when the state-sourced digest fingerprint has
-advanced past the active expectation (F-3), so the stuck window measures the new
-baseline. The expectation's `iterationId` and ledger position are carried
-directly, and its fingerprint uses the post-append cursor; a durable expectation
-is compared against the cursor observed at the start of the cycle, so the
-supervisor's own lease pair and join-live record are never mistaken for digest
-progress. Three read-only classes decide the verdict:
+The active expectation is the latest recorded iteration whose reason is not
+`live-session` (a real lifecycle decision or an explicit `decision: none`, reason
+`expectation`, record). A live cycle records a fresh `decision: none` expectation
+when the state-sourced digest fingerprint has advanced past the active expectation
+(F-3), so the stuck window measures the new baseline. The expectation's
+`iterationId` and ledger position are carried directly, and its fingerprint uses
+the post-append cursor; a durable expectation is compared against the cursor
+observed at the start of the cycle, so the supervisor's own lease pair and
+join-live record are never mistaken for digest progress. A history with no
+non-`live-session` iteration has no active expectation, and that cycle evaluates
+no stuck verdict; a successful wake records an expectation that becomes the next
+baseline. Three read-only classes decide the verdict:
 
 1. `digest-consumed` — the state event-log position (the store's record count,
    carried as the `cursor` field) or the open coordinator-audience question count
@@ -189,7 +215,12 @@ progress. Three read-only classes decide the verdict:
 3. `answer` — a blocker answer record landed after the expectation.
 
 A new turn is a positive `token-delta` or `session-traffic` reading mapped by the
-adapter; absent maps to `unknown`, never zero. Positive sourced progress within
+adapter; absent maps to `unknown`, never zero. The `digest-consumed` class is
+`advanced` only when the fingerprint advanced **and** a new turn is positive;
+when the new-turn fact is `unknown` the class is `unknown`, which never counts as
+stale. In production the new-turn fact is always `unknown`, so the digest class
+is `unknown` and cannot be advanced, and only a merge or answer advance keeps a
+cycle out of the stuck window. Positive sourced progress within
 `coordinator.progress-bound` vetoes a stuck verdict (the prefill-safety
 corroborator). A `stuck` verdict requires the expectation's
 `coordinator.stuck-window` to elapse, no class to have advanced, no positive
@@ -205,15 +236,18 @@ never read.
 On a `stuck` verdict the supervisor appends `coordinator.stuck` with
 `phase=verdict`, `killOutcome=not-attempted` and a bounded key=value evidence
 corpus, then verifies the recorded `pid` plus `processStartTimeMs` through the
-delivered `DaemonProcessPort`'s optional `startTimeMs` capability (the production
-node adapter reads `/proc/<pid>/stat` plus `btime` on Linux and returns the absent
-capability elsewhere), sends TERM,
+delivered `DaemonProcessPort`'s optional `startTimeMs` capability, sends TERM,
 waits `coordinator.kill-grace`, sends `SIGKILL` only if the tree is still alive,
 and appends `phase=outcome` under the same `stuckId` (= the expectation's
-`iterationId`). A mismatch sends no signal and records `killFailureReason=
-identity-mismatch` with `coordinator.session.kill-failed` at exit 2; a failed TERM
-or SIGKILL records `killOutcome=failed` with a null `killFailureReason` and the
-same identity and exit; an absent start-time capability is
+`iterationId`). The shipped `createNodeProcessPort` implements `startTimeMs` from
+the Linux `/proc/<pid>/stat` start ticks plus `/proc/stat` `btime`; off Linux, or
+when either file is unreadable, it yields no reading and the kill path records
+`identity-mismatch` without signalling (the capability is declared by method
+presence, so an unreadable platform start time is a mismatch, not a gap). A
+mismatch sends no signal and records `killFailureReason=identity-mismatch` with
+`coordinator.session.kill-failed` at exit 2; a failed TERM or SIGKILL records
+`killOutcome=failed` with a null `killFailureReason` and the same identity and
+exit. A port that declares no start-time identity capability at all is
 `coordinator.process.capability-gap` before TERM. The target is the recorded
 handle only: no name, pattern, or shell interpolation.
 
@@ -268,18 +302,22 @@ anchor, or question type.
 
 Each collection cycle performs one verified ledger read, applies the delivered
 `isCoordinatorPickup` predicate strictly (rank 1, open with an absent status
-counting as open, coordinator audience), and delivers one wake effect to the
+counting as open, coordinator audience), and issues one wake effect against the
 session within one `coordinator.collection-interval`. The effect is selected from
 the lifecycle decision — `live` for a live session, `resume` for a resumable
 non-live session, `spawn` otherwise — and is exposed on the explicit wake port and
-reported as `wake.effect` in the tick result. Only a successful wake appends one
-durable `coordinator.wake` record with outcome `woken`, the question id, its
-rank, the persisted `askedAt`, and the iteration identity. One wake is issued per
-question lifetime, keyed by coordinator identity, question id, and the persisted
-`askedAt`. `already-woken`, `answered-before-wake`, `delivery-failed`, and
-`no-pickup` are tick results that append nothing, so a retry cannot duplicate a
-record. A tick that does not pick up reports the current cycle's `no-pickup` with
-a null question; the last durable wake is reported by `status` only. A failed
+reported as `wake.effect` on the cycle's result. Production runs the effect on the
+delivered harness port: `live` attaches to the live session (an observation; no
+steering message is sent), while `resume` and `spawn` run the delivered adapter
+effects. Only a successful wake appends one durable `coordinator.wake` record with
+outcome `woken`, the question id, its rank, the persisted `askedAt`, and the
+iteration identity. One wake is issued per question lifetime, keyed by coordinator
+identity, question id, and the persisted `askedAt`. `already-woken`,
+`answered-before-wake`, `delivery-failed`, and `no-pickup` are tick results that
+append nothing, so a retry cannot duplicate a record. A tick that does not pick up
+reports the current cycle's `no-pickup` with a null question. A command that runs
+no collection cycle (`start`, `stop`, `status`) projects the last durable wake
+instead, with a null effect because the wake record does not persist one. A failed
 delivery is `coordinator.wake.delivery-failed` at exit 2.
 
 ## 8. Records, configuration, and the observation payload
@@ -300,9 +338,12 @@ sequence; `recordedAt` is descriptive only, except as the lease-age anchor in §
 | `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action; also carries the durable `budgetEpochId` |
 
 The `coordinator` configuration branch declares six integer keys with shipped
-defaults and domains; unknown keys fail `config.key.unknown` and a wrong type or
-domain fails `config.value.invalid`, so no default or bound literal lives in
-decision code.
+defaults and domains; the branch is validated with the existing configuration
+identities (`config.key.unknown` for an unknown key, `config.value.invalid` for a
+wrong type or domain), so no default or bound literal lives in decision code. The
+coordinator command falls back to those shipped defaults when acquisition or
+resolution fails, so a malformed branch never disables the prompt-required
+surface and the family reports no configuration identity of its own.
 
 | Key | Default | Domain |
 |---|---|---|
@@ -318,16 +359,18 @@ instance folded from the lease, regime descriptor, session facts, last decision,
 restart count/bound/epoch/history, the last **persisted** stuck verdict with
 non-null phase/reason/evidence, the tick-specific `tickVerdict` (null for
 `start`, `stop`, and `status`; nullable phase/reason/evidence when
-`progressing`), last wake with the selected effect, escalation state and question
-id, the last lease action with previous holder and fence age, and a bounded
-degradation list. `status --live` adds the bounded positive live-facts set
-(`alive`, `startTimeVerified` against the recorded `processStartTimeMs`, and
-`leaseAgeMs`) when the process facts are available; otherwise `live` is `null`
-and the degradation list carries `live-facts-unknown`. Declared degradation
-entries are `supervisor-loop-stopped` on a completed `start`, `live-facts-unknown`
-on `status --live` when the probe returns no answer, and `state write fence busy`
-when the shared fence is held. Human output is deterministic, ANSI-free, and at
-most 32 lines; machine data is at most 64 KiB.
+`progressing`), the cycle's wake outcome with its selected effect or — when no
+collection cycle ran — the last durable wake outcome with a null effect,
+escalation state and question id, the last lease action with previous holder and
+fence age, and a bounded degradation list. `status --live` adds the bounded
+positive live-facts set (`alive`, `startTimeVerified` against the recorded
+`processStartTimeMs`, and `leaseAgeMs`) when the process facts are available; an
+unreadable platform start time reports `startTimeVerified: false`, and an
+unanswered probe leaves `live` `null` with `live-facts-unknown` in the degradation
+list. Declared degradation entries are `supervisor-loop-stopped` on a completed
+`start`, `live-facts-unknown` on `status --live` when the probe returns no answer,
+and `state write fence busy` when the shared fence is held. Human output is
+deterministic, ANSI-free, and at most 32 lines; machine data is at most 64 KiB.
 
 The six error identities are the coordinator failure vocabulary; every non-zero
 exit projects from the error table.
@@ -377,6 +420,22 @@ additive explicit `command` vector named above.
   `coordinator.process.capability-gap` at exit 2.
 - `ceo-loop.sh` stays byte-unchanged.
 
+## 11. Testing
+
+The enduring coverage map is the
+[coordinator supervision test specification](../../quality/test-specs/test-spec-coordinator-supervision.md).
+The pure decision, admission, wake, escalation, fence, and observation cases live
+under `tests/behaviour/coordinator-*.test.ts` over a deterministic coordinator
+harness (`tests/fixtures/coordinator/`); the state record folds and the
+contracted error rows are covered by `tests/behaviour/coordinator-records.test.ts`,
+`tests/structure/coordinator-contract.test.ts`, and
+`tests/checks/error-table-sync.test.ts`; the shipped composition is proven by
+`tests/structure/coordinator-production-composition.test.ts` and
+`tests/structure/coordinator-production-session.test.ts`, which drive the real
+production composer and the delivered harness adapters; and
+`tests/behaviour/coordinator-scenario.test.ts` is the end-to-end lifecycle
+scenario (SC-M1-25) over the in-process CLI and the fake process harness.
+
 ## Related
 
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
@@ -392,5 +451,7 @@ additive explicit `command` vector named above.
   capabilities and the new-turn mapping.
 - [Result Contract and Error Table](feature-result-contract.md) — the
   `coordinator` domain kind and six rows.
+- [Coordinator Supervision Test Specification](../quality/test-specs/test-spec-coordinator-supervision.md)
+  — the enduring coverage map.
 - Decision records: [TDR-0017](../../decisions/TDR-0017-coordinator-supervision-architecture.md)
   and [TDR-0018](../../decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md).

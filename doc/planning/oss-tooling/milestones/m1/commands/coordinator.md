@@ -16,7 +16,6 @@ run one bounded collection cycle.
 <binary> coordinator status [--live] [--json]
 <binary> coordinator tick [--json]
 <binary> coordinator --help
-<binary> coordinator --version
 ```
 
 ## DESCRIPTION

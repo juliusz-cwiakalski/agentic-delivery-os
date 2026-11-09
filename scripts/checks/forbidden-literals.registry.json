@@ -144,6 +144,7 @@
     "doc/planning/oss-tooling/milestones/m1/test-scenarios.md",
     "doc/planning/oss-tooling/operator-requirements-2026-11.md",
     "doc/planning/oss-tooling/status.md",
+    "doc/quality/test-specs/test-spec-coordinator-supervision.md",
     "doc/quality/test-specs/test-spec-dispatch-engine.md",
     "doc/quality/test-specs/test-spec-merge-verify-deploy.md",
     "doc/quality/test-specs/test-spec-resident-daemon.md",

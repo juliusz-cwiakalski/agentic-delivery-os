@@ -358,6 +358,12 @@ lease-age anchor.
 | `coordinator.wake` | `delivery.coordinator.wake.v1` | `coordinator.wake:<coordinatorId>` | One successful wake per question lifetime | One-wake-per-question dedupe and the last-wake view |
 | `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action carrying the durable `budgetEpochId` | The instance-lease fold, the status instance view, and the current budget epoch |
 
+The lease carrier is the durable budget-epoch source: the latest non-null
+`budgetEpochId` on a `coordinator.fence` record is the current epoch, so a
+`start --fresh-budget` reset survives later `status`, `tick`, and `start`
+invocations even when the start consumes no restart ordinal. The fold falls back
+to the latest restart epoch, then the latest exhaustion epoch, then `epoch-1`.
+
 Every append uses the non-claim per-append fence rule: acquire, one stale-lock
 recovery and retry on `state.lock.busy`, append, release. A still-busy fence is
 the delivered `state.lock.busy`; a failed append is `state.write.failed`; a torn
