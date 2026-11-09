@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-09T00:22:21.003Z }
   delivery: { started: null, completed: 2026-11-09T01:45:29.051Z }
   system_spec_update: { started: null, completed: 2026-11-09T01:55:46.369Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-09T02:09:21.950Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -413,13 +413,38 @@ notes:
       inside the disposable clone, which was removed with its node_modules
       symlink and no surviving child. This verification note and the §10
       second-run block are committed together through the commit primitive once
-      the worktree is quiesced, so no in-flight system_spec_update doc/** edit is
-      swept in; the commit hash is recorded in the follow-up note."
+      the worktree is quiesced, so no in-flight system_spec_update doc/** edit
+      is swept in; the commit hash is recorded in the follow-up note."
     type: info
     date: "2026-11-09"
   - text: "P5/P6 verification evidence committed: 536bd7fe (docs(GH-275)) carrying
-      the verification note above and the test-plan §10 second recorded §6.3 run.
-      No product code, test assertion, changeset or decision record changed in
-      that commit; the delivery lifecycle state stays owned by @pm."
+      the verification note above and the test-plan §10 second recorded §6.3
+      run. No product code, test assertion, changeset or decision record changed
+      in that commit; the delivery lifecycle state stays owned by @pm."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 8 review_fix iteration 1 = PASS (code-review/review-iter-1.yaml and
+      review-iter-1.md; reviewed_head d5feb29b, base origin/main-tools
+      a3ad6cd9). Severity breakdown 0 critical / 0 high / 0 medium / 3 low / 2
+      info; no remediation phase appended and no source change requested. Spec
+      compliance PASS (F-1..F-8, 30/30 ACs, JSONL framing, top-level sessionID,
+      handle before completion, completion-scoped collect, DEC-5 legacy-envelope
+      precedence, resume identity, 60 s handle bound, no default session bound).
+      Plan compliance PASS (P1..P6 plus phase 7 complete with pm-notes evidence;
+      46/46 TCs mapped, 30/30 ACs owned). Probes re-run by the reviewer: git
+      diff --check exit 0; plan validate valid/readyForDevelopment; pnpm
+      typecheck exit 0; pnpm check:boundaries exit 0; focused harness battery 96
+      pass / 0 fail across 8 files; broader harness/release battery 81 pass / 0
+      fail across 9 files (TC-RELEASE-001 green); scope guard confirms
+      dispatch.ts, claude.ts, harness-classify.ts and scripts/** untouched.
+      Advisory findings only: F-1 dropped opencode resume capability-gap case
+      (low, testing); F-2 contracts/index.ts mass reorder (low,
+      maintainability); F-3 latent unbounded line buffer in the host starter on
+      a newline-free stream after the 16 MiB bound (low, reliability edge); F-4
+      disclosed ResultToken alias (info); F-5 latent collect-rejection path if a
+      future starter's lines iterator throws (info). AC-F8-1/AC-F8-2 rest on the
+      P6 operator E2E evidence recorded in test plan §10; they are not
+      re-executed in this review. Review verdict committed with the review
+      artifact."
     type: info
     date: "2026-11-09"

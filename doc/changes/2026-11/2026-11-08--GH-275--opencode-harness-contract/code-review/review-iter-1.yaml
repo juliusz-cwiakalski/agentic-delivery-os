@@ -1,0 +1,156 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-275
+branch: fix/GH-275/opencode-harness-contract
+reviewed_head: d5feb29bf085d0aa4bbc211346b139da2dde9e09
+base_ref: origin/main-tools (a3ad6cd9078c0d0772045c84f63172c548d4996e)
+status: PASS
+summary: >-
+  The change implements the spec faithfully and the gate evidence holds. The
+  opencode adapter now decodes the real JSONL stream line-independently, takes
+  the top-level sessionID (with the retained fallbacks), returns a handle on the
+  first identified line without awaiting completion, derives completion-scoped
+  evidence under the DEC-5 legacy-envelope precedence, moves resume/deliver onto
+  the same non-blocking acquisition with identity preservation, and replaces the
+  300 s whole-session cap with a 60 s handle bound and no default session bound.
+  The additive HarnessSpawnStarter seam is host-owned and the one-shot runner,
+  session port, dispatch engine, classifier, error vocabulary and Claude adapter
+  are untouched. I re-ran the automated probes named in the brief plus the
+  broader harness/release battery: git diff --check, plan validate, pnpm
+  typecheck, pnpm check:boundaries, and 177 focused tests all pass. Findings are
+  advisory only (3 low, 2 info): one dropped opencode resume capability-gap
+  test, an unrelated mass-reorder in contracts/index.ts, a latent unbounded
+  line buffer in the host starter, the ResultToken alias deviation, and a latent
+  collect-rejection path. No critical, high, or medium findings. AC-F8-1/AC-F8-2
+  rest on P6's recorded operator E2E evidence, which cannot be re-executed in
+  this environment (no live opencode/GITHUB_TOKEN).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+next_step: PROCEED
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/harness-opencode-resume-stream.test.ts:1
+    message: >-
+      When the resume describes were moved out of
+      tests/behaviour/harness-opencode-session.test.ts (plan P3), the opencode
+      "declared resume gap returns before any invocation"
+      (harness.capability.gap) case was dropped and not re-added to the new
+      suite. That branch (opencode.ts `if (!capabilities.supportedOperations
+      .includes("resume")) return gap("resume")`) now has no direct test for the
+      opencode adapter; only the Claude gap path (harness-claude-session.test.ts)
+      remains. The header docstring at harness-opencode-session.test.ts:2 still
+      claims TC-HARN-008/TC-HARN-009, which no longer exist there.
+    suggestion: >-
+      Re-add one resume capability-gap case (capabilities with "resume" removed)
+      to harness-opencode-resume-stream.test.ts asserting
+      harness.capability.gap and zero starter invocations, and update the stale
+      harness-opencode-session.test.ts header docstring to its retained describes.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: maintainability
+    location: packages/core/src/contracts/index.ts:1
+    message: >-
+      The P1 commit (5f05d350) reorders the entire export surface of
+      contracts/index.ts (+239/-240) while the only semantic change is the three
+      additive HarnessSpawnStarter/HarnessSpawnStream/HarnessSpawnStreamOptions
+      re-exports. A sorted diff confirms exactly those three lines are new; the
+      remaining 236 line changes are pure reordering with no behavioural effect.
+      This inflates the PR diff and the merge-conflict surface for a file that
+      the plan only adds three names to.
+    suggestion: >-
+      Accept the reorder as harmless if it came from the coder's formatter, but
+      in future keep incidental whole-file reorders in a separate
+      formatting-only change so the semantic addendum stays reviewable.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: reliability
+    location: packages/adapters/src/host/index.ts:195
+    message: >-
+      The streaming starter appends every stdout chunk to `lineBuffer` (splitLines
+      at :165) before the 16 MiB stdout bound check (:197) and keeps appending on
+      later chunks even after `truncated` is set. A newline-free (or very long
+      single-line) stream therefore grows `lineBuffer` without the 16 MiB cap that
+      stdout itself honours, a latent departure from NFR-6's "no unbounded buffer"
+      intent. Real opencode JSONL is newline-delimited, so the practical risk is
+      low.
+    suggestion: >-
+      Bound lineBuffer (e.g. stop splitting/accumulating once
+      MAX_OUTPUT_BYTES is exceeded, or cap the partial-line length and mark
+      truncation), so a pathological single-line stream cannot grow host memory
+      past the documented bound.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: maintainability
+    location: packages/core/src/contracts/harness.ts:199
+    message: >-
+      `type ResultToken = DeliveryResultToken` was introduced (P1 deviation, per
+      pm-notes) solely to avoid a commit-time secret-scanner false positive, and
+      the exported HarnessClassification.token annotation now points at it. It is
+      semantically identical and the exports-parity/typecheck gates pass, but it
+      is an unrequested change to a delivered contract type unrelated to the
+      streaming seam.
+    suggestion: >-
+      Acceptable as disclosed; if the scanner issue recurs, prefer fixing the
+      scanner allowlist rather than aliasing public contract annotations.
+    suppressed: false
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: robustness
+    location: packages/adapters/src/harness/opencode.ts:241
+    message: >-
+      `pump` (acquisition/drain) has a try/finally but no catch, so if a future
+      starter's `lines` iterator rejected, the rejection would flow into the
+      eagerly-created `completion` promise: on the acquired path `collect` would
+      reject (throwing across the port boundary) and on the absent path the
+      discarded completion promise would become an unhandled rejection. The host
+      starter's `next()` never rejects, so this is latent and not reachable with
+      the shipped starter.
+    suggestion: >-
+      Add a defensive catch in `pump` that records the failure as evidence (or
+      resolves completion on error) so a throwing line iterator can never turn a
+      `collect` into a thrown exception; low priority while the host is the only
+      starter.
+    suppressed: false
+verification:
+  - probe: static diff hygiene
+    command: "git diff --check origin/main-tools...HEAD"
+    result: "exit 0 (no whitespace errors or conflict markers)"
+  - probe: plan schema/readiness
+    command: "bun packages/cli/bin/delivery-os.ts plan validate GH-275 --json"
+    result: "exitCode 0; verdict=valid; readyForDevelopment=true; totalErrors=0"
+  - probe: typecheck
+    command: "pnpm typecheck"
+    result: "packages core/adapters/cli/mcp/opencode/testkit build+typecheck Done; tests/types tsc Done; no errors"
+  - probe: boundaries
+    command: "pnpm check:boundaries"
+    result: "depcruise 356 modules no violations; ambient-globals 162 clean; workspace-entrypoints OK; secret-read-boundary 325 clean"
+  - probe: focused harness suites (brief)
+    command: "bun test tests/behaviour/harness-opencode-stream.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts tests/behaviour/harness-stream-hygiene.test.ts tests/behaviour/harness-host-stream.test.ts tests/behaviour/dispatch-harness-acquisition.test.ts tests/conformance/harness-classification.test.ts tests/structure/harness-stream-contract.test.ts tests/structure/harness-imports.test.ts"
+    result: "96 pass / 0 fail / 904 expects across 8 files"
+  - probe: broader harness + release battery
+    command: "bun test tests/behaviour/harness-opencode-session.test.ts tests/behaviour/harness-claude-session.test.ts tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-spawn-credential.test.ts tests/conformance/harness-liveness.test.ts tests/structure/harness-contract.test.ts tests/structure/dispatch-composition.test.ts tests/structure/content-inventory.test.ts tests/checks/privacy-release.test.ts"
+    result: "81 pass / 0 fail / 762 expects across 9 files (TC-RELEASE-001 green)"
+  - probe: traceability
+    command: "grep distinct TC-OCS ids in tests/ + plan validate"
+    result: "43 TC-OCS ids labelled in tests; TC-OCS-003 covered by harness-imports/boundaries but untagged; TC-OCS-100/101 are operator-run (test-plan §10 Pass); 30 ACs, 30/30 owned, 46/46 TC mapped per plan validate"
+  - probe: scope guard
+    command: "git diff --name-only origin/main-tools...HEAD -- packages/core/src/app/dispatch.ts packages/adapters/src/harness/claude.ts packages/core/src/domain/harness-classify.ts scripts"
+    result: "empty (dispatch engine, Claude adapter, classifier, scripts all untouched)"
+reviewed_at: 2026-11-09T00:00:00Z
