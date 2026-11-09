@@ -3,7 +3,7 @@ change:
   ref: GH-277
   type: fix
   status: Proposed
-  version: 1.1
+  version: 1.2
   slug: harness-default-allowlist
   title: "Make the default harness spawn allowlist able to start opencode without user configuration"
   owners: [engineering]
@@ -31,7 +31,7 @@ Replace the shipped `harness.environment` default from `HARNESS_MODEL`, `HARNESS
 
 Remove `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` from the default required set and do not fabricate a mapping from `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL`: no repository code consumes the `HARNESS_*` names and opencode resolves its own models. Deny-by-default is unchanged: the child receives only declared entries, never ambient inheritance.
 
-When a spawn still fails, dispatch keeps the delivered `dispatch.session.spawn-failed` identity and last message but carries the underlying harness failure `kind`, `code`, and `field` in an additive detail on the dispatch error, visible in machine JSON and in verbose human output, so operators no longer need source to diagnose a spawn failure.
+When a spawn still fails, dispatch keeps the delivered `dispatch.session.spawn-failed` identity and last message but carries the underlying harness failure `kind` and `code`, plus `field` when the failure carries one, in an additive detail on the dispatch error, visible in machine JSON and in verbose human output, so operators no longer need source to diagnose a spawn failure. Verbose human selection receives the parsed `--verbose` fact through an additive optional context on the published command-definition human-text seam.
 
 ## 2. CONTEXT
 
@@ -62,7 +62,7 @@ The relevant delivered behaviour:
 | Dispatch result contract | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` | `DispatchEnvelopeData.error` is a `CommandResultError`, which has no detail or field slot. |
 | Dispatch text output | `packages/cli/src/output/dispatch-text.ts:28-34` | Text mode emits exactly `result`, `pr_url`, `exit_code`, and `last_message`, in that order. |
 | CLI verbose flag and human diagnostic | `packages/cli/src/index.ts:298-303`, `packages/cli/src/index.ts:317`, `packages/cli/src/output/serialize.ts:69-82`, `packages/cli/src/output/serialize.ts:97-98`, `packages/cli/src/output/serialize.ts:110-113` | `--verbose` is parsed in `runCli` and handed to the single output writer, where it selects the full envelope over the scripted one-line trim in machine mode. The shared stderr diagnostic (`diagnosticFor`) is built from a failure outcome's message, summary, and error-table code, is written only by `writeOutput` after redaction, and is emitted for a failure outcome in every mode; it carries no dispatch envelope data. |
-| Dispatch human rendering seam | `packages/cli/src/commands/dispatch.ts:133-149` | The dispatch command selects human text for data-bearing results and passes `data` to the four-key dispatch text renderer. A pre-session spawn failure returns a success envelope carrying `data`, so its human rendering is that four-key text and no stderr failure diagnostic is produced for it. |
+| Dispatch human rendering seam | `packages/cli/src/commands/dispatch.ts:133-149`, `packages/cli/src/index.ts:51,351-353` | The dispatch command selects human text for data-bearing results and passes `data` to the four-key dispatch text renderer. The published seam is `CommandDefinition.humanText`, declared as `(data, brand) => string \| undefined` and invoked with exactly those two arguments, so the human-text selection currently has no verbose fact. A pre-session spawn failure returns a success envelope carrying `data`, so its human rendering is that four-key text and no stderr failure diagnostic is produced for it. |
 
 Measured evidence from the reporting environment:
 
@@ -106,7 +106,7 @@ Because the shipped spawn allowlist omits `PATH` and `HOME` and requires two mod
 | Shipped default optional entries | Exactly `TMPDIR` |
 | Shipped default required model variables | 0 |
 | Undeclared parent variables present in the child environment | 0 |
-| Pre-session spawn failures whose underlying code and field are surfaced when present | 100% |
+| Pre-session spawn failures whose underlying kind and code are surfaced, with the field when the failure carries one | 100% |
 | New failure codes, delivery-result tokens, classifier rows, or error-table rows | 0 |
 | Non-verbose dispatch text keys | Exactly 4 |
 | Real bounded dispatches on a healthy CLI that reach classification instead of `dispatch.session.spawn-failed` | 1 of 1 |
@@ -142,7 +142,7 @@ Because the shipped spawn allowlist omits `PATH` and `HOME` and requires two mod
 - **F-2**: `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` are removed from the default required set. No mapping from `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL` is added. A user may still declare either `HARNESS_*` name explicitly; doing so preserves the delivered required-entry semantics. Model routing remains owned by the harness's own configuration, and this change adds no engine-side model control.
 - **F-3**: A declared variable entry may carry an optional marker. An entry without the marker is required: an absent value fails closed with the existing `harness.spawn.variable-missing` identity and the variable in `field`, and no partial environment is returned. An entry with the marker is optional: an absent value omits the key and the build continues; a present value is forwarded. The optional marker applies only to variable entries; a credential entry stays required and an unresolvable reference still fails closed with the delivered `config.credential.missing` identity.
 - **F-4**: The child environment is still exactly the declared and present entries plus resolved credentials. An undeclared parent variable is absent. No ambient environment read is added in the runtime-neutral core or the builder. A declared record value still takes precedence over the injected parent value, and an undeclared record name still changes nothing.
-- **F-5**: When a spawn or resume fails before a session exists, dispatch keeps the delivered `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, exit projection, token, outcome, and last message. It additionally carries an additive detail on the dispatch error containing the underlying harness failure `kind`, `code`, and `field` when present. The detail is present in machine JSON output and is named in verbose human output. Non-verbose text output remains exactly the four delivered keys. The detail contains identifiers only, never an environment value or secret.
+- **F-5**: When a spawn or resume fails before a session exists, the underlying `HarnessFailure` is always available on that path: `kind` and `code` are required fields and `field` is optional. Dispatch keeps the delivered `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, exit projection, token, outcome, and last message. It additionally carries an additive detail on the dispatch error whenever that underlying failure is available — which is every pre-session failure — containing the underlying `kind` and `code`, plus `field` only when the failure carries one; no detail is fabricated, and there is no detail-less variant on this branch. The detail is present in machine JSON output and is named in verbose human output. Verbose human output is selected by the dispatch command's human-text seam, which receives the parsed `--verbose` fact through the additive optional `HumanTextContext` parameter of `CommandDefinition.humanText` (DM-4). Non-verbose text output remains exactly the four delivered keys. The detail contains identifiers only, never an environment value or secret.
 - **F-6**: The configuration branch keeps its existing shape and validation: a variable entry is still `name` plus optional `credentialRef`; the new optional marker is a boolean and is rejected when non-boolean or combined with a credential reference; a literal `value` remains `config.secret.forbidden`; unknown keys remain `config.value.invalid`. A configuration entry without the marker behaves exactly as today (required). The generated schema, defaults-position manifest, and source hashes are regenerated and parity-checked.
 - **F-7**: The suite pins the repaired default with a fake `opencode` executable placed on a controlled `PATH`: the spawn resolves the bare command, the child environment contains the expected declared entries, an attempt record is written, and the result token is not `dispatch.session.spawn-failed`. Additional cases cover an absent required variable naming the field, an absent optional variable succeeding, an undeclared parent canary staying absent, a present optional variable being forwarded, and explicit `HARNESS_MODEL` compatibility.
 - **F-8**: One real `dispatch <ref>` on the installed healthy opencode CLI with no user configuration declaration reaches classification with any result token other than `dispatch.session.spawn-failed`, and an attempt record exists. The proof is bounded so a nested lifecycle cannot mutate this change's worktree: a probe-scale prompt or a session ended after the handle is observed, executed outside the change worktree. If the real proof exposes another environment variable that opencode genuinely needs to boot, that variable joins the default set as required, or as optional when it is legitimately absent, before delivery closes.
@@ -165,7 +165,7 @@ Flow 2: required entry absent
   -> builder finds it absent in parent and record
   -> harness.spawn.variable-missing with the variable in `field`
   -> dispatch records dispatch.session.spawn-failed
-  -> JSON detail names the underlying code, kind, and field; verbose human output names them
+  -> JSON detail names the underlying kind and code, plus the field when present; verbose human output names them
   -> non-verbose text remains `result`, `pr_url`, `exit_code`, `last_message`
 
 Flow 3: optional entry absent or present
@@ -182,7 +182,7 @@ Flow 5: explicit model-variable override
 
 Flow 6: diagnostic inspection
   machine consumer reads `data.error.code` and `data.error.detail`
-  human operator adds `--verbose` and sees the underlying code and field
+  human operator adds `--verbose` and sees the underlying code and, when present, the field
 ```
 
 ## 7. SCOPE & BOUNDARIES
@@ -237,10 +237,11 @@ N/A. No internal event, message, state record, or capsule event is added or chan
 | DM-1 | `harness.environment` configuration entry | Gains an optional boolean marker. An entry remains `name` plus optional `credentialRef`; the marker is valid only on a variable entry. Existing entries without the marker keep required semantics. |
 | DM-2 | Harness execution-environment descriptor variable entry | Gains the same additive optional marker. The marker is data only and introduces no behaviour in the contracts tier. Credential entries are unchanged. |
 | DM-3 | Dispatch envelope error detail (`DispatchEnvelopeError`) | `packages/core/src/contracts/dispatch.ts` declares `DispatchEnvelopeError` as the delivered `CommandResultError` (same six fields) plus `detail?: { readonly kind: "harness" \| "config"; readonly code: string; readonly field?: string }`. `DispatchEnvelopeData.error` is retyped from `CommandResultError` to `DispatchEnvelopeError`. `CommandResultError` itself and every other envelope stay unchanged, because every envelope's top-level error is built from the error table and widening the shared type would widen all of them. |
+| DM-4 | CLI command-definition human-text context (additive) | `packages/cli/src/index.ts` gains an exported `HumanTextContext = { readonly verbose: boolean }` and widens the published `CommandDefinition.humanText` signature from `(data: unknown, brand: BrandIdentity) => string \| undefined` to `(data: unknown, brand: BrandIdentity, context?: HumanTextContext) => string \| undefined`. The third parameter is optional and additive: every existing command definition that declares two parameters (or fewer) stays assignable, every direct two-argument call stays valid, and an omitted context means non-verbose. `runCli` passes the parsed `--verbose` fact as `{ verbose }` at the single human-text call site, and only the dispatch command's human-text selection consumes it to choose the bounded verbose diagnostic. No other `CommandDefinition` member changes. |
 
-No persisted model, state record, event-log shape, schema version, or migration is affected.
+No persisted model, state record, event-log shape, schema version, or migration is affected. DM-4 is additive in the type sense: the new third parameter is optional, so no existing definition or direct two-argument call needs an edit.
 
-The detail is additive and optional: identifiers only, single-line, at most 256 characters, and it introduces no new failure code, delivery-result token, classifier row, or error-table row (AC-F5-4, AC-F5-5). The inspection surface for DM-1/DM-2 is the delivered `config get <key> [--show-origin]` form, read as `config get harness.environment --show-origin` for the harness branch.
+The `detail` field is optional on `DispatchEnvelopeError` because dispatch error rows other than the pre-session spawn path do not carry it; on the pre-session path it is always present because a `HarnessFailure` is always available there, and its `kind` and `code` are required while `field` appears only when the failure carries one (F-5, AC-F5-1). The detail is identifiers only, single-line, at most 256 characters, and it introduces no new failure code, delivery-result token, classifier row, or error-table row (AC-F5-4, AC-F5-5). The inspection surface for DM-1/DM-2 is the delivered `config get <key> [--show-origin]` form, read as `config get harness.environment --show-origin` for the harness branch.
 
 ### 8.4 External Integrations
 
@@ -264,8 +265,9 @@ No external API, network endpoint, vendor SDK, or transport is added or changed.
 - A literal `value` in an allowlist entry remains `config.secret.forbidden`; an unknown key remains `config.value.invalid`.
 - Credential entries remain required and fail closed on an unresolved reference.
 - The `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, token, outcome, exit projection, and last message are unchanged.
-- Non-verbose dispatch text remains exactly four keys in the delivered order. The new detail is additive on the dispatch error and appears only when an underlying failure identity exists.
+- Non-verbose dispatch text remains exactly four keys in the delivered order. The new detail is additive on the dispatch error; on the pre-session path it is always present because a `HarnessFailure` is always available there.
 - The dispatch `data.error` field is retyped to `DispatchEnvelopeError`, which keeps every delivered `CommandResultError` field and adds only an optional `detail`; a consumer that reads the six delivered fields is unaffected, and the top-level `CommandResult` envelope, `CommandResultError`, and every other envelope keep their delivered shape.
+- The published `CommandDefinition.humanText` type gains an optional third `HumanTextContext` parameter (`{ readonly verbose: boolean }`). An existing definition that declares only `(data, brand)` stays assignable, keeps compiling, and produces identical text because an omitted context means non-verbose; direct two-argument calls keep compiling. Only the dispatch command consumes the context, and no other `CommandDefinition` member, CLI grammar, help entry, or output envelope changes.
 - No CLI grammar, help entry, unrelated output envelope, error-table row, delivery-result token, classifier rule, or persisted shape changes.
 - The default behaviour changes intentionally: a zero-configuration installation no longer requires the two model variables and now forwards `PATH` and `HOME`. This is the repair, not a compatibility break for any repository consumer.
 
@@ -277,7 +279,7 @@ No external API, network endpoint, vendor SDK, or transport is added or changed.
 | NFR-2 | Required-entry fail-closed behaviour | 100% of absent required entries fail with `harness.spawn.variable-missing`, name the variable in `field`, and attempt no child spawn |
 | NFR-3 | Deny-by-default leakage | 0 undeclared parent variables present in the child across the test matrix |
 | NFR-4 | Vocabulary and identity stability | 0 new failure codes, 0 new delivery-result tokens, 0 classifier changes, 0 error-table rows |
-| NFR-5 | Diagnostic completeness | 100% of pre-session harness failures that carry a field surface the underlying code and field in machine JSON; verbose human output names both |
+| NFR-5 | Diagnostic completeness | 100% of pre-session harness failures carry the underlying `kind` and `code` in machine JSON, plus the `field` when the failure carries one; verbose human output names the code and, when present, the field |
 | NFR-6 | Diagnostic hygiene | Detail and verbose text contain identifiers only, no environment value or secret; detail is single-line and at most 256 characters |
 | NFR-7 | Non-verbose text stability | Exactly 4 keys and 4 lines: `result`, `pr_url`, `exit_code`, `last_message` |
 | NFR-8 | Compatibility | 0 required edits for existing valid configuration and 0 changes to the top-level `CommandResult` envelope shape |
@@ -289,7 +291,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 
 - The default spawn is observable as a returned handle, one attempt record, and a result token other than `dispatch.session.spawn-failed`.
 - A pre-session failure is observable as the delivered dispatch identity plus the additive underlying detail in machine JSON.
-- Verbose human output adds a bounded diagnostic naming the underlying code and field; non-verbose text is unchanged.
+- Verbose human output adds a bounded diagnostic naming the underlying code and, when present, the field; non-verbose text is unchanged.
 - No environment value, credential material, prompt content, or stream content is logged or persisted by any new path.
 - The detail is a user-facing diagnostic, not a telemetry record; it adds no state record kind.
 
@@ -361,10 +363,10 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | Harness environment contract (`packages/core/src/contracts/harness.ts`) | Updated: additive optional marker on a variable entry; session port, evidence, outcomes, failure codes, and credentials unchanged. |
 | Deny-by-default builder (`packages/core/src/domain/harness-spawn-env.ts`) | Updated: required/optional projection; required absence still fails closed with the field; optional absence is omitted. |
 | CLI production composition (`packages/cli/src/production.ts`) | Updated: map the optional marker; keep the `DELIVERY_WORK_PATH` record injection and the bare `opencode` command. |
-| Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: declares `DispatchEnvelopeError` (the delivered `CommandResultError` plus an optional bounded `detail` carrying `kind`, `code`, and `field` when present) and retypes `DispatchEnvelopeData.error` to it; `CommandResultError` in `packages/core/src/contracts/result.ts` and every other envelope stay unchanged. |
+| Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: declares `DispatchEnvelopeError` (the delivered `CommandResultError` plus an optional bounded `detail` carrying `kind` and `code`, plus `field` when the failure carries one) and retypes `DispatchEnvelopeData.error` to it; `CommandResultError` in `packages/core/src/contracts/result.ts` and every other envelope stay unchanged. |
 | Dispatch engine (`packages/core/src/app/dispatch.ts`) | Updated: preserve the underlying harness failure on the pre-session spawn path (lines 466-485) and populate `data.error.detail` where `errorOf` assembles the dispatch error (lines 185-200). This is where the detail is attached to data. |
-| CLI dispatch human rendering (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: `renderDispatchText` keeps exactly the four delivered keys as the non-verbose text; the dispatch command's human-text selection (lines 133-149) is the dispatch-specific seam that selects the bounded verbose diagnostic instead, and that diagnostic is rendered in the dispatch text module. No failure identity, token, or exit projection changes here. |
-| CLI flag parsing and diagnostic seam (`packages/cli/src/index.ts`, `packages/cli/src/output/serialize.ts`) | Updated: `--verbose` is parsed at `index.ts:317` and is the fact the verbose human render needs; today it is consumed only by the output writer (`serialize.ts:97-98`), where it selects the full envelope over the scripted trim in machine mode. The shared stderr diagnostic (`diagnosticFor`, `index.ts:298-303`) and the single redacted write path (`serialize.ts:110-113`) stay the only stderr channel and carry no dispatch envelope data. |
+| CLI dispatch human rendering (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: `renderDispatchText` keeps exactly the four delivered keys as the non-verbose text; the dispatch command's human-text selection (lines 133-149) is the dispatch-specific seam that selects the bounded verbose diagnostic instead when the optional context reports `verbose: true` (DM-4), and that diagnostic is rendered in the dispatch text module. No failure identity, token, or exit projection changes here. |
+| CLI flag parsing and human-text seam (`packages/cli/src/index.ts`, `packages/cli/src/output/serialize.ts`) | Updated: `--verbose` is parsed at `index.ts:317`; the output writer (`serialize.ts:97-98`) keeps using it to select the full envelope over the scripted trim in machine mode, and `runCli` now also passes the parsed fact as the optional `HumanTextContext` third argument at the `CommandDefinition.humanText` call site (`index.ts:351-353`). The published type gains that optional context (DM-4); existing two-parameter definitions and direct two-argument calls stay valid. The shared stderr diagnostic (`diagnosticFor`, `index.ts:298-303`) and the single redacted write path (`serialize.ts:110-113`) stay the only stderr channel and carry no dispatch envelope data. |
 | CLI machine output (`packages/cli/src/output/serialize.ts:46-49`) | Unchanged: the whole envelope is serialized and redacted in one place, so `data.error.detail` reaches machine JSON with no dispatch-specific serializer. |
 | Harness and dispatch test fixtures/goldens | Updated/new: pinned default configuration, spawn-failure envelope, fake CLI on PATH, required/optional cases, ambient-leak canary. |
 | Release metadata (`.changeset/gh-277-harness-default-allowlist-minor.md`) | Added: exactly one changeset with the five fixed-group packages at `minor` and a non-empty body. |
@@ -388,9 +390,9 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | AC-F3-5 | **Given** a configuration entry whose optional marker is not a boolean, or a credential entry carrying the optional marker, **when** the harness branch is resolved, **then** the entry is classified `config.value.invalid`; a literal `value` remains `config.secret.forbidden`. | F-3, F-6 |
 | AC-F4-1 | **Given** the builder and composition sources, **when** the boundary, secret-read, and structure gates run, **then** no ambient environment read is introduced, the child environment is constructed from the descriptor, injected parent, record, and credential port only, and the single host child-process site is unchanged. | F-4, NFR-3, NFR-9 |
 | AC-F4-2 | **Given** a declared record value and a parent value for the same name, **when** the environment is built, **then** the record value wins; an undeclared record name changes nothing. | F-4 |
-| AC-F5-1 | **Given** a pre-session spawn failure whose underlying harness failure carries a code and a field, **when** dispatch records the failure, **then** `data.error.code` remains `dispatch.session.spawn-failed` and `data.error.detail` carries the underlying `kind`, `code`, and `field`. | F-5 |
+| AC-F5-1 | **Given** a pre-session spawn failure, **when** dispatch records the failure, **then** `data.error.code` remains `dispatch.session.spawn-failed` and `data.error.detail` carries the underlying harness failure `kind` and `code`, plus `field` when the failure carries one. | F-5 |
 | AC-F5-2 | **Given** the same spawn failure with `--json`, **when** the envelope is rendered, **then** the underlying detail is present in machine output and survives the redaction path. | F-5, NFR-5 |
-| AC-F5-3 | **Given** the same spawn failure in verbose human mode, **when** the output is rendered, **then** the underlying code and field are named; without verbose, the text output remains exactly the four delivered keys. | F-5, NFR-7 |
+| AC-F5-3 | **Given** the same spawn failure in verbose human mode, **when** the output is rendered, **then** the dispatch human-text selection receives the parsed `--verbose` fact through the additive optional `HumanTextContext` parameter of `CommandDefinition.humanText` and names the underlying code and, when present, the field; **and given** a command definition that declares only the delivered two-parameter form, **then** it still type-checks under the workspace typecheck and behaves identically; **and given** no verbose, **then** the text output remains exactly the four delivered keys. | F-5, NFR-7, DM-4 |
 | AC-F5-4 | **Given** the spawn-failed identity across this change, **when** the result is inspected, **then** its category, retryability, consequence, remediation hint, token, outcome, exit projection, and last message are unchanged and no new failure code, token, classifier rule, or error-table row exists. | F-5, NFR-4 |
 | AC-F5-5 | **Given** a detail carrying a variable name but no value, **when** it is serialized or rendered, **then** it contains identifiers only, is single-line, and is bounded to 256 characters. | F-5, NFR-6 |
 | AC-F6-1 | **Given** an empty configuration, **when** the harness branch resolves, **then** the new default list resolves with `defaults` origins and the generated schema, defaults-position manifest, and source hashes pass their parity checks. | F-6, F-1 |
@@ -413,6 +415,26 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | A declared-but-absent variable still fails closed, with the failing name visible in the error detail. | AC-F3-1, AC-F5-1, AC-F5-3 |
 | Regression tests: default-allowlist spawn with a fake CLI on PATH; absent-variable failure names the field; no ambient env leakage (an undeclared parent variable is absent from the child). | AC-F7-1, AC-F7-2, AC-F7-3 |
 | Verbose/JSON output surfaces the underlying harness failure code and field. | AC-F5-2, AC-F5-3, AC-F7-4 |
+
+### 17.1 Definition of Done
+
+This change is done when every condition below holds and is evidenced. Each condition binds the §17 acceptance criteria, the §4.1 success metrics, and the test plan's 29 scenarios (`TC-HDA-001`..`TC-HDA-101`) to a named verification, and cites the delivering plan phase in `chg-GH-277-plan.yaml` (Phases 1–4) or the lifecycle phase that owns the proof. `dod_check` uses this checklist; a condition without passing evidence reopens the owning plan phase rather than being waived. This specification claims no passing evidence; the conditions define what must be proven.
+
+| # | Done condition | Binds | Verification | Proven in |
+|---|---|---|---|---|
+| DoD-1 | All 29 acceptance criteria (AC-F1-1..AC-F8-2) are satisfied against the delivered tree, with no uncovered criterion; each criterion's evidence is its mapped test-plan scenario. | §17 (29 ACs) | Test-plan coverage matrix all Covered; execution-log rows resolve | Phases 1–4 |
+| DoD-2 | Every test-plan scenario reports Pass in the execution log: all 29 TCs, `TC-HDA-001`..`TC-HDA-101`, including the manual real-dispatch pair `TC-HDA-100`/`TC-HDA-101`; no Pending, Fail, skipped, or blocked row remains. | §17; test plan §10 | Execution log | Phases 1–4 |
+| DoD-3 | All nine NFR thresholds (NFR-1..NFR-9) are met with recorded evidence: zero new failure codes, delivery-result tokens, classifier rows, or error-table rows; detail identifiers only, single-line, at most 256 characters; non-verbose text exactly four keys and four lines. | NFR-1..NFR-9, §4.1 | Execution log; vocabulary and bounds assertions | Phases 1–4 |
+| DoD-4 | Mutation evidence M-1..M-20 is recorded: each mutant applied, the named TC(s) observed red, the mutant reverted, and no mutant committed. | Test plan §10 | Mutation log | Phases 1–4 per the per-phase mutation split |
+| DoD-5 | Exactly one changeset is added — `.changeset/gh-277-harness-default-allowlist-minor.md` — declaring `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, and `@delivery-os/opencode` at `minor` with a non-empty body; no pre-existing changeset is modified; `TC-RELEASE-001` passes. | §4.1, DEC-5 | `tests/checks/privacy-release.test.ts` | Phase 4 |
+| DoD-6 | The bounded real-dispatch evidence exists: one `dispatch <ref>` on the installed healthy opencode CLI with zero user configuration, run in a disposable clone outside this worktree, reaches classification with a token other than `dispatch.session.spawn-failed`, writes an attempt record, and mutates no file in this change's worktree. | F-8, AC-F8-1, AC-F8-2, RSK-6 | `TC-HDA-100`, `TC-HDA-101` manual evidence | Phase 4 |
+| DoD-7 | The repaired default holds: `PATH` and `HOME` required, `TMPDIR` optional, `DELIVERY_WORK_PATH` injected, no model variable declared, and no undeclared parent variable present in the child. | F-1..F-4, AC-F1-3, AC-F1-4, NFR-3 | `TC-HDA-005`, `TC-HDA-010`, `TC-HDA-012` | Phases 1, 3 |
+| DoD-8 | The diagnostic surface is delivered as pinned: the detail carries `kind` and `code` on every pre-session failure and `field` only when the failure carries one; verbose selection receives the parsed `--verbose` fact through the optional `HumanTextContext`; a two-parameter definition still compiles and behaves identically; non-verbose text stays four keys. | F-5, DM-3, DM-4, AC-F5-1..AC-F5-5 | `TC-HDA-029`..`TC-HDA-035` | Phases 2, 3 |
+| DoD-9 | Current-truth documentation is reconciled through the system-spec update phase: the configuration default/entry shape, harness adapters descriptor and spawn narrative, dispatch engine spawn-failure envelope, result-contract data-bearing error field set, and adapter-ports descriptor; no stale claim remains. | §16, §22 | `@doc-syncer` reconciliation record | Lifecycle phase 7 (`system_spec_update`) |
+| DoD-10 | No orphan TODO/FIXME marker, placeholder, or unowned follow-up introduced by the change remains in the delivered tree or change artifacts; remaining follow-ups (`OQ-2` discovered boot variables, Windows parity) are named with an owner and a home. | §12, §14, §7.3 | Tree scan; review record | Phases 1–4 |
+| DoD-11 | The lifecycle phase registry shows the `delivery` phase complete and all four declared plan phases complete, recorded only through the `phase` command family; no phase state is hand-edited; the PR URL is recorded as a pm-notes `notes:` entry at PR creation. | Delivery process | `phase list`; per-phase pm-notes `notes:` evidence | Phases 1–4; lifecycle boundary |
+| DoD-12 | The gate battery is green on a clean tree: `pnpm typecheck`, `pnpm test`, `pnpm check:boundaries`, configuration schema/defaults parity, the secret-read boundary, and the aggregate `pnpm check` with the repo-local temp root. | NFR-9 | Gate logs | Phase 4 |
+| DoD-13 | PR posture: one pull request targets `main-tools` and stays open for human review with the required CI jobs green on the pushed HEAD; merge and owner acceptance are not claimed. | §18 | PR record and CI run | Phase 4; lifecycle phase 11 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
@@ -496,13 +518,16 @@ An explicitly user-declared entry keeps its declared required or optional semant
 ```
 data.error                 : DispatchEnvelopeError = CommandResultError + optional detail
 data.error.code            = dispatch.session.spawn-failed        (unchanged identity)
-data.error.detail.kind     = harness | config                     (when present)
+data.error.detail          = present on every pre-session spawn failure
+data.error.detail.kind     = harness | config                     (required)
 data.error.detail.code     = harness.spawn.variable-missing | config.credential.missing | ...
-data.error.detail.field    = <declared variable name>             (when present)
+data.error.detail.field    = <declared variable name>             (when the failure carries one)
 data.lastMessage           = spawn failed before a session existed (unchanged)
 ```
 
-`DispatchEnvelopeError` is declared in `packages/core/src/contracts/dispatch.ts` and is the delivered `CommandResultError` (code, category, retryable, consequence, remediationHint, summary) plus `detail?: { kind: "harness" | "config"; code: string; field?: string }`. `CommandResultError` and every other envelope are unchanged. The detail is additive, optional, single-line, identifiers only, at most 256 characters, and introduces no new error code, delivery-result token, classifier row, or error-table row.
+`DispatchEnvelopeError` is declared in `packages/core/src/contracts/dispatch.ts` and is the delivered `CommandResultError` (code, category, retryable, consequence, remediationHint, summary) plus `detail?: { kind: "harness" | "config"; code: string; field?: string }`. `CommandResultError` and every other envelope are unchanged. The detail is additive, optional in the type because other dispatch error rows do not carry it, identifiers only, single-line, at most 256 characters, and introduces no new error code, delivery-result token, classifier row, or error-table row.
+
+The detail is attached whenever an underlying `HarnessFailure` is available, which is every pre-session spawn or resume failure; the failure's `kind` and `code` are required and always present, and `field` appears only when the failure carries one. There is no detail-less variant on that branch, and no detail is fabricated where no underlying failure exists.
 
 The detail contains no values and no secrets. Non-verbose text remains:
 
@@ -529,6 +554,7 @@ last_message=<bounded single line>
 | A pre-session spawn failure returns a data-bearing result (a success envelope), so no stderr failure diagnostic is produced for it. | `packages/core/src/app/dispatch.ts:347-389`, `packages/core/src/app/dispatch.ts:466-485` |
 | Non-verbose text emits exactly four keys, and the dispatch command selects that renderer as its human text. | `packages/cli/src/output/dispatch-text.ts:28-34`, `packages/cli/src/commands/dispatch.ts:133-149` |
 | `--verbose` is parsed in `runCli` and consumed only by the output writer, where it selects the full envelope over the scripted one-line trim; the shared stderr diagnostic is not verbose-gated and carries no dispatch data. | `packages/cli/src/index.ts:298-303`, `packages/cli/src/index.ts:317`, `packages/cli/src/output/serialize.ts:69-82`, `packages/cli/src/output/serialize.ts:97-98` |
+| `CommandDefinition.humanText` is a published two-parameter type declared as `(data, brand)` and invoked with exactly two arguments, and the parsed `--verbose` fact is not passed to it. | `packages/cli/src/index.ts:51,351-353`; direct two-argument calls at `tests/structure/watchdog-imports.test.ts:226` and `tests/behaviour/verify-gates-output.test.ts:199` |
 | Configuration inspection is `config get <key> [--show-origin]`, and `--show-origin` is accepted only with `get`. | `packages/cli/src/commands/config.ts:96-99`, `packages/cli/src/commands/config.ts:102-155` |
 | The standalone record for the optional marker. | `doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md` |
 | The harness failure identity already exists in the error table. | `packages/core/src/contracts/error-table.ts:1001-1011` |
@@ -540,6 +566,7 @@ last_message=<bounded single line>
 |---|---|---|---|
 | 1.0 | 2026-11-09 | `@spec-writer` | Initial specification for GH-277. |
 | 1.1 | 2026-11-09 | `@spec-writer` | Specification-phase corrections after test planning; all AC ids stable. Added `TDR-0017` to `links.decisions` and to the §13 "Governed by" row, and closed RSK-7 accordingly. Named the delivered verbose/diagnostic channel accurately: the detail is attached in `packages/core/src/app/dispatch.ts` (`errorOf`, pre-session path), machine JSON flows through the whole-envelope writer, non-verbose text is `renderDispatchText`, verbose selection is the dispatch command's human-text seam, and `--verbose` is parsed in `packages/cli/src/index.ts` and consumed only by the output writer (§2.1, §16). Named the dispatch-specific error type `DispatchEnvelopeError` (DM-3, §8.3, §8.5, §16, Appendix C), leaving `CommandResultError` and every other envelope unchanged. Named the inspection invocation `config get harness.environment --show-origin` in AC-F6-3 and §8.3. |
+| 1.2 | 2026-11-09 | `@spec-writer` | DoR iteration 1 remediation; all AC ids stable. B-1 (undeclared public-contract change): added DM-4 for the additive optional `HumanTextContext` widening of the published `CommandDefinition.humanText` — the third parameter is optional, so existing two-parameter definitions and direct two-argument calls stay valid — with a §8.5 backward-compatibility bullet, a §16 seam declaration, a §2.1 current-state observation, an Appendix D evidence row, and an AC-F5-3 seam assertion. B-3 (unreachable detail case): stated the detail-attachment rule in F-5 and Appendix C — every pre-session failure carries a `HarnessFailure`, `kind` and `code` are always present, `field` only when carried — and aligned AC-F5-1, NFR-5, the §4.1 metric, §1, §6, and §10. B-6 (missing Definition of Done): added §17.1 binding all 29 ACs, all 29 test-plan TCs, NFR-1..NFR-9, M-1..M-20, the single added changeset, the bounded real dispatch, current-truth reconciliation, orphan-TODO cleanup, phase-registry completion, the gate battery, and PR posture to named evidence and plan phases. |
 
 ---
 
@@ -557,6 +584,7 @@ This specification was authored from the GH-277 ticket, the PM's verified root-c
 - [x] Acceptance criteria reference at least one F-/NFR- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
+- [x] Change-specific Definition of Done present (§17.1) — binds all 29 ACs, all 29 test-plan TCs, NFR-1..NFR-9, M-1..M-20, the single added changeset, the bounded real dispatch, current-truth reconciliation, orphan-TODO cleanup, phase-registry completion, the gate battery, and PR posture
 - [x] No implementation tasks or step-by-step delivery instructions
 - [x] No content duplicated from linked docs
 - [x] Front matter validates per `front_matter_rules`

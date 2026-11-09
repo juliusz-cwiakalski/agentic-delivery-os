@@ -4,9 +4,9 @@ title: "fix(harness): default spawn allowlist cannot start opencode (missing
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-09T02:56:51.444Z }
-  specification: { started: null, completed: 2026-11-09T03:42:15.355Z }
-  test_planning: { started: null, completed: 2026-11-09T03:55:19.505Z }
-  delivery_planning: { started: null, completed: 2026-11-09T04:02:55.385Z }
+  specification: { started: null, completed: 2026-11-09T05:00:38.113Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -24,8 +24,9 @@ open_questions:
       TDR-0016 states that adding types to
       packages/core/src/contracts/harness.ts is the class the record-governed
       rule covers."
-    status: "Decision needed: consult @decision-advisor before delivery; recommended
-      resolution is a short TDR or an explicit owner waiver."
+    status: "Resolved 2026-11-09: a standalone record is required; TDR-0017 authored
+      (status Proposed, owner acceptance at the GH-277 PR review). Spec DEC-3
+      and §13 cite it."
     date: "2026-11-09"
   - id: OQ-2
     text: "Does opencode require any environment variable beyond PATH, HOME, and
@@ -35,8 +36,43 @@ open_questions:
     status: "Open, evidence needed from the real dispatch proof; non-blocking for
       specification."
     date: "2026-11-09"
-blockers: []
+blockers:
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md,
+      readiness/readiness-iter-1.yaml): 0 critical / 6 major / 6 minor / 2 nit.
+      Blocking: (1) spec omits the second public-contract change — threading the
+      parsed verbose fact into CommandDefinition.humanText (DM-4 + §8.5); (2)
+      the spawn-failure golden
+      tests/fixtures/dispatch/golden/errors/spawn-failed.json gains detail and
+      is in no phase scope; (3) TC-HDA-030 step 8 assumes a spawn failure with
+      neither code nor field, impossible because HarnessFailure requires both;
+      (4) the §6.3 E2E proof shares the live HOME state root and force-releases
+      the GH-277 dispatch lease; (5) the 'byte-identical worktree' claim ignores
+      pnpm build and the clone node_modules symlink; (6) no Definition of Done
+      section (§17.1) for dod_check. Reopened specification, test_planning and
+      delivery_planning; delivery not entered."
+    type: blocker
+    date: "2026-11-09"
 notes:
+  - text: "Retro: findings 1, 3 and 5 are the GH-275 recurrence — an artifact
+      asserting a repository fact without probing the owning file (the humanText
+      seam signature, the HarnessFailure required/optional field set, and what
+      the E2E isolation actually covers). Finding 2 is a coverage gap of the
+      same class: the spec declared goldens in scope but no artifact enumerated
+      the golden that pins the spawn-failure envelope. Lesson: before the DoR
+      gate, enumerate every fixture/golden that asserts the changed surface and
+      name it in a phase scope."
+    type: retro
+    date: "2026-11-09"
+  - text: "Phase-2 chain note: test planning correctly found four upstream spec gaps
+      and the specification phase was reopened and re-completed at v1.1
+      (TDR-0017 citations, verbose channel files, DispatchEnvelopeError type,
+      config get surface). The phase-complete commit also staged the
+      then-untracked test plan (change-folder scope) and flagged
+      doc/decisions/00-index.md as scope drift; TDR-0017 itself stays untracked
+      until plan phase P4, where it lands with the changeset (commitlint
+      ref-token ordering constraint)."
+    type: info
+    date: "2026-11-09"
   - text: "Clarify scope: the ticket is prescriptive and consistent with the
       delivered behaviour. Confirmed in source: (a) PRODUCTION_DEFAULTS
       harness.environment declares HARNESS_MODEL, HARNESS_SMALL_MODEL and
