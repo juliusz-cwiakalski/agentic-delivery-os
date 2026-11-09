@@ -252,3 +252,24 @@ notes:
       branding-contract, so it is renamed splitLines."
     type: info
     date: "2026-11-09"
+  - text: "Plan phase P3 COMPLETE (resume/deliver on the same acquisition with
+      caller identity preserved): commit 7f97fcb1. resume and deliver now start
+      the injected streaming starter with the configured resume args plus the
+      caller's sessionId, deliver the steering prompt on stdin, return on the
+      first identified line whose id equals the handle's, map a mismatch and a
+      no-identifier outcome to harness.session.unknown with an idempotent kill,
+      and carry a later non-zero exit as post-handle evidence; a successful
+      resume replaces the record's completion promise and keeps the delivered
+      tree root. The resume describes moved out of
+      harness-opencode-session.test.ts into the new
+      tests/behaviour/harness-opencode-resume-stream.test.ts in the same commit;
+      the dispatch-composition resume scenario now records the starter's
+      run --format json --session <id> invocation through the recording starter.
+      Owns AC-F3-1..4 and TC-OCS-030..034. Gates: pnpm typecheck exit 0;
+      pnpm check:boundaries exit 0; resume+session+composition+Claude battery
+      41 pass / 0 fail (resume suite 8 pass); focused suites green after M-7
+      restore. Mutation evidence: M-7 (resume accepts any identifier) reddens
+      TC-OCS-032 by assertion (mismatch expected refusal, got ok:true), restored
+      green 8 pass. No deviations."
+    type: info
+    date: "2026-11-09"

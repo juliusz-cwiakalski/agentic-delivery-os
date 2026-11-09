@@ -20,6 +20,7 @@ import {
   CLAUDE_HEADLESS_ARGS,
   classifier,
   createFakeCredentialPort,
+  createFakeStreamStarter,
   createRecordingRunner,
   declaredBuildEnvironment,
   FIXED_NOW,
@@ -118,6 +119,35 @@ describe("TC-HARN-010 opencode premature end and liveness", () => {
     expect(process).toMatchObject({ status: "sourced", value: 1 });
     expect(worktree).toMatchObject({ status: "absent", reason: "harness-unsupported" });
     expect(invocations).toHaveLength(1);
+  });
+});
+
+describe("TC-OCS-081 listing rides the one-shot runner, never the streaming seam", () => {
+  test("listSessions invokes the runner once and the fake starter is never called", async () => {
+    const fake = createFakeStreamStarter();
+    const recording = createRecordingRunner(() => runnerResult("[]"));
+    const port = createOpencodeSession({
+      command: HARNESS_COMMAND,
+      runner: recording.runner,
+      starter: fake.starter,
+      buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
+      classify: classifier,
+      assembleLiveness,
+      now: () => FIXED_NOW,
+      timeoutMs: TIMEOUT_MS,
+      spawnArgs: SPAWN_ARGS,
+      resumeArgs: RESUME_ARGS,
+      listArgs: LIST_ARGS,
+    });
+    const listed = await port.listSessions({
+      workItemRef: WORK_ITEM_REF,
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+    });
+    expect(listed.ok).toBe(true);
+    expect(recording.invocations).toHaveLength(1);
+    expect(recording.invocations[0]?.args).toEqual([...LIST_ARGS]);
+    expect(recording.invocations[0]?.options.timeout).toBe(TIMEOUT_MS);
+    expect(fake.invocations).toHaveLength(0);
   });
 });
 

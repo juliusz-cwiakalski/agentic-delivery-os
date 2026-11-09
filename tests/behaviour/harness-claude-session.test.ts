@@ -3,6 +3,8 @@
  * resume-as-a-gap.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   createClaudeSession,
   createOpencodeSession,
@@ -74,6 +76,18 @@ const missingOptional = JSON.stringify({
   subtype: "success",
   session_id: "cc_drift",
   is_error: false,
+});
+
+describe("TC-OCS-080 the Claude adapter is untouched by the streaming seam", () => {
+  test("the Claude source carries no starter seam and shares the classifier", () => {
+    const source = readFileSync(
+      join(process.cwd(), "packages/adapters/src/harness/claude.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain("starter");
+    const { port } = makeClaude(() => runnerResult(completed));
+    expect(port.classify).toBe(classifier);
+  });
 });
 
 describe("TC-HARN-011 Claude Code headless session", () => {

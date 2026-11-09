@@ -28,6 +28,7 @@ import {
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   type HarnessEvidence,
   type HarnessLivenessReport,
+  type HarnessSessionPort,
 } from "../../../../packages/core/src/contracts/index";
 import { ensureEconomicsExhaustionRecord } from "../../../../packages/core/src/state/index";
 import { createDispatchState, createScriptedHarness } from "../harness";
@@ -97,6 +98,8 @@ export type CommandScenarioOptions = {
     readonly uniqueProgress?: number | null;
   };
   readonly harnessKind?: "opencode" | "claude-code";
+  /** An injected real session port; defaults to the delivered scripted port. */
+  readonly harnessPort?: HarnessSessionPort;
   readonly newAttemptId?: (ref: string) => string;
   readonly newDivergenceId?: (ref: string) => string;
 };
@@ -183,9 +186,11 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
       return `DIV-${divergenceSequence}`;
     },
     harnesses: {
-      [options.harnessKind ?? "opencode"]: scripted.port,
-      opencode: options.harnessKind === undefined ? scripted.port : undefined,
-      "claude-code": options.harnessKind === undefined ? scripted.port : undefined,
+      [options.harnessKind ?? "opencode"]: options.harnessPort ?? scripted.port,
+      opencode:
+        options.harnessKind === undefined ? (options.harnessPort ?? scripted.port) : undefined,
+      "claude-code":
+        options.harnessKind === undefined ? (options.harnessPort ?? scripted.port) : undefined,
     },
     defaultHarness: options.harnessKind ?? "opencode",
     descriptor: { kind: "host", workDirectory: state.root, environment: [] },
