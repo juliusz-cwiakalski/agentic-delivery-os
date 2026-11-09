@@ -156,16 +156,16 @@ and dispatch surfaces — `spawn`, `deliver`/`resume`, `collect`, `liveness`, an
 `listSessions` — with a coordinator session profile (the recorded lane session
 identity, the resolved harness kind/execution descriptor, and a declared
 coordinator prompt). The `spawn` and `resume` effects therefore run against a
-real delivered adapter; no coordinator-local harness is invented and no delivered
-capability is reported as a gap. The recorded lane ledger supplies the replace
-identity and process identity. Two facts remain genuinely absent from the
-delivered surface: a total context-token count (the lane ledger and session port
-expose no such reading), so the pinned lifecycle decision records
-`spawn-fresh`/`context-unknown` rather than `resume-context` in production; and a
-newly spawned handle exposes no pid, so kill-with-grace stays unavailable for a
-spawned session until a lane record carries its pid. A harness kind that declares
-resume absent (claude-code) returns the delivered `harness.capability.gap` rather
-than a fabricated resume.
+real delivered adapter; no coordinator-local harness is invented, and no
+capability a selected harness kind declares is reported as a gap. The recorded
+lane ledger supplies the replace identity and process identity. Two facts remain
+genuinely absent from the delivered surface: a total context-token count (the lane
+ledger and session port expose no such reading), so the pinned lifecycle decision
+records `spawn-fresh`/`context-unknown` rather than `resume-context` in
+production; and a newly spawned handle exposes no pid, so kill-with-grace stays
+unavailable for a spawned session until a lane record carries its pid. A harness
+kind that declares resume absent (claude-code) returns the delivered
+`harness.capability.gap` from the adapter rather than a fabricated resume.
 
 ## 4. Artifact-evidence stuck detection
 
