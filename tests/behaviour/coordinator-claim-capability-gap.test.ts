@@ -3,11 +3,7 @@
  * `coordinator.process.capability-gap`, no lease record, and no takeover.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  errorCodeOf,
-  seedLease,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, errorCodeOf, seedLease } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-097 an undeclared alive capability fails closed", () => {
   test("tick fails closed with no lease record and no takeover", async () => {

@@ -108,7 +108,9 @@ describe("TC-COORD-063 reserved-slot digest golden", () => {
 
   test("the reserved question is index 0 and one question is omitted", () => {
     const digest = JSON.parse(readFileSync(reservedDigest, "utf8")) as {
-      data: { sections: { id: string; questions?: { id: string }[]; counts: { omitted: number } }[] };
+      data: {
+        sections: { id: string; questions?: { id: string }[]; counts: { omitted: number } }[];
+      };
     };
     const section = digest.data.sections.find((entry) => entry.id === "typed-questions");
     expect(section?.questions?.[0]?.id).toBe("q-escalation");

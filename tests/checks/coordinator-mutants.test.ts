@@ -4,14 +4,7 @@
  * mutant must trip the behavioural oracle.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync,
-  rmSync,
-} from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
@@ -112,7 +105,7 @@ describe("TC-COORD-037 temp-copy mutants trip the purity oracle", () => {
       ts.ScriptTarget.Latest,
       true,
     );
-    expect(source.getText()).toContain('allUnknown');
+    expect(source.getText()).toContain("allUnknown");
     expect(source.getText()).toContain('"evidence-unevaluable"');
   });
 });

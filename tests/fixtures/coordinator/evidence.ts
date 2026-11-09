@@ -53,7 +53,9 @@ export const factsForCell = (cell: MatrixCell): CoordinatorEvidenceFacts => ({
 });
 
 /** A plain stale/stale/stale baseline with an expired window. */
-export const staleBaseline = (overrides: Partial<CoordinatorEvidenceFacts> = {}): CoordinatorEvidenceFacts => ({
+export const staleBaseline = (
+  overrides: Partial<CoordinatorEvidenceFacts> = {},
+): CoordinatorEvidenceFacts => ({
   nowMs: NOW_MS,
   expectedAtMs: NOW_MS - STUCK_WINDOW_MS - 1_000,
   stuckWindowMs: STUCK_WINDOW_MS,
@@ -74,14 +76,24 @@ export const FINGERPRINT_COUPLES: readonly {
   readonly digestConsumed: boolean;
 }[] = [
   { id: "advanced-and-turn", fingerprintAdvanced: true, newTurn: "positive", digestConsumed: true },
-  { id: "advanced-without-turn", fingerprintAdvanced: true, newTurn: "zero", digestConsumed: false },
+  {
+    id: "advanced-without-turn",
+    fingerprintAdvanced: true,
+    newTurn: "zero",
+    digestConsumed: false,
+  },
   {
     id: "advanced-with-unknown-turn",
     fingerprintAdvanced: true,
     newTurn: "unknown",
     digestConsumed: false,
   },
-  { id: "turn-without-advance", fingerprintAdvanced: false, newTurn: "positive", digestConsumed: false },
+  {
+    id: "turn-without-advance",
+    fingerprintAdvanced: false,
+    newTurn: "positive",
+    digestConsumed: false,
+  },
   { id: "neither", fingerprintAdvanced: false, newTurn: "zero", digestConsumed: false },
 ];
 

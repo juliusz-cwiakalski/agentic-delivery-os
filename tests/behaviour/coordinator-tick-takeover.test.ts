@@ -3,14 +3,14 @@
  * one cycle, and one `released`; no separate `start` is required.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  seedLease,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, seedLease } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-095 tick recovers a crashed holder", () => {
   test("an acquired-but-dead root is recovered in one tick", async () => {
-    const harness = createCoordinatorHarness({ label: "tick-takeover-acquired", alive: { 4242: false } });
+    const harness = createCoordinatorHarness({
+      label: "tick-takeover-acquired",
+      alive: { 4242: false },
+    });
     seedLease(harness, { action: "acquired", recordedAt: new Date(0).toISOString() });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(0);
@@ -22,7 +22,10 @@ describe("TC-COORD-095 tick recovers a crashed holder", () => {
   });
 
   test("a stop-requested-but-dead root is recovered in one tick", async () => {
-    const harness = createCoordinatorHarness({ label: "tick-takeover-stopped", alive: { 4242: false } });
+    const harness = createCoordinatorHarness({
+      label: "tick-takeover-stopped",
+      alive: { 4242: false },
+    });
     seedLease(harness, { action: "stop-requested", recordedAt: new Date(0).toISOString() });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(0);
@@ -32,7 +35,10 @@ describe("TC-COORD-095 tick recovers a crashed holder", () => {
   });
 
   test("the tick does not block on the dead holder's lease", async () => {
-    const harness = createCoordinatorHarness({ label: "tick-takeover-no-start", alive: { 4242: false } });
+    const harness = createCoordinatorHarness({
+      label: "tick-takeover-no-start",
+      alive: { 4242: false },
+    });
     seedLease(harness, { action: "acquired", recordedAt: new Date(0).toISOString() });
     const readsBefore = harness.counters.reads;
     await harness.run(["coordinator", "tick", "--json"]);
@@ -40,7 +46,10 @@ describe("TC-COORD-095 tick recovers a crashed holder", () => {
   });
 
   test("a live holder is refused rather than taken over", async () => {
-    const harness = createCoordinatorHarness({ label: "tick-takeover-live", alive: { 4242: true } });
+    const harness = createCoordinatorHarness({
+      label: "tick-takeover-live",
+      alive: { 4242: true },
+    });
     seedLease(harness, { action: "acquired", recordedAt: new Date(0).toISOString() });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(2);

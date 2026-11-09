@@ -11,7 +11,12 @@ const ROOT = process.cwd();
 
 const coordinatorSources = (): string[] => {
   const files: string[] = [];
-  for (const tier of ["packages/core/src/domain", "packages/core/src/state", "packages/cli/src/commands", "packages/cli/src/output"]) {
+  for (const tier of [
+    "packages/core/src/domain",
+    "packages/core/src/state",
+    "packages/cli/src/commands",
+    "packages/cli/src/output",
+  ]) {
     for (const entry of readdirSync(join(ROOT, tier))) {
       if (entry.startsWith("coordinator") && entry.endsWith(".ts")) files.push(`${tier}/${entry}`);
     }
@@ -21,8 +26,14 @@ const coordinatorSources = (): string[] => {
 
 describe("TC-COORD-086 identical facts render identical bytes", () => {
   test("two identical roots produce byte-identical data and text", async () => {
-    const first = createCoordinatorHarness({ label: "determinism-a", session: { liveness: "alive" } });
-    const second = createCoordinatorHarness({ label: "determinism-b", session: { liveness: "alive" } });
+    const first = createCoordinatorHarness({
+      label: "determinism-a",
+      session: { liveness: "alive" },
+    });
+    const second = createCoordinatorHarness({
+      label: "determinism-b",
+      session: { liveness: "alive" },
+    });
     const firstJson = await first.run(["coordinator", "tick", "--json"]);
     const secondJson = await second.run(["coordinator", "tick", "--json"]);
     const normalize = (text: string): string =>

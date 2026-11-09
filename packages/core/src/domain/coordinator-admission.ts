@@ -45,11 +45,11 @@ export const evaluateCoordinatorRestartAdmission = (input: {
       return { state: "unevaluable", count: null, bound: input.bound, reason: "torn-ordinals" };
     }
   }
-  if (count >= input.bound) return { state: "refuse", count, bound: input.bound };
+  const bound = input.bound;
+  if (count >= bound) return { state: "refuse", count, bound };
   return { state: "admit", count, bound: input.bound, nextOrdinal: count + 1 };
 };
 
 /** The continuation restart ordinal (or `null` when no restart may land). */
-export const nextRestartOrdinal = (
-  admission: CoordinatorRestartAdmission,
-): number | null => (admission.state === "admit" ? admission.nextOrdinal : null);
+export const nextRestartOrdinal = (admission: CoordinatorRestartAdmission): number | null =>
+  admission.state === "admit" ? admission.nextOrdinal : null;

@@ -3,11 +3,7 @@
  * with `coordinator.already-running` and no append.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  errorCodeOf,
-  seedLease,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, errorCodeOf, seedLease } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-096 a serialized second claim refuses without an append", () => {
   test("the loser re-reads the held lease and refuses", async () => {

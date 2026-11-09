@@ -175,9 +175,15 @@ const unknown = (_location: StateSafeLocation): { ok: false; code: StateFailureC
 
 /* ------------------------------ validation ------------------------------- */
 
-type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly code: StateFailureCode };
+type Parsed<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly code: StateFailureCode };
 
-const iterationFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorIterationRecord> => {
+const iterationFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorIterationRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_ITERATION_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -210,7 +216,11 @@ const iterationFrom = (value: unknown, coordinatorId: string, location: StateSaf
   };
 };
 
-const restartFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorRestartRecord> => {
+const restartFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorRestartRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_RESTART_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -240,7 +250,11 @@ const restartFrom = (value: unknown, coordinatorId: string, location: StateSafeL
   };
 };
 
-const stuckFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorStuckRecord> => {
+const stuckFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorStuckRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_STUCK_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -288,7 +302,11 @@ const stuckFrom = (value: unknown, coordinatorId: string, location: StateSafeLoc
   };
 };
 
-const exhaustionFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorExhaustionRecord> => {
+const exhaustionFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorExhaustionRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_EXHAUSTION_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -322,7 +340,11 @@ const exhaustionFrom = (value: unknown, coordinatorId: string, location: StateSa
   };
 };
 
-const wakeFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorWakeRecord> => {
+const wakeFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorWakeRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_WAKE_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -349,7 +371,11 @@ const wakeFrom = (value: unknown, coordinatorId: string, location: StateSafeLoca
   };
 };
 
-const fenceFrom = (value: unknown, coordinatorId: string, location: StateSafeLocation): Parsed<CoordinatorFenceRecord> => {
+const fenceFrom = (
+  value: unknown,
+  coordinatorId: string,
+  location: StateSafeLocation,
+): Parsed<CoordinatorFenceRecord> => {
   if (!isRecord(value)) return torn(location);
   if (value.schemaId !== COORDINATOR_FENCE_PAYLOAD_SCHEMA) return torn(location);
   if (value.coordinatorId !== coordinatorId) return unknown(location);
@@ -557,10 +583,7 @@ export const foldCoordinatorWake = (
 
 /* ------------------------------- appends --------------------------------- */
 
-const appendFailure = (
-  code: string,
-  location?: StateSafeLocation,
-): CoordinatorAppendOutcome => {
+const appendFailure = (code: string, location?: StateSafeLocation): CoordinatorAppendOutcome => {
   const classified: StateFailureCode | "state.write.failed" =
     code === "state.write.failed"
       ? "state.write.failed"
@@ -572,7 +595,8 @@ const appendFailure = (
     : { ok: false, code: classified, location };
 };
 
-const toJson = (value: object): StateJsonValue => JSON.parse(JSON.stringify(value)) as StateJsonValue;
+const toJson = (value: object): StateJsonValue =>
+  JSON.parse(JSON.stringify(value)) as StateJsonValue;
 
 /** The coordinator key prefixes; a coordinator record outside them is unknown. */
 const COORDINATOR_KEY_PREFIXES = [
@@ -598,7 +622,9 @@ export const appendCoordinatorPayload = (
   store: StateStorePort,
   token: string,
   request: { readonly kind: string; readonly recordKey: string; readonly payload: unknown },
-): { readonly ok: true; readonly sequence: number } | { readonly ok: false; readonly code: StateFailureCode } => {
+):
+  | { readonly ok: true; readonly sequence: number }
+  | { readonly ok: false; readonly code: StateFailureCode } => {
   let acquired = store.acquireFence(token);
   if (!acquired.ok && acquired.error.code === "state.lock.busy") {
     const status = store.fenceStatus();
@@ -630,7 +656,9 @@ const appendVerified = (
   store: StateStorePort,
   token: string,
   request: { readonly kind: string; readonly recordKey: string; readonly payload: unknown },
-): { readonly ok: true; readonly sequence: number } | { readonly ok: false; readonly code: StateFailureCode } =>
+):
+  | { readonly ok: true; readonly sequence: number }
+  | { readonly ok: false; readonly code: StateFailureCode } =>
   appendCoordinatorPayload(store, token, request);
 
 const replay = (record: unknown): CoordinatorAppendOutcome => ({
@@ -714,9 +742,7 @@ export const appendCoordinatorExhaustion = (
 ): CoordinatorAppendOutcome => {
   const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
-  const existing = read.exhaustion.find(
-    (entry) => entry.exhaustionId === record.exhaustionId,
-  );
+  const existing = read.exhaustion.find((entry) => entry.exhaustionId === record.exhaustionId);
   if (existing !== undefined) return replay(existing);
   const appended = appendVerified(store, token, {
     kind: COORDINATOR_EXHAUSTION_RECORD_KIND,

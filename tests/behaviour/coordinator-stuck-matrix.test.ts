@@ -51,7 +51,8 @@ describe("TC-COORD-031 the evidence matrix persists the declared verdicts", () =
     for (const cell of EVIDENCE_MATRIX) {
       const states = [cell.digest, cell.merge, cell.answer];
       if (states.includes("advanced")) expect(cell.expected).toBe("progressing");
-      else if (states.every((state) => state === "unknown")) expect(cell.expected).toBe("unevaluable");
+      else if (states.every((state) => state === "unknown"))
+        expect(cell.expected).toBe("unevaluable");
       else expect(cell.expected).toBe("stuck");
     }
   });

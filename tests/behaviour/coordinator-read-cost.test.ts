@@ -29,7 +29,10 @@ describe("TC-COORD-088 read cost and output bounds", () => {
   });
 
   test("machine data stays within 64 KiB", async () => {
-    const harness = createCoordinatorHarness({ label: "bounds-data", session: { liveness: "alive" } });
+    const harness = createCoordinatorHarness({
+      label: "bounds-data",
+      session: { liveness: "alive" },
+    });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     const data = (result.json as { data?: unknown }).data;
     expect(Buffer.byteLength(JSON.stringify(data), "utf8")).toBeLessThanOrEqual(

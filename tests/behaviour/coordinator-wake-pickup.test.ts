@@ -3,11 +3,12 @@
  * questions; an absent status counts as open.
  */
 import { describe, expect, test } from "bun:test";
+import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 import {
-  createCoordinatorHarness,
-  dataOf,
-} from "../fixtures/coordinator/harness";
-import { ownerQuestion, pickupQuestion, secondCoordinatorQuestion } from "../fixtures/coordinator/blockers";
+  ownerQuestion,
+  pickupQuestion,
+  secondCoordinatorQuestion,
+} from "../fixtures/coordinator/blockers";
 
 describe("TC-COORD-070 strict pickup wakes only a rank-1 open coordinator question", () => {
   test("an absent-status rank-1 coordinator head is a pickup", async () => {
@@ -51,7 +52,10 @@ describe("TC-COORD-070 strict pickup wakes only a rank-1 open coordinator questi
   });
 
   test("no question is no-pickup and appends nothing", async () => {
-    const harness = createCoordinatorHarness({ label: "wake-none", session: { liveness: "alive" } });
+    const harness = createCoordinatorHarness({
+      label: "wake-none",
+      session: { liveness: "alive" },
+    });
     const data = dataOf(await harness.run(["coordinator", "tick", "--json"]));
     expect(data.wake).toBeNull();
     const read = harness.records();

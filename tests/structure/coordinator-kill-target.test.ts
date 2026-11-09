@@ -53,10 +53,7 @@ describe("TC-COORD-042 / TC-COORD-085 the kill path is shell-free", () => {
   });
 
   test("the signal union is closed to the three declared signals", () => {
-    const contracts = readFileSync(
-      join(ROOT, "packages/core/src/contracts/daemon.ts"),
-      "utf8",
-    );
+    const contracts = readFileSync(join(ROOT, "packages/core/src/contracts/daemon.ts"), "utf8");
     expect(contracts).toContain('"SIGTERM" | "SIGINT" | "SIGKILL"');
     const kill = readFileSync(join(ROOT, "packages/adapters/src/daemon/process.ts"), "utf8");
     expect(kill).toContain('"SIGTERM"');

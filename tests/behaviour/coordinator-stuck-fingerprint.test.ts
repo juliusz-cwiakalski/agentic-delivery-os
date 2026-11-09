@@ -32,16 +32,12 @@ describe("TC-COORD-032 the digest class needs both a fingerprint advance and a t
           ? "unknown"
           : "stale";
       expect(digestClass, couple.id).toBe(expectedClass);
-      expect(verdict.verdict, couple.id).toBe(
-        couple.digestConsumed ? "progressing" : "stuck",
-      );
+      expect(verdict.verdict, couple.id).toBe(couple.digestConsumed ? "progressing" : "stuck");
     }
   });
 
   test("an advanced fingerprint with no turn is stale, never consumed", () => {
-    const verdict = evaluateStuck(
-      staleBaseline({ fingerprintAdvanced: true, newTurn: "zero" }),
-    );
+    const verdict = evaluateStuck(staleBaseline({ fingerprintAdvanced: true, newTurn: "zero" }));
     expect(verdict.verdict).toBe("stuck");
     if (verdict.verdict === "stuck") {
       expect(verdict.classes["digest-consumed"]).toBe("stale");

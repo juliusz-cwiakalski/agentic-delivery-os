@@ -50,13 +50,13 @@ export const mapCoordinatorNewTurn = (report: HarnessLivenessReport): Coordinato
   const token = sourcedValue(report, "token-delta");
   const traffic = sourcedValue(report, "session-traffic");
   const positives = [token, traffic].filter(
-    (entry): entry is { value: number; observedAt: string } =>
-      entry !== null && entry.value > 0,
+    (entry): entry is { value: number; observedAt: string } => entry !== null && entry.value > 0,
   );
   if (positives.length > 0) {
-    const observedAt = positives
-      .map((entry) => entry.observedAt)
-      .sort((left, right) => left.localeCompare(right))[0] ?? null;
+    const observedAt =
+      positives
+        .map((entry) => entry.observedAt)
+        .sort((left, right) => left.localeCompare(right))[0] ?? null;
     return { newTurn: "positive", observedAt };
   }
   if (token !== null || traffic !== null) return { newTurn: "zero", observedAt: null };

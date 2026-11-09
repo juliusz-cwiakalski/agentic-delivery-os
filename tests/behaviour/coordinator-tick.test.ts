@@ -61,7 +61,9 @@ describe("TC-COORD-012 tick runs one bounded cycle and starts no loop", () => {
     harness.appendRaw({
       kind: "coordinator.fence",
       recordKey: "coordinator.fence:coordinator-main",
-      payload: { ...fenceRecord({ pid: 4242, processStartTimeMs: 2_000, holder: "pid:4242:start:2000" }) },
+      payload: {
+        ...fenceRecord({ pid: 4242, processStartTimeMs: 2_000, holder: "pid:4242:start:2000" }),
+      },
     });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(2);

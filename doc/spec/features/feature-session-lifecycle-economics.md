@@ -49,6 +49,15 @@ The surface classifies, records, and refuses. It exposes no spawn, kill, steer, 
 
 ## 3. User Experience & Functionality
 
+> **Consumer note (GH-241).** Coordinator supervision consumes these sourced
+> progress signals — the `token-delta` and `session-traffic` readings mapped to a
+> new turn — and the `evaluateRestartBudget` admission shape, but owns a distinct
+> durable budget in the `coordinator/<coordinatorId>` namespace with its own
+> per-epoch ordinals. No lane semantic, lane record, or `economics/*` record
+> changes because of coordinator supervision; the lane configuration keys
+> `lane.liveness-interval` and `lane.restart-budget` are neither reused nor
+> aliased by the `coordinator` branch.
+
 ### 3.1 Capabilities
 
 - **Sourced progress signals:** the harness adapter seam declares heartbeat age and token delta as additive sourced-signal sources beside the unchanged liveness kinds and carries their read-only readings; the neutral liveness assembly carries them additively, and the watchdog bridge projects heartbeat age, session traffic, and token delta into `heartbeatAgeMs`, `traffic`, and `tokenDelta`.

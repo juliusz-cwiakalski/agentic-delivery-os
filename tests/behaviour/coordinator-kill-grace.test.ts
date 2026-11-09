@@ -19,11 +19,13 @@ const harness = (options: Parameters<typeof createRecordingProcessPort>[0] = {})
     ...options,
   });
   const waits: number[] = [];
-  const run = (overrides: {
-    processStartTimeMs?: number;
-    graceMs?: number;
-    capabilities?: Parameters<typeof killCoordinatorProcess>[0]["capabilities"];
-  } = {}) =>
+  const run = (
+    overrides: {
+      processStartTimeMs?: number;
+      graceMs?: number;
+      capabilities?: Parameters<typeof killCoordinatorProcess>[0]["capabilities"];
+    } = {},
+  ) =>
     killCoordinatorProcess({
       port: recorder.port,
       identity: { pid: PID, processStartTimeMs: overrides.processStartTimeMs ?? START },
@@ -127,10 +129,7 @@ describe("TC-COORD-040 the supervisor composes the two-phase outcome and budget"
     const read = harness.records();
     if (!read.ok) throw new Error("read failed");
     expect(read.stuck[1]?.killOutcome).toBe("forced");
-    expect(harness.process.signals.map((signal) => signal.signal)).toEqual([
-      "SIGTERM",
-      "SIGKILL",
-    ]);
+    expect(harness.process.signals.map((signal) => signal.signal)).toEqual(["SIGTERM", "SIGKILL"]);
     expect(read.restarts).toHaveLength(1);
   });
 
@@ -143,11 +142,7 @@ describe("TC-COORD-040 the supervisor composes the two-phase outcome and budget"
     const kinds = raw.value.records
       .filter((record) => ["coordinator.stuck", "coordinator.restart"].includes(record.kind))
       .map((record) => record.kind);
-    expect(kinds).toEqual([
-      "coordinator.stuck",
-      "coordinator.stuck",
-      "coordinator.restart",
-    ]);
+    expect(kinds).toEqual(["coordinator.stuck", "coordinator.stuck", "coordinator.restart"]);
   });
 
   test("no quiet record exists beyond the lease pair and the action records", async () => {

@@ -108,7 +108,8 @@ export const createRecordingProcessPort = (
     calls,
     aliveAnswer,
     killWithGrace: (pid, processStartTimeMs) => {
-      if (!capabilities.killWithGrace) return { outcome: "capability-gap", missing: "kill-with-grace" };
+      if (!capabilities.killWithGrace)
+        return { outcome: "capability-gap", missing: "kill-with-grace" };
       if (!capabilities.startTimeIdentity) {
         return { outcome: "capability-gap", missing: "start-time-identity" };
       }

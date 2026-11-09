@@ -9,7 +9,11 @@ import {
 } from "../../packages/core/src/state/index";
 import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import { CONTEXT_LIMIT, LIFECYCLE_CASES } from "../fixtures/coordinator/lifecycle";
-import { COORDINATOR_ID, iterationRecord, makeCoordinatorStore } from "../fixtures/coordinator/states";
+import {
+  COORDINATOR_ID,
+  iterationRecord,
+  makeCoordinatorStore,
+} from "../fixtures/coordinator/states";
 
 describe("TC-COORD-020 a live session joins and consumes no ordinal", () => {
   const liveCase = LIFECYCLE_CASES.find((entry) => entry.id === "live-session-joins");

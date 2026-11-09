@@ -161,6 +161,26 @@ before a session existed; it does not assert a lane-permission policy verdict.
 
 ## 3. Adapters
 
+> **Additive process-port capabilities (GH-241).** Coordinator supervision reuses
+> the delivered `DaemonProcessPort` rather than forking a second process port. The
+> port is extended additively: `signal` accepts `"SIGKILL"` for the
+> grace-escalation half, and an optional `startTimeMs(pid)` identity capability is
+> declared. The harness session port keeps resume, spawn, and progress; resume is a
+> decision input, never a process capability. Capability ownership is four-way and
+> distinct: an undeclared or unavailable harness **resume** selects
+> `spawn-fresh` reason `session-interrupted` with no error identity; a harness that
+> cannot or will not **spawn** returns the delivered `harness.capability.gap` /
+> `harness.spawn.refused` at exit 1; a missing process-port **alive**,
+> kill-with-grace, or **start-time identity** capability is
+> `coordinator.process.capability-gap` at exit 2 with no destructive action (a
+> declared probe that returns no answer is `unknown`, the lease-age fallback
+> input, never a gap); an absent **progress** source is an `unknown` evidence
+> class and never a failure or a kill. The adapter maps a positive `token-delta`
+> or `session-traffic` reading to `newTurn`/`progressing`, a sourced zero to
+> `zero`, and an absent reading to `unknown` (never zero). `isAlive(pid)` is the
+> lease-liveness source, with lease age only the fallback when the declared
+> capability returns no answer for the handle.
+
 **opencode** (`packages/adapters/src/harness/opencode.ts`) spawns `run --format
 json` and decodes stdout as JSONL: each line is parsed independently, a trailing
 carriage return and blank or non-object lines are skipped, and the session

@@ -61,12 +61,20 @@ describe("TC-COORD-030 the two-phase stuck record shares one stuckId", () => {
     appendCoordinatorStuck(
       store,
       "writer",
-      stuckRecord({ phase: "verdict", killOutcome: "not-attempted", recordedAt: "2026-11-09T00:00:00.000Z" }),
+      stuckRecord({
+        phase: "verdict",
+        killOutcome: "not-attempted",
+        recordedAt: "2026-11-09T00:00:00.000Z",
+      }),
     );
     appendCoordinatorStuck(
       store,
       "writer",
-      stuckRecord({ phase: "outcome", killOutcome: "forced", recordedAt: "2026-11-09T00:00:00.000Z" }),
+      stuckRecord({
+        phase: "outcome",
+        killOutcome: "forced",
+        recordedAt: "2026-11-09T00:00:00.000Z",
+      }),
     );
     const read = readCoordinatorRecords(store, COORDINATOR_ID);
     if (!read.ok) throw new Error("read failed");

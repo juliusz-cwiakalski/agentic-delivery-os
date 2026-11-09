@@ -374,7 +374,6 @@ export const DAEMON_BRANCH = {
   },
 } as const satisfies CatalogField;
 
-
 /**
  * The typed `coordinator` branch (GH-241 F-10, DM-6, DEC-10; Appendix D).
  *
@@ -527,7 +526,6 @@ export const resolveLaneSettings = (
   }
   return { ok: true, value: { livenessIntervalMs: interval, restartBudget: budget } };
 };
-
 
 /** The resolved `coordinator` branch: six policy values with declared units. */
 export type CoordinatorSettings = {

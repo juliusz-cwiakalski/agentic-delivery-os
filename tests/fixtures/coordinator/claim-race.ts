@@ -11,7 +11,10 @@ import type {
   CoordinatorFenceRecord,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
-import { coordinatorFenceKey, readCoordinatorRecords } from "../../../packages/core/src/state/index";
+import {
+  coordinatorFenceKey,
+  readCoordinatorRecords,
+} from "../../../packages/core/src/state/index";
 import { makeIdentity, openStore } from "../state/harness";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -80,7 +83,10 @@ export const contentionController = (handles: ClaimHandles) => {
 export const serializationController = (handles: ClaimHandles) => {
   const acquired = handles.winner.acquireFence("winner");
   if (!acquired.ok) throw new Error("winner could not acquire");
-  const record = fenceRecord({ instanceId: "instance-winner", recordedAt: "1970-01-01T00:16:40.000Z" });
+  const record = fenceRecord({
+    instanceId: "instance-winner",
+    recordedAt: "1970-01-01T00:16:40.000Z",
+  });
   const appended = handles.winner.append(acquired.value.handle, {
     kind: "coordinator.fence",
     recordKey: coordinatorFenceKey(COORDINATOR_ID),

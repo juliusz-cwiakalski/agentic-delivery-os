@@ -3,11 +3,7 @@
  * with exactly one `recoverFence` and one retry, so `start`/`tick` is not wedged.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  dataOf,
-  errorCodeOf,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, dataOf, errorCodeOf } from "../fixtures/coordinator/harness";
 
 const staleHarness = (label: string) =>
   createCoordinatorHarness({
@@ -55,5 +51,4 @@ describe("TC-COORD-098 the claim recovers one stale fence and retries", () => {
     expect(errorCodeOf(result)).toBe("coordinator.already-running");
     expect(harness.counters.recoverFence).toBe(0);
   });
-
 });

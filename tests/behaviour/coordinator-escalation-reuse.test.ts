@@ -3,10 +3,7 @@
  * the open owner question.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  seedRestart,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, seedRestart } from "../fixtures/coordinator/harness";
 import { escalationQuestion } from "../fixtures/coordinator/blockers";
 import { readBlockerLedger } from "../../packages/core/src/state/index";
 

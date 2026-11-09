@@ -34,9 +34,7 @@ export const isCoordinatorEscalationRef = (ref: string | null): boolean => {
 };
 
 /** The pure payload predicate; it performs no read and widens no other rule. */
-export const isReservedEscalationQuestion = (
-  payload: CoordinatorEscalationPayload,
-): boolean =>
+export const isReservedEscalationQuestion = (payload: CoordinatorEscalationPayload): boolean =>
   payload.type === COORDINATOR_RESERVED_ESCALATION_PREDICATE.type &&
   payload.audience === COORDINATOR_RESERVED_ESCALATION_PREDICATE.audience &&
   payload.lane === COORDINATOR_RESERVED_ESCALATION_PREDICATE.lane &&

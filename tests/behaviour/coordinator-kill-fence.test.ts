@@ -17,7 +17,12 @@ describe("TC-COORD-043 a kill requires the current instance lease", () => {
       session: { liveness: "alive" },
       alive: { 4242: true, 7777: true },
     });
-    seedLease(harness, { action: "acquired", pid: 7777, processStartTimeMs: 1, recordedAt: harness.clock.nowIso() });
+    seedLease(harness, {
+      action: "acquired",
+      pid: 7777,
+      processStartTimeMs: 1,
+      recordedAt: harness.clock.nowIso(),
+    });
     seedIteration(harness);
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(2);
@@ -33,7 +38,12 @@ describe("TC-COORD-043 a kill requires the current instance lease", () => {
       session: { liveness: "alive" },
       alive: { 4242: false },
     });
-    seedLease(harness, { action: "acquired", pid: 7777, processStartTimeMs: 1, recordedAt: new Date(0).toISOString() });
+    seedLease(harness, {
+      action: "acquired",
+      pid: 7777,
+      processStartTimeMs: 1,
+      recordedAt: new Date(0).toISOString(),
+    });
     seedIteration(harness);
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(0);

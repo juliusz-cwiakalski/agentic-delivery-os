@@ -55,7 +55,10 @@ describe("TC-COORD-093 a live old holder is refused and stoppable", () => {
   });
 
   test("a dead holder is takeover-eligible even when the lease is young", async () => {
-    const harness = createCoordinatorHarness({ label: "liveness-dead-young", alive: { 4242: false } });
+    const harness = createCoordinatorHarness({
+      label: "liveness-dead-young",
+      alive: { 4242: false },
+    });
     seedLease(harness, { action: "acquired", recordedAt: YOUNG });
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(0);

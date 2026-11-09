@@ -187,7 +187,10 @@ export const spyStore = (inner: StateStorePort): SpyStore => {
       counts.acquireFence += 1;
       const queued = acquireFailures.shift();
       if (queued !== undefined) {
-        return { ok: false, error: { kind: "state", code: queued, consequence: "not_landed", location } };
+        return {
+          ok: false,
+          error: { kind: "state", code: queued, consequence: "not_landed", location },
+        };
       }
       return inner.acquireFence(token);
     },

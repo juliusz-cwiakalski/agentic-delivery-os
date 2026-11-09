@@ -42,7 +42,9 @@ describe("TC-COORD-010 start claims the lease and records the instance", () => {
       String(record.kind).startsWith("coordinator."),
     );
     expect(coordinatorRecords[0]?.kind).toBe("coordinator.fence");
-    expect((coordinatorRecords[0]?.payload as { action?: string }).action).toBe("acquired");
+    const first = coordinatorRecords[0];
+    if (first === undefined) throw new Error("missing first record");
+    expect((first.payload as { action?: string }).action).toBe("acquired");
   });
 
   test("a second start against a live holder is already-running with the holder named", async () => {
@@ -54,7 +56,9 @@ describe("TC-COORD-010 start claims the lease and records the instance", () => {
     harness.appendRaw({
       kind: "coordinator.fence",
       recordKey: "coordinator.fence:coordinator-main",
-      payload: { ...fenceRecord({ pid: 4242, processStartTimeMs: 2_000, holder: "pid:4242:start:2000" }) },
+      payload: {
+        ...fenceRecord({ pid: 4242, processStartTimeMs: 2_000, holder: "pid:4242:start:2000" }),
+      },
     });
     const result = await harness.run(["coordinator", "start", "--foreground", "--json"]);
     expect(result.code).toBe(2);

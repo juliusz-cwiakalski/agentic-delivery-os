@@ -131,7 +131,16 @@ describe("TC-COORD-080 the coordinator keys own defaults and domains", () => {
       "packages/core/src/domain/coordinator-fence.ts",
     ]) {
       const text = readFileSync(join(ROOT, file), "utf8");
-      for (const literal of ["600_000", "600000", "20_000", "20000", "100_000", "100000", "300_000", "300000"]) {
+      for (const literal of [
+        "600_000",
+        "600000",
+        "20_000",
+        "20000",
+        "100_000",
+        "100000",
+        "300_000",
+        "300000",
+      ]) {
         expect(text.includes(literal), `${file} must not hardcode ${literal}`).toBe(false);
       }
     }

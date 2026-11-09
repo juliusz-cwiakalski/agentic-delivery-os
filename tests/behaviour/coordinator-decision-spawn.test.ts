@@ -3,9 +3,7 @@
  * consume exactly one ordinal, while a first start or a clean end consumes none.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  COORDINATOR_ERROR_CODES,
-} from "../../packages/core/src/contracts/index";
+import { COORDINATOR_ERROR_CODES } from "../../packages/core/src/contracts/index";
 import { decideLifecycle } from "../../packages/core/src/domain/index";
 import {
   appendCoordinatorIteration,
@@ -26,9 +24,7 @@ import {
 } from "../fixtures/coordinator/states";
 
 describe("TC-COORD-022 the three recovery spawn reasons consume one ordinal", () => {
-  const recoverySpawn = RECOVERY_CASES.filter(
-    (entry) => entry.expected.kind === "spawn-fresh",
-  );
+  const recoverySpawn = RECOVERY_CASES.filter((entry) => entry.expected.kind === "spawn-fresh");
 
   test("context-pressure, context-unknown, and session-interrupted each consume one", () => {
     expect([...new Set(recoverySpawn.map((entry) => entry.expected.reason))].sort()).toEqual([
@@ -45,7 +41,9 @@ describe("TC-COORD-022 the three recovery spawn reasons consume one ordinal", ()
   });
 
   test("an undeclared resume is a decision input, not an error identity", () => {
-    const entry = LIFECYCLE_CASES.find((item) => item.id === "resume-undeclared-spawns-without-error");
+    const entry = LIFECYCLE_CASES.find(
+      (item) => item.id === "resume-undeclared-spawns-without-error",
+    );
     if (entry === undefined) throw new Error("missing fixture");
     const decision = decideLifecycle(entry.facts);
     expect(decision.kind).toBe("spawn-fresh");

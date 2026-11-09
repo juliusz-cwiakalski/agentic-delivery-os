@@ -3,16 +3,15 @@
  * no restart and escalates, and the value is observed at evaluation time.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  resolveConfig,
-  resolveCoordinatorSettings,
-} from "../../packages/core/src/index";
+import { resolveConfig, resolveCoordinatorSettings } from "../../packages/core/src/index";
 import { evaluateCoordinatorRestartAdmission } from "../../packages/core/src/domain/index";
 import { coordinatorSource } from "../fixtures/config/coordinator";
 import { EPOCH_ID, restartRecord } from "../fixtures/coordinator/states";
 
 const boundFor = (restartBudget: number): number => {
-  const resolved = resolveConfig({ sources: [coordinatorSource({ "restart-budget": restartBudget })] });
+  const resolved = resolveConfig({
+    sources: [coordinatorSource({ "restart-budget": restartBudget })],
+  });
   if (!resolved.ok) throw new Error(`config failed: ${resolved.error.code}`);
   const coordinator = resolveCoordinatorSettings(resolved.value.values, resolved.value.origins);
   if (!coordinator.ok) throw new Error(`settings failed: ${coordinator.error.code}`);
@@ -77,7 +76,10 @@ describe("TC-COORD-056 the restart bound is configuration-driven", () => {
   });
 
   test("the bound is observed at evaluation time, never cached in a record", () => {
-    const records = [restartRecord({ ordinal: 1 }), restartRecord({ ordinal: 2, restartId: "coordinator-main#epoch-1#2" })];
+    const records = [
+      restartRecord({ ordinal: 1 }),
+      restartRecord({ ordinal: 2, restartId: "coordinator-main#epoch-1#2" }),
+    ];
     for (const bound of [2, 3, 10]) {
       const admission = evaluateCoordinatorRestartAdmission({
         records,

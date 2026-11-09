@@ -243,6 +243,16 @@ configured rate. A one-shot read carries no resident backoff state.
 
 ## Supervisor installation
 
+> **Coordinator consumption (GH-241).** Coordinator supervision consumes the
+> delivered `DaemonProcessPort` additively (`SIGKILL`, optional `startTimeMs`) and
+> the `SupervisorPort` / `DaemonSupervisorDescriptor` seam. It changes no daemon
+> command, control surface, unit renderer, or installer; `renderSystemdUnit`
+> remains hardcoded to `daemon start --foreground`, so a coordinator unit needs an
+> additive explicit `command` vector, and coordinator `install`/`uninstall` is out
+> of scope. `daemon.lock` remains the daemon's own heartbeat-age instance lock; the
+> coordinator's single-instance ownership is its append-only ledger lease and
+> never `daemon.lock`.
+
 The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`,
 `Type=simple`, `Restart=on-failure`, and
 `Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>`. The unit

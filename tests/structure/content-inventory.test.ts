@@ -173,9 +173,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchText",
   ],
   "cli/src/commands/daemon.ts": ["createDaemonCommandDefinition"],
-  "cli/src/commands/coordinator.ts": [
-    "createCoordinatorCommandDefinition",
-  ],
+  "cli/src/commands/coordinator.ts": ["createCoordinatorCommandDefinition"],
   "cli/src/commands/coordinator-loop.ts": [
     "createCoordinatorSupervisor",
     "currentBudgetEpoch",
@@ -262,15 +260,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CONTROL_WIRE_TYPES",
     "controlInteractionClass",
   ],
-  "core/src/domain/coordinator-lifecycle.ts": [
-    "decideLifecycle",
-    "lifecycleEffect",
-  ],
-  "core/src/domain/coordinator-evidence.ts": [
-    "boundEvidence",
-    "evaluateStuck",
-    "utf8ByteLength",
-  ],
+  "core/src/domain/coordinator-lifecycle.ts": ["decideLifecycle", "lifecycleEffect"],
+  "core/src/domain/coordinator-evidence.ts": ["boundEvidence", "evaluateStuck", "utf8ByteLength"],
   "core/src/state/coordinator.ts": [
     "COORDINATOR_STATE_ERROR_IDENTITIES",
     "appendCoordinatorExhaustion",
@@ -296,10 +287,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "evaluateCoordinatorRestartAdmission",
     "nextRestartOrdinal",
   ],
-  "core/src/domain/coordinator-wake.ts": [
-    "evaluateWake",
-    "wakeKeyFor",
-  ],
+  "core/src/domain/coordinator-wake.ts": ["evaluateWake", "wakeKeyFor"],
   "core/src/domain/coordinator-escalation.ts": [
     "escalationOptions",
     "isCoordinatorEscalationRef",
@@ -314,10 +302,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "foldCoordinatorLease",
     "leaseAgeMs",
   ],
-  "core/src/domain/coordinator-regime.ts": [
-    "coordinatorUnitIdentity",
-    "projectCoordinatorRegime",
-  ],
+  "core/src/domain/coordinator-regime.ts": ["coordinatorUnitIdentity", "projectCoordinatorRegime"],
   "core/src/domain/coordinator-observe.ts": [
     "persistedTickVerdict",
     "progressingTickVerdict",

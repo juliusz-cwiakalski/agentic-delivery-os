@@ -34,7 +34,11 @@ describe("TC-COORD-072 answered-before-wake is a tick result", () => {
       choice: "continue",
       answeredAt: "1970-01-01T00:00:20.000Z",
       applied: false,
-      laneResume: { mode: "boundary-note", sessionReentry: false, capabilitySource: "adapter-declared" },
+      laneResume: {
+        mode: "boundary-note",
+        sessionReentry: false,
+        capabilitySource: "adapter-declared",
+      },
     });
     const data = dataOf(await harness.run(["coordinator", "tick", "--json"]));
     expect(data.wake).toBeNull();

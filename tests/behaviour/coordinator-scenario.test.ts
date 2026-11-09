@@ -94,9 +94,12 @@ describe("TC-COORD-091 SC-M1-25 end to end", () => {
     const read = harness.records();
     if (!read.ok) throw new Error("read failed");
     for (const restart of read.restarts) {
-      expect(["stuck-artifact-evidence", "session-interrupted", "context-pressure", "context-unknown"]).toContain(
-        restart.reason,
-      );
+      expect([
+        "stuck-artifact-evidence",
+        "session-interrupted",
+        "context-pressure",
+        "context-unknown",
+      ]).toContain(restart.reason);
     }
   });
 });

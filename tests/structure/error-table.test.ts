@@ -1935,16 +1935,8 @@ describe("TC-COORD-081 the coordinator kind declares exactly six rows", () => {
   test("exactly six rows in order with their declared class fields", () => {
     expect(DOMAIN_KINDS.filter((kind) => kind === "coordinator")).toHaveLength(1);
     const coordinator = entries.filter((entry) => entry.domainKind === "coordinator");
-    expect(coordinator.map((entry) => entry.code)).toEqual(
-      COORDINATOR_ROWS.map(([code]) => code),
-    );
-    for (const [
-      code,
-      category,
-      retryable,
-      consequence,
-      projectionClass,
-    ] of COORDINATOR_ROWS) {
+    expect(coordinator.map((entry) => entry.code)).toEqual(COORDINATOR_ROWS.map(([code]) => code));
+    for (const [code, category, retryable, consequence, projectionClass] of COORDINATOR_ROWS) {
       expect(classifyDomainKind("coordinator", code)).toEqual({
         code,
         domainKind: "coordinator",

@@ -58,7 +58,10 @@ describe("TC-COORD-039 the stuck reason is closed and distinct", () => {
     appendCoordinatorStuck(
       store,
       "writer",
-      stuckRecord({ verdict: "stuck", reason: "evidence-unevaluable" as "stuck-artifact-evidence" }),
+      stuckRecord({
+        verdict: "stuck",
+        reason: "evidence-unevaluable" as "stuck-artifact-evidence",
+      }),
     );
     const read = readCoordinatorRecords(store, COORDINATOR_ID);
     expect(read.ok).toBe(false);

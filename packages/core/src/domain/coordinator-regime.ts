@@ -15,10 +15,8 @@ import {
 } from "#contracts";
 
 /** The deterministic unit identity derived from the state dir and coordinator. */
-export const coordinatorUnitIdentity = (
-  stateDirectory: string,
-  coordinatorId: string,
-): string => `${COORDINATOR_REGIME.processKind}@${stateDirectory}#${coordinatorId}`;
+export const coordinatorUnitIdentity = (stateDirectory: string, coordinatorId: string): string =>
+  `${COORDINATOR_REGIME.processKind}@${stateDirectory}#${coordinatorId}`;
 
 /** Project the regime descriptor for one state-dir scope. */
 export const projectCoordinatorRegime = (input: {

@@ -217,9 +217,7 @@ describe("TC-COORD-004 the coordinator surface carries no exit literal", () => {
       "\nexport const coordinatorExit = { exitCode: 2 };\n",
     );
     const report = scanRoot(root);
-    expect(messages(report.failures)).toContain(
-      "packages/cli/src/commands/coordinator-loop.ts",
-    );
+    expect(messages(report.failures)).toContain("packages/cli/src/commands/coordinator-loop.ts");
     expect(messages(report.failures)).toContain("exitCode literal 2");
   });
 });

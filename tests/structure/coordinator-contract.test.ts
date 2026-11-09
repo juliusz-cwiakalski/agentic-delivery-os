@@ -190,9 +190,7 @@ describe("TC-COORD-001 coordinator vocabulary is one data-only home", () => {
 
   test("the two state-fence rules are distinct data with distinct refusal identities", () => {
     expect([...COORDINATOR_STATE_FENCE_RULES]).toEqual(["claim-acquire", "non-claim-append"]);
-    expect(COORDINATOR_STATE_FENCE_REFUSALS["claim-acquire"]).toBe(
-      "coordinator.already-running",
-    );
+    expect(COORDINATOR_STATE_FENCE_REFUSALS["claim-acquire"]).toBe("coordinator.already-running");
     expect(COORDINATOR_STATE_FENCE_REFUSALS["non-claim-append"]).toBe("state.lock.busy");
   });
 

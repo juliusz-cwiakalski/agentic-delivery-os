@@ -36,7 +36,10 @@ describe("TC-COORD-035 an unreadable required store is unevaluable", () => {
   });
 
   test("the unevaluable verdict is never followed by an outcome", async () => {
-    const harness = createCoordinatorHarness({ label: "unevaluable-two", session: { liveness: "alive" } });
+    const harness = createCoordinatorHarness({
+      label: "unevaluable-two",
+      session: { liveness: "alive" },
+    });
     seedIteration(harness);
     harness.appendRaw({
       kind: "blocker.question",
@@ -50,7 +53,10 @@ describe("TC-COORD-035 an unreadable required store is unevaluable", () => {
   });
 
   test("a replay of the same unevaluable verdict appends nothing", async () => {
-    const harness = createCoordinatorHarness({ label: "unevaluable-replay", session: { liveness: "alive" } });
+    const harness = createCoordinatorHarness({
+      label: "unevaluable-replay",
+      session: { liveness: "alive" },
+    });
     seedIteration(harness);
     harness.appendRaw({
       kind: "blocker.question",

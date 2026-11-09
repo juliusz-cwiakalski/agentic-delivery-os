@@ -75,7 +75,9 @@ describe("TC-COORD-094 lock contention yields exactly one acquisition", () => {
     expect(records.ok).toBe(true);
     // No lease record exists yet: only an explicit append would create one.
     if (records.ok) {
-      expect(records.value.records.filter((record) => record.kind === "coordinator.fence")).toHaveLength(0);
+      expect(
+        records.value.records.filter((record) => record.kind === "coordinator.fence"),
+      ).toHaveLength(0);
     }
     void fenceRecord;
   });

@@ -41,12 +41,10 @@ export const COORDINATOR_RECORD_KINDS = [
 export type CoordinatorRecordKind = (typeof COORDINATOR_RECORD_KINDS)[number];
 
 /** The payload schema identifiers (Appendix E verbatim). */
-export const COORDINATOR_ITERATION_PAYLOAD_SCHEMA =
-  "delivery.coordinator.iteration.v1" as const;
+export const COORDINATOR_ITERATION_PAYLOAD_SCHEMA = "delivery.coordinator.iteration.v1" as const;
 export const COORDINATOR_RESTART_PAYLOAD_SCHEMA = "delivery.coordinator.restart.v1" as const;
 export const COORDINATOR_STUCK_PAYLOAD_SCHEMA = "delivery.coordinator.stuck.v1" as const;
-export const COORDINATOR_EXHAUSTION_PAYLOAD_SCHEMA =
-  "delivery.coordinator.exhaustion.v1" as const;
+export const COORDINATOR_EXHAUSTION_PAYLOAD_SCHEMA = "delivery.coordinator.exhaustion.v1" as const;
 export const COORDINATOR_WAKE_PAYLOAD_SCHEMA = "delivery.coordinator.wake.v1" as const;
 export const COORDINATOR_FENCE_PAYLOAD_SCHEMA = "delivery.coordinator.fence.v1" as const;
 
@@ -157,8 +155,7 @@ export type CoordinatorKillFailureReason = (typeof COORDINATOR_KILL_FAILURE_REAS
 
 /** Only `woken` is persisted and consumes the one-wake-per-question lifetime. */
 export const COORDINATOR_WAKE_PERSISTED_OUTCOMES = ["woken"] as const;
-export type CoordinatorWakePersistedOutcome =
-  (typeof COORDINATOR_WAKE_PERSISTED_OUTCOMES)[number];
+export type CoordinatorWakePersistedOutcome = (typeof COORDINATOR_WAKE_PERSISTED_OUTCOMES)[number];
 
 /** The declared tick results; they append no durable record (DEC-9). */
 export const COORDINATOR_WAKE_TICK_RESULTS = [
@@ -199,8 +196,7 @@ export const COORDINATOR_LEASE_LIVENESS_STATES = [
   "age-fallback-takeover",
   "unheld",
 ] as const;
-export type CoordinatorLeaseLivenessState =
-  (typeof COORDINATOR_LEASE_LIVENESS_STATES)[number];
+export type CoordinatorLeaseLivenessState = (typeof COORDINATOR_LEASE_LIVENESS_STATES)[number];
 
 /** `foreground` is the only v1 value; `detached` is reserved and never produced. */
 export const COORDINATOR_SUPERVISOR_MODES = ["foreground", "detached"] as const;
@@ -302,8 +298,7 @@ export const COORDINATOR_PROCESS_CAPABILITIES = [
   "kill-with-grace",
   "start-time-identity",
 ] as const;
-export type CoordinatorProcessCapability =
-  (typeof COORDINATOR_PROCESS_CAPABILITIES)[number];
+export type CoordinatorProcessCapability = (typeof COORDINATOR_PROCESS_CAPABILITIES)[number];
 
 /** The three harness-session capabilities consumed as decision inputs (DEC-11). */
 export const COORDINATOR_HARNESS_CAPABILITIES = ["resume", "spawn", "progress"] as const;

@@ -20,7 +20,11 @@ import type {
   CoordinatorProgressState,
   DaemonProcessPort,
 } from "../../../packages/core/src/contracts/index";
-import { appendBlockerAnswer, appendBlockerQuestion, readBlockerLedger } from "../../../packages/core/src/state/index";
+import {
+  appendBlockerAnswer,
+  appendBlockerQuestion,
+  readBlockerLedger,
+} from "../../../packages/core/src/state/index";
 import {
   readCoordinatorRecords,
   type CoordinatorRecordsRead,
@@ -144,12 +148,10 @@ export type CoordinatorHarness = {
   setProgress(progress: { newTurn: CoordinatorProgressState; observedAtMs: number | null }): void;
   seedQuestion(record: BlockerQuestionRecord): void;
   seedAnswer(record: BlockerAnswerRecord): void;
-  appendRaw(request: {
-    kind: string;
-    recordKey: string;
-    payload: Record<string, unknown>;
-  }): void;
-  observationFromEnvelope(json: Record<string, unknown> | undefined): CoordinatorObservation | undefined;
+  appendRaw(request: { kind: string; recordKey: string; payload: Record<string, unknown> }): void;
+  observationFromEnvelope(
+    json: Record<string, unknown> | undefined,
+  ): CoordinatorObservation | undefined;
 };
 
 const HOLDER_FOR = (pid: number, start: number): string => `pid:${pid}:start:${start}`;
@@ -269,7 +271,10 @@ export const createCoordinatorHarness = (
       counters.fenceStatus += 1;
       return store.fenceStatus();
     },
-    append(handle: Parameters<typeof store.append>[0], request: Parameters<typeof store.append>[1]) {
+    append(
+      handle: Parameters<typeof store.append>[0],
+      request: Parameters<typeof store.append>[1],
+    ) {
       counters.appends += 1;
       if (appendOverride !== undefined) return appendOverride() as never;
       if (
@@ -401,17 +406,29 @@ export const createCoordinatorHarness = (
         coordinator: createCoordinatorCommandDefinition(supervisor),
       },
     };
-    const code = await runCli(argv, {
-      stdout: { write: (chunk: string) => void (stdout += chunk) },
-      stderr: { write: (chunk: string) => void (stderr += chunk) },
-    }, {
-      brand: TEST_BRAND,
-      clock: { now: () => clock.nowMs() },
-      newRunId: () => "run-1",
-      secrets: [],
-      program,
-      mode: "interactive",
-    });
+    const code = await runCli(
+      argv,
+      {
+        stdout: {
+          write: (chunk: string) => {
+            stdout += chunk;
+          },
+        },
+        stderr: {
+          write: (chunk: string) => {
+            stderr += chunk;
+          },
+        },
+      },
+      {
+        brand: TEST_BRAND,
+        clock: { now: () => clock.nowMs() },
+        newRunId: () => "run-1",
+        secrets: [],
+        program,
+        mode: "interactive",
+      },
+    );
     let json: Record<string, unknown> | undefined;
     if (argv.includes("--json")) {
       try {
@@ -620,9 +637,9 @@ export const seedStuckVerdict = (
 };
 
 /** The JSON envelope of one harness invocation. */
-export const envelopeOf = (
-  result: { readonly json: Record<string, unknown> | undefined },
-): Record<string, unknown> => {
+export const envelopeOf = (result: {
+  readonly json: Record<string, unknown> | undefined;
+}): Record<string, unknown> => {
   if (result.json === undefined) throw new Error("missing JSON envelope");
   return result.json;
 };

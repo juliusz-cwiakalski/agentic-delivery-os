@@ -8,8 +8,15 @@ import {
   errorCodeOf,
   seedIteration,
 } from "../fixtures/coordinator/harness";
-import { appendCoordinatorIteration, readCoordinatorRecords } from "../../packages/core/src/state/index";
-import { iterationRecord, makeCoordinatorStore, COORDINATOR_ID } from "../fixtures/coordinator/states";
+import {
+  appendCoordinatorIteration,
+  readCoordinatorRecords,
+} from "../../packages/core/src/state/index";
+import {
+  iterationRecord,
+  makeCoordinatorStore,
+  COORDINATOR_ID,
+} from "../fixtures/coordinator/states";
 
 describe("TC-COORD-044 the four capability owners stay distinct", () => {
   test("an absent start-time identity at kill time is a gap before TERM", async () => {

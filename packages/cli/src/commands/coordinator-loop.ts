@@ -8,10 +8,7 @@
  * ledger, and the injected cycle driver. Handlers never write streams and never
  * choose an exit code; the command surface owns the envelope and projection.
  */
-import {
-  appendBlockerQuestion,
-  readBlockerLedger,
-} from "@delivery-os/core/state";
+import { appendBlockerQuestion, readBlockerLedger } from "@delivery-os/core/state";
 import {
   appendCoordinatorExhaustion,
   appendCoordinatorFence,
@@ -225,9 +222,10 @@ export const escalationRef = (coordinatorId: string, epoch: string): string =>
 /* ------------------------------- engine ---------------------------------- */
 
 export type CoordinatorSupervisor = {
-  start(input: { readonly foreground: boolean; readonly freshBudget: boolean }): Promise<
-    CoordinatorResult<CoordinatorObservation>
-  >;
+  start(input: {
+    readonly foreground: boolean;
+    readonly freshBudget: boolean;
+  }): Promise<CoordinatorResult<CoordinatorObservation>>;
   stop(): Promise<CoordinatorResult<CoordinatorStopData>>;
   status(input: { readonly live: boolean }): Promise<CoordinatorResult<CoordinatorObservation>>;
   tick(): Promise<CoordinatorResult<CoordinatorObservation>>;
@@ -311,8 +309,7 @@ export const createCoordinatorSupervisor = (
   const coordinatorRead = (raw: StoreRead) =>
     readCoordinatorRecords(cachedView(store, raw), coordinatorId);
 
-  const blockersRead = (raw: StoreRead) =>
-    readBlockerLedger(cachedView(store, raw));
+  const blockersRead = (raw: StoreRead) => readBlockerLedger(cachedView(store, raw));
 
   const leaseOf = (read: CoordinatorRecordsRead): CoordinatorLease | null => {
     if (!read.ok) return null;
@@ -457,7 +454,12 @@ export const createCoordinatorSupervisor = (
           read: { ...read, fences: [...read.fences, fence] },
           raw,
           instance,
-          identity: { instanceId, holder, pid: own.pid, processStartTimeMs: own.processStartTimeMs },
+          identity: {
+            instanceId,
+            holder,
+            pid: own.pid,
+            processStartTimeMs: own.processStartTimeMs,
+          },
           fence,
           action,
         },
@@ -485,7 +487,9 @@ export const createCoordinatorSupervisor = (
       readonly contextTokens: number | null;
       readonly iterationId?: string;
     },
-  ): { readonly ok: true; readonly read: OkRead; readonly iterationId: string } | { readonly ok: false; readonly failure: CoordinatorFailure } => {
+  ):
+    | { readonly ok: true; readonly read: OkRead; readonly iterationId: string }
+    | { readonly ok: false; readonly failure: CoordinatorFailure } => {
     const iterationId = input.iterationId ?? ports.newId("iteration");
     const record = {
       schemaId: "delivery.coordinator.iteration.v1" as const,
@@ -553,9 +557,7 @@ export const createCoordinatorSupervisor = (
       const applied = ports.session.apply(effect);
       if (!applied.ok) return { ok: false, failure: failure("harness", applied.code) };
     }
-    const nextRead = appended.appended
-      ? { ...read, restarts: [...read.restarts, record] }
-      : read;
+    const nextRead = appended.appended ? { ...read, restarts: [...read.restarts, record] } : read;
     return { ok: true, read: nextRead };
   };
 
@@ -609,9 +611,7 @@ export const createCoordinatorSupervisor = (
         // budget identity at exit 1; a later tick reuses the receipt and is an
         // idempotent `exhausted-escalated` success at exit 0.
         if (recovered.failure.error.code === restartExhausted) {
-          const alreadyReceipted = read.exhaustion.some(
-            (record) => record.budgetEpochId === epoch,
-          );
+          const alreadyReceipted = read.exhaustion.some((record) => record.budgetEpochId === epoch);
           const escalated = escalate(read, epoch);
           if (!escalated.ok) return { ok: false, failure: escalated.failure };
           if (alreadyReceipted) return { ok: true, read: escalated.read };
@@ -718,7 +718,9 @@ export const createCoordinatorSupervisor = (
     };
   };
 
-  const activeExpectation = (read: OkRead): { readonly recordedAt: string | null; readonly sequenceIndex: number } | null => {
+  const activeExpectation = (
+    read: OkRead,
+  ): { readonly recordedAt: string | null; readonly sequenceIndex: number } | null => {
     if (!read.ok) return null;
     const last = read.iterations[read.iterations.length - 1];
     if (last === undefined) return null;
@@ -797,7 +799,13 @@ export const createCoordinatorSupervisor = (
       if (woken.outcome === "woken" && woken.question !== null) {
         const wake = ports.session.wake();
         if (!wake.ok) {
-          return { kind: "failure", failure: failure("coordinator", wakeFailed), read: current, tickVerdict, wakeOutcome };
+          return {
+            kind: "failure",
+            failure: failure("coordinator", wakeFailed),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         const iterationId = ports.newId("iteration");
         wakeOutcome = {
@@ -819,7 +827,14 @@ export const createCoordinatorSupervisor = (
           recordedAt: ports.clock.nowIso(),
         };
         const appended = appendCoordinatorWake(store, ports.newFenceToken(), record, current);
-        if (!appended.ok) return { kind: "failure", failure: deliveredFailure(appended.code), read: current, tickVerdict, wakeOutcome };
+        if (!appended.ok)
+          return {
+            kind: "failure",
+            failure: deliveredFailure(appended.code),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         current = appended.appended ? { ...current, wakes: [...current.wakes, record] } : current;
         const expectation = appendIteration(current, context, {
           trigger: "wake",
@@ -879,7 +894,9 @@ export const createCoordinatorSupervisor = (
       if (evaluation.verdict === "progressing") {
         tickVerdict = { verdict: "progressing", phase: null, reason: null, evidence: null };
       } else {
-        const stuckId = current.iterations.find((record) => record.recordedAt === expectation.recordedAt)?.iterationId ?? ports.newId("iteration");
+        const stuckId =
+          current.iterations.find((record) => record.recordedAt === expectation.recordedAt)
+            ?.iterationId ?? ports.newId("iteration");
         const already = foldCoordinatorStuck(current.stuck)[stuckId];
         let verdictRecord: CoordinatorStuckRecord | null = null;
         if (already === undefined) {
@@ -896,8 +913,20 @@ export const createCoordinatorSupervisor = (
             killFailureReason: null,
             recordedAt: ports.clock.nowIso(),
           };
-          const appended = appendCoordinatorStuck(store, ports.newFenceToken(), verdictRecord, current);
-          if (!appended.ok) return { kind: "failure", failure: deliveredFailure(appended.code), read: current, tickVerdict, wakeOutcome };
+          const appended = appendCoordinatorStuck(
+            store,
+            ports.newFenceToken(),
+            verdictRecord,
+            current,
+          );
+          if (!appended.ok)
+            return {
+              kind: "failure",
+              failure: deliveredFailure(appended.code),
+              read: current,
+              tickVerdict,
+              wakeOutcome,
+            };
           if (appended.appended) current = { ...current, stuck: [...current.stuck, verdictRecord] };
         }
         tickVerdict = {
@@ -920,12 +949,27 @@ export const createCoordinatorSupervisor = (
         if (latest !== undefined && latest.phase === "outcome") {
           return { kind: "ok", read: current, tickVerdict, wakeOutcome };
         }
-        if (!ports.processPort.capabilities.killWithGrace || !ports.processPort.capabilities.startTimeIdentity) {
-          return { kind: "failure", failure: failure("coordinator", capabilityGap), read: current, tickVerdict, wakeOutcome };
+        if (
+          !ports.processPort.capabilities.killWithGrace ||
+          !ports.processPort.capabilities.startTimeIdentity
+        ) {
+          return {
+            kind: "failure",
+            failure: failure("coordinator", capabilityGap),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         const session = ports.session.read();
         if (session.pid === null || session.processStartTimeMs === null) {
-          return { kind: "failure", failure: failure("coordinator", capabilityGap), read: current, tickVerdict, wakeOutcome };
+          return {
+            kind: "failure",
+            failure: failure("coordinator", capabilityGap),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         const killed = await killCoordinatorProcess({
           port: ports.processPort.port,
@@ -935,7 +979,13 @@ export const createCoordinatorSupervisor = (
           capabilities: ports.processPort.capabilities,
         });
         if (killed.outcome === "capability-gap") {
-          return { kind: "failure", failure: failure("coordinator", capabilityGap), read: current, tickVerdict, wakeOutcome };
+          return {
+            kind: "failure",
+            failure: failure("coordinator", capabilityGap),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         const outcomeRecord: CoordinatorStuckRecord = {
           ...(verdictRecord ?? {
@@ -956,17 +1006,43 @@ export const createCoordinatorSupervisor = (
           killFailureReason: killed.outcome === "failed" ? killed.failureReason : null,
           recordedAt: ports.clock.nowIso(),
         };
-        const appendedOutcome = appendCoordinatorStuck(store, ports.newFenceToken(), outcomeRecord, current);
-        if (!appendedOutcome.ok) return { kind: "failure", failure: deliveredFailure(appendedOutcome.code), read: current, tickVerdict, wakeOutcome };
-        if (appendedOutcome.appended) current = { ...current, stuck: [...current.stuck, outcomeRecord] };
+        const appendedOutcome = appendCoordinatorStuck(
+          store,
+          ports.newFenceToken(),
+          outcomeRecord,
+          current,
+        );
+        if (!appendedOutcome.ok)
+          return {
+            kind: "failure",
+            failure: deliveredFailure(appendedOutcome.code),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
+        if (appendedOutcome.appended)
+          current = { ...current, stuck: [...current.stuck, outcomeRecord] };
         if (killed.outcome === "failed") {
-          return { kind: "failure", failure: failure("coordinator", killFailed), read: current, tickVerdict, wakeOutcome };
+          return {
+            kind: "failure",
+            failure: failure("coordinator", killFailed),
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         // Budget check runs only after the outcome append.
         const recovered = applyRecovery(current, epoch, "stuck-artifact-evidence", "spawn");
         if (!recovered.ok) {
           const escalated = escalate(current, epoch);
-          if (!escalated.ok) return { kind: "failure", failure: escalated.failure, read: current, tickVerdict, wakeOutcome };
+          if (!escalated.ok)
+            return {
+              kind: "failure",
+              failure: escalated.failure,
+              read: current,
+              tickVerdict,
+              wakeOutcome,
+            };
           current = escalated.read;
           const settled = appendIteration(current, context, {
             trigger: "stuck-restart",
@@ -976,13 +1052,19 @@ export const createCoordinatorSupervisor = (
             contextTokens: null,
           });
           if (settled.ok) current = settled.read;
-          return { kind: "failure", failure: recovered.failure, read: current, tickVerdict, wakeOutcome };
+          return {
+            kind: "failure",
+            failure: recovered.failure,
+            read: current,
+            tickVerdict,
+            wakeOutcome,
+          };
         }
         current = recovered.read;
         const settled = appendIteration(current, context, {
           trigger: "stuck-restart",
           decision: "spawn-fresh",
-          reason: "stuck-artifact-evidence" === "stuck-artifact-evidence" ? "session-interrupted" : "session-interrupted",
+          reason: "session-interrupted",
           sessionId: ports.session.read().sessionId,
           contextTokens: ports.session.read().contextTokens,
         });
@@ -1006,14 +1088,13 @@ export const createCoordinatorSupervisor = (
             instanceId: lease.instanceId,
             pid: lease.pid,
             holder: lease.holder,
-            startedAt:
-              read.ok
-                ? [...read.fences]
-                    .reverse()
-                    .find(
-                      (record) => record.action === "acquired" || record.action === "stale-takeover",
-                    )?.recordedAt ?? ports.clock.nowIso()
-                : ports.clock.nowIso(),
+            startedAt: read.ok
+              ? ([...read.fences]
+                  .reverse()
+                  .find(
+                    (record) => record.action === "acquired" || record.action === "stale-takeover",
+                  )?.recordedAt ?? ports.clock.nowIso())
+              : ports.clock.nowIso(),
             supervisorMode: COORDINATOR_V1_SUPERVISOR_MODE,
             externalUnit: "absent",
           }
@@ -1055,8 +1136,8 @@ export const createCoordinatorSupervisor = (
       : null;
     const lastWake = read.ok ? foldCoordinatorWake(read.wakes) : null;
     const questionId = read.ok
-      ? read.exhaustion.find((record) => record.budgetEpochId === epoch)?.escalationQuestionId ??
-        null
+      ? (read.exhaustion.find((record) => record.budgetEpochId === epoch)?.escalationQuestionId ??
+        null)
       : null;
     const escalation: CoordinatorEscalationView = {
       state: projectEscalationState({
@@ -1098,8 +1179,7 @@ export const createCoordinatorSupervisor = (
             action: lease.action,
             previousHolder: lease.previousHolder,
             fenceAgeMs: lease.fenceAgeMs,
-            recordedAt:
-              read.ok ? read.fences[read.fences.length - 1]?.recordedAt ?? null : null,
+            recordedAt: read.ok ? (read.fences[read.fences.length - 1]?.recordedAt ?? null) : null,
           }
         : null,
       degradation,
@@ -1117,17 +1197,17 @@ export const createCoordinatorSupervisor = (
     return appended.ok ? record : null;
   };
 
-  const withReleased = (
-    read: OkRead,
-    record: CoordinatorFenceRecord,
-  ): OkRead => ({ ...read, fences: [...read.fences, record] });
+  const withReleased = (read: OkRead, record: CoordinatorFenceRecord): OkRead => ({
+    ...read,
+    fences: [...read.fences, record],
+  });
 
   const releaseFailure = (): CoordinatorFailure =>
-    store.fenceStatus().held
-      ? stateFailure("state.lock.busy")
-      : stateFailure("state.write.failed");
+    store.fenceStatus().held ? stateFailure("state.lock.busy") : stateFailure("state.write.failed");
 
-  const runClaimedCycle = async (claimed: Claimed): Promise<CoordinatorResult<CoordinatorObservation>> => {
+  const runClaimedCycle = async (
+    claimed: Claimed,
+  ): Promise<CoordinatorResult<CoordinatorObservation>> => {
     const epoch = currentBudgetEpoch(claimed.read);
     let outcome: CycleOutcome;
     try {
@@ -1176,13 +1256,7 @@ export const createCoordinatorSupervisor = (
       recordCount: startRaw.ok ? startRaw.value.records.length : 0,
       appended: 0,
     };
-    const lifecycle = applyLifecycle(
-      claimed.claimed.read,
-      startContext,
-      epoch,
-      "start",
-      true,
-    );
+    const lifecycle = applyLifecycle(claimed.claimed.read, startContext, epoch, "start", true);
     if (!lifecycle.ok) {
       appendReleased(claimed.claimed.identity);
       return lifecycle.failure;
@@ -1245,7 +1319,12 @@ export const createCoordinatorSupervisor = (
     const lease = leaseOf(read);
     if (lease === null || lease.action === "released") {
       return {
-        data: { ...observation(read, null), requested: false, released: false, state: "not-running" },
+        data: {
+          ...observation(read, null),
+          requested: false,
+          released: false,
+          state: "not-running",
+        },
       };
     }
     if (!ports.processPort.capabilities.alive) {
@@ -1256,7 +1335,12 @@ export const createCoordinatorSupervisor = (
     const bound = 2 * configValue("coordinator.collection-interval");
     if (answer === false || (answer === null && age !== null && age > bound)) {
       return {
-        data: { ...observation(read, null), requested: false, released: false, state: "not-running" },
+        data: {
+          ...observation(read, null),
+          requested: false,
+          released: false,
+          state: "not-running",
+        },
       };
     }
     // The request is recorded against the live holder: `stop` never acquires

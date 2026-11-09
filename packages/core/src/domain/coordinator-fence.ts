@@ -46,9 +46,7 @@ export type CoordinatorLeaseFoldInput = {
  * The instance's `startedAt` is its acquisition record's time, so a later
  * `stop-requested` or `released` never re-anchors the age.
  */
-export const foldCoordinatorLease = (
-  input: CoordinatorLeaseFoldInput,
-): CoordinatorLease | null => {
+export const foldCoordinatorLease = (input: CoordinatorLeaseFoldInput): CoordinatorLease | null => {
   let latest: CoordinatorFenceRecord | null = null;
   let acquisition: CoordinatorFenceRecord | null = null;
   for (const record of input.records) {
@@ -58,8 +56,7 @@ export const foldCoordinatorLease = (
     }
   }
   if (latest === null) return null;
-  const acquisitionMs =
-    acquisition === null ? null : input.recordedAtMs(acquisition.recordedAt);
+  const acquisitionMs = acquisition === null ? null : input.recordedAtMs(acquisition.recordedAt);
   return {
     action: latest.action,
     instanceId: latest.instanceId,
@@ -96,7 +93,11 @@ export type CoordinatorClaimDecision =
       readonly previousHolder: string;
       readonly fenceAgeMs: number | null;
     }
-  | { readonly kind: "refuse"; readonly holder: string; readonly liveness: CoordinatorLeaseLivenessState };
+  | {
+      readonly kind: "refuse";
+      readonly holder: string;
+      readonly liveness: CoordinatorLeaseLivenessState;
+    };
 
 /** The lease age in milliseconds (`null` when the acquisition time is unknown). */
 export const leaseAgeMs = (lease: CoordinatorLease, nowMs: number): number | null =>
@@ -114,9 +115,7 @@ export const ageFallbackBoundMs = (collectionIntervalMs: number): number =>
  * is alive; a dead holder is takeover-eligible; a declared-but-unanswered probe
  * takes over only past the age fallback and otherwise refuses.
  */
-export const decideCoordinatorClaim = (
-  facts: CoordinatorClaimFacts,
-): CoordinatorClaimDecision => {
+export const decideCoordinatorClaim = (facts: CoordinatorClaimFacts): CoordinatorClaimDecision => {
   if (!facts.aliveDeclared) return { kind: "capability-gap", missing: "alive" };
   const lease = facts.lease;
   if (lease === null || lease.action === "released") return { kind: "acquire" };

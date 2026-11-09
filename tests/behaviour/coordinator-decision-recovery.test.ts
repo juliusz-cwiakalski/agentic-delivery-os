@@ -3,10 +3,7 @@
  * closed-out work.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createCoordinatorHarness,
-  seedIteration,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 import { answer } from "../fixtures/coordinator/blockers";
 
 const seedClosedOut = (harness: ReturnType<typeof createCoordinatorHarness>) => {
@@ -32,17 +29,21 @@ describe("TC-COORD-024 a killed mid-iteration resumes without re-execution", () 
     seedIteration(harness, { sessionId: "session-1" });
     const before = harness.store.readRecords();
     if (!before.ok) throw new Error("read failed");
-    const mergesBefore = before.value.records.filter((record) => record.kind === "merge.transaction").length;
-    const answersBefore = before.value.records.filter((record) => record.kind === "blocker.answer").length;
+    const mergesBefore = before.value.records.filter(
+      (record) => record.kind === "merge.transaction",
+    ).length;
+    const answersBefore = before.value.records.filter(
+      (record) => record.kind === "blocker.answer",
+    ).length;
 
     const result = await harness.run(["coordinator", "tick", "--json"]);
     expect(result.code).toBe(0);
 
     const after = harness.store.readRecords();
     if (!after.ok) throw new Error("read failed");
-    expect(after.value.records.filter((record) => record.kind === "merge.transaction")).toHaveLength(
-      mergesBefore,
-    );
+    expect(
+      after.value.records.filter((record) => record.kind === "merge.transaction"),
+    ).toHaveLength(mergesBefore);
     expect(after.value.records.filter((record) => record.kind === "blocker.answer")).toHaveLength(
       answersBefore,
     );

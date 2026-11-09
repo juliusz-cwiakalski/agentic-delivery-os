@@ -34,18 +34,26 @@ import type {
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Expect<T extends true> = T;
 
-type WideStringIsRejected = Expect<Equal<string extends CoordinatorDecisionKind ? true : false, false>>;
+type WideStringIsRejected = Expect<
+  Equal<string extends CoordinatorDecisionKind ? true : false, false>
+>;
 type UnknownDecisionIsRejected = Expect<
   Equal<"spawn-hot" extends CoordinatorLifecycleDecision ? true : false, false>
 >;
 type DecisionUnion = Expect<
   Equal<CoordinatorLifecycleDecision, "join-live" | "resume-context" | "spawn-fresh">
 >;
-type IterationDecisionIncludesNone = Expect<Equal<CoordinatorDecisionKind extends CoordinatorLifecycleDecision | "none" ? true : false, true>>;
+type IterationDecisionIncludesNone = Expect<
+  Equal<CoordinatorDecisionKind extends CoordinatorLifecycleDecision | "none" ? true : false, true>
+>;
 type ReasonUnion = Expect<
   Equal<
     CoordinatorDecisionReason,
-    "context-pressure" | "context-unknown" | "session-interrupted" | "initial-start" | "clean-iteration-end"
+    | "context-pressure"
+    | "context-unknown"
+    | "session-interrupted"
+    | "initial-start"
+    | "clean-iteration-end"
   >
 >;
 type RestartReasonUnion = Expect<
@@ -123,7 +131,9 @@ type InstanceExternalUnit = Expect<Equal<CoordinatorInstance["externalUnit"], "a
 type ObservationSchema = Expect<
   Equal<CoordinatorObservation["schemaVersion"], "delivery.coordinator.v1">
 >;
-type ObservationInstance = Expect<Equal<CoordinatorObservation["instance"], CoordinatorInstance | null>>;
+type ObservationInstance = Expect<
+  Equal<CoordinatorObservation["instance"], CoordinatorInstance | null>
+>;
 type ObservationTickVerdict = Expect<
   Equal<CoordinatorObservation["tickVerdict"], CoordinatorTickVerdict | null>
 >;

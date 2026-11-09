@@ -36,6 +36,8 @@ describe("TC-COORD-073 the wake records the question and iteration", () => {
     });
     // Nothing wakes before the tick; the next tick wakes exactly once.
     expect(dataOf(await harness.run(["coordinator", "status", "--json"])).wake).toBeNull();
-    expect(dataOf(await harness.run(["coordinator", "tick", "--json"])).wake?.outcome).toBe("woken");
+    expect(dataOf(await harness.run(["coordinator", "tick", "--json"])).wake?.outcome).toBe(
+      "woken",
+    );
   });
 });

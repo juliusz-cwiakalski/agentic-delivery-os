@@ -7,11 +7,7 @@ import {
   COORDINATOR_RECORD_KINDS,
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/contracts/index";
-import {
-  createCoordinatorHarness,
-  dataOf,
-  seedLease,
-} from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, dataOf, seedLease } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-018 the instance identity folds from the latest lease", () => {
   test("exactly six record kinds exist and no separate instance record", () => {
@@ -46,7 +42,10 @@ describe("TC-COORD-018 the instance identity folds from the latest lease", () =>
   });
 
   test("a takeover folds to the new instance with the previous holder", async () => {
-    const harness = createCoordinatorHarness({ label: "instance-takeover", alive: { 4242: false } });
+    const harness = createCoordinatorHarness({
+      label: "instance-takeover",
+      alive: { 4242: false },
+    });
     seedLease(harness, {
       action: "acquired",
       instanceId: "instance-dead",

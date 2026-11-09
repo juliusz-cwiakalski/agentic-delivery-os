@@ -3,10 +3,7 @@
  * version is unchanged.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  STATE_SCHEMA_VERSION,
-  type StateStorePort,
-} from "../../packages/core/src/contracts/index";
+import { STATE_SCHEMA_VERSION, type StateStorePort } from "../../packages/core/src/contracts/index";
 import {
   appendCoordinatorExhaustion,
   appendCoordinatorFence,

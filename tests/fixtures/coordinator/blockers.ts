@@ -29,9 +29,7 @@ export const question = (
   ...overrides,
 });
 
-export const answer = (
-  overrides: Partial<BlockerAnswerRecord> = {},
-): BlockerAnswerRecord => ({
+export const answer = (overrides: Partial<BlockerAnswerRecord> = {}): BlockerAnswerRecord => ({
   schemaId: BLOCKER_ANSWER_PAYLOAD_SCHEMA,
   questionId: "q-0001",
   answeringAudience: "coordinator",

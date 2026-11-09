@@ -9,10 +9,7 @@ import type { HarnessLivenessReport } from "../../packages/core/src/contracts/in
 import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import { PROGRESS_BOUND_MS, staleBaseline } from "../fixtures/coordinator/evidence";
 
-const reportFor = (
-  tokenDelta: number | null,
-  traffic: number | null,
-): HarnessLivenessReport =>
+const reportFor = (tokenDelta: number | null, traffic: number | null): HarnessLivenessReport =>
   createRecordingProcessPort({ progress: { tokenDelta, traffic } }).livenessReport();
 
 describe("TC-COORD-029 the adapter maps sourced readings to a new turn", () => {

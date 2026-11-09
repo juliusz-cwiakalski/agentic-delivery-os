@@ -58,7 +58,11 @@ describe("TC-COORD-038 one active expectation per coordinator", () => {
   });
 
   test("the expectation window is carried on the record", () => {
-    const record = iterationRecord({ trigger: "collection", decision: "none", reason: "expectation" });
+    const record = iterationRecord({
+      trigger: "collection",
+      decision: "none",
+      reason: "expectation",
+    });
     expect(record.expectationWindowMs).toBe(600_000);
     expect(record.digestFingerprint).toContain("cursor=");
   });

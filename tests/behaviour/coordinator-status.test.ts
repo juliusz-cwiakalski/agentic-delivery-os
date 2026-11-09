@@ -3,7 +3,11 @@
  * `tickVerdict: null`) and degrades honestly.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, dataOf, seedStuckVerdict } from "../fixtures/coordinator/harness";
+import {
+  createCoordinatorHarness,
+  dataOf,
+  seedStuckVerdict,
+} from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-013 status reports the full state and never mutates", () => {
   test("a fresh state dir reports a stopped coordinator with the declared schema", async () => {

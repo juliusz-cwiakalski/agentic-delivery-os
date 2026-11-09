@@ -81,8 +81,7 @@ export const purityViolations = (root: string, file: string): string[] => {
       continue;
     }
     const value = specifier.text;
-    const allowed =
-      value === "#contracts" || (value.startsWith("./") && value.endsWith(".js"));
+    const allowed = value === "#contracts" || (value.startsWith("./") && value.endsWith(".js"));
     if (!allowed) violations.push(`${relative}: forbidden import ${value}`);
     if (FORBIDDEN_MODULES.some((module) => value === module || value.startsWith(module))) {
       violations.push(`${relative}: runtime import ${value}`);
@@ -117,8 +116,9 @@ describe("TC-COORD-002 the coordinator domain tier is pure and confined", () => 
   });
 
   test("a node:fs import in the domain fails naming the runtime import", () => {
-    const mutated = mutateDomainFile("coordinator-evidence.ts", (text) =>
-      `import { readFileSync } from "node:fs";\n${text}`,
+    const mutated = mutateDomainFile(
+      "coordinator-evidence.ts",
+      (text) => `import { readFileSync } from "node:fs";\n${text}`,
     );
     try {
       const violations = purityViolations(mutated.root, "coordinator-evidence.ts");
@@ -129,8 +129,9 @@ describe("TC-COORD-002 the coordinator domain tier is pure and confined", () => 
   });
 
   test("an ambient clock read in the domain fails naming the marker", () => {
-    const mutated = mutateDomainFile("coordinator-lifecycle.ts", (text) =>
-      `${text}\nexport const now = Date.now();\n`,
+    const mutated = mutateDomainFile(
+      "coordinator-lifecycle.ts",
+      (text) => `${text}\nexport const now = Date.now();\n`,
     );
     try {
       const violations = purityViolations(mutated.root, "coordinator-lifecycle.ts");
@@ -141,8 +142,9 @@ describe("TC-COORD-002 the coordinator domain tier is pure and confined", () => 
   });
 
   test("an environment read in the domain fails naming the marker", () => {
-    const mutated = mutateDomainFile("coordinator-evidence.ts", (text) =>
-      `${text}\nexport const limit = process.env.LIMIT;\n`,
+    const mutated = mutateDomainFile(
+      "coordinator-evidence.ts",
+      (text) => `${text}\nexport const limit = process.env.LIMIT;\n`,
     );
     try {
       const violations = purityViolations(mutated.root, "coordinator-evidence.ts");

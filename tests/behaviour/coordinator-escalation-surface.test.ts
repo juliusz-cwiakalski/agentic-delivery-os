@@ -6,7 +6,12 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { STATUS_SECTION_ORDER, BRIEF_ANCHOR_GROUPS } from "../../packages/core/src/contracts/index";
-import { capSizedFacts, reservedSlotFacts, runStatusCli, statusRuntime } from "../fixtures/status/harness";
+import {
+  capSizedFacts,
+  reservedSlotFacts,
+  runStatusCli,
+  statusRuntime,
+} from "../fixtures/status/harness";
 import { briefRuntime, runBriefCli } from "../fixtures/brief/harness";
 
 const ROOT = process.cwd();
@@ -32,10 +37,18 @@ describe("TC-COORD-064 the reserved slot adds no new surface", () => {
   test("the brief keeps the same anchors and renders the escalation first", async () => {
     const control = await runBriefCli(["--json", "brief"], briefRuntime(capSizedFacts()));
     const reserved = await runBriefCli(["--json", "brief"], briefRuntime(reservedSlotFacts()));
-    const controlEnvelope = JSON.parse(control.stdout) as { data: { anchors: { group: string }[] } };
-    const reservedEnvelope = JSON.parse(reserved.stdout) as { data: { anchors: { group: string }[] } };
-    expect(controlEnvelope.data.anchors.map((anchor) => anchor.group)).toEqual([...BRIEF_ANCHOR_GROUPS]);
-    expect(reservedEnvelope.data.anchors.map((anchor) => anchor.group)).toEqual([...BRIEF_ANCHOR_GROUPS]);
+    const controlEnvelope = JSON.parse(control.stdout) as {
+      data: { anchors: { group: string }[] };
+    };
+    const reservedEnvelope = JSON.parse(reserved.stdout) as {
+      data: { anchors: { group: string }[] };
+    };
+    expect(controlEnvelope.data.anchors.map((anchor) => anchor.group)).toEqual([
+      ...BRIEF_ANCHOR_GROUPS,
+    ]);
+    expect(reservedEnvelope.data.anchors.map((anchor) => anchor.group)).toEqual([
+      ...BRIEF_ANCHOR_GROUPS,
+    ]);
     const human = await runBriefCli(["brief"], briefRuntime(reservedSlotFacts()));
     expect(human.stdout).toContain("q-escalation");
     const blockerLine = human.stdout

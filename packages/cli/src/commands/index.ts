@@ -14,9 +14,7 @@ export { createCloseoutCommandDefinition } from "./closeout.js";
 export type { CommitCommandRuntime, CommitContext } from "./commit.js";
 export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
-export type {
-  CoordinatorCommandRuntime,
-} from "./coordinator.js";
+export type { CoordinatorCommandRuntime } from "./coordinator.js";
 export { createCoordinatorCommandDefinition } from "./coordinator.js";
 export type {
   CoordinatorFailure,

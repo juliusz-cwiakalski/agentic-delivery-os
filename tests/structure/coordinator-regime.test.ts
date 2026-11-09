@@ -34,11 +34,21 @@ describe("TC-COORD-014 the regime descriptor is shared and foreground-only", () 
 
   test("the family ships no coordinator installer or unit renderer", () => {
     const command = readFileSync(join(ROOT, "packages/cli/src/commands/coordinator.ts"), "utf8");
-    for (const forbidden of ["coordinator install", "coordinator uninstall", "renderSystemdUnit", "systemd", "launchd"]) {
+    for (const forbidden of [
+      "coordinator install",
+      "coordinator uninstall",
+      "renderSystemdUnit",
+      "systemd",
+      "launchd",
+    ]) {
       expect(command).not.toContain(forbidden);
     }
     const loop = readFileSync(join(ROOT, "packages/cli/src/commands/coordinator-loop.ts"), "utf8");
-    for (const forbidden of ["renderSystemdUnit", "SupervisorInstallRequest", "installSupervisor"]) {
+    for (const forbidden of [
+      "renderSystemdUnit",
+      "SupervisorInstallRequest",
+      "installSupervisor",
+    ]) {
       expect(loop).not.toContain(forbidden);
     }
   });

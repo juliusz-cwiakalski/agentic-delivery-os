@@ -45,9 +45,7 @@ export type CoordinatorLifecycleDecision = {
  * one recovery ordinal. `spawn-fresh` consumes one ordinal for the three
  * recovery reasons and none for `initial-start` / `clean-iteration-end`.
  */
-export const decideLifecycle = (
-  facts: CoordinatorLifecycleFacts,
-): CoordinatorLifecycleDecision => {
+export const decideLifecycle = (facts: CoordinatorLifecycleFacts): CoordinatorLifecycleDecision => {
   if (facts.live) {
     return { kind: "join-live", reason: "live-session", consumesOrdinal: 0 };
   }

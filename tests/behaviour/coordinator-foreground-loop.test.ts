@@ -10,7 +10,10 @@ import {
   seedLease,
 } from "../fixtures/coordinator/harness";
 
-const startHarness = (label: string, cycle: Parameters<typeof createCoordinatorHarness>[0]["cycle"]) =>
+const startHarness = (
+  label: string,
+  cycle: Parameters<typeof createCoordinatorHarness>[0]["cycle"],
+) =>
   createCoordinatorHarness({
     label,
     cycle,
@@ -61,7 +64,9 @@ describe("TC-COORD-099 the foreground loop keeps one lifetime lease pair", () =>
   test("a fatal cycle error exits with its typed identity and still releases", async () => {
     const harness = startHarness("loop-fatal", {
       cycles: 3,
-      events: [{ kind: "throw", afterCycle: 1, error: { kind: "state", code: "state.store.torn" } }],
+      events: [
+        { kind: "throw", afterCycle: 1, error: { kind: "state", code: "state.store.torn" } },
+      ],
     });
     const result = await harness.run(["coordinator", "start", "--foreground", "--json"]);
     expect(result.code).toBe(2);

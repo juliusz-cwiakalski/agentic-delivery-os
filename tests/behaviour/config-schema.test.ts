@@ -29,6 +29,7 @@ describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
       "lane",
       "queue",
       "daemon",
+      "coordinator",
       "poll",
     ]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
