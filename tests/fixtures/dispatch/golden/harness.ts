@@ -28,6 +28,7 @@ import {
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   type HarnessEvidence,
+  type HarnessExecutionEnvironmentDescriptor,
   type HarnessFailure,
   type HarnessLivenessReport,
   type HarnessSessionPort,
@@ -110,6 +111,12 @@ export type CommandScenarioOptions = {
   readonly harnessKind?: "opencode" | "claude-code";
   /** An injected real session port; defaults to the delivered scripted port. */
   readonly harnessPort?: HarnessSessionPort;
+  /** The execution-environment descriptor dispatch hands to the port. */
+  readonly descriptor?: HarnessExecutionEnvironmentDescriptor;
+  /** Registered secret values for the redaction path. */
+  readonly secrets?: readonly string[];
+  /** The prompt factory dispatch hands to the port. */
+  readonly prompt?: (ref: string) => string;
   readonly newAttemptId?: (ref: string) => string;
   readonly newDivergenceId?: (ref: string) => string;
   /** The optional admission preflight; omitting it keeps the delivered order. */
@@ -210,8 +217,12 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
         options.harnessKind === undefined ? (options.harnessPort ?? scripted.port) : undefined,
     },
     defaultHarness: options.harnessKind ?? "opencode",
-    descriptor: { kind: "host", workDirectory: state.root, environment: [] },
-    prompt: (ref) => `deliver ${ref}`,
+    descriptor: options.descriptor ?? {
+      kind: "host",
+      workDirectory: state.root,
+      environment: [],
+    },
+    prompt: options.prompt ?? ((ref) => `deliver ${ref}`),
     ...(options.evidenceClass === undefined ? {} : { evidenceClass: options.evidenceClass }),
     repository: () => options.repository ?? "github.com/owner/repo",
     readTruth: async () => options.reads ?? readsFrom(),
@@ -301,7 +312,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
       brand: BRAND,
       clock: FIXED_CLOCK,
       newRunId: () => "run-fixed",
-      secrets: [],
+      secrets: [...(options.secrets ?? [])],
       program: { commands: { dispatch: definition } },
     });
     const stdout = out.join("");
