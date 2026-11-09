@@ -6,6 +6,8 @@
  * `dual-run resolve`, and `handover --revert`. The handler returns data or a
  * classified failure and never chooses an exit literal.
  */
+
+import type { DispatchRunResult } from "@delivery-os/core";
 import {
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
@@ -13,12 +15,12 @@ import {
   type DispatchSummaryData,
   type ProjectionClass,
 } from "@delivery-os/core/contracts";
-import type { DispatchRunResult } from "@delivery-os/core";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
   renderDispatchHandoverText,
   renderDispatchSummaryText,
   renderDispatchText,
+  renderDispatchVerboseText,
 } from "../output/dispatch-text.js";
 
 /** The one-shot run surface; the edge wires the real ports behind it. */
@@ -132,11 +134,13 @@ export const createDispatchCommandDefinition = (
     const result = (data as { readonly result?: DeliveryResultToken }).result;
     return result === undefined ? "success" : projectionOf(result);
   },
-  humanText: (data) => {
+  humanText: (data, _brand, context) => {
     if (isSummaryData(data)) return renderDispatchSummaryText(data);
     const envelope = data as Partial<DispatchEnvelopeData>;
     if (envelope.result !== undefined && envelope.lastMessage !== undefined) {
-      return renderDispatchText(envelope as DispatchEnvelopeData);
+      return context?.verbose === true
+        ? renderDispatchVerboseText(envelope as DispatchEnvelopeData)
+        : renderDispatchText(envelope as DispatchEnvelopeData);
     }
     const handover = data as { readonly operation?: unknown; readonly recorded?: unknown };
     if (handover.operation === "authoritative" || handover.operation === "dual-run") {

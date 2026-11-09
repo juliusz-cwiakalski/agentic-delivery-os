@@ -168,3 +168,54 @@ notes:
       allowlist or the spawn-failed envelope."
     type: info
     date: "2026-11-09"
+  - text: >-
+      Plan phase 2 complete (commit recorded in the delivery report; primitive
+      commit subject amended to a specific conventional header, no body). Owns
+      AC-F5-1, AC-F5-4 and TC-HDA-029, TC-HDA-033. Added
+      DispatchEnvelopeError (CommandResultError plus optional detail
+      { kind: "harness"|"config"; code; field? }) and the exported
+      DISPATCH_MAX_ERROR_DETAIL_CHARS = 256 bound in
+      packages/core/src/contracts/dispatch.ts; retyped DispatchEnvelopeData.error
+      and re-exported both names from contracts/index.ts. The pre-session spawn
+      branch now attaches the underlying harness kind/code and the field only
+      when carried, single-line and clamped to the bound; spawn-failed identity,
+      category, retryability, consequence, remediation hint, token, outcome,
+      exit and last message are unchanged. Added the additive optional
+      HumanTextContext third parameter to CommandDefinition.humanText, passed
+      { verbose } at the single call site, and rendered the four-key text plus a
+      prose verbose diagnostic in packages/cli/src/output/dispatch-text.ts;
+      non-verbose text stays exactly four keys. Updated the byte-pinned
+      spawn-failed golden with the no-field harness.spawn.refused detail, the
+      v1 contract inventory (both new exports under dispatch.ts and index.ts),
+      and the content-inventory allowances for the exported detail bound and
+      renderDispatchVerboseText. Gates green: dispatch-envelope-detail,
+      dispatch-error-envelope, dispatch-errors golden,
+      port-contract-inventory, content-inventory = 29 pass / 0 fail; pnpm
+      typecheck (including the new type test) passed; pnpm check:boundaries
+      passed (356 modules, 1041 deps; 162 ambient-globals files; 325 secret-read
+      files); biome clean on touched files. Mutation evidence applied, observed
+      red, and restored green: M-9 (2 failing suites: missing data.error.detail
+      and golden byte mismatch) and M-12 (1 failing assertion: last message
+      changed). Deviation recorded: tests/fixtures/dispatch/golden/harness.ts
+      gained the spawnFailure pass-through needed by the detail suites (scope
+      drift disclosed by the primitive), and the verbose renderer export is
+      registered in the content-inventory allowance.
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 1 complete (commit 014fdd6): additive variable-only optional
+      marker and the viable default allowlist across contract, catalog,
+      configuration validation, deny-by-default builder, and production
+      composition; delivered suites and fixtures migrated in the same commit.
+      Gates green: pnpm build regenerated the config artifacts and their parity
+      check passes; harness-environment-marker 3, harness-config 23,
+      harness-spawn-env 18, harness-spawn-credential 8, config-cli 18,
+      dispatch-composition 21, queue-production-binding 15,
+      config-default-positions 6, harness-neutrality 10, harness-imports 6,
+      harness-mutants 14; pnpm typecheck (including the marker type test)
+      passed; pnpm check:boundaries passed. Mutation evidence applied, observed
+      red, and restored green: M-1 (3 failing tests), M-2 (6), M-3 (6), M-4
+      (1), M-5 (3), M-6 (5), M-7 (2), M-14 (15), M-15 (1), M-16 (2), M-17 (2),
+      M-18 (4), M-19 (12), M-19b (12). No mutant committed.
+    type: info
+    date: "2026-11-09"

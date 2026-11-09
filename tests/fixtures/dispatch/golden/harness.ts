@@ -28,6 +28,7 @@ import {
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   type HarnessEvidence,
+  type HarnessFailure,
   type HarnessLivenessReport,
   type HarnessSessionPort,
   type StateStorePort,
@@ -58,6 +59,11 @@ export type CommandRun = {
       readonly consequence: string;
       readonly remediationHint: string;
       readonly summary?: string;
+      readonly detail?: {
+        readonly kind: "harness" | "config";
+        readonly code: string;
+        readonly field?: string;
+      };
     };
   };
 };
@@ -66,6 +72,8 @@ export type CommandScenarioOptions = {
   readonly label?: string;
   readonly evidence?: HarnessEvidence;
   readonly spawnFails?: boolean;
+  /** An explicit underlying spawn failure; takes precedence over `spawnFails`. */
+  readonly spawnFailure?: HarnessFailure;
   readonly collectFails?: boolean;
   readonly claim?: DispatchLeaseClaim;
   readonly reads?: DispatchTruthReads;
@@ -158,6 +166,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
   const scripted = createScriptedHarness({
     ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
     ...(options.spawnFails === undefined ? {} : { spawnFails: options.spawnFails }),
+    ...(options.spawnFailure === undefined ? {} : { spawnFailure: options.spawnFailure }),
     ...(options.collectFails === undefined ? {} : { collectFails: options.collectFails }),
     ...(options.livenessSequence === undefined
       ? {}

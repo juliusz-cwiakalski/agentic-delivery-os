@@ -9,8 +9,9 @@
  * tokens are imported from the delivered taxonomy; this module declares no
  * second token list.
  */
-import type { HarnessKind, HarnessOutcome } from "./harness.js";
+
 import type { DeliveryResultToken } from "./delivery-result.js";
+import type { HarnessKind, HarnessOutcome } from "./harness.js";
 import type { CommandResultError } from "./result.js";
 
 /** The result-token alias; keeps the payload field types readable and bounded. */
@@ -274,6 +275,20 @@ export type DispatchPhaseLedger = {
   readonly variant: DispatchLedgerVariant;
 };
 
+/**
+ * The dispatch envelope error (DM-3, DEC-4): the delivered `CommandResultError`
+ * plus an additive bounded detail carrying the underlying harness failure
+ * identity. The detail is optional because non-spawn dispatch error rows do not
+ * carry one; on the pre-session spawn path it is always present.
+ */
+export type DispatchEnvelopeError = CommandResultError & {
+  readonly detail?: {
+    readonly kind: "harness" | "config";
+    readonly code: string;
+    readonly field?: string;
+  };
+};
+
 /** The declared dispatch envelope `data` (DM-5). */
 export type DispatchEnvelopeData = {
   readonly result: DeliveryResultToken;
@@ -285,7 +300,7 @@ export type DispatchEnvelopeData = {
   readonly handoverState: DispatchHandoverState;
   readonly outcome: HarnessOutcome;
   /** Present only for an attempt-stage classified failure, never for success. */
-  readonly error?: CommandResultError;
+  readonly error?: DispatchEnvelopeError;
   /** Bounded, single-line, redacted summary; also feeds text `last_message=`. */
   readonly lastMessage: string;
   /** Present only when a bounded field was truncated. */
@@ -354,6 +369,8 @@ export const DISPATCH_MAX_MACHINE_BYTES = 65536 as const;
 export const DISPATCH_MAX_HUMAN_LINES = 40 as const;
 export const DISPATCH_MAX_HUMAN_BYTES = 8192 as const;
 export const DISPATCH_MAX_LAST_MESSAGE_CHARS = 512 as const;
+/** The additive error-detail bound (NFR-6): single-line identifiers only. */
+export const DISPATCH_MAX_ERROR_DETAIL_CHARS = 256 as const;
 export const DISPATCH_MAX_EVIDENCE_REFS = 16 as const;
 export const DISPATCH_MAX_NOTE_CHARS = 240 as const;
 export const DISPATCH_MAX_DIVERGENCE_IDS = 20 as const;

@@ -40,6 +40,12 @@ export type CommandInvocation = {
 /** A pure command handler injected by the caller (A-T8: no registry ships). */
 export type CommandHandler = (invocation: CommandInvocation) => unknown | Promise<unknown>;
 
+/**
+ * The optional human-text context (DM-4): the parsed `--verbose` fact. Omitted
+ * context means non-verbose. Additive on the published human-text seam.
+ */
+export type HumanTextContext = { readonly verbose: boolean };
+
 /** One synthetic command definition: handler plus argument-shape metadata. */
 export type CommandDefinition = {
   readonly handler: CommandHandler;
@@ -48,7 +54,11 @@ export type CommandDefinition = {
   readonly conflicts?: readonly (readonly [string, string])[];
   readonly positionals?: { readonly max: number };
   readonly humanSuccess?: boolean;
-  readonly humanText?: (data: unknown, brand: BrandIdentity) => string | undefined;
+  readonly humanText?: (
+    data: unknown,
+    brand: BrandIdentity,
+    context?: HumanTextContext,
+  ) => string | undefined;
   /**
    * Render a failure-path human report from the raw handler error value. The
    * value is never copied into the envelope; only the rendered text reaches the
@@ -358,7 +368,7 @@ export async function runCli(
               ? "success"
               : definition.exitProjection(outcome.data, deps.brand);
           if (definition.humanText !== undefined && !emitEnvelope) {
-            humanText = definition.humanText(outcome.data, deps.brand);
+            humanText = definition.humanText(outcome.data, deps.brand, { verbose });
           }
           if (definition.stream !== undefined) {
             stream = definition.stream(invocation);

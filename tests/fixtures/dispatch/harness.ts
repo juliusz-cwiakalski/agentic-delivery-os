@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
   HarnessEvidence,
+  HarnessFailure,
   HarnessLivenessReport,
   HarnessResult,
   HarnessSessionHandle,
@@ -94,6 +95,8 @@ export const createDispatchState = (label = "dispatch"): DispatchState => {
 export type ScriptedHarnessOptions = {
   readonly evidence?: HarnessEvidence;
   readonly spawnFails?: boolean;
+  /** An explicit underlying spawn failure; takes precedence over `spawnFails`. */
+  readonly spawnFailure?: HarnessFailure;
   readonly collectFails?: boolean;
   readonly liveness?: HarnessLivenessReport;
   /**
@@ -155,6 +158,12 @@ export const createScriptedHarness = (options: ScriptedHarnessOptions = {}): Scr
     spawn: async (input) => {
       calls.push("spawn");
       spawnInputs.push(input);
+      if (options.spawnFailure !== undefined) {
+        return {
+          ok: false,
+          error: options.spawnFailure,
+        } satisfies HarnessResult<HarnessSessionHandle>;
+      }
       return options.spawnFails === true
         ? ({
             ok: false,
