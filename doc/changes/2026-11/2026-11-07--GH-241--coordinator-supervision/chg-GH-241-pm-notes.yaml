@@ -12,7 +12,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-09T09:46:15.412Z }
   quality_gates: { started: null, completed: 2026-11-09T09:53:25.026Z }
   dod_check: { started: null, completed: 2026-11-09T09:54:25.024Z }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: null, completed: 2026-11-09T10:00:23.469Z, url: null }
 decisions:
   - text: "Delivery restarts from a clean branch:
       feat/GH-241/coordinator-supervision existed at origin/main-tools tip
@@ -453,4 +453,11 @@ notes:
       non-blocking behavioural note; NF-07 (TC-073 now asserts only the live
       wake path) is likewise accepted as a minor test-traceability note."
     type: "decision"
+    date: "2026-11-09"
+  - text: "PR/MR for the change:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/278 — base
+      `main-tools`, head `feat/GH-241/coordinator-supervision` @ 78063027, 38
+      commits, `change` label, not merged. Ticket #241 assigned to the owner for
+      review."
+    type: "info"
     date: "2026-11-09"
