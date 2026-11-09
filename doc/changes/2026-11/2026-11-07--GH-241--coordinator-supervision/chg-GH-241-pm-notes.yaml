@@ -3,7 +3,7 @@ title: "M1-S23: Coordinator supervision"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-09T03:22:03.900Z" }
-  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T15:54:57Z" }
+  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-09T04:39:26.131Z" }
   test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T15:54:57Z" }
   delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T15:54:57Z" }
   dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
@@ -345,4 +345,16 @@ notes:
       historical notes only. The stale `packages/*/dist` build also broke every
       CLI command until `pnpm build` was re-run."
     type: "retro"
+    date: "2026-11-09"
+  - text: "Repair round complete (2026-11-09): spec v1.4 (50 ACs; added AC-F1-5
+      foreground-loop lifetime pair and AC-F8-7 stale-fence claim recovery),
+      test plan v1.4 (76 TCs; TC-094 split into contention 094 plus serialized
+      096, new 097 claim-time capability gap, 098 stale-fence start recovery,
+      099 foreground loop), plan.yaml revision 1.4 (76/76 TC map; Phase-6 gate
+      now runs TC-024/025 and the four new test files; foreground loop seam
+      declared; delivered DaemonProcessPort reuse replaces the new harness port;
+      legacy plan.md deleted), TDR-0017/TDR-0018 amended and renumbered from the
+      colliding 0013/0014. The single authorized DoR re-gate follows as
+      iteration 4."
+    type: "decision"
     date: "2026-11-09"
