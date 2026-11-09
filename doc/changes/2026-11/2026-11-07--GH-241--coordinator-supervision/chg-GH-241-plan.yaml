@@ -227,6 +227,8 @@ phases:
   # two-segment allowlist, and the documented-table companion in the same
   # commit so error-table-sync is green from this boundary.
   #
+  # Scope: the two Proposed TDRs (TDR-0017, TDR-0018) are the contract this phase lands and new untracked files the commit primitive can only stage inside a declared scope.
+  #
   # Tasks (TC-COORD-001, 081, 082):
   #  1.1 Create packages/core/src/contracts/coordinator.ts: closed lifecycle
   #      decisions (join-live, resume-context, spawn-fresh, none), decision
@@ -304,6 +306,8 @@ phases:
         - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
         - doc/spec/features/feature-result-contract.md
+        - doc/decisions/TDR-0017-coordinator-supervision-architecture.md
+        - doc/decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md
       folders:
         - tests/fixtures/result/code-corpora
     interactions:
