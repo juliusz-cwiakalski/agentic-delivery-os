@@ -60,12 +60,38 @@
 #   - Ownership is unchanged: 30/30 ACs and 46/46 TCs keep their single owning
 #     phase.
 #
+# Revision 4 (2026-11-09): iteration-3 DoR remediation of the four plan-owned
+# findings in `readiness/readiness-iter-3.md` (spec and test plan are v1.3):
+#   - N-1 (P2): the JSONL `failureReported` rule is the spec v1.3 explicit-fact
+#     rule — a JSONL `error` event or the legacy envelope's `result.failure ===
+#     true`/`result.status === "failed"` — and a non-zero process exit is carried
+#     by `exitStatus` only, classifying `failed` through the classifier's exit
+#     branch (`packages/core/src/domain/harness-classify.ts:50-52`). The removed
+#     "or the exit is non-zero" clause contradicted F-4/§8.4/DEC-5 and
+#     AC-F1-5/AC-F4-3/AC-F4-4 with TC-OCS-015/033/045/048.
+#   - N-2 (P4): the TC-OCS-061 obligation is the observable one — a multi-line
+#     JSONL `spawnStdout` acquires a handle before completion — and no longer
+#     asserts "never over the one-shot runner", which `HarnessConformanceIo`/
+#     `HarnessConformanceRegistration.build`
+#     (`packages/testkit/src/conformance/harness.ts:34-56`) cannot expose.
+#   - N-3 (P6): the `liveness:` evidence ref is corroboration only; the
+#     production adapter receives no `livenessFacts`
+#     (`packages/cli/src/production.ts:443-458`, `opencode.ts:257`), so the
+#     non-blocking discriminator is the deterministic suite (TC-OCS-020/021/082)
+#     and, at dispatch level, `collect` pending across at least one poll. The
+#     test plan's PASS rule keeps the ref as required corroboration.
+#   - N-5 (header/P6): the source block now names spec v1.3 and test plan v1.3,
+#     and `doc/decisions/00-index.md` joins P6's scope so the TDR-0016 index row
+#     authored by `@decision-advisor` lands in the same decision-capture commit.
+#   - Ownership is unchanged: 30/30 ACs and 46/46 TCs keep their single owning
+#     phase; no `doc/spec/**` path is added or edited.
+#
 # Sources (single source of truth):
-#   - Spec:      ./chg-GH-275-spec.md (v1.2; F-1..F-8, AC-F1-1..AC-F8-2 = 30 ACs,
+#   - Spec:      ./chg-GH-275-spec.md (v1.3; F-1..F-8, AC-F1-1..AC-F8-2 = 30 ACs,
 #                NFR-1..NFR-9, DEC-1..DEC-8, RSK-1..RSK-9, §6 flows 1–4,
 #                §8.4 external contract, §8.5 backward compatibility, Appendix
 #                B contract-type sketch, Appendix C failure mapping)
-#   - Test plan: ./chg-GH-275-test-plan.md (v1.2; 46 TC-OCS-* scenarios in §5.1
+#   - Test plan: ./chg-GH-275-test-plan.md (v1.3; 46 TC-OCS-* scenarios in §5.1
 #                and §5.2, §6.1 fixture set of three pinned captures, §6.3
 #                operator-run end-to-end procedure with steps 0a/1b/1c, §7.1
 #                files the delivery must add or edit, §7.2 TC → file/command
@@ -350,11 +376,16 @@ phases:
       `result.toolFailure === true`; otherwise the JSONL rules apply —
       `completionMarker` true only when the final decoded `step_finish` carries
       `part.reason === "stop"` with exit 0 and no host timeout, `toolFailure`
-      true iff a `tool_use` part carries `part.state.status === "error"`,
-      `failureReported` true iff an `error` event is present or the exit is
-      non-zero; in both cases the host `exitStatus` (close status) and `timedOut`
+      true iff a `tool_use` part carries `part.state.status === "error"`, and
+      `failureReported` true iff an explicit failure fact is present — a JSONL
+      `error` event, or the legacy envelope's `result.failure === true` /
+      `result.status === "failed"` — while a non-zero process exit is carried by
+      `exitStatus` only and classifies `failed` through the classifier's exit
+      branch (`packages/core/src/domain/harness-classify.ts:50-52`); in both
+      cases the host `exitStatus` (close status) and `timedOut`
       (host kill flag) merge on top, so a legacy completion fact under a host
-      timeout still classifies `timed-out`. `spawnRefused` is therefore reachable
+      timeout still classifies `timed-out` (spec F-4/§8.4/DEC-5, AC-F1-5,
+      AC-F4-3, AC-F4-4, TC-OCS-045/048). `spawnRefused` is therefore reachable
       on an identified session only through the legacy envelope form; the
       pre-session refusal path stays the no-identifier path of DEC-4. Acquisition
       gets a `60_000` ms default handle bound, an optional `sessionTimeoutMs`
@@ -496,11 +527,19 @@ phases:
       option defaulting to the delivered scripted port, so the existing dispatch
       suites run unchanged) and assert one starter and one one-shot invocation
       set per harness. Extend the conformance assertions in
-      `tests/conformance/harness-classification.test.ts` (TC-OCS-061): the
-      opencode registration's builder constructs its port over a starter derived
-      from the scenario `spawnStdout` and never over the one-shot runner; the six
-      delivered envelopes still produce their delivered evidence and token on
-      both adapters; and five real-shape JSONL counterparts — `completed`
+      `tests/conformance/harness-classification.test.ts` (TC-OCS-061): assert
+      the opencode registration's builder acquires from a MULTI-LINE JSONL
+      `spawnStdout` — two or more lines whose first line carries a top-level
+      `sessionID`, with a later terminal `step_finish` — resolving `ok: true`
+      with that id and deriving evidence in `collect`. That acquisition is the
+      only observable seam (`HarnessConformanceIo` /
+      `HarnessConformanceRegistration.build`,
+      `packages/testkit/src/conformance/harness.ts:34-56`, expose `spawnStdout`
+      plus injected deps and nothing else), so a single-document stream is
+      behaviourally indistinguishable between the one-shot runner and the
+      starter and "never over the one-shot runner" is NOT asserted (TC-OCS-061
+      step 1); the six delivered envelopes still produce their delivered
+      evidence and token on both adapters; and five real-shape JSONL counterparts — `completed`
       (terminal stop), `tool-failure` (`tool_use` with `state.status === "error"`
       plus terminal stop), `premature-end` (no terminal `step_finish`),
       `harness-failure` (`error` event) and `timeout` (terminal stop plus host
@@ -665,10 +704,15 @@ phases:
       `dispatch.session.spawn-failed` or `dispatch.state-unverified`), the exit
       code, elapsed seconds from dispatch start to the kill (pass bound 180 s),
       the step 1c first-event latency, at least one `liveness:` evidence ref in
-      the attempt record (positive evidence that the progress watch polled while
-      the session was live, which a completion-gated spawn cannot produce), and
-      the before/after `git status --porcelain` and `git rev-parse HEAD` of this
-      worktree, which must be unchanged (AC-F8-1, AC-F8-2). State-root accounting
+      the attempt record as CORROBORATION ONLY — the production opencode adapter
+      receives no `livenessFacts` (`packages/cli/src/production.ts:443-458`;
+      `packages/adapters/src/harness/opencode.ts:257`), so readings are
+      absent/unknown and a completion-gated build can record the same ref; the
+      real discriminator for non-blocking acquisition is the deterministic suite
+      (TC-OCS-020/021/082) plus, if asserted at dispatch level, `collect` staying
+      pending across at least one poll (TC-OCS-100 step 6, TC-OCS-101 step 5) —
+      and the before/after `git status --porcelain` and `git rev-parse HEAD` of
+      this worktree, which must be unchanged (AC-F8-1, AC-F8-2). State-root accounting
       is part of the evidence, not cleanup: the probe appends a real
       `dispatch.attempt` to `$HOME/.delivery-os-state/ledger.default.jsonl`
       outside the clone, so the phase reads back that record's `attemptId`, token
@@ -697,10 +741,14 @@ phases:
       authored decision record
       `doc/decisions/TDR-0016-harness-streaming-spawn-seam.md` — the record of the
       additive `HarnessSpawnStarter` seam decision (B-3 resolution, spec DEC-1) —
-      unmodified, byte-for-byte as authored in specification: it is declared in
-      this phase's scope because the `commit` primitive can stage untracked files
-      only inside a declared plan scope and the record is still untracked. It is
-      the only `doc/**` path this phase stages outside the change folder.
+      unmodified, byte-for-byte as authored in specification, together with the
+      TDR-0016 row in `doc/decisions/00-index.md` authored by
+      `@decision-advisor`: the decision index row is part of the
+      decision-capture evidence and lands in this commit. Both paths are declared
+      in this phase's scope because the `commit` primitive can stage untracked
+      files only inside a declared plan scope and the record is still untracked.
+      They are the only `doc/**` paths this phase stages outside the change
+      folder.
       Populate test plan §10 with the
       execution result per TC, the §7.3 mutation records (M-1..M-19) and the §6.3
       envelope output. Run the aggregate gate: `pnpm check` plus `pnpm typecheck`,
@@ -722,6 +770,7 @@ phases:
       files:
         - .changeset/gh-275-opencode-harness-contract-minor.md
         - doc/changes/2026-11/2026-11-08--GH-275--opencode-harness-contract/chg-GH-275-test-plan.md
+        - doc/decisions/00-index.md
         - doc/decisions/TDR-0016-harness-streaming-spawn-seam.md
     doneArtifacts:
       mergeRequestUrl: "PR for fix/GH-275/opencode-harness-contract targeting main-tools, opened at lifecycle phase 11 by @pr-manager and recorded as a pm-notes notes entry; it is not a deliverable of this phase"
@@ -730,11 +779,13 @@ phases:
         GH-275 in review; phase 6 owns AC-F8-1, AC-F8-2 and TC-OCS-100, TC-OCS-101,
         records the §6.3 evidence (result token, lastMessage, error.code, exit
         code, elapsed seconds, step 1c first-event latency, at least one liveness:
-        ref, the appended attemptId/token and the GH-275 lease id with its
+        ref as corroboration only, the appended attemptId/token and the GH-275
+        lease id with its
         released-or-released-by-this-phase proof, unchanged HEAD and status in
         this worktree) and the §10 execution log; it also commits the authored
         decision record doc/decisions/TDR-0016-harness-streaming-spawn-seam.md
-        unchanged as the decision-capture evidence for the additive
+        unchanged plus the TDR-0016 row in doc/decisions/00-index.md as the
+        decision-capture evidence for the additive
         HarnessSpawnStarter seam (B-3 / spec DEC-1); and it declares the phase-7
         doc-syncer handoff for doc/spec/features/feature-harness-adapters.md and
         doc/spec/features/feature-dispatch-engine.md without editing them here.
