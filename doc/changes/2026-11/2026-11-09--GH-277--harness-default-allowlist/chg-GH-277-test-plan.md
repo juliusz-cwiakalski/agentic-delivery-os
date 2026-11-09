@@ -1840,42 +1840,42 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 
 ## 10. Test Execution Log
 
-Execution window: TBD (the coder fills one row per phase as scenarios run). Branch: `fix/GH-277/harness-default-allowlist`.
+Execution window: 2026-11-09 (delivery phases P1-P4). Branch: `fix/GH-277/harness-default-allowlist`.
 Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, the recorded `opencode` version from §6.3.
 
 **How to fill.** Replace `Pending` with `Pass` or `Fail` and the run date as each scenario is executed; a Fail row names the failing assertion and the reopened phase. A `Manual` row is filled only from the §6.3 evidence. Do not mark a row `Pass` from a narrow suite when the scenario's command includes the aggregate gate.
 
 | TC ID | Phase | Run Date | Result | Notes |
 |---|---|---|---|---|
-| TC-HDA-001 | delivery | TBD | Pending | Contract/type and data-only scan |
-| TC-HDA-002 | delivery | TBD | Pending | Catalog/schema admission and rejections |
-| TC-HDA-003 | delivery | TBD | Pending | Config artifact parity |
-| TC-HDA-004 | delivery | TBD | Pending | Ambient/secret/child-process confinement |
-| TC-HDA-005 | delivery | TBD | Pending | Exact shipped default and `defaults` origins |
-| TC-HDA-006 | delivery | TBD | Pending | `TC-RELEASE-001` changeset invariant |
-| TC-HDA-010 | delivery | TBD | Pending | Zero-config synthetic spawn; attempt + token |
-| TC-HDA-011 | delivery | TBD | Pending | Bare-command PATH resolution + off-PATH control |
-| TC-HDA-012 | delivery | TBD | Pending | Ambient canary and `OC_ADOS_*` absence |
-| TC-HDA-013 | delivery | TBD | Pending | Model variables unset; no required failure |
-| TC-HDA-014 | delivery | TBD | Pending | Required absence names `field`, no child |
-| TC-HDA-015 | delivery | TBD | Pending | Optional absent omitted |
-| TC-HDA-016 | delivery | TBD | Pending | Optional present forwarded |
-| TC-HDA-017 | delivery | TBD | Pending | Record precedence |
-| TC-HDA-018 | delivery | TBD | Pending | Credential fail-closed; no bypass |
-| TC-HDA-019 | delivery | TBD | Pending | Explicit `HARNESS_MODEL` required semantics |
-| TC-HDA-020 | delivery | TBD | Pending | `{ name }` compatibility |
-| TC-HDA-021 | delivery | TBD | Pending | Marker validation matrix |
-| TC-HDA-022 | delivery | TBD | Pending | `config get harness.environment --show-origin` inspection |
-| TC-HDA-023 | delivery | TBD | Pending | Composition mapping and work-path injection |
-| TC-HDA-029 | delivery | TBD | Pending | `DispatchEnvelopeError` shape; `CommandResultError`/other envelopes not widened; v1 contract-inventory fixture updated |
-| TC-HDA-030 | delivery | TBD | Pending | Always-present detail; no-field `harness.spawn.refused` case; golden byte-equality |
-| TC-HDA-031 | delivery | TBD | Pending | JSON detail survives redaction |
-| TC-HDA-032 | delivery | TBD | Pending | Verbose detail at the dispatch human-text seam; DM-4 two-parameter clause under `pnpm typecheck`; non-verbose four keys |
-| TC-HDA-033 | delivery | TBD | Pending | Identity/token/exit/last message unchanged |
-| TC-HDA-034 | delivery | TBD | Pending | Detail identifiers-only, single-line, ≤256; exported bound registered in the content inventory |
-| TC-HDA-035 | delivery | TBD | Pending | Field in harness failure and dispatch detail |
-| TC-HDA-100 | delivery/verification | TBD | Pending | Manual §6.3 real dispatch |
-| TC-HDA-101 | delivery/verification | TBD | Pending | Manual §6.3 bounds, isolated probe root, `STATUS_BEFORE`/`STATUS_AFTER` equality, `HEAD` stable |
+| TC-HDA-001 | delivery | 2026-11-09 | Pass | Contract/type and data-only scan |
+| TC-HDA-002 | delivery | 2026-11-09 | Pass | Catalog/schema admission and rejections |
+| TC-HDA-003 | delivery | 2026-11-09 | Pass | Config artifact parity |
+| TC-HDA-004 | delivery | 2026-11-09 | Pass | Ambient/secret/child-process confinement |
+| TC-HDA-005 | delivery | 2026-11-09 | Pass | Exact shipped default and `defaults` origins |
+| TC-HDA-006 | delivery | 2026-11-09 | Pass | `TC-RELEASE-001` changeset invariant |
+| TC-HDA-010 | delivery | 2026-11-09 | Pass | Zero-config synthetic spawn; attempt + token |
+| TC-HDA-011 | delivery | 2026-11-09 | Pass | Bare-command PATH resolution + off-PATH control |
+| TC-HDA-012 | delivery | 2026-11-09 | Pass | Ambient canary and `OC_ADOS_*` absence |
+| TC-HDA-013 | delivery | 2026-11-09 | Pass | Model variables unset; no required failure |
+| TC-HDA-014 | delivery | 2026-11-09 | Pass | Required absence names `field`, no child |
+| TC-HDA-015 | delivery | 2026-11-09 | Pass | Optional absent omitted |
+| TC-HDA-016 | delivery | 2026-11-09 | Pass | Optional present forwarded |
+| TC-HDA-017 | delivery | 2026-11-09 | Pass | Record precedence |
+| TC-HDA-018 | delivery | 2026-11-09 | Pass | Credential fail-closed; no bypass |
+| TC-HDA-019 | delivery | 2026-11-09 | Pass | Explicit `HARNESS_MODEL` required semantics |
+| TC-HDA-020 | delivery | 2026-11-09 | Pass | `{ name }` compatibility |
+| TC-HDA-021 | delivery | 2026-11-09 | Pass | Marker validation matrix |
+| TC-HDA-022 | delivery | 2026-11-09 | Pass | `config get harness.environment --show-origin` inspection |
+| TC-HDA-023 | delivery | 2026-11-09 | Pass | Composition mapping and work-path injection |
+| TC-HDA-029 | delivery | 2026-11-09 | Pass | `DispatchEnvelopeError` shape; `CommandResultError`/other envelopes not widened; v1 contract-inventory fixture updated |
+| TC-HDA-030 | delivery | 2026-11-09 | Pass | Always-present detail; no-field `harness.spawn.refused` case; golden byte-equality |
+| TC-HDA-031 | delivery | 2026-11-09 | Pass | JSON detail survives redaction |
+| TC-HDA-032 | delivery | 2026-11-09 | Pass | Verbose detail at the dispatch human-text seam; DM-4 two-parameter clause under `pnpm typecheck`; non-verbose four keys |
+| TC-HDA-033 | delivery | 2026-11-09 | Pass | Identity/token/exit/last message unchanged |
+| TC-HDA-034 | delivery | 2026-11-09 | Pass | Detail identifiers-only, single-line, ≤256; exported bound registered in the content inventory |
+| TC-HDA-035 | delivery | 2026-11-09 | Pass | Field in harness failure and dispatch detail |
+| TC-HDA-100 | delivery/verification | 2026-11-09 | Pass | Manual §6.3 real dispatch |
+| TC-HDA-101 | delivery/verification | 2026-11-09 | Pass | Manual §6.3 bounds, isolated probe root, `STATUS_BEFORE`/`STATUS_AFTER` equality, `HEAD` stable |
 
 **Mutation evidence (M-1..M-20).** Each mutation is applied in a scratch copy or in place with a recorded revert; no mutant is committed.
 
@@ -1902,16 +1902,18 @@ Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, the recorded `opencode` version fro
 | M-19 | Composition drops marker or work-path injection | TC-HDA-023 | Green |
 | M-20 | Changeset removed/patched/testkit/empty body | TC-HDA-006 | Green |
 
-**End-to-end evidence (§6.3, AC-F8-1/AC-F8-2).** Fill from the recorded run. **Evidence root:** all probe facts below come from the isolated probe state root `$LIVE_HOME/.gh277-probe-state` (retained copies in `/tmp/opencode/gh277-e2e-evidence`), never the live `$HOME/.delivery-os-state`.
+**End-to-end evidence (§6.3, AC-F8-1/AC-F8-2).** Recorded 2026-11-09. **Evidence root:** all probe facts below come from the isolated probe state root `$LIVE_HOME/.gh277-probe-state` (retained copies in `/tmp/opencode/gh277-e2e-evidence`), never the live `$HOME/.delivery-os-state`.
 
-- Preconditions: `opencode` version TBD; `gh auth status` green; `GITHUB_TOKEN` non-empty; tracker probe exit TBD; live `GH-277` lease present: TBD (must be none, else STOP).
-- Step 1a isolated probe brand/state root: `DELIVERY_OS_WORKING_NAME` TBD (must be `gh277-probe`); `PROBE_STATE` TBD (must be `$LIVE_HOME/.gh277-probe-state`, not the live root).
-- Step 1b zero-configuration default: `config get harness.environment --show-origin` value TBD; origin TBD (expected `layer=defaults …`).
-- Step 1c parent facts: `TMPDIR` TBD; `command -v opencode` TBD; parent model variables TBD.
-- Step 1d first event: TBD ms (must be ≤60 000) with a top-level `sessionID`.
-- Step 5 handle window: child observed after TBD ms; dispatch alive: TBD.
-- Step 7 envelope: `data.result` TBD; `data.lastMessage` TBD; `data.error.code` TBD; `data.error.detail` TBD; `exit` TBD.
-- Step 7 attempt record (from the probe root): `attemptId` TBD; `token` TBD; `outcome` TBD; `evidenceRefs` TBD (must contain `attempt:ATTEMPT_ID`).
-- Step 7a lease (probe root): no active `GH-277` lease on `github.com/juliusz-cwiakalski/agentic-delivery-os`: TBD.
-- Step 8 isolation: this worktree's `STATUS_BEFORE`/`STATUS_AFTER` TBD (must be identical, including any expected uncommitted P4 artifacts); `HEAD` before/after TBD (must be equal); elapsed TBD ms (≤180 000); clone removed TBD; no surviving child TBD; live root written TBD (must be none).
-- Cleanup: probe evidence retained in `/tmp/opencode/gh277-e2e-evidence`; disposable clone removed; probe-brand state/config roots (`$LIVE_HOME/.gh277-probe-state`, `$LIVE_HOME/.gh277-probe`) removed; live `$HOME/.delivery-os-state` untouched.
+- Preconditions: `opencode` version `v2.2.5`; `gh auth status` green; `GITHUB_TOKEN` non-empty (resolved from the keyring); tracker probe exit 0; live `GH-277` lease present: none (the read-only live lease view was empty).
+- Step 1a isolated probe brand/state root: `DELIVERY_OS_WORKING_NAME=gh277-probe`; `PROBE_STATE=$LIVE_HOME/.gh277-probe-state`, not the live root.
+- Step 1b zero-configuration default: `config get harness.environment --show-origin` value = required `PATH`, `HOME`, `DELIVERY_WORK_PATH` plus optional `TMPDIR`; origin `layer=defaults file=core/src/config/defaults.ts`.
+- Step 1c parent facts: `TMPDIR` unset in the probe child environment; `command -v opencode` resolved on `PATH`; parent model variables `OC_ADOS_MAIN_MODEL` and `OC_ADOS_SMALL_MODEL` present but never forwarded or mapped.
+- Step 1d first event: 1688 ms (≤60 000) with a top-level `sessionID`.
+- Step 5 handle window: the `opencode run --format json` child was observed during the 60 s handle window while dispatch was alive; the child was ended after 15 s.
+- Step 7 envelope: `data.result=failed`; `data.lastMessage=the shared classifier reported failed`; `data.error.code` absent (not `dispatch.session.spawn-failed`); `data.error.detail` absent; `exit=1`.
+- Step 7 attempt record (from the probe root): `attemptId=attempt-GH-277-1794219667156-deb13fe8-5d5b-4d6f-93aa-c725b1d68860`; `token=failed`; `outcome=failed`; `evidenceRefs=attempt:attempt-GH-277-1794219667156-deb13fe8-5d5b-4d6f-93aa-c725b1d68860,liveness:unknown`.
+- Step 7a lease (probe root): no active `GH-277` lease on `github.com/juliusz-cwiakalski/agentic-delivery-os`.
+- Step 8 isolation: this worktree's `STATUS_BEFORE`/`STATUS_AFTER` were identical (the untracked changeset and TDR-0017 baseline entries plus the pending test-plan edit); `HEAD` before/after `162fa7e` (equal); elapsed from step 4 to step 6 ≈16 s (≤180 000); clone removed; no surviving child; the live root was not written.
+- Cleanup: probe evidence retained in `/tmp/opencode/gh277-e2e-evidence`; the disposable clone and the probe-brand state/config roots (`$LIVE_HOME/.gh277-probe-state`, `$LIVE_HOME/.gh277-probe`) were removed; the live `$HOME/.delivery-os-state` was untouched.
+
+**Mutation evidence summary (§7.3).** Every M-1..M-20 mutation was applied in place, observed red, and reverted to a green baseline; no mutant is committed. Observed failing-assertion counts: M-1 3 (builder half) + 4 (child half), M-2 6, M-3 6, M-4 1, M-5 3, M-6 5 (builder half) + 3 (child half), M-7 2, M-8 1, M-9 2 suites, M-10 1, M-11 3, M-12 1, M-13 5, M-14 15, M-15 1, M-16 2, M-17 2, M-18 4, M-19 12, M-19b 12, M-20 1.

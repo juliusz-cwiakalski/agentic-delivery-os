@@ -198,8 +198,60 @@ notes:
       identity on dispatch errors).
     type: info
     date: "2026-11-09"
+  - text: "Plan phase 3 complete (commit 162fa7ec): regression suites pin the
+      repaired default spawn over a synthetic opencode on a controlled PATH,
+      bare-command resolution with an off-PATH control, the real-child ambient
+      canary, paired optional TMPDIR cases, record precedence through the child,
+      dispatch detail rendering in machine JSON and verbose human output, the
+      exactly-four-key non-verbose text, and the additive optional
+      HumanTextContext type test. Owns AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-2,
+      AC-F5-2, AC-F5-3, AC-F5-5, AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4 and
+      TC-HDA-010, TC-HDA-011, TC-HDA-012, TC-HDA-030, TC-HDA-031, TC-HDA-032,
+      TC-HDA-034, TC-HDA-035; mutation evidence M-8, M-10, M-11, M-13 and the
+      child halves of M-1/M-6, all restored green. Delivered-scope migration:
+      tests/fixtures/dispatch/golden/harness.ts gained the spawnFailure
+      pass-through. Gates: three new behaviour suites, the human-text context
+      type test through pnpm typecheck, content-inventory, pnpm
+      check:boundaries, and biome on the touched files."
+    type: info
+    date: "2026-11-09"
   - text: >-
-      Plan phase 3 complete (commit recorded in the delivery report; primitive
+      Plan phase 3 commit: 162fa7e (test(harness): prove default spawn, path
+      resolution, and detail rendering).
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 4 complete (commit recorded in the delivery report): owns
+      AC-F8-1, AC-F8-2 and TC-HDA-006, TC-HDA-100, TC-HDA-101. Ran the bounded
+      operator proof in a disposable clone outside this worktree under the
+      isolated probe brand gh277-probe and state root $HOME/.gh277-probe-state:
+      the shipped default resolved to required PATH/HOME/DELIVERY_WORK_PATH plus
+      optional TMPDIR with a defaults origin; a real opencode v2.2.5 first event
+      arrived in 1688 ms; the dispatch produced data.result=failed with
+      lastMessage "the shared classifier reported failed" (not the spawn-failed
+      sentence) and no dispatch.session.spawn-failed identity; exactly one
+      attempt record was written with token/outcome failed and
+      attempt:<attemptId> plus liveness:unknown evidence refs; no GH-277 lease
+      remained active in the probe root; the live lease view was read-only and
+      empty; worktree STATUS_BEFORE/STATUS_AFTER were identical with HEAD stable
+      at 162fa7e; total step-4-to-step-6 elapsed about 16 s (<=180 s). Added
+      exactly one five-package minor changeset with a non-empty body; committed
+      TDR-0017 unchanged with it (the index row was already committed); filled
+      the test-plan execution log (29/29 Pass) and the section 10 mutation
+      summary. Gates green: git diff --check; privacy-literals (3302 files, 0
+      violations); aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check (lint,
+      format:check, typecheck, 6612 pass / 4 skip / 0 fail across 782 files,
+      check:boundaries, prompt conformance, help-guide coverage, exports
+      parity); plan validate GH-277 = valid, readyForDevelopment true, 0 errors.
+      Mutation evidence: M-20 applied (core minor -> patch), privacy-release
+      failed (1 assertion), restored green. Deviation recorded: the plan's
+      section 6.3 config inspection used the prompt-required-bin surface, which
+      does not expose `config`; the proof invoked the same composed config
+      program through runCli in the clone, and the probe child ran under a clean
+      environment without the agent harness's ADOS_* legacy variables so the
+      zero-configuration assertion reflects an operator shell.
+    type: info
+    date: "2026-11-09"
   - text: >-
       Plan phase 1 complete (commit 014fdd6): additive variable-only optional
       marker and the viable default allowlist across contract, catalog,
