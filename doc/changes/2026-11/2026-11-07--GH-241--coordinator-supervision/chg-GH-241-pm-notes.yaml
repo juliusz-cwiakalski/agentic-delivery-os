@@ -10,7 +10,7 @@ phases:
   delivery: { started: null, completed: 2026-11-09T07:03:12.474Z }
   system_spec_update: { started: null, completed: 2026-11-09T07:34:32.052Z }
   review_fix: { started: null, completed: 2026-11-09T09:46:15.412Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-09T09:53:25.026Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -378,4 +378,79 @@ notes:
       issue labels blocked/human-input-needed are cleared at the
       readiness-passed transition."
     type: "resolved"
+    date: "2026-11-09"
+  - text: "DoR iteration 5: READY (0 blocking, 6 advisories; AF5-01/03/05 fixed at
+      spec/test-plan 1.6, AF5-02/04/06 recorded as non-blocking). Delivery then
+      executed plan phases 1-10 plus Phase 11 remediation."
+    type: "decision"
+    date: "2026-11-09"
+  - text: "Plan phase 1 (contracts, coordinator error family, result-contract sync)
+      — commit da1d2360; gate: 4-file suite 195 pass, error-table-sync 121/121,
+      typecheck pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 2 (pure domain) — commit ceb3548b; gate: 35 pass,
+      check:boundaries pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 3 (additive state records) — commit 830bb516; gate: phase
+      battery 135 pass, typecheck pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 4 (config branch) — commit be8049ed; gate: 13 pass,
+      ambient-globals pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 5 (delivered process-port reuse) — commit 9a2e4e39; gate: 19
+      pass, tests/boundaries 149 pass, check:boundaries pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 6 (CLI family + foreground loop) — commit cc443da6; gate:
+      phase battery 270 pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 7 (reserved escalation slot + consumer docs) — commit
+      c813296f; gate: 260 pass, control goldens byte-unchanged,
+      test-doc-distribution pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 8 (integration + SC-M1-25) — commit 584eda88; gate: SC-M1-25
+      end-to-end, determinism/privacy/idempotency/perf/read-cost,
+      secret-read-boundary all pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 9 (registry/man-page/changeset) — commit 113f706b; gate: git
+      diff --check, doc-distribution, changesets-group pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 10 (spec reconciliation + gates) — commit a62a4b9f; gate:
+      typecheck/lint/format pass, error-table 121/121, all conformance checks
+      pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Plan phase 11 (review remediation) — commits c6507846 (main remediation:
+      shipped composition, durable epoch, start receipt, per-cycle wake,
+      join-live, historyRef, wake effect, live facts, digest-change expectation,
+      minors), 535ff8ef (production harness session composition),
+      ec0ca81b/fcacedea (docs, absent-context proof), 1a7a98c8 (iteration-2
+      fixes: check:help page, single-effect wake, single read, import order).
+      Gate: coordinator suites 320 pass."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Quality gates (phase 9): TMPDIR on the repo filesystem pnpm check — lint,
+      format:check, typecheck, test (6893 pass / 4 skip / 0 fail),
+      check:boundaries, check:prompt, check:help, exports-parity all green.
+      Without the TMPDIR override the only failure is the pre-existing
+      ci-baseline-parity EXDEV on /tmp, reproduced at origin/main-tools."
+    type: "info"
+    date: "2026-11-09"
+  - text: "Review iteration 3 PASS: NF-01..NF-06 closed (NF-03 and NF-04 proven by
+      reverting the fix and watching the test fail), prior F-01..F-21 closed, AC
+      matrix 49 PASS / 1 PARTIAL / 0 FAIL. The PARTIAL is AC-F7-4
+      (answered-before-wake): the outcome exists in the pure evaluator and is
+      unit-tested, but the integrated cycle ranks only open questions, so the
+      branch is unreachable in production by design. Accepted as a documented
+      non-blocking behavioural note; NF-07 (TC-073 now asserts only the live
+      wake path) is likewise accepted as a minor test-traceability note."
+    type: "decision"
     date: "2026-11-09"
