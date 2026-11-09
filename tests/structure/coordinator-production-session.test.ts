@@ -160,6 +160,36 @@ describe("coordinator production session effects", () => {
     }
   });
 
+  test("an absent context count spawns fresh rather than fabricating a resume", async () => {
+    const root = makeTempRoot("gh241-coordinator-context-unknown");
+    try {
+      const invocations: Array<{ readonly file: string; readonly args: readonly string[] }> = [];
+      const starter: HarnessSpawnStarter = (file, args) => {
+        invocations.push({ file, args });
+        return streamFor("ses-production-unknown-context");
+      };
+      const sessionFacts = () => ({
+        sessionId: "ses-recorded-unknown-context",
+        liveness: "absent" as const,
+        contextTokens: null,
+        harnessKind: "opencode",
+        completedCleanly: false,
+        resumable: true,
+        resumeDeclared: true,
+        pid: 4242,
+        processStartTimeMs: 2_000,
+      });
+      const { code, data, stderr } = await invokeCoordinator({ root, starter, sessionFacts });
+      expect(code, stderr).toBe(0);
+      expect((data?.decision as { kind?: string } | undefined)?.kind).toBe("spawn-fresh");
+      expect((data?.decision as { reason?: string } | undefined)?.reason).toBe("context-unknown");
+      expect((data?.restarts as { count?: number } | undefined)?.count).toBe(1);
+      expect(invocations).toHaveLength(1);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("start --foreground runs the composed spawn effect and releases the lease", async () => {
     const root = makeTempRoot("gh241-coordinator-start");
     try {
