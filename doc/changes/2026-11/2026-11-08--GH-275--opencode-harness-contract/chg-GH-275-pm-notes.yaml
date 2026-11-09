@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-09T01:55:46.369Z }
   review_fix: { started: null, completed: 2026-11-09T02:09:21.950Z }
   quality_gates: { started: null, completed: 2026-11-09T02:27:13.870Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-09T02:29:10.708Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -485,5 +485,29 @@ notes:
       with 0 errors. The committed review artifact and pm-notes carry the final
       evidence; the quality-gates completion commit includes the sanitized
       review artifact and this note."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 10 dod_check = PASS; no phase reopened. Registry: clarify_scope
+      through quality_gates are completed (9/11; phase list verified with
+      framing/terminal/sequence/checksum evidence over 800 records). Every
+      declared plan phase P1-P6 has a pm-notes completion entry naming its id,
+      commit (5f05d350, fb7fd816, 7f97fcb1, 3f8c0078, 794a70d8, f4521ced) and
+      re-run test result; plan validate GH-275 is valid with 0 errors and
+      readyForDevelopment true. All 30 spec ACs are owned by a plan phase and
+      satisfied per the phase evidence and the review-iter-1 PASS (spec
+      compliance PASS, plan compliance PASS). Current-truth documentation is
+      reconciled in phase 7 with no residual gap: feature-harness-adapters.md,
+      feature-dispatch-engine.md, feature-adapter-conformance.md,
+      nonfunctional.md, doc/00-index.md, overview architecture/glossary and the
+      dispatch test spec. Aggregate gate green on the quiesced tree (6558 pass /
+      4 skip / 0 fail across 6562 tests and 777 files; boundaries,
+      prompt-conformance, help-guide-coverage, exports-parity all exit 0). The
+      changeset .changeset/gh-275-opencode-harness-contract-minor.md declares
+      the five fixed-group packages at minor with a non-empty body
+      (TC-RELEASE-001 green) and TDR-0016 plus its index row are committed. No
+      TODOs without a follow-up owner. `verify change` at this checkpoint
+      reports only the not-yet-recorded dod_check and pr_creation phases
+      (partial, not_landed); it is re-run after pr_creation to confirm
+      `finished` exit 0."
     type: info
     date: "2026-11-09"
