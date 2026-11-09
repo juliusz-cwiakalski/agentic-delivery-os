@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239"]
+  related_changes: ["GH-238", "GH-239", "GH-241"]
   related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -245,13 +245,13 @@ configured rate. A one-shot read carries no resident backoff state.
 
 > **Coordinator consumption (GH-241).** Coordinator supervision consumes the
 > delivered `DaemonProcessPort` additively (`SIGKILL`, optional `startTimeMs`) and
-> the `SupervisorPort` / `DaemonSupervisorDescriptor` seam. It changes no daemon
-> command, control surface, unit renderer, or installer; `renderSystemdUnit`
-> remains hardcoded to `daemon start --foreground`, so a coordinator unit needs an
-> additive explicit `command` vector, and coordinator `install`/`uninstall` is out
-> of scope. `daemon.lock` remains the daemon's own heartbeat-age instance lock; the
-> coordinator's single-instance ownership is its append-only ledger lease and
-> never `daemon.lock`.
+> the `SupervisorPort` / `DaemonSupervisorDescriptor` seam. The daemon command,
+> control surface, unit renderer, and installer carry no coordinator unit;
+> `renderSystemdUnit` is hardcoded to `daemon start --foreground`, so a coordinator
+> unit needs an additive explicit `command` vector, and coordinator
+> `install`/`uninstall` does not exist. `daemon.lock` is the daemon's own
+> heartbeat-age instance lock; the coordinator's single-instance ownership is its
+> append-only ledger lease and never `daemon.lock`.
 
 The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`,
 `Type=simple`, `Restart=on-failure`, and
