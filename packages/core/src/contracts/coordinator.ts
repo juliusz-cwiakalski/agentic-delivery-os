@@ -85,10 +85,16 @@ export const COORDINATOR_DECISION_REASONS = [
 ] as const;
 export type CoordinatorDecisionReason = (typeof COORDINATOR_DECISION_REASONS)[number];
 
-/** The iteration reason carries the decision reasons plus the expectation marker. */
+/**
+ * The iteration reason carries the five decision reasons plus two
+ * iteration-only markers: `expectation` (a recorded expectation without a
+ * lifecycle change) and `live-session` (the `join-live` decision, which has no
+ * spawn/resume reason).
+ */
 export const COORDINATOR_ITERATION_REASONS = [
   ...COORDINATOR_DECISION_REASONS,
   "expectation",
+  "live-session",
 ] as const;
 export type CoordinatorIterationReason = (typeof COORDINATOR_ITERATION_REASONS)[number];
 

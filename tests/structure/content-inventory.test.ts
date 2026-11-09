@@ -245,6 +245,46 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CONTROL_WIRE_TYPES",
     "controlInteractionClass",
   ],
+  "core/src/domain/coordinator-lifecycle.ts": [
+    "decideLifecycle",
+    "lifecycleEffect",
+  ],
+  "core/src/domain/coordinator-evidence.ts": [
+    "boundEvidence",
+    "evaluateStuck",
+    "utf8ByteLength",
+  ],
+  "core/src/domain/coordinator-admission.ts": [
+    "evaluateCoordinatorRestartAdmission",
+    "nextRestartOrdinal",
+  ],
+  "core/src/domain/coordinator-wake.ts": [
+    "evaluateWake",
+    "wakeKeyFor",
+  ],
+  "core/src/domain/coordinator-escalation.ts": [
+    "escalationOptions",
+    "isCoordinatorEscalationRef",
+    "isEscalationState",
+    "isReservedEscalationQuestion",
+    "projectEscalationState",
+    "projectReservedSlotQuestions",
+  ],
+  "core/src/domain/coordinator-fence.ts": [
+    "ageFallbackBoundMs",
+    "decideCoordinatorClaim",
+    "foldCoordinatorLease",
+    "leaseAgeMs",
+  ],
+  "core/src/domain/coordinator-regime.ts": [
+    "coordinatorUnitIdentity",
+    "projectCoordinatorRegime",
+  ],
+  "core/src/domain/coordinator-observe.ts": [
+    "persistedTickVerdict",
+    "progressingTickVerdict",
+    "projectCoordinatorObservation",
+  ],
   "core/src/contracts/coordinator.ts": [
     "COORDINATOR_BRANCH_KEYS",
     "COORDINATOR_CAPABILITY_OWNERSHIP",
