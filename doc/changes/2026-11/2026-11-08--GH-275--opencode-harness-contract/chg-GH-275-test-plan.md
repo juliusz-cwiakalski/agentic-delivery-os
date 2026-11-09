@@ -2116,3 +2116,57 @@ command was run, and the source was restored; no mutant was committed.
 - Isolation: this worktree's `git status --porcelain` was empty and `HEAD` was
   `794a70d8` before and after the run. The disposable clone was removed; the
   appended attempt record is retained deliberately as production evidence.
+
+**Second recorded run (§6.3 re-execution, independent of the first).**
+
+Re-executed during `delivery` (P6) after the first recorded run, to capture the
+envelope in a durable log and to record the preconditions the procedure exposes.
+
+- Step 1b, equivalent proof with a control: the delivered config resolver
+  returns `lane.liveness-interval = 30000` (the shipped default) with the
+  probe's `cwd` outside the clone, and `3000` with `cwd` inside the clone, so
+  the clone-local project layer is what supplies the pinned cadence. The
+  `config` command is not in the composed prompt-required command set
+  (`fallback.internal`, `command "config" is not part of the composed
+  prompt-required set`), so `config get` cannot be run through the shipped bin.
+- Step 1c: first event in `2464 ms` (within the 60 s bound) with a top-level
+  `sessionID`.
+- Attempt 1 (`attempt-GH-275-1794188584262-2897470f-6851-46d7-824b-af8a658a73de`,
+  token `failed`): `dispatch.session.spawn-failed` in `956 ms` with no child.
+  Probed root cause: `buildHarnessSpawnEnvironment` returns
+  `harness.spawn.variable-missing` with `field: HARNESS_MODEL`, because the
+  shipped `harness.environment` allowlist is deny-by-default and the invoking
+  shell declared neither model variable.
+- Attempt 2 (`attempt-GH-275-1794188815972-9f4da767-8e54-4223-8d90-f150b4f246de`,
+  token `failed`): `dispatch.session.spawn-failed` in `904 ms` with no child.
+  Probed root cause: `spawn("opencode", ...)` raises `ENOENT Executable not
+  found in $PATH: "opencode"` and the host starter reports `status: 127`,
+  because the same allowlist omits `PATH`. Declaring `HARNESS_MODEL`,
+  `HARNESS_SMALL_MODEL`, `DELIVERY_WORK_PATH` and `PATH` in the clone-local
+  `harness.environment` is the operator remediation; no product code changed.
+- Attempt 3 PASS
+  (`attempt-GH-275-1794188931468-2435dac9-1b0d-45b6-97f8-78dee68c97d6`): the
+  `opencode run --format json` child was observed `1047 ms` after dispatch start
+  while the dispatch process was still alive; only that child was `SIGTERM`-ed,
+  at `16056 ms`; dispatch exited `0` after `21673 ms`. Envelope: `data.result` =
+  `noop-lane-nothing-to-do` (a delivered token), `data.lastMessage` =
+  `the lane has no remaining work` (not the spawn-failed sentence),
+  `data.error.code` absent, `exitCode` 0, `timing.totalMs` 21509. Attempt
+  record: `token` `noop-lane-nothing-to-do`, `outcome` `failed`, `evidenceRefs`
+  `attempt:<attemptId>,liveness:unknown`.
+- Lease proof: the `queue.lease` events record
+  `github.com/juliusz-cwiakalski/agentic-delivery-os#dispatch@2026-11-09T01:48:51.190Z`
+  acquired at `01:48:51.190Z` and released at `01:49:12.205Z`; `queue list
+  --json` afterwards reported no `GH-275` lease on
+  `github.com/juliusz-cwiakalski/agentic-delivery-os`.
+- Worktree snapshot caveat: the probe wrote nothing in this worktree, but the
+  worktree's `HEAD` advanced from `794a70d8` to `08aed1fe` between the start
+  snapshot and this run because the same change was committed concurrently by
+  the delivering session (`f4521ced`, `08aed1fe`). The probe's writes were
+  confined to the disposable clone, whose own `.git` moved independently and
+  was removed with it.
+- Cleanup: `/tmp/opencode/gh275-e2e` removed (its `node_modules` symlink with
+  it); this worktree's `node_modules` untouched; no dispatch child survived.
+- All three attempts are retained in `$HOME/.delivery-os-state/ledger.default.jsonl`
+  as production evidence; the transient logs are at
+  `/tmp/opencode/gh275-e2e-evidence/`.

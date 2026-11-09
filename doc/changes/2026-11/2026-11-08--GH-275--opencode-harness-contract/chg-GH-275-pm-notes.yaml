@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-09T00:05:53.708Z }
   dor_check: { started: null, completed: 2026-11-09T00:22:21.003Z }
   delivery: { started: null, completed: 2026-11-09T01:45:29.051Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-09T01:55:46.369Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -368,5 +368,52 @@ notes:
       completion; progress liveness is observable during the session), plus any
       contract table listing the harness spawn seam. The PR is opened at
       lifecycle phase 11 by @pr-manager."
+    type: info
+    date: "2026-11-09"
+  - text: "P5/P6 independent verification (performed by the coder after the phase
+      notes above were recorded; no product code or assertion changed). P5 gates
+      re-run green against commit 794a70d8: bun test
+      tests/behaviour/harness-stream-hygiene.test.ts 16 pass / 0 fail; the
+      harness suite set (opencode stream, resume, session, host stream,
+      stream-contract, imports, conformance classification, dispatch
+      acquisition, Claude session) 96 pass / 0 fail across 9 files; the
+      migration/conformance set (spawn-env, spawn-credential, conformance
+      liveness, neutrality, dispatch-composition, conformance-coverage,
+      content-inventory, dispatch acquisition) 92 pass / 0 fail across 8 files;
+      pnpm typecheck exit 0; pnpm check:boundaries exit 0 (356 modules); biome
+      check clean on the hygiene suite and the stream fixture. The tracked
+      tests/fixtures/harness/stream/README.md table realignment is required by
+      pnpm format:check (biome formats markdown): reverting it makes the gate
+      red, so it is kept. P6 verification: pnpm check exit 0 with 6558 pass / 4
+      skip / 0 fail across 6562 tests and 777 files plus the five sub-gates;
+      plan validate GH-275 = valid, readyForDevelopment true, 0 errors;
+      tests/checks/privacy-release.test.ts 7 pass / 0 fail;
+      chg-GH-275-test-plan.md §10 holds 46 dated Pass rows, 19 mutation rows and
+      the §6.3 evidence block, no Pending row; the changeset declares the five
+      fixed-group packages at minor with a non-empty body and is the only
+      .changeset path added by f4521ced; TDR-0016 is committed with status
+      Proposed and its index row is doc/decisions/00-index.md:42 (9eda3241).
+      Caveat on the aggregate gate: it ran while the concurrent
+      system_spec_update session was writing doc/spec/**, so phase 9/10 must
+      re-run pnpm check on the quiesced tree. Second recorded §6.3 run
+      (independent of the first, now in §10): attempt
+      attempt-GH-275-1794188931468-2435dac9-1b0d-45b6-97f8-78dee68c97d6 passed
+      with token noop-lane-nothing-to-do, exit 0, elapsed 21673 ms, child
+      observed at 1047 ms while dispatch lived and SIGTERM-ed at 16056 ms,
+      evidenceRefs attempt:<id>,liveness:unknown, and the GH-275 lease acquired
+      01:48:51.190Z and released 01:49:12.205Z. Two earlier attempts of that
+      re-run failed as blocked preconditions, each root-caused by probe and
+      recorded in §10: HARNESS_MODEL/HARNESS_SMALL_MODEL absent from the spawn
+      allowlist parent environment, then PATH absent from the deny-by-default
+      spawn environment (host starter status 127, ENOENT). Both are operator
+      configuration gaps in §6.3, not product failures; no product code changed.
+      Concurrency disclosure: this worktree's HEAD advanced from 794a70d8 to
+      08aed1fe while the second run's E2E window was open because the same
+      change was committed by the delivering session; the probe wrote only
+      inside the disposable clone, which was removed with its node_modules
+      symlink and no surviving child. This verification note and the §10
+      second-run block are committed together through the commit primitive once
+      the worktree is quiesced, so no in-flight system_spec_update doc/** edit is
+      swept in; the commit hash is recorded in the follow-up note."
     type: info
     date: "2026-11-09"
