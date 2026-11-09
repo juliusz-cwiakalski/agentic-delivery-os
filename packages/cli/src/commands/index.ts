@@ -14,6 +14,21 @@ export { createCloseoutCommandDefinition } from "./closeout.js";
 export type { CommitCommandRuntime, CommitContext } from "./commit.js";
 export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
+export type {
+  CoordinatorCommandRuntime,
+} from "./coordinator.js";
+export { createCoordinatorCommandDefinition } from "./coordinator.js";
+export type {
+  CoordinatorFailure,
+  CoordinatorLoopExit,
+  CoordinatorLoopPort,
+  CoordinatorResult,
+  CoordinatorSessionFacts,
+  CoordinatorStopData,
+  CoordinatorSupervisor,
+  CoordinatorSupervisorPorts,
+} from "./coordinator-loop.js";
+export { createCoordinatorSupervisor } from "./coordinator-loop.js";
 export { createConfigCommandDefinition } from "./config.js";
 export type { DaemonCommandRuntime } from "./daemon.js";
 export type {

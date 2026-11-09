@@ -644,8 +644,9 @@ export const appendCoordinatorIteration = (
   store: StateStorePort,
   token: string,
   record: CoordinatorIterationRecord,
+  current?: CoordinatorRecordsRead,
 ): CoordinatorAppendOutcome => {
-  const read = readCoordinatorRecords(store, record.coordinatorId);
+  const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
   const existing = read.iterations.find((entry) => entry.iterationId === record.iterationId);
   if (existing !== undefined) return replay(existing);
@@ -663,8 +664,9 @@ export const appendCoordinatorRestart = (
   store: StateStorePort,
   token: string,
   record: CoordinatorRestartRecord,
+  current?: CoordinatorRecordsRead,
 ): CoordinatorAppendOutcome => {
-  const read = readCoordinatorRecords(store, record.coordinatorId);
+  const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
   const existing = read.restarts.find(
     (entry) =>
@@ -686,8 +688,9 @@ export const appendCoordinatorStuck = (
   store: StateStorePort,
   token: string,
   record: CoordinatorStuckRecord,
+  current?: CoordinatorRecordsRead,
 ): CoordinatorAppendOutcome => {
-  const read = readCoordinatorRecords(store, record.coordinatorId);
+  const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
   const existing = read.stuck.find(
     (entry) => entry.stuckId === record.stuckId && entry.phase === record.phase,
@@ -707,8 +710,9 @@ export const appendCoordinatorExhaustion = (
   store: StateStorePort,
   token: string,
   record: CoordinatorExhaustionRecord,
+  current?: CoordinatorRecordsRead,
 ): CoordinatorAppendOutcome => {
-  const read = readCoordinatorRecords(store, record.coordinatorId);
+  const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
   const existing = read.exhaustion.find(
     (entry) => entry.exhaustionId === record.exhaustionId,
@@ -728,8 +732,9 @@ export const appendCoordinatorWake = (
   store: StateStorePort,
   token: string,
   record: CoordinatorWakeRecord,
+  current?: CoordinatorRecordsRead,
 ): CoordinatorAppendOutcome => {
-  const read = readCoordinatorRecords(store, record.coordinatorId);
+  const read = current ?? readCoordinatorRecords(store, record.coordinatorId);
   if (!read.ok) return appendFailure(read.code, read.location);
   const existing = read.wakes.find(
     (entry) => entry.questionId === record.questionId && entry.askedAt === record.askedAt,

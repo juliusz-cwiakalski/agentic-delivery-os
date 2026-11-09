@@ -8,6 +8,7 @@ import { killCoordinatorProcess } from "../../packages/adapters/src/daemon/index
 import { readCoordinatorRecords } from "../../packages/core/src/state/index";
 import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import { COORDINATOR_ID, makeCoordinatorStore } from "../fixtures/coordinator/states";
+import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 
 const PID = 4242;
 const START = 1_700_000_000_000;
@@ -93,5 +94,68 @@ describe("TC-COORD-040 kill verifies identity then TERM, grace, conditional KILL
     const read = readCoordinatorRecords(store, COORDINATOR_ID);
     expect(read.ok).toBe(true);
     if (read.ok) expect(read.verifiedEmpty).toBe(true);
+  });
+});
+
+/**
+ * TC-COORD-040 (composition half) — the supervisor composes the two-phase
+ * `coordinator.stuck` append and the budget check after the adapter returns.
+ */
+describe("TC-COORD-040 the supervisor composes the two-phase outcome and budget", () => {
+  const composed = (label: string, alive: Record<number, boolean | null>) =>
+    createCoordinatorHarness({ label, session: { liveness: "alive" }, alive });
+
+  test("a terminated kill appends verdict then outcome, then one restart", async () => {
+    const harness = composed("kill-grace-composed", { 4242: false });
+    seedIteration(harness);
+    const result = await harness.run(["coordinator", "tick", "--json"]);
+    expect(result.code).toBe(0);
+    const read = harness.records();
+    if (!read.ok) throw new Error("read failed");
+    expect(read.stuck.map((record) => record.phase)).toEqual(["verdict", "outcome"]);
+    expect(read.stuck[0]?.killOutcome).toBe("not-attempted");
+    expect(read.stuck[1]?.killOutcome).toBe("terminated");
+    expect(new Set(read.stuck.map((record) => record.stuckId)).size).toBe(1);
+    expect(read.restarts.map((record) => record.ordinal)).toEqual([1]);
+    expect(read.restarts[0]?.reason).toBe("stuck-artifact-evidence");
+  });
+
+  test("a forced kill records forced and then restarts", async () => {
+    const harness = composed("kill-grace-forced", { 4242: true });
+    seedIteration(harness);
+    await harness.run(["coordinator", "tick", "--json"]);
+    const read = harness.records();
+    if (!read.ok) throw new Error("read failed");
+    expect(read.stuck[1]?.killOutcome).toBe("forced");
+    expect(harness.process.signals.map((signal) => signal.signal)).toEqual([
+      "SIGTERM",
+      "SIGKILL",
+    ]);
+    expect(read.restarts).toHaveLength(1);
+  });
+
+  test("the budget is checked only after the outcome append", async () => {
+    const harness = composed("kill-grace-order", { 4242: false });
+    seedIteration(harness);
+    await harness.run(["coordinator", "tick", "--json"]);
+    const raw = harness.store.readRecords();
+    if (!raw.ok) throw new Error("read failed");
+    const kinds = raw.value.records
+      .filter((record) => ["coordinator.stuck", "coordinator.restart"].includes(record.kind))
+      .map((record) => record.kind);
+    expect(kinds).toEqual([
+      "coordinator.stuck",
+      "coordinator.stuck",
+      "coordinator.restart",
+    ]);
+  });
+
+  test("no quiet record exists beyond the lease pair and the action records", async () => {
+    const harness = composed("kill-grace-quiet", { 4242: false });
+    seedIteration(harness);
+    await harness.run(["coordinator", "tick", "--json"]);
+    const read = harness.records();
+    if (!read.ok) throw new Error("read failed");
+    expect(read.fences.map((record) => record.action)).toEqual(["acquired", "released"]);
   });
 });

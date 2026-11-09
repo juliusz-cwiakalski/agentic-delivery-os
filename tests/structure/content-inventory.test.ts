@@ -173,6 +173,22 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchText",
   ],
   "cli/src/commands/daemon.ts": ["createDaemonCommandDefinition"],
+  "cli/src/commands/coordinator.ts": [
+    "createCoordinatorCommandDefinition",
+  ],
+  "cli/src/commands/coordinator-loop.ts": [
+    "createCoordinatorSupervisor",
+    "currentBudgetEpoch",
+    "escalationRef",
+    "freshBudgetEpoch",
+  ],
+  "cli/src/output/coordinator-text.ts": [
+    "renderCoordinatorHuman",
+    "renderCoordinatorStarted",
+    "renderCoordinatorStatus",
+    "renderCoordinatorStopHuman",
+    "renderCoordinatorTick",
+  ],
   "cli/src/daemon-compose.ts": ["createBlockerAnswerConsumer", "createDaemonCommandRuntime"],
   "cli/src/daemon-main.ts": ["createDaemonMainEntry"],
   "core/src/app/daemon-runtime.ts": [
@@ -1743,6 +1759,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createBlockersCommandRuntime",
     "createDispatchCommandRuntime",
     "createDispatchGateRuntime",
+    "createCoordinatorCommandRuntime",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],

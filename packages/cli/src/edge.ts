@@ -335,6 +335,12 @@ import {
   createConfigCommandDefinition,
 } from "./commands/config.js";
 import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
+import {
+  createCoordinatorCommandDefinition,
+  createCoordinatorSupervisor,
+  type CoordinatorCommandRuntime,
+  type CoordinatorSupervisorPorts,
+} from "./commands/index.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import {
   createDispatchCommandDefinition,
@@ -2925,6 +2931,27 @@ export const createBlockersCommandRuntime = (
   secrets,
 });
 
+/**
+ * The coordinator supervision composition seams (GH-241 F-1, F-8): the state
+ * store, injected clock and id/fence factories, the resolved coordinator
+ * settings, the process port with its declared capabilities, the harness
+ * session facts/effects, and the injected cycle driver. Nothing here reads an
+ * ambient clock, spawns a real process, or registers a daemon command.
+ */
+export type CoordinatorComposition = Omit<CoordinatorSupervisorPorts, "coordinatorId"> & {
+  /** The coordinator identity; defaults to the single stored coordinator. */
+  readonly coordinatorId?: string;
+};
+
+/** Compose the coordinator family over the injected seams. */
+export const createCoordinatorCommandRuntime = (
+  composition: CoordinatorComposition,
+): CoordinatorCommandRuntime =>
+  createCoordinatorSupervisor({
+    ...composition,
+    coordinatorId: composition.coordinatorId ?? "coordinator-main",
+  });
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -2957,6 +2984,7 @@ export type ConfigProgramOptions = {
   readonly blockers?: BlockersComposition;
   readonly merge?: MergeCommandRuntime;
   readonly daemon?: DaemonCommandRuntime;
+  readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
 };
@@ -3534,6 +3562,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.daemon !== undefined) {
     commands.daemon = createDaemonCommandDefinition(options.daemon);
+  }
+  if (options.coordinator !== undefined) {
+    commands.coordinator = createCoordinatorCommandDefinition(
+      createCoordinatorCommandRuntime(options.coordinator),
+    );
   }
   return {
     ok: true,
