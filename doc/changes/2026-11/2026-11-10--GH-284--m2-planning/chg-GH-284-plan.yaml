@@ -1,7 +1,10 @@
 # GH-284 implementation plan — plan M2: engine-first operations, multi-repo
 # workstations, evidence inspection, and telemetry
 #
-# Plan revision: v1.5 (2026-11-10). Aligned to spec v1.5 and test plan v1.6.
+# Plan revision: v1.6 (2026-11-10). Aligned to spec v1.6 (DEC-21) and test plan
+# v1.8. P1-P5 are ALREADY DELIVERED AND COMMITTED (1842e181, 57120f4e, 5e00d4f2,
+# 39bb4afb, 13171be1, 110fb160); only P6 remains, and it is a continuation, not
+# a re-scope: no earlier phase's scope or gates change.
 #
 # Revision history:
 #   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
@@ -47,22 +50,41 @@
 #                     gate now reflects the block-close bound at `^---$`/`^## `
 #                     with its four head runs and three negative controls
 #                     (DR-19). No phase, scope, mapping, or other pin changes.
+#   v1.6  2026-11-10  P6 halt fix after spec v1.6 (DEC-21) and test plan v1.8.
+#                     The forbidden-literals guard's `userFacingDocs` scope
+#                     covers `doc/**` except `doc/changes/**` and
+#                     `doc/decisions/**` and fails closed on an unregistered
+#                     user-facing doc, so the twelve `milestones/m2/**` docs
+#                     must be registered in
+#                     `scripts/checks/forbidden-literals.registry.json`. P6's
+#                     scope gains that one file as the sole non-planning product
+#                     file (DR-20); P28 now expects 31 product files (30 planning
+#                     + 1 registry); P36 expects the registration assertions
+#                     (`registered_total=139`, `registry_m2=12/12`,
+#                     `m2_registry_sorted=yes`, `m2_registry_duplicates=0`,
+#                     `baseline_absent=12/12`, `unregistered_findings=0`); and
+#                     P32's environmental exemption narrows to the lone
+#                     `ci-baseline-parity` failure once the three
+#                     forbidden-literals failures are gone. P1-P5 stay exactly as
+#                     delivered.
 #                     Finding ids use the `XF-` prefix (plan-authored) and the
 #                     `DR-` prefix (review-derived) so they never collide with
 #                     the spec's `F-` capability ids cited in the task trailers.
 #
 # Sources (single source of truth):
-#   - Spec: ./chg-GH-284-spec.md v1.5 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
-#     DEC-1..DEC-20, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
+#   - Spec: ./chg-GH-284-spec.md v1.6 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
+#     DEC-1..DEC-21, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
 #     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
 #     entrypoint), Appendix D (12-document pack manifest), Appendix E
 #     (structural diagram procedure, asserting heading association with the same
 #     predicates as P33). DEC-16 (status retention oracle, two-sentence
 #     entrypoint bound), DEC-17 (insertion inside the Epic M2 block), DEC-18
-#     (proposal-tail rule), DEC-19 (two-run aggregate gate), and DEC-20
-#     (pack-contents deviation plus the twelve-target index row) govern this
-#     plan.
-#   - Test plan: ./chg-GH-284-test-plan.md v1.6 — 37 TCs TC-M2PLAN-001..037,
+#     (proposal-tail rule), DEC-19 (two-run aggregate gate), DEC-20
+#     (pack-contents deviation plus the twelve-target index row) and DEC-21 (the
+#     forbidden-literals guard scans `doc/planning/**` and needs the twelve pack
+#     documents registered, so AC-NFR1-1 counts 31 product files: 30 planning
+#     plus the one registry) govern this plan.
+#   - Test plan: ./chg-GH-284-test-plan.md v1.8 — 37 TCs TC-M2PLAN-001..037,
 #     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
 #     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
 #     v1.1-v1.3 reopened P03/P15/P16/P18/P19/P27/P30/P32/P33/P34 and the
@@ -70,13 +92,20 @@
 #     renamed P06's counters and widened P35's guard; v1.5 head-anchored P03's
 #     blank-separation check, narrowed P08's AC identity control and proved the
 #     P03/P08 pair jointly satisfiable; v1.6 bounds P29's story extraction at
-#     `^---$` and `^## ` so M2-S9 also ends at the block close, and proves the
-#     real head, base control, minimal head and full head all report
-#     `stories_compared=65 identical=65 changed=0 order=OK`.
+#     `^---$` and `^## ` so M2-S9 also ends at the block close. v1.8 carries the
+#     P6 halt fix: P28 counts the registry file separately
+#     (`planning_files`/`registry_files`/
+#     `outside_planning_outside_registry`), P36 asserts the pack registration
+#     (`registered_total`, `m2_registry_sorted`, `m2_registry_duplicates`,
+#     `registry_m2`, `baseline_absent`, `unregistered_findings`) with sorted and
+#     duplicate self-tests, and P32 keeps the lone-parity classification for the
+#     default run.
 #   - Readiness reviews: ./readiness-review/readiness-iter-1.md (F1-F15,
 #     DR-1..DR-11), readiness-iter-2.md (F1-F8, DR-12..DR-16),
-#     readiness-iter-3.md (confirmation) and readiness-iter-4.md (F1 plus
-#     minors 2-4, DR-17..DR-19).
+#     readiness-iter-3.md (confirmation), readiness-iter-4.md (F1 plus
+#     minors 2-4, DR-17..DR-19), and the P6 halt analysis recorded in
+#     readiness-iter-4.md's P29 follow-up plus the delivery halt itself
+#     (DR-20).
 #   - PM notes: ./chg-GH-284-pm-notes.yaml — binding decisions, the
 #     specification reopens that produced v1.1 (DEC-15) and v1.3 (DEC-17), and
 #     the phase-9 quality-gate environment fact.
@@ -85,12 +114,15 @@
 #   - Base revision: fab46636cc0b5abfbd22257711f594adc0af4660
 #     (= origin/main-tools). Every preservation check compares against it.
 #
-# Change shape: docs-only, no runtime surface, no schema, no changeset.
-# Product files are limited to doc/planning/oss-tooling/**. Any diff outside
-# doc/planning/oss-tooling/** (excluding doc/changes/**) FAILS the change:
-# zero files under packages/, tests/, scripts/, .opencode/, .ai/, or
-# doc/spec/, and no root build/config file. doc/changes/** artifacts and
-# review records are change evidence, not product change.
+# Change shape: docs-only plus one registry edit, no runtime surface, no schema,
+# no changeset. Product files are 31: thirty under doc/planning/oss-tooling/**
+# (all thirty already delivered in P1-P5) plus
+# scripts/checks/forbidden-literals.registry.json (P6, twelve registrations).
+# Any other diff outside doc/planning/oss-tooling/** (excluding doc/changes/**)
+# FAILS the change: zero files under packages/, tests/, .opencode/, .ai/, or
+# doc/spec/, zero scripts/** paths other than the registry, and no root
+# build/config file. doc/changes/** artifacts and review records are change
+# evidence, not product change.
 #
 # Six delivery phases, one Conventional Commit each, in spec §18 order:
 #   P1 backlog.md (7 stories + 2 amendments)      P4 milestones/m2/ (12 docs)
@@ -325,6 +357,25 @@
 #         `negative_body`, `negative_removed` and `negative_reordered` all
 #         detected. No "next `###` only" phrasing remains anywhere in the plan.
 #
+# P6 halt fix absorbed here (spec v1.6 / DEC-21, test plan v1.8):
+#   DR-20 [P6 halt, blocking at delivery] P6 could not go green: the
+#         forbidden-literals guard's `userFacingDocs` scope covers `doc/**`
+#         except `doc/changes/**` and `doc/decisions/**`, and it fails closed on
+#         a user-facing doc absent from `corpusBaseline` unless it is listed in
+#         `scripts/checks/forbidden-literals.registry.json#registered`. The
+#         twelve new `milestones/m2/**` documents are therefore unregistered
+#         findings, so P36 failed and, through the aggregate gate, P32 failed
+#         with four failures (parity plus three forbidden-literals tests) --
+#         while the plan's P6 scope and P28 gate forbade touching `scripts/**`.
+#         P28 and P36 were jointly unsatisfiable. Resolution (D-14): P6 is the
+#         only phase whose scope gains `scripts/checks/forbidden-literals.registry.json`,
+#         as the sole non-planning product file; the change appends the twelve
+#         pack paths to `registered`, sorted among themselves, duplicate-free,
+#         leaving the base registry's existing (not globally sorted) order
+#         untouched and changing no guard behaviour. P1-P5 are already delivered
+#         and committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1,
+#         110fb160) and are not re-scoped; P6 continues from that HEAD.
+#
 # Delivery-planning decisions (placement, wording, sequencing; no behavioural
 # deviation):
 #   D-1 Ceremony: tier `lite`, six delivery phases, standard weight,
@@ -422,7 +473,8 @@
 #       (`git clone --local` hardlinks crossing into tmpfs; one failing test,
 #       roughly 7132 passing). Any other default-run failure, or any repo-local
 #       failure, is a delivery failure. Do not "fix" the environment condition:
-#       `tests/**` and `scripts/**` are out of scope. P32 is the executable
+#       `tests/**` and guard behaviour are out of scope (the sole permitted
+#       `scripts/**` edit is the registration in D-14). P32 is the executable
 #       form; this plan does not restate the command.
 #   D-13 Retention gate (XF-7, NFR-7, DEC-16). P18 is the single
 #       retention-and-whitelist oracle: whole-file line retention plus the
@@ -432,6 +484,16 @@
 #       pointer count. The plan adds no compensating check of its own; a
 #       `pointer_runs<4`, `bad_runs>0`, `removed_lines>0`, or
 #       `reference_head_fixture=FAILED` line fails the phase.
+#   D-14 Registry registration (DR-20, NFR-1, NFR-9, DEC-21). The twelve
+#       `doc/planning/oss-tooling/milestones/m2/**` documents are registered in
+#       `scripts/checks/forbidden-literals.registry.json#registered` in P6, as
+#       the only permitted `scripts/**` change and the only non-planning
+#       product file of the whole change. The edit appends the twelve paths
+#       sorted among themselves and duplicate-free, preserves every existing
+#       entry in its current order (the base registry is not globally sorted),
+#       and changes no guard behaviour, allowlist rule, or test. Product files
+#       therefore total 31: 30 under `doc/planning/oss-tooling/**` plus the
+#       registry.
 #
 # Verification conventions (binding for every phase):
 #   - Run from the repository root on branch docs/GH-284/m2-planning.
@@ -466,7 +528,7 @@
 #     base snapshot, so the table must not be touched even though the pack
 #     deviates from it.
 #
-# Validation record (2026-11-10, plan revision v1.3):
+# Validation record (2026-11-10, plan revision v1.6):
 #   verdict=valid, readyForDevelopment=true, totalErrors=0,
 #   artifact=chg-GH-284-plan.yaml (kind=yaml),
 #   schemaVersion=delivery.plan.v1, tier=lite, phases=1..6.
@@ -479,7 +541,7 @@ tier:
   name: lite
   phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
-    - "A product path outside doc/planning/oss-tooling/ appears in the diff with doc/changes/** excluded (P28)"
+    - "A product path other than doc/planning/oss-tooling/** or scripts/checks/forbidden-literals.registry.json appears in the diff with doc/changes/** excluded, or the registry diff is anything but the twelve sorted pack entries (P28, P36)"
     - "A backlog hunk falls outside the insertion window (immediately after M2-S9's last content line) or the two amended entries, the inserted block does not begin with a blank line, the head `---` separator sequence changes, or a non-amended story body changes (P03, P29)"
     - "The M2-S17 acceptance block does not carry all seven criteria by content, or the anchor scan leaves any of the 79 clauses missing (P04, P06, P02, P35)"
     - "M2-S4 changes anything but its - Depends on: line, or M2-S6 loses a base task line or changes its heading, goal, or acceptance criterion (P07, P08)"
@@ -489,8 +551,8 @@ tier:
     - "The M2 index row links fewer than twelve targets (P27)"
     - "A command page lacks Status: Proposed (M2) on line 3, the <binary> prefix, or a required man-page section (P24, P25)"
     - "A commercial, hosted, or proprietary provider name appears in the pack (NFR-9, XF-5)"
-    - "The repo-local-TMPDIR pnpm check is non-zero, the default run fails on anything but tests/checks/ci-baseline-parity.test.ts, or either run is left unrecorded (P32); or the doc-distribution guard, the forbidden-literal guard, or the structural diagram check is non-zero (P31, P33, P36)"
-    - "The spec or test plan moves past v1.4 / v1.3 while this plan still points at them: re-read the reopened procedures, re-run the affected gate, and revise this plan rather than mixing revisions"
+    - "The repo-local-TMPDIR pnpm check is non-zero, the default run fails on anything but the lone tests/checks/ci-baseline-parity.test.ts failure, or either run is left unrecorded (P32); or the doc-distribution guard, the forbidden-literal guard (including its registration assertions), or the structural diagram check is non-zero (P31, P33, P36)"
+    - "The spec or test plan moves past v1.6 / v1.8 while this plan still points at them: re-read the reopened procedures, re-run the affected gate, and revise this plan rather than mixing revisions"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -1211,7 +1273,7 @@ phases:
       - "NFR-2/DEC-20: M0 and M1 rows, the pack-contents table, and every other byte of the index file byte-identical"
 
   - id: 6
-    title: "P6 — Verification sweep, guard evidence, and delivery record"
+    title: "P6 — Verification sweep, registry registration, guard evidence, and delivery record (continuation: P1-P5 delivered)"
     kind: delivery
     weightClass: standard
     scope:
@@ -1221,13 +1283,14 @@ phases:
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md
+        - scripts/checks/forbidden-literals.registry.json
       folders:
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/readiness-review
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/code-review
     doneArtifacts:
       pipelineId: "GitHub Actions CI on the GH-284 PR targeting main-tools is green"
-      trackerTransition: "GH-284 stays In Progress through merge; the PR body carries the evidence table, the retention and insertion adjudications, the closed XF-7/XF-8 provenance, and the environment note"
+      trackerTransition: "GH-284 stays In Progress through merge; the PR body carries the evidence table, the retention and insertion adjudications, the closed XF-7/XF-8 provenance, the DEC-21 registry registration, and the environment note"
     completionArtifacts:
       - "One Conventional Commit landed via @committer using the phase summary"
       - "Every phase testGate green at the final HEAD"
@@ -1236,41 +1299,72 @@ phases:
     summary: "docs(GH-284): record verification evidence for the M2 planning change"
     tasks:
       - |-
-        6.1 Containment first. Re-run P00 and P28. The product-file list must be
-        exactly: `backlog.md`, `status.md`, `milestones/README.md`, the fifteen
-        `milestones/m1/commands/*.md` pages, and the twelve
-        `milestones/m2/**` documents. `forbidden_root_files=0`,
-        `outside_planning=0`, `unexpected_paths=0`, `non_vacuous=yes`. Any
-        product path outside `doc/planning/oss-tooling/**` (excluding
-        `doc/changes/**`) fails the change: revert it, do not rationalise it as
-        incidental. [NFR-1, DEC-13; AC-NFR1-1; TC-M2PLAN-028]
+        6.1 Continuation and containment. P1-P5 are already delivered and
+        committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1, 110fb160);
+        P6 continues from that HEAD and does not re-scope them. Re-run P00 and
+        P28. The product-file list must be exactly 31 paths: `backlog.md`,
+        `status.md`, `milestones/README.md`, the fifteen
+        `milestones/m1/commands/*.md` pages, the twelve `milestones/m2/**`
+        documents, and `scripts/checks/forbidden-literals.registry.json`.
+        Expect `planning_files=30`, `registry_files=1`,
+        `outside_planning_outside_registry=0`, `forbidden_root_files=0`,
+        `unexpected_planning_paths=0`, `non_vacuous=yes`. The registry file is
+        the only permitted non-planning product file (D-14, DEC-21); any other
+        path outside `doc/planning/oss-tooling/**` (excluding `doc/changes/**`),
+        and anything under `tests/`, `packages/`, `.opencode/`, `.ai/`, or
+        `doc/spec/` or under `scripts/` other than that one file, fails the
+        change: revert it, do not rationalise it as incidental.
+        [NFR-1, DEC-13, DEC-21; AC-NFR1-1; TC-M2PLAN-028]
       - |-
-        6.2 Guards. P31 (doc-distribution, expect exit 0 and the in-scope doc
-        count line, `planning_markers=0`), P36 (forbidden literals, expect
-        0 violations plus `seed_hits=0` over added planning lines and
-        `added_lines>=1`), P37 (links `broken_links=0`, `restated_ac_blocks=0`,
-        `non_vacuous=yes`), P33 (structural diagram and association, expect
-        `keyword_and_fence_exit=0`, `C4 Level 1/2/3 has diagram=OK (heads=1
-        own=1)`, `c4_headings_with_diagrams=3/3`, `flow_headings=7`,
+        6.2 Register the twelve pack documents (D-14, DR-20, DEC-21). In
+        `scripts/checks/forbidden-literals.registry.json`, append the twelve
+        `doc/planning/oss-tooling/milestones/m2/**` paths to the `registered`
+        array — `README.md`, `architecture.md`, `contracts.md`,
+        `test-scenarios.md`, `journeys.md`, `entrypoint-delta.md`, and
+        `commands/{projects,attempts,events,spend,queue,board}.md`, each
+        prefixed with `doc/planning/oss-tooling/milestones/m2/`. Insert them
+        SORTED among themselves and duplicate-free; do NOT reorder or rewrite
+        any existing entry (the base registry is not globally sorted), and do
+        not touch `corpusBaseline`, any other key, the guard implementation, or
+        its tests. This is the only `scripts/**` edit the change allows, and it
+        changes no guard behaviour: the guard already scans `doc/planning/**`
+        and simply requires registration. [NFR-1, NFR-9, DEC-21; AC-NFR1-1,
+        AC-NFR9-1; TC-M2PLAN-028, TC-M2PLAN-036]
+      - |-
+        6.3 Guards. P31 (doc-distribution, expect exit 0 and the in-scope doc
+        count line, `planning_markers=0`), P36 (forbidden literals plus pack
+        registration: expect `registered_total=139`, `m2_registry_sorted=yes`,
+        `m2_registry_duplicates=0`, `registry_m2=12/12`,
+        `baseline_absent=12/12`, then `forbidden_exit=0`, the
+        `OK forbidden-literals` line with 5/5 scope classes and 0 violations,
+        `unregistered_findings=0`, `seed_hits=0`), P37 (links
+        `broken_links=0`, `restated_ac_blocks=0`, `non_vacuous=yes`), P33
+        (structural diagram and association, expect `keyword_and_fence_exit=0`,
+        `C4 Level 1/2/3 has diagram=OK (heads=1 own=1)`,
+        `c4_headings_with_diagrams=3/3`, `flow_headings=7`,
         `flow_headings_with_diagrams=7/7`, `heading_association=OK`, plus
         `fixture_good_metrics=3/3,7/7,OK` and `fixture_negative=detected`).
-        A guard hit is fixed by rewording inside the owning phase's scope;
-        never by registering a document, adding an allowlist entry, or editing
-        `scripts/**`. [NFR-4, NFR-6, NFR-9, NFR-10; AC-NFR4-1, AC-NFR6-1,
-        AC-NFR9-1, AC-NFR10-1; TC-M2PLAN-031, 033, 036, 037]
+        A guard hit is fixed by rewording inside the owning phase's scope; the
+        registration in 6.2 is already complete, so no further registry entry,
+        allowlist rule, or guard change may be added, and no other
+        `scripts/**` file may be edited. [NFR-4, NFR-6, NFR-9, NFR-10;
+        AC-NFR4-1, AC-NFR6-1, AC-NFR9-1, AC-NFR10-1; TC-M2PLAN-031, 033, 036,
+        037]
       - |-
-        6.3 Aggregate gate (D-12, DR-3, DR-5, NFR-5, AC-NFR5-1, DEC-19). Run P32
+        6.4 Aggregate gate (D-12, DR-3, DR-5, NFR-5, AC-NFR5-1, DEC-19). Run P32
         exactly as written and record both invocations verbatim; P32 itself
-        creates the repo-local tmpdir, so do not hand-roll the command. The
-        normative reading: the repo-local-`TMPDIR` run must exit 0, and a
-        default-run failure is environmental only when
-        `tests/checks/ci-baseline-parity.test.ts` is its ONLY failing test
-        (`git clone --local` hardlinks crossing into tmpfs). Any other
-        default-run failure, or any repo-local-TMPDIR failure, is a delivery
-        failure. Do not "fix" the environment condition: `tests/**` and
-        `scripts/**` are out of scope. [NFR-5; AC-NFR5-1; TC-M2PLAN-032]
+        creates the repo-local tmpdir, so do not hand-roll the command. After
+        the 6.2 registration the repo-local-`TMPDIR` run must exit 0, and the
+        default run must reduce to the LONE `ci-baseline-parity` failure
+        (`default_failed_tests=1`; before registration it reported four
+        failures -- parity plus three forbidden-literals tests). Only that
+        single failure is the environmental exemption (`git clone --local`
+        hardlinks crossing into tmpfs); any other default-run failure, any
+        `default_failed_tests` above 1, or any repo-local-TMPDIR failure is a
+        delivery failure. Do not "fix" the environment condition: `tests/**`
+        and guard behaviour are out of scope. [NFR-5; AC-NFR5-1; TC-M2PLAN-032]
       - |-
-        6.4 Fidelity and preservation aggregate. Re-run P02, P05, P06 and then
+        6.5 Fidelity and preservation aggregate. Re-run P02, P05, P06 and then
         P35: expect `clause_scan: total=79 present=79 missing=0`,
         `missing_clauses=0`, `s17_missing_criteria=0`, `added_criteria=0`,
         `criteria_present=7/7` (no eighth criterion, no merged criterion), and
@@ -1296,62 +1390,75 @@ phases:
         `fixture_blank_separation=OK`, `classifier_self_tests=4/4`,
         `changed_lines=3` with `base_task_lines_missing=0` and
         `fixture_p08=OK`, and `stories_compared=65 identical=65 changed=0
-        order=OK`. No phase after P1-P5 may have changed a
-        file; a drift means a later phase leaked and is fixed in the owning
-        phase. [NFR-2, NFR-3, NFR-7, NFR-8;
+        order=OK`. No phase other than this registry step may have changed a
+        file since P5; a drift means a later edit leaked and is fixed in the
+        owning phase. [NFR-2, NFR-3, NFR-7, NFR-8;
         AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
       - |-
-        6.5 Write `delivery-evidence/verification.md` (a change artifact, not a
+        6.6 Write `delivery-evidence/verification.md` (a change artifact, not a
         product file): one row per TC (TC id, AC id, procedure ids, command,
         expected line, observed line), the plan-validation verdict, the P28
-        product-file list, the P31/P32/P33/P36/P37 outputs, both aggregate-gate
-        runs with their classification (DEC-19: `default_exit`,
-        `default_failed_tests`, `default_failure_class`, `repo_tmpdir_exit`,
-        `gate_verdict`), the fidelity evidence (P02's 61-clause scan, P35's
-        79-clause aggregate, `s17_missing_criteria=0`, P04/P06
-        `criteria_present=7/7`), the page evidence (`tail_violations=0` and the
-        four preservation checks), the pack evidence (P19's
-        `deviation_statement=OK` and `pack_contents_table=byte-identical`, P27's
-        `m2_targets=12/12`, P33's `heading_association=OK`), the retention
-        evidence (P18's `windows(base-anchored)`, `retention`, `whitelist`,
-        `retention_oracle`, `reference_head_fixture` and verdict lines plus P34's
-        `pointer_groups` and `sed_line_address_0_errors`), the backlog insertion
-        evidence (P03's window, `window_empty`, `blank_separation`,
-        `separator_sequence` and classifier self-tests), the entrypoint evidence
-        (`entrypoint_bound=OK`, `sentences_removed=2`, `sentences_added=2`), the
-        XF-9 note with its accepted-residual rationale, and the manual-read
+        product-file list (31 paths, with `planning_files=30` and
+        `registry_files=1`), the P36 registration evidence
+        (`registered_total`, `m2_registry_sorted`, `m2_registry_duplicates`,
+        `registry_m2`, `baseline_absent`, `unregistered_findings`), the
+        P31/P32/P33/P36/P37 outputs, both aggregate-gate runs with their
+        classification (DEC-19: `default_exit`, `default_failed_tests`,
+        `default_failure_class`, `repo_tmpdir_exit`, `gate_verdict`), the
+        fidelity evidence (P02's 61-clause scan, P35's 79-clause aggregate,
+        `s17_missing_criteria=0`, P04/P06 `criteria_present=7/7`), the page
+        evidence (`tail_violations=0` and the four preservation checks), the
+        pack evidence (P19's `deviation_statement=OK` and
+        `pack_contents_table=byte-identical`, P27's `m2_targets=12/12`, P33's
+        `heading_association=OK`), the retention evidence (P18's
+        `windows(base-anchored)`, `retention`, `whitelist`, `retention_oracle`,
+        `reference_head_fixture` and verdict lines plus P34's `pointer_groups`
+        and `sed_line_address_0_errors`), the backlog insertion evidence (P03's
+        window, `window_empty`, `blank_separation`, `separator_sequence` and
+        classifier self-tests), the entrypoint evidence (`entrypoint_bound=OK`,
+        `sentences_removed=2`, `sentences_added=2`), the registry diff summary
+        (twelve added registrations, sorted among themselves, no reordering),
+        the XF-9 note with its accepted-residual rationale, and the manual-read
         verdicts owed by review (G-1, G-3, G-4, G-5, G-6). Then re-run P28 after
-        the commit and confirm the same product-file list; record that
-        confirmation in the PR body, not in a second commit.
-        [§17.3 DoD; AC-NFR1-1, AC-NFR5-1]
+        the commit and confirm the same 31-path list; record that confirmation
+        in the PR body, not in a second commit.
+        [§17.3 DoD; AC-NFR1-1, AC-NFR5-1, AC-NFR9-1]
       - |-
-        6.6 Close-out statement in the PR body: no tracker ticket was created
+        6.7 Close-out statement in the PR body: no tracker ticket was created
         for M2-S11..S17, no M2 story was delivered, and no product behaviour
         changed (DEC-1, NG-1, NG-2, NG-4); the M2 pack is proposed until
         milestone exit (DEC-4); `doc/spec/**` is unchanged because this change
-        delivers no behaviour to reconcile (NG-3). [§17.3 DoD]
+        delivers no behaviour to reconcile (NG-3); the only `scripts/**` change
+        is the twelve-entry registration, and guard behaviour is untouched
+        (DEC-21). [§17.3 DoD]
     coverage:
-      - "TC-M2PLAN-028 (complete: product_files=30 paths, forbidden_root_files=0, outside_planning=0, unexpected_paths=0, non_vacuous=yes)"
+      - "TC-M2PLAN-028 (complete: product_files=31 paths = planning_files=30 + registry_files=1; outside_planning_outside_registry=0; forbidden_root_files=0; unexpected_planning_paths=0; non_vacuous=yes)"
       - "TC-M2PLAN-031 (complete: guard_exit=0, no drift, 82 in-scope docs; planning_markers=0)"
-      - "TC-M2PLAN-032 (complete: both runs recorded; default_exit=1 with default_failed_tests=1 classified environmental (ci-baseline-parity only); repo_tmpdir_exit=0; gate_verdict=PASS)"
-      - "Procedure P33 re-proof inside the final sweep (TC ownership stays P4): mermaid_fences>=10, keyword_and_fence_exit=0, inventory 3/6/1"
+      - "TC-M2PLAN-032 (complete: both runs recorded; after registration default_exit=1 with default_failed_tests=1, the lone ci-baseline-parity failure, classified environmental; repo_tmpdir_exit=0; gate_verdict=PASS)"
+      - "Procedure P33 re-proof inside the final sweep (TC ownership stays P4): mermaid_fences>=10, keyword_and_fence_exit=0, heading_association=OK, c4_headings_with_diagrams=3/3, flow_headings_with_diagrams=7/7"
       - "TC-M2PLAN-035 (complete: clause_scan total=79 present=79 missing=0; missing_clauses=0; s17_missing_criteria=0; added_criteria=0; changed_meaning=0 after the clause-by-clause read)"
-      - "TC-M2PLAN-036 (complete: forbidden_exit=0, 0 violations, added_lines>=1, seed_hits=0)"
+      - "TC-M2PLAN-036 (complete: registered_total=139; m2_registry_sorted=yes; m2_registry_duplicates=0; registry_m2=12/12; baseline_absent=12/12; forbidden_exit=0 with 5/5 scope classes and 0 violations; unregistered_findings=0; seed_hits=0)"
       - "TC-M2PLAN-037 (complete: broken_links=0, restated_ac_blocks=0, non_vacuous=yes)"
     testGate:
       - "P00 — re-materialise the base and helpers at the final HEAD"
       - >-
-        P28 -> product_files=30; forbidden_root_files=0; outside_planning=0;
-        unexpected_paths=0; matcher_self_test=OK; non_vacuous=yes
+        P28 -> product_files=31; planning_files=30; registry_files=1;
+        outside_planning_outside_registry=0; forbidden_root_files=0;
+        unexpected_planning_paths=0; matcher_self_test=OK; non_vacuous=yes.
+        The single registry path is
+        `scripts/checks/forbidden-literals.registry.json`; any other
+        `scripts/**` path, or anything under `tests/`, `packages/`,
+        `.opencode/`, `.ai/`, or `doc/spec/`, fails P6.
       - >-
         P31 -> guard_exit=0; (guard-doc-distribution)[OK] no drift, 82 in-scope
         docs; planning_markers=0
       - >-
-        P32 -> both runs executed and classified:
+        P32 -> both runs executed and classified, post-registration:
         `default_exit=1 default_failed_tests=1 default_failure_class=environmental
-        (ci-baseline-parity only)`; `repo_tmpdir_exit=0`; `gate_verdict=PASS`.
-        A `default_failed_tests` above 1, a different failing test, or a
-        non-zero `repo_tmpdir_exit` fails P6.
+        (ci-baseline-parity only)` -- the lone parity failure, down from four
+        failures before the 6.2 registration; `repo_tmpdir_exit=0`;
+        `gate_verdict=PASS`. A `default_failed_tests` above 1, a different
+        failing test, or a non-zero `repo_tmpdir_exit` fails P6.
       - >-
         P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
         `C4 Level 1/2/3 has diagram=OK (heads=1 own=1)`;
@@ -1360,8 +1467,15 @@ phases:
         `heading_association=OK`; `fixture_good_metrics=3/3,7/7,OK`;
         `fixture_negative=detected`
       - >-
-        P36 -> forbidden_exit=0; OK forbidden-literals 5/5 scope classes
-        scanned, 0 violations; added_lines>=1; seed_hits=0
+        P36 -> `registered_total=139`; `m2_registry_sorted=yes`;
+        `m2_registry_duplicates=0`; `registry_m2=12/12 baseline_absent=12/12`
+        (the procedure prints those two counts on one line);
+        `registry_sorted_self_test=detected`;
+        `registry_duplicate_self_test=detected`; `forbidden_exit=0`;
+        `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`;
+        `unregistered_findings=0`; `added_lines>=1`; `seed_hits=0`. A
+        `present at baseline` or `unregistered:` line, a `sorted=no`, a
+        duplicate, or any non-zero guard exit fails P6.
       - >-
         P37 -> changed_planning_files=30; broken_links=0;
         restated_ac_blocks=0; non_vacuous=yes
@@ -1388,7 +1502,8 @@ phases:
         `bad_runs>0`, a `MISSING S17-AC*` line, a C4/flow `MISSING` line, or a
         non-zero `s17_missing_criteria` fails P6.
     invariants:
-      - "NFR-1: product files are limited to doc/planning/oss-tooling/**; doc/changes/** evidence is excluded by P28"
+      - "NFR-1/DEC-21: product files total 31 — 30 under doc/planning/oss-tooling/** plus scripts/checks/forbidden-literals.registry.json; doc/changes/** evidence is excluded by P28, and no other scripts/**, tests/**, packages/**, .opencode/**, .ai/** or doc/spec/** path changes"
+      - "DEC-21/D-14: the registry gains exactly the twelve pack paths, sorted among themselves and duplicate-free, with every pre-existing entry left in place and no guard behaviour changed"
       - "NFR-5/D-12/DEC-19: both aggregate-gate runs are recorded; only a lone default-run ci-baseline-parity failure is environmental, and the repo-local-TMPDIR run must exit 0"
       - "NFR-6/DR-7: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15), and it proves heading association as well as fence counts"
       - "NFR-7/DEC-16/D-13: retention over the whole file plus the addition whitelist is the acceptance oracle; a whole-section cmp is never asserted, and P18's reference-head fixture is the positive control"
@@ -1396,5 +1511,5 @@ phases:
       - "DEC-18/AC-F5-1: no header keeps the proposal tail without a named planned remainder, and the preserved delivered clauses survive"
       - "DEC-20/AC-F8-1/AC-F11-1: the pack states its contents deviation, the index contents table is byte-identical, and the M2 row links twelve targets"
       - "NFR-8/DR-1/DR-2: all 79 clauses present and all seven S17 criteria present by content, with no added criterion"
-      - "NFR-9/NFR-10: guards green with attribution; the manual reads (G-1, G-3, G-4, G-5) are recorded, not claimed"
+      - "NFR-9/NFR-10/DEC-21: both doc guards are green with attribution; the twelve pack documents are registered so the guard reports zero unregistered findings; the manual reads (G-1, G-3, G-4, G-5) are recorded, not claimed"
       - "§17.3 DoD: no ticket created, no story delivered, no behaviour changed, no doc/spec rewrite"
