@@ -1,0 +1,88 @@
+change_id: GH-279
+title: "Preflight truth-read credential before spawn; typed credential and
+  divergence diagnostics"
+delivery_mode: autonomous
+branch: fix/GH-279/dispatch-credential-preflight
+base_branch: main-tools
+phases:
+  clarify_scope: { started: null, completed: 2026-11-10T06:02:20.331Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "D1 (PM-decided): the credential preflight is a pre-session refusal. It
+      runs before the queue-lease claim and before spawn/resume; it appends no
+      attempt record and opens no session, branch, or divergence. Identity
+      config.credential.missing (user, not_landed, exit 1) with a summary naming
+      the resolved source key and the reference; today's post-spawn exit 2 is
+      the defect being replaced."
+    date: 2026-11-10
+  - text: "D2 (PM-decided): dispatch dual-run resolve must work from local evidence
+      only. It consults no credential port and no network. The observed
+      'dispatch.state-unverified' is a diagnostic-collapse defect: every
+      non-state.keys.missing store failure is relabelled as the truth token.
+      Resolve must preserve the underlying typed state code (for example
+      state.lock.busy, state.store.torn, state.write.failed) and remediation. A
+      separate defect fix, not a credential fix."
+    date: 2026-11-10
+  - text: "D3 (PM-decided): a dispatch whose session completed but whose truth reads
+      are unreadable appends exactly one open divergence so it is resolvable
+      through dispatch dual-run resolve and counts as unresolved until resolved.
+      Applies to the production truth-read credential path from issue GH-279."
+    date: 2026-11-10
+  - text: "D4 (PM-decided): gh-keyring bridge is a documented provisioning path,
+      never implicit ambient inheritance. Document the exact key GITHUB_TOKEN
+      and the explicit export bridge from an authenticated gh session;
+      deny-by-default stays intact."
+    date: 2026-11-10
+  - text: "D5 (PM-decided): doctor stays out of the shipped prompt-required command
+      set in this change (its inventory is pinned). The operator-facing
+      prerequisite surface is the dispatch preflight plus status section
+      evidence naming the resolved key; doctor's existing
+      tracker.credential-unavailable check keeps parity through tests. Shipping
+      doctor is deferred to a separate decision."
+    date: 2026-11-10
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue open, label change, zero comments; no PR exists
+      for the branch; branch had zero commits, working tree clean. Fresh full
+      lifecycle."
+    type: info
+    date: 2026-11-10
+  - text: "Architecture map: truth credential is literal GITHUB_TOKEN via reference
+      github-read (packages/cli/src/production.ts:156-167, 285-286). Spawn
+      boundary is packages/core/src/app/dispatch.ts:451-464. Truth read runs
+      post-session at dispatch.ts:620. state-unverified is derived in
+      packages/core/src/domain/dispatch-result.ts:222-231."
+    type: info
+    date: 2026-11-10
+  - text: "Divergence recording currently requires comparison.outcome mismatch
+      (dispatch.ts:646-662), so an unverifiable-but-delivered dispatch opens
+      none; that is why GH-241 could not be resolved through dual-run resolve."
+    type: info
+    date: 2026-11-10
+  - text: "Live state evidence: ~/.delivery-os-state has one open divergence
+      DIV-GH-275-79416392-c1c4-48a0-997e-1f6409daa7df; dual-run summary reads it
+      (exit 0), so the resolve failure is in the local write/diagnostic path,
+      not the credential."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the first session was killed by a provider-balance failure
+      (deepseek) before any artifact existed; no rework, but it cost a restart.
+      Provider balance is now topped up."
+    type: retro
+    date: 2026-11-10
+  - text: "Scope risk: dispatch-composition tests currently assert
+      spawn-then-state-unverified; a correct preflight inverts them to zero
+      spawn. Help inventory/prompt conformance pins dispatch help entries and
+      reference-page phrases."
+    type: risk
+    date: 2026-11-10
