@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-09T10:44:09.188Z }
   review_fix: { started: null, completed: 2026-11-10T07:19:06.028Z }
   quality_gates: { started: null, completed: 2026-11-10T07:34:13.291Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-10T07:35:32.448Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "DEC-1: default allowlist becomes PATH and HOME required, TMPDIR optional,
@@ -157,6 +157,22 @@ blockers:
       prompt-conformance 5 clean; help-guide coverage complete; exports parity 5
       publishables. forbidden-literals 5/5 scope classes, 0 violations. plan
       validate remains valid/readyForDevelopment. Tree clean before and after."
+    type: info
+    date: "2026-11-10"
+  - text: "Phase 10 dod_check = PASS. Registry 9/11 phases complete through
+      quality_gates; plan validate valid/readyForDevelopment; all five declared
+      plan phases have pm-notes evidence with post-rebase commits (8c9b6222,
+      54241176, 7d0040ea, cef22b69, da683a67/f854fd78). All 29 ACs are owned and
+      satisfied per the review-iter-5 PASS (spec and plan compliance PASS).
+      Current-truth docs reconciled with no residual gap (config-layer,
+      harness-adapters, dispatch-engine, result-contract, adapter-ports,
+      cli-entrypoint, four humanText hook docs, dispatch test spec). Aggregate
+      gate green on the rebased tree (6953 pass / 4 skip / 0 fail; all sub-gates
+      green). Changeset declares the five fixed-group packages at minor;
+      TDR-0019 file and index row are committed (status Proposed; owner
+      acceptance is the PR-review action, not a DoD gap). No TODO/FIXME added.
+      `verify change` reports only dod_check/pr_creation pending, as expected
+      before phase 11."
     type: info
     date: "2026-11-10"
 notes:
