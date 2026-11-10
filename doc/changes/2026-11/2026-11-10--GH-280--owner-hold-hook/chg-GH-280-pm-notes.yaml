@@ -487,3 +487,46 @@ notes:
       Remediation decisions D26-D30 recorded; plan phase 10 added."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 10 complete: code review iteration 2 remediation (F-1,
+      F-2, F-3..F-7; D26-D30). Commit 3f8b3c16. F-1 brand half: the shipped
+      example recognises DELIVERY_OS_OWNER_HOLD and
+      DELIVERY_OS_OWNER_HOLD_POLL_SECONDS and reads the fixed
+      $HOME/.delivery-os-state/owner-hold marker, with the registry array
+      renamed to OWNER_HOLD_CONDITIONS and the suite and negative controls
+      moved to the same names; the two guides, feature-autonomous-delivery,
+      the autonomous-delivery test spec, the command pages, the spec, the test
+      plan, the change record, and the changeset carry the same current default
+      names with the brand-derived placeholder kept as the normative form; the
+      doc-check assertions and the synthetic store fixtures were aligned. F-1
+      procedure half: the manual procedure names the 0700 store directory, the
+      state.permission.denied failure for a non-private directory, status plus
+      queue list, queue plan, lanes list, and a no-ref queue claim, dispatch
+      omitted or conditional on a GitHub credential, and no doctor step; the
+      executed shape check in a disposable HOME is recorded in the change
+      record. F-2: no artifact narrows the hold to status alone; the plan,
+      pm-notes D20/D28, changeset, doctor command page, feature-doctor, the
+      structure-test header, and the change record state status as the digest
+      plus the queue read surfaces, with doctor command-runtime only. F-3:
+      doc/spec/features/feature-cli-entrypoint.md declared in phase 7 scope,
+      the spec doc-impact table, and the change record scope deviations. F-4:
+      test-plan aggregate is 7133 pass / 4 skip / 0 fail (7137 tests, 880
+      files). F-5: the phase-9 note names e545b271, 2a7a01cf, f42d67a7, and
+      8128f8e5. F-6: TC-HOLDFACT-009 now drives the real readOwnerHoldMarker
+      over a recording filesystem port, asserts the exact per-pass call shape
+      (one existence check, one regular-file check, one 4 096-byte read at the
+      fixed path) and that the marker content reaches the resolved fact, then
+      asserts zero credential, transport, store-write, and spawn calls; the
+      test-plan mapping moved with it. F-7: test-plan §7.3 says index 27, the
+      28th blockingReasons entry. Verification: hook suite 13/13, shellcheck 0;
+      owner-hold fact/reader 30/30, production composition 3/3, structure pin
+      5/5; queue-scheduling-contract + doctor-contract 33/33; five doc checks
+      54/54; install 55/55 and uninstall 30/30; doc-distribution no drift (82
+      docs); plan validate verdict=valid, readyForDevelopment=true;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133 pass, 4 skip, 0 fail, 7137
+      tests across 880 files). No acceptance criterion, golden, closed set, or
+      product behaviour moved; the full TC-HOLDE2E-001 operator transcript
+      remains PR-scoped (GAP-T1). Remaining old-name occurrences are confined to
+      the immutable review and readiness artifacts that quote the defect and the
+      negative seed assertions in tests/checks/owner-hold-doc.test.ts."
+    type: info
+    date: 2026-11-10
