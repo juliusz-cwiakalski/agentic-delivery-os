@@ -354,3 +354,43 @@ describe("TC-HDA-036 host child-stdin early close", () => {
     LEG_BOUND_MS,
   );
 });
+
+describe("ZZ spawn probe (temporary diagnostic)", () => {
+  test("sync vs async child spawn with an empty environment", async () => {
+    const { spawn, spawnSync } = await import("node:child_process");
+    const sync = spawnSync(process.execPath, ["-e", 'process.stdout.write("SYNC_OK")'], {
+      env: {},
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    console.error(
+      "[GH-277][probe-sync]",
+      JSON.stringify({
+        bun: process.versions.bun,
+        status: sync.status,
+        signal: sync.signal,
+        stdout: sync.stdout,
+        stderr: sync.stderr,
+        error: sync.error?.message,
+      }),
+    );
+    const asyncResult = await new Promise<Record<string, unknown>>((resolve) => {
+      const child = spawn(process.execPath, ["-e", 'process.stdout.write("ASYNC_OK")'], {
+        env: {},
+        cwd: process.cwd(),
+      });
+      let out = "";
+      let err = "";
+      child.stdout?.setEncoding("utf8");
+      child.stderr?.setEncoding("utf8");
+      child.stdout?.on("data", (c: string) => (out += c));
+      child.stderr?.on("data", (c: string) => (err += c));
+      child.on("error", (e) => resolve({ error: e.message }));
+      child.on("close", (code, signal) => resolve({ code, signal, out, err }));
+      child.stdin?.on("error", () => {});
+      child.stdin?.end();
+    });
+    console.error("[GH-277][probe-async]", JSON.stringify(asyncResult));
+    expect(sync.status).toBe(0);
+  });
+});
