@@ -18,6 +18,7 @@ Recorded: 2026-11-10.
 | P4 | `39bb4afb` | the twelve-document `milestones/m2/` pack |
 | P5 | `13171be1` | `milestones/README.md` M2 index row |
 | P6 | `166df7ff` (registration) and this evidence commit | `scripts/checks/forbidden-literals.registry.json` (twelve registrations) + change evidence |
+| P7 | `c2594adb` (product remediation) and the P7 evidence commit | review-iter-1 remediation: status pointer placement, board/watchdog reachability, delta note, queue release/removal split, contract enum mapping, README story map, architecture S17 daemon-absent branch, backlog terminal period and re-wrap, evidence refresh |
 
 ## TC → procedure → observed result
 
@@ -71,7 +72,14 @@ tier=lite
 readyForDevelopment=true
 ```
 
-## Containment (§6.1, TC-028)```
+## Containment — two budgets (§6.1, TC-028, DEC-21, DEC-22)
+
+The change has two budgets and they add to 34 product files.
+
+**Delivery budget (31):** 30 planning files plus the one permitted
+non-planning file.
+
+```
 product_files=31
 planning_files=30 registry_files=1 outside_planning_outside_registry=0
 forbidden_root_files=0
@@ -80,13 +88,26 @@ matcher_self_test=OK
 non_vacuous=yes
 ```
 
-The 31 product paths are `doc/planning/oss-tooling/backlog.md`,
+The 31 delivery paths are `doc/planning/oss-tooling/backlog.md`,
 `doc/planning/oss-tooling/status.md`,
 `doc/planning/oss-tooling/milestones/README.md`, the fifteen
 `doc/planning/oss-tooling/milestones/m1/commands/*.md` pages, the twelve
 `doc/planning/oss-tooling/milestones/m2/**` documents, and
-`scripts/checks/forbidden-literals.registry.json` (the single permitted
-non-planning product file, DEC-21).
+`scripts/checks/forbidden-literals.registry.json` (DEC-21).
+
+**Phase-7 current-truth budget (3):** the doc-syncer's corrections.
+
+```
+spec_files=2 overview_files=1
+phase7_files=3 phase7_extra=0 phase7_unknown_paths=0
+total_product_files=34
+```
+
+The three phase-7 paths are `doc/spec/features/feature-cli-entrypoint.md`,
+`doc/spec/features/feature-resident-daemon.md`, and
+`doc/overview/architecture-overview.md`. They record the delivered daemon,
+entrypoint, and architecture truth the plan reconciles under DEC-22; they are
+the phase-7 artifact, not a product-behaviour change.
 
 ## Registry registration (D-14, DR-20, DEC-21)
 
@@ -226,7 +247,51 @@ insertion_below_separator=never
 
 No tracker ticket was created for M2-S11..S17; no M2 story was delivered; no
 product behaviour changed (DEC-1, NG-1, NG-2, NG-4). The M2 pack is proposed
-until milestone exit (DEC-4). `doc/spec/**` is unchanged because this change
-delivers no behaviour to reconcile (NG-3). The single `scripts/**` edit is the
-forbidden-literals registration required by the guard (DEC-21); the guard
-implementation and its tests are untouched.
+until milestone exit (DEC-4). Under DEC-22 the doc-syncer phase reconciled
+three current-truth documents (`feature-cli-entrypoint.md`,
+`feature-resident-daemon.md`, `doc/overview/architecture-overview.md`) so the
+system spec states the delivered entrypoint and daemon truth; those three are
+the phase-7 budget and bring the change to 34 product files. The single
+`scripts/**` edit is the forbidden-literals registration required by the guard
+(DEC-21); the guard implementation and its tests are untouched.
+
+## P7 review remediation evidence
+
+Findings from `code-review/review-iter-1.yaml` and their remediation, with the
+gate that proves each:
+
+| Finding | Remediation | Gate evidence |
+|---|---|---|
+| F-2 | `status.md`: a blank line now separates the "M1 delivery starts now" pointer from the M1 delivery table, so GFM starts a fresh table block | P17 `m1_table_blank_before=OK`, `m1_table_separator=OK`; P18 same plus `retention_oracle=OK`, `bad_runs=0` |
+| F-8 | `m1/commands/board.md` and `watchdog.md` carry the reachability note "not mounted at the production entrypoint"; `doctor.md` stays exempt as the recorded residual, and config/provider/db remain an accepted residual recorded here | P11 `reachability_missing=0`, `doctor_reachability=exempt (recorded residual)`, `watchdog_m1s15=OK`, `watchdog_sc=OK`, `tail_violations=0` |
+| F-1, F-13 | `m2/entrypoint-delta.md`: no back-pointer claim; the M1 page is stated as a snapshot with only its bounded DESCRIPTION correction; forward links to the M1 page and all six M2 command pages; the `--help` block is labelled abridged | P26 `back_pointer_claim=ABSENT`, `m1_snapshot=OK`, `description_bound=OK`, `forward_m1_link=OK`, `m2_command_links=6/6`, `readme_reachable=OK`, ten tokens OK |
+| F-3, F-9 | `m2/commands/queue.md`: lease release (entry stays, may park) is distinct from the reason-bearing removal; `dep add`/`dep remove` extends the delivered two-positional form; the failing example now carries `--reason` and a refusal example shows exit 1 | P24 `command_headers=6/6`; P25 empty missing lists; P21 `contract_markers_missing=0` |
+| F-4, F-18 | `m2/contracts.md`: one mapping paragraph names the delivered park vocabularies and the `lanes parked:<cause>` consequence; the no-nomination sentence is softened to an S17 decision | P21 `contract_markers_missing=0` |
+| F-10 | `m2/README.md`: S7/S8/S9 point at "none in this pack"; S13 points at the C4 Level 3 event components and the event-taxonomy contract | P19 `readme_lists=12/12`, `story_map_entries=16`, `deviation_statement=OK` |
+| F-11 | `m2/architecture.md`: the S17 flow states the daemon-absent degradation and the last boundary invariant repeats it, with the diagram inventory unchanged | P20 flow headings OK; P33 `heading_association=OK`, `flow_headings_with_diagrams=7/7` |
+| F-16 | `backlog.md`: M2-S4's depends line carries the terminal period; the long inserted lines are re-wrapped to the file's convention with every clause intact and each S17 criterion on its own line | P02 `61/61`; P35 `79/79`; P08 `base_task_lines_missing=0`; P09 `order=OK` |
+| F-6 | this file records the two budgets and the DEC-22 split | P28 `31 + 3 = 34` |
+| F-12 | pm-notes gains a note only: the `phases:` mirror is command-owned and `delivery-os phase list GH-284` is authoritative; no timestamp edited | pm-notes parses; no timestamp change |
+| F-15 | test plan frontmatter `last_updated` now follows `created` | `created=2026-11-10T19:30:00Z`, `last_updated=2026-11-10T23:55:00Z` |
+| F-5 | Not acted on in the diff: a readiness closure record supersedes the two NOT_READY verdicts; no file in this plan's scope is involved | close-out note |
+| F-17 | Not acted on in the diff: squashing the 40 branch commits to the phase commits plus artifact commits is a PR-time action | close-out note |
+
+### Known gate discrepancy at the P7 HEAD
+
+Every P7 gate is green at `c2594adb` except one informational token in P07.
+The spec (v1.9, AC-F3-1) and plan task 7.9 require the terminal period on
+M2-S4's depends line, and the line now reads
+`- Depends on: M1-S5, M1-S17, M2-S11.`. P07's exact-line comparison still
+greps the period-less string, so it prints:
+
+```
+changed_lines=2 unexpected_lines=0
+depends=NOT expected (- Depends on: M1-S5, M1-S17, M2-S11.)
+```
+
+The functional checks pass (two changed lines, no unexpected line, shape OK,
+mutation self-test detected), and the 79-row anchor table still matches the
+line. The minimal fix is one token in the test plan: compare
+`- Depends on: M1-S5, M1-S17, M2-S11.` (add the terminal period) in P07 and in
+TC-007's recorded evidence. The procedure was not edited here, per the
+remediation brief.
