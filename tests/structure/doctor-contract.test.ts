@@ -78,7 +78,7 @@ const conditionsOf = (
   catalog: readonly { readonly condition: string; readonly verdict: string }[],
 ): readonly { readonly condition: string; readonly verdict: string }[] => catalog;
 
-describe("TC-DOCTOR-021 contract vocabulary and constants", () => {
+describe("TC-DOCTOR-021 / TC-HOLDDOCTOR-006 / TC-HOLDNEG-002 contract vocabulary and constants", () => {
   test("areas, verdicts, and outcomes are the declared closed sets", () => {
     expect([...DOCTOR_AREAS]).toEqual(["repo", "tracker", "provider", "state", "ci"]);
     expect([...DOCTOR_VERDICTS]).toEqual(["ok", "fail", "unreachable"]);

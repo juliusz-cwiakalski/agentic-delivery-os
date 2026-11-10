@@ -51,7 +51,7 @@ The surrounding contracts are described in [Result Contract and Error Table](fea
 
 ### Command surface
 
-The command is exactly `doctor`, composed beside `status`, `brief`, `board`, `queue`, and the other top-level commands. It accepts no positionals and declares no command-specific flags; `--json` is the global machine-output switch and adds no doctor behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`. There is no `--fix-hints` flag: hints are part of the contract.
+The command definition is exactly `doctor`. It is registered only when a `DoctorComposition` is supplied; the production composer supplies none today, so the production binary does not register `doctor` (a pre-existing doctor residual) and `status` is the only production operator surface that reports the owner hold. The command accepts no positionals and declares no command-specific flags; `--json` is the global machine-output switch and adds no doctor behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`. There is no `--fix-hints` flag: hints are part of the contract.
 
 The handler owns no stream write and chooses no exit code. It collects the injected facts, runs the five checks inside their containment boundaries, aggregates the report, and returns `data` or a classified failure; the CLI edge renders the human text or the machine envelope and projects the exit code.
 
@@ -141,7 +141,7 @@ Every non-ok condition has exactly one verdict and exactly one hint template. Te
 
 Detail lines are factual and bounded: a clean repo reports `clean work tree on <branch> at <shortSha>` or `detached HEAD at <shortSha>`; a dirty repo says the working tree has uncommitted changes; tracker and CI successes report the observed item or run count (or an explicitly empty page); a credential park names the subject, cause, and expiry; a neutral park names the subject, cause, expiry, and the `provider quota --provider <name>` directive; provider announcements are listed by their closed codes (at most three).
 
-The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved environment variable name: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix. The fix hint names the key only and never a value. Doctor remains outside the shipped prompt-required command set; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
+The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved environment variable name: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix. The fix hint names the key only and never a value. Doctor remains outside the shipped prompt-required command set because the production composer supplies no `DoctorComposition`; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
 
 ### Provider check semantics
 
@@ -160,8 +160,13 @@ condition-catalog entry, evidence source, area, or exit change. When the combine
 value would exceed `DOCTOR_MAX_DETAIL_CHARS`, the existing detail is truncated to
 fit and the **whole** hold segment is kept; it is never cut mid-word or dropped.
 A real provider defect keeps its own `fail` or `unreachable` verdict and reason,
-and does not gain `owner-hold`; `status` remains the surface that shows the hold
-in that case. With no active hold, every machine and human byte is unchanged.
+and does not gain `owner-hold`; `status` remains the production surface that
+shows the hold in that case. With no active hold, every machine and human byte
+is unchanged. This hold detail is exercised through `createDoctorCommandRuntime`
+over a supplied `DoctorComposition` — the command-runtime/test-harness layer.
+The production composer supplies no `DoctorComposition` today (a pre-existing
+doctor residual), so the production binary does not register `doctor` and
+`status` is the only production operator surface that reports the hold.
 The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
 marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
 override or store relocation.
@@ -264,7 +269,7 @@ The doctor vocabulary is runtime-neutral contract data. Pure aggregation lives i
 | `packages/core/src/contracts/doctor.ts` | Doctor vocabulary | Areas, verdicts, sources, outcomes, reasons, area-to-source map, condition catalog with hint templates, wiring-neutral causes, credential-rejection statuses, read limits, bounds, report and facts types, schema version, summary prefix and separator. |
 | `packages/core/src/domain/doctor.ts` | Pure aggregation | Appendix A derivation with precedence, evidence construction with dedupe and caps, bounded detail/hint rendering, `runIsolatedDoctorCheck`, `aggregateDoctorReport`, `formatDoctorFailureSummary`, and `renderDoctorHuman`. Imports contracts only. |
 | `packages/cli/src/commands/doctor.ts` | Command definition | Declares no flags and `positionals.max` of `0`, memoizes shared sources, collects per-area facts, runs each check inside containment, returns the report or the classified failure with its failure-text hook. |
-| `packages/cli/src/edge.ts` | Runtime composition | `DoctorComposition` and `createDoctorCommandRuntime` build the injected readers from repository facts, the GitHub client, the credential port, the provider ledger, and the injected clock; `createProductionDependencies` composes the command beside the other commands. |
+| `packages/cli/src/edge.ts` | Runtime composition | `DoctorComposition` and `createDoctorCommandRuntime` build the injected readers from repository facts, the GitHub client, the credential port, the provider ledger, and the injected clock; `createConfigProgram` registers the command only when a `DoctorComposition` is supplied, and the production composer supplies none today (a pre-existing doctor residual). |
 | `packages/core/src/contracts/error-table.ts` | Failure identity | The `doctor` domain kind and the single `doctor.check.failed` row. |
 | `packages/adapters/src/io/provider-transport.ts` | Read-failure status | The optional structured `httpStatus` on the adapter-local payload and not-found failures. |
 | `packages/adapters/src/github/client.ts` | GitHub read slice | Carries the numeric status on non-2xx responses; transport failures omit it. |

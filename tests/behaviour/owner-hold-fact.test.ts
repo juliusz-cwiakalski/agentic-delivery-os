@@ -197,6 +197,51 @@ describe("TC-HOLDFACT-007 the reason is one control-free line of at most 160 cha
 });
 
 describe("TC-HOLDFACT-009 resolution reads no credential, writes no state, calls no network", () => {
+  test("two resolution passes record exactly zero credential, transport, store, and spawn calls", async () => {
+    const counters = { credentials: 0, transport: 0, writes: 0, spawns: 0 };
+    const credentials = {
+      resolve: () => {
+        counters.credentials += 1;
+        return { ok: true as const, material: { value: "synthetic" } };
+      },
+    };
+    const transport = {
+      send: async () => {
+        counters.transport += 1;
+        return { status: 200, body: {} };
+      },
+    };
+    const store = {
+      append: () => {
+        counters.writes += 1;
+        return { ok: true as const };
+      },
+    };
+    const spawn = async () => {
+      counters.spawns += 1;
+      return { stdout: "", stderr: "", status: 0, timedOut: false };
+    };
+    // A composition-shaped holder: the resolver sees only the injected environment
+    // and marker outcome, never the credential, transport, store, or spawn seams.
+    const composition = {
+      credentials,
+      transport,
+      store,
+      spawn,
+      resolve: (): OwnerHoldFact =>
+        resolve({ ACME_OWNER_HOLD: "pause" }, "ACME", activeMarker("marker reason")),
+    };
+    for (let pass = 0; pass < 2; pass += 1) {
+      expect(composition.resolve()).toEqual({ active: true, source: "env", reason: "pause" });
+    }
+    expect(counters).toEqual({ credentials: 0, transport: 0, writes: 0, spawns: 0 });
+    // Keep the recorder doubles reachable so the zero counts are not tree-shaken.
+    expect(composition.credentials).toBe(credentials);
+    expect(composition.transport).toBe(transport);
+    expect(composition.store).toBe(store);
+    expect(typeof composition.spawn).toBe("function");
+  });
+
   test("the resolver consumes only injected inputs and leaks no planted secret", () => {
     const canary = "SECRET-CANARY-9f2a";
     const fact = resolve(

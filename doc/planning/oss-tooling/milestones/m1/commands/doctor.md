@@ -69,6 +69,12 @@ is kept; it is never cut mid-word or dropped. A real provider defect keeps its
 own `fail` or `unreachable` verdict and reason and does not gain `owner-hold`.
 With no active hold, every machine and human byte is unchanged.
 
+This hold detail is produced by the doctor command runtime whenever a
+`DoctorComposition` is supplied; it is a command-runtime/test-harness capability.
+The production composer supplies no `DoctorComposition` today, so the production
+binary does not register `doctor` (a pre-existing doctor residual). `status` is
+the production operator surface that reports the hold.
+
 The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
 marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
 override, store relocation, new flag, or exit code.

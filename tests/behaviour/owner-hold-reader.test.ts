@@ -10,6 +10,12 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  nodeOwnerHoldMarkerFileSystem,
+  type OwnerHoldMarkerFileSystem,
+  ownerHoldMarkerPath,
+  readOwnerHoldMarker,
+} from "../../packages/adapters/src/file/index";
+import {
   OWNER_HOLD_MAX_MARKER_BYTES,
   type OwnerHoldMarkerOutcome,
 } from "../../packages/core/src/contracts/index";
@@ -17,12 +23,6 @@ import {
   resolveOwnerHoldFact,
   sanitizeOwnerHoldReason,
 } from "../../packages/core/src/domain/index";
-import {
-  nodeOwnerHoldMarkerFileSystem,
-  ownerHoldMarkerPath,
-  readOwnerHoldMarker,
-  type OwnerHoldMarkerFileSystem,
-} from "../../packages/adapters/src/file/index";
 
 const STATE_DIR_NAME = ".acme-state";
 const roots: string[] = [];
@@ -132,6 +132,49 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
       ),
     ).toEqual({ state: "unreadable" });
   });
+
+  test("an existence-check stat failure is unreadable, while ENOENT stays absent", () => {
+    const path = ownerHoldMarkerPath("/srv/operator/.ados-state");
+    expect(path).toBe("/srv/operator/.ados-state/owner-hold");
+    const statFailureFs: OwnerHoldMarkerFileSystem = {
+      exists: () => {
+        throw Object.assign(new Error("parent directory denied"), { code: "EACCES" });
+      },
+      isFile: () => true,
+      readText: () => "never",
+    };
+    expect(
+      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, statFailureFs),
+    ).toEqual({ state: "unreadable" });
+    const enoentFs: OwnerHoldMarkerFileSystem = {
+      exists: () => false,
+      isFile: () => true,
+      readText: () => "never",
+    };
+    expect(readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, enoentFs)).toEqual({
+      state: "absent",
+    });
+  });
+
+  test.skipIf(typeof process.getuid === "function" && process.getuid() === 0)(
+    "an unreadable parent store directory fails closed (skipped as root by name)",
+    () => {
+      const home = tempHome();
+      const store = storeDirectory(home);
+      writeFileSync(join(store, "owner-hold"), "unreadable parent");
+      chmodSync(store, 0o000);
+      try {
+        const marker = readOwnerHoldMarker(
+          { storeDirectory: store },
+          nodeOwnerHoldMarkerFileSystem(),
+        );
+        expect(marker).toEqual({ state: "unreadable" });
+        expect(factFrom(store, marker)).toEqual({ active: true, source: "marker" });
+      } finally {
+        chmodSync(store, 0o700);
+      }
+    },
+  );
 
   test.skipIf(typeof process.getuid === "function" && process.getuid() === 0)(
     "a chmod-000 file resolves active with no reason (skipped as root by name)",

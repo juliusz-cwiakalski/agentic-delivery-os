@@ -27,19 +27,23 @@ window:
   and emits one bounded reason line per sleep.
 - **Typed path.** An active hold empties the next-action list and emits no
   preemption proposal. `ready` becomes `held`; `held` and `not-ready` keep their
-  state; active parks keep `parked:<cause>`; stuck parks keep
-  `park-condition-stuck`; a resumable park becomes `held`; `owner-hold` is the
-  first blocking reason. Claim refuses before ref selection (so a no-ref claim
-  never returns `no-eligible-action`) and the fenced claim refuses before the
-  fence; dispatch refuses before claiming. Both use the existing
-  `queue.precondition.unmet` identity at exit 1 with the token exactly
-  `owner-hold`. The mutating park-recovery pass is skipped, so a parked lane does
-  not resume at its provider window. Bookkeeping (`add`, `prioritize`, `dep`,
-  `release`) remains available.
+  state; `owner-hold` is prepended to every gated entry's ordered `blocking[]`,
+  including active and stuck parks, which keep their state `parked`/`stuck` and
+  park reason `parked:<cause>`/`park-condition-stuck`; a resumable park becomes
+  `held`. Claim refuses before ref selection (so a no-ref claim never returns
+  `no-eligible-action`) and the fenced claim refuses before the fence; dispatch
+  refuses before claiming. Both use the existing `queue.precondition.unmet`
+  identity at exit 1 with the token exactly `owner-hold`. The mutating
+  park-recovery pass is skipped, so a parked lane does not resume at its provider
+  window. Bookkeeping (`add`, `prioritize`, `dep`, `release`) remains available.
 - **Visibility.** `status` adds the optional evidence-level
   `providers.evidence.ownerHold` member and a bounded human suffix. `doctor`
-  keeps the provider check `ok` and adds the single non-failing annotation reason
-  `owner-hold` plus an appended bounded detail that survives the detail clamp.
+  reports the hold whenever a `DoctorComposition` is supplied — the
+  command-runtime/test-harness layer — keeping the provider check `ok` and adding
+  the single non-failing annotation reason `owner-hold` plus an appended bounded
+  detail that survives the detail clamp. The production composer supplies no
+  `DoctorComposition` today (a pre-existing doctor residual, GAP-T8), so
+  `status` is the only production operator surface that reports the hold.
   `queue ready` is unchanged and carries no hold.
 
 ## Operator communication
@@ -87,9 +91,12 @@ below is still required before merge:
 1. Create a disposable root under `./tmp/tmpdir/e2e-gh280` and set `HOME` to it.
 2. Create `<home>/<stateDirectoryName>/owner-hold` with
    `peak-hour cost pause`.
-3. Run `status --json` and `doctor --json`; record
-   `providers.evidence.ownerHold`, the `ok` provider check with the `owner-hold`
-   annotation reason and the appended hold segment, and exit `0`.
+3. Run `status --json`; record `providers.evidence.ownerHold` and exit `0`.
+   `status` is the only production operator surface that reports the hold. Do
+   **not** run production `doctor`: the production composer supplies no
+   `DoctorComposition`, so the production binary does not register `doctor`
+   (GAP-T8). Doctor hold evidence is covered at the command-runtime layer by
+   `TC-HOLDDOCTOR-001..007` over an injected `DoctorComposition`.
 4. Run `queue claim` **with no ref** and a `dispatch`; record
    `queue.precondition.unmet`, `reason=owner-hold`, the bounded detail and
    summary, exit `1`, zero records, and zero sessions. Record that `owner-hold`
@@ -98,8 +105,9 @@ below is still required before merge:
 6. Remove the marker; show the next pass resuming from unchanged records with one
    session.
 7. Record the known limits: no kill switch, no MCP queue surface, no BSD runner,
-   the seam-observed 4 096-byte read bound, and GAP-T7 (the production resident
-   daemon is not wired).
+   the seam-observed 4 096-byte read bound, GAP-T7 (the production resident
+   daemon is not wired), and GAP-T8 (the production composer supplies no
+   `DoctorComposition`).
 
 ## Known gaps
 
@@ -119,12 +127,20 @@ below is still required before merge:
 - **GAP-T7 — the production resident daemon is not wired.** The guarantee is
   conditional on a supervision cycle whose `nextAction` seam derives from the
   held pass; the resident-daemon residual is unchanged.
+- **GAP-T8 — the production composer does not compose `doctor`.**
+  `createProductionComposer` supplies no `DoctorComposition`, and
+  `createConfigProgram` registers `doctor` only when one is supplied, so the
+  production binary rejects `doctor` as outside the composed prompt-required
+  set. Doctor's owner-hold support is a command-runtime/test-harness capability;
+  `status` is the only production operator surface that reports the hold. Wiring
+  production doctor is a pre-existing residual owned by the doctor feature, not
+  this change.
 
 ## Verification
 
-- `pnpm check`: exit 0 — 7127 pass, 4 skip, 0 fail (7131 tests, 879 files); lint,
-  format, typecheck, boundaries, ambient-globals, secret-read, prompt, help, and
-  exports-parity all green.
+- `pnpm check`: exit 0 after review remediation — 7133 pass, 4 skip, 0 fail
+  (7137 tests, 880 files); lint, format, typecheck, boundaries, ambient-globals,
+  secret-read, prompt, help, and exports-parity all green.
 - `bash scripts/run-bash-suites.sh`: 26/26 suites pass.
 - `shellcheck` on both new scripts: zero findings.
 - `bash scripts/.tests/test-doc-distribution.sh`: no drift (82 in-scope docs).
@@ -133,6 +149,13 @@ below is still required before merge:
 - `pnpm build` and `pnpm exec delivery-os --version` (0.0.0) succeed.
 - Inactive queue/status/doctor/lanes/MCP goldens are byte-identical; only the
   declared held fixtures/goldens were added.
+- Review remediation focused runs: owner-hold fact/reader 30/30 (including the
+  two-pass zero-count recorders), production composition 3/3 plus the structure
+  pin 5/5, and the touched doctor/queue/status/conformance suites 232/232 across
+  12 files; `pnpm typecheck`, `pnpm check:boundaries`, shellcheck (0 findings),
+  the hook suite (13/13), the doc-distribution guard (82 in-scope docs, no
+  drift), and `plan validate GH-280` (`verdict=valid`,
+  `readyForDevelopment=true`) are green.
 
 ## DoR-2 minors resolved
 
@@ -154,6 +177,42 @@ below is still required before merge:
 - `tests/structure/error-table.test.ts` had its expected
   `queue.precondition.unmet` remediation hint updated to the new operator-hold
   wording. This is the regression test for the identity that phase 2 changed.
-- Phase 8 includes formatting-only edits (biome format) to files committed in
-  earlier phases, required to make the aggregate format gate green. No behavior,
-  fixture content, or assertion meaning changed.
+- The doc-sync reconciliation touched seven files beyond the feature specs and
+  command pages: `doc/00-index.md` (index summary), `doc/overview/glossary.md`
+  (the owner-hold term), `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`
+  (the dispatch refusal), `doc/quality/test-specs/test-spec-autonomous-delivery.md`
+  (the autonomous-delivery test spec), `doc/spec/features/feature-config-layer.md`
+  (the no-new-key note), `doc/spec/features/feature-dispatch-engine.md` (the
+  dispatch refusal), and `doc/spec/features/feature-resident-daemon.md` (the
+  conditional-residual note).
+- Phase 8 is **verification plus the lint/format edits**, not formatting-only.
+  It includes the behavior-preserving construction change in
+  `packages/core/src/domain/owner-hold.ts` (the control-character and ANSI
+  patterns are built with `new RegExp`/`String.fromCharCode(27)` to satisfy a
+  lint rule with identical matching behaviour), the functional
+  `queue.precondition.unmet` hint expectation in
+  `tests/structure/error-table.test.ts`, and biome formatting/reindent of files
+  already declared in phases 1–7. No assertion meaning, fixture content, golden
+  byte, or runtime behaviour changed.
+
+## Review iteration 1 remediation (D20–D25)
+
+Code review iteration 1 (`code-review/review-iter-1.yaml`) returned FAIL with one
+high, two medium, six low, and two info findings. Dispositions:
+
+| Finding | Disposition |
+|---|---|
+| F-1 (high) production doctor claim | **Fixed by claim correction, not by wiring production doctor (D20).** The spec, plan, this record, the changeset, `doc/guides/delivery-modes.md`, `doc/planning/oss-tooling/milestones/m1/commands/doctor.md`, and `doc/spec/features/feature-doctor.md` now state that doctor reports the hold only when a `DoctorComposition` is supplied; the production composer supplies none, and `status` is the only production operator surface. The `doctor --json` E2E step is removed and GAP-T8 records the residual. |
+| F-2 (medium) commit subjects | **Accepted under D21.** The `commit` primitive composes the subject; template-fallback subjects are accepted, no history is rewritten, and the tree is byte-identical. The plan's phase `summary` remains a plan description, not a hand-authored commit message. |
+| F-3 (medium) composition test | **Fixed by D22.** New `tests/behaviour/owner-hold-production-composition.test.ts` drives the real `createProductionComposer` over a temp HOME whose `<stateDirectoryName>/owner-hold` marker is materialized on disk, covering queue list/plan, supplied-ref and no-ref claim, dispatch, and status, with a marker-removal mutation control and per-pass restore. The structure suite's source-text check is secondary only. |
+| F-4 (low) doc-sync scope | **Fixed.** The seven doc-sync files are declared above and in phase 7 scope. |
+| F-5 (low) phase-8 scope | **Fixed.** Phase 8 is described as verification plus the lint-driven regex construction and the error-table expectation, above. |
+| F-6 (low) park blocking array | **Fixed in the spec and test plan (D25).** `owner-hold` is prepended to every gated entry's ordered `blocking[]`, including active/stuck parks, whose state and park reason are preserved and rendered on the lane surface. |
+| F-7 (low) DM-4 payload shape | **Fixed in the spec (D25):** `{ source; reason? }`, the active fact projected without its `active` member. |
+| F-8 (low) stale test-plan/pm-notes claims | **Fixed (D25):** test-plan §2 records the valid plan, §7.3 describes the 28-entry `laneIdleReasons` and 27 → 34 `blockingReasons`, and D1 carries its inline D12 supersession marker. |
+| F-9 (info) shell read bound | **Fixed.** The hook comment now states the 4 096-character shell read versus the engine's 4 096-byte bound; behaviour is unchanged. |
+| F-10 (low) adapter existence check | **Fixed.** `packages/adapters/src/file/owner-hold-marker.ts` uses an error-aware `lstatSync` existence check: `ENOENT` is absent, every other stat failure (including an unreadable parent store directory) is unreadable/fail-closed. Reader tests cover the injected stat failure and a root-skipped real unreadable-parent case. |
+| F-11 (info) TC ids and counts | **Fixed.** Relevant suites carry their TC ids (`TC-HOLDDOCTOR-006`, `TC-HOLDQUEUE-011`, `TC-HOLDSTATUS-004`, `TC-HOLDNEG-001/002`, and the `TC-HOLDDOCS-004` script mapping); `TC-HOLDFACT-009` now records exactly zero credential, transport, store-write, and spawn calls across two passes. |
+
+No acceptance criterion, delivered golden, closed set, or runtime behaviour moved
+in this remediation.

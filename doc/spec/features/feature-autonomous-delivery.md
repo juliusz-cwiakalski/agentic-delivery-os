@@ -83,8 +83,11 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   `queue.precondition.unmet` at exit `1`, and the mutating park-recovery pass is
   skipped so a parked lane does not resume at its provider window. `status`
   carries the additive evidence-level `providers.evidence.ownerHold` member and
-  `doctor` keeps the provider check `ok` with the `owner-hold` annotation reason
-  and an appended bounded detail. There is **no** new park cause, state record
+  is the only production operator surface that reports the hold. `doctor`, when
+  a `DoctorComposition` is supplied (the command-runtime/test-harness layer; the
+  production composer supplies none today), keeps the provider check `ok` with
+  the `owner-hold` annotation reason and an appended bounded detail. There is
+  **no** new park cause, state record
   kind, seventh queue-ready condition, tenth status section, status reason,
   doctor verdict, doctor summary count, or doctor condition; `queue ready` is
   unchanged and does not report the hold; a mid-flight session is not killed.

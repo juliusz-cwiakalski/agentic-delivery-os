@@ -13,7 +13,10 @@ global read-only gate that suppresses next actions, refuses supplied-ref and
 no-ref claims and dispatches with `queue.precondition.unmet`/`owner-hold`, and
 skips park auto-recovery while preserving every record for resume. Status gains
 the additive evidence-level `providers.evidence.ownerHold` member and human
-suffix; doctor keeps the provider check `ok` and adds the single non-failing
+suffix. Doctor keeps the provider check `ok` and adds the single non-failing
 `owner-hold` annotation reason plus a bounded detail that survives the detail
-clamp. Queue ready is unchanged, no park cause or state record kind is added,
-and doctor verdicts and exits are unchanged.
+clamp whenever a `DoctorComposition` is supplied; this is a command-runtime
+capability, the production composer supplies no `DoctorComposition` today, and
+`status` is the production operator surface that reports the hold. Queue ready is
+unchanged, no park cause or state record kind is added, and doctor verdicts and
+exits are unchanged.

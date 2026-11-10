@@ -171,7 +171,7 @@ const dataOnlyViolations = (text: string, label = CONTRACT): string[] => {
   return violations;
 };
 
-describe("TC-VOCAB-005 closed sets are exact and distinct", () => {
+describe("TC-VOCAB-005 / TC-HOLDQUEUE-011 / TC-HOLDNEG-002 closed sets are exact and distinct", () => {
   test("lease, weight, and rank vocabularies are the declared closed sets", () => {
     expect([...QUEUE_LEASE_SCOPES]).toEqual(closedSets.leaseScopes);
     expect([...QUEUE_IMPLEMENTED_LEASE_SCOPES]).toEqual(closedSets.implementedLeaseScopes);

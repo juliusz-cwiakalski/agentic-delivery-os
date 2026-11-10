@@ -44,9 +44,10 @@ OWNER_HOLD_POLL_SECONDS="${OWNER_HOLD_POLL_SECONDS:-300}"
 _sleep() { sleep "$1"; }
 
 # Marker-reader seam: returns 0 when the fixed marker path exists (stdout = up to
-# the first 4 096 bytes) and 1 when it is absent. A non-regular path is present
-# with empty content, so it fails closed (active without a reason). Tests
-# redefine this seam; production uses bash builtins only.
+# the first 4 096 characters; the engine's own bound is 4 096 bytes) and 1 when
+# it is absent. A non-regular path is present with empty content, so it fails
+# closed (active without a reason). Tests redefine this seam; production uses
+# bash builtins only.
 _owner_hold_marker_read() {
   [[ -e "${OWNER_HOLD_MARKER_PATH}" ]] || return 1
   [[ -f "${OWNER_HOLD_MARKER_PATH}" ]] || return 0

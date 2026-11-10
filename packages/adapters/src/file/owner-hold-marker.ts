@@ -7,9 +7,10 @@
  * directory; no caller-supplied marker path or store relocation is offered.
  * Every unreadable, non-regular, or stat-failing outcome is fail-closed: the
  * marker exists, so the hold is active with no reason. Only a non-existent path
- * is absent.
+ * (`ENOENT`) is absent; any other existence-check failure — for example an
+ * unreadable parent store directory — is unreadable and therefore fail-closed.
  */
-import { closeSync, existsSync, openSync, readSync, statSync } from "node:fs";
+import { closeSync, lstatSync, openSync, readSync, statSync } from "node:fs";
 import {
   OWNER_HOLD_MARKER_NAME,
   OWNER_HOLD_MAX_MARKER_BYTES,
@@ -18,6 +19,10 @@ import {
 
 /** Injected filesystem facts; tests supply deterministic doubles. */
 export type OwnerHoldMarkerFileSystem = {
+  /**
+   * The marker existence check: `false` only for `ENOENT`; any other stat
+   * failure throws, which the reader resolves as fail-closed `unreadable`.
+   */
   readonly exists: (path: string) => boolean;
   /** A regular-file check; may throw, which resolves fail-closed. */
   readonly isFile: (path: string) => boolean;
@@ -45,7 +50,14 @@ export const readOwnerHoldMarker = (
 ): OwnerHoldMarkerOutcome => {
   const path = ownerHoldMarkerPath(input.storeDirectory);
   if (path === undefined) return { state: "absent" };
-  if (!fs.exists(path)) return { state: "absent" };
+  let exists: boolean;
+  try {
+    exists = fs.exists(path);
+  } catch {
+    // An unreadable parent directory or any other stat failure is not absence.
+    return { state: "unreadable" };
+  }
+  if (!exists) return { state: "absent" };
   try {
     if (!fs.isFile(path)) return { state: "unreadable" };
   } catch {
@@ -60,7 +72,15 @@ export const readOwnerHoldMarker = (
 
 /** The production filesystem facts: zero network, zero credential, zero writes. */
 export const nodeOwnerHoldMarkerFileSystem = (): OwnerHoldMarkerFileSystem => ({
-  exists: (path) => existsSync(path),
+  exists: (path) => {
+    try {
+      lstatSync(path);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
+  },
   isFile: (path) => statSync(path).isFile(),
   readText: (path, maxBytes) => {
     const handle = openSync(path, "r");

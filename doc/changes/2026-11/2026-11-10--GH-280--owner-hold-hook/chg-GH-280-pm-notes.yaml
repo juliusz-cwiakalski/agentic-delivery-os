@@ -16,13 +16,15 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "D1 (PM-decided, non-interactive intake): the owner hold has two
-      equivalent sources. (a) A marker file at ${ADOS_STATE_DIR}/owner-hold, the
-      state directory the typed engine already resolves; (b) an environment
-      variable derived from the brand prefix (<PREFIX>_OWNER_HOLD,
-      ADOS_OWNER_HOLD in this repo). A non-empty value is an operator reason.
-      The shell example also accepts ADOS_OWNER_HOLD_FILE to name an explicit
-      marker path. Removing both sources clears the hold with no state loss."
+  - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the
+      marker path): the owner hold has two equivalent sources. (a) A marker file
+      at ${ADOS_STATE_DIR}/owner-hold, the state directory the typed engine
+      already resolves; (b) an environment variable derived from the brand prefix
+      (<PREFIX>_OWNER_HOLD, ADOS_OWNER_HOLD in this repo). A non-empty value is an
+      operator reason. The shell example also accepts ADOS_OWNER_HOLD_FILE to name
+      an explicit marker path. Removing both sources clears the hold with no state
+      loss. D12 replaces the marker-path and override clauses; the env source
+      remains."
     date: 2026-11-10
   - text: "D2 (PM-decided, non-interactive intake): the typed engine models the hold
       as a global read-only gate over an injected fact, not as a queue park
@@ -148,6 +150,52 @@ decisions:
       a classified user-validation refusal (`queue.precondition.unmet`, exit 1),
       not an internal wait. The guide and AC state that callers wanting deferral
       semantics must treat the `owner-hold` token as wait/do-not-abort."
+    date: 2026-11-10
+  - text: "D20 (PM-decided, review-1 F-1): doctor hold support is a
+      command-runtime/test-harness capability in GH-280, not a production
+      composition. `createProductionComposer` does not supply a
+      `DoctorComposition`, and the production binary rejects `doctor` as outside
+      the composed prompt-required set; wiring doctor is a pre-existing residual
+      tracked by the doctor feature, not this change. Correct every GH-280 claim
+      (spec F-4.1/F-5/§16, AC-F6 scope, plan phase 4/5, change record E2E,
+      changeset, delivery-modes guide, doctor command page) and remove the
+      `doctor --json` E2E step. `status` is the only production operator surface
+      that reports the hold; doctor reports it whenever a DoctorComposition is
+      supplied (test harness and any future production wiring)."
+    date: 2026-11-10
+  - text: "D21 (PM-decided, review-1 F-2): the commit primitive owns commit
+      subjects. Template-fallback subjects are accepted and history is not
+      rewritten, per GH-279 D9 and the rule that commits go only through the
+      primitive. The plan's phase-summary-as-subject requirement is corrected to
+      state that the phase `summary` is a plan description and the primitive
+      composes the actual message; the acceptance is recorded in the change
+      record."
+    date: 2026-11-10
+  - text: "D22 (PM-decided, review-1 F-3): strengthen the production-composition
+      test rather than accept the source-text/grep claim. Materialize a marker in
+      a temp HOME/state directory and drive the production reader closure through
+      queue, status, and dispatch behavior; keep doctor at the command-runtime
+      layer per D20. Add a mutation control (removing the marker or the wiring
+      flips the behavior)."
+    date: 2026-11-10
+  - text: "D23 (PM-decided, review-1 F-4/F-5): the plan and change record must
+      declare the seven doc-sync files and the non-formatting phase-8 changes
+      (the lint-driven `owner-hold.ts` regex construction and the
+      `error-table.test.ts` expectation). Describe phase 8 as verification plus
+      those record/formatting changes, not 'formatting-only'."
+    date: 2026-11-10
+  - text: "D24 (PM-decided, review-1 F-9/F-10/F-11): fix the shell marker-read
+      comment to state the character bound versus the engine's byte bound; make
+      the adapter existence check error-aware (ENOENT absent, other errors
+      unreadable/fail-closed) and test it; name the remaining test cases with
+      their TC ids and add a recording-count assertion for TC-HOLDFACT-009 where
+      feasible."
+    date: 2026-11-10
+  - text: "D25 (PM-decided, review-1 F-6/F-7/F-8): clarify that `owner-hold` is
+      prepended to every gated entry's ordered blocking[] including active/stuck
+      parks while their state and park reason are preserved; correct DM-4's
+      payload annotation to `{ source; reason? }`; refresh the stale test-plan
+      §2/§7.3 and mark D1 superseded inline."
     date: 2026-11-10
 open_questions: []
 blockers: []
@@ -314,4 +362,25 @@ notes:
       TC-HOLDE2E-001 remains PR-scoped and NOT EXECUTED in this automated
       delivery (GAP-T1)."
     type: info
+    date: 2026-11-10
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 0 critical,
+      1 high, 2 medium, 6 low, 2 info. Blocking: F-1 the doctor surface is not
+      composed in production, so the spec/plan/guide/change-record claims and
+      the E2E doctor step are false; F-2 phase commits carry the commit
+      primitive's template subjects, not the plan's phase summaries. F-3
+      composition test overclaims (pre-resolved reader + source-text grep, no
+      temp-HOME marker or dispatch/status behavior). F-4/F-5 undeclared doc-sync
+      and phase-8 non-formatting changes. F-6..F-11 precision/nits. Remediation
+      decisions D20-D25 recorded; plan phase 9 (review remediation) to be added.
+      Product behavior, closed sets, inactive goldens, shell hook, and the full
+      gate are otherwise verified green."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the delivery artifacts repeated the long-standing feature-doctor
+      claim that `doctor` is composed beside `status`, but production never
+      supplies a DoctorComposition. The review caught it because it executed the
+      production binary instead of trusting the command-runtime tests. Future
+      changes that touch a command surface must run the production binary for
+      that command before claiming it is operator-visible."
+    type: retro
     date: 2026-11-10

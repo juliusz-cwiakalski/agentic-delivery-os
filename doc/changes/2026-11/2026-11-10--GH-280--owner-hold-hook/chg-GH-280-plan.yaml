@@ -15,18 +15,25 @@
 #     environments and fixtures; §7.1 test files and execution; §7.2 new and
 #     modified files; §7.3 fixture/golden update plan; §7.4 mutation evidence;
 #     §1.2 GAP-T1..GAP-T7)
-#   - PM record: ./chg-GH-280-pm-notes.yaml (binding D1-D11 plus the DoR-1
-#     remediation decisions D12-D19; D3a is history only. D7 splits the token
-#     from the detail, D8 removes the model gate, D9 pins the reason-line
-#     grammar, D10 pins the silent-versus-warning poll fallback, D11 appends the
-#     doctor detail, D12 fixes the marker location, D13 gates the no-ref claim,
-#     D14 makes the supervision guarantee conditional, D15 moves the status
-#     member to evidence level, D16 requires exact closed-set equality, D17
-#     leaves queue ready unchanged, D18 specifies the doctor clamp, and D19
-#     states deferral-versus-refusal semantics)
+#   - PM record: ./chg-GH-280-pm-notes.yaml (binding D1-D11, the DoR-1
+#     remediation decisions D12-D19, and the review-1 remediation decisions
+#     D20-D25; D3a is history only and D1 carries its D12 supersession marker.
+#     D7 splits the token from the detail, D8 removes the model gate, D9 pins
+#     the reason-line grammar, D10 pins the silent-versus-warning poll fallback,
+#     D11 appends the doctor detail, D12 fixes the marker location, D13 gates
+#     the no-ref claim, D14 makes the supervision guarantee conditional, D15
+#     moves the status member to evidence level, D16 requires exact closed-set
+#     equality, D17 leaves queue ready unchanged, D18 specifies the doctor
+#     clamp, D19 states deferral-versus-refusal semantics, D20 scopes doctor to
+#     the command-runtime layer, D21 accepts the primitive-composed commit
+#     subjects, D22 strengthens the production-composition case, D23 declares
+#     the doc-sync and phase-8 scope, D24 fixes the shell read comment, the
+#     adapter existence check, and the TC labels, and D25 fixes the
+#     spec/test-plan precision)
 #   - No decision record is owed: the ten binding decisions live in the spec's
 #     §15 decision log (DEC-1..DEC-10), with D12-D19 folded into DEC-1, DEC-3,
-#     DEC-7, and DEC-10.
+#     DEC-7, and DEC-10. The review-1 remediation decisions D20-D25 are
+#     pm-notes operating decisions and change no contract.
 #
 # ORDERING (dependency-driven; the tree is green at every commit and no
 # intermediate commit lets the shell defer while the engine claims). This is the
@@ -43,8 +50,12 @@
 #   6 the DM-1 example hook, install/uninstall registration, and its
 #     deterministic shell suite
 #   7 guides, feature specs, reference pages, and the release changeset
-#   8 final verification, goldens/inventory confirmation, and the delivery
-#     record (no source change)
+#   8 final verification, goldens/inventory confirmation, the delivery record,
+#     and the lint-driven formatting/regex construction plus the error-table
+#     expectation the aggregate format gate forces
+#   9 code review iteration 1 remediation: the production-doctor claims
+#     corrected to the command-runtime scope, the temp-HOME production
+#     composition behavior case, and the scope/spec/test-plan record repairs
 #   - Phase 1 lands first because every later surface and the shell example
 #     share one fact shape, one source vocabulary, and one reason bound.
 #   - Phase 2 lands the pure/app gate before any composition, so the queue,
@@ -58,9 +69,11 @@
 #     their readers only once their contracts exist.
 #   - Phase 5 is the single owner of `packages/cli/src/edge.ts` and
 #     `packages/cli/src/production.ts`: every production reader (queue, claim,
-#     watch, dispatch, status, doctor) lands together, so no file is changed in
-#     two phases and the composition pin is satisfied in the phase that can
-#     satisfy it in full. The resident daemon is NOT wired by this change: the
+#     watch, dispatch, status) lands together, so no file is changed in two
+#     phases and the composition pin is satisfied in the phase that can satisfy
+#     it in full. The doctor reader is composed only where a `DoctorComposition`
+#     is supplied, which `createProductionComposer` does not do in GH-280 (D20).
+#     The resident daemon is NOT wired by this change: the
 #     phase proves only that a supervision cycle whose next-action seam derives
 #     from the held pass receives no action (GAP-T7, D14).
 #   - Phase 6 ships the example only after the engine gate exists, so a
@@ -71,10 +84,22 @@
 #     The error-table documented row is NOT phase 7: phase 2 owns
 #     `doc/spec/features/feature-result-contract.md` and updates it in the same
 #     commit as the remediation-hint change.
-#   - Phase 8 is verification only: no source, fixture, or golden edit. It
-#     records the test-plan execution log and the change record with the
-#     aggregate gate, the shell battery, the doc-distribution guard, and the
-#     manual TC-HOLDE2E-001 procedure (no-ref claim included).
+#   - Phase 8 is verification plus the two non-formatting edits the aggregate
+#     format gate forces. It records the test-plan execution log and the change
+#     record with the aggregate gate, the shell battery, the doc-distribution
+#     guard, and the manual TC-HOLDE2E-001 procedure (no-ref claim included,
+#     status as the only production surface). Its delta is the biome
+#     formatting of files already declared in phases 1-7, the lint-forced
+#     control-character regex construction in
+#     `packages/core/src/domain/owner-hold.ts` (phase 1 scope), and the updated
+#     `queue.precondition.unmet` hint expectation in
+#     `tests/structure/error-table.test.ts` (phase 2 scope). No delivered golden
+#     changes and no new path is scoped here.
+#   - Phase 9 is the code review iteration 1 remediation (D20-D25). It reopens
+#     no behaviour phase and adds no acceptance criterion: every product path it
+#     touches is already declared in phases 1-7 and is named in prose, so phase
+#     9 scopes only the review artifact, the change artifacts, the change spec,
+#     and one new production-composition behaviour suite.
 #
 # DELIVERY PINS (placements and spellings the spec/test plan leave
 # delivery-bound; none changes a requirement):
@@ -97,8 +122,10 @@
 #     `packages/adapters/src/file/owner-hold-marker.ts` over injected facts
 #     (existence, regular-file check, one bounded read of at most 4 096 bytes),
 #     is fail-closed for an unreadable, non-regular, or stat-failing path, and is
-#     supplied by the CLI edge and the MCP status runtime. No caller-supplied
-#     path reaches the engine.
+#     supplied by the CLI edge and the MCP status runtime. The existence check is
+#     error-aware: ENOENT is the absent outcome and any other stat failure is the
+#     unreadable outcome, so an unreadable store directory never resolves
+#     inactive (D24). No caller-supplied path reaches the engine.
 #   - Precedence: environment present with length > 0 wins over the marker; an
 #     empty environment is inactive; a whitespace-only environment is active
 #     without a reason; a zero-byte marker is active without a reason; only a
@@ -161,6 +188,14 @@
 #     is truncated to fit and the WHOLE hold segment is kept; it is never cut
 #     mid-word or dropped (D11, D18). A real provider defect keeps its own
 #     verdict and reason and does not gain `owner-hold`.
+#   - Doctor surface scope: the hold is reported by the doctor command runtime
+#     whenever a `DoctorComposition` is supplied (the command-runtime harness and
+#     any future production wiring). `createProductionComposer` supplies no
+#     `DoctorComposition`, so `delivery-os doctor` is not a composed production
+#     command in GH-280 and the production binary rejects it as outside the
+#     composed prompt-required set (D20). `status` is therefore the only
+#     production operator surface that reports the hold. No claim in the spec,
+#     this plan, the change record, the changeset, or the guide states otherwise.
 #   - `scripts/deliver-ticket.sh`, `scripts/ceo-loop.sh`,
 #     `scripts/batch-deliver.sh`, `scripts/.tests/test-hook-regression.sh`, and
 #     every pinned wrapper byte are unchanged.
@@ -184,13 +219,15 @@
 #     silent default for unset/empty/whitespace, one bounded warning for any other
 #     invalid value.
 #   - The manual evidence is TC-HOLDE2E-001 only, run in a disposable `HOME`:
-#     create a marker, show status and doctor reporting it, run `queue claim`
-#     WITH NO REF and a dispatch and capture `queue.precondition.unmet` /
-#     `reason=owner-hold` / exit 1, show an expired park staying parked, remove
-#     the marker, and show the next pass resuming from unchanged records with one
-#     session. The transcript records that `owner-hold` means wait/do-not-abort
-#     for deferral callers (D19). It runs at PR time; no automated gate depends
-#     on observed facts.
+#     create a marker, show STATUS reporting it (the only production surface),
+#     run `queue claim` WITH NO REF and a dispatch and capture
+#     `queue.precondition.unmet` / `reason=owner-hold` / exit 1, show an expired
+#     park staying parked, remove the marker, and show the next pass resuming
+#     from unchanged records with one session. The doctor hold evidence in the
+#     same transcript comes from the command-runtime harness, never from the
+#     production binary (D20). The transcript records that `owner-hold` means
+#     wait/do-not-abort for deferral callers (D19). It runs at PR time; no
+#     automated gate depends on observed facts.
 #   - Documentation brand discipline: the two guides are baseline-grandfathered
 #     by the forbidden-literal scan and may name the repository's ADOS_* example
 #     variables; the three registered feature specs and the three registered
@@ -204,10 +241,10 @@
 #     before this change depends on it. Relocating the store is out of scope.
 #
 # DECLARATION-ONLY KEYS: `objective`, `dependsOn`, `acCoverage`, `tcCoverage`,
-# and `verification` are evidence declarations read by the delivery loop;
-# `plan validate` ignores them (the same pattern the delivered GH-279 plan uses
-# for its coverage and verification declarations). They record no progress and
-# no task list: progress lives in pm-notes `notes:`.
+# `exitCriteria`, and `verification` are evidence declarations read by the
+# delivery loop; `plan validate` ignores them (the same pattern the delivered
+# GH-279 plan uses for its coverage and verification declarations). They record
+# no progress and no task list: progress lives in pm-notes `notes:`.
 #
 # COVERAGE INVARIANT: all 44 acceptance criteria appear exactly once in
 # `acCoverage`, each in the phase that satisfies it in full. All 59 test cases
@@ -219,19 +256,25 @@
 # TC-HOLDNEG-002 (closed-set, surface, and composition halves declared
 # explicitly), TC-HOLDNEG-003 (ambient-core half in phase 1, composition
 # half in phase 5), and TC-HOLDFACT-009 (resolver-surface half in phase 1,
-# composition canary in phase 5). No identifier is dangling or invented: every AC and TC
-# resolves to a row in the spec's acceptance-criteria table or in the test
-# plan's case index.
+# composition canary in phase 5). Phase 9 declares no new case and moves no
+# home: it strengthens TC-HOLDEDGE-001, TC-HOLDEDGE-002, and TC-HOLDFACT-009 and
+# labels the cases listed in its own `tcCoverage`. No identifier is dangling or
+# invented: every AC and TC resolves to a row in the spec's acceptance-criteria
+# table or in the test plan's case index.
 #
-# COMMIT HYGIENE: one commit per phase through the `commit` primitive, subject =
-# the phase `summary`, body/footer lines <= 100 characters, no manual staging.
+# COMMIT HYGIENE: one commit per phase through the `commit` primitive, body/footer
+# lines <= 100 characters, no manual staging. The `commit` primitive composes the
+# subject; a phase `summary` is a plan description of the phase, not a required
+# subject. The primitive's template-fallback subject is accepted as delivered, and
+# history is never rewritten to match a summary (D21). No phase records progress
+# in this file; progress lives in pm-notes `notes:`.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-280
 
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - "a hold-refused claim, dispatch, composed supervision-cycle claim, or watch path appends an entry, dependency, lease, park, incident, daemon-lane, heartbeat, handoff, attempt, divergence, or authority record"
     - "a park whose window expired during a hold regains clear-observed, recovered, or a park-auto-recovery incident, or its record bytes change"
@@ -341,6 +384,7 @@ phases:
         - "tests/fixtures/queue/vocabulary/closed-sets.json"
         - "tests/fixtures/queue/hold/cases.json"
         - "tests/structure/queue-scheduling-contract.test.ts"
+        - "tests/structure/error-table.test.ts"
         - "tests/behaviour/queue-hold-schedule.test.ts"
         - "tests/behaviour/queue-hold-dispatch.test.ts"
         - "tests/behaviour/queue-hold-park-resume.test.ts"
@@ -385,7 +429,7 @@ phases:
       - "bun test tests/behaviour/queue-schedule.test.ts tests/behaviour/queue-park.test.ts tests/behaviour/queue-lease.test.ts || the delivered scheduling, park, and lease suites are EXTENDED, not weakened: the claim-precondition matrix gains owner-hold for a supplied ref, the park suite gains the held skip and post-removal recovery pair, and the delivered assertions stay intact"
       - "bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-ready-contract.test.ts || the exact two-way ordered assertions hold: expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons) and expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons), with owner-hold appearing exactly once in each array at the declared position; three park condition types, three causes with their pairing, four recovery states, five record kinds, and the six ready condition ids stay in their delivered order; the test fails by name if either contract array or the fixture disagrees in either direction (D16)"
       - "bun test tests/structure/queue-ready-contract.test.ts || the ready contract is unchanged: six condition ids, their order, tri-state, and evidence vocabulary, with no hold member (D17)"
-      - "bun test tests/checks/error-table-sync.test.ts || the machine and documented tables stay in sync at the current row count with a matching updated hint"
+      - "bun test tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts || the machine and documented tables stay in sync at the current row count with a matching updated hint, and the structural expectation in tests/structure/error-table.test.ts carries the same operator-hold remediation wording (the file is declared in this phase scope; the phase 9 remediation may also touch it)"
       - "pnpm typecheck || the optional fact, member, and summary are exhaustive-safe and no closed union gains a value other than the declared token"
 
   # ---------------------------------------------------------------------------
@@ -501,10 +545,10 @@ phases:
   # Depends on: phases 1-4.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Production composition at the CLI edge (with MCP status parity pinned, not re-wired): the fact supplied to queue, lanes, claim, watch, dispatch, status, and doctor, a claim gate BEFORE ref selection so a no-ref claim refuses owner-hold, a dispatch claim-seam user-validation refusal with zero side effects, held queue goldens, and the cross-surface composition pin (no production daemon wiring claim)"
+    title: "Production composition at the CLI edge (with MCP status parity pinned, not re-wired): the fact supplied to queue, lanes, claim, watch, dispatch, and status, a claim gate BEFORE ref selection so a no-ref claim refuses owner-hold, a dispatch claim-seam user-validation refusal with zero side effects, held queue goldens, and the cross-surface composition pin (no production daemon wiring and no production doctor composition claim)"
     kind: delivery
     summary: "compose owner hold at every production edge"
-    objective: "Remove the possibility that one surface forgets the fact: one composition site resolves it per pass, gates the claim before ref selection so `queue claim` with no ref refuses owner-hold instead of no-eligible-action, refuses dispatch before claiming, and a structure test fails by name if any surface loses it. The supervision guarantee stays conditional on a cycle deriving its next action from the held pass; the production resident-daemon entry is not wired by this change (GAP-T7, D14)."
+    objective: "Remove the possibility that one production surface forgets the fact: one composition site resolves it per pass, gates the claim before ref selection so `queue claim` with no ref refuses owner-hold instead of no-eligible-action, refuses dispatch before claiming, and a structure test fails by name if any surface loses it. The doctor reader is composed only where a `DoctorComposition` is supplied; `createProductionComposer` supplies none in GH-280, so the doctor surface stays command-runtime and `status` is the only production operator surface that reports the hold (D20). The supervision guarantee stays conditional on a cycle deriving its next action from the held pass; the production resident-daemon entry is not wired by this change (GAP-T7, D14)."
     dependsOn: [1, 2, 3, 4]
     leases:
       - "repo:main-tools"
@@ -539,15 +583,15 @@ phases:
       - "TC-HOLDQUEUE-009 (golden half: held list and plan goldens plus unchanged inactive goldens and an unchanged queue ready)"
       - "TC-HOLDQUEUE-010"
       - "TC-HOLDQUEUE-013"
-      - "TC-HOLDEDGE-001 (queue, lanes, claim, watch, dispatch, status, and doctor; the daemon is deliberately NOT in the surface list)"
+      - "TC-HOLDEDGE-001 (queue, lanes, claim, watch, dispatch, and status in the production composition; the doctor fact carriage follows from the same reader at the command-runtime layer only (D20), and the daemon is deliberately NOT in the surface list)"
       - "TC-HOLDEDGE-002 (composition half)"
       - "TC-HOLDNEG-002 (composition half: no new identity, kind, command, flag, or configuration key appears at the edge)"
       - "TC-HOLDNEG-003 (composition half: the edge supplies the read while core stays ambient-free)"
     verification:
-      - "packages/cli/src/edge.ts || one composition site resolves the fact per pass from the injected environment, the fixed production store directory, and the bounded marker reader, then supplies it to queue facts, lanes, the claim precheck, watch, and the status and doctor runtimes; the claim composition evaluates the hold BEFORE ref selection, so queue claim with no ref refuses queue.precondition.unmet/owner-hold and never returns no-eligible-action; no caching across passes; no caller-supplied marker path is accepted (D12, D13)"
+      - "packages/cli/src/edge.ts || one composition site resolves the fact per pass from the injected environment, the fixed production store directory, and the bounded marker reader, then supplies it to queue facts, lanes, the claim precheck, watch, and the status runtime; the doctor runtime carries the same optional reader only where a DoctorComposition is supplied and no production DoctorComposition exists (D20); the claim composition evaluates the hold BEFORE ref selection, so queue claim with no ref refuses queue.precondition.unmet/owner-hold and never returns no-eligible-action; no caching across passes; no caller-supplied marker path is accepted (D12, D13)"
       - "packages/cli/src/production.ts || the dispatch claim seam resolves the same fact before claiming and returns queue.precondition.unmet with a bounded summary naming the hold and its sanitized reason; the refusal is a classified user-validation refusal at exit 1, and callers that want deferral semantics treat owner-hold as wait/do-not-abort rather than aborting on a transient failure (D19); no lease, session, branch, worktree, attempt, divergence, handover, or authority change exists for that dispatch; bookkeeping (add, prioritize, dep, release) still appends its records while held and invokes no recovery mutation"
-      - "tests/fixtures/queue/cli/harness.ts || the edge harness can inject the environment record and a real temp HOME whose production store directory contains a materialized owner-hold marker, so a held run exercises the production reader instead of a pre-resolved fact; the delivered queue fixtures stay byte-identical"
-      - "bun test tests/structure/owner-hold-composition.test.ts || TC-HOLDEDGE-001/002 pass: each of queue, lanes, claim, watch, dispatch, status, and doctor receives the active fact from the production composition, the MCP status runtime supplies the same fact, a removed supply makes at least one surface fail by name (mutation control), and core contains no ambient read. The daemon seam is NOT part of this pin; the production resident daemon is an explicit residual (GAP-T7)"
+      - "tests/fixtures/queue/cli/harness.ts || the edge harness injects the environment record and a pre-resolved reader, and the harness or its production counterpart can drive a real temp HOME whose production store directory contains a materialized owner-hold marker; the delivered queue fixtures stay byte-identical. The temp-HOME marker case that drives queue, status, and dispatch through the real production composer is owned by phase 9 (D22)"
+      - "bun test tests/structure/owner-hold-composition.test.ts || TC-HOLDEDGE-001/002 pass: each of queue, lanes, claim, watch, dispatch, and status receives the active fact from the production composition, the MCP status runtime supplies the same fact, a removed supply makes at least one surface fail by name (mutation control), and core contains no ambient read. The doctor fact carriage is proven at the command-runtime layer only, because no production DoctorComposition exists (D20); the temp-HOME marker behavior case that replaces source-text greps is phase 9 (D22). The daemon seam is NOT part of this pin; the production resident daemon is an explicit residual (GAP-T7)"
       - "bun test tests/behaviour/queue-hold-claim.test.ts tests/behaviour/queue-cli.test.ts || TC-HOLDQUEUE-002/003/010/013 pass: queue claim GH-XXX (supplied ref) AND queue claim (no ref) both exit 1 with queue.precondition.unmet, the blocking-reason token exactly owner-hold, and a bounded detail naming the source and reason, appending zero records; the no-ref leg never returns reason=no-eligible-action and is gated before selection; the fenced path refuses before the fence; the delivered queue-cli bookkeeping cases are extended so add/prioritize/dep/release append while held and invoke no recovery mutation; an unreadable store still returns the delivered state failure at exit 2 with no hold-shaped payload"
       - "bun test tests/behaviour/queue-hold-daemon-watch.test.ts || TC-HOLDQUEUE-005/006 pass: the supervision cycle's nextAction seam is built from the held computeQueueSchedule result and the case fails by name if the seam is a literal () => undefined or the derivation is not invoked; the cycle mode is idle, the claim seam is never called with an action, and zero daemon-lane/heartbeat records exist; the no-hold control derives one action; queue watch streams the hold with an empty action list and claims nothing. The case does not claim production resident-daemon wiring (GAP-T7)"
       - "bun test tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/queue-envelope.test.ts tests/golden/queue-lease-conflict.test.ts tests/golden/queue-rank.test.ts tests/golden/queue-ready.test.ts || the new held list and plan goldens match structurally, queue ready is byte-identical with and without the hold, and every delivered queue golden is byte-identical"
@@ -611,10 +655,10 @@ phases:
   # Depends on: phases 2-6.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Two-semantics documentation, hook composition guidance, the fixed marker path and its no-override rule, the owner-hold-versus-owner-gate distinction, reconciled feature specs and command reference pages with explicit denials and the doctor annotation-reason amendment, the documentation conformance check, and the lockstep minor changeset"
+    title: "Two-semantics documentation, hook composition guidance, the fixed marker path and its no-override rule, the owner-hold-versus-owner-gate distinction, reconciled feature specs and command reference pages with explicit denials, the doctor annotation-reason amendment together with its command-runtime scope, the seven reconciled doc-sync files, the documentation conformance check, and the lockstep minor changeset"
     kind: delivery
     summary: "document owner hold and publish the release note"
-    objective: "Make the distinction between automatic time-bounded deferral and a manual indefinite hold the documented truth, record the additive contract, the evidence-level status member, the lane masking, the unchanged queue ready, and the doctor annotation reason plus clamp, and state the refusal-versus-deferral semantics. Record the additive contract in the release note."
+    objective: "Make the distinction between automatic time-bounded deferral and a manual indefinite hold the documented truth, record the additive contract, the evidence-level status member, the lane masking, the unchanged queue ready, and the doctor annotation reason plus clamp, state the refusal-versus-deferral semantics, and state that `status` is the only production surface that reports the hold while doctor reports it wherever a DoctorComposition is supplied (D20). Record the additive contract in the release note."
     dependsOn: [1, 2, 3, 4, 5, 6]
     leases:
       - "repo:main-tools"
@@ -630,6 +674,13 @@ phases:
         - "doc/planning/oss-tooling/milestones/m1/commands/queue.md"
         - "doc/planning/oss-tooling/milestones/m1/commands/status.md"
         - "doc/planning/oss-tooling/milestones/m1/commands/doctor.md"
+        - "doc/00-index.md"
+        - "doc/overview/glossary.md"
+        - "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md"
+        - "doc/quality/test-specs/test-spec-autonomous-delivery.md"
+        - "doc/spec/features/feature-config-layer.md"
+        - "doc/spec/features/feature-dispatch-engine.md"
+        - "doc/spec/features/feature-resident-daemon.md"
         - "tests/checks/owner-hold-doc.test.ts"
         - ".changeset/gh-280-owner-hold-minor.md"
     interactions:
@@ -645,28 +696,35 @@ phases:
       - "TC-HOLDDOCS-001..004"
       - "TC-HOLDNEG-002 (documents half: no new command, flag, configuration key, or --park cause is documented as available)"
     verification:
-      - "doc/guides/delivery-modes.md || one subsection states the two semantics (provider-window deferral is automatic and time-bounded; an owner hold is manual, indefinite, and outranks windows) and documents both sources, environment precedence, removal, the fixed default marker path $HOME/.ados-state/owner-hold and the absence of a marker-path override or store relocation, the fail-closed unreadable marker, the poll interval, the unbounded driver, the composition-by-MAX rule, the owner-hold versus owner-gate distinction, the explicit limit that a mid-flight session is not killed, and that a held claim/dispatch is a classified refusal at exit 1 with owner-hold meaning wait/do-not-abort to deferral callers; the activation paragraph names both installed examples"
+      - "doc/guides/delivery-modes.md || one subsection states the two semantics (provider-window deferral is automatic and time-bounded; an owner hold is manual, indefinite, and outranks windows) and documents both sources, environment precedence, removal, the fixed default marker path $HOME/.ados-state/owner-hold and the absence of a marker-path override or store relocation, the fail-closed unreadable marker, the poll interval, the unbounded driver, the composition-by-MAX rule, the owner-hold versus owner-gate distinction, the explicit limit that a mid-flight session is not killed, and that a held claim/dispatch is a classified refusal at exit 1 with owner-hold meaning wait/do-not-abort to deferral callers; it names `status` as the only production operator surface that reports the hold and states that doctor reports it only where a DoctorComposition is supplied, because the production composer supplies none (D20); the activation paragraph names both installed examples"
       - "doc/guides/zai-peak-hours-hook.md || the extension section states that the DM-1 contract now has a second example, that conditions compose by MAX, and that a time-bounded condition merged into the owner-hold example inherits the unbounded driver because the hold is the floor"
-      - "doc/spec/features/feature-autonomous-delivery.md, feature-scheduling-engine.md, feature-status-digest.md, feature-doctor.md || the gate (including the no-ref claim refusal before selection and the dispatched-ref refusal), the owner-hold blocking/lane reason and its lane masking with queue list as the specific-reason surface, the additive ownerHold payload member, an unchanged queue ready, the additive providers.evidence.ownerHold member and human suffix, and the doctor non-failing annotation reason plus appended detail with the clamp rule are recorded, together with the explicit denials: no park cause, no state record kind, no seventh ready condition, no tenth status section, no new status reason, no fourth doctor verdict, and no summary or exit change; feature-doctor carries the explicit evidence-model amendment (no evidence source, may co-occur with ok, fourth and last provider reason)"
-      - "doc/planning/oss-tooling/milestones/m1/commands/queue.md, status.md, doctor.md || the reference pages document the additive members, the supplied-ref and no-ref claim refusal on the existing identity, the lane-reason masking point, an unchanged queue ready, the human status suffix read from providers.evidence.ownerHold, and the doctor detail precedence and clamp while keeping every delivered flag, positional, and exit unchanged"
+      - "doc/spec/features/feature-autonomous-delivery.md, feature-scheduling-engine.md, feature-status-digest.md, feature-doctor.md || the gate (including the no-ref claim refusal before selection and the dispatched-ref refusal), the owner-hold blocking/lane reason and its lane masking with queue list as the specific-reason surface, the additive ownerHold payload member, an unchanged queue ready, the additive providers.evidence.ownerHold member and human suffix, and the doctor non-failing annotation reason plus appended detail with the clamp rule are recorded, together with the explicit denials: no park cause, no state record kind, no seventh ready condition, no tenth status section, no new status reason, no fourth doctor verdict, and no summary or exit change; feature-doctor carries the explicit evidence-model amendment (no evidence source, may co-occur with ok, fourth and last provider reason) and states that the hold evidence is a command-runtime capability until a production DoctorComposition is supplied (D20)"
+      - "doc/00-index.md, doc/overview/glossary.md, doc/planning/oss-tooling/milestones/m1/commands/dispatch.md, doc/quality/test-specs/test-spec-autonomous-delivery.md, doc/spec/features/feature-config-layer.md, doc/spec/features/feature-dispatch-engine.md, doc/spec/features/feature-resident-daemon.md || each of the seven reconciled files carries one truthful current-truth delta: the index summary, the glossary term, the dispatch refusal, the autonomous-delivery test spec, the config-layer note, the dispatch-engine refusal, and the resident-daemon conditional; none names the hold as a park cause, a record kind, or a production daemon guarantee, and the resident-daemon page keeps its delivered residual (D23)"
+      - "doc/planning/oss-tooling/milestones/m1/commands/queue.md, status.md, doctor.md || the reference pages document the additive members, the supplied-ref and no-ref claim refusal on the existing identity, the lane-reason masking point, an unchanged queue ready, the human status suffix read from providers.evidence.ownerHold, and the doctor detail precedence and clamp while keeping every delivered flag, positional, and exit unchanged; the doctor page states that the hold evidence is produced by the doctor command runtime and that status is the production surface which reports it (D20)"
       - "bun test tests/checks/owner-hold-doc.test.ts || TC-HOLDDOCS-001/002/003 pass: each pinned phrase of the two-semantics rule, the MAX-floor rule, the gate, the fixed marker path and no-override rule, the owner-hold/owner-gate distinction, the refusal semantics, the evidence-level status member, the doctor annotation reason and clamp, and the explicit denials is present; no stale or historical phrasing is introduced"
       - "bun test tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage.test.ts || every reference-page see-also target exists, the prompt-required help inventory is unchanged, and no new command or flag is required"
       - "bun test tests/checks/doc-conformance.test.ts || the current-truth phrase table stays green in every touched document"
       - "bash scripts/.tests/test-doc-distribution.sh || TC-HOLDDOCS-004 passes: every changed guide keeps its ados_distribution marker and the marker-derived install set matches the sandbox install"
       - "bun test tests/checks/forbidden-literals.test.ts || zero violations and no registry change: the two guides and feature-autonomous-delivery.md are baseline-grandfathered, the other three feature specs and the three reference pages are registered and stay seed-free by naming the brand-derived placeholder <PREFIX>_OWNER_HOLD, and no registry entry is added, removed, or changed"
-      - "test -f .changeset/gh-280-owner-hold-minor.md && grep -c 'minor' .changeset/gh-280-owner-hold-minor.md || the release note declares exactly the five lockstep packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor with a non-empty body naming the new example hook, the two sources, the queue/dispatch gate, the status evidence member, and the doctor detail with unchanged verdict and exit; @delivery-os/testkit is excluded"
+      - "test -f .changeset/gh-280-owner-hold-minor.md && grep -c 'minor' .changeset/gh-280-owner-hold-minor.md || the release note declares exactly the five lockstep packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor with a non-empty body naming the new example hook, the two sources, the queue/dispatch gate, the status evidence member, and the doctor annotation reason at the command-runtime layer without claiming a production doctor surface (D20); @delivery-os/testkit is excluded"
       - "bun test tests/checks/privacy-release.test.ts || exactly one changeset is added, no pre-existing changeset is modified or deleted, and the release shape is accepted"
 
   # ---------------------------------------------------------------------------
-  # PHASE 8 — verification and delivery evidence. NO source, fixture, or golden
-  # change: the only writes are the execution log and the change record.
+  # PHASE 8 — verification, delivery evidence, and the lint-driven edits the
+  # aggregate gate forces. No new file is scoped and no delivered golden,
+  # fixture content, or assertion meaning changes: the phase writes the
+  # execution log and the change record, formats files already declared in
+  # phases 1-7, rewrites the control-character regex construction in
+  # `packages/core/src/domain/owner-hold.ts` (phase 1 scope) to satisfy a lint
+  # rule with identical behaviour, and updates the queue.precondition.unmet hint
+  # expectation in `tests/structure/error-table.test.ts` (phase 2 scope).
   # Depends on: phases 1-7.
   # ---------------------------------------------------------------------------
   - id: 8
-    title: "Final verification: blocked-hook manual evidence, the full aggregate gate, the bash and shellcheck battery, plan validation, doc-distribution and inventory confirmation, and the written delivery record"
+    title: "Final verification and delivery record, plus the lint-driven formatting and behavior-preserving regex construction and the error-table hint expectation"
     kind: delivery
     summary: "verify the change and record the delivery evidence"
-    objective: "Prove the delivered change at the aggregate gate and record honest evidence, including the one manual end-to-end procedure and its known limits."
+    objective: "Prove the delivered change at the aggregate gate and record honest evidence, including the one manual end-to-end procedure and its known limits, while the phase delta stays formatting plus the explicitly named behavior-preserving regex construction and error-table expectation."
     dependsOn: [1, 2, 3, 4, 5, 6, 7]
     leases:
       - "repo:main-tools"
@@ -682,7 +740,8 @@ phases:
     tcCoverage:
       - "TC-HOLDE2E-001 (operator pause and resume evidence in a disposable HOME; PR-scoped, never a delivery-time gate; the no-ref claim is the claim leg)"
     verification:
-      - "pnpm exec delivery-os plan validate GH-280 || verdict=valid, readyForDevelopment=true, eight phases echoed with their declared scope"
+      - "pnpm exec delivery-os plan validate GH-280 || verdict=valid, readyForDevelopment=true, nine phases echoed with their declared scope"
+      - "packages/core/src/domain/owner-hold.ts (phase 1 scope) and tests/structure/error-table.test.ts (phase 2 scope) || the two non-formatting phase-8 edits are exactly these: the control-character and ANSI patterns are built with new RegExp/String.fromCharCode(27) to satisfy the lint rule with identical matching behaviour, and the error-table expectation carries the new operator-hold remediation hint; bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts tests/checks/error-table-sync.test.ts green and every other phase-8 delta is biome formatting or reindent of files already declared in phases 1-7"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate is green: lint, format, typecheck, the full bun test suite, package/subpath/tier/runtime boundaries, ambient-globals, secret-read boundary, prompt conformance, help coverage, and exports parity"
       - "bash scripts/run-bash-suites.sh || every bash suite is green, including the new owner-hold hook suite and the updated install/uninstall fixtures"
       - "shellcheck scripts/hooks/pre-opencode-iteration-owner-hold.sh scripts/.tests/test-hook-owner-hold-example.sh || zero findings"
@@ -690,6 +749,68 @@ phases:
       - "bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts || every new source module and contract export is registered exactly once and no inventory drifted"
       - "git status --porcelain tests/fixtures/queue/golden tests/fixtures/status/golden tests/fixtures/doctor/golden tests/fixtures/mcp/golden || only the declared new held fixtures appear; every delivered golden is byte-identical and none was regenerated"
       - "git diff --check || zero whitespace errors and zero conflict markers"
-      - "manual TC-HOLDE2E-001 in a disposable clone and disposable HOME, recorded in the change record and repeated in the pull request || create the marker at $HOME/.ados-state/owner-hold, show status and doctor reporting it (providers.evidence.ownerHold; the ok provider check with the owner-hold annotation reason and the appended hold segment at exit 0), run `queue claim` WITH NO REF and a dispatch and capture queue.precondition.unmet / reason=owner-hold / the bounded detail and summary / exit 1 / zero records and zero sessions, record that owner-hold means wait/do-not-abort to deferral callers (D19) and is not a transient retry, show an expired park staying parked with unchanged bytes, remove the marker, and show the next pass resuming from the unchanged records with one session; no secret is printed, no live model session is spawned except the resumed one, and the record states the known limits (no kill switch, no MCP queue surface, no BSD runner, the seam-observed read bound, and GAP-T7: the production resident daemon is not wired)"
+      - "manual TC-HOLDE2E-001 in a disposable clone and disposable HOME, recorded in the change record and repeated in the pull request || create the marker at $HOME/.ados-state/owner-hold, show STATUS reporting it (providers.evidence.ownerHold, exit 0) as the only production surface, show the doctor hold evidence from the command-runtime harness rather than the production binary (D20), run `queue claim` WITH NO REF and a dispatch and capture queue.precondition.unmet / reason=owner-hold / the bounded detail and summary / exit 1 / zero records and zero sessions, record that owner-hold means wait/do-not-abort to deferral callers (D19) and is not a transient retry, show an expired park staying parked with unchanged bytes, remove the marker, and show the next pass resuming from the unchanged records with one session; no secret is printed, no live model session is spawned except the resumed one, and the record states the known limits (no kill switch, no MCP queue surface, no BSD runner, the seam-observed read bound, the production doctor residual, and GAP-T7: the production resident daemon is not wired)"
       - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-change-record.md || the record carries the delivered summary, the operator communication (marker at $HOME/.ados-state/owner-hold preferred for durability, no marker-path override, a hold is not a kill switch, owner-hold means wait/do-not-abort), the additive contract and its rollback, the manual evidence with its corroborating fields, and the known gaps GAP-T1..GAP-T7 from the test plan"
       - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-test-plan.md §10 || one row per executed case records the command, exit code, and a one-line result; the manual row names the disposable root and the PR location"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 9 — code review iteration 1 remediation.
+  # Findings: code-review/review-iter-1.yaml (F-1..F-11).
+  # F-1 is a claim correction per D20, not a doctor wiring: the spec, this plan,
+  # the change record, the changeset, and the guide state doctor as a
+  # command-runtime capability and `status` as the only production operator
+  # surface. F-2 is ACCEPTED per D21: the commit primitive composes the subject,
+  # the template fallback is accepted, and no history is rewritten. F-3 is fixed
+  # by a temp-HOME marker behavior case (D22). F-4 and F-5 are scope and wording
+  # repairs (D23). F-6..F-11 are precision fixes (D24, D25). Phases 1-8 keep
+  # their behaviour, their scopes, and the 44 AC / 59 TC coverage; this phase
+  # adds no acceptance criterion.
+  # SCOPE DISCIPLINE: every product, doc, and test path this phase edits that is
+  # already declared in phases 1-7 is named in the verification rows and is NOT
+  # repeated in scope.files. The review artifact, the change artifacts, the
+  # change spec, the new behavior suite, and the F-11 TC-id label edit in
+  # tests/checks/error-table-sync.test.ts are newly scoped here.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code Review Remediation (Iteration 1) — production-doctor claims corrected to the command-runtime scope, temp-HOME production-composition behavior case, doc-sync and phase-8 scope record, spec/test-plan precision, shell read comment, error-aware marker existence, and TC identifier mapping"
+    kind: delivery
+    summary: "apply code review iteration 1 remediation"
+    objective: "Make every delivered claim match the delivered behaviour (doctor is a command-runtime capability and status is the only production operator surface), prove the production reader over a real temp-HOME marker instead of source text, and make the phase-7/phase-8 scope and the spec/test-plan wording truthful, without changing a delivered behaviour, golden, closed set, or acceptance criterion."
+    dependsOn: [1, 2, 3, 4, 5, 6, 7, 8]
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/code-review/review-iter-1.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-spec.md"
+        - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-plan.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-pm-notes.yaml"
+        - "tests/behaviour/owner-hold-production-composition.test.ts"
+        - "tests/checks/error-table-sync.test.ts"
+    acCoverage: []
+    tcCoverage:
+      - "No new test case: the phase strengthens TC-HOLDEDGE-001 and TC-HOLDEDGE-002 (temp-HOME marker through the real production composer for queue, claim, status, and dispatch, with a mutation control), TC-HOLDFACT-009 (recorded zero-write, zero-credential, and zero-network counts), and the identifier labels of TC-HOLDDOCTOR-006, TC-HOLDQUEUE-011, TC-HOLDSTATUS-004, TC-HOLDNEG-001, TC-HOLDNEG-002, and TC-HOLDDOCS-004. F-1, F-2, and F-4..F-9 are claim and record repairs with no new case."
+    exitCriteria:
+      - "every delivered artifact states doctor as a command-runtime capability and status as the only production operator surface (D20)"
+      - "the production composition is proven over a materialized temp-HOME marker for queue, claim, status, and dispatch with a mutation control, and no source-text grep carries a composition claim (D22)"
+      - "phase 7 scope, phase 8 wording, and the change record's scope-deviations section name every path and non-formatting edit the change touched (D23)"
+      - "plan validate stays valid with readyForDevelopment=true, the 44 acceptance criteria and 59 test cases are unchanged, and no golden, fixture assertion, or closed set moved"
+    verification:
+      - "code-review/review-iter-1.yaml and chg-GH-280-pm-notes.yaml || the review artifact stays as the recorded verdict and the pm-notes records one notes entry naming each finding F-1..F-11 with its disposition (fixed, accepted under D21, or record repair) and the decisions D20-D25, so no finding is left unaddressed"
+      - "review F-1 (high, blocking) || chg-GH-280-spec.md removes every production doctor claim: F-4.1, F-5, the AC-F6 preamble, and §16 state that doctor reports the hold whenever a DoctorComposition is supplied, that createProductionComposer supplies none in GH-280, and that status is the only production operator surface that reports it; AC-F6-1..AC-F6-4 stay four criteria satisfied at the command-runtime layer, so the 44-criterion set is unchanged (D20)"
+      - "review F-1 (high, blocking) || chg-GH-280-plan.yaml (this file) carries the command-runtime scope in the phase 5 title, objective, and verification, in the doctor delivery pin, and in the phase 8 manual-evidence row, and claims no production doctor composition anywhere; pnpm exec delivery-os plan validate GH-280 returns verdict=valid with readyForDevelopment=true"
+      - "review F-1 (high, blocking) || chg-GH-280-change-record.md and chg-GH-280-test-plan.md (both phase 8 scope), .changeset/gh-280-owner-hold-minor.md, doc/guides/delivery-modes.md, and doc/planning/oss-tooling/milestones/m1/commands/doctor.md (phase 7 scope) remove every production doctor claim: the manual-evidence step records status --json only, takes the doctor observation from the command-runtime harness or drops it with the residual named, the known gaps gain the production doctor residual, the changeset names the doctor reason at the command-runtime layer, and the guide and doctor page name status as the production surface; bun test tests/checks/owner-hold-doc.test.ts tests/checks/doc-conformance.test.ts tests/checks/reference-page-parity.test.ts tests/checks/privacy-release.test.ts and bash scripts/.tests/test-doc-distribution.sh green"
+      - "review F-2 (medium, blocking) || ACCEPTED per D21: the branch keeps the commit primitive's template subjects, no history is rewritten, and the tree is byte-identical (git diff --stat main-tools..HEAD unchanged); this plan's commit-hygiene note states that the primitive composes the subject while a phase summary is a plan description, and the change record records the acceptance citing D21"
+      - "review F-3 (medium) || tests/behaviour/owner-hold-production-composition.test.ts (this phase scope) drives the real createProductionComposer program over a temp HOME whose <stateDirectoryName>/owner-hold marker is materialized on disk with no injected reader: queue list and status report the hold, queue claim with no ref and a dispatch refuse with queue.precondition.unmet and reason exactly owner-hold at exit 1 appending zero records and zero sessions, the reader closure is executed instead of grepped, and removing the marker flips all four surfaces back (mutation control); zero credential reads, zero transport calls, and zero writes are recorded; tests/structure/owner-hold-composition.test.ts (phase 5 scope) keeps its queue, lanes, claim, watch, dispatch, and status pin with source-text checks as a secondary assertion only"
+      - "review F-4 (low) || the seven doc-sync files are declared in phase 7 scope (doc/00-index.md, doc/overview/glossary.md, doc/planning/oss-tooling/milestones/m1/commands/dispatch.md, doc/quality/test-specs/test-spec-autonomous-delivery.md, doc/spec/features/feature-config-layer.md, doc/spec/features/feature-dispatch-engine.md, doc/spec/features/feature-resident-daemon.md) and the change record's scope-deviations section names each with its one-line reconciliation (D23); pnpm exec delivery-os plan validate GH-280 echoes all seven in the phase 7 scope"
+      - "review F-5 (low) || phase 8 is described as verification plus the lint-driven formatting, the behavior-preserving control-character regex construction in packages/core/src/domain/owner-hold.ts (phase 1 scope), and the tests/structure/error-table.test.ts hint expectation (phase 2 scope); the change record states that description in place of the formatting-only wording and records that behaviour is unchanged; bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts tests/checks/error-table-sync.test.ts green"
+      - "review F-6 (low) || the spec's AC-F4-1 and Appendix B state that owner-hold is prepended to every gated entry's ordered blocking[] including active parks (which keep parked:<cause>) and stuck parks (which keep park-condition-stuck), that their state and park reason are preserved, and that the lane surface renders that park reason; no behaviour changes and bun test tests/behaviour/queue-hold-schedule.test.ts tests/behaviour/queue-hold-payload.test.ts green"
+      - "review F-7 (low) || spec DM-4 annotates QueueReadData.ownerHold as { source: OwnerHoldSource; reason?: string } present only when active, matching the delivered member, AC-F4-7, the tests, and the goldens; the payload and every golden are unchanged"
+      - "review F-8 (low) || the test plan's §2 row records the authored and valid chg-GH-280-plan.yaml, §7.3 describes the fixture target explicitly (blockingReasons grows from 27 to 34 entries: the one owner-hold token plus the six ready-condition ids, and laneIdleReasons is a new 28-entry array), and the pm-notes D1 entry carries its inline SUPERSEDED BY D12 marker at the entry itself"
+      - "review F-9 (info) || the marker-reader comment in scripts/hooks/pre-opencode-iteration-owner-hold.sh (phase 6 scope) states that the shell read is bounded to 4 096 characters and names the engine's 4 096-byte bound; no behaviour changes; shellcheck reports zero findings and bash scripts/.tests/test-hook-owner-hold-example.sh passes 13/13"
+      - "review F-10 (low) || packages/adapters/src/file/owner-hold-marker.ts (phase 1 scope) uses an error-aware existence check: ENOENT resolves the absent outcome, any other stat failure or a non-regular path resolves the unreadable outcome, so an unreadable parent store directory is fail-closed and never resolves inactive; tests/behaviour/owner-hold-reader.test.ts (phase 1 scope) adds the ENOENT and unreadable-parent pair; bun test tests/behaviour/owner-hold-reader.test.ts green and NFR-10 holds for 100% of unreadable and stat-failing marker outcomes"
+      - "review F-11 (info) || the remaining identifiers appear in the test names that cover them (TC-HOLDSTATUS-004 in tests/behaviour/mcp-status-parity.test.ts, TC-HOLDQUEUE-011 in tests/structure/queue-scheduling-contract.test.ts, TC-HOLDNEG-001 in tests/checks/error-table-sync.test.ts, TC-HOLDDOCTOR-006 in tests/behaviour/doctor-owner-hold.test.ts, TC-HOLDDOCS-004 in tests/checks/owner-hold-doc.test.ts) or the test plan's §7.1 index records the covering case for each; TC-HOLDFACT-009 gains a recording-count assertion (zero credential reads, zero network calls, zero store writes through the injected seams) in tests/behaviour/owner-hold-fact.test.ts (phase 1 scope)"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate is green after remediation: lint, format, typecheck, the full bun test suite, package/subpath/tier/runtime boundaries, ambient-globals, secret-read, prompt conformance, help coverage, and exports parity"
+      - "git status --porcelain tests/fixtures/queue/golden tests/fixtures/status/golden tests/fixtures/doctor/golden tests/fixtures/mcp/golden tests/fixtures/queue/vocabulary || empty: the remediation adds no golden, restates no asserted byte, and moves no closed set"
+      - "git diff --check || zero whitespace errors and zero conflict markers"

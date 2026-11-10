@@ -261,10 +261,12 @@ or its provider cuts it out, which can still leave a `partial` lane. Clearing th
 hold resumes the next pass from preserved queue, lease, park, and lane state: no
 record is rewritten, no work is redispatched from scratch, and no duplicate
 session is created. Read-only
-inspection (`status`, `doctor`, `queue list`, `queue plan`, `lanes`, and
-`queue watch`) remains available and reports the hold; `status` exposes it as
-`providers.evidence.ownerHold` and `doctor` keeps the provider check `ok` while
-appending one non-failing annotation reason and a bounded detail.
+inspection (`status`, `queue list`, `queue plan`, `lanes`, and `queue watch`)
+remains available and reports the hold; `status` exposes it as
+`providers.evidence.ownerHold` and is the only production operator surface that
+does so. When the `doctor` command is composed (a `DoctorComposition` is
+supplied; the production composer supplies none today), its provider check stays
+`ok` while appending one non-failing annotation reason and a bounded detail.
 
 The **owner hold** is distinct from the **owner gate**: the hold is a global
 operator pause that stops new delivery work, while the owner gate is a per-work
