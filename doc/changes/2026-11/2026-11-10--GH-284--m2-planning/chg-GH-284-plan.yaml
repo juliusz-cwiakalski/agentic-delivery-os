@@ -1,10 +1,13 @@
 # GH-284 implementation plan — plan M2: engine-first operations, multi-repo
 # workstations, evidence inspection, and telemetry
 #
-# Plan revision: v1.6 (2026-11-10). Aligned to spec v1.6 (DEC-21) and test plan
-# v1.8. P1-P5 are ALREADY DELIVERED AND COMMITTED (1842e181, 57120f4e, 5e00d4f2,
-# 39bb4afb, 13171be1, 110fb160); only P6 remains, and it is a continuation, not
-# a re-scope: no earlier phase's scope or gates change.
+# Plan revision: v1.7 (2026-11-10). Aligned to spec v1.7 (DEC-22) and test plan
+# v1.9. P1-P5 are ALREADY DELIVERED AND COMMITTED (1842e181, 57120f4e, 5e00d4f2,
+# 39bb4afb, 13171be1, 110fb160); P6 is the remaining delivery phase and is a
+# continuation, not a re-scope. `system_spec_update` (phase 7) then reconciles
+# three current-truth docs under its own budget (DEC-22), so the containment
+# rule splits: 31 product files for the delivery phases plus 3 for phase 7, 34
+# across the change.
 #
 # Revision history:
 #   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
@@ -67,24 +70,39 @@
 #                     `ci-baseline-parity` failure once the three
 #                     forbidden-literals failures are gone. P1-P5 stay exactly as
 #                     delivered.
+#   v1.7  2026-11-10  Phase-boundary alignment after `system_spec_update`
+#                     reconciled three current-truth docs (spec v1.7 / DEC-22,
+#                     test plan v1.9). Containment splits into budgets: 31
+#                     product files for the delivery phases (30 planning + the
+#                     registry) and exactly 3 for phase 7
+#                     (`doc/spec/features/feature-resident-daemon.md`,
+#                     `doc/spec/features/feature-cli-entrypoint.md`,
+#                     `doc/overview/architecture-overview.md`), 34 across the
+#                     change. P28 now asserts both budgets (DR-21); P6's
+#                     close-out no longer claims `doc/spec/**` is unchanged and
+#                     instead names phase 7's three-file reconciliation as
+#                     owned by `system_spec_update`; and the change-shape
+#                     header and NFR-1 invariant state the 31 + 3 = 34 budget.
 #                     Finding ids use the `XF-` prefix (plan-authored) and the
 #                     `DR-` prefix (review-derived) so they never collide with
 #                     the spec's `F-` capability ids cited in the task trailers.
 #
 # Sources (single source of truth):
-#   - Spec: ./chg-GH-284-spec.md v1.6 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
-#     DEC-1..DEC-21, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
+#   - Spec: ./chg-GH-284-spec.md v1.7 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
+#     DEC-1..DEC-22, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
 #     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
 #     entrypoint), Appendix D (12-document pack manifest), Appendix E
 #     (structural diagram procedure, asserting heading association with the same
 #     predicates as P33). DEC-16 (status retention oracle, two-sentence
 #     entrypoint bound), DEC-17 (insertion inside the Epic M2 block), DEC-18
 #     (proposal-tail rule), DEC-19 (two-run aggregate gate), DEC-20
-#     (pack-contents deviation plus the twelve-target index row) and DEC-21 (the
+#     (pack-contents deviation plus the twelve-target index row), DEC-21 (the
 #     forbidden-literals guard scans `doc/planning/**` and needs the twelve pack
-#     documents registered, so AC-NFR1-1 counts 31 product files: 30 planning
-#     plus the one registry) govern this plan.
-#   - Test plan: ./chg-GH-284-test-plan.md v1.8 — 37 TCs TC-M2PLAN-001..037,
+#     documents registered, so the delivery phases change 31 product files: 30
+#     planning plus the one registry), and DEC-22 (phase 7 is a separate budget
+#     of exactly three current-truth docs, for 34 product files across the
+#     change) govern this plan.
+#   - Test plan: ./chg-GH-284-test-plan.md v1.9 — 37 TCs TC-M2PLAN-001..037,
 #     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
 #     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
 #     v1.1-v1.3 reopened P03/P15/P16/P18/P19/P27/P30/P32/P33/P34 and the
@@ -99,7 +117,11 @@
 #     (`registered_total`, `m2_registry_sorted`, `m2_registry_duplicates`,
 #     `registry_m2`, `baseline_absent`, `unregistered_findings`) with sorted and
 #     duplicate self-tests, and P32 keeps the lone-parity classification for the
-#     default run.
+#     default run. v1.9 restates P28 as two budgets (delivery 31 and phase 7's
+#     exactly three current-truth docs, 34 total), derives the delivery range
+#     as the whole change minus the three phase-7 paths (equivalently
+#     base..the last delivery commit before phase 7), and fails on any fourth
+#     `doc/spec`/`doc/overview` path.
 #   - Readiness reviews: ./readiness-review/readiness-iter-1.md (F1-F15,
 #     DR-1..DR-11), readiness-iter-2.md (F1-F8, DR-12..DR-16),
 #     readiness-iter-3.md (confirmation), readiness-iter-4.md (F1 plus
@@ -114,15 +136,20 @@
 #   - Base revision: fab46636cc0b5abfbd22257711f594adc0af4660
 #     (= origin/main-tools). Every preservation check compares against it.
 #
-# Change shape: docs-only plus one registry edit, no runtime surface, no schema,
-# no changeset. Product files are 31: thirty under doc/planning/oss-tooling/**
-# (all thirty already delivered in P1-P5) plus
-# scripts/checks/forbidden-literals.registry.json (P6, twelve registrations).
+# Change shape: docs-only plus one registry edit and the phase-7 spec
+# reconciliation, no runtime surface, no schema, no changeset. Containment is
+# split by phase (DEC-22): the DELIVERY phases change exactly 31 product files —
+# thirty under doc/planning/oss-tooling/** (all delivered in P1-P5) plus
+# scripts/checks/forbidden-literals.registry.json (P6, twelve registrations) —
+# and system_spec_update (phase 7) changes exactly three current-truth docs:
+# doc/spec/features/feature-resident-daemon.md,
+# doc/spec/features/feature-cli-entrypoint.md, and
+# doc/overview/architecture-overview.md, for 34 product files across the change.
 # Any other diff outside doc/planning/oss-tooling/** (excluding doc/changes/**)
-# FAILS the change: zero files under packages/, tests/, .opencode/, .ai/, or
-# doc/spec/, zero scripts/** paths other than the registry, and no root
-# build/config file. doc/changes/** artifacts and review records are change
-# evidence, not product change.
+# FAILS the change: zero files under packages/, tests/, .opencode/, .ai/, zero
+# scripts/** paths other than the registry, zero doc/spec/** or doc/overview/**
+# paths other than those three, and no root build/config file. doc/changes/**
+# artifacts and review records are change evidence, not product change.
 #
 # Six delivery phases, one Conventional Commit each, in spec §18 order:
 #   P1 backlog.md (7 stories + 2 amendments)      P4 milestones/m2/ (12 docs)
@@ -375,6 +402,21 @@
 #         untouched and changing no guard behaviour. P1-P5 are already delivered
 #         and committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1,
 #         110fb160) and are not re-scoped; P6 continues from that HEAD.
+#   DR-21 [phase boundary, blocking at close-out] The containment rule as written
+#         covered only the delivery phases, but `system_spec_update` reconciles
+#         current-truth docs by mandate, so after that phase reconciled
+#         `feature-resident-daemon.md`, `feature-cli-entrypoint.md` and
+#         `architecture-overview.md` the single-budget P28 would have failed on
+#         three legitimate files (or, inverted, the phase would have been
+#         forbidden its own job). Resolved normatively by DEC-22: the containment
+#         rule splits into a 31-file delivery budget and a 3-file phase-7
+#         budget, 34 across the change. P28 now asserts both budgets and fails on
+#         any fourth `doc/spec`/`doc/overview` path; P6's close-out no longer
+#         claims `doc/spec/**` is unchanged and instead names the phase-7
+#         reconciliation as owned by `system_spec_update`. Verified against the
+#         current tree: delivery 31 (planning 30 + registry 1), phase 7
+#         `spec_files=2 overview_files=1`, `phase7_files=3 phase7_extra=0
+#         phase7_unknown_paths=0`, `total_product_files=34`.
 #
 # Delivery-planning decisions (placement, wording, sequencing; no behavioural
 # deviation):
@@ -488,12 +530,22 @@
 #       `doc/planning/oss-tooling/milestones/m2/**` documents are registered in
 #       `scripts/checks/forbidden-literals.registry.json#registered` in P6, as
 #       the only permitted `scripts/**` change and the only non-planning
-#       product file of the whole change. The edit appends the twelve paths
+#       product file of the delivery phases. The edit appends the twelve paths
 #       sorted among themselves and duplicate-free, preserves every existing
 #       entry in its current order (the base registry is not globally sorted),
-#       and changes no guard behaviour, allowlist rule, or test. Product files
-#       therefore total 31: 30 under `doc/planning/oss-tooling/**` plus the
+#       and changes no guard behaviour, allowlist rule, or test. The delivery
+#       budget is therefore 31: 30 under `doc/planning/oss-tooling/**` plus the
 #       registry.
+#   D-15 Phase-7 budget (DR-21, NFR-1, DEC-22). `system_spec_update` owns
+#       current-truth reconciliation and is not planned here: it changes at
+#       most the three docs this change made false —
+#       `doc/spec/features/feature-resident-daemon.md`,
+#       `doc/spec/features/feature-cli-entrypoint.md` and
+#       `doc/overview/architecture-overview.md` — under its own 3-file budget,
+#       for 34 product files across the change. P6 itself edits no
+#       `doc/spec/**` or `doc/overview/**` file, and P28 checks the whole
+#       change against both budgets so the phase boundary cannot be used to
+#       smuggle a fourth spec path.
 #
 # Verification conventions (binding for every phase):
 #   - Run from the repository root on branch docs/GH-284/m2-planning.
@@ -528,7 +580,7 @@
 #     base snapshot, so the table must not be touched even though the pack
 #     deviates from it.
 #
-# Validation record (2026-11-10, plan revision v1.6):
+# Validation record (2026-11-10, plan revision v1.7):
 #   verdict=valid, readyForDevelopment=true, totalErrors=0,
 #   artifact=chg-GH-284-plan.yaml (kind=yaml),
 #   schemaVersion=delivery.plan.v1, tier=lite, phases=1..6.
@@ -541,7 +593,7 @@ tier:
   name: lite
   phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
-    - "A product path other than doc/planning/oss-tooling/** or scripts/checks/forbidden-literals.registry.json appears in the diff with doc/changes/** excluded, or the registry diff is anything but the twelve sorted pack entries (P28, P36)"
+    - "A product path other than doc/planning/oss-tooling/**, scripts/checks/forbidden-literals.registry.json, or phase 7's three current-truth docs (doc/spec/features/feature-resident-daemon.md, doc/spec/features/feature-cli-entrypoint.md, doc/overview/architecture-overview.md) appears in the diff with doc/changes/** excluded; the delivery range is not 31, the phase-7 range is not 3, the total is not 34, or the registry diff is anything but the twelve sorted pack entries (P28, P36)"
     - "A backlog hunk falls outside the insertion window (immediately after M2-S9's last content line) or the two amended entries, the inserted block does not begin with a blank line, the head `---` separator sequence changes, or a non-amended story body changes (P03, P29)"
     - "The M2-S17 acceptance block does not carry all seven criteria by content, or the anchor scan leaves any of the 79 clauses missing (P04, P06, P02, P35)"
     - "M2-S4 changes anything but its - Depends on: line, or M2-S6 loses a base task line or changes its heading, goal, or acceptance criterion (P07, P08)"
@@ -1302,19 +1354,22 @@ phases:
         6.1 Continuation and containment. P1-P5 are already delivered and
         committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1, 110fb160);
         P6 continues from that HEAD and does not re-scope them. Re-run P00 and
-        P28. The product-file list must be exactly 31 paths: `backlog.md`,
-        `status.md`, `milestones/README.md`, the fifteen
+        P28 with `LC_ALL=C` exported so its `comm` inputs are ordered the same
+        way. The DELIVERY budget (P28's delivery range, derived as the whole
+        change minus the three phase-7 paths, equivalently base..the last
+        delivery commit before phase 7) must be exactly 31 product files:
+        `backlog.md`, `status.md`, `milestones/README.md`, the fifteen
         `milestones/m1/commands/*.md` pages, the twelve `milestones/m2/**`
         documents, and `scripts/checks/forbidden-literals.registry.json`.
-        Expect `planning_files=30`, `registry_files=1`,
+        Expect `product_files=31`, `planning_files=30`, `registry_files=1`,
         `outside_planning_outside_registry=0`, `forbidden_root_files=0`,
         `unexpected_planning_paths=0`, `non_vacuous=yes`. The registry file is
         the only permitted non-planning product file (D-14, DEC-21); any other
         path outside `doc/planning/oss-tooling/**` (excluding `doc/changes/**`),
-        and anything under `tests/`, `packages/`, `.opencode/`, `.ai/`, or
-        `doc/spec/` or under `scripts/` other than that one file, fails the
-        change: revert it, do not rationalise it as incidental.
-        [NFR-1, DEC-13, DEC-21; AC-NFR1-1; TC-M2PLAN-028]
+        and anything under `tests/`, `packages/`, `.opencode/`, `.ai/`, or under
+        `scripts/` other than that one file, fails the change: revert it, do not
+        rationalise it as incidental. [NFR-1, DEC-13, DEC-21; AC-NFR1-1;
+        TC-M2PLAN-028]
       - |-
         6.2 Register the twelve pack documents (D-14, DR-20, DEC-21). In
         `scripts/checks/forbidden-literals.registry.json`, append the twelve
@@ -1390,9 +1445,11 @@ phases:
         `fixture_blank_separation=OK`, `classifier_self_tests=4/4`,
         `changed_lines=3` with `base_task_lines_missing=0` and
         `fixture_p08=OK`, and `stories_compared=65 identical=65 changed=0
-        order=OK`. No phase other than this registry step may have changed a
-        file since P5; a drift means a later edit leaked and is fixed in the
-        owning phase. [NFR-2, NFR-3, NFR-7, NFR-8;
+        order=OK`. No delivery phase other than this registry step may have
+        changed a file since P5; the phase-7 reconciliation of the three
+        current-truth docs is separate and owned by `system_spec_update`
+        (DEC-22), so it is neither a delivery drift nor part of P6's scope.
+        [NFR-2, NFR-3, NFR-7, NFR-8;
         AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
       - |-
         6.6 Write `delivery-evidence/verification.md` (a change artifact, not a
@@ -1427,12 +1484,16 @@ phases:
         6.7 Close-out statement in the PR body: no tracker ticket was created
         for M2-S11..S17, no M2 story was delivered, and no product behaviour
         changed (DEC-1, NG-1, NG-2, NG-4); the M2 pack is proposed until
-        milestone exit (DEC-4); `doc/spec/**` is unchanged because this change
-        delivers no behaviour to reconcile (NG-3); the only `scripts/**` change
-        is the twelve-entry registration, and guard behaviour is untouched
-        (DEC-21). [§17.3 DoD]
+        milestone exit (DEC-4); P6 itself edits no `doc/spec/**` or
+        `doc/overview/**` file, because current-truth reconciliation is
+        `system_spec_update`'s mandate and DEC-22 gives phase 7 its own 3-file
+        budget — `doc/spec/features/feature-resident-daemon.md`,
+        `doc/spec/features/feature-cli-entrypoint.md` and
+        `doc/overview/architecture-overview.md` — for 34 product files across
+        the change; the only `scripts/**` change is the twelve-entry
+        registration, and guard behaviour is untouched (DEC-21). [§17.3 DoD]
     coverage:
-      - "TC-M2PLAN-028 (complete: product_files=31 paths = planning_files=30 + registry_files=1; outside_planning_outside_registry=0; forbidden_root_files=0; unexpected_planning_paths=0; non_vacuous=yes)"
+      - "TC-M2PLAN-028 (complete: delivery budget product_files=31 = planning_files=30 + registry_files=1 with outside_planning_outside_registry=0, forbidden_root_files=0, unexpected_planning_paths=0; phase-7 budget spec_files=2 overview_files=1 phase7_files=3 phase7_extra=0 phase7_unknown_paths=0; total_product_files=34; non_vacuous=yes)"
       - "TC-M2PLAN-031 (complete: guard_exit=0, no drift, 82 in-scope docs; planning_markers=0)"
       - "TC-M2PLAN-032 (complete: both runs recorded; after registration default_exit=1 with default_failed_tests=1, the lone ci-baseline-parity failure, classified environmental; repo_tmpdir_exit=0; gate_verdict=PASS)"
       - "Procedure P33 re-proof inside the final sweep (TC ownership stays P4): mermaid_fences>=10, keyword_and_fence_exit=0, heading_association=OK, c4_headings_with_diagrams=3/3, flow_headings_with_diagrams=7/7"
@@ -1442,13 +1503,30 @@ phases:
     testGate:
       - "P00 — re-materialise the base and helpers at the final HEAD"
       - >-
-        P28 -> product_files=31; planning_files=30; registry_files=1;
-        outside_planning_outside_registry=0; forbidden_root_files=0;
-        unexpected_planning_paths=0; matcher_self_test=OK; non_vacuous=yes.
-        The single registry path is
-        `scripts/checks/forbidden-literals.registry.json`; any other
-        `scripts/**` path, or anything under `tests/`, `packages/`,
-        `.opencode/`, `.ai/`, or `doc/spec/`, fails P6.
+        P28 -> two budgets, run with `LC_ALL=C` so the `comm` inputs share one
+        ordering. DELIVERY range (`delivery_range=whole change minus the three
+        phase-7 paths (equals base..the last delivery commit before phase 7)`,
+        or `BASE...DELIVERY_HEAD` when supplied):
+        `product_files=31`; `planning_files=30`; `registry_files=1`;
+        `outside_planning_outside_registry=0`; `forbidden_root_files=0`;
+        `unexpected_planning_paths=0`. PHASE-7 budget: `spec_files=2`;
+        `overview_files=1`; `phase7_files=3`; `phase7_extra=0`;
+        `phase7_unknown_paths=0`. Whole change: `total_product_files=34`;
+        `matcher_self_test=OK`; `non_vacuous=yes`. The single registry path is
+        `scripts/checks/forbidden-literals.registry.json`; the three phase-7
+        paths are `doc/spec/features/feature-resident-daemon.md`,
+        `doc/spec/features/feature-cli-entrypoint.md` and
+        `doc/overview/architecture-overview.md`. Any other `scripts/**` path,
+        any fourth `doc/spec`/`doc/overview` path (`phase7_extra>0` or
+        `phase7_unknown_paths>0`), anything under `tests/`, `packages/`,
+        `.opencode/`, `.ai/`, or a different `total_product_files` fails P6.
+        These values are observed with the phase-7 reconciliation present in
+        the tree, which it is now (the three files are edited and uncommitted).
+        If P28 is instead run before phase 7's edits exist, the phase-7 lines
+        read `spec_files=0 overview_files=0 phase7_files=0 phase7_extra=-3
+        phase7_unknown_paths=0 total_product_files=31`: the delivery budget is
+        then the whole gate and the phase-7 counts become the phase-7/DoD
+        check, not a P6 failure.
       - >-
         P31 -> guard_exit=0; (guard-doc-distribution)[OK] no drift, 82 in-scope
         docs; planning_markers=0
@@ -1502,7 +1580,7 @@ phases:
         `bad_runs>0`, a `MISSING S17-AC*` line, a C4/flow `MISSING` line, or a
         non-zero `s17_missing_criteria` fails P6.
     invariants:
-      - "NFR-1/DEC-21: product files total 31 — 30 under doc/planning/oss-tooling/** plus scripts/checks/forbidden-literals.registry.json; doc/changes/** evidence is excluded by P28, and no other scripts/**, tests/**, packages/**, .opencode/**, .ai/** or doc/spec/** path changes"
+      - "NFR-1/DEC-21/DEC-22: the delivery phases change 31 product files — 30 under doc/planning/oss-tooling/** plus scripts/checks/forbidden-literals.registry.json — and system_spec_update's separate budget is the 3 current-truth docs (feature-resident-daemon.md, feature-cli-entrypoint.md, architecture-overview.md), 34 across the change; doc/changes/** evidence is excluded by P28, and no other scripts/**, tests/**, packages/**, .opencode/**, .ai/**, doc/spec/** or doc/overview/** path changes"
       - "DEC-21/D-14: the registry gains exactly the twelve pack paths, sorted among themselves and duplicate-free, with every pre-existing entry left in place and no guard behaviour changed"
       - "NFR-5/D-12/DEC-19: both aggregate-gate runs are recorded; only a lone default-run ci-baseline-parity failure is environmental, and the repo-local-TMPDIR run must exit 0"
       - "NFR-6/DR-7: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15), and it proves heading association as well as fence counts"

@@ -1,14 +1,14 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 1.8
+version: 1.9
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T06:50:00Z
+last_updated: 2026-11-10T08:05:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M2 planning surface against spec v1.6: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; containment expects 31 product files (30 planning + one forbidden-literals registry); clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
+summary: "Docs-only verification of the M2 planning surface against spec v1.7: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; delivery containment expects 31 product files (30 planning + one forbidden-literals registry) and phase 7 adds the three reconciled current-truth docs, 34 total; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
 links:
   change_spec: ./chg-GH-284-spec.md
   implementation_plan: ./chg-GH-284-plan.yaml
@@ -28,7 +28,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 - `doc/planning/oss-tooling/status.md`: one new dated `2026-11-10` section, four pointer insertions of at most three lines each, and whole-file line retention (no base line removed, reordered, or modified).
 - `doc/planning/oss-tooling/milestones/m2/`: the twelve-document pack (README, architecture, contracts, test-scenarios, journeys, entrypoint delta, six command pages), with the README stating the deliberate no-man-page/no-interactions deviation while the contents table stays byte-identical.
 - `doc/planning/oss-tooling/milestones/README.md`: one planned M2 index row with twelve linked targets and the M0/M1 rows untouched.
-- Repository guards: `bash scripts/.tests/test-doc-distribution.sh`, `pnpm check`, the Appendix E structural diagram procedure, link resolution, and the forbidden-literals check. The twelve new pack documents are registered in `scripts/checks/forbidden-literals.registry.json` (the one permitted `scripts/` change), because the guard's `userFacingDocs` scope covers `doc/planning/**` and fails closed on unregistered docs (DEC-21).
+- Repository guards: `bash scripts/.tests/test-doc-distribution.sh`, `pnpm check`, the Appendix E structural diagram procedure, link resolution, and the forbidden-literals check. The twelve new pack documents are registered in `scripts/checks/forbidden-literals.registry.json` (the one permitted `scripts/` change), because the guard's `userFacingDocs` scope covers `doc/planning/**` and fails closed on unregistered docs (DEC-21). Phase 7 (`system_spec_update`) reconciles three current-truth docs — `doc/spec/features/feature-resident-daemon.md`, `doc/spec/features/feature-cli-entrypoint.md`, and `doc/overview/architecture-overview.md` — under a separate three-file budget (DEC-22).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -47,7 +47,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.6 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-21, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
+| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.7 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-22, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
 | [`chg-GH-284-pm-notes.yaml`](./chg-GH-284-pm-notes.yaml) | Binding decisions: S17 scope, daemon resolution, 14+1 reconciliation shape, history handling, no distribution marker, index registration, and the v1.1 reopen that replaced the non-existent mermaid validator |
 | GH-284 ticket (`juliusz-cwiakalski/agentic-delivery-os#284`) | Normative story text for the 79-row clause table (P02, P06, P35) and the S17 acceptance list; read at authoring time |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review, never to the permanent suite |
@@ -95,7 +95,7 @@ Forward traceability: every AC appears exactly once, and every TC maps to exactl
 | AC-F9-2 | Each command page carries the required body sections and the family relationships | TC-M2PLAN-025 | Covered |
 | AC-F10-1 | The entrypoint delta note records the observed composition, planned additions, and the daemon gap | TC-M2PLAN-026 | Covered |
 | AC-F11-1 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | TC-M2PLAN-027 | Covered |
-| AC-NFR1-1 | Exactly 30 planning files plus the single forbidden-literals registry file change | TC-M2PLAN-028 | Covered |
+| AC-NFR1-1 | Delivery budget 31 files and phase-7 budget 3 files (34 total) | TC-M2PLAN-028 | Covered |
 | AC-NFR2-1 | Every non-amended story body is byte-identical on the base, minimal, and full heads | TC-M2PLAN-029 | Covered |
 | AC-NFR3-1 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | TC-M2PLAN-030 | Covered |
 | AC-NFR4-1 | The doc-distribution guard stays green and no planning marker is added | TC-M2PLAN-031 | Covered |
@@ -167,7 +167,7 @@ API-# / EVT-#: none exist in the spec; nothing to cover.
 
 | NFR ID | Requirement | TC ID | Status |
 |---|---|---|---|
-| NFR-1 | Docs-only containment | TC-M2PLAN-028 | Covered (30 planning + 1 registry; DEC-21) |
+| NFR-1 | Docs-only containment | TC-M2PLAN-028 | Covered (31 delivery + 3 phase-7 = 34; DEC-21/DEC-22) |
 | NFR-2 | Backlog preservation | TC-M2PLAN-003, TC-M2PLAN-007, TC-M2PLAN-008, TC-M2PLAN-009, TC-M2PLAN-010, TC-M2PLAN-029 | Covered (byte comparisons plus hunk confinement) |
 | NFR-3 | Command-page containment | TC-M2PLAN-013, TC-M2PLAN-014, TC-M2PLAN-030 | Covered (hunk ranges, body bytes, bounded DESCRIPTION region) |
 | NFR-4 | Doc-distribution guard | TC-M2PLAN-031 | Covered (guard execution) |
@@ -227,7 +227,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 | TC-M2PLAN-025 | Each command page carries the required body sections and the family relationships | Happy Path | Critical | High | AC-F9-2 | Static/diff + content |
 | TC-M2PLAN-026 | The entrypoint delta note records the observed composition, planned additions, and the daemon gap | Happy Path | Critical | High | AC-F10-1 | Static/diff + content |
 | TC-M2PLAN-027 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | Happy Path | Important | High | AC-F11-1 | Static/diff + content |
-| TC-M2PLAN-028 | Exactly 30 planning files plus the single forbidden-literals registry file change | Negative | Critical | High | AC-NFR1-1 | Static/diff + content |
+| TC-M2PLAN-028 | Delivery budget 31 files and phase-7 budget 3 files (34 total) | Negative | Critical | High | AC-NFR1-1 | Static/diff + content |
 | TC-M2PLAN-029 | Every non-amended story body is byte-identical on the base, minimal, and full heads | Regression | Critical | High | AC-NFR2-1 | Static/diff + content |
 | TC-M2PLAN-030 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | Negative | Critical | High | AC-NFR3-1 | Static/diff + content |
 | TC-M2PLAN-031 | The doc-distribution guard stays green and no planning marker is added | Regression | Important | Medium | AC-NFR4-1 | Guard |
@@ -1057,15 +1057,15 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. Row absence is the failing half; row preservation is a passing control.
 - Result label for Section 10: **FAIL (row absent); M0/M1 preservation PASS (control)**.
 
-#### TC-M2PLAN-028 - Exactly 30 planning files plus the single forbidden-literals registry file change
+#### TC-M2PLAN-028 - Delivery budget 31 files and phase-7 budget 3 files (34 total)
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-NFR1-1, NFR-1, DEC-21
+**Related IDs**: AC-NFR1-1, NFR-1, DEC-21, DEC-22
 **Test Type(s)**: Manual (static/diff and content inspection)
 **Automation Level**: Semi-automated (uncommitted procedure)
-**Target Layer / Location**: branch diff vs `fab46636`, excluding `doc/changes/**`
+**Target Layer / Location**: delivery range vs whole-change diff, excluding `doc/changes/**`
 **Tags**: @diff, @containment
 
 **Preconditions**:
@@ -1075,17 +1075,17 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P28** (Section 7.1).
-2. Confirm the changed set is exactly 31 product files: the five planning groups (backlog, status, milestone index, 15 M1 command pages, 12 M2 pack documents = 30) plus `scripts/checks/forbidden-literals.registry.json`, and nothing else.
+1. Run procedure **P28** (Section 7.1). The delivery budget is `BASE...DELIVERY_HEAD` (the last delivery commit before phase 7), or equivalently the whole change minus the three phase-7 paths; the whole-change budget includes the working tree.
+2. Confirm delivery `product_files=31` (30 planning + 1 registry), phase-7 `spec_files=2`, `overview_files=1`, `phase7_extra=0`, `total_product_files=34`, zero forbidden roots, and the negative matcher fires on a fourth `doc/spec` path.
 
 **Expected Outcome**:
 
-- `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `matcher_self_test=OK`; `non_vacuous=yes`.
+- `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`; `non_vacuous=yes`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `product_files=30`; `planning_files=30`; `registry_files=0`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `matcher_self_test=OK`; `non_vacuous=yes`. The planning set is complete; the required registry file is absent, so the shape is 30 of 31.
-- Result label for Section 10: **FAIL (registry file missing; 30/31 product files)**.
+- Observed on the current tree (delivery commits + registry committed, three phase-7 edits in the working tree): `delivery_range=whole change minus the three phase-7 paths (equals base..the last delivery commit before phase 7)`; `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; phase-7 list is exactly `doc/overview/architecture-overview.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/spec/features/feature-resident-daemon.md`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`; `non_vacuous=yes`.
+- Result label for Section 10: **PASS (delivery 31 + phase 7 3 = 34)**.
 
 #### TC-M2PLAN-029 - Every non-amended story body is byte-identical on the base, minimal, and full heads
 
@@ -2191,21 +2191,50 @@ fi
 for row in 'M0 (trust substrate' 'M1 (delivery engine'; do b=$(grep -F "$row" /tmp/gh284/base-milestones-README.md); h=$(grep -F "$row" "$MR"); [ "$b" = "$h" ] && echo "$row row=identical" || echo "$row row=CHANGED"; done
 ```
 
-**P28 — product-file containment**
+**P28 — two-budget product-file containment**
 
 ```bash
-git diff --name-only "$BASE"...HEAD -- . ':(exclude)doc/changes/**' | sort | tee /tmp/gh284/product-files.txt
-n=$(wc -l < /tmp/gh284/product-files.txt); echo "product_files=$n"
-planning=$(grep -c '^doc/planning/oss-tooling/' /tmp/gh284/product-files.txt || true)
-registry=$(grep -c '^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/product-files.txt || true)
-outside=$(grep -vcE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/product-files.txt || true)
+PHASE7=(
+ doc/spec/features/feature-cli-entrypoint.md
+ doc/spec/features/feature-resident-daemon.md
+ doc/overview/architecture-overview.md
+)
+printf '%s\n' "${PHASE7[@]}" | LC_ALL=C sort > /tmp/gh284/phase7-known.txt
+# Whole change includes the working tree (base commit vs current files).
+git diff --name-only "$BASE" -- . ':(exclude)doc/changes/**' | sort -u > /tmp/gh284/whole.txt
+# Delivery budget = base..the last delivery commit before phase 7. When that commit is not
+# supplied via DELIVERY_HEAD, it is exactly the whole change minus the three phase-7 paths.
+if [ -n "${DELIVERY_HEAD:-}" ]; then
+  git diff --name-only "$BASE"...$DELIVERY_HEAD -- . ':(exclude)doc/changes/**' | sort -u > /tmp/gh284/delivery.txt
+  src="BASE...DELIVERY_HEAD ($DELIVERY_HEAD)"
+else
+  comm -23 /tmp/gh284/whole.txt /tmp/gh284/phase7-known.txt > /tmp/gh284/delivery.txt
+  src="whole change minus the three phase-7 paths (equals base..the last delivery commit before phase 7)"
+fi
+comm -23 /tmp/gh284/whole.txt /tmp/gh284/delivery.txt > /tmp/gh284/phase7.txt
+echo "delivery_range=$src"
+echo "----- delivery budget -----"; cat /tmp/gh284/delivery.txt
+n=$(wc -l < /tmp/gh284/delivery.txt); echo "product_files=$n"
+planning=$(grep -c '^doc/planning/oss-tooling/' /tmp/gh284/delivery.txt || true)
+registry=$(grep -c '^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/delivery.txt || true)
+outside=$(grep -vcE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/delivery.txt || true)
 echo "planning_files=$planning registry_files=$registry outside_planning_outside_registry=$outside"
-forbidden=$(grep -vE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/product-files.txt | grep -cE '^(packages|tests|scripts|doc/spec|\.opencode|\.ai)/|(^|/)(package\.json|pnpm-lock\.yaml|tsconfig.*\.json|biome\.json|bunfig\.toml|\.dependency-cruiser\.cjs)$' || true)
+forbidden=$(grep -vE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/delivery.txt | grep -cE '^(packages|tests|scripts|doc/spec|doc/overview|\.opencode|\.ai)/|(^|/)(package\.json|pnpm-lock\.yaml|tsconfig.*\.json|biome\.json|bunfig\.toml|\.dependency-cruiser\.cjs)$' || true)
 echo "forbidden_root_files=$forbidden"
-unexpected=$(grep '^doc/planning/oss-tooling/' /tmp/gh284/product-files.txt | grep -vcE '^doc/planning/oss-tooling/(backlog\.md|status\.md|milestones/README\.md|milestones/m1/commands/[a-z-]+\.md|milestones/m2/)' || true)
+unexpected=$(grep '^doc/planning/oss-tooling/' /tmp/gh284/delivery.txt | grep -vcE '^doc/planning/oss-tooling/(backlog\.md|status\.md|milestones/README\.md|milestones/m1/commands/[a-z-]+\.md|milestones/m2/)' || true)
 echo "unexpected_planning_paths=$unexpected"
-printf '%s\n' 'scripts/checks/forbidden-literals.registry.json' 'scripts/checks/other.ts' | grep -vE '^scripts/checks/forbidden-literals\.registry\.json$' | grep -qE '^scripts/' && echo "matcher_self_test=OK"
-[ "$n" -ge 1 ] && echo "non_vacuous=yes" || echo "non_vacuous=no (no product file changed)"
+echo "----- phase-7 budget -----"; cat /tmp/gh284/phase7.txt
+spec_files=$(grep -c '^doc/spec/' /tmp/gh284/phase7.txt || true)
+overview_files=$(grep -c '^doc/overview/' /tmp/gh284/phase7.txt || true)
+phase7_total=$(wc -l < /tmp/gh284/phase7.txt)
+phase7_extra=$(( phase7_total - 3 ))
+phase7_unknown=$(comm -23 /tmp/gh284/phase7.txt /tmp/gh284/phase7-known.txt | wc -l)
+echo "spec_files=$spec_files overview_files=$overview_files"
+echo "phase7_files=$phase7_total phase7_extra=$phase7_extra phase7_unknown_paths=$phase7_unknown"
+total=$(wc -l < /tmp/gh284/whole.txt); echo "total_product_files=$total"
+# negative matcher: a fourth doc/spec path is outside the allowed three
+printf '%s\n' 'doc/spec/features/feature-resident-daemon.md' 'doc/spec/features/feature-other.md' | LC_ALL=C sort | comm -23 - /tmp/gh284/phase7-known.txt | grep -q '^doc/spec/' && echo "matcher_self_test=OK"
+[ "$total" -ge 1 ] && echo "non_vacuous=yes" || echo "non_vacuous=no (no product file changed)"
 ```
 
 **P29 — per-story body preservation**
@@ -2573,7 +2602,7 @@ echo; echo "##### done"
 | TC-M2PLAN-025 | AC-F9-2 | P25 | `bash` block **P25** (Section 7.1) | Manual Only — uncommitted procedure | All six absent; both relationship checks `MISSING`. |
 | TC-M2PLAN-026 | AC-F10-1 | P26 | `bash` block **P26** (Section 7.1) | Manual Only — uncommitted procedure | `delta=absent` on the pre-change tree; the conforming delta-note fixture prints all ten markers `OK`, including `entrypoint. |
 | TC-M2PLAN-027 | AC-F11-1 | P27 | `bash` block **P27** (Section 7.1) | Manual Only — uncommitted procedure | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. |
-| TC-M2PLAN-028 | AC-NFR1-1 | P28 | `bash` block **P28** (Section 7.1) | Manual Only — uncommitted procedure | `product_files=30`; `planning_files=30`; `registry_files=0`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `matcher_self_test=OK`; `non_vacuous=yes`. |
+| TC-M2PLAN-028 | AC-NFR1-1 | P28 | `bash` block **P28** (Section 7.1) | Manual Only — uncommitted procedure | `delivery_range=whole change minus the three phase-7 paths (equals base. |
 | TC-M2PLAN-029 | AC-NFR2-1 | P29 | `bash` block **P29** (Section 7.1) | Manual Only — uncommitted procedure | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
 | TC-M2PLAN-030 | AC-NFR3-1 | P30 | `bash` block **P30** (Section 7.1) | Manual Only — uncommitted procedure | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. |
 | TC-M2PLAN-031 | AC-NFR4-1 | P31 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary and `exit=0` |
@@ -2590,8 +2619,8 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 
 | Symptom | Meaning | Action |
 |---|---|---|
-| P28 prints `product_files` other than 31, or `registry_files` other than 1 | The 30-file planning set is incomplete, the registry file is missing, or another file was touched (AC-NFR1-1/DEC-21) | Add exactly `scripts/checks/forbidden-literals.registry.json`; revert any other path. |
-| P28 prints `outside_planning_outside_registry>0` or `forbidden_root_files>0` | Containment broken (AC-NFR1-1) | Stop. Revert the out-of-scope path; do not rationalise it as incidental. |
+| P28 prints delivery `product_files` other than 31, `registry_files` other than 1, or `phase7_extra` other than 0 | The delivery budget (30 planning + 1 registry) or the phase-7 three-file budget is wrong (AC-NFR1-1/DEC-22) | Keep delivery at 31 and phase 7 at exactly the three named current-truth docs; revert any other path. |
+| P28 prints `outside_planning_outside_registry>0`, `forbidden_root_files>0`, or `phase7_unknown_paths>0` | Containment broken in either budget (AC-NFR1-1) | Stop. Revert the out-of-scope path; only the three named phase-7 docs may sit under `doc/spec`/`doc/overview`. |
 | P28 prints `non_vacuous=no` | The change is absent, not contained | This is a missing deliverable, not a pass. |
 | P14/P30 print any `OUTSIDE` hunk or a body mismatch | A reconciled page changed outside its status header (AC-F5-4/AC-NFR3-1) | Restore the body byte for byte; only the header region may differ. |
 | P15/P30 print `desc_hunks` other than 1, `outside_desc_hunks>0`, or sentence counts outside 1-2 | The entrypoint edit is broader than one contiguous region of at most two adjacent sentences (AC-F5-4/AC-F6-1) | Restore every other byte; keep the enumeration and registration statements separate and confined to that region. |
@@ -2678,10 +2707,11 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 1.6 | 2026-11-10 | @test-plan-writer | Post-DoR P1 halt: P29 was the third mutually-unsatisfiable gate. **P29:** the shared `entry()` bound now stops at `^---$` and `^## ` as well as `^### `, so the base M2-S9 entry ends at the block close instead of running into Epic M3. Observed: real head, base control, minimal stories-only head, and full amendment+stories head all `stories_compared=65 identical=65 changed=0 order=OK`; negatives `negative_body=detected`, `negative_removed=detected`, `negative_reordered=detected`. **Minors:** TC-008 now states the own-line task shape is the only conforming one (appending into an existing base line gives `base_task_lines_missing=1`); TC-001/TC-003 already consume P03's head-anchored parenthetical, so no stale P1 wording is repeated; this log records the P1 halt and the P29 fix. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 | 1.7 | 2026-11-10 | @test-plan-writer | P4 satisfiability fix. **P26:** the delta-note loop's last token changed from `entrypoint\.md` to `entrypoint.md` (`grep -Fiq` is fixed-string, so the old token required a literal backslash). Conforming fixture `/tmp/sb/.../m2/entrypoint-delta.md` now prints all ten markers `OK`: dispatch, coordinator, state, mcp, daemon, unknown flag, unexpected argument, exit 1, outside this, **entrypoint.md OK**; pre-change real tree remains `delta=absent`. **TC-026** count corrected from eleven to ten. **P11** now bans `Current` on every reconciled header (not only via P13's daemon check); pre-change `current_violations=1` (`daemon.md`), conforming fixture `current_violations=0` / `fixture_conforming=PASS`, and a `Status: Current (GH-224)` doctor fixture yields `doctor.md Current claim (violation)` / `current_violations=1` / `fixture_current_negative=detected`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-6 updated. |
 | 1.8 | 2026-11-10 | @test-plan-writer | P6 halt: forbidden-literals registration. **P28:** expects exactly 31 product files — 30 under `doc/planning/oss-tooling/**` plus `scripts/checks/forbidden-literals.registry.json` — and reports the shape `product_files=31 planning_files=30 registry_files=1 outside_planning_outside_registry=0`; current tree observes `30/30/0/0` (registry missing). **P36:** asserts the twelve `milestones/m2/**` paths are in `registered`, sorted among themselves, duplicate-free, and absent at the corpus baseline; current tree observes `registry_m2=0/12`, `m2_registry_sorted=yes`, `m2_registry_duplicates=0`, `baseline_absent=12/12`, `forbidden_exit=1`, `unregistered_findings=12`; the sorted/duplicate self-tests are `detected`. **P32:** the repo-local run is expected to exit 0 once the registration lands; the lone default-run `ci-baseline-parity` failure remains the only environmental exemption. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-2/G-4/TR-7 updated. |
+| 1.9 | 2026-11-10 | @test-plan-writer | Spec v1.7 (DEC-22) two-budget containment. **P28:** the delivery budget is now `BASE...DELIVERY_HEAD` — or equivalently the whole change minus the three phase-7 paths — and is expected at 31 files (30 planning + 1 registry); the phase-7 budget is exactly the three reconciled current-truth docs (`doc/spec/features/feature-resident-daemon.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/overview/architecture-overview.md`), giving `spec_files=2`, `overview_files=1`, `phase7_extra=0`, `total_product_files=34`. Current tree observes `product_files=31`, `planning_files=30`, `registry_files=1`, `outside_planning_outside_registry=0`, `forbidden_root_files=0`, `unexpected_planning_paths=0`, `spec_files=2`, `overview_files=1`, `phase7_files=3`, `phase7_extra=0`, `phase7_unknown_paths=0`, `total_product_files=34`, `matcher_self_test=OK`. Negative rule extended to `doc/overview/**`; a fourth `doc/spec` path is caught. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; NFR-1 row and triage updated. |
 
 ## 10. Test Execution Log
 
-Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` (pre-change tree). `FAIL` proves the procedure detects the missing deliverable; `PASS (control)` proves a preservation property that must survive the change.
+Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`. Most rows record the first pre-change run (`FAIL` proves the procedure detects the missing deliverable; `PASS (control)` proves a preservation property). TC-M2PLAN-028 was re-run on the current tree after delivery, when the registry and the three phase-7 edits exist, to measure the two-budget split.
 
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
@@ -2712,7 +2742,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-025 | 2026-11-10 | FAIL (change absent) | All six absent; both relationship checks `MISSING`. |
 | TC-M2PLAN-026 | 2026-11-10 | FAIL (change absent) | `delta=absent` on the pre-change tree; the conforming delta-note fixture prints all ten markers `OK`, including `entrypoint.md OK`. |
 | TC-M2PLAN-027 | 2026-11-10 | FAIL (row absent); M0/M1 preservation PASS (control) | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. Row absence is the failing half; row preservation is a passing control. |
-| TC-M2PLAN-028 | 2026-11-10 | FAIL (registry file missing; 30/31 product files) | `product_files=30`; `planning_files=30`; `registry_files=0`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `matcher_self_test=OK`; `non_vacuous=yes`. The planning set is complete; the required registry file is absent, so the shape is 30 of 31. |
+| TC-M2PLAN-028 | 2026-11-10 | PASS (delivery 31 + phase 7 3 = 34) | `delivery_range=whole change minus the three phase-7 paths (equals base..the last delivery commit before phase 7)`; `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; phase-7 list is exactly `doc/overview/architecture-overview.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/spec/features/feature-resident-daemon.md`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`; `non_vacuous=yes`. |
 | TC-M2PLAN-029 | 2026-11-10 | PASS (control) | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
 | TC-M2PLAN-030 | 2026-11-10 | FAIL (entrypoint region unchanged); body preservation PASS (control) | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. The fourteen-body half is a passing control; the entrypoint region is unchanged. |
 | TC-M2PLAN-031 | 2026-11-10 | PASS (control) | `guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`. Passing control. |

@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242, GH-275, GH-241]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242, GH-275, GH-241, GH-284]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -85,7 +85,10 @@ flowchart TB
 Boxes inside the workstation describe runtime responsibilities, not independent
 services. The six workspace packages are libraries/build units, not six running
 containers. The core-to-state arrow is an injected call, not an import permission.
-No typed daemon or background scheduler is established by `packages/`.
+The resident daemon ships as typed contracts, domain folds, and a
+composition-supplied lifecycle family in `packages/`; the production entrypoint
+supplies no daemon runtime, so the shipped CLI starts no resident service.
+Scheduling is one-shot, and no background scheduler exists.
 
 ## Component and feature map
 
