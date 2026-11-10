@@ -1,14 +1,14 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 2.0
+version: 2.1
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T23:55:00Z
+last_updated: 2026-11-10T10:20:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M2 planning surface against spec v1.8: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; delivery containment expects 31 product files (30 planning + one forbidden-literals registry) and phase 7 adds the three reconciled current-truth docs, 34 total; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
+summary: "Docs-only verification of the M2 planning surface against spec v1.9: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; delivery containment expects 31 product files (30 planning + one forbidden-literals registry) and phase 7 adds the three reconciled current-truth docs, 34 total; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
 links:
   change_spec: ./chg-GH-284-spec.md
   implementation_plan: ./chg-GH-284-plan.yaml
@@ -47,7 +47,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.8 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-24, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
+| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.9 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-24, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
 | [`chg-GH-284-pm-notes.yaml`](./chg-GH-284-pm-notes.yaml) | Binding decisions: S17 scope, daemon resolution, 14+1 reconciliation shape, history handling, no distribution marker, index registration, and the v1.1 reopen that replaced the non-existent mermaid validator |
 | GH-284 ticket (`juliusz-cwiakalski/agentic-delivery-os#284`) | Normative story text for the 79-row clause table (P02, P06, P35) and the S17 acceptance list; read at authoring time |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review, never to the permanent suite |
@@ -445,13 +445,13 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Expected Outcome**:
 
-- `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`.
-- Self-test: a one-word goal mutation yields `changed_lines=2 unexpected_lines=2`, proving the oracle flags non-dependency drift.
+- `changed_lines=2 unexpected_lines=0`; `depends=expected` where the line is exactly `- Depends on: M1-S5, M1-S17, M2-S11.` (terminal period required by AC-F3-1); `M2-S4 shape OK`.
+- Self-test: a one-word goal mutation yields `changed_lines=4 unexpected_lines=2`, proving the oracle flags non-dependency drift.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17.)`; `M2-S4 shape FAIL (no amendment)`. Self-test printed `changed_lines=2 unexpected_lines=2`, so the oracle fires.
-- Result label for Section 10: **FAIL (no amendment; oracle self-test passes)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`. Self-test printed `changed_lines=4 unexpected_lines=2`, so the oracle fires on the goal mutation.
+- Result label for Section 10: **PASS (depends line exact, including the period)**.
 
 #### TC-M2PLAN-008 - M2-S6 gains the telemetry task and dependency, nothing else
 
@@ -1716,7 +1716,7 @@ s4_oracle() { # $1 base file, $2 head file
   changed=$(printf '%s\n' "$d" | grep -cE '^[<>]' || true)
   unexpected=$(printf '%s\n' "$d" | grep -E '^[<>]' | grep -vc -- '- Depends on:' || true)
   echo "changed_lines=$changed unexpected_lines=$unexpected"
-  printf '%s\n' "$h" | grep -Fxq -- '- Depends on: M1-S5, M1-S17, M2-S11' && echo "depends=expected" || echo "depends=NOT expected ($(printf '%s\n' "$h" | grep -- '^- Depends on:'))"
+  printf '%s\n' "$h" | grep -Fxq -- '- Depends on: M1-S5, M1-S17, M2-S11.' && echo "depends=expected" || echo "depends=NOT expected ($(printf '%s\n' "$h" | grep -- '^- Depends on:'))"
   [ "$changed" -eq 2 ] && [ "$unexpected" -eq 0 ]
 }
 s4_oracle /tmp/gh284/base-backlog.md "$BL" && echo "M2-S4 shape OK" || echo "M2-S4 shape FAIL (no amendment)"
@@ -2611,7 +2611,7 @@ echo; echo "##### done"
 | TC-M2PLAN-004 | AC-F2-1 | P04 | `bash` block **P04** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent`; `criteria_present=0/7`. |
 | TC-M2PLAN-005 | AC-F2-2 | P05 | `bash` block **P05** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | AC-F2-3 | P06 | `bash` block **P06** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
-| TC-M2PLAN-007 | AC-F3-1 | P07 | `bash` block **P07** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17. |
+| TC-M2PLAN-007 | AC-F3-1 | P07 | `bash` block **P07** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`. |
 | TC-M2PLAN-008 | AC-F3-2 | P08 | `bash` block **P08** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. |
 | TC-M2PLAN-009 | AC-F4-1 | P09 | `bash` block **P09** (Section 7.1) | Manual Only — uncommitted procedure | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. |
 | TC-M2PLAN-010 | AC-F4-2 | P10 | `bash` block **P10** (Section 7.1) | Manual Only — uncommitted procedure | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. |
@@ -2742,10 +2742,11 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 1.8 | 2026-11-10 | @test-plan-writer | P6 halt: forbidden-literals registration. **P28:** expects exactly 31 product files — 30 under `doc/planning/oss-tooling/**` plus `scripts/checks/forbidden-literals.registry.json` — and reports the shape `product_files=31 planning_files=30 registry_files=1 outside_planning_outside_registry=0`; current tree observes `30/30/0/0` (registry missing). **P36:** asserts the twelve `milestones/m2/**` paths are in `registered`, sorted among themselves, duplicate-free, and absent at the corpus baseline; current tree observes `registry_m2=0/12`, `m2_registry_sorted=yes`, `m2_registry_duplicates=0`, `baseline_absent=12/12`, `forbidden_exit=1`, `unregistered_findings=12`; the sorted/duplicate self-tests are `detected`. **P32:** the repo-local run is expected to exit 0 once the registration lands; the lone default-run `ci-baseline-parity` failure remains the only environmental exemption. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-2/G-4/TR-7 updated. |
 | 1.9 | 2026-11-10 | @test-plan-writer | Spec v1.7 (DEC-22) two-budget containment. **P28:** the delivery budget is now `BASE...DELIVERY_HEAD` — or equivalently the whole change minus the three phase-7 paths — and is expected at 31 files (30 planning + 1 registry); the phase-7 budget is exactly the three reconciled current-truth docs (`doc/spec/features/feature-resident-daemon.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/overview/architecture-overview.md`), giving `spec_files=2`, `overview_files=1`, `phase7_extra=0`, `total_product_files=34`. Current tree observes `product_files=31`, `planning_files=30`, `registry_files=1`, `outside_planning_outside_registry=0`, `forbidden_root_files=0`, `unexpected_planning_paths=0`, `spec_files=2`, `overview_files=1`, `phase7_files=3`, `phase7_extra=0`, `phase7_unknown_paths=0`, `total_product_files=34`, `matcher_self_test=OK`. Negative rule extended to `doc/overview/**`; a fourth `doc/spec` path is caught. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; NFR-1 row and triage updated. |
 | 2.0 | 2026-11-10 | @test-plan-writer | Spec v1.8 / review-iter-1 alignment. **F-1 (AC-F10-1):** P26 drops the pointer-from-M1 expectation and asserts the new shape — M1 page is a snapshot, bounded DESCRIPTION correction, no back-pointer claim, forward links to `../m1/commands/entrypoint.md` and all six M2 command pages, reachable via both pack indexes — while keeping the ten composition/evidence/scope tokens. Current observed: `back_pointer_claim=PRESENT (FAIL)`, `description_bound=MISSING`, `m2_command_links=0/6`, all ten tokens `OK`. **F-8 (AC-F5-1):** P11 requires `not mounted at the production entrypoint` on `daemon.md`, `board.md`, and `watchdog.md`, with `doctor.md` exempt and the residual named; current observed `reachability_missing=2` (board, watchdog), conforming fixture `0`/`PASS`, `Current` negative still detected. **F-2:** P17/P18 assert a blank line before the `| Story | Delivery |` table header; current observed `m1_table_blank_before=FAIL` (line 56 pointer), `P18 verdict: FAIL (retention=1 table_block=0)`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-6 and triage updated. |
+| 2.1 | 2026-11-10 | @test-plan-writer | Spec v1.9 AC-F3-1 period fix. P07's exact-line comparison now requires `- Depends on: M1-S5, M1-S17, M2-S11.` (terminal period, per the backlog's convention); TC-007 quotes the same string. Current-tree run: `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`; goal-mutation self-test `changed_lines=4 unexpected_lines=2`. No other oracle changed; traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 
 ## 10. Test Execution Log
 
-Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`. Most rows record the first pre-change run (`FAIL` proves the procedure detects the missing deliverable; `PASS (control)` proves a preservation property). TC-M2PLAN-011/017/018/026/028 were re-run on the current tree after delivery, when the headers, status snapshot, delta note, registry, and phase-7 edits exist.
+Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`. Most rows record the first pre-change run (`FAIL` proves the procedure detects the missing deliverable; `PASS (control)` proves a preservation property). TC-M2PLAN-007/011/017/018/026/028 were re-run on the current tree after delivery, when the headers, status snapshot, delta note, registry, and phase-7 edits exist.
 
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
@@ -2755,7 +2756,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`.
 | TC-M2PLAN-004 | 2026-11-10 | FAIL (change absent) | `S17=absent`; `criteria_present=0/7`. No S17 entry exists in the base tree. |
 | TC-M2PLAN-005 | 2026-11-10 | FAIL (change absent) | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | 2026-11-10 | FAIL (change absent) | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
-| TC-M2PLAN-007 | 2026-11-10 | FAIL (no amendment; oracle self-test passes) | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17.)`; `M2-S4 shape FAIL (no amendment)`. Self-test printed `changed_lines=2 unexpected_lines=2`, so the oracle fires. |
+| TC-M2PLAN-007 | 2026-11-10 | PASS (depends line exact, including the period) | `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`. Self-test printed `changed_lines=4 unexpected_lines=2`, so the oracle fires on the goal mutation. |
 | TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. The identity halves and the conforming-fixture proof pass; the amendment is absent. |
 | TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged. |
 | TC-M2PLAN-010 | 2026-11-10 | PASS (control) | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. Passing control. |

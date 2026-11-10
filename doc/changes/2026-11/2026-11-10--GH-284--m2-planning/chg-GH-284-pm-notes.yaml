@@ -5,7 +5,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-10T18:55:00Z", completed: 2026-11-10T17:50:30.662Z }
   specification: { started: null, completed: 2026-11-10T22:32:37.041Z }
-  test_planning: { started: null, completed: 2026-11-10T22:32:41.180Z }
+  test_planning: { started: null, completed: 2026-11-10T22:40:51.729Z }
   delivery_planning: { started: null, completed: 2026-11-10T22:32:46.016Z }
   dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
   delivery: { started: null, completed: 2026-11-10T21:56:41.400Z }
@@ -568,48 +568,47 @@ notes:
   - text: "REVIEW F-12 (process evidence): phase state is command-owned. The
       `phases:` mirror at the top of this file is written by the phase command
       and is never hand-edited; `delivery-os phase list GH-284` is the
-      authoritative registry. Where the mirror shows a null `started` field or
-      a `clarify_scope` start later than its completion, the registry is
-      correct and the mirror is stale; no timestamp in this file is edited by
-      hand, here or later."
+      authoritative registry. Where the mirror shows a null `started` field or a
+      `clarify_scope` start later than its completion, the registry is correct
+      and the mirror is stale; no timestamp in this file is edited by hand, here
+      or later."
     type: "info"
     date: "2026-11-10"
-  - text: "PLAN PHASE P7 (review remediation) complete: product commit c2594adb
-      and the P7 evidence commit apply review-iter-1 findings F-1, F-2, F-3,
-      F-4, F-6..F-11, F-13, F-15, F-16 and F-18; F-5 is owned outside this plan
-      (a readiness closure record supersedes the NOT_READY verdicts) and F-17
-      is a PR-time action (squash the branch to the phase plus artifact commits,
+  - text: "PLAN PHASE P7 (review remediation) complete: product commit c2594adb and
+      the P7 evidence commit apply review-iter-1 findings F-1, F-2, F-3, F-4,
+      F-6..F-11, F-13, F-15, F-16 and F-18; F-5 is owned outside this plan (a
+      readiness closure record supersedes the NOT_READY verdicts) and F-17 is a
+      PR-time action (squash the branch to the phase plus artifact commits,
       docs: for docs-only commits) - neither is acted on in the diff. Gates at
-      the P7 HEAD: P11 pages=28 header_attribution=14/14
-      reachability_missing=0 tail_violations=0 current_violations=0
-      doctor_reachability=exempt watchdog_m1s15=OK watchdog_sc=OK
-      verify_gates_extension=OK closeout_extension=OK real_headers=PASS; P17
-      and P18 four pointers retained and present, m1_table_blank_before=OK
-      m1_table_separator=OK, removed_lines=0 added_lines=31,
-      pointer_runs=4 pointer_windows=4 bad_runs=0 retention_oracle=OK
-      reference_head_fixture=OK; P34 pointer_groups=4/4
-      sed_line_address_0_errors=0; P26 back_pointer_claim=ABSENT
-      m1_snapshot=OK description_bound=OK forward_m1_link=OK
-      m2_command_links=6/6 readme_reachable=OK and all ten tokens OK; P28
-      product_files=31 planning_files=30 registry_files=1
+      the P7 HEAD: P11 pages=28 header_attribution=14/14 reachability_missing=0
+      tail_violations=0 current_violations=0 doctor_reachability=exempt
+      watchdog_m1s15=OK watchdog_sc=OK verify_gates_extension=OK
+      closeout_extension=OK real_headers=PASS; P17 and P18 four pointers
+      retained and present, m1_table_blank_before=OK m1_table_separator=OK,
+      removed_lines=0 added_lines=31, pointer_runs=4 pointer_windows=4
+      bad_runs=0 retention_oracle=OK reference_head_fixture=OK; P34
+      pointer_groups=4/4 sed_line_address_0_errors=0; P26
+      back_pointer_claim=ABSENT m1_snapshot=OK description_bound=OK
+      forward_m1_link=OK m2_command_links=6/6 readme_reachable=OK and all ten
+      tokens OK; P28 product_files=31 planning_files=30 registry_files=1
       outside_planning_outside_registry=0 forbidden_root_files=0
-      unexpected_planning_paths=0 spec_files=2 overview_files=1
-      phase7_files=3 phase7_extra=0 phase7_unknown_paths=0
-      total_product_files=34; P31 guard_exit=0 planning_markers=0; P36
-      registered_total=139 registry_m2=12/12 forbidden_exit=0
-      '5/5 scope classes scanned, 0 violations' unregistered_findings=0
-      seed_hits=0; P37 changed_planning_files=30 broken_links=0
-      restated_ac_blocks=0; P19/P20/P21/P24/P25/P33 green; full sweep P01-P06,
-      P10, P12-P15, P22, P23, P27, P29, P30, P35 green with
-      clause_scan 61/61 and 79/79, stories_compared=65 identical=65 changed=0,
-      P03 window=1167:1286 blank_separation=OK classifier_self_tests=4/4.
-      One gate expectation is not met: P07 prints
-      'depends=NOT expected (- Depends on: M1-S5, M1-S17, M2-S11.)' because its
-      exact-line grep still compares the period-less string, while spec v1.9
-      AC-F3-1 and task 7.9 require the terminal period (changed_lines=2,
-      unexpected_lines=0 and the shape self-test all pass). The minimal fix is
-      one token in P07 and TC-007 (add the terminal period); the procedure was
-      not edited here. P32 was not re-run: P7 changes only doc/** and change
-      artifacts, no code-adjacent file, so the P6 two-run PASS stands."
+      unexpected_planning_paths=0 spec_files=2 overview_files=1 phase7_files=3
+      phase7_extra=0 phase7_unknown_paths=0 total_product_files=34; P31
+      guard_exit=0 planning_markers=0; P36 registered_total=139
+      registry_m2=12/12 forbidden_exit=0 '5/5 scope classes scanned, 0
+      violations' unregistered_findings=0 seed_hits=0; P37
+      changed_planning_files=30 broken_links=0 restated_ac_blocks=0;
+      P19/P20/P21/P24/P25/P33 green; full sweep P01-P06, P10, P12-P15, P22, P23,
+      P27, P29, P30, P35 green with clause_scan 61/61 and 79/79,
+      stories_compared=65 identical=65 changed=0, P03 window=1167:1286
+      blank_separation=OK classifier_self_tests=4/4. One gate expectation is not
+      met: P07 prints 'depends=NOT expected (- Depends on: M1-S5, M1-S17,
+      M2-S11.)' because its exact-line grep still compares the period-less
+      string, while spec v1.9 AC-F3-1 and task 7.9 require the terminal period
+      (changed_lines=2, unexpected_lines=0 and the shape self-test all pass).
+      The minimal fix is one token in P07 and TC-007 (add the terminal period);
+      the procedure was not edited here. P32 was not re-run: P7 changes only
+      doc/** and change artifacts, no code-adjacent file, so the P6 two-run PASS
+      stands."
     type: "info"
     date: "2026-11-10"
