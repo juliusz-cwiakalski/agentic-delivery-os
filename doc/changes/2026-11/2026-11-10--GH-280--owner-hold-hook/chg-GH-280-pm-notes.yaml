@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-10T15:34:59.866Z }
   review_fix: { started: null, completed: 2026-11-10T17:23:38.920Z }
   quality_gates: { started: null, completed: 2026-11-10T17:36:03.761Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-10T17:36:52.420Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the marker
@@ -555,5 +555,22 @@ notes:
       files; doc-distribution no drift (82 docs); plan validate valid/tier full/
       readyForDevelopment true; pnpm build 6/6 and delivery-os 0.0.0 (build
       dev); git diff --check clean; git status clean."
+    type: info
+    date: 2026-11-10
+  - text: "DoD check (phase 10): pm-notes exists and every phase through
+      quality_gates is completed in the registry; plan validate is valid with 10
+      phases, 44 ACs, and 59 TCs; every declared plan phase (1-10) has a
+      pm-notes note naming its id, commit hash or evidence-commit boundary, and
+      test result; all 44 acceptance criteria are implemented and reviewed PASS
+      (review-iter-3.yaml, 0 critical/high/medium/low, one non-blocking info);
+      current-truth docs are reconciled by @doc-syncer with no residual gaps and
+      the doc-distribution/forbidden-literal/reference-page/help-coverage guards
+      are green; the closed sets move by exactly owner-hold (lane/blocking) and
+      owner-hold (doctor evidence), the inactive goldens are additions only, and
+      the SHA-pinned wrappers are untouched. Residuals owned outside delivery:
+      TC-HOLDE2E-001 is a PR-time operator transcript (GAP-T1); production
+      doctor composition is a pre-existing residual (GAP-T8), with status digest
+      + queue read surfaces carrying the hold in production. DoD passes with
+      those recorded residuals."
     type: info
     date: 2026-11-10
