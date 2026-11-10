@@ -199,7 +199,7 @@ it does not print a zero-valued report.
 
 ## M2-S15 Queue lifecycle completion
 
-### SC-M2-S15-01 Auto-release after closeout
+### SC-M2-S15-01 Auto-removal after closeout
 
 Given a ref with an active queue entry whose work squash-merges and closes
 out, when the closeout completes, then the ref's queue entry is gone without

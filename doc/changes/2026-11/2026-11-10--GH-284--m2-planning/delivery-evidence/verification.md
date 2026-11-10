@@ -258,7 +258,9 @@ the phase-7 budget and bring the change to 34 product files. The single
 ## P7 review remediation evidence
 
 Findings from `code-review/review-iter-1.yaml` and their remediation, with the
-gate that proves each:
+gate that proves each. The rows were re-verified at the P7 continuation head
+after the iteration-2 corrections; they record the current tree, not the state
+at `c2594adb`.
 
 | Finding | Remediation | Gate evidence |
 |---|---|---|
@@ -271,27 +273,7 @@ gate that proves each:
 | F-11 | `m2/architecture.md`: the S17 flow states the daemon-absent degradation and the last boundary invariant repeats it, with the diagram inventory unchanged | P20 flow headings OK; P33 `heading_association=OK`, `flow_headings_with_diagrams=7/7` |
 | F-16 | `backlog.md`: M2-S4's depends line carries the terminal period; the long inserted lines are re-wrapped to the file's convention with every clause intact and each S17 criterion on its own line | P02 `61/61`; P35 `79/79`; P08 `base_task_lines_missing=0`; P09 `order=OK` |
 | F-6 | this file records the two budgets and the DEC-22 split | P28 `31 + 3 = 34` |
-| F-12 | pm-notes gains a note only: the `phases:` mirror is command-owned and `delivery-os phase list GH-284` is authoritative; no timestamp edited | pm-notes parses; no timestamp change |
+| F-12 | pm-notes gains a note only: the `phases:` mirror is command-owned and `delivery-os phase list GH-284` is authoritative; no hand edit was made. `test_planning completed` was refreshed by the phase command, and the stale `clarify_scope` start is a known mirror field the registry overrides | pm-notes parses; no hand-edited timestamp; `test_planning completed` refreshed by the phase command |
 | F-15 | test plan frontmatter `last_updated` now follows `created` | `created=2026-11-10T19:30:00Z`, `last_updated=2026-11-10T23:55:00Z` |
-| F-5 | Not acted on in the diff: a readiness closure record supersedes the two NOT_READY verdicts; no file in this plan's scope is involved | close-out note |
+| F-5 | Not acted on in the diff: the readiness closure record that supersedes the two NOT_READY verdicts is produced by `@readiness-reviewer` (readiness-iter-6 or an equivalent record). It is not in the tree yet, so this row records the outstanding gate; no file in this plan's scope is involved | close-out note; record owned by `@readiness-reviewer` |
 | F-17 | Not acted on in the diff: squashing the 40 branch commits to the phase commits plus artifact commits is a PR-time action | close-out note |
-
-### Known gate discrepancy at the P7 HEAD
-
-Every P7 gate is green at `c2594adb` except one informational token in P07.
-The spec (v1.9, AC-F3-1) and plan task 7.9 require the terminal period on
-M2-S4's depends line, and the line now reads
-`- Depends on: M1-S5, M1-S17, M2-S11.`. P07's exact-line comparison still
-greps the period-less string, so it prints:
-
-```
-changed_lines=2 unexpected_lines=0
-depends=NOT expected (- Depends on: M1-S5, M1-S17, M2-S11.)
-```
-
-The functional checks pass (two changed lines, no unexpected line, shape OK,
-mutation self-test detected), and the 79-row anchor table still matches the
-line. The minimal fix is one token in the test plan: compare
-`- Depends on: M1-S5, M1-S17, M2-S11.` (add the terminal period) in P07 and in
-TC-007's recorded evidence. The procedure was not edited here, per the
-remediation brief.

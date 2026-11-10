@@ -45,7 +45,7 @@ exit 1
 - `spend` gains the v2 breakdowns and the reconciliation disclosure.
 - `queue` keeps the delivered lease release and gains the reason-bearing entry
   removal, the `dep add` and `dep remove` grammar extension, and automatic
-  release on merge and closeout.
+  removal on merge and closeout.
 - `board` becomes the full cross-repository board and is mounted by M2-S4.
 
 These additions are planned; the root listing changes only when the owning

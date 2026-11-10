@@ -41,8 +41,8 @@ squash merge and closeout the ref's entry is removed automatically with reason
 `queue dep <ref> <on-ref>` is the delivered two-positional add. M2 makes it
 explicit as `dep add` and adds `dep remove`; both forms edit one dependency
 edge and recompute the ready set, and the two-positional spelling stays valid.
-`reconcile` compares stale entries with tracker truth and removes or releases
-them without editing state files by hand. Every mutation publishes a
+`reconcile` compares stale entries with tracker truth and removes them with
+the `reconciled` reason without editing state files by hand. Every mutation publishes a
 `queue.graph` event.
 
 Single-flight is enforced across dispatch paths, not only through the queue:
@@ -59,7 +59,7 @@ spelling, and `reconcile` are planned for M2-S15. See
 | Option | Meaning |
 |---|---|
 | `--holder <id>` | On `release`: the lane whose lease is released; omitted, the caller's lane is used. |
-| `--park <cause>` | On `release`: park the entry with a delivered park cause (`provider-window`, `provider-quota`, `preempted-for-close-item`). |
+| `--park <cause>` | On `release`: park the entry with a delivered park cause (`provider-window`, `provider-quota`, `preempted-for-close-item`); S17 adds `peak-window` and `owner-hold` — see [../contracts.md](../contracts.md). |
 | `--until <iso>` | On `release`: the timestamp at which the park condition is expected to clear. |
 | `--reason <reason>` | Required on `remove`: `landed`, `abandoned`, `superseded`, or `reconciled`. |
 | `--ref <ref>` | Scope `reconcile` to one ref. |

@@ -105,7 +105,7 @@ flowchart LR
         BREAK[spend v2 breakdowns<br/>ticket, repository, lane,<br/>agent role, model, timing]
     end
     subgraph lifecycle [lifecycle components]
-        REL[release and remove<br/>with reasons]
+        REL[lease release / remove with reason]
         DEP[dependency edge editor]
         SINGLE[single-flight guard<br/>one active lane per ref]
         STALE[stale-entry reconciler]
@@ -176,7 +176,7 @@ flowchart LR
 ```mermaid
 flowchart LR
     A[merge transaction lands] --> B[closeout completes]
-    B --> C[release the ref's queue entry<br/>reason: landed]
+    B --> C[remove the ref's queue entry<br/>reason: landed]
     C --> D{dependency edges}
     D -->|dependents now ready| E[ready set recomputed]
     D -->|no dependents| F[queue unchanged]
