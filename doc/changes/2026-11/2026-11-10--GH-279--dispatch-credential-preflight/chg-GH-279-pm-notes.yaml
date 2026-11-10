@@ -228,6 +228,22 @@ notes:
       parity all green. doc-distribution guard green; git diff --check clean."
     type: info
     date: 2026-11-10
+  - text: "Review iteration 1: FAIL (spec compliance PASS, plan compliance FAIL).
+      F-1 commit subjects (medium) accepted under D9: primitive template subjects,
+      no history rewrite. F-2..F-10 remediated in plan phase 9. Full suite at
+      review time 6973 pass / 4 skip / 0 fail."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). All ten prior
+      findings fixed or accepted; one new low doc finding F-11 (human status
+      grammar missing the trailing prerequisite suffix). F-11 reconciled in
+      doc/spec/features/feature-status-digest.md under Phase 8 spec-reconciliation
+      scope. The aggregate gate run during review flaked only on the unrelated
+      tests/checks/privacy-ci-wiring.test.ts timing out at ~5.2s under host load;
+      it passes in isolation (4.4s) and the change-relevant 6975 tests pass. The
+      quality_gates phase re-runs the gate."
+    type: info
+    date: 2026-11-10
   - text: "Scope reconciliation (review F-5): the nine files changed outside the
       original phase scopes are now declared — packages/core/src/app/index.ts in
       Phase 5 and, in Phase 8, doc/overview/glossary.md,

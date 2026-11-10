@@ -1,0 +1,207 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-279
+branch: fix/GH-279/dispatch-credential-preflight
+status: PASS
+summary: >-
+  Re-review of the iteration-1 remediation (commit 27186b8c) on
+  fix/GH-279/dispatch-credential-preflight, diff 78e61207..HEAD (73 files, 8669
+  insertions). F-2, F-3, F-4, F-5, F-6, F-7, F-9, and F-10 are verified fixed at
+  their original sites; F-1 is accepted under pm-notes D9 (history unchanged: the
+  same 20 delivery commits plus the remediation commit, 21 total, ca4aa1a8's
+  doubled prefix retained, and no tree change made for the acceptance) and F-8 under pm-notes
+  D10, both recorded in the change record and the plan's phase-9 evidence. A
+  scripted scope check shows 0 of the 73 changed files outside the declared
+  phase scopes (the nine consequential files and seven reconciled feature specs
+  are now declared), and plan validate reports valid, tier full,
+  readyForDevelopment=true over nine phases. Remediation source changes are
+  limited to the narrowed unreadableTruthReason (tracker|artifact|undefined), the
+  human prerequisite suffix in renderStatusHuman, and removal of the sentinel's
+  package-root export; preflight ordering, error typing, resolve typing,
+  divergence semantics, secret non-disclosure, help inventory, and the status
+  machine contract are unchanged. One new low documentation gap remains: the
+  status feature spec's exact human grammar does not mention the prerequisite
+  suffix added by F-9. Aggregate gate note: TMPDIR=$PWD/tmp/tmpdir pnpm check was
+  run twice on this host, both exit 1 with one failure - tests/checks/privacy-ci-wiring.test.ts
+  TC-WIRE-002 timing out at 5165ms and 5498ms against the 5s default; that file
+  and scripts/checks/privacy-literals.ts are untouched by this change, the same
+  case passes in isolation in 4.44s, all other 6975 tests pass, and the
+  pm-notes-recorded run of the same tree is 6976 pass / 4 skip / 0 fail, so this
+  is an environment-load flake, not a GH-279 regression; quality_gates must
+  re-run the aggregate gate on an unloaded runner.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-11
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: "doc/spec/features/feature-status-digest.md:274-291"
+    message: >-
+      The F-9 fix appends ` | requires <sourceKey> (<referenceName>)` to every
+      affected human status line (packages/core/src/domain/status.ts:1866-1873
+      and the eight renderStatusHuman call sites), but the system status spec's
+      "exact grammar" block and the surrounding human-mode prose still document
+      only the plain section lines, truncation, and reason suffixes. The spec is
+      therefore narrower than the delivered human output, and Phase 9 does not
+      include the spec file, so this reconciliation cannot be booked there.
+    suggestion: >-
+      Add the optional trailing prerequisite suffix to the human grammar block
+      and prose in doc/spec/features/feature-status-digest.md (on a section whose
+      evidence carries credentialPrerequisite, names only), and either add the
+      file to the Phase 9 scope or record the doc reconciliation in a pm-notes
+      entry. Documentation only; no behaviour change and no AC/TC impact.
+    suppressed: false
+fold_verifications:
+  - id: F-1
+    verdict: ACCEPTED
+    evidence:
+      - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-pm-notes.yaml (decisions, D9)"
+      - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md:106-108"
+      - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-plan.yaml:607"
+    note: >-
+      History is not rewritten: 78e61207..HEAD carries the same 20 delivery
+      commits with the primitive template subjects (including ca4aa1a8's doubled
+      'docs(GH-279):' prefix) plus the remediation commit 27186b8c (21 total).
+      The acceptance is recorded as pm-notes D9, in the review
+      remediation table, and in the Phase 9 verification; no source or tree
+      change was made to satisfy F-1.
+  - id: F-2
+    verdict: CLOSED
+    evidence:
+      - "packages/core/src/app/dispatch.ts:285-298"
+      - "tests/behaviour/dispatch-delivered-evidence-divergence.test.ts:116-124"
+    note: >-
+      unreadableTruthReason now returns only the reachable 'tracker' | 'artifact'
+      | undefined; the ledger member was removed because isDeliveredEvidence
+      already requires a readable ledger, and a ci-only failure contributes no
+      truth:unreadable reference instead of being mislabelled 'state'. Production
+      dispatchTruth assigns reasons by family (production.ts:896-941), so the
+      emitted truth:unreadable values are unchanged for every reachable path.
+      TC-DIVREC-002 adds the ci-only negative.
+  - id: F-3
+    verdict: CLOSED
+    evidence:
+      - "tests/behaviour/doctor-tracker.test.ts:54-118"
+      - "packages/cli/src/edge.ts:2543-2556,2614-2618"
+    note: >-
+      TC-DOCTCRED-002 drives createDoctorCommandRuntime with an
+      'environment-prefixed' sourceKey and SYNTHETIC_BRAND.environmentPrefix,
+      then asserts the derived EXAMPLE_PRODUCT_TRACKER_TOKEN reaches the hint and
+      the bare TRACKER_TOKEN does not. The production edge derivation is now
+      exercised, not injected pre-derived.
+  - id: F-4
+    verdict: CLOSED
+    evidence:
+      - "packages/core/src/app/dispatch-ledger.ts:238"
+      - "packages/core/src/app/dispatch-gate.ts:26-33"
+      - "packages/core/src/index.ts (no DISPATCH_DIVERGENCE_NOT_FOUND export)"
+      - "packages/core/src/app/index.ts (no DISPATCH_DIVERGENCE_NOT_FOUND export)"
+    note: >-
+      The sentinel stays module-local in app/dispatch-ledger; dispatch-gate and
+      the tests import it from that module. The content-inventory allowance
+      remains because it is file-scoped to the module export, not the package
+      root, matching the Phase 9 evidence.
+  - id: F-5
+    verdict: CLOSED
+    evidence:
+      - "chg-GH-279-plan.yaml Phase 5 and Phase 8 scope.files"
+      - "chg-GH-279-pm-notes.yaml scope-reconciliation note (nine files, seven feature specs)"
+    note: >-
+      Scripted comparison of git diff --name-only 78e61207..HEAD (73 files)
+      against every declared phase scope.files/folders/packages reports 0 files
+      outside scope. The Phase 8 scope now declares the glossary, the dispatch
+      test spec, both additionally reconciled feature specs, the
+      forbidden-literals registry, the e2e test, the queue harness, and the
+      content-inventory test; the pm-notes entry says seven feature specs, not
+      five.
+  - id: F-6
+    verdict: CLOSED
+    evidence:
+      - "tests/behaviour/dispatch-admission-read-mapping.test.ts:26-63,199-214"
+      - "tests/fixtures/dispatch/golden/errors/*.json"
+    note: >-
+      All five goldens now carry kind and projectionClass (values match the
+      error-table rows: provider.auth.rejected and the config/input rows are
+      user-validation, provider.outage and provider.payload.invalid are
+      platform-provider). assertGolden classifies the pair with classifyThrown
+      and pins code, domainKind, projectionClass, and exit; TC-READMAP-008 adds
+      the projection per pair.
+  - id: F-7
+    verdict: CLOSED
+    evidence:
+      - "chg-GH-279-change-record.md:67-87"
+      - "chg-GH-279-plan.yaml Phase 8 manual-verification line"
+    note: >-
+      MV-1/MV-2/MV-3 are now recorded as operator-executed PR-time procedures
+      with explicit artifact, tracker, and CI corroboration columns and stated
+      acceptance tokens. Execution remains PR-time and is recorded as such; no
+      delivery-time gate depends on observed facts.
+  - id: F-8
+    verdict: ACCEPTED
+    evidence:
+      - "chg-GH-279-pm-notes.yaml (decisions, D10)"
+      - "chg-GH-279-change-record.md:115"
+      - "packages/cli/src/entrypoint.ts:12"
+      - "packages/adapters/src/credentials/index.ts:38-79"
+    note: >-
+      Accepted under D10. The import is the pure resolveCredentialSourceKey;
+      process.env is read only inside createProcessCredentialPort's function body,
+      never at module load, so the runtime-neutral entrypoint executes no ambient
+      read. No refactor made, as decided.
+  - id: F-9
+    verdict: CLOSED
+    evidence:
+      - "packages/core/src/domain/status.ts:1862-1873,1985-2085"
+      - "tests/behaviour/status-credential-prerequisite.test.ts:96-118"
+    note: >-
+      renderStatusHuman appends ' | requires <sourceKey> (<referenceName>)' on
+      every section line whose evidence carries credentialPrerequisite, names
+      only (never the value), and TC-STATCRED-001 asserts the tracker, changes,
+      and ready lines carry GITHUB_TOKEN (github-read) without --json while the
+      occurrence count equals the affected-section count. The machine digest and
+      its goldens are unchanged. Residual F-11 covers the missing system-spec
+      grammar update.
+  - id: F-10
+    verdict: CLOSED
+    evidence:
+      - "tests/behaviour/providers/github-inputs.test.ts:161"
+      - "tests/structure/cli-edge-seam.test.ts:277,300"
+    note: >-
+      TC-READMAP-010 and TC-CREDNAME-006 now appear in the test names; the
+      plan-to-test trace is grep-verifiable.
+verification_commands:
+  - command: "git diff --check 78e61207..HEAD"
+    result: "exit 0 — no whitespace errors or conflict markers"
+  - command: "bun packages/cli/bin/delivery-os.ts plan validate GH-279"
+    result: "verdict=valid, artifact=yaml:chg-GH-279-plan.yaml, tier=full, readyForDevelopment=true (9 phases)"
+  - command: "scripted scope check: git diff --name-only 78e61207..HEAD vs every phase scope"
+    result: "73 changed files, 0 outside declared scope"
+  - command: "TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-ci-wiring.test.ts -t 'the command is read-only, deterministic'"
+    result: "PASS — 1 pass / 0 fail, 4.44s (the aggregate-only timeout is load-induced)"
+  - command: "TMPDIR=$PWD/tmp/tmpdir pnpm check (run 1)"
+    result: "FAIL — 6975 pass / 4 skip / 1 fail across 862 files (521.43s); sole failure TC-WIRE-002 timed out after 5165.09ms. All change-relevant suites green."
+  - command: "TMPDIR=$PWD/tmp/tmpdir pnpm check (run 2)"
+    result: "FAIL — 6975 pass / 4 skip / 1 fail across 862 files (503.19s); same sole failure, 5497.60ms. Confirms the same environment-load timeout, not a code regression."
+  - command: "pm-notes-recorded aggregate run of the same tree (phase 9 completion note)"
+    result: "6976 pass / 4 skip / 0 fail (862 files) — the gate is green on an unloaded runner"
+ready_for:
+  quality_gates: true
+  dod_check: true
+  notes: >-
+    No GH-279 code regression: all 6975 change-relevant tests pass. The two local
+    aggregate failures are the same pre-existing tests/checks/privacy-ci-wiring.test.ts
+    TC-WIRE-002 5s default timeout (untouched by this change, passes in 4.44s in
+    isolation); re-run TMPDIR=$PWD/tmp/tmpdir pnpm check on an unloaded runner
+    before/at quality_gates. Apply or explicitly defer F-11 (system-spec human
+    grammar). MV-1/MV-2/MV-3 remain PR-time obligations with their corroboration
+    fields recorded in the change record and must be attached at pr_creation.
+reviewed_at: 2026-11-10T10:52:45Z
+next_step: "PROCEED — all iteration-1 findings are fixed or accepted (F-1/D9, F-8/D10) with no regression; apply the low F-11 system-spec human-grammar reconciliation (or record it) and re-run the aggregate gate on an unloaded runner at quality_gates; attach MV-1..3 corroboration at pr_creation."
