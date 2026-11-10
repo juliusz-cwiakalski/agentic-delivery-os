@@ -9,9 +9,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import {
+  DELIVERY_RESULT_TOKENS,
   DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
+  HARNESS_FAILURE_CODES,
 } from "../../packages/core/src/contracts/index";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
@@ -36,8 +38,15 @@ describe("TC-ERR-001 spawn failure classifies as dispatch.session.spawn-failed",
         category: "user",
         consequence: "not_landed",
       });
+      expect(run.envelope?.data?.error?.retryable).toBe(false);
+      expect(run.envelope?.data?.error?.detail).toEqual({
+        kind: "harness",
+        code: "harness.spawn.refused",
+      });
+      expect(Object.hasOwn(run.envelope?.data?.error?.detail ?? {}, "field")).toBe(false);
       expect(run.envelope?.data?.result).toBe("failed");
       expect(run.envelope?.data?.outcome).toBe("failed");
+      expect(run.envelope?.data?.lastMessage).toBe("spawn failed before a session existed");
       const record = attemptOf(scenario);
       expect(record?.token).toBe("failed");
       expect(record?.outcome).toBe("failed");
@@ -58,6 +67,9 @@ describe("TC-ERR-001 spawn failure classifies as dispatch.session.spawn-failed",
     const row = entries.find((entry) => entry.code === "dispatch.session.spawn-failed");
     expect(row).toBeDefined();
     expect(DOMAIN_KINDS).toContain("dispatch");
+    expect(HARNESS_FAILURE_CODES).toHaveLength(9);
+    expect(DELIVERY_RESULT_TOKENS).toHaveLength(11);
+    expect(entries.some((entry) => entry.code.includes("detail"))).toBe(false);
     const doc = readFileSync(
       join(process.cwd(), "doc/spec/features/feature-result-contract.md"),
       "utf8",

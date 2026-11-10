@@ -6,10 +6,10 @@ last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021"]
 ---
 
 # Feature: Configuration Layer and Inspection
@@ -258,13 +258,15 @@ deny-by-default environment allowlist.
 | `harness.execution.kind` | string | `host` | Execution-environment kind; the closed set is `host`. An unknown value is `config.value.invalid` naming `harness.execution.kind`. |
 | `harness.stores.opencode.databasePath` | string | `.local/state/opencode/opencode.db` | Read-only opencode session-store location. A non-string or empty path is `config.value.invalid`. |
 | `harness.stores.claude-code.sessionDirectory` | string | `.local/state/claude-code` | Read-only Claude Code session-file directory. A non-string or empty path is `config.value.invalid`. |
-| `harness.environment` | array of `{ name, credentialRef? }` | `HARNESS_MODEL`, `HARNESS_SMALL_MODEL`, `DELIVERY_WORK_PATH` names only | The complete child-environment allowlist. Each entry carries a variable name and an optional credential reference; a literal `value` field is rejected by `config.secret.forbidden`, and extra keys are `config.value.invalid`. |
+| `harness.environment` | array of `{ name, optional? }` or `{ name, credentialRef }` | `PATH`, `HOME`, and `DELIVERY_WORK_PATH` required; `TMPDIR` optional | The complete child-environment allowlist. A variable entry carries a name plus the additive `optional` boolean; a credential entry carries a name plus a credential reference. Absent or `false` `optional` means required, so an absent value fails the spawn closed with `harness.spawn.variable-missing` naming the variable in `field`; `true` means an absent value is omitted and a present value is forwarded. The marker is variable-only: a credential entry carrying it, a non-boolean marker, an extra key, or an unknown key is `config.value.invalid`, and a literal `value` field is `config.secret.forbidden`. The shipped default declares `PATH`, `HOME`, and the injected `DELIVERY_WORK_PATH` as required and `TMPDIR` as optional; it declares no model variable, so model selection belongs to the harness's own configuration and no ambient provider-model environment variable is mapped or forwarded. |
 
 An absent branch resolves to the shipped defaults with `defaults` origins. A
 declared branch validates against the closed kinds and store-path rules; an
 unknown branch key fails exact-key discipline. Credential references resolve
 through the credential port at use time and never carry secret material in
-configuration. The configured-kind registry separately validates that exactly
+configuration. The optional marker is the supported way to declare a variable
+that may legitimately be absent, and it never applies to a credential entry. The
+configured-kind registry separately validates that exactly
 the two shipped harness kinds are registered, so a vocabulary drift fails
 instead of defaulting. See [Harness Adapters](feature-harness-adapters.md).
 

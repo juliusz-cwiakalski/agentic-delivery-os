@@ -33,6 +33,21 @@ export const renderDispatchText = (data: DispatchEnvelopeData): string =>
     `last_message=${singleLine(data.lastMessage)}`,
   ].join("\n")}\n`;
 
+/**
+ * The bounded verbose human diagnostic (DM-4, F-5): the four delivered keys
+ * plus prose naming the underlying harness failure identity. The diagnostic is
+ * not a `key=value` line, so the four-key text contract stays intact.
+ */
+export const renderDispatchVerboseText = (data: DispatchEnvelopeData): string => {
+  const detail = data.error?.detail;
+  const lines = renderDispatchText(data).trimEnd().split("\n");
+  if (detail !== undefined) {
+    const field = detail.field === undefined ? "" : ` at ${singleLine(detail.field)}`;
+    lines.push(`detail: ${singleLine(detail.kind)} failure ${singleLine(detail.code)}${field}`);
+  }
+  return `${lines.join("\n")}\n`;
+};
+
 /** The multi-line summary text; bounded and deterministic. */
 export const renderDispatchSummaryText = (data: DispatchSummaryData): string => {
   const lines = [

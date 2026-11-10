@@ -1,0 +1,130 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-277
+branch: fix/GH-277/harness-default-allowlist
+status: FAIL
+summary: >-
+  The functional repair is correct and well covered: the shipped default now
+  declares PATH/HOME required, TMPDIR optional and DELIVERY_WORK_PATH injected;
+  the deny-by-default builder omits an absent optional entry and still fails
+  closed naming a required one; no OC_ADOS_* is forwarded; the pre-session spawn
+  failure keeps its identity and carries a bounded harness kind/code/field
+  detail in machine JSON and verbose human output while non-verbose text stays
+  four keys. All targeted behaviour/structure suites and the workspace
+  typecheck pass. However, the later system_spec_update docs edits introduced
+  two forbidden brand literals (`OC_ADOS_*` matches the forbidden seed `ADOS_`)
+  into registered user-facing docs, so the delivered HEAD fails
+  `tests/checks/forbidden-literals.test.ts` (2 tests) and the CI
+  `ts-forbidden-literals` scan. That red gate violates NFR-9/DoD-12 and blocks
+  merge, so the change is not PASS.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 4
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: compliance
+    location: doc/spec/features/feature-config-layer.md:259
+    message: >-
+      BLOCKING. The new prose "no `OC_ADOS_*` value is mapped or forwarded"
+      (and the same token at doc/spec/features/feature-harness-adapters.md:227)
+      contains `ADOS_`, which matches the repository forbidden seed literal.
+      `bun run scripts/checks/forbidden-literals.ts` reports two violations and
+      `bun test tests/checks/forbidden-literals.test.ts` now fails two tests, so
+      `pnpm test`/`pnpm check` (NFR-9, DoD-12) and the CI jobs
+      `ts-forbidden-literals`, `ts-test`, and `ts-aggregate` are red at HEAD.
+      The regression was introduced by the system_spec_update docs commit after
+      the P4 aggregate gate, and the P4 "6612 pass / 0 fail" evidence no longer
+      holds for the delivered HEAD.
+    suggestion: >-
+      Reword both doc lines to avoid the `ADOS_` token, for example "no ambient
+      provider-model environment variable is mapped or forwarded" or "no
+      ambient model-selection variable is mapped or forwarded"; keep the exact
+      `OC_ADOS_MAIN_MODEL`/`OC_ADOS_SMALL_MODEL` names only in
+      doc/decisions/TDR-0021 (allowlisted) and the change artifacts (excluded).
+      Alternatively add a sanctioned allowlist entry if the names must appear in
+      current-truth docs. Then re-run `bun run scripts/checks/forbidden-literals.ts`
+      and the aggregate gate.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: maintainability
+    location: tests/fixtures/harness/config/optional-entry.yaml:1
+    message: >-
+      The new fixture is never referenced. The test plan (§7.1/§7.2) says
+      TC-HDA-021 and TC-HDA-022 use it, but the tests build the optional entry
+      inline (harness-config.test.ts `validHarnessValues`, config-cli.test.ts
+      `committed(...)`). Dead test fixture.
+    suggestion: >-
+      Either reference it with `resolveFixture("optional-entry.yaml")` in a
+      config test (matching the two invalid-optional fixtures) or delete the
+      file and drop it from the plan/test-plan file maps.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/fixtures/harness/default-spawn.ts:81
+    message: >-
+      `createControlledParent` creates its root with
+      `mkdtempSync(join(tmpdir(), "gh277-default-spawn-"))` (system temp), while
+      test-plan §6.2 requires every filesystem-touching suite to root under the
+      repo-local `join(ROOT, "tmp", "tmpdir")`. Under a plain `bun test` the
+      suite writes outside the intended sandbox; it only lands in the repo-local
+      root when the aggregate gate sets TMPDIR.
+    suggestion: >-
+      Build the root under `join(process.cwd(), "tmp", "tmpdir")` (creating the
+      directory first) as the config-artifact suite does, so plain `bun test`
+      and the gated run behave identically.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: testing
+    location: packages/core/src/app/dispatch.ts:211
+    message: >-
+      The `detailOf` truncation loop (field then code slicing to fit
+      DISPATCH_MAX_ERROR_DETAIL_CHARS) is not exercised by any test. TC-HDA-034's
+      "over-bound field or a newline" case asserts only that a raw hand-built
+      object is over the bound; no dispatch path is fed an over-long field/code,
+      so a regression in the clamp would pass unnoticed.
+    suggestion: >-
+      Add a dispatch-level case that injects a `HarnessFailure` with an
+      over-256-character `field` (and/or `code`) and assert the emitted
+      `data.error.detail` is single-line and `JSON.stringify(detail).length <=
+      DISPATCH_MAX_ERROR_DETAIL_CHARS`, with the field still identified by a
+      prefix.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-pm-notes.yaml:225
+    message: >-
+      Plan-phase 4 completion evidence does not name its commit hash; it says
+      "commit recorded in the delivery report" (P1/P2/P3 name their hashes).
+      The changeset and TDR-0021 landed in e7699431, and the test-plan execution
+      log landed in later commits, so the P4 boundary evidence is not directly
+      traceable from pm-notes.
+    suggestion: >-
+      Add the P4 commit hash (e7699431 for the changeset/TDR, plus the test-plan
+      log commit) to the P4 `notes:` entry so per-phase evidence satisfies the
+      plan-audit rule.
+    suppressed: false
+reviewed_at: 2026-11-09T10:56:20Z
+next_step: >-
+  EXECUTE_REMEDIATION_PHASE — fix F-1 (reword the two doc/spec lines to remove
+  the ADOS_ literal or add a sanctioned allowlist entry) in the
+  system_spec_update output, then re-run `bun run
+  scripts/checks/forbidden-literals.ts` and the aggregate gate
+  (`TMPDIR=$PWD/tmp/tmpdir pnpm check`). F-2..F-5 are non-blocking follow-ups in
+  the same remediation. No product code change is required for the blocking
+  defect.

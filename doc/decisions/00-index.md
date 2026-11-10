@@ -44,3 +44,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0018](TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md) | TDR | Coordinator Artifact-Evidence Stuck Detection and Owner-Brief Exhaustion Escalation | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |
 | [TDR-0019](TDR-0019-dispatch-admission-credential-preflight.md) | TDR | Dispatch Admission Credential Preflight — Pre-Session Refusal, Named Source, Documentation-Only Bridge | Proposed | 2026-11-10 | Juliusz Ćwiąkalski |
 | [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md) | TDR | Dispatch Divergence Recording and Resolution — Delivered-Evidence Divergence (TDR-0015 Amendment) and Local-Evidence-Only Resolve | Proposed | 2026-11-10 | Juliusz Ćwiąkalski |
+| [TDR-0021](TDR-0021-additive-optional-harness-environment-marker.md) | TDR | Additive Optional Marker on Declared Harness Environment Variables | Proposed | 2026-11-09 | Juliusz Ćwiąkalski |

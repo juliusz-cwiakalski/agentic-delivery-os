@@ -1,0 +1,545 @@
+change_id: GH-277
+title: "fix(harness): default spawn allowlist cannot start opencode (missing
+  PATH/HOME, requires unset HARNESS_* model vars)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-09T02:56:51.444Z }
+  specification: { started: null, completed: 2026-11-09T05:57:52.383Z }
+  test_planning: { started: null, completed: 2026-11-09T05:57:58.420Z }
+  delivery_planning: { started: null, completed: 2026-11-09T05:58:03.874Z }
+  dor_check: { started: null, completed: 2026-11-09T06:06:41.220Z }
+  delivery: { started: null, completed: 2026-11-09T10:31:06.980Z }
+  system_spec_update: { started: null, completed: 2026-11-09T10:44:09.188Z }
+  review_fix: { started: null, completed: 2026-11-10T07:19:06.028Z }
+  quality_gates: { started: null, completed: 2026-11-10T07:34:13.291Z }
+  dod_check: { started: null, completed: 2026-11-10T07:35:32.448Z }
+  pr_creation: { started: null, completed: 2026-11-10T07:39:28.247Z }
+decisions:
+  - text: "DEC-1: default allowlist becomes PATH and HOME required, TMPDIR optional,
+      DELIVERY_WORK_PATH required and injected by composition."
+    date: "2026-11-09"
+  - text: "DEC-2: drop HARNESS_MODEL/HARNESS_SMALL_MODEL from the default required
+      set; no OC_ADOS_* mapping because no production code consumes the
+      HARNESS_* names and opencode resolves models from its own configuration."
+    date: "2026-11-09"
+  - text: "DEC-3: additive optional marker on a variable allowlist entry only;
+      credentials stay required. Governed by TDR-0021."
+    date: "2026-11-09"
+  - text: "DEC-4: keep dispatch.session.spawn-failed identity and the four-key text
+      contract; add an additive DispatchEnvelopeError.detail carrying the
+      underlying harness kind/code/field."
+    date: "2026-11-09"
+  - text: "DEC-5: version_impact minor; exactly one added changeset declaring the
+      five fixed-group packages at minor."
+    date: "2026-11-09"
+open_questions:
+  - id: OQ-1
+    text: "Does the additive optional marker on the harness environment contract
+      require a standalone decision record under the delivered additive
+      adapter-contract rule (TDR-0008, TDR-0016), or is the change decision log
+      sufficient? The marker is type-only, additive, and reversible, but
+      TDR-0016 states that adding types to
+      packages/core/src/contracts/harness.ts is the class the record-governed
+      rule covers."
+    status: "Resolved 2026-11-09: a standalone record is required; TDR-0021 authored
+      (status Proposed, owner acceptance at the GH-277 PR review). Spec DEC-3
+      and §13 cite it."
+    date: "2026-11-09"
+  - id: OQ-2
+    text: "Does opencode require any environment variable beyond PATH, HOME, and
+      optionally TMPDIR to boot on the supported POSIX profile? The bounded real
+      dispatch proof is the evidence source; any discovered required variable
+      must join the default set before delivery closes."
+    status: "Open, evidence needed from the real dispatch proof; non-blocking for
+      specification."
+    date: "2026-11-09"
+blockers:
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md,
+      readiness/readiness-iter-1.yaml): 0 critical / 6 major / 6 minor / 2 nit.
+      Blocking: (1) spec omits the second public-contract change — threading the
+      parsed verbose fact into CommandDefinition.humanText (DM-4 + §8.5); (2)
+      the spawn-failure golden
+      tests/fixtures/dispatch/golden/errors/spawn-failed.json gains detail and
+      is in no phase scope; (3) TC-HDA-030 step 8 assumes a spawn failure with
+      neither code nor field, impossible because HarnessFailure requires both;
+      (4) the §6.3 E2E proof shares the live HOME state root and force-releases
+      the GH-277 dispatch lease; (5) the 'byte-identical worktree' claim ignores
+      pnpm build and the clone node_modules symlink; (6) no Definition of Done
+      section (§17.1) for dod_check. Reopened specification, test_planning and
+      delivery_planning; delivery not entered."
+    type: blocker
+    date: "2026-11-09"
+  - text: "DoR iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md): 0
+      critical / 3 major / 3 minor / 2 nit. All six iteration-1 findings
+      verified fixed. New blocking: (A) the E2E asserts absolute git-clean but
+      P4's own artifacts (untracked TDR-0021, new changeset) are uncommitted
+      during the probe; (B) DoD-6 says 'mutates no file' while the procedure
+      runs pnpm build, which rewrites gitignored dist; (C) plan P2 omits the
+      contract inventories that pin the new DispatchEnvelopeError export and the
+      exported 256 bound (tests/structure/port-contract-inventory.test.ts +
+      tests/fixtures/ports/v1-contract-inventory.json,
+      tests/structure/content-inventory.test.ts) and P2 runs no test gate.
+      Reopened specification, test_planning and delivery_planning."
+    type: blocker
+    date: "2026-11-09"
+  - text: "DoR iteration 3 = NOT_READY (readiness-review/readiness-iter-3.md): the
+      three iteration-2 findings are verified fixed; one new major remains — the
+      contract inventory fixture must gain a second new export
+      (DISPATCH_MAX_ERROR_DETAIL_CHARS) while TC-HDA-029 step 9 says it gains
+      only DispatchEnvelopeError and no other export name. Mechanical wording
+      contradiction with a fully specified fix."
+    type: blocker
+    date: "2026-11-09"
+  - text: "PM decision: authorize a fourth DoR iteration (beyond the 3-iteration
+      guideline) because the only blocking finding is a mechanical text
+      contradiction whose owning files and fix are fully specified, the blocking
+      count shrank across iterations (6 -> 3 -> 1), every iteration-2 finding is
+      verified fixed, and escalation would block delivery on wording while the
+      architecture, AC set and coverage are stable. GH-275 precedent."
+    type: decision
+    date: "2026-11-09"
+  - text: "DoR iteration 4 = READY (readiness-review/readiness-iter-4.md,
+      readiness/readiness-iter-4.yaml), 0 blocking findings. Iteration-3
+      contract-inventory wording verified fixed (both declared exports in both
+      modules; no blanket prohibition remains) and DoD-10 owner/home verified
+      closed. Two non-gating minors accepted: (a) the spec DM-3/§16/Appendix C
+      name only DispatchEnvelopeError while the plan also declares the exported
+      DISPATCH_MAX_ERROR_DETAIL_CHARS bound; it is bound by DoD-2 and TC-HDA-034
+      and will be reflected in phase 7 docs; (b) stale +4 spec line anchors and
+      v1.3 version strings in the test plan/plan header, which do not change any
+      AC, TC or scope. Delivery authorized."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 8 review_fix iteration 1 = FAIL (code-review/review-iter-1.yaml,
+      review-iter-1.md). 1 high / 4 low / 0 critical/medium. F-1 (blocking): the
+      phase-7 doc edits introduced the forbidden brand literal ADOS_ in
+      doc/spec/features/feature-config-layer.md:259 and
+      feature-harness-adapters.md:227, making the forbidden-literal check and
+      the aggregate gate red after the recorded P4 green run. All ticket
+      acceptance bullets are functionally PASS; the remaining findings are
+      same-pass cleanup (unused fixture, temp root, untested clamp, missing P4
+      hash in evidence). Remediation delegated to @coder (docs reword + cleanup
+      + gate re-run + one commit), then re-review."
+    type: blocker
+    date: "2026-11-09"
+  - text: "Phase 8 review_fix iterations 2-5: iter-2 FAIL on N-1 (TC-HDA-035 EPIPE
+      flake; fixed by the host stdin early-close guard at both seams, verified
+      20/20 + 20/20 and 215/0 broader); iter-3 FAIL on R3-1/R3-2/R3-3 (spec
+      out-of-scope guard, untested guard branches, plan scope) fixed by spec
+      v1.5 DEC-7, TC-HDA-036/M-21 and plan phase 5; iter-4 FAIL only on stale
+      DoD counts, fixed mechanically in spec v1.6 / test plan v1.7 / plan
+      header; iter-5 = PASS (code-review/review-iter-5.yaml, 0 critical/high/
+      medium, 1 low accepted: starter non-EPIPE does not kill the child, EPIPE
+      unaffected, optional later hardening). Accepted carry: commit-body token
+      stripping of TC- ids by the primitive is pre-existing and noted for a
+      follow-up."
+    type: info
+    date: "2026-11-10"
+  - text: "Post-rebase plan-phase evidence map (SHAs changed by the rebase onto
+      origin/main-tools 78e61207; content and gate results unchanged): P1 =
+      8c9b6222 (contract/defaults/builder/composition + delivered fixture
+      repair; focused suites green); P2 = 54241176 (DispatchEnvelopeError
+      detail, HumanTextContext seam, golden/inventory pins; 29 pass / 0 fail);
+      P3 = 7d0040ea (default spawn, PATH, ambient canary, detail rendering; 18
+      pass / 0 fail); P4 = cef22b69 (changeset, decision record, bounded
+      real-CLI proof and aggregate gate); P5 = da683a67 with f854fd78 (host
+      stdin early-close guard and TC-HDA-036; host suites 11 pass / 0 fail, M-21
+      red 4/green 11). Review evidence commit 736ee99e; decision-record renumber
+      commit 4af1630b (TDR-0019 to avoid the main-tools coordinator
+      TDR-0017/TDR-0018 collision)."
+    type: info
+    date: "2026-11-10"
+  - text: "Phase 9 quality_gates = PASS on the rebased tree: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 in 339 s; lint and format clean (62 pre-existing
+      warnings, 0 errors); build and typecheck green; tests 6953 pass / 4 skip /
+      0 fail across 6957 tests and 859 files; boundaries 370 modules / 1086 deps
+      with ambient-globals 171, entrypoints and secret-read 339 clean;
+      prompt-conformance 5 clean; help-guide coverage complete; exports parity 5
+      publishables. forbidden-literals 5/5 scope classes, 0 violations. plan
+      validate remains valid/readyForDevelopment. Tree clean before and after."
+    type: info
+    date: "2026-11-10"
+  - text: "Phase 10 dod_check = PASS. Registry 9/11 phases complete through
+      quality_gates; plan validate valid/readyForDevelopment; all five declared
+      plan phases have pm-notes evidence with post-rebase commits (8c9b6222,
+      54241176, 7d0040ea, cef22b69, da683a67/f854fd78). All 29 ACs are owned and
+      satisfied per the review-iter-5 PASS (spec and plan compliance PASS).
+      Current-truth docs reconciled with no residual gap (config-layer,
+      harness-adapters, dispatch-engine, result-contract, adapter-ports,
+      cli-entrypoint, four humanText hook docs, dispatch test spec). Aggregate
+      gate green on the rebased tree (6953 pass / 4 skip / 0 fail; all sub-gates
+      green). Changeset declares the five fixed-group packages at minor;
+      TDR-0019 file and index row are committed (status Proposed; owner
+      acceptance is the PR-review action, not a DoD gap). No TODO/FIXME added.
+      `verify change` reports only dod_check/pr_creation pending, as expected
+      before phase 11."
+    type: info
+    date: "2026-11-10"
+  - text: "Phase 11 pr_creation: PR #281
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/281 created
+      against main-tools from fix/GH-277/harness-default-allowlist (head
+      8a9ae20f, non-draft, MERGEABLE, remote head matches local). The branch was
+      rebased onto origin/main-tools 78e61207; the decision record was
+      renumbered TDR-0017 -> TDR-0019 to avoid the coordinator TDR-0017/TDR-0018
+      collision (union-resolved index). PR body states explicitly that dropping
+      the HARNESS_* model defaults and not mapping OC_ADOS_* is deliberate. Left
+      open for review; not merged, no auto-merge, no approval. Merge authority
+      stays with the CEO/human."
+    type: info
+    date: "2026-11-10"
+notes:
+  - text: "Retro: findings 1, 3 and 5 are the GH-275 recurrence — an artifact
+      asserting a repository fact without probing the owning file (the humanText
+      seam signature, the HarnessFailure required/optional field set, and what
+      the E2E isolation actually covers). Finding 2 is a coverage gap of the
+      same class: the spec declared goldens in scope but no artifact enumerated
+      the golden that pins the spawn-failure envelope. Lesson: before the DoR
+      gate, enumerate every fixture/golden that asserts the changed surface and
+      name it in a phase scope."
+    type: retro
+    date: "2026-11-09"
+  - text: "Phase-2 chain note: test planning correctly found four upstream spec gaps
+      and the specification phase was reopened and re-completed at v1.1
+      (TDR-0021 citations, verbose channel files, DispatchEnvelopeError type,
+      config get surface). The phase-complete commit also staged the
+      then-untracked test plan (change-folder scope) and flagged
+      doc/decisions/00-index.md as scope drift; TDR-0021 itself stays untracked
+      until plan phase P4, where it lands with the changeset (commitlint
+      ref-token ordering constraint)."
+    type: info
+    date: "2026-11-09"
+  - text: "Clarify scope: the ticket is prescriptive and consistent with the
+      delivered behaviour. Confirmed in source: (a) PRODUCTION_DEFAULTS
+      harness.environment declares HARNESS_MODEL, HARNESS_SMALL_MODEL and
+      DELIVERY_WORK_PATH only (packages/core/src/config/defaults.ts:58-62), so
+      PATH and HOME are never in the child environment; (b) no code in the repo
+      consumes HARNESS_MODEL/HARNESS_SMALL_MODEL, and production composition
+      supplies DELIVERY_WORK_PATH through the validated record
+      (packages/cli/src/production.ts:441-447); (c) buildHarnessSpawnEnvironment
+      fails closed on the first absent declared variable with
+      harness.spawn.variable-missing and the field name
+      (packages/core/src/domain/harness-spawn-env.ts:46-57); (d) dispatch
+      collapses every session-failure to dispatch.session.spawn-failed with the
+      fixed message 'spawn failed before a session existed' and no underlying
+      code/field (packages/core/src/app/dispatch.ts:466-485); (e) text mode
+      renders only result/pr_url/exit_code/last_message
+      (packages/cli/src/output/dispatch-text.ts:28-34). No blocking question:
+      required behaviour, error identity and acceptance are stated."
+    type: info
+    date: "2026-11-09"
+  - text: "Design latitude recorded for the spec: the ticket permits either mapping
+      HARNESS_MODEL/HARNESS_SMALL_MODEL from the real OC_ADOS_* names or
+      dropping them from the required set. No repository code consumes the
+      HARNESS_* names and opencode resolves models from its own configuration,
+      so the default allowlist fix must not fabricate an unused mapping; the
+      spec should choose one direction with the rationale recorded. Required vs
+      optional entry support is also in scope only if a declared entry may
+      legitimately be absent (TMPDIR on Linux is the likely case)."
+    type: decision
+    date: "2026-11-09"
+  - text: "Doc impact to reconcile in phase 7:
+      doc/spec/features/feature-config-layer.md harness.environment default
+      table (~line 259), feature-harness-adapters.md §1/§4 (deny-by-default
+      descriptor and configuration), feature-dispatch-engine.md (spawn-failure
+      error detail), and any contract/golden fixture that pins the default
+      allowlist or the spawn-failed envelope."
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 2 complete (commit 55ee7c3): added DispatchEnvelopeError
+      (CommandResultError plus optional detail { kind: "harness"|"config"; code;
+      field? }) and the exported DISPATCH_MAX_ERROR_DETAIL_CHARS = 256 bound in
+      packages/core/src/contracts/dispatch.ts; retyped
+      DispatchEnvelopeData.error and re-exported both names from
+      contracts/index.ts. The pre-session spawn branch attaches the underlying
+      harness kind/code and the field only when carried, single-line and clamped
+      to the bound; spawn-failed identity, category, retryability, consequence,
+      remediation hint, token, outcome, exit and last message are unchanged.
+      Added the additive optional HumanTextContext third parameter to
+      CommandDefinition.humanText, passed { verbose } at the single call site,
+      and rendered the four keys plus a prose verbose diagnostic in
+      packages/cli/src/output/dispatch-text.ts; non-verbose text stays exactly
+      four keys. Updated the byte-pinned spawn-failed golden, the v1 contract
+      inventory (both new exports under dispatch.ts and index.ts), and the
+      content-inventory allowances. Owns AC-F5-1, AC-F5-4 and TC-HDA-029,
+      TC-HDA-033. Gates green: dispatch-envelope-detail,
+      dispatch-error-envelope, dispatch-errors golden, port-contract-inventory,
+      content-inventory = 29 pass / 0 fail; pnpm typecheck; pnpm
+      check:boundaries; biome. Mutation evidence: M-9 (2 failing suites), M-12
+      (1 failing assertion), both restored green. Deviation:
+      tests/fixtures/dispatch/golden/harness.ts gained the spawnFailure
+      pass-through (disclosed scope drift).
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 2 commit: 55ee7c3 (fix(harness): surface harness failure
+      identity on dispatch errors).
+    type: info
+    date: "2026-11-09"
+  - text: "Plan phase 3 complete (commit 162fa7ec): regression suites pin the
+      repaired default spawn over a synthetic opencode on a controlled PATH,
+      bare-command resolution with an off-PATH control, the real-child ambient
+      canary, paired optional TMPDIR cases, record precedence through the child,
+      dispatch detail rendering in machine JSON and verbose human output, the
+      exactly-four-key non-verbose text, and the additive optional
+      HumanTextContext type test. Owns AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-2,
+      AC-F5-2, AC-F5-3, AC-F5-5, AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4 and
+      TC-HDA-010, TC-HDA-011, TC-HDA-012, TC-HDA-030, TC-HDA-031, TC-HDA-032,
+      TC-HDA-034, TC-HDA-035; mutation evidence M-8, M-10, M-11, M-13 and the
+      child halves of M-1/M-6, all restored green. Delivered-scope migration:
+      tests/fixtures/dispatch/golden/harness.ts gained the spawnFailure
+      pass-through. Gates: three new behaviour suites, the human-text context
+      type test through pnpm typecheck, content-inventory, pnpm
+      check:boundaries, and biome on the touched files."
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 3 commit: 162fa7e (test(harness): prove default spawn, path
+      resolution, and detail rendering).
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 4 complete (commit e7699431 — changeset, TDR-0021, and the
+      test-plan execution log): owns AC-F8-1, AC-F8-2 and TC-HDA-006,
+      TC-HDA-100, TC-HDA-101. Ran the bounded operator proof in a disposable
+      clone outside this worktree under the isolated probe brand gh277-probe and
+      state root $HOME/.gh277-probe-state: the shipped default resolved to
+      required PATH/HOME/DELIVERY_WORK_PATH plus optional TMPDIR with a defaults
+      origin; a real opencode v2.2.5 first event arrived in 1688 ms; the
+      dispatch produced data.result=failed with lastMessage "the shared
+      classifier reported failed" (not the spawn-failed sentence) and no
+      dispatch.session.spawn-failed identity; exactly one attempt record was
+      written with token/outcome failed and attempt:<attemptId> plus
+      liveness:unknown evidence refs; no GH-277 lease remained active in the
+      probe root; the live lease view was read-only and empty; worktree
+      STATUS_BEFORE/STATUS_AFTER were identical with HEAD stable at 162fa7e;
+      total step-4-to-step-6 elapsed about 16 s (<=180 s). Added exactly one
+      five-package minor changeset with a non-empty body; committed TDR-0021
+      unchanged with it (the index row was already committed); filled the
+      test-plan execution log (29/29 Pass) and the section 10 mutation summary.
+      Gates green: git diff --check; privacy-literals (3302 files, 0
+      violations); aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check (lint,
+      format:check, typecheck, 6612 pass / 4 skip / 0 fail across 782 files,
+      check:boundaries, prompt conformance, help-guide coverage, exports
+      parity); plan validate GH-277 = valid, readyForDevelopment true, 0 errors.
+      Mutation evidence: M-20 applied (core minor -> patch), privacy-release
+      failed (1 assertion), restored green. Deviation recorded: the plan's
+      section 6.3 config inspection used the prompt-required-bin surface, which
+      does not expose `config`; the proof invoked the same composed config
+      program through runCli in the clone, and the probe child ran under a clean
+      environment without the agent harness's ADOS_* legacy variables so the
+      zero-configuration assertion reflects an operator shell.
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Plan phase 1 complete (commit 014fdd6): additive variable-only optional
+      marker and the viable default allowlist across contract, catalog,
+      configuration validation, deny-by-default builder, and production
+      composition; delivered suites and fixtures migrated in the same commit.
+      Gates green: pnpm build regenerated the config artifacts and their parity
+      check passes; harness-environment-marker 3, harness-config 23,
+      harness-spawn-env 18, harness-spawn-credential 8, config-cli 18,
+      dispatch-composition 21, queue-production-binding 15,
+      config-default-positions 6, harness-neutrality 10, harness-imports 6,
+      harness-mutants 14; pnpm typecheck (including the marker type test)
+      passed; pnpm check:boundaries passed. Mutation evidence applied, observed
+      red, and restored green: M-1 (3 failing tests), M-2 (6), M-3 (6), M-4 (1),
+      M-5 (3), M-6 (5), M-7 (2), M-14 (15), M-15 (1), M-16 (2), M-17 (2), M-18
+      (4), M-19 (12), M-19b (12). No mutant committed.
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Phase 8 review_fix iteration 1 remediation (remediation commit): F-1
+      reworded doc/spec/features/feature-config-layer.md and
+      feature-harness-adapters.md to say no ambient provider-model environment
+      variable is mapped, forwarded, or synthesized, so the current-truth docs
+      carry no forbidden brand literal. F-2 referenced
+      tests/fixtures/harness/config/optional-entry.yaml from the TC-HDA-021
+      matrix, so the fixture is live instead of dead. F-3 rooted
+      tests/fixtures/harness/default-spawn.ts under tmp/tmpdir per test plan
+      section 6.2, with the directory created before mkdtemp, so plain bun test
+      and the gated run behave identically. F-4 added a dispatch-path case that
+      feeds a 300-character field through a real dispatch invocation and pins
+      the emitted detail to the exported DISPATCH_MAX_ERROR_DETAIL_CHARS bound
+      with the field prefix intact, exercising detailOf's clamp rather than a
+      hand-built object; test plan TC-HDA-034 gained step 7 for it. F-5 named
+      commit e7699431 in the phase-4 evidence. Gates: forbidden-literals 5/5
+      scope classes and 0 violations; forbidden-literals.test.ts,
+      harness-config, dispatch-harness-default-detail and
+      dispatch-harness-default-spawn = 68 pass / 0 fail; pnpm typecheck; pnpm
+      check:boundaries. Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check: 6613 pass /
+      4 skip / 1 fail; the only failure is the HEAD-dependent ci-baseline-parity
+      test, which scans the committed tree and so still saw the pre-fix doc
+      literals, and a probe clone with this same fix committed returns scan
+      status 0. No product code changed.
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Phase 8 review_fix iteration 2 remediation (remediation commit): N-1
+      closed by hardening both child seams in
+      packages/adapters/src/host/index.ts. Each seam attaches a child.stdin
+      error handler before writing the prompt, so an EPIPE raised by a child
+      that exits before reading is an observed early-exit signal while any other
+      stdin error resolves the seam as a spawn failure (status 127); the
+      existing spawn and exit semantics are unchanged. The synthetic child in
+      tests/fixtures/harness/default-spawn.ts now drains stdin with a bounded
+      fallback instead of exiting immediately, so the TC-HDA-035 control no
+      longer depends on a write/exit race. Determinism: bun test
+      tests/behaviour/dispatch-harness-default-detail.test.ts 20 consecutive
+      runs, 20 pass / 0 fail, with no leaked tmp/tmpdir/gh277-* root (the one
+      root left by the pre-fix reproduction was removed); the 25-file
+      harness/dispatch behaviour set, 215 pass / 0 fail. N-2: test plan v1.5
+      records TC-HDA-034 step 7 and this determinism evidence. Gates green: pnpm
+      typecheck; pnpm check:boundaries (356 modules, no violations);
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (6614 pass / 4 skip / 0 fail
+      across 782 files, lint, format, typecheck, boundaries, prompt conformance,
+      help coverage, exports parity). Scope note: no delivery phase declares
+      packages/adapters/src/host/index.ts; the change is limited to the two
+      existing stdin write sites and is disclosed as the durable N-1 fix
+      mandated by review iteration 2.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      Process deviation recorded for review finding N-3: remediation commit
+      bf5c918e was created by invoking the commit primitive through its command
+      runtime with an agent-authored draft supplied through the harnessOneShot
+      transport seam, rather than a generated model message or the deterministic
+      template. The primitive still owned staging, the deterministic safety
+      scan, ref/type/scope validation, commitlint, and telemetry, so no raw git
+      write occurred and the commit shape and scope are correct; only
+      message-provenance fidelity is lost, because telemetry records
+      transport=harness-one-shot and messageSource=model for an authored
+      message. Standing preference for future remediation commits: use the
+      template fallback, which reports a truthful messageSource=template. The
+      iteration-2 remediation commit needed a specific conventional subject that
+      the path-derived template subject cannot express, so it used the same
+      authored-draft seam with the same provenance caveat. That first
+      iteration-2 invocation landed a local, unpushed commit with the
+      path-derived template subject and without the review artifacts (a
+      standalone commit takes the plan-union scope), so it was reset soft and
+      the same primitive re-invoked as a review_fix commit.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      Phase 8 review_fix iteration 3 = FAIL (code-review/review-iter-3.yaml,
+      review-iter-3.md): the N-1 guard is verified fixed and N-2/N-3 are closed.
+      R3-1 (high) was an artifact contradiction, not a code defect: spec v1.4
+      excluded the delivered host-seam guard, so spec v1.5 (DEC-7) reconciles
+      section 7.1/7.2/15/16/21 and AC-F4-1 while the guard is kept. R3-2
+      (medium) was coverage: the new stdin-error branches were untested, now
+      owned by TC-HDA-036. R3-3 (low) accepted the plan SCOPE_DEVIATION for
+      packages/adapters/src/host/index.ts; this iteration appends plan phase 5
+      (review-iteration-3 remediation) whose scope declares the two host
+      behaviour suites and the change folder, so the review-fix commit stages
+      the new isolated suite and the untracked iteration-3 review artifacts
+      through the primitive's own scope computation instead of hand staging.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      Phase 8 review_fix iteration 3 remediation (this review-fix commit):
+      TC-HDA-036 implements the host child-stdin guard coverage. The delivered
+      TC-OCS-052 suite gains two real-child early-exit EPIPE legs (streaming
+      starter and one-shot runner): a child that never reads a 2 MiB prompt
+      resolves the close-classified status 0 with timedOut false, empty
+      uncaught/unhandled collectors, no orphan and no leaked
+      tmp/tmpdir/gh275-host-* root. A new isolated
+      module-mock suite (since removed after the CI root cause) mocked
+      node:child_process,
+      injects a coded EIO stdin error, asserts the runner returns status
+      127/timedOut false and the starter resolves once with status 127, and
+      restores the module mock in afterEach. Evidence: host suites 11 pass / 0
+      fail across 2 files; dispatch-harness-default-detail 10/10 runs green with
+      no leaked temp root; pnpm typecheck exit 0; pnpm check:boundaries exit 0
+      (356 modules, 1041 dependencies); TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0
+      (6618 pass / 4 skip / 0 fail across 783 files, 60 pre-existing lint
+      warnings, no EPIPE/unhandled lines). M-21 removes both stdin handlers -> 4
+      failing tests (2 real-child uncaught EPIPE, 2 isolated uncaught EIO),
+      restores with git checkout -- packages/adapters/src/host/index.ts, and the
+      restored tree is 11 pass / 0 fail. No mutant committed; no product code
+      changed.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      CI-only regression diagnosed and remediated (quality_gates rework after PR
+      #281 runs failed). Evidence: CI runs 42776899812 and 42776906012 on
+      8d12e81d fail 12 spawn-based tests in both TS tests and TS aggregate check
+      (harness-host-stream 7, dispatch-harness-default-spawn 5), every failure at
+      spawn time with status 127 and no child output; the same suites passed at
+      bf5c918e. Root cause: the DEC-7 stdin error handler introduced in
+      f854fd78 treated any non-EPIPE stdin error as fatal, killing the child and
+      resolving {status:127}. The CI runner emits a non-EPIPE stdin error when
+      the parent ends/closes the child's stdin, before the child produces
+      output; locally that error never fires, which is why the suite was green
+      here. TC-HDA-036 reported the synthetic 127 rather than the close-
+      classified 0, and TC-OCS-052/TC-HDA-010/012/015/016/035 were killed at
+      their first spawn. Remediation: both seams keep a stdin error listener as
+      a benign observer that never kills and never resolves; classification
+      stays with child error/close and the existing handle/session bounds, and
+      isEarlyExitStdinError is removed. Tests: TC-HDA-036 now pins observation
+      plus the close-classified result (coded EIO then close 0 -> status 0, child
+      not killed; real-child EPIPE legs kept), and the first TC-OCS-052 test
+      carries a spawn diagnostic (execPath, status, stderr) so a future CI-only
+      spawn failure is self-explanatory. Artifact truth corrected in spec v1.7
+      (DEC-7, AC-F4-1, 7.1, 13, 16, 21), test plan v1.8 (TC-HDA-036, M-21,
+      revision row) and doc/spec/features/feature-harness-adapters.md 6/8. M-21
+      re-run: removing both observer registrations reddens 4 tests (2 real-child
+      uncaught EPIPE, 2 coded-error uncaught EIO) while the close-classified
+      status still stands; the old fatal handler re-instated reddens the coded
+      legs with Received: 127. No phase rework beyond this quality-gates
+      remediation; no push and no PR action.
+    type: warning
+    date: "2026-11-10"
+  - text: >-
+      CI root cause for the post-#281 red runs (second pass): the remaining red
+      runs all included the dedicated stdin-error suite, which installed a
+      process-global mock.module("node:child_process"). In the shared Bun test
+      process the mock stays sticky across files: every later async spawn
+      resolved code 0 with empty stdout for all spawn variants (inherited env
+      included) while spawnSync still worked, and the suite deleted after this
+      diagnosis. main-tools is green on the same image/Bun and runs the same
+      process.execPath -e async-spawn tests, which isolates the mock as the
+      cause rather than the child-spawn environment. Remediation: the mock
+      suite is deleted; TC-HDA-036 keeps its real-child EPIPE legs in
+      tests/behaviour/harness-host-stream.test.ts (the temporary ZZ spawn
+      matrix and all [GH-277][spawn-diag] diagnostics are removed, while the
+      spawnDiagnostic assertion message stays); tests/behaviour/harness-stream-hygiene.test.ts
+      gains a read-only scan of tests/**/*.test.ts that fails with the offending
+      paths if the pattern returns. Guard control: a probe test file with the
+      mock made the guard fail and name the path (16 pass / 1 fail), then the
+      probe was removed and the suite returned 17 pass / 0 fail. Narrow evidence:
+      host-stream + dispatch-default-spawn + dispatch-default-detail 26 pass / 0
+      fail across 3 files. M-21 re-run on the reduced coverage: removing both
+      stdin observers reddens the 2 real-child EPIPE legs, restored tree 9 pass
+      / 0 fail. Gates: pnpm typecheck exit 0; pnpm check:boundaries exit 0 (370
+      modules, 1087 dependencies; ambient-globals 171 files, entrypoints,
+      secret-read 339 files clean); TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 -
+      6952 pass / 4 skip / 0 fail across 858 files. An initial gate run before
+      the deletion was staged saw 5 transient ENOENT failures in the privacy
+      meta-checks because git ls-files --cached still listed the deleted path;
+      after staging the deletion those suites pass (61 pass / 0 fail). Artifact
+      truth: test plan v1.9, spec v1.8, plan phase-5 scope, and the
+      harness-adapters feature spec section 8 no longer reference the deleted
+      suite; no product code changed, no push, no PR action.
+    type: warning
+    date: "2026-11-10"
+  - text: >-
+      Rebase onto origin/main-tools (fe5f8023, GH-279 credential preflight)
+      forced a second decision-record renumber. main-tools now claims BOTH
+      TDR-0019 (dispatch admission credential preflight) and TDR-0020 (dispatch
+      divergence recording and resolution), so this change's record moves
+      TDR-0019 -> TDR-0021 and keeps its content unchanged. The rename covers
+      doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md,
+      the doc/decisions/00-index.md row (now a union: TDR-0019, TDR-0020,
+      TDR-0021 with no duplicate ids), the change folder (plan, spec, test plan,
+      pm-notes, code-review, readiness and readiness-review evidence), and the
+      affected system specs (feature-adapter-ports, feature-config-layer,
+      feature-dispatch-engine, feature-harness-adapters). Every TDR-0019
+      citation that remains belongs to the GH-279 record and is left intact.
+      Earlier notes in this ledger that name TDR-0019 describe the superseded
+      first renumber and are kept as recorded history. Merge remediation also
+      supplied PATH to the GH-279 admission fixture (tests/fixtures/dispatch/
+      admission.ts): the repaired default allowlist makes PATH a required
+      harness environment entry, so the provisioned-credential spawn leg refused
+      before any spawn until the fixture matched the new default.
+    type: info
+    date: "2026-11-10"

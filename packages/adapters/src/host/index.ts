@@ -8,6 +8,7 @@
  * The containerized-executor seam is the injected runner type, not this module.
  */
 import { spawn } from "node:child_process";
+import type { Writable } from "node:stream";
 import type {
   HarnessSpawnRunner,
   HarnessSpawnRunnerResult,
@@ -20,6 +21,19 @@ const MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
 const TRUNCATION_MARKER = "[output truncated]";
 /** The kill escalation grace: SIGTERM first, SIGKILL if the child ignores it. */
 const KILL_GRACE_MS = 100;
+
+/**
+ * The child-stdin listener is a benign observer. A child that exits before
+ * reading its prompt closes the pipe mid-write, and the parent's write then
+ * fails with an error such as `EPIPE`; the runtime may also surface other stdin
+ * errors when it tears the pipe down. None of them classifies the invocation:
+ * the child `error` and `close` events and the seam's own bounds own that, so
+ * the listener only keeps an early-exit stream error from becoming an unhandled
+ * stream error. It never kills the child and never resolves the seam.
+ */
+const observeStdinErrors = (stream: Writable | null): void => {
+  stream?.on("error", () => {});
+};
 
 /** Build the host runner over `node:child_process`. */
 export const createHostSpawnRunner = (): HarnessSpawnRunner => {
@@ -62,6 +76,9 @@ export const createHostSpawnRunner = (): HarnessSpawnRunner => {
           timedOut,
         });
       });
+      // The listener is attached before the write so an early child exit can
+      // never surface as an unhandled stream error; it never classifies.
+      observeStdinErrors(child.stdin);
       if (options.stdin === undefined) child.stdin?.end();
       else child.stdin?.end(options.stdin, "utf8");
       if (options.timeout > 0) {
@@ -248,6 +265,9 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
       }
     };
 
+    // The same benign observer as the one-shot runner: stdin errors are
+    // absorbed before the write and never classify the invocation.
+    observeStdinErrors(child.stdin);
     if (options.stdin === undefined) child.stdin?.end();
     else child.stdin?.end(options.stdin, "utf8");
 

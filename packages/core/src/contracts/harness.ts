@@ -117,10 +117,18 @@ export type HarnessInstance = {
   readonly capabilities: HarnessCapabilityDeclaration;
 };
 
-/** The declared non-secret environment variable entry (name only). */
+/**
+ * The declared non-secret environment variable entry (name only, plus the
+ * additive optional marker).
+ *
+ * Absence of `optional` (or `optional: false`) means required: an absent value
+ * fails the spawn closed. `optional: true` means an absent value is omitted
+ * while a present value is forwarded. The marker is variable-only.
+ */
 export type HarnessEnvironmentVariable = {
   readonly kind: "variable";
   readonly name: string;
+  readonly optional?: boolean;
 };
 
 /** The declared credential reference entry (name plus reference). */

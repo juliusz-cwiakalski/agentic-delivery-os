@@ -1,0 +1,132 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-277
+branch: fix/GH-277/harness-default-allowlist
+status: FAIL
+summary: >-
+  Re-review after remediation commit bf5c918e. All five iteration-1 findings are
+  verified closed by probe: the forbidden brand literal is gone from the two
+  current-truth docs (forbidden-literals 5/5 scope classes, 0 violations;
+  tests/checks 635 pass / 0 fail, including forbidden-literals and the previously
+  red ci-baseline-parity), the optional-entry fixture is now referenced and
+  asserted (harness-config.test.ts:542), the default-spawn fixture roots under the
+  repo-local tmp/tmpdir per test-plan §6.2, an over-bound field is driven through
+  a real dispatch and the emitted detail is asserted bounded and prefixed
+  (detailOf clamp now exercised by the delivered path), and the phase-4 evidence
+  names commit e7699431. The remediation changed only doc/ and tests/ files, so
+  the iteration-1 functional verdict holds unchanged; plan validate = valid /
+  readyForDevelopment, typecheck, lint, format:check, check:boundaries,
+  check:prompt, check:help, exports-parity and privacy-literals are all green.
+  However the delivered HEAD is not PASS: a newly added test in
+  tests/behaviour/dispatch-harness-default-detail.test.ts (TC-HDA-035 "supplying
+  HOME makes the same failure disappear") fails ~50% of the time (16/30 and 8/16
+  on a clean tree; 3/6 as a multi-suite batch) with an unhandled `EPIPE: broken
+  pipe, write`. The synthetic child never reads stdin, so the host adapter's
+  ungated `child.stdin?.end(options.stdin)` write
+  (packages/adapters/src/host/index.ts:251-252, :65-66, no `stdin.on("error")`
+  guard) intermittently raises on the closed pipe, and the uncaught exception
+  also skips `dispose()` in `finally`, leaking a tmp/tmpdir root per failure. This
+  makes the required aggregate gate (pnpm test inside pnpm check, NFR-9/DoD-12)
+  nondeterministic and the recorded P4 "green aggregate" not reproducible. The
+  flake predates the remediation commit (pre-remediation fixture flaked 5/12 vs
+  HEAD 4/12 interleaved), so it is not a remediation regression, but it is
+  introduced by this change's new fixture/suite and blocks a reliable green gate.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: N-1
+    severity: high
+    confidence: high
+    category: reliability
+    location: tests/behaviour/dispatch-harness-default-detail.test.ts:311
+    message: >-
+      BLOCKING. The new TC-HDA-035 test "supplying HOME makes the same failure
+      disappear" is nondeterministic: it fails roughly half the time (16/30 and
+      8/16 on a clean tree; 3/6 when run together with the sibling spawn suites)
+      with `error: EPIPE: broken pipe, write` surfacing as an uncaught exception.
+      The synthetic opencode script (tests/fixtures/harness/default-spawn.ts:57-69)
+      writes its JSONL and calls process.exit(0) without ever reading stdin, while
+      the host adapter writes the prompt with `child.stdin?.end(options.stdin,
+      "utf8")` (packages/adapters/src/host/index.ts:251-252 session starter, :65-66
+      runner) and registers no `child.stdin.on("error", ...)` handler. When the
+      child exits before that write flushes the pipe is closed and the error is
+      unhandled, so bun marks the running test failed. The uncaught error also
+      bypasses the `finally` dispose blocks, leaking one tmp/tmpdir/gh277-* root
+      per failing run (8 leaked dirs observed after 8/16 failures). Because pnpm
+      check runs pnpm test, this makes the mandatory aggregate gate (NFR-9,
+      DoD-12) nondeterministic at the delivered HEAD and the recorded P4 green
+      aggregate not reliably reproducible. It is not a remediation regression
+      (the pre-remediation fixture flaked 5/12 vs 4/12 interleaved), but it does
+      ship with this change's new suite.
+    suggestion: >-
+      Durable fix (recommended, in the spirit of the change's harness-spawn
+      reliability goal): add a no-op/classified `child.stdin?.on("error", ...)`
+      handler in packages/adapters/src/host/index.ts at both write sites so an
+      early-exiting harness child yields a classified spawn failure instead of an
+      uncaught crash; this also protects the production path when a real
+      `opencode` child exits before reading its prompt. Minimal test-only fix if
+      the adapter is out of scope: make the synthetic script drain stdin before
+      exiting (for example `process.stdin.resume()` and exit on `end`, mirroring a
+      real harness child) so no write races a closed pipe. After either change,
+      run the suite at least ~20 times (TMPDIR=$PWD/tmp/tmpdir bun test
+      tests/behaviour/dispatch-harness-default-detail.test.ts) and confirm 0
+      failures and no leaked tmp/tmpdir/gh277-* directories.
+    suppressed: false
+  - id: N-2
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-test-plan.md:1199
+    message: >-
+      The remediation commit added TC-HDA-034 step 7 ("Dispatch-path clamp") to
+      the test plan, but the artifact's bookkeeping was not updated: front matter
+      still reads `version: 1.4` and `last_updated: 2026-11-09T09:40:00Z`, and the
+      §Revision History table stops at 1.4, so a post-1.4 semantic edit has no
+      revision row. Every prior edit to this test plan (1.0 -> 1.4) carried a
+      detailed revision entry.
+    suggestion: >-
+      Bump the test plan to 1.5 (or note the step-7 addition under a new 1.5 row),
+      update `last_updated`, and record the review_iteration_1 remediation change
+      (TC-HDA-034 step 7, dispatch-path clamp). This keeps the change artifacts'
+      revision discipline consistent.
+    suppressed: false
+  - id: N-3
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-pm-notes.yaml:283
+    message: >-
+      Disclosed remediation-commit deviation: bf5c918e was landed by invoking the
+      commit primitive through its command runtime with an agent-authored draft
+      injected via the `harnessOneShot` transport seam, rather than by letting the
+      primitive generate the message (model) or fall back to the deterministic
+      template. Assessment: acceptable as a one-off. The primitive still owned
+      staging, the deterministic safety scan, ref/type/scope validation,
+      commitlint, and telemetry, so no raw git write occurred and the commit shape
+      and scope are correct; the only loss is message-provenance fidelity (the
+      telemetry records transport `harness-one-shot` / messageSource `model` for a
+      message the agent actually authored). The deviation is not recorded in
+      pm-notes.
+    suggestion: >-
+      Record the deviation and its rationale as a phase-8 notes entry in
+      chg-GH-277-pm-notes.yaml so the durable evidence is complete. For future
+      remediation commits prefer the template fallback (truthful
+      messageSource: template) or the real model transport; if an authored message
+      must be used, record it as authored rather than routing it through a
+      generation transport. Not a defect for this change.
+    suppressed: false
+reviewed_at: 2026-11-10T05:53:55Z
+next_step: >-
+  EXECUTE_REMEDIATION_PHASE — fix N-1 (add a child.stdin error handler in
+  packages/adapters/src/host/index.ts, or make the synthetic child drain stdin),
+  re-run the detail suite ~20x with zero failures and no leaked tmp/tmpdir roots,
+  then re-run the aggregate gate (TMPDIR=$PWD/tmp/tmpdir pnpm check). N-2 is a
+  test-plan version/revision-history bump; N-3 is a non-blocking documentation
+  note to record in pm-notes. No iteration-1 finding needs rework.

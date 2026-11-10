@@ -1,0 +1,457 @@
+# GH-277 delivery plan — make the default harness spawn allowlist able to
+# start opencode without user configuration.
+#
+# Sources (single source of truth):
+#   - Spec:      ./chg-GH-277-spec.md (v1.8; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
+#                NFR-1..NFR-9; DEC-1..DEC-7; DM-1..DM-4; RSK-1..RSK-8; OQ-1
+#                resolved by TDR-0021, OQ-2 open and non-blocking; §6 flows 1–6;
+#                §8.3/§8.5; §13 dependencies; §16 affected components; §17.1
+#                Definition of Done binding 30 scenarios, M-1..M-21 and all five
+#                declared plan phases; Appendix B/C/D)
+#   - Test plan: ./chg-GH-277-test-plan.md (v1.9; 30 scenarios TC-HDA-001..101 plus
+#                TC-HDA-036 in §5.1/§5.2; §6.1 fixtures; §6.2 isolation; §6.3
+#                operator-run E2E with a pre-run git-status baseline; §6.4
+#                regression runs; §6.5 aggregate gate + privacy literals; §7.1
+#                required files; §7.2 TC → file map; §7.3 mutations M-1..M-21;
+#                §10 execution log)
+#   - Decision:  doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
+#                (enforces C-1..C-8 for the marker; spec DEC-3, OQ-1)
+#   - Ticket:    GH-277.
+#
+# Ceremony: one ticket, one PR targeting main-tools, five delivery phases.
+#   P1 contract, catalog, defaults, configuration validation, deny-by-default
+#      builder and production composition (+ the delivered suites, fixtures and
+#      meta-checks the repair invalidates, including the production queue fixture
+#      and the harness-mutants string anchors).
+#   P2 dispatch detail on the dispatch-specific error, the verbose/non-verbose
+#      human rendering seam with the additive optional human-text context, and the
+#      byte-pinned spawn-failure golden (+ the contract-shape and identity suites).
+#   P3 the new regression suites: synthetic harness executable on a controlled
+#      PATH, bare-command PATH resolution, real-child ambient canary, paired
+#      optional cases, record precedence through the child, detail rendering, and
+#      the human-text context type test.
+#   P4 bounded real-CLI proof, release changeset, decision-record capture,
+#      aggregate gate, phase-7 spec handoff.
+#   P5 review-iteration-3 remediation for the delivered host child-stdin
+#      early-close guard (TC-HDA-036, M-21) together with the review-iteration-4
+#      artifact-truth refresh (spec v1.6, test plan v1.7, this header), the
+#      reconciled harness-adapters system-spec edit, and the CI root-cause
+#      cleanup (delete the process-global node:child_process module-mock suite,
+#      guard against its return); no product code change.
+# Each phase is green on its own slice and independently committable through the
+# `commit` primitive: every delivered suite whose construction site or assertion a
+# phase invalidates is migrated in that same commit, and no delivered assertion is
+# deleted to make a new case pass (test plan §7.2 sequencing note 6).
+#
+# AC ownership — 29/29, exactly one owning phase each; cross-phase confirmations
+# are additive and never transfer ownership:
+#   P1  AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4,
+#       AC-F3-5, AC-F4-1, AC-F4-2, AC-F6-1, AC-F6-2, AC-F6-3, AC-F7-5   (14)
+#   P2  AC-F5-1, AC-F5-4                                              (2)
+#   P3  AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-2, AC-F5-2, AC-F5-3, AC-F5-5,
+#       AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4                            (11)
+#   P4  AC-F8-1, AC-F8-2                                              (2)
+#   14 + 2 + 11 + 2 = 29; no AC unmapped, no AC id invented. P5 owns no AC:
+#   TC-HDA-036 is additive confirmation of AC-F4-1, whose owner stays P1.
+#
+# TC ownership — 30/30, exactly one owning phase each:
+#   P1  TC-HDA-001, 002, 003, 004, 005, 013, 014, 015, 016, 017, 018, 019,
+#       020, 021, 022, 023                                             (16)
+#   P2  TC-HDA-029, 033                                              (2)
+#   P3  TC-HDA-010, 011, 012, 030, 031, 032, 034, 035                (8)
+#   P4  TC-HDA-006, 100, 101                                         (3)
+#   P5  TC-HDA-036                                                   (1)
+#   16 + 2 + 8 + 3 + 1 = 30; no TC unmapped, no TC id invented.
+#
+# Golden pin: tests/fixtures/dispatch/golden/errors/spawn-failed.json and its
+# byte-equality consumer tests/golden/dispatch-errors.test.ts are owned by P2,
+# where the dispatch detail lands. The golden's scenario failure is
+# { kind: "harness", code: "harness.spawn.refused" } with no field, so the
+# repaired envelope is the six delivered error fields plus an always-present
+# detail carrying that kind and code and no field.
+#
+# Contract-inventory pins: the widened dispatch contract surface is pinned by two
+# delivered inventories, and both are deliberate updates owned by P2. This change
+# declares exactly two additions to the pinned contract surface — the
+# dispatch-specific error type `DispatchEnvelopeError` and the exported
+# 256-character detail bound `DISPATCH_MAX_ERROR_DETAIL_CHARS` — both declared in
+# `packages/core/src/contracts/dispatch.ts` and re-exported from
+# `packages/core/src/contracts/index.ts`. The bidirectional v1 export fixture
+# `tests/fixtures/ports/v1-contract-inventory.json` must gain both names under
+# `modules["dispatch.ts"]` and `modules["index.ts"]`, and no export name beyond
+# those two changes; `tests/structure/port-contract-inventory.test.ts` is the
+# unchanged comparator. Because `DISPATCH_MAX_ERROR_DETAIL_CHARS` is an exported
+# constant, it must also be registered in
+# `EXECUTABLE_ALLOWANCES["core/src/contracts/dispatch.ts"]` of
+# `tests/structure/content-inventory.test.ts`; the type declaration is type-only
+# and needs no executable allowance entry, and `tests/structure/inventory.json` is
+# unaffected because no package source file is added. P2 runs both structure
+# suites as gates so a broken pin fails in P2, not only at P4's aggregate gate.
+#
+# Cross-phase confirmations that do not transfer ownership: P1 proves the builder
+# canary in the constructed environment while P3 proves the absence in the real
+# child; P2 delivers the detail, the additive human-text context and the verbose
+# renderer plus the repaired golden while P3 owns the machine/verbose/four-key
+# acceptance and the two-parameter compatibility type test (a red P3 assertion
+# reopens P2 rather than being edited away); P1 proves the paired optional-entry
+# cases at the builder and P3 re-observes the optional key through the child's
+# environment dump; P3's child-level absent-required case confirms P1's builder
+# failure identity.
+#
+# Generated-artifact note: `config.schema.json`, `defaults-positions.json` and
+# `schema-sources.json` are generated into `packages/core/dist/config/`, which
+# `.gitignore:14` excludes. Regeneration is a gate step (build, then
+# `--generate-config-artifacts`), never a declared scope path.
+#
+# Privacy-literal rule (test plan §6.5): no absolute workstation path, machine user
+# name, private repository name, or cloud literal in this plan, the tests, or the
+# fixtures. Use placeholders and `mkdtemp` roots; the binding guard is
+# `pnpm check:privacy-literals`.
+#
+# Release obligation (TC-RELEASE-001, `tests/checks/privacy-release.test.ts:42-49,
+# 70-86, 133-175`; spec DEC-5, §18): exactly one added changeset declaring
+# `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`,
+# `@delivery-os/mcp` and `@delivery-os/opencode` at `minor` with a non-empty body;
+# `@delivery-os/testkit` excluded; no pre-existing changeset modified or deleted.
+#
+# Decision-record ordering constraint (P4, one commit): the authored record
+# `doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md` is
+# UNTRACKED while its row in `doc/decisions/00-index.md` (line 43) is already
+# committed, so that row is not edited and the index is not in any phase scope.
+# The `commit` primitive stages untracked files only inside a declared plan scope
+# and derives `topPath` from `staging.include[0].path`
+# (`packages/core/src/domain/commit-act.ts:289`); `TRACKER_REF`
+# (`packages/core/src/domain/commit-message.ts:21`) rejects every ref-shaped token
+# other than the resolved ref, so a standalone commit whose subject falls back to
+# `update <record path>` is rejected as an invented tracker reference. The
+# changeset is therefore declared first in P4's scope and sorts first in the
+# include list (`.changeset/…` < `doc/…`), and P4's summary carries no ref-shaped
+# token, which keeps the deterministic template subject valid.
+#
+# Environment facts: `bun test` is the runner; `pnpm build` is required before the
+# CLI is runnable (the CLI resolves `@delivery-os/core/branding` from `dist`), so
+# P4 builds before any `bun packages/cli/bin/delivery-os.ts` call; the aggregate
+# gate is `TMPDIR=$PWD/tmp/tmpdir pnpm check` (test plan §6.5). Core stays
+# runtime-neutral (no `node:*`), `packages/adapters/src/host/index.ts` stays the
+# only harness child-process site (the 12-entry allowlist in
+# `tests/structure/harness-imports.test.ts:26-40` is unchanged), new files carry no
+# license headers, and change artifacts need no `ados_distribution` marker.
+#
+# Rollback: reverting P1 and P2 restores the previous (broken) behaviour. No
+# persisted state, schema version, configuration key, error code, result token, or
+# CLI grammar changes, so no data rollback and no feature flag apply.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-277
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - new-harness-failure-code-or-delivery-result-token
+    - dispatch-envelope-shared-error-type-widened
+    - ambient-environment-read-added
+    - non-verbose-dispatch-text-keys-changed
+    - second-harness-child-process-site
+    - required-default-entry-changed-beyond-the-declared-set
+    - additional-changeset-added
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Optional marker and viable default allowlist across contract, catalog, configuration, builder, and composition"
+    kind: delivery
+    summary: >-
+      Add the variable-only optional marker and ship the repaired default
+      allowlist across the contract, catalog, configuration validation, the
+      deny-by-default builder and the production composition, migrating every
+      delivered suite and fixture the repair invalidates in the same commit:
+      pin the repaired resolved default, give the credential branch an explicit
+      marker rejection (it currently returns before the unknown-key check),
+      replace the fixture whose undeclared canary is the newly declared home
+      variable, and repair all three parent environment fact sets in
+      tests/structure/dispatch-composition.test.ts (~211-216, ~445-450,
+      ~716-720): each composed parent environment adds PATH (and HOME where
+      absent), the two dependent spawn-count assertions (starterInvocations and
+      the resume case's harness.spawns) still reach a spawn rather than failing
+      pre-session on harness.spawn.variable-missing, and the expected child key
+      set becomes DELIVERY_WORK_PATH/HOME/PATH, with TMPDIR appended only when
+      the case declares or supplies it. It also repairs
+      the delivered regressions the repair invalidates: add a synthetic path to
+      the production queue fixture so the queue-binding case still reaches a
+      spawn instead of failing on the now-declared required path entry, and
+      preserve the exact-string mutation anchors the harness mutant meta-check
+      rewrites in the builder. The packed config artifacts are generated, never
+      asserted into place. Gates: build, then regenerate the config artifacts,
+      then the artifact parity check; the six named behaviour/structure suites
+      plus the marker type test through pnpm typecheck; the queue-production
+      binding suite; the harness-mutants meta-check; pnpm check:boundaries;
+      biome check on the touched files.
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/harness.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/domain/harness-spawn-env.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/harness/config/default.resolved.json
+        - tests/fixtures/harness/config/invalid-optional-credential.yaml
+        - tests/fixtures/harness/config/invalid-optional-non-boolean.yaml
+        - tests/fixtures/harness/config/optional-entry.yaml
+        - tests/fixtures/harness/spawn-env.ts
+        - tests/structure/harness-environment-marker.test.ts
+        - tests/types/harness-environment-marker.type-test.ts
+        - tests/behaviour/harness-config.test.ts
+        - tests/behaviour/harness-spawn-env.test.ts
+        - tests/behaviour/harness-spawn-credential.test.ts
+        - tests/behaviour/config-cli.test.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/fixtures/queue/production/harness.ts
+        - tests/behaviour/queue-production-binding.test.ts
+        - tests/checks/harness-mutants.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-277 in progress; phase 1 owns AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1,
+        AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F4-1, AC-F4-2, AC-F6-1, AC-F6-2,
+        AC-F6-3, AC-F7-5 and TC-HDA-001, TC-HDA-002, TC-HDA-003, TC-HDA-004,
+        TC-HDA-005, TC-HDA-013, TC-HDA-014, TC-HDA-015, TC-HDA-016, TC-HDA-017,
+        TC-HDA-018, TC-HDA-019, TC-HDA-020, TC-HDA-021, TC-HDA-022, TC-HDA-023.
+        It owns mutation evidence M-2, M-3, M-4, M-5, M-6 (builder half),
+        M-7, M-14, M-15, M-16, M-17, M-18, M-19 and the TC-HDA-005 half of M-1;
+        the child-level halves of M-1 and M-6 belong to phase 3. It also owns the
+        delivered queue-production binding regression and the harness-mutants
+        exact-string anchor regression.
+    weightClass: heavy
+  - id: 2
+    title: "Underlying harness failure identity on the dispatch error and the bounded verbose diagnostic"
+    kind: delivery
+    summary: >-
+      Keep the delivered spawn-failure identity, token, outcome, exit, category,
+      retryability, consequence, remediation hint and last message unchanged
+      while carrying the underlying harness failure kind, code and field as an
+      additive bounded detail on the dispatch-specific error type. The
+      256-character detail bound is an exported constant in
+      packages/core/src/contracts/dispatch.ts (expected
+      DISPATCH_MAX_ERROR_DETAIL_CHARS), following the delivered
+      DISPATCH_MAX_LAST_MESSAGE_CHARS precedent, so the bound is a registered
+      contract export rather than a duplicated literal. Widen the published
+      command-definition human-text seam with the additive optional
+      HumanTextContext third parameter, pass the parsed verbose fact at the single
+      call site, and thread it into the dispatch human-text selection so verbose
+      output names the underlying identity while non-verbose text stays exactly
+      four keys in the delivered order; every existing two-parameter definition
+      and direct two-argument call stays valid and produces identical non-verbose
+      text. Update the byte-pinned spawn-failure golden to the repaired envelope:
+      the six delivered error fields plus an always-present detail carrying the
+      harness kind and the refused code for its no-field scenario, with field
+      omitted, and keep its byte-equality consumer as the pin. The shared
+      result-error type and every other envelope keep their delivered shape, and
+      the single redacted writer and the non-verbose-gated stderr diagnostic stay
+      the only channels. Deliberate pin updates, not regressions: this phase
+      declares two additions to the pinned contract surface, the
+      dispatch-specific error type DispatchEnvelopeError and the exported
+      DISPATCH_MAX_ERROR_DETAIL_CHARS bound for the 256-character detail, and the
+      bidirectional v1 contract inventory fixture gains both under
+      modules["dispatch.ts"] and modules["index.ts"] (the contracts/index.ts
+      re-export), with no export name beyond those two changing; the
+      content-inventory executable allowance for core/src/contracts/dispatch.ts
+      registers the exported bound constant, while the type declaration stays
+      type-only and needs no executable allowance entry;
+      tests/structure/inventory.json is unaffected because no package source
+      file is added. Gates: the
+      envelope-detail structure suite, its type test through pnpm typecheck, the
+      dispatch error-envelope suite, the golden dispatch-errors byte-equality
+      suite, and the two delivered structure inventory pins (bun test
+      tests/structure/port-contract-inventory.test.ts
+      tests/structure/content-inventory.test.ts) so a broken pin fails here
+      rather than only at the aggregate gate; pnpm check:boundaries; biome check
+      on the touched files.
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/cli/src/index.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/output/serialize.ts
+        - tests/structure/dispatch-envelope-detail.test.ts
+        - tests/types/dispatch-envelope-detail.type-test.ts
+        - tests/behaviour/dispatch-error-envelope.test.ts
+        - tests/fixtures/dispatch/golden/errors/spawn-failed.json
+        - tests/golden/dispatch-errors.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/structure/content-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-277 in progress; phase 2 owns AC-F5-1 and AC-F5-4 and TC-HDA-029,
+        TC-HDA-033; it also owns the M-9 and M-12 mutation records, the additive
+        optional human-text context delivery, and the updated byte-pinned
+        spawn-failure golden with its unchanged byte-equality consumer. It also
+        owns the two deliberate inventory pin updates for this change's two
+        declared contract exports: the v1 contract inventory fixture gains both
+        DispatchEnvelopeError and DISPATCH_MAX_ERROR_DETAIL_CHARS under
+        modules["dispatch.ts"] and modules["index.ts"], and the
+        EXECUTABLE_ALLOWANCES entry for core/src/contracts/dispatch.ts in
+        tests/structure/content-inventory.test.ts registers the exported
+        256-character detail bound, with both structure suites run as gates here.
+        The error type is a type-only declaration, so it needs no executable
+        allowance entry. No export name beyond those two changes.
+        The machine-json, verbose, four-key and two-parameter compatibility
+        acceptance stays with phase 3, so a red phase-3 assertion reopens this
+        phase; TC-HDA-034's detail-hygiene assertions remain phase 3's, but the
+        bound constant and its inventory registration land here.
+    weightClass: standard
+  - id: 3
+    title: "Regression suites for the repaired default spawn, PATH resolution, ambient confinement, and detail rendering"
+    kind: delivery
+    summary: >-
+      Add the regression suites that pin the repair through a synthetic harness
+      executable on a controlled PATH and through the dispatch fixtures: a
+      zero-configuration default spawn that writes an attempt record and reaches a
+      token other than the spawn-failed identity, bare-command resolution with an
+      off-PATH control and no absolute command path, the undeclared parent canary
+      and the ambient model names absent from the real child, the optional entry
+      absent in the default run and forwarded in a present variant, the record
+      supplied work directory in the child, an absent required entry naming the
+      field in both the harness failure and the dispatch detail, detail
+      rendering in machine json, verbose human text, and the exactly-four-key
+      non-verbose text with identifiers-only bounded content, and the additive
+      optional human-text context with a two-parameter definition still compiling
+      and behaving identically under the workspace typecheck. Gates: the three new
+      behaviour suites; the human-text context type test through pnpm typecheck;
+      the content-inventory pin that registers the exported detail bound that
+      TC-HDA-034 reads (bun test tests/structure/content-inventory.test.ts);
+      pnpm check:boundaries; biome check on the touched files.
+    scope:
+      files:
+        - tests/fixtures/harness/default-spawn.ts
+        - tests/fixtures/dispatch/harness.ts
+        - tests/behaviour/dispatch-harness-default-spawn.test.ts
+        - tests/behaviour/harness-default-path.test.ts
+        - tests/behaviour/dispatch-harness-default-detail.test.ts
+        - tests/types/dispatch-human-text-context.type-test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/dispatch/harness.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-277 in progress; phase 3 owns AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-2,
+        AC-F5-2, AC-F5-3, AC-F5-5, AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4 and
+        TC-HDA-010, TC-HDA-011, TC-HDA-012, TC-HDA-030, TC-HDA-031, TC-HDA-032,
+        TC-HDA-034, TC-HDA-035; it also owns the M-8, M-10, M-11 and M-13
+        mutation records, the child-level halves of M-1 and M-6, and the
+        human-text context type test that carries the two-parameter compatibility
+        clause of AC-F5-3. Every automated case stays hermetic: the only real
+        child is the synthetic script, never a harness CLI.
+    weightClass: heavy
+  - id: 4
+    title: "Bounded real-CLI proof, release changeset, decision-record capture, aggregate gate, and the spec handoff"
+    kind: delivery
+    summary: >-
+      Execute the operator-run end-to-end procedure outside this worktree in a
+      disposable clone and record its evidence against a pre-run git-status
+      baseline, add the single release changeset, commit the authored decision
+      record with it at the phase boundary, populate the test-plan execution log,
+      run the aggregate gate with the repo-local temp root, and declare the
+      current-truth reconciliation handoff for the system-spec update phase. The
+      probe runs while the authored decision record and the new changeset are
+      still uncommitted: they are the expected baseline content, and this phase
+      must not require them to be committed before the probe. Release metadata is
+      declared first in this phase's scope so the deterministic template subject
+      stays valid for the record that shares the commit. Gates: git diff --check;
+      pnpm check:privacy-literals; build before every CLI call; the aggregate gate
+      with the repo-local temp root; the plan validate verdict.
+    scope:
+      files:
+        - .changeset/gh-277-harness-default-allowlist-minor.md
+        - doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
+        - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-test-plan.md
+    doneArtifacts:
+      mergeRequestUrl: >-
+        PR for fix/GH-277/harness-default-allowlist targeting main-tools, opened at
+        lifecycle phase 11 by @pr-manager and recorded as a pm-notes notes entry;
+        it is not a deliverable of this phase.
+      pipelineId: >-
+        TMPDIR=$PWD/tmp/tmpdir pnpm check aggregate gate green: lint,
+        format:check, typecheck, test, check:boundaries, prompt conformance,
+        help-guide coverage, exports parity.
+      trackerTransition: >-
+        GH-277 in review; phase 4 owns AC-F8-1, AC-F8-2 and TC-HDA-006,
+        TC-HDA-100, TC-HDA-101, records the test-plan §6.3 evidence set (result
+        token, last message, error code and detail, exit code, elapsed bound, the
+        appended attempt id/token/evidence refs, the released lease, worktree
+        status equal to its recorded pre-run baseline and head unchanged) and
+        mutation record M-20, and commits
+        doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
+        unchanged. That record is untracked and its row in doc/decisions/00-index.md
+        is already committed, so the changeset leads the scope and the include list
+        and this phase's summary carries no ref-shaped token: a standalone record
+        commit is rejected as an invented tracker reference. The uncommitted record
+        and changeset are the expected baseline during the probe; the plan does not
+        require them committed first. Phase-7 handoff to @doc-syncer (no edits
+        here): doc/spec/features/feature-config-layer.md (harness environment
+        default table and the entry shape),
+        doc/spec/features/feature-harness-adapters.md (§1/§4 deny-by-default
+        descriptor and configuration), doc/spec/features/feature-dispatch-engine.md
+        (spawn-failure narrative and the additive error detail),
+        doc/spec/features/feature-result-contract.md (data-bearing error field set
+        and the --verbose human-mode meaning),
+        doc/spec/features/feature-adapter-ports.md (descriptor description and
+        evolution rule), doc/spec/features/feature-cli-entrypoint.md (global flags
+        and the --verbose human-mode meaning), the CommandDefinition.humanText hook
+        including the additive optional HumanTextContext in
+        doc/spec/features/feature-status-digest.md,
+        doc/spec/features/feature-brief.md, doc/spec/features/feature-doctor.md,
+        and doc/spec/features/feature-owner-gate-sla.md, plus doc/00-index.md and
+        the glossary only if their current wording is affected.
+    weightClass: standard
+  - id: 5
+    title: "Review-iteration-3 remediation for the host child-stdin early-close guard"
+    kind: delivery
+    summary: >-
+      Close review finding R3-2 by adding the TC-HDA-036 regression coverage for
+      the delivered host child-stdin guard: the real-child early-exit EPIPE legs
+      on both seams in the delivered TC-OCS-052 suite, plus mutation M-21 and a
+      read-only suite guard that rejects any process-global
+      node:child_process module mock. The process-global module-mock suite that
+      corrupted async spawn in the shared Bun test process is removed, so the
+      guard keeps its real-child coverage without any module mock. It carries
+      the review-iteration-4 artifact-truth refresh (spec v1.8, test plan v1.9,
+      this plan header) and the reconciled harness-adapters system-spec edit, so
+      the boundary commit reports no scope drift. No product code changes; the
+      committed artifacts are the host-stream behaviour suite, the
+      stream-hygiene guard suite, the spec, the test plan execution evidence,
+      the reconciled system-spec page, the iteration-3 and iteration-4 review
+      records, and the pm-notes ledger update under the change folder.
+    scope:
+      files:
+        - tests/behaviour/harness-host-stream.test.ts
+        - tests/behaviour/harness-stream-hygiene.test.ts
+        - doc/spec/features/feature-harness-adapters.md
+      folders:
+        - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist
+    interactions:
+      - kind: contract-file
+        target: tests/behaviour/harness-host-stream.test.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-277 review_fix iteration 3 closes R3-2 with TC-HDA-036 green (host
+        suite 9 pass / 0 fail, the stream-hygiene guard suite 17 pass / 0 fail,
+        dispatch/harness detail suite 10/10 runs) and M-21 red-then-green on the
+        real-child legs (both stdin guards removed, restored tree green); the CI
+        root-cause cleanup deletes the process-global node:child_process
+        module-mock suite and the guard rejects any reinstatement. The aggregate
+        gate is recorded in the test plan section 10.
+    weightClass: light

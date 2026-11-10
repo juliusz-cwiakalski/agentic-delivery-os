@@ -6,12 +6,18 @@
  * only harness suite allowed `process.execPath` (test plan TC-OCS-071).
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { createHostSpawnStarter } from "../../packages/adapters/src/host/index";
+import {
+  createHostSpawnRunner,
+  createHostSpawnStarter,
+} from "../../packages/adapters/src/host/index";
 
 const ROOT = process.cwd();
 const BASE = join(ROOT, "tmp", "tmpdir");
+const LEG_BOUND_MS = 5_000;
+/** A prompt larger than the OS pipe buffer: a child that never reads closes mid-write. */
+const OVERSIZED_PROMPT = "x".repeat(2 * 1024 * 1024);
 
 const withRoot = async (run: (root: string) => Promise<void>): Promise<void> => {
   mkdirSync(BASE, { recursive: true });
@@ -23,11 +29,69 @@ const withRoot = async (run: (root: string) => Promise<void>): Promise<void> => 
   }
 };
 
+/** The host-suite mkdtemp roots currently under `tmp/tmpdir`. */
+const hostRoots = (): string[] =>
+  existsSync(BASE)
+    ? readdirSync(BASE)
+        .filter((name) => name.startsWith("gh275-host-"))
+        .sort()
+    : [];
+
+/** Collect uncaught exceptions and unhandled rejections for one bounded leg. */
+const withErrorCollectors = async (
+  run: () => Promise<void>,
+): Promise<{
+  readonly uncaught: readonly unknown[];
+  readonly rejections: readonly unknown[];
+}> => {
+  const uncaught: unknown[] = [];
+  const rejections: unknown[] = [];
+  const onUncaught = (error: unknown): void => {
+    uncaught.push(error);
+  };
+  const onRejection = (reason: unknown): void => {
+    rejections.push(reason);
+  };
+  process.on("uncaughtException", onUncaught);
+  process.on("unhandledRejection", onRejection);
+  try {
+    await run();
+    // A stream error can be emitted after `close`; let one macrotask drain.
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  } finally {
+    process.off("uncaughtException", onUncaught);
+    process.off("unhandledRejection", onRejection);
+  }
+  return { uncaught, rejections };
+};
+
+const pidOf = (stdout: string): number | undefined => {
+  const match = /pid:(\d+)/.exec(stdout);
+  return match === null ? undefined : Number(match[1]);
+};
+
+/** Poll until the process is gone; the early-exit child must not survive. */
+const waitUntilGone = async (pid: number): Promise<boolean> => {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return false;
+};
+
 const collectLines = async (lines: AsyncIterable<string>): Promise<string[]> => {
   const collected: string[] = [];
   for await (const line of lines) collected.push(line);
   return collected;
 };
+
+/** A self-explanatory spawn diagnostic so a CI-only child failure names its cause. */
+const spawnDiagnostic = (result: { readonly status: number; readonly stderr: string }): string =>
+  `child=${process.execPath} status=${result.status} stderr=${JSON.stringify(result.stderr)}`;
 
 describe("TC-OCS-052 host streaming starter", () => {
   test("streams lines and resolves completion on close with the accumulated stdout", async () => {
@@ -47,7 +111,7 @@ describe("TC-OCS-052 host streaming starter", () => {
       expect(lines).toHaveLength(2);
       expect(lines[0]).toContain("step_start");
       expect(lines[1]).toContain("step_finish");
-      expect(result.status).toBe(0);
+      expect(result.status, spawnDiagnostic(result)).toBe(0);
       expect(result.timedOut).toBe(false);
       expect(result.stdout).toContain("step_finish");
     });
@@ -71,7 +135,7 @@ describe("TC-OCS-052 host streaming starter", () => {
       stream.acquired();
       const result = await stream.completion;
       expect(result.timedOut).toBe(false);
-      expect(result.status).toBe(0);
+      expect(result.status, spawnDiagnostic(result)).toBe(0);
     });
   });
 
@@ -175,4 +239,85 @@ describe("TC-OCS-052 host streaming starter", () => {
     expect(source).toContain("16 * 1024 * 1024");
     expect(source).toContain("output truncated");
   });
+});
+
+/**
+ * TC-HDA-036 — the child-stdin early-close guard on both host seams.
+ *
+ * A child that exits without reading a prompt larger than the pipe buffer makes
+ * the parent's write fail with `EPIPE`. The seam must observe stdin before the
+ * write, ignore the benign `EPIPE`, and still resolve the close-classified
+ * result. The uncaught-error collectors make the pre-guard failure explicit
+ * instead of a crashed worker.
+ */
+describe("TC-HDA-036 host child-stdin early close", () => {
+  const earlyExitScript =
+    'process.stdout.write("pid:" + process.pid + "\\n", () => process.exit(0));';
+
+  test(
+    "the streaming starter resolves the close-classified result on an early-exit EPIPE",
+    async () => {
+      const rootsBefore = hostRoots();
+      const startedAt = Date.now();
+      try {
+        await withRoot(async (root) => {
+          const evidence = await withErrorCollectors(async () => {
+            const starter = createHostSpawnStarter();
+            const stream = starter(process.execPath, ["-e", earlyExitScript], {
+              cwd: root,
+              env: {},
+              handleTimeoutMs: LEG_BOUND_MS,
+              sessionTimeoutMs: LEG_BOUND_MS,
+              stdin: OVERSIZED_PROMPT,
+            });
+            const lines = await collectLines(stream.lines);
+            const result = await stream.completion;
+            expect(result.status, spawnDiagnostic(result)).toBe(0);
+            expect(result.timedOut).toBe(false);
+            const pid = pidOf(result.stdout) ?? pidOf(lines.join("\n"));
+            expect(pid).toBeDefined();
+            if (pid !== undefined) expect(await waitUntilGone(pid)).toBe(true);
+          });
+          expect(evidence.uncaught).toEqual([]);
+          expect(evidence.rejections).toEqual([]);
+        });
+      } finally {
+        expect(Date.now() - startedAt).toBeLessThan(LEG_BOUND_MS);
+      }
+      expect(hostRoots()).toEqual(rootsBefore);
+    },
+    LEG_BOUND_MS,
+  );
+
+  test(
+    "the one-shot runner resolves the close-classified result on an early-exit EPIPE",
+    async () => {
+      const rootsBefore = hostRoots();
+      const startedAt = Date.now();
+      try {
+        await withRoot(async (root) => {
+          const evidence = await withErrorCollectors(async () => {
+            const runner = createHostSpawnRunner();
+            const result = await runner(process.execPath, ["-e", earlyExitScript], {
+              cwd: root,
+              env: {},
+              timeout: 0,
+              stdin: OVERSIZED_PROMPT,
+            });
+            expect(result.status, spawnDiagnostic(result)).toBe(0);
+            expect(result.timedOut).toBe(false);
+            const pid = pidOf(result.stdout);
+            expect(pid).toBeDefined();
+            if (pid !== undefined) expect(await waitUntilGone(pid)).toBe(true);
+          });
+          expect(evidence.uncaught).toEqual([]);
+          expect(evidence.rejections).toEqual([]);
+        });
+      } finally {
+        expect(Date.now() - startedAt).toBeLessThan(LEG_BOUND_MS);
+      }
+      expect(hostRoots()).toEqual(rootsBefore);
+    },
+    LEG_BOUND_MS,
+  );
 });

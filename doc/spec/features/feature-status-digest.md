@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-279"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -54,7 +54,7 @@ The separate read-only ready-set command that consumes these inputs is specified
 
 The command is exactly `status`, composed where the other top-level commands are composed. It accepts no positionals and declares no command-specific flags; `--json` is the existing global machine-output switch and adds no command behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`.
 
-The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode. Fifteen command declarers provide the hook: `board`, `brief`, `closeout`, `db`, `doctor`, `lanes`, `merge`, `plan`, `provider`, `queue`, `retro`, `spend`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Status is one of them, and doctor is an additional read-only consumer of the same seam, not a new hook.
+The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode; it receives an optional `HumanTextContext` third argument carrying the parsed `--verbose` fact, and an omitted context means non-verbose. Fifteen command declarers provide the hook: `board`, `brief`, `closeout`, `db`, `doctor`, `lanes`, `merge`, `plan`, `provider`, `queue`, `retro`, `spend`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Status is one of them, and doctor is an additional read-only consumer of the same seam, not a new hook.
 
 ### Nine sections and five states
 

@@ -47,6 +47,7 @@ export const buildHarnessSpawnEnvironment = (input: {
     if (entry.kind === "variable") {
       const value = input.record?.[entry.name] ?? input.parentEnvironment[entry.name];
       if (value === undefined) {
+        if (entry.optional === true) continue;
         return failure({
           kind: "harness",
           code: "harness.spawn.variable-missing",

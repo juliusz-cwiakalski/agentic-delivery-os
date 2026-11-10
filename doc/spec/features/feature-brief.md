@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; nine closed render surfaces (seven digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; zero brief-specific reads; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -49,7 +49,7 @@ The surrounding contracts are described in [Status Digest](feature-status-digest
 
 The command is exactly `brief`, composed beside the other top-level commands in the CLI edge. It accepts no positionals and declares no command-specific flags; `--json` is the existing global machine-output switch and adds no command behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`.
 
-The command handler owns no stream writes and chooses no exit code. It collects the injected facts once, projects the payload, and returns it; the CLI edge renders the human text or the machine envelope. The optional pure `humanText` renderer hook on the command-definition contract is invoked by the CLI edge in human mode; status, brief, and the other human-rendering commands supply one.
+The command handler owns no stream writes and chooses no exit code. It collects the injected facts once, projects the payload, and returns it; the CLI edge renders the human text or the machine envelope. The optional pure `humanText` renderer hook on the command-definition contract is invoked by the CLI edge in human mode; it receives an optional `HumanTextContext` third argument carrying the parsed `--verbose` fact, and an omitted context means non-verbose. Status, brief, and the other human-rendering commands supply one.
 
 ### Nine render surfaces
 

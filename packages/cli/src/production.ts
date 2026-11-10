@@ -497,7 +497,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                 sourceKey: { style: "literal" as const, name: entry.credentialRef },
               },
             }
-          : { kind: "variable" as const, name: entry.name },
+          : {
+              kind: "variable" as const,
+              name: entry.name,
+              ...(entry.optional === true ? { optional: true } : {}),
+            },
       );
 
     /** The bound deny-by-default environment builder over the injected parent environment. */

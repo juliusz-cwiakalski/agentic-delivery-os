@@ -7,7 +7,7 @@ last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-279"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -43,7 +43,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/providers/github-inputs.test.ts`, `github-trap.test.ts` — the real GitHub client and normalizer stamp the received 2xx status onto a decode failure, keep 404 as `provider.not-found`, preserve any other non-2xx status, and leave a thrown transport status-absent.
 - `tests/behaviour/dispatch-harness-acquisition.test.ts` — the real opencode adapter over a scripted JSONL stream through the dispatch composition: the handle is returned before the session completes, `collect` stays pending across at least two liveness polls, the recorded call order is spawn → collect → liveness → classify, and a pre-session failure still collapses to `dispatch.session.spawn-failed`.
 - `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, a transient stall cleared by later progress, and routing of a stall still current when collection resolves through restart admission with no silent second spawn.
-- `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the post-spawn collection failure, four-key text order, and classified failures.
+- `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `dispatch-harness-default-detail.test.ts`, `dispatch-harness-default-spawn.test.ts`, `tests/structure/dispatch-envelope-detail.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the additive `DispatchEnvelopeError.detail` on the pre-session spawn path (identified and bounded), the default-allowlist spawn through a synthetic `opencode` on a controlled `PATH`, verbose human detail versus the four-key text, the post-spawn collection failure, four-key text order, and classified failures.
 - `tests/behaviour/dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — one attempt record per classified dispatch and one per attempt-stage failure.
 - `tests/behaviour/dispatch-resume.test.ts`, `dispatch-restart-budget.test.ts`, `dispatch-resume-economics.test.ts` — resume modes, phase-ledger continuity, restart-budget refusal with the terminal exhaustion record, and resume-economics refusal.
 - `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
@@ -87,6 +87,8 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Then** it emits the classified top-level error envelope at the mapped exit (`1`, or `2` for a provider outage or malformed payload) and appends no attempt record.
 - **And given** a spawn failure, restart-budget refusal, resume-economics refusal, or harness spawn refusal
 - **Then** exactly one attempt record is appended with the pinned failure token and outcome.
+- **And given** a pre-session spawn failure
+- **Then** `data.error` is a `DispatchEnvelopeError` carrying the underlying harness failure `kind` and `code` in the additive `detail`, with `field` present only when the failure carries one; the `dispatch.session.spawn-failed` identity, token, outcome, exit, and last message are unchanged; non-verbose text stays exactly four keys while verbose human output names the detail.
 - **And given** a post-spawn `harness.collect` failure
 - **Then** exactly one attempt record is appended with token `state-unverified`, outcome `failed`, and exit `2`, and the envelope carries the classified error under `data.error`.
 

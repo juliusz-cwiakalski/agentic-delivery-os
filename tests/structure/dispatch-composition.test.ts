@@ -212,6 +212,7 @@ describe("the production composer builds a real harness session port", () => {
       const program = createProductionComposer({
         environment: {
           HOME: home,
+          PATH: "/synthetic/bin:/synthetic/usr/bin",
           HARNESS_MODEL: "synthetic/model-large",
           HARNESS_SMALL_MODEL: "synthetic/model-small",
         },
@@ -436,6 +437,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
     const program = createProductionComposer({
       environment: {
         HOME: home,
+        PATH: "/synthetic/bin:/synthetic/usr/bin",
         HARNESS_MODEL: "synthetic/model-large",
         HARNESS_SMALL_MODEL: "synthetic/model-small",
       },
@@ -747,6 +749,7 @@ const createProductionHarness = (input: {
   const program = createProductionComposer({
     environment: {
       HOME: home,
+      PATH: "/synthetic/bin:/synthetic/usr/bin",
       HARNESS_MODEL: "synthetic/model-large",
       HARNESS_SMALL_MODEL: "synthetic/model-small",
     },

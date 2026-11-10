@@ -1,0 +1,326 @@
+schema: readiness-review.v1
+iteration: 1
+verdict: NOT_READY
+workItemRef: GH-277
+date: 2026-11-09
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-277-spec.md (v1.1)
+  test_plan: chg-GH-277-test-plan.md (v1.1)
+  plan: chg-GH-277-plan.yaml
+  pm_notes: chg-GH-277-pm-notes.yaml
+  ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+verdict_basis: >-
+  NOT_READY. Ticket acceptance coverage, the 29-AC and 29-TC matrices, and most
+  source anchors hold up under probe, and the TDR/changeset ordering constraint and
+  TC-RELEASE-001 obligation are correctly encoded. The artifacts are not jointly
+  executable as written: the verbose human diagnostic requires widening a published
+  `@delivery-os/cli` type that no DM declares; the delivered spawn-failure golden
+  envelope breaks and is owned by no phase; the detail-attachment rule conflicts with
+  a TC step that asserts an unreachable failure shape; the end-to-end proof shares the
+  live delivery's state root and can release its lease; and there is no Definition of
+  Done.
+
+facets:
+  spec_completeness: FAIL
+  ac_quality: PASS
+  plan_coverage: FAIL
+  test_traceability: PASS
+  cross_artifact_consistency: FAIL
+  decision_capture: PASS
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: FAIL
+  dod_defined: FAIL
+
+counts:
+  critical: 0
+  major: 6
+  minor: 6
+  nit: 2
+
+findings:
+  - id: F1
+    severity: major
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-277-spec.md §8.3 DM table (235-243), §8.5 (260-270), §16 (364-368);
+      packages/cli/src/index.ts:51 and :351-353; packages/cli/src/commands/dispatch.ts:133-149;
+      chg-GH-277-test-plan.md TC-HDA-029 step 5 (983), TC-HDA-032 note (1102);
+      chg-GH-277-plan.yaml phase 2 scope (185-196)
+    gap: >-
+      The verbose human diagnostic requires changing CommandDefinition.humanText, a type
+      exported from the published @delivery-os/cli "." entry. runCli passes only
+      (data, brand) and --verbose is stripped from argv before the handler, so threading
+      the fact requires widening a published type. The spec declares only DM-1/DM-2/DM-3
+      and states nothing else on the public surface changes, while TC-HDA-029 step 5
+      asserts the dispatch error is "the only widened surface" and TC-HDA-032's note
+      admits the coder must thread verbose into that seam. No DM, no compatibility
+      statement, no governance note.
+    remediation_target: specification
+    fix: >-
+      Add DM-4 declaring the additive backward-compatible humanText context argument,
+      name index.ts as its owner in §16, add the §8.5 compatibility line, and reword
+      TC-HDA-029 step 5 to "the only widened dispatch-envelope surface, plus the declared
+      additive humanText context argument".
+
+  - id: F2
+    severity: major
+    facet: plan_code_area_coverage
+    artifact: >-
+      chg-GH-277-plan.yaml phase 2 (185-196), phase 3 (225-231); chg-GH-277-test-plan.md
+      §7.1 (1487-1516), §7.2 (1537-1567); chg-GH-277-spec.md §7.1 (198);
+      tests/golden/dispatch-errors.test.ts:49-57;
+      tests/fixtures/dispatch/golden/errors/spawn-failed.json
+    gap: >-
+      The delivered TC-ERR-004 asserts byte equality of the spawn-failure envelope with a
+      golden that carries exactly six data.error fields. The scenario's failure is
+      { kind: "harness", code: "harness.spawn.refused" } with no field
+      (tests/fixtures/dispatch/harness.ts:158-162), so under spec F-5/Appendix C the
+      envelope gains data.error.detail and the golden byte-equality test fails. Neither
+      the golden nor its test is in any phase scope or file table, although spec §7.1
+      declares golden envelopes in scope and §2.2 says the delivered fixtures pin the
+      collapsed envelope.
+    remediation_target: delivery_planning
+    fix: >-
+      Add the golden file and tests/golden/dispatch-errors.test.ts to a phase scope with a
+      deliberate-update note, list both in test-plan §7.1/§7.2, and add the byte-equality
+      assertion to TC-HDA-030/TC-HDA-033.
+
+  - id: F3
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-030 step 8 (1023); chg-GH-277-spec.md F-5 (145),
+      Appendix C (494-505), AC-F5-1 (391); packages/core/src/contracts/harness.ts:306-310;
+      tests/fixtures/dispatch/harness.ts:158-162
+    gap: >-
+      TC-HDA-030 step 8 asserts a spawn failure "that carries neither code nor field" and
+      expects no detail. No such HarnessFailure exists: kind and code are required and
+      harness.spawn.refused carries a code with no field. The step asserts an unreachable
+      state and conflicts with F-5/Appendix C, which imply a detail with kind and code and
+      no field. This unresolved rule decides whether F2's golden changes.
+    remediation_target: test_planning
+    fix: >-
+      State the rule in F-5/Appendix C (recommended: detail whenever an underlying failure
+      exists, field only when present) and rewrite step 8 to assert detail
+      { kind: "harness", code: "harness.spawn.refused" } with field omitted. If the other
+      rule is chosen, say so and keep the golden unchanged.
+
+  - id: F4
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md §6.3 (1312-1432), TC-HDA-101 (1244-1277), §6.2 (1306);
+      chg-GH-277-plan.yaml phase 4 (246-293); packages/cli/src/production.ts:925-938;
+      packages/core/src/app/queue.ts:1298-1301
+    gap: >-
+      The end-to-end procedure is bounded for the worktree but not for the delivery's own
+      state. It unsets DELIVERY_OS_WORKING_NAME (1319) so it shares the live
+      $HOME/.delivery-os-state; line 1381 force-releases GH-277 --holder dispatch, which is
+      the live engine dispatch's lease holder, and releaseQueueLease honours a matching
+      holder; line 1382 mutates the real queue; lines 1410-1418 append a real
+      dispatch.attempt record for GH-277 to the live ledger. That contradicts TC-HDA-101's
+      claim that only the clone is touched and can corrupt the lease/attempt evidence
+      dod_check reads.
+    remediation_target: test_planning
+    fix: >-
+      Run the probe under an isolated state/config root (probe-only working name or explicit
+      state directory), add a STOP rule when an active GH-277 lease exists for holder
+      dispatch, and record the probe's attempt record inside the probe root.
+
+  - id: F5
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-101 step 4 (1265) and Expected Outcome (1272),
+      §6.3 step 0 (1323)
+    gap: >-
+      The outcome claims the worktree is "byte-identical", but step 0 runs pnpm build in
+      $REPO, rewriting packages/*/dist and *.tsbuildinfo, and the clone symlinks
+      $REPO/node_modules (1337). The only evidence collected is git status/HEAD, which
+      excludes ignored paths, so the claim cannot be demonstrated and would be recorded as
+      a false pass.
+    remediation_target: test_planning
+    fix: >-
+      Reword to the asserted property: worktree stays git-clean and HEAD unchanged, ignored
+      build artifacts are intentionally rewritten, and no tracked or untracked-not-ignored
+      path changes.
+
+  - id: F6
+    severity: major
+    facet: dod_defined
+    artifact: >-
+      chg-GH-277-spec.md §17 (373-415); precedent chg-GH-239-spec.md §17.1 and the same
+      section in GH-233/238/240/242/266 specs
+    gap: >-
+      No Definition of Done section. Completion conditions live only in the test plan or
+      plan: 29 ACs verified, 29 TCs Pass in the §10 log, M-1..M-20 mutation evidence,
+      pnpm check green, exactly one changeset, the real-dispatch evidence, and the phase-7
+      doc handoff. dod_check cannot distinguish "ACs met" from "evidence collected".
+    remediation_target: specification
+    fix: >-
+      Add ### 17.1 Definition of Done with checkbox conditions covering each of those
+      completion facts, in the GH-239 placement.
+
+  - id: F7
+    severity: minor
+    facet: test_traceability
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-010 preconditions (495-499), TC-HDA-035 step 1 (1193);
+      packages/core/src/app/dispatch.ts:333-336; packages/cli/src/production.ts:925-938
+    gap: >-
+      Both scenarios dispatch through the production composition, which claims a queue
+      lease first; a missing queue entry returns a queue error with no attempt record. No
+      precondition declares the queue entry or an injected claim port, so "exactly one
+      attempt record" cannot be reached.
+    remediation_target: test_planning
+    fix: >-
+      Add a queue-entry (or injected claim port) precondition to both scenarios and note the
+      queue.entry.unobserved pre-spawn failure mode.
+
+  - id: F8
+    severity: minor
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-010 precondition (498), TC-HDA-012 step 5 (576),
+      §6.1 (1292)
+    gap: >-
+      TC-HDA-010 fixes the parent environment as exactly { PATH, HOME }, but TC-HDA-012
+      step 5 needs a canary in the real child and §6.1 says the parent also carries named
+      canaries. The two scenarios contradict each other as written.
+    remediation_target: test_planning
+    fix: >-
+      State the parent as "PATH and HOME plus the §6.1 canaries; TMPDIR and both model
+      variables absent" and keep the exact child key-set assertion.
+
+  - id: F9
+    severity: minor
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-011 steps 1 and 3 (538, 540);
+      packages/core/src/contracts/harness.ts:411-412; packages/cli/src/production.ts:458-465
+    gap: >-
+      The step says spawn is called with the bare command string, but HarnessSessionPort.spawn
+      has no command parameter; the command and args are fixed at adapter composition. The
+      described call cannot be written as stated, and the args assertion must read the
+      runner's (file, args) record.
+    remediation_target: test_planning
+    fix: >-
+      Reword to "compose the adapter with command opencode and spawnArgs run/--format/json,
+      then call spawn({workItemRef, prompt, descriptor}); assert the recorded file is the
+      bare name and args equal [run, --format, json]".
+
+  - id: F10
+    severity: minor
+    facet: plan_code_area_coverage
+    artifact: >-
+      chg-GH-277-plan.yaml phase 1 (134-153); tests/fixtures/queue/production/harness.ts:194-199;
+      tests/behaviour/queue-production-binding.test.ts:504-508;
+      tests/structure/dispatch-composition.test.ts:211-216,445,715,257-261
+    gap: >-
+      The queue production harness composes the stack with { HOME, HARNESS_MODEL,
+      HARNESS_SMALL_MODEL } and no PATH, so after the repair TC-BIND-007 silently stops
+      attempting a spawn (it now fails on harness.spawn.variable-missing: PATH) while its
+      assertions still pass. That fixture/test is in no scope, and phase 1's summary
+      promises only the key-set fix although three dispatch-composition environment fact
+      sets plus the starterInvocations assertions also change.
+    remediation_target: delivery_planning
+    fix: >-
+      Add PATH to the queue production harness (or declare the narrowed meaning of
+      TC-BIND-007) and scope the file; expand phase 1's summary to name all three
+      dispatch-composition environment facts and dependent assertions.
+
+  - id: F11
+    severity: minor
+    facet: plan_code_area_coverage
+    artifact: >-
+      chg-GH-277-plan.yaml phase 1 (119-168); tests/checks/harness-mutants.test.ts:76-84,102-111
+    gap: >-
+      The delivered non-vacuity meta-check mutates harness-spawn-env.ts by exact string
+      replacement. The optional-entry branch rewrites that loop; a changed anchor turns the
+      mutant into a no-op and the suite fails with "mutant passed". The suite is in no phase
+      gate list or regression list.
+    remediation_target: delivery_planning
+    fix: >-
+      Add tests/checks/harness-mutants.test.ts to phase 1's run-unchanged regressions and
+      note that its harness-spawn-env.ts string anchors must survive the optional branch.
+
+  - id: F12
+    severity: minor
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-pm-notes.yaml OQ-1 (19-29) and decisions (17); chg-GH-277-spec.md OQ-1 (340),
+      DEC-1..DEC-6 (347-352)
+    gap: >-
+      The spec records OQ-1 as resolved by TDR-0021 while pm-notes still carries it as
+      "Decision needed" with an open recommendation and decisions is empty. The stale entry
+      reads as an unresolved blocking question at dod_check.
+    remediation_target: specification
+    fix: >-
+      Set pm-notes OQ-1 to resolved by TDR-0021 with the spec cross-reference and add a
+      decisions entry naming TDR-0021.
+
+advisories:
+  - id: A1
+    severity: nit
+    facet: plan_doc_update_coverage
+    artifact: >-
+      chg-GH-277-plan.yaml phase 4 handoff (285-293);
+      doc/spec/features/feature-result-contract.md:25,84;
+      doc/spec/features/feature-cli-entrypoint.md:40; packages/cli/src/help.ts:35
+    gap: >-
+      --verbose gains a human-mode meaning while the result-contract spec still describes it
+      only as the full-envelope override; help.ts already describes human diagnostic detail.
+    fix: Add feature-result-contract.md and feature-cli-entrypoint.md to the phase-7 handoff.
+  - id: A2
+    severity: nit
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-277-spec.md NFR-6 (281), AC-F5-5 (395), DM-3 (239);
+      packages/core/src/app/dispatch.ts:178-182
+    gap: >-
+      The 256-character detail bound has no declared owning module or constant name, unlike
+      the delivered last_message bound.
+    fix: Name the enforcing module and constant in DM-3/§16 so TC-HDA-034 reads it.
+
+verification_notes:
+  plan_schema: >-
+    chg-GH-277-plan.yaml parses as delivery.plan.v1 with four delivery phases, per-phase
+    scope files and interactions (reported valid by plan validate; readyForDevelopment true).
+  delivered_infrastructure_checked:
+    - "Shipped default allowlist is HARNESS_MODEL/HARNESS_SMALL_MODEL/DELIVERY_WORK_PATH only (defaults.ts:58-62); no production consumer of the HARNESS_* names exists."
+    - "Builder is deny-by-default with record-over-parent precedence and fail-closed absence carrying field (harness-spawn-env.ts:38-67)."
+    - "HarnessEnvironmentVariable has no optionality; HarnessFailure requires kind and code and makes field optional (contracts/harness.ts:120-134,306-314)."
+    - "Config validation returns before the unknown-key check on the credentialRef branch, so marker+credentialRef is currently accepted silently (config/harness.ts:123-133) — phase 1's summary correctly anticipates this."
+    - "Production composition maps the allowlist and injects DELIVERY_WORK_PATH through the record; command is the bare opencode with run/--format/json (production.ts:423-447,462-465)."
+    - "Pre-session spawn failure returns a data-bearing success envelope with fixed message and evidence ref (app/dispatch.ts:466-485); token failed projects user-validation (exit 1)."
+    - "errorOf emits exactly code/category/retryable/consequence/remediationHint/summary (app/dispatch.ts:184-200)."
+    - "DispatchEnvelopeData.error is CommandResultError today; contracts/index.ts names it explicitly (277-296, index 718)."
+    - "runCli parses --json/--verbose/--pretty as globals, strips them from argv, and calls humanText(data, brand) only for success outcomes without --json (index.ts:205,211,316-317,351-353)."
+    - "diagnosticFor is non-verbose-gated and emitted only for failure outcomes; writeOutput is the single redacted write path (index.ts:298-303,413-435; serialize.ts:69-117)."
+    - "renderDispatchText emits exactly the four keys in bash order (dispatch-text.ts:28-34)."
+    - "config get <key> --show-origin returns {key,value,origin:originLabel} and rejects the invalid pairing as input.value.rejected (commands/config.ts:24-26,96-155)."
+    - "Default origins are marked for harness.environment and all descendants, so the layer=defaults assertion is achievable (resolver.ts:329-366; provenance.ts:20-24)."
+    - "Generated schema harness.environment.items already has properties/additionalProperties:false; artifacts are config.schema.json, defaults-positions.json, schema-sources.json under the gitignored packages/*/dist (exports-parity.ts:19-57,117; .gitignore:14)."
+    - "config-default-positions.test.ts already contains in-suite non-vacuity controls (67-85, 87-104)."
+    - "12-site node:child_process allowlist present and includes packages/adapters/src/host/index.ts (harness-imports.test.ts:26-40)."
+    - "Delivered spawn-failure golden envelope has exactly six error fields (tests/fixtures/dispatch/golden/errors/spawn-failed.json); it is the only such golden."
+    - "tests/types/tsconfig.json is part of pnpm typecheck; all 'edit' paths in the test plan exist and all 'add' paths are absent."
+    - "TDR-0021 is untracked while its doc/decisions/00-index.md:43 row is committed; commit staging sorts include paths and stages untracked files only inside scope, and TRACKER_REF rejects TDR-0021 as an invented reference — the plan's ordering constraint is correctly encoded."
+    - "TC-RELEASE-001 requires one added five-package minor changeset with a non-empty body and no pre-existing edit; the zero-changeset escape requires an empty packages/ diff (privacy-release.test.ts:42-49,70-86,133-175)."
+  traceability:
+    ticket_acs_covered: "All five ticket acceptance bullets map to ACs via spec §17's traceability table (F1-1/F2-1/F8-1; F1-2; F3-1/F5-1/F5-3; F7-1/F7-2/F7-3; F5-2/F5-3/F7-4)."
+    ac_to_tc: "29/29 ACs have at least one TC; 29 TCs; capability, decision, risk, DM and NFR matrices complete; TC-HDA-006 is a declared release-obligation exception."
+    phase_ownership: "29/29 ACs and 29/29 TCs owned exactly once (P1 14+16, P2 2+2, P3 11+8, P4 2+3)."
+    gaps: "Matrix complete; three assertion defects (F3, F7, F8) and one wording defect (F9) would otherwise surface during delivery."
+  decisions_routing:
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; F12 asks pm-notes to record the OQ-1 resolution and TDR-0021."
+    system: "DEC-3 is already governed by TDR-0021 (status Proposed; owner acceptance at PR review). No additional record is required before delivery; a decision-critic verdict on TDR-0021 is advisable before PR finalization."
+    needs_human_input: "none; no pause flag raised."
+  forbidden_edits: >-
+    This pass modified no spec, test-plan, plan, or source file and made no commit. It
+    wrote only readiness-review/readiness-iter-1.md and readiness/readiness-iter-1.yaml.

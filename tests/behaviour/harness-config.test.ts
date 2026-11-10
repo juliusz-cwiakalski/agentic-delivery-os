@@ -9,7 +9,9 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   catalogPaths,
+  compileTrustedSchema,
   PRODUCTION_CATALOG,
+  PRODUCTION_SCHEMA,
   resolveConfig,
   resolveHarnessSettings,
 } from "../../packages/core/src/config/index";
@@ -24,8 +26,10 @@ import {
   harnessRegistryViolations,
   resolveHarnessInstance,
 } from "../../packages/core/src/domain/harness-registry";
+import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
 import { canonicalHarnessJson } from "../../packages/core/src/domain/index";
 import { fileFacts } from "../fixtures/config/facts";
+import { createFakeCredentialPort, DECLARED_MODEL_VARIABLE } from "../fixtures/harness/spawn-env";
 
 const ROOT = process.cwd();
 const FIXTURES = "tests/fixtures/harness/config";
@@ -95,7 +99,12 @@ describe("TC-HARN-016 harness configuration defaults and selection", () => {
       "harness.execution.kind",
       "harness.stores.opencode.databasePath",
       "harness.stores.claude-code.sessionDirectory",
+      "harness.environment",
       "harness.environment[0].name",
+      "harness.environment[1].name",
+      "harness.environment[2].name",
+      "harness.environment[2].optional",
+      "harness.environment[3].name",
     ]) {
       expect(resolved.value.origins[path]?.layer, path).toBe("defaults");
     }
@@ -105,8 +114,9 @@ describe("TC-HARN-016 harness configuration defaults and selection", () => {
     expect(settings.value.kind).toBe("opencode");
     expect(settings.value.executionKind).toBe("host");
     expect(settings.value.environment).toEqual([
-      { name: "HARNESS_MODEL" },
-      { name: "HARNESS_SMALL_MODEL" },
+      { name: "PATH" },
+      { name: "HOME" },
+      { name: "TMPDIR", optional: true },
       { name: "DELIVERY_WORK_PATH" },
     ]);
   });
@@ -282,5 +292,274 @@ describe("TC-HARN-003 harness instance resolution", () => {
     expect(harnessRegistryViolations(makeRegistrations(calls).slice(0, 1))).toContain(
       "harness claude-code has no registration",
     );
+  });
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const at = (root: unknown, path: readonly string[]): unknown => {
+  let current = root;
+  for (const segment of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+};
+
+const HARNESS_ENVIRONMENT_ENTRY_SCHEMA = at(PRODUCTION_SCHEMA, [
+  "properties",
+  "harness",
+  "properties",
+  "environment",
+  "items",
+]);
+
+const validHarnessValues = (environment: readonly unknown[]): Record<string, ConfigValue> => ({
+  harness: {
+    kind: "opencode",
+    execution: { kind: "host" },
+    stores: {
+      opencode: { databasePath: ".local/state/opencode/opencode.db" },
+      "claude-code": { sessionDirectory: ".local/state/claude-code" },
+    },
+    environment: environment as ConfigValue[],
+  },
+});
+
+const resolveEnvironment = (environment: readonly unknown[]) =>
+  resolveHarnessSettings(validHarnessValues(environment));
+
+describe("TC-HDA-005 exact shipped default allowlist", () => {
+  test("required entries are PATH, HOME, DELIVERY_WORK_PATH; TMPDIR is the only optional", () => {
+    const resolved = resolveConfig();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(true);
+    if (!settings.ok) return;
+    const required = settings.value.environment
+      .filter((entry) => !("credentialRef" in entry) && entry.optional !== true)
+      .map((entry) => entry.name);
+    const optional = settings.value.environment
+      .filter((entry) => !("credentialRef" in entry) && entry.optional === true)
+      .map((entry) => entry.name);
+    expect(required).toEqual(["PATH", "HOME", "DELIVERY_WORK_PATH"]);
+    expect(optional).toEqual(["TMPDIR"]);
+    const names = settings.value.environment.map((entry) => entry.name);
+    expect(names).not.toContain("HARNESS_MODEL");
+    expect(names).not.toContain("HARNESS_SMALL_MODEL");
+    for (const windows of ["USERPROFILE", "APPDATA"]) expect(names).not.toContain(windows);
+  });
+});
+
+describe("TC-HDA-002 catalog and generated schema admit optional", () => {
+  test("the environment entry schema admits a boolean optional and stays closed", () => {
+    const properties = at(HARNESS_ENVIRONMENT_ENTRY_SCHEMA, ["properties"]);
+    expect(isRecord(properties)).toBe(true);
+    if (!isRecord(properties)) return;
+    expect(properties.name).toEqual({ type: "string" });
+    expect(properties.credentialRef).toEqual({ type: "string" });
+    expect(properties.optional).toEqual({ type: "boolean" });
+    expect(properties.value).toEqual({ type: "string" });
+    expect(at(HARNESS_ENVIRONMENT_ENTRY_SCHEMA, ["additionalProperties"])).toBe(false);
+  });
+
+  test("a valid optional entry passes the trusted schema; a non-boolean fails", () => {
+    const schema = compileTrustedSchema(PRODUCTION_CATALOG, true);
+    expect(
+      schema({ harness: { environment: [{ name: "SYNTHETIC_OPTIONAL", optional: true }] } }),
+    ).toBe(true);
+    expect(
+      schema({ harness: { environment: [{ name: "SYNTHETIC_OPTIONAL", optional: "yes" }] } }),
+    ).toBe(false);
+  });
+
+  test("resolveConfig rejects a non-boolean marker as config.value.invalid", () => {
+    const resolved = resolveFixture("invalid-optional-non-boolean.yaml");
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) {
+      expect(resolved.error.code).toBe("config.value.invalid");
+      expect(resolved.error.layer).toBe("project-committed");
+    }
+  });
+
+  test("the catalog adds the marker to no other branch", () => {
+    const providerSchema = at(PRODUCTION_SCHEMA, [
+      "properties",
+      "provider",
+      "properties",
+      "entries",
+      "additionalProperties",
+    ]);
+    expect(isRecord(providerSchema)).toBe(true);
+    if (isRecord(providerSchema)) expect(providerSchema.properties).not.toHaveProperty("optional");
+  });
+});
+
+describe("TC-HDA-019 explicit HARNESS_MODEL keeps required-entry semantics", () => {
+  test("an explicit declaration fails closed without a model value and forwards a present one", () => {
+    const resolved = resolveConfig({
+      sources: [
+        fileFacts(
+          "project-committed",
+          { harness: { environment: [{ name: DECLARED_MODEL_VARIABLE }] } },
+          1,
+        ),
+      ],
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(true);
+    if (!settings.ok) return;
+    expect(settings.value.environment).toEqual([{ name: DECLARED_MODEL_VARIABLE }]);
+
+    const descriptor = {
+      kind: "host" as const,
+      workDirectory: "/synthetic/work/GH-277",
+      environment: [{ kind: "variable" as const, name: DECLARED_MODEL_VARIABLE }],
+    };
+    const missing = buildHarnessSpawnEnvironment({
+      descriptor,
+      parentEnvironment: {
+        OC_ADOS_MAIN_MODEL: "synthetic/ambient-model",
+        OC_ADOS_SMALL_MODEL: "synthetic/ambient-small",
+      },
+      credentials: createFakeCredentialPort().port,
+    });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.error.code).toBe("harness.spawn.variable-missing");
+      expect(missing.error.field).toBe(DECLARED_MODEL_VARIABLE);
+    }
+
+    const present = buildHarnessSpawnEnvironment({
+      descriptor,
+      parentEnvironment: { [DECLARED_MODEL_VARIABLE]: "synthetic/model-large" },
+      credentials: createFakeCredentialPort().port,
+    });
+    expect(present.ok).toBe(true);
+    if (present.ok) expect(present.value[DECLARED_MODEL_VARIABLE]).toBe("synthetic/model-large");
+
+    const defaults = resolveConfig();
+    expect(defaults.ok).toBe(true);
+    if (!defaults.ok) return;
+    const defaultSettings = resolveHarnessSettings(defaults.value.values, defaults.value.origins);
+    expect(defaultSettings.ok).toBe(true);
+    if (defaultSettings.ok) {
+      expect(defaultSettings.value.environment.map((entry) => entry.name)).not.toContain(
+        DECLARED_MODEL_VARIABLE,
+      );
+    }
+  });
+});
+
+describe("TC-HDA-020 existing { name } entries keep required semantics", () => {
+  const CANARY = "SYNTHETIC_CANARY_VARIABLE";
+  const descriptor = {
+    kind: "host" as const,
+    workDirectory: "/synthetic/work/GH-277",
+    environment: [{ kind: "variable" as const, name: CANARY }],
+  };
+
+  test("an existing entry resolves with no migration and no marker", () => {
+    const resolved = resolveConfig({
+      sources: [
+        fileFacts("project-committed", { harness: { environment: [{ name: CANARY }] } }, 1),
+      ],
+    });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(true);
+    if (!settings.ok) return;
+    expect(settings.value.environment).toEqual([{ name: CANARY }]);
+    expect(settings.value.environment[0]).not.toHaveProperty("optional");
+
+    const missing = buildHarnessSpawnEnvironment({
+      descriptor,
+      parentEnvironment: {},
+      credentials: createFakeCredentialPort().port,
+    });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.error.code).toBe("harness.spawn.variable-missing");
+      expect(missing.error.field).toBe(CANARY);
+    }
+
+    const present = buildHarnessSpawnEnvironment({
+      descriptor,
+      parentEnvironment: { [CANARY]: "synthetic-value" },
+      credentials: createFakeCredentialPort().port,
+    });
+    expect(present.ok).toBe(true);
+    if (present.ok) expect(present.value[CANARY]).toBe("synthetic-value");
+  });
+});
+
+describe("TC-HDA-021 optional-marker validation matrix", () => {
+  test("only a boolean marker on a non-credential entry is accepted", () => {
+    const valid = resolveEnvironment([{ name: "SYNTHETIC_OPTIONAL", optional: true }]);
+    expect(valid.ok).toBe(true);
+    if (valid.ok)
+      expect(valid.value.environment).toEqual([{ name: "SYNTHETIC_OPTIONAL", optional: true }]);
+
+    const credential = resolveEnvironment([
+      { name: "SYNTHETIC_CREDENTIAL", credentialRef: "synthetic-reference" },
+    ]);
+    expect(credential.ok).toBe(true);
+    if (credential.ok)
+      expect(credential.value.environment).toEqual([
+        { name: "SYNTHETIC_CREDENTIAL", credentialRef: "synthetic-reference" },
+      ]);
+  });
+
+  test("non-boolean, credential-plus-marker, unknown key and literal value classify", () => {
+    for (const environment of [
+      [{ name: "SYNTHETIC_OPTIONAL", optional: "yes" }],
+      [{ name: "SYNTHETIC_OPTIONAL", optional: 1 }],
+      [{ name: "SYNTHETIC_CREDENTIAL", optional: true, credentialRef: "synthetic-reference" }],
+      [{ name: "SYNTHETIC_OPTIONAL", mystery: true }],
+    ]) {
+      const resolved = resolveEnvironment(environment);
+      expect(resolved.ok).toBe(false);
+      if (!resolved.ok) {
+        expect(resolved.error.code).toBe("config.value.invalid");
+        expect(resolved.error.key).toBe("harness.environment[0]");
+        expect(JSON.stringify(resolved.error)).not.toContain("synthetic-reference");
+      }
+    }
+    const literal = resolveEnvironment([{ name: "SYNTHETIC", value: "synthetic-literal-value" }]);
+    expect(literal.ok).toBe(false);
+    if (!literal.ok) {
+      expect(literal.error.code).toBe("config.secret.forbidden");
+      expect(literal.error.key).toBe("harness.environment[0]");
+      expect(JSON.stringify(literal.error)).not.toContain("synthetic-literal-value");
+    }
+  });
+
+  test("the optional-entry fixture resolves through resolveConfig with the marker intact", () => {
+    const resolved = resolveFixture("optional-entry.yaml");
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(true);
+    if (!settings.ok) return;
+    expect(settings.value.environment).toEqual([
+      { name: "SYNTHETIC_OPTIONAL_VARIABLE", optional: true },
+    ]);
+  });
+
+  test("the credential-plus-marker fixture classifies through resolveConfig", () => {
+    const resolved = resolveFixture("invalid-optional-credential.yaml");
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(false);
+    if (!settings.ok) {
+      expect(settings.error.code).toBe("config.value.invalid");
+      expect(settings.error.key).toBe("harness.environment[0]");
+    }
   });
 });

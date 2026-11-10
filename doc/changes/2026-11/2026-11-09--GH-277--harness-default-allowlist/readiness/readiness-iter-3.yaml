@@ -1,0 +1,293 @@
+schema: readiness-review.v1
+iteration: 3
+verdict: NOT_READY
+workItemRef: GH-277
+date: 2026-11-09
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-277-spec.md (v1.3)
+  test_plan: chg-GH-277-test-plan.md (v1.3)
+  plan: chg-GH-277-plan.yaml (delivery.plan.v1; plan validate verdict=valid, readyForDevelopment=true, tier=full)
+  pm_notes: chg-GH-277-pm-notes.yaml
+  ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+
+verdict_basis: >-
+  NOT_READY on one major cross-artifact contradiction. All three iteration-2 blocking
+  findings are genuinely remediated and were verified against delivered source: the E2E
+  procedure now captures STATUS_BEFORE and asserts STATUS_AFTER == STATUS_BEFORE with an
+  unchanged HEAD and names the permitted uncommitted baseline; DoD-6 states the achievable
+  worktree claim (baseline equality, HEAD unchanged, only gitignored build outputs
+  rewritten); and plan P2 owns the v1 contract fixture, the port-contract comparator, the
+  content-inventory allowance, names the exported bound constant, and runs both inventory
+  suites as gates. The residual defect is a second new contract export that the artifacts
+  do not send to the v1 fixture while TC-HDA-029 step 9 forbids it: the exported
+  DISPATCH_MAX_ERROR_DETAIL_CHARS is collected by the bidirectional TC-PORT-001 comparison
+  exactly as the sibling DISPATCH_MAX_LAST_MESSAGE_CHARS already is (fixture lines 637 and
+  1540), so the fixture must gain it too, and TC-HDA-029 step 9's "changes no other export
+  name" conflicts with TC-HDA-034's requirement to read a delivered export. The new P2 gate
+  contains the blast radius inside P2, but the two binding instructions cannot both hold.
+
+facets:
+  spec_completeness: PASS
+  ac_quality: PASS
+  plan_coverage: PASS
+  test_traceability: PASS
+  cross_artifact_consistency: FAIL
+  decision_capture: PASS
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: PASS
+  dod_defined: PASS
+
+counts:
+  critical: 0
+  major: 1
+  minor: 1
+  nit: 3
+
+iteration_2_verification:
+  - id: A
+    subject: "E2E asserted absolute git-status emptiness while P4's own artifacts are uncommitted"
+    status: FIXED
+    evidence: >-
+      test plan 1374 (STATUS_BEFORE capture), 1368-1373 (baseline-not-emptiness comment naming
+      untracked TDR-0021, the new changeset, and the pending test-plan edit), 1529-1542 (step 8
+      asserts STATUS_AFTER equality then HEAD equality), 1297 and 1300 (TC-HDA-101 steps 1 and 4),
+      1307/1312 (expected outcome and rationale), 80 (§1.4 row 12), 1565-1566 (pass/fail),
+      1696 (§7.2), 1877/1915 (§10); plan 336-349 (P4 summary) and 364-369 (P4 doneArtifacts).
+      Probe: `git status --porcelain` prints only `?? doc/decisions/TDR-0021-…md`; .gitignore:2,14,15
+      exclude tmp/, packages/*/dist/, *.tsbuildinfo, so the step-0 pnpm build cannot move the status.
+  - id: B
+    subject: "DoD-6 required 'mutates no file' while step 0 runs pnpm build in the worktree"
+    status: FIXED
+    evidence: >-
+      spec 430 now states the achievable claim: git status --porcelain after equals the pre-run
+      baseline (including expected uncommitted P4 artifacts such as the untracked TDR-0021 record
+      and the new changeset), HEAD unchanged, and only gitignored build outputs rewritten
+      (packages/*/dist, *.tsbuildinfo). AC-F8-2 unchanged at spec 407. Matches test plan 1300, 1307,
+      1529-1533 and plan 345-347.
+  - id: C
+    subject: "Plan P2 omitted the contract-surface inventories and ran no test gate"
+    status: FIXED_WITH_RESIDUAL_GAP
+    residual_finding: 1
+    evidence: >-
+      plan 267-269 (P2 scope: tests/fixtures/ports/v1-contract-inventory.json,
+      tests/structure/port-contract-inventory.test.ts, tests/structure/content-inventory.test.ts),
+      223-226 (exported DISPATCH_MAX_ERROR_DETAIL_CHARS bound), 70-75 (header: both inventories,
+      inventory.json unaffected), 245-252 (P2 gates run both suites), 280-283 (doneArtifacts);
+      test plan 53-55 (GAP-T2/T6), 1011 (TC-029 step 9), 1189/1195 (TC-034), 1582-1583 (§6.4),
+      1635-1637 (§7.1), 1688/1693 (§7.2), 1795 (R-T15).
+      Probes: port-contract-inventory.test.ts:82-109,134-136 bidirectional; fixture lists
+      DISPATCH_MAX_LAST_MESSAGE_CHARS at 637 and 1540; content-inventory allowance 468-509 and
+      enforcement 2166-2184; contracts/dispatch.ts:356 exports the sibling constant.
+  - id: N4
+    subject: "P1 summary under-described the dispatch-composition repair (iteration-2 minor)"
+    status: FIXED
+    evidence: >-
+      plan 149-174 names all three parent fact sets (~211-216, ~445-450, ~716-720), the PATH
+      addition (HOME present in each; probed dispatch-composition.test.ts:211-216,445-450,716-720),
+      the starterInvocations (255) and resume harness.spawns (908) assertions, and the expected child
+      key set DELIVERY_WORK_PATH/HOME/PATH.
+  - id: N5
+    subject: "Stale spec line anchors (iteration-2 minor)"
+    status: FIXED
+    evidence: >-
+      Spot-probed test-plan citations against spec v1.3: NFR-4 281, NFR-6 283, NFR-7 284, AC-F1-3 381,
+      AC-F5-2 394, AC-F5-3 395, AC-F5-5 397, AC-F6-3 400, AC-F7-2 402, AC-F8-1 406, AC-F8-2 407,
+      F-1 141, F-3 143, F-5 145, F-8 148, DM-3 239, DM-4 240, §8.5 261-271, §16 366-369, §18 439-446,
+      Appendix A 488-500, B 502-514, C 516-540, RSK-6 307 — all resolve to the cited content.
+  - id: N6
+    subject: "pm-notes decisions empty and blocker entry stale (iteration-2 minor)"
+    status: FIXED
+    evidence: >-
+      chg-GH-277-pm-notes.yaml:17-34 carries DEC-1..DEC-5 with DEC-3 "Governed by TDR-0021";
+      72-82 records the iteration-2 verdict.
+  - id: A1
+    subject: "Phase-7 doc handoff narrower than the DM-4 meaning change (iteration-2 A1)"
+    status: FIXED
+    evidence: >-
+      plan 377-392, spec 373, DoD-9 433, and spec 470 name feature-result-contract.md,
+      feature-cli-entrypoint.md, and the humanText hook docs (status-digest, brief, doctor,
+      owner-gate-sla).
+  - id: A2
+    subject: "Zero-configuration guard missed the project-local config (iteration-2 A2)"
+    status: FIXED
+    evidence: >-
+      test plan 1424-1435 checks config.local.yaml under both .delivery-os and .gh277-probe project
+      directories plus the probe-brand user config.
+
+findings:
+  - id: N1
+    severity: major
+    blocking: true
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md TC-HDA-029 step 9 (1011), §1.1 (41), §1.4 row 15 (83), §3.5 (237),
+      §6.1 (1338), §7.1 (1635-1636), §8.1 R-T15 (1795), revision log (1838);
+      chg-GH-277-plan.yaml header (63-75), P2 summary (240-244), P2 doneArtifacts (280-283);
+      tests/fixtures/ports/v1-contract-inventory.json:637,1540;
+      tests/structure/port-contract-inventory.test.ts:82-109,134-136;
+      tests/structure/content-inventory.test.ts:468-509,2166-2184
+    gap: >-
+      Every artifact says the v1 contract fixture gains exactly DispatchEnvelopeError, and TC-HDA-029
+      step 9 adds "Assert the fixture diff changes no other export name." P2 also lands a second new
+      export in the same module, DISPATCH_MAX_ERROR_DETAIL_CHARS (plan 223-226; test plan 1189, 1195),
+      which must be exported so TC-HDA-034 can read the bound instead of duplicating a literal.
+      collectInventory collects exported variable statements and compareInventory is bidirectional —
+      which is why the fixture already lists the sibling DISPATCH_MAX_LAST_MESSAGE_CHARS under
+      modules["dispatch.ts"] (637) and modules["index.ts"] (1540). The correct P2 edit must add
+      DISPATCH_MAX_ERROR_DETAIL_CHARS under dispatch.ts (and under index.ts when re-exported from
+      contracts/index.ts), or `bun test tests/structure/port-contract-inventory.test.ts` fails with
+      "dispatch.ts: unexpected export DISPATCH_MAX_ERROR_DETAIL_CHARS". The artifacts never direct that
+      edit and one binding test-plan step forbids it, so a delivery agent following step 9 literally
+      records a false failure or "fixes" it by not exporting the bound, which breaks TC-HDA-034 and
+      AC-F5-5. The new P2 gate contains the blast radius to P2, but TC-HDA-029 step 9 and TC-HDA-034
+      step 3 cannot both hold as written.
+    remediation_target: test_planning
+    fix: >-
+      In TC-HDA-029 step 9, §7.1's fixture row, §1.1, §1.4 row 15, §3.5, §6.1, R-T15, and the plan's
+      P2 summary/doneArtifacts, state the fixture diff as "add DispatchEnvelopeError and
+      DISPATCH_MAX_ERROR_DETAIL_CHARS under modules[\"dispatch.ts\"] (and under modules[\"index.ts\"] for
+      whatever is re-exported from contracts/index.ts)"; replace "changes no other export name" with
+      "changes no export name other than this change's declared additions"; keep
+      tests/structure/port-contract-inventory.test.ts unmodified.
+
+  - id: N2
+    severity: minor
+    blocking: false
+    facet: dod_defined
+    artifact: >-
+      chg-GH-277-spec.md §17.1 DoD-10 (434) vs §14 (340-343) and §7.3 (215-221);
+      chg-GH-277-test-plan.md:1816,1820
+    gap: >-
+      DoD-10 requires remaining follow-ups (OQ-2 discovered boot variables, Windows parity) to be
+      "named with an owner and a home", but spec §14 has no owner column and OQ-2's status names no
+      owner, and §7.3 names no owner. The test plan assigns owners (OQ-T1 "@coder / owner", OQ-T5
+      "@pm"), yet DoD-10 binds §12/§14/§7.3, so dod_check cannot close it from the spec as written.
+      Non-blocking: OQ-2 is evidence-gated by the P4 real dispatch and explicitly non-blocking for
+      specification.
+    remediation_target: specification
+    fix: >-
+      Name an owner for OQ-2 and the Windows-parity deferral in §14/§7.3, or reword DoD-10 to "named
+      with a home and a resolution path" and cite the test plan's owners.
+
+advisories:
+  - id: A1
+    severity: nit
+    facet: plan_code_area_coverage
+    artifact: chg-GH-277-plan.yaml:171-173 (P1 gates)
+    gap: >-
+      P1's gate text says "the six named behaviour/structure suites" without enumerating them; the
+      count matches the six P1-owned suites but a coder must infer the set.
+    fix: Enumerate the six suite command lines.
+
+  - id: A2
+    severity: nit
+    facet: plan_code_area_coverage
+    artifact: >-
+      tests/structure/content-inventory.test.ts:168 (cli/src/commands/dispatch.ts allowance),
+      169-173 (cli/src/output/dispatch-text.ts allowance), 1618 (cli/src/index.ts allowance)
+    gap: >-
+      DM-3/DM-4 keep HumanTextContext a type, which the allowance permits, so that path is safe. But if
+      the bounded verbose diagnostic is implemented as a new exported function in dispatch-text.ts, it
+      must be registered in that allowance or P2's content-inventory gate fails with "undeclared
+      executable export".
+    fix: >-
+      Name the conditional allowance registration for any new exported dispatch-text symbol in P2's
+      summary, or implement the diagnostic as a non-exported helper.
+
+  - id: A3
+    severity: nit
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-pm-notes.yaml:6-10 (phase registry) and 72-82 (iteration-2 blocker text);
+      chg-GH-277-spec.md:570; chg-GH-277-test-plan.md:1838
+    gap: >-
+      specification, test_planning, and delivery_planning show completed at 05:39 while the blocker
+      entry says they were reopened for the iteration-2 remediation and the artifacts carry later v1.3
+      edits; dor_check remains null. DoD-11 reads the phase registry.
+    fix: >-
+      Record the reopen/re-complete cycle through the phase family when the remediation lands; keep
+      the superseding iterations in readiness-review/ as the audit trail.
+
+verification_notes:
+  plan_schema: >-
+    `delivery-os plan validate GH-277` -> verdict=valid, artifact=yaml:chg-GH-277-plan.yaml, tier=full,
+    readyForDevelopment=true. Four delivery phases; scope counts 21/15/6/3; 45 distinct paths; no path
+    appears in two phases.
+  traceability:
+    ticket_acs_covered: >-
+      All five ticket acceptance bullets map to ACs via spec §17's table: zero-config success ->
+      AC-F1-1/AC-F2-1/AC-F8-1; PATH resolution -> AC-F1-2; absent variable names the field ->
+      AC-F3-1/AC-F5-1/AC-F5-3; regression trio -> AC-F7-1/AC-F7-2/AC-F7-3; verbose/JSON identity ->
+      AC-F5-2/AC-F5-3/AC-F7-4.
+    ac_to_tc: >-
+      29/29 ACs covered in §3.1; 29 TCs in §5.1 index and 29 rows in §10; every §5.2 scenario names
+      its AC/NFR/DM/DEC; TC-HDA-006 is the declared release-obligation exception.
+    phase_ownership: >-
+      AC 14+2+11+2 = 29 and TC 16+2+8+3 = 29, each owned exactly once; cross-phase confirmations
+      (AC-F1-1 via TC-HDA-023, AC-F5-1 via TC-HDA-030, AC-F5-3 via the P3 type test) transfer no
+      ownership. Mutation split covers M-1..M-20 exactly once.
+  delivered_infrastructure_checked:
+    - >-
+      TC-PORT-001 collects the exported surface of every packages/core/src/contracts/*.ts (types,
+      interfaces, variables, re-exports) and compares it bidirectionally with the fixture
+      (port-contract-inventory.test.ts:82-109,134-136); the fixture already pins the sibling exported
+      constant DISPATCH_MAX_LAST_MESSAGE_CHARS under dispatch.ts (637) and index.ts (1540).
+    - >-
+      content-inventory restricts exported variables and functions of core/src/contracts/dispatch.ts
+      to EXECUTABLE_ALLOWANCES (468-509) and reports "undeclared executable export <name>"
+      (2166-2184); the same mechanism covers cli/src/commands/dispatch.ts (168) and
+      cli/src/output/dispatch-text.ts (169-173).
+    - >-
+      DispatchEnvelopeData.error is CommandResultError today (contracts/dispatch.ts:288); errorOf
+      builds it from {lastMessage, errorCode} (app/dispatch.ts:185-200); the pre-session branch keeps
+      the HarnessResult failure in scope (466-471), so attaching kind/code/optional field is additive
+      and reachable. HarnessFailure requires kind and code and makes field optional
+      (contracts/harness.ts:305-314); HARNESS_FAILURE_CODES has exactly nine entries.
+    - >-
+      The spawn-failure golden carries the six error fields and no detail; its consumer compares
+      stdout.trim() byte-for-byte (tests/golden/dispatch-errors.test.ts:48-57, TC-ERR-004); the
+      scripted failure is { kind: harness, code: harness.spawn.refused } with no field
+      (fixtures/dispatch/harness.ts:158-162). Other dispatch suites read error by property or
+      toMatchObject, so an optional detail breaks none of them.
+    - >-
+      Every HARNESS_MODEL/HARNESS_SMALL_MODEL occurrence outside the change folder is in a phase scope
+      or the phase-7 handoff (defaults.ts:58-62, default.resolved.json, spawn-env.ts, queue production
+      harness:194-199, dispatch-composition.test.ts:214/259/448/718, harness-config.test.ts:108,
+      harness-mutants.test.ts:44/56, doc/spec/features/feature-config-layer.md:259). Config artifacts
+      are generated only into packages/core/dist/config (gitignored; packages/core build runs
+      exports-parity --generate-config-artifacts; root pretypecheck/pretest run pnpm build).
+    - >-
+      E2E isolation: probe root derivation production.ts:233 + branding/index.ts:78,128; neutral
+      override name DELIVERY_OS_WORKING_NAME (entrypoint.ts:36, edge.ts:395); .gitignore:2,14,15
+      exclude tmp/, packages/*/dist/, *.tsbuildinfo and .gitignore:17 excludes .*/config.local.yaml.
+      The clone is taken from the branch after P1-P3 phase commits, so only P4 artifacts are
+      uncommitted at probe time.
+    - >-
+      DM-4 moves no delivered pin: humanText is (data, brand) at cli/src/index.ts:51 and invoked with
+      two arguments at 351-353 inside the !emitEnvelope branch; --verbose parsed at 317; diagnosticFor
+      at 298-303. HumanTextContext is a type, so the cli/src/index.ts executable allowance (1618)
+      is unaffected.
+    - >-
+      Release ordering: computeStagingPlan locale-sorts the include list
+      (commit-staging.ts:72) and topPath is staging.include[0].path (commit-act.ts:289); tracked
+      pending work is always staged (commit-staging.ts:58-62). TRACKER_REF (commit-message.ts:21)
+      requires an uppercase ref-shaped token, so .changeset/gh-277-… is safe as the first include
+      while TDR-0021 would be rejected. TC-RELEASE-001 counts untracked changesets
+      (privacy-release.test.ts:23), requires exactly one (145), and validateChangeset (70-86) pins five
+      minor packages plus a non-empty body and rejects testkit.
+    - >-
+      config get harness.environment --show-origin returns { key, value, origin } with a
+      "layer=defaults …" originLabel (commands/config.ts:96-155; config/provenance.ts:20-24), which is
+      what §6.3 step 1b reads.
+  decisions_routing:
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec and the pm-notes decisions list; DEC-3 remains governed by TDR-0021."
+    system: "No new decision record required before delivery; TDR-0021 (Proposed) is the standalone record for DEC-3 and owner acceptance happens at PR review."
+    needs_human_input: "none; no pause flag raised."
+  forbidden_edits: >-
+    This pass modified no spec, test-plan, plan, source, or pm-notes file and made no commit. It wrote
+    only readiness-review/readiness-iter-3.md and readiness/readiness-iter-3.yaml.

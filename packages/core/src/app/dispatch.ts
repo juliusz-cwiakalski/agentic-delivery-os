@@ -13,10 +13,12 @@ import {
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  DISPATCH_MAX_ERROR_DETAIL_CHARS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
   type DispatchAttemptRecord,
   type DispatchEnvelopeData,
+  type DispatchEnvelopeError,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
@@ -25,6 +27,7 @@ import {
   HARNESS_OUTCOMES,
   type HarnessEvidence,
   type HarnessExecutionEnvironmentDescriptor,
+  type HarnessFailure,
   type HarnessKind,
   type HarnessOutcome,
   type HarnessSessionHandle,
@@ -228,6 +231,7 @@ export const boundLastMessage = (message: string): string => {
 const errorOf = (derivation: {
   readonly lastMessage: string;
   readonly errorCode: string;
+  readonly detail?: NonNullable<DispatchEnvelopeError["detail"]>;
 }): NonNullable<DispatchEnvelopeData["error"]> => {
   const stateFailure = derivation.errorCode === "dispatch.state-unverified";
   return {
@@ -239,6 +243,7 @@ const errorOf = (derivation: {
       ? "Repair the named unreadable read and re-run the dispatch; a verdict requires readable truth."
       : "Resolve the named dispatch condition and retry; the attempt was recorded.",
     summary: boundLastMessage(derivation.lastMessage),
+    ...(derivation.detail === undefined ? {} : { detail: derivation.detail }),
   };
 };
 
@@ -316,6 +321,27 @@ const isDeliveredEvidenceDivergence = (
   record.comparisonToken === null &&
   record.repository === repository &&
   record.ref === ref;
+
+/**
+ * The additive bounded detail for the pre-session spawn failure (DM-3, NFR-6):
+ * identifiers only, single-line, and clamped to `DISPATCH_MAX_ERROR_DETAIL_CHARS`.
+ */
+const detailOf = (failure: HarnessFailure): NonNullable<DispatchEnvelopeError["detail"]> => {
+  const singleLine = (value: string): string => value.replace(/[\r\n]+/gu, " ").trim();
+  const kind = failure.kind;
+  let code = singleLine(failure.code);
+  let field = failure.field === undefined ? undefined : singleLine(failure.field);
+  const size = (): number =>
+    JSON.stringify({ kind, code, ...(field === undefined ? {} : { field }) }).length;
+  while (size() > DISPATCH_MAX_ERROR_DETAIL_CHARS && field !== undefined && field.length > 0) {
+    field = field.slice(0, -1);
+  }
+  if (field !== undefined && field.length === 0) field = undefined;
+  while (size() > DISPATCH_MAX_ERROR_DETAIL_CHARS && code.length > 0) {
+    code = code.slice(0, -1);
+  }
+  return { kind, code, ...(field === undefined ? {} : { field }) };
+};
 
 const comparisonFor = (input: {
   readonly token: DispatchToken;
@@ -483,6 +509,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly lastMessage: string;
       readonly evidenceRefs: readonly string[];
       readonly divergenceRef?: string;
+      readonly detail?: NonNullable<DispatchEnvelopeError["detail"]>;
     }): DispatchRunResult => {
       const attempt: DispatchAttemptRecord = {
         schema: DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
@@ -523,8 +550,15 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           : {
               error:
                 input.envelopeErrorCode === undefined
-                  ? errorOf({ lastMessage: input.lastMessage, errorCode: input.errorCode })
-                  : errorFromTable(input.envelopeErrorCode, input.lastMessage),
+                  ? errorOf({
+                      lastMessage: input.lastMessage,
+                      errorCode: input.errorCode,
+                      ...(input.detail === undefined ? {} : { detail: input.detail }),
+                    })
+                  : {
+                      ...errorFromTable(input.envelopeErrorCode, input.lastMessage),
+                      ...(input.detail === undefined ? {} : { detail: input.detail }),
+                    },
             }),
         lastMessage: boundLastMessage(input.lastMessage),
       };
@@ -601,6 +635,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         token: f,
         outcome: O_FAILED,
         errorCode: "dispatch.session.spawn-failed",
+        detail: detailOf(session.error),
         comparison: comparisonFor({
           token: f,
           errorCode: "dispatch.session.spawn-failed",

@@ -1,0 +1,143 @@
+version: 1
+iteration: 5
+mode: local
+work_item_ref: GH-277
+branch: fix/GH-277/harness-default-allowlist
+status: PASS
+summary: >-
+  Iteration-5 verification confirms the iteration-4 findings are closed by probe
+  and that no critical, high, or medium finding remains. F-1: spec v1.6 §17.1 now
+  binds 30 test-plan scenarios (DoD-2), M-1..M-21 (DoD-4), and all five declared
+  plan phases (DoD-11); the preamble and validation checklist agree; §16 carries
+  the new host-stdin guard row (a dedicated module-mock suite, since removed); and the revision
+  history records 1.6. F-2: the plan source-of-truth header is refreshed to spec
+  v1.6/DEC-1..DEC-7, test plan v1.7 (30 scenarios incl. TC-HDA-036), 30/30 TC
+  ownership, five delivery phases, and M-1..M-21. F-3: every M-1..M-20 label in
+  the test plan (§3.4, §7.3 non-vacuity note, §8.3, §10 heading, §10 summary) now
+  reads M-1..M-21, and the false "DoD-1/DoD-2 claims are unaffected" sentence is
+  replaced with the accurate DoD-1-unaffected / DoD-2-and-DoD-4-reconciled
+  statement. F-6: phase 5 scope.files now lists
+  doc/spec/features/feature-harness-adapters.md, so the reconciled system-spec
+  edit stages without undeclared drift. Product code is unchanged since 9a23c8c2
+  (only four documentation files are modified), and the re-run gates are green:
+  pnpm typecheck exit 0, pnpm check:boundaries exit 0 (356 modules / 1041
+  dependencies, ambient-globals/entrypoints/secret-read clean), the two host
+  suites 11 pass / 0 fail, plan validate GH-277 verdict=valid
+  readyForDevelopment=true, pm-notes lint class=conforms. The 30-row execution log
+  is all Pass and the M-1..M-21 mutation table is complete. Remaining items are one
+  carried low (starter non-EPIPE stdin branch does not stop the child) and
+  informational traceability notes; none blocks delivery.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: medium
+    category: reliability
+    location: packages/adapters/src/host/index.ts:272
+    message: >-
+      Carried from iterations 3-4 and accepted as low: the streaming starter's
+      non-EPIPE stdin handler ends the channel and completes { status: 127 } but
+      does not stop the child, whereas the one-shot runner's handler (lines
+      79-83) calls child.kill() first. For a coded non-EPIPE stdin error after
+      handle acquisition, complete() clears the handle/session timers and the
+      caller's collect returns status 127 while the child can keep running until
+      it exits on its own; the isolated EIO leg asserts only the completed
+      result, not an absent child. EPIPE — the realistic early-close case — is
+      unaffected because the close path ends the process. This is an asymmetry,
+      not a regression of the accepted guard, and no product change is required
+      for GH-277.
+    suggestion: >-
+      Optional later hardening: call kill() before complete in the starter's
+      non-EPIPE branch (complete is idempotent, so a later close cannot overwrite
+      127), or document the deliberate difference and add an orphan/killed
+      assertion to the isolated EIO leg.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-test-plan.md:202
+    message: >-
+      The test plan still tags its provenance as "spec v1.5" in content
+      references (§1.1 line 34, GAP-T2/T4/T7 lines 54-59, judgment call 16 line
+      88, the §2 handoff line 114, §3.2 line 193, §3.5 line 202, §3.5 anchors
+      line 226, §7.1/§7.2 notes, §8.1-§8.3 lines 1851-1887), and §3.5 states that
+      line references to the change spec are valid for spec v1.5. Spec v1.6 added
+      one §16 row, so anchors after line 374 shift by one (the TC-HDA-036 anchor
+      "spec AC-F4-1 400" now resolves to line 401; §7.1 190-203, §16 373, §21 471
+      and DEC-7 361 still resolve). The cited content is unchanged by v1.6 apart
+      from §16/§17.1, which the updated bullets already cite as v1.6, so this is
+      provenance and anchor drift, not a contradiction.
+    suggestion: >-
+      When the test plan is next touched, rebase the version tag to spec v1.6 and
+      shift post-§16 line anchors by one; no action required for GH-277.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: traceability
+    location: packages/core/src/domain/commit-message.ts:21
+    message: >-
+      Carried from iterations 4: the phase-5 remediation commit body (9a23c8c2)
+      reads "Cover the host child-stdin early-close guard (TC-)" with the
+      test-case id missing because the commit primitive's stripInventedRefs
+      TRACKER_REF (\b[A-Z][A-Z0-9]*-\d+\b) strips HDA-036 out of TC-HDA-036. The
+      primitive predates GH-277 and is not changed here; the change's commit
+      traceability is degraded but the artifact record is intact.
+    suggestion: >-
+      Cite TC-HDA-036 in the PR description and pm-notes (no sanitizer runs
+      there), and open a follow-up ticket to preserve TC-* test-case ids in
+      stripInventedRefs with a regression test. Do not block GH-277 on this.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-plan.yaml:444
+    message: >-
+      Plan phase 5's summary now states that the phase carries the
+      review-iteration-4 artifact-truth refresh (spec v1.6, test plan v1.7) and
+      the iteration-4 review records, but its doneArtifacts.trackerTransition
+      still describes only the iteration-3 closure ("review_fix iteration 3
+      closes R3-2 with TC-HDA-036 green..."). A phase-10 reader comparing the two
+      sees a narrower completion claim, not a false one; the boundary pm-notes
+      entry will record the full commit hash and test result.
+    suggestion: >-
+      When the phase-5 boundary commit is recorded, extend
+      doneArtifacts.trackerTransition to name the iteration-4 F-1/F-2/F-3/F-6
+      closures and the v1.6/v1.7 artifacts, or rely on the pm-notes completion
+      entry as the authoritative evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-10T07:17:58Z
+next_step: >-
+  PROCEED — the change is PASS. Iteration-4 F-1, F-2, F-3 and F-6 are closed;
+  spec_compliance and plan_compliance are PASS; no critical, high, or medium
+  finding remains. No remediation phase is appended: the carried low (F-1) and
+  the three informational notes (F-2 anchor/version provenance, F-3 commit-body
+  TC-id stripping, F-4 phase-5 doneArtifacts wording) are non-blocking and
+  require no product change. The PM proceeds to the phase-5 boundary commit
+  (which lands the uncommitted spec v1.6 / test plan v1.7 / plan header /
+  harness-adapters doc-sync), then quality gates, dod_check, and PR creation.

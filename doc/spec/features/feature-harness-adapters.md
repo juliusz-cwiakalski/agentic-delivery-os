@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241"]
-  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277"]
+  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
     - "packages/core/src/contracts/economics.ts"
@@ -50,10 +50,15 @@ The spawn path carries an execution-environment descriptor whose environment is
 a deny-by-default allowlist. The child environment is built from the declared
 set alone; an undeclared parent variable is absent, credentials resolve through
 the credential port at use time, and an unresolvable reference fails closed
-naming the reference. Host execution is the only production implementation. An
-optional validated data-record map from profile resolution may supply values for
-declared variable names; a record value takes precedence over the injected
-parent environment, and an undeclared record name changes nothing.
+naming the reference. A declared variable entry is required unless it carries the
+variable-only optional marker: an absent required entry fails closed with
+`harness.spawn.variable-missing` naming the variable in `field`, while an absent
+optional entry is omitted and a present one is forwarded. A credential entry is
+always required and never accepts the marker. Host execution is the only
+production implementation. An optional validated data-record map from profile
+resolution may supply values for declared variable names; a record value takes
+precedence over the injected parent environment, and an undeclared record name
+changes nothing.
 
 At closeout, both harness stores are read strictly read-only into one
 harness-neutral statistics shape and appended to the state ledger as additive
@@ -89,7 +94,7 @@ the dispatch composition; the adapters add no dispatch branch of their own.
 | `HarnessSpawnRunner` | The one-shot child-process seam: resolves at process close and carries the bounded stdout, stderr, exit status, and timeout flag; used for read-only session listing and by the Claude Code adapter. |
 | `HarnessSpawnStarter` | The streaming child-process seam: starts a child and returns its line stream, completion promise, handle-acquisition acknowledgement, and idempotent kill; used by the opencode adapter for spawn, resume, and deliver. |
 | `HarnessSpawnStreamOptions`, `HarnessSpawnStream` | The starter's per-invocation options (working directory, environment, optional stdin, handle-acquisition bound, optional whole-session bound) and its stream handle. |
-| `HarnessExecutionEnvironmentDescriptor` | Execution kind (`host` only), work directory, declared variable names and credential references. |
+| `HarnessExecutionEnvironmentDescriptor` | Execution kind (`host` only), work directory, and the declared variable names (each variable entry may carry the additive optional marker) and credential references. |
 
 `HarnessSessionPort` keeps its delivered shape — `spawn` returns a handle and
 `collect` later returns evidence — and exposes no stream. `HarnessSpawnRunner`
@@ -233,11 +238,23 @@ carries no executable fallback instruction.
 The typed `harness` branch carries the selected kind, the execution kind, both
 store locations, and the declared environment allowlist. An absent branch
 resolves to the shipped defaults (opencode, host execution, default store
-locations, default allowlist names) with `defaults` origins. Unknown kinds,
+locations, the default allowlist below) with `defaults` origins. Unknown kinds,
 wrong-typed or empty store paths, and unknown branch keys classify with the
 configuration path; an allowlist entry carrying a literal value is rejected by
-`config.secret.forbidden`. The configured-kind registry validates that exactly
-the two shipped kinds are registered and never silently defaults.
+`config.secret.forbidden`, and an invalid `optional` marker or a credential entry
+carrying the marker is `config.value.invalid`. The configured-kind registry
+validates that exactly the two shipped kinds are registered and never silently
+defaults.
+
+The shipped `harness.environment` default declares `PATH` and `HOME` as required
+entries, `TMPDIR` as an optional entry, and the composition-injected
+`DELIVERY_WORK_PATH` as a required entry. It declares no model variable: model
+selection is the harness's own configuration concern, and no ambient
+provider-model environment variable is mapped, forwarded, or synthesized. An entry without the `optional` marker keeps
+required semantics, so an absent required entry fails the spawn closed with
+`harness.spawn.variable-missing` naming the variable in `field`; an absent
+optional entry is omitted while a present one is forwarded. The marker is
+variable-only and never applies to a credential entry.
 
 ## 5. Telemetry extraction
 
@@ -324,11 +341,19 @@ stdout as lines while buffering the same 16 MiB stdout bound with the truncation
 marker, resolves `completion` on close or error and never rejects, cancels its
 handle-acquisition bound when the adapter acknowledges acquisition, applies no
 whole-session bound unless the caller injects one, and exposes an idempotent
-`kill` that sends `SIGTERM` and escalates to `SIGKILL` after a short grace. The
-opencode adapter bounds handle acquisition at 60 s by default and takes an
-optional whole-session bound; it has no default session bound, so a lifecycle is
-bounded by progress-based liveness and the restart budget rather than a fixed
-process cap. Evidence derivation keeps the legacy single-document envelope
+`kill` that sends `SIGTERM` and escalates to `SIGKILL` after a short grace. Both
+seams carry the delivered benign child-stdin observer: each attaches an `error`
+listener to the child's stdin before writing the prompt, so a child that exits
+without reading cannot surface an uncaught stream error. The listener never
+classifies: it does not kill the child and does not resolve the seam, so an
+`EPIPE` and any other stdin error are observed while the child `error`/`close`
+events and the seam's own handle and session bounds own the result. No stdin
+error synthesizes a spawn result. The observer adds no process primitive,
+timeout, lifecycle, output-buffering, or invocation-grammar change. The opencode adapter
+bounds handle acquisition at 60 s by default and takes an optional whole-session
+bound; it has no default session bound, so a lifecycle is bounded by
+progress-based liveness and the restart budget rather than a fixed process cap.
+Evidence derivation keeps the legacy single-document envelope
 precedence described in §3. The dispatch composition drives the session port; the
 streaming starter is a declared contract beside the one-shot runner, not an
 ad-hoc runner API, queue, or spawn-failure surface.
@@ -355,16 +380,25 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   the non-allowlisted-path boundary case `runtime-child-process-adapter-registry`),
   `harness-stream-contract.test.ts` (the additive streaming seam, the fixed
   session-port and one-shot-runner shapes, adapter confinement, and the pinned
-  capture shape), `tests/types/harness.type-test.ts`,
-  `tests/types/harness-stream.type-test.ts`
+  capture shape), `harness-environment-marker.test.ts` (the variable-only
+  optional marker is additive and type-only), `tests/types/harness.type-test.ts`,
+  `tests/types/harness-stream.type-test.ts`,
+  `tests/types/harness-environment-marker.type-test.ts`
 - `tests/behaviour/harness-spawn-env.test.ts`,
-  `harness-spawn-credential.test.ts`, `harness-opencode-session.test.ts`,
+  `harness-spawn-credential.test.ts`, `harness-default-path.test.ts` (the
+  shipped default declares `PATH`, `HOME`, `TMPDIR` optional, and
+  `DELIVERY_WORK_PATH`, and a declared bare command resolves through `PATH`),
+  `harness-opencode-session.test.ts`,
   `harness-opencode-stream.test.ts` (per-line decoding, identifier precedence,
   handle before completion, completion-scoped collection, and legacy-envelope
   evidence precedence), `harness-opencode-resume-stream.test.ts` (resume/deliver
-  acquisition with preserved identity), `harness-host-stream.test.ts`,
-  `harness-stream-hygiene.test.ts` (the 60 s handle bound, no default session
-  bound, idempotent kill, and no surviving orphan), `harness-claude-session.test.ts`,
+  acquisition with preserved identity), `harness-host-stream.test.ts` (the
+  benign child-stdin observer on both seams — the close-classified result on an
+  early-exit `EPIPE`, with no uncaught error, no orphan, and no leaked temp root),
+  `harness-stream-hygiene.test.ts`
+  (the 60 s handle bound, no default session
+  bound, idempotent kill, no surviving orphan, and the read-only guard that no
+  test file installs a process-global `node:child_process` module mock), `harness-claude-session.test.ts`,
   `harness-config.test.ts`, `dispatch-harness-acquisition.test.ts` (the adapter
   driven through the dispatch composition),
   `economics-liveness-sourcing.test.ts`, `economics-liveness-prefill.test.ts`,
@@ -414,6 +448,8 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   harness adapter contract.
 - [TDR-0016](../../decisions/TDR-0016-harness-streaming-spawn-seam.md) — the
   additive streaming spawn seam and the handle-acquisition decision.
+- [TDR-0021](../../decisions/TDR-0021-additive-optional-harness-environment-marker.md)
+  — the additive optional marker on a declared environment variable.
 
 ## GH-238 lane executor
 

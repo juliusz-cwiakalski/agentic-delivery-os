@@ -1,0 +1,195 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-277
+branch: fix/GH-277/harness-default-allowlist
+status: FAIL
+summary: >-
+  Iteration-4 verification confirms all three iteration-3 findings are closed by
+  probe. R3-1: spec v1.5 §7.1/§7.2/§16/AC-F4-1/§21 and DEC-7 now describe the
+  delivered child-stdin early-close guard and no longer call the host seams
+  unchanged, and the review-mandated doc-sync (uncommitted, expected) updates
+  feature-harness-adapters.md §6/§8. R3-2: TC-HDA-036 exists and passes (2
+  real-child EPIPE legs + 2 isolated coded-EIO legs; the two host suites ran
+  11 pass / 0 fail on six consecutive runs; the detail suite ran 12 pass / 0
+  fail twice; no leaked gh275-host-*/gh277-default-spawn-* root), and the
+  isolated fake proves both new guide branches non-vacuously. R3-3: plan
+  `tier.phases` is [1,2,3,4,5], phase 5 declares the two host suites and the
+  change folder, and `plan validate GH-277` is valid/readyForDevelopment. No
+  regression: typecheck exit 0, check:boundaries exit 0 (356 modules/1041
+  deps), forbidden-literals 5/5 scope classes 0 violations, and
+  TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 with 6618 pass / 4 skip / 0 fail
+  across 783 files and no EPIPE/unhandled lines. The change is nonetheless not
+  PASS because the remediation left the change spec's binding Definition of Done
+  (F-1, §17.1) stating pre-remediation facts: "the test plan's 29 scenarios" /
+  "all 29 TCs", "M-1..M-20" and "all four declared plan phases complete" while
+  test plan v1.6 carries 30 scenarios (TC-HDA-036) and M-21 and the plan now
+  declares five phases. The product code, tests, and gates are accepted; the
+  remaining blocker is artifact truth in the spec that phase 10 checks.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 3
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-spec.md:430
+    message: >-
+      Spec v1.5 reconciled §7.1/§7.2/§16/AC-F4-1/§21/DEC-7 for the delivered
+      guard, but its binding §17.1 Definition of Done was left at the
+      pre-remediation shape even though the same commit re-scoped the plan and
+      the test plan. The §17.1 preamble (line 430) and DoD-2 (line 435) bind
+      "the test plan's 29 scenarios" and "all 29 TCs, TC-HDA-001..TC-HDA-101",
+      while test plan v1.6 now carries 30 scenarios with TC-HDA-036 (execution
+      log row at test-plan line 1948). DoD-4 (line 437) binds "M-1..M-20", while
+      test plan §10 now records M-21 (line 1976). DoD-11 (line 444) requires
+      "all four declared plan phases complete", while chg-GH-277-plan.yaml
+      declares tier.phases [1,2,3,4,5] with phase 5 appended. The test plan's
+      own line 194 claim that "the spec's DoD-1/DoD-2 claims are unaffected" is
+      therefore false as written, and §16 (line 374) names the edited
+      tests/behaviour/harness-host-stream.test.ts but not the dedicated
+      module-mock suite (since removed) that test plan §7.1 adds.
+      Every AC and DoD condition is substantively met, but a literal phase-10
+      dod_check against §17.1 now reads stale counts and a stale phase count, so
+      the binding artifact contradicts the delivered plan/test plan.
+    suggestion: >-
+      Bump the change spec to v1.6: §17.1 preamble and DoD-2 to 30 scenarios
+      (the 29 spec-named plus TC-HDA-036), DoD-4 to M-1..M-21, DoD-11 to "all
+      five declared plan phases", the affected "Proven in" cells to Phases 1–4
+      plus Phase 5 (or Phases 1–5), and the validation checklist at line 599 to
+      30 test-plan TCs and M-1..M-21; add the isolated host-stdin-error suite to
+      the §16 host row; add a §Revision History 1.6 row. No product-code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-plan.yaml:5
+    message: >-
+      The plan's source-of-truth header comment still says "Spec:
+      ./chg-GH-277-spec.md (v1.3; ... DEC-1..DEC-6)", "Test plan:
+      ./chg-GH-277-test-plan.md (v1.3; 29 scenarios TC-HDA-001..101 ...)" and
+      "four delivery phases", while the spec is v1.5 (DEC-7), the test plan is
+      v1.6 with 30 scenarios including TC-HDA-036, and tier.phases is [1..5].
+      The file body and its own header now disagree.
+    suggestion: >-
+      When the plan is next touched (same remediation as F-1), refresh lines
+      3-22 to spec v1.5/DEC-7, test plan v1.6 (30 scenarios incl. TC-HDA-036),
+      five delivery phases, and M-21.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-test-plan.md:1952
+    message: >-
+      The §10 mutation table heading still says "Mutation evidence
+      (M-1..M-20)", and lines 194 and 1898 repeat the "M-1..M-20" range, while
+      the same table now contains the M-21 row at line 1976 (and line 1806
+      discusses M-21). The stale range labels were not updated when M-21 was
+      appended in the remediation commit.
+    suggestion: >-
+      Change the heading and the two prose references to M-1..M-21.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: reliability
+    location: packages/adapters/src/host/index.ts:271
+    message: >-
+      The streaming starter's non-`EPIPE` stdin handler ends the channel and
+      completes `{ status: 127 }` but does not stop the child, whereas the
+      one-shot runner's handler (lines 79-83) calls `child.kill()` before
+      resolving. For a non-`EPIPE` stdin error after handle acquisition (child
+      already running), `complete()` clears the handle/session timers and the
+      caller's `collect` returns status 127 while the child can keep running
+      until it exits on its own; the isolated EIO leg asserts only the completed
+      result, not an absent child. `EPIPE` (the realistic early-close case) is
+      unaffected because the close path ends the process, so this is an
+      asymmetry, not a regression of the accepted fix.
+    suggestion: >-
+      Mirror the runner by calling `kill()` (or `child.kill()`) before `complete`
+      in the starter's non-`EPIPE` branch — `complete` is idempotent, so a later
+      close cannot overwrite 127 — or document the deliberate difference and add
+      an orphan/`killed` assertion to the isolated EIO leg.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: traceability
+    location: packages/core/src/domain/commit-message.ts:21
+    message: >-
+      The remediation commit body (9a23c8c2) reads "Cover the host child-stdin
+      early-close guard (TC-)" with the test-case id missing. Root cause is the
+      commit primitive's `stripInventedRefs`, whose TRACKER_REF
+      (`\b[A-Z][A-Z0-9]*-\d+\b`) strips `HDA-036` out of `TC-HDA-036`; a
+      read-only probe reproduces "Cover the guard (TC-HDA-036)" → "Cover the
+      guard (TC-)". Any `TC-*-NNN` id is therefore erased from a commit body.
+      The primitive predates GH-277 and is not changed here, but this change's
+      commit traceability is degraded.
+    suggestion: >-
+      Cite TC-HDA-036 in the PR description and pm-notes (no sanitizer runs
+      there), and open a follow-up ticket to preserve `TC-*` test-case ids in
+      `stripInventedRefs` (skip a match preceded by "TC-", or exclude a known
+      TC-prefix list) with a regression test. Do not block GH-277 on this.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-plan.yaml:424
+    message: >-
+      Plan phase 5 scope declares only the two host behaviour suites and the
+      change folder. The working tree still holds the review-mandated doc-sync
+      edit to doc/spec/features/feature-harness-adapters.md (expected; the PM's
+      phase-complete commit will land it), which no plan-phase scope covers, so
+      the commit primitive will report it under `excluded.scopeDrift` ("scope
+      drift (staged, tracked)"). This is a disclosed process wrinkle, not a code
+      defect.
+    suggestion: >-
+      Add doc/spec/features/feature-harness-adapters.md to phase 5's
+      scope.files, or record the accepted drift in pm-notes, so the boundary
+      commit stages it without undeclared drift.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-10T07:11:33Z
+next_step: >-
+  EXECUTE_REMEDIATION_PHASE — no product-code change. (1) Bump the change spec
+  to v1.6 for §17.1 (30 scenarios incl. TC-HDA-036, M-1..M-21, five declared
+  plan phases, Phases 1–5 in the "Proven in" cells, validation checklist) and
+  add the new module-mock suite to §16 (since removed) (F-1). (2) Refresh the plan
+  header (F-2) and the test-plan M-1..M-21 labels (F-3). (3) Optional: mirror
+  the runner's kill in the starter's non-EPIPE branch (F-4). (4) Record the
+  commit-body TC-id stripping in the PR/pm-notes and open a follow-up (F-5);
+  add the doc-sync file to phase 5 scope or record the accepted drift (F-6).
+  R3-1, R3-2 and R3-3 are closed; the guard, TC-HDA-036, the plan phase 5 and
+  every gate are accepted.

@@ -5,7 +5,7 @@
  * assertion reopens P2/P3 instead of being edited away.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createOpencodeSession } from "../../packages/adapters/src/harness/index";
 import type { HarnessSessionPort } from "../../packages/core/src/contracts/index";
@@ -338,5 +338,33 @@ describe("TC-OCS-072 fixture non-vacuity", () => {
     expect(spawned.value.sessionId).not.toBe(WORK_ITEM_REF);
     expect(spawned.value.sessionId).not.toBe(HARNESS_COMMAND);
     expect(spawned.value.sessionId).not.toBe(ROOT_SESSION);
+  });
+});
+
+describe("GH-277 regression guard: no global child-process module mock", () => {
+  /**
+   * Built by concatenation so this guard's own source never contains the
+   * literal it bans. The scan is read-only.
+   */
+  const MOCK_MODULE_CALL = 'mock.module("node:' + 'child_process"';
+
+  const testFiles = (relative: string): string[] => {
+    const files: string[] = [];
+    for (const entry of readdirSync(join(ROOT, relative), { withFileTypes: true })) {
+      const path = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) files.push(...testFiles(path));
+      else if (entry.isFile() && entry.name.endsWith(".test.ts")) files.push(path);
+    }
+    return files;
+  };
+
+  test("no test file installs the process-global child-process module mock", () => {
+    const scanned = testFiles("tests");
+    expect(scanned.length).toBeGreaterThan(0);
+    const offenders = scanned.filter((file) => read(file).includes(MOCK_MODULE_CALL));
+    expect(
+      offenders,
+      "a process-global module mock corrupts async spawn for every suite in the shared Bun process",
+    ).toEqual([]);
   });
 });

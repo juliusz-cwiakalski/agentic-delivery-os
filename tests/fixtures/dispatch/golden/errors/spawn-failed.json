@@ -24,7 +24,11 @@
       "retryable": false,
       "consequence": "not_landed",
       "remediationHint": "Resolve the named dispatch condition and retry; the attempt was recorded.",
-      "summary": "spawn failed before a session existed"
+      "summary": "spawn failed before a session existed",
+      "detail": {
+        "kind": "harness",
+        "code": "harness.spawn.refused"
+      }
     },
     "lastMessage": "spawn failed before a session existed"
   }
