@@ -1,11 +1,13 @@
 /**
- * TC-HDA-036 — the host seams' non-`EPIPE` stdin-error classification.
+ * TC-HDA-036 — the host seams observe a non-`EPIPE` stdin error without
+ * synthesizing a spawn result.
  *
  * `mock.module("node:child_process")` is process-global and sticky, so this leg
  * lives in its own file (`.ai/rules/typescript.md` §9) and is restored in
  * `afterEach`; no real-child suite imports it. A coded `EIO` from the child's
- * stdin is a delivery failure, not an early exit, so both seams must resolve
- * `{ status: 127 }` exactly like the delivered spawn-error path.
+ * stdin is observed and ignored: it must never surface as an unhandled stream
+ * error and must never fabricate a status, so completion follows the child's
+ * `close` and reports the close-classified `0`.
  */
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
@@ -15,6 +17,8 @@ import { EventEmitter } from "node:events";
 type FakeStream = EventEmitter & { readonly setEncoding: (encoding: string) => void };
 type FakeStdin = EventEmitter & {
   readonly end: (data?: string, encoding?: string) => void;
+  /** How many coded stdin errors the fake emitted, so the leg is never vacuous. */
+  emissions: number;
 };
 type FakeChild = EventEmitter & {
   readonly stdin: FakeStdin;
@@ -29,16 +33,26 @@ const stream = (): FakeStream =>
 
 const codedError = (code: string): Error => Object.assign(new Error(code), { code });
 
+/** The fake child the mocked seam spawned, captured for the test's assertions. */
+let spawnedChild: FakeChild | undefined;
+
 /**
  * One fake child whose stdin emits a coded error after `end()`, then closes
- * cleanly: the close must not overwrite the classified status.
+ * cleanly: the error is observed and ignored, so the close owns the result.
  */
 const fakeChild = (): FakeChild => {
   const stdin: FakeStdin = Object.assign(new EventEmitter(), {
+    emissions: 0,
     end: (_data?: string, _encoding?: string): void => {
       setTimeout(() => {
-        stdin.emit("error", codedError("EIO"));
-        child.emit("close", 0, null);
+        stdin.emissions += 1;
+        try {
+          stdin.emit("error", codedError("EIO"));
+        } finally {
+          // Emitted in `finally` so a seam without a stdin listener still
+          // settles at close and only reddens the uncaught-error assertion.
+          child.emit("close", 0, null);
+        }
       }, 0);
     },
   });
@@ -65,7 +79,11 @@ let createHostSpawnStarter: HostModule["createHostSpawnStarter"];
 beforeAll(async () => {
   mock.module("node:child_process", () => ({
     ...realChildProcess,
-    spawn: (): ChildProcess => asChildProcess(fakeChild()),
+    spawn: (): ChildProcess => {
+      const child = fakeChild();
+      spawnedChild = child;
+      return asChildProcess(child);
+    },
   }));
   const host: HostModule = await import("../../packages/adapters/src/host/index");
   createHostSpawnRunner = host.createHostSpawnRunner;
@@ -73,6 +91,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
+  spawnedChild = undefined;
   mock.module("node:child_process", () => realChildProcess);
   mock.restore();
 });
@@ -103,8 +122,8 @@ const withErrorCollectors = async (
   return { uncaught, rejections };
 };
 
-describe("TC-HDA-036 non-EPIPE stdin error", () => {
-  test("the one-shot runner classifies a coded stdin error as status 127", async () => {
+describe("TC-HDA-036 non-EPIPE stdin error is observed, never classified", () => {
+  test("the one-shot runner resolves the close status and never kills the child", async () => {
     const evidence = await withErrorCollectors(async () => {
       const runner = createHostSpawnRunner();
       const result = await runner("synthetic-child", [], {
@@ -113,13 +132,15 @@ describe("TC-HDA-036 non-EPIPE stdin error", () => {
         timeout: 0,
         stdin: "prompt",
       });
-      expect(result).toEqual({ stdout: "", stderr: "", status: 127, timedOut: false });
+      expect(result).toEqual({ stdout: "", stderr: "", status: 0, timedOut: false });
+      expect(spawnedChild?.stdin.emissions).toBe(1);
+      expect(spawnedChild?.killed).toBe(false);
     });
     expect(evidence.uncaught).toEqual([]);
     expect(evidence.rejections).toEqual([]);
   });
 
-  test("the streaming starter resolves once with status 127 on the same error", async () => {
+  test("the streaming starter observes the same error and resolves once with the close status", async () => {
     const evidence = await withErrorCollectors(async () => {
       const starter = createHostSpawnStarter();
       const streamHandle = starter("synthetic-child", [], {
@@ -132,11 +153,13 @@ describe("TC-HDA-036 non-EPIPE stdin error", () => {
       for await (const line of streamHandle.lines) lines.push(line);
       const result = await streamHandle.completion;
       expect(lines).toEqual([]);
-      expect(result.status).toBe(127);
+      expect(result.status).toBe(0);
       expect(result.timedOut).toBe(false);
+      expect(spawnedChild?.stdin.emissions).toBe(1);
+      expect(spawnedChild?.killed).toBe(false);
       // Awaiting the same promise again proves a single settled resolution.
       const repeated = await streamHandle.completion;
-      expect(repeated.status).toBe(127);
+      expect(repeated.status).toBe(0);
     });
     expect(evidence.uncaught).toEqual([]);
     expect(evidence.rejections).toEqual([]);

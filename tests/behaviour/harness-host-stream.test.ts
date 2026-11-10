@@ -89,6 +89,10 @@ const collectLines = async (lines: AsyncIterable<string>): Promise<string[]> => 
   return collected;
 };
 
+/** A self-explanatory spawn diagnostic so a CI-only child failure names its cause. */
+const spawnDiagnostic = (result: { readonly status: number; readonly stderr: string }): string =>
+  `child=${process.execPath} status=${result.status} stderr=${JSON.stringify(result.stderr)}`;
+
 describe("TC-OCS-052 host streaming starter", () => {
   test("streams lines and resolves completion on close with the accumulated stdout", async () => {
     await withRoot(async (root) => {
@@ -107,7 +111,7 @@ describe("TC-OCS-052 host streaming starter", () => {
       expect(lines).toHaveLength(2);
       expect(lines[0]).toContain("step_start");
       expect(lines[1]).toContain("step_finish");
-      expect(result.status).toBe(0);
+      expect(result.status, spawnDiagnostic(result)).toBe(0);
       expect(result.timedOut).toBe(false);
       expect(result.stdout).toContain("step_finish");
     });
@@ -131,7 +135,7 @@ describe("TC-OCS-052 host streaming starter", () => {
       stream.acquired();
       const result = await stream.completion;
       expect(result.timedOut).toBe(false);
-      expect(result.status).toBe(0);
+      expect(result.status, spawnDiagnostic(result)).toBe(0);
     });
   });
 
@@ -268,7 +272,7 @@ describe("TC-HDA-036 host child-stdin early close", () => {
             });
             const lines = await collectLines(stream.lines);
             const result = await stream.completion;
-            expect(result.status).toBe(0);
+            expect(result.status, spawnDiagnostic(result)).toBe(0);
             expect(result.timedOut).toBe(false);
             const pid = pidOf(result.stdout) ?? pidOf(lines.join("\n"));
             expect(pid).toBeDefined();
@@ -300,7 +304,7 @@ describe("TC-HDA-036 host child-stdin early close", () => {
               timeout: 0,
               stdin: OVERSIZED_PROMPT,
             });
-            expect(result.status).toBe(0);
+            expect(result.status, spawnDiagnostic(result)).toBe(0);
             expect(result.timedOut).toBe(false);
             const pid = pidOf(result.stdout);
             expect(pid).toBeDefined();

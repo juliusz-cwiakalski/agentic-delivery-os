@@ -458,3 +458,33 @@ notes:
       changed.
     type: info
     date: "2026-11-10"
+  - text: >-
+      CI-only regression diagnosed and remediated (quality_gates rework after PR
+      #281 runs failed). Evidence: CI runs 42776899812 and 42776906012 on
+      8d12e81d fail 12 spawn-based tests in both TS tests and TS aggregate check
+      (harness-host-stream 7, dispatch-harness-default-spawn 5), every failure at
+      spawn time with status 127 and no child output; the same suites passed at
+      bf5c918e. Root cause: the DEC-7 stdin error handler introduced in
+      f854fd78 treated any non-EPIPE stdin error as fatal, killing the child and
+      resolving {status:127}. The CI runner emits a non-EPIPE stdin error when
+      the parent ends/closes the child's stdin, before the child produces
+      output; locally that error never fires, which is why the suite was green
+      here. TC-HDA-036 reported the synthetic 127 rather than the close-
+      classified 0, and TC-OCS-052/TC-HDA-010/012/015/016/035 were killed at
+      their first spawn. Remediation: both seams keep a stdin error listener as
+      a benign observer that never kills and never resolves; classification
+      stays with child error/close and the existing handle/session bounds, and
+      isEarlyExitStdinError is removed. Tests: TC-HDA-036 now pins observation
+      plus the close-classified result (coded EIO then close 0 -> status 0, child
+      not killed; real-child EPIPE legs kept), and the first TC-OCS-052 test
+      carries a spawn diagnostic (execPath, status, stderr) so a future CI-only
+      spawn failure is self-explanatory. Artifact truth corrected in spec v1.7
+      (DEC-7, AC-F4-1, 7.1, 13, 16, 21), test plan v1.8 (TC-HDA-036, M-21,
+      revision row) and doc/spec/features/feature-harness-adapters.md 6/8. M-21
+      re-run: removing both observer registrations reddens 4 tests (2 real-child
+      uncaught EPIPE, 2 coded-error uncaught EIO) while the close-classified
+      status still stands; the old fatal handler re-instated reddens the coded
+      legs with Received: 127. No phase rework beyond this quality-gates
+      remediation; no push and no PR action.
+    type: warning
+    date: "2026-11-10"
