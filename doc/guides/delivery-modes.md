@@ -240,18 +240,20 @@ condition merged into the owner-hold example therefore inherits the unbounded
 driver, because the hold is the floor that keeps the loop alive.
 
 The typed engine enforces the same hold. A held scheduling pass emits no next
-action and no preemption proposal; `owner-hold` is the first blocking/lane
-reason; an active park keeps `parked:<cause>` and a stuck park keeps
-`park-condition-stuck`; a park whose window passed while recovery was skipped
-becomes `held`. Claim and dispatch are refused with the existing
-`queue.precondition.unmet` identity and the token exactly `owner-hold`, before
-ref selection (so a no-ref `queue claim` never falls through to
-`no-eligible-action`), with a separate bounded detail naming the source and
-reason. The mutating park-recovery pass is not invoked, so a parked lane does not
-resume at its provider window. `queue list` keeps the full ordered blocking
-list; `lanes` renders one reason and therefore masks the more specific reason
-with `owner-hold` while the hold is active. `queue ready` is unchanged and does
-not report the hold.
+action and no preemption proposal; `owner-hold` is prepended to every gated
+entry's ordered blocking list, so it is the first blocking reason; an active
+park keeps its `parked` state and `parked:<cause>` reason, and a stuck park
+keeps its `stuck` state and `park-condition-stuck` reason; a park whose window
+passed while recovery was skipped becomes `held`. Claim and dispatch are refused
+with the existing `queue.precondition.unmet` identity and the token exactly
+`owner-hold`, before ref selection (so a no-ref `queue claim` never falls
+through to `no-eligible-action`), with a separate bounded detail naming the
+source and reason. The mutating park-recovery pass is not invoked, so a parked
+lane does not resume at its provider window. `queue list` keeps the full ordered
+blocking list. `lanes` renders one reason from `blocking[0]`: a gated entry that
+is not an active or stuck park shows `owner-hold` and masks its more specific
+idle reason, while an active or stuck park lane keeps rendering its park reason.
+`queue ready` is unchanged and does not report the hold.
 
 A held claim or dispatch is a **classified user-validation refusal at exit 1**,
 not an internal wait. A caller that wants deferral semantics treats the
@@ -262,9 +264,10 @@ hold resumes the next pass from preserved queue, lease, park, and lane state: no
 record is rewritten, no work is redispatched from scratch, and no duplicate
 session is created. Read-only
 inspection (`status`, `queue list`, `queue plan`, `lanes`, and `queue watch`)
-remains available and reports the hold; `status` exposes it as
-`providers.evidence.ownerHold` and is the only production operator surface that
-does so. When the `doctor` command is composed (a `DoctorComposition` is
+remains available and reports the hold; `status` carries it in its digest as
+`providers.evidence.ownerHold`, while `queue list`, `queue plan`, `lanes`, and
+`queue watch` report it on their own production surfaces. When the `doctor`
+command is composed (a `DoctorComposition` is
 supplied; the production composer supplies none today), its provider check stays
 `ok` while appending one non-failing annotation reason and a bounded detail.
 

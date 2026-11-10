@@ -42,9 +42,11 @@ window:
   command-runtime/test-harness layer — keeping the provider check `ok` and adding
   the single non-failing annotation reason `owner-hold` plus an appended bounded
   detail that survives the detail clamp. The production composer supplies no
-  `DoctorComposition` today (a pre-existing doctor residual, GAP-T8), so
-  `status` is the only production operator surface that reports the hold.
-  `queue ready` is unchanged and carries no hold.
+  `DoctorComposition` today (a pre-existing doctor residual, GAP-T8), so `doctor`
+  reports the hold only at the command-runtime/test-harness layer, not in the
+  production composition. In production, `status` carries the hold in its digest,
+  and `queue list`, `queue plan`, `lanes`, and `queue watch` report it on their
+  own surfaces. `queue ready` is unchanged and carries no hold.
 
 ## Operator communication
 
@@ -92,7 +94,8 @@ below is still required before merge:
 2. Create `<home>/<stateDirectoryName>/owner-hold` with
    `peak-hour cost pause`.
 3. Run `status --json`; record `providers.evidence.ownerHold` and exit `0`.
-   `status` is the only production operator surface that reports the hold. Do
+   In production, `status` carries the hold in its digest while `queue list`,
+   `queue plan`, `lanes`, and `queue watch` report it on their own surfaces. Do
    **not** run production `doctor`: the production composer supplies no
    `DoctorComposition`, so the production binary does not register `doctor`
    (GAP-T8). Doctor hold evidence is covered at the command-runtime layer by
@@ -132,8 +135,9 @@ below is still required before merge:
   `createConfigProgram` registers `doctor` only when one is supplied, so the
   production binary rejects `doctor` as outside the composed prompt-required
   set. Doctor's owner-hold support is a command-runtime/test-harness capability;
-  `status` is the only production operator surface that reports the hold. Wiring
-  production doctor is a pre-existing residual owned by the doctor feature, not
+  in production, `status` carries the hold in its digest and `queue list`,
+  `queue plan`, `lanes`, and `queue watch` report it on their own surfaces.
+  Wiring production doctor is a pre-existing residual owned by the doctor feature, not
   this change.
 
 ## Verification
@@ -202,7 +206,7 @@ high, two medium, six low, and two info findings. Dispositions:
 
 | Finding | Disposition |
 |---|---|
-| F-1 (high) production doctor claim | **Fixed by claim correction, not by wiring production doctor (D20).** The spec, plan, this record, the changeset, `doc/guides/delivery-modes.md`, `doc/planning/oss-tooling/milestones/m1/commands/doctor.md`, and `doc/spec/features/feature-doctor.md` now state that doctor reports the hold only when a `DoctorComposition` is supplied; the production composer supplies none, and `status` is the only production operator surface. The `doctor --json` E2E step is removed and GAP-T8 records the residual. |
+| F-1 (high) production doctor claim | **Fixed by claim correction, not by wiring production doctor (D20).** The spec, plan, this record, the changeset, `doc/guides/delivery-modes.md`, `doc/planning/oss-tooling/milestones/m1/commands/doctor.md`, and `doc/spec/features/feature-doctor.md` now state that doctor reports the hold only when a `DoctorComposition` is supplied; the production composer supplies none, so in production `status` carries the hold in its digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report it on their own surfaces. The `doctor --json` E2E step is removed and GAP-T8 records the residual. |
 | F-2 (medium) commit subjects | **Accepted under D21.** The `commit` primitive composes the subject; template-fallback subjects are accepted, no history is rewritten, and the tree is byte-identical. The plan's phase `summary` remains a plan description, not a hand-authored commit message. |
 | F-3 (medium) composition test | **Fixed by D22.** New `tests/behaviour/owner-hold-production-composition.test.ts` drives the real `createProductionComposer` over a temp HOME whose `<stateDirectoryName>/owner-hold` marker is materialized on disk, covering queue list/plan, supplied-ref and no-ref claim, dispatch, and status, with a marker-removal mutation control and per-pass restore. The structure suite's source-text check is secondary only. |
 | F-4 (low) doc-sync scope | **Fixed.** The seven doc-sync files are declared above and in phase 7 scope. |

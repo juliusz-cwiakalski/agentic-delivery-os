@@ -214,11 +214,14 @@ zero writes. The executable is a non-installed Bun bin; see the
 ## Owner hold
 
 While an owner hold is active, `queue list` and `queue plan` carry the additive
-optional `ownerHold` member (`source`, optional `reason`) and no next action; each
-entry's blocking list starts with `owner-hold`. `lanes` renders exactly one
-reason, so it shows `owner-hold` and masks the more specific reason; `queue list`
-retains the full ordered `blocking[]`. `queue ready` is unchanged and carries no
-hold.
+optional `ownerHold` member (`source`, optional `reason`) and no next action;
+`owner-hold` is prepended to every gated entry's ordered blocking list,
+including active and stuck park entries, whose state and park reason are
+preserved. `lanes` renders exactly one reason from `blocking[0]`: a gated entry
+that is not an active or stuck park shows `owner-hold` and masks its more
+specific idle reason, while an active or stuck park lane keeps rendering its
+park reason; `queue list` retains the full ordered `blocking[]`. `queue ready` is
+unchanged and carries no hold.
 
 `queue claim <ref>` and `queue claim` with no ref both refuse
 `queue.precondition.unmet` with the blocking-reason token exactly `owner-hold`

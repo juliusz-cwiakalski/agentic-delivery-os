@@ -78,12 +78,15 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   `1`–`3600`, no fixed iteration cap). The shell and the typed engine read the
   same fixed production-store marker; there is no marker-path override or store
   relocation. The typed engine enforces the same fact:
-  a held pass emits no next action, `owner-hold` is the first lane/blocking
-  reason, claim (with or without a ref, before selection) and dispatch refuse
-  `queue.precondition.unmet` at exit `1`, and the mutating park-recovery pass is
-  skipped so a parked lane does not resume at its provider window. `status`
+  a held pass emits no next action, `owner-hold` is the first blocking reason
+  (`lanes` shows it for gated entries that are not active or stuck parks, which
+  keep their park reason), claim (with or without a ref, before selection) and
+  dispatch refuse `queue.precondition.unmet` at exit `1`, and the mutating
+  park-recovery pass is skipped so a parked lane does not resume at its provider
+  window. `status`
   carries the additive evidence-level `providers.evidence.ownerHold` member and
-  is the only production operator surface that reports the hold. `doctor`, when
+  is the production operator surface that carries the hold in its digest.
+  `doctor`, when
   a `DoctorComposition` is supplied (the command-runtime/test-harness layer; the
   production composer supplies none today), keeps the provider check `ok` with
   the `owner-hold` annotation reason and an appended bounded detail. There is

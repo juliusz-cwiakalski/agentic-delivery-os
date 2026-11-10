@@ -202,15 +202,20 @@ stat'd is active without a reason (fail closed); only a non-existent path is
 inactive. The reason is one control-free line bounded to 160 characters.
 
 While the fact is active, one pass emits no next action and no preemption
-proposal. A `ready` entry becomes `held`; `held` and `not-ready` entries keep
-their state; active parks keep `parked:<cause>` and stuck parks keep
-`park-condition-stuck`; a park whose window passed while recovery was skipped
-becomes `held`. `owner-hold` is always the first blocking reason, and each
-entry's own ordered reasons follow unchanged. The `queue list`/`queue plan`
-payloads carry the additive optional `ownerHold` member (source and optional
-reason) only while active; `lanes` renders exactly one reason, so a held entry
-shows `owner-hold` and masks the more specific reason — `queue list` remains the
-full-reason surface. `queue ready` is unchanged and carries no hold.
+proposal. `owner-hold` is prepended to every gated entry's ordered `blocking[]`,
+including active and stuck park entries, and each entry's own ordered reasons
+follow unchanged. A `ready` entry becomes `held`; `held` and `not-ready` entries
+keep their state; an active park keeps its `parked` state and `parked:<cause>`
+reason (blocking `[owner-hold, parked:<cause>]`); a stuck park keeps its `stuck`
+state and `park-condition-stuck` reason (blocking
+`[owner-hold, park-condition-stuck]`); a park whose window passed while recovery
+was skipped becomes `held`. The `queue list`/`queue plan` payloads carry the
+additive optional `ownerHold` member (source and optional reason) only while
+active. `lanes` renders exactly one reason from `blocking[0]`, so a gated entry
+that is not an active or stuck park shows `owner-hold` and masks the more
+specific reason; an active or stuck park lane keeps rendering its park reason,
+and `queue list` remains the full-reason surface. `queue ready` is unchanged and
+carries no hold.
 
 `queue claim` refuses `queue.precondition.unmet` with the blocking-reason token
 exactly `owner-hold` and a separate bounded detail naming the source and reason.
