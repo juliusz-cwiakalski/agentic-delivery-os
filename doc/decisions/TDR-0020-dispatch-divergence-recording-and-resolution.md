@@ -68,7 +68,7 @@ links:
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/contracts/delivery-result.ts"
   diagrams: []
-  decisions: ["TDR-0015", "TDR-0005", "TDR-0010"]
+  decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "TDR-0019"]
   experiments: []
   metrics: []
   roadmap_items: ["M1-S9"]
@@ -177,7 +177,7 @@ Out of scope: the delivery-result taxonomy, the projection and exit tables, the 
 - **Required reviewers:** `@readiness-reviewer` and `@reviewer` during delivery; independent challenge by `@decision-critic` is recommended for an amendment of accepted-semantics territory; the human owner decides at PR review.
 - **Performers:** `@test-plan-writer` (recording, replay, resolve-identity, and note-bound oracles), `@plan-writer` (recording step and resolve diagnostics), `@coder` (delivery).
 - **Informed:** M1-S9 operational owners (the gate's truth condition now has a resolvable obligation attached to unverifiable deliveries); divergence resolvers; summary and gate consumers (unresolved counts move for new attempts only; historical attempts are not backfilled).
-- **Timing and escalation:** recorded during GH-279 specification. The spec names this amendment as a dependency so gate semantics keep a durable home (spec §13); its F-4.9/DEC-3 sentence summarizes the change as two gate behaviours, while the authoritative scope is the **four** amended TDR-0015 assertions recorded here — this record is their durable home and the spec pointer does not narrow them. Implementation may proceed with acceptance pending (TDR-0005/TDR-0015 precedent). Unresolved disagreement escalates to the owner.
+- **Timing and escalation:** recorded during GH-279 specification. The spec names this amendment as a dependency so gate semantics keep a durable home (spec §13); its F-4.9/DEC-3 sentence states the same scope — **four** TDR-0015 assertions (three in §1: `Truth(W)`, `Coverage(W)`, record-level degradation; one in §5: the comparison append invariant) — and names this record as their durable home, so the spec pointer and the scope recorded here agree. Implementation may proceed with acceptance pending (TDR-0005/TDR-0015 precedent). Unresolved disagreement escalates to the owner.
 
 ## Evidence, Assumptions & Unknowns
 

@@ -67,7 +67,7 @@ links:
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/contracts/dispatch.ts"
   diagrams: []
-  decisions: ["TDR-0005", "TDR-0012"]
+  decisions: ["TDR-0005", "TDR-0012", "TDR-0020"]
   experiments: []
   metrics: []
   roadmap_items: ["M1-S9"]
