@@ -431,6 +431,7 @@ remove_local_files() {
     "scripts/ceo-loop.sh" \
     "scripts/pm-liveness.sh" \
     "scripts/hooks/pre-opencode-iteration-zai.sh" \
+    "scripts/hooks/pre-opencode-iteration-owner-hold.sh" \
     "tools/clean-merged-branches"; do
     remove_file "${delivery_file}" "${delivery_file}"
   done
