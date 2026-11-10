@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-10T08:57:15.453Z }
   review_fix: { started: null, completed: 2026-11-10T10:57:00.459Z }
   quality_gates: { started: null, completed: 2026-11-10T11:06:39.746Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-10T11:07:57.663Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "D1 (PM-decided): the credential preflight is a pre-session refusal. It
@@ -302,5 +302,20 @@ notes:
       pnpm check exit 0 in 503s; bun test 6976 pass / 4 skip / 0 fail across 862
       files; lint, format, typecheck, boundaries, prompt-conformance,
       help-guide-coverage, and exports-parity all green. No flakes on this run."
+    type: info
+    date: 2026-11-10
+  - text: "DoD check (phase 10): pm-notes exists and phases clarify_scope through
+      quality_gates are all completed in the registry; every declared plan phase
+      has a notes entry with its id and test result (phase 1 is
+      verification-only by design, phases 2-8 carry commit hashes, phase 9's
+      literal hash is 27186b8c); all 30 acceptance criteria are implemented and
+      reviewed PASS (spec_compliance PASS, plan_compliance PASS after
+      remediation); the current-truth docs are reconciled by @doc-syncer with no
+      residual gaps and F-11 is closed; the name-level contract inventory is
+      unchanged; no secrets are staged. Residuals owned outside delivery: MV-1
+      (one real credentialed dispatch) is a PR-time operator procedure recorded
+      in the change record, and the GitHub-backed gate evidence (ci-green,
+      push-parity, owner-gate, squash-preflight) is unobtainable until the PR
+      exists and a token is provisioned. DoD passes with those two records."
     type: info
     date: 2026-11-10
