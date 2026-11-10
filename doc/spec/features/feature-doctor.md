@@ -51,7 +51,7 @@ The surrounding contracts are described in [Result Contract and Error Table](fea
 
 ### Command surface
 
-The command definition is exactly `doctor`. It is registered only when a `DoctorComposition` is supplied; the production composer supplies none today, so the production binary does not register `doctor` (a pre-existing doctor residual) and `status` is the production operator surface that carries the owner hold in its digest. The command accepts no positionals and declares no command-specific flags; `--json` is the global machine-output switch and adds no doctor behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`. There is no `--fix-hints` flag: hints are part of the contract.
+The command definition is exactly `doctor`. It is registered only when a `DoctorComposition` is supplied; the production composer supplies none today, so the production binary does not register `doctor` (a pre-existing doctor residual); in production `status` carries the owner hold in its digest and the queue read surfaces report it. The command accepts no positionals and declares no command-specific flags; `--json` is the global machine-output switch and adds no doctor behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`. There is no `--fix-hints` flag: hints are part of the contract.
 
 The handler owns no stream write and chooses no exit code. It collects the injected facts, runs the five checks inside their containment boundaries, aggregates the report, and returns `data` or a classified failure; the CLI edge renders the human text or the machine envelope and projects the exit code.
 
@@ -165,9 +165,9 @@ shows the hold in that case. With no active hold, every machine and human byte
 is unchanged. This hold detail is exercised through `createDoctorCommandRuntime`
 over a supplied `DoctorComposition` — the command-runtime/test-harness layer.
 The production composer supplies no `DoctorComposition` today (a pre-existing
-doctor residual), so the production binary does not register `doctor`; `status`
-is the production operator surface that carries the hold in its digest, and the
-queue and lanes surfaces report it on their own surfaces.
+doctor residual), so the production binary does not register `doctor`; in
+production `status` carries the hold in its digest, and `queue list`,
+`queue plan`, `lanes`, and `queue watch` report it on their own surfaces.
 The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
 marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
 override or store relocation.

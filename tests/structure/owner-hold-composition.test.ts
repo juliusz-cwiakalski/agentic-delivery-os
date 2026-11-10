@@ -1,9 +1,10 @@
 /**
  * TC-HOLDEDGE-001/002 + TC-HOLDNEG-003 (GH-280) — the production composition
  * supplies one per-pass owner-hold fact to the queue, lanes, claim, watch,
- * dispatch, status, and doctor seams; a removed supply changes behaviour; and
- * core stays ambient-free. The production resident daemon is deliberately not a
- * claim source (GAP-T7/D14).
+ * dispatch, and status surfaces; a removed supply changes behaviour; and core
+ * stays ambient-free. The doctor fact carriage is proven at the command-runtime
+ * layer only: no production `DoctorComposition` exists (D20). The production
+ * resident daemon is deliberately not a claim source (GAP-T7/D14).
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";

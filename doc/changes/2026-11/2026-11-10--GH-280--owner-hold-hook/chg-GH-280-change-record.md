@@ -50,9 +50,14 @@ window:
 
 ## Operator communication
 
-- Create a hold with either `export <PREFIX>_OWNER_HOLD="<reason>"` or
-  `printf '<reason>\n' > <home>/<stateDirectoryName>/owner-hold`. The marker is
-  preferred for durability across processes.
+- Create a hold with either `export <PREFIX>_OWNER_HOLD="<reason>"` (the current
+  default working name is `delivery-os`, so the setting is
+  `DELIVERY_OS_OWNER_HOLD`) or
+  `printf '<reason>\n' > <home>/<stateDirectoryName>/owner-hold`
+  (`$HOME/.delivery-os-state/owner-hold` for that default). The marker is
+  preferred for durability across processes; create the store directory
+  privately (`mkdir -m 700`) because a non-private directory fails
+  `state.permission.denied` before the hold gate.
 - There is **no marker-path override and no store relocation** for the hold. The
   shipped example defaults to the production path of this product; adopters who
   rename the product edit that default (the environment source is
@@ -88,26 +93,40 @@ Status: **NOT EXECUTED during this automated delivery.** The procedure is
 PR-scoped and must be run in a disposable clone and disposable `HOME`; its
 transcript belongs in the pull request. The automated suites prove the same facts
 through injected composition and seams (GAP-T1), but the operator-run sequence
-below is still required before merge:
+below is still required before merge. The engine's default working name is
+`delivery-os`, so the production store directory is `$HOME/.delivery-os-state`;
+a store directory created non-private (for example `0775` from a plain
+`mkdir -p`) is rejected with `state.permission.denied` at exit `1` before the
+hold gate, so no queue command ever reaches `owner-hold`.
 
 1. Create a disposable root under `./tmp/tmpdir/e2e-gh280` and set `HOME` to it.
-2. Create `<home>/<stateDirectoryName>/owner-hold` with
-   `peak-hour cost pause`.
+2. Create the private store directory and the marker:
+   `mkdir -m 700 -p "$HOME/.delivery-os-state"` followed by
+   `printf 'peak-hour cost pause\n' > "$HOME/.delivery-os-state/owner-hold"`.
 3. Run `status --json`; record `providers.evidence.ownerHold` and exit `0`.
    In production, `status` carries the hold in its digest while `queue list`,
-   `queue plan`, `lanes`, and `queue watch` report it on their own surfaces. Do
-   **not** run production `doctor`: the production composer supplies no
+   `queue plan`, `lanes`, and `queue watch` report it on their own surfaces.
+   There is **no** production `doctor` step: the production composer supplies no
    `DoctorComposition`, so the production binary does not register `doctor`
    (GAP-T8). Doctor hold evidence is covered at the command-runtime layer by
    `TC-HOLDDOCTOR-001..007` over an injected `DoctorComposition`.
-4. Run `queue claim` **with no ref** and a `dispatch`; record
-   `queue.precondition.unmet`, `reason=owner-hold`, the bounded detail and
-   summary, exit `1`, zero records, and zero sessions. Record that `owner-hold`
-   means wait/do-not-abort (D19), not a transient retry.
-5. Show an expired park staying parked with unchanged bytes while held.
-6. Remove the marker; show the next pass resuming from unchanged records with one
+4. Run `queue list`, `queue plan`, and `lanes list`; record the `ownerHold`
+   member on the list/plan payloads and `owner-hold` as the first blocking
+   reason (and as the rendered lane reason where a lane exists). The store
+   directory must still be `0700` here; a non-private directory fails
+   `state.permission.denied` before this point.
+5. Run `queue claim` **with no ref**; record `queue.precondition.unmet`,
+   `reason=owner-hold`, the bounded detail, exit `1`, zero records, and zero
+   sessions. Record that `owner-hold` means wait/do-not-abort (D19), not a
+   transient retry. Dispatch is covered by the automated production-composition
+   suite and is not part of this procedure; if it is run anyway, it is a
+   conditional step that first requires a configured GitHub credential, because
+   an unconfigured host fails `config.credential.missing` and never reaches the
+   hold.
+6. Show an expired park staying parked with unchanged bytes while held.
+7. Remove the marker; show the next pass resuming from unchanged records with one
    session.
-7. Record the known limits: no kill switch, no MCP queue surface, no BSD runner,
+8. Record the known limits: no kill switch, no MCP queue surface, no BSD runner,
    the seam-observed 4 096-byte read bound, GAP-T7 (the production resident
    daemon is not wired), and GAP-T8 (the production composer supplies no
    `DoctorComposition`).
@@ -154,12 +173,22 @@ below is still required before merge:
 - Inactive queue/status/doctor/lanes/MCP goldens are byte-identical; only the
   declared held fixtures/goldens were added.
 - Review remediation focused runs: owner-hold fact/reader 30/30 (including the
-  two-pass zero-count recorders), production composition 3/3 plus the structure
-  pin 5/5, and the touched doctor/queue/status/conformance suites 232/232 across
-  12 files; `pnpm typecheck`, `pnpm check:boundaries`, shellcheck (0 findings),
-  the hook suite (13/13), the doc-distribution guard (82 in-scope docs, no
-  drift), and `plan validate GH-280` (`verdict=valid`,
+  zero-count recorder at the injected reader boundary), production composition
+  3/3 plus the structure pin 5/5, and the touched doctor/queue/status/conformance
+  suites 232/232 across 12 files; `pnpm typecheck`, `pnpm check:boundaries`,
+  shellcheck (0 findings), the hook suite (13/13), the doc-distribution guard
+  (82 in-scope docs, no drift), and `plan validate GH-280` (`verdict=valid`,
   `readyForDevelopment=true`) are green.
+- Review iteration 2 remediation focused runs: hook suite 13/13 with
+  `shellcheck` 0 findings; owner-hold fact/reader 30/30, production composition
+  3/3, structure pin 5/5 (38/38 across the four owner-hold suites);
+  `queue-scheduling-contract` + `doctor-contract` 33/33; the five doc checks
+  (`owner-hold-doc`, `doc-conformance`, `forbidden-literals`,
+  `reference-page-parity`, `help-guide-coverage`) 54/54; install 55/55 and
+  uninstall 30/30; `test-doc-distribution` no drift (82 in-scope docs);
+  `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 — 7133 pass / 4 skip / 0 fail
+  (7137 tests, 880 files) with every sub-gate green; `plan validate GH-280`
+  `verdict=valid`, `readyForDevelopment=true`.
 
 ## DoR-2 minors resolved
 
@@ -189,6 +218,13 @@ below is still required before merge:
   (the no-new-key note), `doc/spec/features/feature-dispatch-engine.md` (the
   dispatch refusal), and `doc/spec/features/feature-resident-daemon.md` (the
   conditional-residual note).
+- `doc/spec/features/feature-cli-entrypoint.md` received one consequential
+  doc-sync edit: the doctor registration/drop paragraph and its related-changes
+  entry now state that the hold evidence is a doctor command-runtime capability
+  and that the production composer supplies no `DoctorComposition` in GH-280,
+  while `status` and the queue read surfaces report the hold in production. It is
+  declared in phase 7 scope and is the only formerly outside-declared path in the
+  branch diff apart from the two readiness-review files (D29).
 - Phase 8 is **verification plus the lint/format edits**, not formatting-only.
   It includes the behavior-preserving construction change in
   `packages/core/src/domain/owner-hold.ts` (the control-character and ANSI
@@ -220,3 +256,38 @@ high, two medium, six low, and two info findings. Dispositions:
 
 No acceptance criterion, delivered golden, closed set, or runtime behaviour moved
 in this remediation.
+
+## Review iteration 2 remediation (D26–D30)
+Code review iteration 2 (`code-review/review-iter-2.yaml`) returned FAIL with one
+high, one medium, three low, and two info findings over an otherwise verified
+iteration-1 code and test remediation. Dispositions:
+
+| Finding | Disposition |
+|---|---|
+| F-1 (high) brand alignment and executable E2E | **Fixed (D26, D27).** The shipped example recognises `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` and reads `$HOME/.delivery-os-state/owner-hold`; the guides, feature specs, test spec, spec, test plan, this record, and the changeset use the same current default names, keeping `<PREFIX>_OWNER_HOLD`/`<home>/<brand.stateDirectoryName>` normative and stating that an adopter with a different working name edits the example's two names and marker default or exports the brand-derived variable. The manual procedure creates the store directory with `mkdir -m 700`, uses `status` plus `queue list`/`queue plan`/`lanes` and a no-ref `queue claim`, names `state.permission.denied` for a non-private directory, makes dispatch conditional on a GitHub credential, and has no doctor step. |
+| F-2 (medium) remaining surface claim | **Fixed (D28).** No artifact narrows the hold to `status` alone: `status` carries it in its digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report it on their own production surfaces, with doctor command-runtime only. The structure-composition header no longer lists doctor as a production seam and states that the doctor fact carriage is proven at the command-runtime layer only. |
+| F-3 (low) undeclared `feature-cli-entrypoint.md` | **Fixed (D29).** The file is declared in phase 7 scope and named in this record's scope deviations. |
+| F-4 (low) stale aggregate counts | **Fixed (D29).** Test-plan §10 records 7133 pass / 4 skip / 0 fail (7137 tests, 880 files). |
+| F-5 (low) phase-9 commit set | **Fixed (D29).** The phase-9 evidence note names `e545b271`, `2a7a01cf`, `f42d67a7`, and `8128f8e5`, with the preceding `48347c03`, `e6efedbf`, and `286d1935` work. |
+| F-6 (info) tautological zero-count recorder | **Fixed (D29).** `TC-HOLDFACT-009` now drives the real `readOwnerHoldMarker` over a recording filesystem port and asserts the exact per-pass call counts, the fixed path, and the 4 096-byte read bound before asserting zero credential, transport, store-write, and spawn calls; the marker content is proved to reach the resolved fact. |
+| F-7 (info) blocking-reason position | **Fixed (D29).** Test-plan §7.3 says `owner-hold` is index 27 — the 28th `blockingReasons` entry — after the 27 delivered entries, growing the array 27 → 34. |
+
+No acceptance criterion, delivered golden, closed set, or runtime behaviour moved
+in this remediation either.
+
+### Iteration-2 executable procedure check
+
+The documented procedure shape was executed against the production binary in a
+disposable `HOME` under `./tmp/tmpdir/e2e-gh280.*` (this is the D27 shape check;
+the full operator-run TC-HOLDE2E-001 transcript remains PR-scoped under GAP-T1):
+
+| Step | Command | Result |
+|---|---|---|
+| private store | `mkdir -m 700 -p "$HOME/.delivery-os-state"` | directory mode `700` |
+| marker | `printf 'peak-hour cost pause\n' > "$HOME/.delivery-os-state/owner-hold"` | marker written |
+| status | `bun packages/cli/bin/delivery-os.ts status --json` | exit `0`; `providers.evidence.ownerHold = {source: marker, reason: peak-hour cost pause}` |
+| queue list | `... queue list --json` | exit `0`; `ownerHold` present |
+| queue plan | `... queue plan --json` | exit `0`; `ownerHold` present |
+| lanes | `... lanes list --json` | exit `0` (no lanes in the disposable store) |
+| no-ref claim | `... queue claim --json` | exit `1`; `queue.precondition.unmet`; `summary: reason=owner-hold; owner hold active (marker): peak-hour cost pause` |
+| non-private store | `mkdir -p` (mode `775`) | exit `1`; `state.permission.denied` before the hold gate |

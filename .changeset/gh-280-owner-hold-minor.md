@@ -17,6 +17,7 @@ suffix. Doctor keeps the provider check `ok` and adds the single non-failing
 `owner-hold` annotation reason plus a bounded detail that survives the detail
 clamp whenever a `DoctorComposition` is supplied; this is a command-runtime
 capability, the production composer supplies no `DoctorComposition` today, and
-`status` is the production operator surface that reports the hold. Queue ready is
-unchanged, no park cause or state record kind is added, and doctor verdicts and
-exits are unchanged.
+in production `status` carries the hold in its digest while `queue list`,
+`queue plan`, `lanes`, and `queue watch` report it on their own surfaces. Queue
+ready is unchanged, no park cause or state record kind is added, and doctor
+verdicts and exits are unchanged.

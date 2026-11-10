@@ -1,0 +1,248 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-280
+branch: feat/GH-280/owner-hold-hook
+status: FAIL
+summary: >-
+  The iteration-1 code and test remediation is genuine. The adapter existence
+  check is error-aware and fail-closed (ENOENT absent; any other lstat failure
+  unreadable) with injected and root-skipped real tests; the new
+  production-composition suite builds the real `createProductionComposer` over a
+  temp-HOME marker and drives queue list/plan, supplied-ref and no-ref claim,
+  dispatch, and status, and it fails when the production marker path is mutated
+  in a scratch copy (verified). The closed sets stay exact at 28/34 with only
+  `owner-hold` added; every inactive golden is byte-identical; the wrapper SHA
+  pin and hook suite are green; doc-conformance is green; `plan validate` is
+  valid with 9 phases, 44 ACs, and 59 TCs; and `pnpm check` is exit 0 with 7133
+  pass / 4 skip / 0 fail across 880 files. FAIL remains for two artifact
+  defects. First, the manual E2E is still not executable as written: the test
+  plan and plan hardcode `$HOME/.ados-state` while the production CLI's default
+  working name is `delivery-os` (`.delivery-os-state`), and a disposable-HOME
+  state directory created with `mkdir -p` is 0775, which the state store rejects
+  with `state.permission.denied` before the hold gate; both were reproduced with
+  the production binary, and the queue legs work only with the working-name
+  override or `.delivery-os-state` plus a 0700 directory. Second, several
+  artifacts still claim `status` is the only production operator surface even
+  though `queue list`, `queue plan`, `lanes`, and `queue watch` also report the
+  hold, and the structure-test header still lists the doctor seam in the
+  production composition. The remaining findings are scope and record precision.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: FAIL
+accepted_deviations:
+  - deviation: "Phase commits carry the commit primitive's template-fallback subjects instead of the plan phase summaries (iteration-1 F-2)."
+    pm_basis: "D21: the primitive composes the subject; a phase summary is a plan description; the plan's commit-hygiene note and the change record record the acceptance; no history was rewritten."
+    assessment: "Accepted. The tree is unchanged and the plan requirement was corrected; this is no longer a finding."
+    verdict: ACCEPT
+  - deviation: "TC-HOLDE2E-001 remains manual and PR-scoped (GAP-T1)."
+    pm_basis: "The procedure needs a disposable clone/HOME and a real resumed session; the automated suites prove the same facts through the production composer and seams."
+    assessment: "Deferral is acceptable, but the procedure must name the engine state directory and create it 0700 (F-1); as written it cannot produce the queue evidence."
+    verdict: DEFERRED_WITH_BLOCKER
+  - deviation: "The shell example's default marker is `$HOME/.ados-state/owner-hold` while the neutral build's brand state directory is `.delivery-os-state` (iteration-1 accepted residual, D12/RSK-7)."
+    pm_basis: "Adopters who rename the product edit the example; the environment source is relocation-safe."
+    assessment: "The residual is unchanged and is not reopened. The manual E2E must still name the engine directory (or set `DELIVERY_OS_WORKING_NAME=ados`) because the production status/queue commands read `.delivery-os-state` by default (F-1)."
+    verdict: ACCEPT_AS_DOCUMENTED_RESIDUAL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: testing
+    blocking: true
+    location: "chg-GH-280-test-plan.md:1896,1913; chg-GH-280-plan.yaml:752; chg-GH-280-change-record.md:93-95; doc/guides/delivery-modes.md:206-214; packages/core/src/state/driver/runtime-edge.ts:119-120"
+    message: >-
+      The manual TC-HOLDE2E-001 is still not executable as written. (a) The
+      test-plan step 1 and the plan's phase-8 manual row create the marker at
+      `$HOME/.ados-state/owner-hold`, but the production binary's default
+      working name is `delivery-os`, whose brand state directory is
+      `.delivery-os-state`; a real `status --json` against a `.ados-state`
+      marker reports no `providers.evidence.ownerHold` (reproduced), while the
+      same marker under `.delivery-os-state`, or under `.ados-state` with
+      `DELIVERY_OS_WORKING_NAME=ados`, reports it. (b) In a disposable HOME,
+      step 2's `mkdir -p <home>/<stateDirectoryName>` yields a 0775 directory;
+      the state store rejects a non-private directory with
+      `state.permission.denied` at exit 1 before the hold gate, so
+      `queue list`/`queue claim` never reach
+      `queue.precondition.unmet`/`owner-hold` (reproduced: 0775 ->
+      `state.permission.denied`; `mkdir -m 700` -> `reason=owner-hold`).
+      `dispatch` additionally requires a GitHub credential and fails
+      `config.credential.missing` when none is present. The change record's
+      `<stateDirectoryName>` placeholder is correct but does not name the value
+      or the 0700 requirement, and the guide/test plan/plan still hardcode
+      `.ados-state`.
+    suggestion: >-
+      In the test plan, plan phase 8, change record, and guide, name the actual
+      engine directory (`$HOME/.delivery-os-state` for the default working name)
+      or instruct the operator to run the E2E with
+      `DELIVERY_OS_WORKING_NAME=ados`; create the state directory with
+      `mkdir -m 700 -p` (or let a store-initializing command create it) before
+      writing the marker; and state the dispatch credential precondition (or use
+      `queue list`/`queue claim` as the queue leg). Then the status/queue E2E is
+      executable as written.
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    blocking: true
+    location: "chg-GH-280-pm-notes.yaml:154-165,392; chg-GH-280-plan.yaml:91,222,551,661,699,752,761,778,795,801; .changeset/gh-280-owner-hold-minor.md:20; tests/structure/owner-hold-composition.test.ts:2-4"
+    message: >-
+      The remediation replaced the false production-doctor claim with a false
+      production-surface claim: pm-notes D20 and the phase-9 note, the plan's
+      phase 5/7/9 objectives and exit criteria plus the phase-8 E2E line, and
+      the changeset say `status` is the only production operator surface that
+      reports the hold (the changeset says `status` is the production operator
+      surface). The delivered product also reports the hold on
+      `queue list`, `queue plan`, `lanes`, and `queue watch`; the spec (§5.1,
+      AC-DOC-1), the change record, the guide, the doctor page, and
+      feature-doctor say so. The plan's phase-9 exit criterion therefore requires
+      a false claim and contradicts the spec. Separately,
+      `tests/structure/owner-hold-composition.test.ts` still says the production
+      composition supplies the fact to the "doctor" seam; no production
+      `DoctorComposition` exists (D20).
+    suggestion: >-
+      Replace every "status is the only production operator surface" phrasing
+      with "status carries the hold in its digest; `queue list`, `queue plan`,
+      `lanes`, and `queue watch` report it on their own surfaces" (or similar)
+      in pm-notes D20/the phase-9 note, the plan phase 5/7/9 narratives and exit
+      criteria, and the changeset; remove "and doctor" from the structure-test
+      header and say the doctor fact carriage is proven at the command-runtime
+      layer only.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: plan-compliance
+    blocking: false
+    location: "doc/spec/features/feature-cli-entrypoint.md (commit f42d67a7); chg-GH-280-plan.yaml phase 7 scope; chg-GH-280-spec.md §16.1; chg-GH-280-change-record.md 'Scope deviations'"
+    message: >-
+      The remediation edited `doc/spec/features/feature-cli-entrypoint.md` (the
+      doctor registration/drop paragraph and the related-changes list), but the
+      file is in no plan phase `scope.files`, not in spec §16.1, and not named in
+      the change record's scope-deviations section. It is the only new
+      outside-declared path in the branch diff (the two readiness-review files
+      and `packages/mcp/src/commands/status.ts` are the pre-existing accepted
+      artifacts).
+    suggestion: >-
+      Add the file to phase 7 scope and the change record's scope deviations (and
+      spec §16.1 if the doc-impact table is exhaustive), or record it as a
+      consequential doc-sync edit.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: documentation
+    blocking: false
+    location: "chg-GH-280-test-plan.md:2155"
+    message: >-
+      The test plan's §10 aggregate line still records the pre-remediation gate:
+      `pnpm check` exit 0 (7127 pass, 4 skip, 0 fail, 7131 tests, 879 files). The
+      change record and pm-notes record the post-remediation 7133 pass / 4 skip
+      / 0 fail / 7137 tests / 880 files, which is what a fresh
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` produced at review time.
+    suggestion: >-
+      Refresh the test-plan §10 aggregate line to the post-remediation counts (or
+      label it explicitly as the phase-8 pre-remediation run).
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    blocking: false
+    location: "chg-GH-280-pm-notes.yaml:387-419; git log main-tools..HEAD"
+    message: >-
+      The phase-9 completion note names only `e545b271`, but substantive
+      remediation continued after it: `2a7a01cf` adds the completion note,
+      `f42d67a7` changes the change record/spec/guide/doctor page/queue
+      page/feature-cli-entrypoint, and `8128f8e5` changes the test plan (and
+      `48347c03`/`e6efedbf`/`286d1935` precede it with pm-notes/doc/doctor-comment
+      work). The named hash is not the final phase-9 tree, so the per-phase
+      evidence understates the phase's commit set.
+    suggestion: >-
+      Name the final remediation commit (`8128f8e5`) or the set of commits that
+      carried phase 9, or state the phase-9 boundary as the range, so the
+      pm-notes evidence matches the delivered tree.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: testing
+    blocking: false
+    location: "tests/behaviour/owner-hold-fact.test.ts:200-241"
+    message: >-
+      The new TC-HOLDFACT-009 zero-count recorder builds
+      credential/transport/store/spawn doubles and a `resolve()` wrapper that
+      only calls the pure resolver, so the recorded counts are zero by
+      construction; the resolver cannot reach those seams. The assertion is
+      harmless but does not add the assurance the disposition claims beyond the
+      existing canary/static checks.
+    suggestion: >-
+      Either drive a real composition path that could touch the seams (and prove
+      it does not) or describe the test as a shape canary rather than a
+      recording-count proof.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: documentation
+    blocking: false
+    location: "chg-GH-280-test-plan.md:1232,1240,1997"
+    message: >-
+      The fixture target says `owner-hold` is at "position 27" in
+      `blockingReasons` followed by the six condition ids. The delivered fixture
+      has 27 entries before `owner-hold`, so it is the 28th entry (index 27); the
+      same paragraph uses 1-based counts elsewhere (28-entry lane array, 27 -> 34
+      growth). The wording is ambiguous and reads as an off-by-one.
+    suggestion: >-
+      Say "index 27 (the 28th entry)" or "position 28", so the 27 -> 34 growth is
+      unambiguous.
+    suppressed: false
+verification_evidence:
+  - command: "git status --porcelain=v1"
+    result: "clean; branch feat/GH-280/owner-hold-hook at 8128f8e5"
+  - command: "TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/owner-hold-production-composition.test.ts"
+    result: "3 pass, 0 fail (33 expect calls)"
+  - command: "scratch copy of the tree with production.ts readOwnerHoldMarker storeDirectory mutated to a wrong path"
+    result: "2 of 3 tests fail (marker and mutation cases); env-source case still passes -> the suite genuinely depends on the production reader (F-3 fix verified)"
+  - command: "bun test tests/behaviour/owner-hold-reader.test.ts tests/behaviour/owner-hold-fact.test.ts"
+    result: "30 pass, 0 fail (92 expect calls); the ENOENT/unreadable-parent pair and the zero-count recorder run"
+  - command: "bun test tests/checks/{doc-conformance,owner-hold-doc,error-table-sync,forbidden-literals,reference-page-parity,help-guide-coverage,privacy-release}.test.ts"
+    result: "157 pass, 0 fail"
+  - command: "bun test tests/structure/{queue-scheduling-contract,doctor-contract,error-table}.test.ts tests/checks/error-table-sync.test.ts"
+    result: "212 pass, 0 fail; closed sets exact at 28/34 with owner-hold only"
+  - command: "bun test tests/structure/provider-surface.test.ts; git diff --stat main-tools...HEAD -- scripts/ceo-loop.sh scripts/.tests/test-hook-regression.sh"
+    result: "6 pass, 0 fail; wrapper/suite diff empty (SHA pin intact)"
+  - command: "pnpm exec delivery-os plan validate GH-280"
+    result: "verdict=valid, tier=full, readyForDevelopment=true; 9 phases; 44 unique ACs, 59 TCs; phase 9 scope 6 files"
+  - command: "bash scripts/.tests/test-doc-distribution.sh; shellcheck ...; bash scripts/.tests/test-hook-owner-hold-example.sh"
+    result: "guard no drift (82 in-scope docs); shellcheck 0; hook suite 13/13"
+  - command: "HOME=<temp> bun packages/cli/bin/delivery-os.ts status --json with <home>/.delivery-os-state/owner-hold"
+    result: "exit 0; providers.evidence.ownerHold = {source: marker, reason: peak-hour cost pause}"
+  - command: "HOME=<temp> bun packages/cli/bin/delivery-os.ts status --json with <home>/.ados-state/owner-hold and no working-name override"
+    result: "exit 0; providers.evidence.ownerHold absent (F-1 evidence); with DELIVERY_OS_WORKING_NAME=ados it is present"
+  - command: "HOME=<temp> bun packages/cli/bin/delivery-os.ts queue list/claim --json with a 0775 state directory"
+    result: "exit 1, state.permission.denied; with chmod 700, queue list reports the hold and queue claim with no ref returns queue.precondition.unmet / reason=owner-hold (F-1 evidence)"
+  - command: "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+    result: "exit 0: 7133 pass, 4 skip, 0 fail (7137 tests, 880 files); typecheck, boundaries, ambient-globals, secret-read, prompt, help, exports-parity green"
+reviewed_at: 2026-11-10T16:45:00Z
+verdict_basis: >-
+  The iteration-1 fixes that changed code and tests are real: the adapter
+  existence check is error-aware and fail-closed with tests, the production
+  composition suite drives the real composer over a temp-HOME marker and fails
+  under a production-reader mutation, and the closed sets, goldens, wrapper pin,
+  hook suite, doc checks, plan validity, and the full gate are green. The change
+  still cannot PASS because its manual evidence is not executable as written:
+  the test plan/plan name `$HOME/.ados-state` while the production CLI reads
+  `.delivery-os-state`, and a disposable-HOME store directory created with
+  `mkdir -p` is rejected with `state.permission.denied` before the hold gate
+  (both reproduced with the real binary). The claim correction is also
+  incomplete: `status` is still described as the only production operator
+  surface even though the queue read surfaces report the hold, and the structure
+  test header still claims a production doctor seam. Remediation is a bounded
+  wording/procedure fix, not a design change; the code does not need to move.
+next_step: "CALL_CODER - correct the manual E2E (engine state directory + 0700 creation + dispatch credential precondition), replace the 'status is the only production operator surface' claims and the structure-test doctor seam, and apply the low/info advisories; then re-review (iteration 3)."

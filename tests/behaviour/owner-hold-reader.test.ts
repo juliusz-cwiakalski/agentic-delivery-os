@@ -106,8 +106,8 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
   });
 
   test("an injected EACCES read and an injected stat failure both fail closed", () => {
-    const path = ownerHoldMarkerPath("/srv/operator/.ados-state");
-    expect(path).toBe("/srv/operator/.ados-state/owner-hold");
+    const path = ownerHoldMarkerPath("/srv/operator/.delivery-os-state");
+    expect(path).toBe("/srv/operator/.delivery-os-state/owner-hold");
     const unreadableFs = (
       overrides: Partial<OwnerHoldMarkerFileSystem>,
     ): OwnerHoldMarkerFileSystem => ({
@@ -119,11 +119,11 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
       ...overrides,
     });
     expect(
-      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, unreadableFs({})),
+      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.delivery-os-state" }, unreadableFs({})),
     ).toEqual({ state: "unreadable" });
     expect(
       readOwnerHoldMarker(
-        { storeDirectory: "/srv/operator/.ados-state" },
+        { storeDirectory: "/srv/operator/.delivery-os-state" },
         unreadableFs({
           isFile: () => {
             throw Object.assign(new Error("io"), { code: "EIO" });
@@ -134,8 +134,8 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
   });
 
   test("an existence-check stat failure is unreadable, while ENOENT stays absent", () => {
-    const path = ownerHoldMarkerPath("/srv/operator/.ados-state");
-    expect(path).toBe("/srv/operator/.ados-state/owner-hold");
+    const path = ownerHoldMarkerPath("/srv/operator/.delivery-os-state");
+    expect(path).toBe("/srv/operator/.delivery-os-state/owner-hold");
     const statFailureFs: OwnerHoldMarkerFileSystem = {
       exists: () => {
         throw Object.assign(new Error("parent directory denied"), { code: "EACCES" });
@@ -144,14 +144,16 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
       readText: () => "never",
     };
     expect(
-      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, statFailureFs),
+      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.delivery-os-state" }, statFailureFs),
     ).toEqual({ state: "unreadable" });
     const enoentFs: OwnerHoldMarkerFileSystem = {
       exists: () => false,
       isFile: () => true,
       readText: () => "never",
     };
-    expect(readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, enoentFs)).toEqual({
+    expect(
+      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.delivery-os-state" }, enoentFs),
+    ).toEqual({
       state: "absent",
     });
   });
@@ -217,14 +219,14 @@ describe("TC-HOLDFACT-008 one existence check and one 4 096-byte read", () => {
         return "recording reason";
       },
     };
-    const marker = readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, fs);
+    const marker = readOwnerHoldMarker({ storeDirectory: "/srv/operator/.delivery-os-state" }, fs);
     expect(marker).toEqual({ state: "present", content: "recording reason" });
     expect(calls).toEqual(["exists", "isFile", "read"]);
     expect(limits).toEqual([OWNER_HOLD_MAX_MARKER_BYTES]);
     expect(paths).toEqual([
-      "/srv/operator/.ados-state/owner-hold",
-      "/srv/operator/.ados-state/owner-hold",
-      "/srv/operator/.ados-state/owner-hold",
+      "/srv/operator/.delivery-os-state/owner-hold",
+      "/srv/operator/.delivery-os-state/owner-hold",
+      "/srv/operator/.delivery-os-state/owner-hold",
     ]);
   });
 

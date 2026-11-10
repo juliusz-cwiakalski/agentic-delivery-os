@@ -22,9 +22,9 @@ describe("TC-HOLDDOCS-001 the delivery-modes guide states both semantics and the
     expectAll(text, [
       "Provider-window deferral is automatic and time-bounded",
       "An owner hold is manual, indefinite, and outranks every window",
-      "ADOS_OWNER_HOLD",
-      "ADOS_OWNER_HOLD_POLL_SECONDS",
-      "$HOME/.ados-state/owner-hold",
+      "DELIVERY_OS_OWNER_HOLD",
+      "DELIVERY_OS_OWNER_HOLD_POLL_SECONDS",
+      "$HOME/.delivery-os-state/owner-hold",
       "The environment source wins when both are active",
       "Removing the environment value and the marker",
     ]);
@@ -111,7 +111,7 @@ describe("TC-HOLDDOCS-003 the feature specs and command pages are reconciled", (
     const text = read("doc/spec/features/feature-autonomous-delivery.md");
     expectAll(text, [
       "Owner hold outranks provider windows (F-8.1)",
-      "ADOS_OWNER_HOLD",
+      "DELIVERY_OS_OWNER_HOLD",
       "no fixed iteration cap",
       "park cause",
       "queue ready",

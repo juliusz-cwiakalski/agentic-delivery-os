@@ -97,13 +97,13 @@ remain rejected.
 
 ### Owner-hold hook contract
 
-Given the owner-hold example with `ADOS_OWNER_HOLD` non-empty, when its condition
+Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty, when its condition
 is evaluated, then it asks for the poll interval and the sleep line names the
 `env` source and the sanitized reason. Given only the fixed production-store
-marker `$HOME/.ados-state/owner-hold`, then the marker source and its first line
+marker `$HOME/.delivery-os-state/owner-hold`, then the marker source and its first line
 are named. Given neither, then the condition asks for `0` and the driver returns
 without sleeping. The driver takes the MAX across conditions, applies no fixed
-iteration cap, accepts `ADOS_OWNER_HOLD_POLL_SECONDS` only in `1`–`3600` and uses
+iteration cap, accepts `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` only in `1`–`3600` and uses
 `300` with one warning otherwise, reads no other marker path, emits one bounded
 reason line per sleep, and uses no real sleep, network call, or clock read in the
 suite. A clock jump neither ends the hold nor extends a deferral beyond one poll.

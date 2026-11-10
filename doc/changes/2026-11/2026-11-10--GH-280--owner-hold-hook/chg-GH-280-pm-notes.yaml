@@ -18,13 +18,12 @@ phases:
 decisions:
   - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the
       marker path): the owner hold has two equivalent sources. (a) A marker file
-      at ${ADOS_STATE_DIR}/owner-hold, the state directory the typed engine
-      already resolves; (b) an environment variable derived from the brand prefix
-      (<PREFIX>_OWNER_HOLD, ADOS_OWNER_HOLD in this repo). A non-empty value is an
-      operator reason. The shell example also accepts ADOS_OWNER_HOLD_FILE to name
-      an explicit marker path. Removing both sources clears the hold with no state
-      loss. D12 replaces the marker-path and override clauses; the env source
-      remains."
+      in the state directory the typed engine resolves; (b) an environment
+      variable derived from the brand prefix (`<PREFIX>_OWNER_HOLD`, which is
+      `DELIVERY_OS_OWNER_HOLD` for the current default working name). A non-empty
+      value is an operator reason. Removing both sources clears the hold with no
+      state loss. D12 replaces the marker-path clause and removes the
+      marker-path override; the env source remains."
     date: 2026-11-10
   - text: "D2 (PM-decided, non-interactive intake): the typed engine models the hold
       as a global read-only gate over an injected fact, not as a queue park
@@ -86,7 +85,9 @@ decisions:
       match AC-F2-1."
     date: 2026-11-10
   - text: "D10 (PM-decided, test-plan OQ-4): an unset or empty/whitespace
-      ADOS_OWNER_HOLD_POLL_SECONDS uses the 300-second default silently; any
+      poll setting (`<PREFIX>_OWNER_HOLD_POLL_SECONDS`, currently
+      `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`) uses the 300-second default
+      silently; any
       non-empty invalid value (non-integer, zero, negative, out of range) uses
       300 with exactly one bounded warning."
     date: 2026-11-10
@@ -99,12 +100,13 @@ decisions:
   - text: "D12 (PM-decided, DoR-1 finding 1): the hold marker lives in the directory
       the production store identity actually uses,
       `<home>/<brand.stateDirectoryName>/owner-hold`. The design does NOT claim
-      or use `<PREFIX>_STATE_DIR`, and the shell example does NOT offer
-      ADOS_OWNER_HOLD_FILE, because neither is honoured by the production
+      or use `<PREFIX>_STATE_DIR`, and the shell example does NOT offer a
+      marker-path override setting, because neither is honoured by the production
       queue/dispatch/status/doctor store today. Relocating state is out of scope
-      for GH-280. The shell example's default is the shipped product's
-      `$HOME/.ados-state/owner-hold`; adopters who rename the product edit the
-      example. Correct every spec/test-plan/plan claim that says otherwise."
+      for GH-280. The shell example's default is the current product's
+      `$HOME/.delivery-os-state/owner-hold`; adopters whose working name differs
+      edit the example's two setting names and that default. Correct every
+      spec/test-plan/plan claim that says otherwise."
     date: 2026-11-10
   - text: "D13 (PM-decided, DoR-1 finding 2): `queue claim` with no ref must also
       refuse with `queue.precondition.unmet` and reason token `owner-hold`. The
@@ -159,9 +161,11 @@ decisions:
       tracked by the doctor feature, not this change. Correct every GH-280 claim
       (spec F-4.1/F-5/§16, AC-F6 scope, plan phase 4/5, change record E2E,
       changeset, delivery-modes guide, doctor command page) and remove the
-      `doctor --json` E2E step. `status` is the only production operator surface
-      that reports the hold; doctor reports it whenever a DoctorComposition is
-      supplied (test harness and any future production wiring)."
+      `doctor --json` E2E step. In production, `status` carries the hold in its
+      digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report it
+      on their own surfaces; doctor reports it whenever a DoctorComposition is
+      supplied (test harness and any future production wiring) and is not a
+      production composition."
     date: 2026-11-10
   - text: "D21 (PM-decided, review-1 F-2): the commit primitive owns commit
       subjects. Template-fallback subjects are accepted and history is not
@@ -196,6 +200,49 @@ decisions:
       parks while their state and park reason are preserved; correct DM-4's
       payload annotation to `{ source; reason? }`; refresh the stale test-plan
       §2/§7.3 and mark D1 superseded inline."
+    date: 2026-11-10
+  - text: "D26 (PM-decided, review-2 F-1): align the shipped example and every
+      example artifact to the current default brand. The entrypoint default
+      working name is `delivery-os`, so the engine reads
+      `DELIVERY_OS_OWNER_HOLD` and
+      `<home>/.delivery-os-state/owner-hold`. The shell example uses
+      `DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, and the
+      fixed default `$HOME/.delivery-os-state/owner-hold`. Normative text keeps
+      the `<PREFIX>` placeholder; concrete examples use the current names.
+      Adopters who set a different working name edit the example's defaults or
+      use the brand-derived env source. The previously used settings and
+      state-directory names for the owner hold are removed from the GH-280
+      artifacts."
+    date: 2026-11-10
+  - text: "D27 (PM-decided, review-2 F-1): the manual E2E must be executable.
+      Create the disposable state directory with mode 0700
+      (`mkdir -m 700 \"$HOME/.delivery-os-state\"`) because the store rejects a
+      non-private directory. Use `status` plus the queue read surfaces and
+      `queue claim` with no ref as the production evidence. Dispatch is covered
+      by the automated composition test and is omitted from the manual procedure
+      (it needs a GitHub credential); if included, it is a conditional step with
+      the credential prerequisite named. No `doctor` step."
+    date: 2026-11-10
+  - text: "D28 (PM-decided, review-2 F-2): remove every remaining
+      status-exclusive surface claim. `status` carries the hold in its digest;
+      `queue list`/`queue plan`/`lanes`/`queue watch` report it on their own
+      production surfaces; doctor is command-runtime only, and its fact carriage
+      is proven at that layer. Fix the pm-notes D20/phase-9 notes, plan phase
+      5/7/9 narratives and exit criteria, phase-8 E2E line, changeset, and the
+      structure-test header."
+    date: 2026-11-10
+  - text: "D29 (PM-decided, review-2 advisories): declare
+      `doc/spec/features/feature-cli-entrypoint.md` in plan phase 7 scope and
+      the change record; update the test-plan aggregate counts to 7133 pass /
+      880 files; list the remediation commits in the phase-9 evidence note; move
+      the TC-HOLDFACT-009 zero-count recorder to the injected reader/composition
+      boundary so it is not tautological; say `owner-hold` is the 28th
+      blockingReasons entry (position 28), not 27."
+    date: 2026-11-10
+  - text: "D30 (PM-decided, review-2): add plan phase 10 for the review-2
+      remediation (brand-aligned example, E2E procedure, wording and advisory
+      fixes). The product behavior is otherwise unchanged; only the shipped
+      example defaults, tests, and artifacts move."
     date: 2026-11-10
 open_questions: []
 blockers: []
@@ -243,9 +290,10 @@ notes:
     type: retro
     date: 2026-11-10
   - text: "DoR iteration 1: NOT_READY (readiness-review/readiness-iter-1.md). 1
-      critical, 5 major, 6 minor, 4 nit. Blocking: (F1) the shell advertised
-      ADOS_STATE_DIR/ADOS_OWNER_HOLD_FILE marker paths the production store does
-      not honour, re-creating the shell-defers/engine-claims split; (F2) no-ref
+      critical, 5 major, 6 minor, 4 nit. Blocking: (F1) the shell advertised a
+      state-directory setting and a marker-path override the production store
+      does not honour, re-creating the shell-defers/engine-claims split; (F2)
+      no-ref
       `queue claim` short-circuits as no-eligible-action and never names the
       hold; (F3-F4) the production resident daemon is not a claim source, so the
       daemon guarantee and its test were vacuous; (F5) the status member
@@ -254,10 +302,10 @@ notes:
       recorded; specification, test_planning, and delivery_planning reopened."
     type: info
     date: 2026-11-10
-  - text: "Retro: the first artifact pass trusted the GH-238 review note that
-      ADOS_STATE_DIR was wired through the production resolver; the readiness
-      gate found production.ts:282 and mcp/serve.ts:88 hardcode the home state
-      dir, and only the audit store uses the resolver. The spec's critical
+  - text: "Retro: the first artifact pass trusted the GH-238 review note that a
+      state-directory override was wired through the production resolver; the
+      readiness gate found production.ts:282 and mcp/serve.ts:88 hardcode the
+      home state dir, and only the audit store uses the resolver. The spec's critical
       finding came from asserting a current-truth coupling without reading the
       production composition. Future intake should verify every state/config
       coupling at the composition site, not the resolver unit."
@@ -389,8 +437,9 @@ notes:
       per D20: the change record, changeset, delivery-modes guide, doctor command
       page, feature-doctor, and feature-autonomous-delivery state doctor as a
       command-runtime capability over a supplied DoctorComposition, remove the
-      doctor --json E2E step, and name status as the only production operator
-      surface; GAP-T8 records the production-doctor residual. F-2 accepted under
+      doctor --json E2E step, and name `status` as the digest surface plus the
+      queue read surfaces as the production reporting surfaces; GAP-T8 records the
+      production-doctor residual. F-2 accepted under
       D21: the commit primitive composes the subject, template fallbacks are
       accepted, and no history was rewritten. F-3 fixed by D22: new
       tests/behaviour/owner-hold-production-composition.test.ts drives the real
@@ -416,6 +465,25 @@ notes:
       readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133
       pass, 4 skip, 0 fail, 7137 tests across 880 files). No golden, closed set,
       acceptance criterion, or product behaviour moved; manual TC-HOLDE2E-001
-      remains PR-scoped and not executed (GAP-T1)."
+      remains PR-scoped and not executed (GAP-T1). Remediation commits:
+      e545b271 (phase 9 work), 2a7a01cf (phase 9 evidence note), f42d67a7
+      (post-remediation doc-sync corrections), 8128f8e5 (test-plan wording)."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 2: FAIL (code-review/review-iter-2.yaml). 0 critical,
+      1 high, 1 medium, 3 low, 2 info; 2 blocking. F-1: the manual E2E was not
+      executable as written because the shipped default brand is `delivery-os`
+      (`.delivery-os-state`, `DELIVERY_OS_*`), while the example and E2E named
+      the previous working name's settings and state directory; the disposable
+      store directory also needs mode 0700, and dispatch needs a GitHub
+      credential. F-2: a status-exclusive surface claim survived in pm-notes,
+      plan, changeset, and the structure-test header, although the queue read
+      surfaces also report the hold. Advisories: undeclared
+      feature-cli-entrypoint.md, stale aggregate counts, phase-9 commit list,
+      tautological TC-HOLDFACT-009 recorder, position 27 vs 28. The iteration-1
+      code fixes were verified genuine (adapter check, temp-HOME production
+      composition test with a mutation control, closed sets 28/34, inactive
+      goldens byte-identical, wrapper pin, plan valid, pnpm check 7133/880).
+      Remediation decisions D26-D30 recorded; plan phase 10 added."
     type: info
     date: 2026-11-10

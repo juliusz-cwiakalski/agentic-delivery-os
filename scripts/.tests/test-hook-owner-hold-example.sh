@@ -14,7 +14,7 @@ readonly SCRIPT_DIR
 
 TEST_ROOT="$(mktemp -d)"
 export HOME="${TEST_ROOT}/home"
-mkdir -p "${HOME}/.ados-state"
+mkdir -p "${HOME}/.delivery-os-state"
 readonly TEST_ROOT
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/hooks/pre-opencode-iteration-owner-hold.sh"
@@ -26,15 +26,15 @@ RUN_OUT="${TEST_ROOT}/run.out"
 SLEEP_LOG=""
 SLEEP_COUNT=0
 SLEEP_LIMIT=0
-MARKER="${HOME}/.ados-state/owner-hold"
+MARKER="${HOME}/.delivery-os-state/owner-hold"
 
 _clear_hold() {
-  unset ADOS_OWNER_HOLD 2>/dev/null || true
+  unset DELIVERY_OS_OWNER_HOLD 2>/dev/null || true
   rm -f "${MARKER}"
 }
 reset_case() {
   _clear_hold
-  unset ADOS_OWNER_HOLD_POLL_SECONDS 2>/dev/null || true
+  unset DELIVERY_OS_OWNER_HOLD_POLL_SECONDS 2>/dev/null || true
   SLEEP_LOG=""
   SLEEP_COUNT=0
   SLEEP_LIMIT=0
@@ -55,7 +55,7 @@ line_count() { grep -c -E -- "$1" "${RUN_OUT}" 2>/dev/null || true; }
 
 # --- TC-HOLDHOOK-001 active hold sleeps the default poll and prints one line ---
 test_001_env_default() {
-  reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="peak-hour cost pause"
+  reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="peak-hour cost pause"
   run_main
   (( RUN_RC == 0 )) || return 1
   [[ "${SLEEP_LOG}" == "300" ]] || return 1
@@ -85,7 +85,7 @@ test_003_inactive() {
 
 # --- TC-HOLDHOOK-003 no fixed loop cap while held ---
 test_004_no_cap() {
-  reset_case; SLEEP_LIMIT=25; ADOS_OWNER_HOLD="long hold"
+  reset_case; SLEEP_LIMIT=25; DELIVERY_OS_OWNER_HOLD="long hold"
   run_main
   (( RUN_RC == 0 )) || return 1
   (( SLEEP_COUNT == 25 )) || return 1
@@ -97,28 +97,28 @@ test_004_no_cap() {
 test_005_poll_values() {
   local value expected warns
   for value in 1 600 3600; do
-    reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"; ADOS_OWNER_HOLD_POLL_SECONDS="${value}"
+    reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"; DELIVERY_OS_OWNER_HOLD_POLL_SECONDS="${value}"
     run_main
     (( RUN_RC == 0 )) || return 1
     [[ "${SLEEP_LOG}" == "${value}" ]] || return 1
     [[ "$(line_count '\[WARN\]')" == "0" ]] || return 1
   done
   for value in 0 -1 abc 99999; do
-    reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"; ADOS_OWNER_HOLD_POLL_SECONDS="${value}"
+    reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"; DELIVERY_OS_OWNER_HOLD_POLL_SECONDS="${value}"
     run_main
     (( RUN_RC == 0 )) || return 1
     [[ "${SLEEP_LOG}" == "300" ]] || return 1
     [[ "$(line_count '\[WARN\]')" == "1" ]] || return 1
   done
   for value in "" "   " $'\t'; do
-    reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"; ADOS_OWNER_HOLD_POLL_SECONDS="${value}"
+    reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"; DELIVERY_OS_OWNER_HOLD_POLL_SECONDS="${value}"
     run_main
     (( RUN_RC == 0 )) || return 1
     [[ "${SLEEP_LOG}" == "300" ]] || return 1
     [[ "$(line_count '\[WARN\]')" == "0" ]] || return 1
   done
   # unset silently defaults too.
-  reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"
+  reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"
   run_main
   (( RUN_RC == 0 )) || return 1
   [[ "${SLEEP_LOG}" == "300" ]] || return 1
@@ -141,7 +141,7 @@ test_006_marker_removal() {
 
 # --- TC-HOLDHOOK-006 conditions compose by MAX and the hold remains the floor ---
 test_007_max_composition() {
-  reset_case; ADOS_OWNER_HOLD="hold"
+  reset_case; DELIVERY_OS_OWNER_HOLD="hold"
   local counter="${TEST_ROOT}/peak-calls"
   : > "${counter}"
   howLongToSleepDueToPeakHours() {
@@ -152,18 +152,18 @@ test_007_max_composition() {
     if (( n == 1 )); then printf '3600'; else printf '0'; fi
   }
   # shellcheck disable=SC2034
-  ADOS_OWNER_HOLD_CONDITIONS=(howLongToSleepDueToOwnerHold howLongToSleepDueToPeakHours)
+  OWNER_HOLD_CONDITIONS=(howLongToSleepDueToOwnerHold howLongToSleepDueToPeakHours)
   SLEEP_LIMIT=2
   run_main
   unset -f howLongToSleepDueToPeakHours
-  ADOS_OWNER_HOLD_CONDITIONS=(howLongToSleepDueToOwnerHold)
+  OWNER_HOLD_CONDITIONS=(howLongToSleepDueToOwnerHold)
   (( RUN_RC == 0 )) || return 1
   [[ "${SLEEP_LOG}" == "3600 300" ]] || return 1
 }
 
 # --- TC-HOLDHOOK-007 pure gate: no env output, no file, no signal ---
 test_008_pure_gate() {
-  reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"
+  reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"
   local before after
   before="$(find "${TEST_ROOT}" -type f | sort)"
   run_main
@@ -177,7 +177,7 @@ test_008_pure_gate() {
 
 # --- TC-HOLDHOOK-008 no clock decision (a day jump is neutral) ---
 test_009_clock_jump() {
-  reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"
+  reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"
   TZ="Pacific/Kiritimati" run_main
   (( RUN_RC == 0 )) || return 1
   [[ "${SLEEP_LOG}" == "300" ]] || return 1
@@ -190,7 +190,7 @@ test_010_line_bounded() {
   reset_case; SLEEP_LIMIT=1
   local long reason line
   long="$(printf 'a%.0s' {1..300})"
-  ADOS_OWNER_HOLD="${long}"
+  DELIVERY_OS_OWNER_HOLD="${long}"
   run_main
   (( RUN_RC == 0 )) || return 1
   [[ "$(line_count '\[INFO\]')" == "1" ]] || return 1
@@ -201,7 +201,7 @@ test_010_line_bounded() {
   [[ "${line}" != *$'\n'* ]] || return 1
   # Control characters and ANSI are stripped.
   reset_case; SLEEP_LIMIT=1
-  ADOS_OWNER_HOLD=$'  \e[31mred\e[0m\u0007 reason  '
+  DELIVERY_OS_OWNER_HOLD=$'  \e[31mred\e[0m\u0007 reason  '
   run_main
   (( RUN_RC == 0 )) || return 1
   grep -qF 'owner-hold (env): red reason; sleeping 300s' "${RUN_OUT}" || return 1
@@ -213,7 +213,7 @@ test_011_fixed_path_no_override() {
   reset_case; SLEEP_LIMIT=1
   mkdir -p "${TEST_ROOT}/relocated"
   printf 'relocated' > "${TEST_ROOT}/relocated/owner-hold"
-  ADOS_STATE_DIR="${TEST_ROOT}/relocated" ADOS_OWNER_HOLD_FILE="${TEST_ROOT}/relocated/owner-hold" run_main
+  DELIVERY_OS_STATE_DIR="${TEST_ROOT}/relocated" DELIVERY_OS_OWNER_HOLD_FILE="${TEST_ROOT}/relocated/owner-hold" run_main
   (( RUN_RC == 0 )) || return 1
   [[ -z "${SLEEP_LOG}" ]] || return 1
   # The fixed production path still works.
@@ -225,7 +225,7 @@ test_011_fixed_path_no_override() {
 
 # --- Hermetic: zero real sleeps and zero network calls ---
 test_012_hermetic() {
-  reset_case; SLEEP_LIMIT=1; ADOS_OWNER_HOLD="hold"
+  reset_case; SLEEP_LIMIT=1; DELIVERY_OS_OWNER_HOLD="hold"
   local sleep_flag="${TEST_ROOT}/real-sleep" net_flag="${TEST_ROOT}/network"
   : > "${sleep_flag}"; : > "${net_flag}"
   sleep() { echo "REAL-SLEEP $*" >> "${sleep_flag}"; }
@@ -241,11 +241,11 @@ test_012_hermetic() {
 # --- Fixed-path self-description in the source ---
 test_013_source_contract() {
   local hook="${SCRIPT_DIR}/hooks/pre-opencode-iteration-owner-hold.sh"
-  grep -q 'OWNER_HOLD_MARKER_PATH="\${HOME}/.ados-state/owner-hold"' "${hook}" || return 1
-  grep -q 'ADOS_OWNER_HOLD_POLL_SECONDS' "${hook}" || return 1
-  grep -q 'ADOS_OWNER_HOLD' "${hook}" || return 1
-  ! grep -q 'ADOS_OWNER_HOLD_FILE' "${hook}" || return 1
-  ! grep -q 'ADOS_STATE_DIR' "${hook}" || return 1
+  grep -q 'OWNER_HOLD_MARKER_PATH="\${HOME}/.delivery-os-state/owner-hold"' "${hook}" || return 1
+  grep -q 'DELIVERY_OS_OWNER_HOLD_POLL_SECONDS' "${hook}" || return 1
+  grep -q 'DELIVERY_OS_OWNER_HOLD' "${hook}" || return 1
+  ! grep -q 'DELIVERY_OS_OWNER_HOLD_FILE' "${hook}" || return 1
+  ! grep -q 'DELIVERY_OS_STATE_DIR' "${hook}" || return 1
 }
 
 check 'TC-HOLDHOOK-001 env default poll 300' test_001_env_default

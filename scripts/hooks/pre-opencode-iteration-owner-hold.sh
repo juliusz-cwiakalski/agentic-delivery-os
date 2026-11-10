@@ -7,16 +7,24 @@
 # ADOS_HOOK_ENV_V1 output, never creates state, and never signals a session.
 #
 # It recognises exactly TWO settings:
-#   ADOS_OWNER_HOLD               non-empty value activates the hold; the value is
-#                                 the operator reason
-#   ADOS_OWNER_HOLD_POLL_SECONDS  poll interval in seconds, default 300, accepted
-#                                 range 1-3600; unset/empty/whitespace is silent,
-#                                 any other invalid value uses 300 with one warning
+#   DELIVERY_OS_OWNER_HOLD               non-empty value activates the hold; the
+#                                        value is the operator reason
+#   DELIVERY_OS_OWNER_HOLD_POLL_SECONDS  poll interval in seconds, default 300,
+#                                        accepted range 1-3600; unset/empty/
+#                                        whitespace is silent, any other invalid
+#                                        value uses 300 with one warning
+#
+# The two setting names and the marker default below are the current default
+# product's resolved names (working name `delivery-os`, brand-derived
+# <PREFIX>_OWNER_HOLD in general). An adopter who sets a different working name
+# edits those two names and the marker default below, or exports the
+# brand-derived <PREFIX>_OWNER_HOLD variable so the environment source matches
+# what the typed engine reads.
 #
 # The marker source is the fixed production store path
-# $HOME/.ados-state/owner-hold. The example accepts NO marker-path override and
-# no store relocation: a shell-only path would leave the typed engine unheld.
-# Adopters who rename the product edit this default.
+# $HOME/.delivery-os-state/owner-hold. The example accepts NO marker-path
+# override and no store relocation: a shell-only path would leave the typed
+# engine unheld.
 #
 # Condition-function contract (DM-1): a condition is a function named
 # howLongToSleepDueTo<Reason>() that echoes exactly ONE non-negative integer to
@@ -33,7 +41,7 @@ IFS=$'\n\t'
 readonly OWNER_HOLD_DEFAULT_POLL_SECONDS=300
 readonly OWNER_HOLD_MAX_POLL_SECONDS=3600
 readonly OWNER_HOLD_MAX_REASON_CHARS=160
-readonly OWNER_HOLD_MARKER_PATH="${HOME}/.ados-state/owner-hold"
+readonly OWNER_HOLD_MARKER_PATH="${HOME}/.delivery-os-state/owner-hold"
 # Set by main from the parsed setting; a direct condition call uses the default.
 OWNER_HOLD_POLL_SECONDS="${OWNER_HOLD_POLL_SECONDS:-300}"
 
@@ -89,7 +97,7 @@ _owner_hold_sanitize() {
 
 # Parse the poll interval once per run. Exact grammar: integer 1..3600.
 _owner_hold_poll_seconds() {
-  local raw="${ADOS_OWNER_HOLD_POLL_SECONDS:-}"
+  local raw="${DELIVERY_OS_OWNER_HOLD_POLL_SECONDS:-}"
   local stripped="${raw//[[:space:]]/}"
   if [[ -z "${stripped}" ]]; then
     printf '%s' "${OWNER_HOLD_DEFAULT_POLL_SECONDS}"
@@ -112,9 +120,9 @@ _owner_hold_poll_seconds() {
 _owner_hold_resolve() {
   OWNER_HOLD_SOURCE=""
   OWNER_HOLD_REASON=""
-  if [[ -n "${ADOS_OWNER_HOLD:-}" ]]; then
+  if [[ -n "${DELIVERY_OS_OWNER_HOLD:-}" ]]; then
     OWNER_HOLD_SOURCE="env"
-    OWNER_HOLD_REASON="$(_owner_hold_sanitize "${ADOS_OWNER_HOLD}")" || OWNER_HOLD_REASON=""
+    OWNER_HOLD_REASON="$(_owner_hold_sanitize "${DELIVERY_OS_OWNER_HOLD}")" || OWNER_HOLD_REASON=""
     return 0
   fi
   local marker
@@ -145,7 +153,7 @@ howLongToSleepDueToOwnerHold() {
 # ============================================================================
 # CONDITION REGISTRY — the driver takes MAX over these (append a condition)
 # ============================================================================
-ADOS_OWNER_HOLD_CONDITIONS=(
+OWNER_HOLD_CONDITIONS=(
   howLongToSleepDueToOwnerHold
 )
 
@@ -157,7 +165,7 @@ main() {
   local max_sleep cond cond_out line
   while true; do
     max_sleep=0
-    for cond in "${ADOS_OWNER_HOLD_CONDITIONS[@]}"; do
+    for cond in "${OWNER_HOLD_CONDITIONS[@]}"; do
       cond_out="$("${cond}")" || cond_out=0
       if [[ "${cond_out}" =~ ^[0-9]+$ ]] && (( cond_out > max_sleep )); then
         max_sleep="${cond_out}"

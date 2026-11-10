@@ -2,7 +2,7 @@
 id: chg-GH-280-test-plan
 status: Updated
 created: 2026-11-10T14:30:00Z
-last_updated: 2026-11-10T20:10:00Z
+last_updated: 2026-11-10T21:40:00Z
 owners: [engineering]
 service: delivery-os scheduling and pre-iteration hooks
 labels: [change, hooks, scheduling, queue, status, doctor, cost-control]
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan protects one operator-intent primitive and the closed vocabularies around it. The primitive is the owner-hold fact: a brand-derived environment variable whose non-empty value is the operator's reason, or a marker file named `owner-hold` at the fixed production store directory (`$HOME/.ados-state` for this product), resolved with declared precedence, a bounded and sanitized reason, fail-closed marker handling, and no cache. The enforcement is a global read-only gate over that injected fact: while held, one scheduling pass emits no next actions and no preemption proposal, claim and dispatch refuse with the existing `queue.precondition.unmet` identity and the `owner-hold` reason, the mutating park-recovery pass is not invoked, and every record needed to resume is left byte-identical. The visibility is additive: one optional `providers.evidence.ownerHold` member in `status` and one `ok` provider detail plus the single new non-failing doctor annotation reason `owner-hold`, with no new section, no new status reason, no new verdict, no new summary count, no new condition, and no exit change. `status` carries the hold in its digest, and `queue list`, `queue plan`, `lanes`, and `queue watch` report it on their own read-only surfaces in production; the doctor surface reports it only when a `DoctorComposition` is supplied at the command-runtime layer, which the production composer does not supply (D20, GAP-T8).
+This plan protects one operator-intent primitive and the closed vocabularies around it. The primitive is the owner-hold fact: a brand-derived environment variable whose non-empty value is the operator's reason, or a marker file named `owner-hold` at the fixed production store directory (`$HOME/.delivery-os-state` for the current product, whose default working name is `delivery-os`; the normative form is `<home>/<brand.stateDirectoryName>`), resolved with declared precedence, a bounded and sanitized reason, fail-closed marker handling, and no cache. The enforcement is a global read-only gate over that injected fact: while held, one scheduling pass emits no next actions and no preemption proposal, claim and dispatch refuse with the existing `queue.precondition.unmet` identity and the `owner-hold` reason, the mutating park-recovery pass is not invoked, and every record needed to resume is left byte-identical. The visibility is additive: one optional `providers.evidence.ownerHold` member in `status` and one `ok` provider detail plus the single new non-failing doctor annotation reason `owner-hold`, with no new section, no new status reason, no new verdict, no new summary count, no new condition, and no exit change. `status` carries the hold in its digest, and `queue list`, `queue plan`, `lanes`, and `queue watch` report it on their own read-only surfaces in production; the doctor surface reports it only when a `DoctorComposition` is supplied at the command-runtime layer, which the production composer does not supply (D20, GAP-T8).
 
 The plan is shaped by four properties that cannot be allowed to pass behind one another:
 
@@ -31,7 +31,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 
 ### 1.1 In Scope
 
-- The owner-hold contract fact, its two sources, precedence, fail-closed marker outcomes, reason bounds and sanitization, per-resolution budget, per-pass re-resolution, the fixed production store directory (`$HOME/.ados-state/owner-hold`, no override), and the no-resolvable-home case (F-1, DM-1, DM-2, DM-9, DEC-7, DEC-8, D12; AC-F1-1..AC-F1-9, NFR-1, NFR-5, NFR-10, NFR-11).
+- The owner-hold contract fact, its two sources, precedence, fail-closed marker outcomes, reason bounds and sanitization, per-resolution budget, per-pass re-resolution, the fixed production store directory (`$HOME/.delivery-os-state/owner-hold` for the current product, whose default working name is `delivery-os`; normative form `<home>/<brand.stateDirectoryName>/owner-hold`, no override), and the no-resolvable-home case (F-1, DM-1, DM-2, DM-9, DEC-7, DEC-8, D12; AC-F1-1..AC-F1-9, NFR-1, NFR-5, NFR-10, NFR-11).
 - The DM-1 example hook `scripts/hooks/pre-opencode-iteration-owner-hold.sh`: the hold condition, the poll interval and its accepted range, the unbounded MAX driver, the bounded reason line, the pure-gate posture, removal latency, and clock-jump immunity (F-2, DEC-4; AC-F2-1..AC-F2-8, NFR-3, NFR-4, NFR-9).
 - Install, uninstall, fixture, and shell-test registration of the new example, and the byte-stability of the SHA-pinned wrappers (F-3; AC-F3-1..AC-F3-4).
 - The global queue gate: schedule suppression across ready, held, not-ready, active-park, stuck-park, resumable-park, and delivering-lane states; pre-fence and fenced claim refusal for supplied-ref and no-ref claims; dispatch claim-seam refusal with a bounded summary and a classified user-validation exit; a composed supervision cycle whose next-action seam derives from the held pass, and `queue watch`; park-recovery skip; lane masking; payload presence; bookkeeping; resume; unreadable queue facts (F-4, DM-3..DM-6, DEC-6, DEC-9, D13, D14, D19; AC-F4-1..AC-F4-11, NFR-2, NFR-4, NFR-7).
@@ -48,7 +48,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 - **[OUT] No new doctor verdict, summary count, condition, source, or area.** The provider check stays `ok` while held; only the `owner-hold` non-failing annotation reason (no evidence source, fourth and last provider reason) and the appended detail segment are additive (NG-13, DEC-10, D18).
 - **[OUT] No wrapper edits.** `scripts/deliver-ticket.sh`, `scripts/ceo-loop.sh`, and `scripts/batch-deliver.sh` are not changed, and `scripts/ceo-loop.sh` plus `scripts/.tests/test-hook-regression.sh` remain byte-identical under the delivered SHA-256 pin (NG-6, DEC-5).
 - **[OUT] No real network, sleep, credential read, production daemon, or harness session.** Every automated case injects the clock, sleep, marker-reader, store, credential, transport, and session seams (NG-10). TC-HOLDE2E-001 is the only non-automated evidence and runs with a disposable `HOME`.
-- **[GAP-T1 — one operator-run end-to-end proof]** The full "create marker at the isolated HOME's production store directory → show `status` reporting it → refused no-ref claim and dispatch → expired park stays parked → remove marker → resume with unchanged records and one session" sequence is TC-HOLDE2E-001, executed manually in a disposable clone/home and recorded in the pull request. It is the only case that exercises a real CLI process end to end; every automated case proves the same facts through the composed program or the delivered seams. The procedure exercises the hold through `status` and the queue read surfaces: production `doctor` is not composed, so no `doctor --json` step exists (D20, GAP-T8).
+- **[GAP-T1 — one operator-run end-to-end proof]** The full "create the private state directory and the marker at the isolated HOME's production store directory → show `status` reporting it → `queue list`/`queue plan`/`lanes` reporting it and a refused no-ref claim → expired park stays parked → remove marker → resume with unchanged records and one session" sequence is TC-HOLDE2E-001, executed manually in a disposable clone/home and recorded in the pull request. It is the only case that exercises a real CLI process end to end; every automated case proves the same facts through the composed program or the delivered seams. The procedure exercises the production status digest and the production queue read surfaces (`queue list`, `queue plan`, `lanes`, and `queue claim` with no ref); production `doctor` is not composed, so the procedure has no doctor step (D20, GAP-T8), and the dispatch leg is conditional on a configured GitHub credential because the automated composition covers dispatch.
 - **[GAP-T2 — real permission failures cannot be produced deterministically on every runner]** The real `chmod 000` marker case is skipped when the test process runs as root (root can read a `000` file); the deterministic permission-error case uses an injected filesystem fact that returns `EACCES`. The real non-regular marker case (a directory at the marker path) is always executable.
 - **[GAP-T3 — the 4 096-byte read bound is observed at the reader seam]** TC-HOLDFACT-008 asserts the injected reader requests at most 4 096 bytes and performs one existence check and one read; it does not trace syscalls. The real adapter is additionally exercised over a 10 KB temp file to prove the produced reason is bounded and the extra bytes are not surfaced.
 - **[GAP-T4 — no MCP queue surface exists]** The MCP server composes `status`, `verify-artifact`, and `gate-report` only. The queue/dispatch composition pin is therefore CLI-only (TC-HOLDEDGE-001); MCP parity covers `status` (TC-HOLDSTATUS-004, TC-HOLDEDGE-002).
@@ -63,7 +63,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 | Reference | Role in this plan |
 |---|---|
 | [`chg-GH-280-spec.md`](./chg-GH-280-spec.md) | Authoritative source: F-1..F-6, 44 ACs (`AC-F1-1..AC-F6-4`, `AC-DOC-1..4`), NFR-1..NFR-14, DM-1..DM-9, DEC-1..DEC-10, Appendix A (precedence), Appendix B (queue gate), Appendix C (ticket traceability), Appendix D (doctor delta) |
-| [`chg-GH-280-pm-notes.yaml`](./chg-GH-280-pm-notes.yaml) | Binding PM decisions D2–D11 (D1 is superseded by D12 for the marker path and its override clause; D3a is history), the DoR-1 remediation decisions D12–D19, and the review-1 remediation decisions D20–D25, folded into DEC-1–DEC-10: two sources at the fixed production store directory, global gate not a park, evidence-level status member, dedicated example hook, no wrapper changes, refuse claims and skip recovery, no-ref claim gating, conditional supervision, exact closed-set pins, `queue ready` unchanged, detail clamp, deferral-vs-refusal semantics, doctor as a command-runtime capability, the temp-HOME production-composition test, and the park blocking-array rule |
+| [`chg-GH-280-pm-notes.yaml`](./chg-GH-280-pm-notes.yaml) | Binding PM decisions D2–D11 (D1 is superseded by D12 for the marker path and its override clause; D3a is history), the DoR-1 remediation decisions D12–D19, and the review remediation decisions D20–D29 (with D30 adding the review-2 remediation plan phase), folded into DEC-1–DEC-10: two sources at the fixed production store directory, global gate not a park, evidence-level status member, dedicated example hook, no wrapper changes, refuse claims and skip recovery, no-ref claim gating, conditional supervision, exact closed-set pins, `queue ready` unchanged, detail clamp, deferral-vs-refusal semantics, doctor as a command-runtime capability, the temp-HOME production-composition test, and the park blocking-array rule |
 | [`chg-GH-280-plan.yaml`](./chg-GH-280-plan.yaml) | The implementation plan exists and validates (`plan validate GH-280` verdict=valid). This plan owns the required test files and assertions; the implementation plan owns sequencing. If the plan places a case in a different phase, the assertion set here is unchanged. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Layers, module→test mapping, `bun test`/`pnpm check`, fixture and invariant-test conventions, docs content checks |
 | [`.ai/rules/bash.md`](../../../../.ai/rules/bash.md) | Strict mode, quoting, `readonly`, shellcheck discipline for the new example and suite |
@@ -109,14 +109,14 @@ Every acceptance criterion appears exactly once in this forward table; no criter
 | AC ID | Requirement (condensed) | TC ID(s) | Test file(s) | Layer | Automation |
 |---|---|---|---|---|---|
 | AC-F1-1 | Environment source active, source `env`, reason is the value, variable name is brand-derived prefix plus `_OWNER_HOLD` | TC-HOLDFACT-001, TC-HOLDFACT-011 | `owner-hold-fact.test.ts` | Unit | Automated |
-| AC-F1-2 | Marker source active at the fixed production store directory's `owner-hold` (`$HOME/.ados-state/owner-hold` for this product), source `marker`, reason is the first line; no other marker path is read | TC-HOLDFACT-002, TC-HOLDFACT-011 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts` | Unit, Adapter | Automated |
+| AC-F1-2 | Marker source active at the fixed production store directory's `owner-hold` (`$HOME/.delivery-os-state/owner-hold` for the current product; normative form `<home>/<brand.stateDirectoryName>/owner-hold`), source `marker`, reason is the first line; no other marker path is read | TC-HOLDFACT-002, TC-HOLDFACT-011 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts` | Unit, Adapter | Automated |
 | AC-F1-3 | Environment wins when both sources are active; the marker reason is unused | TC-HOLDFACT-003 | `owner-hold-fact.test.ts` | Unit | Automated |
 | AC-F1-4 | Empty environment is inactive; whitespace-only environment is active without a reason | TC-HOLDFACT-004 | `owner-hold-fact.test.ts` | Unit | Automated |
 | AC-F1-5 | Existing zero-byte marker is active with source `marker` and no reason | TC-HOLDFACT-005 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts` | Unit, Adapter | Automated |
 | AC-F1-6 | Unreadable, directory-at-path, or stat-failing marker is active with source `marker` and no reason; never inactive | TC-HOLDFACT-006 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts` | Unit, Adapter | Automated |
 | AC-F1-7 | Newline, tab, ANSI escape, and over-160-character reason become one line, control-free, at most 160 characters | TC-HOLDFACT-007 | `owner-hold-fact.test.ts` | Unit | Automated |
 | AC-F1-8 | No resolvable home directory plus empty environment is inactive with no ambient read; a set environment is active despite the missing directory; no store relocation is introduced | TC-HOLDFACT-010 | `owner-hold-fact.test.ts` | Unit | Automated |
-| AC-F1-9 | Resolution performs zero network calls, zero credential reads, zero state writes, at most one existence check and one bounded marker read | TC-HOLDFACT-008, TC-HOLDFACT-009 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts`, `owner-hold-composition.test.ts` | Unit, Adapter, Structure | Automated |
+| AC-F1-9 | Resolution performs zero network calls, zero credential reads, zero state writes, at most one existence check and one bounded marker read | TC-HOLDFACT-008, TC-HOLDFACT-009 | `owner-hold-fact.test.ts`, `owner-hold-reader.test.ts`, `owner-hold-production-composition.test.ts`, `owner-hold-composition.test.ts` | Unit, Adapter, Structure | Automated |
 | AC-F2-1 | Active hold with the default poll echoes `300`, sleeps 300 s, and prints exactly one line naming `owner-hold`, the source, and the reason | TC-HOLDHOOK-001, TC-HOLDHOOK-009 | `test-hook-owner-hold-example.sh` | Shell | Automated |
 | AC-F2-2 | No active hold echoes `0`, returns immediately, performs zero sleeps, and prints no deferral line | TC-HOLDHOOK-002 | `test-hook-owner-hold-example.sh` | Shell | Automated |
 | AC-F2-3 | A hold persisting across 25 or more polls keeps sleeping and never logs a loop-cap warning | TC-HOLDHOOK-003 | `test-hook-owner-hold-example.sh` | Shell | Automated |
@@ -171,14 +171,14 @@ No `API-*` identifier is added: the hold resolution performs no network call and
 | DM-6 | Claim/dispatch refusal (`queue.precondition.unmet`; blocking-reason token exactly `owner-hold`; bounded detail separately naming the source and reason; bounded dispatch summary) | TC-HOLDQUEUE-002, TC-HOLDQUEUE-003, TC-HOLDQUEUE-004, TC-HOLDNEG-001 | Identity, token, separately-named detail/summary, and zero records are asserted together; the token is never folded into the detail |
 | DM-7 | `StatusEvidence.ownerHold?: { source; reason? }` on the providers section's evidence record (`providers.evidence.ownerHold`), and `StatusProviderFacts.ownerHold?` | TC-HOLDSTATUS-001..005 | Evidence-level sibling of `sources[]` (the `credentialPrerequisite` precedent), not a sibling of `chain`/`entries`/`parks`; present only when active; section state is unchanged |
 | DM-8 | `DOCTOR_EVIDENCE_REASONS` gains `owner-hold` immediately after `park-credential-cause`; `DoctorProviderFacts.ownerHold?` | TC-HOLDDOCTOR-001..007 | The exact 23-value order is pinned; `owner-hold` has no evidence source, may co-occur with `ok`, and is the fourth and last provider reason; verdicts, counts, catalog, and exit are untouched; the clamp case is TC-HOLDDOCTOR-007. Doctor runs at the command-runtime layer only (D20) |
-| DM-9 | Marker path is fixed to the production store directory's `owner-hold` (`$HOME/.ados-state/owner-hold` for this product); the shell example defaults to the same path and accepts no marker-path override or store relocation | TC-HOLDFACT-002, TC-HOLDFACT-008, TC-HOLDFACT-010, TC-HOLDHOOK-001, TC-HOLDEDGE-001, TC-HOLDREG-001, TC-HOLDREG-002 | The engine path is derived from the production home/brand, no caller-supplied path reaches it, and the negative is pinned |
+| DM-9 | Marker path is fixed to the production store directory's `owner-hold` (`$HOME/.delivery-os-state/owner-hold` for the current product; normative form `<home>/<brand.stateDirectoryName>/owner-hold`); the shell example defaults to the current product's names (`DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, `$HOME/.delivery-os-state/owner-hold`) and adopters edit those defaults on rename; it accepts no marker-path override or store relocation | TC-HOLDFACT-002, TC-HOLDFACT-008, TC-HOLDFACT-010, TC-HOLDHOOK-001, TC-HOLDEDGE-001, TC-HOLDREG-001, TC-HOLDREG-002 | The engine path is derived from the production home/brand, no caller-supplied path reaches it, and the negative is pinned |
 | Ports | No new port member; `readOwnerHold?` readers are optional runtime hooks on status/queue compositions and on `DoctorComposition`/`createDoctorCommandRuntime` when a doctor composition is supplied; the marker read lives in `packages/adapters/src/file/owner-hold-marker.ts` | TC-HOLDEDGE-001, TC-HOLDEDGE-002, TC-HOLDFACT-008 | The port-contract inventory moves only for the new contract module's exports; the adapter module is registered in the source inventory; no production doctor composition is claimed (D20) |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR ID | Requirement | TC ID(s) | Coverage note |
 |---|---|---|---|
-| NFR-1 | ≤ 1 existence check and ≤ 1 bounded marker read (≤ 4 096 bytes) per resolution; zero network, credential reads, state writes, process spawns | TC-HOLDFACT-008, TC-HOLDFACT-009 | Reader seam records the requested bound and the call counts; the real 10 KB file proves the extra bytes are not surfaced |
+| NFR-1 | ≤ 1 existence check and ≤ 1 bounded marker read (≤ 4 096 bytes) per resolution; zero network, credential reads, state writes, process spawns | TC-HOLDFACT-008, TC-HOLDFACT-009 | Reader seam records the requested bound and the call counts; the zero-count recorder drives the real bounded reader over a recording filesystem port and asserts the exact call shape before the zero counts for credentials, transport, store writes, and spawns at the composition-shaped boundary; the real 10 KB file proves the extra bytes are not surfaced |
 | NFR-2 | Zero queue entry, dependency, lease, park, incident, daemon-lane, heartbeat, handoff, attempt, divergence, or authority records written **because of hold resolution or gating** while held | TC-HOLDQUEUE-002..008, TC-HOLDFACT-009 | Store write counters are asserted at zero for hold-caused writes; the invocation audit ledger is explicitly not asserted. The composed supervision cycle is conditional (GAP-T7) |
 | NFR-3 | A new iteration defers within one poll interval; default 300 s; accepted range 1–3 600 s | TC-HOLDHOOK-001, TC-HOLDHOOK-004 | The condition's echoed seconds are the determinism-safe proxy; no wall-clock wait occurs in tests |
 | NFR-4 | After removal, the next pass permits eligible claims and the next hook evaluation returns `0`; no restart | TC-HOLDFACT-011, TC-HOLDHOOK-005, TC-HOLDQUEUE-008 | Re-resolution is proven with the same runtime/store instance |
@@ -223,7 +223,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 | TC-HOLDFACT-006 | Unreadable, non-regular, and stat-failing markers fail closed | Negative | Unit/Adapter | High | AC-F1-6, NFR-10, RSK-1 |
 | TC-HOLDFACT-007 | Reason is sanitized to one control-free line of at most 160 characters | Corner Case | Unit | High | AC-F1-7, NFR-5, RSK-8 |
 | TC-HOLDFACT-008 | Marker resolution performs one existence check and one 4 096-byte read | Performance | Adapter | High | AC-F1-9, NFR-1 |
-| TC-HOLDFACT-009 | Resolution reads no credential, writes no state, and calls no network | Negative | Unit/Structure | High | AC-F1-9, NFR-1, NFR-2 |
+| TC-HOLDFACT-009 | Resolution reads no credential, writes no state, and calls no network | Negative | Unit/Structure | High | AC-F1-9, NFR-1, NFR-2, D29 |
 | TC-HOLDFACT-010 | No resolvable home directory leaves only the environment source; no store relocation | Edge Case | Unit | High | AC-F1-8, NFR-11, D12 |
 | TC-HOLDFACT-011 | The fact is re-resolved on every pass and never cached | Corner Case | Integration | High | AC-F1-1, AC-F1-2, NFR-4 |
 | TC-HOLDHOOK-001 | Active hold sleeps the default poll and prints one reason line | Happy Path | Shell | High | AC-F2-1, NFR-3 |
@@ -273,7 +273,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 | TC-HOLDNEG-001 | No new error identity or domain kind; remediation prose is updated | Regression | Checks | High | AC-F4-2, AC-F4-3, NFR-7 |
 | TC-HOLDNEG-002 | No new park, record, ready, status, or doctor vocabulary | Regression | Checks | High | AC-F4-9, AC-F5-4, AC-F6-1, NFR-8 |
 | TC-HOLDNEG-003 | Core stays ambient-free and brand-literal-free | Regression | Checks | High | AC-F1-8, NFR-11 |
-| TC-HOLDE2E-001 | Operator pause and resume evidence in a disposable HOME (status-based production evidence) | Manual | Manual | High | AC-F4-2, AC-F4-3, AC-F4-5, AC-F4-6, AC-F5-1 |
+| TC-HOLDE2E-001 | Operator pause and resume evidence in a disposable HOME (`status` digest plus `queue list`/`queue plan`/`lanes` and a no-ref claim; dispatch conditional on a credential) | Manual | Manual | High | AC-F4-2, AC-F4-3, AC-F4-5, AC-F4-6, AC-F5-1 |
 
 ### 5.2 Scenario Details
 
@@ -300,7 +300,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Expected Outcome**:
 - The fact equals `{ active: true, source: "env", reason: "peak-hour cost pause" }`.
-- The looked-up key is exactly the brand-derived prefix plus `_OWNER_HOLD`; it is not a bare `OWNER_HOLD` and not a hardcoded `ADOS_` literal in core.
+- The looked-up key is exactly the brand-derived prefix plus `_OWNER_HOLD`; it is not a bare `OWNER_HOLD` and not a hardcoded product-name literal in core (the current product yields `DELIVERY_OS_OWNER_HOLD`).
 - The second brand produces its own derived key and the same reason.
 
 #### TC-HOLDFACT-002 - Marker source activates with its first-line reason
@@ -316,7 +316,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Preconditions**:
 - An unset environment source.
-- A temporary `HOME` whose production store directory is the brand state directory (`$HOME/.ados-state` for this product), containing a regular `owner-hold` file whose first line is `peak-hour cost pause` and whose later lines contain other text.
+- A temporary `HOME` whose production store directory is the brand state directory (`$HOME/.delivery-os-state` for the current product, whose default working name is `delivery-os`; the suite derives the directory from the brand rather than hardcoding it), containing a regular `owner-hold` file whose first line is `peak-hour cost pause` and whose later lines contain other text.
 - A second marker file at a non-default path (for example under the temp working directory) with a different reason, as the negative control.
 
 **Steps**:
@@ -493,29 +493,31 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-1.7, AC-F1-9, NFR-1, NFR-2
-**Test Type(s)**: Unit, Structure
+**Test Type(s)**: Unit, Structure, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/owner-hold-fact.test.ts`, `tests/behaviour/owner-hold-reader.test.ts`, and `tests/structure/owner-hold-composition.test.ts` (new)
-**Tags**: @core, @security
+**Target Layer / Location**: `tests/behaviour/owner-hold-fact.test.ts` for the numeric zero-count recorder at the injected-reader/composition boundary; `tests/behaviour/owner-hold-reader.test.ts` for the reader call shape and the 4 096-byte bound; `tests/behaviour/owner-hold-production-composition.test.ts` and `tests/structure/owner-hold-composition.test.ts` for the composition supply of the fact (not the zero-count proof)
+**Tags**: @core, @cli, @security
 
 **Preconditions**:
-- Recording seams, not just canaries: a credential port that increments a counter and returns a canary, a transport that increments a request counter and returns a canary, a store wrapper that increments an append/write counter, and a process-spawn recorder.
-- An active marker resolved through the real bounded reader over a temp HOME, and an active environment case.
+- Recording seams, not just canaries: one composition-shaped holder carries a credential port that increments a counter and returns a canary, a transport that increments a request counter and returns a canary, a store wrapper that increments an append/write counter, and a process-spawn recorder, together with a resolution closure that calls the real `readOwnerHoldMarker` over a recording filesystem port. The reader's ports are therefore exercised, and the remaining ports are reachable in the same object.
+- The recording filesystem port returns a marker content so the reader outcome is consumed by the resolver, not ignored.
 - A planted credential canary value in the injected environment record, separate from the hold value.
 
 **Steps**:
-1. Reset every recorder, then resolve both cases (marker and environment) through the composition that supplies the fact.
-2. Read and assert the recorded counts: credential resolutions, transport requests, store writes, and process spawns are each **exactly `0`** (a numeric count assertion, not only a "was not called" canary).
-3. Repeat the resolution a second time on the same runtime/server instance and assert the totals stay at `0` (no lazy or cached ambient access appears on the second pass).
-4. Assert the resolver's input surface: environment record, production store directory, marker outcome only.
-5. Scan the resolved fact, the status digest, the doctor report, and the queue payloads for the canary.
+1. Reset every recorder.
+2. Resolve twice with the environment source active and once with the environment absent, so the marker source is consumed through the reader; then assert the recorded counts.
+3. Assert the reader call shape numerically: one existence check, one regular-file check, and one bounded read per pass, always at the fixed `<storeDirectory>/owner-hold` path and always requesting exactly 4 096 bytes. These counts come from the real reader, so the assertion is not satisfied by construction.
+4. Assert the recorded counts for the other ports: credential resolutions, transport requests, store writes, and process spawns are each **exactly `0`** (numeric count assertions, not only a "was not called" canary).
+5. Assert the marker content reached the resolved fact on the environment-miss pass (`{ active: true, source: "marker", reason: "peak-hour cost pause" }`).
+6. Scan the resolved fact for the canary.
 
 **Expected Outcome**:
-- Recorded counts are exactly zero for credential resolutions, network requests, state writes, and process spawns for either source, across both passes.
-- The resolver has no ambient access; it cannot read `process.env`, the filesystem, or the clock.
-- The credential canary appears nowhere; the hold path reads no secret and exposes no secret.
+- The reader performs exactly the one existence check, one regular-file check, and one bounded read it is allowed, at the fixed production store path and the 4 096-byte bound, on every resolution pass.
+- The counters for credential resolutions, transport requests, state writes, and process spawns are exactly zero for either source.
+- The marker content is genuinely consumed; the resolver exposes no planted secret.
+- The composition suites prove that the produced composer supplies the fact to every surface; they are not cited as the zero-count proof.
 
-**Notes / Clarifications**: The recorded counts are the primary assertion for AC-F1-9/NFR-1; canaries and the static source checks corroborate them but cannot substitute for a numeric zero count (review-1 F-11).
+**Notes / Clarifications**: The numeric zero-count assertion is placed at the injected-reader/composition boundary (review-2 D29). A recorder around the pure resolver alone would read zero by construction and prove nothing, because the resolver holds no reference to any port; the recorder here calls the real reader over a recording filesystem port, so a positive, exact call shape is asserted before the zero counts. Canaries and the static source checks corroborate the counts but cannot substitute for them (review-1 F-11).
 
 #### TC-HOLDFACT-010 - No resolvable home directory leaves only the environment source; no store relocation
 
@@ -583,7 +585,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Preconditions**:
 - The hook sourced in the test shell.
-- A temp `HOME` whose production store directory contains `owner-hold` with reason `peak-hour cost pause`; `ADOS_OWNER_HOLD_POLL_SECONDS` unset.
+- A temp `HOME` whose production store directory contains `owner-hold` with reason `peak-hour cost pause`; `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` unset.
 - A second marker at a non-default path (for example under the temp working directory) with a different reason, as the negative control.
 - `_now_utc_epoch` and `_sleep` overridden; the sleep seam records the requested seconds and removes the marker after the first sleep so the driver terminates.
 - A non-zai agent/model pair (`ADOS_HOOK_AGENT=ceo` with a model that is not `zai-coding-plan/*`) and a zai pair, run separately, to prove the example has no provider/model activation gate.
@@ -600,9 +602,10 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 - Exactly one deferral line is printed and it matches the resolved grammar `[INFO] (pre-opencode-iteration-owner-hold) owner-hold (marker): peak-hour cost pause; sleeping 300s` (source token in parentheses, reason segment only when present, poll interval last).
 - The line is one line with no control or ANSI sequence; no `[WARN]` is printed.
 - The non-zai and zai pairs behave identically: there is no `zai-coding-plan/*` or model activation gate in the dedicated owner-hold example.
-- The shell example reads only the temp HOME's `.ados-state/owner-hold`; the non-default marker is ignored and no marker-path override is offered (D12).
+- The shell example reads only the temp HOME's `.delivery-os-state/owner-hold`; the non-default marker is ignored and no marker-path override is offered (D12).
+- The example ships the current product's names as its defaults (`DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, `$HOME/.delivery-os-state/owner-hold`); adopters edit those defaults when they rename the product, and the typed engine derives the same names from the brand rather than from the example.
 
-**Notes / Clarifications**: Resolved by PM decisions D8 (no model gate), D9 (reason-line grammar), and D12 (fixed marker path).
+**Notes / Clarifications**: Resolved by PM decisions D8 (no model gate), D9 (reason-line grammar), and D12 (fixed marker path). The example's defaults are the current product's names (D26); the shell suite sets them explicitly per case so a rename requires one edit in one place.
 
 #### TC-HOLDHOOK-002 - Inactive hold returns immediately with no sleep and no line
 
@@ -617,13 +620,13 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Preconditions**:
 - No environment source and no marker.
-- A temp `HOME` whose `.ados-state` directory is available for the empty-marker leg.
+- A temp `HOME` whose `.delivery-os-state` directory is available for the empty-marker leg.
 - A non-zai agent/model pair as well as the zai pair.
 
 **Steps**:
 1. Evaluate the condition.
 2. Run `main` with the recording seams.
-3. Repeat with an empty marker at the temp HOME's `.ados-state/owner-hold` and then with the marker removed.
+3. Repeat with an empty marker at the temp HOME's `.delivery-os-state/owner-hold` and then with the marker removed.
 4. Repeat with the non-zai pair.
 
 **Expected Outcome**:
@@ -646,8 +649,8 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @hook
 
 **Preconditions**:
-- A temp `HOME` with `owner-hold` at the temp HOME's `.ados-state/owner-hold`.
-- `ADOS_OWNER_HOLD_POLL_SECONDS=1` for a fast logical run; no real sleep.
+- A temp `HOME` with `owner-hold` at the temp HOME's `.delivery-os-state/owner-hold`.
+- `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS=1` for a fast logical run; no real sleep.
 - A stepping clock seam; the sleep seam increments the clock and counts calls, and removes the marker on the 26th sleep so the loop terminates.
 - `ADOS_ZAI_MAX_SLEEP_LOOPS` set to `1` as a negative control.
 
@@ -673,7 +676,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @hook
 
 **Preconditions**:
-- A temp `HOME` with an active marker at the temp HOME's `.ados-state/owner-hold`; a recording sleep seam.
+- A temp `HOME` with an active marker at the temp HOME's `.delivery-os-state/owner-hold`; a recording sleep seam.
 - A table of values: `1`, `300`, `600`, `3600` accepted; `0`, `-1`, `abc`, `1.5`, `99999` rejected with one warning; unset, `""`, and whitespace-only `"   "` accepted silently as the default.
 - The variable is unset, set to the empty string, and set to whitespace in three separate runs.
 
@@ -702,7 +705,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @hook
 
 **Preconditions**:
-- A temp `HOME` with an active marker at the temp HOME's `.ados-state/owner-hold`; a sleep seam that removes the marker during the first sleep.
+- A temp `HOME` with an active marker at the temp HOME's `.delivery-os-state/owner-hold`; a sleep seam that removes the marker during the first sleep.
 - The condition is evaluated again after the sleep.
 
 **Steps**:
@@ -752,7 +755,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @security
 
 **Preconditions**:
-- A temp `HOME` with an active marker at the temp HOME's `.ados-state/owner-hold`; the `HOME` and `TMPDIR` trees are snapshotted before the run.
+- A temp `HOME` with an active marker at the temp HOME's `.delivery-os-state/owner-hold`; the `HOME` and `TMPDIR` trees are snapshotted before the run.
 - `kill` and `pkill` shadowed with functions that record any invocation.
 - A sentinel `ADOS_HOOK_ENV_OUTPUT` path that does not exist before the run.
 
@@ -779,7 +782,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @hook
 
 **Preconditions**:
-- A temp `HOME` with an active marker at the temp HOME's `.ados-state/owner-hold`; a clock seam that starts at `T`, jumps forward by `86 400` after the first evaluation, then backward by `86 400` after the second.
+- A temp `HOME` with an active marker at the temp HOME's `.delivery-os-state/owner-hold`; a clock seam that starts at `T`, jumps forward by `86 400` after the first evaluation, then backward by `86 400` after the second.
 - A sleep seam that records durations and terminates after three sleeps.
 
 **Steps**:
@@ -803,7 +806,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Tags**: @shell, @hook
 
 **Preconditions**:
-- A temp `HOME` with an active marker at the temp HOME's `.ados-state/owner-hold` whose reason is a 300-character string with an ANSI escape and a newline; a source that is `marker` or `env`.
+- A temp `HOME` with an active marker at the temp HOME's `.delivery-os-state/owner-hold` whose reason is a 300-character string with an ANSI escape and a newline; a source that is `marker` or `env`.
 - A second run with an active environment hold and no reason (whitespace-only variable).
 - A sleep seam that removes the marker after one sleep.
 
@@ -1229,7 +1232,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Preconditions**:
 - The delivered closed sets: 3 park condition types, 3 causes, 3 pairings, 4 recovery states, 5 record kinds, 6 ready condition ids, 6 lane states.
-- The updated `closed-sets.json`: a **new 28-entry `laneIdleReasons` array** (the 27 delivered lane reasons plus `owner-hold` appended at the end) and a `blockingReasons` array grown **27 → 34** (`owner-hold` at position 27, followed by the six condition ids the contract already composes: `deps-satisfied`, `repo-free`, `tier-known`, `no-owner-gate`, `ci-healthy`, `provider-available`). The six condition ids are existing members of `QUEUE_BLOCKING_REASONS`; the fixture catch-up is part of the same deliberate edit.
+- The updated `closed-sets.json`: a **new 28-entry `laneIdleReasons` array** (the 27 delivered lane reasons plus `owner-hold` appended at the end) and a `blockingReasons` array grown **27 → 34** (`owner-hold` at index 27 — the 28th entry — followed by the six condition ids the contract already composes: `deps-satisfied`, `repo-free`, `tier-known`, `no-owner-gate`, `ci-healthy`, `provider-available`). The six condition ids are existing members of `QUEUE_BLOCKING_REASONS`; the fixture catch-up is part of the same deliberate edit.
 - The delivered suite name is `describe("TC-VOCAB-005 closed sets are exact and distinct")`; this case is that suite's two `toEqual` assertions.
 
 **Steps**:
@@ -1237,7 +1240,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
    - `expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons)` (28 entries)
    - `expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons)` (34 entries)
 2. Assert the other closed arrays equal their fixtures exactly, in both directions.
-3. Assert `owner-hold` appears exactly once in each array at the declared position (last in `laneIdleReasons`; position 27 in `blockingReasons`, immediately before the six condition ids), and that the six condition ids keep their delivered order.
+3. Assert `owner-hold` appears exactly once in each array at the declared position (last in `laneIdleReasons`; index 27 — the 28th entry — in `blockingReasons`, immediately before the six condition ids), and that the six condition ids keep their delivered order.
 4. Assert the six ready condition ids, their order, tri-state, and evidence vocabulary are unchanged.
 5. Run a mutation control that removes or renames `owner-hold` in either contract array, and a second control that drops or reorders a condition id, and assert the named equality fails.
 
@@ -1644,9 +1647,9 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 - The updated guide with one subsection covering the hold.
 
 **Steps**:
-1. Assert the guide names both example files, `ADOS_OWNER_HOLD`, and `ADOS_OWNER_HOLD_POLL_SECONDS`.
+1. Assert the guide names both example files, `DELIVERY_OS_OWNER_HOLD`, and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`.
 2. Assert it states the two semantics: provider-window deferral is automatic and time-bounded; an owner hold is manual, indefinite, and outranks windows.
-3. Assert it documents environment precedence, marker removal, the fixed default marker path `$HOME/.ados-state/owner-hold` and the absence of a marker-path override, fail-closed unreadable marker, the poll interval, the unbounded driver, the `owner-hold` versus `owner-gate` distinction, and the explicit limit that a mid-flight session is not killed.
+3. Assert it documents environment precedence, marker removal, the fixed default marker path `$HOME/.delivery-os-state/owner-hold` and the absence of a marker-path override, fail-closed unreadable marker, the poll interval, the unbounded driver, the `owner-hold` versus `owner-gate` distinction, and the explicit limit that a mid-flight session is not killed.
 4. Assert it states that a held dispatch/claim is a classified refusal at exit `1`, and that a caller wanting deferral semantics treats `owner-hold` as wait/do-not-abort.
 5. Assert it states that installation copies both examples inactive and that uninstall removes the delivered examples while preserving an operator hook.
 6. Assert it does not claim a new park cause, a state record, or a tenth status section.
@@ -1872,7 +1875,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Expected Outcome**:
 - Zero new ambient environment or filesystem reads in core; the guard stays green.
-- Zero hardcoded brand/product/binary literals in tooling code; the shell example uses the repository's existing `ADOS_*` convention only.
+- Zero hardcoded brand/product/binary literals in tooling code; the shell example's two owner-hold settings carry the current product's names (`DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`) and its hook-protocol variables keep the repository's existing `ADOS_*` convention; adopters edit the example's defaults on rename (D26).
 - The marker path is fixed to the production store directory's `owner-hold` in the adapter and accepts no caller-supplied path (D12).
 
 #### TC-HOLDE2E-001 - Operator pause and resume evidence in a disposable HOME
@@ -1888,21 +1891,25 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 **Preconditions**:
 - A built/installed CLI in a disposable clone with an isolated `HOME`; no live lease or session is touched.
+- The disposable state directory is the current product's brand state directory — `$HOME/.delivery-os-state` for the default `delivery-os` working name (normative form `<home>/<brand.stateDirectoryName>`) — created with mode `0700` (`mkdir -m 700 -p`) before any marker is written. A non-private directory (for example `0775` from a plain `mkdir -p`) is rejected by the state store with `state.permission.denied` at exit `1` before the hold gate, so no queue command ever reports the hold.
 - A seeded queue entry and a provider-window park whose `expiresAt` is just in the past.
 - A recorded session handle for the resume step. A real resumed session is the only session the evidence capture spawns (§18); if a real resume is unavailable, a synthetic handle that the resume path reuses stands in and the substitution is recorded in the PR.
-- Production `doctor` is not composed (D20), so this procedure has no doctor step; `status` and the queue read surfaces are the production evidence surfaces used here.
+- Production `doctor` is not composed (D20), so this procedure has no doctor step. The production evidence surfaces used here are the `status` digest, `queue list`, `queue plan`, `lanes`, and `queue claim` with no ref; `dispatch` is conditional and only runs when a GitHub credential is configured (otherwise `dispatch` fails `config.credential.missing` and the automated dispatch cases carry that coverage).
 
 **Steps**:
-1. Create the `owner-hold` marker at `$HOME/.ados-state/owner-hold` with `peak-hour cost pause`; show `status --json` and `status` reporting `providers.evidence.ownerHold` and the `| owner-hold: peak-hour cost pause` suffix, exit `0`.
-2. Run `queue claim` (no ref) and a dispatch; capture `queue.precondition.unmet`, `reason=owner-hold`, the bounded detail/summary, the zero-record/zero-session evidence, and the classified user-validation exit `1`; record that a caller must treat `owner-hold` as wait/do-not-abort, never abort as a transient failure.
-3. Run the read pass and the mutating pass after the park's window has expired; capture the unchanged park record (state `parked` with `parked:<cause>` while `queue list` shows `["owner-hold","parked:<cause>"]`), the absence of `clear-observed`, `recovered`, and incident records, and the empty next actions.
-4. Remove the marker; run `status` to show the hold gone; run the next pass and the resume; capture the single recovery triple, the reused session handle/lane identity, and the absence of a new branch/worktree or duplicate session.
-5. Record the commands and outputs in the PR; scan for secrets and for live-state paths.
+1. `mkdir -m 700 -p "$HOME/.delivery-os-state"`, then write the `owner-hold` marker there with `peak-hour cost pause`; show `status --json` and `status` reporting `providers.evidence.ownerHold` and the `| owner-hold: peak-hour cost pause` suffix, exit `0`.
+2. Run `queue list`, `queue plan`, and `lanes list`; capture `ownerHold` on the list/plan payloads, `owner-hold` as the first `blocking[]` entry, `owner-hold` as the rendered lane reason, and the empty `nextActions` of the held plan. Record the state directory's mode (`0700`) alongside the transcript, and record that a non-private directory would have failed `state.permission.denied` before this point.
+3. Run `queue claim` with no ref; capture `queue.precondition.unmet`, `reason=owner-hold` (never `no-eligible-action`), the bounded detail, the zero-record evidence, and the classified user-validation exit `1`; record that a caller must treat `owner-hold` as wait/do-not-abort, never abort as a transient failure.
+4. Conditional dispatch leg: only when a GitHub credential is configured, run a dispatch and capture `queue.precondition.unmet` with `reason=owner-hold`, the bounded summary, the zero leases/sessions/branches/worktrees evidence, and exit `1`. Without a credential, record the observed `config.credential.missing` as the unmet prerequisite and note that the automated dispatch cases (TC-HOLDQUEUE-004, TC-HOLDEDGE-001) cover the refusal; do not present the credential failure as hold evidence.
+5. Run the read pass and the mutating pass after the park's window has expired; capture the unchanged park record (state `parked` with `parked:<cause>` while `queue list` shows `["owner-hold","parked:<cause>"]`), the absence of `clear-observed`, `recovered`, and incident records, and the empty next actions.
+6. Remove the marker; run `status` to show the hold gone; run the next pass and the resume; capture the single recovery triple, the reused session handle/lane identity, and the absence of a new branch/worktree or duplicate session.
+7. Record the commands and outputs in the PR; scan for secrets and for live-state paths.
 
 **Expected Outcome**:
-- Every step matches the automated assertions: the hold is visible at `providers.evidence.ownerHold`, the no-ref claim and dispatch refuse with the existing identity at exit `1`, the expired park stays parked while held, and removal resumes the preserved state exactly once.
+- Every step matches the automated assertions: the state directory is `0700` and the hold is visible at `providers.evidence.ownerHold`, on `queue list`/`queue plan`/`lanes`, and at the no-ref claim; the expired park stays parked while held, and removal resumes the preserved state exactly once.
 - The transcript records the D19 caller guidance: `owner-hold` means wait/do-not-abort for deferral callers, not a transient retry.
-- The transcript contains no `doctor --json` step: production does not register `doctor` (GAP-T8). Doctor behavior is proven only by the command-runtime cases.
+- The transcript contains no doctor step: production does not register `doctor` (GAP-T8). Doctor behavior is proven only by the command-runtime cases.
+- The dispatch leg is either absent (no credential) or shows the same hold refusal; the transcript never presents `config.credential.missing` as proof of the hold.
 - The evidence contains no secret and no mutation of the live production store directory; the disposable `HOME` is removed afterward.
 - The transcript is linked from the PR description; no automated suite depends on this procedure.
 
@@ -1910,8 +1917,8 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 - **Runtimes.** Local development and CI run `bun test` for `tests/**/*.test.ts` and each adjacent `.tests/test-*.sh` suite for shell changes. The aggregate gate is `pnpm check`. No case requires a live provider, credential, daemon, harness CLI, or network.
 - **State and facts.** Every TypeScript case builds its facts in memory and injects the environment record, home/production store directory, marker outcome, clock, IDs, store, credential port, transport, and harness session seam. Shell cases source the hook and override `_now_utc_epoch`, `_sleep`, the marker-reader seam, and any condition registry append point; they use `mktemp -d` for the temp HOME, marker, and counter fixtures and trap cleanup.
-- **Marker fixtures.** The canonical reason is `peak-hour cost pause`. Every marker fixture lives at the temp HOME's brand state directory plus `owner-hold` (`$HOME/.ados-state/owner-hold` for this product). Additional fixtures: a zero-byte file; a file whose first line is safe and whose later lines are noise; a 10 KB file; a file with `\u001b[31m`, `\u0007`, `\u0085`, newline, and tab; a directory at the marker path; an injected `EACCES`/`EIO` outcome; a chmod-000 file (skipped as root); a non-default-path marker that must be ignored.
-- **Environment fixtures.** A synthetic brand prefix (never a hardcoded `ADOS_` in core), the derived key set to a reason, set to `""`, set to whitespace only, and unset. The shell suite sets only `ADOS_OWNER_HOLD` and `ADOS_OWNER_HOLD_POLL_SECONDS` explicitly per case and runs with the temp `HOME`. No marker-path or store-relocation override exists to set (D12).
+- **Marker fixtures.** The canonical reason is `peak-hour cost pause`. Every marker fixture lives at the temp HOME's brand state directory plus `owner-hold` (`$HOME/.delivery-os-state/owner-hold` for the current product, whose default working name is `delivery-os`; the suite derives the directory from the brand). Additional fixtures: a zero-byte file; a file whose first line is safe and whose later lines are noise; a 10 KB file; a file with `\u001b[31m`, `\u0007`, `\u0085`, newline, and tab; a directory at the marker path; an injected `EACCES`/`EIO` outcome; a chmod-000 file (skipped as root); a non-default-path marker that must be ignored.
+- **Environment fixtures.** A synthetic brand prefix (never a hardcoded product name in core), the derived key set to a reason, set to `""`, set to whitespace only, and unset. The shell suite sets only `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` explicitly per case and runs with the temp `HOME`; those are the current product's names, and an adopter who renames the product edits the example's two defaults (D26). No marker-path or store-relocation override exists to set (D12).
 - **Queue fixtures.** `tests/fixtures/queue/hold/cases.json` holds the ready/held/not-ready/active-park/stuck-park/resumable/delivering matrix, including the not-ready entry whose `queue list` blocking list is `[owner-hold, dependency-open, ...]` and whose lane renders only `owner-hold`. The store is a real temp JSONL store; record snapshots are taken with a stable key order and compared as bytes. The claim/dispatch cases use recording seams and explicit zero-count assertions; the no-ref claim is a separate leg.
 - **Status/doctor fixtures.** `tests/fixtures/status/harness.ts` and `tests/fixtures/doctor/harness.ts` gain a `providers({ ownerHold })` fact helper and a `provider({ ownerHold })` fact helper; the status assertion target is `providers.evidence.ownerHold`. The status corpus gets `tests/fixtures/status/corpus/owner-hold-active/case.json`; the MCP parity gets one success case; the doctor matrix gets hold rows and the near-bound detail row.
 - **Isolation.** Every test creates a unique temp directory and never reads the ambient `HOME`, the repository's live production store directory, or a real git remote. The install/uninstall cases run `install.sh --local`/`uninstall.sh --local` against a mock source and a sandbox project under the test temp dir. TC-HOLDE2E-001 runs with a disposable `HOME` outside the worktree.
@@ -1923,7 +1930,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 
 | Test file / command | Executes | TC IDs | Status |
 |---|---|---|---|
-| `bun test tests/behaviour/owner-hold-fact.test.ts` | Fact resolution, precedence, inactive shape, sanitizer, fail-closed matrix, no-cache | TC-HOLDFACT-001, TC-HOLDFACT-002, TC-HOLDFACT-003, TC-HOLDFACT-004, TC-HOLDFACT-005, TC-HOLDFACT-006, TC-HOLDFACT-007, TC-HOLDFACT-009, TC-HOLDFACT-010, TC-HOLDFACT-011 | To implement |
+| `bun test tests/behaviour/owner-hold-fact.test.ts` | Fact resolution, precedence, inactive shape, sanitizer, fail-closed matrix, no-cache, and the numeric zero-count recorder at the injected-reader/composition boundary (exact reader call shape plus zero credential, transport, store-write, and spawn calls) | TC-HOLDFACT-001, TC-HOLDFACT-002, TC-HOLDFACT-003, TC-HOLDFACT-004, TC-HOLDFACT-005, TC-HOLDFACT-006, TC-HOLDFACT-007, TC-HOLDFACT-009, TC-HOLDFACT-010, TC-HOLDFACT-011 | To implement |
 | `bun test tests/behaviour/owner-hold-reader.test.ts` | Bounded real/injected marker reader | TC-HOLDFACT-002, TC-HOLDFACT-005, TC-HOLDFACT-006, TC-HOLDFACT-008, TC-HOLDFACT-009, TC-HOLDFACT-010 | To implement |
 | `bash scripts/.tests/test-hook-owner-hold-example.sh` | Condition, driver, poll, removal, MAX, pure-gate, clock, line bounds, hermetic meta | TC-HOLDHOOK-001, TC-HOLDHOOK-002, TC-HOLDHOOK-003, TC-HOLDHOOK-004, TC-HOLDHOOK-005, TC-HOLDHOOK-006, TC-HOLDHOOK-007, TC-HOLDHOOK-008, TC-HOLDHOOK-009 | To implement |
 | `bash scripts/run-bash-suites.sh` (discovery) and `shellcheck` | New suite discovery and shellcheck zero findings | TC-HOLDREG-003 | To implement |
@@ -1943,7 +1950,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 | `bun test tests/structure/doctor-contract.test.ts` | 23-value reason list and closed doctor surfaces (delivered suite `TC-DOCTOR-021`) | TC-HOLDDOCTOR-006 | Existing — update |
 | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-ready-contract.test.ts` | Closed queue vocabularies; **exact two-way ordered equality** for both lane/blocking arrays (delivered suite `TC-VOCAB-005`) | TC-HOLDQUEUE-011 | Existing — extend the structural test |
 | `bun test tests/structure/status-contract.test.ts tests/golden/status-digest.test.ts` | Status vocabulary and golden no-hold bytes | TC-HOLDSTATUS-005 | Existing — no change |
-| `bun test tests/behaviour/owner-hold-production-composition.test.ts tests/structure/owner-hold-composition.test.ts` | Production composer (`createProductionComposer`) over a temp HOME with a materialized `<stateDirectoryName>/owner-hold`: queue list/plan, supplied-ref and no-ref claim, dispatch, and status behavior with a marker-removal mutation control and environment-source control; the structure suite keeps the source-text pin as a secondary assertion; MCP status composition supplies the same fact; ambient-free core; no production daemon claim; doctor is not composed (D20) | TC-HOLDEDGE-001, TC-HOLDEDGE-002, TC-HOLDNEG-003 | To implement |
+| `bun test tests/behaviour/owner-hold-production-composition.test.ts tests/structure/owner-hold-composition.test.ts` | Production composer (`createProductionComposer`) over a temp HOME with a materialized `<stateDirectoryName>/owner-hold`: queue list/plan, supplied-ref and no-ref claim, dispatch, and status behavior with a marker-removal mutation control and environment-source control (supply proof only; the TC-HOLDFACT-009 zero-count recorder lives in the fact suite at the injected reader boundary); the structure suite keeps the source-text pin as a secondary assertion; MCP status composition supplies the same fact; ambient-free core; no production daemon claim; doctor is not composed (D20) | TC-HOLDEDGE-001, TC-HOLDEDGE-002, TC-HOLDFACT-009, TC-HOLDNEG-003 | To implement |
 | `bun test tests/checks/owner-hold-doc.test.ts` | Guide/spec/command-page content and denials | TC-HOLDDOCS-001, TC-HOLDDOCS-002, TC-HOLDDOCS-003 | To implement |
 | `bash scripts/.tests/test-doc-distribution.sh` | `ados_distribution` marker and install-set drift (the script is TC-HOLDDOCS-004's mapping; no in-test TC id) | TC-HOLDDOCS-004 | Existing — no change |
 | `bun test tests/checks/error-table-sync.test.ts tests/checks/forbidden-literals.test.ts tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage.test.ts` | Error identity, literals, reference pages, help coverage (TC-HOLDNEG-001 ≡ `TC-SYNC-*` plus the `queue.precondition.unmet` hint expectation in `tests/structure/error-table.test.ts`) | TC-HOLDNEG-001, TC-HOLDNEG-002, TC-HOLDNEG-003, TC-HOLDDOCS-003 | Existing — no change |
@@ -1994,7 +2001,7 @@ Modified:
 
 | File | Change | Reason |
 |---|---|---|
-| `tests/fixtures/queue/vocabulary/closed-sets.json` | Exact target: add a **new 28-entry `laneIdleReasons` array** (the 27 delivered lane reasons plus `owner-hold` appended) and grow `blockingReasons` **27 → 34** (`owner-hold` at position 27 followed by the six condition ids the contract already composes: `deps-satisfied`, `repo-free`, `tier-known`, `no-owner-gate`, `ci-healthy`, `provider-available`). No other array changes. The exact two-way assertions are `expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons)` (28) and `expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons)` (34); a missing, extra, or reordered member fails by name | DM-5 / AC-F4-9 / D16 / D25 |
+| `tests/fixtures/queue/vocabulary/closed-sets.json` | Exact target: add a **new 28-entry `laneIdleReasons` array** (the 27 delivered lane reasons plus `owner-hold` appended) and grow `blockingReasons` **27 → 34** (`owner-hold` at index 27 — the 28th entry — followed by the six condition ids the contract already composes: `deps-satisfied`, `repo-free`, `tier-known`, `no-owner-gate`, `ci-healthy`, `provider-available`). No other array changes. The exact two-way assertions are `expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons)` (28) and `expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons)` (34); a missing, extra, or reordered member fails by name | DM-5 / AC-F4-9 / D16 / D25 |
 | `tests/fixtures/queue/hold/cases.json` | New matrix: ready, held, not-ready, active park, stuck park, resumable park, delivering lane | AC-F4-1, AC-F4-10 |
 | `tests/fixtures/queue/golden/queue-list-held.json` | New held list golden | AC-F4-7 |
 | `tests/fixtures/queue/golden/queue-plan-held.json` | New held plan golden (empty `nextActions`) | AC-F4-1, AC-F4-7 |
@@ -2077,7 +2084,7 @@ The poll-interval cases are shell-only: accepted, defaulted, and invalid values 
 
 ### 8.3 Open Questions
 
-None. The five planning questions were resolved by the binding PM decisions D7–D11 and are recorded in TC-HOLDQUEUE-002/003 (D7), TC-HOLDHOOK-001/002 (D8), TC-HOLDHOOK-001/009 (D9), TC-HOLDHOOK-004 (D10), and TC-HOLDDOCTOR-001/002/004 (D11). The DoR-1 remediation decisions D12–D19 are binding and are recorded in TC-HOLDFACT-002/010 and TC-HOLDHOOK-001 (D12), TC-HOLDQUEUE-002 (D13), TC-HOLDQUEUE-005 (D14), TC-HOLDSTATUS-001..004 (D15), TC-HOLDQUEUE-011 (D16), TC-HOLDQUEUE-009 (D17), TC-HOLDDOCTOR-007 (D18), and TC-HOLDQUEUE-004/TC-HOLDE2E-001 (D19). No open question remains.
+None. The five planning questions were resolved by the binding PM decisions D7–D11 and are recorded in TC-HOLDQUEUE-002/003 (D7), TC-HOLDHOOK-001/002 (D8), TC-HOLDHOOK-001/009 (D9), TC-HOLDHOOK-004 (D10), and TC-HOLDDOCTOR-001/002/004 (D11). The DoR-1 remediation decisions D12–D19 are binding and are recorded in TC-HOLDFACT-002/010 and TC-HOLDHOOK-001 (D12), TC-HOLDQUEUE-002 (D13), TC-HOLDQUEUE-005 (D14), TC-HOLDSTATUS-001..004 (D15), TC-HOLDQUEUE-011 (D16), TC-HOLDQUEUE-009 (D17), TC-HOLDDOCTOR-007 (D18), and TC-HOLDQUEUE-004/TC-HOLDE2E-001 (D19). The review-iteration decisions D20–D29 are binding and are recorded in TC-HOLDEDGE-001/TC-HOLDDOCTOR-001..007 (D20), TC-HOLDFACT-009 and the composition row in §7.1 (D29 recording placement), TC-HOLDFACT-002/DM-9/TC-HOLDHOOK-001/§6 (D26 current product names), TC-HOLDE2E-001 (D27 executable procedure), the §1/§3.1/§4/§7/§8 surface wording (D28), and TC-HOLDQUEUE-011/§7.3 (D29 fixture position). No open question remains.
 
 ## 9. Plan Revision Log
 
@@ -2086,7 +2093,8 @@ None. The five planning questions were resolved by the binding PM decisions D7�
 | 1.0 | 2026-11-10 | test-plan-writer | Initial plan: 44 ACs mapped to 58 test cases (57 automated, 1 manual); layers, fixtures/goldens, mutation evidence, and five open questions. |
 | 1.1 | 2026-11-10 | test-plan-writer | Recorded the binding PM resolutions D7–D11 in the affected cases, removed all five open questions, and corrected the claim token/detail grammar, the no-model-gate assertion, the reason-line grammar, the silent-vs-warning poll fallback, and the doctor appended-detail assertions. TC count and AC coverage are unchanged. |
 | 1.2 | 2026-11-10 | test-plan-writer | DoR iteration 1 remediation against spec v1.2: fixed the marker at the production store directory and removed every marker-path/store-relocation reference (D12); gated the no-ref claim before selection (D13); made the supervision guarantee conditional and rewrote the daemon test to prove its derivation (D14, GAP-T7); moved the status member to `providers.evidence.ownerHold` (D15); required exact two-way ordered closed-set equality (D16); narrowed `queue ready` out of the hold surfaces (D17); added the doctor detail-clamp case (D18); recorded the deferral-vs-refusal semantics (D19); corrected the lane-masking, decision-reference, and inventory wording. Added TC-HOLDDOCTOR-007; 59 TCs, 58 automated + 1 manual, 44/44 ACs. |
-| 1.3 | 2026-11-10 | test-plan-writer | Review iteration 1 remediation (F-1, F-3, F-6, F-8, F-11; D20, D22, D25). Scoped doctor to the command-runtime layer over an injected `DoctorComposition`, removed the production-doctor claim from AC-F6-1/TC-HOLDEDGE-001, and made TC-HOLDE2E-001 `status`-only (GAP-T8). Rewrote TC-HOLDEDGE-001 to drive the production reader closure from a temp HOME with a materialized `<stateDirectoryName>/owner-hold` marker through queue/claim/dispatch/status with a marker-removal mutation control. Stated that `owner-hold` is prepended to every gated entry's ordered `blocking[]` including active/stuck parks (TC-HOLDQUEUE-001, AC-F4-1/AC-F4-7). Refreshed §2 (plan exists and validates), §7.3 (`laneIdleReasons` 28 entries; `blockingReasons` 27 → 34 with the six condition ids), and the D1-superseded-by-D12 note. Added explicit test-name mappings for TC-HOLDDOCTOR-006, TC-HOLDQUEUE-011, TC-HOLDSTATUS-004, TC-HOLDNEG-001/002, TC-HOLDDOCS-004 and recording-count assertions for TC-HOLDFACT-009. TC count unchanged at 59 (58 automated + 1 manual); 44/44 ACs. |
+| 1.3 | 2026-11-10 | test-plan-writer | Review iteration 1 remediation (F-1, F-3, F-6, F-8, F-11; D20, D22, D25). Scoped doctor to the command-runtime layer over an injected `DoctorComposition`, removed the production-doctor claim from AC-F6-1/TC-HOLDEDGE-001, and limited TC-HOLDE2E-001 to the `status` digest plus the queue read surfaces (GAP-T8). Rewrote TC-HOLDEDGE-001 to drive the production reader closure from a temp HOME with a materialized `<stateDirectoryName>/owner-hold` marker through queue/claim/dispatch/status with a marker-removal mutation control. Stated that `owner-hold` is prepended to every gated entry's ordered `blocking[]` including active/stuck parks (TC-HOLDQUEUE-001, AC-F4-1/AC-F4-7). Refreshed §2 (plan exists and validates), §7.3 (`laneIdleReasons` 28 entries; `blockingReasons` 27 → 34 with the six condition ids), and the D1-superseded-by-D12 note. Added explicit test-name mappings for TC-HOLDDOCTOR-006, TC-HOLDQUEUE-011, TC-HOLDSTATUS-004, TC-HOLDNEG-001/002, TC-HOLDDOCS-004 and recording-count assertions for TC-HOLDFACT-009. TC count unchanged at 59 (58 automated + 1 manual); 44/44 ACs. |
+| 1.4 | 2026-11-10 | test-plan-writer | Review iteration 2 remediation (F-1, F-2, F-4, F-6, F-7; D26–D29). Aligned every concrete owner-hold name with the current product — `DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, `$HOME/.delivery-os-state` — keeping `<PREFIX>`/`<brand.stateDirectoryName>` in normative text and declaring the shell example's defaults as the current names that adopters edit on rename (D26). Made TC-HOLDE2E-001 executable: the state directory is created mode `0700` (a non-private directory fails `state.permission.denied` before the hold gate), the hold is evidenced through the `status` digest, `queue list`/`queue plan`/`lanes`, and a no-ref `queue claim`, and `dispatch` is conditional on a GitHub credential (D27). Removed the remaining claim that `status` alone reported the hold in production, so the production surfaces are the `status` digest plus the queue read surfaces plus the command-runtime doctor capability (D28). Refreshed §10 to 7133 pass / 4 skip / 0 fail across 880 files (7137 tests); moved the TC-HOLDFACT-009 zero-count recorder to the injected-reader/composition boundary (the pure resolver cannot reach those ports) with the real bounded reader driven over a recording filesystem port so the exact per-pass call shape is asserted before the zero credential, transport, store-write, and spawn counters; corrected `owner-hold` to index 27 — the 28th `blockingReasons` entry (D29). TC count unchanged at 59 (58 automated + 1 manual); 44/44 ACs. |
 
 ## 10. Test Execution Log
 
@@ -2100,7 +2108,7 @@ None. The five planning questions were resolved by the binding PM decisions D7�
 | TC-HOLDFACT-006 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
 | TC-HOLDFACT-007 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
 | TC-HOLDFACT-008 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
-| TC-HOLDFACT-009 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 30/30; two-pass recording counters are exactly zero for credentials, transport, store writes, and spawns |
+| TC-HOLDFACT-009 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — 30/30 (96 expect calls) with the reader-boundary recorder: exact per-pass reader call shape (one existence check, one regular-file check, one 4 096-byte read at the fixed path) and exactly zero credential resolutions, transport requests, store writes, and process spawns; the composition suites 3/3 + 5/5 prove supply |
 | TC-HOLDFACT-010 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
 | TC-HOLDFACT-011 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
 | TC-HOLDHOOK-001 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
@@ -2150,6 +2158,6 @@ None. The five planning questions were resolved by the binding PM decisions D7�
 | TC-HOLDNEG-001 | 2026-11-10 | PASS | bun test tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts — identity count unchanged; hint synced |
 | TC-HOLDNEG-002 | 2026-11-10 | PASS | bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/status-contract.test.ts tests/structure/doctor-contract.test.ts — closed sets unchanged except the two declared tokens |
 | TC-HOLDNEG-003 | 2026-11-10 | PASS | bun run scripts/checks/ambient-globals.ts && bun test tests/structure/owner-hold-composition.test.ts — 173 files clean; core ambient-free |
-| TC-HOLDE2E-001 | 2026-11-10 | NOT EXECUTED | manual, disposable HOME at ./tmp/tmpdir/e2e-gh280 (PR-scoped) — Residual; procedure recorded in the change record and PR |
+| TC-HOLDE2E-001 | 2026-11-10 | NOT EXECUTED | manual, disposable HOME at ./tmp/tmpdir/e2e-gh280 (PR-scoped) — Residual; the procedure creates `$HOME/.delivery-os-state` with mode 0700, uses `status` plus the queue read surfaces and a no-ref claim, and keeps `dispatch` conditional on a GitHub credential; recorded in the change record and PR |
 
-Aggregate: `pnpm check` exit 0 (7127 pass, 4 skip, 0 fail, 7131 tests, 879 files); `bash scripts/run-bash-suites.sh` 26/26 suites; `pnpm exec delivery-os plan validate GH-280` verdict=valid; `pnpm build` and `delivery-os --version` 0.0.0; `git diff --check` clean.
+Aggregate: `pnpm check` exit 0 (7133 pass, 4 skip, 0 fail; 7137 tests across 880 files); `bash scripts/run-bash-suites.sh` 26/26 suites; `pnpm exec delivery-os plan validate GH-280` verdict=valid; `pnpm build` and `delivery-os --version` 0.0.0; `git diff --check` clean.

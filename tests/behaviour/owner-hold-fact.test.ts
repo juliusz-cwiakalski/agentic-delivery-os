@@ -6,6 +6,11 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  type OwnerHoldMarkerFileSystem,
+  readOwnerHoldMarker,
+} from "../../packages/adapters/src/file/index";
+import {
+  OWNER_HOLD_MAX_MARKER_BYTES,
   OWNER_HOLD_MAX_REASON_CHARS,
   type OwnerHoldFact,
   type OwnerHoldMarkerOutcome,
@@ -16,7 +21,7 @@ import {
   sanitizeOwnerHoldReason,
 } from "../../packages/core/src/domain/index";
 
-const STORE = "/srv/operator/.ados-state";
+const STORE = "/srv/operator/.delivery-os-state";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -197,7 +202,31 @@ describe("TC-HOLDFACT-007 the reason is one control-free line of at most 160 cha
 });
 
 describe("TC-HOLDFACT-009 resolution reads no credential, writes no state, calls no network", () => {
-  test("two resolution passes record exactly zero credential, transport, store, and spawn calls", async () => {
+  test("the reader/composition boundary performs only the one bounded read and no other port", () => {
+    // The injected reader boundary is where the ports are reachable: the call
+    // counts below are produced by the real `readOwnerHoldMarker`, so the
+    // assertion is not satisfied by construction.
+    const calls = { exists: 0, isFile: 0, readText: 0 };
+    const readPaths: string[] = [];
+    const readLimits: number[] = [];
+    const recordingFs: OwnerHoldMarkerFileSystem = {
+      exists: (path) => {
+        calls.exists += 1;
+        readPaths.push(path);
+        return true;
+      },
+      isFile: (path) => {
+        calls.isFile += 1;
+        readPaths.push(path);
+        return true;
+      },
+      readText: (path, maxBytes) => {
+        calls.readText += 1;
+        readPaths.push(path);
+        readLimits.push(maxBytes);
+        return "peak-hour cost pause\nsecond line";
+      },
+    };
     const counters = { credentials: 0, transport: 0, writes: 0, spawns: 0 };
     const credentials = {
       resolve: () => {
@@ -221,19 +250,47 @@ describe("TC-HOLDFACT-009 resolution reads no credential, writes no state, calls
       counters.spawns += 1;
       return { stdout: "", stderr: "", status: 0, timedOut: false };
     };
-    // A composition-shaped holder: the resolver sees only the injected environment
-    // and marker outcome, never the credential, transport, store, or spawn seams.
+    // A composition-shaped holder: the resolution path reaches the reader's
+    // filesystem ports, and the credential, transport, store, and spawn ports
+    // are reachable in the same object yet must never be used by the hold.
     const composition = {
       credentials,
       transport,
       store,
       spawn,
-      resolve: (): OwnerHoldFact =>
-        resolve({ ACME_OWNER_HOLD: "pause" }, "ACME", activeMarker("marker reason")),
+      resolve: (environment: Environment): OwnerHoldFact => {
+        const marker = readOwnerHoldMarker({ storeDirectory: STORE }, recordingFs);
+        return resolveOwnerHoldFact({
+          environment,
+          environmentPrefix: "ACME",
+          marker,
+          storeDirectory: STORE,
+        });
+      },
     };
     for (let pass = 0; pass < 2; pass += 1) {
-      expect(composition.resolve()).toEqual({ active: true, source: "env", reason: "pause" });
+      expect(composition.resolve({ ACME_OWNER_HOLD: "pause" })).toEqual({
+        active: true,
+        source: "env",
+        reason: "pause",
+      });
     }
+    // The environment miss resolves from the reader content, so the marker
+    // outcome is genuinely consumed rather than ignored.
+    expect(composition.resolve({})).toEqual({
+      active: true,
+      source: "marker",
+      reason: "peak-hour cost pause",
+    });
+    // One existence check, one regular-file check, and one bounded read per
+    // pass, all at the fixed production store path and the 4 096-byte bound.
+    expect(calls).toEqual({ exists: 3, isFile: 3, readText: 3 });
+    expect([...new Set(readPaths)]).toEqual([`${STORE}/owner-hold`]);
+    expect(readLimits).toEqual([
+      OWNER_HOLD_MAX_MARKER_BYTES,
+      OWNER_HOLD_MAX_MARKER_BYTES,
+      OWNER_HOLD_MAX_MARKER_BYTES,
+    ]);
     expect(counters).toEqual({ credentials: 0, transport: 0, writes: 0, spawns: 0 });
     // Keep the recorder doubles reachable so the zero counts are not tree-shaken.
     expect(composition.credentials).toBe(credentials);
