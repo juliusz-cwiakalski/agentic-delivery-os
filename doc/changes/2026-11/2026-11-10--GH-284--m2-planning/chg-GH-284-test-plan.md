@@ -1,9 +1,9 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 1.4
+version: 1.5
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T01:20:00Z
+last_updated: 2026-11-10T02:35:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
@@ -319,16 +319,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P03** (Section 7.1). The insertion window has two sources: its start is the line after M2-S9's last content line in the **base snapshot** (1167), and its end is the **head** `---` line that precedes `## Epic M3`, minus one.
-2. Confirm `window_empty=no`, `separator_sequence=identical`, `blank_separation=OK`, `backlog_hunks>=1`, `non_vacuous=yes`, and `hunks: inside=N outside=0`; the classifier self-tests must print `4/4`, including the below-separator and separator-deletion probes.
+1. Run procedure **P03** (Section 7.1). Two anchors serve different purposes: the **hunk window** is base-anchored (start = base M2-S9 last content + 1 = 1167; end = head `---` before `## Epic M3` − 1), while **blank separation is head-anchored** (locate `### M2-S9` in the head, walk to its last non-blank line before the next heading/separator, then require blank + `### M2-S11`).
+2. Confirm `window_empty=no`, `separator_sequence=identical`, `blank_separation=OK`, `backlog_hunks>=1`, `non_vacuous=yes`, and `hunks: inside=N outside=0`; the classifier self-tests must print `4/4`.
 
 **Expected Outcome**:
 
-- `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=N window=1167:N` with `window_empty=no`; `separator_sequence=identical`; `blank_separation=OK`; `backlog_hunks=N` with `N>=1`; every hunk inside one of the seven inserted entries or the two amended entries; `hunks: inside=N outside=0`; `hunk confinement OK`; `classifier_self_tests=4/4`; `insertion_below_separator=never`; exit 0.
+- `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=N window=1167:N` with `window_empty=no`; `separator_sequence=identical`; `blank_separation=OK (head M2-S9 last non-blank; next line blank; the line after that is ### M2-S11)`; `fixture_blank_separation=OK`; `backlog_hunks=N` with `N>=1`; every hunk inside one of the seven inserted entries or the two amended entries; `hunks: inside=N outside=0`; `hunk confinement OK`; `classifier_self_tests=4/4`; `insertion_below_separator=never`; exit 0.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The window is non-empty on the base; the tree has no hunk yet.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture prints `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)` and `fixture_blank_separation=OK`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The blank check now reads the head, so the M2-S6 amendment shift cannot break it.
 - Result label for Section 10: **FAIL (vacuous: no hunk)**.
 
 #### TC-M2PLAN-004 - S17 entry carries goal, six task clauses, seven content-checked ACs, and the full dependency set
@@ -468,19 +468,20 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 - Worktree at `docs/GH-284/m2-planning`; `git` available; base commit `fab46636cc0b5abfbd22257711f594adc0af4660` fetched.
 - Section 7.1 P00 has been run once in the same shell (base snapshots and helpers).
+- P03 has run first (it builds the conforming-head fixture used by the identity proof).
 
 **Steps**:
 
-1. Run procedure **P08** (Section 7.1).
-2. Confirm the only changed lines are inside `- Tasks:` and on `- Depends on:`, and that heading, goal, and `- AC:` are byte-identical.
+1. Run procedure **P08** (Section 7.1). It compares the `- AC:` line alone (`grep -m1`), not a 4-line capture that would include the changed dependency line.
+2. Confirm the only changed lines are inside `- Tasks:` and on `- Depends on:`, and that heading, goal, and the `- AC:` line are byte-identical. The conforming fixture (P03) proves the S6 task-line insertion and the shifted M2-S9 can coexist: `fixture_task_lines_missing=0`, `fixture_ac_identity=identical`, `fixture_p08=OK`.
 
 **Expected Outcome**:
 
-- `changed_lines` covers only Tasks/Depends; `tasks_clause=OK`; `depends=M2-S14 OK`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`.
+- `changed_lines` covers only Tasks/Depends; `tasks_clause=OK`; `depends=M2-S14 OK`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. The identity halves are a passing control; the amendment is absent.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. The identity halves and the conforming-fixture proof pass; the amendment is absent.
 - Result label for Section 10: **FAIL (no amendment; identity controls pass)**.
 
 #### TC-M2PLAN-009 - Existing headings, story codes, order, and the Epic M2 retirement note survive
@@ -1580,10 +1581,28 @@ sep_base=$(awk -v m="$m3b" 'NR<m && /^---$/{l=NR} END{print l+0}' /tmp/gh284/bas
 base_seq=$(sed -n "${sep_base},$((sep_base+2))p" /tmp/gh284/base-backlog.md)
 head_seq=$(sed -n "${sepline},$((sepline+2))p" "$BL")
 [ "$base_seq" = "$head_seq" ] && echo "separator_sequence=identical" || { echo "separator_sequence=CHANGED"; printf '%s\n' "$head_seq"; }
-# AC-F1-1: the inserted block begins with a blank line separating M2-S11 from M2-S9.
-line_after=$(sed -n "$((s9last_base+1))p" "$BL")
-line_next=$(sed -n "$((s9last_base+2))p" "$BL")
-if [ -z "$line_after" ] && printf '%s' "$line_next" | grep -q '^### M2-S11 '; then echo "blank_separation=OK"; else echo "blank_separation=FAIL (want blank then ### M2-S11; got [$line_after] then [$line_next])"; fi
+# AC-F1-1 blank separation is HEAD-anchored: locate M2-S9 in the head, walk to
+# its last non-blank line before the next heading/separator, then require blank + `### M2-S11`.
+# (The hunk window above stays BASE-anchored on purpose: it marks where insertions may land.)
+blank_sep_check() { # $1 = head file
+  local f="$1" hs last l1 l2
+  hs=$(grep -n '^### M2-S9 ' "$f" | cut -d: -f1)
+  [ -z "$hs" ] && { echo "blank_separation=FAIL (M2-S9 absent in $f)"; return 1; }
+  last=$(awk -v s="$hs" 'NR>s { if ($0 ~ /^---$/ || $0 ~ /^## / || $0 ~ /^### /) exit; if (NF>0) l=NR } END{print l+0}' "$f")
+  l1=$(sed -n "$((last+1))p" "$f"); l2=$(sed -n "$((last+2))p" "$f")
+  if [ -z "$l1" ] && printf '%s' "$l2" | grep -q '^### M2-S11 '; then
+    echo "blank_separation=OK (head M2-S9 last non-blank=$last, blank=$((last+1)), M2-S11=$((last+2)))"; return 0
+  else
+    echo "blank_separation=FAIL (head M2-S9 last non-blank=$last; got [$l1] then [$l2])"; return 1
+  fi
+}
+blank_sep_check "$BL" || true
+# conforming-head fixture: M2-S6 gains one task line (line count +1), M2-S9 shifts,
+# and M2-S11 is inserted after the existing blank line. Proves P03 and P08 can both pass.
+cp /tmp/gh284/base-backlog.md /tmp/gh284/conforming-base.md
+awk 'BEGIN{insec=0;done=0} /^### M2-S6 /{insec=1} insec && /^- AC:/ && !done {print "  consumes M2-S14 telemetry for per-agent and per-model facts;"; done=1} {print}' /tmp/gh284/conforming-base.md > /tmp/gh284/conforming-head-1.md
+awk 'BEGIN{ins=0} /^### M2-S9 /{s=1} s && /^---$/ && !ins {print "### M2-S11 Multi-repository workstations"; print "- Goal: fixture goal."; print "- Tasks: fixture tasks."; print "- AC: fixture ac."; print "- Depends on: M0-S5, M1-S17."; ins=1} {print}' /tmp/gh284/conforming-head-1.md > /tmp/gh284/conforming-head.md
+blank_sep_check /tmp/gh284/conforming-head.md && echo "fixture_blank_separation=OK" || echo "fixture_blank_separation=FAILED"
 hunk_guard() { # $1..$n = "start:end" allowed ranges; hunk headers on stdin
   local -a R=("$@"); local inside=0 outside=0 h c d last ok i a b
   while IFS= read -r h; do
@@ -1721,12 +1740,26 @@ if [ -z "$h6" ]; then echo "M2-S6=absent"; else
   printf '%s\n' "$b" | awk '/^- Tasks:/{f=1;next} /^- AC:/{f=0} f' | sed '/^[[:space:]]*$/d' | LC_ALL=C sort > /tmp/gh284/t8-base.txt
   printf '%s\n' "$h" | awk '/^- Tasks:/{f=1;next} /^- AC:/{f=0} f' | sed '/^[[:space:]]*$/d' | LC_ALL=C sort > /tmp/gh284/t8-head.txt
   echo "base_task_lines_missing=$(comm -23 /tmp/gh284/t8-base.txt /tmp/gh284/t8-head.txt | wc -l)"
-  # identity controls: heading, goal, AC
+  # identity controls: the label's own line only (a 4-line capture would include the changed depends line)
   for lab in '- Goal:' '- AC:'; do
-    bb=$(printf '%s\n' "$b" | grep -A3 -- "$lab" | head -4); hh=$(printf '%s\n' "$h" | grep -A3 -- "$lab" | head -4)
-    [ "$bb" = "$hh" ] && echo "$lab identical" || echo "$lab CHANGED"
+    bb=$(printf '%s\n' "$b" | grep -m1 -- "$lab"); hh=$(printf '%s\n' "$h" | grep -m1 -- "$lab")
+    [ -n "$bb" ] && [ "$bb" = "$hh" ] && echo "$lab identical" || echo "$lab CHANGED"
   done
 fi
+
+# fixture proof for the same conforming head built by P03: S6 task lines survive and the AC line is identical
+tasks_of() { awk '/^### M2-S6 /{s=1;next} s&&/^### /{exit} s&&/^- Tasks:/{f=1;next} s&&/^- AC:/{f=0} f' "$1"; }
+if [ -f /tmp/gh284/conforming-head.md ]; then
+  tasks_of /tmp/gh284/conforming-base.md | sed '/^[[:space:]]*$/d' | LC_ALL=C sort > /tmp/gh284/fix-t-base.txt
+  tasks_of /tmp/gh284/conforming-head.md | sed '/^[[:space:]]*$/d' | LC_ALL=C sort > /tmp/gh284/fix-t-head.txt
+  fm=$(comm -23 /tmp/gh284/fix-t-base.txt /tmp/gh284/fix-t-head.txt | wc -l)
+  fab=$(grep -m1 -- '^- AC:' /tmp/gh284/conforming-base.md); fah=$(grep -m1 -- '^- AC:' /tmp/gh284/conforming-head.md)
+  echo "fixture_task_lines_missing=$fm"
+  fb=$(tasks_of /tmp/gh284/conforming-base.md | grep -c '[^[:space:]]'); fh=$(tasks_of /tmp/gh284/conforming-head.md | grep -c '[^[:space:]]')
+  echo "fixture_s6_task_lines=$fb->$fh"
+  [ "$fab" = "$fah" ] && echo "fixture_ac_identity=identical" || echo "fixture_ac_identity=CHANGED"
+  [ "$fm" -eq 0 ] && [ "$fab" = "$fah" ] && echo "fixture_p08=OK" || echo "fixture_p08=FAILED"
+else echo "fixture_p08=SKIPPED (run P03 first)"; fi
 ```
 
 **P09 — headings, codes, order, and retirement note**
@@ -2370,12 +2403,12 @@ echo; echo "##### done"
 |---|---|---|---|---|---|
 | TC-M2PLAN-001 | AC-F1-1 | P01 | `bash` block **P01** (Section 7.1) | Manual Only — uncommitted procedure | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `separator_sequence=identical`. |
 | TC-M2PLAN-002 | AC-F1-2 | P02 | `bash` block **P02** (Section 7.1) | Manual Only — uncommitted procedure | `M2-S11 clauses=0/9`, `M2-S12 clauses=0/8`, `M2-S13 clauses=0/11`, `M2-S14 clauses=0/12`, `M2-S15 clauses=0/10`, `M2-S16 clauses=0/11`; `clause_scan: total=61 present=0 missing=61`; 61 named `MISSING` lines, including `S11-AC1: disjoint phase state and queue entries` and `S12-AC2: resolved with a note and unresolved counts`. |
-| TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. |
+| TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture prints `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)` and `fixture_blank_separation=OK`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. |
 | TC-M2PLAN-004 | AC-F2-1 | P04 | `bash` block **P04** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent`; `criteria_present=0/7`. |
 | TC-M2PLAN-005 | AC-F2-2 | P05 | `bash` block **P05** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | AC-F2-3 | P06 | `bash` block **P06** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
 | TC-M2PLAN-007 | AC-F3-1 | P07 | `bash` block **P07** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17. |
-| TC-M2PLAN-008 | AC-F3-2 | P08 | `bash` block **P08** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. |
+| TC-M2PLAN-008 | AC-F3-2 | P08 | `bash` block **P08** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. |
 | TC-M2PLAN-009 | AC-F4-1 | P09 | `bash` block **P09** (Section 7.1) | Manual Only — uncommitted procedure | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. |
 | TC-M2PLAN-010 | AC-F4-2 | P10 | `bash` block **P10** (Section 7.1) | Manual Only — uncommitted procedure | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. |
 | TC-M2PLAN-011 | AC-F5-1 | P11 | `bash` block **P11** (Section 7.1) | Manual Only — uncommitted procedure | `pages=28`; `M1_planned_hits=9`; `M1_milestone_planned_hits=2`; `forbidden_phrase_pages=11`; `header_attribution=2/14`; `tail_violations=11`; `watchdog_m1s15=OK`; `watchdog_sc=OK`; `verify_gates_extension=OK`; `closeout_extension=OK`. |
@@ -2494,6 +2527,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 1.2 | 2026-11-10 | @test-plan-writer | Reopened and aligned to spec v1.3 (DEC-17). **D5:** P03 now pins the insertion inside the Epic M2 block: start is the base M2-S9 last content line + 1 (1167), end is the head `---` line before `## Epic M3` minus 1; it asserts `separator_sequence=identical`, adds a below-separator negative fixture and a separator-deletion probe (`classifier_self_tests=4/4`), and observed `window=1167:1167`, `window_empty=no`, `separator_sequence=identical`, `backlog_hunks=0`, `FAIL (vacuous)`. **D6:** P18 re-anchors the paragraph/scheduling/items windows to the base statement ends and maps them through the insertion offset, so an appended pointer cannot become the `last non-blank` line and shift its own window; observed pre-change `pointer_runs=0`, `bad_runs=0`, and a reference-shaped-head fixture with `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`, `reference_head_fixture=OK`. **D7:** P34 clamps the title-group start to 1; observed `pointer_groups=0/4` with `sed_line_address_0_errors=0`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; TC003/TC018/TC034 and G-8/TR-3/TR-10 updated. |
 | 1.3 | 2026-11-10 | @test-plan-writer | DoR iteration-1 remediation against spec v1.4. **F2:** P02/P35 run a 79-row clause table built from GH-284's actual clause set (61 rows for S11-S16; 79 including S17 and both amendments), with a named `MISSING` record per clause; observed `clause_scan: total=79 present=0 missing=79`, `missing_clauses=79`, `s17_missing_criteria=7`. **Changed ACs:** P06 checks the seven S17 criteria by content (`criteria_present`); P11 asserts the proposal-tail rule and preserves `watchdog`'s `M1-S15 adds progress signals`/`SC-M1-14` plus verify-gates/closeout extension attributions (`tail_violations=11` pre-change, both preservation checks already OK); P19 asserts the README deviation statement and contents-table identity; P27 asserts twelve linked targets; P32 runs and records both gate invocations with lone-parity classification; P33 proves heading association for each C4/flow heading; P03 asserts the blank line before M2-S11 (`blank_separation=FAIL` pre-change). **Minor:** P34 defines `ptr()` locally (runs alone; `sed_line_address_0_errors=0`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-1/G-2/G-3/G-6 reworded. |
 | 1.4 | 2026-11-10 | @test-plan-writer | DoR iteration-2 remediation against spec v1.5. **F1 (blocking):** P33 adopts Appendix E v1.5's C4 predicate `^## C4 Level $lvl([^0-9]|$)` in both the count and ownership awk, prescribes the committed heading form `## C4 Level 1: system context` (level digit + `: ` + subject), and proves exactly one block per C4 heading and seven per `## Key flows`; fixtures mixed subject/bare headings report `c4_headings_with_diagrams=3/3`, `flow_headings_with_diagrams=7/7`, `heading_association=OK`, while the level-1-without-diagram fixture reports `MISSING`/`fixture_negative=detected`. **Minors:** P06 evidence now uses `ac_numbered_items` (not `ac_items`); item counting uses `[0-9]+` so an eighth item is caught (`extra_self_test=detected (8 items, extra=1)`), duplicate numbers are derived from the criterion number (`duplicate_self_test=detected` on a duplicated `3.`); TC-011 has its own precondition; P19 requires pack-relative README links and proves a `../README.md` self-link is rejected (`readme_self_link_self_test=detected`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-3 updated. |
+| 1.5 | 2026-11-10 | @test-plan-writer | Delivery-blocking contradiction fix. **P03:** blank separation is now **head-anchored** — locate `### M2-S9` in the head, walk to its last non-blank line before the next heading/separator, then require blank + `### M2-S11`; the hunk window stays base-anchored. Pre-change observed `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture (M2-S6 gains one task line, M2-S9 shifts by one, M2-S11 inserted after the blank) observes `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)`. **P08:** `- AC:` identity now compares the line alone (`grep -m1`), so the changed depends line cannot poison it; pre-change `- AC: identical`, `base_task_lines_missing=0`, and the fixture observes `fixture_task_lines_missing=0`, `fixture_s6_task_lines=3->4`, `fixture_ac_identity=identical`, `fixture_p08=OK`. The two procedures can now pass together on a conforming head. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 
 ## 10. Test Execution Log
 
@@ -2503,12 +2537,12 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 |---|---|---|---|
 | TC-M2PLAN-001 | 2026-11-10 | FAIL (change absent) | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `separator_sequence=identical`. The seven entries do not exist in the base tree. |
 | TC-M2PLAN-002 | 2026-11-10 | FAIL (change absent; 61 clauses missing) | `M2-S11 clauses=0/9`, `M2-S12 clauses=0/8`, `M2-S13 clauses=0/11`, `M2-S14 clauses=0/12`, `M2-S15 clauses=0/10`, `M2-S16 clauses=0/11`; `clause_scan: total=61 present=0 missing=61`; 61 named `MISSING` lines, including `S11-AC1: disjoint phase state and queue entries` and `S12-AC2: resolved with a note and unresolved counts`. The oracle bites. |
-| TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The window is non-empty on the base; the tree has no hunk yet. |
+| TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture prints `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)` and `fixture_blank_separation=OK`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The blank check now reads the head, so the M2-S6 amendment shift cannot break it. |
 | TC-M2PLAN-004 | 2026-11-10 | FAIL (change absent) | `S17=absent`; `criteria_present=0/7`. No S17 entry exists in the base tree. |
 | TC-M2PLAN-005 | 2026-11-10 | FAIL (change absent) | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | 2026-11-10 | FAIL (change absent) | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
 | TC-M2PLAN-007 | 2026-11-10 | FAIL (no amendment; oracle self-test passes) | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17.)`; `M2-S4 shape FAIL (no amendment)`. Self-test printed `changed_lines=2 unexpected_lines=2`, so the oracle fires. |
-| TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. The identity halves are a passing control; the amendment is absent. |
+| TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. The identity halves and the conforming-fixture proof pass; the amendment is absent. |
 | TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged. |
 | TC-M2PLAN-010 | 2026-11-10 | PASS (control) | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. Passing control. |
 | TC-M2PLAN-011 | 2026-11-10 | FAIL (15 drift pages, 11 tail violations) | `pages=28`; `M1_planned_hits=9`; `M1_milestone_planned_hits=2`; `forbidden_phrase_pages=11`; `header_attribution=2/14`; `tail_violations=11`; `watchdog_m1s15=OK`; `watchdog_sc=OK`; `verify_gates_extension=OK`; `closeout_extension=OK`. The preserved clauses already pass; the headers and tails do not. |
