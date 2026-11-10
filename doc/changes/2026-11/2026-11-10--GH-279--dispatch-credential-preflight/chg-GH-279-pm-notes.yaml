@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-10T07:52:22.108Z }
   delivery: { started: null, completed: 2026-11-10T08:44:33.977Z }
   system_spec_update: { started: null, completed: 2026-11-10T08:57:15.453Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-10T10:57:00.459Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -64,17 +64,19 @@ decisions:
       sections, discovered from the digest rather than hardcoded."
     date: 2026-11-10
   - text: "D9 (PM-decided, review F-1 accepted): the delivery commit subjects are
-      primitive-generated template fallbacks because a numeric plan phase cannot be
-      passed to the commit primitive; they are conventional, specific to the staged
-      area, and within the 72-char cap. History rewriting is out of policy (commits
-      go only through the commit primitive). Accept the template subjects and do not
-      reword the branch history; the plan phase-9 escape clause records this."
+      primitive-generated template fallbacks because a numeric plan phase cannot
+      be passed to the commit primitive; they are conventional, specific to the
+      staged area, and within the 72-char cap. History rewriting is out of
+      policy (commits go only through the commit primitive). Accept the template
+      subjects and do not reword the branch history; the plan phase-9 escape
+      clause records this."
     date: 2026-11-10
   - text: "D10 (PM-decided, review F-8/F-9 acceptance boundary): F-8 (entrypoint
-      importing the pure credential key resolver) is accepted as a low-risk layering
-      advisory because the import is pure and the boundary scan is green; F-9 is
-      fixed by rendering the status credentialPrerequisite in the human report when
-      it is cheap, otherwise accepted as machine-only and recorded."
+      importing the pure credential key resolver) is accepted as a low-risk
+      layering advisory because the import is pure and the boundary scan is
+      green; F-9 is fixed by rendering the status credentialPrerequisite in the
+      human report when it is cheap, otherwise accepted as machine-only and
+      recorded."
     date: 2026-11-10
 open_questions: []
 blockers: []
@@ -229,19 +231,20 @@ notes:
     type: info
     date: 2026-11-10
   - text: "Review iteration 1: FAIL (spec compliance PASS, plan compliance FAIL).
-      F-1 commit subjects (medium) accepted under D9: primitive template subjects,
-      no history rewrite. F-2..F-10 remediated in plan phase 9. Full suite at
-      review time 6973 pass / 4 skip / 0 fail."
+      F-1 commit subjects (medium) accepted under D9: primitive template
+      subjects, no history rewrite. F-2..F-10 remediated in plan phase 9. Full
+      suite at review time 6973 pass / 4 skip / 0 fail."
     type: info
     date: 2026-11-10
   - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). All ten prior
       findings fixed or accepted; one new low doc finding F-11 (human status
       grammar missing the trailing prerequisite suffix). F-11 reconciled in
-      doc/spec/features/feature-status-digest.md under Phase 8 spec-reconciliation
-      scope. The aggregate gate run during review flaked only on the unrelated
-      tests/checks/privacy-ci-wiring.test.ts timing out at ~5.2s under host load;
-      it passes in isolation (4.4s) and the change-relevant 6975 tests pass. The
-      quality_gates phase re-runs the gate."
+      doc/spec/features/feature-status-digest.md under Phase 8
+      spec-reconciliation scope. The aggregate gate run during review flaked
+      only on the unrelated tests/checks/privacy-ci-wiring.test.ts timing out at
+      ~5.2s under host load; it passes in isolation (4.4s) and the
+      change-relevant 6975 tests pass. The quality_gates phase re-runs the
+      gate."
     type: info
     date: 2026-11-10
   - text: "Scope reconciliation (review F-5): the nine files changed outside the
@@ -259,10 +262,11 @@ notes:
     type: info
     date: 2026-11-10
   - text: "Plan phase 9 (apply code review iteration 1 remediation) complete in the
-      remediation commit that carries this note on fix/GH-279/dispatch-credential-preflight
-      (one commit, primitive-authored subject). Dispositions: F-1 accepted per D9
-      (history unchanged, tree unchanged); F-2 fixed (unreadableTruthReason returns
-      only tracker/artifact, ci-only yields no ref, TC-DIVREC-002 ci-only negative);
+      remediation commit that carries this note on
+      fix/GH-279/dispatch-credential-preflight (one commit, primitive-authored
+      subject). Dispositions: F-1 accepted per D9 (history unchanged, tree
+      unchanged); F-2 fixed (unreadableTruthReason returns only
+      tracker/artifact, ci-only yields no ref, TC-DIVREC-002 ci-only negative);
       F-3 fixed (TC-DOCTCRED-002 drives the edge derivation for an
       environment-prefixed reference); F-4 fixed (sentinel module-local, no
       root/app-barrel export; the file-scoped executable allowance stays); F-5
@@ -270,12 +274,12 @@ notes:
       fixed (goldens carry kind+projectionClass, assertGolden and TC-READMAP-008
       pin kind/projection/exit); F-7 fixed as a PR-time procedure record; F-8
       accepted per D10; F-9 fixed (human status renders requires <sourceKey>
-      (<referenceName>) on affected lines; TC-STATCRED-001); F-10 fixed (TC ids in
-      test names). Targeted suites: admission read mapping, delivered-evidence
-      divergence, doctor tracker, status prerequisite/output, github inputs,
-      cli-edge-seam, resolve diagnostics/composition, content and contract
-      inventories (127 pass). Aggregate gate: TMPDIR=$PWD/tmp/tmpdir pnpm check
-      exit 0, 6976 pass / 4 skip / 0 fail across 862 files;
+      (<referenceName>) on affected lines; TC-STATCRED-001); F-10 fixed (TC ids
+      in test names). Targeted suites: admission read mapping,
+      delivered-evidence divergence, doctor tracker, status prerequisite/output,
+      github inputs, cli-edge-seam, resolve diagnostics/composition, content and
+      contract inventories (127 pass). Aggregate gate: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0, 6976 pass / 4 skip / 0 fail across 862 files;
       lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
       parity all green."
     type: info
