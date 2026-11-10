@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-10T07:46:17.691Z }
   delivery_planning: { started: null, completed: 2026-11-10T07:46:19.943Z }
   dor_check: { started: null, completed: 2026-11-10T07:52:22.108Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-10T08:44:33.977Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -137,63 +137,80 @@ notes:
   - text: "D8 (PM-decided): the five DoR-3 advisories are accepted as non-blocking
       and are resolved at review time; they do not reopen the READY verdict."
     date: 2026-11-10
-  - text: "Plan phase 2 (declare dispatch preflight port and refusals) complete
-      in commit 1c344ca: optional preflight port on DispatchPorts, distinct from
+  - text: "Plan phase 2 (declare dispatch preflight port and refusals) complete in
+      commit 1c344ca: optional preflight port on DispatchPorts, distinct from
       admission and invoked before claimLease/spawn; the result error-kind union
-      admits provider and config additively; the name-level v1 contract inventory
-      is unchanged. Tests: bun test tests/structure/dispatch-preflight-contract.test.ts
-      (5 pass); port-contract-inventory, error-table-sync, delivery-result-contract,
+      admits provider and config additively; the name-level v1 contract
+      inventory is unchanged. Tests: bun test
+      tests/structure/dispatch-preflight-contract.test.ts (5 pass);
+      port-contract-inventory, error-table-sync, delivery-result-contract,
       dispatch-token-home, and content-inventory (129 pass); pnpm build green."
     type: info
     date: 2026-11-10
   - text: "Plan phase 3 (stamp 2xx status on GitHub decode failures) complete in
       commit 106da48: the bounded read now returns the received status and the
       issue normalizer stamps it onto provider.payload.invalid, so a malformed
-      2xx carries httpStatus while a transport throw stays status-absent; 404 and
-      other non-2xx keep their status. Tests: github-inputs, github-trap, and
-      github-closeout (30 pass); adapters tsc build green."
+      2xx carries httpStatus while a transport throw stays status-absent; 404
+      and other non-2xx keep their status. Tests: github-inputs, github-trap,
+      and github-closeout (30 pass); adapters tsc build green."
     type: info
     date: 2026-11-10
   - text: "Plan phase 4 (preflight tracker credential before spawn) complete in
       commit b4a0ffc: the production boundary supplies the optional preflight,
       classifies the one bounded work-item read from httpStatus (401/403 auth,
       5xx/other/status-absent outage, malformed 2xx payload.invalid, 404 input),
-      and the trusted-refusal marker admits only config.credential.missing prose.
-      The two delivered composition suites are inverted to zero-spawn refusal.
-      Tests: admission preflight, read mapping, diagnostics, composition,
-      error-classification, error-table-sync, help inventory, content inventory
-      (190 pass); tests/types tsc green."
+      and the trusted-refusal marker admits only config.credential.missing
+      prose. The two delivered composition suites are inverted to zero-spawn
+      refusal. Tests: admission preflight, read mapping, diagnostics,
+      composition, error-classification, error-table-sync, help inventory,
+      content inventory (190 pass); tests/types tsc green."
     type: info
     date: 2026-11-10
   - text: "Plan phase 5 (preserve typed identities on divergence resolve) complete
       in commit 71cf4e1: resolve delegates to the ledger helper, clamps the note
       before building, maps an absent id to the app-local divergence-not-found
       sentinel -> input.value.rejected/kind input, and carries every genuine
-      store fault as kind state with its own code. Tests: resolve diagnostics and
-      local-only composition (9 pass); gate/evidence/summary suites (30 pass)."
+      store fault as kind state with its own code. Tests: resolve diagnostics
+      and local-only composition (9 pass); gate/evidence/summary suites (30
+      pass)."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 6 (record delivered-evidence divergences honestly) complete
-      in commit 64ea12c: a completed classifier outcome with a readable
+  - text: "Plan phase 6 (record delivered-evidence divergences honestly) complete in
+      commit 64ea12c: a completed classifier outcome with a readable
       progressed/completed ledger and an unreadable truth appends at most one
-      open delivered-evidence divergence per (repository, ref), divergence first,
-      then the attempt carrying divergenceRef; a replay is skipped, a failed
-      divergence append appends the attempt once with divergence:append-failed
-      and the underlying state identity, and an orphan stays counted and
-      resolvable. Tests: delivered-evidence divergence TC-DIVREC-001..011 (14
-      pass); unevaluable/divergence/summary/floor/state-unverified/truth
-      derivation (29 pass); tests/types tsc green."
+      open delivered-evidence divergence per (repository, ref), divergence
+      first, then the attempt carrying divergenceRef; a replay is skipped, a
+      failed divergence append appends the attempt once with
+      divergence:append-failed and the underlying state identity, and an orphan
+      stays counted and resolvable. Tests: delivered-evidence divergence
+      TC-DIVREC-001..011 (14 pass);
+      unevaluable/divergence/summary/floor/state-unverified/truth derivation (29
+      pass); tests/types tsc green."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 7 (surface tracker credential prerequisite) complete in
-      commit fe5b61f: status attaches the additive section-level
-      credentialPrerequisite {referenceName, sourceKey} only to sections whose
-      credential-dependent source failed (derived from the digest), sources[]
-      shape/bound unchanged; doctor names the derived key for literal and
-      prefixed references; the declared reference is registered for redaction at
-      the entrypoint from injected environment facts (no ambient read, no new
-      allowlist entry). Tests: status prerequisite/output, doctor tracker,
-      cli-edge-seam, entrypoint-bin, secret boundary, exports parity, contract
-      inventory (114 pass); tests/types tsc green."
+  - text: "Plan phase 7 (surface tracker credential prerequisite) complete in commit
+      fe5b61f: status attaches the additive section-level credentialPrerequisite
+      {referenceName, sourceKey} only to sections whose credential-dependent
+      source failed (derived from the digest), sources[] shape/bound unchanged;
+      doctor names the derived key for literal and prefixed references; the
+      declared reference is registered for redaction at the entrypoint from
+      injected environment facts (no ambient read, no new allowlist entry).
+      Tests: status prerequisite/output, doctor tracker, cli-edge-seam,
+      entrypoint-bin, secret boundary, exports parity, contract inventory (114
+      pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 8 (publish guide, change record, and release note) complete in
+      commit 3fafa18: the provisioning guide declares ados_distribution
+      redistributable and carries the explicit export bridge, no-keyring/no-
+      ambient/no-fallback rule, least privilege, rotation, 404 scope check, and
+      the redaction-registration fact; the dispatch reference page documents the
+      pre-claimLease ordering, named key/reference, status-keyed mapping, 404
+      caveat, per-work-item dedupe, and resolution path; the change record and
+      minor changeset land; five feature specs are reconciled; the forbidden-
+      literals registry and content allowance are updated. Aggregate gate:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0, 6973 pass / 4 skip / 0 fail,
+      lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
+      parity all green. doc-distribution guard green; git diff --check clean."
     type: info
     date: 2026-11-10
