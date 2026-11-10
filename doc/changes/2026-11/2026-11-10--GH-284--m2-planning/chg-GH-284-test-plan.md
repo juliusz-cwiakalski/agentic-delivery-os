@@ -1,9 +1,9 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 1.5
+version: 1.6
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T02:35:00Z
+last_updated: 2026-11-10T03:50:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
@@ -96,7 +96,7 @@ Forward traceability: every AC appears exactly once, and every TC maps to exactl
 | AC-F10-1 | The entrypoint delta note records the observed composition, planned additions, and the daemon gap | TC-M2PLAN-026 | Covered |
 | AC-F11-1 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | TC-M2PLAN-027 | Covered |
 | AC-NFR1-1 | Every product file changed is under the planning corpus, with zero code, test, tooling, or spec paths | TC-M2PLAN-028 | Covered |
-| AC-NFR2-1 | Every non-amended story body is byte-identical to the base revision | TC-M2PLAN-029 | Covered |
+| AC-NFR2-1 | Every non-amended story body is byte-identical on the base, minimal, and full heads | TC-M2PLAN-029 | Covered |
 | AC-NFR3-1 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | TC-M2PLAN-030 | Covered |
 | AC-NFR4-1 | The doc-distribution guard stays green and no planning marker is added | TC-M2PLAN-031 | Covered |
 | AC-NFR5-1 | Both aggregate-gate runs are recorded and only a lone ci-baseline-parity failure is environmental | TC-M2PLAN-032 | Covered |
@@ -228,7 +228,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 | TC-M2PLAN-026 | The entrypoint delta note records the observed composition, planned additions, and the daemon gap | Happy Path | Critical | High | AC-F10-1 | Static/diff + content |
 | TC-M2PLAN-027 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | Happy Path | Important | High | AC-F11-1 | Static/diff + content |
 | TC-M2PLAN-028 | Every product file changed is under the planning corpus, with zero code, test, tooling, or spec paths | Negative | Critical | High | AC-NFR1-1 | Static/diff + content |
-| TC-M2PLAN-029 | Every non-amended story body is byte-identical to the base revision | Regression | Critical | High | AC-NFR2-1 | Static/diff + content |
+| TC-M2PLAN-029 | Every non-amended story body is byte-identical on the base, minimal, and full heads | Regression | Critical | High | AC-NFR2-1 | Static/diff + content |
 | TC-M2PLAN-030 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | Negative | Critical | High | AC-NFR3-1 | Static/diff + content |
 | TC-M2PLAN-031 | The doc-distribution guard stays green and no planning marker is added | Regression | Important | Medium | AC-NFR4-1 | Guard |
 | TC-M2PLAN-032 | Both aggregate-gate runs are recorded and only a lone ci-baseline-parity failure is environmental | Regression | Critical | High | AC-NFR5-1 | Guard |
@@ -473,7 +473,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P08** (Section 7.1). It compares the `- AC:` line alone (`grep -m1`), not a 4-line capture that would include the changed dependency line.
-2. Confirm the only changed lines are inside `- Tasks:` and on `- Depends on:`, and that heading, goal, and the `- AC:` line are byte-identical. The conforming fixture (P03) proves the S6 task-line insertion and the shifted M2-S9 can coexist: `fixture_task_lines_missing=0`, `fixture_ac_identity=identical`, `fixture_p08=OK`.
+2. Confirm the only changed lines are inside `- Tasks:` and on `- Depends on:`, and that heading, goal, and the `- AC:` line are byte-identical. The clause must be its own task line; appending it into an existing base task line modifies that line (`base_task_lines_missing=1`) and is non-conforming. The conforming fixture (P03) proves the own-line insertion and the shifted M2-S9 can coexist: `fixture_task_lines_missing=0`, `fixture_s6_task_lines=3->4`, `fixture_ac_identity=identical`, `fixture_p08=OK`.
 
 **Expected Outcome**:
 
@@ -1087,7 +1087,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `product_files=0`; `forbidden_root_files=0`; `outside_planning=0`; `unexpected_paths=0`; `non_vacuous=no (no product file changed)`. Zero is a containment pass but not evidence the change exists; hence FAIL for non-vacuity.
 - Result label for Section 10: **FAIL (vacuous: no product file changed)**.
 
-#### TC-M2PLAN-029 - Every non-amended story body is byte-identical to the base revision
+#### TC-M2PLAN-029 - Every non-amended story body is byte-identical on the base, minimal, and full heads
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1105,16 +1105,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P29** (Section 7.1).
-2. Confirm `stories_compared=65`, `changed=0`, and no `body CHANGED:` line.
+1. Run procedure **P29** (Section 7.1). Its shared `entry()` bound now stops at `^---$` and `^## ` as well as `^### `, so the base M2-S9 entry ends at the block close instead of running into Epic M3.
+2. Confirm the base control and all three heads report `65/65/0 order=OK`, and that the body/removed/reorder negatives are detected.
 
 **Expected Outcome**:
 
-- `stories_compared=65 identical=65 changed=0`.
+- `real_head=PASS`, `base_control=PASS`, `minimal_head=PASS`, `full_head=PASS`; every run `stories_compared=65 identical=65 changed=0 order=OK`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `stories_compared=65 identical=65 changed=0`. Passing control.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`.
 - Result label for Section 10: **PASS (control)**.
 
 #### TC-M2PLAN-030 - Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region
@@ -1391,7 +1391,7 @@ MR=doc/planning/oss-tooling/milestones/README.md
 M1=doc/planning/oss-tooling/milestones/m1/commands
 M2=doc/planning/oss-tooling/milestones/m2
 
-entry() { awk -v h="$2" 'index($0,h)==1{f=1;print;next} f&&/^### /{exit} f{print}' "$1"; }
+entry() { awk -v h="$2" 'index($0,h)==1{f=1;print;next} f&&(/^### /||/^---$/||/^## /){exit} f{print}' "$1"; }
 section() { awk -v h="$2" '$0==h{f=1;print;next} f&&/^## /{exit} f{print}' "$1"; }
 
 mkdir -p /tmp/gh284
@@ -2194,18 +2194,112 @@ printf '%s\n' 'packages/core/src/x.ts' 'doc/planning/oss-tooling/backlog.md' | g
 **P29 — per-story body preservation**
 
 ```bash
+# entry() now also stops at ^---$ and ^## (the M2-S9 block close), so the base and head
+# M2-S9 entries both end at the blank before the separator instead of running into Epic M3.
+p29_check() { # $1 = head file; returns 0 only when every non-amended story body matches in order
+  local head="$1" tot=0 ident=0 changed=0 order=OK prev=0 h code ln
+  while IFS= read -r h; do
+    code=$(printf '%s' "$h" | sed -E 's/^### (M[0-9]-S[0-9]+).*/\1/')
+    [ -n "${AMEND[$code]:-}" ] && continue
+    [ -n "${NEW[$code]:-}" ] && continue
+    ln=$(grep -n -F -- "$h" "$head" | head -1 | cut -d: -f1)
+    if [ -z "$ln" ]; then changed=$((changed+1)); echo "heading missing: $h"; continue; fi
+    [ "$ln" -gt "$prev" ] || order=FAIL
+    prev=$ln
+    tot=$((tot+1))
+    entry /tmp/gh284/base-backlog.md "$h" > /tmp/gh284/e-b.txt; entry "$head" "$h" > /tmp/gh284/e-h.txt
+    if cmp -s /tmp/gh284/e-b.txt /tmp/gh284/e-h.txt; then ident=$((ident+1)); else changed=$((changed+1)); echo "body CHANGED: $h"; fi
+  done < <(grep '^### ' /tmp/gh284/base-backlog.md)
+  echo "stories_compared=$tot identical=$ident changed=$changed order=$order"
+  [ "$changed" -eq 0 ] && [ "$order" = OK ]
+}
 declare -A AMEND=([M2-S4]=1 [M2-S6]=1); declare -A NEW=([M2-S11]=1 [M2-S12]=1 [M2-S13]=1 [M2-S14]=1 [M2-S15]=1 [M2-S16]=1 [M2-S17]=1)
-tot=0; ident=0; changed=0
-while IFS= read -r h; do
-  code=$(printf '%s' "$h" | sed -E 's/^### (M[0-9]-S[0-9]+).*/\1/')
-  [ -n "${AMEND[$code]:-}" ] && continue
-  [ -n "${NEW[$code]:-}" ] && continue
-  tot=$((tot+1))
-  grep -Fxq "$h" "$BL" || { changed=$((changed+1)); echo "heading missing: $h"; continue; }
-  entry /tmp/gh284/base-backlog.md "$h" > /tmp/gh284/e-b.txt; entry "$BL" "$h" > /tmp/gh284/e-h.txt
-  cmp -s /tmp/gh284/e-b.txt /tmp/gh284/e-h.txt && ident=$((ident+1)) || { changed=$((changed+1)); echo "body CHANGED: $h"; }
-done < <(grep '^### ' /tmp/gh284/base-backlog.md)
-echo "stories_compared=$tot identical=$ident changed=$changed"
+# Build the three heads the review used: minimal (stories only), full (stories + S4/S6 amendments),
+# and reorder/removal/body mutants for the negative controls.
+python3 - /tmp/gh284/base-backlog.md <<'PYFIX'
+import sys
+base = open(sys.argv[1]).read()
+def block(code):
+    ls = base.splitlines(keepends=True)
+    st = next(i for i, l in enumerate(ls) if l.startswith(f"### {code} "))
+    en = next((i for i in range(st+1, len(ls)) if ls[i].startswith("### ")), len(ls))
+    return ls, st, en
+stories = """### M2-S11 Multi-repository workstations
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M0-S5, M1-S17.
+### M2-S12 Evidence inspection and divergence resolution
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S9.
+### M2-S13 Public event taxonomy
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S18.
+### M2-S14 Harness telemetry v2
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S11, M1-S15, M1-S19, M1-S22.
+### M2-S15 Queue lifecycle completion
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S9, M1-S17, M1-S18.
+### M2-S16 Engine-first delivery operations
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S9, M1-S18, M1-S21, #280.
+### M2-S17 Provider-aware peak pausing
+- Goal: fixture goal.
+- Tasks: fixture tasks.
+- AC: fixture ac.
+- Depends on: M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, #280.
+"""
+def insert_stories(text):
+    out=[]; s9=False; ins=False
+    for line in text.splitlines(keepends=True):
+        if line.startswith("### M2-S9 "): s9=True
+        if s9 and line.rstrip()=="---" and not ins:
+            out.extend(stories.splitlines(keepends=True)); ins=True
+        out.append(line)
+    return "".join(out)
+minimal = insert_stories(base)
+full = base.replace("- Depends on: M1-S5, M1-S17.\n", "- Depends on: M1-S5, M1-S17, M2-S11.\n")
+ls=full.splitlines(keepends=True); out=[]; insec=False; done=False
+for line in ls:
+    if line.startswith("### M2-S6 "): insec=True
+    if insec and line.startswith("- AC:") and not done:
+        out.append("  consumes M2-S14 telemetry for per-agent and per-model facts;\n"); done=True
+    out.append(line)
+full = "".join(out).replace("- Depends on: M1-S19, M2-S3.\n", "- Depends on: M1-S19, M2-S3, M2-S14.\n")
+full = insert_stories(full)
+changed = base.replace("- Goal: Ceremonies become", "- Goal: Ceremonies become (mutated)")
+ls, st, en = block("M2-S3")
+removed = "".join(ls[:st] + ls[en:])
+ls, st2, en2 = block("M2-S2")
+rest = ls[:st2] + ls[en2:]
+st3 = next(i for i, l in enumerate(rest) if l.startswith("### M2-S3 "))
+en3 = next((i for i in range(st3+1, len(rest)) if rest[i].startswith("### ")), len(rest))
+reordered = "".join(rest[:en3] + ls[st2:en2] + rest[en3:])
+open("/tmp/gh284/head-min.md","w").write(minimal)
+open("/tmp/gh284/head-full.md","w").write(full)
+open("/tmp/gh284/head-changed.md","w").write(changed)
+open("/tmp/gh284/head-removed.md","w").write(removed)
+open("/tmp/gh284/head-reordered.md","w").write(reordered)
+PYFIX
+echo "-- real head --"; p29_check "$BL" && echo "real_head=PASS" || echo "real_head=FAIL"
+echo "-- base control --"; p29_check /tmp/gh284/base-backlog.md && echo "base_control=PASS" || echo "base_control=FAIL"
+echo "-- minimal stories-only head --"; p29_check /tmp/gh284/head-min.md && echo "minimal_head=PASS" || echo "minimal_head=FAIL"
+echo "-- full amendment + stories head --"; p29_check /tmp/gh284/head-full.md && echo "full_head=PASS" || echo "full_head=FAIL"
+echo "-- negatives --"
+p29_check /tmp/gh284/head-changed.md >/tmp/gh284/p29-neg1.txt || true; grep -q 'changed=1' /tmp/gh284/p29-neg1.txt && echo "negative_body=detected" || echo "negative_body=FAILED"
+p29_check /tmp/gh284/head-removed.md >/tmp/gh284/p29-neg2.txt || true; grep -Eq 'heading missing|changed=1' /tmp/gh284/p29-neg2.txt && echo "negative_removed=detected" || echo "negative_removed=FAILED"
+p29_check /tmp/gh284/head-reordered.md >/tmp/gh284/p29-neg3.txt || true; grep -q 'order=FAIL' /tmp/gh284/p29-neg3.txt && echo "negative_reordered=detected" || echo "negative_reordered=FAILED"
 ```
 
 **P30 — body byte identity and bounded entrypoint region**
@@ -2429,7 +2523,7 @@ echo; echo "##### done"
 | TC-M2PLAN-026 | AC-F10-1 | P26 | `bash` block **P26** (Section 7.1) | Manual Only — uncommitted procedure | `delta=absent`. |
 | TC-M2PLAN-027 | AC-F11-1 | P27 | `bash` block **P27** (Section 7.1) | Manual Only — uncommitted procedure | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. |
 | TC-M2PLAN-028 | AC-NFR1-1 | P28 | `bash` block **P28** (Section 7.1) | Manual Only — uncommitted procedure | `product_files=0`; `forbidden_root_files=0`; `outside_planning=0`; `unexpected_paths=0`; `non_vacuous=no (no product file changed)`. |
-| TC-M2PLAN-029 | AC-NFR2-1 | P29 | `bash` block **P29** (Section 7.1) | Manual Only — uncommitted procedure | `stories_compared=65 identical=65 changed=0`. |
+| TC-M2PLAN-029 | AC-NFR2-1 | P29 | `bash` block **P29** (Section 7.1) | Manual Only — uncommitted procedure | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
 | TC-M2PLAN-030 | AC-NFR3-1 | P30 | `bash` block **P30** (Section 7.1) | Manual Only — uncommitted procedure | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. |
 | TC-M2PLAN-031 | AC-NFR4-1 | P31 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary and `exit=0` |
 | TC-M2PLAN-032 | AC-NFR5-1 | P32 | `mkdir -p "$(git rev-parse --show-toplevel)/tmp/tmpdir" && TMPDIR="$(git rev-parse --show-toplevel)/tmp/tmpdir" pnpm check` | Existing guard — no change | `pnpm check` exit code and the last successful stage |
@@ -2528,6 +2622,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 1.3 | 2026-11-10 | @test-plan-writer | DoR iteration-1 remediation against spec v1.4. **F2:** P02/P35 run a 79-row clause table built from GH-284's actual clause set (61 rows for S11-S16; 79 including S17 and both amendments), with a named `MISSING` record per clause; observed `clause_scan: total=79 present=0 missing=79`, `missing_clauses=79`, `s17_missing_criteria=7`. **Changed ACs:** P06 checks the seven S17 criteria by content (`criteria_present`); P11 asserts the proposal-tail rule and preserves `watchdog`'s `M1-S15 adds progress signals`/`SC-M1-14` plus verify-gates/closeout extension attributions (`tail_violations=11` pre-change, both preservation checks already OK); P19 asserts the README deviation statement and contents-table identity; P27 asserts twelve linked targets; P32 runs and records both gate invocations with lone-parity classification; P33 proves heading association for each C4/flow heading; P03 asserts the blank line before M2-S11 (`blank_separation=FAIL` pre-change). **Minor:** P34 defines `ptr()` locally (runs alone; `sed_line_address_0_errors=0`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-1/G-2/G-3/G-6 reworded. |
 | 1.4 | 2026-11-10 | @test-plan-writer | DoR iteration-2 remediation against spec v1.5. **F1 (blocking):** P33 adopts Appendix E v1.5's C4 predicate `^## C4 Level $lvl([^0-9]|$)` in both the count and ownership awk, prescribes the committed heading form `## C4 Level 1: system context` (level digit + `: ` + subject), and proves exactly one block per C4 heading and seven per `## Key flows`; fixtures mixed subject/bare headings report `c4_headings_with_diagrams=3/3`, `flow_headings_with_diagrams=7/7`, `heading_association=OK`, while the level-1-without-diagram fixture reports `MISSING`/`fixture_negative=detected`. **Minors:** P06 evidence now uses `ac_numbered_items` (not `ac_items`); item counting uses `[0-9]+` so an eighth item is caught (`extra_self_test=detected (8 items, extra=1)`), duplicate numbers are derived from the criterion number (`duplicate_self_test=detected` on a duplicated `3.`); TC-011 has its own precondition; P19 requires pack-relative README links and proves a `../README.md` self-link is rejected (`readme_self_link_self_test=detected`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-3 updated. |
 | 1.5 | 2026-11-10 | @test-plan-writer | Delivery-blocking contradiction fix. **P03:** blank separation is now **head-anchored** — locate `### M2-S9` in the head, walk to its last non-blank line before the next heading/separator, then require blank + `### M2-S11`; the hunk window stays base-anchored. Pre-change observed `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture (M2-S6 gains one task line, M2-S9 shifts by one, M2-S11 inserted after the blank) observes `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)`. **P08:** `- AC:` identity now compares the line alone (`grep -m1`), so the changed depends line cannot poison it; pre-change `- AC: identical`, `base_task_lines_missing=0`, and the fixture observes `fixture_task_lines_missing=0`, `fixture_s6_task_lines=3->4`, `fixture_ac_identity=identical`, `fixture_p08=OK`. The two procedures can now pass together on a conforming head. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
+| 1.6 | 2026-11-10 | @test-plan-writer | Post-DoR P1 halt: P29 was the third mutually-unsatisfiable gate. **P29:** the shared `entry()` bound now stops at `^---$` and `^## ` as well as `^### `, so the base M2-S9 entry ends at the block close instead of running into Epic M3. Observed: real head, base control, minimal stories-only head, and full amendment+stories head all `stories_compared=65 identical=65 changed=0 order=OK`; negatives `negative_body=detected`, `negative_removed=detected`, `negative_reordered=detected`. **Minors:** TC-008 now states the own-line task shape is the only conforming one (appending into an existing base line gives `base_task_lines_missing=1`); TC-001/TC-003 already consume P03's head-anchored parenthetical, so no stale P1 wording is repeated; this log records the P1 halt and the P29 fix. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 
 ## 10. Test Execution Log
 
@@ -2563,7 +2658,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-026 | 2026-11-10 | FAIL (change absent) | `delta=absent`. |
 | TC-M2PLAN-027 | 2026-11-10 | FAIL (row absent); M0/M1 preservation PASS (control) | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. Row absence is the failing half; row preservation is a passing control. |
 | TC-M2PLAN-028 | 2026-11-10 | FAIL (vacuous: no product file changed) | `product_files=0`; `forbidden_root_files=0`; `outside_planning=0`; `unexpected_paths=0`; `non_vacuous=no (no product file changed)`. Zero is a containment pass but not evidence the change exists; hence FAIL for non-vacuity. |
-| TC-M2PLAN-029 | 2026-11-10 | PASS (control) | `stories_compared=65 identical=65 changed=0`. Passing control. |
+| TC-M2PLAN-029 | 2026-11-10 | PASS (control) | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
 | TC-M2PLAN-030 | 2026-11-10 | FAIL (entrypoint region unchanged); body preservation PASS (control) | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. The fourteen-body half is a passing control; the entrypoint region is unchanged. |
 | TC-M2PLAN-031 | 2026-11-10 | PASS (control) | `guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`. Passing control. |
 | TC-M2PLAN-032 | 2026-11-10 | PASS (repo-local TMPDIR); default run classified environmental (DEC-19) | Default run: `default_exit=1`; `default_failed_tests=1`; `default_failure_class=environmental (ci-baseline-parity only)`; `default_failures=CI baseline parity (hermetic partial clone) > a depth-1 checkout fails closed and the baseline fetch is the remedy`; repo-local run: `repo_tmpdir_exit=0`; `gate_verdict=PASS`. Both invocations and both exits are recorded. |
