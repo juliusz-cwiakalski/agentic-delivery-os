@@ -4,7 +4,7 @@
 # Sources (single source of truth):
 #   - Spec:      ./chg-GH-277-spec.md (v1.6; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
 #                NFR-1..NFR-9; DEC-1..DEC-7; DM-1..DM-4; RSK-1..RSK-8; OQ-1
-#                resolved by TDR-0017, OQ-2 open and non-blocking; §6 flows 1–6;
+#                resolved by TDR-0021, OQ-2 open and non-blocking; §6 flows 1–6;
 #                §8.3/§8.5; §13 dependencies; §16 affected components; §17.1
 #                Definition of Done binding 30 scenarios, M-1..M-21 and all five
 #                declared plan phases; Appendix B/C/D)
@@ -14,7 +14,7 @@
 #                regression runs; §6.5 aggregate gate + privacy literals; §7.1
 #                required files; §7.2 TC → file map; §7.3 mutations M-1..M-21;
 #                §10 execution log)
-#   - Decision:  doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md
+#   - Decision:  doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
 #                (enforces C-1..C-8 for the marker; spec DEC-3, OQ-1)
 #   - Ticket:    GH-277.
 #
@@ -113,7 +113,7 @@
 # `@delivery-os/testkit` excluded; no pre-existing changeset modified or deleted.
 #
 # Decision-record ordering constraint (P4, one commit): the authored record
-# `doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md` is
+# `doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md` is
 # UNTRACKED while its row in `doc/decisions/00-index.md` (line 43) is already
 # committed, so that row is not edited and the index is not in any phase scope.
 # The `commit` primitive stages untracked files only inside a declared plan scope
@@ -373,7 +373,7 @@ phases:
     scope:
       files:
         - .changeset/gh-277-harness-default-allowlist-minor.md
-        - doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md
+        - doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
         - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-test-plan.md
     doneArtifacts:
       mergeRequestUrl: >-
@@ -391,7 +391,7 @@ phases:
         appended attempt id/token/evidence refs, the released lease, worktree
         status equal to its recorded pre-run baseline and head unchanged) and
         mutation record M-20, and commits
-        doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md
+        doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md
         unchanged. That record is untracked and its row in doc/decisions/00-index.md
         is already committed, so the changeset leads the scope and the include list
         and this phase's summary carries no ref-shaped token: a standalone record

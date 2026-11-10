@@ -12,7 +12,7 @@ artifact_set:
   plan: chg-GH-277-plan.yaml (delivery.plan.v1; plan validate verdict=valid, readyForDevelopment=true, tier=full)
   pm_notes: chg-GH-277-pm-notes.yaml
   ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
-  governing_decision: "doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
 
 verdict_basis: >-
   READY. Iteration 3's single major is fixed: the test plan and plan now state the v1
@@ -102,7 +102,7 @@ iteration_3_verification:
     status: FIXED
     evidence: >-
       spec 217-225 (§7.3 table with Deferred item / Owner / Home; all five rows owned by @pm with
-      concrete homes), 344-347 (§14 table with Owner and Home columns: OQ-1 -> @pm / TDR-0017,
+      concrete homes), 344-347 (§14 table with Owner and Home columns: OQ-1 -> @pm / TDR-0021,
       OQ-2 -> @pm / §14 OQ-2 + §7.3 with TC-HDA-100/TC-HDA-101 closure evidence), 438 (DoD-10 now
       "named with an owner and a home, as recorded in §7.3 and §14"). Both tables are well formed
       (7 and 4 pipe-delimited columns).
@@ -229,14 +229,14 @@ verification_notes:
       byte-equality, HarnessFailure required fields, changeset ordering, TC-RELEASE-001, E2E isolation,
       DM-4 seam) remain valid.
     - >-
-      Working tree state: only `?? doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md`
+      Working tree state: only `?? doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md`
       is untracked, which is the P4-owned artifact the plan and DoD-6 baseline account for.
   orphan_markers: >-
     TODO/FIXME/TBD scan of the three artifacts finds only the DoD-10 rule text and the test plan §10
     "TBD" execution-log placeholders, which are the log's intended pre-run state.
   decisions_routing:
-    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 remain in the spec and pm-notes; DEC-3 remains governed by TDR-0017."
-    system: "No new decision record required before delivery; TDR-0017 (Proposed) is the standalone record for DEC-3, with owner acceptance at PR review."
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 remain in the spec and pm-notes; DEC-3 remains governed by TDR-0021."
+    system: "No new decision record required before delivery; TDR-0021 (Proposed) is the standalone record for DEC-3, with owner acceptance at PR review."
     needs_human_input: "none; no pause flag raised."
   forbidden_edits: >-
     This pass modified no spec, test-plan, plan, source, or pm-notes file and made no commit. It wrote

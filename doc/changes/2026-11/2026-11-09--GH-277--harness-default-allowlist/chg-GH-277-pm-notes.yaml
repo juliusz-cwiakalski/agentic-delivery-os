@@ -23,7 +23,7 @@ decisions:
       HARNESS_* names and opencode resolves models from its own configuration."
     date: "2026-11-09"
   - text: "DEC-3: additive optional marker on a variable allowlist entry only;
-      credentials stay required. Governed by TDR-0017."
+      credentials stay required. Governed by TDR-0021."
     date: "2026-11-09"
   - text: "DEC-4: keep dispatch.session.spawn-failed identity and the four-key text
       contract; add an additive DispatchEnvelopeError.detail carrying the
@@ -41,7 +41,7 @@ open_questions:
       TDR-0016 states that adding types to
       packages/core/src/contracts/harness.ts is the class the record-governed
       rule covers."
-    status: "Resolved 2026-11-09: a standalone record is required; TDR-0017 authored
+    status: "Resolved 2026-11-09: a standalone record is required; TDR-0021 authored
       (status Proposed, owner acceptance at the GH-277 PR review). Spec DEC-3
       and §13 cite it."
     date: "2026-11-09"
@@ -72,7 +72,7 @@ blockers:
   - text: "DoR iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md): 0
       critical / 3 major / 3 minor / 2 nit. All six iteration-1 findings
       verified fixed. New blocking: (A) the E2E asserts absolute git-clean but
-      P4's own artifacts (untracked TDR-0017, new changeset) are uncommitted
+      P4's own artifacts (untracked TDR-0021, new changeset) are uncommitted
       during the probe; (B) DoD-6 says 'mutates no file' while the procedure
       runs pnpm build, which rewrites gitignored dist; (C) plan P2 omits the
       contract inventories that pin the new DispatchEnvelopeError export and the
@@ -148,10 +148,10 @@ notes:
     date: "2026-11-09"
   - text: "Phase-2 chain note: test planning correctly found four upstream spec gaps
       and the specification phase was reopened and re-completed at v1.1
-      (TDR-0017 citations, verbose channel files, DispatchEnvelopeError type,
+      (TDR-0021 citations, verbose channel files, DispatchEnvelopeError type,
       config get surface). The phase-complete commit also staged the
       then-untracked test plan (change-folder scope) and flagged
-      doc/decisions/00-index.md as scope drift; TDR-0017 itself stays untracked
+      doc/decisions/00-index.md as scope drift; TDR-0021 itself stays untracked
       until plan phase P4, where it lands with the changeset (commitlint
       ref-token ordering constraint)."
     type: info
@@ -247,7 +247,7 @@ notes:
     type: info
     date: "2026-11-09"
   - text: >-
-      Plan phase 4 complete (commit e7699431 — changeset, TDR-0017, and the
+      Plan phase 4 complete (commit e7699431 — changeset, TDR-0021, and the
       test-plan execution log): owns AC-F8-1, AC-F8-2 and TC-HDA-006,
       TC-HDA-100, TC-HDA-101. Ran the bounded operator proof in a disposable
       clone outside this worktree under the isolated probe brand gh277-probe and
@@ -262,7 +262,7 @@ notes:
       probe root; the live lease view was read-only and empty; worktree
       STATUS_BEFORE/STATUS_AFTER were identical with HEAD stable at 162fa7e;
       total step-4-to-step-6 elapsed about 16 s (<=180 s). Added exactly one
-      five-package minor changeset with a non-empty body; committed TDR-0017
+      five-package minor changeset with a non-empty body; committed TDR-0021
       unchanged with it (the index row was already committed); filled the
       test-plan execution log (29/29 Pass) and the section 10 mutation summary.
       Gates green: git diff --check; privacy-literals (3302 files, 0

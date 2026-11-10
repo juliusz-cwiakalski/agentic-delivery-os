@@ -48,7 +48,7 @@ findings:
       provider-model environment variable is mapped or forwarded" or "no
       ambient model-selection variable is mapped or forwarded"; keep the exact
       `OC_ADOS_MAIN_MODEL`/`OC_ADOS_SMALL_MODEL` names only in
-      doc/decisions/TDR-0017 (allowlisted) and the change artifacts (excluded).
+      doc/decisions/TDR-0021 (allowlisted) and the change artifacts (excluded).
       Alternatively add a sanctioned allowlist entry if the names must appear in
       current-truth docs. Then re-run `bun run scripts/checks/forbidden-literals.ts`
       and the aggregate gate.
@@ -111,7 +111,7 @@ findings:
     message: >-
       Plan-phase 4 completion evidence does not name its commit hash; it says
       "commit recorded in the delivery report" (P1/P2/P3 name their hashes).
-      The changeset and TDR-0017 landed in e7699431, and the test-plan execution
+      The changeset and TDR-0021 landed in e7699431, and the test-plan execution
       log landed in later commits, so the P4 boundary evidence is not directly
       traceable from pm-notes.
     suggestion: >-

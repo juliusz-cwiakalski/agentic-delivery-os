@@ -12,7 +12,7 @@ artifact_set:
   plan: chg-GH-277-plan.yaml
   pm_notes: chg-GH-277-pm-notes.yaml
   ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
-  governing_decision: "doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
 
 verdict_basis: >-
   NOT_READY. All six iteration-1 blocking findings are genuinely remediated at the
@@ -26,7 +26,7 @@ verdict_basis: >-
   spec §17.1 defines a 13-condition Definition of Done bound to named evidence. Three
   new blocking gaps remain. (1) The E2E assertion is stated as absolute
   `git status --porcelain` emptiness, which the change's own in-flight artifacts make
-  unsatisfiable during P4 (TDR-0017 is untracked until that phase's boundary commit).
+  unsatisfiable during P4 (TDR-0021 is untracked until that phase's boundary commit).
   (2) DoD-6 still claims the proof "mutates no file in this change's worktree", which
   the procedure's own `pnpm build` in `$REPO` violates. (3) Two delivered contract-surface
   inventory gates (`tests/structure/port-contract-inventory.test.ts` with
@@ -110,10 +110,10 @@ findings:
       and P4 doneArtifacts (315-325); chg-GH-277-pm-notes.yaml (66-73)
     gap: >-
       The isolation assertion is absolute git-status emptiness before and after the probe,
-      but this change's own artifacts are untracked/modified while P4 runs: TDR-0017 is
+      but this change's own artifacts are untracked/modified while P4 runs: TDR-0021 is
       untracked until P4 lands it (pm-notes 66-73), P4 also adds the changeset and edits
       the test plan (305), and a plan phase commits only at its boundary. Probed now:
-      `git status --porcelain` prints `?? doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md`.
+      `git status --porcelain` prints `?? doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md`.
       Step 0 therefore fails its own comment with no declared action (it is neither the
       FAIL condition nor a STOP), and step 8 fails deterministically, invalidating the
       AC-F8-2 evidence DoD-6 reads.
@@ -121,7 +121,7 @@ findings:
     fix: >-
       Record STATUS_BEFORE at step 0 and assert STATUS_AFTER == STATUS_BEFORE at step 8
       (and in TC-HDA-101 steps 1/4 and the §10 line), naming the expected baseline entries
-      (untracked TDR-0017, untracked changeset, pending test-plan edit). If instead the
+      (untracked TDR-0021, untracked changeset, pending test-plan edit). If instead the
       TDR/changeset commit is meant to precede the probe, restate the P4 single-commit
       ordering in the plan too.
 
@@ -215,12 +215,12 @@ findings:
     artifact: chg-GH-277-pm-notes.yaml (17 decisions, 39-54 blockers); chg-GH-277-spec.md (21, 351)
     gap: >-
       OQ-1's status is now correct, but decisions is still empty although DEC-3 is governed
-      by TDR-0017 (spec links.decisions and §15), and the blocker entry still presents the
+      by TDR-0021 (spec links.decisions and §15), and the blocker entry still presents the
       six iteration-1 findings as the live gate state without noting they were verified
       remediated. At dod_check that reads as "no governing record, old gate still failing".
     remediation_target: specification
     fix: >-
-      Add a decisions entry naming TDR-0017 for DEC-3, and replace the blocker entry with
+      Add a decisions entry naming TDR-0021 for DEC-3, and replace the blocker entry with
       the iteration-2 verdict state once these findings are addressed (the iteration-1
       record remains the audit trail).
 
@@ -275,13 +275,13 @@ verification_notes:
     - "queue list data.leases[] carries repository/ref/leaseId/holder/scope (contracts/queue.ts:572-582); queue add and queue release --holder are valid grammar (commands/queue.ts:381-400, 431-456)."
     - "The probe brand derivation is real: stateDirectory = homeDirectory/brand.stateDirectoryName (production.ts:233); dotDir + '-state' (branding/index.ts:78,128); user config under $XDG_CONFIG_HOME/.<name>/config.yaml and project-committed under <root>/.<name>/config.yaml, project-local config.local.yaml (adapters/src/file/config-source.ts:54-59,162,178)."
     - "packages/*/dist and *.tsbuildinfo are gitignored (.gitignore:13-15); git check-ignore confirms both."
-    - "The working tree currently carries an untracked TDR-0017, which is the concrete evidence for finding N1."
+    - "The working tree currently carries an untracked TDR-0021, which is the concrete evidence for finding N1."
     - "TC-PORT-001 compares the contracts export surface in both directions against tests/fixtures/ports/v1-contract-inventory.json (84-109,134-136); no generator script exists, so the fixture is hand-maintained."
     - "content-inventory pins exported variables of core/src/contracts/dispatch.ts to a fixed allowance list (466-…, 2166-2184) and inventories only packages sources, so new test files need no registration."
     - "Config validation returns on the credentialRef branch before the unknown-key check (config/harness.ts:123-133); the catalog entry shape is at catalog.ts:276-284; the builder's single projection point is domain/harness-spawn-env.ts:44-66."
     - "Every HARNESS_MODEL/HARNESS_SMALL_MODEL occurrence in delivered code/tests/doc-spec is in a phase scope or the phase-7 handoff (defaults.ts, default.resolved.json, spawn-env.ts, queue production harness, dispatch-composition.test.ts, harness-config.test.ts, harness-mutants.test.ts, feature-config-layer.md)."
     - "TC-RELEASE-001 counts untracked changesets via git ls-files --others, so the gate can pass before the P4 commit (privacy-release.test.ts:19-38); validateChangeset pins five minor packages and a non-empty body (70-86)."
-    - "Commit staging locale-sorts the include list (commit-staging.ts:72), takes topPath from include[0] (commit-act.ts:289), excludes out-of-scope untracked files as stray (62-66), and TRACKER_REF rejects TDR-0017 as invented (commit-message.ts:21,123-129)."
+    - "Commit staging locale-sorts the include list (commit-staging.ts:72), takes topPath from include[0] (commit-act.ts:289), excludes out-of-scope untracked files as stray (62-66), and TRACKER_REF rejects TDR-0021 as invented (commit-message.ts:21,123-129)."
     - "tests/types/tsconfig.json compiles ./**/*.type-test.ts under pnpm typecheck, so the two new type tests are actually compiled; tests/types/dispatch-contract.type-test.ts makes no assertion on DispatchEnvelopeData['error'], so the DM-3 retype is safe."
     - "tests/structure/cli-edge-seam.test.ts:545 pins which command files declare humanText, not the type arity, and no test enumerates packages/cli/src/index.ts exports, so DM-4 moves no delivered pin."
   traceability:
@@ -290,8 +290,8 @@ verification_notes:
     phase_ownership: "29/29 ACs and 29/29 TCs owned exactly once (P1 14+16, P2 2+2, P3 11+8, P4 2+3)."
     gaps: "Matrix complete; the residual defects are two unsatisfiable E2E assertions (N1, N2) and one unowned delivered inventory surface (N3)."
   decisions_routing:
-    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; N6 asks pm-notes to record TDR-0017 as the governing record for DEC-3."
-    system: "DEC-3 is governed by TDR-0017 (status Proposed; owner acceptance at PR review). No new record is required before delivery."
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; N6 asks pm-notes to record TDR-0021 as the governing record for DEC-3."
+    system: "DEC-3 is governed by TDR-0021 (status Proposed; owner acceptance at PR review). No new record is required before delivery."
     needs_human_input: "none; no pause flag raised."
   forbidden_edits: >-
     This pass modified no spec, test-plan, plan, or source file and made no commit. It

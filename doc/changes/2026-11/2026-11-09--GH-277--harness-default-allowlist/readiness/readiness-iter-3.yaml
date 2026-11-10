@@ -12,7 +12,7 @@ artifact_set:
   plan: chg-GH-277-plan.yaml (delivery.plan.v1; plan validate verdict=valid, readyForDevelopment=true, tier=full)
   pm_notes: chg-GH-277-pm-notes.yaml
   ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
-  governing_decision: "doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
 
 verdict_basis: >-
   NOT_READY on one major cross-artifact contradiction. All three iteration-2 blocking
@@ -54,18 +54,18 @@ iteration_2_verification:
     status: FIXED
     evidence: >-
       test plan 1374 (STATUS_BEFORE capture), 1368-1373 (baseline-not-emptiness comment naming
-      untracked TDR-0017, the new changeset, and the pending test-plan edit), 1529-1542 (step 8
+      untracked TDR-0021, the new changeset, and the pending test-plan edit), 1529-1542 (step 8
       asserts STATUS_AFTER equality then HEAD equality), 1297 and 1300 (TC-HDA-101 steps 1 and 4),
       1307/1312 (expected outcome and rationale), 80 (§1.4 row 12), 1565-1566 (pass/fail),
       1696 (§7.2), 1877/1915 (§10); plan 336-349 (P4 summary) and 364-369 (P4 doneArtifacts).
-      Probe: `git status --porcelain` prints only `?? doc/decisions/TDR-0017-…md`; .gitignore:2,14,15
+      Probe: `git status --porcelain` prints only `?? doc/decisions/TDR-0021-…md`; .gitignore:2,14,15
       exclude tmp/, packages/*/dist/, *.tsbuildinfo, so the step-0 pnpm build cannot move the status.
   - id: B
     subject: "DoD-6 required 'mutates no file' while step 0 runs pnpm build in the worktree"
     status: FIXED
     evidence: >-
       spec 430 now states the achievable claim: git status --porcelain after equals the pre-run
-      baseline (including expected uncommitted P4 artifacts such as the untracked TDR-0017 record
+      baseline (including expected uncommitted P4 artifacts such as the untracked TDR-0021 record
       and the new changeset), HEAD unchanged, and only gitignored build outputs rewritten
       (packages/*/dist, *.tsbuildinfo). AC-F8-2 unchanged at spec 407. Matches test plan 1300, 1307,
       1529-1533 and plan 345-347.
@@ -103,7 +103,7 @@ iteration_2_verification:
     subject: "pm-notes decisions empty and blocker entry stale (iteration-2 minor)"
     status: FIXED
     evidence: >-
-      chg-GH-277-pm-notes.yaml:17-34 carries DEC-1..DEC-5 with DEC-3 "Governed by TDR-0017";
+      chg-GH-277-pm-notes.yaml:17-34 carries DEC-1..DEC-5 with DEC-3 "Governed by TDR-0021";
       72-82 records the iteration-2 verdict.
   - id: A1
     subject: "Phase-7 doc handoff narrower than the DM-4 meaning change (iteration-2 A1)"
@@ -277,7 +277,7 @@ verification_notes:
       (commit-staging.ts:72) and topPath is staging.include[0].path (commit-act.ts:289); tracked
       pending work is always staged (commit-staging.ts:58-62). TRACKER_REF (commit-message.ts:21)
       requires an uppercase ref-shaped token, so .changeset/gh-277-… is safe as the first include
-      while TDR-0017 would be rejected. TC-RELEASE-001 counts untracked changesets
+      while TDR-0021 would be rejected. TC-RELEASE-001 counts untracked changesets
       (privacy-release.test.ts:23), requires exactly one (145), and validateChangeset (70-86) pins five
       minor packages plus a non-empty body and rejects testkit.
     - >-
@@ -285,8 +285,8 @@ verification_notes:
       "layer=defaults …" originLabel (commands/config.ts:96-155; config/provenance.ts:20-24), which is
       what §6.3 step 1b reads.
   decisions_routing:
-    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec and the pm-notes decisions list; DEC-3 remains governed by TDR-0017."
-    system: "No new decision record required before delivery; TDR-0017 (Proposed) is the standalone record for DEC-3 and owner acceptance happens at PR review."
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec and the pm-notes decisions list; DEC-3 remains governed by TDR-0021."
+    system: "No new decision record required before delivery; TDR-0021 (Proposed) is the standalone record for DEC-3 and owner acceptance happens at PR review."
     needs_human_input: "none; no pause flag raised."
   forbidden_edits: >-
     This pass modified no spec, test-plan, plan, source, or pm-notes file and made no commit. It wrote

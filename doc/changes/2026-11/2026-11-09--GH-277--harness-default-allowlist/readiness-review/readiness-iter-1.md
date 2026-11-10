@@ -5,7 +5,7 @@ Work Item: GH-277
 Date: 2026-11-09
 Pause Required: no
 
-> Adversarial Definition-of-Ready pass over `chg-GH-277-spec.md` v1.1, `chg-GH-277-test-plan.md` v1.1, `chg-GH-277-plan.yaml`, `chg-GH-277-pm-notes.yaml`, the GH-277 ticket, `TDR-0017`, and the delivered source named by the artifacts. This pass modified no spec, test-plan, plan, or source file.
+> Adversarial Definition-of-Ready pass over `chg-GH-277-spec.md` v1.1, `chg-GH-277-test-plan.md` v1.1, `chg-GH-277-plan.yaml`, `chg-GH-277-pm-notes.yaml`, the GH-277 ticket, `TDR-0021`, and the delivered source named by the artifacts. This pass modified no spec, test-plan, plan, or source file.
 
 ## Facet Summary
 - spec_completeness: FAIL
@@ -81,9 +81,9 @@ Ticket acceptance coverage is complete (all five bullets trace to ACs through th
     Suggested fix: Add `tests/checks/harness-mutants.test.ts` to phase 1's gate list as a run-unchanged regression (and to the test plan's §6.4 regression runs), noting that its string anchors on `harness-spawn-env.ts` must survive the optional branch.
 
 12. [minor] cross_artifact_consistency — `chg-GH-277-pm-notes.yaml` OQ-1 (lines 19–29) and `decisions: []` (line 17); `chg-GH-277-spec.md` OQ-1 (line 340), DEC-1..DEC-6 (347–352).
-    Gap: The spec records OQ-1 as "Resolved 2026-11-09 by `TDR-0017`", while pm-notes still carries OQ-1 as "Decision needed: consult @decision-advisor … recommended resolution is a short TDR or an explicit owner waiver", and `decisions: []`. The stale entry will read as an unresolved blocking question at `dod_check` and contradicts the spec's decision log.
+    Gap: The spec records OQ-1 as "Resolved 2026-11-09 by `TDR-0021`", while pm-notes still carries OQ-1 as "Decision needed: consult @decision-advisor … recommended resolution is a short TDR or an explicit owner waiver", and `decisions: []`. The stale entry will read as an unresolved blocking question at `dod_check` and contradicts the spec's decision log.
     Suggested remediation target phase: specification
-    Suggested fix: Update pm-notes OQ-1 to `Resolved 2026-11-09 by TDR-0017 (see spec §14 OQ-1, §15 DEC-3)` and add a `decisions` entry naming TDR-0017 as the governing system record.
+    Suggested fix: Update pm-notes OQ-1 to `Resolved 2026-11-09 by TDR-0021 (see spec §14 OQ-1, §15 DEC-3)` and add a `decisions` entry naming TDR-0021 as the governing system record.
 
 ## Advisories (non-blocking)
 
@@ -91,7 +91,7 @@ Ticket acceptance coverage is complete (all five bullets trace to ACs through th
 - **A2 (nit) — `spec_completeness`**: The 256-character detail bound (NFR-6, AC-F5-5) has no declared owning module or constant name, unlike `boundLastMessage`/`DISPATCH_MAX_LAST_MESSAGE_CHARS` for `last_message` (`packages/core/src/app/dispatch.ts:178-182`). Name the enforcing module and constant in DM-3/§16 so TC-HDA-034 can read it rather than restate it.
 - **Verified as consistent (no finding):**
   - **DEC-2 (drop, no `OC_ADOS_*` mapping)** is within the ticket's "map or drop" latitude and matches delivered code: no production consumer of `HARNESS_MODEL`/`HARNESS_SMALL_MODEL` exists (only `packages/core/src/config/defaults.ts:59-60`, fixtures, and tests), and `opencode` resolves its own model configuration.
-  - **The TDR/changeset ordering constraint is correctly encoded.** `doc/decisions/TDR-0017-…md` is untracked while its row is already committed at `doc/decisions/00-index.md:43`; the `commit` primitive stages untracked files only inside a declared scope (`packages/core/src/domain/commit-staging.ts:63-66`) and sorts the include list (`:72`), so `.changeset/gh-277-…md` is `topPath` (`commit-act.ts:289`); the deterministic fallback subject would embed `TDR-0017`, which `TRACKER_REF = /\b[A-Z][A-Z0-9]*-\d+\b/g` (`commit-message.ts:21`) rejects as an invented reference (`:123-129`, `commit-act.ts:214-231`). Phase 4's summary carries no ref-shaped token.
+  - **The TDR/changeset ordering constraint is correctly encoded.** `doc/decisions/TDR-0021-…md` is untracked while its row is already committed at `doc/decisions/00-index.md:43`; the `commit` primitive stages untracked files only inside a declared scope (`packages/core/src/domain/commit-staging.ts:63-66`) and sorts the include list (`:72`), so `.changeset/gh-277-…md` is `topPath` (`commit-act.ts:289`); the deterministic fallback subject would embed `TDR-0021`, which `TRACKER_REF = /\b[A-Z][A-Z0-9]*-\d+\b/g` (`commit-message.ts:21`) rejects as an invented reference (`:123-129`, `commit-act.ts:214-231`). Phase 4's summary carries no ref-shaped token.
   - **`TC-RELEASE-001` is satisfied by the plan.** One changeset in phase 4 scope, exactly the five fixed packages at `minor`, non-empty body, no pre-existing changeset touched; the zero-changeset escape requires an empty `packages/` diff (`tests/checks/privacy-release.test.ts:136-143`), which this change does not have.
   - **E2E bounding** (once finding 4 is fixed) is real: disposable clone outside the worktree, `pgrep -P` child scoping, ≤60 s acquisition + 15 s settle, ≤180 s total, explicit STOP-vs-FAIL rules.
   - **All 29 ACs and all 29 TCs are owned by exactly one phase** (14+2+11+2 and 16+2+8+3 both sum to 29), and every ticket acceptance bullet maps to ACs.

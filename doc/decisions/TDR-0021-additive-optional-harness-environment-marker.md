@@ -1,5 +1,5 @@
 ---
-id: TDR-0017
+id: TDR-0021
 decision_type: tdr
 status: Proposed
 created: 2026-11-09
@@ -72,7 +72,7 @@ links:
   roadmap_items: ["M1-S9", "M1-S11"]
 ---
 
-# TDR-0017: Additive Optional Marker on Declared Harness Environment Variables
+# TDR-0021: Additive Optional Marker on Declared Harness Environment Variables
 
 ## Context
 

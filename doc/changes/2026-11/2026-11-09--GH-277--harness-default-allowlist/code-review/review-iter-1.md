@@ -46,7 +46,7 @@ This makes `pnpm test` / `pnpm check` red (NFR-9, DoD-12) and fails CI jobs
 
 **Fix:** reword both lines to avoid the `ADOS_` token (for example, "no ambient
 provider-model environment variable is mapped or forwarded"). Keep the exact
-`OC_ADOS_MAIN_MODEL`/`OC_ADOS_SMALL_MODEL` names in `doc/decisions/TDR-0017`
+`OC_ADOS_MAIN_MODEL`/`OC_ADOS_SMALL_MODEL` names in `doc/decisions/TDR-0021`
 (allowlisted) and the change artifacts (excluded), or add a sanctioned allowlist entry.
 Re-run `bun run scripts/checks/forbidden-literals.ts` and the aggregate gate.
 

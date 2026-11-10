@@ -30,7 +30,7 @@ remediation regression — the flake predates `bf5c918e` — but it blocks a rel
 | F-2 (low) unused `optional-entry.yaml` fixture | **FIXED** | `tests/behaviour/harness-config.test.ts:542` now references it via `resolveFixture("optional-entry.yaml")` and asserts the resolved marker `{ name: SYNTHETIC_OPTIONAL_VARIABLE, optional: true }`. |
 | F-3 (low) default-spawn fixture used system `tmpdir()` | **FIXED** | `tests/fixtures/harness/default-spawn.ts` now builds `TEMP_ROOT = join(process.cwd(), "tmp", "tmpdir")` (mkdir before `mkdtemp`), matching test-plan §6.2; plain `bun test` and the gated run both root repo-locally. |
 | F-4 (low) `detailOf` clamp untested | **FIXED** | New dispatch-path case injects a `HarnessFailure` with a 300-char `field` through a real `dispatch` invocation and asserts single-line, `<= DISPATCH_MAX_ERROR_DETAIL_CHARS`, prefix intact and `field.length < 300` — genuinely exercises the clamp, not a hand-built object. |
-| F-5 (low) P4 evidence missing commit hash | **FIXED** | `chg-GH-277-pm-notes.yaml:237` now reads "Plan phase 4 complete (commit e7699431 — changeset, TDR-0017, and the test-plan execution log)". Plan phases 1–4 all name their commits (014fdd6, 55ee7c3, 162fa7ec, e7699431). |
+| F-5 (low) P4 evidence missing commit hash | **FIXED** | `chg-GH-277-pm-notes.yaml:237` now reads "Plan phase 4 complete (commit e7699431 — changeset, TDR-0021, and the test-plan execution log)". Plan phases 1–4 all name their commits (014fdd6, 55ee7c3, 162fa7ec, e7699431). |
 
 ## Plan and artifact compliance
 

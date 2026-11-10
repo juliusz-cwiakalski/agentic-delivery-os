@@ -12,7 +12,7 @@ artifact_set:
   plan: chg-GH-277-plan.yaml
   pm_notes: chg-GH-277-pm-notes.yaml
   ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
-  governing_decision: "doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+  governing_decision: "doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
 verdict_basis: >-
   NOT_READY. Ticket acceptance coverage, the 29-AC and 29-TC matrices, and most
   source anchors hold up under probe, and the TDR/changeset ordering constraint and
@@ -256,13 +256,13 @@ findings:
       chg-GH-277-pm-notes.yaml OQ-1 (19-29) and decisions (17); chg-GH-277-spec.md OQ-1 (340),
       DEC-1..DEC-6 (347-352)
     gap: >-
-      The spec records OQ-1 as resolved by TDR-0017 while pm-notes still carries it as
+      The spec records OQ-1 as resolved by TDR-0021 while pm-notes still carries it as
       "Decision needed" with an open recommendation and decisions is empty. The stale entry
       reads as an unresolved blocking question at dod_check.
     remediation_target: specification
     fix: >-
-      Set pm-notes OQ-1 to resolved by TDR-0017 with the spec cross-reference and add a
-      decisions entry naming TDR-0017.
+      Set pm-notes OQ-1 to resolved by TDR-0021 with the spec cross-reference and add a
+      decisions entry naming TDR-0021.
 
 advisories:
   - id: A1
@@ -310,7 +310,7 @@ verification_notes:
     - "12-site node:child_process allowlist present and includes packages/adapters/src/host/index.ts (harness-imports.test.ts:26-40)."
     - "Delivered spawn-failure golden envelope has exactly six error fields (tests/fixtures/dispatch/golden/errors/spawn-failed.json); it is the only such golden."
     - "tests/types/tsconfig.json is part of pnpm typecheck; all 'edit' paths in the test plan exist and all 'add' paths are absent."
-    - "TDR-0017 is untracked while its doc/decisions/00-index.md:43 row is committed; commit staging sorts include paths and stages untracked files only inside scope, and TRACKER_REF rejects TDR-0017 as an invented reference — the plan's ordering constraint is correctly encoded."
+    - "TDR-0021 is untracked while its doc/decisions/00-index.md:43 row is committed; commit staging sorts include paths and stages untracked files only inside scope, and TRACKER_REF rejects TDR-0021 as an invented reference — the plan's ordering constraint is correctly encoded."
     - "TC-RELEASE-001 requires one added five-package minor changeset with a non-empty body and no pre-existing edit; the zero-changeset escape requires an empty packages/ diff (privacy-release.test.ts:42-49,70-86,133-175)."
   traceability:
     ticket_acs_covered: "All five ticket acceptance bullets map to ACs via spec §17's traceability table (F1-1/F2-1/F8-1; F1-2; F3-1/F5-1/F5-3; F7-1/F7-2/F7-3; F5-2/F5-3/F7-4)."
@@ -318,8 +318,8 @@ verification_notes:
     phase_ownership: "29/29 ACs and 29/29 TCs owned exactly once (P1 14+16, P2 2+2, P3 11+8, P4 2+3)."
     gaps: "Matrix complete; three assertion defects (F3, F7, F8) and one wording defect (F9) would otherwise surface during delivery."
   decisions_routing:
-    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; F12 asks pm-notes to record the OQ-1 resolution and TDR-0017."
-    system: "DEC-3 is already governed by TDR-0017 (status Proposed; owner acceptance at PR review). No additional record is required before delivery; a decision-critic verdict on TDR-0017 is advisable before PR finalization."
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; F12 asks pm-notes to record the OQ-1 resolution and TDR-0021."
+    system: "DEC-3 is already governed by TDR-0021 (status Proposed; owner acceptance at PR review). No additional record is required before delivery; a decision-critic verdict on TDR-0021 is advisable before PR finalization."
     needs_human_input: "none; no pause flag raised."
   forbidden_edits: >-
     This pass modified no spec, test-plan, plan, or source file and made no commit. It
