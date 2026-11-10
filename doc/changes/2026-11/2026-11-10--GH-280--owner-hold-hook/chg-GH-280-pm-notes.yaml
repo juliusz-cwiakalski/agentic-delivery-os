@@ -5,9 +5,9 @@ branch: feat/GH-280/owner-hold-hook
 base_branch: main-tools
 phases:
   clarify_scope: { started: null, completed: 2026-11-10T12:55:22.221Z }
-  specification: { started: null, completed: 2026-11-10T13:23:03.522Z }
-  test_planning: { started: null, completed: 2026-11-10T13:27:29.532Z }
-  delivery_planning: { started: null, completed: 2026-11-10T13:38:42.779Z }
+  specification: { started: null, completed: 2026-11-10T13:57:15.946Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -94,6 +94,61 @@ decisions:
       (<source>)[: <reason>]`) rather than replacing the healthy text. The
       existing detail bound remains the outer limit."
     date: 2026-11-10
+  - text: "D12 (PM-decided, DoR-1 finding 1): the hold marker lives in the directory
+      the production store identity actually uses,
+      `<home>/<brand.stateDirectoryName>/owner-hold`. The design does NOT claim
+      or use `<PREFIX>_STATE_DIR`, and the shell example does NOT offer
+      ADOS_OWNER_HOLD_FILE, because neither is honoured by the production
+      queue/dispatch/status/doctor store today. Relocating state is out of scope
+      for GH-280. The shell example's default is the shipped product's
+      `$HOME/.ados-state/owner-hold`; adopters who rename the product edit the
+      example. Correct every spec/test-plan/plan claim that says otherwise."
+    date: 2026-11-10
+  - text: "D13 (PM-decided, DoR-1 finding 2): `queue claim` with no ref must also
+      refuse with `queue.precondition.unmet` and reason token `owner-hold`. The
+      claim composition gates on the hold before ref selection, so a held claim
+      never falls through to `no-eligible-action`. Add a no-ref test case and
+      use `queue claim` in the E2E procedure."
+    date: 2026-11-10
+  - text: "D14 (PM-decided, DoR-1 findings 3-4): the daemon half of the acceptance
+      is a conditional guarantee, not an enforced production path. Production
+      daemon supervision is already a delivered residual and is not a claim
+      source. The spec/test plan/change record must say: any composed
+      supervision cycle that derives its next action from the held scheduling
+      pass receives no action; the production daemon entry remains the
+      resident-daemon spec's existing residual. The daemon test must derive its
+      seam from the held schedule (not assert a tautological undefined) and the
+      residual is recorded. `daemon-compose.ts` is not added to scope."
+    date: 2026-11-10
+  - text: "D15 (PM-decided, DoR-1 finding 5): the status member is evidence-level
+      `providers.evidence.ownerHold` (the `credentialPrerequisite` precedent),
+      not a sibling of `chain`/`entries`/`parks`. Align spec F-5.1/DM-7, the
+      test plan's assertions/A-T1, and the plan pins/verification to that one
+      location."
+    date: 2026-11-10
+  - text: "D16 (PM-decided, DoR-1 finding 6): the closed-set guarantee must be
+      asserted, not inferred from a fixture edit. Extend
+      `queue-scheduling-contract.test.ts` with exact two-way equality for
+      `QUEUE_LANE_IDLE_REASONS` and `QUEUE_BLOCKING_REASONS` against
+      `closed-sets.json`, update the test plan's mutation row, and name the
+      assertion in plan phase 2 verification."
+    date: 2026-11-10
+  - text: "D17 (PM-decided, DoR-1 finding 7): `queue ready` is unchanged and does
+      not report the hold. Narrow NG-12/NFR-14 to the surfaces that do report it
+      (queue list/plan/lanes, status, doctor) and state the omission
+      explicitly."
+    date: 2026-11-10
+  - text: "D18 (PM-decided, DoR-1 finding 10): the doctor hold segment must survive
+      the detail clamp. When appending would exceed DOCTOR_MAX_DETAIL_CHARS,
+      truncate the existing detail to fit and keep the whole hold segment; never
+      truncate the hold segment mid-word or drop it. Add a near-bound test
+      case."
+    date: 2026-11-10
+  - text: "D19 (PM-decided, DoR-1 finding 16): a held dispatch/claim is realized as
+      a classified user-validation refusal (`queue.precondition.unmet`, exit 1),
+      not an internal wait. The guide and AC state that callers wanting deferral
+      semantics must treat the `owner-hold` token as wait/do-not-abort."
+    date: 2026-11-10
 open_questions: []
 blockers: []
 notes:
@@ -137,5 +192,26 @@ notes:
       four open ticket choices were resolved as recorded PM decisions rather
       than owner-confirmed. Each is reversible and additive; they are surfaced
       at the PR gate for owner acceptance."
+    type: retro
+    date: 2026-11-10
+  - text: "DoR iteration 1: NOT_READY (readiness-review/readiness-iter-1.md). 1
+      critical, 5 major, 6 minor, 4 nit. Blocking: (F1) the shell advertised
+      ADOS_STATE_DIR/ADOS_OWNER_HOLD_FILE marker paths the production store does
+      not honour, re-creating the shell-defers/engine-claims split; (F2) no-ref
+      `queue claim` short-circuits as no-eligible-action and never names the
+      hold; (F3-F4) the production resident daemon is not a claim source, so the
+      daemon guarantee and its test were vacuous; (F5) the status member
+      location was stated at section level and evidence level; (F6) the
+      one-reason closed-set pin was unasserted. Remediation decisions D12-D19
+      recorded; specification, test_planning, and delivery_planning reopened."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the first artifact pass trusted the GH-238 review note that
+      ADOS_STATE_DIR was wired through the production resolver; the readiness
+      gate found production.ts:282 and mcp/serve.ts:88 hardcode the home state
+      dir, and only the audit store uses the resolver. The spec's critical
+      finding came from asserting a current-truth coupling without reading the
+      production composition. Future intake should verify every state/config
+      coupling at the composition site, not the resolver unit."
     type: retro
     date: 2026-11-10
