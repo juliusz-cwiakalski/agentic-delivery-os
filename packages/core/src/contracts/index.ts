@@ -1273,6 +1273,22 @@ export {
   type OwnerGateUnknownAgeReason,
   type OwnerGateWaiverAuthorization,
 } from "./owner-gate-sla.js";
+// The owner-hold vocabulary (GH-280 F-1, DM-1, DM-2, DM-9, DEC-7, D12): the
+// brand-derived environment suffix, the fixed marker name, the reason and poll
+// bounds, the two sources, the marker outcome, and the discriminated fact.
+export {
+  OWNER_HOLD_DEFAULT_POLL_SECONDS,
+  OWNER_HOLD_ENV_SUFFIX,
+  OWNER_HOLD_MARKER_NAME,
+  OWNER_HOLD_MAX_MARKER_BYTES,
+  OWNER_HOLD_MAX_POLL_SECONDS,
+  OWNER_HOLD_MAX_REASON_CHARS,
+  OWNER_HOLD_MIN_POLL_SECONDS,
+  OWNER_HOLD_SOURCES,
+  type OwnerHoldFact,
+  type OwnerHoldMarkerOutcome,
+  type OwnerHoldSource,
+} from "./owner-hold.js";
 // The `delivery.plan.v1` vocabulary (GH-226 DM-1..DM-8): plan document, scope,
 // artifacts, leases, interactions, tier, verdict payloads, and port types.
 export {

@@ -47,6 +47,13 @@ export {
 } from "./plan-artifact.js";
 export { readLocalPmContext } from "./pm-context.js";
 export {
+  nodeOwnerHoldMarkerFileSystem,
+  ownerHoldMarkerPath,
+  readOwnerHoldMarker,
+  type OwnerHoldMarkerFileSystem,
+  type OwnerHoldMarkerReadInput,
+} from "./owner-hold-marker.js";
+export {
   nodePmNotesFileSystemFacts,
   type PmNotesEntryEdit,
   type PmNotesFileSystemFacts,

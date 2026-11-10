@@ -701,6 +701,26 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "OWNER_GATE_UNKNOWN_AGE_REASONS",
     "OWNER_GATE_WAIVER_AUTHORIZATIONS",
   ],
+  "core/src/contracts/owner-hold.ts": [
+    "OWNER_HOLD_DEFAULT_POLL_SECONDS",
+    "OWNER_HOLD_ENV_SUFFIX",
+    "OWNER_HOLD_MARKER_NAME",
+    "OWNER_HOLD_MAX_MARKER_BYTES",
+    "OWNER_HOLD_MAX_POLL_SECONDS",
+    "OWNER_HOLD_MAX_REASON_CHARS",
+    "OWNER_HOLD_MIN_POLL_SECONDS",
+    "OWNER_HOLD_SOURCES",
+  ],
+  "core/src/domain/owner-hold.ts": [
+    "ownerHoldEnvironmentVariableName",
+    "resolveOwnerHoldFact",
+    "sanitizeOwnerHoldReason",
+  ],
+  "adapters/src/file/owner-hold-marker.ts": [
+    "nodeOwnerHoldMarkerFileSystem",
+    "ownerHoldMarkerPath",
+    "readOwnerHoldMarker",
+  ],
   "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
   "core/src/contracts/blockers.ts": [
     "BLOCKER_ANSWER_CHANNEL_BY_TYPE",

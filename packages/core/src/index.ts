@@ -780,6 +780,12 @@ export {
   spendTruncationWarning,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
+// The pure owner-hold resolver (GH-280 F-1, DM-1, D12).
+export {
+  ownerHoldEnvironmentVariableName,
+  resolveOwnerHoldFact,
+  sanitizeOwnerHoldReason,
+} from "./domain/owner-hold.js";
 export {
   boundWatchLine,
   createWatchProjection,
