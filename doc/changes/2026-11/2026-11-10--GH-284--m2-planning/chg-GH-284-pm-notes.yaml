@@ -1,0 +1,118 @@
+change_id: GH-284
+title: "docs: plan M2 - engine-first operations, multi-repo workstations,
+  evidence inspection, telemetry"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-10T18:55:00Z", completed: 2026-11-10T17:50:30.662Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Intake state: GH-284 open with label `change` only, zero comments; branch
+      docs/GH-284/m2-planning exists locally with zero unique commits (HEAD ==
+      origin/main-tools fab46636), worktree clean; no PR open or closed for the
+      branch and none matching GH-284. Fresh start: no resume merge, no review
+      threads."
+    date: "2026-11-10"
+  - text: "Delivery mode: autonomous. The session entry point asked for end-to-end
+      delivery of exactly GH-284, PR creation included, with merge left to the
+      owner."
+    date: "2026-11-10"
+  - text: "PM decision (M2-S17 in backlog): the Acceptance section names
+      'M2-S11..S16', but the ticket also carries a normative 'M2-S17
+      Provider-aware peak pausing (owner-hard requirement)' section with story
+      text, ACs, dependencies, and blueprint additions. The explicit story
+      section governs; backlog.md gains M2-S11 through M2-S17, and the
+      Acceptance line is read as shorthand for the add-stories set, not as an
+      exclusion."
+    date: "2026-11-10"
+  - text: "PM decision (daemon command wiring): verification shows
+      `createDaemonCommandDefinition` is composed into the CLI edge
+      (packages/cli/src/edge.ts:3574-3576) only when `options.daemon` is
+      supplied, and the production entrypoint does not supply it — root `--help`
+      omits `daemon`, `daemon --help` fails with `unknown flag \"--help\"`,
+      `daemon status` fails with `unexpected argument \"status\"`. The ticket's
+      claim is accurate. Chosen resolution: correct the page (docs-only change);
+      wiring the command is product work outside this ticket's scope and gets
+      attributed to the M2 man-page/entrypoint delta note rather than to an
+      invented story."
+    date: "2026-11-10"
+  - text: "PM decision (header reconciliation breadth): the ticket names four stale
+      pages (doctor M1-S3, board M1-S5, mcp M1-S7, state M1-S2). A read of all
+      25 m1 command pages shows the same 'M1 planned' drift on merge.md (M1-S4),
+      verify-deploy.md (M1-S4), watchdog.md (M1-S1), blockers.md (M1-S16), and
+      retro.md (M1-S8). Acceptance says 'Contract doc headers reconciled with
+      delivered reality', so reconciliation covers every page whose Status
+      contradicts a delivered M1 story, not only the four examples. Pages that
+      stay planned are re-pointed at their M2/M3 story."
+    date: "2026-11-10"
+  - text: "PM decision (status.md history handling): follow the GH-266 precedent —
+      the existing dated sections are historical records and are not rewritten;
+      a new dated section records M1 delivery (23/23) and the M2 planning state,
+      and the superseded forward-looking statements get explicit pointers."
+    date: "2026-11-10"
+  - text: "PM decision (doc distribution marker): doc/planning/** is outside the
+      closed scan set of scripts/.tests/test-doc-distribution.sh and no existing
+      M1 pack document carries an `ados_distribution` marker, so the new M2 pack
+      documents follow the pack convention and add no marker. The AGENTS.md
+      required-marker list (doc/guides, doc/templates, standalone docs) is the
+      operative rule; pm-instructions.md's broader 'any doc under doc/' wording
+      is narrowed by it."
+    date: "2026-11-10"
+  - text: "PM decision (blueprint index registration): the ticket asks for a new
+      milestones/m2/ pack including its own README.md, and milestones/README.md
+      is the pack index ('Index' table listing M0 and M1). Registering the M2
+      pack there is required for the pack to be discoverable, so the change
+      touches that index as well as the files the ticket enumerates."
+    date: "2026-11-10"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope read against current system truth: doc/spec/features/ already
+      carries delivered specs for the surfaces this planning touches
+      (feature-doctor.md, feature-state-layer.md, feature-mcp-surface.md,
+      feature-resident-daemon.md, feature-dispatch-engine.md, feature-spend.md,
+      feature-scheduling-engine.md, feature-provider-profiles.md,
+      feature-session-lifecycle-economics.md, feature-audit-ledger.md). Planning
+      docs that call those surfaces 'M1 planned' therefore contradict
+      current-truth specs — the drift the ticket asks to reconcile. No product
+      behavior changes in this change, so system_spec_update is expected to be a
+      verified no-op; if the doc-syncer finds the specs themselves incomplete it
+      owns the fix under its always-resolve rule."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Repository facts recorded for the artifact authors: milestones/README.md
+      defines the pack contents table (architecture, journeys, man-page,
+      commands/, contracts, interactions, test-scenarios) and the conventions
+      (bare command names with `<binary>` prefix, planned-until-exit status
+      semantics, mermaid C4 levels, no private content); the M2 pack in the
+      ticket deviates deliberately (README.md added, no
+      man-page.md/interactions.md named) and the ticket's explicit list governs.
+      milestones/m2/ does not exist yet. m1/ has no README.md."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Repo gate facts: `pnpm check` is the aggregate gate (lint, format:check,
+      typecheck, test, boundaries, prompt-conformance, help-guide-coverage,
+      exports-parity); `scripts/.tests/test-doc-distribution.sh` is a separate
+      CI guard; a mermaid-validation gate exists from GH-110, so new diagrams in
+      milestones/m2/architecture.md must parse. `packages/*/dist` was absent in
+      this fresh checkout and `pnpm build` is required before any `delivery-os`
+      command works — recorded so later phases do not mistake the import error
+      for a product defect."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Clarify-scope verdict: no ticket comment and no human hold required. The
+      ticket is unusually complete — it supplies story text, ACs, dependencies,
+      amendments, file targets, and a fallback instruction for its one open
+      verification ('either wire it or correct the page') — and every ambiguity
+      found resolves to a PM decision recorded above rather than a requirement
+      gap."
+    type: "decision"
+    date: "2026-11-10"
