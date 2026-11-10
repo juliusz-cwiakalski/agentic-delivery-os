@@ -235,6 +235,21 @@ An entry with an active provider park has availability `parked`; the matching ac
 
 Entries rank `parked` before `unverified`, then enabled before disabled, then name, then class. Active parks rank by soonest expiry, parks without an expiry last, then chain before provider, then name. Both lists are capped at eight.
 
+An active owner hold adds one optional **evidence-level** member,
+`providers.evidence.ownerHold`, a sibling of `sources[]` exactly like
+`credentialPrerequisite`: `{ source, reason? }`, present only while the hold is
+active. It is attached to the derived evidence record after derivation, so it is
+visible across `observed`, `degraded`, `unknown`, and `unavailable` and changes
+no state, count, source, reason, truncation, finding, entry, or park. Human mode
+appends `| owner-hold` or `| owner-hold: <reason>` to the existing providers line
+inside the delivered clamp, read from `providers.evidence.ownerHold`. The nine
+sections, the five states, the ten evidence sources, the twenty-reason set, and
+the schema version are unchanged; no new section, state, source, reason, or
+finding code is added. The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
+marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
+override or store relocation. The CLI and the MCP status runtime compose the same
+reader, so the machine payload is identical.
+
 ### Parked work
 
 The source of truth is the local PM context's `parked_changes` array in the git-ignored `.ai/local/pm-context.yaml`. The collector projects only `workItemRef`, optional `branch`, `changeFolder`, `reason`, and optional `parkedAt`. Free-form notes and unrelated fields are never read. An absent file makes the section `unavailable` with `local-context-missing` and an explicit git-ignored marker. Malformed YAML or a non-array `parked_changes` makes it `unknown` with `local-context-malformed`. An explicit empty array is `observed` with `observed-empty`. An entry without `workItemRef` is item-level unknown. Age is derived only from a present, parseable `parkedAt`; otherwise age is unknown and never fabricated. Parked work is explicitly distinct from a provider park.

@@ -217,8 +217,9 @@
 # TC-HOLDQUEUE-009 (projector here, CLI goldens in phase 5),
 # TC-HOLDEDGE-002 (parity case in phase 3, composition pin in phase 5),
 # TC-HOLDNEG-002 (closed-set, surface, and composition halves declared
-# explicitly), and TC-HOLDNEG-003 (ambient-core half in phase 1, composition
-# half in phase 5). No identifier is dangling or invented: every AC and TC
+# explicitly), TC-HOLDNEG-003 (ambient-core half in phase 1, composition
+# half in phase 5), and TC-HOLDFACT-009 (resolver-surface half in phase 1,
+# composition canary in phase 5). No identifier is dangling or invented: every AC and TC
 # resolves to a row in the spec's acceptance-criteria table or in the test
 # plan's case index.
 #

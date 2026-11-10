@@ -68,6 +68,23 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   and its later children. This does not promise any provider/model binding or
   selected model. Canonical activation, lifecycle, protocol, security, and
   setting details are in [delivery-modes.md](../../guides/delivery-modes.md#optional-pre-iteration-hooks).
+- **Owner hold outranks provider windows (F-8.1):** the second shipped example
+  (`scripts/hooks/pre-opencode-iteration-owner-hold.sh`) keeps deferring every
+  spawn/resume for as long as an owner hold exists. The hold has two equivalent
+  sources — the brand-derived `ADOS_OWNER_HOLD` value and the marker
+  `$HOME/.ados-state/owner-hold` — with environment precedence, a fail-closed
+  unreadable marker, a bounded sanitized reason, and a `300`-second default poll
+  (`1`–`3600`, no fixed iteration cap). The typed engine enforces the same fact:
+  a held pass emits no next action, `owner-hold` is the first lane/blocking
+  reason, claim (with or without a ref, before selection) and dispatch refuse
+  `queue.precondition.unmet` at exit `1`, and the mutating park-recovery pass is
+  skipped so a parked lane does not resume at its provider window. `status`
+  carries the additive evidence-level `providers.evidence.ownerHold` member and
+  `doctor` keeps the provider check `ok` with the `owner-hold` annotation reason
+  and an appended bounded detail. There is **no** new park cause, state record
+  kind, seventh queue-ready condition, tenth status section, status reason,
+  doctor verdict, doctor summary count, or doctor condition; `queue ready` is
+  unchanged and does not report the hold; a mid-flight session is not killed.
 - **Platform-aware verification (F-9, GH-148):** `deliver-ticket.sh` and
   `batch-deliver.sh` auto-detect the tracker platform (GitHub or GitLab) once at
   startup — resolution order: `ADOS_PLATFORM` env var, then the `origin` git

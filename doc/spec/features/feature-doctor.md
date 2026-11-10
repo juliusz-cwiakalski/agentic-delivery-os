@@ -149,6 +149,23 @@ The provider check reads only local evidence: the resolved provider configuratio
 
 The delivered provider-configuration read exposes exactly two tolerant failure reasons: `config-invalid` (a resolver failure carrying a classified `config.*` code) and `provider-chain-unresolved` (a provider-branch validation failure carrying `failureCode: "config.value.invalid"`). Both are provider-check `fail` evidence; neither aborts the run. The check never calls `provider resolve`, never calls `provider quota`, never injects or uses the quota transport, and never evaluates a peak or quota condition.
 
+**Owner-hold amendment.** While an owner hold is active and the provider check
+would otherwise be `ok`, the check stays `ok` and adds exactly one non-failing
+annotation reason, `owner-hold`, immediately after `park-credential-cause` in the
+closed reason set. It carries **no evidence source**, may co-occur with `ok`, and
+is the fourth reason on an otherwise-`ok` provider record at the four-reason
+record cap. The check appends `<existing detail>; owner hold active
+(<source>)[: <reason>]` and adds **no** fix hint, verdict, summary count,
+condition-catalog entry, evidence source, area, or exit change. When the combined
+value would exceed `DOCTOR_MAX_DETAIL_CHARS`, the existing detail is truncated to
+fit and the **whole** hold segment is kept; it is never cut mid-word or dropped.
+A real provider defect keeps its own `fail` or `unreachable` verdict and reason,
+and does not gain `owner-hold`; `status` remains the surface that shows the hold
+in that case. With no active hold, every machine and human byte is unchanged.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
+marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
+override or store relocation.
+
 ### Evidence model
 
 Each check carries a bounded evidence record:

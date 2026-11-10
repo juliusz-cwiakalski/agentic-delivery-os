@@ -244,3 +244,6 @@ notes:
   - text: "Plan phase 5 complete (commit 8702ff1c6d7bb696458daa9b6e2f8a2cad04f42f): the production composition resolves the hold per pass and supplies queue, lanes, claim, watch, status, and doctor; the claim gate runs before ref selection so a no-ref claim refuses owner-hold; dispatch refuses before claiming; held list/plan goldens added; the composition pin and mutation control land. Verification: queue-hold-claim/daemon-watch, queue-cli/watch, daemon-lane-supervision, owner-hold-composition, and all queue goldens 87 pass; error-table-sync + forbidden-literals 123 pass; full pnpm typecheck clean; ambient-globals clean; inactive goldens unchanged. The production resident daemon remains unwired (GAP-T7)."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 6 complete (commit 10237e25295e1cf6a8ab1a346450ffd1ffcb6fb9): the inactive owner-hold example hook with the two-setting contract, fixed marker path, unbounded MAX driver, one bounded reason line, install/uninstall registration, and the hermetic shell suite. Verification: test-hook-owner-hold-example 13/13 pass; shellcheck zero findings on both new scripts; test-install 55/55; test-uninstall 30/30; full run-bash-suites 26/26 suites; provider-surface 6 pass; ceo-loop.sh and test-hook-regression.sh byte-unchanged."
+    type: info
+    date: 2026-11-10

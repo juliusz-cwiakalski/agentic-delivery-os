@@ -123,3 +123,20 @@ self-description only: zero state, network, git, or configuration reads and
 zero writes. The executable is a non-installed Bun bin; see the
 [man page](../man-page.md).
 
+
+## Owner hold
+
+An active owner hold is reported as one additive evidence-level member,
+`providers.evidence.ownerHold` (`source`, optional `reason`), a sibling of
+`sources[]`. It is present only while active and is attached across every
+providers section state without changing the state, counts, sources, reasons,
+truncation, findings, or entries. Human output appends `| owner-hold` or
+`| owner-hold: <reason>` to the existing providers line inside the delivered
+clamp.
+
+No section, state, evidence source, status reason, finding code, schema version,
+or exit changes. An inactive hold adds no member and the output is byte-identical
+to the delivered digest. The CLI and MCP status runtime compose the same reader.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
+marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
+override or store relocation.

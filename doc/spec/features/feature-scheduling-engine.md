@@ -191,6 +191,49 @@ than discovering work by hand.
   with `queue.lease-ttl` and `queue.park-recheck.<condition-type>`. No schema
   version bump, migration, backfill, or compatibility path exists.
 
+## Owner hold
+
+An owner hold is a global read-only gate, never a park. The scheduling facts gain
+one optional injected fact resolved at the CLI/MCP edge from the brand-derived
+`<PREFIX>_OWNER_HOLD` environment value, the fixed production store directory
+`<home>/<stateDirectoryName>`, and its `owner-hold` marker. Environment wins when
+active; a marker that exists but cannot be read, is not regular, or cannot be
+stat'd is active without a reason (fail closed); only a non-existent path is
+inactive. The reason is one control-free line bounded to 160 characters.
+
+While the fact is active, one pass emits no next action and no preemption
+proposal. A `ready` entry becomes `held`; `held` and `not-ready` entries keep
+their state; active parks keep `parked:<cause>` and stuck parks keep
+`park-condition-stuck`; a park whose window passed while recovery was skipped
+becomes `held`. `owner-hold` is always the first blocking reason, and each
+entry's own ordered reasons follow unchanged. The `queue list`/`queue plan`
+payloads carry the additive optional `ownerHold` member (source and optional
+reason) only while active; `lanes` renders exactly one reason, so a held entry
+shows `owner-hold` and masks the more specific reason — `queue list` remains the
+full-reason surface. `queue ready` is unchanged and carries no hold.
+
+`queue claim` refuses `queue.precondition.unmet` with the blocking-reason token
+exactly `owner-hold` and a separate bounded detail naming the source and reason.
+The composition evaluates the hold **before ref selection**, so `queue claim`
+with no ref also refuses `owner-hold` and never returns `no-eligible-action`.
+The fenced claim refuses before acquiring the fence. Dispatch resolves the same
+fact before claiming and refuses with the existing identity and a bounded
+summary; this is a classified user-validation refusal at exit 1, not an
+internal wait. The mutating park-recovery pass is not invoked while held, so no
+`clear-observed` marker, `recovered` record, or `park-auto-recovery` incident is
+appended; removal mutates nothing and the delivered selection, claim, recovery,
+and resume paths run against the state captured at hold entry. `queue add`,
+`queue prioritize`, `queue dep`, and `queue release` remain available operator
+bookkeeping.
+
+Explicit denials: the hold adds **no** park cause, park condition type, recovery
+state, state record kind, or seventh queue-ready condition. It adds exactly one
+lane/blocking reason, `owner-hold`, pinned by exact two-way ordered equality
+against the closed-set fixture. The production resident daemon entry is not a
+claim source today; a composed supervision cycle whose next-action seam derives
+from the held pass receives no action, and the resident-daemon residual is
+unchanged.
+
 ## Command surfaces
 
 | Invocation | Payload `data` | Result vocabulary |
