@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-10T14:09:33.217Z }
   delivery_planning: { started: null, completed: 2026-11-10T14:16:51.833Z }
   dor_check: { started: null, completed: 2026-11-10T14:24:24.607Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-10T15:21:55.392Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -229,24 +229,89 @@ notes:
       be resolved during delivery/review; they do not reopen the verdict."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 1 complete (commit c3fe7c8840806fb9fdf3ad1a9a2362514773190c): owner-hold fact contract, pure resolver, bounded marker reader, and the content/contract inventories. Verification: bun test owner-hold-fact + owner-hold-reader 27 pass; content-inventory + port-contract-inventory 17 pass; ambient-globals clean (173 files); forbidden-literals 27 pass; core/adapters typecheck clean."
+  - text: "Plan phase 1 complete (commit c3fe7c8840806fb9fdf3ad1a9a2362514773190c):
+      owner-hold fact contract, pure resolver, bounded marker reader, and the
+      content/contract inventories. Verification: bun test owner-hold-fact +
+      owner-hold-reader 27 pass; content-inventory + port-contract-inventory 17
+      pass; ambient-globals clean (173 files); forbidden-literals 27 pass;
+      core/adapters typecheck clean."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 2 complete (commit fff2cb1011ab0357cf745f9bf5fe782ca38b832c): global queue gate, claim/fenced refusal, park-recovery skip, dispatch summary carriage, one owner-hold lane/blocking token, and exact two-way closed-set equality. Verification: queue-hold-schedule/dispatch/park-resume/payload + queue-lease/park/schedule + queue-scheduling-contract/queue-ready + error-table-sync 205 pass; content/port inventories pass; ambient-globals clean; forbidden-literals 27 pass; full pnpm typecheck clean."
+  - text: "Plan phase 2 complete (commit fff2cb1011ab0357cf745f9bf5fe782ca38b832c):
+      global queue gate, claim/fenced refusal, park-recovery skip, dispatch
+      summary carriage, one owner-hold lane/blocking token, and exact two-way
+      closed-set equality. Verification:
+      queue-hold-schedule/dispatch/park-resume/payload +
+      queue-lease/park/schedule + queue-scheduling-contract/queue-ready +
+      error-table-sync 205 pass; content/port inventories pass; ambient-globals
+      clean; forbidden-literals 27 pass; full pnpm typecheck clean."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 3 complete (commit cbcbd8383ad32e2d39ab1aef59d404dfb759e465): additive providers.evidence.ownerHold with human suffix, CLI/MCP parity, the owner-hold-active corpus case, and the new MCP status parity golden. Scope note: packages/mcp/src/commands/status.ts was edited (2-line optional reader) because the MCP status tool runtime type lives there and the plan scope listed only mcp/serve.ts; reported as the sole scope deviation. Verification: status-owner-hold + status-corpus 16 pass; mcp-status-parity 11 pass; status-contract/status-digest/status-output 48 pass; full pnpm typecheck clean; ambient-globals clean; forbidden-literals 27 pass; no existing status or MCP golden changed."
+  - text: "Plan phase 3 complete (commit cbcbd8383ad32e2d39ab1aef59d404dfb759e465):
+      additive providers.evidence.ownerHold with human suffix, CLI/MCP parity,
+      the owner-hold-active corpus case, and the new MCP status parity golden.
+      Scope note: packages/mcp/src/commands/status.ts was edited (2-line
+      optional reader) because the MCP status tool runtime type lives there and
+      the plan scope listed only mcp/serve.ts; reported as the sole scope
+      deviation. Verification: status-owner-hold + status-corpus 16 pass;
+      mcp-status-parity 11 pass; status-contract/status-digest/status-output 48
+      pass; full pnpm typecheck clean; ambient-globals clean; forbidden-literals
+      27 pass; no existing status or MCP golden changed."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 4 complete (commit 477129895a2ce13ea832d7d8dd3a869a2ffba61d): the one non-failing doctor reason owner-hold after park-credential-cause, the appended hold detail that survives the DOCTOR_MAX_DETAIL_CHARS clamp, defect precedence, the new held goldens, and the DoR-2 minor (a) count correction in spec §2.1 and the plan's phase 4 verification. Verification: doctor-owner-hold/report/provider/outcome/readonly-determinism + doctor-contract + doctor-output 78 pass; full pnpm typecheck clean; ambient-globals clean; forbidden-literals 27 pass; only the two declared new doctor goldens appear."
+  - text: "Plan phase 4 complete (commit 477129895a2ce13ea832d7d8dd3a869a2ffba61d):
+      the one non-failing doctor reason owner-hold after park-credential-cause,
+      the appended hold detail that survives the DOCTOR_MAX_DETAIL_CHARS clamp,
+      defect precedence, the new held goldens, and the DoR-2 minor (a) count
+      correction in spec §2.1 and the plan's phase 4 verification. Verification:
+      doctor-owner-hold/report/provider/outcome/readonly-determinism +
+      doctor-contract + doctor-output 78 pass; full pnpm typecheck clean;
+      ambient-globals clean; forbidden-literals 27 pass; only the two declared
+      new doctor goldens appear."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 5 complete (commit 8702ff1c6d7bb696458daa9b6e2f8a2cad04f42f): the production composition resolves the hold per pass and supplies queue, lanes, claim, watch, status, and doctor; the claim gate runs before ref selection so a no-ref claim refuses owner-hold; dispatch refuses before claiming; held list/plan goldens added; the composition pin and mutation control land. Verification: queue-hold-claim/daemon-watch, queue-cli/watch, daemon-lane-supervision, owner-hold-composition, and all queue goldens 87 pass; error-table-sync + forbidden-literals 123 pass; full pnpm typecheck clean; ambient-globals clean; inactive goldens unchanged. The production resident daemon remains unwired (GAP-T7)."
+  - text: "Plan phase 5 complete (commit 8702ff1c6d7bb696458daa9b6e2f8a2cad04f42f):
+      the production composition resolves the hold per pass and supplies queue,
+      lanes, claim, watch, status, and doctor; the claim gate runs before ref
+      selection so a no-ref claim refuses owner-hold; dispatch refuses before
+      claiming; held list/plan goldens added; the composition pin and mutation
+      control land. Verification: queue-hold-claim/daemon-watch,
+      queue-cli/watch, daemon-lane-supervision, owner-hold-composition, and all
+      queue goldens 87 pass; error-table-sync + forbidden-literals 123 pass;
+      full pnpm typecheck clean; ambient-globals clean; inactive goldens
+      unchanged. The production resident daemon remains unwired (GAP-T7)."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 6 complete (commit 10237e25295e1cf6a8ab1a346450ffd1ffcb6fb9): the inactive owner-hold example hook with the two-setting contract, fixed marker path, unbounded MAX driver, one bounded reason line, install/uninstall registration, and the hermetic shell suite. Verification: test-hook-owner-hold-example 13/13 pass; shellcheck zero findings on both new scripts; test-install 55/55; test-uninstall 30/30; full run-bash-suites 26/26 suites; provider-surface 6 pass; ceo-loop.sh and test-hook-regression.sh byte-unchanged."
+  - text: "Plan phase 6 complete (commit 10237e25295e1cf6a8ab1a346450ffd1ffcb6fb9):
+      the inactive owner-hold example hook with the two-setting contract, fixed
+      marker path, unbounded MAX driver, one bounded reason line,
+      install/uninstall registration, and the hermetic shell suite.
+      Verification: test-hook-owner-hold-example 13/13 pass; shellcheck zero
+      findings on both new scripts; test-install 55/55; test-uninstall 30/30;
+      full run-bash-suites 26/26 suites; provider-surface 6 pass; ceo-loop.sh
+      and test-hook-regression.sh byte-unchanged."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 7 complete (commit a5c0280f35b7cac1587f585a6f2e967ac315a47d): the two-semantics guide, MAX-floor extension, reconciled feature specs and command pages with explicit denials, the doc conformance test, and the five-package minor changeset. DoR-2 minor (b) resolved by declaring the TC-HOLDFACT-009 split in the plan invariant. Verification: owner-hold-doc 10 pass; reference-page/help/doc-conformance/forbidden-literals/privacy-release 51 pass; doc-distribution guard passes (82 in-scope docs, no drift); changeset has five minor packages and excludes testkit."
+  - text: "Plan phase 7 complete (commit a5c0280f35b7cac1587f585a6f2e967ac315a47d):
+      the two-semantics guide, MAX-floor extension, reconciled feature specs and
+      command pages with explicit denials, the doc conformance test, and the
+      five-package minor changeset. DoR-2 minor (b) resolved by declaring the
+      TC-HOLDFACT-009 split in the plan invariant. Verification: owner-hold-doc
+      10 pass;
+      reference-page/help/doc-conformance/forbidden-literals/privacy-release 51
+      pass; doc-distribution guard passes (82 in-scope docs, no drift);
+      changeset has five minor packages and excludes testkit."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 8 complete (commit 4e2a7b798a785f0f9704f1c6607cf8d0f1f9fd16):
+      verification and delivery evidence only, plus formatting-only fixes
+      required by the aggregate format gate and the error-table regression
+      expectation update. Verification: pnpm exec delivery-os plan validate
+      GH-280 verdict=valid; pnpm check exit 0 (7127 pass, 4 skip, 0 fail, 7131
+      tests, 879 files); run-bash-suites 26/26; shellcheck 0; doc-distribution
+      no drift; pnpm build + delivery-os --version 0.0.0; git diff --check
+      clean; only the declared held fixtures/goldens added. Manual
+      TC-HOLDE2E-001 remains PR-scoped and NOT EXECUTED in this automated
+      delivery (GAP-T1)."
     type: info
     date: 2026-11-10
