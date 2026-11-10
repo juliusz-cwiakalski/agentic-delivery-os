@@ -22,6 +22,7 @@ import {
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
   type StatusWorkItemRead,
+  type OwnerHoldFact,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
@@ -49,6 +50,8 @@ export type StatusCommandRuntime = {
   readonly readCredentialPrerequisite?: () =>
     | { readonly referenceName: string; readonly sourceKey: string }
     | undefined;
+  /** The injected owner hold; absent leaves the delivered digest unchanged. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
 };
@@ -86,6 +89,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
   }
   const nowMs = runtime.nowMs();
   const credentialPrerequisite = runtime.readCredentialPrerequisite?.();
+  const ownerHold = runtime.readOwnerHold?.();
   return {
     nowIso: runtime.nowIso(),
     nowMs,
@@ -96,6 +100,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
     providers: {
       config: runtime.readProviderConfig(),
       parks: runtime.readProviderParks(nowMs),
+      ...(ownerHold === undefined ? {} : { ownerHold }),
     },
     localContext: runtime.readLocalContext(),
     blockers: runtime.readBlockers(),

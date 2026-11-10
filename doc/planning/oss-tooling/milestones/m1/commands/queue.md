@@ -210,3 +210,31 @@ self-description only: zero state, network, git, or configuration reads and
 zero writes. The executable is a non-installed Bun bin; see the
 [man page](../man-page.md).
 
+
+## Owner hold
+
+While an owner hold is active, `queue list` and `queue plan` carry the additive
+optional `ownerHold` member (`source`, optional `reason`) and no next action;
+`owner-hold` is prepended to every gated entry's ordered blocking list,
+including active and stuck park entries, whose state and park reason are
+preserved. `lanes` renders exactly one reason from `blocking[0]`: a gated entry
+that is not an active or stuck park shows `owner-hold` and masks its more
+specific idle reason, while an active or stuck park lane keeps rendering its
+park reason; `queue list` retains the full ordered `blocking[]`. `queue ready` is
+unchanged and carries no hold.
+
+`queue claim <ref>` and `queue claim` with no ref both refuse
+`queue.precondition.unmet` with the blocking-reason token exactly `owner-hold`
+before ref selection, so the no-ref form never returns `no-eligible-action`.
+The bounded detail names the source and optional reason, for example
+`owner hold active (marker): peak-hour cost pause`. The refusal exits `1`, appends
+zero records, and is a classified user-validation refusal: callers that want
+deferral semantics treat `owner-hold` as wait/do-not-abort. The fenced claim
+refuses before acquiring the fence. `queue add`, `queue prioritize`, `queue dep`,
+and `queue release` still work while held; the mutating park-recovery pass is
+skipped.
+
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
+marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
+override, store relocation, new command, new flag, new `--park` cause, or new
+exit code.

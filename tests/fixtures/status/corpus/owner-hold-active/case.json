@@ -1,0 +1,149 @@
+{
+  "name": "owner-hold-active",
+  "scenario": "owner-hold-active",
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": [],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          }
+        ]
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false,
+        "findings": [],
+        "ownerHold": {
+          "source": "marker",
+          "reason": "peak-hour cost pause"
+        }
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "unknown",
+        "reasons": ["state-unreadable"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "typed-questions": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      }
+    }
+  }
+}

@@ -132,6 +132,7 @@ readonly ADOS_DELIVERY_SCRIPTS=(
 # Installed examples remain inactive until an adopter explicitly selects one.
 readonly ADOS_HOOK_EXAMPLES=(
   "scripts/hooks/pre-opencode-iteration-zai.sh"
+  "scripts/hooks/pre-opencode-iteration-owner-hold.sh"
 )
 
 # Delivery infrastructure tools — always track upstream, must be executable.

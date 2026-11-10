@@ -171,6 +171,8 @@ create_mock_ados_source() {
   mkdir -p "${base}/scripts/hooks"
   printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
   chmod +x "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/hooks/pre-opencode-iteration-owner-hold.sh"
+  chmod +x "${base}/scripts/hooks/pre-opencode-iteration-owner-hold.sh"
 
   # Agent files
   printf '# pm agent\n' > "${base}/.opencode/agent/pm.md"
@@ -555,6 +557,8 @@ test_local_install_creates_structure() {
   assert_dir_exists "${project_dir}/.ai/rules" ".ai/rules"
   assert_file_exists "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" "inactive hook example"
   [[ -x "${project_dir}/scripts/hooks/pre-opencode-iteration-zai.sh" ]] || return 1
+  assert_file_exists "${project_dir}/scripts/hooks/pre-opencode-iteration-owner-hold.sh" "inactive owner-hold hook example"
+  [[ -x "${project_dir}/scripts/hooks/pre-opencode-iteration-owner-hold.sh" ]] || return 1
 }
 
 test_local_install_does_not_create_pm_instructions() {

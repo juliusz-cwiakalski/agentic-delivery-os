@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.queue.v1",
+    "entries": [
+      {
+        "ref": "GH-320",
+        "repository": "github.com/owner/repo-alpha",
+        "state": "held",
+        "rankClass": "new-start",
+        "priority": 5,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "deps": [],
+        "blocking": [
+          {
+            "reason": "owner-hold"
+          }
+        ]
+      }
+    ],
+    "leases": [],
+    "weights": [],
+    "parks": [],
+    "findings": [],
+    "degraded": ["daemon-unreachable"],
+    "truncated": false,
+    "ownerHold": {
+      "source": "marker",
+      "reason": "peak-hour cost pause"
+    },
+    "counts": {
+      "entries": 1,
+      "ready": 0,
+      "held": 1,
+      "parked": 0,
+      "leases": 0,
+      "parks": 0
+    },
+    "nextActions": []
+  }
+}

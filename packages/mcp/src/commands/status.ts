@@ -21,6 +21,7 @@ import {
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
   type StatusWorkItemRead,
+  type OwnerHoldFact,
 } from "@delivery-os/core/contracts";
 import { failureFromValue, type McpToolResult } from "../output/payload.js";
 
@@ -38,6 +39,8 @@ export type StatusToolRuntime = {
   readonly readPipelineRuns: (sha: string, limit?: number) => Promise<StatusPipelineRunRead>;
   readonly readProviderConfig: () => StatusProviderConfigRead;
   readonly readProviderParks: (nowMs: number) => StatusParkRead;
+  /** The injected owner hold; absent leaves the delivered digest unchanged. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
   readonly readLocalContext: () => StatusLocalContextRead;
   readonly readBlockers: () => StatusBlockersRead;
   /** The spend read projection; absent means the verified-empty observation. */
@@ -78,6 +81,7 @@ const collectStatusFacts = async (runtime: StatusToolRuntime) => {
         : await runtime.readPipelineRuns(repository.head.sha, STATUS_SOURCE_PIPELINE_LIMIT);
   }
   const nowMs = runtime.nowMs();
+  const ownerHold = runtime.readOwnerHold?.();
   return {
     nowIso: runtime.nowIso(),
     nowMs,
@@ -88,6 +92,7 @@ const collectStatusFacts = async (runtime: StatusToolRuntime) => {
     providers: {
       config: runtime.readProviderConfig(),
       parks: runtime.readProviderParks(nowMs),
+      ...(ownerHold === undefined ? {} : { ownerHold }),
     },
     localContext: runtime.readLocalContext(),
     blockers: runtime.readBlockers(),

@@ -30,7 +30,7 @@ const sectionOf = (data: unknown, id: string): Record<string, unknown> => {
   return found as Record<string, unknown>;
 };
 
-describe("TC-MCP-003 status success parity", () => {
+describe("TC-MCP-003 / TC-HOLDSTATUS-004 status success parity", () => {
   test("the declared case floor is met before iterating", () => {
     expect(STATUS_CASES.length).toBeGreaterThanOrEqual(5);
     expect(successCases.length).toBeGreaterThanOrEqual(5);

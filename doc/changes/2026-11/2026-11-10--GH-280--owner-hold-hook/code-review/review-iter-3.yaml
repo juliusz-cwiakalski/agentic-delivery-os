@@ -1,0 +1,135 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-280
+branch: feat/GH-280/owner-hold-hook
+status: PASS
+summary: >-
+  The two iteration-2 blockers are genuinely fixed and verified by execution, not
+  by reading. F-1 (brand mismatch / non-executable E2E) is resolved: the shipped
+  example, its suite, the guides, the specs, the test spec, the spec, the test
+  plan, the plan, the change record, and the changeset now use
+  `DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, and
+  `$HOME/.delivery-os-state/owner-hold`; the manual procedure creates the store
+  directory `0700`, uses `status` plus `queue list`/`queue plan`/`lanes` and a
+  no-ref `queue claim`, names `state.permission.denied` for a non-private
+  directory, makes dispatch conditional on a GitHub credential, and has no doctor
+  step. F-2 (status-only wording) is resolved: no artifact narrows the hold to
+  `status`; every surface names the digest plus the queue read surfaces with
+  doctor command-runtime only, and the structure-test header no longer claims a
+  production doctor seam. The five advisories are addressed. The delivered code is
+  unchanged since the iteration-2 review (no `packages/**` diff); only the
+  example's default names, the tests, and the artifacts moved, and every gate is
+  green. The manual end-to-end (TC-HOLDE2E-001) remains PR-scoped and GAP-T1
+  honest; one small change-record self-containment advisory is recorded below.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+accepted_deviations:
+  - deviation: "Phase commits carry the commit primitive's template-fallback subjects instead of the plan phase summaries (iteration-1 F-2, D21)."
+    pm_basis: "The primitive composes the subject; a phase summary is a plan description; the plan's commit-hygiene note and the change record record the acceptance; no history was rewritten."
+    assessment: "Unchanged and still accepted; the tree is byte-identical and this is not a finding."
+    verdict: ACCEPT
+  - deviation: "TC-HOLDE2E-001 remains manual and PR-scoped (GAP-T1)."
+    pm_basis: "The procedure needs a disposable clone/HOME, a seeded park, and a real resumed session; the automated suites prove the same facts through the production composer and seams. The change record now names the engine state directory, creates it 0700, and states the state.permission.denied and dispatch-credential conditions."
+    assessment: "The iteration-2 blocker (engine directory + 0700 + dispatch credential + no doctor step) is fixed; the deferral of the operator transcript is honest and acceptable. The change record's own steps 4/6/7 still rely on seeded state that only the test-plan preconditions spell out (see F-1 advisory)."
+    verdict: ACCEPT_WITH_ADVISORY
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: documentation
+    blocking: false
+    location: "chg-GH-280-change-record.md:102-132"
+    message: >-
+      The change record's manual procedure is executable for the bare disposable
+      HOME it describes (steps 1-3 and the no-ref claim and the 0775
+      `state.permission.denied` case were reproduced against the real binary), but
+      steps 4, 6, and 7 assume pre-seeded state — a seeded queue entry to observe
+      `owner-hold` as the first blocking reason, an expired provider-window park
+      to show it staying parked with unchanged bytes, and a recorded session
+      handle for the resume leg. Those preconditions live in the test plan's
+      TC-HOLDE2E-001 precondition block (test-plan:1892-1896) and are not restated
+      in the change record, so a reader following only the change record sees
+      empty queue payloads and cannot run the park/resume legs without the test
+      plan.
+    suggestion: >-
+      In the change record's manual-evidence section, either add the one-line
+      seeding preconditions (seeded entry + expired park + recorded session, per
+      TC-HOLDE2E-001) before step 4, or cross-reference the test plan's
+      precondition block explicitly, so the procedure is self-contained. The
+      record already labels the procedure PR-scoped and GAP-T1 honest, so this is
+      a precision improvement, not a correctness gap.
+    suppressed: false
+verification_evidence:
+  - command: "git status --porcelain=v1; git rev-parse --abbrev-ref HEAD; git log --oneline -1"
+    result: "clean; feat/GH-280/owner-hold-hook at 6744a5e6"
+  - command: "git diff --check main-tools...HEAD"
+    result: "clean (no whitespace errors, no conflict markers)"
+  - command: "bash scripts/.tests/test-hook-owner-hold-example.sh"
+    result: "13 passed, 0 failed; the suite sets DELIVERY_OS_OWNER_HOLD / DELIVERY_OS_OWNER_HOLD_POLL_SECONDS and reads $HOME/.delivery-os-state/owner-hold"
+  - command: "TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/owner-hold-production-composition.test.ts tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts tests/structure/owner-hold-composition.test.ts"
+    result: "38 pass, 0 fail (164 expect calls) — matches the record's 38/38 across the four owner-hold suites"
+  - command: "bun test tests/structure/{queue-scheduling-contract,doctor-contract,error-table}.test.ts tests/checks/error-table-sync.test.ts"
+    result: "212 pass, 0 fail; laneIdleReasons 28 (owner-hold idx 27), blockingReasons 34 (idx 27); closed sets exact"
+  - command: "git diff --name-status main-tools...HEAD -- tests/fixtures/{queue,status,doctor,mcp}/golden tests/fixtures/queue/vocabulary"
+    result: "goldens additions only (A); closed-sets.json the only modified fixture; no pre-existing inactive golden changed"
+  - command: "git diff --stat main-tools...HEAD -- scripts/ceo-loop.sh scripts/.tests/test-hook-regression.sh"
+    result: "empty — wrapper/legacy-suite SHA pin intact"
+  - command: "bun test tests/checks/{doc-conformance,owner-hold-doc,forbidden-literals,reference-page-parity,help-guide-coverage}.test.ts"
+    result: "54 pass, 0 fail (233 expect calls)"
+  - command: "shellcheck scripts/hooks/pre-opencode-iteration-owner-hold.sh scripts/.tests/test-hook-owner-hold-example.sh"
+    result: "exit 0, zero findings"
+  - command: "bash scripts/.tests/test-doc-distribution.sh"
+    result: "no drift — 82 in-scope docs; install set matches ados_distribution markers"
+  - command: "pnpm exec delivery-os plan validate GH-280 --json"
+    result: "verdict=valid, tier=full, readyForDevelopment=true; 10 phases [1..10]; 44 unique ACs; 59 defined TCs (58 automated + 1 manual)"
+  - command: "HOME=<temp 0700> bun packages/cli/bin/delivery-os.ts status --json / status / queue list --json / queue plan --json / lanes list --json with <home>/.delivery-os-state/owner-hold"
+    result: "status exit 0, providers evidence ownerHold = {source: marker, reason: peak-hour cost pause}; human status suffix '| owner-hold: peak-hour cost pause'; queue list/plan carry ownerHold; lanes list exit 0 (no lanes in an empty store)"
+  - command: "HOME=<temp 0700> ... queue claim --json (no ref)"
+    result: "exit 1, queue.precondition.unmet, summary 'reason=owner-hold; owner hold active (marker): peak-hour cost pause'; store contents unchanged (marker only, no records)"
+  - command: "HOME=<temp with 0775 .delivery-os-state> ... queue list --json"
+    result: "exit 1, state.permission.denied before the hold gate (reproduced); 0700 store mode confirmed via stat"
+  - command: "HOME=<temp> ... doctor --json"
+    result: "exit 2 'command \"doctor\" is not part of the composed prompt-required set' — GAP-T8 honest"
+  - command: "git diff --stat 8128f8e5...HEAD -- packages/"
+    result: "empty — no production code changed since the iteration-2 review; phase 10 moved only the example default names, tests, and artifacts; the hook diff is a names-only rename (ADOS_* -> DELIVERY_OS_*, .ados-state -> .delivery-os-state, internal array OWNER_HOLD_CONDITIONS)"
+  - command: "grep for positive ADOS_OWNER_HOLD / ADOS_OWNER_HOLD_POLL_SECONDS / .ados-state across spec, test-plan, plan, change record, guides, specs, test spec, scripts, .changeset"
+    result: "no positive owner-hold name; only negative-control assertions in tests/checks/owner-hold-doc.test.ts and negative requirement seeds in the plan/change-record wording"
+  - command: "grep for 'status is the only production operator surface' / status-exclusive wording across pm-notes, plan, changeset, change record, docs, structure test"
+    result: "no status-exclusive claim remains; all surfaces state the digest plus queue list/plan/lanes/watch with doctor command-runtime only"
+  - command: "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+    result: "exit 0: 7133 pass, 4 skip, 0 fail (7137 tests, 880 files); boundaries (373 modules), ambient-globals, workspace-entrypoints, secret-read, prompt-conformance, help-guide-coverage, exports-parity all green"
+reviewed_at: 2026-11-10T19:05:00Z
+verdict_basis: >-
+  The iteration-2 blockers are fixed by execution. F-1: the brand is aligned end
+  to end (`DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`,
+  `$HOME/.delivery-os-state/owner-hold`) with no positive old name left in any
+  delivered artifact (only negative controls and history), and the manual
+  procedure now produces real evidence against the production binary: `status`
+  exit 0 with `providers.evidence.ownerHold`, the human suffix, `ownerHold` on
+  `queue list`/`queue plan`, a no-ref `queue claim` exiting 1 with
+  `queue.precondition.unmet`/`reason=owner-hold` leaving the store untouched, and a
+  0775 store rejected `state.permission.denied` before the gate. F-2: no artifact
+  narrows the hold to `status`; the pm-notes D20/D28, phase-9/10 notes, the plan
+  phase 5/7/8/9/10 narratives and exit criteria, the changeset, the change record,
+  the doctor page, and the structure-test header all state the digest plus the
+  queue read surfaces with doctor command-runtime only, and the changeset and
+  structure-test header read correctly. The advisories are addressed (feature-cli
+  entrypoint declared in phase 7 scope and spec §16.1; test-plan §10 counts
+  7133/880 matching a fresh `pnpm check`; phase-9 evidence names the commit set;
+  TC-HOLDFACT-009 drives the real reader over a recording FS port; §7.3 says index
+  27 / the 28th entry). The delivered behaviour is unchanged since the iteration-2
+  review (no `packages/**` diff), closed sets stay exact at 28/34, inactive
+  goldens are additions only, the wrapper SHA pin is intact, `plan validate`
+  reports 10 phases / 44 ACs / 59 TCs / readyForDevelopment=true, and `pnpm check`
+  is exit 0 with 7133 pass / 4 skip / 0 fail across 880 files. GAP-T1 (manual
+  PR-scoped E2E) and GAP-T8 (production doctor not composed — reproduced exit 2)
+  are honest. One info advisory notes the change record's steps 4/6/7 need the
+  test plan's seeding preconditions; it is a precision point, not a blocker.
+next_step: "PROCEED — iteration-2 blockers are genuinely fixed and no new blocking issue exists. Optional: make the change-record manual procedure self-contained (F-1 info advisory)."

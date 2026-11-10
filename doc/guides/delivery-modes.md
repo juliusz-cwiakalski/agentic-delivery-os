@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280"]
   decisions: ["TDR-0002"]
 ---
 
@@ -158,9 +158,11 @@ evaluated and are never logged.
 
 ### Activation, lifecycle, and retry semantics
 
-`install.sh --local` installs the inactive example at
-`scripts/hooks/pre-opencode-iteration-zai.sh`. It does not activate it. Copy it
-to the default path, or set the path override to use any executable hook:
+`install.sh --local` installs both inactive examples at
+`scripts/hooks/pre-opencode-iteration-zai.sh` and
+`scripts/hooks/pre-opencode-iteration-owner-hold.sh`. It does not activate
+either. Copy one to the default path, or set the path override to use any
+executable hook:
 
 ```bash
 mkdir -p ~/.ados/hooks
@@ -171,7 +173,7 @@ ADOS_PRE_ITERATION_HOOK="$PWD/scripts/hooks/pre-opencode-iteration-zai.sh" \
   scripts/ceo-loop.sh
 ```
 
-`uninstall.sh --local` removes the installed example and its empty
+`uninstall.sh --local` removes the installed examples and any empty
 `scripts/hooks/` directory, but never removes an operator's hook at the default
 or overridden path.
 
@@ -190,6 +192,95 @@ Hook cleanup sends SIGTERM to the tracked process group and escalates after
 `ADOS_HOOK_SHUTDOWN_GRACE_SECONDS` (default `2`). This is teardown only, not an
 execution deadline. It covers normal exit and direct HUP/INT/TERM; it excludes
 wrapper-only SIGKILL, host/power failure, and descendants outside the group.
+
+### Owner hold versus provider-window deferral
+
+Two different waits share the same hook contract:
+
+- **Provider-window deferral is automatic and time-bounded.** A peak window
+  ends at a UTC time and a quota pause ends at a provider reset time. The
+  shipped `pre-opencode-iteration-zai.sh` example encodes those waits.
+- **An owner hold is manual, indefinite, and outranks every window.** It exists
+  because an operator said stop, not because a provider condition will clear.
+
+The hold has two equivalent sources. The environment source is
+`DELIVERY_OS_OWNER_HOLD` (the current default brand's name for the
+brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
+and an empty value is inactive. The marker source is the regular file
+`$HOME/.delivery-os-state/owner-hold` inside the production store directory; its
+first line is the reason and an empty file is an active hold without a reason.
+The environment source wins when both are active. Presence is the hold and
+content is only the reason: an unreadable, non-regular, or stat-failing marker is
+active without a reason (fail closed). Removing the environment value and the
+marker clears the hold; nothing else is repaired or migrated.
+
+The marker path is fixed to the production store directory. There is no
+marker-path override and no store relocation for the hold: a shell-only path
+would leave the typed engine unheld. The shipped example defaults to
+`$HOME/.delivery-os-state/owner-hold` for this product; adopters who set a
+different working name edit the example's two setting names and that marker
+default (or use the environment source, which is relocation-safe). Create the
+store directory privately (`mkdir -m 700`): the state store rejects a
+non-private directory with `state.permission.denied` at exit `1` before the hold
+gate is consulted, so a directory created at `0775` never reports the hold.
+
+`install.sh --local` installs both inactive examples:
+`scripts/hooks/pre-opencode-iteration-zai.sh` and
+`scripts/hooks/pre-opencode-iteration-owner-hold.sh`. Activate the owner-hold
+example like any hook: copy it to the default path or point
+`ADOS_PRE_ITERATION_HOOK` at it. The owner-hold example
+recognises exactly two settings: `DELIVERY_OS_OWNER_HOLD` and
+`DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (the current default brand's names for the
+brand-derived `<PREFIX>_OWNER_HOLD` and `<PREFIX>_OWNER_HOLD_POLL_SECONDS`;
+default `300`, accepted range `1`–`3600`; an unset, empty, or whitespace-only
+value defaults silently, any other invalid value uses `300` with one bounded
+warning). It applies to every agent and model
+because an owner pause is provider-independent, and it has no fixed iteration
+cap: while the hold exists the driver keeps sleeping and never proceeds on a
+loop budget.
+
+Conditions compose by **MAX**. When a peak condition asks for `3600` seconds
+and the hold asks for `300`, the driver sleeps `3600`; after the window ends the
+hold still asks for `300` and the driver keeps sleeping. A time-bounded
+condition merged into the owner-hold example therefore inherits the unbounded
+driver, because the hold is the floor that keeps the loop alive.
+
+The typed engine enforces the same hold. A held scheduling pass emits no next
+action and no preemption proposal; `owner-hold` is prepended to every gated
+entry's ordered blocking list, so it is the first blocking reason; an active
+park keeps its `parked` state and `parked:<cause>` reason, and a stuck park
+keeps its `stuck` state and `park-condition-stuck` reason; a park whose window
+passed while recovery was skipped becomes `held`. Claim and dispatch are refused
+with the existing `queue.precondition.unmet` identity and the token exactly
+`owner-hold`, before ref selection (so a no-ref `queue claim` never falls
+through to `no-eligible-action`), with a separate bounded detail naming the
+source and reason. The mutating park-recovery pass is not invoked, so a parked
+lane does not resume at its provider window. `queue list` keeps the full ordered
+blocking list. `lanes` renders one reason from `blocking[0]`: a gated entry that
+is not an active or stuck park shows `owner-hold` and masks its more specific
+idle reason, while an active or stuck park lane keeps rendering its park reason.
+`queue ready` is unchanged and does not report the hold.
+
+A held claim or dispatch is a **classified user-validation refusal at exit 1**,
+not an internal wait. A caller that wants deferral semantics treats the
+`owner-hold` token as wait/do-not-abort, never as a transient retry. The hold is
+**not a kill switch**: a session that is already running continues until it ends
+or its provider cuts it out, which can still leave a `partial` lane. Clearing the
+hold resumes the next pass from preserved queue, lease, park, and lane state: no
+record is rewritten, no work is redispatched from scratch, and no duplicate
+session is created. Read-only
+inspection (`status`, `queue list`, `queue plan`, `lanes`, and `queue watch`)
+remains available and reports the hold; `status` carries it in its digest as
+`providers.evidence.ownerHold`, while `queue list`, `queue plan`, `lanes`, and
+`queue watch` report it on their own production surfaces. When the `doctor`
+command is composed (a `DoctorComposition` is
+supplied; the production composer supplies none today), its provider check stays
+`ok` while appending one non-failing annotation reason and a bounded detail.
+
+The **owner hold** is distinct from the **owner gate**: the hold is a global
+operator pause that stops new delivery work, while the owner gate is a per-work
+item approval condition (`no-owner-gate`). A hold does not replace, satisfy, or
+waive an owner gate, and an owner gate does not pause unrelated work.
 
 ### `ADOS_HOOK_ENV_V1` protocol and scope
 

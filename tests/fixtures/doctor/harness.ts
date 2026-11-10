@@ -26,6 +26,7 @@ import {
   type ProviderAnnouncementRecord,
   type ProviderConfiguration,
   type ProviderParkRecord,
+  type OwnerHoldFact,
 } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
@@ -185,6 +186,7 @@ export type DoctorWorld = {
     readonly config?: DoctorProviderConfigRead;
     readonly credentials?: readonly DoctorProviderCredentialPresence[];
     readonly fold?: DoctorParkFoldRead;
+    readonly ownerHold?: OwnerHoldFact;
   };
   readonly state?: DoctorStateStoresRead;
   readonly ci?: Partial<DoctorCiFacts>;
@@ -330,6 +332,9 @@ export const fakeDoctorRuntime = (
       }),
     readParkFold: () => guard("fold", () => fold),
     readStateStores: () => guard("state", () => state),
+    ...(world.provider?.ownerHold === undefined
+      ? {}
+      : { readOwnerHold: () => world.provider?.ownerHold ?? { active: false } }),
     nowIso: () => FIXED_NOW,
     nowMs: () => FIXED_NOW_MS,
   };

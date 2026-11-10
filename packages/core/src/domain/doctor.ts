@@ -25,6 +25,7 @@ import {
   DOCTOR_SUMMARY_PREFIX,
   DOCTOR_SUMMARY_SEPARATOR,
   DOCTOR_WIRING_NEUTRAL_CONDITIONS,
+  OWNER_HOLD_MAX_REASON_CHARS,
   type DoctorArea,
   type DoctorAreaFacts,
   type DoctorCheck,
@@ -50,6 +51,7 @@ import {
   type ProviderAnnouncementRecord,
   type ProviderConfiguration,
   type ProviderParkRecord,
+  type OwnerHoldFact,
 } from "#contracts";
 
 /* ------------------------------- primitives ------------------------------- */
@@ -61,6 +63,29 @@ const clampText = (value: string, max: number): string => {
 };
 
 const collapseWhitespace = (value: string): string => value.replace(/\s+/g, " ").trim();
+
+/**
+ * Append the hold segment to the existing bounded detail. When the combined
+ * value would exceed the detail bound, the EXISTING detail yields and the whole
+ * hold segment is kept; it is never cut mid-word or dropped (GH-280 D18).
+ */
+const appendOwnerHoldDetail = (
+  baseDetail: string,
+  hold: Extract<OwnerHoldFact, { active: true }>,
+): string => {
+  const reason =
+    hold.reason === undefined ? undefined : clampText(hold.reason, OWNER_HOLD_MAX_REASON_CHARS);
+  const segment =
+    reason === undefined
+      ? `owner hold active (${hold.source})`
+      : `owner hold active (${hold.source}): ${reason}`;
+  const suffix = `; ${segment}`;
+  const combined = `${baseDetail}${suffix}`;
+  if (Array.from(combined).length <= DOCTOR_MAX_DETAIL_CHARS) return combined;
+  const available = DOCTOR_MAX_DETAIL_CHARS - Array.from(suffix).length;
+  if (available <= 0) return segment;
+  return `${clampText(baseDetail, available)}${suffix}`;
+};
 
 const catalogEntry = (condition: DoctorConditionId): (typeof DOCTOR_CONDITION_CATALOG)[number] => {
   const entry = DOCTOR_CONDITION_CATALOG.find((candidate) => candidate.condition === condition);
@@ -666,14 +691,20 @@ const providerCheck = (provider: DoctorProviderFacts, nowMs: number): DoctorChec
       outcome: announcements.length === 0 ? "observed-empty" : "read",
     },
   ];
-  return check(
-    "provider",
-    "ok",
+  const baseDetail =
     details.length === 0
       ? "provider chain and credentials resolve; no active park"
-      : details.join("; "),
-    buildEvidence(sources, reasons),
-  );
+      : details.join("; ");
+  const hold = provider.ownerHold;
+  if (hold?.active === true) {
+    return check(
+      "provider",
+      "ok",
+      appendOwnerHoldDetail(baseDetail, hold),
+      buildEvidence(sources, [...reasons, "owner-hold"]),
+    );
+  }
+  return check("provider", "ok", baseDetail, buildEvidence(sources, reasons));
 };
 
 /* --------------------------------- state --------------------------------- */

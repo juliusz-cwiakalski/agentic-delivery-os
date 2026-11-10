@@ -554,3 +554,25 @@ describe("TC-SCHED-016 invocation rejection and --json envelope", () => {
     expect(listed.stdout).not.toContain(text);
   });
 });
+
+describe("GH-280 held bookkeeping", () => {
+  test("add, prioritize, dep, and release append while held; claim refuses", async () => {
+    const hold = {
+      active: true as const,
+      source: "marker" as const,
+      reason: "peak-hour cost pause",
+    };
+    const harness = createQueueEdgeHarness("held-bookkeeping", {
+      overrides: { readOwnerHold: () => hold },
+    });
+    expect(
+      (await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"])).exitCode,
+    ).toBe(0);
+    expect((await harness.run(["queue", "prioritize", "GH-320", "9", "--json"])).exitCode).toBe(0);
+    expect((await harness.run(["queue", "dep", "GH-320", "GH-321", "--json"])).exitCode).toBe(0);
+    expect((await harness.run(["queue", "release", "GH-320", "--json"])).exitCode).toBe(0);
+    const claim = await harness.run(["queue", "claim", "GH-320", "--json"]);
+    expect(claim.exitCode).toBe(1);
+    expect(String(error(claim.stdout)?.summary)).toContain("reason=owner-hold");
+  });
+});

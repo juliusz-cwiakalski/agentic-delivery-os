@@ -55,3 +55,28 @@ $ <binary> doctor --json
 ## SEE ALSO
 
 [provider.md](provider.md), [state.md](state.md)
+
+## Owner hold
+
+While an owner hold is active and the provider check would otherwise be `ok`, the
+check stays `ok`, adds the single non-failing annotation reason `owner-hold`, and
+appends `<existing detail>; owner hold active (<source>)[: <reason>]` to the
+existing bounded detail. It carries no evidence source, adds no fix hint,
+verdict, summary count, condition-catalog entry, evidence source, area, or exit
+change, and may co-occur with `ok`. When the combined value would exceed
+`DOCTOR_MAX_DETAIL_CHARS`, the existing detail yields and the whole hold segment
+is kept; it is never cut mid-word or dropped. A real provider defect keeps its
+own `fail` or `unreachable` verdict and reason and does not gain `owner-hold`.
+With no active hold, every machine and human byte is unchanged.
+
+This hold detail is produced by the doctor command runtime whenever a
+`DoctorComposition` is supplied; it is a command-runtime/test-harness capability.
+The production composer supplies no `DoctorComposition` today, so the production
+binary does not register `doctor` (a pre-existing doctor residual). In
+production, `status` carries the hold in its digest, and the queue read surfaces
+(`queue list`, `queue plan`, `lanes`, and `queue watch`) report it on their own
+surfaces.
+
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
+marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
+override, store relocation, new flag, or exit code.

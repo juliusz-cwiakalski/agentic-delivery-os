@@ -78,6 +78,7 @@ export const corpusScenarios = [
   "placeholders-not-delivered",
   "blockers-unreadable-unknown",
   "mixed-attention-ranked",
+  "owner-hold-active",
   "no-findings-attention-zero",
   "ready-merge-ready-ranked",
   "ready-review-unknown-degraded",
@@ -94,6 +95,17 @@ export const factsFor = (scenario: string): StatusFacts => {
       return capSizedFacts();
     case "spend-read-failed":
       return baseFacts({ spend: failedSpend() });
+    case "owner-hold-active":
+      return baseFacts({
+        spend: failedSpend(),
+        providers: providers({
+          ownerHold: {
+            active: true,
+            source: "marker",
+            reason: "peak-hour cost pause",
+          },
+        }),
+      });
     case "tracker-degraded-github":
       return baseFacts({ tracker: workItemRead([], GITHUB_SLICE_AVAILABILITY) });
     case "failed-reads-degraded":

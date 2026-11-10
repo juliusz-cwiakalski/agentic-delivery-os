@@ -10,6 +10,7 @@
 
 import type { BlockerLedgerView, BlockerQuestionView } from "./blockers.js";
 import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
+import type { OwnerHoldFact, OwnerHoldSource } from "./owner-hold.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
 import type { SpendDigestSection } from "./spend.js";
@@ -440,6 +441,15 @@ export type StatusEvidence = {
     readonly referenceName: string;
     readonly sourceKey: string;
   };
+  /**
+   * The active owner hold, attached after derivation and only when active. An
+   * evidence-level sibling of `sources[]` (the `credentialPrerequisite`
+   * precedent), never an entry and never a sibling of `chain`/`entries`/`parks`.
+   */
+  readonly ownerHold?: {
+    readonly source: OwnerHoldSource;
+    readonly reason?: string;
+  };
 };
 
 /** The repository binding derived from `origin` (DM-11). */
@@ -539,6 +549,8 @@ export type StatusParkRead =
 export type StatusProviderFacts = {
   readonly config: StatusProviderConfigRead;
   readonly parks: StatusParkRead;
+  /** The injected owner hold; absent means inactive. */
+  readonly ownerHold?: OwnerHoldFact;
 };
 
 /** The active local change projected from the PM context (DM-6). */

@@ -1864,7 +1864,7 @@ describe("TC-VOCAB-002 the queue kind declares exactly five rows", () => {
       "queue.precondition.unmet",
       "user",
       false,
-      "Resolve the named blocking precondition (readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
+      "Resolve the named blocking precondition (an operator hold, readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
       "A claim precondition was not met.",
     ],
   ] as const;

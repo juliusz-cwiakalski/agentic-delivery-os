@@ -1832,6 +1832,24 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
       evidence: { ...section.evidence, credentialPrerequisite: prerequisite },
     };
   };
+  // The active owner hold is attached to the derived providers evidence record
+  // after derivation, so it is visible across every section state and changes
+  // no state, count, source, reason, truncation, finding, or entry (GH-280 F-5).
+  const attachOwnerHold = (section: StatusSection): StatusSection => {
+    if (section.id !== "providers") return section;
+    const hold = facts.providers.ownerHold;
+    if (hold === undefined || !hold.active) return section;
+    return {
+      ...section,
+      evidence: {
+        ...section.evidence,
+        ownerHold:
+          hold.reason === undefined
+            ? { source: hold.source }
+            : { source: hold.source, reason: hold.reason },
+      },
+    };
+  };
   const sections: readonly StatusSection[] = [
     trackerSection(facts),
     changesSection(facts),
@@ -1842,7 +1860,9 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     readyToMergeSection(facts),
     spendSection(facts.spend),
     typedQuestionsSection(facts),
-  ].map(attachCredentialPrerequisite);
+  ]
+    .map(attachCredentialPrerequisite)
+    .map(attachOwnerHold);
   return {
     schemaVersion: STATUS_SCHEMA_VERSION,
     generatedAt: facts.nowIso,
@@ -1867,6 +1887,17 @@ const prerequisiteSuffix = (section: StatusSection): string => {
   const prerequisite = section.evidence.credentialPrerequisite;
   if (prerequisite === undefined) return "";
   return ` | requires ${prerequisite.sourceKey} (${prerequisite.referenceName})`;
+};
+
+/**
+ * The bounded owner-hold token on the existing providers line, read from
+ * `providers.evidence.ownerHold`; the existing human clamp remains the outer
+ * bound. Absent when the hold is inactive.
+ */
+const ownerHoldSuffix = (section: StatusSection): string => {
+  const hold = section.evidence.ownerHold;
+  if (hold === undefined) return "";
+  return hold.reason === undefined ? " | owner-hold" : ` | owner-hold: ${hold.reason}`;
 };
 
 const familyOf = (
@@ -2038,7 +2069,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     const parkCount = parksKnown ? String(providers.parks?.length ?? 0) : "?";
     const entries = providers.state === "unknown" ? "?" : String(providers.entries?.length ?? 0);
     lines.push(
-      `providers  ${providers.state}  chain ${chain} | active parks ${parkCount} | ${entries} entries${truncationSuffix(providers)}${prerequisiteSuffix(providers)}`,
+      `providers  ${providers.state}  chain ${chain} | active parks ${parkCount} | ${entries} entries${truncationSuffix(providers)}${prerequisiteSuffix(providers)}${ownerHoldSuffix(providers)}`,
     );
   }
 

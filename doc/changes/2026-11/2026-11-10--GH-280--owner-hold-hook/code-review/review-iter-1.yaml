@@ -1,0 +1,407 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-280
+branch: feat/GH-280/owner-hold-hook
+status: FAIL
+summary: >-
+  The delivered owner-hold fact, queue/dispatch gate, status/doctor projections,
+  and shell example are functionally sound: environment/marker precedence, the
+  empty/whitespace/absent arms, the fail-closed unreadable/non-regular marker
+  matrix, the 160-character sanitizer, the 4096-byte reader bound, no caching,
+  no ambient FS/env in core, the no-ref and fenced claim refusals, dispatch and
+  park-recovery side-effect freedom, bookkeeping/resume, the lane masking versus
+  the full queue-list blocking array, the exact one-token closed-set pins, the
+  single non-failing doctor reason and its clamp, the inactive byte-identical
+  goldens, and the hook's MAX driver/no cap/poll fallback/reason line are all
+  implemented and covered by meaningful tests. The FAIL is driven by the doctor
+  half of the claimed production composition: `createProductionComposer` supplies
+  no `DoctorComposition`, the production binary rejects `doctor` as "not part of
+  the composed prompt-required set", and the change record's manual E2E step 3
+  (`doctor --json`) therefore cannot be run as written; the spec/plan/guide and
+  change-record claims that doctor resolves the hold in production are inaccurate.
+  Plan compliance also fails on commit hygiene (template-fallback subjects
+  instead of the plan's phase summaries) and on the phase-8 and doc-sync scope
+  declarations, and the production-composition test overclaims coverage (source
+  text greps and a pre-resolved reader rather than a temp-HOME marker plus
+  dispatch/status/doctor behavior). Verified at review time: `pnpm check` exit 0
+  (7127 pass / 4 skip / 0 fail, 879 files), `pnpm typecheck` green, boundaries
+  and ambient-globals green, shellcheck 0, doc-distribution 82 in-scope docs
+  with no drift, install/uninstall 55/55 and 30/30, and all targeted queue,
+  status, doctor, fact/reader, composition, closed-set, golden, and hook suites
+  pass.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 2
+  low: 6
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+accepted_deviations:
+  - deviation: "packages/mcp/src/commands/status.ts received a two-line optional `readOwnerHold` reader outside the plan phase 3 scope (served by a source change in phase 3)."
+    pm_basis: >-
+      The MCP status tool runtime type lives in `packages/mcp/src/commands/status.ts`;
+      the plan phase 3 scope listed only `packages/mcp/src/serve.ts`, so the
+      reader could not reach the MCP digest without this file.
+    assessment: >-
+      Consequential and minimal: the runtime type is the correct home, `serve.ts`
+      composes the one reader, and the CLI/MCP parity case passes. The change
+      record names this deviation; keep it, and add the file to phase 3 scope or
+      the record so the declared scope stays truthful.
+    verdict: ACCEPT
+  - deviation: "tests/structure/error-table.test.ts updated the expected `queue.precondition.unmet` remediation hint outside every plan phase scope."
+    pm_basis: >-
+      It is the regression test for the identity phase 2 changed; the machine and
+      documented tables must stay in sync at the new operator-hold wording.
+    assessment: >-
+      Consequential and correct: it is the exact pin for the changed hint, no
+      assertion is weakened, and `error-table-sync` passes. Add it to phase 2
+      scope or the change record so the phase record is complete.
+    verdict: ACCEPT
+  - deviation: "Phase 8 contains formatting edits and the `tests/structure/error-table.test.ts` update to files committed in earlier phases and to the declared fixtures/goldens."
+    pm_basis: >-
+      The aggregate format/lint gate must be green; the error-table expectation is
+      the same regression fix described above.
+    assessment: >-
+      Most of the phase-8 delta is genuinely biome formatting/reindent, but
+      `packages/core/src/domain/owner-hold.ts` is a behavior-preserving source
+      change (regex literals replaced by `new RegExp`/`String.fromCharCode(27)`)
+      and the error-table edit is functional, so "formatting-only" is inaccurate.
+      Substance is acceptable (behavior unchanged, gates green); correct the
+      phase boundary and the change-record wording (F-5).
+    verdict: ACCEPT_WITH_CORRECTION
+  - deviation: "Seven doc-sync files changed outside every plan phase scope: doc/00-index.md, doc/overview/glossary.md, doc/planning/oss-tooling/milestones/m1/commands/dispatch.md, doc/quality/test-specs/test-spec-autonomous-delivery.md, doc/spec/features/feature-config-layer.md, feature-dispatch-engine.md, and feature-resident-daemon.md."
+    pm_basis: >-
+      The system_spec_update/doc-sync phase reconciles the broader current-truth
+      set; the spec §16.1 explicitly makes the feature-spec reconciliation a
+      required doc-sync obligation.
+    assessment: >-
+      Consequential and accurate: each edit is a truthful reconciliation (index
+      summary, glossary term, dispatch refusal, test spec, config-layer note,
+      dispatch-engine refusal, resident-daemon conditional). The change record's
+      scope-deviations section names only the three deviations above, so the
+      doc-sync set is undeclared; extend phase 7 scope or record it (F-4).
+    verdict: ACCEPT_WITH_CORRECTION
+  - deviation: "TC-HOLDE2E-001 (manual end-to-end) is not executed; it is a PR-time obligation recorded in the change record (GAP-T1)."
+    pm_basis: >-
+      The procedure is PR-scoped and must run in a disposable clone/HOME; the
+      automated suites prove the same facts through injected composition and
+      seams, and GAP-T1 states the residual honestly.
+    assessment: >-
+      Deferring the operator-run evidence to the PR is acceptable in principle,
+      but step 3 (`status --json` and `doctor --json`) is not executable against
+      the production CLI as delivered because no production `DoctorComposition`
+      exists (F-1). The procedure must be corrected (use the command-runtime
+      harness or wire doctor), otherwise the PR-time obligation cannot be
+      satisfied as written.
+    verdict: DEFERRED_WITH_BLOCKER
+  - deviation: "The example hook's fixed marker default is `$HOME/.ados-state/owner-hold`, while the neutral default working name of this build is `delivery-os` (brand state directory `.delivery-os-state`)."
+    pm_basis: >-
+      D12 fixes the marker to the production store directory and makes the shell
+      example's default the shipped product's `.ados-state` path; adopters who
+      rename the product edit the example or use the environment source, which is
+      relocation-safe.
+    assessment: >-
+      Accepted residual with a caveat: for a deployment whose working name is
+      `ados` the shell and engine agree; under the neutral `delivery-os` default
+      they do not, and an operator who selects the example without editing it
+      recreates the shell-defers/engine-claims split. The guide states the edit;
+      consider a startup mismatch warning or deriving the hook default, and keep
+      the residual documented (RSK-7/D12).
+    verdict: ACCEPT_AS_DOCUMENTED_RESIDUAL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    blocking: true
+    location: "packages/cli/src/production.ts:1508-1593 (no DoctorComposition), packages/cli/src/edge.ts:3539-3542"
+    message: >-
+      `createProductionComposer` never supplies a `DoctorComposition`, and
+      `createConfigProgram` registers the `doctor` command only when
+      `options.doctor` is defined. The production binary reports
+      `command "doctor" is not part of the composed prompt-required set`
+      (fallback.internal, exit 2) and the root `--help` omits doctor. The spec
+      F-4.1/F-5/§16, plan phase 5 verification, change-record manual-evidence
+      step 3, the changeset, and `doc/guides/delivery-modes.md` all say the doctor
+      composition resolves the hold and that an operator runs `doctor`. The code
+      correctly adds the optional `readOwnerHold` to `DoctorComposition` and
+      `createDoctorCommandRuntime`, but no production path supplies it. The doctor
+      surface is therefore proven only at the command-runtime/test-harness layer;
+      the operator cannot see the hold in doctor, and TC-HOLDE2E-001 step 3 cannot
+      be executed as written. This is the blocking finding.
+    suggestion: >-
+      Either (a) compose `doctor` in `createProductionComposer` (store,
+      credentials, transport, repository, clock, github, environmentPrefix,
+      readWorkTree, and `readOwnerHold`) and add a production behavior test, or
+      (b) correct the spec/plan/change-record/guide to state doctor is a planned
+      command exercised at the command-runtime layer, remove the production
+      claim, and change the E2E to the harness (or drop its doctor step). If
+      doctor remains planned, state that `status` is the only production surface
+      that reports the hold.
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    blocking: true
+    location: "git history main-tools..HEAD (all eight phase commits and the lifecycle commits)"
+    message: >-
+      The plan requires one commit per phase through the `commit` primitive with
+      the subject equal to the phase `summary` (chg-GH-280-plan.yaml:226-227).
+      The delivered phase commits use the primitive's template fallback instead:
+      c3fe7c88 -> "chore(GH-280): update packages/adapters/src/file/index.ts",
+      fff2cb10/cbcbd838/47712989/8702ff1c/10237e25/4e2a7b79 -> "chore(GH-280):
+      update doc/changes/...owner-hol…", a5c0280f -> "chore(GH-280): update
+      .changeset/gh-280-owner-hold-minor.md". None carries its phase summary
+      ("add owner-hold fact, resolver, and bounded reader", "gate queue
+      scheduling, claims, and park recovery", etc.); the 48347c03 boundary commit
+      is also a template fallback. The branch is 20 commits ahead and not pushed
+      (upstream is origin/main-tools), so reword before the first push. This is a
+      plan-compliance failure, not a code defect.
+    suggestion: >-
+      Reword each delivery commit to its plan phase `summary` (body/footer lines
+      <= 100 characters) through the commit primitive/rewrite, keeping the tree
+      byte-identical; if the deviation is intentional, record an explicit
+      pm-notes decision instead of leaving the plan requirement unmet.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: testing
+    blocking: false
+    location: "tests/fixtures/queue/cli/harness.ts:120-170; tests/structure/owner-hold-composition.test.ts:100-122"
+    message: >-
+      The plan phase 5 requires the edge harness to inject a real temp HOME with
+      a materialized marker so a held run exercises the production reader, and
+      TC-HOLDEDGE-001 to prove queue, lanes, claim, watch, dispatch, status, and
+      doctor receive the fact from the production composition. The delivered
+      harness only accepts `overrides.readOwnerHold` (a pre-resolved lambda); the
+      composition test's "exact production wiring" check is
+      `readFileSync(...).toContain(...)` over source text; only the queue family
+      is behavior-tested. The production `readOwnerHold` closure
+      (`readOwnerHoldMarker` + `resolveOwnerHoldFact`) and the production
+      dispatch claim seam (`production.ts:1093-1122`) are never executed by a
+      test (and the doctor seam cannot be, F-1). A wrong store directory/prefix
+      or a removed dispatch hold would still pass the current checks.
+    suggestion: >-
+      Build `createProductionComposer` over a temp HOME containing
+      `<stateDirectoryName>/owner-hold` (and an environment with
+      `<PREFIX>_OWNER_HOLD`) and drive status, dispatch, queue, and doctor
+      through the resulting program with a mutation control; or correct the
+      plan/test header claims and add explicit per-surface tests. Also assert
+      the claimed seven-surface composition in `owner-hold-composition.test.ts`
+      rather than source text alone.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    blocking: false
+    location: "doc/00-index.md, doc/overview/glossary.md, doc/planning/oss-tooling/milestones/m1/commands/dispatch.md, doc/quality/test-specs/test-spec-autonomous-delivery.md, doc/spec/features/{feature-config-layer,feature-dispatch-engine,feature-resident-daemon}.md"
+    message: >-
+      Seven doc-sync files are outside every plan phase `scope.files` and are not
+      named in the change record's scope-deviations section (which names only
+      mcp status.ts, error-table.test.ts, and phase-8 formatting). Each edit is a
+      defensible reconciliation, but the declared scope is incomplete. Accept as
+      consequential; the record should say so.
+    suggestion: >-
+      Extend phase 7 `scope.files` (or add a pm-notes/change-record entry naming
+      the doc-sync set) so the scope remains a truthful record.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    blocking: false
+    location: "commit 4e2a7b79 (packages/core/src/domain/owner-hold.ts, tests/structure/error-table.test.ts, and the formatted test/fixture files); chg-GH-280-change-record.md 'Scope deviations'"
+    message: >-
+      Phase 8 is declared "verification only: no source, fixture, or golden
+      change", but the phase-8 commit changes six source files and ~16
+      test/fixture files. Most are biome formatting/reindent, but
+      `packages/core/src/domain/owner-hold.ts` is a behavior-preserving source
+      rewrite (`/\u001b.../` -> `new RegExp(String.fromCharCode(27)...)`,
+      `C0_C1_CONTROL` -> `new RegExp`) to satisfy a lint rule, and
+      `tests/structure/error-table.test.ts` is the functional hint expectation.
+      The change record calls these "formatting-only"; the substance is
+      acceptable (behavior unchanged, lint/format green), but the phase boundary
+      and record wording are inaccurate.
+    suggestion: >-
+      Describe phase 8 as "formatting + the lint-driven regex construction change
+      + the error-table expectation" (or move those two edits into their owning
+      phases) and correct the change-record scope-deviations text.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: spec-compliance
+    blocking: false
+    location: "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-spec.md:565,677; packages/core/src/domain/queue-precedence.ts:439-448"
+    message: >-
+      AC-F4-1/Appendix B say an active park "stays parked:<cause>" and a stuck
+      park "stays park-condition-stuck"; the delivered `applyOwnerHold` prepends
+      `owner-hold` to every gated entry, so an active/stuck park's `queue list`
+      blocking array is `["owner-hold","parked:..."]` or
+      `["owner-hold","park-condition-stuck"]`. The state and parked/stuck reason
+      are preserved and lanes still render parked/stuck (tests assert it), and
+      the plan pin/RSK-4 support prepending; only the AC/Appendix wording can be
+      read as "unchanged" for those entries.
+    suggestion: >-
+      State explicitly that `owner-hold` is prepended to every gated entry's
+      ordered `blocking[]` (including active/stuck parks), while their state and
+      parked/stuck reason are preserved and the lane surface renders that reason.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: spec-compliance
+    blocking: false
+    location: "chg-GH-280-spec.md:379 (DM-4); packages/core/src/contracts/queue.ts:643-648"
+    message: >-
+      DM-4 types `QueueReadData.ownerHold` as `OwnerHoldFact`, while the delivered
+      member is `{ source: OwnerHoldSource; reason?: string }` (no `active: true`).
+      AC-F4-7, the tests, and the goldens consistently use the projected shape,
+      and the status/doctor members use the same shape; only DM-4's annotation is
+      imprecise.
+    suggestion: >-
+      Change DM-4 to `{ source; reason? }` (present only when active), or add
+      `active: true` to the delivered payload and goldens; the former matches the
+      intended active-only projection.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: high
+    category: documentation
+    blocking: false
+    location: "chg-GH-280-test-plan.md:66,1970; chg-GH-280-pm-notes.yaml:19-25"
+    message: >-
+      (a) Test-plan §2 still says the implementation plan is "Not yet authored at
+      test-planning time (phase 4 follows phase 3)" although `chg-GH-280-plan.yaml`
+      exists and validates. (b) §7.3 says `blockingReasons` gets "exactly one
+      owner-hold token; no other array changes", but the fixture's
+      `blockingReasons` also gains the six condition ids (27 -> 34) and
+      `laneIdleReasons` is a new 28-entry array. (c) pm-notes D1 still asserts
+      `${ADOS_STATE_DIR}/owner-hold` and `ADOS_OWNER_HOLD_FILE`, superseded by D12
+      but not marked inline. These are stale/precision claims in delivered
+      artifacts.
+    suggestion: >-
+      Refresh the test-plan §2 row, describe the 28/34 fixture target in §7.3,
+      and append the D12 supersession marker to D1.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: high
+    category: documentation
+    blocking: false
+    location: "scripts/hooks/pre-opencode-iteration-owner-hold.sh:46-55"
+    message: >-
+      The marker reader comment says "up to the first 4 096 bytes" but
+      `read -r -N 4096` bounds by characters; a multibyte marker can be read
+      beyond 4 096 bytes (still bounded by 4 096 characters, and the reason is
+      truncated to 160). The engine reader is byte-bounded. Harmless, but the
+      comment overstates the byte bound.
+    suggestion: >-
+      Say "up to 4 096 characters (the engine's byte bound is 4 096 bytes)" or
+      use a byte-aware read; no behavior change is required.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: medium
+    category: correctness
+    blocking: false
+    location: "packages/adapters/src/file/owner-hold-marker.ts:46-55"
+    message: >-
+      Production `exists: existsSync` returns false both when the path is absent
+      and when the parent directory cannot be stat'd (EACCES), so a marker under
+      an unreadable store directory resolves `absent` (inactive) rather than
+      fail-closed. The ordinary marker-permission case (chmod 000 file) is
+      fail-closed because `existsSync` succeeds, `isFile` succeeds, and
+      `readText` throws. NFR-10 says 100% of unreadable/stat-failing marker
+      outcomes are active; the parent-dir case is a narrow exception.
+    suggestion: >-
+      Use an error-aware existence check (`lstatSync` with ENOENT -> absent,
+      other errors -> unreadable) or document the parent-dir exception; the
+      current behavior is fail-open only when the store directory itself is
+      unreadable (which usually fails the store reads too).
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: high
+    category: testing
+    blocking: false
+    location: "tests/behaviour/mcp-status-parity.test.ts, tests/structure/queue-scheduling-contract.test.ts, tests/checks/error-table-sync.test.ts, tests/checks/owner-hold-doc.test.ts, tests/behaviour/doctor-owner-hold.test.ts"
+    message: >-
+      Several plan/test-plan TC ids have no test whose name carries the
+      identifier: TC-HOLDDOCTOR-006 (behavior covered by TC-DOCTOR-021 and
+      TC-HOLDDOCTOR-007), TC-HOLDQUEUE-011 (exact equality in
+      queue-scheduling-contract.test.ts), TC-HOLDSTATUS-004 (mcp-status-parity
+      iterates the fixture), TC-HOLDNEG-001/002, and TC-HOLDDOCS-004. The
+      behavior is covered, but the plan's traceability is grep-unverifiable.
+      TC-HOLDFACT-009's "zero credential/network/write" is asserted only by a
+      canary and static source checks, not by recorded counts.
+    suggestion: >-
+      Name the test cases with their TC ids (or record the mapping) and add a
+      recording-count assertion for TC-HOLDFACT-009.
+    suppressed: false
+verification_evidence:
+  - command: "git diff --stat main-tools...HEAD"
+    result: "97 files changed, 9175 insertions, 124 deletions; only five declared held goldens added; no delivered golden modified"
+  - command: "bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts"
+    result: "27 pass, 0 fail"
+  - command: "bash scripts/.tests/test-hook-owner-hold-example.sh"
+    result: "13 pass, 0 fail (TC-HOLDHOOK-001..009, TC-HOLDREG-003)"
+  - command: "bun test tests/behaviour/queue-hold-{schedule,claim,dispatch,park-resume,payload,daemon-watch}.test.ts tests/behaviour/queue-{cli,lease,park,schedule}.test.ts"
+    result: "96 pass, 0 fail"
+  - command: "bun test tests/behaviour/{doctor-owner-hold,status-owner-hold,status-corpus}.test.ts tests/structure/owner-hold-composition.test.ts"
+    result: "29 pass, 0 fail"
+  - command: "bun test tests/structure/{queue-scheduling-contract,doctor-contract,error-table,content-inventory,port-contract-inventory}.test.ts tests/checks/owner-hold-doc.test.ts tests/golden/{doctor-output,queue-list,queue-plan}.test.ts"
+    result: "157 pass, 0 fail"
+  - command: "bun run scripts/checks/ambient-globals.ts"
+    result: "OK: 173 neutral-set files clean (1 entry + 6 tier scopes)"
+  - command: "shellcheck scripts/hooks/pre-opencode-iteration-owner-hold.sh scripts/.tests/test-hook-owner-hold-example.sh"
+    result: "0 findings"
+  - command: "bun test tests/checks/{doc-conformance,forbidden-literals,reference-page-parity,help-guide-coverage,privacy-release}.test.ts"
+    result: "51 pass, 0 fail"
+  - command: "bash scripts/.tests/test-doc-distribution.sh"
+    result: "no drift; 82 in-scope docs; install set matches ados_distribution"
+  - command: "bash scripts/.tests/test-install.sh; bash scripts/.tests/test-uninstall.sh"
+    result: "55/55 pass; 30/30 pass"
+  - command: "bun test tests/structure/provider-surface.test.ts"
+    result: "6 pass, 0 fail; ceo-loop.sh and test-hook-regression.sh byte-unchanged"
+  - command: "pnpm typecheck"
+    result: "exit 0 across six packages plus tests/types"
+  - command: "pnpm check:boundaries"
+    result: "exit 0 (373 modules / 1101 dependencies, ambient/entrypoints/secret-read clean)"
+  - command: "bun run scripts/checks/{prompt-conformance,help-guide-coverage,exports-parity}.ts"
+    result: "all exit 0 (5 prompts clean, all prompt-required commands covered, 5 publishables pass)"
+  - command: "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+    result: "exit 0: 7127 pass, 4 skip, 0 fail (7131 tests, 879 files)"
+  - command: "bun packages/cli/bin/delivery-os.ts doctor --json"
+    result: "exit 2, fallback.internal, 'command doctor is not part of the composed prompt-required set' (F-1 evidence)"
+  - command: "bun packages/cli/bin/delivery-os.ts --help"
+    result: "root command list omits doctor (F-1 evidence)"
+reviewed_at: 2026-11-10T15:50:00Z
+verdict_basis: >-
+  The product behaviour is largely correct and well tested: the owner-hold fact
+  resolves with the declared precedence and fail-closed marker semantics, the
+  queue/dispatch gate refuses claims and dispatches before selection or the
+  fence, recovery is skipped with zero records, status/doctor project the hold
+  additively with unchanged inactive goldens, the closed sets move by exactly
+  the two declared tokens, and the shell example is a deterministic MAX driver
+  with no cap. The review is still FAIL for two independent reasons. First, the
+  doctor surface is not composed in production: `delivery-os doctor` is rejected
+  by the prompt-required-set guard, so the operator-visible doctor half of G-5/
+  AC-F6 is only test-harness-level and the manual E2E's doctor step cannot be
+  run; the spec, plan, change record, changeset, and guide all overstate the
+  production wiring. Second, plan compliance fails on commit hygiene (all phase
+  commits carry template-fallback "update <path>" subjects instead of the
+  declared phase summaries) and on the phase-8/doc-sync scope declarations, and
+  the production composition test is weaker than claimed (source-text greps,
+  pre-resolved reader, no temp-HOME marker, no dispatch/status/doctor behavior).
+  The remaining findings are precision/accuracy nits and one narrow fail-closed
+  edge; none is a security or data-loss issue. Remediation should wire or
+  honestly scope the doctor surface, reword the phase commits, strengthen the
+  composition test, and correct the phase-8/doc-sync/artifact wording; then
+  re-review iteration 2.
+next_step: "CALL_CODER - address F-1 (wire production doctor or correct the spec/plan/record/guide/E2E claims), F-2 (reword every phase commit to its plan summary before the first push), and F-3 (temp-HOME marker + dispatch/status/doctor composition behavior test); apply or explicitly accept F-4..F-11; then re-review (iteration 2) before quality gates."

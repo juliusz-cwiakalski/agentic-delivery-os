@@ -2,11 +2,11 @@
 id: TEST-SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-16
-last_updated: 2026-10-02
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-146", "PDEV-514", "PDEV-516"]
+  related_changes: ["GH-146", "PDEV-514", "PDEV-516", "GH-280"]
   feature_spec: doc/spec/features/feature-autonomous-delivery.md
   decisions: ["TDR-0002"]
 ---
@@ -23,8 +23,9 @@ invariants while safely supporting optional pre-iteration hooks.
 
 - `scripts/ceo-loop.sh`, `scripts/deliver-ticket.sh`, and their hook lifecycle
   and `ADOS_HOOK_ENV_V1` parser behavior.
-- `scripts/hooks/pre-opencode-iteration-zai.sh` and local install/uninstall
-  distribution symmetry.
+- `scripts/hooks/pre-opencode-iteration-zai.sh`,
+  `scripts/hooks/pre-opencode-iteration-owner-hold.sh`, and local
+  install/uninstall distribution symmetry.
 - Existing `batch-deliver.sh` exit-code consumer behavior and the CEO failed
   ticket path.
 - Excluded cleanup modes: wrapper-only SIGKILL, host/power failure, and hook
@@ -48,10 +49,13 @@ also verify 0700/0600 output artifacts are fresh and removed. Dry-run coverage
 proves that no hook executes, artifact is created, or hook-return data is applied.
 The shared security fixture exercises GNU and BSD/macOS `stat` metadata formats.
 
-`test-install.sh`, `test-uninstall.sh`, and `test-hook-zai-example.sh` verify
-that the Z.AI example is executable but inactive after local install, removed
-with its empty directory on local uninstall, and waits only for matching
-configured values in its UTC window.
+`test-install.sh`, `test-uninstall.sh`, `test-hook-zai-example.sh`, and
+`test-hook-owner-hold-example.sh` verify
+that both examples are executable but inactive after local install, removed with
+any empty directory on local uninstall, and that each waits only for its own
+configured inputs: the Z.AI example inside its UTC window, and the owner-hold
+example while the environment value or the fixed production-store marker is
+active.
 
 ### End-to-End Tests
 
@@ -90,6 +94,19 @@ in logs. Tests cover exact 65,536-byte files, 256 records, 8,192-byte lines, and
 both GNU and BSD/macOS metadata adapters. They also prove a valid multi-byte
 UTF-8 literal value is inherited byte-for-byte, while actual CR and NUL bytes
 remain rejected.
+
+### Owner-hold hook contract
+
+Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty, when its condition
+is evaluated, then it asks for the poll interval and the sleep line names the
+`env` source and the sanitized reason. Given only the fixed production-store
+marker `$HOME/.delivery-os-state/owner-hold`, then the marker source and its first line
+are named. Given neither, then the condition asks for `0` and the driver returns
+without sleeping. The driver takes the MAX across conditions, applies no fixed
+iteration cap, accepts `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` only in `1`–`3600` and uses
+`300` with one warning otherwise, reads no other marker path, emits one bounded
+reason line per sleep, and uses no real sleep, network call, or clock read in the
+suite. A clock jump neither ends the hold nor extends a deferral beyond one poll.
 
 ### Delivery result-contract guards
 

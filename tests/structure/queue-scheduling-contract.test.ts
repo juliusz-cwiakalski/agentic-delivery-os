@@ -101,6 +101,7 @@ type ClosedSets = {
   recoveryStates: string[];
   incidentTypes: string[];
   laneStates: string[];
+  laneIdleReasons: string[];
   blockingReasons: string[];
   precedenceStepIds: number[];
   bounds: Record<string, number>;
@@ -170,7 +171,7 @@ const dataOnlyViolations = (text: string, label = CONTRACT): string[] => {
   return violations;
 };
 
-describe("TC-VOCAB-005 closed sets are exact and distinct", () => {
+describe("TC-VOCAB-005 / TC-HOLDQUEUE-011 / TC-HOLDNEG-002 closed sets are exact and distinct", () => {
   test("lease, weight, and rank vocabularies are the declared closed sets", () => {
     expect([...QUEUE_LEASE_SCOPES]).toEqual(closedSets.leaseScopes);
     expect([...QUEUE_IMPLEMENTED_LEASE_SCOPES]).toEqual(closedSets.implementedLeaseScopes);
@@ -212,6 +213,16 @@ describe("TC-VOCAB-005 closed sets are exact and distinct", () => {
   test("lane states and blocking reasons come only from the declared sets", () => {
     expect([...QUEUE_LANE_STATES]).toEqual(closedSets.laneStates);
     expect(QUEUE_LANE_STATES).toHaveLength(6);
+    // D16/DoR-2: exact two-way ordered equality against the named fixture
+    // arrays. A single token added, removed, reordered, or renamed fails here.
+    expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons);
+    expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons);
+    expect(
+      (QUEUE_LANE_IDLE_REASONS as readonly string[]).filter((reason) => reason === "owner-hold"),
+    ).toHaveLength(1);
+    expect(
+      (QUEUE_BLOCKING_REASONS as readonly string[]).filter((reason) => reason === "owner-hold"),
+    ).toHaveLength(1);
     for (const reason of QUEUE_LANE_IDLE_REASONS) {
       expect(QUEUE_BLOCKING_REASONS as readonly string[]).toContain(reason);
     }

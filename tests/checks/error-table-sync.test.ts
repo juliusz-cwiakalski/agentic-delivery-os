@@ -104,7 +104,7 @@ afterEach(() => {
   tempRoots.length = 0;
 });
 
-describe("TC-SYNC-001 delivered state", () => {
+describe("TC-SYNC-001 / TC-HOLDNEG-001 delivered state", () => {
   test("is bidirectionally consistent, non-vacuous, and read-only", async () => {
     const before = gitStatus();
     const result = await runSyncCheck({ root: ROOT });

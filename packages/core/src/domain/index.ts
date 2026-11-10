@@ -442,6 +442,15 @@ export {
   toBoardData,
   validateOwnerGateSlaPolicy,
 } from "./owner-gate-sla.js";
+// The pure owner-hold resolver (GH-280 F-1, DM-1, D12): one injected fact over
+// an injected environment record, production store directory, and marker
+// outcome; no ambient environment or filesystem access.
+export {
+  ownerHoldEnvironmentVariableName,
+  resolveOwnerHoldFact,
+  sanitizeOwnerHoldReason,
+} from "./owner-hold.js";
+export type { OwnerHoldMarkerOutcome, OwnerHoldResolutionInput } from "./owner-hold.js";
 export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
 export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {

@@ -31,6 +31,7 @@ import {
   type DoctorStateStoresRead,
   type DoctorTrackerFacts,
   type DoctorWiringRead,
+  type OwnerHoldFact,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
@@ -52,6 +53,8 @@ export type DoctorCommandRuntime = {
   }) => DoctorProviderCredentialPresence;
   readonly readParkFold: (nowMs: number) => DoctorParkFoldRead;
   readonly readStateStores: () => DoctorStateStoresRead;
+  /** The injected owner hold; absent leaves the delivered report byte-identical. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
 };
@@ -158,11 +161,17 @@ export const createDoctorCommandDefinition = (
       contained: false,
       facts: {
         area: "provider",
-        provider: { config, credentials, fold: await readFold(nowMs) },
+        provider: {
+          config,
+          credentials,
+          fold: await readFold(nowMs),
+          ...("readOwnerHold" in runtime && runtime.readOwnerHold !== undefined
+            ? { ownerHold: runtime.readOwnerHold() }
+            : {}),
+        },
       },
     };
   };
-
   const collectState = async (): Promise<DoctorCheckResult> => ({
     area: "state",
     contained: false,

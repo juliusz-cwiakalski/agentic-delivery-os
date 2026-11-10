@@ -267,6 +267,7 @@ export const toQueueReadData = (
     findings: schedule.findings,
     degraded,
     truncated: schedule.truncated,
+    ...(schedule.ownerHold === undefined ? {} : { ownerHold: schedule.ownerHold }),
     counts: {
       entries: schedule.entries.length,
       ready: schedule.entries.filter((entry) => entry.state === "ready").length,

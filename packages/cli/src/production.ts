@@ -18,8 +18,10 @@ import {
   acquireFileConfig,
   ensureDispatchIdentityMarkerText,
   nodeFileSystemFacts,
+  nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   readDispatchIdentityMarkerText,
+  readOwnerHoldMarker,
   readPmNotesText,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
@@ -75,6 +77,7 @@ import {
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
+  resolveOwnerHoldFact,
   serializeIdentityMarker,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -98,6 +101,7 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessSessionHandle,
+  type OwnerHoldFact,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
@@ -281,6 +285,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
     const stateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
     const changesDirectory = `${cwd}/doc/changes`;
+    // One per-pass owner-hold resolution over the injected environment and the
+    // fixed production store directory (GH-280 F-1, D12). Never cached.
+    const readOwnerHold = (): OwnerHoldFact => {
+      const marker = readOwnerHoldMarker(
+        { storeDirectory: stateDirectory },
+        nodeOwnerHoldMarkerFileSystem(),
+      );
+      return resolveOwnerHoldFact({
+        environment,
+        environmentPrefix: brand.environmentPrefix,
+        storeDirectory: stateDirectory,
+        marker,
+      });
+    };
     // One git-root resolution for every configuration branch composition.
     const gitRootForConfig = (): string | undefined => findGitRoot(cwd, nodeRepositoryIo());
     const notesFs = nodePmNotesFileSystemFacts();
@@ -370,6 +388,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       localContext: { path: pmContextPath, fs: localFs },
       clock: { nowMs, nowIso },
       github: { instance },
+      readOwnerHold,
       ...(truthReadCredential === undefined ? {} : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
@@ -450,6 +469,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       newFenceToken,
       degraded: ["daemon-unreachable" as const],
       readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
+      readOwnerHold,
     };
 
     const gates = createVerifyGatesCommandRuntime({
@@ -1073,6 +1093,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       readTruth: dispatchTruth,
       preflight: dispatchPreflight,
       claimLease: (ref) => {
+        const hold = readOwnerHold();
+        if (hold.active) {
+          return {
+            ok: false,
+            code: "queue.precondition.unmet",
+            summary:
+              hold.reason === undefined
+                ? `reason=owner-hold; owner hold active (${hold.source})`
+                : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`,
+          };
+        }
         const claimed = claimQueueLease(store, {
           ref,
           holder: "dispatch",
@@ -1081,6 +1112,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           nowIso: nowIso(),
           nowMs: nowMs(),
           fenceToken: newFenceToken(),
+          ownerHold: hold,
         });
         return claimed.ok
           ? { ok: true, leaseId: claimed.value.lease.leaseId }

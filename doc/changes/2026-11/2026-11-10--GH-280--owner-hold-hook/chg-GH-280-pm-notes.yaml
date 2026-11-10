@@ -1,0 +1,576 @@
+change_id: GH-280
+title: "Owner hold that outranks provider windows (pause lanes, not just defer)"
+delivery_mode: autonomous
+branch: feat/GH-280/owner-hold-hook
+base_branch: main-tools
+phases:
+  clarify_scope: { started: null, completed: 2026-11-10T12:55:22.221Z }
+  specification: { started: null, completed: 2026-11-10T13:57:15.946Z }
+  test_planning: { started: null, completed: 2026-11-10T14:09:33.217Z }
+  delivery_planning: { started: null, completed: 2026-11-10T14:16:51.833Z }
+  dor_check: { started: null, completed: 2026-11-10T14:24:24.607Z }
+  delivery: { started: null, completed: 2026-11-10T15:21:55.392Z }
+  system_spec_update: { started: null, completed: 2026-11-10T15:34:59.866Z }
+  review_fix: { started: null, completed: 2026-11-10T17:23:38.920Z }
+  quality_gates: { started: null, completed: 2026-11-10T17:36:03.761Z }
+  dod_check: { started: null, completed: 2026-11-10T17:36:52.420Z }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the marker
+      path): the owner hold has two equivalent sources. (a) A marker file in the
+      state directory the typed engine resolves; (b) an environment variable
+      derived from the brand prefix (`<PREFIX>_OWNER_HOLD`, which is
+      `DELIVERY_OS_OWNER_HOLD` for the current default working name). A
+      non-empty value is an operator reason. Removing both sources clears the
+      hold with no state loss. D12 replaces the marker-path clause and removes
+      the marker-path override; the env source remains."
+    date: 2026-11-10
+  - text: "D2 (PM-decided, non-interactive intake): the typed engine models the hold
+      as a global read-only gate over an injected fact, not as a queue park
+      cause and not as a state record. This preserves the closed park
+      cause/condition pairing, the closed five state record kinds, and the
+      closed six queue-ready conditions. Removing the marker resumes every ref
+      from preserved queue, lease, and park state."
+    date: 2026-11-10
+  - text: "D3 (PM-decided, non-interactive intake; amended after spec review):
+      include the read-only status/doctor surface from the ticket. Status
+      carries an additive optional owner-hold sibling on the existing providers
+      section (credential-prerequisite precedent; no tenth section, no new
+      status reason). Doctor carries the hold only when the provider check would
+      otherwise be ok: it keeps the ok verdict and adds one closed evidence
+      reason (owner-hold) and a bounded detail. No fourth verdict, no summary
+      count, no condition-catalog entry, and no exit change, because a
+      deliberate pause is not a wiring defect and the delivered verdict set
+      stays closed at ok/fail/unreachable."
+    date: 2026-11-10
+  - text: "D3a (PM-decided, spec revision): the first spec draft added a non-failing
+      warn verdict plus a warn summary count to doctor. That was rejected as
+      disproportionate: it would change the closed verdict vocabulary, the
+      failure summary grammar, exit semantics, and exhaustive consumers for an
+      optional surface. The spec was revised to the additive ok-plus-reason
+      design before test planning."
+    date: 2026-11-10
+  - text: "D4 (PM-decided, non-interactive intake): ship a dedicated new example
+      hook at scripts/hooks/pre-opencode-iteration-owner-hold.sh with
+      howLongToSleepDueToOwnerHold() under the DM-1 contract. It is registered
+      in install.sh ADOS_HOOK_EXAMPLES, removed by uninstall.sh, and covered by
+      its own deterministic shell test. The delivery-modes guide documents
+      merging it with peak/quota conditions, since conditions compose by MAX and
+      a hold therefore outranks every time-bounded wait."
+    date: 2026-11-10
+  - text: "D5 (PM-decided): no wrapper behavior changes. deliver-ticket.sh and
+      ceo-loop.sh already invoke the configured hook before every spawn/resume;
+      ceo-loop.sh is SHA-pinned by provider-surface tests. The hold is delivered
+      entirely through the example hook, the typed engine gate, and docs."
+    date: 2026-11-10
+  - text: "D6 (PM-decided): while the hold is active, claim and dispatch are refused
+      and the park auto-recovery mutation is skipped, so a park that reached its
+      provider window stays parked. Read-only surfaces may still evaluate and
+      display the park, but no recovery record is appended and no lane is
+      claimed."
+    date: 2026-11-10
+  - text: "D7 (PM-decided, test-plan OQ-1): the claim refusal's reason token is
+      exactly `owner-hold`; the separate bounded detail names the source and the
+      sanitized reason. DM-6's `owner-hold` / `owner-hold: reason` shorthand
+      describes the blocking-reason token form, not the claim detail grammar."
+    date: 2026-11-10
+  - text: "D8 (PM-decided, test-plan OQ-2): the dedicated owner-hold example applies
+      to every agent and model. It has no provider/model activation gate, unlike
+      the zai example's zai-coding-plan/* gate, because an operator hold is
+      model-agnostic."
+    date: 2026-11-10
+  - text: "D9 (PM-decided, test-plan OQ-3): the hook's bounded reason line names the
+      source: `owner-hold (<source>)` followed by `: <reason>` only when a
+      reason is present, then `; sleeping <N>s`. The spec sample is corrected to
+      match AC-F2-1."
+    date: 2026-11-10
+  - text: "D10 (PM-decided, test-plan OQ-4): an unset or empty/whitespace poll
+      setting (`<PREFIX>_OWNER_HOLD_POLL_SECONDS`, currently
+      `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`) uses the 300-second default
+      silently; any non-empty invalid value (non-integer, zero, negative, out of
+      range) uses 300 with exactly one bounded warning."
+    date: 2026-11-10
+  - text: "D11 (PM-decided, test-plan OQ-5): when the provider check would otherwise
+      be ok and the hold is active, the hold segment is appended to the existing
+      bounded provider detail (`<existing detail>; owner hold active
+      (<source>)[: <reason>]`) rather than replacing the healthy text. The
+      existing detail bound remains the outer limit."
+    date: 2026-11-10
+  - text: "D12 (PM-decided, DoR-1 finding 1): the hold marker lives in the directory
+      the production store identity actually uses,
+      `<home>/<brand.stateDirectoryName>/owner-hold`. The design does NOT claim
+      or use `<PREFIX>_STATE_DIR`, and the shell example does NOT offer a
+      marker-path override setting, because neither is honoured by the
+      production queue/dispatch/status/doctor store today. Relocating state is
+      out of scope for GH-280. The shell example's default is the current
+      product's `$HOME/.delivery-os-state/owner-hold`; adopters whose working
+      name differs edit the example's two setting names and that default.
+      Correct every spec/test-plan/plan claim that says otherwise."
+    date: 2026-11-10
+  - text: "D13 (PM-decided, DoR-1 finding 2): `queue claim` with no ref must also
+      refuse with `queue.precondition.unmet` and reason token `owner-hold`. The
+      claim composition gates on the hold before ref selection, so a held claim
+      never falls through to `no-eligible-action`. Add a no-ref test case and
+      use `queue claim` in the E2E procedure."
+    date: 2026-11-10
+  - text: "D14 (PM-decided, DoR-1 findings 3-4): the daemon half of the acceptance
+      is a conditional guarantee, not an enforced production path. Production
+      daemon supervision is already a delivered residual and is not a claim
+      source. The spec/test plan/change record must say: any composed
+      supervision cycle that derives its next action from the held scheduling
+      pass receives no action; the production daemon entry remains the
+      resident-daemon spec's existing residual. The daemon test must derive its
+      seam from the held schedule (not assert a tautological undefined) and the
+      residual is recorded. `daemon-compose.ts` is not added to scope."
+    date: 2026-11-10
+  - text: "D15 (PM-decided, DoR-1 finding 5): the status member is evidence-level
+      `providers.evidence.ownerHold` (the `credentialPrerequisite` precedent),
+      not a sibling of `chain`/`entries`/`parks`. Align spec F-5.1/DM-7, the
+      test plan's assertions/A-T1, and the plan pins/verification to that one
+      location."
+    date: 2026-11-10
+  - text: "D16 (PM-decided, DoR-1 finding 6): the closed-set guarantee must be
+      asserted, not inferred from a fixture edit. Extend
+      `queue-scheduling-contract.test.ts` with exact two-way equality for
+      `QUEUE_LANE_IDLE_REASONS` and `QUEUE_BLOCKING_REASONS` against
+      `closed-sets.json`, update the test plan's mutation row, and name the
+      assertion in plan phase 2 verification."
+    date: 2026-11-10
+  - text: "D17 (PM-decided, DoR-1 finding 7): `queue ready` is unchanged and does
+      not report the hold. Narrow NG-12/NFR-14 to the surfaces that do report it
+      (queue list/plan/lanes, status, doctor) and state the omission
+      explicitly."
+    date: 2026-11-10
+  - text: "D18 (PM-decided, DoR-1 finding 10): the doctor hold segment must survive
+      the detail clamp. When appending would exceed DOCTOR_MAX_DETAIL_CHARS,
+      truncate the existing detail to fit and keep the whole hold segment; never
+      truncate the hold segment mid-word or drop it. Add a near-bound test
+      case."
+    date: 2026-11-10
+  - text: "D19 (PM-decided, DoR-1 finding 16): a held dispatch/claim is realized as
+      a classified user-validation refusal (`queue.precondition.unmet`, exit 1),
+      not an internal wait. The guide and AC state that callers wanting deferral
+      semantics must treat the `owner-hold` token as wait/do-not-abort."
+    date: 2026-11-10
+  - text: "D20 (PM-decided, review-1 F-1): doctor hold support is a
+      command-runtime/test-harness capability in GH-280, not a production
+      composition. `createProductionComposer` does not supply a
+      `DoctorComposition`, and the production binary rejects `doctor` as outside
+      the composed prompt-required set; wiring doctor is a pre-existing residual
+      tracked by the doctor feature, not this change. Correct every GH-280 claim
+      (spec F-4.1/F-5/§16, AC-F6 scope, plan phase 4/5, change record E2E,
+      changeset, delivery-modes guide, doctor command page) and remove the
+      `doctor --json` E2E step. In production, `status` carries the hold in its
+      digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report
+      it on their own surfaces; doctor reports it whenever a DoctorComposition
+      is supplied (test harness and any future production wiring) and is not a
+      production composition."
+    date: 2026-11-10
+  - text: "D21 (PM-decided, review-1 F-2): the commit primitive owns commit
+      subjects. Template-fallback subjects are accepted and history is not
+      rewritten, per GH-279 D9 and the rule that commits go only through the
+      primitive. The plan's phase-summary-as-subject requirement is corrected to
+      state that the phase `summary` is a plan description and the primitive
+      composes the actual message; the acceptance is recorded in the change
+      record."
+    date: 2026-11-10
+  - text: "D22 (PM-decided, review-1 F-3): strengthen the production-composition
+      test rather than accept the source-text/grep claim. Materialize a marker
+      in a temp HOME/state directory and drive the production reader closure
+      through queue, status, and dispatch behavior; keep doctor at the
+      command-runtime layer per D20. Add a mutation control (removing the marker
+      or the wiring flips the behavior)."
+    date: 2026-11-10
+  - text: "D23 (PM-decided, review-1 F-4/F-5): the plan and change record must
+      declare the seven doc-sync files and the non-formatting phase-8 changes
+      (the lint-driven `owner-hold.ts` regex construction and the
+      `error-table.test.ts` expectation). Describe phase 8 as verification plus
+      those record/formatting changes, not 'formatting-only'."
+    date: 2026-11-10
+  - text: "D24 (PM-decided, review-1 F-9/F-10/F-11): fix the shell marker-read
+      comment to state the character bound versus the engine's byte bound; make
+      the adapter existence check error-aware (ENOENT absent, other errors
+      unreadable/fail-closed) and test it; name the remaining test cases with
+      their TC ids and add a recording-count assertion for TC-HOLDFACT-009 where
+      feasible."
+    date: 2026-11-10
+  - text: "D25 (PM-decided, review-1 F-6/F-7/F-8): clarify that `owner-hold` is
+      prepended to every gated entry's ordered blocking[] including active/stuck
+      parks while their state and park reason are preserved; correct DM-4's
+      payload annotation to `{ source; reason? }`; refresh the stale test-plan
+      §2/§7.3 and mark D1 superseded inline."
+    date: 2026-11-10
+  - text: "D26 (PM-decided, review-2 F-1): align the shipped example and every
+      example artifact to the current default brand. The entrypoint default
+      working name is `delivery-os`, so the engine reads
+      `DELIVERY_OS_OWNER_HOLD` and `<home>/.delivery-os-state/owner-hold`. The
+      shell example uses `DELIVERY_OS_OWNER_HOLD`,
+      `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, and the fixed default
+      `$HOME/.delivery-os-state/owner-hold`. Normative text keeps the `<PREFIX>`
+      placeholder; concrete examples use the current names. Adopters who set a
+      different working name edit the example's defaults or use the
+      brand-derived env source. The previously used settings and state-directory
+      names for the owner hold are removed from the GH-280 artifacts."
+    date: 2026-11-10
+  - text: "D27 (PM-decided, review-2 F-1): the manual E2E must be executable. Create
+      the disposable state directory with mode 0700 (`mkdir -m 700
+      \"$HOME/.delivery-os-state\"`) because the store rejects a non-private
+      directory. Use `status` plus the queue read surfaces and `queue claim`
+      with no ref as the production evidence. Dispatch is covered by the
+      automated composition test and is omitted from the manual procedure (it
+      needs a GitHub credential); if included, it is a conditional step with the
+      credential prerequisite named. No `doctor` step."
+    date: 2026-11-10
+  - text: "D28 (PM-decided, review-2 F-2): remove every remaining status-exclusive
+      surface claim. `status` carries the hold in its digest; `queue
+      list`/`queue plan`/`lanes`/`queue watch` report it on their own production
+      surfaces; doctor is command-runtime only, and its fact carriage is proven
+      at that layer. Fix the pm-notes D20/phase-9 notes, plan phase 5/7/9
+      narratives and exit criteria, phase-8 E2E line, changeset, and the
+      structure-test header."
+    date: 2026-11-10
+  - text: "D29 (PM-decided, review-2 advisories): declare
+      `doc/spec/features/feature-cli-entrypoint.md` in plan phase 7 scope and
+      the change record; update the test-plan aggregate counts to 7133 pass /
+      880 files; list the remediation commits in the phase-9 evidence note; move
+      the TC-HOLDFACT-009 zero-count recorder to the injected reader/composition
+      boundary so it is not tautological; say `owner-hold` is the 28th
+      blockingReasons entry (position 28), not 27."
+    date: 2026-11-10
+  - text: "D30 (PM-decided, review-2): add plan phase 10 for the review-2
+      remediation (brand-aligned example, E2E procedure, wording and advisory
+      fixes). The product behavior is otherwise unchanged; only the shipped
+      example defaults, tests, and artifacts move."
+    date: 2026-11-10
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: GitHub issue 280 is open, labelled change, zero comments, no
+      assignee. Worktree clean on feat/GH-280/owner-hold-hook at d49164e0, equal
+      to origin/main-tools. No prior change folder exists."
+    type: info
+    date: 2026-11-10
+  - text: "Scope cross-check against current truth: feature-autonomous-delivery.md
+      F-8 and the delivery-modes hook section define the DM-1 sleep-driver
+      contract; feature-scheduling-engine.md defines the closed park
+      cause/condition pairing, the five state record kinds, and the six
+      queue-ready conditions; feature-status-digest.md fixes nine sections and a
+      closed 20-reason set; feature-doctor.md fixes five areas and a closed
+      22-reason set. The change is additive and does not contradict those
+      contracts when the hold is an injected fact rather than a park or record."
+    type: info
+    date: 2026-11-10
+  - text: "Doc impact map: doc/guides/delivery-modes.md (hook section),
+      doc/guides/zai-peak-hours-hook.md (condition list and extensibility),
+      doc/spec/features/feature-autonomous-delivery.md (F-8 and configuration),
+      doc/spec/features/feature-scheduling-engine.md (global hold gate and
+      surfaces), doc/spec/features/feature-status-digest.md (providers sibling),
+      doc/spec/features/feature-doctor.md (provider detail and reason),
+      doc/planning/oss-tooling/milestones/m1/commands/{queue,status,doctor}.md.
+      Any new doc needs an ados_distribution marker and forbidden-literal
+      registration."
+    type: risk
+    date: 2026-11-10
+  - text: "Invariant constraints mapped before spec: queue-ready stays at six
+      conditions; park cause/condition pairs stay closed; queue lane/blocking
+      reason vocabularies are pinned by
+      tests/fixtures/queue/vocabulary/closed-sets.json; status sections stay at
+      nine with a closed reason set; doctor reasons are closed; status and queue
+      goldens compare byte/structural equality; the core tier bans ambient
+      filesystem access, so the marker must arrive through an injected fact at
+      the CLI/MCP edge."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the non-interactive harness rejected the scope question, so the
+      four open ticket choices were resolved as recorded PM decisions rather
+      than owner-confirmed. Each is reversible and additive; they are surfaced
+      at the PR gate for owner acceptance."
+    type: retro
+    date: 2026-11-10
+  - text: "DoR iteration 1: NOT_READY (readiness-review/readiness-iter-1.md). 1
+      critical, 5 major, 6 minor, 4 nit. Blocking: (F1) the shell advertised a
+      state-directory setting and a marker-path override the production store
+      does not honour, re-creating the shell-defers/engine-claims split; (F2)
+      no-ref `queue claim` short-circuits as no-eligible-action and never names
+      the hold; (F3-F4) the production resident daemon is not a claim source, so
+      the daemon guarantee and its test were vacuous; (F5) the status member
+      location was stated at section level and evidence level; (F6) the
+      one-reason closed-set pin was unasserted. Remediation decisions D12-D19
+      recorded; specification, test_planning, and delivery_planning reopened."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the first artifact pass trusted the GH-238 review note that a
+      state-directory override was wired through the production resolver; the
+      readiness gate found production.ts:282 and mcp/serve.ts:88 hardcode the
+      home state dir, and only the audit store uses the resolver. The spec's
+      critical finding came from asserting a current-truth coupling without
+      reading the production composition. Future intake should verify every
+      state/config coupling at the composition site, not the resolver unit."
+    type: retro
+    date: 2026-11-10
+  - text: "DoR iteration 2: READY (readiness-review/readiness-iter-2.md). 0
+      critical, 0 major, 3 minor, 7 nit; all non-blocking. Iteration-1
+      remediation 16/16 verified at file:line: marker path truthful to
+      production.ts:282 and mcp/serve.ts:88 (D12), no-ref claim gated before
+      selection (D13), daemon conditional with GAP-T7 and a non-vacuous derived
+      seam test (D14), evidence-level providers.evidence.ownerHold (D15), exact
+      two-way closed-set assertions named (D16), queue ready unchanged (D17),
+      doctor clamp rule and TC-HOLDDOCTOR-007 (D18), refusal-vs-defer documented
+      (D19). Coverage recomputes 44 ACs / 59 TCs; plan valid; pinned wrappers
+      untouched. The three minors are precision issues (provider evidence-source
+      count, one split TC declaration, exact-equality fixture target) and are to
+      be resolved during delivery/review; they do not reopen the verdict."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 1 complete (commit c3fe7c8840806fb9fdf3ad1a9a2362514773190c):
+      owner-hold fact contract, pure resolver, bounded marker reader, and the
+      content/contract inventories. Verification: bun test owner-hold-fact +
+      owner-hold-reader 27 pass; content-inventory + port-contract-inventory 17
+      pass; ambient-globals clean (173 files); forbidden-literals 27 pass;
+      core/adapters typecheck clean."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 2 complete (commit fff2cb1011ab0357cf745f9bf5fe782ca38b832c):
+      global queue gate, claim/fenced refusal, park-recovery skip, dispatch
+      summary carriage, one owner-hold lane/blocking token, and exact two-way
+      closed-set equality. Verification:
+      queue-hold-schedule/dispatch/park-resume/payload +
+      queue-lease/park/schedule + queue-scheduling-contract/queue-ready +
+      error-table-sync 205 pass; content/port inventories pass; ambient-globals
+      clean; forbidden-literals 27 pass; full pnpm typecheck clean."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 3 complete (commit cbcbd8383ad32e2d39ab1aef59d404dfb759e465):
+      additive providers.evidence.ownerHold with human suffix, CLI/MCP parity,
+      the owner-hold-active corpus case, and the new MCP status parity golden.
+      Scope note: packages/mcp/src/commands/status.ts was edited (2-line
+      optional reader) because the MCP status tool runtime type lives there and
+      the plan scope listed only mcp/serve.ts; reported as the sole scope
+      deviation. Verification: status-owner-hold + status-corpus 16 pass;
+      mcp-status-parity 11 pass; status-contract/status-digest/status-output 48
+      pass; full pnpm typecheck clean; ambient-globals clean; forbidden-literals
+      27 pass; no existing status or MCP golden changed."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 4 complete (commit 477129895a2ce13ea832d7d8dd3a869a2ffba61d):
+      the one non-failing doctor reason owner-hold after park-credential-cause,
+      the appended hold detail that survives the DOCTOR_MAX_DETAIL_CHARS clamp,
+      defect precedence, the new held goldens, and the DoR-2 minor (a) count
+      correction in spec §2.1 and the plan's phase 4 verification. Verification:
+      doctor-owner-hold/report/provider/outcome/readonly-determinism +
+      doctor-contract + doctor-output 78 pass; full pnpm typecheck clean;
+      ambient-globals clean; forbidden-literals 27 pass; only the two declared
+      new doctor goldens appear."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 5 complete (commit 8702ff1c6d7bb696458daa9b6e2f8a2cad04f42f):
+      the production composition resolves the hold per pass and supplies queue,
+      lanes, claim, watch, status, and doctor; the claim gate runs before ref
+      selection so a no-ref claim refuses owner-hold; dispatch refuses before
+      claiming; held list/plan goldens added; the composition pin and mutation
+      control land. Verification: queue-hold-claim/daemon-watch,
+      queue-cli/watch, daemon-lane-supervision, owner-hold-composition, and all
+      queue goldens 87 pass; error-table-sync + forbidden-literals 123 pass;
+      full pnpm typecheck clean; ambient-globals clean; inactive goldens
+      unchanged. The production resident daemon remains unwired (GAP-T7)."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 6 complete (commit 10237e25295e1cf6a8ab1a346450ffd1ffcb6fb9):
+      the inactive owner-hold example hook with the two-setting contract, fixed
+      marker path, unbounded MAX driver, one bounded reason line,
+      install/uninstall registration, and the hermetic shell suite.
+      Verification: test-hook-owner-hold-example 13/13 pass; shellcheck zero
+      findings on both new scripts; test-install 55/55; test-uninstall 30/30;
+      full run-bash-suites 26/26 suites; provider-surface 6 pass; ceo-loop.sh
+      and test-hook-regression.sh byte-unchanged."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 7 complete (commit a5c0280f35b7cac1587f585a6f2e967ac315a47d):
+      the two-semantics guide, MAX-floor extension, reconciled feature specs and
+      command pages with explicit denials, the doc conformance test, and the
+      five-package minor changeset. DoR-2 minor (b) resolved by declaring the
+      TC-HOLDFACT-009 split in the plan invariant. Verification: owner-hold-doc
+      10 pass;
+      reference-page/help/doc-conformance/forbidden-literals/privacy-release 51
+      pass; doc-distribution guard passes (82 in-scope docs, no drift);
+      changeset has five minor packages and excludes testkit."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 8 complete (commit 4e2a7b798a785f0f9704f1c6607cf8d0f1f9fd16):
+      verification and delivery evidence only, plus formatting-only fixes
+      required by the aggregate format gate and the error-table regression
+      expectation update. Verification: pnpm exec delivery-os plan validate
+      GH-280 verdict=valid; pnpm check exit 0 (7127 pass, 4 skip, 0 fail, 7131
+      tests, 879 files); run-bash-suites 26/26; shellcheck 0; doc-distribution
+      no drift; pnpm build + delivery-os --version 0.0.0; git diff --check
+      clean; only the declared held fixtures/goldens added. Manual
+      TC-HOLDE2E-001 remains PR-scoped and NOT EXECUTED in this automated
+      delivery (GAP-T1)."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 0 critical, 1
+      high, 2 medium, 6 low, 2 info. Blocking: F-1 the doctor surface is not
+      composed in production, so the spec/plan/guide/change-record claims and
+      the E2E doctor step are false; F-2 phase commits carry the commit
+      primitive's template subjects, not the plan's phase summaries. F-3
+      composition test overclaims (pre-resolved reader + source-text grep, no
+      temp-HOME marker or dispatch/status behavior). F-4/F-5 undeclared doc-sync
+      and phase-8 non-formatting changes. F-6..F-11 precision/nits. Remediation
+      decisions D20-D25 recorded; plan phase 9 (review remediation) to be added.
+      Product behavior, closed sets, inactive goldens, shell hook, and the full
+      gate are otherwise verified green."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the delivery artifacts repeated the long-standing feature-doctor
+      claim that `doctor` is composed beside `status`, but production never
+      supplies a DoctorComposition. The review caught it because it executed the
+      production binary instead of trusting the command-runtime tests. Future
+      changes that touch a command surface must run the production binary for
+      that command before claiming it is operator-visible."
+    type: retro
+    date: 2026-11-10
+  - text: "Plan phase 9 complete (review iteration 1 remediation, commit
+      e545b271e6e5db55f91a5638c0bf58c3dfe205e8). F-1 fixed by claim correction
+      per D20: the change record, changeset, delivery-modes guide, doctor
+      command page, feature-doctor, and feature-autonomous-delivery state doctor
+      as a command-runtime capability over a supplied DoctorComposition, remove
+      the doctor --json E2E step, and name `status` as the digest surface plus
+      the queue read surfaces as the production reporting surfaces; GAP-T8
+      records the production-doctor residual. F-2 accepted under D21: the commit
+      primitive composes the subject, template fallbacks are accepted, and no
+      history was rewritten. F-3 fixed by D22: new
+      tests/behaviour/owner-hold-production-composition.test.ts drives the real
+      createProductionComposer over a temp HOME whose
+      <stateDirectoryName>/owner-hold marker is materialized on disk for queue
+      list/plan, supplied-ref and no-ref claim, dispatch, and status, with a
+      marker-removal mutation control and an environment-source control; doctor
+      is not asserted. F-4/F-5 fixed by declaring the seven doc-sync files and
+      the non-formatting phase-8 edits in the change record. F-6/F-7/F-8
+      verified in the spec and test plan (active/stuck blocking-array
+      clarification, DM-4 {source; reason?}, §2/§7.3 refresh, D1 inline D12
+      supersession). F-9 fixed the hook comment (4 096 characters vs the
+      engine's 4 096-byte bound). F-10 made the adapter existence check
+      error-aware (ENOENT absent; other stat failures, including an unreadable
+      parent store directory, unreadable and fail-closed) with injected and
+      root-skipped real tests. F-11 added the remaining TC ids to the covering
+      test names and a two-pass zero-count recorder for TC-HOLDFACT-009 (zero
+      credentials, transport, writes, spawns). Verification: owner-hold
+      fact/reader 30/30; production composition 3/3 plus the structure pin 5/5;
+      touched 12-file suite 232/232; pnpm typecheck green; check:boundaries
+      green (373 modules, 1101 deps; ambient/entrypoints/secret clean);
+      shellcheck 0 findings; hook suite 13/13; doc-distribution no drift (82
+      in-scope docs); plan validate verdict=valid, readyForDevelopment=true;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133 pass, 4 skip, 0 fail, 7137
+      tests across 880 files). No golden, closed set, acceptance criterion, or
+      product behaviour moved; manual TC-HOLDE2E-001 remains PR-scoped and not
+      executed (GAP-T1). Remediation commits: e545b271 (phase 9 work), 2a7a01cf
+      (phase 9 evidence note), f42d67a7 (post-remediation doc-sync corrections),
+      8128f8e5 (test-plan wording)."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 2: FAIL (code-review/review-iter-2.yaml). 0 critical, 1
+      high, 1 medium, 3 low, 2 info; 2 blocking. F-1: the manual E2E was not
+      executable as written because the shipped default brand is `delivery-os`
+      (`.delivery-os-state`, `DELIVERY_OS_*`), while the example and E2E named
+      the previous working name's settings and state directory; the disposable
+      store directory also needs mode 0700, and dispatch needs a GitHub
+      credential. F-2: a status-exclusive surface claim survived in pm-notes,
+      plan, changeset, and the structure-test header, although the queue read
+      surfaces also report the hold. Advisories: undeclared
+      feature-cli-entrypoint.md, stale aggregate counts, phase-9 commit list,
+      tautological TC-HOLDFACT-009 recorder, position 27 vs 28. The iteration-1
+      code fixes were verified genuine (adapter check, temp-HOME production
+      composition test with a mutation control, closed sets 28/34, inactive
+      goldens byte-identical, wrapper pin, plan valid, pnpm check 7133/880).
+      Remediation decisions D26-D30 recorded; plan phase 10 added."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 10 complete: code review iteration 2 remediation (F-1, F-2,
+      F-3..F-7; D26-D30). Commit 3f8b3c16 carries the remediation; the phase-10
+      boundary is the immediately following evidence-note commit, so this note
+      is never read as naming an intermediate tree. F-1 brand half: the shipped
+      example recognises DELIVERY_OS_OWNER_HOLD and
+      DELIVERY_OS_OWNER_HOLD_POLL_SECONDS and reads the fixed
+      $HOME/.delivery-os-state/owner-hold marker, with the registry array
+      renamed to OWNER_HOLD_CONDITIONS and the suite and negative controls moved
+      to the same names; the two guides, feature-autonomous-delivery, the
+      autonomous-delivery test spec, the command pages, the spec, the test plan,
+      the change record, and the changeset carry the same current default names
+      with the brand-derived placeholder kept as the normative form; the
+      doc-check assertions and the synthetic store fixtures were aligned. F-1
+      procedure half: the manual procedure names the 0700 store directory, the
+      state.permission.denied failure for a non-private directory, status plus
+      queue list, queue plan, lanes list, and a no-ref queue claim, dispatch
+      omitted or conditional on a GitHub credential, and no doctor step; the
+      executed shape check in a disposable HOME is recorded in the change
+      record. F-2: no artifact narrows the hold to status alone; the plan,
+      pm-notes D20/D28, changeset, doctor command page, feature-doctor, the
+      structure-test header, and the change record state status as the digest
+      plus the queue read surfaces, with doctor command-runtime only. F-3:
+      doc/spec/features/feature-cli-entrypoint.md declared in phase 7 scope, the
+      spec doc-impact table, and the change record scope deviations. F-4:
+      test-plan aggregate is 7133 pass / 4 skip / 0 fail (7137 tests, 880
+      files). F-5: the phase-9 note names e545b271, 2a7a01cf, f42d67a7, and
+      8128f8e5. F-6: TC-HOLDFACT-009 now drives the real readOwnerHoldMarker
+      over a recording filesystem port, asserts the exact per-pass call shape
+      (one existence check, one regular-file check, one 4 096-byte read at the
+      fixed path) and that the marker content reaches the resolved fact, then
+      asserts zero credential, transport, store-write, and spawn calls; the
+      test-plan mapping moved with it. F-7: test-plan §7.3 says index 27, the
+      28th blockingReasons entry. Verification: hook suite 13/13, shellcheck 0;
+      owner-hold fact/reader 30/30, production composition 3/3, structure pin
+      5/5; queue-scheduling-contract + doctor-contract 33/33; five doc checks
+      54/54; install 55/55 and uninstall 30/30; doc-distribution no drift (82
+      docs); plan validate verdict=valid, readyForDevelopment=true;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133 pass, 4 skip, 0 fail, 7137
+      tests across 880 files). No acceptance criterion, golden, closed set, or
+      product behaviour moved; the full TC-HOLDE2E-001 operator transcript
+      remains PR-scoped (GAP-T1). Remaining old-name occurrences are confined to
+      the immutable review and readiness artifacts that quote the defect and the
+      negative seed assertions in tests/checks/owner-hold-doc.test.ts."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 3: PASS (code-review/review-iter-3.yaml). 0 critical, 0
+      high, 0 medium, 0 low, 1 info advisory. Verified by execution against the
+      real binary with a temp HOME: status carries providers.evidence.ownerHold,
+      queue list/plan carry ownerHold, lanes list exits 0, no-ref queue claim
+      exits 1 queue.precondition.unmet/ reason=owner-hold, and a 0775 store
+      fails state.permission.denied before the gate. No positive
+      ADOS_OWNER_HOLD/.ados-state remains, no status-only claim remains, closed
+      sets are exact 28/34, inactive goldens are additions only, the wrapper pin
+      is intact, plan validate is valid (10 phases, 44 ACs, 59 TCs), and pnpm
+      check is 7133 pass / 4 skip / 0 fail across 880 files. The sole advisory
+      is a self-containment precision point in the change record's manual steps
+      (preconditions live in TC-HOLDE2E-001); non-blocking."
+    type: info
+    date: 2026-11-10
+  - text: "Quality gates (phase 9): green on the final tree. TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 — 7133 pass / 4 skip / 0 fail (7137 tests, 880 files,
+      60,492 expect calls); lint 0 errors (65 pre-existing warnings), format,
+      typecheck (6 packages + tests/types), boundaries (373 modules / 1101 deps;
+      ambient-globals 173 files; workspace-entrypoints; secret-read 342 files),
+      prompt conformance (5 prompts), help coverage (all prompt-required
+      commands), and exports parity (5 publishables) all green. bash
+      run-bash-suites 26/26; shellcheck 0 findings on the six changed shell
+      files; doc-distribution no drift (82 docs); plan validate valid/tier full/
+      readyForDevelopment true; pnpm build 6/6 and delivery-os 0.0.0 (build
+      dev); git diff --check clean; git status clean."
+    type: info
+    date: 2026-11-10
+  - text: "DoD check (phase 10): pm-notes exists and every phase through
+      quality_gates is completed in the registry; plan validate is valid with 10
+      phases, 44 ACs, and 59 TCs; every declared plan phase (1-10) has a
+      pm-notes note naming its id, commit hash or evidence-commit boundary, and
+      test result; all 44 acceptance criteria are implemented and reviewed PASS
+      (review-iter-3.yaml, 0 critical/high/medium/low, one non-blocking info);
+      current-truth docs are reconciled by @doc-syncer with no residual gaps and
+      the doc-distribution/forbidden-literal/reference-page/help-coverage guards
+      are green; the closed sets move by exactly owner-hold (lane/blocking) and
+      owner-hold (doctor evidence), the inactive goldens are additions only, and
+      the SHA-pinned wrappers are untouched. Residuals owned outside delivery:
+      TC-HOLDE2E-001 is a PR-time operator transcript (GAP-T1); production
+      doctor composition is a pre-existing residual (GAP-T8), with status digest
+      + queue read surfaces carrying the hold in production. DoD passes with
+      those recorded residuals."
+    type: info
+    date: 2026-11-10

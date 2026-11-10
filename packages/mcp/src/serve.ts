@@ -15,9 +15,11 @@ import { createInterface } from "node:readline";
 import {
   acquireFileConfig,
   nodeFileSystemFacts,
+  nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   readCiWorkflowJobNames,
   readLocalPmContext,
+  readOwnerHoldMarker,
   readPmNotesText,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
@@ -27,7 +29,8 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
-import type { BrandIdentity } from "@delivery-os/core/contracts";
+import { resolveOwnerHoldFact } from "@delivery-os/core";
+import type { BrandIdentity, OwnerHoldFact } from "@delivery-os/core/contracts";
 import { STATE_SCHEMA_VERSION } from "@delivery-os/core/contracts";
 import { readProviderParkViews } from "@delivery-os/core/provider";
 import {
@@ -90,6 +93,7 @@ const stateIdentity = (brand: BrandIdentity, homeDirectory: string) => ({
 const buildStatusRuntime = (
   cwd: string,
   store: ReturnType<typeof createStateStore>,
+  readOwnerHold: () => OwnerHoldFact,
 ): StatusToolRuntime => ({
   readRepository: () => {
     const facts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
@@ -111,6 +115,7 @@ const buildStatusRuntime = (
   readDeliveryRequests: async () => ({ ok: false, reason: "not-configured" }),
   readPipelineRuns: async () => ({ ok: false, reason: "not-configured" }),
   readProviderConfig: () => ({ ok: false, reason: "provider-chain-unresolved" }),
+  readOwnerHold,
   readProviderParks: (nowMs) => {
     // The same verified-park fold the CLI status edge composes (review F-2):
     // the store is already built and read successfully for verify/gates here,
@@ -254,9 +259,22 @@ const run = async (): Promise<void> => {
     driver: "jsonl",
     edge: createNodeStateEdge(),
   });
+  const stateDirectory = stateIdentity(brand, homeDirectory).stateDirectory;
+  const readOwnerHold = (): OwnerHoldFact => {
+    const marker = readOwnerHoldMarker(
+      { storeDirectory: stateDirectory },
+      nodeOwnerHoldMarkerFileSystem(),
+    );
+    return resolveOwnerHoldFact({
+      environment,
+      environmentPrefix: brand.environmentPrefix,
+      storeDirectory: stateDirectory,
+      marker,
+    });
+  };
   const toolset = createToolset({
     brand,
-    status: buildStatusRuntime(cwd, store),
+    status: buildStatusRuntime(cwd, store, readOwnerHold),
     verify: buildVerifyRuntime(store, cwd),
     gates: buildGateRuntime(store, cwd),
   });

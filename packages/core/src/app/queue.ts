@@ -39,6 +39,7 @@ import {
   QUEUE_WEIGHT_CLASSES,
   LOCAL_CALLER_PRINCIPAL,
   type QueueActiveLease,
+  type OwnerHoldFact,
   type QueueDependencyRecord,
   type QueueEntryRecord,
   type QueueGraphDocument,
@@ -69,6 +70,12 @@ import {
   type QueueGraphFold,
   queueGraphDocument,
 } from "../domain/queue-graph.js";
+
+/** The bounded detail naming the source and optional reason, separate from the token. */
+const ownerHoldDetail = (hold: Extract<OwnerHoldFact, { readonly active: true }>): string =>
+  hold.reason === undefined
+    ? `owner hold active (${hold.source})`
+    : `owner hold active (${hold.source}): ${hold.reason}`;
 import {
   claimScope,
   earliestTakeoverAtIso,
@@ -1087,11 +1094,22 @@ export const claimQueueLease = (
     readonly nowIso: string;
     readonly nowMs: number;
     readonly fenceToken: string;
+    /** The injected owner hold; active refuses before the fence is acquired. */
+    readonly ownerHold?: OwnerHoldFact;
     readonly precheck?: () => QueueClaimPrecondition;
   },
 ): QueueClaimResult => {
   if (request.holder.length === 0) {
     return { ok: false, kind: "input", code: "input.value.rejected", detail: "holder is empty" };
+  }
+  if (request.ownerHold?.active === true) {
+    return {
+      ok: false,
+      kind: "queue",
+      code: "queue.precondition.unmet",
+      reason: "owner-hold",
+      detail: ownerHoldDetail(request.ownerHold),
+    };
   }
   if (request.precheck !== undefined) {
     const pre = request.precheck();
@@ -1408,8 +1426,30 @@ export const recoverQueueParks = (
     readonly nowMs: number;
     readonly context: QueueParkContext;
     readonly fenceToken: string;
+    /** An active hold skips the mutating pass: no marker, recovery, or incident. */
+    readonly ownerHold?: OwnerHoldFact;
   },
 ): QueueParkRecoveryResult => {
+  if (request.ownerHold?.active === true) {
+    const read = readQueueParks(store);
+    if (!read.ok) {
+      return stateFailureOf({
+        ...read,
+        kind: "state",
+        consequence: "not_landed",
+        location: { path: store.identity.stateDirectory },
+      });
+    }
+    const pass = evaluateParkPass(read.records, request.nowMs, request.context);
+    const stuck: string[] = [];
+    for (const record of pass.records) {
+      if (pass.evaluations[record.ref]?.state === "stuck") stuck.push(record.ref);
+    }
+    return {
+      ok: true,
+      value: { recovered: [], stuck, evaluations: pass.evaluations, records: pass.records },
+    };
+  }
   const fold = readQueueFold(store);
   if (!fold.ok) return fold;
   const acquired = store.acquireFence(request.fenceToken);

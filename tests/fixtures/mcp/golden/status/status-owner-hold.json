@@ -1,0 +1,364 @@
+{
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "repository": {
+    "host": "github.com",
+    "name": "project-placeholder",
+    "owner": "owner-placeholder",
+    "remoteName": "origin",
+    "state": "observed"
+  },
+  "schemaVersion": "delivery.status.v1",
+  "sections": [
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "tracker"
+          }
+        ]
+      },
+      "families": [
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "ownerHandBacks",
+          "items": [],
+          "state": "observed"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "blockedDependencies",
+          "items": [],
+          "state": "observed"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "stalls",
+          "items": [],
+          "state": "observed"
+        },
+        {
+          "assertions": [
+            {
+              "assertion": "epic-membership",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            },
+            {
+              "assertion": "story-points",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            },
+            {
+              "assertion": "in-sprint",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            }
+          ],
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "hygiene",
+          "items": [],
+          "state": "observed"
+        }
+      ],
+      "id": "tracker",
+      "state": "observed",
+      "title": "Tracker",
+      "truncated": false
+    },
+    {
+      "activeChange": {
+        "branch": "feat/GH-175/status-v1",
+        "changeFolder": "doc/changes/2026-10/2026-10-31--GH-175--status-v1",
+        "state": "observed",
+        "workItemRef": "GH-175"
+      },
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "local-context"
+          },
+          {
+            "outcome": "observed-empty",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "changes-and-prs",
+      "pullRequests": [],
+      "state": "observed",
+      "title": "Changes and pull requests",
+      "truncated": false
+    },
+    {
+      "commit": {
+        "branch": "feat/GH-175/status-v1",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "ci"
+          }
+        ]
+      },
+      "id": "ci",
+      "result": "none",
+      "runs": [],
+      "state": "observed",
+      "title": "CI",
+      "truncated": false
+    },
+    {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
+      "capability": "queue-lane-engine",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M2-S1",
+      "id": "lanes-or-queue",
+      "items": [],
+      "note": "no queue or lane engine exists in this release",
+      "state": "not-delivered",
+      "title": "Lanes or queue",
+      "truncated": false
+    },
+    {
+      "chain": {
+        "entries": [
+          "primary"
+        ],
+        "name": "primary",
+        "state": "declared"
+      },
+      "counts": {
+        "observed": 1,
+        "omitted": 0,
+        "total": 1,
+        "unknown": 0
+      },
+      "entries": [
+        {
+          "availability": "unverified",
+          "class": "subscription",
+          "enabled": true,
+          "name": "primary",
+          "peakDeclared": false,
+          "quotaDeclared": false
+        }
+      ],
+      "evidence": {
+        "ownerHold": {
+          "reason": "peak-hour cost pause",
+          "source": "marker"
+        },
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "provider-config"
+          },
+          {
+            "outcome": "observed-empty",
+            "source": "provider-parks"
+          }
+        ]
+      },
+      "id": "providers",
+      "parks": [],
+      "state": "observed",
+      "title": "Providers",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "local-context"
+          }
+        ]
+      },
+      "id": "parked-work",
+      "items": [],
+      "source": {
+        "gitIgnored": true,
+        "kind": "local-pm-context",
+        "path": "/home/user/.ai/local/pm-context.yaml",
+        "tracked": false
+      },
+      "state": "observed",
+      "title": "Parked work",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [],
+      "state": "observed",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "state-log"
+          }
+        ]
+      },
+      "id": "spend",
+      "items": [],
+      "note": "no captured telemetry (absence of capture)",
+      "spend": {
+        "captured": false,
+        "state": "observed"
+      },
+      "state": "observed",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "blockers"
+          }
+        ]
+      },
+      "id": "typed-questions",
+      "questions": [],
+      "state": "observed",
+      "title": "Typed questions",
+      "truncated": false
+    }
+  ],
+  "summary": {
+    "actionable": 1,
+    "degraded": 0,
+    "findingsTotal": 0,
+    "notDelivered": 1,
+    "observed": 8,
+    "placeholderSectionCount": 0,
+    "sections": 9,
+    "unavailable": 0,
+    "unknown": 0
+  }
+}

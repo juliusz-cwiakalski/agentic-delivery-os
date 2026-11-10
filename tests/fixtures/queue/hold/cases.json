@@ -1,0 +1,106 @@
+{
+  "hold": {
+    "active": true,
+    "source": "marker",
+    "reason": "peak-hour cost pause"
+  },
+  "cases": [
+    {
+      "name": "ready",
+      "ref": "GH-101",
+      "repository": "github.com/owner/repo-ready",
+      "expectedState": "held",
+      "expectedReasons": ["owner-hold"],
+      "laneState": "idle-with-reason",
+      "laneReason": "owner-hold"
+    },
+    {
+      "name": "held-dependency",
+      "ref": "GH-102",
+      "repository": "github.com/owner/repo-dependency",
+      "edges": ["GH-202"],
+      "expectedState": "held",
+      "expectedReasons": ["owner-hold", "dependency-open"],
+      "laneState": "idle-with-reason",
+      "laneReason": "owner-hold"
+    },
+    {
+      "name": "dependency-producer",
+      "ref": "GH-202",
+      "repository": "github.com/owner/repo-producer",
+      "workItemState": "in-progress",
+      "expectedState": "held",
+      "expectedReasons": ["owner-hold"],
+      "laneState": "idle-with-reason",
+      "laneReason": "owner-hold"
+    },
+    {
+      "name": "not-ready",
+      "ref": "GH-103",
+      "repository": "github.com/owner/repo-not-ready",
+      "plan": { "state": "invalid", "code": "plan.schema.invalid" },
+      "expectedState": "not-ready",
+      "expectedReasons": ["owner-hold", "tier-unknown"],
+      "laneState": "idle-with-reason",
+      "laneReason": "owner-hold"
+    },
+    {
+      "name": "active-park",
+      "ref": "GH-104",
+      "repository": "github.com/owner/repo-active-park",
+      "park": {
+        "state": "active",
+        "cause": "provider-window",
+        "recheckMs": 60000,
+        "expiresAt": "2026-11-07T12:00:00Z"
+      },
+      "expectedState": "parked",
+      "expectedReasons": ["owner-hold", "parked:provider-window"],
+      "laneState": "parked",
+      "laneReason": "parked:provider-window"
+    },
+    {
+      "name": "stuck-park",
+      "ref": "GH-105",
+      "repository": "github.com/owner/repo-stuck-park",
+      "park": {
+        "state": "stuck",
+        "cause": "provider-window",
+        "recheckMs": 60000,
+        "expiresAt": "2026-11-07T09:00:00Z"
+      },
+      "expectedState": "stuck",
+      "expectedReasons": ["owner-hold", "park-condition-stuck"],
+      "laneState": "idle-with-reason",
+      "laneReason": "park-condition-stuck"
+    },
+    {
+      "name": "resumable-park",
+      "ref": "GH-106",
+      "repository": "github.com/owner/repo-resumable-park",
+      "park": {
+        "state": "resumable",
+        "cause": "provider-window",
+        "recheckMs": 60000,
+        "expiresAt": "2026-11-07T09:00:00Z"
+      },
+      "expectedState": "held",
+      "expectedReasons": ["owner-hold"],
+      "laneState": "idle-with-reason",
+      "laneReason": "owner-hold"
+    },
+    {
+      "name": "delivering",
+      "ref": "GH-107",
+      "repository": "github.com/owner/repo-delivering",
+      "lease": {
+        "holder": "session-holder",
+        "leaseId": "lease-GH-107"
+      },
+      "expectedState": "held",
+      "expectedReasons": ["owner-hold", "lease-held"],
+      "laneState": "delivering",
+      "laneReason": null
+    }
+  ]
+}

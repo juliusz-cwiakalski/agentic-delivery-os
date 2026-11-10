@@ -21,6 +21,10 @@ type ExpectedSection = {
   readonly counts: StatusCounts;
   readonly orderedIds: readonly string[];
   readonly truncated: boolean;
+  readonly ownerHold?: {
+    readonly source: string;
+    readonly reason?: string;
+  };
   readonly findings?: readonly {
     readonly code: string;
     readonly severity: string;
@@ -120,6 +124,13 @@ const failuresFor = (cases: readonly CorpusCase[]): string[] => {
         failures.push(
           `${testCase.name}: ${id} truncated ${section.truncated} != ${expected.truncated}`,
         );
+      }
+      if (expected.ownerHold !== undefined) {
+        if (JSON.stringify(section.evidence.ownerHold) !== JSON.stringify(expected.ownerHold)) {
+          failures.push(
+            `${testCase.name}: ${id} evidence.ownerHold ${JSON.stringify(section.evidence.ownerHold)} != ${JSON.stringify(expected.ownerHold)}`,
+          );
+        }
       }
       if (expected.findings !== undefined) {
         const actual = (section.findings ?? []).map((finding) => ({

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -55,10 +55,10 @@ than discovering work by hand.
   unavailable, unattempted, or unresolved source yields `unknown`.
 - **Per-repository single-flight.** `repo-exclusive` is the only implemented
   lease scope; `worktree` is declared and never acquired. The claim has two
-  stages: the pre-fence gate evaluates parks and the five non-exclusivity
-  readiness conditions, and the in-fence verified lease read owns the
-  exclusivity outcome, so a live holder is always a lease conflict and never a
-  precondition refusal. A live lease held by another holder refuses
+  stages: the pre-fence gate evaluates the owner hold first, then parks, then the
+  five non-exclusivity readiness conditions, and the in-fence verified lease read
+  owns the exclusivity outcome, so a live holder is always a lease conflict and
+  never a precondition refusal. A live lease held by another holder refuses
   `queue.lease-conflict`; a stale lease — heartbeat age at or beyond the TTL,
   the bound is inclusive — is taken over with previous-holder, lease,
   heartbeat-age, last-heartbeat, and takeover evidence plus a
@@ -190,6 +190,53 @@ than discovering work by hand.
   extended from `{tracker}` to `{tracker, lanes}`; and the typed `queue` branch
   with `queue.lease-ttl` and `queue.park-recheck.<condition-type>`. No schema
   version bump, migration, backfill, or compatibility path exists.
+
+## Owner hold
+
+An owner hold is a global read-only gate, never a park. The scheduling facts gain
+one optional injected fact resolved at the CLI/MCP edge from the brand-derived
+`<PREFIX>_OWNER_HOLD` environment value, the fixed production store directory
+`<home>/<stateDirectoryName>`, and its `owner-hold` marker. Environment wins when
+active; a marker that exists but cannot be read, is not regular, or cannot be
+stat'd is active without a reason (fail closed); only a non-existent path is
+inactive. The reason is one control-free line bounded to 160 characters.
+
+While the fact is active, one pass emits no next action and no preemption
+proposal. `owner-hold` is prepended to every gated entry's ordered `blocking[]`,
+including active and stuck park entries, and each entry's own ordered reasons
+follow unchanged. A `ready` entry becomes `held`; `held` and `not-ready` entries
+keep their state; an active park keeps its `parked` state and `parked:<cause>`
+reason (blocking `[owner-hold, parked:<cause>]`); a stuck park keeps its `stuck`
+state and `park-condition-stuck` reason (blocking
+`[owner-hold, park-condition-stuck]`); a park whose window passed while recovery
+was skipped becomes `held`. The `queue list`/`queue plan` payloads carry the
+additive optional `ownerHold` member (source and optional reason) only while
+active. `lanes` renders exactly one reason from `blocking[0]`, so a gated entry
+that is not an active or stuck park shows `owner-hold` and masks the more
+specific reason; an active or stuck park lane keeps rendering its park reason,
+and `queue list` remains the full-reason surface. `queue ready` is unchanged and
+carries no hold.
+
+`queue claim` refuses `queue.precondition.unmet` with the blocking-reason token
+exactly `owner-hold` and a separate bounded detail naming the source and reason.
+The composition evaluates the hold **before ref selection**, so `queue claim`
+with no ref also refuses `owner-hold` and never returns `no-eligible-action`.
+The fenced claim refuses before acquiring the fence. Dispatch resolves the same
+fact before claiming and refuses with the existing identity and a bounded
+summary; this is a classified user-validation refusal at exit 1, not an
+internal wait. The mutating park-recovery pass is not invoked while held, so no
+`clear-observed` marker, `recovered` record, or `park-auto-recovery` incident is
+appended; removal mutates nothing and the delivered selection, claim, recovery,
+and resume paths run against the state captured at hold entry. `queue add`,
+`queue prioritize`, `queue dep`, and `queue release` remain available operator
+bookkeeping.
+
+Explicit denials: the hold adds **no** park cause, park condition type, recovery
+state, state record kind, or seventh queue-ready condition. It adds exactly one
+lane/blocking reason, `owner-hold`, pinned by exact two-way ordered equality
+against the closed-set fixture. The production resident daemon entry is not a
+claim source; a composed supervision cycle whose next-action seam derives from
+the held pass receives no action, and the resident-daemon residual is unchanged.
 
 ## Command surfaces
 

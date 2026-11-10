@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280"]
   related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -161,6 +161,13 @@ supplied. The production daemon entry that supplies the lane composition and
 registers the daemon command remains the resident-daemon production scope
 (GH-238); the dispatch engine proves the seam and the daemon-path attempt
 producer, not a resident production daemon that launches lanes.
+
+A supervision cycle that derives its next-action seam from a held scheduling
+pass receives no action, and a claim port that supplies the resolved owner-hold
+fact refuses `queue.precondition.unmet` with reason `owner-hold` before the
+fence. The guarantee is conditional on that composition: the production daemon
+entry is not wired and resolves no owner-hold fact, so the resident-daemon
+residual is unchanged.
 
 The daemon path hands the same observation and collection evidence to
 `recordDaemonDispatchResult`, which derives the outcome and token through the
