@@ -688,7 +688,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Expected Outcome**:
 - Accepted values `1`, `300`, `600`, and `3600` echo and sleep exactly that number of seconds; no warning is printed.
 - Unset, empty, and whitespace-only values echo and sleep `300` silently, with zero `[WARN]` lines.
-- Non-empty invalid values (`0`, `-1`, `abc`, `1.5`, `99999`) echo and sleep `300`, and print exactly one bounded warning naming the poll-interval setting; the result is never `0` and never a busy loop.
+- Non-empty invalid values (`0`, `-1`, `abc`, `1.5`, `99999`) echo and sleep `300`, and print exactly one bounded warning; the result is never `0` and never a busy loop.
 - The warning is a single line with no unbounded value echo.
 
 **Notes / Clarifications**: Resolved by PM decision D10 (unset/empty/whitespace silent default; non-empty invalid emits one warning).
