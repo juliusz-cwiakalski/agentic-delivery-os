@@ -30,6 +30,7 @@ import {
   type HarnessEvidence,
   type HarnessLivenessReport,
   type HarnessSessionPort,
+  type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
 import { ensureEconomicsExhaustionRecord } from "../../../../packages/core/src/state/index";
 import { createDispatchState, createScriptedHarness } from "../harness";
@@ -105,6 +106,8 @@ export type CommandScenarioOptions = {
   readonly newDivergenceId?: (ref: string) => string;
   /** The optional admission preflight; omitting it keeps the delivered order. */
   readonly preflight?: DispatchPreflightPort;
+  /** An optional store wrapper (for targeted append failures). */
+  readonly store?: (store: StateStorePort) => StateStorePort;
 };
 
 export type CommandScenario = {
@@ -176,15 +179,17 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
   const nowIso = options.nowIso ?? (() => "2026-11-08T10:00:00.000Z");
 
   const runtime = createDispatchCommandRuntime({
-    store: state.store,
+    store: options.store === undefined ? state.store : options.store(state.store),
     stateRoot: state.root,
     fenceToken: state.fenceToken,
     nowIso,
     newAttemptId: () => {
+      if (options.newAttemptId !== undefined) return options.newAttemptId("GH-301");
       attemptSequence += 1;
       return `attempt-${attemptSequence}`;
     },
     newDivergenceId: () => {
+      if (options.newDivergenceId !== undefined) return options.newDivergenceId("GH-301");
       divergenceSequence += 1;
       return `DIV-${divergenceSequence}`;
     },

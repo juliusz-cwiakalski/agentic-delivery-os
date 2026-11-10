@@ -13,7 +13,9 @@ import {
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
+  ERROR_TABLE,
   type DispatchAttemptRecord,
   type DispatchEnvelopeData,
   type DispatchEvidenceClass,
@@ -24,6 +26,7 @@ import {
   type HarnessEvidence,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
+  type HarnessOutcome,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type ProjectionClass,
@@ -46,11 +49,17 @@ import {
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
   type DispatchRead,
+  type DispatchReadFailure,
   type DispatchTrackerFacts,
   deriveDispatchResult,
 } from "../domain/dispatch-result.js";
 import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-resume.js";
-import { appendDispatchAttempt, appendDispatchDivergence } from "./dispatch-ledger.js";
+import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  foldDispatchDivergences,
+  readDispatchDivergences,
+} from "./dispatch-ledger.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
@@ -234,6 +243,67 @@ const errorOf = (derivation: {
   };
 };
 
+/** The completed harness outcome; delivered evidence is evaluated at record time. */
+const COMPLETED_OUTCOME = HARNESS_OUTCOMES[0];
+
+/**
+ * Build the envelope error from the declared table row. Used when the delivered
+ * attempt must name an underlying state identity other than its derived token.
+ */
+const errorFromTable = (
+  code: string,
+  lastMessage: string,
+): NonNullable<DispatchEnvelopeData["error"]> => {
+  const row = ERROR_TABLE.find((entry) => entry.code === code);
+  if (row === undefined) return errorOf({ lastMessage, errorCode: code });
+  return {
+    code: row.code,
+    category: row.category,
+    retryable: row.retryable,
+    consequence: row.consequence,
+    remediationHint: row.remediationHint,
+    summary: boundLastMessage(lastMessage),
+  };
+};
+
+/**
+ * Delivered evidence (F-4.1): the shared classifier outcome is `completed` at
+ * record time and the phase ledger is readable with progress or a complete
+ * total. The persisted attempt outcome is never an input.
+ */
+const isDeliveredEvidence = (input: {
+  readonly outcome: HarnessOutcome;
+  readonly ledger: DispatchRead<DispatchLedgerFacts>;
+}): boolean => {
+  if (input.outcome !== COMPLETED_OUTCOME) return false;
+  if (!input.ledger.ok) return false;
+  return (
+    input.ledger.value.progressed ||
+    (input.ledger.value.total > 0 && input.ledger.value.completed === input.ledger.value.total)
+  );
+};
+
+/** The failing read family of the delivered closed read set. */
+const unreadableTruthReason = (reads: DispatchTruthReads): DispatchReadFailure | undefined => {
+  for (const read of [reads.ledger, reads.tracker, reads.artifacts] as const) {
+    if (!read.ok) return read.reason;
+  }
+  return reads.ci.ok ? undefined : "state";
+};
+
+/** The delivered-evidence divergence shape used for per-work-item dedupe. */
+const isDeliveredEvidenceDivergence = (
+  record: { readonly state: string; readonly comparisonClass: string; readonly engineToken: string; readonly comparisonToken: string | null; readonly repository: string; readonly ref: string },
+  repository: string,
+  ref: string,
+): boolean =>
+  record.state === "open" &&
+  record.comparisonClass === "not-applicable" &&
+  record.engineToken === su &&
+  record.comparisonToken === null &&
+  record.repository === repository &&
+  record.ref === ref;
+
 const comparisonFor = (input: {
   readonly token: DispatchToken;
   readonly errorCode?: string;
@@ -390,6 +460,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly token: DispatchToken;
       readonly outcome: DispatchAttemptRecord["outcome"];
       readonly errorCode?: string;
+      /** An identity the envelope must name instead of the derived token's row. */
+      readonly envelopeErrorCode?: string;
       readonly comparison: DispatchAttemptRecord["comparison"];
       readonly corroboration: DispatchAttemptRecord["corroboration"];
       readonly falseSuccess: boolean;
@@ -435,7 +507,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         outcome: input.outcome,
         ...(input.errorCode === undefined
           ? {}
-          : { error: errorOf({ lastMessage: input.lastMessage, errorCode: input.errorCode }) }),
+          : {
+              error:
+                input.envelopeErrorCode === undefined
+                  ? errorOf({ lastMessage: input.lastMessage, errorCode: input.errorCode })
+                  : errorFromTable(input.envelopeErrorCode, input.lastMessage),
+            }),
         lastMessage: boundLastMessage(input.lastMessage),
       };
       releaseCause = "completed";
@@ -686,7 +763,56 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     });
 
     let divergenceRef: string | undefined;
-    if (comparison.outcome === "mismatch") {
+    let truthRef: string | undefined;
+    let appendFailureCode: string | undefined;
+    const delivered =
+      derivation.token === su &&
+      isDeliveredEvidence({
+        outcome: classification.outcome,
+        ledger: reads.ledger,
+      });
+    const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
+    if (delivered && truthReason !== undefined) {
+      truthRef = `truth:unreadable:${truthReason}`;
+      const ledger = readDispatchDivergences(ports.store);
+      const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
+      // A replayed attempt is already represented by its own divergence,
+      // resolved or not; never open a second record for it.
+      const recordedAttempt = folded.some(
+        (entry) =>
+          entry.attemptId === attemptId &&
+          entry.repository === ports.repository &&
+          entry.ref === ports.ref &&
+          entry.comparisonClass === "not-applicable" &&
+          entry.engineToken === su &&
+          entry.comparisonToken === null,
+      );
+      if (!recordedAttempt) {
+        const existing = folded.find((entry) =>
+          isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
+        );
+        if (existing !== undefined) {
+          divergenceRef = existing.divergenceId;
+        } else {
+          const candidate = ports.newDivergenceId();
+          const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
+            schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+            divergenceId: candidate,
+            repository: ports.repository,
+            ref: ports.ref,
+            attemptId,
+            state: "open",
+            comparisonClass: "not-applicable",
+            engineToken: su,
+            comparisonToken: null,
+            evidenceRefs: [`attempt:${attemptId}`, truthRef],
+            recordedAt: now,
+          });
+          if (appended.ok) divergenceRef = candidate;
+          else appendFailureCode = appended.code;
+        }
+      }
+    } else if (comparison.outcome === "mismatch") {
       divergenceRef = ports.newDivergenceId();
       appendDispatchDivergence(ports.store, ports.fenceToken, {
         schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -713,17 +839,29 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       ...(unreadable.length === 0 ? {} : { unreadable }),
     });
 
+    const evidenceRefs = [
+      `attempt:${attemptId}`,
+      ...(truthRef === undefined ? [] : [truthRef]),
+      ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
+      ...livenessRefs,
+    ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
+    const lastMessage =
+      appendFailureCode === undefined
+        ? derivation.lastMessage
+        : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
+
     return record({
       token: derivedToken,
       outcome: derivation.outcome,
       ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+      ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
       comparison,
       corroboration,
       falseSuccess,
       prUrl: derivation.prUrl,
       urlResolved: derivation.urlResolved,
-      lastMessage: derivation.lastMessage,
-      evidenceRefs: [`attempt:${attemptId}`, ...livenessRefs],
+      lastMessage,
+      evidenceRefs,
       ...(divergenceRef === undefined ? {} : { divergenceRef }),
     });
   } finally {

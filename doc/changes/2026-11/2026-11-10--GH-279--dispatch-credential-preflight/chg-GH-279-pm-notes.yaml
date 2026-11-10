@@ -165,3 +165,11 @@ notes:
       (190 pass); tests/types tsc green."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 5 (preserve typed identities on divergence resolve) complete
+      in commit 71cf4e1: resolve delegates to the ledger helper, clamps the note
+      before building, maps an absent id to the app-local divergence-not-found
+      sentinel -> input.value.rejected/kind input, and carries every genuine
+      store fault as kind state with its own code. Tests: resolve diagnostics and
+      local-only composition (9 pass); gate/evidence/summary suites (30 pass)."
+    type: info
+    date: 2026-11-10
