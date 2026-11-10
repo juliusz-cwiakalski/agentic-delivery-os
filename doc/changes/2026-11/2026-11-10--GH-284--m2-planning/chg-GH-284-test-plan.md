@@ -1,14 +1,14 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 1.3
+version: 1.4
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T23:55:00Z
+last_updated: 2026-11-10T01:20:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M2 planning surface against spec v1.4: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
+summary: "Docs-only verification of the M2 planning surface against spec v1.5: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
 links:
   change_spec: ./chg-GH-284-spec.md
   implementation_plan: ./chg-GH-284-plan.yaml
@@ -34,7 +34,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 - **G-1 — clause presence is mechanical; clause meaning is not.** AC-F1-2, AC-F2-2, and AC-NFR8-1 require no clause weakened, moved, merged, or changed in meaning. P02 runs a 61-row table for S11-S16 and P35 runs the full 79-row table (S11-S17 plus both amendments), each row an anchor derived from the ticket's actual clause set; a missing anchor fails with its clause id and short clause. The declared gap is only the semantic residue: an anchor proves the clause text exists, not that its normative force is unchanged. **Compensation:** the reviewer performs a paraphrase read of the seven entries and two amendments against GH-284 using the 79-row table as the checklist. Owner: `@reviewer` at phase 8.
 - **G-2 — the default aggregate run is environment-sensitive; the repo-local run is normative.** `tests/checks/ci-baseline-parity.test.ts` runs `git clone --local`, which fails with a cross-device hardlink error when `tmpdir()` is on tmpfs (`/tmp` in this checkout). DEC-19 makes `mkdir -p "$REPO_ROOT/tmp/tmpdir" && TMPDIR="$REPO_ROOT/tmp/tmpdir" pnpm check` authoritative. P32 records both runs and classifies a default failure as environmental **only** when the sole failing test is `CI baseline parity (hermetic partial clone)`; any other default failure or any repo-local failure is a delivery failure. Owner: `@runner` at phase 9.
-- **G-3 — mermaid syntax validity is not testable here.** The repository has no mermaid validator (spec DEC-15). P33 now proves both structure and heading association: fence count, keyword first line, balanced fences, no block before a heading, each `C4 Level 1/2/3` heading owning a diagram, each named flow plus park/resume owning one, and `c4_headings_with_diagrams=3/3`. A syntax error that still satisfies those conditions would not be caught. **Compensation:** reviewer opens the rendered GitHub preview for the architecture document. Owner: `@reviewer`.
+- **G-3 — mermaid syntax validity is not testable here.** The repository has no mermaid validator (spec DEC-15). P33 adopts Appendix E v1.5: fence count, keyword first line, balanced fences, no block before a heading, exactly one diagram per C4 heading (`## C4 Level 1` style matched with `([^0-9]|$)`, committed form `## C4 Level 1: system context` (level digit + `: ` + subject)), and exactly one per `###` heading under `## Key flows` (six flows plus park/resume). Compliant subject-form and bare-heading fixtures pass `3/3,7/7,OK`; a level-1-without-diagram fixture reports `MISSING`. A syntax error that still satisfies those conditions would not be caught. **Compensation:** reviewer opens the rendered GitHub preview for the architecture document. Owner: `@reviewer`.
 - **G-4 — private-name hygiene is partly judgment.** The forbidden-literals guard covers configured literals and the seed scan covers `ados`/`ADOS_`/`~/.ados`; it cannot enumerate every hosted, fleet, or proprietary name. **Compensation:** reviewer reads the added lines against spec NFR-9 and §7.2. Owner: `@reviewer`.
 - **G-5 — "restated acceptance criteria" has a semantic residue.** P37 catches `- AC:` blocks and `**Given**` blocks; a paraphrase in prose is not machine-detectable. **Compensation:** reviewer reads the pack for any restated criterion and checks that it references story codes instead. Owner: `@reviewer`.
 - **G-6 — header, proposal-tail, pointer, and entrypoint-region wording quality is approximated.** The checks ban `M1 planned`/`M1 milestone planned`, require delivered story codes plus GH references, ban a proposal tail without a named planned remainder, require the watchdog progress-signal and `SC-M1-14` clauses and the verify-gates/closeout extension attributions, require four pointers of at most three lines naming `2026-11-10`, and require the enumeration and not-registered statements to stay separate sentences; an ambiguously worded header or pointer can still pass the tokens. **Compensation:** the reviewer reads the fifteen edited headers, the four pointer insertions, and the corrected DESCRIPTION region once; F-5, F-6, F-7, and DEC-18 are the standards. Owner: `@reviewer`.
@@ -47,7 +47,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.4 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-20, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
+| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.5 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-20, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
 | [`chg-GH-284-pm-notes.yaml`](./chg-GH-284-pm-notes.yaml) | Binding decisions: S17 scope, daemon resolution, 14+1 reconciliation shape, history handling, no distribution marker, index registration, and the v1.1 reopen that replaced the non-existent mermaid validator |
 | GH-284 ticket (`juliusz-cwiakalski/agentic-delivery-os#284`) | Normative story text for the 79-row clause table (P02, P06, P35) and the S17 acceptance list; read at authoring time |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review, never to the permanent suite |
@@ -415,11 +415,11 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Expected Outcome**:
 
-- `S17-AC1..S17-AC7 OK`; `criteria_present=7/7`; `ac_numbered_items=7/7`; `extra_criteria=0`; `duplicate_numbers=0`; exit 0.
+- `S17-AC1..S17-AC7 OK`; `criteria_present=7/7`; `ac_numbered_items=7/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; exit 0.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `S17=absent criteria_present=0/7`; `ac_items=0` (the numbered-list and extra-criteria checks are not reached because the entry is absent); all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count.
 - Result label for Section 10: **FAIL (change absent)**.
 
 #### TC-M2PLAN-007 - M2-S4 changes only its `- Depends on:` line
@@ -558,7 +558,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 - Worktree at `docs/GH-284/m2-planning`; `git` available; base commit `fab46636cc0b5abfbd22257711f594adc0af4660` fetched.
 - Section 7.1 P00 has been run once in the same shell (base snapshots and helpers).
-- P11 has run first (it defines the `NEED` page map used by this procedure).
+- All 28 M1 command pages are present and Appendix B's 14-page reconciliation set is the audit target.
 
 **Steps**:
 
@@ -805,15 +805,15 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P19** (Section 7.1).
-2. Confirm `actual_files=12`, the README lists all twelve, `deviation_statement=OK` (no `man-page.md` or `interactions.md`; `entrypoint-delta.md` instead), and `pack_contents_table=byte-identical`.
+2. Confirm `actual_files=12`, the README links all twelve with pack-relative targets (no parent-directory escape; the self-entry uses a row-shaped `| \`README.md\` |` pattern), `deviation_statement=OK` (no `man-page.md` or `interactions.md`; `entrypoint-delta.md` instead), and `pack_contents_table=byte-identical`.
 
 **Expected Outcome**:
 
-- `pack_files=12/12`; `actual_files=12 (expected 12)`; `readme_lists=12/12`; `deviation_statement=OK`; `pack_contents_table=byte-identical`.
+- `pack_files=12/12`; `actual_files=12 (expected 12)`; `readme_lists=12/12` via pack-relative links (no `../` escape); `readme_self_link_self_test=detected`; `deviation_statement=OK`; `pack_contents_table=byte-identical`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `pack_files=0/12`; `actual_files=0`; `README=absent`; `pack_contents_table=byte-identical`. The table-identity half is a passing control; the pack and its deviation statement are absent.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `pack_files=0/12`; `actual_files=0`; `README=absent`; `readme_self_link_self_test=detected`; `pack_contents_table=byte-identical`. The table-identity half is a passing control; the pack and its deviation statement are absent.
 - Result label for Section 10: **FAIL (change absent); table identity PASS (control)**.
 
 #### TC-M2PLAN-020 - Architecture carries C4 L1/L2/L3, the six flows plus park/resume, and the deltas
@@ -1223,16 +1223,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P33** (Section 7.1), the Appendix E procedure plus the heading-association map.
-2. Confirm `mermaid_fences>=10`, `keyword_and_fence_exit=0`, `heading_association=OK`, each `C4 Level 1/2/3 has diagram=OK`, each of the six flows plus park/resume `has diagram=OK`, and `c4_headings_with_diagrams=3/3`.
+1. Run procedure **P33** (Section 7.1), which adopts Appendix E v1.5: tolerant C4 predicate, exactly one diagram per C4 heading before the next `##`, and exactly one per `###` heading under `## Key flows`.
+2. Confirm `mermaid_fences>=10`, `keyword_and_fence_exit=0`, `c4_headings_with_diagrams=3/3`, `flow_headings_with_diagrams=7/7`, `heading_association=OK`, and both fixture self-tests (`fixture_good_metrics=3/3,7/7,OK`, `fixture_negative=detected`).
 
 **Expected Outcome**:
 
-- `mermaid_fences>=10`; `keyword_and_fence_exit=0`; `heading_association=OK`; three `C4 Level n has diagram=OK`; seven flow/park `has diagram=OK`; `c4_headings_with_diagrams=3/3`.
+- The committed form is `## C4 Level 1: system context` (level digit + `: ` + subject); the predicate `^## C4 Level $lvl([^0-9]|$)` also accepts a bare heading. `mermaid_fences>=10`; `keyword_and_fence_exit=0`; `c4_headings_with_diagrams=3/3` (exactly one block per level); `flow_headings_with_diagrams=7/7` (exactly one under each `## Key flows` → `###` heading); `heading_association=OK`; `fixture_good_metrics=3/3,7/7,OK`; `fixture_negative=detected`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`; the compliant fixture still reports `fixture_good=OK` / `fixture_good_metrics=3/3,7/7,OK`, and the level-1-without-diagram fixture reports `C4 Level 1 has diagram=MISSING` / `fixture_negative=detected`.
 - Result label for Section 10: **FAIL (change absent)**.
 
 #### TC-M2PLAN-034 - The status retention oracle passes and all four pointer insertions are present
@@ -1658,8 +1658,18 @@ fi
 **P06 — S17 seven criteria by content**
 
 ```bash
+# self-tests always run: duplicate detection and an eighth numbered item
+printf '   1. a\n   2. b\n   3. c\n   3. d\n' | sed -nE 's/^[[:space:]]+([0-9]+)\..*/\1/p' | sort | uniq -d | grep -qx 3 && echo "duplicate_self_test=detected" || echo "duplicate_self_test=FAILED"
+printf '   1. a\n   2. b\n   3. c\n   4. d\n   5. e\n   6. f\n   7. g\n   8. h\n' | sed -nE 's/^[[:space:]]+([0-9]+)\..*/\1/p' > /tmp/gh284/extra-fixture.txt
+xn=$(wc -l < /tmp/gh284/extra-fixture.txt)
+echo "extra_self_test=$([ "$xn" -gt 7 ] && echo "detected ($xn items, extra=$((xn-7)))" || echo FAILED)"
 h17=$(grep -m1 '^### M2-S17 ' "$BL" || true)
-if [ -z "$h17" ]; then echo "S17=absent criteria_present=0/7"; else
+if [ -z "$h17" ]; then
+  echo "S17=absent criteria_present=0/7"
+  echo "ac_numbered_items=0/7"
+  echo "extra_criteria=0"
+  echo "duplicate_numbers=0"
+else
   e=$(entry "$BL" "$h17")
   acblock=$(printf '%s\n' "$e" | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f' | tr '\n' ' ')
   c=0; pr=0
@@ -1667,11 +1677,11 @@ if [ -z "$h17" ]; then echo "S17=absent criteria_present=0/7"; else
     case "$id" in S17-AC*) c=$((c+1)); if printf '%s' "$acblock" | grep -Eiq -- "$anchor"; then pr=$((pr+1)); echo "$id OK"; else echo "$id MISSING: $clause"; fi ;; esac
   done < <(clause_rows)
   echo "criteria_present=$pr/7"
-  printf '%s\n' "$e" | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f' | grep -nE '^[[:space:]]+[1-7]\. ' > /tmp/gh284/s17-ac.txt
+  printf '%s\n' "$e" | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f' | sed -nE 's/^[[:space:]]+([0-9]+)\..*/\1/p' > /tmp/gh284/s17-ac.txt
   ni=$(wc -l < /tmp/gh284/s17-ac.txt)
   echo "ac_numbered_items=$ni/7"
   echo "extra_criteria=$([ "$ni" -gt 7 ] && echo $((ni-7)) || echo 0)"
-  echo "duplicate_numbers=$(awk '{print $1}' /tmp/gh284/s17-ac.txt | sort | uniq -d | wc -l)"
+  echo "duplicate_numbers=$(sort /tmp/gh284/s17-ac.txt | uniq -d | wc -l)"
 fi
 ```
 
@@ -2004,13 +2014,24 @@ have=0
 for f in "${wantfiles[@]}"; do [ -f "$M2/$f" ] && have=$((have+1)); done
 actual=0; [ -d "$M2" ] && actual=$(find "$M2" -type f | wc -l)
 echo "pack_files=$have/12 actual_files=$actual (expected 12)"
+check_readme_link() { # $1 readme, $2 target; no parent-directory escape
+  if [ "$2" = README.md ]; then
+    grep -Eq '^\|[[:space:]]*`?README\.md`?[[:space:]]*\|' "$1" || grep -Eq '\]\(\./README\.md\)|\]\(README\.md\)' "$1"
+  else
+    grep -Eq "\]\((\./)?$2\)" "$1"
+  fi
+}
 if [ -f "$M2/README.md" ]; then
-  listed=0; for f in "${wantfiles[@]}"; do grep -Fq "$(basename "$f")" "$M2/README.md" && listed=$((listed+1)); done
+  listed=0; for f in "${wantfiles[@]}"; do check_readme_link "$M2/README.md" "$f" && listed=$((listed+1)); done
   echo "readme_lists=$listed/12 story_map_entries=$(grep -cE 'M2-S[0-9]+' "$M2/README.md")"
   dev=0
   grep -Eiq 'man-page\.md' "$M2/README.md" && grep -Eiq 'interactions\.md' "$M2/README.md" && grep -Eiq 'entrypoint-delta\.md' "$M2/README.md" && grep -Eiq 'deviat|deliberate' "$M2/README.md" && dev=1
   echo "deviation_statement=$([ "$dev" -eq 1 ] && echo OK || echo MISSING)"
 else echo "README=absent"; fi
+# self-test: a parent-escape link must not satisfy the self-entry
+printf '| `README.md` | map |\n' > /tmp/gh284/readme-good.md
+printf '| [x](../README.md) |\n' > /tmp/gh284/readme-bad.md
+check_readme_link /tmp/gh284/readme-good.md README.md && check_readme_link /tmp/gh284/readme-bad.md README.md && echo "readme_self_link_self_test=FAILED" || echo "readme_self_link_self_test=detected"
 table() { awk '/^## Pack contents/{f=1} /^## Conventions/{exit} f' "$1"; }
 git show "$BASE:$MR" > /tmp/gh284/base-milestones-README.md
 table /tmp/gh284/base-milestones-README.md > /tmp/gh284/tbl-b.txt; table "$MR" > /tmp/gh284/tbl-h.txt
@@ -2200,10 +2221,38 @@ rm -rf "$TMPDIR_REPO"
 **P33 — structural and heading association**
 
 ```bash
-if [ ! -d "$M2" ]; then echo "FAIL: $M2 absent; mermaid fences=0 (<10); association=absent"; else
-  files=$(find "$M2" -name '*.md')
+diagram_assoc() { # $1 = root
+  local root="$1" files count c4good=0 fn fgood fbad own heads lvl
+  files=$(find "$root" -name '*.md')
   count=$(grep -h '^```mermaid' $files | wc -l); echo "mermaid_fences=$count"
   [ "$count" -ge 10 ] || echo "FAIL: $count mermaid fences, need >= 10"
+  # The committed heading form is `## C4 Level 1: system context` (level digit, colon, subject); the predicate tolerates a bare heading.
+  for lvl in 1 2 3; do
+    heads=$(grep -hE "^## C4 Level $lvl([^0-9]|$)" $files | wc -l)
+    own=$(awk -v want="$lvl" '
+      FNR==1 { inside=0 }
+      $0 ~ "^## C4 Level " want "([^0-9]|$)" { inside=1; seen=0; next }
+      /^## / { inside=0 }
+      /^```mermaid/ { if (inside) seen++ }
+      END { print seen+0 }' $files)
+    if [ "$heads" -eq 1 ] && [ "$own" -eq 1 ]; then c4good=$((c4good+1)); echo "C4 Level $lvl has diagram=OK (heads=$heads own=$own)"; else echo "C4 Level $lvl has diagram=MISSING (heads=$heads own=$own)"; fi
+  done
+  echo "c4_headings_with_diagrams=$c4good/3"
+  read -r fn fgood fbad <<< "$(awk '
+    FNR==1 { insec=0 }
+    /^## Key flows/ { insec=1; next }
+    /^## / { insec=0 }
+    insec && /^### / { n++; own[n]=0; next }
+    insec && /^```mermaid/ { if (n) own[n]++ }
+    END { good=0; bad=0; for(i=1;i<=n;i++){ if(own[i]==1) good++; else bad++ } printf "%d %d %d\n", n+0, good+0, bad+0 }' $files)"
+  echo "flow_headings=${fn:-0}"
+  echo "flow_headings_with_diagrams=${fgood:-0}/${fn:-0}"
+  [ "${fn:-0}" -eq 7 ] && [ "${fgood:-0}" -eq 7 ] && echo "flow_section=OK" || echo "flow_section=FAIL"
+  if awk '/^#{1,6} /{seen=1} /^```mermaid/{if(!seen){bad=1}} END{exit (bad?1:0)}' $files; then orphan=OK; else orphan=FAIL; fi
+  if [ "$c4good" -eq 3 ] && [ "${fn:-0}" -eq 7 ] && [ "${fgood:-0}" -eq 7 ] && [ "$orphan" = OK ]; then echo "heading_association=OK"; return 0; else echo "heading_association=FAIL (c4=$c4good/3 flows=${fgood:-0}/${fn:-0} orphan=$orphan)"; return 1; fi
+}
+if [ ! -d "$M2" ]; then echo "FAIL: $M2 absent; mermaid fences=0 (<10); association=absent"; else
+  files=$(find "$M2" -name '*.md')
   awk '
     FNR==1 && open { printf "FAIL unclosed fence in %s\n", prev; bad=1; open=0 }
     /^```mermaid/ { open=1; prev=FILENAME; getline
@@ -2212,16 +2261,41 @@ if [ ! -d "$M2" ]; then echo "FAIL: $M2 absent; mermaid fences=0 (<10); associat
     /^```/ { open=0 }
     END { if (open) { printf "FAIL unclosed fence in %s\n", prev; bad=1 } exit bad }
   ' $files; echo "keyword_and_fence_exit=$?"
-  awk '/^#{2,3} /{h=$0} /^```mermaid/{if(h==""){print "0|NO HEADING"} else c[h]++} END{for(k in c) print c[k]"|"k}' $files | sort > /tmp/gh284/assoc.txt
-  cat /tmp/gh284/assoc.txt
-  grep -q '|NO HEADING' /tmp/gh284/assoc.txt && echo "heading_association=FAIL (block before any heading)" || echo "heading_association=OK"
-  for lvl in 1 2 3; do grep -qE "^[0-9]+\|## C4 Level $lvl[^0-9]" /tmp/gh284/assoc.txt && echo "C4 Level $lvl has diagram=OK" || echo "C4 Level $lvl has diagram=MISSING"; done
-  for tok in 'multi.repo' 'divergence' 'telemetry attribution' 'auto.release' 'single.flight' 'handover.gate' 'park|resume'; do
-    grep -qiE "^[0-9]+\|#{2,3} .*($tok)" /tmp/gh284/assoc.txt && echo "flow heading $tok has diagram=OK" || echo "flow heading $tok has diagram=MISSING"
-  done
-  c4=$(grep -cE '^[0-9]+\|## C4 Level [123][^0-9]' /tmp/gh284/assoc.txt)
-  echo "c4_headings_with_diagrams=$c4/3"
+  diagram_assoc "$M2" || true
 fi
+# compliant fixture: subject form on L1/L3, bare heading on L2; seven flows under ## Key flows
+emit() { printf '%s\n\n```mermaid\nflowchart LR\n  A-->B\n```\n\n' "$1"; }
+mkdir -p /tmp/gh284/p33-good /tmp/gh284/p33-bad
+{
+  emit "## C4 Level 1: system context"
+  emit "## C4 Level 2"
+  emit "## C4 Level 3: components"
+  printf '## Key flows\n\n'
+  emit "### Multi-repository overview"
+  emit "### Attempt-history inspection and divergence resolution"
+  emit "### Telemetry attribution"
+  emit "### Queue auto-release after merge and closeout"
+  emit "### Single-flight refusal across dispatch paths"
+  emit "### Handover-gate evaluation"
+  emit "### S17 park and resume"
+} > /tmp/gh284/p33-good/architecture.md
+{
+  emit "## C4 Level 2: containers"
+  emit "## C4 Level 3: components"
+  printf '## Key flows\n\n'
+  emit "### Multi-repository overview"
+  emit "### Attempt-history inspection and divergence resolution"
+  emit "### Telemetry attribution"
+  emit "### Queue auto-release after merge and closeout"
+  emit "### Single-flight refusal across dispatch paths"
+  emit "### Handover-gate evaluation"
+  emit "### S17 park and resume"
+} > /tmp/gh284/p33-bad/architecture.md
+printf '## C4 Level 1: system context\n\nNo diagram here.\n\n' >> /tmp/gh284/p33-bad/architecture.md
+if diagram_assoc /tmp/gh284/p33-good > /tmp/gh284/p33-good.out; then echo "fixture_good=OK"; else echo "fixture_good=FAILED"; fi
+grep -q 'c4_headings_with_diagrams=3/3' /tmp/gh284/p33-good.out && grep -q 'flow_headings_with_diagrams=7/7' /tmp/gh284/p33-good.out && grep -q 'heading_association=OK' /tmp/gh284/p33-good.out && echo "fixture_good_metrics=3/3,7/7,OK" || echo "fixture_good_metrics=FAILED"
+diagram_assoc /tmp/gh284/p33-bad > /tmp/gh284/p33-bad.out || true
+grep -q 'C4 Level 1 has diagram=MISSING' /tmp/gh284/p33-bad.out && echo "fixture_negative=detected" || echo "fixture_negative=FAILED"
 ```
 
 **P34 — retention oracle and four pointer insertions**
@@ -2256,7 +2330,7 @@ if ! declare -f clause_check >/dev/null; then echo "FAIL: run P02 first (defines
   cat /tmp/gh284/clause-all.txt
   echo "missing_clauses=$m"
   echo "s17_missing_criteria=$(grep -cE '^MISSING S17-AC' /tmp/gh284/clause-all.txt)"
-  ni=$(entry "$BL" '### M2-S17 ' | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f' | grep -cE '^[[:space:]]+[1-7]\. ' || true)
+  ni=$(entry "$BL" '### M2-S17 ' | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f' | grep -cE '^[[:space:]]+[0-9]+\. ' || true)
   echo "added_criteria=$([ "${ni:-0}" -gt 7 ] && echo $((ni-7)) || echo 0)"
   echo "changed_meaning=manual clause-by-clause review (declared gap G-1)"
 fi
@@ -2299,7 +2373,7 @@ echo; echo "##### done"
 | TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. |
 | TC-M2PLAN-004 | AC-F2-1 | P04 | `bash` block **P04** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent`; `criteria_present=0/7`. |
 | TC-M2PLAN-005 | AC-F2-2 | P05 | `bash` block **P05** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent clauses_present=0/6`; `missing=6`. |
-| TC-M2PLAN-006 | AC-F2-3 | P06 | `bash` block **P06** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent criteria_present=0/7`; `ac_items=0` (the numbered-list and extra-criteria checks are not reached because the entry is absent); all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
+| TC-M2PLAN-006 | AC-F2-3 | P06 | `bash` block **P06** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
 | TC-M2PLAN-007 | AC-F3-1 | P07 | `bash` block **P07** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17. |
 | TC-M2PLAN-008 | AC-F3-2 | P08 | `bash` block **P08** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. |
 | TC-M2PLAN-009 | AC-F4-1 | P09 | `bash` block **P09** (Section 7.1) | Manual Only — uncommitted procedure | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. |
@@ -2312,7 +2386,7 @@ echo; echo "##### done"
 | TC-M2PLAN-016 | AC-F7-1 | P16 | `bash` block **P16** (Section 7.1) | Manual Only — uncommitted procedure | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. |
 | TC-M2PLAN-017 | AC-F7-2 | P17 | `bash` block **P17** (Section 7.1) | Manual Only — uncommitted procedure | All four groups retain their bytes (`yes`), but every pointer check is `no` and `g4_pointer=0/1`. |
 | TC-M2PLAN-018 | AC-F7-3 | P18 | `bash` block **P18** (Section 7.1) | Manual Only — uncommitted procedure | `windows(base-anchored): newsec=0. |
-| TC-M2PLAN-019 | AC-F8-1 | P19 | `bash` block **P19** (Section 7.1) | Manual Only — uncommitted procedure | `pack_files=0/12`; `actual_files=0`; `README=absent`; `pack_contents_table=byte-identical`. |
+| TC-M2PLAN-019 | AC-F8-1 | P19 | `bash` block **P19** (Section 7.1) | Manual Only — uncommitted procedure | `pack_files=0/12`; `actual_files=0`; `README=absent`; `readme_self_link_self_test=detected`; `pack_contents_table=byte-identical`. |
 | TC-M2PLAN-020 | AC-F8-2 | P20 | `bash` block **P20** (Section 7.1) | Manual Only — uncommitted procedure | `architecture=absent`. |
 | TC-M2PLAN-021 | AC-F8-3 | P21 | `bash` block **P21** (Section 7.1) | Manual Only — uncommitted procedure | `contracts=absent`. |
 | TC-M2PLAN-022 | AC-F8-4 | P22 | `bash` block **P22** (Section 7.1) | Manual Only — uncommitted procedure | `test-scenarios=absent`. |
@@ -2326,7 +2400,7 @@ echo; echo "##### done"
 | TC-M2PLAN-030 | AC-NFR3-1 | P30 | `bash` block **P30** (Section 7.1) | Manual Only — uncommitted procedure | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. |
 | TC-M2PLAN-031 | AC-NFR4-1 | P31 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary and `exit=0` |
 | TC-M2PLAN-032 | AC-NFR5-1 | P32 | `mkdir -p "$(git rev-parse --show-toplevel)/tmp/tmpdir" && TMPDIR="$(git rev-parse --show-toplevel)/tmp/tmpdir" pnpm check` | Existing guard — no change | `pnpm check` exit code and the last successful stage |
-| TC-M2PLAN-033 | AC-NFR6-1 | P33 | `bash` block **P33** (Section 7.1) | Manual Only — uncommitted procedure | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`. |
+| TC-M2PLAN-033 | AC-NFR6-1 | P33 | `bash` block **P33** (Section 7.1) | Manual Only — uncommitted procedure | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`; the compliant fixture still reports `fixture_good=OK` / `fixture_good_metrics=3/3,7/7,OK`, and the level-1-without-diagram fixture reports `C4 Level 1 has diagram=MISSING` / `fixture_negative=detected`. |
 | TC-M2PLAN-034 | AC-NFR7-1 | P34 | `bash` block **P34** (Section 7.1) | Manual Only — uncommitted procedure | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. |
 | TC-M2PLAN-035 | AC-NFR8-1 | P35 | `bash` block **P35** (Section 7.1) | Manual Only — uncommitted procedure | `clause_scan: total=79 present=0 missing=79`; `missing_clauses=79`; `s17_missing_criteria=7`; `added_criteria=0`; all 79 clause ids printed as `MISSING`, including `S11-AC1`, `S12-AC2`, `S13-AC1`, `S15-AC1`, `S15-AC2`, `S15-AC3`, `S16-AC1`, and `S17-AC3`/`AC4`/`AC6`. |
 | TC-M2PLAN-036 | AC-NFR9-1 | P36 | `bun run scripts/checks/forbidden-literals.ts` + added-line scan | Existing guard plus uncommitted scan | `0 violations`, `seed_hits=0` |
@@ -2409,7 +2483,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 
 | ID | Question | Blocking? | Owner | Disposition |
 |---|---|---|---|---|
-| — | None outstanding | — | — | Closed by spec v1.4 and the pm-notes decisions |
+| — | None outstanding | — | — | Closed by spec v1.5 and the pm-notes decisions |
 
 ## 9. Plan Revision Log
 
@@ -2419,6 +2493,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 1.1 | 2026-11-10 | @test-plan-writer | Reopened and aligned to spec v1.2 (DEC-16). **D1:** P03 now derives the M2 insertion window from two sources — start from the base snapshot's M2-S9 end (1170) and end from the head `## Epic M3` line minus one — and the classifier self-tests grow to 3/3; observed window `1170:1169` (empty before the change) and `backlog_hunks=0`, so the verdict stays `FAIL (vacuous)`. **D2:** P16 uses a real ERE alternation `23 of 23|23/23`, adds a `literal_pipe` prohibition and an `alternation_self_test=OK`; observed `new_sections=0`, `FAIL`. **D3:** P15/P30 implement the two-sentence bound: exactly 16 enumerated families, exactly `state`/`mcp`/resident daemon absent, separate sentences, one contiguous DESCRIPTION hunk with at most two adjacent sentences and every other byte identical; two-sentence and merged-sentence fixtures prove the oracle; observed `desc_hunks=0`, `enumerated_families=14`, `FAIL`. **D4:** P18/P34 replace the whole-section `cmp` with whole-file line retention plus an added-line whitelist (new section plus four pointer windows, ≤3 non-blank lines each); observed `removed_lines=0`, `added_lines=0`, self-tests `detected/detected/permitted`, `FAIL (vacuous)`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-6 and G-8 reworded for the new mechanisms. |
 | 1.2 | 2026-11-10 | @test-plan-writer | Reopened and aligned to spec v1.3 (DEC-17). **D5:** P03 now pins the insertion inside the Epic M2 block: start is the base M2-S9 last content line + 1 (1167), end is the head `---` line before `## Epic M3` minus 1; it asserts `separator_sequence=identical`, adds a below-separator negative fixture and a separator-deletion probe (`classifier_self_tests=4/4`), and observed `window=1167:1167`, `window_empty=no`, `separator_sequence=identical`, `backlog_hunks=0`, `FAIL (vacuous)`. **D6:** P18 re-anchors the paragraph/scheduling/items windows to the base statement ends and maps them through the insertion offset, so an appended pointer cannot become the `last non-blank` line and shift its own window; observed pre-change `pointer_runs=0`, `bad_runs=0`, and a reference-shaped-head fixture with `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`, `reference_head_fixture=OK`. **D7:** P34 clamps the title-group start to 1; observed `pointer_groups=0/4` with `sed_line_address_0_errors=0`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; TC003/TC018/TC034 and G-8/TR-3/TR-10 updated. |
 | 1.3 | 2026-11-10 | @test-plan-writer | DoR iteration-1 remediation against spec v1.4. **F2:** P02/P35 run a 79-row clause table built from GH-284's actual clause set (61 rows for S11-S16; 79 including S17 and both amendments), with a named `MISSING` record per clause; observed `clause_scan: total=79 present=0 missing=79`, `missing_clauses=79`, `s17_missing_criteria=7`. **Changed ACs:** P06 checks the seven S17 criteria by content (`criteria_present`); P11 asserts the proposal-tail rule and preserves `watchdog`'s `M1-S15 adds progress signals`/`SC-M1-14` plus verify-gates/closeout extension attributions (`tail_violations=11` pre-change, both preservation checks already OK); P19 asserts the README deviation statement and contents-table identity; P27 asserts twelve linked targets; P32 runs and records both gate invocations with lone-parity classification; P33 proves heading association for each C4/flow heading; P03 asserts the blank line before M2-S11 (`blank_separation=FAIL` pre-change). **Minor:** P34 defines `ptr()` locally (runs alone; `sed_line_address_0_errors=0`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-1/G-2/G-3/G-6 reworded. |
+| 1.4 | 2026-11-10 | @test-plan-writer | DoR iteration-2 remediation against spec v1.5. **F1 (blocking):** P33 adopts Appendix E v1.5's C4 predicate `^## C4 Level $lvl([^0-9]|$)` in both the count and ownership awk, prescribes the committed heading form `## C4 Level 1: system context` (level digit + `: ` + subject), and proves exactly one block per C4 heading and seven per `## Key flows`; fixtures mixed subject/bare headings report `c4_headings_with_diagrams=3/3`, `flow_headings_with_diagrams=7/7`, `heading_association=OK`, while the level-1-without-diagram fixture reports `MISSING`/`fixture_negative=detected`. **Minors:** P06 evidence now uses `ac_numbered_items` (not `ac_items`); item counting uses `[0-9]+` so an eighth item is caught (`extra_self_test=detected (8 items, extra=1)`), duplicate numbers are derived from the criterion number (`duplicate_self_test=detected` on a duplicated `3.`); TC-011 has its own precondition; P19 requires pack-relative README links and proves a `../README.md` self-link is rejected (`readme_self_link_self_test=detected`). Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-3 updated. |
 
 ## 10. Test Execution Log
 
@@ -2431,7 +2506,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The window is non-empty on the base; the tree has no hunk yet. |
 | TC-M2PLAN-004 | 2026-11-10 | FAIL (change absent) | `S17=absent`; `criteria_present=0/7`. No S17 entry exists in the base tree. |
 | TC-M2PLAN-005 | 2026-11-10 | FAIL (change absent) | `S17=absent clauses_present=0/6`; `missing=6`. |
-| TC-M2PLAN-006 | 2026-11-10 | FAIL (change absent) | `S17=absent criteria_present=0/7`; `ac_items=0` (the numbered-list and extra-criteria checks are not reached because the entry is absent); all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
+| TC-M2PLAN-006 | 2026-11-10 | FAIL (change absent) | `S17=absent criteria_present=0/7`; `ac_numbered_items=0/7`; `extra_criteria=0`; `duplicate_numbers=0`; `duplicate_self_test=detected`; `extra_self_test=detected (8 items, extra=1)`; all seven `MISSING` lines prove the oracle cannot be satisfied by a bare count. |
 | TC-M2PLAN-007 | 2026-11-10 | FAIL (no amendment; oracle self-test passes) | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17.)`; `M2-S4 shape FAIL (no amendment)`. Self-test printed `changed_lines=2 unexpected_lines=2`, so the oracle fires. |
 | TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. The identity halves are a passing control; the amendment is absent. |
 | TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged. |
@@ -2444,7 +2519,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-016 | 2026-11-10 | FAIL (change absent) | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. The self-test proves the fixed `23 of 23\|23/23` alternation matches prose; the pre-change tree has no section to scan. |
 | TC-M2PLAN-017 | 2026-11-10 | FAIL (pointers absent); byte retention PASS (control) | All four groups retain their bytes (`yes`), but every pointer check is `no` and `g4_pointer=0/1`. Byte retention is a passing control; the four pointers are absent. |
 | TC-M2PLAN-018 | 2026-11-10 | FAIL (vacuous: no added line); retention PASS (control) | `windows(base-anchored): newsec=0..-1 title=2..4 paragraph=54..56 scheduling=148..150 items=101..103`; `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`; `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`; `reference_head_fixture=OK`. Retention passes but the file has no addition; the reference fixture proves an appended pointer is counted by its base-anchored window rather than shifting it. |
-| TC-M2PLAN-019 | 2026-11-10 | FAIL (change absent); table identity PASS (control) | `pack_files=0/12`; `actual_files=0`; `README=absent`; `pack_contents_table=byte-identical`. The table-identity half is a passing control; the pack and its deviation statement are absent. |
+| TC-M2PLAN-019 | 2026-11-10 | FAIL (change absent); table identity PASS (control) | `pack_files=0/12`; `actual_files=0`; `README=absent`; `readme_self_link_self_test=detected`; `pack_contents_table=byte-identical`. The table-identity half is a passing control; the pack and its deviation statement are absent. |
 | TC-M2PLAN-020 | 2026-11-10 | FAIL (change absent) | `architecture=absent`. |
 | TC-M2PLAN-021 | 2026-11-10 | FAIL (change absent) | `contracts=absent`. |
 | TC-M2PLAN-022 | 2026-11-10 | FAIL (change absent) | `test-scenarios=absent`. |
@@ -2458,7 +2533,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-030 | 2026-11-10 | FAIL (entrypoint region unchanged); body preservation PASS (control) | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. The fourteen-body half is a passing control; the entrypoint region is unchanged. |
 | TC-M2PLAN-031 | 2026-11-10 | PASS (control) | `guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`. Passing control. |
 | TC-M2PLAN-032 | 2026-11-10 | PASS (repo-local TMPDIR); default run classified environmental (DEC-19) | Default run: `default_exit=1`; `default_failed_tests=1`; `default_failure_class=environmental (ci-baseline-parity only)`; `default_failures=CI baseline parity (hermetic partial clone) > a depth-1 checkout fails closed and the baseline fetch is the remedy`; repo-local run: `repo_tmpdir_exit=0`; `gate_verdict=PASS`. Both invocations and both exits are recorded. |
-| TC-M2PLAN-033 | 2026-11-10 | FAIL (change absent) | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`. |
+| TC-M2PLAN-033 | 2026-11-10 | FAIL (change absent) | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`; the compliant fixture still reports `fixture_good=OK` / `fixture_good_metrics=3/3,7/7,OK`, and the level-1-without-diagram fixture reports `C4 Level 1 has diagram=MISSING` / `fixture_negative=detected`. |
 | TC-M2PLAN-034 | 2026-11-10 | FAIL (change absent); retention PASS (control) | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. Zero removals is a passing retention control; there are no additions or pointers yet, and the title group is addressable without a `sed` line-address-0 error. |
 | TC-M2PLAN-035 | 2026-11-10 | FAIL (change absent; 79 clauses missing) | `clause_scan: total=79 present=0 missing=79`; `missing_clauses=79`; `s17_missing_criteria=7`; `added_criteria=0`; all 79 clause ids printed as `MISSING`, including `S11-AC1`, `S12-AC2`, `S13-AC1`, `S15-AC1`, `S15-AC2`, `S15-AC3`, `S16-AC1`, and `S17-AC3`/`AC4`/`AC6`. The oracle bites on the full clause set. |
 | TC-M2PLAN-036 | 2026-11-10 | PASS (guard control); FAIL (vacuous scan) | `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `added_lines=0`; `seed_hits=0`; `non_vacuous=no`. Zero violations is a passing guard control; the added-line scan is vacuous until the change lands. |
