@@ -48,7 +48,7 @@ export const DOCTOR_EVIDENCE_OUTCOMES = [
 ] as const;
 export type DoctorEvidenceOutcome = (typeof DOCTOR_EVIDENCE_OUTCOMES)[number];
 
-/** The closed twenty-two-value reason set in declared order (DM-6). */
+/** The closed twenty-three-value reason set in declared order (DM-6). */
 export const DOCTOR_EVIDENCE_REASONS = [
   "observed",
   "observed-empty",
