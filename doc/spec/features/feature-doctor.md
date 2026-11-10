@@ -160,9 +160,9 @@ condition-catalog entry, evidence source, area, or exit change. When the combine
 value would exceed `DOCTOR_MAX_DETAIL_CHARS`, the existing detail is truncated to
 fit and the **whole** hold segment is kept; it is never cut mid-word or dropped.
 A real provider defect keeps its own `fail` or `unreachable` verdict and reason,
-and does not gain `owner-hold`; `status` remains the production surface that
-shows the hold in that case. With no active hold, every machine and human byte
-is unchanged. This hold detail is exercised through `createDoctorCommandRuntime`
+and does not gain `owner-hold`; in that case `status` still carries the hold in
+its digest, and the queue read surfaces report it. With no active hold, every
+machine and human byte is unchanged. This hold detail is exercised through `createDoctorCommandRuntime`
 over a supplied `DoctorComposition` — the command-runtime/test-harness layer.
 The production composer supplies no `DoctorComposition` today (a pre-existing
 doctor residual), so the production binary does not register `doctor`; in
