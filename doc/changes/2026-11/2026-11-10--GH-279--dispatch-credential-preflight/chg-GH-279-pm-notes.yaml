@@ -13,7 +13,7 @@ phases:
   delivery: { started: null, completed: 2026-11-10T08:44:33.977Z }
   system_spec_update: { started: null, completed: 2026-11-10T08:57:15.453Z }
   review_fix: { started: null, completed: 2026-11-10T10:57:00.459Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-10T11:06:39.746Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -282,5 +282,25 @@ notes:
       pnpm check exit 0, 6976 pass / 4 skip / 0 fail across 862 files;
       lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
       parity all green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 1 (verify decision records and amendment notes) complete with
+      no commit by design: the decision material landed earlier at ca4aa1a8;
+      delivery-os plan validate GH-279 valid; bun test
+      tests/checks/decision-record.test.ts 4 pass; the anchored grep finds
+      exactly four TDR-0015 amendment notes; TDR-0019 and TDR-0020 remain
+      Proposed."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 9 remediation commit hash is 27186b8c (subject primitive-
+      authored); targeted suites 127 pass; aggregate gate exit 0 (6976 pass / 4
+      skip / 0 fail). The phase note above is self-referential; this note
+      records the literal hash for DoD evidence."
+    type: info
+    date: 2026-11-10
+  - text: "Quality gates (phase 9) green on the final tree: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 in 503s; bun test 6976 pass / 4 skip / 0 fail across 862
+      files; lint, format, typecheck, boundaries, prompt-conformance,
+      help-guide-coverage, and exports-parity all green. No flakes on this run."
     type: info
     date: 2026-11-10
