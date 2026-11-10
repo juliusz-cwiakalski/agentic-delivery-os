@@ -2,16 +2,17 @@
 # typed divergence resolution, and delivered-evidence divergence recording.
 #
 # SOURCES (single source of truth, read before delivery):
-#   - Spec: ./chg-GH-279-spec.md (v1.2 or later; F-1..F-6, AC-F1-1..AC-F1-8,
-#     AC-F2-1..AC-F6-3, DM-1..DM-6, NFR-1..NFR-14, RSK-1..RSK-17,
-#     DEC-1..DEC-11, §16.1 documentation impact including the change record,
-#     §18 ordering/rollout, Appendix A admission table, Appendix B divergence
-#     shape, Appendix C refusal diagnostics)
-#   - Test plan: ./chg-GH-279-test-plan.md (v1.1 or later; TC families ADMIT,
-#     READMAP, CREDNAME, RESOLVE, DIVREC, STATCRED, DOCTCRED, DOCS, and REG,
-#     including the adapter-level stamping TC, the trusted-refusal-marker TC,
-#     the unresolvable-repository-target TC, and the attempt-append-failure TC
-#     TC-DIVREC-011; §6 fixtures; §7 file mapping; MV-1..MV-3 manual evidence)
+#   - Spec: ./chg-GH-279-spec.md (v1.4 or later; F-1..F-6, the 30 acceptance
+#     criteria AC-F1-1..AC-F1-7 and AC-F2-1..AC-F6-3, DM-1..DM-6,
+#     NFR-1..NFR-14, RSK-1..RSK-18, DEC-1..DEC-12, §16.1 documentation impact
+#     including the change record, §18 ordering/rollout, Appendix A admission
+#     table, Appendix B divergence shape, Appendix C refusal diagnostics)
+#   - Test plan: ./chg-GH-279-test-plan.md (v1.3 or later; the 61 test cases of
+#     the ADMIT, READMAP, CREDNAME, RESOLVE, DIVREC, STATCRED, DOCTCRED, DOCS,
+#     and REG families, including the adapter-level stamping TC, the
+#     trusted-refusal-marker TC, and the attempt-append-failure TC
+#     TC-DIVREC-011; §6 fixtures; §7 file mapping and plan-phase mapping;
+#     MV-1..MV-3 manual evidence)
 #   - PM record: ./chg-GH-279-pm-notes.yaml (D1..D7)
 #   - Decisions: doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md,
 #     doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md,
@@ -29,9 +30,10 @@
 #   + named diagnostics -> 5 resolve typing -> 6 delivered-evidence divergence
 #   -> 7 status prerequisite + doctor parity + redaction -> 8 docs, change
 #   record, conformance, spec reconciliation, release.
-#   - Phase 2 lands first because the engine, the contract inventory, and the
-#     later production composition must agree on the declared port/kind shape
-#     before behaviour.
+#   - Phase 2 lands first because the engine and the later production
+#     composition must agree on the declared port/kind shape before behaviour;
+#     the declaration stays field-level, so the name-level contract inventory
+#     does not move.
 #   - Phase 3 (received-2xx status stamped onto a decode failure) lands before
 #     Phase 4 because the malformed-payload-versus-transport-throw distinction is
 #     a prerequisite of the read-outcome matrix, and it is independently
@@ -81,11 +83,12 @@
 #     stamps the 2xx it received onto the normalizer's payload failure, so a
 #     malformed payload carries a status and a transport throw carries none
 #     (TDR-0019 decision point 4). No new field, code, row, or identity.
-#   - An unaddressable admission read (no resolvable repository target for the
-#     declared instance) refuses as `input.value.rejected` (kind input) before
-#     any request is issued (spec F-1.10, AC-F1-8); the composition already
-#     refuses an unresolvable repository identity this way, so no identity is
-#     invented.
+#   - An unresolvable repository target stays a composition-level refusal that
+#     runs before the dispatch runtime exists (`input.value.rejected`, summary
+#     `repository identity is unresolvable`; spec §2.1 records it as unchanged
+#     current-state behaviour). The dispatch ports receive an already-resolved
+#     required target, so no preflight branch can observe an unresolved one, no
+#     criterion covers it, and no ports-driven double can produce it.
 #   - The named-refusal summary reaches the machine envelope AND the human
 #     diagnostic. The delivered classification layer deliberately drops an
 #     explicit summary/remediation hint on a config-shaped failure to protect
@@ -158,6 +161,16 @@
 # declarations). They record no progress and no task list: progress lives in
 # pm-notes `notes:`.
 #
+# COVERAGE INVARIANT: all 30 acceptance criteria of the spec appear exactly once
+# in `acCoverage`, each in the phase that can satisfy it in full. The one
+# exception is AC-F5-4, whose two spec-mandated halves (§16) are declared by
+# Phase 7 (runtime-edge redaction) and Phase 8 (guide content). All 61 test cases
+# of the test plan have a declared home, and the only case assigned to two
+# phases is TC-REG-002, whose structure half runs in Phase 2 and documents half
+# in Phase 8, matching test plan §7. No identifier is dangling or invented:
+# every AC and TC below resolves to a row in the spec's acceptance-criteria table
+# or in the test plan's case list.
+#
 # COMMIT HYGIENE: one commit per phase through the `commit` primitive, subject =
 # the phase `summary`, body/footer lines <= 100 characters, no manual staging.
 
@@ -227,7 +240,7 @@ phases:
   # PHASE 2 — additive admission contract declarations
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Optional preflight port, additive refusal kinds, and the additive contract-inventory delta"
+    title: "Optional preflight port and additive refusal kinds, with the name-level contract inventory unchanged"
     kind: delivery
     summary: "declare dispatch preflight port and refusals"
     leases:
@@ -239,22 +252,23 @@ phases:
         - "packages/core/src/contracts/index.ts"
         - "packages/core/src/app/dispatch.ts"
         - "packages/core/src/index.ts"
-        - "tests/fixtures/ports/v1-contract-inventory.json"
         - "tests/structure/dispatch-preflight-contract.test.ts"
         - "tests/structure/inventory.json"
     interactions:
       - kind: contract-file
         target: "packages/core/src/contracts/dispatch.ts"
         role: producer
-    acCoverage:
-      - "AC-F2-5 (contract half: the engine result error-kind union admits the existing provider kind additively; DOMAIN_KINDS and the error-table row count unchanged)"
+    # No criterion completes here: this phase lands declarations only, and the
+    # criteria it enables (AC-F2-5 in particular) are satisfied in full by the
+    # behavioural phase that asserts kind, projection, and exit together.
+    acCoverage: []
     tcCoverage:
-      - "TC-REG-004 (structure half: the preflight port is declared optional and distinct from admission; the contract-inventory delta is exactly additive)"
+      - "TC-REG-004 (structure half: the preflight port is declared optional and distinct from admission; the addition is field-level, so the name-level v1 contract inventory is asserted unchanged)"
       - "TC-REG-002 (structure half: no new token, DOMAIN_KINDS member, error identity, configuration key, command, or flag)"
     verification:
       - "pnpm typecheck || the additive declarations compile and no existing caller breaks"
       - "bun test tests/structure/dispatch-preflight-contract.test.ts || the preflight port is optional, distinct from admission, and absent from a direct-caller composition"
-      - "bun test tests/structure/port-contract-inventory.test.ts || the inventory delta is exactly the additive preflight declarations (no deleted entry, no renamed export)"
+      - "bun test tests/structure/port-contract-inventory.test.ts || the name-level v1 contract inventory is UNCHANGED: the optional preflight port and the widened error-kind union add no exported type name, so no entry is added, removed, or renamed and the fixture is not regenerated"
       - "bun test tests/checks/error-table-sync.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/dispatch-token-home.test.ts || machine and documented tables stay in sync at their current count; eleven tokens; provider/config rows unchanged"
       - "bun test tests/structure/content-inventory.test.ts || every registered core module resolves; no unregistered source file"
 
@@ -283,14 +297,12 @@ phases:
       - kind: contract-file
         target: "packages/adapters/src/io/provider-transport.ts"
         role: producer
-    acCoverage:
-      - "AC-F1-7 (read half: a malformed 2xx stays distinguishable from a status-absent transport failure)"
-      - "AC-F2-6 (read half: the malformed-2xx/transport-throw pair is separable at the read boundary)"
+    # No criterion completes here: this phase proves the received-2xx stamp that
+    # AC-F1-7 and AC-F2-6 depend on, and both are satisfied in full by Phase 4,
+    # where the engine classifies the read outcome.
+    acCoverage: []
     tcCoverage:
-      - "TC-READMAP-004 (read half: a malformed 2xx carries the received status on the adapter-local provider.payload.invalid)"
-      - "TC-READMAP-007 (read half: malformed 2xx carries a status; a transport throw carries none)"
-      - "TC-READMAP-006 (read half: a transport throw stays status-absent)"
-      - "TC-READMAP-010 (adapter half: the real GitHub client and normalizer stamp the received 2xx onto the decode failure; asserted without a pre-stamped read double)"
+      - "TC-READMAP-010 (adapter half, sole home: the real GitHub client and normalizer stamp the received 2xx onto the decode failure, a thrown transport stays status-absent, 404 stays provider.not-found, and other non-2xx keep their status; asserted without a pre-stamped read double, while the engine-side read halves it pins are declared by Phase 4)"
     verification:
       - "bun test tests/behaviour/providers/github-inputs.test.ts || driven through the real client and normalizer with an injected transport: a 200 response with a malformed body yields provider.payload.invalid WITH httpStatus 200; a thrown transport yields it WITHOUT httpStatus; 404 stays provider.not-found; other non-2xx keep their status"
       - "bun test tests/behaviour/providers/github-trap.test.ts || the transport-throw path stays status-absent and never reaches the network"
@@ -337,7 +349,6 @@ phases:
       - "AC-F1-5"
       - "AC-F1-6"
       - "AC-F1-7"
-      - "AC-F1-8 (spec F-1.10: an unresolvable repository target refuses as input.value.rejected before any request is issued)"
       - "AC-F2-1"
       - "AC-F2-2"
       - "AC-F2-3"
@@ -349,11 +360,10 @@ phases:
       - "TC-READMAP-001..009"
       - "TC-CREDNAME-001..005"
       - "TC-CREDNAME-007 (trusted-refusal marker: the bounded credential-refusal summary reaches machine and human output only with the marker, and an unmarked config-shaped failure still suppresses summary and hint)"
-      - "the AC-F1-8 TC the test plan assigns (no resolvable repository target -> input.value.rejected with zero requests and zero session records)"
       - "TC-REG-001 (determinism half: identical injected clock and id factory produce byte-identical refusal envelopes)"
     verification:
       - "bun test tests/behaviour/dispatch-admission-preflight.test.ts || a refusing credential port yields config.credential.missing/kind config/exit 1 with zero spawns, resumes, leases, and attempts; a resume is refused identically; the missing-credential path issues zero transport requests and completes well under 2 000 ms; a direct caller without the port keeps the delivered order; one resolution and one bounded read per admission"
-      - "bun test tests/behaviour/dispatch-admission-read-mapping.test.ts || 401/403 -> provider.auth.rejected (provider, user-validation, exit 1); 5xx and 429/other non-2xx -> provider.outage (provider, platform-provider, exit 2); status-absent throw -> provider.outage; malformed 2xx -> provider.payload.invalid (provider, platform-provider, exit 2); 404 -> input.value.rejected (input, user-validation, exit 1) naming the ref without calling it wrong; a declared instance with no resolvable repository target -> input.value.rejected (input, user-validation, exit 1) before any request; every pair asserted with kind AND projection AND exit; zero spawns/attempts; the five refusal goldens pin shape only"
+      - "bun test tests/behaviour/dispatch-admission-read-mapping.test.ts || 401/403 -> provider.auth.rejected (provider, user-validation, exit 1); 5xx and 429/other non-2xx -> provider.outage (provider, platform-provider, exit 2); status-absent throw -> provider.outage; malformed 2xx -> provider.payload.invalid (provider, platform-provider, exit 2); 404 -> input.value.rejected (input, user-validation, exit 1) naming the ref without calling it wrong; every pair asserted with kind AND projection AND exit; zero spawns/attempts; the five refusal goldens pin shape only"
       - "bun test tests/behaviour/dispatch-admission-diagnostics.test.ts || machine and human renderings both name GITHUB_TOKEN and github-read plus one remediation; a prefixed reference reports prefix+suffix; a planted canary appears nowhere in envelope, human text, summary, evidence ref, attempt or divergence record; the canary detector itself fires on a deliberate leak; summary <= 240 chars single line and last_message <= 512"
       - "bun test tests/structure/dispatch-composition.test.ts || the two replaced suites are INVERTED to zero spawns and a typed pre-session refusal (assertions retained, not deleted); the positive control reaches a verdict other than state-unverified with exactly one attempt; the no-preflight control preserves the old order; the production composition supplies the port and orders it after input validation and before claimLease"
       - "bun test tests/behaviour/error-classification.test.ts || the trusted-refusal marker is required for the bounded credential-refusal summary, and the untrusted-config pin is INVERTED, not deleted: an unmarked config-shaped failure still suppresses summary and remediationHint"
@@ -521,7 +531,7 @@ phases:
       - "AC-F5-3"
       - "AC-F5-4 (guide-content half: the guide records the least-privilege expectation and the registration-by-this-change fact; the redaction half is Phase 7)"
     tcCoverage:
-      - "TC-DOCS-001..003 (TC-DOCS-004 manual half is Phase 1)"
+      - "TC-DOCS-001..003 (the manual amendment-inspection half of the change record is Phase 1)"
       - "TC-REG-005"
       - "TC-REG-002 (documents half: no new command, flag, configuration key, token, or identity is introduced)"
     verification:

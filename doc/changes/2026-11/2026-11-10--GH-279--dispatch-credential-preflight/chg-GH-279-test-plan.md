@@ -2,7 +2,7 @@
 id: chg-GH-279-test-plan
 status: Updated
 created: 2026-11-10T00:00:00Z
-last_updated: 2026-11-10T10:00:00Z
+last_updated: 2026-11-10T11:30:00Z
 owners: [engineering]
 service: delivery-os dispatch engine
 labels: [change, dispatch, credentials, diagnostics, reliability]
@@ -100,7 +100,7 @@ Every acceptance criterion appears exactly once in the forward table; no criteri
 | AC-F2-2 | Environment-prefixed reference reports the full derived key (prefix + suffix), never the bare suffix | TC-CREDNAME-002 | Covered |
 | AC-F2-3 | Registered planted value appears in zero envelopes, human diagnostics, summaries, evidence refs, attempt records, divergence records | TC-CREDNAME-003, TC-CREDNAME-004 | Covered |
 | AC-F2-4 | Adapter `provider.payload.invalid` + 401 → `provider.auth.rejected`; 429/other non-2xx → `provider.outage`; 404 → `input.value.rejected`; the adapter identity is never forwarded | TC-READMAP-001, TC-READMAP-002, TC-READMAP-003, TC-READMAP-005, TC-READMAP-008 | Covered |
-| AC-F2-5 | Provider identities carry `kind: "provider"`; 404 carries `kind: "input"`; no `fallback.internal`; `DOMAIN_KINDS` and error-table row count unchanged; no code under a mismatched kind | TC-READMAP-008, TC-REG-002 | Covered |
+| AC-F2-5 | Provider identities carry `kind: "provider"`; 404 carries `kind: "input"`; `config.credential.missing` carries `kind: "config"` and classifies to its own row; no `fallback.internal`; the engine result error-kind union admits the existing `provider` and `config` kinds additively; `DOMAIN_KINDS` and error-table row count unchanged; no code under a mismatched kind | TC-READMAP-008, TC-REG-002 | Covered |
 | AC-F2-6 | Malformed 2xx → `provider.payload.invalid` **carrying the received 2xx status** (`httpStatus: 200`); a status-absent transport throw → `provider.outage`; the pair stays distinguishable by status presence, proven at the adapter that stamps it | TC-READMAP-004, TC-READMAP-007, TC-READMAP-010 | Covered |
 | AC-F3-1 | Resolve succeeds from local evidence with spy credential and transport never invoked | TC-RESOLVE-001 | Covered |
 | AC-F3-2 | `state.lock.busy` → `kind: "state"`, own category/retryability/consequence/remediation/exit; never dispatch-kind; never `dispatch.state-unverified` | TC-RESOLVE-002 | Covered |
@@ -150,7 +150,7 @@ Backward/negative traceability (each test case's primary link):
 | TC-CREDNAME-005 | NFR-5, AC-F2-1 | TC-REG-004 | NFR-8, DEC-6, DEC-11 |
 | TC-CREDNAME-006 | AC-F5-4 (a) redaction/parity half, NFR-9 | TC-REG-005 | NFR-10, RSK-8 |
 | TC-READMAP-010 | AC-F2-6, AC-F1-7 (adapter-stamping half) | TC-CREDNAME-007 | AC-F2-1, NFR-2 (trusted-marker control) |
-| TC-DIVREC-011 | F-4.10 (attempt-append-failure/orphan direction), DM-2, DM-6, NFR-11, DEC-9 | — | — |
+| TC-DIVREC-011 | F-4.4, F-4.6 (attempt-append-failure/orphan direction), DM-2, DM-6, NFR-11, DEC-9 | — | — |
 | TC-RESOLVE-001 | AC-F3-1, NFR-7 | TC-RESOLVE-005 | AC-F3-5 |
 | TC-RESOLVE-002 | AC-F3-2, NFR-14 | TC-RESOLVE-006 | AC-F3-5, DEC-10 |
 | TC-RESOLVE-003 | AC-F3-3, NFR-14 | TC-RESOLVE-007 | NFR-14 (negative control) |
@@ -168,7 +168,7 @@ No `API-*` identifier is added: the preflight issues at most one bounded read ag
 | DM-4 | Status `credentialPrerequisite {referenceName, sourceKey}` | TC-STATCRED-001, TC-STATCRED-002, TC-STATCRED-003 | Sibling of `sources[]`; source-entry shape and six-entry bound unchanged; the affected section set is derived from the digest, never hardcoded |
 | DM-5 | Resolve failure diagnostic (`kind: "state"` + own code; not-found → `kind: "input"`) | TC-RESOLVE-002, TC-RESOLVE-003, TC-RESOLVE-005, TC-RESOLVE-006 | Kind assertion is inseparable from identity |
 | DM-6 | Delivered-evidence dedupe key (repository, work-item reference) | TC-DIVREC-003, TC-DIVREC-005, TC-DIVREC-007, TC-DIVREC-009, TC-DIVREC-011 | At most one open per pair; new only after resolution; an orphaned open record still satisfies the dedupe predicate and is reused rather than duplicated |
-| Port contract | Optional `preflight` port, distinct from `ports.admission`; additive `provider` member on the engine result error-kind union | TC-REG-004, TC-ADMIT-005, TC-ADMIT-008 | Contract inventory moves by exactly the additive declarations |
+| Port contract | Optional `preflight` port, distinct from `ports.admission`; the engine result error-kind union admits the existing `provider` and `config` kinds additively (`config.credential.missing` is a config-kind row) | TC-REG-004, TC-ADMIT-005, TC-ADMIT-008 | Contract inventory moves by exactly the additive declarations |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -181,7 +181,7 @@ No `API-*` identifier is added: the preflight issues at most one bounded read ag
 | NFR-5 | Summary ≤ 240 chars single line; `last_message` ≤ 512; note clamped to 240; ≤ 16 evidence refs | TC-CREDNAME-005, TC-RESOLVE-004, TC-DIVREC-006, TC-DIVREC-008 | Bounds asserted on the produced value, not on the fixture; the append-failure case adds an evidence ref and stays within the 16-ref bound |
 | NFR-6 | ≤ 1 credential resolution and ≤ 1 bounded work-item read per admission; no pagination/retries/concurrency | TC-ADMIT-010, TC-ADMIT-009 | Transport request log and credential-call counter asserted exactly |
 | NFR-7 | Resolve: 0 credential resolutions, 0 network calls, 0 truth reads | TC-RESOLVE-001 | Spy ports composed into the production program |
-| NFR-8 | 0 new tokens/DOMAIN_KINDS/error identities/config keys/commands/flags; `provider` admitted additively | TC-REG-002, TC-READMAP-008, TC-REG-004 | Error-table sync, taxonomy equality, help inventory, contract inventory |
+| NFR-8 | 0 new tokens/DOMAIN_KINDS/error identities/config keys/commands/flags; the existing `provider` and `config` kinds admitted additively to the engine result error-kind union | TC-REG-002, TC-READMAP-008, TC-REG-004 | Error-table sync, taxonomy equality, help inventory, contract inventory |
 | NFR-9 | 0 new ambient env reads; secret-read allowlist unchanged; boundary check green | TC-REG-003, TC-CREDNAME-006 | `tests/checks/secret-read-boundary.test.ts` plus the CLI env-read scan |
 | NFR-10 | Inverted assertions updated; 0 assertions protecting the replaced behaviour; help/doc pins green | TC-ADMIT-005, TC-REG-005 | The old assertions are **inverted, not deleted**; review checks the diff for deleted assertions (RSK-8) |
 | NFR-11 | Every appended record passes the validator on first attempt; no partial/torn record | TC-DIVREC-006, TC-DIVREC-008, TC-DIVREC-011, TC-RESOLVE-004, TC-RESOLVE-008 | Includes both append-failure directions: (a) the attempt lands once, the divergence does not land, the failure is declared via `divergence:append-failed` plus the underlying state identity, and no fabricated reference is produced; (b) the divergence lands, the attempt does not land, and the standing orphan is readable, countable, resolvable, and dedupe-reusable without any fabricated attempt claim |
@@ -254,7 +254,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 | TC-DIVREC-008 | A failed divergence append is declared and never referenced | Negative | Behaviour | High | NFR-11, F-4.2 |
 | TC-DIVREC-009 | A replayed attempt appends nothing, even after resolution | Corner Case | Behaviour | High | AC-F4-4, DM-6 |
 | TC-DIVREC-010 | The attempt keeps the underlying failure identity on `last_message` | Edge Case | Behaviour | Medium | F-4.8 |
-| TC-DIVREC-011 | A failed attempt append leaves a standing open divergence that stays resolvable and dedupe-usable | Negative | Behaviour | High | F-4.10, DM-2, DM-6, NFR-11 |
+| TC-DIVREC-011 | A failed attempt append leaves a standing open divergence that stays resolvable and dedupe-usable | Negative | Behaviour | High | F-4.4, F-4.6, DM-2, DM-6, NFR-11 |
 | TC-STATCRED-001 | Affected status sections carry `credentialPrerequisite`, `sources[]` unchanged | Happy Path | Behaviour | High | AC-F6-1, DM-4 |
 | TC-STATCRED-002 | Observing and otherwise-unavailable sections carry no prerequisite | Negative | Behaviour | High | AC-F6-1 |
 | TC-STATCRED-003 | No observed section, no fabricated zero, no finding, no vocabulary growth | Negative | Behaviour | High | AC-F6-2, F-6.4 |
@@ -750,18 +750,20 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Preconditions**:
 
 - All seven admission-read outcomes from TC-READMAP-001…006.
+- The `config.credential.missing` refusal produced by the unresolvable-credential path (TC-ADMIT-001).
 
 **Steps**:
 
 1. Run every outcome.
 2. Classify each through the delivered classifier and compare with the emitted envelope.
-3. Assert `DOMAIN_KINDS` membership and the error-table row count are unchanged.
+3. Classify the `config.credential.missing` refusal the same way.
+4. Assert `DOMAIN_KINDS` membership and the error-table row count are unchanged.
 
 **Expected Outcome**:
 
-- Every provider identity carries `kind: "provider"`; the 404 refusal carries `kind: "input"`.
+- Every provider identity carries `kind: "provider"`; the 404 refusal carries `kind: "input"`; the credential refusal carries `kind: "config"` and classifies to its own row rather than `fallback.internal`.
 - Zero cases classify as `fallback.internal`; zero emit `provider.payload.invalid` for 401/5xx/transport.
-- The engine result error-kind union admits `provider`; `DOMAIN_KINDS` and the error-table count are unchanged (with TC-REG-002).
+- The engine result error-kind union admits the existing `provider` and `config` kinds additively; `DOMAIN_KINDS` and the error-table count are unchanged (with TC-REG-002).
 
 #### TC-READMAP-009 - Refusal envelope goldens and bounded single-line shape
 
@@ -1488,7 +1490,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4.2, F-4.6, F-4.8, F-4.10 (attempt-append-failure/orphan direction), DM-2, DM-6, NFR-11, DEC-3, DEC-9
+**Related IDs**: F-4.2, F-4.4, F-4.6, F-4.8 (attempt-append-failure/orphan direction), DM-2, DM-6, NFR-11, DEC-3, DEC-9
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts` (new), a store double whose divergence append succeeds and whose attempt append returns `state.write.failed`, over the delivered ledger reader, `dispatch dual-run summary`, and `dispatch dual-run resolve`
@@ -1517,7 +1519,7 @@ Rules that bind every layer: `bun:test` only (never Jest/Vitest); fixtures never
 - The divergence resolves from local evidence only (zero credential resolutions, zero transport requests, zero truth reads), the unresolved count decreases by exactly one, and the record stays readable before and after.
 - No attempt record is fabricated at any step, and no step reports a divergence id that is not in the ledger.
 
-**Notes / Clarifications**: The delivered order writes the divergence before the attempt in the same step, so this direction is reachable: a failed attempt append leaves an open obligation whose evidence reference cannot be attested. The change accepts and documents that orphan instead of compensating for it — it stays listed, countable, locally resolvable, and reusable by dedupe. The contract lives in the attempt-append-failure item added to F-4 by the DoR iteration 1 specification remediation (cited here as F-4.10) together with DEC-3/DEC-9. This is the mirror of OQ-1/TC-DIVREC-008, and it is assigned to plan Phase 6.
+**Notes / Clarifications**: The delivered order writes the divergence before the attempt in the same step, so this direction is reachable: a failed attempt append leaves an open obligation whose evidence reference cannot be attested. The change accepts and documents that orphan instead of compensating for it — it stays listed, countable, locally resolvable, and reusable by dedupe. The contract lives in F-4.4 (the append order, the accepted orphan, and the returned state identity) and F-4.6 (the per-pair dedupe applies equally to the orphan, so a later attempt references it instead of opening a second divergence), together with DEC-3/DEC-9. This is the mirror of OQ-1/TC-DIVREC-008, and it is assigned to plan Phase 6.
 
 #### TC-STATCRED-001 - Affected status sections carry `credentialPrerequisite`, `sources[]` unchanged
 
@@ -2099,7 +2101,8 @@ None. The four questions raised by plan v1.0 were resolved by the PM on 2026-11-
 |---|---|---|---|
 | 1.0 | 2026-11-10 | `@test-plan-writer` | Initial plan for GH-279. 58 test cases trace all 30 acceptance criteria (AC-F1-1…AC-F6-3), DM-1…DM-6, NFR-1…NFR-14; the two delivered composition assertions are inverted with a positive control and a no-preflight control; the read-outcome matrix asserts identity + kind + projection + exit per branch including the malformed-2xx/transport discriminator pair; resolve is verified local-only with spy ports, per-store identity typing, the distinguishable not-found sentinel, note clamping, and replay; the delivered-evidence divergence is verified for the predicate conjuncts, declared shape, per-pair dedupe, summary counting, resolution decrement, and append-failure observability; status prerequisite and doctor parity are pinned; docs/conformance/boundary/regression pins are enumerated. Three manual verification procedures record the PR evidence the fixture suite cannot produce. |
 | 1.1 | 2026-11-10 | `@test-plan-writer` | Resolved the four review questions from the PM decision and folded them into the affected cases. OQ-1: TC-DIVREC-008 now pins the append-failure contract (one attempt append, no `divergenceRef`, bounded `divergence:append-failed` evidence reference, underlying state identity on `data.error`, derived token and exit `2` unchanged), with DM-3, NFR-11, and TR-9 aligned. OQ-2: the guide path is `doc/guides/tracker-credential-provisioning.md` with its content check under `tests/checks/`. OQ-3: TC-READMAP-009, TC-CREDNAME-001, and TC-CREDNAME-005 assert key/reference substrings in the machine summary and the human diagnostic plus canary absence, and no longer pin prose sentences; goldens pin shape and classified fields. OQ-4: TC-STATCRED-001/002 derive the prerequisite section set from the digest and assert absence on observing and non-credential-unavailable sections. OQ-1…OQ-4 marked resolved in §8.3/§8.4; every AC, F, NFR, and DM link is unchanged. |
-| 1.2 | 2026-11-10 | `@test-plan-writer` | DoR iteration 1 remediation (verdict NOT_READY) plus the AC-F2-6 alignment; 61 test cases. AC-F2-6 is now read as status-present for a malformed `2xx` (`httpStatus: 200`) and status-absent only for a transport throw, and TC-READMAP-004/007, §6, and §8.2 say so. TC-READMAP-010 drives the **real** GitHub client and normalizer over an injected transport and asserts the received-`2xx` stamp, the absent status on a throw, the `404` mapping, and status preservation, so the suite cannot pass if the Phase 3 stamp is never implemented; it is mapped to `tests/behaviour/providers/github-inputs.test.ts` and `tests/behaviour/providers/github-trap.test.ts` (paths corrected) and to plan Phase 3. TC-CREDNAME-007 proves the narrow trusted-refusal marker is required for `config.credential.missing` to carry its bounded summary and one remediation in machine and human output, while an unmarked config-shaped failure keeps the delivered suppression and a marked non-credential config code stays suppressed; mapped to `tests/behaviour/error-classification.test.ts` and Phase 4. TC-DIVREC-008 now asserts only what `CommandResultError` carries (`error.code` plus category/retryable/consequence/remediationHint/summary) and proves domain kind and projection through the classification path and the exit code instead of reading them off the envelope. TC-DIVREC-011 covers the opposite append direction — a standing orphan divergence that stays listed, counted, locally resolvable, and dedupe-reusable after a failed attempt append — resolved as OQ-5 and traced to the new F-4 item (F-4.10). AC-F5-4's halves are now traced separately (redaction/parity half TC-CREDNAME-006, Phase 7; guide-content half TC-DOCS-001, Phase 8), a plan-phase mapping table was added to §7, TR-11…TR-13 were added, the front matter points at the delivered plan, and the summary counts were corrected. |
+| 1.2 | 2026-11-10 | `@test-plan-writer` | DoR iteration 1 remediation (verdict NOT_READY) plus the AC-F2-6 alignment; 61 test cases. AC-F2-6 is now read as status-present for a malformed `2xx` (`httpStatus: 200`) and status-absent only for a transport throw, and TC-READMAP-004/007, §6, and §8.2 say so. TC-READMAP-010 drives the **real** GitHub client and normalizer over an injected transport and asserts the received-`2xx` stamp, the absent status on a throw, the `404` mapping, and status preservation, so the suite cannot pass if the Phase 3 stamp is never implemented; it is mapped to `tests/behaviour/providers/github-inputs.test.ts` and `tests/behaviour/providers/github-trap.test.ts` (paths corrected) and to plan Phase 3. TC-CREDNAME-007 proves the narrow trusted-refusal marker is required for `config.credential.missing` to carry its bounded summary and one remediation in machine and human output, while an unmarked config-shaped failure keeps the delivered suppression and a marked non-credential config code stays suppressed; mapped to `tests/behaviour/error-classification.test.ts` and Phase 4. TC-DIVREC-008 now asserts only what `CommandResultError` carries (`error.code` plus category/retryable/consequence/remediationHint/summary) and proves domain kind and projection through the classification path and the exit code instead of reading them off the envelope. TC-DIVREC-011 covers the opposite append direction — a standing orphan divergence that stays listed, counted, locally resolvable, and dedupe-reusable after a failed attempt append — resolved as OQ-5 and traced to F-4.4/F-4.6 (the attempt-append-failure behaviour and the orphan's dedupe reuse). AC-F5-4's halves are now traced separately (redaction/parity half TC-CREDNAME-006, Phase 7; guide-content half TC-DOCS-001, Phase 8), a plan-phase mapping table was added to §7, TR-11…TR-13 were added, the front matter points at the delivered plan, and the summary counts were corrected. |
+| 1.3 | 2026-11-10 | `@test-plan-writer` | DoR iteration 2 remediation (verdict NOT_READY), test-plan-local fixes; 61 test cases, 30 acceptance criteria (AC-F1-1…AC-F6-3). The unresolvable-repository-target admission branch is dropped with the specification change and is not traced here: it has no criterion row, no scenario, and no mapping, §3.1's "exactly once" claim holds for the 30 surviving criteria, and no scenario asserts that removed behaviour. The engine result error-kind union is now stated as admitting the existing `provider` **and** `config` kinds additively — in §3.2 "Port contract", the §3.3 NFR-8 row, the §3.1 AC-F2-5 row, and TC-READMAP-008 — because `config.credential.missing` is a config-kind row and a provider-only union would classify it as `fallback.internal`; TC-READMAP-008 now classifies that refusal too and asserts `kind: "config"` with its own row. TC-DIVREC-011's demand is re-pointed from a non-existent fourth-capability item to F-4.4 (append order and the accepted orphan) and F-4.6 (the per-pair dedupe applies equally to the orphan) in §3.1, §5.1, the scenario's Related IDs, its Notes, and the 1.2 row above. MV-1 keeps its artifact, tracker, and CI corroboration requirement; no TC, AC mapping, or plan-phase assignment is added or removed. |
 
 ## 10. Test Execution Log
 
