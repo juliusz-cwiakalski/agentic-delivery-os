@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-10T22:11:06.439Z }
   dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
   delivery: { started: null, completed: 2026-11-10T21:56:41.400Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-10T22:11:52.242Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -507,5 +507,61 @@ notes:
       s17_missing_criteria=0 added_criteria=0; P37 changed_planning_files=30
       broken_links=0 restated_ac_blocks=0; full regression sweep (P01..P27, P29,
       P30, P33..P35, P37) green at the final HEAD."
+    type: "info"
+    date: "2026-11-10"
+  - text: "system_spec_update (phase 7) complete by @doc-syncer: three current-truth
+      corrections, all caused by the daemon-reachability finding.
+      feature-resident-daemon.md's Command family section now states the family
+      is composed only when a daemon runtime is supplied, that the production
+      entrypoint supplies none, and points the registration gap at the M2 delta
+      note; feature-cli-entrypoint.md's 'ships its own control surface' sentence
+      was replaced with the same truth (its composition table already matched
+      observation); architecture-overview.md's stale 'no typed daemon or
+      background scheduler is established by packages/' claim was corrected.
+      Verified no-ops: the entrypoint composed set already listed all sixteen
+      families and already excluded state/mcp/daemon; no doc/spec file promotes
+      M2 planned scope to delivered; no current-truth doc enumerates
+      doc/planning files or registry entries; no index needs a pointer; no
+      milestone-pack convention spec exists to contradict M2's deliberate
+      deviation. Guards: test-doc-distribution exit 0 (82 docs, no drift),
+      forbidden-literals 0 violations with 139 docs, privacy 0, help-guide
+      coverage green, doc-conformance 17/17, and the only failing test in
+      tests/checks is the known cross-device ci-baseline-parity."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Phase-7 containment carve-out (DEC-22): the reconciliation legitimately
+      edited three files NFR-1 forbade, so the containment rule was split into a
+      delivery budget (31 files: 30 planning + 1 registry) and a phase-7 budget
+      (3 current-truth docs), 34 total. Spec v1.7, test plan v1.9 (P28 measures
+      both budgets and observed 31 + 3 = 34), plan v1.7 (P6 statement now says
+      P6 edits no spec/overview file; phase 7 owns those three). All three
+      re-completed. The @doc-syncer was right to flag the conflict rather than
+      silently exceeding the budget."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "Residual documentation gaps reported by @doc-syncer and accepted as out
+      of scope, recorded so the phase-8 reviewer sees them rather than
+      discovering them: (1) doc/planning/oss-tooling/cli-command-registry.md's
+      `ados daemon` row still reads 'Delivered (GH-238)' with start/stop/
+      status/install/uninstall and no reachability caveat, while a later section
+      on the same page says no resident daemon ships with that registration — a
+      planning-truth overclaim in the same class as the one fixed in daemon.md,
+      deliberately not edited because the spec's NG-5 keeps that file out of
+      scope and the ticket names only the four command pages plus daemon.md;
+      propose it for the M2-S16 planning touch. (2) feature-cli-entrypoint.md
+      still says an unknown `--help` path 'falls through to the classified
+      composition failure', while observation gives `unknown flag \"--help\"` at
+      exit 1 for `bogus --help` and fallback.internal exit 2 for `bogus` — a
+      pre-existing GH-242 defect whose resolution is a product decision (fix the
+      parser or restate the contract), so it is not documented around. (3)
+      doc/overview/glossary.md's declared-gap row presents lanes-or-queue →
+      M2-S1 without the qualifier feature-status-digest.md already carries."
+    type: "risk"
+    date: "2026-11-10"
+  - text: "Guard-environment nuance worth keeping: test-doc-distribution.sh must run
+      with the default TMPDIR — with TMPDIR pointed inside the repo its own
+      marker self-test aborts because a mktemp path is built relative to a
+      relative TMPDIR. That is the mirror image of the repo-local-TMPDIR rule
+      for pnpm check (DEC-19), so the two gates need opposite TMPDIR settings."
     type: "info"
     date: "2026-11-10"
