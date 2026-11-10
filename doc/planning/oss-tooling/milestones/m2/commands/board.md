@@ -24,11 +24,12 @@ repositories without mixing their state.
 `--project` narrows the board to one project key. `--all` spans every managed
 project. The default is the current checkout's project.
 
-This surface is proposed for M2-S4 - the cross-repository board depends on the
-project model M2-S11 introduces - and its remainder beyond the M1 view is not
-yet registered at the root listing; see
-[../entrypoint-delta.md](../entrypoint-delta.md). The contract is
-[../contracts.md](../contracts.md).
+The `board` command is defined in the edge composition but not composed by
+the production entrypoint, so it does not answer from the root listing today;
+M2-S4 has to mount it. The remainder beyond the M1 view is planned for M2-S4
+and depends on the project model M2-S11 introduces. See
+[../entrypoint-delta.md](../entrypoint-delta.md) for the root delta and
+[../contracts.md](../contracts.md) for the contract.
 
 ## OPTIONS
 

@@ -47,13 +47,13 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S4 Board | multi-repository overview | `projects.v1` | SC-M2-S4-01, SC-M2-S4-02 |
 | M2-S5 Steer | handover-gate evaluation | `phase.state` topic | SC-M2-S5-01, SC-M2-S5-02 |
 | M2-S6 Metrics and spend | telemetry attribution | `telemetry.v1`, `spend` v2 | SC-M2-S6-01, SC-M2-S6-02 |
-| M2-S7 Suite-to-job mapping in gates | handover-gate evaluation | `attempts.v1` | SC-M2-S7-01, SC-M2-S7-02 |
-| M2-S8 Memory records | multi-repository overview | queue lifecycle mutations | SC-M2-S8-01, SC-M2-S8-02 |
-| M2-S9 Memory conventions in bootstrap | multi-repository overview | `projects.v1` | SC-M2-S9-01, SC-M2-S9-02 |
+| M2-S7 Suite-to-job mapping in gates | none in this pack | none in this pack | SC-M2-S7-01, SC-M2-S7-02 |
+| M2-S8 Memory records | none in this pack | none in this pack | SC-M2-S8-01, SC-M2-S8-02 |
+| M2-S9 Memory conventions in bootstrap | none in this pack | none in this pack | SC-M2-S9-01, SC-M2-S9-02 |
 | M2-S10 Retro action registry | telemetry attribution | `telemetry.v1` | SC-M2-S10-01, SC-M2-S10-02 |
 | M2-S11 Multi-repository workstations | multi-repository overview | `projects.v1` | SC-M2-S11-01, SC-M2-S11-02 |
 | M2-S12 Evidence inspection and divergence resolution | attempt-history inspection and divergence resolution | `attempts.v1` | SC-M2-S12-01, SC-M2-S12-02 |
-| M2-S13 Public event taxonomy | telemetry attribution | event taxonomy v1 | SC-M2-S13-01, SC-M2-S13-02 |
+| M2-S13 Public event taxonomy | C4 Level 3 event components | event taxonomy v1 | SC-M2-S13-01, SC-M2-S13-02 |
 | M2-S14 Harness telemetry v2 | telemetry attribution | `telemetry.v1`, `spend` v2 | SC-M2-S14-01, SC-M2-S14-02 |
 | M2-S15 Queue lifecycle completion | queue auto-release after merge and closeout | queue lifecycle mutations, single-flight | SC-M2-S15-01, SC-M2-S15-02, SC-M2-S15-03 |
 | M2-S16 Engine-first delivery operations | single-flight refusal across dispatch paths, handover-gate evaluation | `attempts.v1`, event taxonomy v1 | SC-M2-S16-01, SC-M2-S16-02 |
@@ -64,7 +64,8 @@ deliberate and the generic table is left unchanged until milestone exit.
 1. Start with the story entry in [../../backlog.md](../../backlog.md); it is
    canonical for scope, acceptance, and dependencies.
 2. Read the architecture flow this story changes, then the contract surface it
-   implements.
+   implements; a `none in this pack` row is owned by an M1 or M3 surface, and
+   only its scenario seeds live here.
 3. Inherit the scenario seeds as the first draft of the story's test plan and
    reconcile them at delivery.
 

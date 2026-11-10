@@ -1,6 +1,7 @@
 # board(1)
 
 Status: Delivered M1-S5 (GH-229); the full board is planned in M2-S4.
+The board command is not mounted at the production entrypoint.
 Proposed contract scoped to the M2-S4 remainder.
 
 ## NAME

@@ -54,6 +54,7 @@ remains the critical path for M0 exit. The M1-S9 half is superseded by the
 2026-11-07 M1-S9 handover amendment below.
 
 Historical note: see the 2026-11-10 M2 planning snapshot below for the current M1 delivery state.
+
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
 | S1 scaffold | PR #191 | S11 session-admin port | PR #212 |

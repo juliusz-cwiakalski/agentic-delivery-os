@@ -227,6 +227,11 @@ sequenceDiagram
     P->>T: ledger events: stop, park, resume
 ```
 
+With no resident daemon there is no window watcher to park mid-flight: peak
+control degrades to the existing iteration-start gating, the engine does not
+claim a park that did not happen, and the difference is declared to the
+operator. The S17 contract carries both branches.
+
 ## Persistence and concurrency deltas
 
 M2 changes where state lives, not only what it contains.
@@ -266,4 +271,6 @@ M2 changes where state lives, not only what it contains.
   tolerance, and telemetry absence is a classified outcome.
 - A provider peak parks only lanes on that profile; other providers keep
   running, and resume loses or duplicates no branch, artifact, or queue
-  state.
+  state. Without a resident daemon the behaviour degrades to iteration-start
+  gating, and the declared difference — not an implied park — is what the
+  operator sees.

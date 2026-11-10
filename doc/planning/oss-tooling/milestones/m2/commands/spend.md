@@ -26,10 +26,11 @@ states the tolerance in the reconciliation line instead of applying it
 silently. Telemetry absence is a classified outcome with exit `1`, never a
 zero report.
 
-This surface is proposed for M2-S6 on the telemetry M2-S14 delivers, and is
-not yet registered at the root listing; see
-[../entrypoint-delta.md](../entrypoint-delta.md). The contract is
-[../contracts.md](../contracts.md).
+The `spend` family is registered in the root listing today; only the v2
+breakdown fields and the reconciliation disclosure are planned, delivered by
+M2-S6 on the telemetry M2-S14 produces. See
+[../entrypoint-delta.md](../entrypoint-delta.md) for the root delta and
+[../contracts.md](../contracts.md) for the contract.
 
 ## OPTIONS
 

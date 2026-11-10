@@ -2,13 +2,17 @@
 
 A delta note, not a restated man page. It records the observed root entry at
 the time of writing, the additions M2 plans, and the daemon registration gap
-with its evidence. The M1 snapshot stays in
-[../m1/commands/entrypoint.md](../m1/commands/entrypoint.md) and
+with its evidence. The M1 page
+[../m1/commands/entrypoint.md](../m1/commands/entrypoint.md) is a milestone
+snapshot and stays as written; the M1 man page is
 [../m1/man-page.md](../m1/man-page.md).
 
 ## Observed composition
 
-Observed from the built workspace at authoring time:
+Observed from the built workspace at authoring time. The `Commands:` block is
+abridged to the family list: the real output also prints a title, Usage,
+Options, Examples, Exit codes, and See also, and each family carries a
+description on its own row.
 
 ```
 $ <binary> --help
@@ -39,9 +43,10 @@ exit 1
 - `events` joins the subscribe surface as the taxonomy reference; the daemon
   publishes the versioned topics.
 - `spend` gains the v2 breakdowns and the reconciliation disclosure.
-- `queue` gains the lifecycle verbs: release with a reason, remove with a
-  reason, and dependency-edge add and remove.
-- `board` becomes the full cross-repository board.
+- `queue` keeps the delivered lease release and gains the reason-bearing entry
+  removal, the `dep add` and `dep remove` grammar extension, and automatic
+  release on merge and closeout.
+- `board` becomes the full cross-repository board and is mounted by M2-S4.
 
 These additions are planned; the root listing changes only when the owning
 story delivers.
@@ -59,8 +64,21 @@ work outside this change; no plan document can close it. It is recorded here
 so the gap is visible where the blueprint reader looks, and it stays owned by
 the product surface.
 
-## Pointer
+## Where this note is read
 
-The M1 page [../m1/commands/entrypoint.md](../m1/commands/entrypoint.md) now
-points here for the registration gap and for the composition correction, so
-the page and this note are read together.
+The M1 page [../m1/commands/entrypoint.md](../m1/commands/entrypoint.md) is a
+milestone snapshot. Its only amendment in this change is the bounded
+DESCRIPTION correction that lists the sixteen observed families and the absent
+set; this note adds no back pointer to that page and claims none.
+
+The note is reachable from the milestone index, which lists
+`m2/entrypoint-delta.md` in [../README.md](../README.md), and from the pack
+index in [README.md](README.md).
+
+Read it with the M2 command contracts it introduces:
+[commands/projects.md](commands/projects.md),
+[commands/attempts.md](commands/attempts.md),
+[commands/events.md](commands/events.md),
+[commands/spend.md](commands/spend.md),
+[commands/queue.md](commands/queue.md), and
+[commands/board.md](commands/board.md).

@@ -102,13 +102,20 @@ The attribution contract, owned by M2-S14 and consumed by M2-S6 and M2-S10.
 
 Owned by M2-S15.
 
-- **Release and removal reasons.** A queue entry leaves with a reason:
-  `landed`, `abandoned`, `superseded`, or `reconciled`. Removal carries a
-  reason; an unqualified removal is refused.
-- **Automatic release.** A squash merge followed by closeout releases the
-  ref's entry without manual action.
-- **Dependency edges.** Edges are added and removed explicitly; the ready set
-  is recomputed from the graph, and a dependent becomes ready only when its
+- **Lease release stays.** `queue release` keeps its delivered meaning: the
+  lane's lease is dropped, the entry stays in the queue, and it may be parked
+  with a delivered park cause and an `until` timestamp. Release takes no
+  removal reason.
+- **Entry removal carries a reason.** The M2 `queue remove` verb takes an
+  entry out of the queue with a reason: `landed`, `abandoned`, `superseded`,
+  or `reconciled`. Removal carries a reason; an unqualified removal is
+  refused with `queue.reason-missing`.
+- **Automatic removal.** A squash merge followed by closeout removes the
+  ref's entry without manual action, with reason `landed`.
+- **Dependency edges.** `queue dep <ref> <on-ref>` stays the delivered
+  two-positional add; `dep add` and `dep remove` are its explicit grammar
+  extension, and either form edits one dependency edge. The ready set is
+  recomputed from the graph, and a dependent becomes ready only when its
   edges clear.
 - **Single-flight.** One active lane per ref across every dispatch path; a
   second dispatch is refused with a classified error naming the holder.
@@ -131,14 +138,27 @@ Owned by M2-S6 on M2-S14 telemetry.
 Owned by M2-S17.
 
 - **Provider profile field.** `providerProfile` appears on dispatch
-  admission, lane records, and attempt records; a dispatch without a
-  nominated profile is refused at admission.
+  admission, lane records, and attempt records. Every delivery nominates its
+  profile; the no-nomination case is a decision at S17 delivery (a classified
+  refusal or the profile's declared default), so this pack does not add an
+  admission rule ahead of it.
 - **Peak-window rule schema.** Rules are data per profile: a window list
   (start, end, and time zone), a multiplier per window, and a buffer before
   and after each window. The schema is versioned with the profile.
 - **Park reason vocabulary.** `peak-window` and `owner-hold`, each with an
   `until` timestamp. `peak-window` names the profile and the window end;
   `owner-hold` outranks provider windows and names the hold's expiry.
+- **Delivered vocabularies and the S17 mapping.** Three vocabularies already
+  exist, and S17 adds no fourth: the queue park-cause set
+  `provider-window | provider-quota | preempted-for-close-item`, which `lanes`
+  projects as `parked:<cause>`; `peak-window` as a provider-condition kind and
+  provider park cause; and `owner-hold` as a queue lane idle reason plus the
+  owner-hold marker. The committed mapping: `peak-window` is the S17 park
+  reason and becomes a queue park cause whose condition type is the existing
+  `provider-window` (no duplicate cause, no silent rename), and `owner-hold`
+  becomes a park cause alongside today's idle reason. Consequence for `lanes`:
+  the `parked:<cause>` projection gains the `peak-window` and `owner-hold`
+  causes and keeps printing the delivered three unchanged.
 - **Resume event shapes.** `dispatch.attempt` gains a parked kind and a
   resumed kind; `queue.graph` gains a park-edge kind. The resume event
   records the preserved session state reference, the same branch, and that
