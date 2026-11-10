@@ -4,9 +4,9 @@ title: "docs: plan M2 - engine-first operations, multi-repo workstations,
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-10T18:55:00Z", completed: 2026-11-10T17:50:30.662Z }
-  specification: { started: null, completed: 2026-11-10T18:56:07.633Z }
-  test_planning: { started: null, completed: 2026-11-10T18:56:10.728Z }
-  delivery_planning: { started: null, completed: 2026-11-10T19:01:12.768Z }
+  specification: { started: null, completed: 2026-11-10T19:38:21.898Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -249,5 +249,55 @@ notes:
       arithmetic; the P18 anchor was assumed rather than built and run).
       Recorded so the readiness review sees the process cost, not just the fixed
       defects."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "DoR iteration 1: NOT_READY — 8/10 facets PASS; spec_completeness and
+      cross_artifact_consistency FAIL. Record:
+      readiness-review/readiness-iter-1.md. Four major findings: (1) S17's seven
+      acceptance criteria were never enumerated, so ticket criteria 3, 4 and 6
+      (other-provider isolation, resume without state loss, auditable ledger
+      events) could be dropped while every gate stayed green; (2) the clause
+      fidelity oracle was overstated — G-1 claimed every ticket clause had an
+      anchor while at least seven AC clauses had none, and P35 only summed
+      existing anchors; (3) AC-NFR5-1 was unachievable because plain `pnpm
+      check` fails here (cross-device ci-baseline-parity clone), a condition
+      only the test plan and plan carried; (4) the `Proposed contract` tail was
+      undecided for delivered pages, and Appendix B omitted watchdog.md's real
+      M1-S15 and SC-M1-14 clauses, licensing their deletion."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DoR iteration 1 remediation routing: reopened specification (findings 1,
+      3, 4 plus the pack-table, index-row-shape and DEC-6 minors), test_planning
+      (finding 2 plus the P34 self-containment, TMPDIR mkdir, and AC-NFR6-1(d)
+      association minors), delivery_planning (gate alignment). Sequence: spec
+      v1.4 -> test plan v1.3 -> plan v1.3 -> dor_check iteration 2."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "DoR iteration 1 remediation complete. Spec v1.4: F-2 enumerates S17's
+      seven criteria; AC-F2-1 checks content not counts; NFR-5/AC-NFR5-1/KPI/
+      RSK-9/DoD carry the two-run gate with a lone default-run
+      ci-baseline-parity failure classified environmental (DEC-19); F-5/DM-2/
+      AC-F5-1 add the proposal-tail rule with preserved delivered-extension
+      clauses and scenario references (DEC-18); F-8/AC-F8-1/DEC-20 handle the
+      pack-contents deviation; AC-F11-1 pins the twelve-target index row;
+      AC-F1-1 adds the blank-line separation; DEC-6 now cites the AGENTS.md
+      marker list and the guard's path set explicitly. Test plan v1.3: the
+      clause table is rebuilt from the ticket's own 79 clauses (observed
+      missing_clauses=79 pre-change, so the oracle bites), P06 checks the seven
+      S17 criteria by content, P11 adds the tail and preservation checks, P19
+      the deviation statement, P27 twelve targets, P32 both real gate runs
+      (default exit 1 with a lone parity failure, repo-local TMPDIR exit 0), P33
+      heading association, P34 self-contained. Plan v1.3 re-validated: valid,
+      readyForDevelopment."
+    type: "info"
+    date: "2026-11-10"
+  - text: "RETRO (third round, and the one that paid): the readiness gate found the
+      class the authors could not see — the owner-hard story's ACs were
+      referenced by count, never enumerated, so three requirements were absent
+      from every artifact while all 37 ACs were 'covered'. Same root as the
+      earlier rounds: a count or a summary standing in for the enumerated
+      content. Improvement for future planning changes: when a ticket marks a
+      story 'owner-hard', transcribe its acceptance criteria verbatim into the
+      spec and give each one its own anchor before any procedure is written."
     type: "retro"
     date: "2026-11-10"

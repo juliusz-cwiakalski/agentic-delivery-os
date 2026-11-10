@@ -1,7 +1,7 @@
 # GH-284 implementation plan — plan M2: engine-first operations, multi-repo
 # workstations, evidence inspection, and telemetry
 #
-# Plan revision: v1.2 (2026-11-10). Aligned to spec v1.3 and test plan v1.2.
+# Plan revision: v1.3 (2026-11-10). Aligned to spec v1.4 and test plan v1.3.
 #
 # Revision history:
 #   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
@@ -16,44 +16,57 @@
 #                     literal_pipe prohibition, and P03's base-anchored window.
 #                     It recorded two residual defects, XF-7 and XF-8.
 #   v1.2  2026-11-10  alignment to spec v1.3 (DEC-17) and test plan v1.2. XF-7
-#                     and XF-8 are CLOSED upstream: P18 now derives all four
-#                     pointer windows from BASE statement ends mapped through
-#                     the insertion offset and ships a reference-head fixture, so
-#                     it is the single retention-and-whitelist oracle; P34 clamps
-#                     the title group's start and captures stderr; and DEC-17
-#                     pins the backlog insertion INSIDE the Epic M2 block, after
-#                     M2-S9's last content line and before the block-closing
-#                     blank line and `---` separator. D-4 and the P1 gate are
-#                     inverted to match, and the v1.1 compensating pointer-window
-#                     check is gone because P18 no longer needs it.
-#                     Finding ids use the `XF-` prefix so they never collide with
-#                     the spec's `F-` capability ids cited in the phase task
-#                     trailers.
+#                     and XF-8 closed: P18 derives all four pointer windows from
+#                     BASE statement ends mapped through the insertion offset and
+#                     ships a reference-head fixture; P34 clamps the title-group
+#                     start and captures stderr; DEC-17 pins the backlog
+#                     insertion inside the Epic M2 block.
+#   v1.3  2026-11-10  DoR iteration-1 alignment to spec v1.4 and test plan v1.3,
+#                     absorbing readiness-review/readiness-iter-1.md. S17's seven
+#                     acceptance criteria are now enumerated and gated by content
+#                     (DR-1, F1); the anchor table is 79 clauses with zero
+#                     tolerated (DR-2, F2); the aggregate gate is the normative
+#                     two-run DEC-19 form with a created repo-local TMPDIR and
+#                     lone-parity classification, and P6 no longer restates the
+#                     command (DR-3/DR-5, F3/F6); the DEC-18 proposal-tail rule
+#                     and watchdog/verify-gates/closeout preservation are gated
+#                     (DR-4/DR-10, F4/F15); the pack README states the deliberate
+#                     contents deviation and the index row links twelve targets
+#                     while the contents table stays byte-identical (DR-6,
+#                     F8/F10); the inserted block starts with a blank line
+#                     (DR-9, F13); P33 proves heading association (DR-7, F7);
+#                     P34 is self-contained (DR-8, F5); and the six-phase split
+#                     is confirmed against the relaxed §18 wording (DR-11, F12).
+#                     Finding ids use the `XF-` prefix (plan-authored) and the
+#                     `DR-` prefix (review-derived) so they never collide with
+#                     the spec's `F-` capability ids cited in the task trailers.
 #
 # Sources (single source of truth):
-#   - Spec: ./chg-GH-284-spec.md v1.3 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
-#     DEC-1..DEC-17, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
+#   - Spec: ./chg-GH-284-spec.md v1.4 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
+#     DEC-1..DEC-20, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
 #     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
 #     entrypoint), Appendix D (12-document pack manifest), Appendix E
-#     (structural diagram procedure). DEC-16 replaces the whole-section
-#     comparison with the status retention oracle and bounds entrypoint.md at
-#     one contiguous hunk over at most two adjacent DESCRIPTION sentences;
-#     DEC-17 pins the seven-story insertion INSIDE the Epic M2 block, after
-#     M2-S9's last content line and before the block-closing blank line and
-#     `---` separator (AC-F1-1, AC-F1-3, AC-F4-1).
-#   - Test plan: ./chg-GH-284-test-plan.md v1.2 — 37 TCs TC-M2PLAN-001..037,
+#     (structural diagram procedure). DEC-16 (status retention oracle,
+#     two-sentence entrypoint bound), DEC-17 (insertion inside the Epic M2
+#     block), DEC-18 (proposal-tail rule and delivered-extension preservation),
+#     DEC-19 (the aggregate gate is `pnpm check` with a repository-filesystem
+#     TMPDIR, both runs recorded, lone `ci-baseline-parity` failure classified
+#     environmental), and DEC-20 (pack-contents deviation plus the twelve-target
+#     index row) all govern this plan.
+#   - Test plan: ./chg-GH-284-test-plan.md v1.3 — 37 TCs TC-M2PLAN-001..037,
 #     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
 #     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
-#     v1.1 reopened P03 (base-anchored window), P15/P30 (`entrypoint_oracle`,
-#     <=2 adjacent sentences), P16 (real alternation plus literal_pipe
-#     prohibition and alternation self-test) and P18/P34 (whole-file line
-#     retention plus added-line whitelist; `retention_oracle` is defined in P18
-#     and reused by P34). v1.2 anchors P03's window inside the Epic M2 block
-#     (start = base M2-S9 last content + 1, end = head separator - 1, separator
-#     sequence identity, 4/4 classifier self-tests), derives P18's four pointer
-#     windows from BASE statement ends mapped through the insertion offset
-#     (plus a reference-head fixture), and clamps P34's title-group start with
-#     stderr capture.
+#     v1.1 reopened P03/P15/P16/P18/P30/P34; v1.2 anchored P03's window inside
+#     the Epic M2 block, re-anchored P18's pointer windows on base statement
+#     ends with a reference-head fixture, and clamped P34's title group. v1.3
+#     reopened P02/P35 (79-clause table with a named MISSING record), P06 (the
+#     seven S17 criteria by content), P11 (proposal-tail rule and preserved
+#     watchdog/verify-gates/closeout clauses), P19 (README deviation statement
+#     and contents-table identity), P27 (twelve linked targets), P32 (both gate
+#     runs executed and classified), P33 (heading association) and P03 (blank
+#     separation before M2-S11); P34 now defines `ptr()` locally.
+#   - Readiness review: ./readiness-review/readiness-iter-1.md — findings F1-F15;
+#     verdict NOT_READY; all plan-facing items are absorbed as DR-1..DR-11.
 #   - PM notes: ./chg-GH-284-pm-notes.yaml — binding decisions, the
 #     specification reopens that produced v1.1 (DEC-15) and v1.3 (DEC-17), and
 #     the phase-9 quality-gate environment fact.
@@ -178,6 +191,69 @@
 #       including a below-separator negative fixture and a separator-deletion
 #       probe. Re-verified: an insertion after base line 1166
 #       (`@@ -1166,0 +1167,N @@`) classifies INSIDE `1167:<head separator-1>`.
+#       v1.3 adds the blank-line separator requirement (DR-9) without moving the
+#       window.
+#   XF-9 [ACCEPTED RESIDUAL — review F14]. `head_line_for_base` still sums every
+#       hunk's new-side line count as if it were an insertion, so a replacement
+#       hunk above a pointer window over-shifts the paragraph/scheduling/items
+#       windows and reports the pointers as OUTSIDE instead of naming the
+#       replaced line. Re-verified on a fixture with one edited base line plus
+#       four compliant pointers: `paragraph=56..58` (true `55..57`),
+#       `pointer_runs=2`, `bad_runs=3`. Not a false-PASS risk: the same oracle
+#       prints `removed_lines=1` and fails, and this change's compliant head
+#       contains only pure insertion hunks. The review accepted it as
+#       plan-acceptable with a one-line hardening (`d>0` for a replacement hunk
+#       reports the hunk instead of shifting the offsets). Recorded, not fixed
+#       upstream.
+#
+# DoR iteration-1 review findings absorbed here (readiness-iter-1.md; ids are
+# review finding numbers, kept so the trail survives):
+#   DR-1  [F1, major] S17's seven acceptance criteria are enumerated in spec F-2
+#         and AC-F2-1 asserts their content. The plan carries all seven in the
+#         backlog entry (P1 task 1.3), in the pack scenario coverage (P4 task
+#         4.4), and gates them with P04/P06 `criteria_present=7/7`, including
+#         the three that were previously unanchored: other providers keep
+#         running; resume with no branch, artifact, or queue state lost or
+#         duplicated; and stop/park/resume as auditable ledger events surfaced
+#         in status and brief.
+#   DR-2  [F2, major] P02/P35 now run a 79-clause table (61 for S11-S16 plus
+#         S17's 15 and the two amendments' 3), each clause with a named MISSING
+#         record. The plan's P1 gates require `clause_scan: total=61 present=61
+#         missing=0` at P1 and `total=79 present=79 missing=0` at P6, so a
+#         green matrix can no longer mask an unanchored clause.
+#   DR-3  [F3, major] The aggregate gate is normative as DEC-19 / NFR-5 /
+#         AC-NFR5-1: two runs, the second with a created repository-filesystem
+#         TMPDIR, lone `ci-baseline-parity` default failure classified
+#         environmental. The plan's P6 task 6.3 points at P32 instead of
+#         restating a command (which also closes DR-5).
+#   DR-4  [F4, major] DEC-18 adds the proposal-tail rule. The plan's P2 task 2.1
+#         applies it and P11 gates `tail_violations=0`, so a delivered page
+#         cannot keep reading "Delivered M1-Sx (GH-nnn). Proposed contract."
+#   DR-5  [F6, minor] P6 task 6.3 no longer quotes a bare `TMPDIR=... pnpm
+#         check`; it cites P32, whose `mkdir -p` guard is the executable form.
+#   DR-6  [F8/F10, minor] DEC-20 records the pack-contents deviation and the
+#         twelve-target row. The plan's P4 task 4.1 states the deviation in the
+#         pack README, P5 task 5.1 links twelve targets, and P19/P27 gate
+#         `deviation_statement=OK`, `pack_contents_table=byte-identical` and
+#         `m2_targets=12/12`.
+#   DR-7  [F7, minor] P33 proves heading association. The plan's P4 task 4.2
+#         requires each mermaid block to sit directly under its own heading and
+#         gates `heading_association=OK`, `C4 Level 1/2/3 has diagram=OK`, the
+#         seven flow/park headings, and `c4_headings_with_diagrams=3/3`.
+#   DR-8  [F5, minor] P34 defines `ptr()` locally. The plan no longer instructs
+#         "run P16/P17 first"; P34 runs after P18 alone.
+#   DR-9  [F13, nit] AC-F1-1 requires the inserted block to begin with a blank
+#         line. The plan's P1 task 1.1 states it and P03 gates
+#         `blank_separation=OK`.
+#   DR-10 [F15, nit] Appendix B now lists the header text that must survive.
+#         The plan's P2 task 2.1 preserves `watchdog.md`'s `M1-S15 adds progress
+#         signals` and `SC-M1-14`, and the delivered-extension attributions on
+#         `verify-gates.md` and `closeout.md`; P11 gates all four checks.
+#   DR-11 [F12, nit] §18 now allows splitting the recommended commit sequence
+#         finer. The plan keeps six phases and one commit each, including a
+#         separate evidence commit (D-1).
+#   (F9, F11 and F14 need no plan change: F9 and F11 are spec/test-plan wording,
+#   and F14 is recorded as XF-9 above.)
 #
 # Delivery-planning decisions (placement, wording, sequencing; no behavioural
 # deviation):
@@ -192,17 +268,20 @@
 #   D-3 TC/AC ownership as tabulated above; each phase gate list proves only
 #       its own phases' TCs, and P6 re-runs the content procedures as
 #       regression proof without re-claiming their TCs.
-#   D-4 Backlog insertion point (XF-8, DEC-17): insert the seven entries INSIDE
-#       the Epic M2 block, immediately after M2-S9's last content line
+#   D-4 Backlog insertion point (XF-8, DR-9, DEC-17): insert the seven entries
+#       INSIDE the Epic M2 block, immediately after M2-S9's last content line
 #       (`- Depends on: M2-S8.`, base 1166) and before the block-closing blank
 #       line (base 1167) and the `---` separator (base 1168), so the first
 #       inserted line carries base line 1167 and P03's window admits it. The
+#       inserted block BEGINS with a blank line, so `### M2-S11` is separated
+#       from M2-S9's last line exactly as every other entry is (AC-F1-1, P03
+#       `blank_separation=OK`); one blank line between entries thereafter. The
 #       `---` line, the blank line after it, and the `## Epic M3` heading stay
 #       byte-identical and follow the inserted block. Never insert below the
 #       separator: AC-F1-3 and AC-F4-1 make that non-conforming and P03 reports
-#       `separator_sequence=CHANGED` or an OUTSIDE hunk. One blank line between
-#       entries; the file's two-space continuation indent; no `- Ticket:` line;
-#       no reflow of a neighbouring entry.
+#       `separator_sequence=CHANGED` or an OUTSIDE hunk. The file's two-space
+#       continuation indent; no `- Ticket:` line; no reflow of a neighbouring
+#       entry.
 #   D-5 M2-S6 wording. The story's existing task text already contains the
 #       seed token inside "`ados spend`"; those bytes are frozen. The new task
 #       clause must describe consuming M2-S14 telemetry for per-agent and
@@ -213,9 +292,17 @@
 #       contiguous hunk over at most two adjacent DESCRIPTION sentences, with
 #       their period boundary preserved, every other byte identical, and no
 #       third sentence touched.
-#   D-7 Command-page edits: status header only (lines 1..first `## `); title
-#       line byte-identical; no page may contain `M1 planned` or
-#       `M1 milestone planned` anywhere; no header may contain `Current`.
+#   D-7 Command-page edits (DR-4, DR-10, DEC-18): status header only (lines
+#       1..first `## `); title line byte-identical; no page may contain
+#       `M1 planned` or `M1 milestone planned` anywhere; no header may contain
+#       `Current`. Proposal-tail rule: drop `Proposed contract` /
+#       `Proposed examples` from any header whose planned remainder is empty,
+#       and keep the tail only when it is scoped to a remaining planned
+#       surface (board -> M2-S4, watchdog -> M2-S2, mcp -> M3-S2). Preserve
+#       clauses that are already true: `watchdog.md` keeps
+#       `M1-S15 adds progress signals` and `SC-M1-14`; `verify-gates.md` keeps
+#       its M1-S4 extension attribution; `closeout.md` keeps its M1-S12
+#       expansion attribution.
 #   D-8 Status pointers and retention (XF-1, NFR-7, DEC-16): exactly one pointer
 #       per statement group, four groups, each a new line of at most three
 #       non-blank lines that names the 2026-11-10 section; no original line
@@ -234,22 +321,33 @@
 #   D-9 P16 prose constraint (XF-2): state M1 delivery as "23 of 23" and never
 #       write the literal phrase "23 of 23|23/23", which P16 now checks with
 #       `literal_pipe=ABSENT`.
-#   D-10 Pack conventions: exactly twelve files (no extras), line 1 `# <name>(1)`
-#       in commands/, line 3 exactly `Status: Proposed (M2)`, `<binary>`
-#       invocation prefix, bare command names, no `ados_distribution` marker,
-#       no line matching `^- AC:` and no `**Given**` in pack prose (P37), no
-#       commercial provider names (XF-5), and every relative link resolved from
-#       that file's own directory depth.
+#   D-10 Pack conventions (DR-6, DR-7, DEC-20): exactly twelve files (no
+#       extras), line 1 `# <name>(1)` in commands/, line 3 exactly
+#       `Status: Proposed (M2)`, `<binary>` invocation prefix, bare command
+#       names, no `ados_distribution` marker, no line matching `^- AC:` and no
+#       `**Given**` in pack prose (P37), no commercial provider names (XF-5), and
+#       every relative link resolved from that file's own directory depth. The
+#       pack README states the deliberate contents deviation: no `man-page.md`,
+#       no `interactions.md`, and `entrypoint-delta.md` instead, while the
+#       `milestones/README.md` pack-contents table stays byte-identical. Every
+#       mermaid block sits directly under the heading that names its subject, so
+#       P33 can prove association rather than only counts. The M2 index row
+#       links twelve targets: `m2/README.md`, the five other pack-level
+#       documents, and the six command pages.
 #   D-11 Gate order: P28 -> P31 -> P32 -> P36 first (cheap containment and
 #       guards), then the content procedures, per test plan §7.1. A phase
 #       commits only when its own gate list is green at that phase's HEAD.
-#   D-12 Environment: `pnpm check` fails by DEFAULT in this checkout because
-#       tests/checks/ci-baseline-parity.test.ts uses `git clone --local` and
-#       /tmp is tmpfs, giving 7132 pass / 1 fail. The authoritative run points
-#       TMPDIR at the repository filesystem and gives 7133 pass, exit 0. Both
-#       runs are recorded; the default failure is environmental, is not a
-#       regression, and must NOT be "fixed" (scripts/** and tests/** are out
-#       of scope).
+#   D-12 Aggregate gate (DR-3, NFR-5, AC-NFR5-1, DEC-19): the normative
+#       invocation is TWO runs -- plain `pnpm check`, then
+#       `mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check` --
+#       and both results are recorded. The repo-local-`TMPDIR` run must exit 0;
+#       a default-run failure is environmental only when
+#       `tests/checks/ci-baseline-parity.test.ts` is its only failing test
+#       (`git clone --local` hardlinks crossing into tmpfs; one failing test,
+#       roughly 7132 passing). Any other default-run failure, or any repo-local
+#       failure, is a delivery failure. Do not "fix" the environment condition:
+#       `tests/**` and `scripts/**` are out of scope. P32 is the executable
+#       form; this plan does not restate the command.
 #   D-13 Retention gate (XF-7, NFR-7, DEC-16). P18 is the single
 #       retention-and-whitelist oracle: whole-file line retention plus the
 #       addition whitelist (the new dated section and the four pointer
@@ -278,13 +376,21 @@
 #   - `pnpm exec delivery-os --help` needs the built workspace; packages/*/dist
 #     is present in this checkout and P15 reads the live listing.
 #   - P18 defines `retention_oracle` and `head_line_for_base` for P34: run P18
-#     first in the same shell, or P34 prints "FAIL: run P18 first".
-#   - Retention evidence (XF-7): every P3/P6 run records P18's
+#     first in the same shell. P34 defines `ptr()` locally (DR-8), so it does
+#     not need P16/P17 to have run.
+#   - Retention evidence (XF-7, XF-9): every P3/P6 run records P18's
 #     `windows(base-anchored)`, `retention`, `whitelist`, `retention_oracle`,
 #     `reference_head_fixture` and verdict lines, and P34's `pointer_groups` and
 #     `sed_line_address_0_errors` lines. No compensating check is added.
+#   - Aggregate-gate evidence (DR-3): record both P32 runs verbatim -- the
+#     default `default_exit` / `default_failed_tests` /
+#     `default_failure_class` lines and the `repo_tmpdir_exit` /
+#     `gate_verdict` lines. P32 creates the repo-local tmpdir itself.
+#   - Table identity (DR-6): P19 compares the "Pack contents" table against the
+#     base snapshot, so the table must not be touched even though the pack
+#     deviates from it.
 #
-# Validation record (2026-11-10, plan revision v1.2):
+# Validation record (2026-11-10, plan revision v1.3):
 #   verdict=valid, readyForDevelopment=true, totalErrors=0,
 #   artifact=chg-GH-284-plan.yaml (kind=yaml),
 #   schemaVersion=delivery.plan.v1, tier=lite, phases=1..6.
@@ -298,15 +404,17 @@ tier:
   phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
     - "A product path outside doc/planning/oss-tooling/ appears in the diff with doc/changes/** excluded (P28)"
-    - "A backlog hunk falls outside the insertion window (immediately after M2-S9's last content line) or the two amended entries, the head `---` separator sequence changes, or a non-amended story body changes (P03, P29)"
+    - "A backlog hunk falls outside the insertion window (immediately after M2-S9's last content line) or the two amended entries, the inserted block does not begin with a blank line, the head `---` separator sequence changes, or a non-amended story body changes (P03, P29)"
+    - "The M2-S17 acceptance block does not carry all seven criteria by content, or the anchor scan leaves any of the 79 clauses missing (P04, P06, P02, P35)"
     - "M2-S4 changes anything but its - Depends on: line, or M2-S6 loses a base task line or changes its heading, goal, or acceptance criterion (P07, P08)"
-    - "An M1 command page changes outside its status header, or entrypoint.md changes beyond one contiguous hunk over at most two adjacent DESCRIPTION sentences (P14, P15, P30)"
+    - "An M1 command page changes outside its status header, a header with no planned remainder keeps the proposal tail, watchdog drops M1-S15 or SC-M1-14, verify-gates/closeout lose their delivered-extension attribution, or entrypoint.md changes beyond one contiguous hunk over at most two adjacent DESCRIPTION sentences (P11, P14, P15, P30)"
     - "A base status.md line is removed, reordered, or modified, an added line falls outside the new dated section and the four pointer insertions, or a pointer group is missing (P17, P18, P34)"
-    - "The M2 pack does not hold exactly twelve documents, a required heading is absent, or fewer than 32 SC-M2 scenarios exist with two per story S2-S17 (P19, P20, P22, P33)"
+    - "The M2 pack does not hold exactly twelve documents, the README omits the contents-deviation statement, the pack-contents table changes, a required heading or heading-to-diagram association is absent, or fewer than 32 SC-M2 scenarios exist with two per story S2-S17 (P19, P20, P22, P33)"
+    - "The M2 index row links fewer than twelve targets (P27)"
     - "A command page lacks Status: Proposed (M2) on line 3, the <binary> prefix, or a required man-page section (P24, P25)"
     - "A commercial, hosted, or proprietary provider name appears in the pack (NFR-9, XF-5)"
-    - "The doc-distribution guard, the forbidden-literal guard, the structural diagram check, or the authoritative pnpm check is non-zero (P31, P32, P33, P36)"
-    - "The spec or test plan moves past v1.3 / v1.2 while this plan still points at them: re-read the reopened procedures, re-run P03/P18/P34 against the new derivation, and revise this plan rather than mixing revisions"
+    - "The repo-local-TMPDIR pnpm check is non-zero, the default run fails on anything but tests/checks/ci-baseline-parity.test.ts, or either run is left unrecorded (P32); or the doc-distribution guard, the forbidden-literal guard, or the structural diagram check is non-zero (P31, P33, P36)"
+    - "The spec or test plan moves past v1.4 / v1.3 while this plan still points at them: re-read the reopened procedures, re-run the affected gate, and revise this plan rather than mixing revisions"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -328,11 +436,14 @@ phases:
         1.1 Insert the seven new entries INSIDE the Epic M2 block, immediately
         after M2-S9's last content line (`- Depends on: M2-S8.`, base 1166) and
         before the block-closing blank line (base 1167) and the `---` separator
-        (base 1168) (D-4, XF-8, DEC-17), in code order, one blank line between
-        entries, in the existing story shape. The `---` line, the blank line
-        after it, and the `## Epic M3` heading stay byte-identical and follow
-        the inserted block; an insertion anywhere below that separator is
-        non-conforming (AC-F1-3, AC-F4-1) and P03 reports an OUTSIDE hunk or
+        (base 1168) (D-4, XF-8, DR-9, DEC-17), in code order, in the existing
+        story shape. The inserted block begins with a BLANK LINE, so
+        `### M2-S11` is separated from M2-S9's last line exactly as every other
+        entry is (AC-F1-1, P03 `blank_separation=OK`); one blank line separates
+        the entries thereafter. The `---` line, the blank line after it, and the
+        `## Epic M3` heading stay byte-identical and follow the inserted block;
+        an insertion anywhere below that separator is non-conforming (AC-F1-3,
+        AC-F4-1) and P03 reports an OUTSIDE hunk or
         `separator_sequence=CHANGED`. Headings exactly: `### M2-S11
         Multi-repository workstations`, `### M2-S12 Evidence inspection and
         divergence resolution`, `### M2-S13 Public event taxonomy`,
@@ -351,13 +462,31 @@ phases:
         Dependency lines exactly: S11 `M0-S5, M1-S17`; S12 `M1-S9`;
         S13 `M1-S18`; S14 `M1-S11, M1-S15, M1-S19, M1-S22`;
         S15 `M1-S9, M1-S17, M1-S18`; S16 `M1-S9, M1-S18, M1-S21` plus the
-        owner-hold semantics `(#280)`. P02's 81 anchors are the checklist;
-        the clause-by-clause read is recorded by the reviewer (test plan G-1).
-        [F-1, NFR-8; AC-F1-2; TC-M2PLAN-002]
+        owner-hold semantics `(#280)`. P02's 61-row table for S11-S16 is the
+        checklist and every row must be present, including the
+        acceptance-criterion clauses the v1.2 matrix missed (`S11-AC1`
+        disjoint phase state and queue entries; `S12-AC2` resolved with a note
+        and unresolved counts; `S13-AC1` changes a client can act on;
+        `S15-AC1` classified error naming the holder; `S15-AC2` reconcilable
+        without editing state files; `S16-AC1` consecutive corroborated engine
+        dispatches accrue). The clause-by-clause read is recorded by the
+        reviewer (test plan G-1). [F-1, NFR-8; AC-F1-2; TC-M2PLAN-002]
       - |-
-        1.3 S17 entry (F-2). `- AC:` is followed by an indented numbered list
-        of exactly seven items, one per ticket criterion, each independently
-        identifiable; the `- Tasks:` block carries the six task clauses
+        1.3 S17 entry (F-2, DR-1). `- AC:` is followed by an indented numbered
+        list of exactly seven items, one per ticket criterion, each independently
+        identifiable AND carrying its criterion's content, because P06 checks
+        the seven by content rather than by count: (1) profile nomination
+        recorded at dispatch admission and visible on lane and attempt records;
+        (2) peak start stops every in-flight lane on the profile with bounded
+        grace, parked with reason `peak-window` and the window end, until the
+        window ends; (3) lanes on other providers are unaffected and keep
+        running; (4) window end resumes parked lanes automatically from
+        preserved session state with no branch, artifact, or queue state lost or
+        duplicated; (5) telemetry proves zero billable model calls on the
+        profile during the window for parked lanes; (6) stop, park, and resume
+        are auditable ledger events surfaced in status and brief; (7)
+        daemon-resident operation with the daemon-absent iteration-start
+        degradation declared. The `- Tasks:` block carries the six task clauses
         (provider-profile nomination at admission recorded on lane and attempt
         records; peak-window rules as data per profile including windows,
         multipliers and buffers; daemon watch-and-park with bounded-grace stop,
@@ -394,12 +523,12 @@ phases:
         [F-4, NFR-2, NFR-9; AC-F4-1, AC-F4-2, AC-NFR2-1; TC-M2PLAN-003, 009,
         010, 029]
     coverage:
-      - "TC-M2PLAN-001 (complete: m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7, no Ticket line)"
-      - "TC-M2PLAN-002 (complete: clauses_present=81/81; S11 10/10, S12 15/15, S13 11/11, S14 21/21, S15 12/12, S16 12/12)"
-      - "TC-M2PLAN-003 (complete: backlog_hunks>=1, hunks inside=M outside=0, hunk confinement OK, separator_sequence=identical, classifier_self_tests=4/4, window_empty=no, insertion_below_separator=never)"
-      - "TC-M2PLAN-004 (complete: four labels present, six dependencies OK, ac_numbered_items=7/7)"
+      - "TC-M2PLAN-001 (complete: m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7, no Ticket line; block opens with a blank line after M2-S9)"
+      - "TC-M2PLAN-002 (complete: clause_scan: total=61 present=61 missing=0 across S11-S16; every per-story count full at 9/8/11/12/10/11)"
+      - "TC-M2PLAN-003 (complete: backlog_hunks>=1, hunks inside=M outside=0, hunk confinement OK, separator_sequence=identical, blank_separation=OK, classifier_self_tests=4/4, window_empty=no, insertion_below_separator=never)"
+      - "TC-M2PLAN-004 (complete: four labels present, six dependencies OK, ac_numbered_items=7/7, criteria_present=7/7)"
       - "TC-M2PLAN-005 (complete: clauses_present=6/6, softening may=ABSENT)"
-      - "TC-M2PLAN-006 (complete: ac_items=7/7, duplicate_numbers=0)"
+      - "TC-M2PLAN-006 (complete: criteria_present=7/7, ac_items=7/7, duplicate_numbers=0)"
       - "TC-M2PLAN-007 (complete: changed_lines=2 unexpected_lines=0 depends=expected; goal-mutation self-test flagged)"
       - "TC-M2PLAN-008 (complete: tasks_clause=OK, depends=M2-S14 OK, heading/Goal/AC identical, base_task_lines_missing=0)"
       - "TC-M2PLAN-009 (complete: base_headings=67 head_headings=74 added=7 removed=0 unexpected=0; retirement_note=identical; order=OK; negative_control=detected)"
@@ -411,28 +540,37 @@ phases:
         P01 -> m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7
         (Goal+Tasks+AC+Depends-on, no Ticket line); P01 verdict: PASS
       - >-
-        P02 -> M2-S11 anchors=10/10, S12=15/15, S13=11/11, S14=21/21,
-        S15=12/12, S16=12/12; clauses_present=81/81; P02 verdict: PASS
+        P02 -> `clause_scan: total=61 present=61 missing=0` for S11-S16, with
+        every per-story count full (`M2-S11 clauses=9/9`, `M2-S12 8/8`,
+        `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 10/10`, `M2-S16 11/11`) and no
+        `MISSING` record; P02 verdict: PASS
       - >-
         P03 -> backlog_hunks=M with M>=1; amended ranges printed for M2-S4 and
         M2-S6; `insertion window: start=base M2-S9 last content+1=1167
         end=head separator-1=<nee> window=1167:<nee>`; window_empty=no;
-        separator_sequence=identical; hunks: inside=M outside=0; hunk
-        confinement OK; classifier_self_tests=4/4;
-        insertion_below_separator=never; non_vacuous=yes; P03 verdict: PASS.
-        XF-6 and XF-8 are closed upstream: the window is base-anchored inside
-        the Epic M2 block, and the pre-change base reads `window=1167:1167`.
-        A hunk below the separator, or any change to the `---` line, the blank
-        line after it, or the Epic M3 heading, prints OUTSIDE or
-        `separator_sequence=CHANGED` and fails.
+        separator_sequence=identical; blank_separation=OK (the line after
+        M2-S9's last line is empty and the next line is `### M2-S11 `);
+        hunks: inside=M outside=0; hunk confinement OK;
+        classifier_self_tests=4/4; insertion_below_separator=never;
+        non_vacuous=yes; P03 verdict: PASS. XF-6, XF-8 and DR-9 are closed
+        upstream: the window is base-anchored inside the Epic M2 block, and the
+        pre-change base reads `window=1167:1167` with
+        `blank_separation=FAIL` as expected. A hunk below the separator, a
+        block opening directly on `### M2-S11`, or any change to the `---` line,
+        the blank line after it, or the Epic M3 heading fails.
       - >-
         P04 -> all four labels present; depends M1-S15/M1-S18/M1-S21/M1-S22/
-        M2-S14/#280 OK; ac_numbered_items=7/7
+        M2-S14/#280 OK; ac_numbered_items=7/7; criteria_present=7/7
       - >-
         P05 -> six clauses OK (profile-nomination, peak-rules-as-data,
         park-bounded-grace, resume-without-redispatch, zero-spend,
         daemon-absent); softening may=ABSENT; clauses_present=6/6; missing=0
-      - "P06 -> ac_items=7/7; duplicate_numbers=0"
+      - >-
+        P06 -> criteria_present=7/7 with each `S17-AC1..AC7` line printed OK
+        (content, not count), including `S17-AC3` other providers keep running,
+        `S17-AC4` no branch/artifact/queue state lost or duplicated, and
+        `S17-AC6` auditable stop/park/resume events surfaced in status and
+        brief; ac_items=7/7; duplicate_numbers=0; no extra criterion
       - >-
         P07 -> changed_lines=2 unexpected_lines=0; depends=expected
         (- Depends on: M1-S5, M1-S17, M2-S11); self-test goal mutated ->
@@ -457,7 +595,8 @@ phases:
       - "F-3/NFR-2: M2-S4 differs only on its dependency line; M2-S6 only gains the telemetry clause and M2-S14"
       - "F-4/NFR-2: frontmatter, reading guide, cross-cutting principles, retirement note, and every other entry byte-identical"
       - "NFR-9/D-5: no seed literal in added lines; the existing `ados spend` bytes stay untouched"
-      - "D-4/XF-8/DEC-17: the insertion sits inside the Epic M2 block, immediately after M2-S9's last content line and before the block-closing blank line and `---` separator; the separator, the blank line after it, and the Epic M3 heading stay byte-identical and follow the block"
+      - "D-4/XF-8/DR-9/DEC-17: the insertion sits inside the Epic M2 block, immediately after M2-S9's last content line and before the block-closing blank line and `---` separator; the inserted block begins with a blank line; the separator, the blank line after it, and the Epic M3 heading stay byte-identical and follow the block"
+      - "DR-1/NFR-8: S17's seven criteria are present with their content, including the three previously unanchored ones, and no criterion is added"
 
   - id: 2
     title: "P2 — Reconcile the M1 command-page status headers and the entrypoint composition statement"
@@ -488,10 +627,15 @@ phases:
     tasks:
       - |-
         2.1 Rewrite the status header of the fourteen pages in Appendix B so it
-        names the delivered story and its GH reference, keeping each page's
-        existing contract tail ("Proposed contract", "Delivered contract",
-        scenario references) where it does not contradict. Required token
-        pairs, all inside the header region (lines 1..first `## `):
+        names the delivered story and its GH reference. Apply the proposal-tail
+        rule (D-7, DR-4, DEC-18): DELETE the `Proposed contract` /
+        `Proposed examples` tail from every reconciled header whose planned
+        remainder is empty, and keep it only where the header names a planned
+        remainder for it to scope to. Keep each page's other true clauses:
+        `watchdog.md` retains `M1-S15 adds progress signals` and `SC-M1-14`;
+        `verify-gates.md` keeps its delivered M1-S4 extension attribution;
+        `closeout.md` keeps its delivered M1-S12 expansion attribution. Required
+        token pairs, all inside the header region (lines 1..first `## `):
         board `M1-S5` `GH-229`; doctor `M1-S3` `GH-224`; mcp `M1-S7`
         `GH-231`; state `M1-S2` `GH-222`; merge `M1-S4` `GH-225`;
         verify-deploy `M1-S4` `GH-225`; watchdog `M1-S1` `GH-221`;
@@ -500,7 +644,7 @@ phases:
         (M0-S9 stays shipped); closeout `M1-S12` `GH-240` (M0-S14 stays
         shipped); daemon `M1-S18` `GH-238`. plan.md and commit.md drop the
         `M1 milestone planned` phrase and keep the shipped attribution.
-        [F-5, DM-2, DEC-3; AC-F5-1; TC-M2PLAN-011]
+        [F-5, DM-2, DEC-3, DEC-18; AC-F5-1; TC-M2PLAN-011]
       - |-
         2.2 Remainder pointers in the same headers: board points at M2-S4
         (full board), watchdog at M2-S2 (supervision battery), mcp at M3-S2
@@ -550,7 +694,7 @@ phases:
         `../../m2/entrypoint-delta.md`, which resolves when P4 lands. Do not add
         any other link, and do not run P37 in this phase.
     coverage:
-      - "TC-M2PLAN-011 (complete: pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0; forbidden_phrase_pages=0; header_attribution=14/14)"
+      - "TC-M2PLAN-011 (complete: pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0; forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0; watchdog_m1s15=OK; watchdog_sc=OK; verify_gates_extension=OK; closeout_extension=OK)"
       - "TC-M2PLAN-012 (complete: board -> M2-S4, watchdog -> M2-S2, mcp -> M3-S2)"
       - "TC-M2PLAN-013 (complete: header M1-S18/GH-238/not mounted/entrypoint delta OK; Current=ABSENT; daemon_body=byte-identical)"
       - "TC-M2PLAN-014 (complete: changed_pages=14/14, every hunk inside the header region, entrypoint_hunks=1, classifier self-tests OK)"
@@ -560,7 +704,10 @@ phases:
       - "P00 — re-materialise the base snapshots inside P2"
       - >-
         P11 -> pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0;
-        forbidden_phrase_pages=0; header_attribution=14/14
+        forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0
+        (no header keeps `Proposed contract`/`Proposed examples` without a
+        named planned remainder); watchdog_m1s15=OK; watchdog_sc=OK;
+        verify_gates_extension=OK; closeout_extension=OK
       - "P12 -> board.md -> M2-S4 OK; watchdog.md -> M2-S2 OK; mcp.md -> M3-S2 OK"
       - >-
         P13 -> header M1-S18 OK; header GH-238 OK; header not mounted OK;
@@ -585,7 +732,7 @@ phases:
         outside_desc_hunks=0, sentences_removed=2, sentences_added=2);
         P30 verdict: PASS
     invariants:
-      - "F-5/DM-2/D-7: header-region-only diffs on the fourteen pages; title lines byte-identical; zero `M1 planned` / `M1 milestone planned` across the 28 command pages; no header containing `Current`"
+      - "F-5/DM-2/D-7/DEC-18: header-region-only diffs on the fourteen pages; title lines byte-identical; zero `M1 planned` / `M1 milestone planned` across the 28 command pages; no header containing `Current`; no proposal tail without a named planned remainder; watchdog's M1-S15 clause and SC-M1-14 preserved alongside the verify-gates/closeout extension attributions"
       - "F-6/DEC-8/DEC-16: the sixteen observed families, backticked, no period inside the list, absent families in a separate sentence without `dispatch`, one contiguous DESCRIPTION hunk over at most two adjacent sentences"
       - "AC-F5-3: daemon body byte-identical, reachability corrected in the header only"
       - "NFR-4/DEC-6: no `ados_distribution` marker added anywhere"
@@ -692,10 +839,11 @@ phases:
         `section_lines=0` fails P3.
       - >-
         P34 -> run AFTER P18 in the same shell (it reuses `retention_oracle`
-        and `head_line_for_base`). Expected: `retention_oracle=OK`;
+        and `head_line_for_base`) and it defines `ptr()` locally, so P16/P17
+        need not have run (DR-8). Expected: `retention_oracle=OK`;
         `pointer_groups=4/4`; `sed_line_address_0_errors=0`; `P34 verdict:
-        PASS`. No `sed: invalid usage of line address 0` line is expected: XF-7
-        is closed and the title-group start is clamped.
+        PASS`. No `sed: invalid usage of line address 0` line and no `ptr:
+        command not found` line is expected: XF-7 and DR-8 are closed.
       - >-
         Hygiene: `head -1 doc/planning/oss-tooling/status.md` is not `---`;
         `git diff fab46636...HEAD -- doc/planning/oss-tooling/ | grep -c
@@ -742,9 +890,12 @@ phases:
         entries, state the planned-until-exit status semantics and the
         `Status: Proposed (M2)` convention, and carry a story-to-artifact map
         covering M2-S2 through M2-S17 that points each story at its
-        architecture flow, contract surface, and scenario ids. Link
+        architecture flow, contract surface, and scenario ids. State the
+        deliberate contents DEVIATION explicitly (DR-6, DEC-20): the pack ships
+        no `man-page.md` and no `interactions.md`, and ships
+        `entrypoint-delta.md` instead, with one line of rationale. Link
         `../README.md` and `../../backlog.md`. Reference story codes; never
-        restate an acceptance block. [F-8, DM-3, DEC-7; AC-F8-1;
+        restate an acceptance block. [F-8, DM-3, DEC-7, DEC-20; AC-F8-1;
         TC-M2PLAN-019]
       - |-
         4.2 architecture.md: the M2 end state. Exactly three C4 headings
@@ -758,9 +909,15 @@ phases:
         boundary-invariants section at M2 exit. Ten mermaid fences in this file
         (3 C4 + 6 flows + 1 park/resume), each with the diagram keyword
         (`flowchart`, `graph`, `sequenceDiagram`, `classDiagram`, or
-        `stateDiagram-v2`) as its first body line, every fence closed. Use the
-        exact flow vocabulary P20/P33 match (case-insensitive): `Multi-repository`,
-        `divergence`, `Telemetry attribution`, `auto-release`, `single-flight`,
+        `stateDiagram-v2`) as its first body line, every fence closed. Each
+        mermaid block must sit DIRECTLY under the heading that names its
+        subject, with no prose or other heading in between, so P33 can prove
+        association and not only counts (DR-7): `heading_association=OK`, each
+        `## C4 Level 1/2/3` heading owns exactly one diagram,
+        `c4_headings_with_diagrams=3/3`, and every one of the seven flow/park
+        headings owns one. Use the exact flow vocabulary P20/P33 match
+        (case-insensitive): `Multi-repository`, `divergence`,
+        `Telemetry attribution`, `auto-release`, `single-flight`,
         `handover-gate`, `park`. No other heading may repeat a flow token or the
         word `park`, because P20/P33 count exactly 3 C4, 6 flows, and 1 park
         heading across the whole pack. [F-8, NFR-6; AC-F8-2, AC-NFR6-1;
@@ -792,10 +949,15 @@ phases:
         single-flight refusal naming the holder, handover evaluation reporting
         per condition) and the five S17 scenarios (park at peak start per
         profile, other-provider isolation, resume at window end without state
-        loss, zero-spend assertion, daemon-absent degradation). Use those
-        phrasings, not synonyms. Do not use `**Given**` markers and do not open
-        a line with `- AC:`; reference story codes instead of restating them.
-        [F-8, DEC-10, NFR-10; AC-F8-4; TC-M2PLAN-022]
+        loss, zero-spend assertion, daemon-absent degradation). Because S17's
+        seven criteria are now normative (DR-1), the S17 scenarios must also
+        make criteria 3, 4 and 6 observable: another provider's lane keeps
+        running through the peak; no branch, artifact, or queue state is lost
+        or duplicated across park and resume; and stop, park, and resume appear
+        as ledger events surfaced in status and brief. Use those phrasings, not
+        synonyms. Do not use `**Given**` markers and do not open a line with
+        `- AC:`; reference story codes instead of restating them.
+        [F-8, DEC-10, NFR-8, NFR-10; AC-F8-4, AC-F2-1; TC-M2PLAN-022]
       - |-
         4.5 journeys.md: five `##` journeys with headings that name
         multi-repo morning overview, inspecting evidence before a handover
@@ -839,7 +1001,7 @@ phases:
         `](target)` has no parenthesis in the target. [NFR-9, NFR-10, NFR-6;
         AC-NFR6-1, AC-F8-1; TC-M2PLAN-019, 033]
     coverage:
-      - "TC-M2PLAN-019 (complete: pack_files=12/12, actual_files=12, README lists 12/12 with a story map)"
+      - "TC-M2PLAN-019 (complete: pack_files=12/12, actual_files=12, README lists 12/12 with a story map, deviation_statement=OK, pack_contents_table=byte-identical)"
       - "TC-M2PLAN-020 (complete: C4 Level 1/2/3 headings, six flow headings, park/resume heading, persistence/concurrency/boundary-invariants headings)"
       - "TC-M2PLAN-021 (complete: contract_markers_missing=0 across all 29 surfaces including the S17 additions)"
       - "TC-M2PLAN-022 (complete: scenario headings>=32, every story S2..S17 at least two, stories_below_two=0, twelve mandatory anchors OK)"
@@ -847,10 +1009,15 @@ phases:
       - "TC-M2PLAN-024 (complete: command_headers=6/6, line 3 exactly `Status: Proposed (M2)`, `<binary>` present, no `ados`)"
       - "TC-M2PLAN-025 (complete: all seven sections plus envelope on each page; attempts=dispatch subfamily; events=subscribe taxonomy)"
       - "TC-M2PLAN-026 (complete: delta note records the sixteen families, the absent three, the observed invocations and exit codes, the outside-scope statement, and the entrypoint pointer)"
-      - "TC-M2PLAN-033 (complete: mermaid_fences>=10, keyword_and_fence_exit=0, c4_headings=3/3, key_flow_headings=6/6, park_resume_headings=1/1)"
+      - "TC-M2PLAN-033 (complete: mermaid_fences>=10, keyword_and_fence_exit=0, heading_association=OK, C4 Level 1/2/3 each owns a diagram, all seven flow/park headings own diagrams, c4_headings_with_diagrams=3/3)"
     testGate:
       - "P00 — re-materialise the base snapshots inside P4"
-      - "P19 -> pack_files=12/12 actual_files=12; readme_lists=12/12; story_map_entries>=16"
+      - >-
+        P19 -> pack_files=12/12 actual_files=12; readme_lists=12/12;
+        story_map_entries>=16; deviation_statement=OK (the README names
+        `man-page.md`, `interactions.md`, `entrypoint-delta.md` and the
+        deliberate deviation); pack_contents_table=byte-identical against the
+        base `milestones/README.md`
       - >-
         P20 -> heading C4 Level 1/2/3 OK; flow headings multi-repo, divergence,
         telemetry attribution, auto-release, single-flight, handover-gate OK;
@@ -866,14 +1033,16 @@ phases:
         P26 -> dispatch, coordinator, state, mcp, daemon, unknown flag,
         unexpected argument, exit 1, outside this, entrypoint.md all OK
       - >-
-        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0; c4_headings=3/3;
-        key_flow_headings=6/6; park_resume_headings=1/1;
-        inventory=c4:3/3 flows:6/6 park:1/1
+        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
+        heading_association=OK (no `|NO HEADING` record); `C4 Level 1 has
+        diagram=OK`, `C4 Level 2 has diagram=OK`, `C4 Level 3 has diagram=OK`;
+        each of the seven flow/park headings reports
+        `flow heading <token> has diagram=OK`; c4_headings_with_diagrams=3/3
     invariants:
-      - "AC-F8-1/DM-3: exactly twelve documents, README maps every one and the story set"
-      - "AC-F8-2/NFR-6: 3 C4 + 6 named flows + 1 park/resume, each with a diagram whose first body line is a diagram keyword"
+      - "AC-F8-1/DM-3/DEC-20: exactly twelve documents, README maps every one and the story set, and the README states the man-page/interactions deviation while the index contents table stays byte-identical"
+      - "AC-F8-2/NFR-6: 3 C4 + 6 named flows + 1 park/resume, each diagram directly under its named heading with a diagram keyword as its first body line"
       - "AC-F8-3/DEC-10: every named contract surface including the S17 additions is present"
-      - "AC-F8-4: >=32 scenarios, >=2 per story S2..S17, twelve mandatory anchors verbatim"
+      - "AC-F8-4/AC-F2-1/DR-1: >=32 scenarios, >=2 per story S2..S17, twelve mandatory anchors verbatim, and S17 coverage for criteria 3, 4 and 6 (other providers keep running, no state lost or duplicated, auditable stop/park/resume events)"
       - "AC-F9-1/AC-F9-2/DEC-14: Proposed (M2) header, `<binary>` prefix, seven man-page sections, family relationships"
       - "NFR-9/NFR-10/D-10: no commercial provider name, no seed literal, no distribution marker, no restated AC block, no broken link"
 
@@ -892,29 +1061,38 @@ phases:
     tasks:
       - |-
         5.1 Add exactly one row to the `## Index` table after the M1 row,
-        following the existing row shape: milestone label marked planned, then
-        links to `m2/README.md`, `m2/architecture.md`, `m2/contracts.md`,
-        `m2/test-scenarios.md`, `m2/journeys.md`, `m2/entrypoint-delta.md`,
-        `m2/commands/projects.md`, `m2/commands/attempts.md`,
+        following the table's formatting, with the milestone label marked
+        planned, and linking TWELVE targets (DR-6, DEC-20): `m2/README.md`,
+        the five other pack-level documents (`m2/architecture.md`,
+        `m2/contracts.md`, `m2/test-scenarios.md`, `m2/journeys.md`,
+        `m2/entrypoint-delta.md`), and the six command pages
+        (`m2/commands/projects.md`, `m2/commands/attempts.md`,
         `m2/commands/events.md`, `m2/commands/spend.md`,
-        `m2/commands/queue.md`, `m2/commands/board.md`. Every link must resolve
-        from `milestones/`. [F-11, DM-3, DEC-7; AC-F11-1; TC-M2PLAN-027]
+        `m2/commands/queue.md`, `m2/commands/board.md`). Every link must resolve
+        from `milestones/`, all twelve must appear on the row line itself (P27
+        reads only that physical line), and no other `m2/*.md` path may appear
+        on it, because P27 counts distinct targets and expects exactly twelve.
+        [F-11, DM-3, DEC-7, DEC-20; AC-F11-1; TC-M2PLAN-027]
       - |-
         5.2 Leave the M0 and M1 rows byte-identical (P27 compares the full
         lines containing `M0 (trust substrate` and `M1 (delivery engine`), and
-        leave the pack-contents table, the conventions section, and every other
-        byte of the file untouched. Do not add an `ados_distribution` marker.
-        [F-11, NFR-2; AC-F11-1]
+        leave the `## Pack contents` table, the conventions section, and every
+        other byte of the file untouched: P19 compares that table against the
+        base snapshot and the pack states its deviation in its own README
+        instead (DEC-20). Do not add an `ados_distribution` marker.
+        [F-11, NFR-2, DEC-20; AC-F11-1]
     coverage:
-      - "TC-M2PLAN-027 (complete: M2 row present, links the README and all eleven artifacts, marked planned; M0 and M1 rows identical)"
+      - "TC-M2PLAN-027 (complete: M2 row present with m2_targets=12/12 on the row line, m2_row_marked_planned=yes, no row-missing line, M0 and M1 rows identical)"
     testGate:
       - "P00 — re-materialise the base snapshot of milestones/README.md inside P5"
       - >-
-        P27 -> M2 row=present; no `row missing` lines; m2_row_marked_planned=yes;
-        `M0 (trust substrate` row=identical; `M1 (delivery engine` row=identical
+        P27 -> M2 row=present; m2_targets=12/12 (README, five pack-level
+        documents, six command pages, all on the row line); no `target missing
+        m2/...` lines; m2_row_marked_planned=yes; `M0 (trust substrate` row=identical;
+        `M1 (delivery engine` row=identical
     invariants:
-      - "AC-F11-1/DEC-7: one planned M2 row linking the README and each artifact"
-      - "NFR-2: M0 and M1 rows and every other byte of the index file byte-identical"
+      - "AC-F11-1/DEC-7/DEC-20: one planned M2 row linking twelve targets"
+      - "NFR-2/DEC-20: M0 and M1 rows, the pack-contents table, and every other byte of the index file byte-identical"
 
   - id: 6
     title: "P6 — Verification sweep, guard evidence, and delivery record"
@@ -956,38 +1134,46 @@ phases:
         0 violations plus `seed_hits=0` over added planning lines and
         `added_lines>=1`), P37 (links `broken_links=0`, `restated_ac_blocks=0`,
         `non_vacuous=yes`), P33 (structural diagram, expect
-        `keyword_and_fence_exit=0` and `inventory=c4:3/3 flows:6/6 park:1/1`).
+        `keyword_and_fence_exit=0`, `heading_association=OK`, each C4 level and
+        each flow/park heading owning a diagram, `c4_headings_with_diagrams=3/3`).
         A guard hit is fixed by rewording inside the owning phase's scope;
         never by registering a document, adding an allowlist entry, or editing
         `scripts/**`. [NFR-4, NFR-6, NFR-9, NFR-10; AC-NFR4-1, AC-NFR6-1,
         AC-NFR9-1, AC-NFR10-1; TC-M2PLAN-031, 033, 036, 037]
       - |-
-        6.3 Aggregate gate (D-12). Run both forms and record both:
-        (a) `pnpm check` as-is, expected to fail with exactly one failure,
-        `tests/checks/ci-baseline-parity.test.ts`, from the cross-device
-        `git clone --local` under tmpfs `/tmp` (7132 pass / 1 fail);
-        (b) the authoritative run with a repository-filesystem TMPDIR:
-        `TMPDIR="$(git rev-parse --show-toplevel)/../.tmp-gh284" pnpm check`,
-        expected 7133 pass and exit 0. Treat (a) as the declared environment
-        condition G-2, not a regression, and do not "fix" it: `tests/**` and
+        6.3 Aggregate gate (D-12, DR-3, DR-5, NFR-5, AC-NFR5-1, DEC-19). Run P32
+        exactly as written and record both invocations verbatim; P32 itself
+        creates the repo-local tmpdir, so do not hand-roll the command. The
+        normative reading: the repo-local-`TMPDIR` run must exit 0, and a
+        default-run failure is environmental only when
+        `tests/checks/ci-baseline-parity.test.ts` is its ONLY failing test
+        (`git clone --local` hardlinks crossing into tmpfs). Any other
+        default-run failure, or any repo-local-TMPDIR failure, is a delivery
+        failure. Do not "fix" the environment condition: `tests/**` and
         `scripts/**` are out of scope. [NFR-5; AC-NFR5-1; TC-M2PLAN-032]
       - |-
         6.4 Fidelity and preservation aggregate. Re-run P02, P05, P06 and then
-        P35: expect `missing_clauses=0`, `ac_items=7` (no eighth criterion, no
-        merged criterion), and the clause-by-clause read against the ticket
-        recorded as the `changed_meaning` evidence (test plan G-1). Re-run the
-        content procedures at the final HEAD as regression proof, in the test
-        plan's recommended order: P28, P31, P32, P36, then P11, P14, P15, P30,
+        P35: expect `clause_scan: total=79 present=79 missing=0`,
+        `missing_clauses=0`, `s17_missing_criteria=0`, `added_criteria=0`,
+        `criteria_present=7/7` (no eighth criterion, no merged criterion), and
+        the clause-by-clause read against the ticket recorded as the
+        `changed_meaning` evidence (test plan G-1). Re-run the content
+        procedures at the final HEAD as regression proof, in the test plan's
+        recommended order: P28, P31, P32, P36, then P11, P14, P15, P30,
         P01..P10, P16..P18 (P18 first, then P34 which reuses
         `retention_oracle` and `head_line_for_base`), P19..P27, P29,
         P33..P35, P37. Expected entrypoint lines are `entrypoint_bound=OK`
-        with `sentences_removed=2` and `sentences_added=2`; expected status
-        lines are `removed_lines=0`, `added_lines>0`, `pointer_runs=4`,
-        `pointer_windows=4`, `bad_runs=0`, `retention_oracle=OK`,
-        `reference_head_fixture=OK`, `pointer_groups=4/4`, and
-        `sed_line_address_0_errors=0`; expected backlog lines are
-        `window=1167:<nee>`, `window_empty=no`, `separator_sequence=identical`,
-        and `classifier_self_tests=4/4`. No phase after P1-P5 may have changed a
+        with `sentences_removed=2` and `sentences_added=2`; expected page lines
+        are `tail_violations=0` with all four preservation checks OK; expected
+        pack lines are `deviation_statement=OK`,
+        `pack_contents_table=byte-identical`, `m2_targets=12/12`,
+        `heading_association=OK`; expected status lines are `removed_lines=0`,
+        `added_lines>0`, `pointer_runs=4`, `pointer_windows=4`, `bad_runs=0`,
+        `retention_oracle=OK`, `reference_head_fixture=OK`,
+        `pointer_groups=4/4`, and `sed_line_address_0_errors=0`; expected
+        backlog lines are `window=1167:<nee>`, `window_empty=no`,
+        `separator_sequence=identical`, `blank_separation=OK`, and
+        `classifier_self_tests=4/4`. No phase after P1-P5 may have changed a
         file; a drift means a later phase leaked and is fixed in the owning
         phase. [NFR-2, NFR-3, NFR-7, NFR-8;
         AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
@@ -995,17 +1181,26 @@ phases:
         6.5 Write `delivery-evidence/verification.md` (a change artifact, not a
         product file): one row per TC (TC id, AC id, procedure ids, command,
         expected line, observed line), the plan-validation verdict, the P28
-        product-file list, the P31/P32/P33/P36/P37 outputs, the two `pnpm check`
-        runs with the G-2 explanation, the retention evidence (P18's
-        `windows(base-anchored)`, `retention`, `whitelist`, `retention_oracle`,
-        `reference_head_fixture` and verdict lines plus P34's `pointer_groups`
-        and `sed_line_address_0_errors`), the backlog insertion evidence (P03's
-        window, `window_empty`, `separator_sequence` and classifier self-tests),
-        the entrypoint evidence (`entrypoint_bound=OK`, `sentences_removed=2`,
-        `sentences_added=2`), and the manual-read verdicts owed by review (G-1,
-        G-3, G-4, G-5, G-6). Then re-run P28 after the commit and confirm the
-        same product-file list; record that confirmation in the PR body, not in
-        a second commit. [§17.3 DoD; AC-NFR1-1, AC-NFR5-1]
+        product-file list, the P31/P32/P33/P36/P37 outputs, both aggregate-gate
+        runs with their classification (DEC-19: `default_exit`,
+        `default_failed_tests`, `default_failure_class`, `repo_tmpdir_exit`,
+        `gate_verdict`), the fidelity evidence (P02's 61-clause scan, P35's
+        79-clause aggregate, `s17_missing_criteria=0`, P04/P06
+        `criteria_present=7/7`), the page evidence (`tail_violations=0` and the
+        four preservation checks), the pack evidence (P19's
+        `deviation_statement=OK` and `pack_contents_table=byte-identical`, P27's
+        `m2_targets=12/12`, P33's `heading_association=OK`), the retention
+        evidence (P18's `windows(base-anchored)`, `retention`, `whitelist`,
+        `retention_oracle`, `reference_head_fixture` and verdict lines plus P34's
+        `pointer_groups` and `sed_line_address_0_errors`), the backlog insertion
+        evidence (P03's window, `window_empty`, `blank_separation`,
+        `separator_sequence` and classifier self-tests), the entrypoint evidence
+        (`entrypoint_bound=OK`, `sentences_removed=2`, `sentences_added=2`), the
+        XF-9 note with its accepted-residual rationale, and the manual-read
+        verdicts owed by review (G-1, G-3, G-4, G-5, G-6). Then re-run P28 after
+        the commit and confirm the same product-file list; record that
+        confirmation in the PR body, not in a second commit.
+        [§17.3 DoD; AC-NFR1-1, AC-NFR5-1]
       - |-
         6.6 Close-out statement in the PR body: no tracker ticket was created
         for M2-S11..S17, no M2 story was delivered, and no product behaviour
@@ -1015,9 +1210,9 @@ phases:
     coverage:
       - "TC-M2PLAN-028 (complete: product_files=30 paths, forbidden_root_files=0, outside_planning=0, unexpected_paths=0, non_vacuous=yes)"
       - "TC-M2PLAN-031 (complete: guard_exit=0, no drift, 82 in-scope docs; planning_markers=0)"
-      - "TC-M2PLAN-032 (complete: default run recorded 7132 pass / 1 environmental fail; authoritative TMPDIR run 7133 pass, exit 0)"
+      - "TC-M2PLAN-032 (complete: both runs recorded; default_exit=1 with default_failed_tests=1 classified environmental (ci-baseline-parity only); repo_tmpdir_exit=0; gate_verdict=PASS)"
       - "Procedure P33 re-proof inside the final sweep (TC ownership stays P4): mermaid_fences>=10, keyword_and_fence_exit=0, inventory 3/6/1"
-      - "TC-M2PLAN-035 (complete: missing_clauses=0, added_criteria=0, changed_meaning=0 after the clause-by-clause read)"
+      - "TC-M2PLAN-035 (complete: clause_scan total=79 present=79 missing=0; missing_clauses=0; s17_missing_criteria=0; added_criteria=0; changed_meaning=0 after the clause-by-clause read)"
       - "TC-M2PLAN-036 (complete: forbidden_exit=0, 0 violations, added_lines>=1, seed_hits=0)"
       - "TC-M2PLAN-037 (complete: broken_links=0, restated_ac_blocks=0, non_vacuous=yes)"
     testGate:
@@ -1029,18 +1224,16 @@ phases:
         P31 -> guard_exit=0; (guard-doc-distribution)[OK] no drift, 82 in-scope
         docs; planning_markers=0
       - >-
-        P32 (a, recorded only) -> pnpm check exit 1 with exactly one failure,
-        tests/checks/ci-baseline-parity.test.ts, cross-device `git clone
-        --local` under tmpfs; Test Files 7132 pass / 1 fail. Environmental
-        (G-2), not a regression.
+        P32 -> both runs executed and classified:
+        `default_exit=1 default_failed_tests=1 default_failure_class=environmental
+        (ci-baseline-parity only)`; `repo_tmpdir_exit=0`; `gate_verdict=PASS`.
+        A `default_failed_tests` above 1, a different failing test, or a
+        non-zero `repo_tmpdir_exit` fails P6.
       - >-
-        P32 (b, authoritative) ->
-        TMPDIR="$(git rev-parse --show-toplevel)/../.tmp-gh284" pnpm check;
-        expected 7133 pass, tmpdir_check_exit=0
-      - >-
-        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0; c4_headings=3/3;
-        key_flow_headings=6/6; park_resume_headings=1/1;
-        inventory=c4:3/3 flows:6/6 park:1/1
+        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
+        heading_association=OK; C4 Level 1/2/3 each has a diagram=OK; the seven
+        flow/park headings each have a diagram=OK;
+        c4_headings_with_diagrams=3/3
       - >-
         P36 -> forbidden_exit=0; OK forbidden-literals 5/5 scope classes
         scanned, 0 violations; added_lines>=1; seed_hits=0
@@ -1048,23 +1241,31 @@ phases:
         P37 -> changed_planning_files=30; broken_links=0;
         restated_ac_blocks=0; non_vacuous=yes
       - >-
-        P35 -> P02 missing=0 total=81; P05 missing=0; P06 ac_items=7;
-        missing_clauses=0; added_criteria=0; changed_meaning=0 (read
-        recorded); P35 verdict: PASS
+        P35 -> P02 `clause_scan: total=79 present=79 missing=0`; P05 missing=0;
+        P06 criteria_present=7/7 ac_items=7; `missing_clauses=0`;
+        `s17_missing_criteria=0`; `added_criteria=0`; `changed_meaning=0`
+        (read recorded); P35 verdict: PASS
       - >-
         Regression re-run at the final HEAD: P11/P14/P15/P30 (pages, expect
         `entrypoint_bound=OK`), P16/P17/P18 then P34 (status, expect
         `removed_lines=0`, `pointer_runs=4`, `bad_runs=0`,
         `retention_oracle=OK`, `reference_head_fixture=OK`,
-        `pointer_groups=4/4`), P19..P27 (pack and index), P01..P10 and P29
-        (backlog, expect `window=1167:<nee>`, `separator_sequence=identical`,
-        `classifier_self_tests=4/4`). Expected lines are those recorded in
-        P1-P5; a new CHANGED/OUTSIDE/missing line, or `bad_runs>0`, fails P6.
+        `pointer_groups=4/4`), P19/P27 (pack and index, expect
+        `deviation_statement=OK`, `pack_contents_table=byte-identical`,
+        `m2_targets=12/12`), P01..P10 and P29 (backlog, expect
+        `window=1167:<nee>`, `blank_separation=OK`,
+        `separator_sequence=identical`, `classifier_self_tests=4/4`). Expected
+        lines are those recorded in P1-P5; a new CHANGED/OUTSIDE/missing line,
+        `bad_runs>0`, a `MISSING S17-AC*` line, or a non-zero
+        `s17_missing_criteria` fails P6.
     invariants:
       - "NFR-1: product files are limited to doc/planning/oss-tooling/**; doc/changes/** evidence is excluded by P28"
-      - "NFR-5/D-12: the authoritative aggregate gate is the TMPDIR run; the default failure is declared, recorded, and untouched"
-      - "NFR-6: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15)"
+      - "NFR-5/D-12/DEC-19: both aggregate-gate runs are recorded; only a lone default-run ci-baseline-parity failure is environmental, and the repo-local-TMPDIR run must exit 0"
+      - "NFR-6/DR-7: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15), and it proves heading association as well as fence counts"
       - "NFR-7/DEC-16/D-13: retention over the whole file plus the addition whitelist is the acceptance oracle; a whole-section cmp is never asserted, and P18's reference-head fixture is the positive control"
-      - "DEC-17: the seven stories sit inside the Epic M2 block, and the separator sequence that closes it is byte-identical"
+      - "DEC-17/AC-F1-1: the seven stories sit inside the Epic M2 block behind a blank separator, and the separator sequence that closes the block is byte-identical"
+      - "DEC-18/AC-F5-1: no header keeps the proposal tail without a named planned remainder, and the preserved delivered clauses survive"
+      - "DEC-20/AC-F8-1/AC-F11-1: the pack states its contents deviation, the index contents table is byte-identical, and the M2 row links twelve targets"
+      - "NFR-8/DR-1/DR-2: all 79 clauses present and all seven S17 criteria present by content, with no added criterion"
       - "NFR-9/NFR-10: guards green with attribution; the manual reads (G-1, G-3, G-4, G-5) are recorded, not claimed"
       - "§17.3 DoD: no ticket created, no story delivered, no behaviour changed, no doc/spec rewrite"
