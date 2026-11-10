@@ -11,19 +11,19 @@ phases:
   dor_check: { started: null, completed: 2026-11-10T14:24:24.607Z }
   delivery: { started: null, completed: 2026-11-10T15:21:55.392Z }
   system_spec_update: { started: null, completed: 2026-11-10T15:34:59.866Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-10T17:23:38.920Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the
-      marker path): the owner hold has two equivalent sources. (a) A marker file
-      in the state directory the typed engine resolves; (b) an environment
-      variable derived from the brand prefix (`<PREFIX>_OWNER_HOLD`, which is
-      `DELIVERY_OS_OWNER_HOLD` for the current default working name). A non-empty
-      value is an operator reason. Removing both sources clears the hold with no
-      state loss. D12 replaces the marker-path clause and removes the
-      marker-path override; the env source remains."
+  - text: "D1 (PM-decided, non-interactive intake; SUPERSEDED by D12 for the marker
+      path): the owner hold has two equivalent sources. (a) A marker file in the
+      state directory the typed engine resolves; (b) an environment variable
+      derived from the brand prefix (`<PREFIX>_OWNER_HOLD`, which is
+      `DELIVERY_OS_OWNER_HOLD` for the current default working name). A
+      non-empty value is an operator reason. Removing both sources clears the
+      hold with no state loss. D12 replaces the marker-path clause and removes
+      the marker-path override; the env source remains."
     date: 2026-11-10
   - text: "D2 (PM-decided, non-interactive intake): the typed engine models the hold
       as a global read-only gate over an injected fact, not as a queue park
@@ -84,12 +84,11 @@ decisions:
       reason is present, then `; sleeping <N>s`. The spec sample is corrected to
       match AC-F2-1."
     date: 2026-11-10
-  - text: "D10 (PM-decided, test-plan OQ-4): an unset or empty/whitespace
-      poll setting (`<PREFIX>_OWNER_HOLD_POLL_SECONDS`, currently
+  - text: "D10 (PM-decided, test-plan OQ-4): an unset or empty/whitespace poll
+      setting (`<PREFIX>_OWNER_HOLD_POLL_SECONDS`, currently
       `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`) uses the 300-second default
-      silently; any
-      non-empty invalid value (non-integer, zero, negative, out of range) uses
-      300 with exactly one bounded warning."
+      silently; any non-empty invalid value (non-integer, zero, negative, out of
+      range) uses 300 with exactly one bounded warning."
     date: 2026-11-10
   - text: "D11 (PM-decided, test-plan OQ-5): when the provider check would otherwise
       be ok and the hold is active, the hold segment is appended to the existing
@@ -101,12 +100,12 @@ decisions:
       the production store identity actually uses,
       `<home>/<brand.stateDirectoryName>/owner-hold`. The design does NOT claim
       or use `<PREFIX>_STATE_DIR`, and the shell example does NOT offer a
-      marker-path override setting, because neither is honoured by the production
-      queue/dispatch/status/doctor store today. Relocating state is out of scope
-      for GH-280. The shell example's default is the current product's
-      `$HOME/.delivery-os-state/owner-hold`; adopters whose working name differs
-      edit the example's two setting names and that default. Correct every
-      spec/test-plan/plan claim that says otherwise."
+      marker-path override setting, because neither is honoured by the
+      production queue/dispatch/status/doctor store today. Relocating state is
+      out of scope for GH-280. The shell example's default is the current
+      product's `$HOME/.delivery-os-state/owner-hold`; adopters whose working
+      name differs edit the example's two setting names and that default.
+      Correct every spec/test-plan/plan claim that says otherwise."
     date: 2026-11-10
   - text: "D13 (PM-decided, DoR-1 finding 2): `queue claim` with no ref must also
       refuse with `queue.precondition.unmet` and reason token `owner-hold`. The
@@ -162,9 +161,9 @@ decisions:
       (spec F-4.1/F-5/§16, AC-F6 scope, plan phase 4/5, change record E2E,
       changeset, delivery-modes guide, doctor command page) and remove the
       `doctor --json` E2E step. In production, `status` carries the hold in its
-      digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report it
-      on their own surfaces; doctor reports it whenever a DoctorComposition is
-      supplied (test harness and any future production wiring) and is not a
+      digest and `queue list`, `queue plan`, `lanes`, and `queue watch` report
+      it on their own surfaces; doctor reports it whenever a DoctorComposition
+      is supplied (test harness and any future production wiring) and is not a
       production composition."
     date: 2026-11-10
   - text: "D21 (PM-decided, review-1 F-2): the commit primitive owns commit
@@ -176,11 +175,11 @@ decisions:
       record."
     date: 2026-11-10
   - text: "D22 (PM-decided, review-1 F-3): strengthen the production-composition
-      test rather than accept the source-text/grep claim. Materialize a marker in
-      a temp HOME/state directory and drive the production reader closure through
-      queue, status, and dispatch behavior; keep doctor at the command-runtime
-      layer per D20. Add a mutation control (removing the marker or the wiring
-      flips the behavior)."
+      test rather than accept the source-text/grep claim. Materialize a marker
+      in a temp HOME/state directory and drive the production reader closure
+      through queue, status, and dispatch behavior; keep doctor at the
+      command-runtime layer per D20. Add a mutation control (removing the marker
+      or the wiring flips the behavior)."
     date: 2026-11-10
   - text: "D23 (PM-decided, review-1 F-4/F-5): the plan and change record must
       declare the seven doc-sync files and the non-formatting phase-8 changes
@@ -204,31 +203,30 @@ decisions:
   - text: "D26 (PM-decided, review-2 F-1): align the shipped example and every
       example artifact to the current default brand. The entrypoint default
       working name is `delivery-os`, so the engine reads
-      `DELIVERY_OS_OWNER_HOLD` and
-      `<home>/.delivery-os-state/owner-hold`. The shell example uses
-      `DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, and the
-      fixed default `$HOME/.delivery-os-state/owner-hold`. Normative text keeps
-      the `<PREFIX>` placeholder; concrete examples use the current names.
-      Adopters who set a different working name edit the example's defaults or
-      use the brand-derived env source. The previously used settings and
-      state-directory names for the owner hold are removed from the GH-280
-      artifacts."
+      `DELIVERY_OS_OWNER_HOLD` and `<home>/.delivery-os-state/owner-hold`. The
+      shell example uses `DELIVERY_OS_OWNER_HOLD`,
+      `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`, and the fixed default
+      `$HOME/.delivery-os-state/owner-hold`. Normative text keeps the `<PREFIX>`
+      placeholder; concrete examples use the current names. Adopters who set a
+      different working name edit the example's defaults or use the
+      brand-derived env source. The previously used settings and state-directory
+      names for the owner hold are removed from the GH-280 artifacts."
     date: 2026-11-10
-  - text: "D27 (PM-decided, review-2 F-1): the manual E2E must be executable.
-      Create the disposable state directory with mode 0700
-      (`mkdir -m 700 \"$HOME/.delivery-os-state\"`) because the store rejects a
-      non-private directory. Use `status` plus the queue read surfaces and
-      `queue claim` with no ref as the production evidence. Dispatch is covered
-      by the automated composition test and is omitted from the manual procedure
-      (it needs a GitHub credential); if included, it is a conditional step with
-      the credential prerequisite named. No `doctor` step."
+  - text: "D27 (PM-decided, review-2 F-1): the manual E2E must be executable. Create
+      the disposable state directory with mode 0700 (`mkdir -m 700
+      \"$HOME/.delivery-os-state\"`) because the store rejects a non-private
+      directory. Use `status` plus the queue read surfaces and `queue claim`
+      with no ref as the production evidence. Dispatch is covered by the
+      automated composition test and is omitted from the manual procedure (it
+      needs a GitHub credential); if included, it is a conditional step with the
+      credential prerequisite named. No `doctor` step."
     date: 2026-11-10
-  - text: "D28 (PM-decided, review-2 F-2): remove every remaining
-      status-exclusive surface claim. `status` carries the hold in its digest;
-      `queue list`/`queue plan`/`lanes`/`queue watch` report it on their own
-      production surfaces; doctor is command-runtime only, and its fact carriage
-      is proven at that layer. Fix the pm-notes D20/phase-9 notes, plan phase
-      5/7/9 narratives and exit criteria, phase-8 E2E line, changeset, and the
+  - text: "D28 (PM-decided, review-2 F-2): remove every remaining status-exclusive
+      surface claim. `status` carries the hold in its digest; `queue
+      list`/`queue plan`/`lanes`/`queue watch` report it on their own production
+      surfaces; doctor is command-runtime only, and its fact carriage is proven
+      at that layer. Fix the pm-notes D20/phase-9 notes, plan phase 5/7/9
+      narratives and exit criteria, phase-8 E2E line, changeset, and the
       structure-test header."
     date: 2026-11-10
   - text: "D29 (PM-decided, review-2 advisories): declare
@@ -293,10 +291,9 @@ notes:
       critical, 5 major, 6 minor, 4 nit. Blocking: (F1) the shell advertised a
       state-directory setting and a marker-path override the production store
       does not honour, re-creating the shell-defers/engine-claims split; (F2)
-      no-ref
-      `queue claim` short-circuits as no-eligible-action and never names the
-      hold; (F3-F4) the production resident daemon is not a claim source, so the
-      daemon guarantee and its test were vacuous; (F5) the status member
+      no-ref `queue claim` short-circuits as no-eligible-action and never names
+      the hold; (F3-F4) the production resident daemon is not a claim source, so
+      the daemon guarantee and its test were vacuous; (F5) the status member
       location was stated at section level and evidence level; (F6) the
       one-reason closed-set pin was unasserted. Remediation decisions D12-D19
       recorded; specification, test_planning, and delivery_planning reopened."
@@ -305,10 +302,10 @@ notes:
   - text: "Retro: the first artifact pass trusted the GH-238 review note that a
       state-directory override was wired through the production resolver; the
       readiness gate found production.ts:282 and mcp/serve.ts:88 hardcode the
-      home state dir, and only the audit store uses the resolver. The spec's critical
-      finding came from asserting a current-truth coupling without reading the
-      production composition. Future intake should verify every state/config
-      coupling at the composition site, not the resolver unit."
+      home state dir, and only the audit store uses the resolver. The spec's
+      critical finding came from asserting a current-truth coupling without
+      reading the production composition. Future intake should verify every
+      state/config coupling at the composition site, not the resolver unit."
     type: retro
     date: 2026-11-10
   - text: "DoR iteration 2: READY (readiness-review/readiness-iter-2.md). 0
@@ -411,8 +408,8 @@ notes:
       delivery (GAP-T1)."
     type: info
     date: 2026-11-10
-  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 0 critical,
-      1 high, 2 medium, 6 low, 2 info. Blocking: F-1 the doctor surface is not
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 0 critical, 1
+      high, 2 medium, 6 low, 2 info. Blocking: F-1 the doctor surface is not
       composed in production, so the spec/plan/guide/change-record claims and
       the E2E doctor step are false; F-2 phase commits carry the commit
       primitive's template subjects, not the plan's phase summaries. F-3
@@ -434,44 +431,45 @@ notes:
     date: 2026-11-10
   - text: "Plan phase 9 complete (review iteration 1 remediation, commit
       e545b271e6e5db55f91a5638c0bf58c3dfe205e8). F-1 fixed by claim correction
-      per D20: the change record, changeset, delivery-modes guide, doctor command
-      page, feature-doctor, and feature-autonomous-delivery state doctor as a
-      command-runtime capability over a supplied DoctorComposition, remove the
-      doctor --json E2E step, and name `status` as the digest surface plus the
-      queue read surfaces as the production reporting surfaces; GAP-T8 records the
-      production-doctor residual. F-2 accepted under
-      D21: the commit primitive composes the subject, template fallbacks are
-      accepted, and no history was rewritten. F-3 fixed by D22: new
+      per D20: the change record, changeset, delivery-modes guide, doctor
+      command page, feature-doctor, and feature-autonomous-delivery state doctor
+      as a command-runtime capability over a supplied DoctorComposition, remove
+      the doctor --json E2E step, and name `status` as the digest surface plus
+      the queue read surfaces as the production reporting surfaces; GAP-T8
+      records the production-doctor residual. F-2 accepted under D21: the commit
+      primitive composes the subject, template fallbacks are accepted, and no
+      history was rewritten. F-3 fixed by D22: new
       tests/behaviour/owner-hold-production-composition.test.ts drives the real
       createProductionComposer over a temp HOME whose
       <stateDirectoryName>/owner-hold marker is materialized on disk for queue
       list/plan, supplied-ref and no-ref claim, dispatch, and status, with a
       marker-removal mutation control and an environment-source control; doctor
       is not asserted. F-4/F-5 fixed by declaring the seven doc-sync files and
-      the non-formatting phase-8 edits in the change record. F-6/F-7/F-8 verified
-      in the spec and test plan (active/stuck blocking-array clarification, DM-4
-      {source; reason?}, §2/§7.3 refresh, D1 inline D12 supersession). F-9 fixed
-      the hook comment (4 096 characters vs the engine's 4 096-byte bound). F-10
-      made the adapter existence check error-aware (ENOENT absent; other stat
-      failures, including an unreadable parent store directory, unreadable and
-      fail-closed) with injected and root-skipped real tests. F-11 added the
-      remaining TC ids to the covering test names and a two-pass zero-count
-      recorder for TC-HOLDFACT-009 (zero credentials, transport, writes, spawns).
-      Verification: owner-hold fact/reader 30/30; production composition 3/3 plus
-      the structure pin 5/5; touched 12-file suite 232/232; pnpm typecheck green;
-      check:boundaries green (373 modules, 1101 deps; ambient/entrypoints/secret
-      clean); shellcheck 0 findings; hook suite 13/13; doc-distribution no drift
-      (82 in-scope docs); plan validate verdict=valid,
-      readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133
-      pass, 4 skip, 0 fail, 7137 tests across 880 files). No golden, closed set,
-      acceptance criterion, or product behaviour moved; manual TC-HOLDE2E-001
-      remains PR-scoped and not executed (GAP-T1). Remediation commits:
-      e545b271 (phase 9 work), 2a7a01cf (phase 9 evidence note), f42d67a7
-      (post-remediation doc-sync corrections), 8128f8e5 (test-plan wording)."
+      the non-formatting phase-8 edits in the change record. F-6/F-7/F-8
+      verified in the spec and test plan (active/stuck blocking-array
+      clarification, DM-4 {source; reason?}, §2/§7.3 refresh, D1 inline D12
+      supersession). F-9 fixed the hook comment (4 096 characters vs the
+      engine's 4 096-byte bound). F-10 made the adapter existence check
+      error-aware (ENOENT absent; other stat failures, including an unreadable
+      parent store directory, unreadable and fail-closed) with injected and
+      root-skipped real tests. F-11 added the remaining TC ids to the covering
+      test names and a two-pass zero-count recorder for TC-HOLDFACT-009 (zero
+      credentials, transport, writes, spawns). Verification: owner-hold
+      fact/reader 30/30; production composition 3/3 plus the structure pin 5/5;
+      touched 12-file suite 232/232; pnpm typecheck green; check:boundaries
+      green (373 modules, 1101 deps; ambient/entrypoints/secret clean);
+      shellcheck 0 findings; hook suite 13/13; doc-distribution no drift (82
+      in-scope docs); plan validate verdict=valid, readyForDevelopment=true;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133 pass, 4 skip, 0 fail, 7137
+      tests across 880 files). No golden, closed set, acceptance criterion, or
+      product behaviour moved; manual TC-HOLDE2E-001 remains PR-scoped and not
+      executed (GAP-T1). Remediation commits: e545b271 (phase 9 work), 2a7a01cf
+      (phase 9 evidence note), f42d67a7 (post-remediation doc-sync corrections),
+      8128f8e5 (test-plan wording)."
     type: info
     date: 2026-11-10
-  - text: "Review iteration 2: FAIL (code-review/review-iter-2.yaml). 0 critical,
-      1 high, 1 medium, 3 low, 2 info; 2 blocking. F-1: the manual E2E was not
+  - text: "Review iteration 2: FAIL (code-review/review-iter-2.yaml). 0 critical, 1
+      high, 1 medium, 3 low, 2 info; 2 blocking. F-1: the manual E2E was not
       executable as written because the shipped default brand is `delivery-os`
       (`.delivery-os-state`, `DELIVERY_OS_*`), while the example and E2E named
       the previous working name's settings and state directory; the disposable
@@ -487,19 +485,18 @@ notes:
       Remediation decisions D26-D30 recorded; plan phase 10 added."
     type: info
     date: 2026-11-10
-  - text: "Plan phase 10 complete: code review iteration 2 remediation (F-1,
-      F-2, F-3..F-7; D26-D30). Commit 3f8b3c16 carries the remediation; the
-      phase-10 boundary is the immediately following evidence-note commit, so
-      this note is never read as naming an intermediate tree. F-1 brand half:
-      the shipped
+  - text: "Plan phase 10 complete: code review iteration 2 remediation (F-1, F-2,
+      F-3..F-7; D26-D30). Commit 3f8b3c16 carries the remediation; the phase-10
+      boundary is the immediately following evidence-note commit, so this note
+      is never read as naming an intermediate tree. F-1 brand half: the shipped
       example recognises DELIVERY_OS_OWNER_HOLD and
       DELIVERY_OS_OWNER_HOLD_POLL_SECONDS and reads the fixed
       $HOME/.delivery-os-state/owner-hold marker, with the registry array
-      renamed to OWNER_HOLD_CONDITIONS and the suite and negative controls
-      moved to the same names; the two guides, feature-autonomous-delivery,
-      the autonomous-delivery test spec, the command pages, the spec, the test
-      plan, the change record, and the changeset carry the same current default
-      names with the brand-derived placeholder kept as the normative form; the
+      renamed to OWNER_HOLD_CONDITIONS and the suite and negative controls moved
+      to the same names; the two guides, feature-autonomous-delivery, the
+      autonomous-delivery test spec, the command pages, the spec, the test plan,
+      the change record, and the changeset carry the same current default names
+      with the brand-derived placeholder kept as the normative form; the
       doc-check assertions and the synthetic store fixtures were aligned. F-1
       procedure half: the manual procedure names the 0700 store directory, the
       state.permission.denied failure for a non-private directory, status plus
@@ -510,8 +507,8 @@ notes:
       pm-notes D20/D28, changeset, doctor command page, feature-doctor, the
       structure-test header, and the change record state status as the digest
       plus the queue read surfaces, with doctor command-runtime only. F-3:
-      doc/spec/features/feature-cli-entrypoint.md declared in phase 7 scope,
-      the spec doc-impact table, and the change record scope deviations. F-4:
+      doc/spec/features/feature-cli-entrypoint.md declared in phase 7 scope, the
+      spec doc-impact table, and the change record scope deviations. F-4:
       test-plan aggregate is 7133 pass / 4 skip / 0 fail (7137 tests, 880
       files). F-5: the phase-9 note names e545b271, 2a7a01cf, f42d67a7, and
       8128f8e5. F-6: TC-HOLDFACT-009 now drives the real readOwnerHoldMarker
@@ -531,5 +528,19 @@ notes:
       remains PR-scoped (GAP-T1). Remaining old-name occurrences are confined to
       the immutable review and readiness artifacts that quote the defect and the
       negative seed assertions in tests/checks/owner-hold-doc.test.ts."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 3: PASS (code-review/review-iter-3.yaml). 0 critical, 0
+      high, 0 medium, 0 low, 1 info advisory. Verified by execution against the
+      real binary with a temp HOME: status carries providers.evidence.ownerHold,
+      queue list/plan carry ownerHold, lanes list exits 0, no-ref queue claim
+      exits 1 queue.precondition.unmet/ reason=owner-hold, and a 0775 store
+      fails state.permission.denied before the gate. No positive
+      ADOS_OWNER_HOLD/.ados-state remains, no status-only claim remains, closed
+      sets are exact 28/34, inactive goldens are additions only, the wrapper pin
+      is intact, plan validate is valid (10 phases, 44 ACs, 59 TCs), and pnpm
+      check is 7133 pass / 4 skip / 0 fail across 880 files. The sole advisory
+      is a self-containment precision point in the change record's manual steps
+      (preconditions live in TC-HOLDE2E-001); non-blocking."
     type: info
     date: 2026-11-10
