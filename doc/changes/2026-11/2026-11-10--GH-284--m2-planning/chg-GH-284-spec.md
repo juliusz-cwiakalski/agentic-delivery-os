@@ -3,7 +3,7 @@ change:
   ref: GH-284
   type: docs
   status: Proposed
-  version: 1.0
+  version: 1.1
   slug: m2-planning
   title: "Plan M2: engine-first operations, multi-repo workstations, evidence inspection, and telemetry"
   owners: [engineering]
@@ -41,7 +41,7 @@ This change plans the remainder of M2 in the committed planning corpus. It lands
 - **Observed entrypoint truth (verified this session, `packages/*/dist` built).** Root `--help` lists sixteen families — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `dispatch`, `spend`, `retro`, `coordinator` — and no `daemon`, `mcp`, or `state`. `daemon --help` fails with `unknown flag "--help"` (exit 1); `daemon status` fails with `unexpected argument "status"` (exit 1). The daemon command definition exists in the CLI composition and is mounted only when the daemon option is enabled; the production entrypoint does not enable it. So `daemon.md` overclaims reachability, and `entrypoint.md` underclaims the composed set (`dispatch` and `coordinator` are registered, `state`/`mcp`/`daemon` are not).
 - **The M2 pack does not exist.** `doc/planning/oss-tooling/milestones/` holds `m0/` (architecture only) and `m1/` (architecture, contracts, interactions, journeys, man-page, test-scenarios, and 28 command pages, with no pack README). `milestones/README.md` defines the pack contents table and conventions (bare command names with a `<binary>` invocation prefix, planned-until-exit status semantics, mermaid C4 diagrams with the level named per heading, no private content) and its `## Index` table lists M0 and M1 only.
 - **`status.md` predates M1 closure.** Its title reads "M0 stories delivered, milestone exit pending"; its dated sections are the 2026-11-03 M0 amendment, the 20/20 M0 delivery record, the M0 exit-pending section, the decision list, the 2026-11-05 M1 ticket map, the 2026-11-07 scheduling-engine section, and the 2026-11-07 M1-S9 handover amendment. It contains no M2 planning state.
-- **Doc-distribution scope.** `scripts/.tests/test-doc-distribution.sh` marker-checks `doc/guides/**` and a fixed standalone list; `doc/planning/**` is outside that set, and no M1 pack document carries an `ados_distribution` marker. The aggregate gate is `pnpm check` (lint, format:check, typecheck, test, boundaries, prompt conformance, help-guide coverage, exports parity). A mermaid validation gate exists, so new diagrams must parse.
+- **Doc-distribution scope.** `scripts/.tests/test-doc-distribution.sh` marker-checks `doc/guides/**` and a fixed standalone list; `doc/planning/**` is outside that set, and no M1 pack document carries an `ados_distribution` marker. The aggregate gate is `pnpm check` (lint, format:check, typecheck, test, boundaries, prompt conformance, help-guide coverage, exports parity). **No mermaid syntax validator exists in this repository:** no workflow step or `scripts/checks/` entry invokes diagram tooling, and the only mechanical mermaid touch is a fenced-block counter in `scripts/.tests/test-inception-doc-consistency.sh`, which covers one guide and not `doc/planning/**`. Diagram validity is therefore proven structurally (NFR-6).
 
 ### 2.2 Pain Points / Gaps
 
@@ -80,7 +80,7 @@ Because the M2 scope exists only in a tracker ticket and the committed planning 
 | Product files changed outside `doc/planning/oss-tooling/**` (excluding `doc/changes/**`) | 0 |
 | `bash scripts/.tests/test-doc-distribution.sh` | exit 0 |
 | Aggregate `pnpm check` | exit 0 |
-| Mermaid blocks failing to parse | 0 of ≥ 10 |
+| Diagram structure failures (fence inventory: count, keyword, closure, headings, 3+6+1 inventory) | 0 of 5 checks over ≥ 10 blocks |
 
 ### 4.2 Non-Goals
 
@@ -220,7 +220,7 @@ N/A for this change. The planning pack documents, but does not deliver, the M2 e
 | NFR-3 | Command-page containment | For each of the fourteen status reconciliation pages (every edited M1 command page except `entrypoint.md`), 100% of diff hunks lie within the status header region (the lines from the page title through the first section heading), and the remainder of the page is byte-identical. `entrypoint.md` is bounded separately: exactly one sentence in its description is replaced and every other byte is identical. |
 | NFR-4 | Doc-distribution guard | `bash scripts/.tests/test-doc-distribution.sh` exits 0; 0 `ados_distribution` markers added to any planning document. |
 | NFR-5 | Aggregate gate | `pnpm check` exits 0 on the branch head. |
-| NFR-6 | Diagram validity | 100% of mermaid blocks parse under the repository's mermaid validation; at least 10 diagrams (3 C4 levels, 6 key flows, 1 S17 park/resume). |
+| NFR-6 | Diagram structure (self-contained check) | No mermaid syntax validator exists in this repository, so diagram validity is proven structurally over `doc/planning/oss-tooling/milestones/m2/**`, without new tooling: (a) at least 10 fenced blocks whose opening fence is tagged `mermaid`; (b) every such block's first body line starts with a diagram-type keyword (`flowchart`, `graph`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`); (c) every opened fence is closed, so fence counts are even per file and each mermaid body ends before the next heading; (d) each diagram sits under a heading naming its subject, with the three C4 diagrams under `C4 Level 1`, `C4 Level 2`, and `C4 Level 3` headings and the six key flows plus the S17 park/resume under their named flow headings; (e) the inventory is 3 C4 levels, 6 key flows, and 1 S17 park/resume. A grep/awk procedure (Appendix E) proves (a)–(e) and exits 0. |
 | NFR-7 | Status history integrity | 100% of dated `status.md` sections, and every original sentence those sections contain, byte-identical; 0 historical claims rewritten. |
 | NFR-8 | Story fidelity | 100% of ticket-supplied normative clauses present per story; 0 added acceptance criteria; 0 clause meaning changes. |
 | NFR-9 | Public/OSS hygiene | 0 private, fleet, repository, hosted, or proprietary product names in new or changed text; 0 new forbidden-literal violations. |
@@ -242,7 +242,7 @@ N/A for this change. No runtime surface is added or modified, so no metric, log,
 | RSK-6 | Pack documents restate or contradict backlog acceptance criteria | M | M | Packs reference story codes; NFR-10; the status snapshot points to the backlog as canonical | L |
 | RSK-7 | New command names (`projects`, `attempts`, `events`) are absent from `cli-command-registry.md` | M | L | Names derive from story tasks; registry reconciliation is a declared deferred item; the delta note records the planned additions | M: the registry stays stale until the next planning touch |
 | RSK-8 | The status snapshot implies a milestone exit that has not happened | H | L | The snapshot states story delivery only and repeats that story delivery is not milestone exit; M0/M1 exit sections are untouched (AC-F7-1, AC-NFR7-1) | L |
-| RSK-9 | Mermaid or doc guards fail in CI after local authoring | M | L | Run the mermaid validation, the distribution guard, and `pnpm check` before the PR; AC-NFR5-1/AC-NFR6-1 | L |
+| RSK-9 | Diagram structure or doc guards fail review or CI after local authoring | M | L | Run the structural diagram procedure (Appendix E), the distribution guard, and `pnpm check` before the PR; AC-NFR5-1/AC-NFR6-1 | L |
 | RSK-10 | The planning corpus drifts again after the next M2 delivery | M | H | The maintenance convention is restated in the new status section; each M2 delivery updates backlog markers and the snapshot | M: depends on future delivery discipline |
 
 ## 12. ASSUMPTIONS
@@ -250,6 +250,7 @@ N/A for this change. No runtime surface is added or modified, so no metric, log,
 - The ticket body is the normative requirement source for story text, amendments, the pack brief, and the acceptance list.
 - "M1 delivered 23/23" means story delivery through the lifecycle; it does not assert milestone exit, pilot completion, or decision acceptance.
 - `doc/planning/**` is outside the doc-distribution guard's scan set, and the pack adds no marker; this follows the guard's path set and `AGENTS.md`, which narrows the broader "any doc under `doc/`" phrasing in `.ai/agent/pm-instructions.md`.
+- The repository has no mermaid syntax validator and no workflow step or `scripts/checks/` entry for diagrams; diagram validity is therefore established structurally by the Appendix E procedure (NFR-6), not by a gate.
 - The M1 pack's planned-until-exit labels remain correct until the milestone exits; only per-command status headers that name delivered stories are reconciled.
 - A built workspace exists in the checkout, so `delivery-os` invocations reflect the built composition; the observed outputs recorded in Appendix C were produced from that build.
 - The M1 command pack has 28 pages, verified by directory listing; the ticket's count of the drift examples is illustrative, not exhaustive.
@@ -262,7 +263,7 @@ N/A for this change. No runtime surface is added or modified, so no metric, log,
 |-----------|------|-------|
 | Depends on | M1 story delivery (23/23) | Every reconciliation target must actually be delivered; verified in the current tree |
 | Depends on | Owner-hold hook change (#280) | Referenced as a dependency by M2-S16 and M2-S17; delivered as the baseline |
-| Depends on | Doc-distribution guard and mermaid gate | Must pass on the branch head |
+| Depends on | Doc-distribution guard and structural diagram check | Must pass on the branch head; no mermaid validator exists, so the check is the Appendix E procedure |
 | Depends on | Delivered feature specs under `doc/spec/features/` | The external truth that makes "M1 planned" headers wrong |
 | Blocks | M2 story ticket creation and delivery (S11–S17) | Tickets are created from backlog entries; the pack seeds each story's test plan |
 | Related | #268 (commit-message lint before PR) | Early M2 chore, scoped in its own issue; named in the status snapshot, not landed here |
@@ -293,6 +294,7 @@ None. The one open verification the ticket carried — whether the daemon lifecy
 | DEC-12 | The entrypoint delta note lives at `milestones/m2/entrypoint-delta.md`, not inside `commands/` or the pack README | The note describes the root entry's delta, not a command contract, and the README is the pack index; a named pack-level note keeps both roles clean | 2026-11-10 |
 | DEC-13 | Preservation is enforced mechanically: append-only placement, per-entry hunk containment, byte identity for untouched regions, and status-header-only diffs for reconciled pages | The GH-266 lesson is that a preservation clause needs its own checkable criterion; a prose promise alone does not survive review | 2026-11-10 |
 | DEC-14 | M2 command pages use the pack's `Status: Proposed (M2)` header, reading the ticket's uppercase `STATUS: Proposed (M2)` as the status value, not a label-casing change | All 28 M1 command pages carry `Status:`; keeping the label consistent makes the pack mechanically checkable, while the value `Proposed (M2)` carries the ticket's meaning | 2026-11-10 |
+| DEC-15 | Mermaid validity is checked structurally, not by a repository gate: this repository has no mermaid syntax validator (no workflow step, no `scripts/checks/` entry, and the only mechanical touch is a fence counter in `scripts/.tests/test-inception-doc-consistency.sh`, which does not cover `doc/planning/**`). NFR-6 and AC-NFR6-1 are a grep/awk-verifiable fence inventory (Appendix E); the diagram content inventory (3 C4 levels, 6 key flows, 1 park/resume) is unchanged | An unexecutable criterion cannot be tested or reviewed; the structural procedure proves the same content requirements without new tooling, and recording the correction explains why the criterion changed | 2026-11-10 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -349,7 +351,7 @@ None. The one open verification the ticket carried — whether the daemon lifecy
 | AC-NFR3-1 | **Given** each of the fourteen status reconciliation pages, **when** its diff is inspected with zero context, **then** every hunk lies in the header region and the body is byte-identical; and **given** `entrypoint.md`, **then** exactly one sentence differs and every other byte is identical. | NFR-3, F-5 |
 | AC-NFR4-1 | **Given** the branch head, **when** `bash scripts/.tests/test-doc-distribution.sh` runs, **then** it exits 0 and no planning document carries an `ados_distribution` marker. | NFR-4, DEC-6 |
 | AC-NFR5-1 | **Given** the branch head, **when** `pnpm check` runs, **then** it exits 0. | NFR-5 |
-| AC-NFR6-1 | **Given** the new and changed documents, **when** the mermaid validation runs, **then** every mermaid block parses and the pack contains at least ten diagrams (3 C4 levels, 6 key flows, 1 S17 park/resume). | NFR-6, RSK-9 |
+| AC-NFR6-1 | **Given** the M2 pack documents, **when** the structural diagram procedure in Appendix E runs over them (count the fenced blocks whose opening fence is tagged `mermaid` and inspect each body), **then** (a) the count is at least 10; (b) every block's first body line begins with `flowchart`, `graph`, `sequenceDiagram`, `classDiagram`, or `stateDiagram-v2`; (c) fences are balanced per file, so every mermaid block closes before the next heading; (d) the three C4 diagrams sit under headings containing `C4 Level 1`, `C4 Level 2`, and `C4 Level 3`, and the six key flows plus the S17 park/resume sit under headings naming those flows; and (e) the inventory is 3 C4 levels, 6 key flows, and 1 park/resume; the procedure exits 0 and reports zero failures. | NFR-6, RSK-9 |
 | AC-NFR7-1 | **Given** `status.md`, **when** every dated section and every original sentence in the four pointer groups is compared byte for byte with the base revision, **then** all are identical and only appended pointer text is new. | NFR-7, F-7 |
 | AC-NFR8-1 | **Given** the seven new story entries, **when** each is diffed clause by clause against its ticket section, **then** the missing-clause count, the added-criterion count, and the changed-meaning count are each zero. | NFR-8, F-1, F-2 |
 | AC-NFR9-1 | **Given** all new and changed text, **when** the forbidden-literal and private-name checks run, **then** zero new violations are attributable to the change and no hosted, proprietary, fleet, repository, or product name appears. | NFR-9, RSK-4 |
@@ -362,7 +364,7 @@ None. The one open verification the ticket carried — whether the daemon lifecy
 - [ ] `status.md` carries one new dated M2 section, four appended pointer groups, and byte-identical history (AC-F7-*, AC-NFR7-1).
 - [ ] `milestones/m2/` exists with the twelve documents, complete architecture levels and flows, contract surfaces, at least 32 scenarios, five journeys, six command contracts, and the delta note (AC-F8-*, AC-F9-*, AC-F10-1).
 - [ ] `milestones/README.md` indexes M2 without touching M0 or M1 rows (AC-F11-1).
-- [ ] `bash scripts/.tests/test-doc-distribution.sh` and `pnpm check` exit 0; mermaid parses; zero product files outside planning (AC-NFR1-1, AC-NFR4-1, AC-NFR5-1, AC-NFR6-1).
+- [ ] `bash scripts/.tests/test-doc-distribution.sh` and `pnpm check` exit 0; the structural diagram procedure (Appendix E) passes with zero failures; zero product files outside planning (AC-NFR1-1, AC-NFR4-1, AC-NFR5-1, AC-NFR6-1).
 - [ ] No tracker ticket was created, no M2 story was delivered, and no product behavior changed (DEC-1, NG-1, NG-2, NG-4).
 - [ ] Story codes, headings, and existing story text outside the amended entries are byte-identical, with the check recorded in the delivery evidence (DEC-13, NFR-2).
 
@@ -478,19 +480,59 @@ Composition fact: the daemon command definition exists in the CLI composition an
 | `milestones/m2/commands/queue.md` | Queue lifecycle verbs contract |
 | `milestones/m2/commands/board.md` | Full M2 board contract |
 
+### Appendix E — Structural diagram check (reference procedure)
+
+No mermaid syntax validator exists in this repository, so the pack's diagrams are
+checked structurally. The procedure below is the reference a test plan can adopt
+or refine; it exits non-zero on any failure and prints what failed.
+
+```bash
+root=doc/planning/oss-tooling/milestones/m2
+files=$(find "$root" -name '*.md')
+
+# (a) at least 10 opening fences tagged mermaid
+count=$(grep -h '^```mermaid' $files | wc -l)
+[ "$count" -ge 10 ] || { echo "FAIL: $count mermaid fences, need >= 10"; exit 1; }
+
+# (b) first body line is a diagram-type keyword; (c) every fence closes
+awk '
+  FNR==1 && open { printf "FAIL unclosed fence in %s\n", prev; bad=1; open=0 }
+  /^```mermaid/ {
+      open=1; prev=FILENAME; getline
+      if ($0 !~ /^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram-v2)([ \t]|$)/) {
+          printf "FAIL keyword %s:%d: %s\n", FILENAME, FNR, $0; bad=1
+      }
+      next
+  }
+  /^```/ { open=0 }
+  END { if (open) { printf "FAIL unclosed fence in %s\n", prev; bad=1 } exit bad }
+' $files || exit 1
+
+# (d) C4 level headings; (e) inventory is 3 C4 + 6 named flows + 1 park/resume
+c4=$(grep -hE '^#{2,3} C4 Level [123]' $files | wc -l)
+[ "$c4" -eq 3 ] || { echo "FAIL: $c4 C4 level headings, need 3"; exit 1; }
+# Flow headings are named in the pack's architecture.md; the reviewer confirms
+# the six ticket flows plus the S17 park/resume, one heading and one diagram each.
+```
+
+The heading check in (d)–(e) is a counted grep for the C4 levels plus a named
+heading review for the flows; both are deterministic because the flow names are
+fixed by the ticket.
+
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-10 | @spec-writer | Initial specification |
+| 1.1 | 2026-11-10 | @spec-writer | Corrected the mermaid-validation premise: no validator exists in this repository. Rewrote NFR-6 and AC-NFR6-1 as a self-contained structural fence inventory (Appendix E), fixed the CONTEXT, ASSUMPTIONS, dependency, risk, KPI, and DoD references, and added DEC-15. Diagram content requirements unchanged. |
 
 ---
 
 ## AUTHORING GUIDELINES
 
 - The ticket body was read as the normative requirement source; the PM notes for GH-284 supplied the binding decisions (S17 scope, daemon resolution, reconciliation breadth, history handling, marker policy, index registration), which are encoded as DEC-1 through DEC-7 rather than re-litigated.
-- Repository facts were verified in the working tree rather than assumed: the M2 epic position and current story set, the 28 M1 command pages and their status lines, the absence of the M2 pack, the pack conventions and index rows, the distribution guard's path set, the gate battery, and the observed entrypoint outputs in Appendix C.
-- Two ticket ambiguities were resolved and recorded: the entrypoint page's `dispatch` claim (DEC-8) and the blueprint brief's "S2-S16" scenario range against S17's explicit additions (DEC-10). The delta-note location (DEC-12) and the status-header label (DEC-14) are also recorded because the ticket left them to the pack convention.
+- Repository facts were verified in the working tree rather than assumed: the M2 epic position and current story set, the 28 M1 command pages and their status lines, the absence of the M2 pack, the pack conventions and index rows, the distribution guard's path set, the gate battery and the absence of any mermaid syntax validator (DEC-15), and the observed entrypoint outputs in Appendix C.
+- Two ticket ambiguities were resolved and recorded: the entrypoint page's `dispatch` claim (DEC-8) and the blueprint brief's "S2-S16" scenario range against S17's explicit additions (DEC-10). The delta-note location (DEC-12), the status-header label (DEC-14), and the diagram-validation mechanism (DEC-15) are also recorded because the ticket left them to the pack convention or to repository tooling that does not exist.
 - The template at `doc/templates/change-spec-template.md` governed structure; every section is present in order, and the Definition of Done lives under Section 17 so the mandated ordering is preserved.
 - No implementation detail, file-level code path, or step-by-step task appears; the documents' contract surfaces are described as requirements, and code composition is described by behavior only.
 
