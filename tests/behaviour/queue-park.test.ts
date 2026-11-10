@@ -483,3 +483,33 @@ describe("TC-PARK-008 a stuck park is never a next action", () => {
     });
   });
 });
+
+describe("GH-280 owner hold skips the mutating park pass", () => {
+  test("a held pass appends nothing and the removal recovers through the delivered pass", () => {
+    const fixture = makeAuditStore("queue-park-owner-hold");
+    seedEntry(fixture.store);
+    seedPark(
+      fixture.store,
+      windowPark({ expiresAt: "2026-11-07T09:00:00Z", evaluatedAt: "2026-11-07T08:58:00Z" }),
+    );
+    const before = readQueueParks(fixture.store);
+    const beforeBytes = before.ok ? JSON.stringify(before.records) : "";
+    const held = recoverQueueParks(fixture.store, {
+      nowIso: NOW_ISO,
+      nowMs: NOW_MS,
+      context,
+      fenceToken: "held",
+      ownerHold: { active: true, source: "marker", reason: "peak-hour cost pause" },
+    });
+    expect(held.ok && held.value.recovered).toEqual([]);
+    const afterHold = readQueueParks(fixture.store);
+    expect(afterHold.ok ? JSON.stringify(afterHold.records) : "").toBe(beforeBytes);
+    const removed = recoverQueueParks(fixture.store, {
+      nowIso: NOW_ISO,
+      nowMs: NOW_MS,
+      context,
+      fenceToken: "removed",
+    });
+    expect(removed.ok && removed.value.recovered).toEqual([REF]);
+  });
+});

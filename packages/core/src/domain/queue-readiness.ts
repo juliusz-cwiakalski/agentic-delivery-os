@@ -26,6 +26,7 @@ import {
   type QueueReadyReason,
   type QueueWeightClass,
   type QueueWeightClassSource,
+  type OwnerHoldFact,
 } from "#contracts";
 import type { QueueGraphFold } from "./queue-graph.js";
 
@@ -134,6 +135,8 @@ export type QueueSchedulerFacts = {
   readonly close: Readonly<Record<string, QueueCloseFact>>;
   readonly deploy: QueueDeployFacts;
   readonly runner: string;
+  /** The injected owner hold; absent means inactive. */
+  readonly ownerHold?: OwnerHoldFact;
 };
 
 /** The readiness result for one entry. */

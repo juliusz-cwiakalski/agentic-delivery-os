@@ -74,7 +74,7 @@ type DispatchToken = DeliveryResultToken;
 /** One lease claim outcome through the scheduling engine. */
 export type DispatchLeaseClaim =
   | { readonly ok: true; readonly leaseId: string }
-  | { readonly ok: false; readonly code: string };
+  | { readonly ok: false; readonly code: string; readonly summary?: string };
 
 /** One cancellable cadence wait; the composition owns the timer. */
 export type DispatchCadenceWait = {
@@ -483,7 +483,14 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
 
   const claimed = ports.claimLease();
   if (!claimed.ok) {
-    return { ok: false, error: { kind: "queue", code: claimed.code } };
+    return {
+      ok: false,
+      error: {
+        kind: "queue",
+        code: claimed.code,
+        ...(claimed.summary === undefined ? {} : { summary: claimed.summary }),
+      },
+    };
   }
 
   let releaseCause: "completed" | "aborted" = "aborted";

@@ -14,6 +14,7 @@
  */
 
 import type { CallerPrincipal } from "./principal.js";
+import type { OwnerHoldSource } from "./owner-hold.js";
 import type { QueueReadyCondition, QueueReadyConditionId } from "./queue-ready.js";
 import type { StateJsonValue } from "./state.js";
 
@@ -248,6 +249,7 @@ export const QUEUE_LANE_IDLE_REASONS = [
   "provider-no-enabled-entry",
   "provider-all-entries-parked",
   "provider-unknown",
+  "owner-hold",
 ] as const;
 export type QueueLaneIdleReason = (typeof QUEUE_LANE_IDLE_REASONS)[number];
 
@@ -638,6 +640,11 @@ export type QueueReadData = {
   readonly truncated: boolean;
   /** The named reason when `truncated` is set by a bound other than a cap. */
   readonly truncationReason?: string;
+  /** The active owner hold, projected only when active (D17: no member when inactive). */
+  readonly ownerHold?: {
+    readonly source: OwnerHoldSource;
+    readonly reason?: string;
+  };
   readonly counts: {
     readonly entries: number;
     readonly ready: number;

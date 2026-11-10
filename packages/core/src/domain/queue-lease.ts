@@ -14,6 +14,7 @@
 import {
   QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_MIN_RENEWAL_MS,
+  type OwnerHoldFact,
   type QueueActiveLease,
   type QueueBlockingReason,
   type QueueLeaseRecord,
@@ -21,6 +22,12 @@ import {
   type QueueParkedReason,
 } from "#contracts";
 import { evaluateQueueReadiness, type QueueSchedulerFacts } from "./queue-readiness.js";
+
+/** The bounded detail naming the source and optional reason, separate from the token. */
+const ownerHoldDetail = (hold: Extract<OwnerHoldFact, { readonly active: true }>): string =>
+  hold.reason === undefined
+    ? `owner hold active (${hold.source})`
+    : `owner hold active (${hold.source}): ${hold.reason}`;
 
 /** The single implemented lease scope; the declared scope every path acquires. */
 const LEASE_SCOPE: QueueLeaseScope = "repo-exclusive";
@@ -157,15 +164,25 @@ const reasonForProvider = (reason: string | undefined): QueueBlockingReason => {
 };
 
 /**
- * Evaluate the pre-fence claim gate: parks first, then the five non-exclusivity
- * readiness conditions. `repo-free` is deliberately excluded — repository
- * exclusivity is decided only by the verified in-fence lease read.
+ * Evaluate the pre-fence claim gate: the owner hold first, then parks, then the
+ * five non-exclusivity readiness conditions. `repo-free` is deliberately
+ * excluded — repository exclusivity is decided only by the verified in-fence
+ * lease read.
  */
 export const evaluateClaimPreconditions = (
   facts: QueueSchedulerFacts,
   ref: string,
   options: { readonly outrankedBy?: string; readonly weightHeldBy?: string } = {},
 ): QueueClaimPrecondition => {
+  const hold = facts.ownerHold;
+  if (hold?.active === true) {
+    return {
+      ok: false,
+      code: "queue.precondition.unmet",
+      reason: "owner-hold",
+      detail: ownerHoldDetail(hold),
+    };
+  }
   const park = facts.parkEvaluations[ref];
   if (park?.state === "stuck") {
     return {

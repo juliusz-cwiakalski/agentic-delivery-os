@@ -1226,7 +1226,7 @@ export const ERROR_TABLE = [
     retryable: false,
     consequence: "not_landed",
     remediationHint:
-      "Resolve the named blocking precondition (readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
+      "Resolve the named blocking precondition (an operator hold, readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
     projectionClass: "user-validation",
     summary: "A claim precondition was not met.",
   },

@@ -37,6 +37,7 @@ import {
   type QueueListData,
   type QueueNextAction,
   type QueueParkedReason,
+  type OwnerHoldSource,
   type QueueParkProjection,
   type QueuePlanData,
   type QueueRankClass,
@@ -64,6 +65,12 @@ import { isHeldByWeight, resolveQueueWeight, weightLoads } from "./queue-weight.
 /** The default next-action cap. */
 export const QUEUE_NEXT_DEFAULT = QUEUE_DEFAULT_NEXT_ACTIONS;
 
+/** The owner-hold member projected on the read payloads. */
+type ScheduleOwnerHold = {
+  readonly source: OwnerHoldSource;
+  readonly reason?: string;
+};
+
 /** One computed schedule over the injected facts. */
 export type QueueSchedule = {
   readonly entries: readonly QueueEntryProjection[];
@@ -75,6 +82,8 @@ export type QueueSchedule = {
   readonly truncated: boolean;
   readonly evaluatedCandidates: number;
   readonly deployReads: number;
+  /** The active owner hold projected for the read payloads; absent when inactive. */
+  readonly ownerHold?: ScheduleOwnerHold;
 };
 
 /** Options for the one-pass schedule fold. */
@@ -414,9 +423,39 @@ const latestParks = (facts: QueueSchedulerFacts): readonly QueueParkProjection[]
 };
 
 /**
+ * Project the active fact for the read payloads. The inactive arm projects
+ * nothing, so an inactive run is byte-identical to the delivered payload.
+ */
+const ownerHoldProjection = (
+  facts: QueueSchedulerFacts,
+): ScheduleOwnerHold | undefined => {
+  const hold = facts.ownerHold;
+  if (hold === undefined || !hold.active) return undefined;
+  return hold.reason === undefined
+    ? { source: hold.source }
+    : { source: hold.source, reason: hold.reason };
+};
+
+/**
+ * Gate one entry under an active hold: `ready` becomes `held`; every other
+ * state is preserved; `owner-hold` is first and the entry's own ordered reasons
+ * follow unchanged. Projection is suppressed so the pass emits no action.
+ */
+const applyOwnerHold = (state: EntryState): EntryState => ({
+  ...state,
+  state: state.state === "ready" ? "held" : state.state,
+  blocking: [
+    blocking("owner-hold"),
+    ...state.blocking.filter((item) => item.reason !== "owner-hold"),
+  ],
+  projected: false,
+});
+
+/**
  * Compute one deterministic scheduling pass. Hard exclusions remove; ordering
  * orders; step 13b projects at most one action per repository; step 14 emits a
- * preemption proposal only.
+ * preemption proposal only. An active owner hold gates every entry and emits no
+ * next action and no preemption proposal (GH-280 F-4.1, F-4.2).
  */
 export const computeQueueSchedule = (
   facts: QueueSchedulerFacts,
@@ -453,14 +492,18 @@ export const computeQueueSchedule = (
   const evaluated = new Set(
     cheap.slice(0, QUEUE_MAX_EVALUATED_CANDIDATES).map((entry) => entry.ref),
   );
-  const states = folded.map((entry) =>
+  const evaluatedStates = folded.map((entry) =>
     evaluateEntry(facts, deployState, entry.ref, !evaluated.has(entry.ref)),
   );
+  const holdActive = facts.ownerHold?.active === true;
+  const states = holdActive ? evaluatedStates.map(applyOwnerHold) : evaluatedStates;
   const byRef = new Map(states.map((state) => [state.ref, state]));
 
-  const eligible = states
-    .filter((state) => state.state === "ready")
-    .sort((left, right) => entryOrder(facts.fold, left, right));
+  const eligible = holdActive
+    ? []
+    : states
+        .filter((state) => state.state === "ready")
+        .sort((left, right) => entryOrder(facts.fold, left, right));
 
   // Step 13b: at most one projected action per repository per pass.
   const projectedRepositories = new Set<string>();
@@ -506,6 +549,7 @@ export const computeQueueSchedule = (
   // Step 14: a close item blocked only by a new start's live lease proposes a
   // preemption; the close item is not scheduled in this pass.
   for (const state of states) {
+    if (holdActive) break;
     if (
       state.state !== "held" ||
       state.repository === undefined ||
@@ -589,6 +633,7 @@ export const computeQueueSchedule = (
     findings.length === QUEUE_MAX_FINDINGS ||
     reasonsTruncated;
 
+  const ownerHold = ownerHoldProjection(facts);
   return {
     entries,
     nextActions: cappedActions,
@@ -599,6 +644,7 @@ export const computeQueueSchedule = (
     truncated,
     evaluatedCandidates: evaluated.size,
     deployReads: deployState.reads,
+    ...(ownerHold === undefined ? {} : { ownerHold }),
   };
 };
 

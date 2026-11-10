@@ -694,3 +694,26 @@ describe("TC-LEASE-011 / TC-RANK-004 release plus park atomicity", () => {
     }
   });
 });
+
+describe("GH-280 owner hold claim precondition", () => {
+  test("the hold is evaluated before parks and readiness with the exact token and bounded detail", () => {
+    const facts = {
+      ...makeFacts([{ ref: "GH-350", repository: REPO_A }]),
+      ownerHold: {
+        active: true as const,
+        source: "marker" as const,
+        reason: "peak-hour cost pause",
+      },
+    };
+    expect(evaluateClaimPreconditions(facts, "GH-350")).toEqual({
+      ok: false,
+      code: "queue.precondition.unmet",
+      reason: "owner-hold",
+      detail: "owner hold active (marker): peak-hour cost pause",
+    });
+    // A no-hold control still claims past the pre-fence gate.
+    expect(evaluateClaimPreconditions(makeFacts([{ ref: "GH-350", repository: REPO_A }]), "GH-350")).toEqual({
+      ok: true,
+    });
+  });
+});

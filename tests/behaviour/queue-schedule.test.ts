@@ -130,3 +130,31 @@ describe("TC-SCHED-011 structural bounds", () => {
     expect(elapsed).toBeLessThan(250);
   });
 });
+
+describe("GH-280 an active owner hold suppresses the pass", () => {
+  test("no next action, no preemption, and owner-hold first on every entry", () => {
+    const facts = {
+      ...makeFacts([
+        { ref: "GH-360", repository: REPO_A },
+        { ref: "GH-361", repository: "github.com/owner/repo-beta" },
+      ]),
+      ownerHold: {
+        active: true as const,
+        source: "marker" as const,
+        reason: "peak-hour cost pause",
+      },
+    };
+    const schedule = computeQueueSchedule(facts);
+    expect(schedule.nextActions).toEqual([]);
+    for (const entry of schedule.entries) {
+      expect(entry.blocking[0]?.reason).toBe("owner-hold");
+    }
+    const control = computeQueueSchedule(
+      makeFacts([
+        { ref: "GH-360", repository: REPO_A },
+        { ref: "GH-361", repository: "github.com/owner/repo-beta" },
+      ]),
+    );
+    expect(control.nextActions.length).toBeGreaterThan(0);
+  });
+});
