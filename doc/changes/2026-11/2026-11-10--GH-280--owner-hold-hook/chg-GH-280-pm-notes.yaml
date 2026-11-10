@@ -1,0 +1,105 @@
+change_id: GH-280
+title: "Owner hold that outranks provider windows (pause lanes, not just defer)"
+delivery_mode: autonomous
+branch: feat/GH-280/owner-hold-hook
+base_branch: main-tools
+phases:
+  clarify_scope: { started: null, completed: 2026-11-10T12:55:22.221Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "D1 (PM-decided, non-interactive intake): the owner hold has two
+      equivalent sources. (a) A marker file at ${ADOS_STATE_DIR}/owner-hold, the
+      state directory the typed engine already resolves; (b) an environment
+      variable derived from the brand prefix (<PREFIX>_OWNER_HOLD,
+      ADOS_OWNER_HOLD in this repo). A non-empty value is an operator reason.
+      The shell example also accepts ADOS_OWNER_HOLD_FILE to name an explicit
+      marker path. Removing both sources clears the hold with no state loss."
+    date: 2026-11-10
+  - text: "D2 (PM-decided, non-interactive intake): the typed engine models the hold
+      as a global read-only gate over an injected fact, not as a queue park
+      cause and not as a state record. This preserves the closed park
+      cause/condition pairing, the closed five state record kinds, and the
+      closed six queue-ready conditions. Removing the marker resumes every ref
+      from preserved queue, lease, and park state."
+    date: 2026-11-10
+  - text: "D3 (PM-decided, non-interactive intake): include the read-only
+      status/doctor surface from the ticket. Status carries an additive optional
+      owner-hold sibling on the existing providers section
+      (credential-prerequisite precedent; no tenth section, no new status
+      reason). Doctor carries the hold as an additive provider-check detail with
+      one new closed evidence reason, because a held system must not read as a
+      healthy provider."
+    date: 2026-11-10
+  - text: "D4 (PM-decided, non-interactive intake): ship a dedicated new example
+      hook at scripts/hooks/pre-opencode-iteration-owner-hold.sh with
+      howLongToSleepDueToOwnerHold() under the DM-1 contract. It is registered
+      in install.sh ADOS_HOOK_EXAMPLES, removed by uninstall.sh, and covered by
+      its own deterministic shell test. The delivery-modes guide documents
+      merging it with peak/quota conditions, since conditions compose by MAX and
+      a hold therefore outranks every time-bounded wait."
+    date: 2026-11-10
+  - text: "D5 (PM-decided): no wrapper behavior changes. deliver-ticket.sh and
+      ceo-loop.sh already invoke the configured hook before every spawn/resume;
+      ceo-loop.sh is SHA-pinned by provider-surface tests. The hold is delivered
+      entirely through the example hook, the typed engine gate, and docs."
+    date: 2026-11-10
+  - text: "D6 (PM-decided): while the hold is active, claim and dispatch are refused
+      and the park auto-recovery mutation is skipped, so a park that reached its
+      provider window stays parked. Read-only surfaces may still evaluate and
+      display the park, but no recovery record is appended and no lane is
+      claimed."
+    date: 2026-11-10
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: GitHub issue 280 is open, labelled change, zero comments, no
+      assignee. Worktree clean on feat/GH-280/owner-hold-hook at d49164e0, equal
+      to origin/main-tools. No prior change folder exists."
+    type: info
+    date: 2026-11-10
+  - text: "Scope cross-check against current truth: feature-autonomous-delivery.md
+      F-8 and the delivery-modes hook section define the DM-1 sleep-driver
+      contract; feature-scheduling-engine.md defines the closed park
+      cause/condition pairing, the five state record kinds, and the six
+      queue-ready conditions; feature-status-digest.md fixes nine sections and a
+      closed 20-reason set; feature-doctor.md fixes five areas and a closed
+      22-reason set. The change is additive and does not contradict those
+      contracts when the hold is an injected fact rather than a park or record."
+    type: info
+    date: 2026-11-10
+  - text: "Doc impact map: doc/guides/delivery-modes.md (hook section),
+      doc/guides/zai-peak-hours-hook.md (condition list and extensibility),
+      doc/spec/features/feature-autonomous-delivery.md (F-8 and configuration),
+      doc/spec/features/feature-scheduling-engine.md (global hold gate and
+      surfaces), doc/spec/features/feature-status-digest.md (providers sibling),
+      doc/spec/features/feature-doctor.md (provider detail and reason),
+      doc/planning/oss-tooling/milestones/m1/commands/{queue,status,doctor}.md.
+      Any new doc needs an ados_distribution marker and forbidden-literal
+      registration."
+    type: risk
+    date: 2026-11-10
+  - text: "Invariant constraints mapped before spec: queue-ready stays at six
+      conditions; park cause/condition pairs stay closed; queue lane/blocking
+      reason vocabularies are pinned by
+      tests/fixtures/queue/vocabulary/closed-sets.json; status sections stay at
+      nine with a closed reason set; doctor reasons are closed; status and queue
+      goldens compare byte/structural equality; the core tier bans ambient
+      filesystem access, so the marker must arrive through an injected fact at
+      the CLI/MCP edge."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the non-interactive harness rejected the scope question, so the
+      four open ticket choices were resolved as recorded PM decisions rather
+      than owner-confirmed. Each is reversible and additive; they are surfaced
+      at the PR gate for owner acceptance."
+    type: retro
+    date: 2026-11-10
