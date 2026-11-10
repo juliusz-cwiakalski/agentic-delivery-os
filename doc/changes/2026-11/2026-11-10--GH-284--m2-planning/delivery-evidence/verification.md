@@ -61,9 +61,17 @@ Recorded: 2026-11-10.
 | TC-M2PLAN-036 | AC-NFR9-1 | P36 | `registered_total=139`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=12/12 baseline_absent=12/12`; `registry_sorted_self_test=detected`; `registry_duplicate_self_test=detected`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `added_lines=1665`; `seed_hits=0 non_vacuous=yes` |
 | TC-M2PLAN-037 | AC-NFR10-1 | P37 | `changed_planning_files=30`; `broken_links=0`; `restated_ac_blocks=0`; `non_vacuous=yes` |
 
-## Containment (§6.1, TC-028)
+## Plan validation
 
 ```
+$ pnpm exec delivery-os plan validate GH-284
+verdict=valid
+artifact=yaml:chg-GH-284-plan.yaml
+tier=lite
+readyForDevelopment=true
+```
+
+## Containment (§6.1, TC-028)```
 product_files=31
 planning_files=30 registry_files=1 outside_planning_outside_registry=0
 forbidden_root_files=0
