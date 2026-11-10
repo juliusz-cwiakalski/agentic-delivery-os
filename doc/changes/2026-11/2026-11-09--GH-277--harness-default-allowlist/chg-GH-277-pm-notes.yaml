@@ -309,3 +309,49 @@ notes:
       returns scan status 0. No product code changed.
     type: info
     date: "2026-11-09"
+  - text: >-
+      Phase 8 review_fix iteration 2 remediation (remediation commit): N-1
+      closed by hardening both child seams in
+      packages/adapters/src/host/index.ts. Each seam attaches a child.stdin
+      error handler before writing the prompt, so an EPIPE raised by a child
+      that exits before reading is an observed early-exit signal while any
+      other stdin error resolves the seam as a spawn failure (status 127); the
+      existing spawn and exit semantics are unchanged. The synthetic child in
+      tests/fixtures/harness/default-spawn.ts now drains stdin with a bounded
+      fallback instead of exiting immediately, so the TC-HDA-035 control no
+      longer depends on a write/exit race. Determinism: bun test
+      tests/behaviour/dispatch-harness-default-detail.test.ts 20 consecutive
+      runs, 20 pass / 0 fail, with no leaked tmp/tmpdir/gh277-* root (the one
+      root left by the pre-fix reproduction was removed); the 25-file
+      harness/dispatch behaviour set, 215 pass / 0 fail. N-2: test plan v1.5
+      records TC-HDA-034 step 7 and this determinism evidence. Gates green:
+      pnpm typecheck; pnpm check:boundaries (356 modules, no violations);
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (6614 pass / 4 skip / 0 fail
+      across 782 files, lint, format, typecheck, boundaries, prompt
+      conformance, help coverage, exports parity). Scope note: no delivery
+      phase declares packages/adapters/src/host/index.ts; the change is limited
+      to the two existing stdin write sites and is disclosed as the durable
+      N-1 fix mandated by review iteration 2.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      Process deviation recorded for review finding N-3: remediation commit
+      bf5c918e was created by invoking the commit primitive through its command
+      runtime with an agent-authored draft supplied through the harnessOneShot
+      transport seam, rather than a generated model message or the
+      deterministic template. The primitive still owned staging, the
+      deterministic safety scan, ref/type/scope validation, commitlint, and
+      telemetry, so no raw git write occurred and the commit shape and scope
+      are correct; only message-provenance fidelity is lost, because telemetry
+      records transport=harness-one-shot and messageSource=model for an
+      authored message. Standing preference for future remediation commits:
+      use the template fallback, which reports a truthful
+      messageSource=template. The iteration-2 remediation commit needed a
+      specific conventional subject that the path-derived template subject
+      cannot express, so it used the same authored-draft seam with the same
+      provenance caveat. That first iteration-2 invocation landed a local,
+      unpushed commit with the path-derived template subject and without the
+      review artifacts (a standalone commit takes the plan-union scope), so it
+      was reset soft and the same primitive re-invoked as a review_fix commit.
+    type: info
+    date: "2026-11-10"

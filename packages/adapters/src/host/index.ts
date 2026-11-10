@@ -21,6 +21,18 @@ const TRUNCATION_MARKER = "[output truncated]";
 /** The kill escalation grace: SIGTERM first, SIGKILL if the child ignores it. */
 const KILL_GRACE_MS = 100;
 
+/**
+ * A child that exits before reading its prompt closes the pipe mid-write, and
+ * the write then fails with `EPIPE`. That is an early-exit signal the close and
+ * error paths already classify, not a delivery failure of its own, so it is
+ * observed and ignored. Any other stdin error is a real failure and resolves the
+ * seam exactly like a spawn error.
+ */
+const isEarlyExitStdinError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false;
+  return error.code === "EPIPE";
+};
+
 /** Build the host runner over `node:child_process`. */
 export const createHostSpawnRunner = (): HarnessSpawnRunner => {
   return (file, args, options): Promise<HarnessSpawnRunnerResult> =>
@@ -61,6 +73,13 @@ export const createHostSpawnRunner = (): HarnessSpawnRunner => {
           status: typeof code === "number" ? code : 1,
           timedOut,
         });
+      });
+      // The handler is attached before the write so an early child exit can
+      // never surface as an unhandled stream error.
+      child.stdin?.on("error", (error: Error) => {
+        if (isEarlyExitStdinError(error)) return;
+        if (!child.killed) child.kill();
+        resolve({ stdout, stderr, status: 127, timedOut: false });
       });
       if (options.stdin === undefined) child.stdin?.end();
       else child.stdin?.end(options.stdin, "utf8");
@@ -248,6 +267,12 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
       }
     };
 
+    // The same guard as the one-shot runner: stdin is observed before the write.
+    child.stdin?.on("error", (error: Error) => {
+      if (isEarlyExitStdinError(error)) return;
+      channel.end();
+      complete({ stdout, stderr, status: 127, timedOut });
+    });
     if (options.stdin === undefined) child.stdin?.end();
     else child.stdin?.end(options.stdin, "utf8");
 

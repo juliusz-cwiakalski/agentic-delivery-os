@@ -5,8 +5,8 @@
  * real host starter.
  *
  * The only real child is the synthetic script. It never contacts a model, a
- * network, or a store; it dumps its inherited environment and argv and prints
- * the pinned two-line JSONL before exiting 0.
+ * network, or a store; it dumps its inherited environment and argv, prints the
+ * pinned two-line JSONL, drains stdin, and then exits 0.
  */
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -53,7 +53,13 @@ const RUNTIME_PATH = "/usr/bin:/bin";
 /** The repo-local temp root every filesystem-touching suite roots under (test plan §6.2). */
 const TEMP_ROOT = join(process.cwd(), "tmp", "tmpdir");
 
-/** The synthetic script: dump environment and argv, print the acquired JSONL. */
+/**
+ * The synthetic child drains stdin instead of exiting immediately, so its exit
+ * never races the parent's prompt write; the bound only keeps a hung run finite.
+ */
+const STDIN_DRAIN_BOUND_MS = 2000;
+
+/** The synthetic script: dump environment and argv, print the acquired JSONL, drain stdin. */
 const scriptSource = (paths: {
   readonly environmentDumpPath: string;
   readonly argvDumpPath: string;
@@ -66,7 +72,13 @@ writeFileSync(${JSON.stringify(paths.argvDumpPath)}, JSON.stringify(process.argv
 writeFileSync(${JSON.stringify(paths.markerPath)}, "invoked");
 console.log(JSON.stringify({ type: "step_start", sessionID: "ses_synthetic_1" }));
 console.log(JSON.stringify({ type: "step_finish", part: { reason: "stop" } }));
-process.exit(0);
+const finish = () => {
+  process.exit(0);
+};
+process.stdin.once("end", finish);
+process.stdin.once("error", finish);
+process.stdin.resume();
+setTimeout(finish, ${STDIN_DRAIN_BOUND_MS}).unref();
 `;
 
 export type ControlledParentOptions = {
