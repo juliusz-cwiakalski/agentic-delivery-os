@@ -25,7 +25,9 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 
 /** The canary scanner shared by the positive and negative cases. */
 const canaryHits = (haystack: readonly unknown[], canary: string): string[] =>
-  haystack.flatMap((entry) => (JSON.stringify(entry) ?? "").includes(canary) ? [String(entry)] : []);
+  haystack.flatMap((entry) =>
+    (JSON.stringify(entry) ?? "").includes(canary) ? [String(entry)] : [],
+  );
 
 const prefixedInstance = (): ExternalSystemInstance => ({
   instanceName: "vcs-github",
@@ -146,7 +148,9 @@ describe("TC-CREDNAME-003 the planted canary never escapes any surface", () => {
 
 describe("TC-CREDNAME-004 the canary detector fires on a deliberate leak", () => {
   test("the scanner reports a planted hit", () => {
-    expect(canaryHits([{ summary: `leaked ${ADMISSION_CANARY}` }], ADMISSION_CANARY)).toHaveLength(1);
+    expect(canaryHits([{ summary: `leaked ${ADMISSION_CANARY}` }], ADMISSION_CANARY)).toHaveLength(
+      1,
+    );
   });
 });
 

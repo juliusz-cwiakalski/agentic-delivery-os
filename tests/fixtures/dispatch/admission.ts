@@ -17,15 +17,15 @@ import {
 } from "../../../packages/core/src/app/dispatch-ledger";
 import { declareQueueEntry } from "../../../packages/core/src/app/queue";
 import { resolveBrandIdentity } from "../../../packages/core/src/branding/index";
-import {
-  type BrandIdentity,
-  type CredentialPort,
-  type DispatchAttemptRecord,
-  type DispatchEnvelopeData,
-  type ExternalSystemInstance,
-  type HarnessSpawnRunner,
-  type HarnessSpawnRunnerResult,
-  type StateStorePort,
+import type {
+  BrandIdentity,
+  CredentialPort,
+  DispatchAttemptRecord,
+  DispatchEnvelopeData,
+  ExternalSystemInstance,
+  HarnessSpawnRunner,
+  HarnessSpawnRunnerResult,
+  StateStorePort,
 } from "../../../packages/core/src/contracts/index";
 import {
   createNodeStateEdge,
@@ -159,10 +159,7 @@ export const scriptedIssueTransport = (input: {
 }): AdmissionTransport => ({
   send: async (request) => {
     input.requests?.push(request.url);
-    if (
-      input.issueNumber !== undefined &&
-      request.url.includes(`/issues/${input.issueNumber}`)
-    ) {
+    if (input.issueNumber !== undefined && request.url.includes(`/issues/${input.issueNumber}`)) {
       return input.response();
     }
     if (request.url.includes("/issues/")) {
@@ -184,9 +181,7 @@ const completedRunner = (): HarnessSpawnRunner => async (): Promise<HarnessSpawn
 });
 
 /** Compose one production dispatch program over the injected seams. */
-export const createAdmissionHarness = (
-  options: AdmissionHarnessOptions = {},
-): AdmissionHarness => {
+export const createAdmissionHarness = (options: AdmissionHarnessOptions = {}): AdmissionHarness => {
   const brand = resolveBrand();
   const base = join(ROOT, "tmp", "tmpdir");
   mkdirSync(base, { recursive: true });

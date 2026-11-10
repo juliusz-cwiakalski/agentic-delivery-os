@@ -5,7 +5,10 @@
  * omits it keeps the delivered order.
  */
 import { describe, expect, test } from "bun:test";
-import { readDispatchDivergences, readDispatchHandover } from "../../packages/core/src/app/dispatch-ledger";
+import {
+  readDispatchDivergences,
+  readDispatchHandover,
+} from "../../packages/core/src/app/dispatch-ledger";
 import { runAdmission } from "../fixtures/dispatch/admission";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { readFail } from "../fixtures/dispatch/truth";

@@ -13,7 +13,10 @@ import { makeDivergence } from "../fixtures/dispatch/ledger";
 
 describe("TC-RESOLVE-001 resolve is local-only", () => {
   test("the production runtime never resolves a credential or calls the transport", async () => {
-    const harness = createAdmissionHarness({ label: "gh279-resolve-local-", credential: "resolved" });
+    const harness = createAdmissionHarness({
+      label: "gh279-resolve-local-",
+      credential: "resolved",
+    });
     try {
       const appended = appendDispatchDivergence(
         harness.store,

@@ -167,9 +167,7 @@ const githubReadReference: CredentialReference = {
  * The declared credential references whose resolved values the runtime edge
  * registers for serialization redaction.
  */
-export const DECLARED_CREDENTIAL_REFERENCES: readonly CredentialReference[] = [
-  githubReadReference,
-];
+export const DECLARED_CREDENTIAL_REFERENCES: readonly CredentialReference[] = [githubReadReference];
 
 const githubInstance = (): ExternalSystemInstance => ({
   instanceName: "vcs-github",
@@ -372,9 +370,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       localContext: { path: pmContextPath, fs: localFs },
       clock: { nowMs, nowIso },
       github: { instance },
-      ...(truthReadCredential === undefined
-        ? {}
-        : { credentialReference: truthReadCredential }),
+      ...(truthReadCredential === undefined ? {} : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
       ok: true as const,

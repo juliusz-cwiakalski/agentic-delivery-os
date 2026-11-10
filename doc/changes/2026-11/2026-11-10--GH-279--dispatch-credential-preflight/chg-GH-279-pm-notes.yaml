@@ -185,3 +185,15 @@ notes:
       derivation (29 pass); tests/types tsc green."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 7 (surface tracker credential prerequisite) complete in
+      commit fe5b61f: status attaches the additive section-level
+      credentialPrerequisite {referenceName, sourceKey} only to sections whose
+      credential-dependent source failed (derived from the digest), sources[]
+      shape/bound unchanged; doctor names the derived key for literal and
+      prefixed references; the declared reference is registered for redaction at
+      the entrypoint from injected environment facts (no ambient read, no new
+      allowlist entry). Tests: status prerequisite/output, doctor tracker,
+      cli-edge-seam, entrypoint-bin, secret boundary, exports parity, contract
+      inventory (114 pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10

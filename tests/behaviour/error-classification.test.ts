@@ -545,7 +545,8 @@ describe("TC-CLOSE-005 closeout kind classification and containment", () => {
 });
 
 describe("TC-CREDNAME-007 the trusted-refusal marker is narrow and required", () => {
-  const summary = 'credential key GITHUB_TOKEN is unset (reference github-read); export GITHUB_TOKEN="$(gh auth token)"';
+  const summary =
+    'credential key GITHUB_TOKEN is unset (reference github-read); export GITHUB_TOKEN="$(gh auth token)"';
   const hint = "configure the declared credential reference and retry";
   const canary = "planted-error-classification-canary";
 
@@ -589,7 +590,11 @@ describe("TC-CREDNAME-007 the trusted-refusal marker is narrow and required", ()
       trustedRefusal: true,
     });
     const envelope = JSON.parse(rendered.stdout) as {
-      readonly error?: { readonly code?: string; readonly summary?: string; readonly remediationHint?: string };
+      readonly error?: {
+        readonly code?: string;
+        readonly summary?: string;
+        readonly remediationHint?: string;
+      };
     };
     expect(rendered.exit).toBe(1);
     expect(envelope.error?.code).toBe("config.credential.missing");

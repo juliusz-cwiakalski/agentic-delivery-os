@@ -26,7 +26,9 @@ describe("TC-REG-004 the preflight port is optional and distinct from admission"
     expect(text).toContain("readonly preflight?: DispatchPreflightPort;");
     expect(text).toContain("readonly admission?: () => DispatchAdmission;");
     expect(text.indexOf("readonly preflight?")).toBeGreaterThan(0);
-    expect(text.indexOf("readonly admission?")).toBeGreaterThan(text.indexOf("readonly preflight?"));
+    expect(text.indexOf("readonly admission?")).toBeGreaterThan(
+      text.indexOf("readonly preflight?"),
+    );
   });
 
   test("a caller may omit the preflight port and still satisfy the ports type", () => {

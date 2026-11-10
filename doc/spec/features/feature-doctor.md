@@ -141,6 +141,8 @@ Every non-ok condition has exactly one verdict and exactly one hint template. Te
 
 Detail lines are factual and bounded: a clean repo reports `clean work tree on <branch> at <shortSha>` or `detached HEAD at <shortSha>`; a dirty repo says the working tree has uncommitted changes; tracker and CI successes report the observed item or run count (or an explicitly empty page); a credential park names the subject, cause, and expiry; a neutral park names the subject, cause, expiry, and the `provider quota --provider <name>` directive; provider announcements are listed by their closed codes (at most three).
 
+The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved environment variable name: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix. The fix hint names the key only and never a value. Doctor remains outside the shipped prompt-required command set; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
+
 ### Provider check semantics
 
 The provider check reads only local evidence: the resolved provider configuration, the structural resolution of the declared default chain against declared entries, credential presence for enabled entries that declare a quota policy, and the verified park/announcement fold. A successful run reports neutral parks in the detail with cause, expiry, and a `provider quota --provider <name>` directive. Active parks with cause `credential-missing` or `credential-rejected` fail the check. The five wiring-neutral causes are `peak-window`, `quota-exhausted`, `provider-outage`, `chain-exhausted`, and `reevaluation-cap`.

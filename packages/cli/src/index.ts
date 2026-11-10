@@ -159,9 +159,7 @@ const explicitRemediationHint = (value: unknown): string | undefined => {
  * other config-shaped failure stays suppressed.
  */
 const trustedCredentialRefusal = (value: unknown): boolean =>
-  isRecord(value) &&
-  value.trustedRefusal === true &&
-  value.code === "config.credential.missing";
+  isRecord(value) && value.trustedRefusal === true && value.code === "config.credential.missing";
 
 const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
   // No untrusted config summary, even when the discriminator was malformed and
@@ -171,7 +169,8 @@ const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
     isRecord(value) &&
     (value.kind === "config" ||
       (typeof value.code === "string" && value.code.startsWith("config.")));
-  const suppressed = (configShaped || entry.domainKind === "config") && !trustedCredentialRefusal(value);
+  const suppressed =
+    (configShaped || entry.domainKind === "config") && !trustedCredentialRefusal(value);
   const summary = suppressed ? undefined : explicitSummary(value);
   const hint = suppressed ? undefined : explicitRemediationHint(value);
   const resolved = hint === undefined ? entry : { ...entry, remediationHint: hint };

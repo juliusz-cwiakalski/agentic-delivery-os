@@ -658,7 +658,9 @@ describe("TC-ADMIT-004 the positive control reaches a real verdict", () => {
 
 describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", () => {
   test("a direct engine caller without the port still spawns and classifies state-unverified", async () => {
-    const scenario = createCommandScenario({ reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }) });
+    const scenario = createCommandScenario({
+      reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }),
+    });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
       expect(run.envelope?.data?.result).toBe("state-unverified");

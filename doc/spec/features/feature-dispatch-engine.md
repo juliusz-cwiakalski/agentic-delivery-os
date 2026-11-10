@@ -60,6 +60,23 @@ Three refusals happen before any session attempt exists: an unknown harness, rej
 6. **Classify and derive truth.** The shared classifier yields a harness outcome and token; truth derivation then decides the final token from branch commits, PR state and URL, ledger progress, tracker state, and CI. A success claim is never accepted on an exit code alone.
 7. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text or the machine envelope.
 
+## Admission preflight
+
+The engine exposes an optional `preflight` port, distinct from `ports.admission`. It runs after harness resolution and input validation and before `claimLease`, spawn, or resume, and it appends no attempt, divergence, handover, or authority record. Production composition always supplies it; a direct engine caller may omit it and keep the delivered run order.
+
+The preflight resolves the declared truth-read reference (`github-read` over the environment key `GITHUB_TOKEN`) and performs one bounded work-item read. It classifies the read itself from the failure's optional status instead of forwarding the adapter identity:
+
+| Condition | Identity | Kind | Projection | Exit |
+|---|---|---|---|---|
+| Credential unresolvable | `config.credential.missing` | `config` | user-validation | 1 |
+| Status 401 or 403 | `provider.auth.rejected` | `provider` | user-validation | 1 |
+| Status 5xx or any other status-bearing non-2xx | `provider.outage` | `provider` | platform-provider | 2 |
+| No status (transport throw or timeout) | `provider.outage` | `provider` | platform-provider | 2 |
+| Malformed 2xx payload (status present) | `provider.payload.invalid` | `provider` | platform-provider | 2 |
+| Status 404 | `input.value.rejected` | `input` | user-validation | 1 |
+
+The 404 summary states that the provider reported the work item absent for this credential and names the reference; it does not assert that the reference is wrong, because an item the credential cannot see answers 404 exactly like an absent one. The engine result error-kind union admits the existing `provider` and `config` kinds additively; `DOMAIN_KINDS`, the error-table row count, the tokens, the projections, and the exits are unchanged. The credential refusal carries a narrow trusted-refusal marker that the CLI classifier honours only for `config.credential.missing`, so the bounded identifier-only summary reaches both machine and human output without reopening the untrusted-config suppression.
+
 ## Result derivation and exit projection
 
 Result derivation is artifact-first:
@@ -102,6 +119,7 @@ Every dispatch failure identity pins one result token, one engine outcome, one e
 | Post-spawn `harness.collect` failure (a session existed but its evidence could not be read) | exactly one | `state-unverified` | `failed` | 2 | not applicable, token null, reason `comparison-source-unavailable` |
 | Harness spawn refusal (no error identity) | exactly one | `noop-lane-permission` | `refused` | 1 | not applicable, token null, reason `dispatch-session-family` |
 | Unknown harness, rejected input, or conflicting lease before a spawn | none | none | none | 1 | none |
+| Credential or admission-read refusal before a spawn | none | the mapped identity | none | 1 or 2 per the admission table | none |
 
 All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the three pre-session refusals.
 
@@ -139,13 +157,13 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |
 | Bounds | At most 16 bounded evidence references; no prompt, transcript, diff, credential, or raw provider payload. |
 
-`token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A divergence is appended if and only if the outcome is `mismatch`. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
+`token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A comparison divergence is appended when the outcome is `mismatch`; the delivered-evidence case below is the one additional, explicitly shaped divergence. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
 
 The watch contributes its observed verdict trail as `liveness:<verdict>` evidence references, so a transient stall remains visible even when the session later classifies normally. A post-spawn collection failure names `harness:collect-failed`; a restart-budget refusal names `economics:exhaustion` when the terminal record landed and `economics:exhaustion-unrecorded` when the append did not land, so an unrecorded exhaustion is never claimed as durable evidence.
 
 ### Divergence and handover records
 
-- `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains.
+- `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains. A delivered-evidence divergence is the one other shape: when the shared classifier outcome is `completed`, the phase ledger is readable and shows progress or a complete total, and truth is unreadable, at most one open record per `(repository, work-item reference)` carries `comparisonClass: not-applicable`, `engineToken: state-unverified`, `comparisonToken: null`, and evidence references `attempt:<id>` plus `truth:unreadable:<ledger|tracker|artifact|state>`. The divergence is appended before the attempt so the attempt can carry `divergenceRef`; a resume reuses the open record. If the divergence append fails, the attempt lands once with no `divergenceRef` and a bounded `divergence:append-failed` reference, and the underlying state identity is returned. If the attempt append fails after the divergence lands, the orphan stays open, counted, and resolvable, and a later attempt for the same pair reuses it.
 - `dispatch.handover` (`delivery.dispatch.handover.v1`) records one authority operation (`authoritative` or `dual-run`) per repository, with the conditions snapshot at decision time, bounded evidence references, principal, and timestamp. History is append-only; a reversal is a new record, never a deletion.
 
 ### Authority view
@@ -160,7 +178,7 @@ Production handover counts only `pilot` attempts. A controlled scope counts only
 
 The window lower bound is the most recent false-success incident's recorded timestamp, exclusive, when an incident exists; otherwise it is the first counted dispatch, inclusive. A dispatch recorded exactly at the incident timestamp is excluded. The summary reports `windowStart` and the closed `windowStartReason` (`first-counted-dispatch`, `false-success-incident-reset`, `no-counted-dispatch`). Resolved divergences do not reset the window; a false-success incident does.
 
-A record-level unevaluable read degrades only that record: a non-success token still counts for class coverage and does not block, while an uncorroborated success claim fails corroboration as one named unmet condition without creating a divergence or resetting the window.
+A record-level unevaluable read degrades only that record: a non-success token still counts for class coverage and does not block, while an uncorroborated success claim fails corroboration as one named unmet condition without creating a comparison divergence or resetting the window. The delivered-evidence case is the explicit exception: a completed session with a readable progressed/completed ledger and an unreadable truth read owes one open, resolvable delivered-evidence divergence per work item, and that record counts as unresolved until resolved.
 
 Corroboration distinguishes an unreadable source from a contradicted one. A source whose read failed is recorded uncorroborated (`unsatisfied` in the tri-state record) with the unreadable marker retained; it blocks the corroboration condition but is never a false-success incident. Only a readable contradiction of a success claim is a false-success incident that resets the evidence window. An unreadable, torn, or truncated evidence-stream read makes eligibility unverifiable and is never reported as eligible.
 

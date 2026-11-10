@@ -7,10 +7,7 @@
  * every decision to `runEntrypoint`. It is not added to the installer.
  */
 import { runEntrypoint } from "../src/entrypoint.ts";
-import {
-  createProductionComposer,
-  DECLARED_CREDENTIAL_REFERENCES,
-} from "../src/production.ts";
+import { createProductionComposer, DECLARED_CREDENTIAL_REFERENCES } from "../src/production.ts";
 
 const invoke = async (): Promise<number> => {
   const environment: Readonly<Record<string, string | undefined>> = { ...process.env };

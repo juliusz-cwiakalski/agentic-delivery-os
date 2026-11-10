@@ -65,8 +65,14 @@ const storeWith = (input: {
     }),
     append: () =>
       input.appendCode === undefined
-        ? { ok: false as const, error: { code: "state.write.failed", location: { path: "/tmp/state" } } }
-        : { ok: false as const, error: { code: input.appendCode, location: { path: "/tmp/state" } } },
+        ? {
+            ok: false as const,
+            error: { code: "state.write.failed", location: { path: "/tmp/state" } },
+          }
+        : {
+            ok: false as const,
+            error: { code: input.appendCode, location: { path: "/tmp/state" } },
+          },
     releaseFence: () => ({ ok: true as const, value: undefined }),
   }) as unknown as StateStorePort;
 
@@ -117,7 +123,11 @@ describe("TC-RESOLVE-004 a 300-character note clamps to 240 and lands", () => {
   test("the stored note is bounded and no write failure is produced", () => {
     const state = createDispatchState("gh279-resolve-clamp");
     try {
-      appendDispatchDivergence(state.store, state.fenceToken, makeDivergence({ divergenceId: "DIV-1" }));
+      appendDispatchDivergence(
+        state.store,
+        state.fenceToken,
+        makeDivergence({ divergenceId: "DIV-1" }),
+      );
       const longNote = "x".repeat(300);
       const result = resolveDispatchDivergenceEvidence({
         store: state.store,
@@ -200,7 +210,11 @@ describe("TC-RESOLVE-008 resolution replay is a noop and the open record is byte
   test("the second resolve reports the existing record and rewrites nothing", () => {
     const state = createDispatchState("gh279-resolve-replay");
     try {
-      appendDispatchDivergence(state.store, state.fenceToken, makeDivergence({ divergenceId: "DIV-1" }));
+      appendDispatchDivergence(
+        state.store,
+        state.fenceToken,
+        makeDivergence({ divergenceId: "DIV-1" }),
+      );
       const before = readDispatchDivergences(state.store);
       expect(before.ok).toBe(true);
       if (!before.ok) return;

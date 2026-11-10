@@ -293,7 +293,14 @@ const unreadableTruthReason = (reads: DispatchTruthReads): DispatchReadFailure |
 
 /** The delivered-evidence divergence shape used for per-work-item dedupe. */
 const isDeliveredEvidenceDivergence = (
-  record: { readonly state: string; readonly comparisonClass: string; readonly engineToken: string; readonly comparisonToken: string | null; readonly repository: string; readonly ref: string },
+  record: {
+    readonly state: string;
+    readonly comparisonClass: string;
+    readonly engineToken: string;
+    readonly comparisonToken: string | null;
+    readonly repository: string;
+    readonly ref: string;
+  },
   repository: string,
   ref: string,
 ): boolean =>

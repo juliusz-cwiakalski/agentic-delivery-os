@@ -149,16 +149,8 @@ export type ProductionQueueHarnessOptions = {
   readonly home?: string;
 };
 
-const refusingCredentials: CredentialPort = {
-  resolve: () => ({
-    ok: false,
-    code: "config.credential.missing",
-    domainKind: "config",
-    category: "user",
-    retryable: false,
-    consequence: "not_landed",
-    projectionClass: "user-validation",
-  }),
+const resolvingCredentials: CredentialPort = {
+  resolve: () => ({ ok: true, material: { value: "synthetic-queue-read" } }),
 };
 
 /** Compose the real production program over a real working directory. */
@@ -205,11 +197,19 @@ export const createProductionQueueHarness = (
     },
     harnessSpawnRunner: spawnRunner,
     harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
-    credentials: refusingCredentials,
+    credentials: resolvingCredentials,
     githubTransport: {
       send: async (request) => {
         transportCalls.push({ url: request.url, method: request.method });
-        throw new Error("the queue add path must not call the provider transport");
+        // The admission preflight performs one bounded work-item read; the queue
+        // add path itself never reaches the provider.
+        if (request.url.includes("/issues/")) {
+          return {
+            status: 200,
+            body: { number: 1, title: "Queue fixture", state: "open", labels: [] },
+          };
+        }
+        throw new Error("the queue path must not call the provider transport");
       },
     },
     gitChildRunner: gitRunner,

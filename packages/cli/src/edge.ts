@@ -4496,7 +4496,7 @@ export type DispatchComposition = {
   readonly readTruth: (ref: string) => Promise<DispatchTruthReads>;
   /**
    * The admission precondition, invoked after harness/input validation and
-   * before `claimLease`, spawn, and resume. Production always supplies it; a
+   * before `claimLease` and any session start. Production always supplies it; a
    * direct composition may omit it and keep the delivered run order.
    */
   readonly preflight?: (ref: string) => Promise<DispatchPreflightResult>;

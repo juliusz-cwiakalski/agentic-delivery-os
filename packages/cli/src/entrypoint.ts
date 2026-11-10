@@ -170,10 +170,7 @@ const isUnusableCommand = (program: CommandProgram, command: string): boolean =>
  * environment and the declared references only. An absent or empty value is not
  * registered; no ambient environment read is added.
  */
-const entrypointSecrets = (
-  options: EntrypointOptions,
-  brand: BrandIdentity,
-): readonly string[] => {
+const entrypointSecrets = (options: EntrypointOptions, brand: BrandIdentity): readonly string[] => {
   const values = new Set<string>(options.secrets ?? []);
   for (const reference of options.credentialReferences ?? []) {
     const key = resolveCredentialSourceKey(reference, brand);

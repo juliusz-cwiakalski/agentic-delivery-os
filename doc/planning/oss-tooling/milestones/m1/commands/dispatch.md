@@ -75,6 +75,43 @@ decide fallback.
 a merge-ready PR stays `pr-open` or `pr-open-unverified` for the coordinator's
 merge decision.
 
+## ADMISSION PREFLIGHT
+
+Before `claimLease` and before any spawn or resume, and after harness resolution
+and input validation, dispatch resolves the declared truth-read credential
+reference `github-read` (the exact environment key `GITHUB_TOKEN`) and performs
+one bounded work-item read. A refusal here is a pre-session refusal: it opens no
+session, branch, worktree, lease, attempt, divergence, handover, or authority
+change.
+
+The preflight classifies that read itself from the received status, never by
+forwarding the adapter identity:
+
+| Read outcome | Identity | Kind | Exit |
+|---|---|---|---|
+| credential unresolvable | `config.credential.missing` | `config` | 1 |
+| status 401 or 403 | `provider.auth.rejected` | `provider` | 1 |
+| status 5xx or any other status-bearing non-2xx | `provider.outage` | `provider` | 2 |
+| no status (transport throw or timeout) | `provider.outage` | `provider` | 2 |
+| malformed 2xx payload (status present) | `provider.payload.invalid` | `provider` | 2 |
+| status 404 | `input.value.rejected` | `input` | 1 |
+
+A 404 means the provider reported the work item absent for this credential. A
+private item the credential is not scoped to see answers 404 exactly like an
+absent one, so verify the reference **and** the token's repository scope before
+changing the reference. Non-interactive consumers that previously treated every
+failed dispatch as exit `2` with one attempt record must treat these pre-session
+refusals as precondition failures: there is no attempt record to read.
+
+A dispatch whose session completed and whose phase ledger shows progress or a
+complete total, but whose truth read is unreadable, records at most one open
+delivered-evidence divergence per `(repository, work-item reference)` pair. A
+resume reuses and references the existing open record instead of appending a
+second one. Resolve it locally with `dispatch dual-run resolve <id> --note
+<text>`; a later unverifiable attempt may open a new record only after the
+previous one is resolved. `doctor` remains unshipped in this release; its
+existing `tracker.credential-unavailable` check keeps parity through tests.
+
 ## OPTIONS
 
 - `<ref>` - work item reference.
@@ -107,6 +144,10 @@ eligibility verdict, and every unmet condition.
 - `1` for `failed`, `max-restarts`, `partial`, `noop-lane-permission`, a
   restart-budget or resume-economics refusal, and a readable-but-unmet handover.
 - `2` for `state-unverified` and an unreadable or torn evidence read.
+- `1` for a pre-session missing or rejected credential, and for a work item the
+  provider reports absent (`input.value.rejected`); `2` for a pre-session
+  provider outage or a malformed 2xx payload. None of these appends an attempt
+  record, so a consumer must read the refusal identity, not an attempt.
 
 ## EXAMPLES
 
@@ -130,11 +171,16 @@ $ <binary> dispatch handover github.com/owner/repo --revert
 
 ## ERRORS
 
+`config.credential.missing`, `provider.auth.rejected`, `provider.outage`,
+`provider.payload.invalid`, `input.value.rejected`,
 `dispatch.session.spawn-failed`, `dispatch.restart-budget-exceeded`,
 `dispatch.resume-uneconomical`, `dispatch.state-unverified`. A pre-session
-refusal (unknown harness, rejected input, or a conflicting lease before a spawn)
-emits the classified envelope and appends no attempt record; every attempt-stage
-failure is recorded with its pinned token and outcome.
+refusal (unknown harness, rejected input, an unresolvable credential, a failing
+admission read, or a conflicting lease before a spawn) emits the classified
+envelope and appends no attempt record; every attempt-stage failure is recorded
+with its pinned token and outcome. A local store fault during
+`dispatch dual-run resolve` keeps its own `kind: "state"` code; an absent
+divergence identifier is `input.value.rejected` with `kind: "input"`.
 
 ## SEE ALSO
 

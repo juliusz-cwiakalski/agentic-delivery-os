@@ -276,6 +276,12 @@ Two containment entries cover distinct populations, and each population resolves
 
 Both entries carry `consequence: unknown` because containment never asserts that a mutation landed or did not land, and both carry `retryable: false` because an identical broken invocation fails identically and an unclassifiable failure with unknown consequence must not invite a blind retry. The remediation hint, not the retryable flag, directs the next step.
 
+### Trusted refusal prose
+
+The classifier suppresses a supplied summary and remediation hint for any config-shaped failure, because that text may be untrusted configuration. One narrow exception is declared: a `config.credential.missing` failure may carry a `trustedRefusal: true` marker set by the engine's bounded credential refusal. The marker is honoured only for that exact code; the classifier forwards the bounded identifier-only summary and hint in both machine and human output. An unmarked config-shaped failure and a marked failure for any other `config.*` code keep the suppression. The marker changes no identity, projection, or exit.
+
+The dispatch engine's local result error-kind union admits the existing `provider` and `config` kinds additively, so its admission refusals carry the real identity rather than a containment code. `DOMAIN_KINDS`, the error-table row count, the eleven delivery-result tokens, and the exit table are unchanged; the adapter-local `provider.payload.invalid` identity remains outside the table with its platform-provider projection.
+
 ### Evolution discipline
 
 Envelope changes are additive within `schemaVersion`; a breaking shape change requires a new schema version. A new table entry requires its structured fields, its projection class, and its documented row in the same change. Documentation drift fails closed in both directions: an emitted or referenced code without a documented row fails, and a documented row without a machine-readable entry fails.

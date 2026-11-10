@@ -268,8 +268,7 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
       PROMPT_REQUIRED_COMMANDS.map((command) => [
         command,
         {
-          handler: () =>
-            command === "status" ? { data: { echoed: canary } } : { data: {} },
+          handler: () => (command === "status" ? { data: { echoed: canary } } : { data: {} }),
         },
       ]),
     ),

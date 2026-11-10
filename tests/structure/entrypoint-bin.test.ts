@@ -85,8 +85,7 @@ describe("TC-ENTRY-010 non-installed bin", () => {
           PROMPT_REQUIRED_COMMANDS.map((command) => [
             command,
             {
-              handler: () =>
-                command === "status" ? { data: { echoed: canary } } : { data: {} },
+              handler: () => (command === "status" ? { data: { echoed: canary } } : { data: {} }),
             },
           ]),
         ),

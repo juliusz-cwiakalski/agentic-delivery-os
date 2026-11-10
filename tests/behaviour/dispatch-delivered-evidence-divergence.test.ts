@@ -44,7 +44,10 @@ const failAppendFor = (
   return {
     ...store,
     append: (handle, request) => {
-      if (request.kind === DISPATCH_ATTEMPT_RECORD_KIND || request.kind === DISPATCH_DIVERGENCE_RECORD_KIND) {
+      if (
+        request.kind === DISPATCH_ATTEMPT_RECORD_KIND ||
+        request.kind === DISPATCH_DIVERGENCE_RECORD_KIND
+      ) {
         attempts += 1;
         if (predicate(request.kind, attempts)) {
           return {
@@ -189,7 +192,12 @@ describe("TC-DIVREC-004 the summary lists and counts it; resolution decrements b
       ]);
       expect(before.exit).toBe(0);
       const beforeData = before.envelope?.data as
-        | { readonly divergences?: { readonly unresolved?: number; readonly unresolvedIds?: readonly string[] } }
+        | {
+            readonly divergences?: {
+              readonly unresolved?: number;
+              readonly unresolvedIds?: readonly string[];
+            };
+          }
         | undefined;
       expect(beforeData?.divergences?.unresolvedIds).toContain(divergence?.divergenceId);
       const beforeUnresolved = beforeData?.divergences?.unresolved ?? 0;
@@ -263,7 +271,10 @@ describe("TC-DIVREC-006 record bounds and the closed read families", () => {
     const scenario = createCommandScenario({
       label: "gh279-divrec-006-",
       evidence: COMPLETED_EVIDENCE,
-      reads: readsFrom({ artifacts: readFail("artifact", "artifact.read-unreadable"), tracker: readOk({ state: "in-progress", blocking: false }) }),
+      reads: readsFrom({
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+        tracker: readOk({ state: "in-progress", blocking: false }),
+      }),
     });
     try {
       await scenario.invoke(["dispatch", "GH-301", "--json"]);
@@ -439,7 +450,12 @@ describe("TC-DIVREC-011 a failed attempt append leaves a standing open divergenc
       ]);
       expect(summary.exit).toBe(0);
       const summaryData = summary.envelope?.data as
-        | { readonly divergences?: { readonly unresolved?: number; readonly unresolvedIds?: readonly string[] } }
+        | {
+            readonly divergences?: {
+              readonly unresolved?: number;
+              readonly unresolvedIds?: readonly string[];
+            };
+          }
         | undefined;
       expect(summaryData?.divergences?.unresolvedIds).toContain(orphan?.divergenceId);
 

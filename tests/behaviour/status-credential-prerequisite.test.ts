@@ -13,14 +13,11 @@ import {
   type AdmissionHarnessOptions,
 } from "../fixtures/dispatch/admission";
 
-const statusOf = (observed: {
-  readonly envelope?: { readonly data?: unknown };
-}): StatusDigest => observed.envelope?.data as StatusDigest;
+const statusOf = (observed: { readonly envelope?: { readonly data?: unknown } }): StatusDigest =>
+  observed.envelope?.data as StatusDigest;
 
 const sectionsWithPrerequisite = (digest: StatusDigest): readonly StatusSection[] =>
-  digest.sections.filter(
-    (section) => section.evidence.credentialPrerequisite !== undefined,
-  );
+  digest.sections.filter((section) => section.evidence.credentialPrerequisite !== undefined);
 
 const sectionsWithCredentialReason = (digest: StatusDigest): readonly StatusSection[] =>
   digest.sections.filter((section) => section.evidence.reasons.includes("credential-unavailable"));
@@ -51,9 +48,11 @@ describe("TC-STATCRED-001 affected sections carry credentialPrerequisite", () =>
         sourceKey: "GITHUB_TOKEN",
       });
       for (const entry of section.evidence.sources) {
-        expect(Object.keys(entry).every((key) =>
-          ["source", "outcome", "failureCode", "failureClass"].includes(key),
-        )).toBe(true);
+        expect(
+          Object.keys(entry).every((key) =>
+            ["source", "outcome", "failureCode", "failureClass"].includes(key),
+          ),
+        ).toBe(true);
       }
       expect(section.evidence.sources.length).toBeLessThanOrEqual(6);
     }
@@ -116,9 +115,7 @@ describe("the status prerequisite is derived from the digest, not a fixed list",
   test("the helper covers every section whose reason is credential-unavailable", async () => {
     const { digest } = await runStatus({ credential: "missing" });
     const derived = sectionsWithCredentialReason(digest).map((section) => section.id);
-    expect(derived).toEqual(
-      sectionsWithPrerequisite(digest).map((section) => section.id),
-    );
+    expect(derived).toEqual(sectionsWithPrerequisite(digest).map((section) => section.id));
     expect(readableAdmissionTransport).toBeDefined();
   });
 });
