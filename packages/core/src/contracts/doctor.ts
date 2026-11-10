@@ -13,6 +13,7 @@ import type {
   ProviderConfiguration,
   ProviderParkRecord,
 } from "./provider.js";
+import type { OwnerHoldFact } from "./owner-hold.js";
 
 /** The five fixed check areas in their declared order (DM-2, Appendix A). */
 export const DOCTOR_AREAS = ["repo", "tracker", "provider", "state", "ci"] as const;
@@ -63,6 +64,7 @@ export const DOCTOR_EVIDENCE_REASONS = [
   "provider-chain-unresolved",
   "park-active",
   "park-credential-cause",
+  "owner-hold",
   "announcement-recorded",
   "store-torn",
   "store-schema-mismatch",
@@ -440,6 +442,8 @@ export type DoctorProviderFacts = {
   readonly config: DoctorProviderConfigRead;
   readonly credentials: readonly DoctorProviderCredentialPresence[];
   readonly fold: DoctorParkFoldRead;
+  /** The injected owner hold; active only annotates an otherwise-ok check. */
+  readonly ownerHold?: OwnerHoldFact;
 };
 
 /** One additive per-store fact in the state check (GH-232 F-8). */

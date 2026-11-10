@@ -63,6 +63,7 @@ const REASONS = [
   "provider-chain-unresolved",
   "park-active",
   "park-credential-cause",
+  "owner-hold",
   "announcement-recorded",
   "store-torn",
   "store-schema-mismatch",
@@ -110,10 +111,13 @@ describe("TC-DOCTOR-021 contract vocabulary and constants", () => {
     }
   });
 
-  test("the reason set is exactly the twenty-two DM-6 values in declared order", () => {
+  test("the reason set is exactly the twenty-three DM-6 values in declared order", () => {
     expect([...DOCTOR_EVIDENCE_REASONS]).toEqual([...REASONS]);
-    expect(DOCTOR_EVIDENCE_REASONS).toHaveLength(22);
-    expect(new Set(DOCTOR_EVIDENCE_REASONS).size).toBe(22);
+    expect(DOCTOR_EVIDENCE_REASONS).toHaveLength(23);
+    expect(new Set(DOCTOR_EVIDENCE_REASONS).size).toBe(23);
+    // The single annotation reason sits immediately after park-credential-cause.
+    const position = DOCTOR_EVIDENCE_REASONS.indexOf("owner-hold");
+    expect(DOCTOR_EVIDENCE_REASONS[position - 1]).toBe("park-credential-cause");
     const text = DOCTOR_EVIDENCE_REASONS.join(",");
     expect(text).not.toContain('"chain-not-declared"');
     expect(text).not.toContain('"chain-unresolved"');

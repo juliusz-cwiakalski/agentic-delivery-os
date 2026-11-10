@@ -62,6 +62,22 @@ describe("TC-DOCTOR-027 golden outputs", () => {
     expect(text).toContain("summary: doctor check failures (1/5)");
   });
 
+  test("the held machine and human goldens match byte-for-byte", async () => {
+    const world = {
+      provider: {
+        ownerHold: {
+          active: true as const,
+          source: "marker" as const,
+          reason: "peak-hour cost pause",
+        },
+      },
+    };
+    const json = await runDoctorCli(["doctor", "--json"], world);
+    expect(json.stdout).toBe(golden("owner-hold.json"));
+    const human = await runDoctorCli(["doctor"], world);
+    expect(human.stdout + human.stderr).toBe(golden("owner-hold-human.txt"));
+  });
+
   test("a changed fact breaks byte equality (the golden is live)", async () => {
     const run = await runDoctorCli(["doctor", "--json"], {
       checkout: { branch: "feat/GH-224/other-branch" },

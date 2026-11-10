@@ -33,6 +33,14 @@ export type MatrixCase = {
   readonly expected: MatrixExpectation;
 };
 
+const OWNER_HOLD = {
+  active: true,
+  source: "marker",
+  reason: "peak-hour cost pause",
+} as const;
+
+const OWNER_HOLD_NO_REASON = { active: true, source: "env" } as const;
+
 export const MATRIX_CASES: readonly MatrixCase[] = [
   {
     id: "repo-ok",
@@ -158,6 +166,26 @@ export const MATRIX_CASES: readonly MatrixCase[] = [
     expected: { verdict: "ok", reasons: ["observed"] },
   },
   {
+    id: "provider-ok-owner-hold",
+    area: "provider",
+    world: { provider: { ownerHold: OWNER_HOLD } },
+    expected: {
+      verdict: "ok",
+      reasons: ["observed", "owner-hold"],
+      detailIncludes: "owner hold active (marker): peak-hour cost pause",
+    },
+  },
+  {
+    id: "provider-ok-owner-hold-no-reason",
+    area: "provider",
+    world: { provider: { ownerHold: OWNER_HOLD_NO_REASON } },
+    expected: {
+      verdict: "ok",
+      reasons: ["observed", "owner-hold"],
+      detailIncludes: "owner hold active (env)",
+    },
+  },
+  {
     id: "provider-empty-fold",
     area: "provider",
     world: { provider: { fold: FOLD_OK } },
@@ -274,6 +302,49 @@ export const MATRIX_CASES: readonly MatrixCase[] = [
       verdict: "fail",
       reasons: ["credential-unavailable"],
       detailIncludes: "provider-a",
+    },
+  },
+  {
+    id: "provider-credential-unavailable-with-hold",
+    area: "provider",
+    world: {
+      provider: {
+        credentials: [
+          { providerName: "provider-a", sourceKey: "EXAMPLE_PRODUCT_PROVIDER_A_TOKEN", ok: false },
+          ...PROVIDER_CREDENTIALS_OK.slice(1),
+        ],
+        ownerHold: OWNER_HOLD,
+      },
+    },
+    expected: {
+      verdict: "fail",
+      reasons: ["credential-unavailable"],
+      detailIncludes: "provider-a",
+    },
+  },
+  {
+    id: "provider-near-bound-owner-hold",
+    area: "provider",
+    world: {
+      provider: {
+        fold: {
+          ok: true,
+          parks: [
+            parkRecord({
+              subjectName: `provider-${"x".repeat(140)}`,
+              cause: "quota-exhausted",
+              conditions: [],
+            }),
+          ],
+          announcements: [],
+        },
+        ownerHold: OWNER_HOLD,
+      },
+    },
+    expected: {
+      verdict: "ok",
+      reasons: ["observed", "park-active", "owner-hold"],
+      detailIncludes: "owner hold active (marker): peak-hour cost pause",
     },
   },
   {

@@ -235,3 +235,6 @@ notes:
   - text: "Plan phase 2 complete (commit fff2cb1011ab0357cf745f9bf5fe782ca38b832c): global queue gate, claim/fenced refusal, park-recovery skip, dispatch summary carriage, one owner-hold lane/blocking token, and exact two-way closed-set equality. Verification: queue-hold-schedule/dispatch/park-resume/payload + queue-lease/park/schedule + queue-scheduling-contract/queue-ready + error-table-sync 205 pass; content/port inventories pass; ambient-globals clean; forbidden-literals 27 pass; full pnpm typecheck clean."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 3 complete (commit cbcbd8383ad32e2d39ab1aef59d404dfb759e465): additive providers.evidence.ownerHold with human suffix, CLI/MCP parity, the owner-hold-active corpus case, and the new MCP status parity golden. Scope note: packages/mcp/src/commands/status.ts was edited (2-line optional reader) because the MCP status tool runtime type lives there and the plan scope listed only mcp/serve.ts; reported as the sole scope deviation. Verification: status-owner-hold + status-corpus 16 pass; mcp-status-parity 11 pass; status-contract/status-digest/status-output 48 pass; full pnpm typecheck clean; ambient-globals clean; forbidden-literals 27 pass; no existing status or MCP golden changed."
+    type: info
+    date: 2026-11-10
