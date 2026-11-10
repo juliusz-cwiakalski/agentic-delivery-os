@@ -522,3 +522,24 @@ notes:
       suite; no product code changed, no push, no PR action.
     type: warning
     date: "2026-11-10"
+  - text: >-
+      Rebase onto origin/main-tools (fe5f8023, GH-279 credential preflight)
+      forced a second decision-record renumber. main-tools now claims BOTH
+      TDR-0019 (dispatch admission credential preflight) and TDR-0020 (dispatch
+      divergence recording and resolution), so this change's record moves
+      TDR-0019 -> TDR-0021 and keeps its content unchanged. The rename covers
+      doc/decisions/TDR-0021-additive-optional-harness-environment-marker.md,
+      the doc/decisions/00-index.md row (now a union: TDR-0019, TDR-0020,
+      TDR-0021 with no duplicate ids), the change folder (plan, spec, test plan,
+      pm-notes, code-review, readiness and readiness-review evidence), and the
+      affected system specs (feature-adapter-ports, feature-config-layer,
+      feature-dispatch-engine, feature-harness-adapters). Every TDR-0019
+      citation that remains belongs to the GH-279 record and is left intact.
+      Earlier notes in this ledger that name TDR-0019 describe the superseded
+      first renumber and are kept as recorded history. Merge remediation also
+      supplied PATH to the GH-279 admission fixture (tests/fixtures/dispatch/
+      admission.ts): the repaired default allowlist makes PATH a required
+      harness environment entry, so the provisioned-credential spawn leg refused
+      before any spawn until the fixture matched the new default.
+    type: info
+    date: "2026-11-10"

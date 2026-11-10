@@ -237,6 +237,7 @@ export const createAdmissionHarness = (options: AdmissionHarnessOptions = {}): A
   const program = createProductionComposer({
     environment: {
       HOME: home,
+      PATH: "/synthetic/bin:/synthetic/usr/bin",
       HARNESS_MODEL: "synthetic/model-large",
       HARNESS_SMALL_MODEL: "synthetic/model-small",
       ...(options.environment ?? {}),
