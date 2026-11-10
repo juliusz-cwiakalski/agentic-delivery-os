@@ -565,7 +565,9 @@ describe("GH-280 held bookkeeping", () => {
     const harness = createQueueEdgeHarness("held-bookkeeping", {
       overrides: { readOwnerHold: () => hold },
     });
-    expect((await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"])).exitCode).toBe(0);
+    expect(
+      (await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"])).exitCode,
+    ).toBe(0);
     expect((await harness.run(["queue", "prioritize", "GH-320", "9", "--json"])).exitCode).toBe(0);
     expect((await harness.run(["queue", "dep", "GH-320", "GH-321", "--json"])).exitCode).toBe(0);
     expect((await harness.run(["queue", "release", "GH-320", "--json"])).exitCode).toBe(0);

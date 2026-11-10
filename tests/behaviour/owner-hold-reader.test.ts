@@ -6,20 +6,17 @@
  * bytes, no second read, and no marker when no store directory resolves.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   OWNER_HOLD_MAX_MARKER_BYTES,
   type OwnerHoldMarkerOutcome,
 } from "../../packages/core/src/contracts/index";
-import { resolveOwnerHoldFact, sanitizeOwnerHoldReason } from "../../packages/core/src/domain/index";
+import {
+  resolveOwnerHoldFact,
+  sanitizeOwnerHoldReason,
+} from "../../packages/core/src/domain/index";
 import {
   nodeOwnerHoldMarkerFileSystem,
   ownerHoldMarkerPath,
@@ -109,8 +106,8 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
   });
 
   test("an injected EACCES read and an injected stat failure both fail closed", () => {
-    const path = ownerHoldMarkerPath("/home/operator/.ados-state");
-    expect(path).toBe("/home/operator/.ados-state/owner-hold");
+    const path = ownerHoldMarkerPath("/srv/operator/.ados-state");
+    expect(path).toBe("/srv/operator/.ados-state/owner-hold");
     const unreadableFs = (
       overrides: Partial<OwnerHoldMarkerFileSystem>,
     ): OwnerHoldMarkerFileSystem => ({
@@ -122,11 +119,11 @@ describe("TC-HOLDFACT-006 unreadable, non-regular, and stat-failing markers fail
       ...overrides,
     });
     expect(
-      readOwnerHoldMarker({ storeDirectory: "/home/operator/.ados-state" }, unreadableFs({})),
+      readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, unreadableFs({})),
     ).toEqual({ state: "unreadable" });
     expect(
       readOwnerHoldMarker(
-        { storeDirectory: "/home/operator/.ados-state" },
+        { storeDirectory: "/srv/operator/.ados-state" },
         unreadableFs({
           isFile: () => {
             throw Object.assign(new Error("io"), { code: "EIO" });
@@ -177,14 +174,14 @@ describe("TC-HOLDFACT-008 one existence check and one 4 096-byte read", () => {
         return "recording reason";
       },
     };
-    const marker = readOwnerHoldMarker({ storeDirectory: "/home/operator/.ados-state" }, fs);
+    const marker = readOwnerHoldMarker({ storeDirectory: "/srv/operator/.ados-state" }, fs);
     expect(marker).toEqual({ state: "present", content: "recording reason" });
     expect(calls).toEqual(["exists", "isFile", "read"]);
     expect(limits).toEqual([OWNER_HOLD_MAX_MARKER_BYTES]);
     expect(paths).toEqual([
-      "/home/operator/.ados-state/owner-hold",
-      "/home/operator/.ados-state/owner-hold",
-      "/home/operator/.ados-state/owner-hold",
+      "/srv/operator/.ados-state/owner-hold",
+      "/srv/operator/.ados-state/owner-hold",
+      "/srv/operator/.ados-state/owner-hold",
     ]);
   });
 

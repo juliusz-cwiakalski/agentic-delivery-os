@@ -71,8 +71,13 @@ describe("GH-280 queue watch carries the hold", () => {
       }) as never;
     const run = await runProgram(["queue", "list", "--watch", "--json"], heldProgram());
     expect(run.exitCode).toBe(0);
-    const frame = JSON.parse(run.stdout.split("\n").find((line) => line.startsWith('{"kind":"event"')) ?? "{}") as {
-      readonly data: { readonly ownerHold?: { readonly source: string }; readonly nextActions?: unknown[] };
+    const frame = JSON.parse(
+      run.stdout.split("\n").find((line) => line.startsWith('{"kind":"event"')) ?? "{}",
+    ) as {
+      readonly data: {
+        readonly ownerHold?: { readonly source: string };
+        readonly nextActions?: unknown[];
+      };
     };
     expect(frame.data.ownerHold?.source).toBe("marker");
     expect(frame.data.nextActions).toEqual([]);

@@ -133,7 +133,8 @@ export const createDoctorCommandDefinition = (
   };
 
   const collectProvider = async (nowMs: number): Promise<DoctorCheckResult> => {
-    const config = await readProviderConfig();    const credentials: DoctorProviderCredentialPresence[] = [];
+    const config = await readProviderConfig();
+    const credentials: DoctorProviderCredentialPresence[] = [];
     if (config.ok) {
       const { entries, credentials: declaredCredentials } = config.config;
       for (const entry of Object.values(entries).sort((left, right) =>

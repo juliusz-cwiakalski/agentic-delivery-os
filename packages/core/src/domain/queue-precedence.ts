@@ -426,9 +426,7 @@ const latestParks = (facts: QueueSchedulerFacts): readonly QueueParkProjection[]
  * Project the active fact for the read payloads. The inactive arm projects
  * nothing, so an inactive run is byte-identical to the delivered payload.
  */
-const ownerHoldProjection = (
-  facts: QueueSchedulerFacts,
-): ScheduleOwnerHold | undefined => {
+const ownerHoldProjection = (facts: QueueSchedulerFacts): ScheduleOwnerHold | undefined => {
   const hold = facts.ownerHold;
   if (hold === undefined || !hold.active) return undefined;
   return hold.reason === undefined

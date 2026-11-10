@@ -16,7 +16,7 @@ import {
   sanitizeOwnerHoldReason,
 } from "../../packages/core/src/domain/index";
 
-const STORE = "/home/operator/.ados-state";
+const STORE = "/srv/operator/.ados-state";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -41,7 +41,8 @@ const resolve = (
   environmentPrefix: string,
   marker: OwnerHoldMarkerOutcome = { state: "absent" },
   storeDirectory: string | undefined = STORE,
-): OwnerHoldFact => resolveOwnerHoldFact({ environment, environmentPrefix, marker, storeDirectory });
+): OwnerHoldFact =>
+  resolveOwnerHoldFact({ environment, environmentPrefix, marker, storeDirectory });
 
 describe("TC-HOLDFACT-001 environment source with a derived variable name", () => {
   test("a synthetic prefix derives the key and activates with the value as reason", () => {
@@ -172,7 +173,7 @@ describe("TC-HOLDFACT-007 the reason is one control-free line of at most 160 cha
     expect(reason).toBe("red line tab spaces");
     expect(reason?.length ?? 0).toBeLessThanOrEqual(OWNER_HOLD_MAX_REASON_CHARS);
     expect(reason).not.toContain("\u001b");
-    expect(reason).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/u);
+    expect(reason).not.toMatch(new RegExp("[\\u0000-\\u001f\\u007f-\\u009f]", "u"));
   });
 
   test("the 160 bound truncates with no ellipsis and preserves shorter values", () => {
@@ -210,9 +211,7 @@ describe("TC-HOLDFACT-009 resolution reads no credential, writes no state, calls
 
 describe("TC-HOLDFACT-010 no resolvable home directory leaves only the environment source", () => {
   test("an absent store directory is inactive for an absent source and active for a set source", () => {
-    const withoutHome = (
-      environment: Environment,
-    ): ReturnType<typeof resolveOwnerHoldFact> =>
+    const withoutHome = (environment: Environment): ReturnType<typeof resolveOwnerHoldFact> =>
       resolveOwnerHoldFact({
         environment,
         environmentPrefix: "ACME",

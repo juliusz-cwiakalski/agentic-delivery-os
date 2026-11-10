@@ -2059,6 +2059,68 @@ None. The five planning questions were resolved by the binding PM decisions D7�
 
 ## 10. Test Execution Log
 
+## 10. Test Execution Log
+
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
-| — | — | Not executed | Populated during delivery and quality gates; record the command, exit code, and a one-line result for each row. |
+| TC-HOLDFACT-001 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-002 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-003 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-004 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-005 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-006 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-007 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-008 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-009 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-010 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDFACT-011 | 2026-11-10 | PASS | bun test tests/behaviour/owner-hold-fact.test.ts tests/behaviour/owner-hold-reader.test.ts — fact/reader suite 27/27 |
+| TC-HOLDHOOK-001 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-002 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-003 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-004 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-005 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-006 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-007 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-008 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDHOOK-009 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh — hook suite 13/13 |
+| TC-HOLDREG-001 | 2026-11-10 | PASS | bash scripts/.tests/test-install.sh — install 55/55 |
+| TC-HOLDREG-002 | 2026-11-10 | PASS | bash scripts/.tests/test-uninstall.sh — uninstall 30/30 |
+| TC-HOLDREG-003 | 2026-11-10 | PASS | bash scripts/.tests/test-hook-owner-hold-example.sh && shellcheck — 13/13; shellcheck 0 |
+| TC-HOLDREG-004 | 2026-11-10 | PASS | bun test tests/structure/provider-surface.test.ts — 6/6; wrappers byte-unchanged |
+| TC-HOLDQUEUE-001 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-schedule.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-002 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-claim.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-003 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-claim.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-004 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-dispatch.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-005 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-daemon-watch.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-006 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-daemon-watch.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-007 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-park-resume.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-008 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-park-resume.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-009 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-payload.test.ts tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-010 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-claim.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-011 | 2026-11-10 | PASS | bun test tests/structure/queue-scheduling-contract.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-012 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-park-resume.test.ts — behaviour/structure suite green |
+| TC-HOLDQUEUE-013 | 2026-11-10 | PASS | bun test tests/behaviour/queue-hold-claim.test.ts — behaviour/structure suite green |
+| TC-HOLDSTATUS-001 | 2026-11-10 | PASS | bun test tests/behaviour/status-owner-hold.test.ts — digest/parity green |
+| TC-HOLDSTATUS-002 | 2026-11-10 | PASS | bun test tests/behaviour/status-owner-hold.test.ts — digest/parity green |
+| TC-HOLDSTATUS-003 | 2026-11-10 | PASS | bun test tests/behaviour/status-owner-hold.test.ts — digest/parity green |
+| TC-HOLDSTATUS-004 | 2026-11-10 | PASS | bun test tests/behaviour/mcp-status-parity.test.ts — digest/parity green |
+| TC-HOLDSTATUS-005 | 2026-11-10 | PASS | bun test tests/structure/status-contract.test.ts tests/golden/status-digest.test.ts — digest/parity green |
+| TC-HOLDDOCTOR-001 | 2026-11-10 | PASS | bun test tests/behaviour/doctor-owner-hold.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-002 | 2026-11-10 | PASS | bun test tests/behaviour/doctor-owner-hold.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-003 | 2026-11-10 | PASS | bun test tests/behaviour/doctor-owner-hold.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-004 | 2026-11-10 | PASS | bun test tests/behaviour/doctor-owner-hold.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-005 | 2026-11-10 | PASS | bun test tests/golden/doctor-output.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-006 | 2026-11-10 | PASS | bun test tests/structure/doctor-contract.test.ts — doctor suite green |
+| TC-HOLDDOCTOR-007 | 2026-11-10 | PASS | bun test tests/behaviour/doctor-owner-hold.test.ts — doctor suite green |
+| TC-HOLDDOCS-001 | 2026-11-10 | PASS | bun test tests/checks/owner-hold-doc.test.ts — 10/10 doc checks; guard no drift |
+| TC-HOLDDOCS-002 | 2026-11-10 | PASS | bun test tests/checks/owner-hold-doc.test.ts — 10/10 doc checks; guard no drift |
+| TC-HOLDDOCS-003 | 2026-11-10 | PASS | bun test tests/checks/owner-hold-doc.test.ts — 10/10 doc checks; guard no drift |
+| TC-HOLDDOCS-004 | 2026-11-10 | PASS | bash scripts/.tests/test-doc-distribution.sh — 10/10 doc checks; guard no drift |
+| TC-HOLDEDGE-001 | 2026-11-10 | PASS | bun test tests/structure/owner-hold-composition.test.ts — 5/5 composition pin |
+| TC-HOLDEDGE-002 | 2026-11-10 | PASS | bun test tests/behaviour/mcp-status-parity.test.ts — 11/11 parity |
+| TC-HOLDNEG-001 | 2026-11-10 | PASS | bun test tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts — identity count unchanged; hint synced |
+| TC-HOLDNEG-002 | 2026-11-10 | PASS | bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/status-contract.test.ts tests/structure/doctor-contract.test.ts — closed sets unchanged except the two declared tokens |
+| TC-HOLDNEG-003 | 2026-11-10 | PASS | bun run scripts/checks/ambient-globals.ts && bun test tests/structure/owner-hold-composition.test.ts — 173 files clean; core ambient-free |
+| TC-HOLDE2E-001 | 2026-11-10 | NOT EXECUTED | manual, disposable HOME at ./tmp/tmpdir/e2e-gh280 (PR-scoped) — Residual; procedure recorded in the change record and PR |
+
+Aggregate: `pnpm check` exit 0 (7127 pass, 4 skip, 0 fail, 7131 tests, 879 files); `bash scripts/run-bash-suites.sh` 26/26 suites; `pnpm exec delivery-os plan validate GH-280` verdict=valid; `pnpm build` and `delivery-os --version` 0.0.0; `git diff --check` clean.

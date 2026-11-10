@@ -13,8 +13,7 @@ import {
 } from "../../packages/core/src/app/index";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 
-const SUMMARY =
-  "reason=owner-hold; owner hold active (marker): peak-hour cost pause";
+const SUMMARY = "reason=owner-hold; owner hold active (marker): peak-hour cost pause";
 
 describe("TC-HOLDQUEUE-004 a held dispatch is a classified user-validation refusal", () => {
   test("the claim seam refuses with the existing identity and the bounded summary", async () => {

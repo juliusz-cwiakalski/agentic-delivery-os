@@ -5,10 +5,7 @@
  * unreadable store keeps the delivered state failure at exit 2.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  claimQueueLease,
-  declareQueueEntry,
-} from "../../packages/core/src/app/index";
+import { claimQueueLease, declareQueueEntry } from "../../packages/core/src/app/index";
 import type { OwnerHoldFact } from "../../packages/core/src/contracts/index";
 import {
   createQueueEdgeHarness,
@@ -142,13 +139,7 @@ describe("TC-HOLDQUEUE-010 bookkeeping still works while held; claim does not", 
     const harness = heldHarness("claim-hold-bookkeeping");
     const added = await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"]);
     expect(added.exitCode).toBe(0);
-    const prioritized = await harness.run([
-      "queue",
-      "prioritize",
-      "GH-320",
-      "9",
-      "--json",
-    ]);
+    const prioritized = await harness.run(["queue", "prioritize", "GH-320", "9", "--json"]);
     expect(prioritized.exitCode).toBe(0);
     const dep = await harness.run(["queue", "dep", "GH-320", "GH-321", "--json"]);
     expect(dep.exitCode).toBe(0);

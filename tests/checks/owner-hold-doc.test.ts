@@ -129,7 +129,11 @@ describe("TC-HOLDDOCS-003 the feature specs and command pages are reconciled", (
       "new command, new flag",
     ]);
     const status = read("doc/planning/oss-tooling/milestones/m1/commands/status.md");
-    expectAll(status, ["providers.evidence.ownerHold", "section, state, evidence source", "exit changes"]);
+    expectAll(status, [
+      "providers.evidence.ownerHold",
+      "section, state, evidence source",
+      "exit changes",
+    ]);
     const doctor = read("doc/planning/oss-tooling/milestones/m1/commands/doctor.md");
     expectAll(doctor, ["owner-hold", "never cut mid-word", "fix hint", "exit change"]);
   });

@@ -5,14 +5,8 @@
  * its delivered shape without a field addition.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  toQueuePlanData,
-  toQueueReadData,
-} from "../../packages/cli/src/commands/queue";
-import {
-  type OwnerHoldFact,
-  type QueueReadyFacts,
-} from "../../packages/core/src/contracts/index";
+import { toQueuePlanData, toQueueReadData } from "../../packages/cli/src/commands/queue";
+import { type OwnerHoldFact, type QueueReadyFacts } from "../../packages/core/src/contracts/index";
 import { evaluateQueueReady } from "../../packages/core/src/domain/queue-ready";
 import { computeQueueSchedule, foldLanes } from "../../packages/core/src/domain/index";
 import { canonicalFacts } from "../fixtures/queue-ready/golden/canonical";

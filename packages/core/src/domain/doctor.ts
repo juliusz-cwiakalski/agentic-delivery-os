@@ -69,7 +69,10 @@ const collapseWhitespace = (value: string): string => value.replace(/\s+/g, " ")
  * value would exceed the detail bound, the EXISTING detail yields and the whole
  * hold segment is kept; it is never cut mid-word or dropped (GH-280 D18).
  */
-const appendOwnerHoldDetail = (baseDetail: string, hold: Extract<OwnerHoldFact, { active: true }>): string => {
+const appendOwnerHoldDetail = (
+  baseDetail: string,
+  hold: Extract<OwnerHoldFact, { active: true }>,
+): string => {
   const reason =
     hold.reason === undefined ? undefined : clampText(hold.reason, OWNER_HOLD_MAX_REASON_CHARS);
   const segment =

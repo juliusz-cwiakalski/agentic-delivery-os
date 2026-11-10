@@ -712,7 +712,9 @@ describe("GH-280 owner hold claim precondition", () => {
       detail: "owner hold active (marker): peak-hour cost pause",
     });
     // A no-hold control still claims past the pre-fence gate.
-    expect(evaluateClaimPreconditions(makeFacts([{ ref: "GH-350", repository: REPO_A }]), "GH-350")).toEqual({
+    expect(
+      evaluateClaimPreconditions(makeFacts([{ ref: "GH-350", repository: REPO_A }]), "GH-350"),
+    ).toEqual({
       ok: true,
     });
   });

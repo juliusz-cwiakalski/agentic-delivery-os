@@ -457,58 +457,58 @@ export const statusRuntime = (
 ): StatusCommandRuntime => {
   const ownerHold = facts.providers.ownerHold;
   return {
-  readRepository: () => {
-    recorder.calls.push("readRepository");
-    return facts.repository;
-  },
-  readWorkItems: async () => {
-    recorder.calls.push("readWorkItems");
-    return facts.tracker;
-  },
-  readDeliveryRequests: async () => {
-    recorder.calls.push("readDeliveryRequests");
-    return facts.changes;
-  },
-  readPipelineRuns: async () => {
-    recorder.calls.push("readPipelineRuns");
-    return facts.ci;
-  },
-  readProviderConfig: () => {
-    recorder.calls.push("readProviderConfig");
-    return facts.providers.config;
-  },
-  readProviderParks: () => {
-    recorder.calls.push("readProviderParks");
-    return facts.providers.parks;
-  },
-  ...(ownerHold === undefined
-    ? {}
-    : {
-        readOwnerHold: () => {
-          recorder.calls.push("readOwnerHold");
-          return ownerHold;
-        },
-      }),
-  readLocalContext: () => {
-    recorder.calls.push("readLocalContext");
-    return facts.localContext;
-  },
-  readBlockers: () => {
-    recorder.calls.push("readBlockers");
-    return facts.blockers;
-  },
-  readSpend: () => {
-    recorder.calls.push("readSpend");
-    return facts.spend;
-  },
-  nowIso: () => {
-    recorder.calls.push("nowIso");
-    return facts.nowIso;
-  },
-  nowMs: () => {
-    recorder.calls.push("nowMs");
-    return facts.nowMs;
-  },
+    readRepository: () => {
+      recorder.calls.push("readRepository");
+      return facts.repository;
+    },
+    readWorkItems: async () => {
+      recorder.calls.push("readWorkItems");
+      return facts.tracker;
+    },
+    readDeliveryRequests: async () => {
+      recorder.calls.push("readDeliveryRequests");
+      return facts.changes;
+    },
+    readPipelineRuns: async () => {
+      recorder.calls.push("readPipelineRuns");
+      return facts.ci;
+    },
+    readProviderConfig: () => {
+      recorder.calls.push("readProviderConfig");
+      return facts.providers.config;
+    },
+    readProviderParks: () => {
+      recorder.calls.push("readProviderParks");
+      return facts.providers.parks;
+    },
+    ...(ownerHold === undefined
+      ? {}
+      : {
+          readOwnerHold: () => {
+            recorder.calls.push("readOwnerHold");
+            return ownerHold;
+          },
+        }),
+    readLocalContext: () => {
+      recorder.calls.push("readLocalContext");
+      return facts.localContext;
+    },
+    readBlockers: () => {
+      recorder.calls.push("readBlockers");
+      return facts.blockers;
+    },
+    readSpend: () => {
+      recorder.calls.push("readSpend");
+      return facts.spend;
+    },
+    nowIso: () => {
+      recorder.calls.push("nowIso");
+      return facts.nowIso;
+    },
+    nowMs: () => {
+      recorder.calls.push("nowMs");
+      return facts.nowMs;
+    },
   };
 };
 

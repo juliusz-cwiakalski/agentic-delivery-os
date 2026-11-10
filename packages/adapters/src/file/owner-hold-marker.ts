@@ -33,9 +33,7 @@ export type OwnerHoldMarkerReadInput = {
 const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
 
 /** The fixed marker path; `undefined` when no production store directory exists. */
-export const ownerHoldMarkerPath = (
-  storeDirectory: string | undefined,
-): string | undefined => {
+export const ownerHoldMarkerPath = (storeDirectory: string | undefined): string | undefined => {
   if (storeDirectory === undefined || storeDirectory.length === 0) return undefined;
   return `${trimTrailingSeparators(storeDirectory)}/${OWNER_HOLD_MARKER_NAME}`;
 };

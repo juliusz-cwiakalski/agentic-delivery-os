@@ -57,10 +57,8 @@ describe("TC-HOLDSTATUS-001 the evidence member is additive", () => {
     const control = aggregateStatus(baseFacts());
     const controlSection = control.sections.find((entry) => entry.id === "providers");
     if (controlSection === undefined) throw new Error("control providers section is missing");
-    const {
-      ownerHold: _ignored,
-      ...evidenceWithoutHold
-    } = section.evidence as typeof section.evidence & { ownerHold?: unknown };
+    const { ownerHold: _ignored, ...evidenceWithoutHold } =
+      section.evidence as typeof section.evidence & { ownerHold?: unknown };
     expect(evidenceWithoutHold).toEqual(controlSection.evidence);
     expect(section.state).toBe(controlSection.state);
     expect(section.counts).toEqual(controlSection.counts);

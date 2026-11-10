@@ -5,9 +5,7 @@
     "sections": {
       "tracker": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -40,9 +38,7 @@
       },
       "changes-and-prs": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -55,9 +51,7 @@
       },
       "ci": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -70,9 +64,7 @@
       },
       "lanes-or-queue": {
         "state": "not-delivered",
-        "reasons": [
-          "engine-not-delivered"
-        ],
+        "reasons": ["engine-not-delivered"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -85,18 +77,14 @@
       },
       "providers": {
         "state": "observed",
-        "reasons": [
-          "observed"
-        ],
+        "reasons": ["observed"],
         "counts": {
           "observed": 1,
           "unknown": 0,
           "total": 1,
           "omitted": 0
         },
-        "orderedIds": [
-          "entry:primary"
-        ],
+        "orderedIds": ["entry:primary"],
         "truncated": false,
         "findings": [],
         "ownerHold": {
@@ -106,9 +94,7 @@
       },
       "parked-work": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -121,9 +107,7 @@
       },
       "ready-to-merge": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -136,9 +120,7 @@
       },
       "spend": {
         "state": "unknown",
-        "reasons": [
-          "state-unreadable"
-        ],
+        "reasons": ["state-unreadable"],
         "counts": {
           "observed": 0,
           "unknown": 0,
@@ -151,9 +133,7 @@
       },
       "typed-questions": {
         "state": "observed",
-        "reasons": [
-          "observed-empty"
-        ],
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,

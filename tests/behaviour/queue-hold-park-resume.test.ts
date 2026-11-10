@@ -19,7 +19,11 @@ import {
   type OwnerHoldFact,
   type QueueParkRecord,
 } from "../../packages/core/src/contracts/index";
-import { computeQueueSchedule, createParkRecord, foldLanes } from "../../packages/core/src/domain/index";
+import {
+  computeQueueSchedule,
+  createParkRecord,
+  foldLanes,
+} from "../../packages/core/src/domain/index";
 import { activeLease, makeFacts, REPO_A } from "../fixtures/queue/schedule/harness";
 import { makeAuditStore } from "../fixtures/state/harness";
 
@@ -167,9 +171,9 @@ describe("TC-HOLDQUEUE-008 removal resumes preserved state with no duplicate ses
     const entries = records.filter((record) => record.kind === "queue.entry");
     expect(entries).toHaveLength(1);
     const parks = records.filter((record) => record.kind === "queue.park");
-    expect(parks.map((record) => (record.payload as { recoveryState?: string }).recoveryState)).toEqual(
-      ["parked", "clear-observed", "recovered"],
-    );
+    expect(
+      parks.map((record) => (record.payload as { recoveryState?: string }).recoveryState),
+    ).toEqual(["parked", "clear-observed", "recovered"]);
   });
 });
 

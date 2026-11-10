@@ -46,9 +46,7 @@ describe("TC-HOLDDOCTOR-001 healthy provider + hold keeps ok and appends reason 
     const held = providerCheckOf(holdWorld());
     expect(held.verdict).toBe("ok");
     expect(held.evidence.reasons).toEqual([...control.evidence.reasons, "owner-hold"]);
-    expect(held.detail).toBe(
-      `${control.detail}; owner hold active (marker): peak-hour cost pause`,
-    );
+    expect(held.detail).toBe(`${control.detail}; owner hold active (marker): peak-hour cost pause`);
     expect(held.fixHint).toBeUndefined();
     expect(held.evidence.sources).toEqual(control.evidence.sources);
     expect(held.detail.length).toBeLessThanOrEqual(DOCTOR_MAX_DETAIL_CHARS);
@@ -138,7 +136,9 @@ describe("TC-HOLDDOCTOR-004 held versus no-hold differs only by the additive rea
     expect(heldProvider.evidence.sources).toEqual(controlProvider.evidence.sources);
     expect(heldProvider.evidence.failureCode).toBe(controlProvider.evidence.failureCode);
     expect(heldProvider.fixHint).toBe(controlProvider.fixHint);
-    expect(heldProvider.detail).toBe(`${controlProvider.detail}; owner hold active (marker): peak-hour cost pause`);
+    expect(heldProvider.detail).toBe(
+      `${controlProvider.detail}; owner hold active (marker): peak-hour cost pause`,
+    );
   });
 });
 

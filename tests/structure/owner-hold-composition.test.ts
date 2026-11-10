@@ -8,10 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  createQueueCommandRuntime,
-  type QueueComposition,
-} from "../../packages/cli/src/edge";
+import { createQueueCommandRuntime, type QueueComposition } from "../../packages/cli/src/edge";
 import { declareQueueEntry } from "../../packages/core/src/app/index";
 import type { OwnerHoldFact } from "../../packages/core/src/contracts/index";
 import { resolveOwnerHoldFact } from "../../packages/core/src/domain/index";
@@ -133,7 +130,14 @@ describe("TC-HOLDNEG-003 core stays ambient-free and brand-literal-free", () => 
       "packages/core/src/domain/owner-hold.ts",
     ]) {
       const source = readFileSync(join(ROOT, relative), "utf8");
-      for (const banned of ["process.env", "Bun.env", "Deno.env", "node:fs", "fetch(", "Date.now"]) {
+      for (const banned of [
+        "process.env",
+        "Bun.env",
+        "Deno.env",
+        "node:fs",
+        "fetch(",
+        "Date.now",
+      ]) {
         expect(source.includes(banned), `${relative}: ${banned}`).toBe(false);
       }
     }

@@ -4061,9 +4061,7 @@ const recoverParksForMutation = (
     nowMs: composition.nowMs(),
     context,
     fenceToken: composition.newFenceToken(),
-    ...(composition.readOwnerHold === undefined
-      ? {}
-      : { ownerHold: composition.readOwnerHold() }),
+    ...(composition.readOwnerHold === undefined ? {} : { ownerHold: composition.readOwnerHold() }),
   });
   if (recovered.ok) return undefined;
   return mapQueueFailure(recovered);

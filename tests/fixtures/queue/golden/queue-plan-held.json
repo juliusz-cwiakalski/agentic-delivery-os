@@ -28,9 +28,7 @@
     "weights": [],
     "parks": [],
     "findings": [],
-    "degraded": [
-      "daemon-unreachable"
-    ],
+    "degraded": ["daemon-unreachable"],
     "truncated": false,
     "ownerHold": {
       "source": "marker",

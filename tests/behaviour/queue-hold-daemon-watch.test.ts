@@ -5,10 +5,7 @@
  * streams the hold with empty actions and claims nothing.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createQueueCommandRuntime,
-  type QueueComposition,
-} from "../../packages/cli/src/edge";
+import { createQueueCommandRuntime, type QueueComposition } from "../../packages/cli/src/edge";
 import { readDaemonLanes, runSupervisionCycle } from "../../packages/core/src/app/index";
 import type { OwnerHoldFact } from "../../packages/core/src/contracts/index";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
@@ -24,7 +21,11 @@ const HOLD: OwnerHoldFact = {
 const executor = {
   availability: () => ({ available: true as const }),
   start: async () => undefined,
-  observe: async () => ({ observable: true as const, progress: "progressing" as const, done: false }),
+  observe: async () => ({
+    observable: true as const,
+    progress: "progressing" as const,
+    done: false,
+  }),
   collect: async () => ({ ok: true as const }),
   resume: async () => true,
 };
@@ -36,7 +37,9 @@ const factsFor = (ownerHold?: OwnerHoldFact) => ({
 
 const supervision = async (ownerHold: OwnerHoldFact | undefined) => {
   const schedule = computeQueueSchedule(factsFor(ownerHold));
-  const fixture = makeAuditStore(`owner-hold-supervision-${ownerHold === undefined ? "control" : "held"}`);
+  const fixture = makeAuditStore(
+    `owner-hold-supervision-${ownerHold === undefined ? "control" : "held"}`,
+  );
   let derived = false;
   let claims = 0;
   const result = await runSupervisionCycle({

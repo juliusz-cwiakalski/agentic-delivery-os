@@ -247,3 +247,6 @@ notes:
   - text: "Plan phase 6 complete (commit 10237e25295e1cf6a8ab1a346450ffd1ffcb6fb9): the inactive owner-hold example hook with the two-setting contract, fixed marker path, unbounded MAX driver, one bounded reason line, install/uninstall registration, and the hermetic shell suite. Verification: test-hook-owner-hold-example 13/13 pass; shellcheck zero findings on both new scripts; test-install 55/55; test-uninstall 30/30; full run-bash-suites 26/26 suites; provider-surface 6 pass; ceo-loop.sh and test-hook-regression.sh byte-unchanged."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 7 complete (commit a5c0280f35b7cac1587f585a6f2e967ac315a47d): the two-semantics guide, MAX-floor extension, reconciled feature specs and command pages with explicit denials, the doc conformance test, and the five-package minor changeset. DoR-2 minor (b) resolved by declaring the TC-HOLDFACT-009 split in the plan invariant. Verification: owner-hold-doc 10 pass; reference-page/help/doc-conformance/forbidden-literals/privacy-release 51 pass; doc-distribution guard passes (82 in-scope docs, no drift); changeset has five minor packages and excludes testkit."
+    type: info
+    date: 2026-11-10
