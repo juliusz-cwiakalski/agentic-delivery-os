@@ -158,3 +158,43 @@ describe("GH-178 HTTP 404 is definitive absence, not a payload failure", () => {
     if (!result.ok) expect(result.code).toBe("provider.payload.invalid");
   });
 });
+describe("GH-279 a malformed 2xx carries the received status", () => {
+  test("the real client and normalizer stamp httpStatus 200 on a decode failure", async () => {
+    const transport = createFixtureTransport([
+      { url: issueUrl, body: { number: ISSUE_NUMBER }, status: 200 },
+    ]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const guard = installThrowingFetchGuard();
+    try {
+      const result = await client.readWorkItem(ISSUE_NUMBER);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("provider.payload.invalid");
+        expect((result as { readonly httpStatus?: number }).httpStatus).toBe(200);
+      }
+      expect(transport.requests).toHaveLength(1);
+      expect(guard.calls).toEqual([]);
+    } finally {
+      guard.restore();
+    }
+  });
+
+  test("a thrown transport stays status-absent", async () => {
+    const client = createGitHubClient({
+      instance,
+      credentials,
+      repository,
+      transport: {
+        send: async () => {
+          throw new TypeError("synthetic transport failure");
+        },
+      },
+    });
+    const result = await client.readWorkItem(ISSUE_NUMBER);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("provider.payload.invalid");
+      expect((result as { readonly httpStatus?: number }).httpStatus).toBeUndefined();
+    }
+  });
+});

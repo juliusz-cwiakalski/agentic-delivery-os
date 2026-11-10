@@ -179,7 +179,9 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
     };
   };
 
-  const get = async (path: string): Promise<ProviderReadResult<unknown>> => {
+  const get = async (
+    path: string,
+  ): Promise<ProviderReadResult<{ readonly status: number; readonly body: unknown }>> => {
     const headers = authorizedHeaders();
     if (!headers.ok) return headers;
     const request: ProviderRequest = {
@@ -196,7 +198,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       if (response.status < 200 || response.status >= 300) {
         return providerPayloadFailure(`GitHub returned HTTP ${response.status}`, response.status);
       }
-      return { ok: true, value: response.body };
+      return { ok: true, value: { status: response.status, body: response.body } };
     } catch (error: unknown) {
       const name = error instanceof Error ? error.name : "unknown error";
       return providerPayloadFailure(`GitHub request failed (${name})`);
@@ -309,35 +311,35 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         `${repositoryPath}/issues/${encodeURIComponent(String(issueNumber))}`,
       );
       if (!response.ok) return response;
-      return normalizeGithubIssue(response.value, context);
+      return normalizeGithubIssue(response.value.body, context, response.value.status);
     },
     readDeliveryRequest: async (pullNumber) => {
       const response = await get(
         `${repositoryPath}/pulls/${encodeURIComponent(String(pullNumber))}`,
       );
       if (!response.ok) return response;
-      return normalizePullRequest(response.value, context);
+      return normalizePullRequest(response.value.body, context);
     },
     readPipelineRun: async (commitSha, limit = STATUS_SOURCE_PIPELINE_LIMIT) => {
       const response = await get(
         `${repositoryPath}/commits/${encodeURIComponent(commitSha)}/check-runs?per_page=${encodeURIComponent(String(limit))}`,
       );
       if (!response.ok) return response;
-      return normalizeCheckRuns(response.value, context, commitSha);
+      return normalizeCheckRuns(response.value.body, context, commitSha);
     },
     listWorkItems: async (limit) => {
       const response = await get(
         `${repositoryPath}/issues?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
       if (!response.ok) return response;
-      return normalizeGithubIssueList(response.value, context);
+      return normalizeGithubIssueList(response.value.body, context);
     },
     listDeliveryRequests: async (limit) => {
       const response = await get(
         `${repositoryPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
       if (!response.ok) return response;
-      return normalizeGithubPullList(response.value, context);
+      return normalizeGithubPullList(response.value.body, context);
     },
     readWorkItemObservation: (entityId) => readObservation(entityId),
     findMergedDeliveryRequest: async (input) => {
@@ -349,7 +351,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           ? { observation: "invalid", detail: response.detail }
           : { observation: "unavailable" };
       }
-      const normalized = normalizeMergedDeliveryRequestList(response.value, context);
+      const normalized = normalizeMergedDeliveryRequestList(response.value.body, context);
       if (!normalized.ok) {
         return {
           observation: "invalid",

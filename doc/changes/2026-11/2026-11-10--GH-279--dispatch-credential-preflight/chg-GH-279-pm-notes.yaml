@@ -137,3 +137,12 @@ notes:
   - text: "D8 (PM-decided): the five DoR-3 advisories are accepted as non-blocking
       and are resolved at review time; they do not reopen the READY verdict."
     date: 2026-11-10
+  - text: "Plan phase 2 (declare dispatch preflight port and refusals) complete
+      in commit 1c344ca: optional preflight port on DispatchPorts, distinct from
+      admission and invoked before claimLease/spawn; the result error-kind union
+      admits provider and config additively; the name-level v1 contract inventory
+      is unchanged. Tests: bun test tests/structure/dispatch-preflight-contract.test.ts
+      (5 pass); port-contract-inventory, error-table-sync, delivery-result-contract,
+      dispatch-token-home, and content-inventory (129 pass); pnpm build green."
+    type: info
+    date: 2026-11-10
