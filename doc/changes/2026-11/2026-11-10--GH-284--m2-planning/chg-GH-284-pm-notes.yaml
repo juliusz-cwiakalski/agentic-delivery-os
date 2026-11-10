@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-10T22:11:52.242Z }
   review_fix: { started: null, completed: 2026-11-10T23:14:45.991Z }
   quality_gates: { started: null, completed: 2026-11-10T23:29:00.468Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-10T23:30:01.411Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Intake state: GH-284 open with label `change` only, zero comments; branch
@@ -704,5 +704,29 @@ notes:
       exports-parity all green. The delta between the two runs is exactly the
       one environmental test. These supersede the P6-era results for phase-9
       evidence."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DOD CHECK (phase 10): PASS. Phases: nine recorded complete before this
+      check (clarify_scope, specification, test_planning, delivery_planning,
+      dor_check, delivery, system_spec_update, review_fix, quality_gates) with
+      this check closing the tenth. Plan phases: all seven declared phases carry
+      a pm-notes entry naming the phase id, its commit(s) and its gate results
+      (P1 1842e181+110fb160, P2 57120f4e, P3 5e00d4f2, P4 39bb4afb, P5 13171be1,
+      P6 166df7ff+93117da5+ae62e63e, P7 c2594adb+b75f0c30+d57ba77f). Plan
+      validates valid/readyForDevelopment with 37 TCs mapped exactly once across
+      P1-P7. Acceptance criteria: 37/37 evidenced — the reviewer's iteration-3
+      PASS executed all 38 procedures at HEAD (including P02 61/61, P35 79/79,
+      P28 31+3=34, P26 all checks, P11 reachability 0, P17/P18 table and
+      retention) and the phase-9 battery is green. Current-truth docs:
+      @doc-syncer reconciled three files and verified the no-ops;
+      readiness-iter-6 re-affirmed all ten facets with the closure READY.
+      Deliverables present: the M2 pack's seven top-level documents plus six
+      command pages, the backlog's seven stories and two amendments, the status
+      snapshot, the fourteen reconciled M1 headers plus the entrypoint
+      correction, and the M2 index row. Known non-blocking residue is recorded
+      in the review-iter-3 residue list and carried to the human gate; nothing
+      on that list blocks an AC. Change capsule note: this change predates the
+      events.jsonl/candidates capsule wiring in this checkout, so the phase
+      registry plus pm-notes carry the event trail."
     type: "info"
     date: "2026-11-11"
