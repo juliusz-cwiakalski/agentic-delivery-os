@@ -54,6 +54,24 @@ describe("TC-DOCTOR-007 tracker check", () => {
     expect(run.counts.tracker).toBe(0);
   });
 
+  test("a derived-prefix reference names the full key, never the bare suffix", async () => {
+    const run = await runDoctorCli(["doctor", "--json"], {
+      tracker: {
+        credential: {
+          ok: false,
+          failureCode: "config.credential.missing",
+          envVar: "EXAMPLE_PRODUCT_TRACKER_TOKEN",
+        },
+      },
+    });
+    const check = tracker(run.report);
+    expect(check.verdict).toBe("fail");
+    expect(reasons(check)).toContain("credential-unavailable");
+    expect(String(check.fixHint)).toContain("EXAMPLE_PRODUCT_TRACKER_TOKEN");
+    expect(String(check.fixHint)).not.toMatch(/\bTRACKER_TOKEN\b/);
+    expect(run.stdout).not.toContain("planted");
+  });
+
   test("structured 401 and 403 are fail/credential-rejected from the status only", async () => {
     for (const status of [401, 403]) {
       const run = await runDoctorCli(["doctor", "--json"], {

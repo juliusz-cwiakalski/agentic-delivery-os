@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PROMPT_REQUIRED_COMMANDS, runEntrypoint } from "../../packages/cli/src/entrypoint";
 
 const ROOT = process.cwd();
 const manifest = JSON.parse(readFileSync(join(ROOT, "packages/cli/package.json"), "utf8")) as {
@@ -61,5 +62,39 @@ describe("TC-ENTRY-010 non-installed bin", () => {
     for (const seed of ["ados", "ADOS_", "~/.ados"]) {
       expect("delivery-os").not.toContain(seed);
     }
+  });
+
+  test("secrets registered by the composed program reach the redaction chokepoint", async () => {
+    const canary = "planted-entrypoint-secret";
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const exit = await runEntrypoint(["status", "--json"], {
+      streams: {
+        stdout: { write: (text) => stdout.push(text) },
+        stderr: { write: (text) => stderr.push(text) },
+      },
+      environment: { GITHUB_TOKEN: canary },
+      configuredWorkingName: "delivery-os",
+      clock: { now: () => 1 },
+      newRunId: () => "run-entrypoint-secret",
+      credentialReferences: [
+        { referenceName: "github-read", sourceKey: { style: "literal", name: "GITHUB_TOKEN" } },
+      ],
+      composeProgram: () => ({
+        commands: Object.fromEntries(
+          PROMPT_REQUIRED_COMMANDS.map((command) => [
+            command,
+            {
+              handler: () =>
+                command === "status" ? { data: { echoed: canary } } : { data: {} },
+            },
+          ]),
+        ),
+      }),
+    });
+    expect(exit).toBe(0);
+    expect(stdout.join("")).not.toContain(canary);
+    expect(stdout.join("")).toContain("[redacted]");
+    expect(stderr.join("")).not.toContain(canary);
   });
 });

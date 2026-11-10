@@ -141,7 +141,7 @@ export const readableAdmissionTransport = (input: {
 }): AdmissionTransport => ({
   send: async (request) => {
     input.requests?.push(request.url);
-    if (request.url.includes("/issues/")) {
+    if (request.url.includes("/issues")) {
       return { status: 200, body: input.issue ?? ADMISSION_OPEN_ISSUE };
     }
     if (request.url.includes("/pulls?")) {

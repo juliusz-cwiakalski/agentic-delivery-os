@@ -83,6 +83,7 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type CoordinatorProgressState,
   type CredentialPort,
+  type CredentialReference,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -156,16 +157,27 @@ const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code:
   code: PROVIDER_FAILURE,
 });
 
+/** The declared truth-read credential reference (names only, never material). */
+const githubReadReference: CredentialReference = {
+  referenceName: "github-read",
+  sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
+};
+
+/**
+ * The declared credential references whose resolved values the runtime edge
+ * registers for serialization redaction.
+ */
+export const DECLARED_CREDENTIAL_REFERENCES: readonly CredentialReference[] = [
+  githubReadReference,
+];
+
 const githubInstance = (): ExternalSystemInstance => ({
   instanceName: "vcs-github",
   systemKind: "vcs",
   baseUrl: "https://api.github.com",
   authMethod: {
     mechanism: "credential-reference",
-    reference: {
-      referenceName: "github-read",
-      sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
-    },
+    reference: githubReadReference,
   },
 });
 
@@ -293,6 +305,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
     const instance = facts.githubInstance ?? githubInstance();
+    const truthReadReference =
+      instance.authMethod.mechanism === "credential-reference"
+        ? instance.authMethod.reference
+        : undefined;
+    const truthReadCredential =
+      truthReadReference === undefined
+        ? undefined
+        : {
+            referenceName: truthReadReference.referenceName,
+            sourceKey: resolveCredentialSourceKey(truthReadReference, brand),
+          };
     const transport = facts.githubTransport ?? nativeTransport;
     const gitBranches = createGitBranchSeam({
       cwd,
@@ -349,6 +372,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       localContext: { path: pmContextPath, fs: localFs },
       clock: { nowMs, nowIso },
       github: { instance },
+      ...(truthReadCredential === undefined
+        ? {}
+        : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
       ok: true as const,
@@ -924,11 +950,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const single = text.replace(/[\r\n]+/gu, " ").trim();
       return single.length <= 240 ? single : `${single.slice(0, 239)}…`;
     };
-
-    const truthReadReference =
-      instance.authMethod.mechanism === "credential-reference"
-        ? instance.authMethod.reference
-        : undefined;
 
     const preflightRefusal = (error: DispatchPreflightError): DispatchPreflightResult => ({
       ok: false,

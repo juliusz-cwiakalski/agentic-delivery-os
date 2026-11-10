@@ -431,6 +431,15 @@ export type StatusEvidence = {
     readonly failureClass?: string;
   }[];
   readonly reasons: readonly StatusEvidenceReason[];
+  /**
+   * The credential prerequisite of a credential-dependent section whose source
+   * failed. Identifier-only names; absent on a readable section and on a section
+   * unavailable for another reason. A sibling of `sources[]`, never an entry.
+   */
+  readonly credentialPrerequisite?: {
+    readonly referenceName: string;
+    readonly sourceKey: string;
+  };
 };
 
 /** The repository binding derived from `origin` (DM-11). */
@@ -594,6 +603,11 @@ export type StatusFacts = {
   readonly blockers: StatusBlockersRead;
   /** The spend read projection fed by the same fold the command consumes. */
   readonly spend: SpendDigestSection;
+  /** The declared truth-read reference, present only when admitted. */
+  readonly credentialPrerequisite?: {
+    readonly referenceName: string;
+    readonly sourceKey: string;
+  };
 };
 
 /** The active-change item shape inside the changes section. */

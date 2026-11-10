@@ -9,10 +9,12 @@
  * invocation outside that set. It never invokes `process.exit`.
  */
 
+import { resolveCredentialSourceKey } from "@delivery-os/adapters/credentials";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type BrandIdentity,
   type CommandResult,
+  type CredentialReference,
   FALLBACK_INTERNAL_CODE,
 } from "@delivery-os/core/contracts";
 import {
@@ -59,6 +61,8 @@ export type EntrypointOptions = {
   readonly clock?: CliDependencies["clock"];
   readonly newRunId?: () => string;
   readonly secrets?: readonly string[];
+  /** Declared credential references whose resolved values are redacted. */
+  readonly credentialReferences?: readonly CredentialReference[];
   readonly mode?: CliMode;
   readonly audit?: CliDependencies["audit"];
 };
@@ -161,6 +165,24 @@ const versionText = (entrypoint: Entrypoint): string =>
 const isUnusableCommand = (program: CommandProgram, command: string): boolean =>
   program.commands[command] === undefined;
 
+/**
+ * Register the declared truth-read keys for redaction from the injected
+ * environment and the declared references only. An absent or empty value is not
+ * registered; no ambient environment read is added.
+ */
+const entrypointSecrets = (
+  options: EntrypointOptions,
+  brand: BrandIdentity,
+): readonly string[] => {
+  const values = new Set<string>(options.secrets ?? []);
+  for (const reference of options.credentialReferences ?? []) {
+    const key = resolveCredentialSourceKey(reference, brand);
+    const value = options.environment[key];
+    if (typeof value === "string" && value.length > 0) values.add(value);
+  }
+  return [...values];
+};
+
 const dependenciesFor = (
   options: EntrypointOptions,
   entrypoint: Entrypoint,
@@ -169,7 +191,7 @@ const dependenciesFor = (
   brand: entrypoint.brand,
   clock: options.clock ?? { now: () => Date.now() },
   newRunId: options.newRunId ?? (() => globalThis.crypto.randomUUID()),
-  secrets: options.secrets ?? [],
+  secrets: entrypointSecrets(options, entrypoint.brand),
   program,
   ...(options.mode === undefined ? {} : { mode: options.mode }),
   ...(options.audit === undefined ? {} : { audit: options.audit }),

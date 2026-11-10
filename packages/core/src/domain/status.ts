@@ -1819,6 +1819,19 @@ const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] 
 
 /** Aggregate the injected facts into the bounded `delivery.status.v1` digest. */
 export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
+  // The prerequisite is a section-level sibling of `sources[]`, attached only to
+  // a section whose credential-dependent source failed. The derived section set
+  // comes from the digest itself (the closed `credential-unavailable` reason),
+  // never a hardcoded list.
+  const attachCredentialPrerequisite = (section: StatusSection): StatusSection => {
+    const prerequisite = facts.credentialPrerequisite;
+    if (prerequisite === undefined) return section;
+    if (!section.evidence.reasons.includes("credential-unavailable")) return section;
+    return {
+      ...section,
+      evidence: { ...section.evidence, credentialPrerequisite: prerequisite },
+    };
+  };
   const sections: readonly StatusSection[] = [
     trackerSection(facts),
     changesSection(facts),
@@ -1829,7 +1842,7 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     readyToMergeSection(facts),
     spendSection(facts.spend),
     typedQuestionsSection(facts),
-  ];
+  ].map(attachCredentialPrerequisite);
   return {
     schemaVersion: STATUS_SCHEMA_VERSION,
     generatedAt: facts.nowIso,

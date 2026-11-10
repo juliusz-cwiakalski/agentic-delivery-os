@@ -1466,6 +1466,8 @@ export type StatusComposition = {
   readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
   readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
   readonly github: { readonly instance: ExternalSystemInstance };
+  /** The declared truth-read reference names, when the composition is admitted. */
+  readonly credentialReference?: { readonly referenceName: string; readonly sourceKey: string };
 };
 
 /**
@@ -2425,6 +2427,7 @@ export const createStatusCommandRuntime = (
         : { ok: false, reason: "state-unreadable", failureCode: read.error.code };
     },
     readSpend: (): SpendDigestSection => spendDigestFor(options),
+    readCredentialPrerequisite: () => (admitted ? options.credentialReference : undefined),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };

@@ -173,3 +173,15 @@ notes:
       local-only composition (9 pass); gate/evidence/summary suites (30 pass)."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 6 (record delivered-evidence divergences honestly) complete
+      in commit 64ea12c: a completed classifier outcome with a readable
+      progressed/completed ledger and an unreadable truth appends at most one
+      open delivered-evidence divergence per (repository, ref), divergence first,
+      then the attempt carrying divergenceRef; a replay is skipped, a failed
+      divergence append appends the attempt once with divergence:append-failed
+      and the underlying state identity, and an orphan stays counted and
+      resolvable. Tests: delivered-evidence divergence TC-DIVREC-001..011 (14
+      pass); unevaluable/divergence/summary/floor/state-unverified/truth
+      derivation (29 pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
