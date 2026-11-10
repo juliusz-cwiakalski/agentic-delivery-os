@@ -228,6 +228,15 @@ export const readDispatchAttempts = (
     max: options.max ?? DISPATCH_MAX_ATTEMPT_RECORDS,
   });
 
+/**
+ * The app-local distinguishable not-found sentinel for a resolve target.
+ *
+ * It is not an error-table identity: the resolve surface maps it to
+ * `input.value.rejected`, while a genuine store key-set failure keeps
+ * `state.keys.missing`.
+ */
+export const DISPATCH_DIVERGENCE_NOT_FOUND = "divergence-not-found" as const;
+
 /** Append exactly one attempt record; a differing replay is refused. */
 export const appendDispatchAttempt = (
   store: StateStorePort,
@@ -321,7 +330,7 @@ export const resolveDispatchDivergence = (
     (record) => record.divergenceId === input.divergenceId,
   );
   if (folded === undefined) {
-    return { ok: false, code: "state.keys.missing", path: input.divergenceId };
+    return { ok: false, code: DISPATCH_DIVERGENCE_NOT_FOUND, path: input.divergenceId };
   }
   if (folded.state === "resolved") return { ok: true, appended: false, record: folded };
   const note = input.note.slice(0, DISPATCH_MAX_NOTE_CHARS);

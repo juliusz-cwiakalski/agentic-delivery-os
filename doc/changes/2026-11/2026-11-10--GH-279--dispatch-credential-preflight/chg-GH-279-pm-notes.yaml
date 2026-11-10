@@ -154,3 +154,14 @@ notes:
       github-closeout (30 pass); adapters tsc build green."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 4 (preflight tracker credential before spawn) complete in
+      commit b4a0ffc: the production boundary supplies the optional preflight,
+      classifies the one bounded work-item read from httpStatus (401/403 auth,
+      5xx/other/status-absent outage, malformed 2xx payload.invalid, 404 input),
+      and the trusted-refusal marker admits only config.credential.missing prose.
+      The two delivered composition suites are inverted to zero-spawn refusal.
+      Tests: admission preflight, read mapping, diagnostics, composition,
+      error-classification, error-table-sync, help inventory, content inventory
+      (190 pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
