@@ -8,9 +8,7 @@
  * negative at exit 1 and appends nothing that changes authority.
  */
 import {
-  DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
-  type DispatchDivergenceRecord,
   type DispatchHandoverRecord,
   type DispatchSummaryData,
   type StateStorePort,
@@ -26,11 +24,12 @@ import {
   toSummaryData,
 } from "../domain/dispatch-gate.js";
 import {
-  appendDispatchDivergence,
   appendDispatchHandover,
+  DISPATCH_DIVERGENCE_NOT_FOUND,
   readDispatchAttempts,
   readDispatchDivergences,
   readDispatchHandover,
+  resolveDispatchDivergence,
   writeDispatchAuthority,
 } from "./dispatch-ledger.js";
 
@@ -97,19 +96,25 @@ export const resolveDispatchDivergenceEvidence = (input: {
   readonly nowIso: string;
 }):
   | { readonly ok: true; readonly data: Record<string, unknown> }
-  | { readonly ok: false; readonly error: { readonly kind: string; readonly code: string } } => {
-  const resolved = resolveAppend(input);
+  | {
+      readonly ok: false;
+      readonly error: {
+        readonly kind: "input" | "state" | "dispatch";
+        readonly code: string;
+      };
+    } => {
+  // Local evidence only: the ledger helper clamps the note before building the
+  // record, so an over-long note can never become a write failure.
+  const resolved = resolveDispatchDivergence(input.store, input.fenceToken, {
+    divergenceId: input.divergenceId,
+    note: input.note,
+    principal: input.principal,
+    recordedAt: input.nowIso,
+  });
   if (!resolved.ok) {
-    return {
-      ok: false,
-      error: {
-        kind: "dispatch",
-        code:
-          resolved.code === "state.keys.missing"
-            ? "input.value.rejected"
-            : "dispatch.state-unverified",
-      },
-    };
+    return resolved.code === DISPATCH_DIVERGENCE_NOT_FOUND
+      ? { ok: false, error: { kind: "input", code: "input.value.rejected" } }
+      : { ok: false, error: { kind: "state", code: resolved.code } };
   }
   return {
     ok: true,
@@ -121,38 +126,6 @@ export const resolveDispatchDivergenceEvidence = (input: {
       principal: resolved.record.principal,
     },
   };
-};
-
-const resolveAppend = (input: {
-  readonly store: StateStorePort;
-  readonly fenceToken: string;
-  readonly divergenceId: string;
-  readonly note: string;
-  readonly principal: string;
-  readonly nowIso: string;
-}) => {
-  const read = readDispatchDivergences(input.store);
-  if (!read.ok) return { ok: false as const, code: read.code };
-  const latest = [...read.records]
-    .reverse()
-    .find((record) => record.divergenceId === input.divergenceId);
-  if (latest === undefined) return { ok: false as const, code: "state.keys.missing" };
-  if (latest.state === "resolved") return { ok: true as const, appended: false, record: latest };
-  const resolved: DispatchDivergenceRecord = {
-    ...latest,
-    state: "resolved",
-    note: input.note,
-    principal: input.principal,
-    resolvedAt: input.nowIso,
-    recordedAt: input.nowIso,
-  };
-  const appended = appendDispatchDivergence(input.store, input.fenceToken, {
-    ...resolved,
-    schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-  });
-  return appended.ok
-    ? { ok: true as const, appended: appended.appended, record: appended.record }
-    : { ok: false as const, code: appended.code };
 };
 
 /** The handover/reversal result. */

@@ -3,14 +3,23 @@
  * credential/401-403/other-non-2xx/transport/unattempted, no prose parsing.
  */
 import { describe, expect, test } from "bun:test";
-import { DOCTOR_TRACKER_READ_LIMIT } from "../../packages/core/src/contracts/index";
+import { createDoctorCommandRuntime, type DoctorComposition } from "../../packages/cli/src/edge";
+import {
+  DOCTOR_TRACKER_READ_LIMIT,
+  type ExternalSystemInstance,
+} from "../../packages/core/src/contracts/index";
+import { createDispatchState } from "../fixtures/dispatch/harness";
 import {
   CREDENTIAL_MISSING,
+  FIXED_NOW,
+  FIXED_NOW_MS,
+  providerConfigOk,
   READ_FAILED,
   READ_OK,
   runDoctorCli,
   UNRESOLVED_BINDING,
 } from "../fixtures/doctor/harness";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const tracker = (report: Record<string, unknown> | undefined): Record<string, unknown> => {
   const data = report as { readonly checks: readonly Record<string, unknown>[] };
@@ -42,6 +51,69 @@ describe("TC-DOCTOR-007 tracker check", () => {
     expect(String(check.detail)).toContain("empty page");
   });
 
+  test("TC-DOCTCRED-002 a derived-prefix reference through the runtime edge names prefix+suffix", async () => {
+    const dispatchState = createDispatchState("gh279-doctor-prefixed");
+    try {
+      const instance: ExternalSystemInstance = {
+        instanceName: "vcs-github",
+        systemKind: "vcs",
+        baseUrl: "https://api.github.com",
+        authMethod: {
+          mechanism: "credential-reference",
+          reference: {
+            referenceName: "github-read",
+            sourceKey: { style: "environment-prefixed", suffix: "TRACKER_TOKEN" },
+          },
+        },
+      };
+      const composition: DoctorComposition = {
+        store: dispatchState.store,
+        credentials: {
+          resolve: () => ({
+            ok: false,
+            code: "config.credential.missing",
+            domainKind: "config",
+            category: "user",
+            retryable: false,
+            consequence: "not_landed",
+            projectionClass: "user-validation",
+          }),
+        },
+        transport: {
+          send: async () => {
+            throw new TypeError("the credential refusal performs no read");
+          },
+        },
+        repository: {
+          cwd: "/doctor-prefix-fixture",
+          io: { exists: () => false, isFile: () => false, readText: () => "" },
+        },
+        clock: { nowMs: () => FIXED_NOW_MS, nowIso: () => FIXED_NOW },
+        github: { instance },
+        environmentPrefix: SYNTHETIC_BRAND.environmentPrefix,
+        readWorkTree: () => ({ readable: true, clean: true }),
+      };
+      const credential = createDoctorCommandRuntime(
+        composition,
+        providerConfigOk,
+      ).resolveTrackerCredential();
+      // The derivation happens at the edge, not in the injected world.
+      expect(credential).toEqual({
+        ok: false,
+        failureCode: "config.credential.missing",
+        envVar: "EXAMPLE_PRODUCT_TRACKER_TOKEN",
+      });
+      const run = await runDoctorCli(["doctor", "--json"], { tracker: { credential } });
+      const check = tracker(run.report);
+      expect(check.verdict).toBe("fail");
+      expect(reasons(check)).toContain("credential-unavailable");
+      expect(String(check.fixHint)).toContain("EXAMPLE_PRODUCT_TRACKER_TOKEN");
+      expect(String(check.fixHint)).not.toMatch(/\bTRACKER_TOKEN\b/);
+    } finally {
+      dispatchState.dispose();
+    }
+  });
+
   test("an unresolvable credential is fail naming only the declared environment variable", async () => {
     const run = await runDoctorCli(["doctor", "--json"], {
       tracker: { credential: CREDENTIAL_MISSING },
@@ -52,6 +124,24 @@ describe("TC-DOCTOR-007 tracker check", () => {
     expect(reasons(check)).toContain("credential-unavailable");
     expect(String(check.fixHint)).toContain("EXAMPLE_PRODUCT_GITHUB_TOKEN");
     expect(run.counts.tracker).toBe(0);
+  });
+
+  test("a derived-prefix reference names the full key, never the bare suffix", async () => {
+    const run = await runDoctorCli(["doctor", "--json"], {
+      tracker: {
+        credential: {
+          ok: false,
+          failureCode: "config.credential.missing",
+          envVar: "EXAMPLE_PRODUCT_TRACKER_TOKEN",
+        },
+      },
+    });
+    const check = tracker(run.report);
+    expect(check.verdict).toBe("fail");
+    expect(reasons(check)).toContain("credential-unavailable");
+    expect(String(check.fixHint)).toContain("EXAMPLE_PRODUCT_TRACKER_TOKEN");
+    expect(String(check.fixHint)).not.toMatch(/\bTRACKER_TOKEN\b/);
+    expect(run.stdout).not.toContain("planted");
   });
 
   test("structured 401 and 403 are fail/credential-rejected from the status only", async () => {

@@ -1,0 +1,329 @@
+change_id: GH-279
+title: "Preflight truth-read credential before spawn; typed credential and
+  divergence diagnostics"
+delivery_mode: autonomous
+branch: fix/GH-279/dispatch-credential-preflight
+base_branch: main-tools
+phases:
+  clarify_scope: { started: null, completed: 2026-11-10T06:02:20.331Z }
+  specification: { started: null, completed: 2026-11-10T07:46:15.410Z }
+  test_planning: { started: null, completed: 2026-11-10T07:46:17.691Z }
+  delivery_planning: { started: null, completed: 2026-11-10T07:46:19.943Z }
+  dor_check: { started: null, completed: 2026-11-10T07:52:22.108Z }
+  delivery: { started: null, completed: 2026-11-10T08:44:33.977Z }
+  system_spec_update: { started: null, completed: 2026-11-10T08:57:15.453Z }
+  review_fix: { started: null, completed: 2026-11-10T10:57:00.459Z }
+  quality_gates: { started: null, completed: 2026-11-10T11:06:39.746Z }
+  dod_check: { started: null, completed: 2026-11-10T11:07:57.663Z }
+  pr_creation: { started: null, completed: 2026-11-10T11:11:05.653Z }
+decisions:
+  - text: "D1 (PM-decided): the credential preflight is a pre-session refusal. It
+      runs before the queue-lease claim and before spawn/resume; it appends no
+      attempt record and opens no session, branch, or divergence. Identity
+      config.credential.missing (user, not_landed, exit 1) with a summary naming
+      the resolved source key and the reference; today's post-spawn exit 2 is
+      the defect being replaced."
+    date: 2026-11-10
+  - text: "D2 (PM-decided): dispatch dual-run resolve must work from local evidence
+      only. It consults no credential port and no network. The observed
+      'dispatch.state-unverified' is a diagnostic-collapse defect: every
+      non-state.keys.missing store failure is relabelled as the truth token.
+      Resolve must preserve the underlying typed state code (for example
+      state.lock.busy, state.store.torn, state.write.failed) and remediation. A
+      separate defect fix, not a credential fix."
+    date: 2026-11-10
+  - text: "D3 (PM-decided): a dispatch whose session completed but whose truth reads
+      are unreadable appends exactly one open divergence so it is resolvable
+      through dispatch dual-run resolve and counts as unresolved until resolved.
+      Applies to the production truth-read credential path from issue GH-279."
+    date: 2026-11-10
+  - text: "D4 (PM-decided): gh-keyring bridge is a documented provisioning path,
+      never implicit ambient inheritance. Document the exact key GITHUB_TOKEN
+      and the explicit export bridge from an authenticated gh session;
+      deny-by-default stays intact."
+    date: 2026-11-10
+  - text: "D5 (PM-decided): doctor stays out of the shipped prompt-required command
+      set in this change (its inventory is pinned). The operator-facing
+      prerequisite surface is the dispatch preflight plus status section
+      evidence naming the resolved key; doctor's existing
+      tracker.credential-unavailable check keeps parity through tests. Shipping
+      doctor is deferred to a separate decision."
+    date: 2026-11-10
+  - text: "D6 (PM-decided, test-plan OQ-1): when the delivered-evidence divergence
+      append fails, never fabricate a divergenceRef and never dangle one. The
+      attempt is still appended exactly once with a bounded
+      divergence:append-failed evidence ref; the returned envelope carries the
+      underlying state identity in data.error and names it in lastMessage; exit
+      stays 2. No silent success."
+    date: 2026-11-10
+  - text: "D7 (PM-decided, test-plan OQ-2..4): the provisioning guide path is
+      doc/guides/tracker-credential-provisioning.md; diagnostics assertions are
+      behavior-level (key/reference substrings present, canary value absent),
+      not prose goldens; the status credentialPrerequisite field is asserted on
+      sections whose credential-dependent source failed and absent on observing
+      sections, discovered from the digest rather than hardcoded."
+    date: 2026-11-10
+  - text: "D9 (PM-decided, review F-1 accepted): the delivery commit subjects are
+      primitive-generated template fallbacks because a numeric plan phase cannot
+      be passed to the commit primitive; they are conventional, specific to the
+      staged area, and within the 72-char cap. History rewriting is out of
+      policy (commits go only through the commit primitive). Accept the template
+      subjects and do not reword the branch history; the plan phase-9 escape
+      clause records this."
+    date: 2026-11-10
+  - text: "D10 (PM-decided, review F-8/F-9 acceptance boundary): F-8 (entrypoint
+      importing the pure credential key resolver) is accepted as a low-risk
+      layering advisory because the import is pure and the boundary scan is
+      green; F-9 is fixed by rendering the status credentialPrerequisite in the
+      human report when it is cheap, otherwise accepted as machine-only and
+      recorded."
+    date: 2026-11-10
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue open, label change, zero comments; no PR exists
+      for the branch; branch had zero commits, working tree clean. Fresh full
+      lifecycle."
+    type: info
+    date: 2026-11-10
+  - text: "Architecture map: truth credential is literal GITHUB_TOKEN via reference
+      github-read (packages/cli/src/production.ts:156-167, 285-286). Spawn
+      boundary is packages/core/src/app/dispatch.ts:451-464. Truth read runs
+      post-session at dispatch.ts:620. state-unverified is derived in
+      packages/core/src/domain/dispatch-result.ts:222-231."
+    type: info
+    date: 2026-11-10
+  - text: "Divergence recording currently requires comparison.outcome mismatch
+      (dispatch.ts:646-662), so an unverifiable-but-delivered dispatch opens
+      none; that is why GH-241 could not be resolved through dual-run resolve."
+    type: info
+    date: 2026-11-10
+  - text: "Live state evidence: ~/.delivery-os-state has one open divergence
+      DIV-GH-275-79416392-c1c4-48a0-997e-1f6409daa7df; dual-run summary reads it
+      (exit 0), so the resolve failure is in the local write/diagnostic path,
+      not the credential."
+    type: info
+    date: 2026-11-10
+  - text: "Retro: the first session was killed by a provider-balance failure
+      (deepseek) before any artifact existed; no rework, but it cost a restart.
+      Provider balance is now topped up."
+    type: retro
+    date: 2026-11-10
+  - text: "Scope risk: dispatch-composition tests currently assert
+      spawn-then-state-unverified; a correct preflight inverts them to zero
+      spawn. Help inventory/prompt conformance pins dispatch help entries and
+      reference-page phrases."
+    type: risk
+    date: 2026-11-10
+  - text: "Decision review: decision-critic returned REWORK twice. Iteration 1 found
+      real defects (harm framing contradicted by GH-241 evidence, identity
+      mapping to provider.payload.invalid, resolve kind discriminant collapse,
+      state.keys.missing ambiguity, per-attempt vs per-work-item divergence
+      dedupe, two-vs-four TDR-0015 assertions, no-ci read family). Iteration 2
+      found the read-path evidence (adapter collapses 401/5xx into
+      provider.payload.invalid) and un-pinned kinds. Both were fixed;
+      TDR-0019/0020 remain Proposed for the human PR gate."
+    type: retro
+    date: 2026-11-10
+  - text: "Test plan finalized: 61 TCs, all 30 ACs traced; OQ-1 append-failure
+      semantics decided (D6) and OQ-2..4 resolved (D7). (The earlier 58-TC count
+      was the first draft before the DoR reconciliation.)"
+    type: info
+    date: 2026-11-10
+  - text: "DoR iteration 1: NOT_READY (7 major: malformed-2xx wording, plan phase-1
+      verification, adapter stamping, trusted marker, envelope fields, orphan
+      divergence, decision links). Artifact phases reopened; all fixed."
+    type: info
+    date: 2026-11-10
+  - text: "DoR iteration 2: NOT_READY (critical: AC-F1-8 no TC; major: AC-F1-8
+      unsatisfiable at the composition layer, TDR-0019 union provider-only, plan
+      no-target assertion; minors: union wording, F-4.10, inventory delta).
+      AC-F1-8 removed as unreachable; union fixed to provider+config; plan
+      cleaned."
+    type: info
+    date: 2026-11-10
+  - text: "DoR iteration 3: READY at readiness/readiness-iter-3.md. Five
+      non-blocking advisories accepted (A1 inventory wording in test plan, A2
+      phase-3 TC groups, A3 F-2.4 hedge, A4 F-4.8 citation, A5 stale 58-TC note
+      now corrected). The plan is authoritative for implementation: the
+      name-level contract inventory is unchanged."
+    type: info
+    date: 2026-11-10
+  - text: "D8 (PM-decided): the five DoR-3 advisories are accepted as non-blocking
+      and are resolved at review time; they do not reopen the READY verdict."
+    date: 2026-11-10
+  - text: "Plan phase 2 (declare dispatch preflight port and refusals) complete in
+      commit 1c344ca: optional preflight port on DispatchPorts, distinct from
+      admission and invoked before claimLease/spawn; the result error-kind union
+      admits provider and config additively; the name-level v1 contract
+      inventory is unchanged. Tests: bun test
+      tests/structure/dispatch-preflight-contract.test.ts (5 pass);
+      port-contract-inventory, error-table-sync, delivery-result-contract,
+      dispatch-token-home, and content-inventory (129 pass); pnpm build green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 3 (stamp 2xx status on GitHub decode failures) complete in
+      commit 106da48: the bounded read now returns the received status and the
+      issue normalizer stamps it onto provider.payload.invalid, so a malformed
+      2xx carries httpStatus while a transport throw stays status-absent; 404
+      and other non-2xx keep their status. Tests: github-inputs, github-trap,
+      and github-closeout (30 pass); adapters tsc build green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 4 (preflight tracker credential before spawn) complete in
+      commit b4a0ffc: the production boundary supplies the optional preflight,
+      classifies the one bounded work-item read from httpStatus (401/403 auth,
+      5xx/other/status-absent outage, malformed 2xx payload.invalid, 404 input),
+      and the trusted-refusal marker admits only config.credential.missing
+      prose. The two delivered composition suites are inverted to zero-spawn
+      refusal. Tests: admission preflight, read mapping, diagnostics,
+      composition, error-classification, error-table-sync, help inventory,
+      content inventory (190 pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 5 (preserve typed identities on divergence resolve) complete
+      in commit 71cf4e1: resolve delegates to the ledger helper, clamps the note
+      before building, maps an absent id to the app-local divergence-not-found
+      sentinel -> input.value.rejected/kind input, and carries every genuine
+      store fault as kind state with its own code. Tests: resolve diagnostics
+      and local-only composition (9 pass); gate/evidence/summary suites (30
+      pass)."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 6 (record delivered-evidence divergences honestly) complete in
+      commit 64ea12c: a completed classifier outcome with a readable
+      progressed/completed ledger and an unreadable truth appends at most one
+      open delivered-evidence divergence per (repository, ref), divergence
+      first, then the attempt carrying divergenceRef; a replay is skipped, a
+      failed divergence append appends the attempt once with
+      divergence:append-failed and the underlying state identity, and an orphan
+      stays counted and resolvable. Tests: delivered-evidence divergence
+      TC-DIVREC-001..011 (14 pass);
+      unevaluable/divergence/summary/floor/state-unverified/truth derivation (29
+      pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 7 (surface tracker credential prerequisite) complete in commit
+      fe5b61f: status attaches the additive section-level credentialPrerequisite
+      {referenceName, sourceKey} only to sections whose credential-dependent
+      source failed (derived from the digest), sources[] shape/bound unchanged;
+      doctor names the derived key for literal and prefixed references; the
+      declared reference is registered for redaction at the entrypoint from
+      injected environment facts (no ambient read, no new allowlist entry).
+      Tests: status prerequisite/output, doctor tracker, cli-edge-seam,
+      entrypoint-bin, secret boundary, exports parity, contract inventory (114
+      pass); tests/types tsc green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 8 (publish guide, change record, and release note) complete in
+      commit 3fafa18: the provisioning guide declares ados_distribution
+      redistributable and carries the explicit export bridge, no-keyring/no-
+      ambient/no-fallback rule, least privilege, rotation, 404 scope check, and
+      the redaction-registration fact; the dispatch reference page documents the
+      pre-claimLease ordering, named key/reference, status-keyed mapping, 404
+      caveat, per-work-item dedupe, and resolution path; the change record and
+      minor changeset land; seven feature specs are reconciled; the glossary,
+      the dispatch test spec, the forbidden-literals registry, the e2e and queue
+      fixtures, and the content allowance are updated. Aggregate gate:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0, 6973 pass / 4 skip / 0 fail,
+      lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
+      parity all green. doc-distribution guard green; git diff --check clean."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 1: FAIL (spec compliance PASS, plan compliance FAIL).
+      F-1 commit subjects (medium) accepted under D9: primitive template
+      subjects, no history rewrite. F-2..F-10 remediated in plan phase 9. Full
+      suite at review time 6973 pass / 4 skip / 0 fail."
+    type: info
+    date: 2026-11-10
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). All ten prior
+      findings fixed or accepted; one new low doc finding F-11 (human status
+      grammar missing the trailing prerequisite suffix). F-11 reconciled in
+      doc/spec/features/feature-status-digest.md under Phase 8
+      spec-reconciliation scope. The aggregate gate run during review flaked
+      only on the unrelated tests/checks/privacy-ci-wiring.test.ts timing out at
+      ~5.2s under host load; it passes in isolation (4.4s) and the
+      change-relevant 6975 tests pass. The quality_gates phase re-runs the
+      gate."
+    type: info
+    date: 2026-11-10
+  - text: "Scope reconciliation (review F-5): the nine files changed outside the
+      original phase scopes are now declared — packages/core/src/app/index.ts in
+      Phase 5 and, in Phase 8, doc/overview/glossary.md,
+      doc/quality/test-specs/test-spec-dispatch-engine.md,
+      doc/spec/features/feature-cli-entrypoint.md,
+      doc/spec/features/feature-provider-client-seeds.md,
+      scripts/checks/forbidden-literals.registry.json,
+      tests/conformance/dispatch/dispatch-e2e.test.ts,
+      tests/fixtures/queue/production/harness.ts, and
+      tests/structure/content-inventory.test.ts. Each is a re-export, glossary,
+      spec-reconciliation, or preflight-fixture consequence; seven feature specs
+      are reconciled, not five."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 9 (apply code review iteration 1 remediation) complete in the
+      remediation commit that carries this note on
+      fix/GH-279/dispatch-credential-preflight (one commit, primitive-authored
+      subject). Dispositions: F-1 accepted per D9 (history unchanged, tree
+      unchanged); F-2 fixed (unreadableTruthReason returns only
+      tracker/artifact, ci-only yields no ref, TC-DIVREC-002 ci-only negative);
+      F-3 fixed (TC-DOCTCRED-002 drives the edge derivation for an
+      environment-prefixed reference); F-4 fixed (sentinel module-local, no
+      root/app-barrel export; the file-scoped executable allowance stays); F-5
+      fixed as a record repair (phase 5/8 scopes and the seven-spec count); F-6
+      fixed (goldens carry kind+projectionClass, assertGolden and TC-READMAP-008
+      pin kind/projection/exit); F-7 fixed as a PR-time procedure record; F-8
+      accepted per D10; F-9 fixed (human status renders requires <sourceKey>
+      (<referenceName>) on affected lines; TC-STATCRED-001); F-10 fixed (TC ids
+      in test names). Targeted suites: admission read mapping,
+      delivered-evidence divergence, doctor tracker, status prerequisite/output,
+      github inputs, cli-edge-seam, resolve diagnostics/composition, content and
+      contract inventories (127 pass). Aggregate gate: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0, 6976 pass / 4 skip / 0 fail across 862 files;
+      lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
+      parity all green."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 1 (verify decision records and amendment notes) complete with
+      no commit by design: the decision material landed earlier at ca4aa1a8;
+      delivery-os plan validate GH-279 valid; bun test
+      tests/checks/decision-record.test.ts 4 pass; the anchored grep finds
+      exactly four TDR-0015 amendment notes; TDR-0019 and TDR-0020 remain
+      Proposed."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 9 remediation commit hash is 27186b8c (subject primitive-
+      authored); targeted suites 127 pass; aggregate gate exit 0 (6976 pass / 4
+      skip / 0 fail). The phase note above is self-referential; this note
+      records the literal hash for DoD evidence."
+    type: info
+    date: 2026-11-10
+  - text: "Quality gates (phase 9) green on the final tree: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 in 503s; bun test 6976 pass / 4 skip / 0 fail across 862
+      files; lint, format, typecheck, boundaries, prompt-conformance,
+      help-guide-coverage, and exports-parity all green. No flakes on this run."
+    type: info
+    date: 2026-11-10
+  - text: "DoD check (phase 10): pm-notes exists and phases clarify_scope through
+      quality_gates are all completed in the registry; every declared plan phase
+      has a notes entry with its id and test result (phase 1 is
+      verification-only by design, phases 2-8 carry commit hashes, phase 9's
+      literal hash is 27186b8c); all 30 acceptance criteria are implemented and
+      reviewed PASS (spec_compliance PASS, plan_compliance PASS after
+      remediation); the current-truth docs are reconciled by @doc-syncer with no
+      residual gaps and F-11 is closed; the name-level contract inventory is
+      unchanged; no secrets are staged. Residuals owned outside delivery: MV-1
+      (one real credentialed dispatch) is a PR-time operator procedure recorded
+      in the change record, and the GitHub-backed gate evidence (ci-green,
+      push-parity, owner-gate, squash-preflight) is unobtainable until the PR
+      exists and a token is provisioned. DoD passes with those two records."
+    type: info
+    date: 2026-11-10
+  - text: "PR creation (phase 11):
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/282 (title
+      fix(GH-279): preflight truth-read credential before dispatch spawn; head
+      fix/GH-279/dispatch-credential-preflight -> base main-tools; open, not
+      merged). TDR-0019 and TDR-0020 remain Proposed for owner acceptance at
+      this PR. MV-1 remains a PR-time operator procedure."
+    type: info
+    date: 2026-11-10

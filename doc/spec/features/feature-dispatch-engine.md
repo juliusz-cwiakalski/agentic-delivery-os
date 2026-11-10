@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution and queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records and the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016"]
+  related_changes: ["GH-239", "GH-275", "GH-279"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -22,6 +22,7 @@ links:
     - "packages/adapters/src/repo/index.ts"
     - "packages/cli/src/commands/dispatch.ts"
     - "packages/cli/src/output/dispatch-text.ts"
+    - "packages/cli/src/production.ts"
     - "scripts/lib/dispatch-authority.sh"
 ---
 
@@ -29,13 +30,13 @@ links:
 
 ## Overview
 
-The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, claims the repository's queue lease, spawns or resumes the lifecycle session through the delivered harness session port, watches it with progress-based liveness, classifies the terminal outcome through the shared harness classifier, and derives the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Every dispatch that reaches classification appends one durable attempt record, so the engine accrues dual-run evidence beside the bash stack.
+The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, validates its input, runs the admission preflight, claims the repository's queue lease, spawns or resumes the lifecycle session through the delivered harness session port, watches it with progress-based liveness, classifies the terminal outcome through the shared harness classifier, and derives the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Every dispatch that reaches classification appends one durable attempt record, so the engine accrues dual-run evidence beside the bash stack.
 
 A repository is either `dual-run` (bash authoritative, dispatch evidence only) or `authoritative` (dispatch primary, bash fallback). Authority changes only through a recorded, reversible handover that evaluates the four-condition evidence gate. The derived per-repository authority view is a plain file the bash entry points read without invoking the typed CLI, so the fallback keeps working when the typed stack is unavailable.
 
 `dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, and attempt-record ledger serve one-shot dispatches and daemon-driven lanes.
 
-The shipped production composition wires the one-shot run path, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production daemon entry that supplies that seam is owned by the resident-daemon change.
+The shipped production composition wires the one-shot run path with its admission preflight, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production daemon entry that supplies that seam is owned by the resident-daemon change.
 
 ## Command grammar
 
@@ -48,17 +49,35 @@ The shipped production composition wires the one-shot run path, the evidence-gat
 
 A work-item reference matches `[A-Z]+-\d+`. The harness resolves from `--harness` when supplied and from the typed harness configuration otherwise; an unknown harness name is an input refusal. Grammar runs before any runtime call, and the handler returns data or a classified failure rather than choosing an exit digit.
 
-Three refusals happen before any session attempt exists: an unknown harness, rejected input, and a conflicting lease. Each emits the classified envelope at exit `1` and appends no attempt record. Every failure after harness resolution, input validation, and lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
+Four kinds of refusal happen before any session attempt exists: an unknown harness, rejected input, an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), and a conflicting lease. Each emits the classified top-level error envelope with its mapped identity and exit and appends no attempt record; the admission preflight is the only one whose exit can be `2`. Every failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
 
 ## One-shot dispatch
 
 1. **Resolve the harness.** The flag wins over configuration; the selected adapter supplies spawn, resume, observe, collect, and liveness capabilities and its declared gaps.
-2. **Claim the lease.** The scheduling engine claims the repository-exclusive lease for the reference. A live conflicting lease refuses at exit `1` without spawning.
-3. **Spawn or resume.** A fresh run spawns through the harness session port. An opencode spawn returns its handle as soon as the first identified stream line arrives, before the session completes, and a resume acquires the same way while preserving the existing session identity; a Claude Code spawn returns its handle when the bounded one-shot invocation completes. `--resume-prompt` resolves the existing lane, records the resume mode (`attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection), and continues from the phase-ledger position. Completed phases are skipped idempotently.
-4. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
-5. **Admit restarts and resumes.** Restart admission delegates to the delivered restart-budget gate with the bound from `lane.restart-budget` and the persisted restart count. At or above the bound, an attempt whose session has not completed refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, one attempt record, the delivered terminal exhaustion record, and a typed escalation; a completed harness session keeps its own classification and is never re-keyed to a restart refusal by an already-reached bound. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with token `failed`, outcome `failed`, exit `1`, and one attempt record, and unreadable token or cost facts refuse rather than admit. A stall that is still current when evidence collection resolves is routed through the same restart-admission gate: at or above the bound the attempt is the restart-budget refusal with no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent second session.
-6. **Classify and derive truth.** The shared classifier yields a harness outcome and token; truth derivation then decides the final token from branch commits, PR state and URL, ledger progress, tracker state, and CI. A success claim is never accepted on an exit code alone.
-7. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text or the machine envelope.
+2. **Run the admission preflight.** After the harness resolves and input validates, the preflight resolves the declared truth-read credential and performs one bounded work-item read. A refusal here is pre-session: no lease, spawn, resume, or record.
+3. **Claim the lease.** The scheduling engine claims the repository-exclusive lease for the reference. A live conflicting lease refuses at exit `1` without spawning.
+4. **Spawn or resume.** A fresh run spawns through the harness session port. An opencode spawn returns its handle as soon as the first identified stream line arrives, before the session completes, and a resume acquires the same way while preserving the existing session identity; a Claude Code spawn returns its handle when the bounded one-shot invocation completes. `--resume-prompt` resolves the existing lane, records the resume mode (`attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection), and continues from the phase-ledger position. Completed phases are skipped idempotently.
+5. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
+6. **Admit restarts and resumes.** Restart admission delegates to the delivered restart-budget gate with the bound from `lane.restart-budget` and the persisted restart count. At or above the bound, an attempt whose session has not completed refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, one attempt record, the delivered terminal exhaustion record, and a typed escalation; a completed harness session keeps its own classification and is never re-keyed to a restart refusal by an already-reached bound. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with token `failed`, outcome `failed`, exit `1`, and one attempt record, and unreadable token or cost facts refuse rather than admit. A stall that is still current when evidence collection resolves is routed through the same restart-admission gate: at or above the bound the attempt is the restart-budget refusal with no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent second session.
+7. **Classify and derive truth.** The shared classifier yields a harness outcome and token; truth derivation then decides the final token from branch commits, PR state and URL, ledger progress, tracker state, and CI. A success claim is never accepted on an exit code alone.
+8. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text or the machine envelope.
+
+## Admission preflight
+
+The engine exposes an optional `preflight` port, distinct from `ports.admission` (the delivered pre-spawn decision whose refusal still records an attempt pair). It runs after harness resolution and input validation and before `claimLease`, spawn, or resume, and it appends no attempt, divergence, handover, or authority record. Production composition always supplies it; a direct engine caller may omit it and keep the delivered run order.
+
+The preflight resolves the declared truth-read reference (`github-read` over the environment key `GITHUB_TOKEN`) and performs one bounded work-item read. A credential refusal is name-only: one bounded single-line summary names the fully derived source key (a literal reference verbatim; an environment-prefixed reference as prefix plus suffix) and the reference name, never the value. When the credential is unresolvable the preflight issues no request at all; when it resolves, admission makes exactly one bounded read with no pagination, retry, or concurrent read, and it adds no configuration key. The preflight classifies the read itself from the failure's optional status instead of forwarding the adapter identity:
+
+| Condition | Identity | Kind | Projection | Exit |
+|---|---|---|---|---|
+| Credential unresolvable | `config.credential.missing` | `config` | user-validation | 1 |
+| Status 401 or 403 | `provider.auth.rejected` | `provider` | user-validation | 1 |
+| Status 5xx or any other status-bearing non-2xx | `provider.outage` | `provider` | platform-provider | 2 |
+| No status (transport throw or timeout) | `provider.outage` | `provider` | platform-provider | 2 |
+| Malformed 2xx payload (status present) | `provider.payload.invalid` | `provider` | platform-provider | 2 |
+| Status 404 | `input.value.rejected` | `input` | user-validation | 1 |
+
+The 404 summary states that the provider reported the work item absent for this credential and names the reference; it does not assert that the reference is wrong, because an item the credential cannot see answers 404 exactly like an absent one. The engine result error-kind union admits the existing `provider` and `config` kinds additively; `DOMAIN_KINDS`, the error-table row count, the tokens, the projections, and the exits are unchanged. The credential refusal carries a narrow trusted-refusal marker that the CLI classifier honours only for `config.credential.missing`, so the bounded identifier-only summary reaches both machine and human output without reopening the untrusted-config suppression. The preflight applies to a fresh dispatch and to a resume alike; daemon-driven lane launches do not run it. The supported operator provisioning path is documented in [Tracker Credential Provisioning](../../guides/tracker-credential-provisioning.md).
 
 ## Result derivation and exit projection
 
@@ -102,8 +121,9 @@ Every dispatch failure identity pins one result token, one engine outcome, one e
 | Post-spawn `harness.collect` failure (a session existed but its evidence could not be read) | exactly one | `state-unverified` | `failed` | 2 | not applicable, token null, reason `comparison-source-unavailable` |
 | Harness spawn refusal (no error identity) | exactly one | `noop-lane-permission` | `refused` | 1 | not applicable, token null, reason `dispatch-session-family` |
 | Unknown harness, rejected input, or conflicting lease before a spawn | none | none | none | 1 | none |
+| Credential or admission-read refusal before a spawn | none | none (the top-level error carries the mapped identity) | none | 1 or 2 per the admission table | none |
 
-All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the three pre-session refusals.
+All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the four pre-session refusal kinds.
 
 ### Text and machine output
 
@@ -139,14 +159,16 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |
 | Bounds | At most 16 bounded evidence references; no prompt, transcript, diff, credential, or raw provider payload. |
 
-`token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A divergence is appended if and only if the outcome is `mismatch`. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
+`token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A comparison divergence is appended when the outcome is `mismatch`; the delivered-evidence case below is the one additional, explicitly shaped divergence. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
 
 The watch contributes its observed verdict trail as `liveness:<verdict>` evidence references, so a transient stall remains visible even when the session later classifies normally. A post-spawn collection failure names `harness:collect-failed`; a restart-budget refusal names `economics:exhaustion` when the terminal record landed and `economics:exhaustion-unrecorded` when the append did not land, so an unrecorded exhaustion is never claimed as durable evidence.
 
 ### Divergence and handover records
 
-- `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains.
+- `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains. A delivered-evidence divergence is the one other shape: when the shared classifier outcome is `completed` (evaluated at record time; the persisted attempt outcome is never used), the phase ledger is readable and shows progress or a complete total, and truth is unreadable, at most one open record per `(repository, work-item reference)` carries `comparisonClass: not-applicable`, `engineToken: state-unverified`, `comparisonToken: null`, and evidence references `attempt:<id>` plus `truth:unreadable:<ledger|tracker|artifact|state>`. The divergence is appended before the attempt so the attempt can carry `divergenceRef`; a resume reuses the open record. If the divergence append fails, the attempt lands once with no `divergenceRef` and a bounded `divergence:append-failed` reference, and the underlying state identity is returned. If the attempt append fails after the divergence lands, the orphan stays open, counted, and resolvable, and a later attempt for the same pair reuses it.
 - `dispatch.handover` (`delivery.dispatch.handover.v1`) records one authority operation (`authoritative` or `dual-run`) per repository, with the conditions snapshot at decision time, bounded evidence references, principal, and timestamp. History is append-only; a reversal is a new record, never a deletion.
+
+`dispatch dual-run resolve` works from local evidence only: it resolves no credential, performs no network call, and reads no truth source outside the local state store and the divergence ledger. A genuine store fault keeps its own `state.*` identity under `kind: "state"` with that row's category, retryability, consequence, remediation, and exit, so a store fault is never reported as `dispatch.state-unverified`. An absent divergence identifier is an app-local `divergence-not-found` sentinel, distinct from a genuine `state.keys.missing`, surfaced as `input.value.rejected` with `kind: "input"` and appending nothing. The resolution note is clamped to its declared 240-character bound before the record is built, so an over-long note cannot become a write failure. A successful resolution appends one resolved record, leaves the original open record byte-identical, reports the resolved state and stored note, and is idempotent on replay.
 
 ### Authority view
 
@@ -160,7 +182,7 @@ Production handover counts only `pilot` attempts. A controlled scope counts only
 
 The window lower bound is the most recent false-success incident's recorded timestamp, exclusive, when an incident exists; otherwise it is the first counted dispatch, inclusive. A dispatch recorded exactly at the incident timestamp is excluded. The summary reports `windowStart` and the closed `windowStartReason` (`first-counted-dispatch`, `false-success-incident-reset`, `no-counted-dispatch`). Resolved divergences do not reset the window; a false-success incident does.
 
-A record-level unevaluable read degrades only that record: a non-success token still counts for class coverage and does not block, while an uncorroborated success claim fails corroboration as one named unmet condition without creating a divergence or resetting the window.
+A record-level unevaluable read degrades only that record: a non-success token still counts for class coverage and does not block, while an uncorroborated success claim fails corroboration as one named unmet condition without creating a comparison divergence or resetting the window. The delivered-evidence case is the explicit exception: a completed session with a readable progressed/completed ledger and an unreadable truth read owes one open, resolvable delivered-evidence divergence per work item, and that record counts as unresolved until resolved.
 
 Corroboration distinguishes an unreadable source from a contradicted one. A source whose read failed is recorded uncorroborated (`unsatisfied` in the tri-state record) with the unreadable marker retained; it blocks the corroboration condition but is never a false-success incident. Only a readable contradiction of a success claim is a false-success incident that resets the evidence window. An unreadable, torn, or truncated evidence-stream read makes eligibility unverifiable and is never reported as eligible.
 
@@ -216,6 +238,8 @@ The `dispatch` error kind carries four rows, all non-retryable with consequence 
 
 Every dispatch failure resolves by exact code; no kind-only dispatch discriminant is assumed to resolve to one row. Prose is never identity, and no dispatch path exits outside `{0, 1, 2}`.
 
+The admission refusals and resolve failures add no `dispatch` row. An admission refusal carries an existing `provider`, `config`, or `input` identity (the admission table above); a resolve store failure carries the failing `state` identity with `kind: "state"`; and an absent divergence identifier is `input.value.rejected` with `kind: "input"`. The engine's local result error-kind union admits the existing `provider` and `config` kinds; `DOMAIN_KINDS` and the error-table row count are unchanged.
+
 ## Bounds and configuration
 
 | Bound | Value |
@@ -236,7 +260,7 @@ The delivered state read verifies the JSONL ledger once. The attempt fold retain
 
 ## Quality evidence
 
-The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, resume, identity, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites under `tests/behaviour/`, `tests/structure/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces.
+The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites under `tests/behaviour/`, `tests/structure/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces.
 
 ## Related
 
@@ -248,10 +272,13 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the restart-budget gate and resume-economics admission.
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) — the delivery-result vocabulary and the verify-change comparison baseline.
 - [Dispatch reference page](../../planning/oss-tooling/milestones/m1/commands/dispatch.md)
+- [Tracker Credential Provisioning](../../guides/tracker-credential-provisioning.md) — the supported truth-read key, the explicit `gh` export bridge, and rotation guidance.
 - [TDR-0015 — Dispatch handover gate operational semantics](../../decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md)
+- [TDR-0019 — Dispatch admission credential preflight](../../decisions/TDR-0019-dispatch-admission-credential-preflight.md)
+- [TDR-0020 — Dispatch divergence recording and resolution](../../decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md)
 - [TDR-0005 — Delivery result enum and CLI exit taxonomy](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
 - [TDR-0010 — Dispatch session classification token projection](../../decisions/TDR-0010-dispatch-session-classification-token-projection.md)
 - [ADR-0008 — Harness adapter contract](../../decisions/ADR-0008-harness-adapter-contract.md)
 - [TDR-0016 — Additive harness streaming spawn seam](../../decisions/TDR-0016-harness-streaming-spawn-seam.md)
 
-**Change record:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/`.
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine) and `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence).

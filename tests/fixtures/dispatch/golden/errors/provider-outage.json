@@ -1,0 +1,9 @@
+{
+  "kind": "provider",
+  "code": "provider.outage",
+  "category": "transient",
+  "retryable": true,
+  "consequence": "not_landed",
+  "projectionClass": "platform-provider",
+  "exitCode": 2
+}

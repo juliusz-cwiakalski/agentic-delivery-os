@@ -1,0 +1,618 @@
+# GH-279 implementation plan — dispatch admission credential preflight,
+# typed divergence resolution, and delivered-evidence divergence recording.
+#
+# SOURCES (single source of truth, read before delivery):
+#   - Spec: ./chg-GH-279-spec.md (v1.4 or later; F-1..F-6, the 30 acceptance
+#     criteria AC-F1-1..AC-F1-7 and AC-F2-1..AC-F6-3, DM-1..DM-6,
+#     NFR-1..NFR-14, RSK-1..RSK-18, DEC-1..DEC-12, §16.1 documentation impact
+#     including the change record, §18 ordering/rollout, Appendix A admission
+#     table, Appendix B divergence shape, Appendix C refusal diagnostics)
+#   - Test plan: ./chg-GH-279-test-plan.md (v1.3 or later; the 61 test cases of
+#     the ADMIT, READMAP, CREDNAME, RESOLVE, DIVREC, STATCRED, DOCTCRED, DOCS,
+#     and REG families, including the adapter-level stamping TC, the
+#     trusted-refusal-marker TC, and the attempt-append-failure TC
+#     TC-DIVREC-011; §6 fixtures; §7 file mapping and plan-phase mapping;
+#     MV-1..MV-3 manual evidence)
+#   - PM record: ./chg-GH-279-pm-notes.yaml (D1..D7)
+#   - Decisions: doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md,
+#     doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md,
+#     doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md
+#     (four additive amendment notes, TDR-0020 as their durable home)
+#   - System spec (reconciled in Phase 8):
+#     doc/spec/features/feature-dispatch-engine.md,
+#     feature-adapter-ports.md, feature-status-digest.md,
+#     feature-result-contract.md, feature-doctor.md
+#
+# ORDERING (dependency-driven; every phase is separately verifiable and the
+# tree stays green at every commit):
+#   1 verified decision basis -> 2 additive admission contract -> 3 adapter read
+#   discriminator -> 4 engine preflight + production composition + classification
+#   + named diagnostics -> 5 resolve typing -> 6 delivered-evidence divergence
+#   -> 7 status prerequisite + doctor parity + redaction -> 8 docs, change
+#   record, conformance, spec reconciliation, release.
+#   - Phase 2 lands first because the engine and the later production
+#     composition must agree on the declared port/kind shape before behaviour;
+#     the declaration stays field-level, so the name-level contract inventory
+#     does not move.
+#   - Phase 3 (received-2xx status stamped onto a decode failure) lands before
+#     Phase 4 because the malformed-payload-versus-transport-throw distinction is
+#     a prerequisite of the read-outcome matrix, and it is independently
+#     verifiable at the adapter surface.
+#   - Phase 4 is the capability core: it is the only phase where the admission
+#     ordering, the status-keyed identity mapping, and the named diagnostics can
+#     all be proven together (a half-classified preflight would emit a wrong
+#     identity and is not shippable).
+#   - Phase 5 (resolve) is independent of Phase 4 (admission) and could be
+#     reordered; it follows because both are diagnostic surfaces and Phase 4
+#     establishes the `kind` discipline the resolve typing reuses.
+#   - Phase 6 consumes the unreadable-read identity that Phase 4 proves is
+#     reachable, and the divergence record shape that Phase 5 makes resolvable,
+#     so it lands after both.
+#   - Phase 8 carries the aggregate gate, the spec reconciliation obligation, the
+#     change-record obligation, and the release/changeset obligation as scope,
+#     not as prose.
+#   - Phase 1 is a planning recording step whose material already landed before
+#     delivery: it re-verifies the committed decision basis and stages nothing.
+#
+# DELIVERY PINS (placements and spellings the spec/test plan leave delivery-bound;
+# none changes a requirement):
+#   - The admission seam is the OPTIONAL `preflight` port on `DispatchPorts`,
+#     distinct from `ports.admission`: invoked inside `runDispatch` after
+#     harness/input validation and BEFORE `claimLease` and before any spawn or
+#     resume; it appends no attempt, divergence, handover, or authority record.
+#     Production always supplies it; a direct caller may omit it and keep the
+#     delivered run order (TC-ADMIT-008).
+#   - The preflight result carries its own typed failure `{kind, code, summary?}`;
+#     the engine's local `DispatchRunResult` error-kind union is widened
+#     additively to admit the existing `provider` and `config` kinds (both rows
+#     already exist; `DOMAIN_KINDS` and the error-table row count do not change).
+#     Emitting a correct code under a mismatched kind classifies as
+#     `fallback.internal`, so identity, kind, projection, and exit are always
+#     asserted together.
+#   - Read-outcome classification happens in the PRODUCTION preflight at the
+#     composition boundary, never in the adapter and never by forwarding the
+#     adapter identity: 401/403 -> `provider.auth.rejected` (kind provider,
+#     user-validation, exit 1); 5xx and any other status-bearing non-2xx ->
+#     `provider.outage` (kind provider, platform-provider, exit 2); a
+#     status-absent transport throw -> `provider.outage`; a received-but-
+#     malformed 2xx -> the adapter-local `provider.payload.invalid` (kind
+#     provider, platform-provider, exit 2); 404 -> `input.value.rejected`
+#     (kind input, user-validation, exit 1) with the provider-reported-absence
+#     wording that never asserts the reference is wrong.
+#   - Malformed-2xx discrimination uses the received status: the bounded read
+#     stamps the 2xx it received onto the normalizer's payload failure, so a
+#     malformed payload carries a status and a transport throw carries none
+#     (TDR-0019 decision point 4). No new field, code, row, or identity.
+#   - An unresolvable repository target stays a composition-level refusal that
+#     runs before the dispatch runtime exists (`input.value.rejected`, summary
+#     `repository identity is unresolvable`; spec §2.1 records it as unchanged
+#     current-state behaviour). The dispatch ports receive an already-resolved
+#     required target, so no preflight branch can observe an unresolved one, no
+#     criterion covers it, and no ports-driven double can produce it.
+#   - The named-refusal summary reaches the machine envelope AND the human
+#     diagnostic. The delivered classification layer deliberately drops an
+#     explicit summary/remediation hint on a config-shaped failure to protect
+#     untrusted config text (`packages/cli/src/index.ts`), so the engine refusal
+#     carries a narrow, explicit trusted-refusal marker that the classifier
+#     honours only for `config.credential.missing`. The existing untrusted-config
+#     pin in `tests/behaviour/error-classification.test.ts` stays green (inverted
+#     to assert both the marker-gated forwarding and the unmarked suppression,
+#     never deleted), and a new case proves the marker is required. Summaries
+#     remain identifier-only, bounded, and single-line.
+#   - The delivered-evidence predicate is the shared classifier outcome
+#     `completed` evaluated at record time (never the persisted attempt outcome)
+#     plus a readable phase ledger with progress or a complete total. The
+#     divergence record is built with `comparisonClass: "not-applicable"`,
+#     `engineToken: "state-unverified"`, `comparisonToken: null` — it does NOT
+#     copy the attempt's comparison class (`dispatch-derived-failure`), whose
+#     derivation stays unchanged.
+#   - Delivered-evidence dedupe key is (repository, work-item ref) at most one
+#     OPEN record; a resume reuses and references it.
+#   - The append ORDER stays the delivered one and is pinned: the divergence
+#     append precedes the attempt append.
+#   - Failed-divergence-append semantics are D6/OQ-1: one attempt append, no
+#     `divergenceRef`, bounded `divergence:append-failed` evidence ref, the
+#     underlying state identity on `data.error` and `lastMessage`, derived token
+#     and exit unchanged.
+#   - Orphan-direction semantics (the divergence lands and the attempt append
+#     then fails) are accepted and documented, never compensated: the open
+#     divergence stays on the ledger, keeps counting in `unresolvedDivergences`,
+#     stays resolvable through `dispatch dual-run resolve`, and a later attempt
+#     for the same pair may reference it instead of opening a second one. The
+#     command returns the underlying state identity, appends no fabricated
+#     attempt, and writes no `divergenceRef` for an attempt record that did not
+#     land (TC-DIVREC-011).
+#   - The not-found resolve sentinel is an app-layer constant, not a contracts
+#     export, so it never moves the v1 contract inventory.
+#   - The status prerequisite is one additive OPTIONAL section-level
+#     `credentialPrerequisite: {referenceName, sourceKey}` sibling of the bounded
+#     `sources[]` list; the six-entry source-entry shape and bound are unchanged,
+#     no section/state/finding code is added, and the digest golden corpus stays
+#     byte-identical. The change is field-level and additive: it introduces no
+#     new exported type name, so `tests/fixtures/ports/v1-contract-inventory.json`
+#     does not move and no name-level inventory assertion is owed by Phase 7.
+#   - The truth-read key is registered for redaction at the runtime edge from the
+#     injected environment facts and the declared reference (literal name, or
+#     brand prefix + suffix), adding no ambient read and no new allowlist entry.
+#   - Documentation is exactly `doc/guides/tracker-credential-provisioning.md`
+#     (ados_distribution: redistributable, plain text without typographic quote
+#     marks) and the existing dispatch reference page; the prompt-required help
+#     inventory stays at four `dispatch` entries and no command or flag is added.
+#   - The change record is `chg-GH-279-change-record.md` in this change folder
+#     (the change folder is the durable record), carried by Phase 8 together with
+#     the release note (`.changeset/gh-279-dispatch-credential-preflight-minor.md`):
+#     it records the GH-241 live evidence and the resolve failure, the one real
+#     credentialed dispatch used as manual evidence (MV-1) with its artifact,
+#     tracker, and CI corroboration facts, the operator communication (export
+#     `GITHUB_TOKEN` before upgrading), and the doctor-unshipped statement. The
+#     pull-request description repeats the MV-1 summary; no token value appears in
+#     either.
+#   - Phase 1 is a lease-free planning record and the commit path unions only
+#     `kind: delivery` phases, so Phase 1 asserts tracked state and stages
+#     nothing: TDR-0019, TDR-0020, the 00-index rows, and the four TDR-0015
+#     amendment notes already landed at ca4aa1a8 and stay `Proposed`.
+#   - Every new `packages/**` source module must be registered in
+#     `tests/structure/inventory.json` in the same phase commit (the content
+#     inventory check is fail-closed).
+#
+# DECLARATION-ONLY KEYS: `acCoverage`, `tcCoverage`, and `verification` are
+# evidence declarations read by the delivery loop; `plan validate` ignores them
+# (the same pattern the delivered GH-238 plan uses for its coverage/testGate
+# declarations). They record no progress and no task list: progress lives in
+# pm-notes `notes:`.
+#
+# COVERAGE INVARIANT: all 30 acceptance criteria of the spec appear exactly once
+# in `acCoverage`, each in the phase that can satisfy it in full. The one
+# exception is AC-F5-4, whose two spec-mandated halves (§16) are declared by
+# Phase 7 (runtime-edge redaction) and Phase 8 (guide content). All 61 test cases
+# of the test plan have a declared home, and the only case assigned to two
+# phases is TC-REG-002, whose structure half runs in Phase 2 and documents half
+# in Phase 8, matching test plan §7. No identifier is dangling or invented:
+# every AC and TC below resolves to a row in the spec's acceptance-criteria table
+# or in the test plan's case list.
+#
+# COMMIT HYGIENE: one commit per phase through the `commit` primitive, subject =
+# the phase `summary`, body/footer lines <= 100 characters, no manual staging.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-279
+
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "a pre-session refusal claims a lease, opens a session, branch, worktree, attempt, divergence, handover, or authority change"
+    - "a refusing credential port still spawns or resumes, or a refusal returns state-unverified instead of its typed identity"
+    - "a refusal returns a correct code under a mismatched kind and classifies as fallback.internal"
+    - "the admission read outcome is decided by forwarding the adapter identity instead of the failure's httpStatus"
+    - "a malformed 2xx payload stops carrying its received status, or the malformed-payload/transport-throw pair stops being distinguishable"
+    - "any credential value, value substring, or value-derived digest appears in an envelope, diagnostic, summary, evidence reference, or record"
+    - "dispatch dual-run resolve consults a credential or the network, or reports dispatch.state-unverified for a readable store"
+    - "more than one open delivered-evidence divergence exists for one (repository, work-item ref), or a divergenceRef points at a record that was not written"
+    - "the divergence append stops preceding the attempt append, or an orphaned open divergence stops counting as unresolved or stops being resolvable"
+    - "the classifier forwards a config-shaped summary or remediation hint without the engine's trusted-refusal marker"
+    - "status exits non-zero, drops a section, extends the bounded sources[] entry shape, or adds a section/state/finding code"
+    - "the error-table identity count, DOMAIN_KINDS membership, delivery-result tokens, configuration keys, commands, flags, or exits outside {0, 1, 2} change"
+    - "a new process.env/Bun.env/Deno.env read appears outside the credential adapter, or the secret-read boundary check fails"
+    - "the prompt-required help inventory grows past four dispatch entries, or doctor is shipped"
+    - "a pinned assertion protecting the replaced behaviour is deleted instead of inverted"
+
+defaultWeightClass: "standard"
+
+phases:
+  # ---------------------------------------------------------------------------
+  # PHASE 1 — decision and change record (planning, lease-free, VERIFY-ONLY)
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Verified decision basis: TDR-0019, TDR-0020, and the four TDR-0015 amendment notes"
+    kind: planning
+    summary: "verify decision records and amendment notes"
+    scope:
+      files:
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-spec.md"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-test-plan.md"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-plan.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-pm-notes.yaml"
+        - "doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md"
+        - "doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md"
+        - "doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md"
+        - "doc/decisions/00-index.md"
+      folders:
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight"
+    interactions:
+      - kind: contract-file
+        target: "doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md"
+        role: producer
+      - kind: contract-file
+        target: "doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md"
+        role: producer
+    acCoverage: []
+    tcCoverage:
+      - "TC-DOCS-004 (manual half: the change record carries the four-assertion TDR-0015 amendment and names TDR-0020 as its durable home)"
+    verification:
+      - "delivery-os plan validate GH-279 || verdict=valid, readyForDevelopment=true, nine phases echoed"
+      - "bun test tests/checks/decision-record.test.ts || TDR-0019 and TDR-0020 pass the decision-record contract; no duplicate or reused id; the 00-index rows match the register"
+      - "git ls-files --error-unmatch doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md doc/decisions/00-index.md || all four decision paths are tracked on the branch (landed at ca4aa1a8); this planning record verifies them and stages nothing, because the delivery commit path unions only kind: delivery phases"
+      - "grep -c '^  > \\*\\*Amendment (GH-279' doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md || exactly four additive notes (§1 Truth(W), §1 Coverage(W), §1 record-level degradation, §5); the §1 preamble bullet is excluded by the anchor"
+      - "grep -n '^status: Proposed$' doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md || both records stay Proposed until the human PR gate, and TDR-0020 is named as the durable home of the four TDR-0015 notes"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 2 — additive admission contract declarations
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Optional preflight port and additive refusal kinds, with the name-level contract inventory unchanged"
+    kind: delivery
+    summary: "declare dispatch preflight port and refusals"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "packages/core/src/contracts/dispatch.ts"
+        - "packages/core/src/contracts/index.ts"
+        - "packages/core/src/app/dispatch.ts"
+        - "packages/core/src/index.ts"
+        - "tests/structure/dispatch-preflight-contract.test.ts"
+        - "tests/structure/inventory.json"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/dispatch.ts"
+        role: producer
+    # No criterion completes here: this phase lands declarations only, and the
+    # criteria it enables (AC-F2-5 in particular) are satisfied in full by the
+    # behavioural phase that asserts kind, projection, and exit together.
+    acCoverage: []
+    tcCoverage:
+      - "TC-REG-004 (structure half: the preflight port is declared optional and distinct from admission; the addition is field-level, so the name-level v1 contract inventory is asserted unchanged)"
+      - "TC-REG-002 (structure half: no new token, DOMAIN_KINDS member, error identity, configuration key, command, or flag)"
+    verification:
+      - "pnpm typecheck || the additive declarations compile and no existing caller breaks"
+      - "bun test tests/structure/dispatch-preflight-contract.test.ts || the preflight port is optional, distinct from admission, and absent from a direct-caller composition"
+      - "bun test tests/structure/port-contract-inventory.test.ts || the name-level v1 contract inventory is UNCHANGED: the optional preflight port and the widened error-kind union add no exported type name, so no entry is added, removed, or renamed and the fixture is not regenerated"
+      - "bun test tests/checks/error-table-sync.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/dispatch-token-home.test.ts || machine and documented tables stay in sync at their current count; eleven tokens; provider/config rows unchanged"
+      - "bun test tests/structure/content-inventory.test.ts || every registered core module resolves; no unregistered source file"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 3 — adapter read discriminator (received 2xx status on decode failure)
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Stamp the received 2xx status onto a GitHub read decode failure so a malformed payload stays distinguishable"
+    kind: delivery
+    summary: "stamp 2xx status on GitHub decode failures"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "packages/adapters/src/github/client.ts"
+        - "packages/adapters/src/github/normalize.ts"
+        - "packages/adapters/src/io/provider-transport.ts"
+        - "packages/adapters/src/github/index.ts"
+        - "tests/behaviour/providers/github-inputs.test.ts"
+        - "tests/behaviour/providers/github-trap.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/providers/github"
+    interactions:
+      - kind: contract-file
+        target: "packages/adapters/src/io/provider-transport.ts"
+        role: producer
+    # No criterion completes here: this phase proves the received-2xx stamp that
+    # AC-F1-7 and AC-F2-6 depend on, and both are satisfied in full by Phase 4,
+    # where the engine classifies the read outcome.
+    acCoverage: []
+    tcCoverage:
+      - "TC-READMAP-010 (adapter half, sole home: the real GitHub client and normalizer stamp the received 2xx onto the decode failure, a thrown transport stays status-absent, 404 stays provider.not-found, and other non-2xx keep their status; asserted without a pre-stamped read double, while the engine-side read halves it pins are declared by Phase 4)"
+    verification:
+      - "bun test tests/behaviour/providers/github-inputs.test.ts || driven through the real client and normalizer with an injected transport: a 200 response with a malformed body yields provider.payload.invalid WITH httpStatus 200; a thrown transport yields it WITHOUT httpStatus; 404 stays provider.not-found; other non-2xx keep their status"
+      - "bun test tests/behaviour/providers/github-trap.test.ts || the transport-throw path stays status-absent and never reaches the network"
+      - "bun test tests/behaviour/providers/github-closeout.test.ts || the delivered observation read contract is unchanged"
+      - "pnpm typecheck || the additive optional httpStatus stays optional; no new failure code or field"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 4 — engine preflight, production composition, classification, diagnostics
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Pre-session credential and truth-read preflight with status-keyed refusal identities and named diagnostics"
+    kind: delivery
+    summary: "preflight tracker credential before spawn"
+    leases:
+      - "repo:main-tools"
+    weightClass: heavy
+    scope:
+      files:
+        - "packages/core/src/app/dispatch.ts"
+        - "packages/core/src/index.ts"
+        - "packages/cli/src/production.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/index.ts"
+        - "packages/cli/src/commands/dispatch.ts"
+        - "tests/behaviour/dispatch-admission-preflight.test.ts"
+        - "tests/behaviour/dispatch-admission-read-mapping.test.ts"
+        - "tests/behaviour/dispatch-admission-diagnostics.test.ts"
+        - "tests/structure/dispatch-composition.test.ts"
+        - "tests/behaviour/error-classification.test.ts"
+        - "tests/fixtures/dispatch/admission.ts"
+        - "tests/fixtures/dispatch/harness.ts"
+        - "tests/fixtures/dispatch/truth.ts"
+        - "tests/fixtures/dispatch/golden/harness.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/dispatch/golden/errors"
+    packages:
+      - "packages/core/src/domain/*"
+    acCoverage:
+      - "AC-F1-1"
+      - "AC-F1-2"
+      - "AC-F1-3"
+      - "AC-F1-4"
+      - "AC-F1-5"
+      - "AC-F1-6"
+      - "AC-F1-7"
+      - "AC-F2-1"
+      - "AC-F2-2"
+      - "AC-F2-3"
+      - "AC-F2-4"
+      - "AC-F2-5"
+      - "AC-F2-6"
+    tcCoverage:
+      - "TC-ADMIT-001..010"
+      - "TC-READMAP-001..009"
+      - "TC-CREDNAME-001..005"
+      - "TC-CREDNAME-007 (trusted-refusal marker: the bounded credential-refusal summary reaches machine and human output only with the marker, and an unmarked config-shaped failure still suppresses summary and hint)"
+      - "TC-REG-001 (determinism half: identical injected clock and id factory produce byte-identical refusal envelopes)"
+    verification:
+      - "bun test tests/behaviour/dispatch-admission-preflight.test.ts || a refusing credential port yields config.credential.missing/kind config/exit 1 with zero spawns, resumes, leases, and attempts; a resume is refused identically; the missing-credential path issues zero transport requests and completes well under 2 000 ms; a direct caller without the port keeps the delivered order; one resolution and one bounded read per admission"
+      - "bun test tests/behaviour/dispatch-admission-read-mapping.test.ts || 401/403 -> provider.auth.rejected (provider, user-validation, exit 1); 5xx and 429/other non-2xx -> provider.outage (provider, platform-provider, exit 2); status-absent throw -> provider.outage; malformed 2xx -> provider.payload.invalid (provider, platform-provider, exit 2); 404 -> input.value.rejected (input, user-validation, exit 1) naming the ref without calling it wrong; every pair asserted with kind AND projection AND exit; zero spawns/attempts; the five refusal goldens pin shape only"
+      - "bun test tests/behaviour/dispatch-admission-diagnostics.test.ts || machine and human renderings both name GITHUB_TOKEN and github-read plus one remediation; a prefixed reference reports prefix+suffix; a planted canary appears nowhere in envelope, human text, summary, evidence ref, attempt or divergence record; the canary detector itself fires on a deliberate leak; summary <= 240 chars single line and last_message <= 512"
+      - "bun test tests/structure/dispatch-composition.test.ts || the two replaced suites are INVERTED to zero spawns and a typed pre-session refusal (assertions retained, not deleted); the positive control reaches a verdict other than state-unverified with exactly one attempt; the no-preflight control preserves the old order; the production composition supplies the port and orders it after input validation and before claimLease"
+      - "bun test tests/behaviour/error-classification.test.ts || the trusted-refusal marker is required for the bounded credential-refusal summary, and the untrusted-config pin is INVERTED, not deleted: an unmarked config-shaped failure still suppresses summary and remediationHint"
+      - "bun test tests/checks/error-table-sync.test.ts tests/structure/dispatch-help-inventory.test.ts || the error-table identity count is unchanged and dispatch keeps exactly four help entries"
+      - "pnpm typecheck && bun test tests/structure/content-inventory.test.ts || the widened error-kind union is exhaustive; every new module is registered"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 5 — type-preserving, local-only divergence resolution
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Local-evidence-only divergence resolution with preserved state identities, a distinguishable not-found, and note clamping"
+    kind: delivery
+    summary: "preserve typed identities on divergence resolve"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "packages/core/src/app/dispatch-gate.ts"
+        - "packages/core/src/app/dispatch-ledger.ts"
+        - "packages/core/src/app/index.ts"
+        - "tests/behaviour/dispatch-resolve-diagnostics.test.ts"
+        - "tests/structure/dispatch-resolve-composition.test.ts"
+        - "tests/fixtures/dispatch/ledger.ts"
+        - "tests/structure/inventory.json"
+    acCoverage:
+      - "AC-F3-1"
+      - "AC-F3-2"
+      - "AC-F3-3"
+      - "AC-F3-4"
+      - "AC-F3-5"
+    tcCoverage:
+      - "TC-RESOLVE-001..008"
+    verification:
+      - "bun test tests/structure/dispatch-resolve-composition.test.ts || the production resolve runtime never invokes the credential port or the transport (spy counters zero), and the resolution comes from local evidence only"
+      - "bun test tests/behaviour/dispatch-resolve-diagnostics.test.ts || state.lock.busy / state.store.torn / state.write.failed surface as kind state with their own category, retryability, consequence, remediation, and projection; a state code under the dispatch kind falls to fallback.internal (negative control); an absent id maps to input.value.rejected/kind input and appends nothing; a genuine state.keys.missing still surfaces as itself; a 300-character note lands clamped to <= 240 with no state.write.failed; replay is a noop and the open record stays byte-identical"
+      - "bun test tests/behaviour/dispatch-gate-evidence.test.ts tests/behaviour/dispatch-dual-run-summary.test.ts || the unreadable-gate collapse is unchanged where it is still correct; summary behaviour and counts are unaffected"
+      - "pnpm typecheck || no literal type widened; no new contracts export (the not-found sentinel stays app-local)"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 6 — delivered-evidence divergence recording
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "One open delivered-evidence divergence per work item for an unverifiable-but-delivered dispatch, with honest failure in both append directions"
+    kind: delivery
+    summary: "record delivered-evidence divergences honestly"
+    leases:
+      - "repo:main-tools"
+    weightClass: heavy
+    scope:
+      files:
+        - "packages/core/src/app/dispatch.ts"
+        - "packages/core/src/app/dispatch-ledger.ts"
+        - "packages/core/src/domain/dispatch-result.ts"
+        - "packages/core/src/index.ts"
+        - "tests/behaviour/dispatch-delivered-evidence-divergence.test.ts"
+        - "tests/behaviour/dispatch-unevaluable.test.ts"
+        - "tests/behaviour/dispatch-divergence.test.ts"
+        - "tests/fixtures/dispatch/truth.ts"
+        - "tests/fixtures/dispatch/ledger.ts"
+        - "tests/fixtures/dispatch/harness.ts"
+        - "tests/structure/inventory.json"
+    packages:
+      - "packages/core/src/domain/*"
+    acCoverage:
+      - "AC-F4-1"
+      - "AC-F4-2"
+      - "AC-F4-3"
+      - "AC-F4-4"
+      - "AC-F4-5"
+    tcCoverage:
+      - "TC-DIVREC-001..010"
+      - "TC-DIVREC-011 (orphan direction: the divergence append lands and the attempt append then fails; the open divergence stays counted and resolvable, a later attempt may reference it, the command returns the underlying state identity, and no fabricated attempt or divergenceRef exists)"
+    verification:
+      - "bun test tests/behaviour/dispatch-delivered-evidence-divergence.test.ts || a completed classifier outcome with a readable progressed/completed ledger and an unreadable truth appends ONE open divergence (not-applicable, state-unverified, comparisonToken null, attempt:<id> + truth:unreadable:<ledger|tracker|artifact|state>) and the attempt carries divergenceRef; each delivered-evidence conjunct falsified opens none (a persisted failed outcome never suffices); a resume reuses the open record and the unresolved count does not increase; a new record opens only after resolution; an unrelated open mismatch divergence does not suppress recording; the append ORDER stays divergence-then-attempt in every recorded case; a failed divergence append appends the attempt once with no divergenceRef, a bounded divergence:append-failed evidence ref, the underlying state identity on data.error and lastMessage, and exit 2; the orphan direction (divergence lands, attempt append fails) leaves that open divergence counted and resolvable, lets a later attempt for the same pair reference it instead of opening a second one, returns the underlying state identity, and fabricates no attempt and no divergenceRef; a replayed attempt appends nothing; last_message keeps the underlying identity; every record passes the validator on first attempt and stays within the 16-ref bound"
+      - "bun test tests/behaviour/dispatch-unevaluable.test.ts tests/behaviour/dispatch-divergence.test.ts || the delivered-evidence exception is the only amended assertion; admission-refusal not-applicable cases and match cases still record no divergence"
+      - "bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/behaviour/dispatch-dual-run-floor.test.ts || the summary lists and counts the new divergence as unresolved and resolution decrements by exactly one; the divergence append precedes the attempt append in the same step, so no attempt lands without its divergence attempt"
+      - "pnpm typecheck && bun test tests/structure/content-inventory.test.ts || the delivered-evidence predicate is total over the closed read set (no ci family); every new module is registered"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 7 — operator prerequisite surfaces, doctor parity, redaction
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Status credential prerequisite evidence, doctor parity, and truth-read redaction at the runtime edge"
+    kind: delivery
+    summary: "surface tracker credential prerequisite"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "packages/core/src/contracts/status.ts"
+        - "packages/core/src/domain/status.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/production.ts"
+        - "packages/cli/src/commands/status.ts"
+        - "packages/cli/src/entrypoint.ts"
+        - "packages/cli/bin/delivery-os.ts"
+        - "tests/behaviour/status-credential-prerequisite.test.ts"
+        - "tests/fixtures/status/harness.ts"
+        - "tests/behaviour/doctor-tracker.test.ts"
+        - "tests/fixtures/doctor/harness.ts"
+        - "tests/structure/cli-edge-seam.test.ts"
+        - "tests/structure/entrypoint-bin.test.ts"
+        - "tests/structure/inventory.json"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/status.ts"
+        role: producer
+    acCoverage:
+      - "AC-F6-1"
+      - "AC-F6-2"
+      - "AC-F6-3"
+      - "AC-F5-4 (redaction half: the truth-read key is registered for redaction from injected facts and its value never survives the chokepoint; the guide-content half is Phase 8)"
+    tcCoverage:
+      - "TC-STATCRED-001..004"
+      - "TC-DOCTCRED-001..002"
+      - "TC-CREDNAME-006"
+      - "TC-REG-003"
+    verification:
+      - "bun test tests/behaviour/status-credential-prerequisite.test.ts || every section whose credential-dependent source failed carries the optional section-level credentialPrerequisite {referenceName, sourceKey} with names only; observing sections and sections unavailable for another reason carry none (set derived from the digest); no sources[] entry is added and the entry shape/bound is unchanged; no section is observed, no zero is fabricated, no finding is emitted; exit 0 with all nine sections; no credential value appears"
+      - "bun test tests/behaviour/status-output.test.ts && git status --porcelain tests/fixtures/status/golden || the digest golden corpus is byte-identical (no regeneration)"
+      - "bun test tests/behaviour/doctor-tracker.test.ts || the tracker.credential-unavailable hint names the resolved key for a literal reference and for a prefixed reference; doctor behaviour is otherwise unchanged"
+      - "bun test tests/structure/cli-edge-seam.test.ts tests/structure/entrypoint-bin.test.ts || the resolved truth-read key is registered for redaction from injected environment facts only (zero new ambient reads); the entrypoint secrets seam is unchanged"
+      - "bun test tests/checks/secret-read-boundary.test.ts || the secret-read allowlist gains no entry and the boundary check stays green"
+      - "pnpm typecheck && bun test tests/checks/exports-parity.test.ts tests/structure/port-contract-inventory.test.ts || the additive optional credentialPrerequisite field compiles on the existing status evidence type, adds no new exported type name, and therefore leaves the v1 name-level contract inventory unchanged (no inventory edit is owed and none is made)"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 8 — documentation, conformance pins, spec reconciliation, release
+  # FINAL GATE (phase 8 obligation): mkdir -p tmp/tmpdir &&
+  # TMPDIR=$PWD/tmp/tmpdir pnpm check, then git diff --check. No phase completes
+  # on a red aggregate gate.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Provisioning guide, dispatch reference page, change record, feature-spec reconciliation, release note, and the aggregate gate"
+    kind: delivery
+    summary: "publish guide, change record, and release note"
+    leases:
+      - "repo:main-tools"
+    weightClass: heavy
+    doneArtifacts:
+      mergeRequestUrl: "GH-279 pull request to main-tools (URL recorded as a pm-notes notes entry)"
+      trackerTransition: "GH-279 remains In Progress through delivery phases and moves to review at the pull request"
+    scope:
+      files:
+        - "doc/guides/tracker-credential-provisioning.md"
+        - "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md"
+        - "doc/00-index.md"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md"
+        - "doc/overview/glossary.md"
+        - "doc/quality/test-specs/test-spec-dispatch-engine.md"
+        - "doc/spec/features/feature-dispatch-engine.md"
+        - "doc/spec/features/feature-adapter-ports.md"
+        - "doc/spec/features/feature-status-digest.md"
+        - "doc/spec/features/feature-result-contract.md"
+        - "doc/spec/features/feature-doctor.md"
+        - "doc/spec/features/feature-cli-entrypoint.md"
+        - "doc/spec/features/feature-provider-client-seeds.md"
+        - ".changeset/gh-279-dispatch-credential-preflight-minor.md"
+        - "scripts/checks/forbidden-literals.registry.json"
+        - "tests/conformance/dispatch/dispatch-e2e.test.ts"
+        - "tests/fixtures/queue/production/harness.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/checks/tracker-credential-provisioning-guide.test.ts"
+        - "tests/checks/dispatch-doc-conformance.test.ts"
+        - "tests/checks/reference-page-parity.test.ts"
+    interactions:
+      - kind: contract-file
+        target: "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md"
+        role: producer
+    acCoverage:
+      - "AC-F5-1"
+      - "AC-F5-2"
+      - "AC-F5-3"
+      - "AC-F5-4 (guide-content half: the guide records the least-privilege expectation and the registration-by-this-change fact; the redaction half is Phase 7)"
+    tcCoverage:
+      - "TC-DOCS-001..003 (the manual amendment-inspection half of the change record is Phase 1)"
+      - "TC-REG-005"
+      - "TC-REG-002 (documents half: no new command, flag, configuration key, token, or identity is introduced)"
+    verification:
+      - "bun test tests/checks/tracker-credential-provisioning-guide.test.ts || the guide names the literal key GITHUB_TOKEN and the github-read reference, carries the explicit export GITHUB_TOKEN=\"$(gh auth token)\" bridge, states that no keyring, ambient, or fallback key is ever read, carries least-privilege plus rotation/revocation guidance and the 404 scope check, and records that the key is registered for redaction by this change rather than by the config-catalog path (the AC-F5-4 guide half); content is plain text without typographic quote marks and the value is never printed"
+      - "bun test tests/checks/dispatch-doc-conformance.test.ts || the reference page still carries the pinned phrases and now documents the pre-claimLease ordering, the named key and reference, the status-keyed identity/kind/exit mapping, the 404 scope caveat, the per-work-item dedupe, the resolution path, and that doctor remains unshipped in this change; no stale phrase is reintroduced"
+      - "bun test tests/checks/reference-page-parity.test.ts tests/structure/dispatch-help-inventory.test.ts || every see-also target exists, the inventory equals the prompt-required set, doctor is absent, and dispatch keeps exactly four help entries"
+      - "bash scripts/.tests/test-doc-distribution.sh || the new guide declares ados_distribution: redistributable and the marker-derived install set matches the sandbox install"
+      - "bash scripts/add-header-location.sh doc/guides && git diff --stat doc/guides || the new guide carries exactly the generated license/source header, and no other guide changes"
+      - "test -f doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md || the change record exists beside the spec and the test plan"
+      - "grep -c 'GITHUB_TOKEN' doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md || at least one naming of the required key, the github-read reference, the GH-241 live evidence and the resolve failure, the operator communication (export GITHUB_TOKEN before upgrading), the doctor-unshipped statement, and TDR-0020 as the durable home of the four TDR-0015 amendment notes"
+      - "grep -En 'gh[pousr]_[A-Za-z0-9]{20,}' doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md .changeset/gh-279-dispatch-credential-preflight-minor.md || zero matches: no credential value, token shape, or token-derived digest appears in the change record or the release note (grep exits 1 when nothing matches)"
+      - "grep -A 3 'MV-1' doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md || the MV-1 row records the one real credentialed dispatch together with its verdict and its artifact, tracker, and CI corroboration facts, not the verdict alone"
+      - "bun test tests/checks/error-table-sync.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/dispatch-token-home.test.ts || tables stay in sync at the current count; eleven tokens; zero new identities"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate (lint, format, typecheck, full bun test suite, dependency/secret boundaries, prompt conformance, help coverage, exports parity) is green"
+      - "git diff --check || zero whitespace errors and zero conflict markers"
+      - "manual MV-1/MV-2/MV-3 recorded in the change record as operator-executed PR-time procedures with artifact, tracker, and CI corroboration fields, and repeated in the pull request || each procedure names the observation to attach and the fields that corroborate it; execution stays PR-time, so no delivery-time gate depends on observed facts; one real credentialed dispatch must reach a verdict other than state-unverified with its artifact, tracker, and CI corroboration; one summary before/after a resolution shows the count moving by one and a resume reusing the open id; the record names TDR-0020 as the amendment home; no token printed, committed, or attached"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 9 — code review remediation (iteration 1)
+  # Findings: code-review/review-iter-1.yaml (F-1..F-10).
+  # F-1 (branch-history subjects) is ACCEPTED per pm-notes D9: history is not
+  # rewritten because commits go only through the commit primitive. F-8 is
+  # ACCEPTED per D10; F-2, F-3, F-4, F-6, F-9, and F-10 are fixed; F-5 and F-7
+  # are record repairs. No behaviour in Phases 2-8 changes.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code Review Remediation (Iteration 1) — commit-subject acceptance, dead read-reason branch, doctor prefix derivation proof, sentinel surface, scope reconciliation, projection pin, MV evidence, entrypoint dependency, human prerequisite, TC labels"
+    kind: delivery
+    summary: "apply code review iteration 1 remediation"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/code-review/review-iter-1.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-plan.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-pm-notes.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md"
+        - "packages/core/src/app/dispatch.ts"
+        - "packages/core/src/app/dispatch-gate.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/domain/status.ts"
+        - "packages/adapters/src/credentials/index.ts"
+        - "packages/cli/src/entrypoint.ts"
+        - "tests/behaviour/dispatch-delivered-evidence-divergence.test.ts"
+        - "tests/behaviour/dispatch-admission-read-mapping.test.ts"
+        - "tests/behaviour/dispatch-resolve-diagnostics.test.ts"
+        - "tests/behaviour/doctor-tracker.test.ts"
+        - "tests/behaviour/providers/github-inputs.test.ts"
+        - "tests/behaviour/status-credential-prerequisite.test.ts"
+        - "tests/fixtures/doctor/harness.ts"
+        - "tests/fixtures/dispatch/golden/errors/config-credential-missing.json"
+        - "tests/fixtures/dispatch/golden/errors/input-value-rejected.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-auth-rejected.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-outage.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-payload-invalid.json"
+        - "tests/structure/cli-edge-seam.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+    acCoverage: []
+    tcCoverage:
+      - "No new TC — remediation strengthens TC-READMAP-001..009 (kind+projection+exit pin), TC-DOCTCRED-001..002 (edge prefixed derivation), TC-STATCRED-001..004 (human prerequisite), TC-DIVREC-002 (ci-only negative), and TC-READMAP-010/TC-CREDNAME-006 (identifier labels); F-1, F-5, F-7 are record/history repairs with no new case."
+    verification:
+      - "review F-1 (medium) || ACCEPTED per pm-notes D9: the branch keeps the commit primitive's template subjects unchanged (no history rewrite, no tree change) because commits go only through the commit primitive; the acceptance is recorded in the change record and this evidence cites D9"
+      - "review F-2 (low) || packages/core/src/app/dispatch.ts unreadableTruthReason no longer returns a value it cannot reach: a ci-only unreadable read yields no truth:unreadable ref (undefined) and the ledger/state members are either removed or proven by a test; bun test tests/behaviour/dispatch-delivered-evidence-divergence.test.ts stays green"
+      - "review F-3 (low) || tests/behaviour/doctor-tracker.test.ts (or the doctor harness) drives a prefixed reference through the runtime derivation and asserts the hint names prefix+suffix, not the bare suffix; bun test tests/behaviour/doctor-tracker.test.ts green"
+      - "review F-4 (low) || DISPATCH_DIVERGENCE_NOT_FOUND is module-local: no package-root or app-barrel export, imported from app/dispatch-ledger by dispatch-gate and the tests; the per-file executable allowance stays because the module still exports the constant (the allowance is file-scoped, not root-scoped); bun test tests/checks/exports-parity.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts green"
+      - "review F-5 (low) || this phase's scope, the amended Phases 2-8 scope lists, and the pm-notes entry account for the nine consequential files and the seven reconciled feature specs; delivery-os plan validate GH-279 stays valid"
+      - "review F-6 (low) || the five admission goldens carry projectionClass and assertGolden compares it (or TC-READMAP-008 asserts classifyThrown(pair).projectionClass); bun test tests/behaviour/dispatch-admission-read-mapping.test.ts green"
+      - "review F-7 (low) || the change record records MV-1/MV-2/MV-3 as operator-executed PR-time procedures with artifact, tracker, and CI corroboration fields, actual execution stays PR-time, and the record states the deferral; dod_check does not depend on executed evidence"
+      - "review F-8 (low) || entrypoint.ts depends on core only for the pure source-key resolver (moved to core contracts and re-exported by the credentials subpath) or the entrypoint documents the deliberate adapters edge; bun test tests/structure/cli-edge-seam.test.ts tests/structure/entrypoint-bin.test.ts green"
+      - "review F-9 (low) || human status output names requires <sourceKey> (<referenceName>) on each affected section line, names only and never a value; bun test tests/behaviour/status-credential-prerequisite.test.ts tests/behaviour/status-output.test.ts green and the digest goldens unchanged"
+      - "review F-10 (info) || the adapter-stamping and redaction cases carry TC-READMAP-010 / TC-CREDNAME-006 in their names"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate is green after remediation"
+      - "git diff --check || zero whitespace errors and zero conflict markers"

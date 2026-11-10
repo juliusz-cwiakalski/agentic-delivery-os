@@ -34,6 +34,20 @@ const REQUIRED_ON_PAGE = [
   "dispatch dual-run resolve",
   "dispatch handover",
   "--revert",
+  "claimLease",
+  "GITHUB_TOKEN",
+  "github-read",
+  "config.credential.missing",
+  "provider.auth.rejected",
+  "provider.outage",
+  "provider.payload.invalid",
+  "input.value.rejected",
+  "404",
+  "repository scope",
+  "delivered-evidence divergence",
+  "(repository, work-item reference)",
+  "non-interactive",
+  "unshipped",
 ] as const;
 
 const REQUIRED_ON_SCENARIOS = [

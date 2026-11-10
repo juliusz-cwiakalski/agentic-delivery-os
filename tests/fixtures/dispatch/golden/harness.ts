@@ -16,6 +16,7 @@ import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
 import { projectExitCode } from "../../../../packages/cli/src/projection";
 import type {
   DispatchLeaseClaim,
+  DispatchPreflightPort,
   DispatchTruthReads,
 } from "../../../../packages/core/src/app/dispatch";
 import { resolveBrandIdentity } from "../../../../packages/core/src/branding/index";
@@ -29,6 +30,7 @@ import {
   type HarnessEvidence,
   type HarnessLivenessReport,
   type HarnessSessionPort,
+  type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
 import { ensureEconomicsExhaustionRecord } from "../../../../packages/core/src/state/index";
 import { createDispatchState, createScriptedHarness } from "../harness";
@@ -102,6 +104,10 @@ export type CommandScenarioOptions = {
   readonly harnessPort?: HarnessSessionPort;
   readonly newAttemptId?: (ref: string) => string;
   readonly newDivergenceId?: (ref: string) => string;
+  /** The optional admission preflight; omitting it keeps the delivered order. */
+  readonly preflight?: DispatchPreflightPort;
+  /** An optional store wrapper (for targeted append failures). */
+  readonly store?: (store: StateStorePort) => StateStorePort;
 };
 
 export type CommandScenario = {
@@ -173,15 +179,17 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
   const nowIso = options.nowIso ?? (() => "2026-11-08T10:00:00.000Z");
 
   const runtime = createDispatchCommandRuntime({
-    store: state.store,
+    store: options.store === undefined ? state.store : options.store(state.store),
     stateRoot: state.root,
     fenceToken: state.fenceToken,
     nowIso,
     newAttemptId: () => {
+      if (options.newAttemptId !== undefined) return options.newAttemptId("GH-301");
       attemptSequence += 1;
       return `attempt-${attemptSequence}`;
     },
     newDivergenceId: () => {
+      if (options.newDivergenceId !== undefined) return options.newDivergenceId("GH-301");
       divergenceSequence += 1;
       return `DIV-${divergenceSequence}`;
     },
@@ -198,6 +206,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     ...(options.evidenceClass === undefined ? {} : { evidenceClass: options.evidenceClass }),
     repository: () => options.repository ?? "github.com/owner/repo",
     readTruth: async () => options.reads ?? readsFrom(),
+    ...(options.preflight === undefined ? {} : { preflight: options.preflight }),
     claimLease: () => {
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };

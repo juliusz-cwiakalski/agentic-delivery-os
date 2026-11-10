@@ -11,6 +11,7 @@ import { writeFileSync } from "node:fs";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
+  resolveCredentialSourceKey,
 } from "@delivery-os/adapters/credentials";
 import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
 import {
@@ -54,6 +55,8 @@ import {
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
   type DispatchPrFact,
+  type DispatchPreflightError,
+  type DispatchPreflightResult,
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
@@ -80,6 +83,7 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type CoordinatorProgressState,
   type CredentialPort,
+  type CredentialReference,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -153,16 +157,25 @@ const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code:
   code: PROVIDER_FAILURE,
 });
 
+/** The declared truth-read credential reference (names only, never material). */
+const githubReadReference: CredentialReference = {
+  referenceName: "github-read",
+  sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
+};
+
+/**
+ * The declared credential references whose resolved values the runtime edge
+ * registers for serialization redaction.
+ */
+export const DECLARED_CREDENTIAL_REFERENCES: readonly CredentialReference[] = [githubReadReference];
+
 const githubInstance = (): ExternalSystemInstance => ({
   instanceName: "vcs-github",
   systemKind: "vcs",
   baseUrl: "https://api.github.com",
   authMethod: {
     mechanism: "credential-reference",
-    reference: {
-      referenceName: "github-read",
-      sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
-    },
+    reference: githubReadReference,
   },
 });
 
@@ -220,6 +233,11 @@ export type ProductionCompositionFacts = {
    * a recording transport so the truth read is proven without network access.
    */
   readonly githubTransport?: GithubClientOptions["transport"];
+  /**
+   * The injected provider instance. Production uses the declared `github-read`
+   * reference; tests may inject a prefixed reference to prove key derivation.
+   */
+  readonly githubInstance?: ExternalSystemInstance;
   /**
    * The injected credential port. Production reads the process environment;
    * tests inject a port so a missing credential is proven without ambient state.
@@ -284,7 +302,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     );
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
-    const instance = githubInstance();
+    const instance = facts.githubInstance ?? githubInstance();
+    const truthReadReference =
+      instance.authMethod.mechanism === "credential-reference"
+        ? instance.authMethod.reference
+        : undefined;
+    const truthReadCredential =
+      truthReadReference === undefined
+        ? undefined
+        : {
+            referenceName: truthReadReference.referenceName,
+            sourceKey: resolveCredentialSourceKey(truthReadReference, brand),
+          };
     const transport = facts.githubTransport ?? nativeTransport;
     const gitBranches = createGitBranchSeam({
       cwd,
@@ -341,6 +370,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       localContext: { path: pmContextPath, fs: localFs },
       clock: { nowMs, nowIso },
       github: { instance },
+      ...(truthReadCredential === undefined ? {} : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
       ok: true as const,
@@ -911,6 +941,88 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /** The bounded refusal summary: one line, at most 240 characters. */
+    const boundPreflightSummary = (text: string): string => {
+      const single = text.replace(/[\r\n]+/gu, " ").trim();
+      return single.length <= 240 ? single : `${single.slice(0, 239)}…`;
+    };
+
+    const preflightRefusal = (error: DispatchPreflightError): DispatchPreflightResult => ({
+      ok: false,
+      error,
+    });
+
+    /**
+     * The admission precondition at the production boundary.
+     *
+     * It asks the delivered work-item read for exactly one bounded record and
+     * classifies the outcome itself from the failure's status: the adapter
+     * collapses an outage, a rejected credential, and a malformed payload into
+     * one code, so forwarding that code would make them indistinguishable.
+     */
+    const dispatchPreflight = async (changeRef: string): Promise<DispatchPreflightResult> => {
+      if (truthReadReference === undefined) return { ok: true };
+      const referenceName = truthReadReference.referenceName;
+      const sourceKey = resolveCredentialSourceKey(truthReadReference, brand);
+      const issueNumber = /^[A-Za-z]+-([0-9]+)$/u.exec(changeRef)?.[1];
+      if (issueNumber === undefined || target === undefined) {
+        return preflightRefusal({
+          kind: "input",
+          code: "input.value.rejected",
+          summary: boundPreflightSummary(
+            `work item ${changeRef} is not addressable for admission; verify the reference and the repository remote`,
+          ),
+        });
+      }
+      const read = await client.readWorkItem(Number(issueNumber));
+      if (read.ok) return { ok: true };
+      const status = "httpStatus" in read ? read.httpStatus : undefined;
+      if (read.code === "config.credential.missing") {
+        return preflightRefusal({
+          kind: "config",
+          code: "config.credential.missing",
+          summary: boundPreflightSummary(
+            `credential key ${sourceKey} is unset (reference ${referenceName}); export ${sourceKey}="$(gh auth token)" or configure a credential reference`,
+          ),
+          trustedRefusal: true,
+        });
+      }
+      if (read.code === "provider.not-found" || status === 404) {
+        return preflightRefusal({
+          kind: "input",
+          code: "input.value.rejected",
+          summary: boundPreflightSummary(
+            `the provider reported work item ${changeRef} as absent for credential key ${sourceKey} (reference ${referenceName}); verify the reference and the token's repository scope`,
+          ),
+        });
+      }
+      if (status !== undefined && status >= 200 && status < 300) {
+        return preflightRefusal({
+          kind: "provider",
+          code: "provider.payload.invalid",
+          summary: boundPreflightSummary(
+            `the provider returned an unparsable work-item payload for ${changeRef} (reference ${referenceName}); treat this as a provider or adapter fault`,
+          ),
+        });
+      }
+      if (status === 401 || status === 403) {
+        return preflightRefusal({
+          kind: "provider",
+          code: "provider.auth.rejected",
+          summary: boundPreflightSummary(
+            `the truth-read credential for reference ${referenceName} was rejected by the provider; correct ${sourceKey} or rotate it and retry`,
+          ),
+        });
+      }
+      return preflightRefusal({
+        kind: "provider",
+        code: "provider.outage",
+        summary: boundPreflightSummary(
+          `the provider could not complete the work-item read for ${changeRef} (reference ${referenceName}); retry when the provider is available`,
+        ),
+      });
+    };
+
     /**
      * The cancellable cadence timer: the composition owns the real timer, so a
      * finished session cancels the pending wait instead of holding the process.
@@ -955,6 +1067,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       evidenceClass: DISPATCH_DEFAULT_EVIDENCE_CLASS,
       repository: () => repository,
       readTruth: dispatchTruth,
+      preflight: dispatchPreflight,
       claimLease: (ref) => {
         const claimed = claimQueueLease(store, {
           ref,

@@ -64,6 +64,7 @@
   "registered": [
     "doc/guides/provider-conditions-and-parks.md",
     "doc/guides/rename-drill.md",
+    "doc/guides/tracker-credential-provisioning.md",
     "doc/inception/analysis/assumptions.md",
     "doc/inception/analysis/fse-audit.md",
     "doc/inception/analysis/material-inventory.md",

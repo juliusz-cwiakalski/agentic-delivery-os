@@ -71,7 +71,15 @@ const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
       });
       return;
     case "state-unverified":
-      await repo.run({ reads: { tracker: readFail("tracker", "tracker.read-unreadable") } });
+      // An unreadable ledger cannot establish delivered evidence, so this class
+      // is exposure-only and owes no divergence (the delivered-evidence case is
+      // covered by its own suite).
+      await repo.run({
+        reads: {
+          ledger: readFail("ledger", "ledger.read-unreadable"),
+          tracker: readFail("tracker", "tracker.read-unreadable"),
+        },
+      });
       return;
     case "noop-lane-permission":
       await repo.run({ evidence: SPAWN_REFUSED_EVIDENCE });

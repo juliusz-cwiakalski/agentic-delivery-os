@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the additive optional DeliveryThread root-author facts (login, normalized author kind, author association), the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238", "GH-279"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
@@ -122,6 +122,10 @@ The normalized `GithubDeployTrace` is a closed, provider-neutral shape: `jobId`,
 The mapping is declared data, never guessed from an external system's name. Resolution returns either `{ ok: true, material }` or the reified `config.credential.missing` failure. An absent key and an empty-string value fail; whitespace is a value. Resolved material is returned once through the port result and has no diagnostic channel.
 
 The environment-backed implementation is `createEnvironmentCredentialPort({ environment, brand })`, where the environment record is injected. `createProcessCredentialPort(brand)` is the production wrapper that supplies the process environment. The port exposes no mode flag, so the future credential sidecar becomes a second implementation: adapters forward operations to the sidecar over local transport instead of executing with local credentials, and the interface does not change. No sidecar or forwarded-execution code exists.
+
+A credential refusal rendered by a consumer is name-only: it may name the resolved source key (literal name, or environment prefix plus suffix) and the reference name, and never the material; the credential port itself exposes no diagnostic channel. Production never reads the OS keyring, never inherits an ambient variable implicitly, and declares no fallback key. The operator's supported bridge is an explicit export from an already-authenticated session, performed in the operator's own shell; it is not a product action. The runtime edge registers the resolved truth-read key for serialization redaction from the injected environment facts and the declared reference, adding no ambient read and no new secret-read allowlist entry.
+
+The GitHub work-item read stamps the status it actually received onto a decode failure, so a malformed 2xx payload stays distinguishable from a status-absent transport throw. The adapter keeps its delivered identities: 404 is `provider.not-found`; any other non-2xx is `provider.payload.invalid` with the received status; a thrown or timed-out request is `provider.payload.invalid` without a status. The admission preflight classifies that outcome from the status rather than forwarding the adapter code.
 
 ### Provider quota authorization
 

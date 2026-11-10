@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-DOCTOR
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-two reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery and retro registry store verdicts in the state check, and zero-write execution."
 links:
-  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236"]
-  related_decisions: ["ADR-0003", "TDR-0005"]
+  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-279"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/doctor.ts"
 ---
@@ -140,6 +140,8 @@ Every non-ok condition has exactly one verdict and exactly one hint template. Te
 | `doctor.check.ci.unreachable` | ci | `unreachable` | `check-unreachable` | resolve the ci check failure described in its detail, then re-run doctor |
 
 Detail lines are factual and bounded: a clean repo reports `clean work tree on <branch> at <shortSha>` or `detached HEAD at <shortSha>`; a dirty repo says the working tree has uncommitted changes; tracker and CI successes report the observed item or run count (or an explicitly empty page); a credential park names the subject, cause, and expiry; a neutral park names the subject, cause, expiry, and the `provider quota --provider <name>` directive; provider announcements are listed by their closed codes (at most three).
+
+The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved environment variable name: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix. The fix hint names the key only and never a value. Doctor remains outside the shipped prompt-required command set; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
 
 ### Provider check semantics
 

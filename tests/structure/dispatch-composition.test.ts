@@ -60,7 +60,8 @@ import {
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/state/index";
 import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import { readFail } from "../fixtures/dispatch/truth";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 import { streamStarterFromRunner } from "../fixtures/harness/harness-io";
@@ -136,7 +137,7 @@ describe("TC-MERGE-004 the production composition has no reachable merge port", 
 });
 
 describe("the production composer builds a real harness session port", () => {
-  test("a production-composed dispatch spawns through the delivered port", async () => {
+  test("a refusing credential port refuses before any spawn (TC-ADMIT-005 inversion)", async () => {
     const base = join(ROOT, "tmp", "tmpdir");
     mkdirSync(base, { recursive: true });
     const home = mkdtempSync(join(base, "gh239-production-"));
@@ -249,35 +250,21 @@ describe("the production composer builds a real harness session port", () => {
           readonly result?: string;
           readonly error?: { readonly code?: string; readonly summary?: string };
         };
-        readonly error?: { readonly code?: string };
+        readonly error?: { readonly code?: string; readonly summary?: string };
       };
 
-      expect(starterInvocations).toHaveLength(1);
-      expect(starterInvocations[0]?.command.startsWith("opencode ")).toBe(true);
-      expect(Object.keys(starterInvocations[0]?.environment ?? {}).sort()).toEqual([
-        "DELIVERY_WORK_PATH",
-        "HARNESS_MODEL",
-        "HARNESS_SMALL_MODEL",
-      ]);
-      // Spawn/resume ride the streaming starter; the one-shot runner is retained
-      // for session listing and is not invoked by a dispatch.
+      // The refusal is pre-session: the harness port records zero spawns and the
+      // one-shot runner is not invoked, so no session or attempt exists.
+      expect(starterInvocations).toHaveLength(0);
       expect(invocations).toHaveLength(0);
-      expect(outcome.error).toBeUndefined();
-      expect(outcome.data?.result).toBeDefined();
-      expect(outcome.data?.result).not.toBe("harness.capability.gap");
-      // The composed truth read is honest: an unresolvable provider credential
-      // classifies `state-unverified` with its own identity, never a fabricated
-      // artifact or tracker fact.
-      expect(outcome.data?.result).toBe("state-unverified");
-      expect(outcome.data?.error?.code).toBe("dispatch.state-unverified");
-      expect(outcome.data?.error?.summary).toContain("config.credential.missing");
+      expect(outcome.data).toBeUndefined();
+      expect(outcome.error?.code).toBe("config.credential.missing");
+      expect(outcome.error?.summary).toContain("GITHUB_TOKEN");
+      expect(outcome.error?.summary).toContain("github-read");
 
       const attempts = readDispatchAttempts(store);
       expect(attempts.ok).toBe(true);
-      if (attempts.ok) {
-        expect(attempts.records).toHaveLength(1);
-        expect(attempts.records[0]?.evidenceClass).toBe("pilot");
-      }
+      if (attempts.ok) expect(attempts.records).toHaveLength(0);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -422,8 +409,12 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
     const transport = {
       send: async (request: { readonly url: string }) => {
         requests.push(request.url);
-        if (scenario.transportFails === true) throw new Error("synthetic transport failure");
         const path = request.url.replace(/^https:\/\/api\.github\.com\/repos\/[^/]+\/[^/]+/u, "");
+        // The admission read must succeed so a post-session failure is reachable;
+        // only the later provider reads fail here.
+        if (scenario.transportFails === true && !path.startsWith("/issues/")) {
+          throw new Error("synthetic transport failure");
+        }
         if (path.startsWith("/pulls?")) {
           return {
             status: 200,
@@ -622,32 +613,73 @@ describe("the production truth read classifies artifact and tracker truth", () =
 });
 
 describe("the production truth read keeps honest failure classified", () => {
-  test("a missing credential classifies state-unverified with its identity", async () => {
+  test("a missing credential refuses pre-session with no attempt (TC-ADMIT-005 inversion)", async () => {
     const observed = await observeTruth({ branch: BRANCH, credentialMissing: true });
 
-    expect(observed.exit).toBe(2);
-    expect(observed.data?.result).toBe("state-unverified");
-    expect(observed.data?.error?.code).toBe("dispatch.state-unverified");
-    expect(observed.data?.error?.summary).toContain("config.credential.missing");
-    expect(observed.attempts).toHaveLength(1);
-    expect(observed.attempts[0]?.token).toBe("state-unverified");
+    expect(observed.exit).toBe(1);
+    expect(observed.data).toBeUndefined();
+    expect(observed.error?.code).toBe("config.credential.missing");
+    expect(observed.error?.summary).toContain("GITHUB_TOKEN");
+    expect(observed.error?.summary).toContain("github-read");
     // The credential resolves before any request leaves the process.
     expect(observed.requests).toEqual([]);
+    expect(observed.attempts).toHaveLength(0);
   });
 
-  test("a provider transport failure classifies state-unverified with its identity", async () => {
+  test("a post-session provider transport failure classifies state-unverified", async () => {
     const observed = await observeTruth({
       branch: BRANCH,
       openPullRequests: [openPullRequest(42)],
       transportFails: true,
     });
 
+    // The admission issue read succeeded; the later provider read failed.
     expect(observed.exit).toBe(2);
     expect(observed.data?.result).toBe("state-unverified");
     expect(observed.data?.error?.code).toBe("dispatch.state-unverified");
     expect(observed.data?.error?.summary).toContain("provider.payload.invalid");
     expect(observed.attempts[0]?.token).toBe("state-unverified");
     expect(observed.requests.length).toBeGreaterThan(0);
+  });
+});
+
+describe("TC-ADMIT-004 the positive control reaches a real verdict", () => {
+  test("a provisioned credential and readable truth derive a token other than state-unverified", async () => {
+    const observed = await observeTruth({
+      branch: BRANCH,
+      openPullRequests: [openPullRequest(42)],
+      ahead: "3",
+    });
+    expect(observed.data?.result).toBe("pr-open");
+    expect(observed.data?.result).not.toBe("state-unverified");
+    expect(observed.attempts).toHaveLength(1);
+  });
+});
+
+describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", () => {
+  test("a direct engine caller without the port still spawns and classifies state-unverified", async () => {
+    const scenario = createCommandScenario({
+      reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }),
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(scenario.scripted.calls.filter((call) => call === "spawn")).toHaveLength(1);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("the production composition supplies and orders the preflight", () => {
+  test("production wires the preflight and the engine invokes it before claimLease", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
+    expect(production).toContain("preflight: dispatchPreflight");
+    expect(engine.indexOf("ports.preflight()")).toBeGreaterThan(0);
+    expect(engine.indexOf("ports.preflight()")).toBeLessThan(
+      engine.indexOf("const claimed = ports.claimLease()"),
+    );
   });
 });
 
@@ -726,21 +758,21 @@ const createProductionHarness = (input: {
       : { repositoryFacts: { originUrl: input.originUrl } }),
     harnessSpawnRunner: runner,
     harnessSpawnStarter: streamStarterFromRunner(runner),
-    credentials:
-      input.credentialMissing === false
-        ? credentialPort(false)
-        : {
-            resolve: () => ({
-              ok: false,
-              code: "config.credential.missing",
-              domainKind: "config",
-              category: "user",
-              retryable: false,
-              consequence: "not_landed",
-              projectionClass: "user-validation",
-            }),
-          },
-    ...(input.transport === undefined ? {} : { githubTransport: input.transport }),
+    credentials: credentialPort(input.credentialMissing === true),
+    // The admission read must not reach the network; a resolved credential plus
+    // this hermetic transport keeps the preflight hermetic while the later reads
+    // stay unreadable exactly where each suite expects.
+    githubTransport:
+      input.transport ??
+      ({
+        send: async (request: { readonly url: string }) =>
+          request.url.includes("/issues/")
+            ? {
+                status: 200,
+                body: { number: 301, title: "Hermetic issue", state: "open", labels: [] },
+              }
+            : { status: 404, body: {} },
+      } as { send: (request: { readonly url: string }) => Promise<unknown> }),
     ...(input.gitRunner === undefined ? {} : { gitChildRunner: input.gitRunner }),
   })(brand);
   return {

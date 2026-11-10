@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275"]
+  related_changes: ["GH-239", "GH-275", "GH-279"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -15,12 +15,12 @@ links:
 
 ## Overview
 
-The dispatch suite protects one property: a delivery verdict is trustworthy only when truth decides it, evidence is durable, and authority moves only through a recorded gate. The suite fails if an exit code alone can produce a success claim; if a dispatch that reaches classification appends no attempt record or appends more than one; if a pre-session refusal records a fake attempt; if an exit-0-with-no-artifact run is counted clean; if a false-success incident is hidden or an incident does not reset the evidence window; if evidence of the wrong class counts toward a production handover; if a handover flips more than one repository, cannot be reverted idempotently, or is lost on replay; if bash needs the typed CLI to decide fallback; if the daemon path and the one-shot path disagree; if a model call or secret enters help, summary, gate, record, or envelope; or if a merge path becomes reachable from dispatch.
+The dispatch suite protects one property: a delivery verdict is trustworthy only when truth decides it, evidence is durable, and authority moves only through a recorded gate. The suite fails if an exit code alone can produce a success claim; if a dispatch that reaches classification appends no attempt record or appends more than one; if a pre-session refusal records a fake attempt or an admission refusal claims a lease or starts a session; if an admission read outcome is forwarded from the adapter instead of classified from its received status; if an exit-0-with-no-artifact run is counted clean; if a false-success incident is hidden or an incident does not reset the evidence window; if a delivered-evidence divergence duplicates, disappears, or becomes locally unresolvable; if evidence of the wrong class counts toward a production handover; if a handover flips more than one repository, cannot be reverted idempotently, or is lost on replay; if bash needs the typed CLI to decide fallback; if the daemon path and the one-shot path disagree; if a model call or secret enters help, summary, gate, record, or envelope; or if a merge path becomes reachable from dispatch.
 
 ## Test Scope
 
-- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `edge.ts`, `production.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
-- Contracts under test: the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the four-condition handover gate, and the bounded read/output constants.
+- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the GitHub work-item read and its received-status stamp (`packages/adapters/src/github/client.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/io/provider-transport.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `index.ts`, `edge.ts`, `production.ts`, `entrypoint.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
+- Contracts under test: the optional `preflight` admission port and its status-keyed refusal identities, the trusted-refusal marker's narrow forwarding rule, the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the delivered-evidence divergence shape and its per-work-item dedupe, the local-only resolve typing, the four-condition handover gate, and the bounded read/output constants.
 - Exclusions: no real repository is flipped and no real pilot evidence is accrued; the controlled proof uses the real state store and command path with injected harness, tracker, CI, and VCS ports. No live network, live model, or real merge is exercised. Evidence retention and cross-host authority are out of scope.
 
 ## Test Levels
@@ -33,21 +33,27 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-false-success.test.ts`, `dispatch-unevaluable.test.ts` — false-success classification, the unreadable-versus-contradicted corroboration distinction, and record-level versus window-level degradation.
 - `tests/behaviour/dispatch-identity.test.ts` and `tests/structure/dispatch-authority-view.test.ts` — repository identity resolution, rename stability, checkout-scoped marker reuse, and the atomic authority view.
 - `tests/behaviour/dispatch-dual-run-floor.test.ts`, `dispatch-gate-evidence.test.ts`, `dispatch-gate-window.test.ts`, `dispatch-divergence.test.ts` — floor-only semantics, corroboration, incident-exclusive window, and divergence folding.
+- `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts` — the delivered-evidence predicate over the classifier outcome and readable ledger, at most one open divergence per (repository, work-item reference), the divergence-before-attempt order, the failed-divergence-append and orphan directions, replay, and summary counting.
+- `tests/behaviour/dispatch-resolve-diagnostics.test.ts` — local-only resolve, preserved `state` identities with their own projections, the distinguishable not-found sentinel mapped to `input.value.rejected`, note clamping, and replay idempotency.
 
 ### Command and ledger tests
 
 - `tests/behaviour/dispatch-harness-lease.test.ts` — harness resolution, lease claim, pre-session refusals, and spawn-refused recording.
+- `tests/behaviour/dispatch-admission-preflight.test.ts`, `dispatch-admission-read-mapping.test.ts`, `dispatch-admission-diagnostics.test.ts` — admission ordering before the lease, zero side effects and zero requests on a credential refusal, the status-keyed read-outcome matrix with identity and kind asserted together, the name-only bounded summary in machine and human output, the trusted-refusal marker, and the admission read budget and latency.
+- `tests/behaviour/providers/github-inputs.test.ts`, `github-trap.test.ts` — the real GitHub client and normalizer stamp the received 2xx status onto a decode failure, keep 404 as `provider.not-found`, preserve any other non-2xx status, and leave a thrown transport status-absent.
 - `tests/behaviour/dispatch-harness-acquisition.test.ts` — the real opencode adapter over a scripted JSONL stream through the dispatch composition: the handle is returned before the session completes, `collect` stays pending across at least two liveness polls, the recorded call order is spawn → collect → liveness → classify, and a pre-session failure still collapses to `dispatch.session.spawn-failed`.
 - `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, a transient stall cleared by later progress, and routing of a stall still current when collection resolves through restart admission with no silent second spawn.
 - `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the post-spawn collection failure, four-key text order, and classified failures.
 - `tests/behaviour/dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — one attempt record per classified dispatch and one per attempt-stage failure.
 - `tests/behaviour/dispatch-resume.test.ts`, `dispatch-restart-budget.test.ts`, `dispatch-resume-economics.test.ts` — resume modes, phase-ledger continuity, restart-budget refusal with the terminal exhaustion record, and resume-economics refusal.
 - `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
-- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts` — no merge path, composition honesty, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, rename-invariant identity, and per-repository identity isolation paths.
+- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts`, `dispatch-preflight-contract.test.ts`, `dispatch-resolve-composition.test.ts` — no merge path, composition honesty, the optional-preflight contract, the production preflight wiring and ordering, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, rename-invariant identity, and per-repository identity isolation paths.
+- `tests/structure/cli-edge-seam.test.ts`, `entrypoint-bin.test.ts` — the declared truth-read key registered for redaction from injected environment facts (literal and prefixed references) and the entrypoint/bin secret seam.
 
 ### Registration, fallback, and daemon tests
 
 - `tests/behaviour/entrypoint-composition.test.ts`, `entrypoint-help-coverage.test.ts`, `dispatch-help-version.test.ts`, `tests/structure/dispatch-help-inventory.test.ts`, `tests/checks/dispatch-doc-conformance.test.ts` — prompt-required registration, help paths, reference-page coverage, and the stale-ring reconciliation.
+- `tests/behaviour/error-classification.test.ts` — the trusted-refusal marker is required for the bounded credential refusal, while an unmarked config-shaped failure and a marked failure for any other `config.*` code keep the untrusted-config suppression.
 - `scripts/.tests/test-dispatch-bash-fallback.sh` and `tests/structure/dispatch-bash-authority.test.ts` — the twelve-cell fallback matrix (four scripts × dual-run, authoritative, typed-CLI-absent/broken) and the no-typed-CLI source rule.
 - `tests/behaviour/dispatch-daemon-planner.test.ts`, `dispatch-daemonless.test.ts`, `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` — planner output, executor composition, the daemon-path attempt record, and the daemon-less one-shot path. The daemon lane seam is factory-proven here; the production daemon entry that supplies the lane composition is resident-daemon scope.
 
@@ -58,7 +64,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 
 ## Test Data
 
-Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, golden text, and mutation cases. The controlled proof uses a real local state store and real change files with deterministic UTC date advance; only the command path produces its attempt, divergence, and handover records. The production-composition proof seeds attempt records through the delivered ledger append to reach an eligible window, then drives `summary`, `resolve`, `handover`, and resume through the shipped production composer. No fixture fabricates a command outcome.
+Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, admission doubles (recording credential port and transport), golden refusal envelopes, golden text, and mutation cases. The controlled proof uses a real local state store and real change files with deterministic UTC date advance; only the command path produces its attempt, divergence, and handover records. The production-composition proof seeds attempt records through the delivered ledger append to reach an eligible window, then drives `summary`, `resolve`, `handover`, and resume through the shipped production composer. No fixture fabricates a command outcome.
 
 ## Test Scenarios
 
@@ -76,13 +82,47 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 
 ### Scenario: pre-session refusal versus attempt-stage failure
 
-- **Given** an unknown harness, rejected input, or a conflicting lease before a spawn
+- **Given** an unknown harness, rejected input, an admission preflight refusal, or a conflicting lease before a spawn
 - **When** the dispatch refuses
-- **Then** it emits the classified envelope at exit `1` and appends no attempt record.
+- **Then** it emits the classified top-level error envelope at the mapped exit (`1`, or `2` for a provider outage or malformed payload) and appends no attempt record.
 - **And given** a spawn failure, restart-budget refusal, resume-economics refusal, or harness spawn refusal
 - **Then** exactly one attempt record is appended with the pinned failure token and outcome.
 - **And given** a post-spawn `harness.collect` failure
 - **Then** exactly one attempt record is appended with token `state-unverified`, outcome `failed`, and exit `2`, and the envelope carries the classified error under `data.error`.
+
+### Scenario: admission preflight and read classification
+
+- **Given** an unresolvable truth-read credential and a harness session port that records every spawn and resume
+- **When** dispatch runs
+- **Then** it refuses pre-session with `config.credential.missing` (`kind: "config"`, exit `1`) and a bounded summary naming the resolved source key and the reference, issues zero provider requests, and records zero spawns, zero leases, and zero attempt records.
+- **And given** a resolvable credential and a bounded work-item read failing with 401 or 403
+- **Then** the refusal is `provider.auth.rejected` (`kind: "provider"`, exit `1`); 5xx or any other status-bearing non-2xx and a status-absent transport failure are `provider.outage` (`kind: "provider"`, exit `2`); a malformed 2xx payload carrying its received status is `provider.payload.invalid` (`kind: "provider"`, platform-provider); and a 404 is `input.value.rejected` (`kind: "input"`, exit `1`) naming the reference without asserting it is wrong.
+- **And given** an unknown harness or a malformed reference
+- **Then** the input refusal precedes the preflight and the preflight port is never invoked.
+
+### Scenario: delivered-evidence divergence
+
+- **Given** a completed classifier outcome, a readable phase ledger with progress or a complete total, and an unreadable truth read
+- **When** the dispatch records the attempt
+- **Then** one open divergence with `comparisonClass: not-applicable`, `engineToken: state-unverified`, `comparisonToken: null`, `attempt:<id>` and `truth:unreadable:<ledger|tracker|artifact|state>` evidence is appended before the attempt, and the attempt carries its `divergenceRef`.
+- **And given** an open delivered-evidence divergence for the same (repository, work-item reference)
+- **Then** a resume or another unverifiable-but-delivered attempt reuses and references it without increasing the unresolved count, and a new divergence opens only after the previous one is resolved.
+- **And given** the classifier outcome is not completed, the ledger is unreadable, or the ledger shows no progress and an incomplete total
+- **Then** no divergence opens.
+- **And given** the divergence append fails
+- **Then** one attempt lands with no `divergenceRef` and a bounded `divergence:append-failed` reference, and the underlying state identity is returned; when the attempt append fails after the divergence lands, the orphan stays open, counted, and resolvable.
+
+### Scenario: resolve writes from local evidence only
+
+- **Given** a composed resolve runtime with spy credential and transport ports
+- **When** `dispatch dual-run resolve <id> --note <text>` runs
+- **Then** neither port is invoked and the resolution comes from local state and the divergence ledger.
+- **And given** a store fault such as `state.lock.busy`, `state.store.torn`, or `state.write.failed`
+- **Then** the failure carries `kind: "state"` with that identity and its own projection, never `dispatch.state-unverified`.
+- **And given** an absent divergence identifier
+- **Then** it is the app-local `divergence-not-found` sentinel surfaced as `input.value.rejected` with `kind: "input"` and nothing is appended, never `state.keys.missing`.
+- **And given** a note longer than 240 characters
+- **Then** the resolution lands with the note clamped to at most 240 characters.
 
 ### Scenario: unreadable corroboration is unevaluable
 

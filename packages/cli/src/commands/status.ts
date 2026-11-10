@@ -42,6 +42,13 @@ export type StatusCommandRuntime = {
   readonly readLocalContext: () => StatusLocalContextRead;
   readonly readBlockers: () => StatusBlockersRead;
   readonly readSpend?: () => SpendDigestSection;
+  /**
+   * The declared truth-read reference, present only when the source is admitted.
+   * Names only, never material.
+   */
+  readonly readCredentialPrerequisite?: () =>
+    | { readonly referenceName: string; readonly sourceKey: string }
+    | undefined;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
 };
@@ -78,6 +85,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
         : await runtime.readPipelineRuns(repository.head.sha, STATUS_SOURCE_PIPELINE_LIMIT);
   }
   const nowMs = runtime.nowMs();
+  const credentialPrerequisite = runtime.readCredentialPrerequisite?.();
   return {
     nowIso: runtime.nowIso(),
     nowMs,
@@ -92,6 +100,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
     localContext: runtime.readLocalContext(),
     blockers: runtime.readBlockers(),
     spend: runtime.readSpend?.() ?? { state: "observed", captured: false },
+    ...(credentialPrerequisite === undefined ? {} : { credentialPrerequisite }),
   };
 };
 

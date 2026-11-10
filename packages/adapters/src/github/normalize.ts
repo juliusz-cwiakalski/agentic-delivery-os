@@ -287,23 +287,39 @@ const relationsFrom = (
   return relations;
 };
 
-/** Normalize one GitHub issue. */
+/**
+ * Normalize one GitHub issue.
+ *
+ * `httpStatus` is the status the bounded read received; passing it stamps a
+ * decode failure so a malformed 2xx payload stays distinguishable from a
+ * status-absent transport throw (TDR-0019 decision point 4).
+ */
 export const normalizeGithubIssue = (
   payload: unknown,
   context: GithubNormalizationContext,
+  httpStatus?: number,
 ): ProviderReadResult<WorkItem> => {
-  if (!isRecord(payload)) return providerPayloadFailure("GitHub issue payload is not an object");
+  if (!isRecord(payload)) {
+    return providerPayloadFailure("GitHub issue payload is not an object", httpStatus);
+  }
   const entityId = identityField(payload, "number");
-  if (entityId === undefined) return providerPayloadFailure("GitHub issue has no number");
+  if (entityId === undefined) {
+    return providerPayloadFailure("GitHub issue has no number", httpStatus);
+  }
   const title = stringField(payload, "title");
-  if (title === undefined) return providerPayloadFailure(`GitHub issue ${entityId} has no title`);
+  if (title === undefined) {
+    return providerPayloadFailure(`GitHub issue ${entityId} has no title`, httpStatus);
+  }
   const nativeStatus = stringField(payload, "state");
   if (nativeStatus === undefined) {
-    return providerPayloadFailure(`GitHub issue ${entityId} has no state`);
+    return providerPayloadFailure(`GitHub issue ${entityId} has no state`, httpStatus);
   }
   const deliveryState = workItemStatusFor(nativeStatus);
   if (deliveryState === undefined) {
-    return providerPayloadFailure(`GitHub issue ${entityId} has unmapped state "${nativeStatus}"`);
+    return providerPayloadFailure(
+      `GitHub issue ${entityId} has unmapped state "${nativeStatus}"`,
+      httpStatus,
+    );
   }
 
   const rawLabels = payload.labels;
@@ -524,7 +540,7 @@ export const normalizeWorkItemObservation = (
   if (status < 200 || status >= 300) {
     return { observation: "invalid", detail: `GitHub returned HTTP ${status}` };
   }
-  const normalized = normalizeGithubIssue(payload, context);
+  const normalized = normalizeGithubIssue(payload, context, status);
   if (!normalized.ok) {
     return {
       observation: "invalid",

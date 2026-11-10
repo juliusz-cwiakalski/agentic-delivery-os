@@ -13,6 +13,7 @@ import {
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
   type DispatchAttemptRecord,
   type DispatchEnvelopeData,
@@ -20,10 +21,12 @@ import {
   type DispatchHandoverState,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
+  ERROR_TABLE,
   HARNESS_OUTCOMES,
   type HarnessEvidence,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
+  type HarnessOutcome,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type ProjectionClass,
@@ -50,7 +53,12 @@ import {
   deriveDispatchResult,
 } from "../domain/dispatch-result.js";
 import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-resume.js";
-import { appendDispatchAttempt, appendDispatchDivergence } from "./dispatch-ledger.js";
+import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  foldDispatchDivergences,
+  readDispatchDivergences,
+} from "./dispatch-ledger.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
@@ -110,6 +118,33 @@ export type DispatchAdmission =
       readonly resumeMode?: DispatchResumeMode;
     };
 
+/**
+ * The admission preflight refusal.
+ *
+ * `trustedRefusal` is the narrow marker the CLI classifier honours only for
+ * `config.credential.missing`; it lets the bounded credential prose past the
+ * untrusted-config suppression. Provider and input refusals carry no marker.
+ */
+export type DispatchPreflightError = {
+  readonly kind: "input" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly trustedRefusal?: true;
+};
+
+/**
+ * The admission preflight result: admitted, or a typed pre-session refusal.
+ *
+ * Distinct from `DispatchAdmission`: a preflight refusal appends no record and
+ * runs before `claimLease`, while an admission refusal still records a pair.
+ */
+export type DispatchPreflightResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: DispatchPreflightError };
+
+/** The optional admission precondition; production always supplies it. */
+export type DispatchPreflightPort = () => Promise<DispatchPreflightResult>;
+
 /** Everything the one-shot run consumes; every field is injected. */
 export type DispatchPorts = {
   readonly store: StateStorePort;
@@ -129,6 +164,12 @@ export type DispatchPorts = {
   readonly claimLease: () => DispatchLeaseClaim;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: DispatchPhaseLedger;
+  /**
+   * The admission precondition: resolves the truth-read credential and performs
+   * one bounded read. It runs after harness/input validation and before
+   * `claimLease`, spawn, or resume, and appends no record of its own.
+   */
+  readonly preflight?: DispatchPreflightPort;
   readonly admission?: () => DispatchAdmission;
   readonly initialRestarts?: number;
   readonly restartBudget?: number;
@@ -162,9 +203,11 @@ export type DispatchRunResult =
   | {
       readonly ok: false;
       readonly error: {
-        readonly kind: "input" | "queue" | "state" | "harness" | "dispatch";
+        readonly kind: "input" | "queue" | "state" | "harness" | "dispatch" | "provider" | "config";
         readonly code: string;
         readonly summary?: string;
+        /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
+        readonly trustedRefusal?: true;
       };
     };
 
@@ -198,6 +241,81 @@ const errorOf = (derivation: {
     summary: boundLastMessage(derivation.lastMessage),
   };
 };
+
+/** The completed harness outcome; delivered evidence is evaluated at record time. */
+const COMPLETED_OUTCOME = HARNESS_OUTCOMES[0];
+
+/**
+ * Build the envelope error from the declared table row. Used when the delivered
+ * attempt must name an underlying state identity other than its derived token.
+ */
+const errorFromTable = (
+  code: string,
+  lastMessage: string,
+): NonNullable<DispatchEnvelopeData["error"]> => {
+  const row = ERROR_TABLE.find((entry) => entry.code === code);
+  if (row === undefined) return errorOf({ lastMessage, errorCode: code });
+  return {
+    code: row.code,
+    category: row.category,
+    retryable: row.retryable,
+    consequence: row.consequence,
+    remediationHint: row.remediationHint,
+    summary: boundLastMessage(lastMessage),
+  };
+};
+
+/**
+ * Delivered evidence (F-4.1): the shared classifier outcome is `completed` at
+ * record time and the phase ledger is readable with progress or a complete
+ * total. The persisted attempt outcome is never an input.
+ */
+const isDeliveredEvidence = (input: {
+  readonly outcome: HarnessOutcome;
+  readonly ledger: DispatchRead<DispatchLedgerFacts>;
+}): boolean => {
+  if (input.outcome !== COMPLETED_OUTCOME) return false;
+  if (!input.ledger.ok) return false;
+  return (
+    input.ledger.value.progressed ||
+    (input.ledger.value.total > 0 && input.ledger.value.completed === input.ledger.value.total)
+  );
+};
+
+/**
+ * The failing read family of the delivered closed read set.
+ *
+ * Only `tracker` and `artifact` are reachable here: `isDeliveredEvidence`
+ * already requires a readable ledger, and the derivation yields
+ * `state-unverified` only from an unreadable ledger, tracker, or artifact read.
+ * A `ci`-only failure is not a truth-read family (the spec forbids a `ci`
+ * reason), so it contributes no reference instead of being mislabelled.
+ */
+const unreadableTruthReason = (reads: DispatchTruthReads): "tracker" | "artifact" | undefined => {
+  if (!reads.tracker.ok) return "tracker";
+  if (!reads.artifacts.ok) return "artifact";
+  return undefined;
+};
+
+/** The delivered-evidence divergence shape used for per-work-item dedupe. */
+const isDeliveredEvidenceDivergence = (
+  record: {
+    readonly state: string;
+    readonly comparisonClass: string;
+    readonly engineToken: string;
+    readonly comparisonToken: string | null;
+    readonly repository: string;
+    readonly ref: string;
+  },
+  repository: string,
+  ref: string,
+): boolean =>
+  record.state === "open" &&
+  record.comparisonClass === "not-applicable" &&
+  record.engineToken === su &&
+  record.comparisonToken === null &&
+  record.repository === repository &&
+  record.ref === ref;
 
 const comparisonFor = (input: {
   readonly token: DispatchToken;
@@ -330,6 +448,13 @@ const livenessReadings = (
  * they append exactly one attempt record and return a classified envelope.
  */
 export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResult> => {
+  // Admission precondition: a refusal here is pre-session. It runs before the
+  // lease claim and before any spawn, resume, attempt, or divergence record.
+  if (ports.preflight !== undefined) {
+    const preflight = await ports.preflight();
+    if (!preflight.ok) return { ok: false, error: preflight.error };
+  }
+
   const claimed = ports.claimLease();
   if (!claimed.ok) {
     return { ok: false, error: { kind: "queue", code: claimed.code } };
@@ -348,6 +473,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly token: DispatchToken;
       readonly outcome: DispatchAttemptRecord["outcome"];
       readonly errorCode?: string;
+      /** An identity the envelope must name instead of the derived token's row. */
+      readonly envelopeErrorCode?: string;
       readonly comparison: DispatchAttemptRecord["comparison"];
       readonly corroboration: DispatchAttemptRecord["corroboration"];
       readonly falseSuccess: boolean;
@@ -393,7 +520,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         outcome: input.outcome,
         ...(input.errorCode === undefined
           ? {}
-          : { error: errorOf({ lastMessage: input.lastMessage, errorCode: input.errorCode }) }),
+          : {
+              error:
+                input.envelopeErrorCode === undefined
+                  ? errorOf({ lastMessage: input.lastMessage, errorCode: input.errorCode })
+                  : errorFromTable(input.envelopeErrorCode, input.lastMessage),
+            }),
         lastMessage: boundLastMessage(input.lastMessage),
       };
       releaseCause = "completed";
@@ -644,7 +776,56 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     });
 
     let divergenceRef: string | undefined;
-    if (comparison.outcome === "mismatch") {
+    let truthRef: string | undefined;
+    let appendFailureCode: string | undefined;
+    const delivered =
+      derivation.token === su &&
+      isDeliveredEvidence({
+        outcome: classification.outcome,
+        ledger: reads.ledger,
+      });
+    const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
+    if (delivered && truthReason !== undefined) {
+      truthRef = `truth:unreadable:${truthReason}`;
+      const ledger = readDispatchDivergences(ports.store);
+      const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
+      // A replayed attempt is already represented by its own divergence,
+      // resolved or not; never open a second record for it.
+      const recordedAttempt = folded.some(
+        (entry) =>
+          entry.attemptId === attemptId &&
+          entry.repository === ports.repository &&
+          entry.ref === ports.ref &&
+          entry.comparisonClass === "not-applicable" &&
+          entry.engineToken === su &&
+          entry.comparisonToken === null,
+      );
+      if (!recordedAttempt) {
+        const existing = folded.find((entry) =>
+          isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
+        );
+        if (existing !== undefined) {
+          divergenceRef = existing.divergenceId;
+        } else {
+          const candidate = ports.newDivergenceId();
+          const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
+            schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+            divergenceId: candidate,
+            repository: ports.repository,
+            ref: ports.ref,
+            attemptId,
+            state: "open",
+            comparisonClass: "not-applicable",
+            engineToken: su,
+            comparisonToken: null,
+            evidenceRefs: [`attempt:${attemptId}`, truthRef],
+            recordedAt: now,
+          });
+          if (appended.ok) divergenceRef = candidate;
+          else appendFailureCode = appended.code;
+        }
+      }
+    } else if (comparison.outcome === "mismatch") {
       divergenceRef = ports.newDivergenceId();
       appendDispatchDivergence(ports.store, ports.fenceToken, {
         schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -671,17 +852,29 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       ...(unreadable.length === 0 ? {} : { unreadable }),
     });
 
+    const evidenceRefs = [
+      `attempt:${attemptId}`,
+      ...(truthRef === undefined ? [] : [truthRef]),
+      ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
+      ...livenessRefs,
+    ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
+    const lastMessage =
+      appendFailureCode === undefined
+        ? derivation.lastMessage
+        : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
+
     return record({
       token: derivedToken,
       outcome: derivation.outcome,
       ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+      ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
       comparison,
       corroboration,
       falseSuccess,
       prUrl: derivation.prUrl,
       urlResolved: derivation.urlResolved,
-      lastMessage: derivation.lastMessage,
-      evidenceRefs: [`attempt:${attemptId}`, ...livenessRefs],
+      lastMessage,
+      evidenceRefs,
       ...(divergenceRef === undefined ? {} : { divergenceRef }),
     });
   } finally {

@@ -548,6 +548,25 @@ const httpStatusTrapCheck = async (): Promise<void> => {
     expect((transportFailure as { readonly httpStatus?: number }).httpStatus).toBeUndefined();
   }
   expect(transport.requests).toEqual([]);
+
+  // A received-but-malformed 2xx is status-present: the bounded read stamps the
+  // status it received onto the decode failure, so it stays distinguishable from
+  // the status-absent transport throw above.
+  const malformedTransport = createFixtureTransport([
+    { url: issueUrl(178), body: { number: 178 }, status: 200 },
+  ]);
+  const malformed = await createGitHubClient({
+    instance,
+    credentials,
+    repository,
+    transport: malformedTransport,
+  }).readWorkItem(178);
+  expect(malformed.ok).toBe(false);
+  if (!malformed.ok) {
+    expect(malformed.code).toBe("provider.payload.invalid");
+    expect((malformed as { readonly httpStatus?: number }).httpStatus).toBe(200);
+  }
+  expect(malformedTransport.requests).toHaveLength(1);
 };
 
 const defaultAssertions: TrapAssertions = {

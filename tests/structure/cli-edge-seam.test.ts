@@ -15,6 +15,11 @@ import {
   resolveAgentIdentity,
   resolveCliMode,
 } from "../../packages/cli/src/edge";
+import {
+  PROMPT_REQUIRED_COMMANDS,
+  resolveEntrypointBrand,
+  runEntrypoint,
+} from "../../packages/cli/src/entrypoint";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import { AUDIT_IDENTITY_VARIABLE_SUFFIX } from "../../packages/core/src/contracts/index";
 import { createFakeIo, NOW_MS, SYNTHETIC_DB_PATH } from "../fixtures/session-admin/harness";
@@ -256,6 +261,65 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
 
   test("no product token literal exists in the new CLI code", () => {
     expect(productTokenFailures(ROOT)).toEqual([]);
+  });
+
+  const promptProgram = (canary: string) => ({
+    commands: Object.fromEntries(
+      PROMPT_REQUIRED_COMMANDS.map((command) => [
+        command,
+        {
+          handler: () => (command === "status" ? { data: { echoed: canary } } : { data: {} }),
+        },
+      ]),
+    ),
+  });
+
+  test("TC-CREDNAME-006 the declared truth-read key is registered for redaction from injected facts", async () => {
+    const canary = "planted-edge-truth-read-canary";
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const exit = await runEntrypoint(["status", "--json"], {
+      streams: { stdout, stderr },
+      environment: { GITHUB_TOKEN: canary },
+      configuredWorkingName: "synthetic",
+      clock: { now: () => 100 },
+      newRunId: () => "run-edge-secret",
+      credentialReferences: [
+        {
+          referenceName: "github-read",
+          sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
+        },
+      ],
+      composeProgram: () => promptProgram(canary),
+    });
+    expect(exit).toBe(0);
+    expect(stdout.value).not.toContain(canary);
+    expect(stdout.value).toContain("[redacted]");
+  });
+
+  test("TC-CREDNAME-006 a prefixed reference resolves its key from the injected brand", async () => {
+    const canary = "planted-edge-prefixed-canary";
+    const brand = resolveEntrypointBrand({ configuredWorkingName: "synthetic", environment: {} });
+    const key = `${brand.environmentPrefix}TRACKER_TOKEN`;
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const exit = await runEntrypoint(["status", "--json"], {
+      streams: { stdout, stderr },
+      environment: { [key]: canary },
+      configuredWorkingName: "synthetic",
+      clock: { now: () => 100 },
+      newRunId: () => "run-edge-prefixed",
+      credentialReferences: [
+        {
+          referenceName: "tracker-read",
+          sourceKey: { style: "environment-prefixed", suffix: "TRACKER_TOKEN" },
+        },
+      ],
+      composeProgram: () => promptProgram(canary),
+    });
+    expect(exit).toBe(0);
+    expect(stdout.value).not.toContain(canary);
+    expect(stdout.value).toContain("[redacted]");
   });
 });
 

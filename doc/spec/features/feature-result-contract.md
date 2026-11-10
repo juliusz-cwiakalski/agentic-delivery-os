@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-RESULT-CONTRACT
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
 summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the nine state integrity rows, the thirteen provider-kind rows (five provider-engine, four profile-selection, four env-record), the lint rows for pm-notes conformance including the lint-document-unreadable row, the six verify delivery-verdict, gates, and deploy rows, the four db session-administration rows, the five closeout rows plus the open-slot closeout.step.<id>.failed family, the five machine-readable delivery-plan rows, the four watchdog lane-safety rows, the five commit-primitive rows, the nine harness-primitive rows, the seven concrete merge rows plus the open-slot merge.gate.<gate-id>.failed family, the four dispatch rows, the single doctor check-failure row, the status collector-unavailable family row, the four retro evidence rows, the four blockers typed-question-channel rows, the one spend read-side row, the five queue scheduling rows, the eight daemon rows, and the six coordinator rows, the domain-kind to app-error-code to projection classification chain with exact-code provider, db, closeout, plan, watchdog, commit, status, blockers, doctor, merge, harness, retro, dispatch, spend, queue, daemon, and coordinator classification, the harness-neutral outcome-to-delivery-result token projection, the adapter-local provider.payload.invalid projection, the standalone CLI {0, 1, 2} exit projection with the additive data-bearing `attention` class, the deterministic in-process runCli surface behind the executable entrypoint, the injected interactive-vs-scripted machine-output mode with the scripted trim and its --verbose override, the two-entry fallback containment, the serialization redaction chokepoint, the testkit envelope and scripted-projection validators, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-224", "GH-231", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-242", "GH-239", "GH-241"]
-  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0008"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-224", "GH-231", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-242", "GH-239", "GH-241", "GH-279"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0008", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
     - "packages/core/src/contracts/capsule.ts"
@@ -275,6 +275,12 @@ Two containment entries cover distinct populations, and each population resolves
 - **`fallback.internal`** contains errors no table entry classifies: undeclared kinds, non-`Error` thrown values, rejected promises, malformed results, a handler whose definition disappears, and serialization failure. It is category `platform`, `retryable: false`, `consequence: unknown`, projection class `platform-provider` (exit `2`), with a remediation hint directing the caller to diagnostics.
 
 Both entries carry `consequence: unknown` because containment never asserts that a mutation landed or did not land, and both carry `retryable: false` because an identical broken invocation fails identically and an unclassifiable failure with unknown consequence must not invite a blind retry. The remediation hint, not the retryable flag, directs the next step.
+
+### Trusted refusal prose
+
+The classifier suppresses a supplied summary and remediation hint for any config-shaped failure, because that text may be untrusted configuration. One narrow exception is declared: a `config.credential.missing` failure may carry a `trustedRefusal: true` marker set by the engine's bounded credential refusal. The marker is honoured only for that exact code; the classifier forwards the bounded identifier-only summary and any supplied remediation hint in both machine and human output. An unmarked config-shaped failure and a marked failure for any other `config.*` code keep the suppression. The marker changes no identity, projection, or exit.
+
+The dispatch engine's local result error-kind union admits the existing `provider` and `config` kinds additively, so its admission refusals carry the real identity rather than a containment code. `DOMAIN_KINDS`, the error-table row count, the eleven delivery-result tokens, and the exit table are unchanged; the adapter-local `provider.payload.invalid` identity remains outside the table with its platform-provider projection.
 
 ### Evolution discipline
 
