@@ -488,7 +488,10 @@ notes:
     type: info
     date: 2026-11-10
   - text: "Plan phase 10 complete: code review iteration 2 remediation (F-1,
-      F-2, F-3..F-7; D26-D30). Commit 3f8b3c16. F-1 brand half: the shipped
+      F-2, F-3..F-7; D26-D30). Commit 3f8b3c16 carries the remediation; the
+      phase-10 boundary is the immediately following evidence-note commit, so
+      this note is never read as naming an intermediate tree. F-1 brand half:
+      the shipped
       example recognises DELIVERY_OS_OWNER_HOLD and
       DELIVERY_OS_OWNER_HOLD_POLL_SECONDS and reads the fixed
       $HOME/.delivery-os-state/owner-hold marker, with the registry array
