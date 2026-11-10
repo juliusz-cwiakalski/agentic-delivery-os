@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-10T23:14:45.991Z }
   quality_gates: { started: null, completed: 2026-11-10T23:29:00.468Z }
   dod_check: { started: null, completed: 2026-11-10T23:30:01.411Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-10T23:32:06.055Z }
 decisions:
   - text: "Intake state: GH-284 open with label `change` only, zero comments; branch
       docs/GH-284/m2-planning exists locally with zero unique commits (HEAD ==
@@ -728,5 +728,15 @@ notes:
       on that list blocks an AC. Change capsule note: this change predates the
       events.jsonl/candidates capsule wiring in this checkout, so the phase
       registry plus pm-notes carry the event trail."
+    type: "info"
+    date: "2026-11-11"
+  - text: "PR CREATION (phase 11): PR #285 opened against main-tools —
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/285 — from
+      docs/GH-284/m2-planning, head 4827b7478ecfc5ddae93410e2b665901181b9fc6,
+      label `documentation`, linked as `Refs #284` so it cross-references
+      without closing the ticket. The branch was unpublished and is now pushed
+      with tracking. Merge authority stays with the owner/CEO: the PR body
+      records the squash-merge instruction and the docs: subject, and the
+      non-blocking residue from review-iter-3 for the human reviewer."
     type: "info"
     date: "2026-11-11"
