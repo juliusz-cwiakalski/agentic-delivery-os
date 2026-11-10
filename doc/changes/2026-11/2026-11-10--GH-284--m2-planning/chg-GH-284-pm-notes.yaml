@@ -7,7 +7,7 @@ phases:
   specification: { started: null, completed: 2026-11-10T19:54:39.263Z }
   test_planning: { started: null, completed: 2026-11-10T19:54:42.633Z }
   delivery_planning: { started: null, completed: 2026-11-10T19:54:46.270Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -335,4 +335,29 @@ notes:
       against both a compliant fixture and a deliberately non-compliant one in
       the same edit, which is exactly how the fix was validated this round."
     type: "retro"
+    date: "2026-11-10"
+  - text: "DoR iteration 3: READY — 10/10 facets PASS, blocking set empty. Record:
+      readiness-review/readiness-iter-3.md. The reviewer proved the iteration-2
+      blocker closed by execution, not by reading: the fixed P33 predicate
+      returns 3/3 and 7/7 with heading_association=OK on a compliant document
+      built to the plan's heading form, still passes with extra narrative ##
+      sections and with a diagram under a ### subheading (no over-strictness),
+      fails on a duplicate C4 heading, and reports MISSING on the negative
+      fixture; Appendix E has predicate parity. It re-ran 24 of the 38 procedure
+      blocks plus gate-capability fixtures, confirmed every control value, and
+      confirmed the gates can go green (a realistic twelve-file pack passes P33
+      at 10 fences; a twelve-target index row scores 12/12 with the M0/M1 rows
+      identical)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Non-blocking residue accepted and routed to the phase-8 reviewer:
+      flow-token association is section-scoped rather than adjacency-proven; the
+      KPI still says '3+6+1' while P33 reports 3 C4 + 7 flows; task 4.2's
+      'directly under' is stricter than its gate (never false-fails);
+      story_map_entries>=16 is line-based; P35's total=79 line is loosely
+      attributed to P02; P33's orphan seen-set is not reset per file;
+      milestones/README.md whole-file identity beyond the table and rows is
+      ungated; the DoD does not spell out association. None changes a verdict or
+      a requirement."
+    type: "info"
     date: "2026-11-10"
