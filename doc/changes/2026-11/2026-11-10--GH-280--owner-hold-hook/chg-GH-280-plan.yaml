@@ -6,31 +6,40 @@
 #     AC-F1-1..AC-F1-9, AC-F2-1..AC-F2-8, AC-F3-1..AC-F3-4,
 #     AC-F4-1..AC-F4-11, AC-F5-1..AC-F5-4, AC-F6-1..AC-F6-4,
 #     AC-DOC-1..AC-DOC-4; DM-1..DM-9; NFR-1..NFR-14; DEC-1..DEC-10;
-#     RSK-1..RSK-12; §5.1 capability details; §6 flows 1-5; §7 scope;
+#     RSK-1..RSK-13; §5.1 capability details; §6 flows 1-5; §7 scope;
 #     §8.3 data model; §16 affected components; §16.1 documentation impact;
 #     §18 ordering and rollback; §22 maintenance and operations impact)
-#   - Test plan: ./chg-GH-280-test-plan.md (58 cases: 57 automated plus the
+#   - Test plan: ./chg-GH-280-test-plan.md (59 cases: 58 automated plus the
 #     operator-run TC-HOLDE2E-001; the HOLDFACT, HOLDHOOK, HOLDREG, HOLDQUEUE,
 #     HOLDSTATUS, HOLDDOCTOR, HOLDDOCS, HOLDEDGE, HOLDNEG families; §6
 #     environments and fixtures; §7.1 test files and execution; §7.2 new and
 #     modified files; §7.3 fixture/golden update plan; §7.4 mutation evidence;
-#     §1.2 GAP-T1..GAP-T6)
-#   - PM record: ./chg-GH-280-pm-notes.yaml (binding D1-D11, including the
-#     token/detail split D7, the no-model-gate rule D8, the reason-line grammar
-#     D9, the silent-versus-warning poll fallback D10, and the appended doctor
-#     detail D11)
+#     §1.2 GAP-T1..GAP-T7)
+#   - PM record: ./chg-GH-280-pm-notes.yaml (binding D1-D11 plus the DoR-1
+#     remediation decisions D12-D19; D3a is history only. D7 splits the token
+#     from the detail, D8 removes the model gate, D9 pins the reason-line
+#     grammar, D10 pins the silent-versus-warning poll fallback, D11 appends the
+#     doctor detail, D12 fixes the marker location, D13 gates the no-ref claim,
+#     D14 makes the supervision guarantee conditional, D15 moves the status
+#     member to evidence level, D16 requires exact closed-set equality, D17
+#     leaves queue ready unchanged, D18 specifies the doctor clamp, and D19
+#     states deferral-versus-refusal semantics)
 #   - No decision record is owed: the ten binding decisions live in the spec's
-#     §15 decision log (DEC-1..DEC-10).
+#     §15 decision log (DEC-1..DEC-10), with D12-D19 folded into DEC-1, DEC-3,
+#     DEC-7, and DEC-10.
 #
 # ORDERING (dependency-driven; the tree is green at every commit and no
-# intermediate commit lets the shell defer while the engine claims):
+# intermediate commit lets the shell defer while the engine claims). This is the
+# spec §18 order: contract/fact -> gate -> status/doctor surfaces -> production
+# composition -> hook -> docs.
 #   1 fact contract + bounded reader and its inventories
 #   2 global queue gate, claim/fenced-claim refusal, park-recovery skip,
 #     payload presence, and the closed lane/blocking vocabulary
-#   3 additive status providers sibling and human suffix
-#   4 additive doctor provider detail and the one new evidence reason
-#   5 production composition at the CLI/MCP edge, queue CLI surfaces, dispatch
-#     claim-seam refusal, queue goldens, and the cross-surface composition pin
+#   3 additive status providers evidence member and human suffix
+#   4 additive doctor provider detail and the one new annotation reason
+#   5 production composition at the CLI/MCP edge, the claim gate before ref
+#     selection, queue CLI surfaces, dispatch claim-seam refusal, queue goldens,
+#     and the cross-surface composition pin
 #   6 the DM-1 example hook, install/uninstall registration, and its
 #     deterministic shell suite
 #   7 guides, feature specs, reference pages, and the release changeset
@@ -40,7 +49,9 @@
 #     share one fact shape, one source vocabulary, and one reason bound.
 #   - Phase 2 lands the pure/app gate before any composition, so the queue,
 #     lease, park, and lane proofs never depend on a CLI wiring that could
-#     silently omit the fact.
+#     silently omit the fact. The pre-fence and fenced refusals are phase 2; the
+#     pre-ref-selection claim gate belongs to phase 5, where the composition
+#     owns selection.
 #   - Phases 3 and 4 are independent surfaces over injected facts; they follow
 #     the gate because the payload and reason vocabularies they project are
 #     declared in phase 2, and precede phase 5 because `edge.ts` can compose
@@ -49,19 +60,21 @@
 #     `packages/cli/src/production.ts`: every production reader (queue, claim,
 #     watch, dispatch, status, doctor) lands together, so no file is changed in
 #     two phases and the composition pin is satisfied in the phase that can
-#     satisfy it in full.
-#   - Phase 6 ships the example only after the engine gate exists. That is the
-#     spec §18 ordering: a wrapper-side deferral may never exist in a commit
-#     where the typed engine would still claim. The example is installed
-#     inactive and is not referenced by operator documentation until phase 7.
-#   - Phase 7 is the only phase that tells an operator to select the example; it
-#     also lands the one binding doc-sync edit the error-table check forces
-#     (phase 2's remediation-hint change must update the documented row in
-#     `doc/spec/features/feature-result-contract.md` in the same commit).
+#     satisfy it in full. The resident daemon is NOT wired by this change: the
+#     phase proves only that a supervision cycle whose next-action seam derives
+#     from the held pass receives no action (GAP-T7, D14).
+#   - Phase 6 ships the example only after the engine gate exists, so a
+#     wrapper-side deferral cannot exist in a commit where the typed engine would
+#     still claim. The example is installed inactive and is not referenced by
+#     operator documentation until phase 7.
+#   - Phase 7 is the only phase that tells an operator to select the example.
+#     The error-table documented row is NOT phase 7: phase 2 owns
+#     `doc/spec/features/feature-result-contract.md` and updates it in the same
+#     commit as the remediation-hint change.
 #   - Phase 8 is verification only: no source, fixture, or golden edit. It
 #     records the test-plan execution log and the change record with the
 #     aggregate gate, the shell battery, the doc-distribution guard, and the
-#     manual TC-HOLDE2E-001 procedure.
+#     manual TC-HOLDE2E-001 procedure (no-ref claim included).
 #
 # DELIVERY PINS (placements and spellings the spec/test plan leave
 # delivery-bound; none changes a requirement):
@@ -70,15 +83,22 @@
 #     `packages/core/src/contracts/owner-hold.ts` (types and `OWNER_HOLD_*`
 #     constants only, because the contract tier must stay type-and-const). The
 #     pure resolver lives in `packages/core/src/domain/owner-hold.ts` and takes
-#     the environment record, the state directory, and the marker outcome as
-#     injected inputs. Core reads no ambient environment and no filesystem.
+#     the environment record, the production store directory, and the marker
+#     outcome as injected inputs. Core reads no ambient environment and no
+#     filesystem.
+#   - The marker is read from exactly
+#     `<home>/<brand.stateDirectoryName>/owner-hold` (`$HOME/.ados-state/owner-hold`
+#     for this product), the directory the production store identity actually
+#     uses. There is no marker-path override and no store-relocation override:
+#     neither is offered, accepted, or honoured, because a shell-only path would
+#     leave the typed engine unheld (D12). Relocating the store is a separate
+#     change and is explicitly out of scope here.
 #   - The bounded marker read lives in
 #     `packages/adapters/src/file/owner-hold-marker.ts` over injected facts
 #     (existence, regular-file check, one bounded read of at most 4 096 bytes),
 #     is fail-closed for an unreadable, non-regular, or stat-failing path, and is
-#     supplied by the CLI edge and the MCP status runtime. The engine's marker
-#     path is always `<stateDirectory>/owner-hold` from the store identity; no
-#     caller-supplied path reaches the engine.
+#     supplied by the CLI edge and the MCP status runtime. No caller-supplied
+#     path reaches the engine.
 #   - Precedence: environment present with length > 0 wins over the marker; an
 #     empty environment is inactive; a whitespace-only environment is active
 #     without a reason; a zero-byte marker is active without a reason; only a
@@ -88,11 +108,29 @@
 #   - Claim refusal keeps the blocking-reason token exactly `owner-hold` and
 #     names the source and reason in the separate bounded detail
 #     (`owner hold active (<source>)[: <reason>]`). `parked:<cause>` stays a park
-#     reason and is never conflated with the token (PM D7).
+#     reason and is never conflated with the token (D7). The pre-fence and fenced
+#     gates belong to phase 2; the composition gates the hold BEFORE ref
+#     selection in phase 5, so `queue claim` with no ref also refuses
+#     `owner-hold` and never falls through to `no-eligible-action` (D13).
+#   - A held claim and a held dispatch are a classified user-validation refusal
+#     at exit 1 from the existing `queue.precondition.unmet` identity, not an
+#     internal wait. A caller that wants deferral semantics must treat
+#     `owner-hold` as wait/do-not-abort, never as a transient retry (D19).
 #   - A resumable park under a hold renders `held` with `owner-hold`, an active
 #     park keeps `parked:<cause>`, a stuck park keeps `park-condition-stuck`, and
 #     `owner-hold` is always the first blocking reason; later reasons are
-#     preserved, never replaced.
+#     preserved, never replaced. `queue list` therefore keeps the full ordered
+#     `blocking[]`, while `lanes` renders exactly one reason and shows
+#     `owner-hold` for a held entry, masking the more specific not-ready reason;
+#     the masking is documented and operators are pointed at `queue list`.
+#   - `queue ready` is unchanged: its payload carries no `ownerHold` and no
+#     hold-shaped suppression, and it is not a hold surface (D17).
+#   - The exact one-token boundary is pinned by two-way ordered equality in
+#     `tests/structure/queue-scheduling-contract.test.ts`:
+#     `expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons)`
+#     and
+#     `expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons)`
+#     against `tests/fixtures/queue/vocabulary/closed-sets.json` (D16).
 #   - The mutating recovery pass is skipped at the app layer, so every caller
 #     (claim, release, bookkeeping, watch) inherits the skip without a separate
 #     gate. Reads may still evaluate and display park state.
@@ -100,17 +138,29 @@
 #     plus one additive optional `summary`; the engine carries it into the
 #     existing `queue`-kind `error.summary`. No new error identity, domain kind,
 #     or exit.
-#   - The status sibling is one optional `ownerHold?: { source; reason? }` on
-#     the section evidence (a sibling of `sources[]`, the
-#     `credentialPrerequisite` precedent), attached after derivation and only
-#     when active. Human mode appends `| owner-hold[: <reason>]` to the existing
-#     providers line inside the delivered clamp.
+#   - The supervision guarantee is CONDITIONAL: a composed supervision cycle
+#     whose `nextAction` seam derives from the held `computeQueueSchedule` result
+#     receives no action and cannot claim. The production resident-daemon entry
+#     supplies neither seam today; it remains the resident-daemon spec's
+#     documented residual (GAP-T7, D14). No plan phase claims production daemon
+#     wiring and `daemon-compose.ts` is not in any scope.
+#   - The status member is one optional `ownerHold?: { source; reason? }` on the
+#     providers section's EVIDENCE record — `providers.evidence.ownerHold`, a
+#     sibling of `sources[]` following the `credentialPrerequisite` precedent.
+#     It is not a sibling of `chain`, `entries`, or `parks`. It is attached after
+#     derivation and only when active. Human mode appends
+#     `| owner-hold[: <reason>]` to the existing providers line inside the
+#     delivered clamp.
 #   - The doctor reason is exactly one value, `owner-hold`, inserted immediately
-#     after `park-credential-cause`; the provider check keeps `ok`, adds no hint
-#     and no condition-catalog entry, and appends
-#     `<existing detail>; owner hold active (<source>)[: <reason>]` clamped to
-#     `DOCTOR_MAX_DETAIL_CHARS`. A real provider defect keeps its own verdict and
-#     reason and does not gain `owner-hold` (PM D11).
+#     after `park-credential-cause`. It is a non-failing annotation reason with
+#     no evidence source, may co-occur with `ok`, and is the fourth and last
+#     admissible provider reason. The provider check keeps `ok`, adds no hint and
+#     no condition-catalog entry, and appends
+#     `<existing detail>; owner hold active (<source>)[: <reason>]`. When the
+#     combined value would exceed `DOCTOR_MAX_DETAIL_CHARS`, the existing detail
+#     is truncated to fit and the WHOLE hold segment is kept; it is never cut
+#     mid-word or dropped (D11, D18). A real provider defect keeps its own
+#     verdict and reason and does not gain `owner-hold`.
 #   - `scripts/deliver-ticket.sh`, `scripts/ceo-loop.sh`,
 #     `scripts/batch-deliver.sh`, `scripts/.tests/test-hook-regression.sh`, and
 #     every pinned wrapper byte are unchanged.
@@ -126,15 +176,21 @@
 #   - The example hook is `scripts/hooks/pre-opencode-iteration-owner-hold.sh`
 #     with `howLongToSleepDueToOwnerHold()` as its only default registration, no
 #     provider/model gate, no fixed iteration cap while held, a MAX driver, and
-#     exactly one bounded reason line per sleep. Poll default 300 s, accepted
-#     range 1-3 600 s, silent default for unset/empty/whitespace, one bounded
-#     warning for any other invalid value.
-#   - The manual evidence is TC-HOLDE2E-001 only: create a marker in a
-#     disposable root, show status and doctor reporting it, show a queue claim
-#     and a dispatch refusing with `owner-hold`, show an expired park staying
-#     parked, remove the marker, and show the next pass resuming from unchanged
-#     records with one session. It runs at PR time against a disposable state
-#     root; no automated gate depends on observed facts.
+#     exactly one bounded reason line per sleep. It recognises exactly TWO
+#     settings: `ADOS_OWNER_HOLD` (the environment reason) and
+#     `ADOS_OWNER_HOLD_POLL_SECONDS` (the poll interval). The marker path is
+#     fixed at `$HOME/.ados-state/owner-hold` and the example accepts no
+#     marker-path override (D12). Poll default 300 s, accepted range 1-3 600 s,
+#     silent default for unset/empty/whitespace, one bounded warning for any other
+#     invalid value.
+#   - The manual evidence is TC-HOLDE2E-001 only, run in a disposable `HOME`:
+#     create a marker, show status and doctor reporting it, run `queue claim`
+#     WITH NO REF and a dispatch and capture `queue.precondition.unmet` /
+#     `reason=owner-hold` / exit 1, show an expired park staying parked, remove
+#     the marker, and show the next pass resuming from unchanged records with one
+#     session. The transcript records that `owner-hold` means wait/do-not-abort
+#     for deferral callers (D19). It runs at PR time; no automated gate depends
+#     on observed facts.
 #   - Documentation brand discipline: the two guides are baseline-grandfathered
 #     by the forbidden-literal scan and may name the repository's ADOS_* example
 #     variables; the three registered feature specs and the three registered
@@ -143,9 +199,9 @@
 #     `ADOS_`, or `.ados-state` literal. The registry is not edited.
 #   - Rollback: reverting the change restores the delivered scheduling, claim,
 #     surface, and hook behaviour with no migration; clearing a hold is always
-#     `rm <stateDirectory>/owner-hold` plus unsetting the variable, with no code
+#     `rm $HOME/.ados-state/owner-hold` plus unsetting the variable, with no code
 #     change and no state repair. A hold writes nothing, so no record written
-#     before this change depends on it.
+#     before this change depends on it. Relocating the store is out of scope.
 #
 # DECLARATION-ONLY KEYS: `objective`, `dependsOn`, `acCoverage`, `tcCoverage`,
 # and `verification` are evidence declarations read by the delivery loop;
@@ -154,8 +210,9 @@
 # no task list: progress lives in pm-notes `notes:`.
 #
 # COVERAGE INVARIANT: all 44 acceptance criteria appear exactly once in
-# `acCoverage`, each in the phase that satisfies it in full. All 58 test cases
-# have a declared home; the only cases split across phases are
+# `acCoverage`, each in the phase that satisfies it in full. All 59 test cases
+# have a declared home (TC-HOLDDOCTOR-007 is the added near-bound clamp case);
+# the only cases split across phases are
 # TC-HOLDQUEUE-004 (engine carriage here, production seam in phase 5),
 # TC-HOLDQUEUE-009 (projector here, CLI goldens in phase 5),
 # TC-HOLDEDGE-002 (parity case in phase 3, composition pin in phase 5),
@@ -175,14 +232,19 @@ tier:
   name: full
   phases: [1, 2, 3, 4, 5, 6, 7, 8]
   escalationTriggers:
-    - "a hold-refused claim, dispatch, daemon claim, or watch path appends an entry, dependency, lease, park, incident, daemon-lane, heartbeat, handoff, attempt, divergence, or authority record"
+    - "a hold-refused claim, dispatch, composed supervision-cycle claim, or watch path appends an entry, dependency, lease, park, incident, daemon-lane, heartbeat, handoff, attempt, divergence, or authority record"
     - "a park whose window expired during a hold regains clear-observed, recovered, or a park-auto-recovery incident, or its record bytes change"
     - "the claim blocking-reason token is anything other than owner-hold, or the source and reason are folded into the token"
+    - "a held queue claim with no ref reports no-eligible-action instead of owner-hold, or the refusal happens after ref selection"
+    - "a held claim or dispatch is presented as an internal wait rather than a classified user-validation refusal at exit 1, or the plan implies callers should abort instead of waiting"
+    - "a marker-path override or store relocation is accepted, or the marker is read from anywhere other than the production store directory"
     - "a new park cause, park condition type, recovery state, state record kind, queue-ready condition, status section, status evidence reason, doctor verdict, doctor summary count, doctor condition, doctor area, doctor evidence source, error identity, or domain kind appears"
     - "an inactive hold changes a queue payload, lanes payload, status digest, doctor report, or hook decision byte"
+    - "queue ready gains an ownerHold member or a hold-shaped suppression"
     - "an unreadable, non-regular, or stat-failing marker resolves inactive, or the reason is not stripped of control characters and truncated to 160 characters"
+    - "the doctor hold segment is truncated mid-word or dropped at DOCTOR_MAX_DETAIL_CHARS instead of the existing detail yielding"
     - "core reads the ambient environment or filesystem, or a product/binary/brand literal is hardcoded in tooling code"
-    - "the example hook applies a fixed iteration cap while held, performs a real sleep or network call in its suite, or writes ADOS_HOOK_ENV_V1 output"
+    - "the example hook applies a fixed iteration cap while held, recognises a third setting, performs a real sleep or network call in its suite, or writes ADOS_HOOK_ENV_V1 output"
     - "scripts/ceo-loop.sh, scripts/.tests/test-hook-regression.sh, or any wrapper byte changes"
     - "a production surface omits the owner-hold reader, so the shell defers while the engine still claims"
     - "an existing golden is regenerated, or an assertion is deleted or loosened to make the additive change fit"
@@ -201,7 +263,7 @@ phases:
     title: "One owner-hold fact with two sources, declared precedence, a bounded sanitized reason, an injected-input resolver, a fail-closed bounded marker reader, and the contract/content/port inventory pins"
     kind: delivery
     summary: "add owner-hold fact, resolver, and bounded reader"
-    objective: "Land one injected fact resolved from an injected environment record, state directory, and marker outcome, with fail-closed marker handling and a bounded reason, and prove it before any surface consumes it."
+    objective: "Land one injected fact resolved from an injected environment record, the production store directory, and a marker outcome, with fail-closed marker handling and a bounded reason, and prove it before any surface consumes it."
     dependsOn: []
     leases:
       - "repo:main-tools"
@@ -239,11 +301,11 @@ phases:
       - "TC-HOLDNEG-003 (ambient-free half: core resolves only from injected inputs; the composition half is phase 5)"
     verification:
       - "packages/core/src/contracts/owner-hold.ts || declares OWNER_HOLD_ENV_SUFFIX, OWNER_HOLD_MARKER_NAME, OWNER_HOLD_MAX_REASON_CHARS, OWNER_HOLD_DEFAULT_POLL_SECONDS, OWNER_HOLD_MAX_POLL_SECONDS, the OwnerHoldSource union, and the OwnerHoldFact discriminated union whose inactive arm carries no source and no reason; the variable name is derived from brand.environmentPrefix normalized once plus the suffix, never a literal"
-      - "packages/core/src/domain/owner-hold.ts || resolves env over marker, empty env inactive, whitespace-only env active without reason, zero-byte marker active without reason, unreadable/non-regular/stat-failing marker active without reason, and a missing state directory leaves only the env source; the sanitizer strips C0/C1 and ANSI, collapses line breaks and tabs to one space, trims, and truncates to 160 characters"
-      - "packages/adapters/src/file/owner-hold-marker.ts || performs at most one existence check and one bounded read of at most 4096 bytes against exactly <stateDirectory>/owner-hold, returns fail-closed outcomes for unreadable/not-regular/stat failure, and performs zero network calls, zero credential reads, and zero writes"
+      - "packages/core/src/domain/owner-hold.ts || resolves env over marker, empty env inactive, whitespace-only env active without reason, zero-byte marker active without reason, unreadable/non-regular/stat-failing marker active without reason, and no resolvable home directory leaves only the env source; the sanitizer strips C0/C1 and ANSI, collapses line breaks and tabs to one space, trims, and truncates to 160 characters"
+      - "packages/adapters/src/file/owner-hold-marker.ts || performs at most one existence check and one bounded read of at most 4096 bytes against exactly <home>/<brand.stateDirectoryName>/owner-hold, returns fail-closed outcomes for unreadable/not-regular/stat failure, ignores a marker at any other path, and performs zero network calls, zero credential reads, and zero writes"
       - "pnpm typecheck || the new contract, resolver, and adapter compile; no ambient global appears in core"
-      - "bun test tests/behaviour/owner-hold-fact.test.ts || TC-HOLDFACT-001..007 and TC-HOLDFACT-009..011 pass with a synthetic brand prefix: the looked-up key is the derived prefix plus _OWNER_HOLD (never a bare OWNER_HOLD or a hardcoded product literal), the fact is re-resolved on every call with the same runtime and is never cached, and zero store writes and zero credential reads are recorded"
-      - "bun test tests/behaviour/owner-hold-reader.test.ts || TC-HOLDFACT-002/005/006/008/009/010 pass against a real temp state root: one existence check and one read whose requested limit is 4096, a 10 KB file yields a bounded reason and surfaces no extra bytes, a directory at the path and an injected EACCES/EIO outcome resolve active without a reason, and the chmod-000 case is skipped by name only when the process runs as root"
+      - "bun test tests/behaviour/owner-hold-fact.test.ts || TC-HOLDFACT-001..007 and TC-HOLDFACT-009..011 pass with a synthetic brand prefix: the looked-up key is the derived prefix plus _OWNER_HOLD (never a bare OWNER_HOLD or a hardcoded product literal), the fact is re-resolved on every call with the same runtime and is never cached, no marker-path or store-relocation override is honoured, and zero store writes and zero credential reads are recorded"
+      - "bun test tests/behaviour/owner-hold-reader.test.ts || TC-HOLDFACT-002/005/006/008/009/010 pass against a real temp HOME: one existence check and one read whose requested limit is 4096 at the fixed production store path, a marker at a non-default path is ignored, a 10 KB file yields a bounded reason and surfaces no extra bytes, a directory at the path and an injected EACCES/EIO outcome resolve active without a reason, and the chmod-000 case is skipped by name only when the process runs as root"
       - "bun test tests/structure/content-inventory.test.ts || the three new modules are registered in the committed inventory and their executable exports (the OWNER_HOLD_* constants, the resolver, and the marker reader) are declared in EXECUTABLE_ALLOWANCES; the contract file remains type-and-const only"
       - "bun test tests/structure/port-contract-inventory.test.ts || the v1 contract surface matches the fixture exactly in both directions: a new owner-hold.ts module entry and the corresponding contracts/index.ts re-exports, with no other name added, removed, or renamed"
       - "bun run scripts/checks/ambient-globals.ts || zero findings over the public entry and the contracts/domain/app/config/branding tiers"
@@ -255,10 +317,10 @@ phases:
   # Depends on: phase 1 (the fact).
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Global read-only queue gate over the injected fact: empty next actions, owner-hold first on every gated entry, resumable-park degradation to held, pre-fence and fenced claim refusal, skipped park recovery, additive payload presence, and exactly one new lane/blocking reason"
+    title: "Global read-only queue gate over the injected fact: empty next actions, owner-hold first on every gated entry, resumable-park degradation to held, pre-fence and fenced claim refusal for a supplied ref, skipped park recovery, additive payload presence, an unchanged queue ready, lane-level reason masking, and exactly one new lane/blocking reason pinned by exact two-way equality"
     kind: delivery
     summary: "gate queue scheduling, claims, and park recovery"
-    objective: "Make the queue and dispatch engine honour the injected hold before parks, readiness conditions, and the fence, while preserving every record needed to resume and keeping every closed vocabulary intact apart from one lane/blocking token."
+    objective: "Make the queue and dispatch engine honour the injected hold before parks, readiness conditions, and the fence, while preserving every record needed to resume and keeping every closed vocabulary intact apart from one lane/blocking token. The pre-ref-selection claim gate is phase 5; this phase owns the pre-fence and fenced refusals for a supplied ref."
     dependsOn: [1]
     leases:
       - "repo:main-tools"
@@ -277,6 +339,7 @@ phases:
         - "doc/spec/features/feature-result-contract.md"
         - "tests/fixtures/queue/vocabulary/closed-sets.json"
         - "tests/fixtures/queue/hold/cases.json"
+        - "tests/structure/queue-scheduling-contract.test.ts"
         - "tests/behaviour/queue-hold-schedule.test.ts"
         - "tests/behaviour/queue-hold-dispatch.test.ts"
         - "tests/behaviour/queue-hold-park-resume.test.ts"
@@ -296,43 +359,44 @@ phases:
       - "AC-F4-9"
       - "AC-F4-10"
     tcCoverage:
-      - "TC-HOLDQUEUE-001"
+      - "TC-HOLDQUEUE-001 (held pass suppression across entry states; the lane renders owner-hold as blocking[0] while queue list keeps the full ordered blocking list)"
       - "TC-HOLDQUEUE-004 (engine half: the claim seam failure carries the additive summary into the existing queue-kind error with zero side effects; the production seam is phase 5)"
       - "TC-HOLDQUEUE-007"
       - "TC-HOLDQUEUE-008"
-      - "TC-HOLDQUEUE-009 (projector half: ownerHold present only when active and the inactive projection is unchanged; the CLI golden comparison is phase 5)"
-      - "TC-HOLDQUEUE-011"
+      - "TC-HOLDQUEUE-009 (projector half: ownerHold present only when active, the inactive projection is unchanged, and queue ready carries no hold; the CLI golden comparison is phase 5)"
+      - "TC-HOLDQUEUE-011 (exact two-way ordered equality for QUEUE_LANE_IDLE_REASONS and QUEUE_BLOCKING_REASONS against closed-sets.json)"
       - "TC-HOLDQUEUE-012"
       - "TC-HOLDNEG-001 (identity half: the remediation-hint row is updated in the machine table and the documented table, and the identity count is unchanged)"
       - "TC-HOLDNEG-002 (closed-set half: exactly one lane/blocking reason is added and no park, record, readiness, status, or doctor vocabulary moves)"
     verification:
       - "packages/core/src/domain/queue-readiness.ts || QueueSchedulerFacts gains one optional ownerHold member; absent means inactive and no existing fact changes shape"
-      - "packages/core/src/contracts/queue.ts || QUEUE_LANE_IDLE_REASONS gains exactly one appended token owner-hold (inherited by QUEUE_BLOCKING_REASONS through the existing spread) and QueueReadData gains one optional ownerHold member; park condition types, causes, the cause-condition pairing, recovery states, and record kinds are byte-unchanged"
+      - "packages/core/src/contracts/queue.ts || QUEUE_LANE_IDLE_REASONS gains exactly one appended token owner-hold (inherited by QUEUE_BLOCKING_REASONS through the existing spread) and QueueReadData gains one optional ownerHold member; park condition types, causes, the cause-condition pairing, recovery states, and record kinds are byte-unchanged, and QueueReadyPayload gains nothing: queue ready is unchanged and does not report the hold (D17)"
       - "packages/core/src/domain/queue-precedence.ts || one held pass emits an empty nextActions list and no preemption proposal; a ready entry becomes held with owner-hold first; an already held or not-ready entry keeps its own conditions after owner-hold; an active park keeps parked:<cause>; a stuck park keeps park-condition-stuck; a resumable park becomes held with owner-hold; the schedule carries the active fact for projection"
-      - "packages/core/src/domain/queue-lease.ts || evaluateClaimPreconditions evaluates the hold before parks and readiness and returns queue.precondition.unmet with reason exactly owner-hold and a bounded detail naming the source and optional reason; claimQueueLease in packages/core/src/app/queue.ts refuses the same way before acquiring the fence, so a caller that bypasses the pre-fence gate cannot claim"
+      - "packages/core/src/domain/queue-lease.ts || evaluateClaimPreconditions evaluates the hold before parks and readiness and returns queue.precondition.unmet with reason exactly owner-hold and a bounded detail naming the source and optional reason; claimQueueLease in packages/core/src/app/queue.ts refuses the same way before acquiring the fence, so a caller that bypasses the pre-fence gate cannot claim. This phase gates a SUPPLIED ref; the pre-ref-selection gate for a no-ref claim belongs to phase 5 (D13)"
       - "packages/core/src/app/queue.ts || the mutating recovery pass is not invoked while held: no clear-observed marker, no recovered record, and no park-auto-recovery incident is appended; removal mutates nothing and the delivered selection, claim, recovery, and resume paths run against the state captured at hold entry"
       - "packages/core/src/app/dispatch.ts || the lease-claim failure arm gains one additive optional summary and the engine carries it into the existing kind: queue error; no new identity, kind, or exit"
       - "packages/core/src/contracts/error-table.ts and doc/spec/features/feature-result-contract.md || the queue.precondition.unmet remediation hint names an operator hold as a blocking precondition and the documented row is updated in the same commit; the identity count, category, retryability, consequence, projection, summary, and exit are unchanged"
       - "packages/cli/src/commands/queue.ts || toQueueReadData and toQueuePlanData project ownerHold only when active; lanes keep their delivered payload shape"
-      - "bun test tests/behaviour/queue-hold-schedule.test.ts || TC-HOLDQUEUE-001 passes over tests/fixtures/queue/hold/cases.json (ready, held, not-ready, active park, stuck park, resumable park, delivering lane) and the lane fold carries owner-hold as the idle reason; two runs over identical facts are byte-identical"
+      - "bun test tests/behaviour/queue-hold-schedule.test.ts || TC-HOLDQUEUE-001 passes over tests/fixtures/queue/hold/cases.json (ready, held, not-ready, active park, stuck park, resumable park, delivering lane): a not-ready entry keeps the full ordered blocking list starting with owner-hold in queue list, while the lane fold renders exactly one reason and therefore shows owner-hold (masking the specific dependency-open/ci-failed reason), and the delivered delivering lane stays delivering; two runs over identical facts are byte-identical"
       - "bun test tests/behaviour/queue-hold-dispatch.test.ts || TC-HOLDQUEUE-004 (engine half) refuses with queue.precondition.unmet plus the additive bounded summary and creates zero leases, sessions, branches, worktrees, attempts, divergences, handover records, and authority changes"
       - "bun test tests/behaviour/queue-hold-park-resume.test.ts || TC-HOLDQUEUE-007/008/012 pass: an expired park appends zero records and stays byte-identical, removal recovers it through the delivered pass and resumes the recorded session with no duplicate, and a delivering lane is never signalled, killed, or cleaned up"
-      - "bun test tests/behaviour/queue-hold-payload.test.ts || TC-HOLDQUEUE-009 (projector half) shows the member present with source and optional reason only when active and absent on the inactive projection"
-      - "bun test tests/behaviour/queue-schedule.test.ts tests/behaviour/queue-park.test.ts tests/behaviour/queue-lease.test.ts || the delivered scheduling, park, and lease suites are EXTENDED, not weakened: the claim-precondition matrix gains owner-hold, the park suite gains the held skip and post-removal recovery pair, and the delivered assertions stay intact"
-      - "bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-ready-contract.test.ts || the closed-set equality holds in both directions: exactly one blocking reason added, three park condition types, three causes with their pairing, four recovery states, five record kinds, and the six ready condition ids in their delivered order"
+      - "bun test tests/behaviour/queue-hold-payload.test.ts || TC-HOLDQUEUE-009 (projector half) shows the member present with source and optional reason only when active and absent on the inactive projection, and shows a queue ready payload that is byte-identical with and without the hold and carries no ownerHold member (D17)"
+      - "bun test tests/behaviour/queue-schedule.test.ts tests/behaviour/queue-park.test.ts tests/behaviour/queue-lease.test.ts || the delivered scheduling, park, and lease suites are EXTENDED, not weakened: the claim-precondition matrix gains owner-hold for a supplied ref, the park suite gains the held skip and post-removal recovery pair, and the delivered assertions stay intact"
+      - "bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-ready-contract.test.ts || the exact two-way ordered assertions hold: expect([...QUEUE_LANE_IDLE_REASONS]).toEqual(closedSets.laneIdleReasons) and expect([...QUEUE_BLOCKING_REASONS]).toEqual(closedSets.blockingReasons), with owner-hold appearing exactly once in each array at the declared position; three park condition types, three causes with their pairing, four recovery states, five record kinds, and the six ready condition ids stay in their delivered order; the test fails by name if either contract array or the fixture disagrees in either direction (D16)"
+      - "bun test tests/structure/queue-ready-contract.test.ts || the ready contract is unchanged: six condition ids, their order, tri-state, and evidence vocabulary, with no hold member (D17)"
       - "bun test tests/checks/error-table-sync.test.ts || the machine and documented tables stay in sync at the current row count with a matching updated hint"
       - "pnpm typecheck || the optional fact, member, and summary are exhaustive-safe and no closed union gains a value other than the declared token"
 
   # ---------------------------------------------------------------------------
-  # PHASE 3 — additive status providers sibling, human suffix, and parity.
+  # PHASE 3 — additive status providers EVIDENCE member, human suffix, parity.
   # Injected facts only; production composition is phase 5.
   # Depends on: phase 1 (the fact). Independent of phases 2 and 4.
   # ---------------------------------------------------------------------------
   - id: 3
-    title: "Additive status providers sibling and human suffix over an injected fact, attached across every section state without touching nine sections, twenty reasons, counts, sources, or the schema version, with CLI/MCP parity"
+    title: "Additive status providers EVIDENCE member (providers.evidence.ownerHold, a sibling of sources[]) and human suffix over an injected fact, attached across every section state without touching nine sections, twenty reasons, counts, sources, or the schema version, with CLI/MCP parity"
     kind: delivery
-    summary: "surface owner hold in status providers"
-    objective: "Let an operator confirm a pause in status without adding a section, a state, a reason, a finding code, or an exit change, and keep the machine payload identical across CLI and MCP."
+    summary: "surface owner hold in status providers evidence"
+    objective: "Let an operator confirm a pause in status without adding a section, a state, a reason, a finding code, or an exit change, keep the machine payload identical across CLI and MCP, and place the member at the evidence level exactly like credentialPrerequisite (D15)."
     dependsOn: [1]
     leases:
       - "repo:main-tools"
@@ -362,33 +426,34 @@ phases:
       - "AC-F5-4"
     tcCoverage:
       - "TC-HOLDSTATUS-001..005"
-      - "TC-HOLDEDGE-002 (parity-case half: the same injected facts produce the same ownerHold member on the CLI and MCP status surfaces; the composition pin is phase 5)"
+      - "TC-HOLDEDGE-002 (parity-case half: the same injected facts produce the same providers.evidence.ownerHold member on the CLI and MCP status surfaces; the composition pin is phase 5)"
       - "TC-HOLDNEG-002 (status half: the nine-section order, section states, twenty-reason set, evidence sources, and digest schema version are unchanged)"
     verification:
-      - "packages/core/src/contracts/status.ts || one additive optional evidence sibling ownerHold?: { source: OwnerHoldSource; reason?: string } and one optional StatusProviderFacts.ownerHold; no section, state, evidence source, reason, or finding code is added"
-      - "packages/core/src/domain/status.ts || the sibling is attached after the providers section is derived, present only when active, visible across observed, degraded, unknown, and unavailable states, and it changes no state, count, source, reason, truncation, finding, or entry; human mode appends | owner-hold[: <reason>] inside the existing clamp"
+      - "packages/core/src/contracts/status.ts || StatusEvidence gains one additive optional member ownerHold?: { source: OwnerHoldSource; reason?: string } (providers.evidence.ownerHold, a sibling of sources[] exactly like credentialPrerequisite) and StatusProviderFacts gains one optional ownerHold; no section, state, evidence source, reason, or finding code is added and the member is NOT placed on the section object beside chain/entries/parks (D15)"
+      - "packages/core/src/domain/status.ts || the member is attached to the derived providers EVIDENCE record after the section is derived, present only when active, visible across observed, degraded, unknown, and unavailable states, and it changes no state, count, source, reason, truncation, finding, or entry; human mode appends | owner-hold[: <reason>] read from providers.evidence.ownerHold inside the existing clamp"
       - "packages/cli/src/commands/status.ts || StatusCommandRuntime gains one optional readOwnerHold reader whose fact is carried into the provider facts; a missing reader leaves the delivered digest unchanged"
-      - "packages/mcp/src/serve.ts || the MCP status runtime composes the same marker reader over the same injected environment and state directory, so the machine payload matches the CLI"
-      - "bun test tests/behaviour/status-owner-hold.test.ts || TC-HOLDSTATUS-001/002/003/005 pass: the sibling appears only when active, is present on every providers section state without changing it, human output ends with the pipe plus owner-hold or owner-hold: <reason>, and the nine sections, twenty reasons, states, and schema version are unchanged"
-      - "bun test tests/behaviour/status-corpus.test.ts || the new owner-hold-active corpus case passes and the expected-shape validator is extended for the additive sibling (never relaxed); the section completeness meta-check still covers every section"
+      - "packages/mcp/src/serve.ts || the MCP status runtime composes the same marker reader over the same injected environment and production store directory, so the machine payload matches the CLI"
+      - "bun test tests/behaviour/status-owner-hold.test.ts || TC-HOLDSTATUS-001/002/003/005 pass: providers.evidence.ownerHold appears only when active, is present on every providers section state without changing it, human output ends with the pipe plus owner-hold or owner-hold: <reason>, the section object itself gains no ownerHold key, and the nine sections, twenty reasons, states, and schema version are unchanged"
+      - "bun test tests/behaviour/status-corpus.test.ts || the new owner-hold-active corpus case passes and the expected-shape validator is extended for the additive evidence member (never relaxed), asserting providers.evidence.ownerHold; the section completeness meta-check still covers every section"
       - "bun run tests/fixtures/mcp/regenerate.ts --write || the new status-owner-hold parity golden is produced by the provided writer in this commit, and no delivered MCP golden changes (git status shows only the one new file)"
       - "bun test tests/behaviour/mcp-status-parity.test.ts || TC-HOLDSTATUS-004 and the parity-case half of TC-HOLDEDGE-002 pass: CLI, MCP, and the committed status-owner-hold parity golden agree, and the delivered parity cases are unchanged"
       - "bun test tests/structure/status-contract.test.ts tests/golden/status-digest.test.ts || the status vocabulary pin and the committed digest/human goldens are UNCHANGED (byte-identical); no regeneration is owed for the inactive path"
       - "bun test tests/behaviour/status-output.test.ts || the delivered status output suite stays green with no hold present"
       - "git status --porcelain tests/fixtures/status/golden || empty: no existing status golden changed"
-      - "pnpm typecheck || the additive optional sibling compiles and the digest type stays exhaustive-safe"
+      - "pnpm typecheck || the additive optional evidence member compiles and the digest type stays exhaustive-safe"
 
   # ---------------------------------------------------------------------------
-  # PHASE 4 — doctor provider detail, the one new evidence reason, precedence.
+  # PHASE 4 — doctor provider detail, the one new annotation reason, the detail
+  # clamp, and precedence.
   # Depends on: phase 1 (the fact). Independent of phases 2 and 3; it precedes
   # phase 5 because the edge composes this reader with the others. Injected
   # facts only; production composition is phase 5.
   # ---------------------------------------------------------------------------
   - id: 4
-    title: "Additive doctor provider detail on an otherwise-ok check: exactly one new closed evidence reason owner-hold, an appended bounded hold segment, defect precedence preserved, and an unchanged verdict set, summary shape, condition catalog, and exit model"
+    title: "Additive doctor provider detail on an otherwise-ok check: exactly one new non-failing annotation reason owner-hold (no evidence source, fourth and last provider reason), an appended bounded hold segment that survives the detail clamp, defect precedence preserved, and an unchanged verdict set, summary shape, condition catalog, and exit model"
     kind: delivery
     summary: "surface owner hold in doctor provider check"
-    objective: "Report the pause in doctor without reclassifying it: the provider check stays ok, gains one reason and one appended detail, and a real provider defect still wins unchanged."
+    objective: "Report the pause in doctor without reclassifying it: the provider check stays ok, gains one annotation reason and one appended detail, keeps the whole hold segment when the detail bound bites, and a real provider defect still wins unchanged (D18)."
     dependsOn: [1]
     leases:
       - "repo:main-tools"
@@ -415,14 +480,14 @@ phases:
       - "AC-F6-3"
       - "AC-F6-4"
     tcCoverage:
-      - "TC-HOLDDOCTOR-001..006"
+      - "TC-HOLDDOCTOR-001..007 (007 is the near-bound clamp: the existing detail yields and the whole hold segment is kept)"
       - "TC-HOLDNEG-002 (doctor half: no fourth verdict, no summary count, no condition-catalog entry, no evidence source, and no area is added)"
     verification:
-      - "packages/core/src/contracts/doctor.ts || DOCTOR_EVIDENCE_REASONS gains exactly one value owner-hold immediately after park-credential-cause with every other value in its delivered position; DoctorProviderFacts gains one optional ownerHold; DOCTOR_VERDICTS, DoctorSummaryCounts, DOCTOR_CONDITION_CATALOG, and the detail bound are unchanged"
-      - "packages/core/src/domain/doctor.ts || when and only when the provider check would otherwise be ok and the hold is active, it stays ok, adds the owner-hold reason, and appends <existing detail>; owner hold active (<source>)[: <reason>] clamped to DOCTOR_MAX_DETAIL_CHARS; no hint; any real provider defect keeps its own fail or unreachable verdict and reason and does not gain owner-hold"
+      - "packages/core/src/contracts/doctor.ts || DOCTOR_EVIDENCE_REASONS gains exactly one value owner-hold immediately after park-credential-cause with every other value in its delivered position; it is a non-failing annotation reason with no evidence source, may co-occur with ok, and is the fourth and last admissible provider reason (DOCTOR_MAX_EVIDENCE_REASONS is four); DoctorProviderFacts gains one optional ownerHold; DOCTOR_VERDICTS, DoctorSummaryCounts, DOCTOR_CONDITION_CATALOG, and DOCTOR_MAX_DETAIL_CHARS are unchanged"
+      - "packages/core/src/domain/doctor.ts || when and only when the provider check would otherwise be ok and the hold is active, it stays ok, adds the owner-hold reason, and appends <existing detail>; owner hold active (<source>)[: <reason>]; when the combined value would exceed DOCTOR_MAX_DETAIL_CHARS the existing detail is truncated to fit and the WHOLE hold segment is kept (never cut mid-word, never dropped); no hint; any real provider defect keeps its own fail or unreachable verdict and reason and does not gain owner-hold (D18)"
       - "packages/cli/src/commands/doctor.ts || the doctor runtime carries one optional readOwnerHold fact into the provider facts; absent means inactive and the delivered report is byte-identical"
-      - "bun test tests/behaviour/doctor-owner-hold.test.ts || TC-HOLDDOCTOR-001..004 pass: ok plus reason plus appended detail, the no-reason form names only the source, a configuration/credential/park/fold defect wins with its own verdict and omits owner-hold, and the held-versus-no-hold machine delta is exactly the reason and the appended detail"
-      - "bun test tests/behaviour/doctor-report.test.ts || the Appendix A matrix iterates the new hold rows (ok with reason, ok without reason, each defect plus hold) and each resolves to its declared verdict, reasons, and appended detail with no delivered cell changed"
+      - "bun test tests/behaviour/doctor-owner-hold.test.ts || TC-HOLDDOCTOR-001..004 and TC-HOLDDOCTOR-007 pass: ok plus reason plus appended detail, the no-reason form names only the source, a configuration/credential/park/fold defect wins with its own verdict and omits owner-hold, the held-versus-no-hold machine delta is exactly the reason and the appended detail, and at a detail at/near DOCTOR_MAX_DETAIL_CHARS the existing detail is truncated while the whole hold segment survives with the reason still present and no hint attached"
+      - "bun test tests/behaviour/doctor-report.test.ts || the Appendix A matrix iterates the new hold rows (ok with reason, ok without reason, each defect plus hold, and the near-bound detail clamp row) and each resolves to its declared verdict, reasons, and appended detail with no delivered cell changed"
       - "bun test tests/structure/doctor-contract.test.ts || the reason list is exactly 23 values with owner-hold in position after park-credential-cause; five areas, three verdicts, the six provider evidence sources, the summary counts, and the condition catalog are byte-unchanged"
       - "bun test tests/golden/doctor-output.test.ts || TC-HOLDDOCTOR-005 passes: every delivered golden is byte-identical and the two new held goldens match; no existing golden is regenerated"
       - "bun test tests/behaviour/doctor-provider.test.ts tests/behaviour/doctor-outcome.test.ts || the delivered provider verdict derivation and the exit model are unchanged when no hold is active"
@@ -435,10 +500,10 @@ phases:
   # Depends on: phases 1-4.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Production composition at the CLI and MCP edge: the fact supplied to queue, lanes, claim, watch, daemon supervision, dispatch, status, and doctor, dispatch claim-seam refusal with zero side effects, held queue goldens, and the cross-surface composition pin"
+    title: "Production composition at the CLI edge (with MCP status parity pinned, not re-wired): the fact supplied to queue, lanes, claim, watch, dispatch, status, and doctor, a claim gate BEFORE ref selection so a no-ref claim refuses owner-hold, a dispatch claim-seam user-validation refusal with zero side effects, held queue goldens, and the cross-surface composition pin (no production daemon wiring claim)"
     kind: delivery
     summary: "compose owner hold at every production edge"
-    objective: "Remove the possibility that one surface forgets the fact: one composition site resolves it per pass for every queue and dispatch path, and a structure test fails by name if any surface loses it."
+    objective: "Remove the possibility that one surface forgets the fact: one composition site resolves it per pass, gates the claim before ref selection so `queue claim` with no ref refuses owner-hold instead of no-eligible-action, refuses dispatch before claiming, and a structure test fails by name if any surface loses it. The supervision guarantee stays conditional on a cycle deriving its next action from the held pass; the production resident-daemon entry is not wired by this change (GAP-T7, D14)."
     dependsOn: [1, 2, 3, 4]
     leases:
       - "repo:main-tools"
@@ -454,6 +519,8 @@ phases:
         - "tests/golden/queue-plan.test.ts"
         - "tests/behaviour/queue-hold-claim.test.ts"
         - "tests/behaviour/queue-hold-daemon-watch.test.ts"
+        - "tests/behaviour/daemon-lane-supervision.test.ts"
+        - "tests/behaviour/queue-cli.test.ts"
         - "tests/behaviour/queue-watch.test.ts"
         - "tests/structure/owner-hold-composition.test.ts"
     acCoverage:
@@ -463,27 +530,27 @@ phases:
       - "AC-F4-8"
       - "AC-F4-11"
     tcCoverage:
-      - "TC-HOLDQUEUE-002"
+      - "TC-HOLDQUEUE-002 (both legs: supplied-ref AND no-ref names the hold before ref selection, never no-eligible-action)"
       - "TC-HOLDQUEUE-003"
-      - "TC-HOLDQUEUE-004 (production half: the dispatch claim seam resolves the fact before claiming and returns the existing refusal identity with a bounded summary)"
-      - "TC-HOLDQUEUE-005"
+      - "TC-HOLDQUEUE-004 (production half: the dispatch claim seam resolves the fact before claiming, returns the existing identity with a bounded summary, and is a classified user-validation refusal at exit 1, not a wait; D19)"
+      - "TC-HOLDQUEUE-005 (conditional guarantee: the next-action seam is DERIVED from the held computeQueueSchedule result and the case fails if that derivation is absent; no production daemon wiring is claimed, GAP-T7/D14)"
       - "TC-HOLDQUEUE-006"
-      - "TC-HOLDQUEUE-009 (golden half: held list and plan goldens plus unchanged inactive goldens)"
+      - "TC-HOLDQUEUE-009 (golden half: held list and plan goldens plus unchanged inactive goldens and an unchanged queue ready)"
       - "TC-HOLDQUEUE-010"
       - "TC-HOLDQUEUE-013"
-      - "TC-HOLDEDGE-001"
+      - "TC-HOLDEDGE-001 (queue, lanes, claim, watch, dispatch, status, and doctor; the daemon is deliberately NOT in the surface list)"
       - "TC-HOLDEDGE-002 (composition half)"
       - "TC-HOLDNEG-002 (composition half: no new identity, kind, command, flag, or configuration key appears at the edge)"
       - "TC-HOLDNEG-003 (composition half: the edge supplies the read while core stays ambient-free)"
     verification:
-      - "packages/cli/src/edge.ts || one composition site resolves the fact per pass from the injected environment, the resolved state directory, and the bounded marker reader, then supplies it to queue facts, lanes, claim precheck, watch, and the status and doctor runtimes; no caching across passes; the marker path is the store identity directory plus owner-hold and accepts no caller path"
-      - "packages/cli/src/production.ts || the dispatch claim seam resolves the same fact before claiming and returns queue.precondition.unmet with a bounded summary naming the hold and its sanitized reason; no lease, session, branch, worktree, attempt, divergence, handover, or authority change exists for that dispatch; bookkeeping (add, prioritize, dep, release) still appends its records while held and invokes no recovery mutation"
-      - "tests/fixtures/queue/cli/harness.ts || the edge harness can inject the environment record and a real temp state directory containing a materialized owner-hold marker, so a held run exercises the production reader instead of a pre-resolved fact; the delivered queue fixtures stay byte-identical"
-      - "bun test tests/structure/owner-hold-composition.test.ts || TC-HOLDEDGE-001/002 pass: each of queue, lanes, claim, watch, dispatch, status, and doctor receives the active fact from the production composition, the MCP status runtime supplies the same fact, a removed supply makes at least one surface fail by name (mutation control), and core contains no ambient read"
-      - "bun test tests/behaviour/queue-hold-claim.test.ts || TC-HOLDQUEUE-002/003/010/013 pass: queue claim exits 1 with queue.precondition.unmet, the blocking-reason token exactly owner-hold, and a bounded detail naming the source and reason, appending zero records; the fenced path refuses before the fence; bookkeeping appends while held; an unreadable store still returns the delivered state failure at exit 2 with no hold-shaped payload"
-      - "bun test tests/behaviour/queue-hold-daemon-watch.test.ts || TC-HOLDQUEUE-005/006 pass: the supervision cycle receives no next action and its claim refuses with zero daemon-lane records, and queue watch streams the hold with an empty action list and claims nothing"
-      - "bun test tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/queue-envelope.test.ts tests/golden/queue-lease-conflict.test.ts tests/golden/queue-rank.test.ts tests/golden/queue-ready.test.ts || the new held list and plan goldens match structurally and every delivered queue golden is byte-identical"
-      - "bun test tests/behaviour/queue-watch.test.ts tests/behaviour/daemon-lane-supervision.test.ts tests/behaviour/queue-edge-wiring.test.ts || the delivered watch, supervision, and edge-wiring suites stay green with no hold active"
+      - "packages/cli/src/edge.ts || one composition site resolves the fact per pass from the injected environment, the fixed production store directory, and the bounded marker reader, then supplies it to queue facts, lanes, the claim precheck, watch, and the status and doctor runtimes; the claim composition evaluates the hold BEFORE ref selection, so queue claim with no ref refuses queue.precondition.unmet/owner-hold and never returns no-eligible-action; no caching across passes; no caller-supplied marker path is accepted (D12, D13)"
+      - "packages/cli/src/production.ts || the dispatch claim seam resolves the same fact before claiming and returns queue.precondition.unmet with a bounded summary naming the hold and its sanitized reason; the refusal is a classified user-validation refusal at exit 1, and callers that want deferral semantics treat owner-hold as wait/do-not-abort rather than aborting on a transient failure (D19); no lease, session, branch, worktree, attempt, divergence, handover, or authority change exists for that dispatch; bookkeeping (add, prioritize, dep, release) still appends its records while held and invokes no recovery mutation"
+      - "tests/fixtures/queue/cli/harness.ts || the edge harness can inject the environment record and a real temp HOME whose production store directory contains a materialized owner-hold marker, so a held run exercises the production reader instead of a pre-resolved fact; the delivered queue fixtures stay byte-identical"
+      - "bun test tests/structure/owner-hold-composition.test.ts || TC-HOLDEDGE-001/002 pass: each of queue, lanes, claim, watch, dispatch, status, and doctor receives the active fact from the production composition, the MCP status runtime supplies the same fact, a removed supply makes at least one surface fail by name (mutation control), and core contains no ambient read. The daemon seam is NOT part of this pin; the production resident daemon is an explicit residual (GAP-T7)"
+      - "bun test tests/behaviour/queue-hold-claim.test.ts tests/behaviour/queue-cli.test.ts || TC-HOLDQUEUE-002/003/010/013 pass: queue claim GH-XXX (supplied ref) AND queue claim (no ref) both exit 1 with queue.precondition.unmet, the blocking-reason token exactly owner-hold, and a bounded detail naming the source and reason, appending zero records; the no-ref leg never returns reason=no-eligible-action and is gated before selection; the fenced path refuses before the fence; the delivered queue-cli bookkeeping cases are extended so add/prioritize/dep/release append while held and invoke no recovery mutation; an unreadable store still returns the delivered state failure at exit 2 with no hold-shaped payload"
+      - "bun test tests/behaviour/queue-hold-daemon-watch.test.ts || TC-HOLDQUEUE-005/006 pass: the supervision cycle's nextAction seam is built from the held computeQueueSchedule result and the case fails by name if the seam is a literal () => undefined or the derivation is not invoked; the cycle mode is idle, the claim seam is never called with an action, and zero daemon-lane/heartbeat records exist; the no-hold control derives one action; queue watch streams the hold with an empty action list and claims nothing. The case does not claim production resident-daemon wiring (GAP-T7)"
+      - "bun test tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/queue-envelope.test.ts tests/golden/queue-lease-conflict.test.ts tests/golden/queue-rank.test.ts tests/golden/queue-ready.test.ts || the new held list and plan goldens match structurally, queue ready is byte-identical with and without the hold, and every delivered queue golden is byte-identical"
+      - "bun test tests/behaviour/queue-watch.test.ts tests/behaviour/daemon-lane-supervision.test.ts tests/behaviour/queue-edge-wiring.test.ts || the delivered watch, supervision-seam, and edge-wiring suites stay green with no hold active; the modified supervision suite proves the derivation and adds no production-daemon claim"
       - "bun run scripts/checks/ambient-globals.ts && bun test tests/checks/error-table-sync.test.ts tests/checks/forbidden-literals.test.ts || the core boundary, the unchanged identity count, and the literal scan stay green"
       - "pnpm typecheck || every composition seam that gained an optional reader still compiles when the reader is absent (a direct caller keeps the delivered behaviour)"
 
@@ -493,10 +560,10 @@ phases:
   # Depends on: phases 1 and 5.
   # ---------------------------------------------------------------------------
   - id: 6
-    title: "DM-1 owner-hold example hook with an unbounded MAX driver, the poll-interval contract, one bounded reason line per sleep, install and uninstall registration, and a hermetic shell suite that performs zero real sleeps and zero network calls"
+    title: "DM-1 owner-hold example hook with an unbounded MAX driver, a TWO-setting contract (ADOS_OWNER_HOLD and ADOS_OWNER_HOLD_POLL_SECONDS) over the fixed marker path, one bounded reason line per sleep, install and uninstall registration, and a hermetic shell suite that performs zero real sleeps and zero network calls"
     kind: delivery
     summary: "ship owner-hold example hook and registration"
-    objective: "Defer every new iteration for as long as the hold exists from the shell path, without touching a wrapper and without ever proceeding on a fixed cap."
+    objective: "Defer every new iteration for as long as the hold exists from the shell path, reading the same fixed marker the engine reads, without touching a wrapper and without ever proceeding on a fixed cap."
     dependsOn: [1, 5]
     leases:
       - "repo:main-tools"
@@ -523,17 +590,17 @@ phases:
       - "AC-F3-3"
       - "AC-F3-4"
     tcCoverage:
-      - "TC-HOLDHOOK-001..009"
+      - "TC-HOLDHOOK-001..009 (including the fixed-path and no-override negative controls)"
       - "TC-HOLDREG-001..004"
     verification:
-      - "scripts/hooks/pre-opencode-iteration-owner-hold.sh || howLongToSleepDueToOwnerHold() echoes the poll interval while held and 0 otherwise, applies to every agent and model (no provider/model gate), recognises only ADOS_OWNER_HOLD, ADOS_OWNER_HOLD_FILE, and ADOS_OWNER_HOLD_POLL_SECONDS, resolves the marker at ${ADOS_OWNER_HOLD_FILE:-${ADOS_STATE_DIR:-${HOME}/.ados-state}/owner-hold}, and uses the repository's existing ADOS_* example convention"
+      - "scripts/hooks/pre-opencode-iteration-owner-hold.sh || howLongToSleepDueToOwnerHold() echoes the poll interval while held and 0 otherwise, applies to every agent and model (no provider/model gate), recognises exactly TWO settings: ADOS_OWNER_HOLD (the environment reason) and ADOS_OWNER_HOLD_POLL_SECONDS (the poll interval), reads the marker only at the fixed $HOME/.ados-state/owner-hold, accepts no marker-path override, and uses the repository's existing ADOS_* example convention (D12)"
       - "scripts/hooks/pre-opencode-iteration-owner-hold.sh || the driver takes the MAX across registered conditions, re-evaluates after every sleep, applies NO fixed iteration cap while held, emits exactly one bounded line per sleep in the form [INFO] (pre-opencode-iteration-owner-hold) owner-hold (<source>)[: <reason>]; sleeping <N>s, uses 300 silently for unset/empty/whitespace poll values, and uses 300 with exactly one bounded warning for any other invalid value"
       - "scripts/hooks/pre-opencode-iteration-owner-hold.sh || the hook is a pure gate: no ADOS_HOOK_ENV_V1 output, no file creation, no signal or kill, and no absolute-time decision, so a clock jump cannot end the hold or extend a deferral beyond one poll interval"
       - "scripts/install.sh and scripts/uninstall.sh || ADOS_HOOK_EXAMPLES names both examples and the existing copy loop installs the new one executable and inactive; the unconditional removal list names the new example so uninstall removes it and the empty scripts/hooks directory while preserving an operator hook"
-      - "bash scripts/.tests/test-hook-owner-hold-example.sh || TC-HOLDHOOK-001..009 pass with the sleep seam and the marker reader overridden and temp directories used: active default 300, inactive immediate 0 with no line, at least 25 polls with no cap warning, poll 600 accepted, 0/-1/abc/99999 defaulting to 300 with exactly one warning, marker removal visible at the next evaluation, MAX 3600 then hold 300, no side effects, a one-day clock jump neutral, and the line single-line, source-named, and bounded; zero real sleeps and zero network calls (a shadowed sleep and a network canary prove it)"
+      - "bash scripts/.tests/test-hook-owner-hold-example.sh || TC-HOLDHOOK-001..009 pass with the sleep seam and the marker reader overridden and a temp HOME used: active default 300, inactive immediate 0 with no line, at least 25 polls with no cap warning, poll 600 accepted, 0/-1/abc/99999 defaulting to 300 with exactly one warning, marker removal visible at the next evaluation, MAX 3600 then hold 300, no side effects, a one-day clock jump neutral, a marker at any non-default path or under an unsupported override ignored, and the line single-line, source-named, and bounded; zero real sleeps and zero network calls (a shadowed sleep and a network canary prove it)"
       - "shellcheck scripts/hooks/pre-opencode-iteration-owner-hold.sh || zero findings (the CI shellcheck job runs the same binary over scripts/)"
       - "bash scripts/.tests/test-install.sh || TC-HOLDREG-001 passes: both example hook paths exist, are executable, and are not activated"
-      - "bash scripts/.tests/test-uninstall.sh || TC-HOLDREG-002 passes: both examples are removed, the empty scripts/hooks directory is removed, and an operator hook at the default or overridden path is preserved"
+      - "bash scripts/.tests/test-uninstall.sh || TC-HOLDREG-002 passes: both examples are removed, the empty scripts/hooks directory is removed, and an operator hook at the configured hook path is preserved"
       - "bash scripts/run-bash-suites.sh || the new suite is auto-discovered by the */.tests/test-*.sh discovery and the whole bash battery is green"
       - "bun test tests/structure/provider-surface.test.ts && git diff --stat scripts/ceo-loop.sh scripts/.tests/test-hook-regression.sh || TC-HOLDREG-004 passes: the SHA-256 pinned wrapper and legacy regression suite are byte-unchanged (the diff is empty)"
 
@@ -543,10 +610,10 @@ phases:
   # Depends on: phases 2-6.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Two-semantics documentation, hook composition guidance, reconciled feature specs and command reference pages with explicit denials, the documentation conformance check, and the lockstep minor changeset"
+    title: "Two-semantics documentation, hook composition guidance, the fixed marker path and its no-override rule, the owner-hold-versus-owner-gate distinction, reconciled feature specs and command reference pages with explicit denials and the doctor annotation-reason amendment, the documentation conformance check, and the lockstep minor changeset"
     kind: delivery
     summary: "document owner hold and publish the release note"
-    objective: "Make the distinction between automatic time-bounded deferral and a manual indefinite hold the documented truth, and record the additive contract in the release note."
+    objective: "Make the distinction between automatic time-bounded deferral and a manual indefinite hold the documented truth, record the additive contract, the evidence-level status member, the lane masking, the unchanged queue ready, and the doctor annotation reason plus clamp, and state the refusal-versus-deferral semantics. Record the additive contract in the release note."
     dependsOn: [1, 2, 3, 4, 5, 6]
     leases:
       - "repo:main-tools"
@@ -577,16 +644,16 @@ phases:
       - "TC-HOLDDOCS-001..004"
       - "TC-HOLDNEG-002 (documents half: no new command, flag, configuration key, or --park cause is documented as available)"
     verification:
-      - "doc/guides/delivery-modes.md || one subsection states the two semantics (provider-window deferral is automatic and time-bounded; an owner hold is manual, indefinite, and outranks windows) and documents both sources, environment precedence, removal, the fail-closed unreadable marker, the poll interval, the unbounded driver, the composition-by-MAX rule, and the explicit limit that a mid-flight session is not killed; the activation paragraph names both installed examples"
+      - "doc/guides/delivery-modes.md || one subsection states the two semantics (provider-window deferral is automatic and time-bounded; an owner hold is manual, indefinite, and outranks windows) and documents both sources, environment precedence, removal, the fixed default marker path $HOME/.ados-state/owner-hold and the absence of a marker-path override or store relocation, the fail-closed unreadable marker, the poll interval, the unbounded driver, the composition-by-MAX rule, the owner-hold versus owner-gate distinction, the explicit limit that a mid-flight session is not killed, and that a held claim/dispatch is a classified refusal at exit 1 with owner-hold meaning wait/do-not-abort to deferral callers; the activation paragraph names both installed examples"
       - "doc/guides/zai-peak-hours-hook.md || the extension section states that the DM-1 contract now has a second example, that conditions compose by MAX, and that a time-bounded condition merged into the owner-hold example inherits the unbounded driver because the hold is the floor"
-      - "doc/spec/features/feature-autonomous-delivery.md, feature-scheduling-engine.md, feature-status-digest.md, feature-doctor.md || the gate, the owner-hold blocking/lane reason, the additive ownerHold payload member, the additive providers sibling and human suffix, and the additive doctor reason plus appended detail are recorded, together with the explicit denials: no park cause, no state record kind, no seventh ready condition, no tenth status section, no new status reason, no fourth doctor verdict, and no summary or exit change"
-      - "doc/planning/oss-tooling/milestones/m1/commands/queue.md, status.md, doctor.md || the reference pages document the additive members, the claim refusal reason on the existing identity, the human status suffix, and the doctor detail precedence while keeping every delivered flag, positional, and exit unchanged"
-      - "bun test tests/checks/owner-hold-doc.test.ts || TC-HOLDDOCS-001/002/003 pass: each pinned phrase of the two-semantics rule, the MAX-floor rule, the gate, the additive members, and the explicit denials is present; no stale or historical phrasing is introduced"
+      - "doc/spec/features/feature-autonomous-delivery.md, feature-scheduling-engine.md, feature-status-digest.md, feature-doctor.md || the gate (including the no-ref claim refusal before selection and the dispatched-ref refusal), the owner-hold blocking/lane reason and its lane masking with queue list as the specific-reason surface, the additive ownerHold payload member, an unchanged queue ready, the additive providers.evidence.ownerHold member and human suffix, and the doctor non-failing annotation reason plus appended detail with the clamp rule are recorded, together with the explicit denials: no park cause, no state record kind, no seventh ready condition, no tenth status section, no new status reason, no fourth doctor verdict, and no summary or exit change; feature-doctor carries the explicit evidence-model amendment (no evidence source, may co-occur with ok, fourth and last provider reason)"
+      - "doc/planning/oss-tooling/milestones/m1/commands/queue.md, status.md, doctor.md || the reference pages document the additive members, the supplied-ref and no-ref claim refusal on the existing identity, the lane-reason masking point, an unchanged queue ready, the human status suffix read from providers.evidence.ownerHold, and the doctor detail precedence and clamp while keeping every delivered flag, positional, and exit unchanged"
+      - "bun test tests/checks/owner-hold-doc.test.ts || TC-HOLDDOCS-001/002/003 pass: each pinned phrase of the two-semantics rule, the MAX-floor rule, the gate, the fixed marker path and no-override rule, the owner-hold/owner-gate distinction, the refusal semantics, the evidence-level status member, the doctor annotation reason and clamp, and the explicit denials is present; no stale or historical phrasing is introduced"
       - "bun test tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage.test.ts || every reference-page see-also target exists, the prompt-required help inventory is unchanged, and no new command or flag is required"
       - "bun test tests/checks/doc-conformance.test.ts || the current-truth phrase table stays green in every touched document"
       - "bash scripts/.tests/test-doc-distribution.sh || TC-HOLDDOCS-004 passes: every changed guide keeps its ados_distribution marker and the marker-derived install set matches the sandbox install"
       - "bun test tests/checks/forbidden-literals.test.ts || zero violations and no registry change: the two guides and feature-autonomous-delivery.md are baseline-grandfathered, the other three feature specs and the three reference pages are registered and stay seed-free by naming the brand-derived placeholder <PREFIX>_OWNER_HOLD, and no registry entry is added, removed, or changed"
-      - "test -f .changeset/gh-280-owner-hold-minor.md && grep -c 'minor' .changeset/gh-280-owner-hold-minor.md || the release note declares exactly the five lockstep packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor with a non-empty body naming the new example hook, the two sources, the queue/dispatch gate, the status sibling, and the doctor detail with unchanged verdict and exit; @delivery-os/testkit is excluded"
+      - "test -f .changeset/gh-280-owner-hold-minor.md && grep -c 'minor' .changeset/gh-280-owner-hold-minor.md || the release note declares exactly the five lockstep packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor with a non-empty body naming the new example hook, the two sources, the queue/dispatch gate, the status evidence member, and the doctor detail with unchanged verdict and exit; @delivery-os/testkit is excluded"
       - "bun test tests/checks/privacy-release.test.ts || exactly one changeset is added, no pre-existing changeset is modified or deleted, and the release shape is accepted"
 
   # ---------------------------------------------------------------------------
@@ -612,7 +679,7 @@ phases:
         - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-change-record.md"
     acCoverage: []
     tcCoverage:
-      - "TC-HOLDE2E-001 (operator pause and resume evidence in a disposable root; PR-scoped, never a delivery-time gate)"
+      - "TC-HOLDE2E-001 (operator pause and resume evidence in a disposable HOME; PR-scoped, never a delivery-time gate; the no-ref claim is the claim leg)"
     verification:
       - "pnpm exec delivery-os plan validate GH-280 || verdict=valid, readyForDevelopment=true, eight phases echoed with their declared scope"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate is green: lint, format, typecheck, the full bun test suite, package/subpath/tier/runtime boundaries, ambient-globals, secret-read boundary, prompt conformance, help coverage, and exports parity"
@@ -622,6 +689,6 @@ phases:
       - "bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts || every new source module and contract export is registered exactly once and no inventory drifted"
       - "git status --porcelain tests/fixtures/queue/golden tests/fixtures/status/golden tests/fixtures/doctor/golden tests/fixtures/mcp/golden || only the declared new held fixtures appear; every delivered golden is byte-identical and none was regenerated"
       - "git diff --check || zero whitespace errors and zero conflict markers"
-      - "manual TC-HOLDE2E-001 in a disposable clone and state root, recorded in the change record and repeated in the pull request || create the marker, show status and doctor reporting it, show a queue claim and a dispatch refusing with owner-hold, show an expired park staying parked with unchanged bytes, remove the marker, and show the next pass resuming from the unchanged records with one session; no secret is printed, no live model session is spawned except the resumed one, and the record states the known limits (no kill switch, no MCP queue surface, no BSD runner, the seam-observed read bound)"
-      - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-change-record.md || the record carries the delivered summary, the operator communication (marker preferred for durability, a hold is not a kill switch), the additive contract and its rollback, the manual evidence with its corroborating fields, and the known gaps GAP-T1..GAP-T6 from the test plan"
+      - "manual TC-HOLDE2E-001 in a disposable clone and disposable HOME, recorded in the change record and repeated in the pull request || create the marker at $HOME/.ados-state/owner-hold, show status and doctor reporting it (providers.evidence.ownerHold; the ok provider check with the owner-hold annotation reason and the appended hold segment at exit 0), run `queue claim` WITH NO REF and a dispatch and capture queue.precondition.unmet / reason=owner-hold / the bounded detail and summary / exit 1 / zero records and zero sessions, record that owner-hold means wait/do-not-abort to deferral callers (D19) and is not a transient retry, show an expired park staying parked with unchanged bytes, remove the marker, and show the next pass resuming from the unchanged records with one session; no secret is printed, no live model session is spawned except the resumed one, and the record states the known limits (no kill switch, no MCP queue surface, no BSD runner, the seam-observed read bound, and GAP-T7: the production resident daemon is not wired)"
+      - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-change-record.md || the record carries the delivered summary, the operator communication (marker at $HOME/.ados-state/owner-hold preferred for durability, no marker-path override, a hold is not a kill switch, owner-hold means wait/do-not-abort), the additive contract and its rollback, the manual evidence with its corroborating fields, and the known gaps GAP-T1..GAP-T7 from the test plan"
       - "doc/changes/2026-11/2026-11-10--GH-280--owner-hold-hook/chg-GH-280-test-plan.md §10 || one row per executed case records the command, exit code, and a one-line result; the manual row names the disposable root and the PR location"
