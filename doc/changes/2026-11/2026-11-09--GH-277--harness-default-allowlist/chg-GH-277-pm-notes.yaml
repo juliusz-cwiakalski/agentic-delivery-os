@@ -355,3 +355,41 @@ notes:
       was reset soft and the same primitive re-invoked as a review_fix commit.
     type: info
     date: "2026-11-10"
+  - text: >-
+      Phase 8 review_fix iteration 3 = FAIL (code-review/review-iter-3.yaml,
+      review-iter-3.md): the N-1 guard is verified fixed and N-2/N-3 are closed.
+      R3-1 (high) was an artifact contradiction, not a code defect: spec v1.4
+      excluded the delivered host-seam guard, so spec v1.5 (DEC-7) reconciles
+      section 7.1/7.2/15/16/21 and AC-F4-1 while the guard is kept. R3-2
+      (medium) was coverage: the new stdin-error branches were untested, now
+      owned by TC-HDA-036. R3-3 (low) accepted the plan SCOPE_DEVIATION for
+      packages/adapters/src/host/index.ts; this iteration appends plan phase 5
+      (review-iteration-3 remediation) whose scope declares the two host
+      behaviour suites and the change folder, so the review-fix commit stages the
+      new isolated suite and the untracked iteration-3 review artifacts through
+      the primitive's own scope computation instead of hand staging.
+    type: info
+    date: "2026-11-10"
+  - text: >-
+      Phase 8 review_fix iteration 3 remediation (this review-fix commit):
+      TC-HDA-036 implements the host child-stdin guard coverage. The delivered
+      TC-OCS-052 suite gains two real-child early-exit EPIPE legs (streaming
+      starter and one-shot runner): a child that never reads a 2 MiB prompt
+      resolves the close-classified status 0 with timedOut false, empty
+      uncaught/unhandled collectors, no orphan and no leaked
+      tmp/tmpdir/gh275-host-* root. A new isolated
+      tests/behaviour/harness-host-stdin-error.test.ts mocks
+      node:child_process, injects a coded EIO stdin error, asserts the runner
+      returns status 127/timedOut false and the starter resolves once with
+      status 127, and restores the module mock in afterEach. Evidence: host
+      suites 11 pass / 0 fail across 2 files; dispatch-harness-default-detail
+      10/10 runs green with no leaked temp root; pnpm typecheck exit 0;
+      pnpm check:boundaries exit 0 (356 modules, 1041 dependencies);
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (6618 pass / 4 skip / 0 fail
+      across 783 files, 60 pre-existing lint warnings, no EPIPE/unhandled
+      lines). M-21 removes both stdin handlers -> 4 failing tests (2 real-child
+      uncaught EPIPE, 2 isolated uncaught EIO), restores with
+      git checkout -- packages/adapters/src/host/index.ts, and the restored
+      tree is 11 pass / 0 fail. No mutant committed; no product code changed.
+    type: info
+    date: "2026-11-10"

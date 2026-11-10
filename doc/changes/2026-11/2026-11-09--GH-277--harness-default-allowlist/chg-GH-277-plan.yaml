@@ -134,7 +134,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-277
 tier:
   name: full
-  phases: [1, 2, 3, 4]
+  phases: [1, 2, 3, 4, 5]
   escalationTriggers:
     - new-harness-failure-code-or-delivery-result-token
     - dispatch-envelope-shared-error-type-widened
@@ -406,3 +406,32 @@ phases:
         and doc/spec/features/feature-owner-gate-sla.md, plus doc/00-index.md and
         the glossary only if their current wording is affected.
     weightClass: standard
+  - id: 5
+    title: "Review-iteration-3 remediation for the host child-stdin early-close guard"
+    kind: delivery
+    summary: >-
+      Close review finding R3-2 by adding the TC-HDA-036 regression coverage for
+      the delivered host child-stdin guard: the real-child early-exit EPIPE legs
+      on both seams in the delivered TC-OCS-052 suite and the isolated coded
+      non-EPIPE stdin-error leg, plus mutation M-21. No product code changes; the
+      committed artifacts are the two behaviour suites, the spec v1.5, the test
+      plan v1.6 execution evidence, the iteration-3 review records, and the
+      pm-notes ledger update under the change folder.
+    scope:
+      files:
+        - tests/behaviour/harness-host-stream.test.ts
+        - tests/behaviour/harness-host-stdin-error.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist
+    interactions:
+      - kind: contract-file
+        target: tests/behaviour/harness-host-stream.test.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-277 review_fix iteration 3 closes R3-2 with TC-HDA-036 green (host
+        suites 11 pass / 0 fail, dispatch/harness detail suite 10/10 runs) and
+        M-21 red-then-green (4 failing tests with both stdin guards removed,
+        11 pass / 0 fail on the restored tree); the aggregate gate is recorded
+        in the test plan section 10.
+    weightClass: light

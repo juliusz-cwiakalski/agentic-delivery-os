@@ -1,0 +1,146 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-277
+branch: fix/GH-277/harness-default-allowlist
+status: FAIL
+summary: >-
+  Iteration-3 verification confirms the N-1 remediation is real and durable. The
+  host adapter now observes child.stdin at both write sites before the prompt is
+  written (packages/adapters/src/host/index.ts:79, :271), the synthetic child
+  drains stdin (tests/fixtures/harness/default-spawn.ts:78-81), and the probe
+  evidence reproduces: the TC-HDA-035 suite ran 20/20 with 12 pass and 0 fail per
+  run and no leaked tmp/tmpdir/gh277-default-spawn-* root; a control probe that
+  keeps the pre-fix shape (no stdin error handler) raised EPIPE on every one of 8
+  attempts, while the delivered seams returned status 0 on every one of 5
+  attempts with no uncaught error. N-2 is closed (test plan v1.5, front-matter
+  last_updated, and a §Revision History 1.5 row) and N-3 is recorded (pm-notes
+  phase-8 entry naming the authored-draft transport, the lost messageSource
+  fidelity, and the reset-soft re-invocation of the unpushed local commit). No
+  regression: plan validate valid/readyForDevelopment, pnpm typecheck exit 0,
+  pnpm check:boundaries exit 0 (356 modules), and TMPDIR=$PWD/tmp/tmpdir pnpm
+  check exit 0 with 6614 pass / 4 skip / 0 fail across 782 files. The change is
+  nonetheless not PASS: the durable fix modifies both host seams, which change
+  spec v1.4 explicitly lists as out of scope (§7.2: "Changes to the harness
+  session port, the streaming starter, the one-shot runner, or the classifier")
+  and describes as unchanged (AC-F4-1, §21), and neither the spec, the test-plan
+  file inventory, nor the plan phase scopes were amended for the review-mandated
+  extension; additionally the new stdin-error branches have no test because the
+  corrected fixture drains stdin. Both are artifact/coverage gaps, not code
+  defects: do not revert the adapter guard, amend the spec/test plan and add a
+  guard test.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 1
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: R3-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-spec.md:213
+    message: >-
+      The delivered remediation changes both host seams in
+      packages/adapters/src/host/index.ts (createHostSpawnRunner and
+      createHostSpawnStarter), but change spec v1.4 declares exactly that change
+      out of scope: §7.2 line 213 lists "Changes to the harness session port, the
+      streaming starter, the one-shot runner, or the classifier" as [OUT];
+      AC-F4-1 line 395 requires "the single host child-process site is unchanged";
+      and §21 line 466 repeats "The single host child-process site ... [is]
+      unchanged". §7.1 In Scope and §16 Affected Components do not list the host
+      module, and the test-plan §7.1 product-code inventory does not either. The
+      extension is justified (review iteration 2 mandated it as the durable N-1
+      fix) and disclosed in the commit body and the pm-notes phase-8 entry, but
+      the binding change artifacts were not reconciled, so the spec now
+      contradicts the delivered tree. That fails AC-F4-1 as written (DoD-1 binds
+      all 29 ACs) and leaves a stale claim the DoD-9 current-truth check can
+      reopen; the system spec (doc/spec/features/feature-harness-adapters.md §6)
+      also still describes the seams without the stdin early-exit observation.
+    suggestion: >-
+      Do not revert the guard. Bump the change spec to v1.5: add the host-seam
+      child-stdin observation to §7.1 In Scope and §16 (a row for
+      packages/adapters/src/host/index.ts), narrow §7.2 to the contract-level
+      exclusions (session-port contract, classifier) while naming the accepted
+      stdin-error guard, reword AC-F4-1 and §21 from "unchanged" to "the single
+      host child-process site remains the only site and additionally observes
+      child.stdin errors before writing (EPIPE ignored; other stdin errors
+      classified as a spawn failure with status 127)", and record the accepted
+      review-mandated deviation in §15 Decision Log. Update the test-plan §7.1
+      product-code table for the same file and re-run the phase-7 doc-sync so
+      doc/spec/features/feature-harness-adapters.md §6 names the stdin early-exit
+      handling. No product-code change is required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: R3-2
+    severity: medium
+    confidence: high
+    category: testing
+    location: packages/adapters/src/host/index.ts:79
+    message: >-
+      The two new stdin-error branches have no test. The runner handler at :79
+      (ignore EPIPE; otherwise kill and resolve status 127) and the starter
+      handler at :271 (ignore EPIPE; otherwise end the channel and complete with
+      status 127) are now unreachable from the suite because the synthetic child
+      in tests/fixtures/harness/default-spawn.ts:78-81 drains stdin, and no other
+      harness suite writes a prompt to a child that closes stdin early
+      (tests/behaviour/harness-host-stream.test.ts passes no stdin at all). Test
+      plan v1.5 records the guard only in prose in its revision row and states
+      "no ... coverage row ... changed", so a future edit can delete or weaken
+      the guard with every gate still green.
+    suggestion: >-
+      Add a regression case in tests/behaviour/harness-host-stream.test.ts (the
+      suite already allowed to use process.execPath) and an equivalent runner
+      case: spawn a child that exits without reading stdin, write a prompt larger
+      than the pipe buffer (for example 1 MiB), and assert no uncaught error and
+      the classified status (close status for the EPIPE case). Record it in the
+      test-plan §6.4 regression runs and the §Revision History 1.5 row. My
+      read-only probe shows the shape is feasible and deterministic: the pre-fix
+      control raised EPIPE 8/8 and the guarded seams returned status 0 5/5.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: R3-3
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist/chg-GH-277-plan.yaml:179
+    message: >-
+      Mechanical SCOPE_DEVIATION: packages/adapters/src/host/index.ts is outside
+      every declared plan phase scope (phase 1 is core config/contracts and
+      production.ts, phase 2 dispatch, phase 3 test fixtures/suites, phase 4
+      release/docs). The deviation is justified (review-mandated durable N-1 fix)
+      and disclosed in the commit body and the pm-notes phase-8 entry, and
+      plan validate remains valid/readyForDevelopment, so it is not a delivery
+      failure; it is recorded here because the plan audit still reports the
+      touched file as outside declared scope.
+    suggestion: >-
+      If the plan is refreshed, append a small remediation phase (scope:
+      packages/adapters/src/host/index.ts plus the guard test from R3-2) with its
+      commit and gate evidence, or amend phase 3's scope. If the plan must stay
+      untouched per the review mandate, carry the accepted deviation in the spec
+      §15 decision log (R3-1) so the artifact set records it once.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-10T06:27:56Z
+next_step: >-
+  EXECUTE_REMEDIATION_PHASE — keep the adapter guard. (1) Amend change spec to
+  v1.5 for the review-mandated host-seam stdin observation (scope §7.1, §16,
+  AC-F4-1, §21, §7.2, §15) and update test-plan §7.1 product-code inventory.
+  (2) Add the guard regression test (R3-2) and record it in the test plan.
+  (3) If the plan is refreshed, add the remediation phase/scope note (R3-3).
+  (4) Re-run the phase-7 doc-sync for
+  doc/spec/features/feature-harness-adapters.md §6 and the aggregate gate.
+  N-1, N-2, and N-3 are closed; no iteration-1 or iteration-2 code finding needs
+  rework and the product behaviour is accepted.

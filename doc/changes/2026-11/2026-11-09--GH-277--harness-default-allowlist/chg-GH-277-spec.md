@@ -3,7 +3,7 @@ change:
   ref: GH-277
   type: fix
   status: Proposed
-  version: 1.4
+  version: 1.5
   slug: harness-default-allowlist
   title: "Make the default harness spawn allowlist able to start opencode without user configuration"
   owners: [engineering]
@@ -13,9 +13,9 @@ change:
   audience: internal
   security_impact: medium
   risk_level: medium
-  last_updated: 2026-11-09
+  last_updated: 2026-11-10
   dependencies:
-    internal: [harness adapter contract, deny-by-default spawn-environment builder, configuration layer, CLI production composition, dispatch engine, CLI dispatch output, harness and dispatch test fixtures]
+    internal: [harness adapter contract, deny-by-default spawn-environment builder, configuration layer, CLI production composition, host spawn seams, dispatch engine, CLI dispatch output, harness and dispatch test fixtures]
     external: [opencode CLI]
 links:
   decisions: ["TDR-0008", "TDR-0016", "TDR-0017"]
@@ -116,7 +116,7 @@ Because the shipped spawn allowlist omits `PATH` and `HOME` and requires two mod
 
 - **NG-1**: Ambient inheritance or any fallback that copies all of `process.env` into the child.
 - **NG-2**: Engine-controlled model routing, a new model configuration branch, or an `OC_ADOS_*` to `HARNESS_*` mapping.
-- **NG-3**: A new harness kind, adapter behaviour, or change to the opencode invocation grammar.
+- **NG-3**: A new harness kind, a new adapter operation, or a change to the opencode invocation grammar or session-port contract, beyond the shipped default allowlist and the DEC-7 host stdin early-close guard.
 - **NG-4**: A new dispatch failure identity, delivery-result token, classifier rule, exit projection, or change to `dispatch.session.spawn-failed` category, retryability, consequence, or remediation hint.
 - **NG-5**: Credential resolution semantics, optional credentials, or accepting literal secret values in configuration.
 - **NG-6**: Windows-specific default environment variables (`USERPROFILE`, `APPDATA`, and equivalents); Windows parity is deferred.
@@ -193,6 +193,8 @@ Flow 6: diagnostic inspection
 - The optional marker on a declared variable entry across the configuration and harness descriptor layers.
 - The deny-by-default builder's required/optional projection, including fail-closed behaviour and omission of absent optional entries.
 - The production composition mapping of the optional marker and the existing `DELIVERY_WORK_PATH` injection.
+- The host spawn seams' child-stdin early-close guard: an `error` handler attached before the prompt write at both the one-shot runner and the streaming starter, treating `EPIPE` as a benign early-exit signal and any other stdin error as a spawn failure with status 127.
+- The synthetic default-spawn fixture's stdin drain, so the fixture child never races the parent's prompt write.
 - The dispatch error detail carrying the underlying harness failure identity.
 - Machine JSON and verbose human rendering of that detail, with the four-key non-verbose text contract preserved.
 - Regression tests, fixtures, and golden envelopes that pin the default allowlist and the spawn-failure envelope.
@@ -210,7 +212,7 @@ Flow 6: diagnostic inspection
 - [OUT] User-facing configuration for ambient inheritance.
 - [OUT] Windows-specific default environment variables; Windows parity is deferred.
 - [OUT] Bash stack changes or a bash dependency on the typed CLI.
-- [OUT] Changes to the harness session port, the streaming starter, the one-shot runner, or the classifier.
+- [OUT] Changes to the harness session port, the streaming-starter or one-shot-runner lifecycle, timeout or kill-escalation behaviour, output buffering or truncation, or the classifier. The delivered child-stdin early-close guard at both host write seams (§7.1) is in scope: it changes no lifecycle boundary, timeout, process primitive, or invocation grammar.
 
 ### 7.3 Deferred / Maybe-Later
 
@@ -328,7 +330,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 
 | Direction | Item | Notes |
 |---|---|---|
-| Depends on | Harness execution-environment contract | The optional variable marker is added here; the session port, runner, and starter are unchanged. |
+| Depends on | Harness execution-environment contract | The optional variable marker is added here; the session port interface, evidence, outcomes, failure codes, and credentials are unchanged, and the host runner and starter keep their lifecycle, timeout, and spawn-failure semantics (the child-stdin early-close guard, DEC-7, is the only change inside those seams). |
 | Depends on | Configuration layer (`harness` branch, schema, defaults) | The allowlist entry shape and shipped defaults change; validation keeps the secret-forbidden rule. |
 | Depends on | Deny-by-default spawn-environment builder | Required/optional projection and fail-closed naming live here. |
 | Depends on | CLI production composition | Maps the optional marker and keeps the `DELIVERY_WORK_PATH` record injection. |
@@ -356,6 +358,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | DEC-4 | Carry the underlying harness failure as an additive detail on the dispatch `data.error`: `kind`, `code`, and `field` when present. Keep `dispatch.session.spawn-failed` as the identity, token, outcome, exit, retryability, consequence, remediation hint, and last message. Surface the detail in machine JSON and in verbose human output; keep non-verbose text exactly four keys. | The ticket requires the underlying kind, code, and field to be visible without source, while the delivered dispatch identity and bash-continuity text contract must stay stable. A nested additive detail preserves the error's identity and the four-key text contract; a new error identity or a changed last message would be a larger, consumer-visible break. | 2026-11-09 |
 | DEC-5 | `version_impact` is `minor` and the change ships exactly one changeset declaring `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, and `@delivery-os/opencode` at `minor`, with a non-empty body, and modifies no pre-existing changeset. | Probed `TC-RELEASE-001` (`tests/checks/privacy-release.test.ts`): a branch that touches `packages/**` with zero added changesets fails because the test asserts the publishable diff is empty in that case; more than one added changeset fails `expect(added).toHaveLength(1)`; `validateChangeset` requires exactly the five fixed-group packages at `minor`, excludes `@delivery-os/testkit`, and requires a non-empty body. This change touches multiple packages, so the gate binds. The lockstep five-package `minor` convention is the repository release rule (precedent: `.changeset/gh-273-queue-repository-binding-minor.md`). | 2026-11-09 |
 | DEC-6 | Scope the default-environment repair to the POSIX host profile and defer Windows-specific variables. | The ticket's evidence and the M1-S9 pilot are POSIX; the harness stack nowhere claims Windows dispatch parity, and adding `USERPROFILE`/`APPDATA` without a Windows acceptance path would be an unverified default. Windows variables remain a documented deferred item and a revisit trigger if Windows harness dispatch is claimed. | 2026-11-09 |
+| DEC-7 | Add a child-stdin early-close guard to both host spawn seams: the `error` handler is attached before the prompt write, `EPIPE` is a benign early-exit signal, and any other stdin error resolves the seam as a spawn failure with status 127. | Review-mandated reliability fix: a child that exits before reading its prompt closed the pipe mid-write and surfaced an uncaught stream error, which made the default-spawn regression non-deterministic. Observing stdin before the write keeps the delivered spawn semantics — status 127 is already the seam's spawn-error status — so no failure code, token, exit projection, API, contract, or process primitive is added, and the module stays the single child-process site (F-4, AC-F4-1, §21). The synthetic default-spawn fixture drains stdin for the same reason: its child must not race the parent's prompt write. | 2026-11-10 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -367,12 +370,14 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | Harness environment contract (`packages/core/src/contracts/harness.ts`) | Updated: additive optional marker on a variable entry; session port, evidence, outcomes, failure codes, and credentials unchanged. |
 | Deny-by-default builder (`packages/core/src/domain/harness-spawn-env.ts`) | Updated: required/optional projection; required absence still fails closed with the field; optional absence is omitted. |
 | CLI production composition (`packages/cli/src/production.ts`) | Updated: map the optional marker; keep the `DELIVERY_WORK_PATH` record injection and the bare `opencode` command. |
+| Host spawn adapters (`packages/adapters/src/host/index.ts`) | Updated (review-mandated reliability fix, DEC-7): both seams — the one-shot runner and the streaming starter — attach a child-stdin `error` handler before the prompt write, treat `EPIPE` as a benign early-exit signal, and classify any other stdin error as a spawn failure with status 127. It remains the single production child-process module: no ambient environment read, no new process primitive, and no lifecycle, timeout, or invocation-grammar change. |
+| Host seam behaviour suite (`tests/behaviour/harness-host-stream.test.ts`) | Updated/extended: the host one-shot-runner and streaming-starter coverage that pins the early-close classification at both seams, alongside the delivered streaming, timeout, kill-escalation, and orphan cases. |
 | Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: declares `DispatchEnvelopeError` (the delivered `CommandResultError` plus an optional bounded `detail` carrying `kind` and `code`, plus `field` when the failure carries one) and retypes `DispatchEnvelopeData.error` to it; `CommandResultError` in `packages/core/src/contracts/result.ts` and every other envelope stay unchanged. |
 | Dispatch engine (`packages/core/src/app/dispatch.ts`) | Updated: preserve the underlying harness failure on the pre-session spawn path (lines 466-485) and populate `data.error.detail` where `errorOf` assembles the dispatch error (lines 185-200). This is where the detail is attached to data. |
 | CLI dispatch human rendering (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: `renderDispatchText` keeps exactly the four delivered keys as the non-verbose text; the dispatch command's human-text selection (lines 133-149) is the dispatch-specific seam that selects the bounded verbose diagnostic instead when the optional context reports `verbose: true` (DM-4), and that diagnostic is rendered in the dispatch text module. No failure identity, token, or exit projection changes here. |
 | CLI flag parsing and human-text seam (`packages/cli/src/index.ts`, `packages/cli/src/output/serialize.ts`) | Updated: `--verbose` is parsed at `index.ts:317`; the output writer (`serialize.ts:97-98`) keeps using it to select the full envelope over the scripted trim in machine mode, and `runCli` now also passes the parsed fact as the optional `HumanTextContext` third argument at the `CommandDefinition.humanText` call site (`index.ts:351-353`). The published type gains that optional context (DM-4); existing two-parameter definitions and direct two-argument calls stay valid. The shared stderr diagnostic (`diagnosticFor`, `index.ts:298-303`) and the single redacted write path (`serialize.ts:110-113`) stay the only stderr channel and carry no dispatch envelope data. |
 | CLI machine output (`packages/cli/src/output/serialize.ts:46-49`) | Unchanged: the whole envelope is serialized and redacted in one place, so `data.error.detail` reaches machine JSON with no dispatch-specific serializer. |
-| Harness and dispatch test fixtures/goldens | Updated/new: pinned default configuration, spawn-failure envelope, fake CLI on PATH, required/optional cases, ambient-leak canary. |
+| Harness and dispatch test fixtures/goldens | Updated/new: pinned default configuration, spawn-failure envelope, fake CLI on PATH, required/optional cases, ambient-leak canary, and the synthetic default-spawn child's stdin drain so it never races the parent's prompt write. |
 | Release metadata (`.changeset/gh-277-harness-default-allowlist-minor.md`) | Added: exactly one changeset with the five fixed-group packages at `minor` and a non-empty body. |
 | Current-truth documentation | Updated in the system-spec update phase: configuration layer, harness adapters, dispatch engine, result contract, adapter ports. The `--verbose` human-mode meaning (it also selects the bounded verbose human diagnostic, not only the full machine envelope) is reconciled in `doc/spec/features/feature-result-contract.md` (mode override and human output) and `doc/spec/features/feature-cli-entrypoint.md` (global flags), and the `CommandDefinition.humanText` hook, including the additive optional `HumanTextContext`, is reconciled in `doc/spec/features/feature-status-digest.md`, `doc/spec/features/feature-brief.md`, `doc/spec/features/feature-doctor.md`, and `doc/spec/features/feature-owner-gate-sla.md`. |
 
@@ -392,7 +397,7 @@ No new metric, log stream, trace, alert, or persisted telemetry record is requir
 | AC-F3-3 | **Given** a declared optional variable present in the parent or record, **when** the environment is built, **then** the key is forwarded with that value. | F-3 |
 | AC-F3-4 | **Given** a declared credential entry whose reference does not resolve, **when** the environment is built, **then** it fails closed with `config.credential.missing` and no optional marker can bypass the failure. | F-3, F-4 |
 | AC-F3-5 | **Given** a configuration entry whose optional marker is not a boolean, or a credential entry carrying the optional marker, **when** the harness branch is resolved, **then** the entry is classified `config.value.invalid`; a literal `value` remains `config.secret.forbidden`. | F-3, F-6 |
-| AC-F4-1 | **Given** the builder and composition sources, **when** the boundary, secret-read, and structure gates run, **then** no ambient environment read is introduced, the child environment is constructed from the descriptor, injected parent, record, and credential port only, and the single host child-process site is unchanged. | F-4, NFR-3, NFR-9 |
+| AC-F4-1 | **Given** the builder, composition, and host sources, **when** the boundary, secret-read, and structure gates run, **then** no ambient environment read is introduced, the child environment is constructed from the descriptor, injected parent, record, and credential port only, and the host spawn path stays the single production child-process module, which also carries the delivered child-stdin early-close guard: an `EPIPE` write error is treated as a benign early-exit signal, and any other stdin error is classified as a spawn failure with status 127, with no new process primitive and no change to the environment-as-data rule. | F-4, NFR-3, NFR-9 |
 | AC-F4-2 | **Given** a declared record value and a parent value for the same name, **when** the environment is built, **then** the record value wins; an undeclared record name changes nothing. | F-4 |
 | AC-F5-1 | **Given** a pre-session spawn failure, **when** dispatch records the failure, **then** `data.error.code` remains `dispatch.session.spawn-failed` and `data.error.detail` carries the underlying harness failure `kind` and `code`, plus `field` when the failure carries one. | F-5 |
 | AC-F5-2 | **Given** the same spawn failure with `--json`, **when** the envelope is rendered, **then** the underlying detail is present in machine output and survives the redaction path. | F-5, NFR-5 |
@@ -463,7 +468,7 @@ N/A. The change forwards two standard process variables (`PATH`, `HOME`) and one
 - The optional marker cannot make a credential entry optional, and a literal secret value remains `config.secret.forbidden`.
 - `PATH` and `HOME` are the minimum variables needed to execute the trusted harness and let it locate its own configuration; the parent environment is the operator's existing trust boundary.
 - The diagnostic detail carries identifiers (`kind`, `code`, `field`) only and is bounded; it cannot become an environment dump or a secret-exfiltration path.
-- The single host child-process site, the injected-environment-as-data rule, and the secret-read boundary are unchanged.
+- The single host child-process site, the injected-environment-as-data rule, and the secret-read boundary are unchanged: the site stays the single production child-process module and now also observes child stdin before the prompt write, so an early child exit cannot surface as an unhandled stream error; an `EPIPE` early close is benign and any other stdin error is classified as a spawn failure with status 127, adding no new process primitive, failure code, or ambient read.
 - No new dependency, network call, file write, or ambient environment read is added.
 
 ## 22. MAINTENANCE & OPERATIONS IMPACT
@@ -573,12 +578,13 @@ last_message=<bounded single line>
 | 1.2 | 2026-11-09 | `@spec-writer` | DoR iteration 1 remediation; all AC ids stable. B-1 (undeclared public-contract change): added DM-4 for the additive optional `HumanTextContext` widening of the published `CommandDefinition.humanText` — the third parameter is optional, so existing two-parameter definitions and direct two-argument calls stay valid — with a §8.5 backward-compatibility bullet, a §16 seam declaration, a §2.1 current-state observation, an Appendix D evidence row, and an AC-F5-3 seam assertion. B-3 (unreachable detail case): stated the detail-attachment rule in F-5 and Appendix C — every pre-session failure carries a `HarnessFailure`, `kind` and `code` are always present, `field` only when carried — and aligned AC-F5-1, NFR-5, the §4.1 metric, §1, §6, and §10. B-6 (missing Definition of Done): added §17.1 binding all 29 ACs, all 29 test-plan TCs, NFR-1..NFR-9, M-1..M-20, the single added changeset, the bounded real dispatch, current-truth reconciliation, orphan-TODO cleanup, phase-registry completion, the gate battery, and PR posture to named evidence and plan phases. |
 | 1.3 | 2026-11-09 | `@spec-writer` | DoR iteration 2 remediation; all AC and DoD ids stable. B (unachievable worktree claim): reworded DoD-6 from "mutates no file" to the precise claim — no nested-lifecycle mutation and no tracked or untracked source change, `git status --porcelain` after equals the pre-run baseline (including expected uncommitted P4 artifacts such as the untracked `TDR-0017` record and the new changeset), `HEAD` unchanged, and only gitignored build outputs (`packages/*/dist`, `*.tsbuildinfo`) rewritten by the in-repo `pnpm build`. Phase-7 handoff nit: named the files that carry the `--verbose` human-mode meaning (`feature-result-contract.md`, `feature-cli-entrypoint.md`) and the `CommandDefinition.humanText` hook (`feature-status-digest.md`, `feature-brief.md`, `feature-doctor.md`, `feature-owner-gate-sla.md`) in the §16 current-truth row, DoD-9, and the §22 bullet. |
 | 1.4 | 2026-11-09 | `@spec-writer` | DoR iteration 3 remediation; all AC, DoD, and OQ ids stable. Closed the DoD-10 owner gap: §7.3 deferred items are now a table whose every item names owner `@pm` and a concrete home, and §14 gained `Owner` and `Home` columns so OQ-2 is owned by `@pm` with its home in §7.3/§14 and its closure evidence named as `TC-HDA-100`/`TC-HDA-101`; DoD-10 now points to those owner and home records. No new work, ACs, or DoD items were introduced. |
+| 1.5 | 2026-11-10 | `@spec-writer` | Review iteration 3 R3-1 scope reconciliation for an already-delivered, review-mandated fix; all AC, DoD, DEC, and OQ ids stable, and no new work was introduced. The host spawn seams observe child stdin before the prompt write — `EPIPE` is a benign early exit, any other stdin error is classified as a spawn failure with status 127 — and the synthetic default-spawn fixture drains stdin. Reconciled the binding artifacts: §7.1 lists the guard at both seams and the fixture drain; §7.2 no longer excludes the delivered starter/runner change and now excludes only lifecycle, timeout, kill-escalation, buffering, and classifier changes; AC-F4-1 keeps its intent and states that the site stays the single child-process module and carries the guard; §21 states the same correction; §16 adds `packages/adapters/src/host/index.ts` and `tests/behaviour/harness-host-stream.test.ts`; DEC-7 records the review-mandated reliability fix as adding no API, contract, failure code, or process primitive. |
 
 ---
 
 ## AUTHORING GUIDELINES
 
-This specification was authored from the GH-277 ticket, the PM's verified root-cause evidence, the delivered configuration layer, harness contract, spawn-environment builder, host runner, production composition, dispatch engine, dispatch output, and the current feature specs. It resolves the ticket's two design directions as DEC-1 through DEC-3, keeps the dispatch identity and closed vocabularies unchanged in DEC-4, records the probed release obligation in DEC-5, and records the POSIX scope boundary in DEC-6. Implementation sequencing, test file placement, fixture mechanics, and the bounded real-dispatch procedure belong to the plan and test plan.
+This specification was authored from the GH-277 ticket, the PM's verified root-cause evidence, the delivered configuration layer, harness contract, spawn-environment builder, host runner, production composition, dispatch engine, dispatch output, and the current feature specs. It resolves the ticket's two design directions as DEC-1 through DEC-3, keeps the dispatch identity and closed vocabularies unchanged in DEC-4, records the probed release obligation in DEC-5, records the POSIX scope boundary in DEC-6, and records the review-mandated host stdin early-close guard and fixture drain in DEC-7 as a reliability fix that adds no API, contract, failure code, or process primitive. Implementation sequencing, test file placement, fixture mechanics, and the bounded real-dispatch procedure belong to the plan and test plan.
 
 ## VALIDATION CHECKLIST
 
