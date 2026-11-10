@@ -2,21 +2,23 @@
 # start opencode without user configuration.
 #
 # Sources (single source of truth):
-#   - Spec:      ./chg-GH-277-spec.md (v1.3; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
-#                NFR-1..NFR-9; DEC-1..DEC-6; DM-1..DM-4; RSK-1..RSK-8; OQ-1
+#   - Spec:      ./chg-GH-277-spec.md (v1.6; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
+#                NFR-1..NFR-9; DEC-1..DEC-7; DM-1..DM-4; RSK-1..RSK-8; OQ-1
 #                resolved by TDR-0017, OQ-2 open and non-blocking; §6 flows 1–6;
 #                §8.3/§8.5; §13 dependencies; §16 affected components; §17.1
-#                Definition of Done; Appendix B/C/D)
-#   - Test plan: ./chg-GH-277-test-plan.md (v1.3; 29 scenarios TC-HDA-001..101 in
-#                §5.1/§5.2; §6.1 fixtures; §6.2 isolation; §6.3 operator-run E2E
-#                with a pre-run git-status baseline; §6.4 regression runs; §6.5
-#                aggregate gate + privacy literals; §7.1 required files; §7.2
-#                TC → file map; §7.3 mutations M-1..M-20; §10 execution log)
+#                Definition of Done binding 30 scenarios, M-1..M-21 and all five
+#                declared plan phases; Appendix B/C/D)
+#   - Test plan: ./chg-GH-277-test-plan.md (v1.7; 30 scenarios TC-HDA-001..101 plus
+#                TC-HDA-036 in §5.1/§5.2; §6.1 fixtures; §6.2 isolation; §6.3
+#                operator-run E2E with a pre-run git-status baseline; §6.4
+#                regression runs; §6.5 aggregate gate + privacy literals; §7.1
+#                required files; §7.2 TC → file map; §7.3 mutations M-1..M-21;
+#                §10 execution log)
 #   - Decision:  doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md
 #                (enforces C-1..C-8 for the marker; spec DEC-3, OQ-1)
 #   - Ticket:    GH-277.
 #
-# Ceremony: one ticket, one PR targeting main-tools, four delivery phases.
+# Ceremony: one ticket, one PR targeting main-tools, five delivery phases.
 #   P1 contract, catalog, defaults, configuration validation, deny-by-default
 #      builder and production composition (+ the delivered suites, fixtures and
 #      meta-checks the repair invalidates, including the production queue fixture
@@ -30,6 +32,10 @@
 #      the human-text context type test.
 #   P4 bounded real-CLI proof, release changeset, decision-record capture,
 #      aggregate gate, phase-7 spec handoff.
+#   P5 review-iteration-3 remediation for the delivered host child-stdin
+#      early-close guard (TC-HDA-036, M-21) together with the review-iteration-4
+#      artifact-truth refresh (spec v1.6, test plan v1.7, this header) and the
+#      reconciled harness-adapters system-spec edit; no product code change.
 # Each phase is green on its own slice and independently committable through the
 # `commit` primitive: every delivered suite whose construction site or assertion a
 # phase invalidates is migrated in that same commit, and no delivered assertion is
@@ -43,15 +49,17 @@
 #   P3  AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-2, AC-F5-2, AC-F5-3, AC-F5-5,
 #       AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4                            (11)
 #   P4  AC-F8-1, AC-F8-2                                              (2)
-#   14 + 2 + 11 + 2 = 29; no AC unmapped, no AC id invented.
+#   14 + 2 + 11 + 2 = 29; no AC unmapped, no AC id invented. P5 owns no AC:
+#   TC-HDA-036 is additive confirmation of AC-F4-1, whose owner stays P1.
 #
-# TC ownership — 29/29, exactly one owning phase each:
+# TC ownership — 30/30, exactly one owning phase each:
 #   P1  TC-HDA-001, 002, 003, 004, 005, 013, 014, 015, 016, 017, 018, 019,
 #       020, 021, 022, 023                                             (16)
 #   P2  TC-HDA-029, 033                                              (2)
 #   P3  TC-HDA-010, 011, 012, 030, 031, 032, 034, 035                (8)
 #   P4  TC-HDA-006, 100, 101                                         (3)
-#   16 + 2 + 8 + 3 = 29; no TC unmapped, no TC id invented.
+#   P5  TC-HDA-036                                                   (1)
+#   16 + 2 + 8 + 3 + 1 = 30; no TC unmapped, no TC id invented.
 #
 # Golden pin: tests/fixtures/dispatch/golden/errors/spawn-failed.json and its
 # byte-equality consumer tests/golden/dispatch-errors.test.ts are owned by P2,
@@ -413,14 +421,19 @@ phases:
       Close review finding R3-2 by adding the TC-HDA-036 regression coverage for
       the delivered host child-stdin guard: the real-child early-exit EPIPE legs
       on both seams in the delivered TC-OCS-052 suite and the isolated coded
-      non-EPIPE stdin-error leg, plus mutation M-21. No product code changes; the
-      committed artifacts are the two behaviour suites, the spec v1.5, the test
-      plan v1.6 execution evidence, the iteration-3 review records, and the
-      pm-notes ledger update under the change folder.
+      non-EPIPE stdin-error leg, plus mutation M-21. It carries the
+      review-iteration-4 artifact-truth refresh (spec v1.6, test plan v1.7, this
+      plan header) and the reconciled harness-adapters system-spec edit, so the
+      boundary commit reports no scope drift. No product code changes; the
+      committed artifacts are the two behaviour suites, the spec, the test plan
+      execution evidence, the reconciled system-spec page, the iteration-3 and
+      iteration-4 review records, and the pm-notes ledger update under the change
+      folder.
     scope:
       files:
         - tests/behaviour/harness-host-stream.test.ts
         - tests/behaviour/harness-host-stdin-error.test.ts
+        - doc/spec/features/feature-harness-adapters.md
       folders:
         - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist
     interactions:
