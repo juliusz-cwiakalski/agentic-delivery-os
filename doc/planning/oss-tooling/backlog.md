@@ -1261,11 +1261,11 @@ the gap is deliberate. M2 stories keep their codes.
   M1-S22 identity); peak-window rules as data per provider profile (windows,
   multipliers, buffers); the resident daemon watches profile windows and parks
   in-flight lanes whose profile enters peak (bounded-grace stop, session state
-  preserved, park reason recorded); automatic resume from preserved session
-  state when the window ends (same branch, session resume path,
-  never re-dispatch from scratch); zero-spend assertion through telemetry
-  (M2-S14): no model calls bill on a parked profile during its window;
-  daemon-absent degrades to the existing iteration-start gating, documented.
+  preserved, park reason recorded); automatic resume from preserved session state
+  when the window ends (same branch, session resume path, never re-dispatch
+  from scratch); zero-spend assertion through telemetry (M2-S14): no model calls bill
+  on a parked profile during its window; daemon-absent degrades to the existing
+  iteration-start gating, documented.
 - AC:
   1. A dispatch records its nominated provider profile; the nomination is visible on lane and attempt records.
   2. When a peak window starts for profile P, every in-flight lane using P is stopped with bounded grace, marked parked with reason `peak-window` and the window end, and stays parked until it ends.
