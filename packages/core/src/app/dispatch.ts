@@ -110,6 +110,33 @@ export type DispatchAdmission =
       readonly resumeMode?: DispatchResumeMode;
     };
 
+/**
+ * The admission preflight refusal.
+ *
+ * `trustedRefusal` is the narrow marker the CLI classifier honours only for
+ * `config.credential.missing`; it lets the bounded credential prose past the
+ * untrusted-config suppression. Provider and input refusals carry no marker.
+ */
+export type DispatchPreflightError = {
+  readonly kind: "input" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly trustedRefusal?: true;
+};
+
+/**
+ * The admission preflight result: admitted, or a typed pre-session refusal.
+ *
+ * Distinct from `DispatchAdmission`: a preflight refusal appends no record and
+ * runs before `claimLease`, while an admission refusal still records a pair.
+ */
+export type DispatchPreflightResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: DispatchPreflightError };
+
+/** The optional admission precondition; production always supplies it. */
+export type DispatchPreflightPort = () => Promise<DispatchPreflightResult>;
+
 /** Everything the one-shot run consumes; every field is injected. */
 export type DispatchPorts = {
   readonly store: StateStorePort;
@@ -129,6 +156,12 @@ export type DispatchPorts = {
   readonly claimLease: () => DispatchLeaseClaim;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: DispatchPhaseLedger;
+  /**
+   * The admission precondition: resolves the truth-read credential and performs
+   * one bounded read. It runs after harness/input validation and before
+   * `claimLease`, spawn, or resume, and appends no record of its own.
+   */
+  readonly preflight?: DispatchPreflightPort;
   readonly admission?: () => DispatchAdmission;
   readonly initialRestarts?: number;
   readonly restartBudget?: number;
@@ -162,9 +195,11 @@ export type DispatchRunResult =
   | {
       readonly ok: false;
       readonly error: {
-        readonly kind: "input" | "queue" | "state" | "harness" | "dispatch";
+        readonly kind: "input" | "queue" | "state" | "harness" | "dispatch" | "provider" | "config";
         readonly code: string;
         readonly summary?: string;
+        /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
+        readonly trustedRefusal?: true;
       };
     };
 
@@ -330,6 +365,13 @@ const livenessReadings = (
  * they append exactly one attempt record and return a classified envelope.
  */
 export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResult> => {
+  // Admission precondition: a refusal here is pre-session. It runs before the
+  // lease claim and before any spawn, resume, attempt, or divergence record.
+  if (ports.preflight !== undefined) {
+    const preflight = await ports.preflight();
+    if (!preflight.ok) return { ok: false, error: preflight.error };
+  }
+
   const claimed = ports.claimLease();
   if (!claimed.ok) {
     return { ok: false, error: { kind: "queue", code: claimed.code } };
