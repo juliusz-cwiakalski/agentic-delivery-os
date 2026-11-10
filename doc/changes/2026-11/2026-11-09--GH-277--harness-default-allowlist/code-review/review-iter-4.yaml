@@ -53,8 +53,8 @@ findings:
       declares tier.phases [1,2,3,4,5] with phase 5 appended. The test plan's
       own line 194 claim that "the spec's DoD-1/DoD-2 claims are unaffected" is
       therefore false as written, and §16 (line 374) names the edited
-      tests/behaviour/harness-host-stream.test.ts but not the new
-      tests/behaviour/harness-host-stdin-error.test.ts that test plan §7.1 adds.
+      tests/behaviour/harness-host-stream.test.ts but not the dedicated
+      module-mock suite (since removed) that test plan §7.1 adds.
       Every AC and DoD condition is substantively met, but a literal phase-10
       dod_check against §17.1 now reads stale counts and a stale phase count, so
       the binding artifact contradicts the delivered plan/test plan.
@@ -186,7 +186,7 @@ next_step: >-
   EXECUTE_REMEDIATION_PHASE — no product-code change. (1) Bump the change spec
   to v1.6 for §17.1 (30 scenarios incl. TC-HDA-036, M-1..M-21, five declared
   plan phases, Phases 1–5 in the "Proven in" cells, validation checklist) and
-  add the new harness-host-stdin-error suite to §16 (F-1). (2) Refresh the plan
+  add the new module-mock suite to §16 (since removed) (F-1). (2) Refresh the plan
   header (F-2) and the test-plan M-1..M-21 labels (F-3). (3) Optional: mirror
   the runner's kill in the starter's non-EPIPE branch (F-4). (4) Record the
   commit-body TC-id stripping in the PR/pm-notes and open a follow-up (F-5);

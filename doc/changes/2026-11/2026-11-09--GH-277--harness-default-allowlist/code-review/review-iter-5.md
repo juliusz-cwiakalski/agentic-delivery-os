@@ -33,7 +33,7 @@ requires a product change or a plan phase.
 - `:445` DoD-11 — "all five declared plan phases complete", Proven in Phases 1–5.
 - `:601` validation checklist — "all 30 test-plan TCs … M-1..M-21".
 - `:374-375` §16 — the host-stdin guard suite row
-  (`tests/behaviour/harness-host-stdin-error.test.ts`) is added beside the updated
+  (a dedicated module-mock suite, since removed) is added beside the updated
   `harness-host-stream.test.ts` row.
 - `:583` revision history — 1.6 row records the reconciliation and the §16 change.
 
@@ -112,7 +112,7 @@ closures (or rely on the pm-notes completion entry, which is the authoritative e
 |---|---|
 | `pnpm typecheck` | **exit 0** ✅ |
 | `pnpm check:boundaries` | **exit 0** — 356 modules / 1041 dependencies; ambient-globals 162 files, entrypoints, secret-read (325 files) clean ✅ |
-| `bun test tests/behaviour/harness-host-stream.test.ts tests/behaviour/harness-host-stdin-error.test.ts` | **11 pass / 0 fail**, 44 expect() calls across 2 files ✅ |
+| `bun test tests/behaviour/harness-host-stream.test.ts` (+ a since-removed module-mock suite) | **11 pass / 0 fail**, 44 expect() calls across 2 files ✅ |
 | `delivery-os plan validate GH-277` | `verdict=valid`, `tier=full`, `readyForDevelopment=true` ✅ |
 | `delivery-os lint GH-277` | pm-notes `class: conforms` ✅ |
 | `delivery-os verify change GH-277` | `result=partial`, `missing=review_fix,quality_gates,dod_check,pr_creation` — expected at this lifecycle point ✅ |

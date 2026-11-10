@@ -395,11 +395,10 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   acquisition with preserved identity), `harness-host-stream.test.ts` (the
   benign child-stdin observer on both seams — the close-classified result on an
   early-exit `EPIPE`, with no uncaught error, no orphan, and no leaked temp root),
-  `harness-host-stdin-error.test.ts` (a coded `EIO` stdin error is observed
-  without synthesizing a result, so both seams resolve the child's close status),
   `harness-stream-hygiene.test.ts`
   (the 60 s handle bound, no default session
-  bound, idempotent kill, and no surviving orphan), `harness-claude-session.test.ts`,
+  bound, idempotent kill, no surviving orphan, and the read-only guard that no
+  test file installs a process-global `node:child_process` module mock), `harness-claude-session.test.ts`,
   `harness-config.test.ts`, `dispatch-harness-acquisition.test.ts` (the adapter
   driven through the dispatch composition),
   `economics-liveness-sourcing.test.ts`, `economics-liveness-prefill.test.ts`,

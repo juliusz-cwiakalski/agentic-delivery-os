@@ -2,13 +2,13 @@
 # start opencode without user configuration.
 #
 # Sources (single source of truth):
-#   - Spec:      ./chg-GH-277-spec.md (v1.6; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
+#   - Spec:      ./chg-GH-277-spec.md (v1.8; F-1..F-8; AC-F1-1..AC-F8-2 = 29 ACs;
 #                NFR-1..NFR-9; DEC-1..DEC-7; DM-1..DM-4; RSK-1..RSK-8; OQ-1
 #                resolved by TDR-0021, OQ-2 open and non-blocking; §6 flows 1–6;
 #                §8.3/§8.5; §13 dependencies; §16 affected components; §17.1
 #                Definition of Done binding 30 scenarios, M-1..M-21 and all five
 #                declared plan phases; Appendix B/C/D)
-#   - Test plan: ./chg-GH-277-test-plan.md (v1.7; 30 scenarios TC-HDA-001..101 plus
+#   - Test plan: ./chg-GH-277-test-plan.md (v1.9; 30 scenarios TC-HDA-001..101 plus
 #                TC-HDA-036 in §5.1/§5.2; §6.1 fixtures; §6.2 isolation; §6.3
 #                operator-run E2E with a pre-run git-status baseline; §6.4
 #                regression runs; §6.5 aggregate gate + privacy literals; §7.1
@@ -34,8 +34,10 @@
 #      aggregate gate, phase-7 spec handoff.
 #   P5 review-iteration-3 remediation for the delivered host child-stdin
 #      early-close guard (TC-HDA-036, M-21) together with the review-iteration-4
-#      artifact-truth refresh (spec v1.6, test plan v1.7, this header) and the
-#      reconciled harness-adapters system-spec edit; no product code change.
+#      artifact-truth refresh (spec v1.6, test plan v1.7, this header), the
+#      reconciled harness-adapters system-spec edit, and the CI root-cause
+#      cleanup (delete the process-global node:child_process module-mock suite,
+#      guard against its return); no product code change.
 # Each phase is green on its own slice and independently committable through the
 # `commit` primitive: every delivered suite whose construction site or assertion a
 # phase invalidates is migrated in that same commit, and no delivered assertion is
@@ -420,19 +422,22 @@ phases:
     summary: >-
       Close review finding R3-2 by adding the TC-HDA-036 regression coverage for
       the delivered host child-stdin guard: the real-child early-exit EPIPE legs
-      on both seams in the delivered TC-OCS-052 suite and the isolated coded
-      non-EPIPE stdin-error leg, plus mutation M-21. It carries the
-      review-iteration-4 artifact-truth refresh (spec v1.6, test plan v1.7, this
-      plan header) and the reconciled harness-adapters system-spec edit, so the
-      boundary commit reports no scope drift. No product code changes; the
-      committed artifacts are the two behaviour suites, the spec, the test plan
-      execution evidence, the reconciled system-spec page, the iteration-3 and
-      iteration-4 review records, and the pm-notes ledger update under the change
-      folder.
+      on both seams in the delivered TC-OCS-052 suite, plus mutation M-21 and a
+      read-only suite guard that rejects any process-global
+      node:child_process module mock. The process-global module-mock suite that
+      corrupted async spawn in the shared Bun test process is removed, so the
+      guard keeps its real-child coverage without any module mock. It carries
+      the review-iteration-4 artifact-truth refresh (spec v1.8, test plan v1.9,
+      this plan header) and the reconciled harness-adapters system-spec edit, so
+      the boundary commit reports no scope drift. No product code changes; the
+      committed artifacts are the host-stream behaviour suite, the
+      stream-hygiene guard suite, the spec, the test plan execution evidence,
+      the reconciled system-spec page, the iteration-3 and iteration-4 review
+      records, and the pm-notes ledger update under the change folder.
     scope:
       files:
         - tests/behaviour/harness-host-stream.test.ts
-        - tests/behaviour/harness-host-stdin-error.test.ts
+        - tests/behaviour/harness-stream-hygiene.test.ts
         - doc/spec/features/feature-harness-adapters.md
       folders:
         - doc/changes/2026-11/2026-11-09--GH-277--harness-default-allowlist
@@ -443,8 +448,10 @@ phases:
     doneArtifacts:
       trackerTransition: >-
         GH-277 review_fix iteration 3 closes R3-2 with TC-HDA-036 green (host
-        suites 11 pass / 0 fail, dispatch/harness detail suite 10/10 runs) and
-        M-21 red-then-green (4 failing tests with both stdin guards removed,
-        11 pass / 0 fail on the restored tree); the aggregate gate is recorded
-        in the test plan section 10.
+        suite 9 pass / 0 fail, the stream-hygiene guard suite 17 pass / 0 fail,
+        dispatch/harness detail suite 10/10 runs) and M-21 red-then-green on the
+        real-child legs (both stdin guards removed, restored tree green); the CI
+        root-cause cleanup deletes the process-global node:child_process
+        module-mock suite and the guard rejects any reinstatement. The aggregate
+        gate is recorded in the test plan section 10.
     weightClass: light

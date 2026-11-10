@@ -9,7 +9,7 @@ summary: >-
   and that no critical, high, or medium finding remains. F-1: spec v1.6 §17.1 now
   binds 30 test-plan scenarios (DoD-2), M-1..M-21 (DoD-4), and all five declared
   plan phases (DoD-11); the preamble and validation checklist agree; §16 carries
-  the new tests/behaviour/harness-host-stdin-error.test.ts row; and the revision
+  the new host-stdin guard row (a dedicated module-mock suite, since removed); and the revision
   history records 1.6. F-2: the plan source-of-truth header is refreshed to spec
   v1.6/DEC-1..DEC-7, test plan v1.7 (30 scenarios incl. TC-HDA-036), 30/30 TC
   ownership, five delivery phases, and M-1..M-21. F-3: every M-1..M-20 label in

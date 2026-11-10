@@ -53,11 +53,12 @@ No remaining "unchanged" claim about the host seams survives in the spec.
   never reads stdin (EPIPE), assert the close-classified result (`status 0`,
   `timedOut false`), empty uncaught/rejection collectors, no orphan, and no leaked
   `tmp/tmpdir/gh275-host-*` root.
-- `tests/behaviour/harness-host-stdin-error.test.ts` — an isolated `node:child_process`
+- A dedicated module-mock suite (since removed after the CI root cause) — an isolated `node:child_process`
   module mock feeds a coded `EIO` stdin error and asserts the runner's exact
   `{ stdout: "", stderr: "", status: 127, timedOut: false }` and a single settled
   starter completion with `status 127`; the mock is restored in `afterEach` per
-  `.ai/rules/typescript.md` §9.
+  `.ai/rules/typescript.md` §9. The suite was later removed with its
+  process-global mock after it corrupted async spawn in CI.
 - M-21 (remove both `child.stdin.on("error")` registrations → 4 failing tests) is
   recorded in test plan §7.3/§10; the code-review-independent shape is non-vacuous
   (without a handler the stream error is uncaught; without the `EPIPE` branch the close
@@ -93,7 +94,7 @@ was R3-3's alternative disposition. Plan phases 1–4 keep commit + gate evidenc
 - `chg-GH-277-spec.md:444` (DoD-11) — "all four declared plan phases complete".
 - `chg-GH-277-spec.md:599` — checklist repeats 29 TCs / M-1..M-20.
 - `chg-GH-277-spec.md:374` — §16 names the edited host-stream suite but not the new
-  `tests/behaviour/harness-host-stdin-error.test.ts`.
+  module-mock suite (since removed).
 - Contrast: test plan v1.6 has 30 scenarios and the TC-HDA-036 execution row
   (`chg-GH-277-test-plan.md:1948`), records M-21 (`:1976`), and the plan declares five
   phases (`chg-GH-277-plan.yaml` `tier.phases`). Test plan line 194's claim that the
@@ -159,7 +160,7 @@ phase 5 `scope.files` or record the accepted drift.
 
 | Gate | Result |
 |---|---|
-| `bun test tests/behaviour/harness-host-stream.test.ts tests/behaviour/harness-host-stdin-error.test.ts` ×6, `TMPDIR=$PWD/tmp/tmpdir` | **11 pass / 0 fail** every run; 0 leaked roots ✅ |
+| `bun test tests/behaviour/harness-host-stream.test.ts` (+ a since-removed module-mock suite) ×6, `TMPDIR=$PWD/tmp/tmpdir` | **11 pass / 0 fail** every run; 0 leaked roots ✅ |
 | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts` ×2 | **12 pass / 0 fail** each ✅ |
 | `bun run scripts/checks/forbidden-literals.ts` | 5/5 scope classes, **0 violations** ✅ |
 | `pnpm typecheck` | exit 0 ✅ |
