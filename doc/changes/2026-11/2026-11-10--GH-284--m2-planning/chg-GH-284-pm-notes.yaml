@@ -423,3 +423,92 @@ notes:
       have prevented three of the six reopen rounds."
     type: "retro"
     date: "2026-11-10"
+  - text: "PLAN PHASE P1 complete: commits 1842e181 (seven stories M2-S11..S17
+      inserted inside the Epic M2 block after M2-S9's last content line, plus
+      the M2-S4 and M2-S6 amendments) and remediation 110fb160 (one S17 task
+      clause re-wrapped during the P6 regression so the 'preserved session
+      state' and 'no model calls bill' anchors stay contiguous). Gates at HEAD:
+      P01 m2_story_headings=7 new_found=7/7 order=OK shape_ok=7/7 PASS; P02
+      clause_scan total=61 present=61 missing=0 (9/8/11/12/10/11 per story);
+      P03 window=1167:1278 blank_separation=OK fixture_blank_separation=OK
+      separator_sequence=identical backlog_hunks=4 inside=4 outside=0
+      classifier_self_tests=4/4 PASS; P04 ac_numbered_items=7/7 all six S17
+      dependencies incl. #280; P05 clauses_present=6/6 may=ABSENT; P06
+      criteria_present=7/7 extra_criteria=0 duplicate_numbers=0 both self-tests
+      detected; P07 changed_lines=2 unexpected_lines=0 depends=expected; P08
+      changed_lines=3 base_task_lines_missing=0 Goal/AC identical
+      fixture_p08=OK; P09 67->74 added=7 removed=0 unexpected=0 order=OK; P10
+      fm/rg/cc byte-identical; P29 stories_compared=65 identical=65 changed=0
+      order=OK with four head runs PASS and three negatives detected."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P2 complete: commit 57120f4e (fourteen M1 command-page
+      status headers plus entrypoint.md's two-sentence DESCRIPTION region; 15
+      files). Gates at HEAD: P11 pages=28 M1_planned_hits=0
+      M1_milestone_planned_hits=0 header_attribution=14/14 tail_violations=0
+      current_violations=0 watchdog_m1s15=OK watchdog_sc=OK
+      verify_gates_extension=OK closeout_extension=OK real_headers=PASS; P12
+      board->M2-S4 watchdog->M2-S2 mcp->M3-S2; P13 header M1-S18/GH-238/not
+      mounted/entrypoint delta OK Current=ABSENT daemon_body=byte-identical;
+      P14 changed_pages=14/14 total_hunks=14 zero OUTSIDE entrypoint_hunks=1;
+      P15 observed=16 enumerated=16 both differences empty exactly
+      state/mcp/resident daemon absent desc_hunks=1 sentences_removed=2
+      sentences_added=2 PASS; P30 body_identical=14/14 entrypoint_bound=OK
+      PASS."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P3 complete: commit 5e00d4f2 (status.md: one dated
+      2026-11-10 M2 planning section appended at EOF plus four pointer
+      insertions). Gates at HEAD: P16 new_sections=1 all eleven markers OK
+      literal_pipe=ABSENT exit_overclaim=ABSENT alternating self-test OK; P17
+      all four groups bytes retained and pointer present g4_pointer=1/1; P18
+      windows newsec=186..211 title=2..4 paragraph=55..57 scheduling=151..153
+      items=103..105 removed_lines=0 added_lines=30 section_lines=26
+      pointer_runs=4 pointer_windows=4 bad_runs=0 retention_oracle=OK
+      reference_head_fixture=OK PASS; P34 pointer_groups=4/4
+      sed_line_address_0_errors=0 PASS."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P4 complete: commit 39bb4afb (twelve documents under
+      milestones/m2/: README, architecture, contracts, test-scenarios with 38
+      SC-M2 scenarios, journeys with five journeys, entrypoint-delta, and six
+      command contracts). Gates at HEAD: P19 pack_files=12/12 actual_files=12
+      readme_lists=12/12 story_map_entries=16 deviation_statement=OK
+      readme_self_link_self_test=detected pack_contents_table=byte-identical;
+      P20 all C4, flow, and delta headings OK; P21 contract_markers_missing=0;
+      P22 scenario_headings=38 stories_below_two=0 twelve mandatory anchors OK;
+      P23 journey_headings=5 with resume and other-provider isolation; P24
+      command_headers=6/6; P25 every page complete plus the dispatch-subfamily
+      and subscribe-taxonomy relationships; P26 all ten delta markers OK
+      including entrypoint.md; P33 mermaid_fences=10
+      keyword_and_fence_exit=0 C4 3/3 flows 7/7 heading_association=OK
+      fixtures OK/3/3,7/7,OK/detected."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P5 complete: commit 13171be1 (one planned M2 row in
+      milestones/README.md linking twelve m2/ targets on a single physical
+      line). Gates at HEAD: P27 m2_targets=12/12 m2_row_marked_planned=yes
+      M0 and M1 rows identical."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P6 complete: commit 166df7ff registers the twelve
+      milestones/m2 documents in scripts/checks/forbidden-literals.registry.json
+      (sorted among themselves, duplicate-free, no existing entry reordered,
+      corpusBaseline untouched, the only scripts/** edit DEC-21 permits), and
+      the accompanying evidence commit records this file plus
+      delivery-evidence/verification.md. Gates at HEAD: P28 product_files=31
+      planning_files=30 registry_files=1 outside_planning_outside_registry=0
+      forbidden_root_files=0 unexpected_planning_paths=0 non_vacuous=yes; P31
+      guard_exit=0 no drift 82 in-scope docs planning_markers=0; P36
+      registered_total=139 m2_registry_sorted=yes m2_registry_duplicates=0
+      registry_m2=12/12 baseline_absent=12/12 forbidden_exit=0
+      'OK forbidden-literals: 5/5 scope classes scanned, 0 violations'
+      unregistered_findings=0 seed_hits=0; P32 default_exit=1
+      default_failed_tests=1 default_failure_class=environmental
+      (ci-baseline-parity only) repo_tmpdir_exit=0 gate_verdict=PASS; P35
+      clause_scan total=79 present=79 missing=0 missing_clauses=0
+      s17_missing_criteria=0 added_criteria=0; P37 changed_planning_files=30
+      broken_links=0 restated_ac_blocks=0; full regression sweep (P01..P27,
+      P29, P30, P33..P35, P37) green at the final HEAD."
+    type: "info"
+    date: "2026-11-10"
