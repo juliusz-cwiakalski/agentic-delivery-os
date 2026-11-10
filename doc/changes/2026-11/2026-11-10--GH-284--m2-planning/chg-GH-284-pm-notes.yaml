@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: "2026-11-10T18:55:00Z", completed: 2026-11-10T17:50:30.662Z }
   specification: { started: null, completed: 2026-11-10T19:54:39.263Z }
   test_planning: { started: null, completed: 2026-11-10T20:17:23.773Z }
-  delivery_planning: { started: null, completed: 2026-11-10T19:54:46.270Z }
+  delivery_planning: { started: null, completed: 2026-11-10T20:20:54.074Z }
   dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -359,5 +359,29 @@ notes:
       milestones/README.md whole-file identity beyond the table and rows is
       ungated; the DoD does not spell out association. None changes a verdict or
       a requirement."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DELIVERY HALT 1 (P1): the coder stopped before writing anything and
+      reported that P03's blank-separation check and P08's task-line gate are
+      mutually unsatisfiable — P03 read head lines from a base-derived anchor,
+      so the change's own M2-S6 one-line insertion shifted M2-S9 and the check
+      compared the depends line against a blank expectation; the own-line clause
+      shape then failed P03, and the net-zero shape failed P08's
+      base_task_lines_missing=0. This is exactly the right behaviour from the
+      coder: it restored the tree and reported instead of compensating by
+      reflowing a neighbouring blank line."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "Reopen round 5 (post-DoR): test plan v1.5 head-anchored P03's blank check
+      (hunk window stays base-anchored) and made P08 compare the - AC: line
+      alone. A focused readiness confirmation then found a THIRD unsatisfiable
+      gate — P29 extracted each story body to the next ### heading, so the last
+      story in the Epic M2 block (M2-S9) ran through the --- separator into ##
+      Epic M3 and reported body CHANGED on every conforming head, blocking
+      P1/P6's 65/65/0 target. Fixed in test plan v1.6 by bounding entries at ---
+      and ## headings, verified on base control plus minimal and full heads,
+      with negative controls still detected. Plan v1.5 aligned (P08
+      own-line-only with the exact depends line, P03 parenthetical, P29 bound)
+      and re-validated valid/readyForDevelopment."
     type: "info"
     date: "2026-11-10"

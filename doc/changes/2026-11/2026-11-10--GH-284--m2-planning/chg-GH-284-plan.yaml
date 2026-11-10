@@ -1,7 +1,7 @@
 # GH-284 implementation plan — plan M2: engine-first operations, multi-repo
 # workstations, evidence inspection, and telemetry
 #
-# Plan revision: v1.4 (2026-11-10). Aligned to spec v1.5 and test plan v1.4.
+# Plan revision: v1.5 (2026-11-10). Aligned to spec v1.5 and test plan v1.6.
 #
 # Revision history:
 #   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
@@ -29,21 +29,24 @@
 #                     twelve-target row, blank separation, P33 association,
 #                     P34 self-containment, §18 commit-split wording).
 #   v1.4  2026-11-10  DoR iteration-2 alignment to spec v1.5 and test plan v1.4,
-#                     absorbing readiness-review/readiness-iter-2.md as
-#                     DR-12..DR-16. The pack's C4 heading form is committed as
-#                     `## C4 Level <n>: <subject>` with the association
-#                     predicate `^## C4 Level $lvl([^0-9]|$)` and exactly seven
-#                     `###` flow headings under `## Key flows`, each owning one
-#                     diagram (DR-12, review F1, blocking); the P06/P35
-#                     expectation tokens are `ac_numbered_items`,
-#                     `extra_criteria` and `duplicate_numbers`, with
-#                     `extra_self_test`/`duplicate_self_test` proving the
-#                     widened `[0-9]+` guards (DR-13/DR-15, F2/F3); the README
-#                     target rule is pack-relative `(./)?<artifact>` with a
-#                     row-shaped self entry and a parent-escape self-test
-#                     (DR-14, F7); and Appendix E now carries the same
-#                     association procedure as P33 (DR-16, F4). XF-9 stays an
-#                     accepted residual with its rationale.
+#                     absorbing readiness-iter-2.md as DR-12..DR-16 (the
+#                     `## C4 Level <n>: <subject>` form with the
+#                     `([^0-9]|$)` association predicate and seven `###` flow
+#                     headings, the `ac_numbered_items`/`extra_criteria`/
+#                     `duplicate_numbers` tokens with their self-tests, the
+#                     pack-relative README target rule, the widened
+#                     added-criteria guard, and Appendix E parity).
+#   v1.5  2026-11-10  Post-DoR confirmation alignment to test plan v1.6,
+#                     absorbing readiness-review/readiness-iter-4.md as
+#                     DR-17..DR-19, all in expected-string and task wording:
+#                     P08's appended-clause alternative is removed because
+#                     appending into an existing base task line is
+#                     non-conforming (DR-17); P03's `blank_separation`
+#                     parenthetical is restated in the procedure's head-anchored
+#                     form with `fixture_blank_separation=OK` (DR-18); and P29's
+#                     gate now reflects the block-close bound at `^---$`/`^## `
+#                     with its four head runs and three negative controls
+#                     (DR-19). No phase, scope, mapping, or other pin changes.
 #                     Finding ids use the `XF-` prefix (plan-authored) and the
 #                     `DR-` prefix (review-derived) so they never collide with
 #                     the spec's `F-` capability ids cited in the task trailers.
@@ -53,26 +56,27 @@
 #     DEC-1..DEC-20, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
 #     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
 #     entrypoint), Appendix D (12-document pack manifest), Appendix E
-#     (structural diagram procedure, now asserting heading association with the
-#     same predicates as P33). DEC-16 (status retention oracle, two-sentence
+#     (structural diagram procedure, asserting heading association with the same
+#     predicates as P33). DEC-16 (status retention oracle, two-sentence
 #     entrypoint bound), DEC-17 (insertion inside the Epic M2 block), DEC-18
 #     (proposal-tail rule), DEC-19 (two-run aggregate gate), and DEC-20
-#     (pack-contents deviation plus the twelve-target index row) all govern this
+#     (pack-contents deviation plus the twelve-target index row) govern this
 #     plan.
-#   - Test plan: ./chg-GH-284-test-plan.md v1.4 — 37 TCs TC-M2PLAN-001..037,
+#   - Test plan: ./chg-GH-284-test-plan.md v1.6 — 37 TCs TC-M2PLAN-001..037,
 #     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
 #     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
-#     v1.1-v1.2 reopened P03/P15/P16/P18/P30/P34; v1.3 reopened P02/P35, P06,
-#     P11, P19, P27, P32, P33 and P03; v1.4 fixes P33's C4 predicate to
-#     `([^0-9]|$)` with per-heading ownership and a seven-heading `## Key flows`
-#     section plus good/negative fixtures, renames P06's item counter to
-#     `ac_numbered_items` and hardens the eighth-item and duplicate-number
-#     self-tests, applies P19's pack-relative target rule with a
-#     parent-escape self-test, and widens P35's added-criteria guard to
-#     `[0-9]+`.
+#     v1.1-v1.3 reopened P03/P15/P16/P18/P19/P27/P30/P32/P33/P34 and the
+#     P02/P06/P11/P35 fidelity procedures; v1.4 fixed P33's C4 predicate,
+#     renamed P06's counters and widened P35's guard; v1.5 head-anchored P03's
+#     blank-separation check, narrowed P08's AC identity control and proved the
+#     P03/P08 pair jointly satisfiable; v1.6 bounds P29's story extraction at
+#     `^---$` and `^## ` so M2-S9 also ends at the block close, and proves the
+#     real head, base control, minimal head and full head all report
+#     `stories_compared=65 identical=65 changed=0 order=OK`.
 #   - Readiness reviews: ./readiness-review/readiness-iter-1.md (F1-F15,
-#     absorbed as DR-1..DR-11) and ./readiness-review/readiness-iter-2.md
-#     (F1-F8, absorbed as DR-12..DR-16).
+#     DR-1..DR-11), readiness-iter-2.md (F1-F8, DR-12..DR-16),
+#     readiness-iter-3.md (confirmation) and readiness-iter-4.md (F1 plus
+#     minors 2-4, DR-17..DR-19).
 #   - PM notes: ./chg-GH-284-pm-notes.yaml — binding decisions, the
 #     specification reopens that produced v1.1 (DEC-15) and v1.3 (DEC-17), and
 #     the phase-9 quality-gate environment fact.
@@ -294,6 +298,32 @@
 #   (F5, F6 and F8 are spec/test-plan wording only: the watchdog tail is settled
 #   by AC-F5-1 plus P11's remainder token, the TC-011 precondition duplicate is
 #   removed, and AC-F1-2 now points at the 79-row table.)
+#
+# Post-DoR readiness confirmation absorbed here (readiness-iter-4.md):
+#   DR-17 [F2, minor] P08's expected `changed_lines` parenthetical offered an
+#         "appended to an existing task line" alternative that is
+#         non-conforming: it modifies a base task line, so the same gate prints
+#         `base_task_lines_missing=1` (and `changed_lines=4`) and fails. The
+#         plan now states that the clause must be inserted as its OWN task line
+#         (3 -> 4 task lines, `changed_lines=3`) and cites
+#         `fixture_task_lines_missing=0`, `fixture_s6_task_lines=3->4`,
+#         `fixture_ac_identity=identical` and `fixture_p08=OK`.
+#   DR-18 [F3, nit] P03's `blank_separation` parenthetical is now quoted in the
+#         procedure's own head-anchored form (`head M2-S9 last non-blank=<n>,
+#         blank=<n+1>, M2-S11=<n+2>`), with the pre-change control
+#         `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then
+#         [---])` and the additive `fixture_blank_separation=OK` line listed.
+#         The hunk window stays base-anchored; only the blank check is
+#         head-anchored.
+#   DR-19 [F1, blocking] P29's `entry()` now bounds each story entry at `^---$`
+#         and `^## ` as well as `^### `, because M2-S9 is the last story of the
+#         Epic M2 block and otherwise ran through the separator into
+#         `## Epic M3`, so any conforming head reported `body CHANGED: ###
+#         M2-S9`. The plan's P29 line now expects
+#         `stories_compared=65 identical=65 changed=0 order=OK` on the real
+#         head plus the base control, minimal head and full head, with
+#         `negative_body`, `negative_removed` and `negative_reordered` all
+#         detected. No "next `###` only" phrasing remains anywhere in the plan.
 #
 # Delivery-planning decisions (placement, wording, sequencing; no behavioural
 # deviation):
@@ -544,16 +574,21 @@ phases:
         `M1-S18`, `M1-S21`, `M1-S22`, `M2-S14`, and `(#280)`.
         [F-2, NFR-8; AC-F2-1, AC-F2-2, AC-F2-3; TC-M2PLAN-004, 005, 006]
       - |-
-        1.4 Amendments (F-3). In M2-S4 change ONLY the dependency line to
+        1.4 Amendments (F-3, DR-17). In M2-S4 change ONLY the dependency line to
         exactly `- Depends on: M1-S5, M1-S17, M2-S11`; heading, goal, tasks and
         acceptance criterion stay byte-identical (P07 expects exactly two
         changed lines: the old and the new line). In M2-S6 add ONE clause to
-        the `- Tasks:` block stating that the story consumes M2-S14 telemetry
-        for per-agent and per-model facts, and add `M2-S14` to its
-        `- Depends on:` line; the heading, goal, acceptance criterion, and
-        every existing task line stay byte-identical (P08 requires
-        `base_task_lines_missing=0`). Wording constraint D-5: the new clause
-        must not add a seed literal. No other story is amended.
+        the `- Tasks:` block AS ITS OWN task line stating that the story
+        consumes M2-S14 telemetry for per-agent and per-model facts, and add
+        `M2-S14` to its `- Depends on:` line, keeping the base line's trailing
+        period: `- Depends on: M1-S19, M2-S3, M2-S14.`; the heading, goal,
+        acceptance criterion, and every existing task line stay byte-identical
+        (P08 requires `base_task_lines_missing=0` with `changed_lines=3`).
+        Appending the clause to an existing base task line is non-conforming: it
+        modifies that line and the same gate reports
+        `base_task_lines_missing=1`.
+        Wording constraint D-5: the new clause must not add a seed literal. No
+        other story is amended.
         [F-3, NFR-2; AC-F3-1, AC-F3-2; TC-M2PLAN-007, 008]
       - |-
         1.5 Preservation. Do not touch the frontmatter block, `## Reading
@@ -579,7 +614,7 @@ phases:
       - "TC-M2PLAN-008 (complete: tasks_clause=OK, depends=M2-S14 OK, heading/Goal/AC identical, base_task_lines_missing=0)"
       - "TC-M2PLAN-009 (complete: base_headings=67 head_headings=74 added=7 removed=0 unexpected=0; retirement_note=identical; order=OK; negative_control=detected)"
       - "TC-M2PLAN-010 (complete: fm/rg/cc byte-identical)"
-      - "TC-M2PLAN-029 (complete: stories_compared=65 identical=65 changed=0)"
+      - "TC-M2PLAN-029 (complete: stories_compared=65 identical=65 changed=0 order=OK on the real head; base_control, minimal_head and full_head PASS; negative_body, negative_removed and negative_reordered detected)"
     testGate:
       - "P00 — materialise base snapshots from fab46636 and define helpers; expected: base snapshots ready with the base backlog, status, and milestones-index line counts"
       - >-
@@ -594,16 +629,20 @@ phases:
         P03 -> backlog_hunks=M with M>=1; amended ranges printed for M2-S4 and
         M2-S6; `insertion window: start=base M2-S9 last content+1=1167
         end=head separator-1=<nee> window=1167:<nee>`; window_empty=no;
-        separator_sequence=identical; blank_separation=OK (the line after
-        M2-S9's last line is empty and the next line is `### M2-S11 `);
+        separator_sequence=identical; blank_separation=OK (the check is
+        head-anchored: it locates `### M2-S9` in the head, walks to that entry's
+        last non-blank line before the next `##`/`###`/`---`, then requires a
+        blank line followed by `### M2-S11`, printing `head M2-S9 last
+        non-blank=<n>, blank=<n+1>, M2-S11=<n+2>`); fixture_blank_separation=OK;
         hunks: inside=M outside=0; hunk confinement OK;
         classifier_self_tests=4/4; insertion_below_separator=never;
-        non_vacuous=yes; P03 verdict: PASS. XF-6, XF-8 and DR-9 are closed
-        upstream: the window is base-anchored inside the Epic M2 block, and the
-        pre-change base reads `window=1167:1167` with
-        `blank_separation=FAIL` as expected. A hunk below the separator, a
-        block opening directly on `### M2-S11`, or any change to the `---` line,
-        the blank line after it, or the Epic M3 heading fails.
+        non_vacuous=yes; P03 verdict: PASS. The hunk window stays base-anchored
+        inside the Epic M2 block (XF-6, XF-8 and DR-9 closed upstream); the
+        pre-change base reads `window=1167:1167` with `blank_separation=FAIL
+        (head M2-S9 last non-blank=1166; got [] then [---])` as expected. A hunk
+        below the separator, a block opening directly on `### M2-S11`, or any
+        change to the `---` line, the blank line after it, or the Epic M3
+        heading fails.
       - >-
         P04 -> all four labels present; depends M1-S15/M1-S18/M1-S21/M1-S22/
         M2-S14/#280 OK; ac_numbered_items=7/7; criteria_present=7/7
@@ -623,23 +662,35 @@ phases:
         (- Depends on: M1-S5, M1-S17, M2-S11); self-test goal mutated ->
         changed_lines=2 unexpected_lines=2, so the oracle bites
       - >-
-        P08 -> tasks_clause=OK; depends=M2-S14 OK; heading=identical;
-        base_task_lines_missing=0; - Goal: identical; - AC: identical
-        (changed_lines is 3 when the clause is inserted as its own task line
-        and 4 when it is appended to an existing task line; only the five named
-        properties are asserted)
+        P08 -> changed_lines=3; tasks_clause=OK; depends=M2-S14 OK;
+        heading=identical; base_task_lines_missing=0; - Goal: identical;
+        - AC: identical; fixture_task_lines_missing=0;
+        fixture_s6_task_lines=3->4; fixture_ac_identity=identical;
+        fixture_p08=OK. The clause must be inserted as its OWN task line: only
+        that shape conforms, because appending it to an existing base task line
+        modifies that line, gives `base_task_lines_missing=1` (and
+        `changed_lines=4`), and fails this gate. [DR-17]
       - >-
         P09 -> base_headings=67 head_headings=74 added=7 removed=0
         unexpected=0; retirement_note=identical; order=OK;
         negative_control=detected
       - "P10 -> fm=byte-identical; rg=byte-identical; cc=byte-identical"
       - >-
-        P29 -> stories_compared=65 identical=65 changed=0 (every non-amended
-        story body byte-identical to fab46636)
+        P29 -> `stories_compared=65 identical=65 changed=0 order=OK`, with the
+        four head runs the procedure builds: `real_head=PASS`,
+        `base_control=PASS`, `minimal_head=PASS` (stories only) and
+        `full_head=PASS` (stories plus the M2-S4/M2-S6 amendments); and the
+        three negative controls `negative_body=detected`,
+        `negative_removed=detected`, `negative_reordered=detected`. The
+        extraction bounds each story entry at `^---$` and `^## ` as well as
+        `^### `, so the base and head M2-S9 entries both end at the blank before
+        the block separator instead of running into `## Epic M3`; a
+        `body CHANGED: ### M2-S9` line means a conforming block close is
+        missing. [DR-19]
     invariants:
       - "F-1/DEC-9: append-only after M2-S9, code order S11..S17, no entry moved, no Ticket line"
       - "F-2/NFR-8: S17 keeps six task clauses and seven numbered criteria, no `may` softening"
-      - "F-3/NFR-2: M2-S4 differs only on its dependency line; M2-S6 only gains the telemetry clause and M2-S14"
+      - "F-3/NFR-2/DR-17: M2-S4 differs only on its dependency line; M2-S6 only gains the telemetry clause as its own task line and M2-S14 on the dependency line, with every base task line byte-identical"
       - "F-4/NFR-2: frontmatter, reading guide, cross-cutting principles, retirement note, and every other entry byte-identical"
       - "NFR-9/D-5: no seed literal in added lines; the existing `ados spend` bytes stay untouched"
       - "D-4/XF-8/DR-9/DEC-17: the insertion sits inside the Epic M2 block, immediately after M2-S9's last content line and before the block-closing blank line and `---` separator; the inserted block begins with a blank line; the separator, the blank line after it, and the Epic M3 heading stay byte-identical and follow the block"
@@ -1241,8 +1292,11 @@ phases:
         `retention_oracle=OK`, `reference_head_fixture=OK`,
         `pointer_groups=4/4`, and `sed_line_address_0_errors=0`; expected
         backlog lines are `window=1167:<nee>`, `window_empty=no`,
-        `separator_sequence=identical`, `blank_separation=OK`, and
-        `classifier_self_tests=4/4`. No phase after P1-P5 may have changed a
+        `separator_sequence=identical`, `blank_separation=OK`,
+        `fixture_blank_separation=OK`, `classifier_self_tests=4/4`,
+        `changed_lines=3` with `base_task_lines_missing=0` and
+        `fixture_p08=OK`, and `stories_compared=65 identical=65 changed=0
+        order=OK`. No phase after P1-P5 may have changed a
         file; a drift means a later phase leaked and is fixed in the owning
         phase. [NFR-2, NFR-3, NFR-7, NFR-8;
         AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
@@ -1327,11 +1381,12 @@ phases:
         `pack_contents_table=byte-identical`, `m2_targets=12/12`,
         `heading_association=OK`, `flow_headings_with_diagrams=7/7`),
         P01..P10 and P29 (backlog, expect `window=1167:<nee>`,
-        `blank_separation=OK`, `separator_sequence=identical`,
-        `classifier_self_tests=4/4`). Expected lines are those recorded in
-        P1-P5; a new CHANGED/OUTSIDE/missing line, `bad_runs>0`, a
-        `MISSING S17-AC*` line, a C4/flow `MISSING` line, or a non-zero
-        `s17_missing_criteria` fails P6.
+        `blank_separation=OK`, `fixture_blank_separation=OK`,
+        `separator_sequence=identical`, `classifier_self_tests=4/4`,
+        `stories_compared=65 identical=65 changed=0 order=OK`). Expected lines
+        are those recorded in P1-P5; a new CHANGED/OUTSIDE/missing line,
+        `bad_runs>0`, a `MISSING S17-AC*` line, a C4/flow `MISSING` line, or a
+        non-zero `s17_missing_criteria` fails P6.
     invariants:
       - "NFR-1: product files are limited to doc/planning/oss-tooling/**; doc/changes/** evidence is excluded by P28"
       - "NFR-5/D-12/DEC-19: both aggregate-gate runs are recorded; only a lone default-run ci-baseline-parity failure is environmental, and the repo-local-TMPDIR run must exit 0"
