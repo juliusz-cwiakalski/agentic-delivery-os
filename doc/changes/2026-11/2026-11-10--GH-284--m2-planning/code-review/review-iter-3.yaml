@@ -1,0 +1,295 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-284
+branch: docs/GH-284/m2-planning
+status: PASS
+summary: >-
+  Iteration-3 re-review of HEAD 6a2a7157, executing every gate rather than
+  reading the record. All ten iteration-2 findings are closed: the test plan
+  v2.2 rows and the Test Execution Log now report the passing values I observe
+  (P07 depends=expected; P11 reachability_missing=0; P17/P18
+  m1_table_blank_before=OK with retention 0/31/0; P26 back_pointer_claim=ABSENT,
+  description_bound=OK, m2_command_links=6/6), the superseded FAIL values are
+  kept only as labelled pre-c2594adb falsifiability controls, verification.md's
+  "Known gate discrepancy" section is gone, the release/removal split is
+  propagated through architecture, the delta note, the S15 scenario title and
+  queue.md, spec v2.0/AC-F8-3 and contracts.md now say the same thing, plan v1.9
+  pins spec v2.0 / test plan v2.2 with a version-agnostic drift trigger and
+  declares P7's product plus artifact scope, and readiness-iter-6 records READY.
+  I also re-ran the whole procedure pack at HEAD (all expected PASS; P07's exit
+  1 is its own negative self-test), the two doc guards, plan validation, the
+  status.md render, my own ticket-fidelity comparison of all seven stories and
+  both amendments (zero differences; the backlog was not touched by the spec
+  reword), and `pnpm check` with a repo-local TMPDIR, which exits 0 (7133 pass,
+  4 skip, 0 fail; boundaries, prompt-conformance, help-guide coverage and
+  exports parity green). What remains is bookkeeping-level residue: one stale
+  evidence sentence about the readiness record, one undefined pair of
+  queue.graph event kinds after the split, a plan comment count slip, and a few
+  wording nits. Nothing blocks delivery.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 6
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: N-1
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md:278
+    message: >-
+      The F-5 row still says the readiness closure record "is not in the tree
+      yet, so this row records the outstanding gate", but readiness-iter-6.md
+      now exists with a READY verdict that closes iter-4 and iter-5. The record
+      itself then says "delivery-evidence/verification.md F-5 row already points
+      here as the owner" (readiness-iter-6.md:11), which overstates the row: it
+      names @readiness-reviewer, not the record. pm-notes carries no note that
+      the closure landed. The tree at HEAD therefore says both "outstanding" and
+      "closed" in two files.
+    suggestion: >-
+      Update the F-5 row to cite readiness-iter-6 (READY, closes iter-4/5) as
+      the delivered record, and either fix the closure record's sentence or add
+      one pm-notes note naming it. This is a one-sentence edit; the underlying
+      gate is genuinely satisfied.
+    suppressed: false
+  - id: N-2
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/contracts.md:64
+    message: >-
+      The event taxonomy still lists `queue.graph` kinds as "entry,
+      dependency-edge, release, and remove" without saying which mechanism each
+      names. After DEC-25 "release" is the lease operation (the entry stays) and
+      "remove" is the departure, so "release" as a queue-graph kind is either a
+      lease event on a graph topic or a leftover synonym for removal; queue.md
+      also says "Every mutation publishes a queue.graph event", which does not
+      settle whether a lease release is a mutation. A delivery agent
+      implementing S13/S15 has to guess.
+    suggestion: >-
+      Define the two kinds in one clause — e.g. "release (lease released, entry
+      stays)" and "remove (entry removed with a reason)" — or drop the
+      redundant one and state whether a lease release emits a queue.graph event.
+    suppressed: false
+  - id: N-3
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: plan-quality
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml:265
+    message: >-
+      The plan's AC-coverage comment is off by one between P1 and P7: P1 is
+      labelled "(8)" over seven listed ACs, P7 is labelled "(14)" over fifteen,
+      and AC-F1-3 is listed under P7 although its TC (TC-M2PLAN-003) is claimed
+      by P1. The authoritative per-phase TC sets are exact (8/5/2/2/1/5/14 = 37,
+      no duplicates — computed from the YAML) and the plan validates, so this is
+      a comment-level slip. readiness-iter-6.md:95 already records it as its own
+      finding 1.
+    suggestion: >-
+      Move AC-F1-3 from P7's list to P1's; both parenthetical counts then become
+      correct with no change to the TC mapping or the gates.
+    suppressed: false
+  - id: N-4
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: style
+    location: doc/planning/oss-tooling/milestones/m2/commands/queue.md:45
+    message: >-
+      The rewritten reconcile sentence leaves an 87-column line ("the
+      `reconciled` reason without editing state files by hand. Every mutation
+      publishes a") against the page's ~78-column wrap everywhere else outside
+      the option/example tables.
+    suggestion: Re-wrap that paragraph by one line.
+    suppressed: false
+  - id: N-5
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md:576
+    message: >-
+      The refreshed observations still read "Observed on the current tree
+      (delivery commits; pack and registry present; phase-7 edits in the working
+      tree)". At HEAD the phase-7 edits are committed, not in the working tree,
+      so the parenthetical is stale in the four refreshed notes.
+    suggestion: Say "phase-7 edits committed" (or drop the parenthetical).
+    suppressed: false
+  - id: N-6
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml:7
+    message: >-
+      The `clarify_scope` mirror still shows `started: 18:55:00Z` against the
+      registry's 17:50:30.662Z, and the file's F-12 note explains that the
+      registry wins. The completed timestamps for specification, test_planning
+      and delivery_planning now match the registry exactly (23:01), so this is
+      the only stale mirror field left.
+    suggestion: >-
+      Accept as the documented residual, or have the phase tooling rewrite the
+      stale start on its next touch. No hand edit.
+    suppressed: false
+  - id: N-7
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/readiness-review/readiness-iter-6.md:96
+    message: >-
+      The closure record's residue item 2 (the phase mirror showing
+      specification/test_planning/delivery_planning as started:null,
+      completed:null) was accurate at its observation HEAD d57ba77f but is no
+      longer true: the phase completes at 23:01 landed in edec9160/f9e17704/
+      6a2a7157 and the mirror now matches the registry.
+    suggestion: Mark residue 2 resolved, or leave it as a dated observation with
+      a one-line "resolved at 23:01" note.
+    suppressed: false
+  - id: N-8
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md:2194
+    message: >-
+      P26 prints only its individual check lines and no single "P26 verdict"
+      line, unlike P01/P02/P03/P15/P18/P30/P34. Pre-existing shape; the gate is
+      read by expected lines (and readiness-iter-6.md:97 notes it).
+    suggestion: >-
+      Optional hardening: add a summary verdict line at the end of P26.
+    suppressed: false
+  - id: N-9
+    severity: info
+    severity_label: info
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml:607
+    message: >-
+      The delivery evidence says P32 was not re-run after the review
+      remediations ("P7 changes only doc/** and change artifacts, no
+      code-adjacent file, so the P6 two-run PASS stands"), while the plan's P7
+      gate list expects `gate_verdict=PASS`. This review executed the aggregate
+      gate at HEAD to settle it: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir
+      pnpm check` exits 0 with 7133 pass / 4 skip / 0 fail across 7137 tests,
+      and boundaries, prompt-conformance (5 clean), help-guide coverage and
+      exports parity all pass. The two-run default-TMPDIR exemption from P6 is
+      unchanged (the lone ci-baseline-parity environmental failure). No action
+      needed; recorded so phase 9 does not repeat the doubt.
+    suggestion: >-
+      Optionally append this observation to verification.md's aggregate-gate
+      section so the evidence names a P7-head run.
+    suppressed: false
+  - id: N-10
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: commit-hygiene
+    location: fab46636..HEAD (branch commits)
+    message: >-
+      F-17 remains deferred: the branch still carries the placeholder
+      "docs(GH-284): update <path>" subjects and one `feat(GH-284)` docs-only
+      commit. The plan's P7 close-out and the continuation note say the squash
+      happens at PR time, so this is a recorded action rather than a gap.
+    suggestion: >-
+      Squash to the phase and artifact commits (using `docs:` throughout) in the
+      PR body step, as P7's close-out already states.
+    suppressed: false
+iteration_2_status:
+  - id: F-1
+    status: closed
+    evidence: >-
+      Test plan v2.2 records PASS for TC-007/011/017/018/026 with the pre-fix
+      values kept as labelled "observed before product commit c2594adb"
+      controls; verification.md's "Known gate discrepancy" section is deleted
+      and the F-12/F-15 rows corrected; the pm-notes P7 note now says P07 prints
+      depends=expected. I re-ran P07 (depends=expected), P11
+      (reachability_missing=0), P17/P18 (m1_table_*=OK, P18 PASS), P26 (all six
+      checks plus ten tokens) at HEAD and they match the refreshed rows.
+  - id: F-2
+    status: closed
+    evidence: >-
+      d57ba77f propagates DEC-25: architecture.md:108 "lease release / remove
+      with reason", architecture.md:179 "remove the ref's queue entry", the
+      ticket-named flow heading retained; entrypoint-delta.md:47 "automatic
+      removal"; test-scenarios.md:202 "Auto-removal after closeout";
+      queue.md:44 "removes them with the `reconciled` reason". P20 finds all
+      seven flow headings (auto.release label kept), P22 finds 38 scenarios with
+      the auto.release|auto.removal anchor, P33 keeps 10 diagrams and 3/3 + 7/7
+      association.
+  - id: F-3
+    status: closed
+    evidence: >-
+      Test plan frontmatter at HEAD reads created 2026-11-10T19:30:00Z,
+      last_updated 2026-11-10T23:55:00Z (after created), and verification.md:277
+      records the same values.
+  - id: F-4
+    status: closed
+    evidence: >-
+      Plan v1.9 header and Sources block name spec v2.0 / test plan v2.2; the
+      escalation trigger is now version-agnostic ("revised past the versions
+      this plan cites in its Sources block"); spec v2.0, test plan v2.2 and plan
+      v1.9 are mutually consistent; `plan validate GH-284` is valid and
+      readyForDevelopment=true.
+  - id: F-5
+    status: closed
+    evidence: >-
+      Plan task 7.6 now describes the delivered README outcome (S7/S8/S9 "none
+      in this pack" plus the explanatory sentence, S13 "C4 Level 3 event
+      components") and explicitly names the straw-man mapping as forbidden;
+      P19 readme_lists=12/12, story_map_entries=16.
+  - id: F-6
+    status: closed
+    evidence: >-
+      Spec v2.0 aligns F-8, AC-F8-3, AC-F1-2's S15 summary, AC-F8-4's mandatory
+      scenario wording, §8.1 and Appendix D to lease release vs reason-bearing
+      removal, and DEC-25 records the interpretation. AC-F8-3 and contracts.md
+      now say the same five things (lease release, reason-bearing removal,
+      automatic removal, dependency edges, single-flight) — verified by reading
+      both and by P21 contract_markers_missing=0.
+  - id: F-7
+    status: closed
+    evidence: >-
+      readiness-review/readiness-iter-6.md exists with Verdict READY, closing
+      iter-4 and iter-5, and its evidence (P29 five fixtures, P26 tokens, P03,
+      P08, P28, P11, P17/P18, P07, P35, plan validate) matches what I re-ran.
+      The only residue is the stale verification F-5 row (this iteration's N-1)
+      and its residue 2 being overtaken by the phase completes (N-7).
+  - id: F-8
+    status: closed
+    evidence: >-
+      queue.md's `--park` option row now names the delivered three causes and
+      points at contracts.md for the S17 additions (`peak-window`,
+      `owner-hold`); contracts.md:145-160 carries the mapping.
+  - id: F-9
+    status: closed
+    evidence: >-
+      verification.md's F-12 row now records the phase-command refresh of
+      `test_planning completed` and the known stale `clarify_scope` start, and
+      the phase mirror's completed timestamps match the registry
+      (specification/test_planning/delivery_planning 23:01).
+  - id: F-10
+    status: closed
+    evidence: >-
+      P7 now declares twelve product files (test-scenarios.md added with the
+      propagation task) plus the five change artifacts it revises, and the plan
+      header explains that change artifacts never count toward the 34-file
+      budget; the header and the change-shape block agree on twelve.
+verification_evidence:
+  - "Procedures executed at HEAD 6a2a7157 (extracted from test plan v2.2, 38 blocks, bash -n clean, run in one session after P00): full sweep P01-P31 and P33-P37 report their expected PASS lines. P07 exits 1 only because its last command is the deliberate goal-mutation self-test. P26 prints back_pointer_claim=ABSENT, m1_snapshot=OK, description_bound=OK, forward_m1_link=OK, m2_command_links=6/6, readme_reachable=OK and all ten tokens OK. P30/P34 pass in the canonical order (both depend on P11/P14 and P18 state)."
+  - "Aggregate gate at HEAD (P32 substance): `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 — 7133 pass, 4 skip, 0 fail, 7137 tests; boundaries no violations (373 modules); prompt-conformance 5 prompts clean; help-guide coverage complete; exports parity 5/5."
+  - "Doc guards: `bash scripts/.tests/test-doc-distribution.sh` exit 0 (82 in-scope docs, planning_markers=0); `bun run scripts/checks/forbidden-literals.ts` exit 0 (5/5 scope classes, 0 violations, 139 registered, 12 m2 entries sorted and absent at fab46636)."
+  - "Containment: `git diff --name-only fab46636..HEAD` minus doc/changes/** = 34 product files, all inside doc/planning/oss-tooling/**, doc/spec/features/**, doc/overview/** and the registry; P28 prints product_files=31, phase7_files=3, total_product_files=34, unexpected_planning_paths=0."
+  - "Plan: `pnpm exec delivery-os plan validate GH-284` -> verdict=valid, readyForDevelopment=true, tier lite phases 1..7; TC coverage computed from the YAML is 8/5/2/2/1/5/14 = 37 with no duplicates; P7 scope lists 12 product files plus 5 change artifacts."
+  - "Ticket fidelity after the spec reword: `git diff --name-only a2f45be7..HEAD` contains no backlog.md; `git log -1 -- backlog.md` is c2594adb; my whitespace-normalised field comparison of all seven stories and both amendments against the GH-284 body shows zero differences; P02 61/61 and P35 79/79 with the S15 anchors still the ticket's 'removal/release with reasons' and 'automatic release on merge and closeout' (only the description column names DEC-25); P29 65/65 identical on four heads."
+  - "Rendering and links: `pandoc -f gfm` renders two tables in status.md (24 rows); P37 changed_planning_files=30, broken_links=0, restated_ac_blocks=0; the delta note's 11 relative links resolve."
+  - "Readiness: readiness-review/readiness-iter-6.md verdict READY, closes iter-4/5; its quoted P29/P26/P03/P08/P28/P11/P17/P18/P07/P35 values match my runs; its residue 1 (plan AC-coverage comment) is confirmed present and is N-3, residue 2 is superseded by the 23:01 phase completes (N-7)."
+  - "Terminology sweep: grep over milestones/m2 for 'release' returns only lease-release uses, the retained ticket-named flow heading (AC-F8-2), the README flow-name row and the queue.md SEE ALSO label; every departure statement says remove/removal, and contracts.md, queue.md, the delta note, architecture and SC-M2-S15-01 agree."
+reviewed_at: 2026-11-11T00:40:00Z
+next_step: PROCEED

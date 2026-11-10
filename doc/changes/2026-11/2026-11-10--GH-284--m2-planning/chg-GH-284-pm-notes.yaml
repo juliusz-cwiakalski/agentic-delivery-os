@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
   delivery: { started: null, completed: 2026-11-10T21:56:41.400Z }
   system_spec_update: { started: null, completed: 2026-11-10T22:11:52.242Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-10T23:14:45.991Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -641,5 +641,51 @@ notes:
       the iteration-1 evidence no longer reports a failing gate. The landed hash
       is reported in the phase close-out and PR body: a single continuation
       commit cannot name itself inside its own tree."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 1 (phase 8): FAIL — 1 blocking, 4 major, 5 minor, 4 nit.
+      Record: code-review/review-iter-1.yaml. The blocking finding was real and
+      self-inflicted: AC-F10-1 required entrypoint-delta.md to record a pointer
+      from the M1 entrypoint page while NFR-3's two-sentence DESCRIPTION bound
+      forbade adding one, and the delivered note claimed the pointer existed
+      anyway. Remediation went upstream (spec v1.8 DEC-23 turned the requirement
+      around: the M1 page is a snapshot, the note links forward, discoverability
+      runs through the pack index) plus DEC-24 extending the reachability note
+      to board and watchdog, and a P7 remediation phase executed through
+      @coder."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 2 (phase 8): FAIL — 2 blocking (evidence rows still
+      reporting v2.0-era failures that now pass; the release/removal split not
+      propagated to architecture.md, entrypoint-delta.md, the S15 scenario title
+      and queue.md), 5 major (regressed test-plan last_updated, stale plan
+      version pins, task 7.6 prescribing the review's straw man, spec not
+      aligned to its own new contract, absent readiness closure record), 3
+      minor. Remediation: spec v2.0 (DEC-25 records the lease-release vs
+      reason-bearing-removal split), test plan v2.2 (rows re-executed at HEAD
+      with the old FAIL values kept as labelled pre-remediation controls), plan
+      v1.9 (version pins, task 7.6, P7 scope accounting, propagation task 7.13),
+      coder continuation d57ba77f, and readiness-iter-6.md as the closure
+      record."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 3 (phase 8): PASS — no blocking findings. Record:
+      code-review/review-iter-3.yaml. The reviewer extracted all 38 procedures
+      and ran the full sweep at HEAD: P02 61/61, P35 79/79, P29 65/65 on four
+      heads, P28 31+3=34, P26 all checks with back_pointer ABSENT and 6/6
+      command links, P11 reachability_missing=0, P17/P18 table block OK with
+      retention 4/4, P07 depends=expected, P20/P22/P33 green with the
+      ticket-named flow heading retained, and the aggregate gate at a repo-local
+      TMPDIR exiting 0 (7133 pass, 0 fail). It also confirmed the backlog was
+      not touched after c2594adb and that the S15 story text still matches the
+      ticket byte-for-byte in substance, so the spec's interpretation did not
+      license a backlog change. Residue for the human gate (10 items, all
+      non-blocking): a stale F-5 row in verification.md that still says the
+      closure record is absent; a missing definition of the queue.graph
+      release-vs-remove event kinds; an off-by-one AC-coverage comment in the
+      plan; a long line in queue.md; two stale working-tree phrasings; the
+      documented mirror field; a resolved residue in the readiness record; P26's
+      missing aggregate verdict line; the aggregate gate not being re-run in the
+      change's own evidence (the reviewer ran it); and the PR-time squash."
     type: "info"
     date: "2026-11-10"
