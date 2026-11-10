@@ -15,6 +15,7 @@ describe("TC-CONFIG-023 pure root API and unchanged composition declaration", ()
       "lane",
       "queue",
       "daemon",
+      "coordinator",
       "poll",
     ]);
     expect(PRODUCTION_CATALOG.provider.type).toBe("object");

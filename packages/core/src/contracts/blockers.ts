@@ -207,6 +207,11 @@ export type BlockerQuestionRecord = {
   readonly question: string;
   readonly options: readonly string[];
   readonly askedAt: string;
+  /**
+   * The durable history reference carried by a coordinator exhaustion question
+   * (GH-241 EVT-6); ordinary questions omit it.
+   */
+  readonly historyRef?: string;
   /** Additive optional caller principal (C-2); historical records omit it. */
   readonly callerPrincipal?: CallerPrincipal;
 };

@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys) and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, `merge`, `harness`, and `lane` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
+Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, `merge`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
 
 Every source is validated before it is merged, every effective value can report where it came from, and inspection through the `config` command uses the same serialization and redaction boundary as every other command. Configuration cannot rename the frozen brand identity, supply a credential from a repository file, or silently interpolate environment values into files.
 
@@ -73,7 +73,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog declares the typed `provider`, `commit`, `merge`, `harness`, and `lane` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- The ordinary production catalog declares the typed `provider`, `commit`, `merge`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
 - `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
 
@@ -143,10 +143,10 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/config.ts` | Plain JSON-compatible facts, layers, origins, skips, warnings and failure identity |
-| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider`, `commit`, `merge`, `harness`, and `lane` branches, the `record` field kind for dynamic-name maps, and the lane-branch projection into typed settings |
+| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider`, `commit`, `merge`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches, the `record` field kind for dynamic-name maps, and the lane- and coordinator-branch projections into typed settings |
 | `packages/core/src/config/harness.ts` | Pure validation and projection of the resolved `harness` branch into typed settings (kind, execution kind, store paths, environment allowlist) with configuration-path origin evidence |
 | `packages/core/src/config/schema.ts` | Trusted schema generation, partial/final compilation and safe invalid-key detection |
-| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable defaults, including the `harness` and `lane` branches |
+| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable defaults, including the `harness`, `lane`, `queue`, `daemon`, and `coordinator` branches |
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
@@ -187,7 +187,7 @@ The core build emits `config.schema.json`, `defaults-positions.json` and `schema
 
 ### Cost and limitations
 
-Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The `provider`, `commit`, `merge`, `harness`, and `lane` branches are the ordinary production catalogs currently declared; the provider branch's Z.AI descriptor and credential reference ship as overridable defaults with no chain enabled, the commit branch ships `commit.phaseCommit` defaulting to `true`, and the lane branch ships the `30000` ms cadence and `3` restart bound. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The `provider`, `commit`, `merge`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches are the ordinary production catalogs currently declared; the provider branch's Z.AI descriptor and credential reference ship as overridable defaults with no chain enabled, the commit branch ships `commit.phaseCommit` defaulting to `true`, the lane branch ships the `30000` ms cadence and `3` restart bound, and the coordinator branch ships the six supervision policy values. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ## Quality Assurance Strategy
 
@@ -214,6 +214,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the resolved provider branch only; it adds no keys and no queue-readiness settings.
 - **Consumed by** the commit primitive ([Commit Primitive](feature-commit-primitive.md)) for the resolved `commit.phaseCommit` key that decides whether a phase completion lands its commit atomically.
 - **Consumed by** the doctor diagnostic ([Doctor](feature-doctor.md)) for the resolved provider branch only, read tolerantly so a resolution failure becomes provider-check evidence; doctor adds no keys and no doctor configuration branch.
+- **Consumed by** coordinator supervision ([Coordinator Supervision](feature-coordinator-supervision.md)) for the resolved `coordinator` branch; the six values are policy data and the branch reuses the existing configuration identities.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References
@@ -228,6 +229,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
 | Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
+| Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
 
 See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
@@ -337,6 +339,26 @@ branch resolves to the defaults with `defaults` origins. An unknown key is
 | `daemon.reconcile-max-lanes` | integer lanes | `200` | Reconciliation bound; excess lanes are reported truncated, never silently dropped. |
 | `daemon.transport` | enum | `unix` | `unix` and `stdio` are implemented; `tcp`, `tls`, `ssh`, and `container-pipe` are declared but not delivered and are refused with `config.value.invalid` naming the implemented set. |
 | `daemon.socket-path` | string path | `<state-dir>/daemon.sock` | Must resolve inside the state directory; an outside path is `config.value.invalid`. The literal value appears in envelopes and only as the normalized `<state-dir>/daemon.sock` placeholder in goldens. |
+
+## The coordinator configuration branch
+
+The production catalog declares a typed `coordinator` branch. It carries six
+integer keys with shipped defaults. An absent branch resolves to the defaults
+with `defaults` origins; an unknown key is `config.key.unknown`; a wrong type or
+an out-of-domain value is `config.value.invalid` naming the key. The values are
+policy data: resolving the branch starts no supervisor.
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `coordinator.stuck-window` | integer milliseconds | `600000` | Time after an expectation before a no-progress coordinator is stuck. Must be greater than `0`. |
+| `coordinator.kill-grace` | integer milliseconds | `20000` | TERM-to-SIGKILL grace for the coordinator process tree. Must be greater than `0`. |
+| `coordinator.restart-budget` | integer restarts per epoch | `10` | Restart bound for one budget epoch; `0` is the valid admit-no-restart policy. Must be greater than or equal to `0`. |
+| `coordinator.resume-context-limit` | integer tokens | `100000` | Context size at or above which a fresh spawn is preferred. Must be greater than `0`. |
+| `coordinator.collection-interval` | integer milliseconds | `30000` | One supervision collection cycle and the base of the 2x lease-age fallback. Must be greater than `0`. |
+| `coordinator.progress-bound` | integer milliseconds | `300000` | Liveness window in which positive sourced progress vetoes a stuck verdict. Must be greater than `0`. |
+
+The lane keys `lane.liveness-interval` and `lane.restart-budget` are neither
+reused nor aliased. See [Coordinator Supervision](feature-coordinator-supervision.md).
 
 ## The poll configuration branch
 

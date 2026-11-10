@@ -359,6 +359,16 @@ export const STATUS_SECTION_TITLES: Readonly<Record<StatusSectionId, string>> = 
   "typed-questions": "Typed questions",
 };
 
+/**
+ * The payload-only reserved escalation-slot predicate (GH-241 DEC-5, AC-F6-1).
+ *
+ * The `typed-questions` section and the brief `blocker-questions` anchor render
+ * an open owner-audience coordinator exhaustion question first by index, detected
+ * from the payload alone. The declaration is owned by the coordinator vocabulary
+ * and re-exported here as one datum; neither renderer reads coordinator state.
+ */
+export { COORDINATOR_RESERVED_ESCALATION_PREDICATE as STATUS_RESERVED_ESCALATION_PREDICATE } from "./coordinator.js";
+
 /** Rendered-item cap for each non-tracker ranked list (Appendix C). */
 export const STATUS_MAX_ITEMS_PER_SECTION = 8 as const;
 /** Per-family tracker cap; each family caps independently (Appendix C). */

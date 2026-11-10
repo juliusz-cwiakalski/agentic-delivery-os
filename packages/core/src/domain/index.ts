@@ -692,3 +692,60 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
+
+/* ---------------------- coordinator supervision (GH-241) ----------------- */
+
+export {
+  type CoordinatorLifecycleDecision,
+  type CoordinatorLifecycleFacts,
+  type CoordinatorPriorSession,
+  decideLifecycle,
+  lifecycleEffect,
+} from "./coordinator-lifecycle.js";
+export {
+  boundEvidence,
+  type CoordinatorEvidenceFacts,
+  type CoordinatorStuckEvaluation,
+  evaluateStuck,
+  utf8ByteLength,
+} from "./coordinator-evidence.js";
+export {
+  type CoordinatorRestartAdmission,
+  evaluateCoordinatorRestartAdmission,
+  nextRestartOrdinal,
+} from "./coordinator-admission.js";
+export {
+  evaluateWake,
+  wakeKeyFor,
+  type CoordinatorWakeEvaluation,
+  type CoordinatorWakeFacts,
+  type CoordinatorWakeHead,
+  type CoordinatorWakeKey,
+} from "./coordinator-wake.js";
+export {
+  escalationOptions,
+  isCoordinatorEscalationRef,
+  isEscalationState,
+  isReservedEscalationQuestion,
+  projectEscalationState,
+  projectReservedSlotQuestions,
+  type CoordinatorEscalationPayload,
+  type CoordinatorQuestionSlice,
+} from "./coordinator-escalation.js";
+export {
+  ageFallbackBoundMs,
+  decideCoordinatorClaim,
+  foldCoordinatorLease,
+  leaseAgeMs,
+  type CoordinatorClaimDecision,
+  type CoordinatorClaimFacts,
+  type CoordinatorLease,
+  type CoordinatorLeaseFoldInput,
+} from "./coordinator-fence.js";
+export { coordinatorUnitIdentity, projectCoordinatorRegime } from "./coordinator-regime.js";
+export {
+  persistedTickVerdict,
+  progressingTickVerdict,
+  projectCoordinatorObservation,
+  type CoordinatorObservationFacts,
+} from "./coordinator-observe.js";

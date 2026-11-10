@@ -189,3 +189,35 @@ describe("TC-DOCTOR-017 doctor source contains no exit literal", () => {
     }
   });
 });
+
+/**
+ * TC-COORD-004 (exit-literal half, GH-241): the coordinator command module, the
+ * supervision engine, and the text renderer contain no exit literal and no
+ * stream write; the projection module stays the only digit home.
+ */
+describe("TC-COORD-004 the coordinator surface carries no exit literal", () => {
+  test("the delivered coordinator modules are scanned and clean", () => {
+    for (const file of [
+      "packages/cli/src/commands/coordinator.ts",
+      "packages/cli/src/commands/coordinator-loop.ts",
+      "packages/cli/src/output/coordinator-text.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text).not.toContain("process.exit");
+      expect(text).not.toContain("exitCode:");
+    }
+    expect(scanRoot(ROOT).failures).toEqual([]);
+  });
+
+  test("an exit literal in the coordinator engine fails naming the file", () => {
+    const root = makeTempRoot();
+    appendFile(
+      root,
+      "packages/cli/src/commands/coordinator-loop.ts",
+      "\nexport const coordinatorExit = { exitCode: 2 };\n",
+    );
+    const report = scanRoot(root);
+    expect(messages(report.failures)).toContain("packages/cli/src/commands/coordinator-loop.ts");
+    expect(messages(report.failures)).toContain("exitCode literal 2");
+  });
+});

@@ -197,6 +197,42 @@
       "text": "blockers.audience-mismatch",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "coordinator-already-running",
+      "text": "coordinator.already-running",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "coordinator-restart-budget-exhausted",
+      "text": "coordinator.restart-budget-exhausted",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "coordinator-process-capability-gap",
+      "text": "coordinator.process.capability-gap",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "coordinator-session-kill-failed",
+      "text": "coordinator.session.kill-failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "coordinator-escalation-publish-failed",
+      "text": "coordinator.escalation.publish-failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "coordinator-wake-delivery-failed",
+      "text": "coordinator.wake.delivery-failed",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

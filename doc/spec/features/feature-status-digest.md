@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATUS-DIGEST
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -71,6 +71,8 @@ The section ids and order are fixed:
 | 7 | `ready-to-merge` | Ready to merge | The existing open pull-request read plus the CI classification |
 | 8 | `spend` | Spend | The spend read side's verified telemetry and transition fold over the state ledger |
 | 9 | `typed-questions` | Typed questions | One verified read of the blocker ledger |
+
+**Reserved escalation slot (GH-241).** Inside the `typed-questions` section one open owner-audience `decision-needed` question whose `lane` is `coordinator` and whose `ref` is `<coordinatorId>#<budgetEpochId>` (exactly one `#`, both sides non-empty) renders **first by index**, even when the ordinary eight-question cap is reached. The other questions follow in the delivered rank order, up to seven, and the lowest-ranked question is the one displaced and counted as omitted; the rendered bound therefore stays at eight and the omitted count stays exact. The slot is selected from the payload alone by that predicate and adds no coordinator-state read, no new section, no new digest schema, and no new evidence source. The control digest is unchanged.
 
 Every section has exactly one state:
 

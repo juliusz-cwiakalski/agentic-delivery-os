@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SESSION-LIFECYCLE-ECONOMICS
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch; the dispatch engine composes the restart gate and resume admission for one-shot lanes with the pinned failure tokens."
 links:
-  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239"]
+  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239", "GH-241"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -48,6 +48,15 @@ The surface classifies, records, and refuses. It exposes no spawn, kill, steer, 
 - Keep every outcome inside the closed error table and the `{0, 1, 2}` exit taxonomy.
 
 ## 3. User Experience & Functionality
+
+> **Consumer note (GH-241).** Coordinator supervision consumes these sourced
+> progress signals — the `token-delta` and `session-traffic` readings mapped to a
+> new turn — and the `evaluateRestartBudget` admission shape, but owns a distinct
+> durable budget in the `coordinator/<coordinatorId>` namespace with its own
+> per-epoch ordinals. Lane semantics, lane records, and `economics/*` records are
+> independent of coordinator supervision; the lane configuration keys
+> `lane.liveness-interval` and `lane.restart-budget` are neither reused nor
+> aliased by the `coordinator` branch.
 
 ### 3.1 Capabilities
 

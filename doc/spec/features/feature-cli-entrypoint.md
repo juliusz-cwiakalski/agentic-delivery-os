@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CLI-ENTRYPOINT
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
-summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` family, fail-closed `fallback.internal` containment for an uncomposed invocation, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
+summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` and `coordinator` families, fail-closed `fallback.internal` containment for an uncomposed invocation, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
-  related_changes: ["GH-242", "GH-239", "GH-273"]
+  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
@@ -60,8 +60,9 @@ Global flags on every surface are `--json`, `--verbose`, and `--pretty`. Command
 | `spend` | — |
 | `retro` | `collect`, `report` |
 | `dispatch` | `dual-run` (`summary`, `resolve`), `handover` (`--revert`) |
+| `coordinator` | `start`, `stop`, `status`, `tick` |
 
-`state` and `mcp` are not registered or claimed: the state layer ships no command surface and `mcp` is its own package surface. The resident daemon is not part of the prompt-required composition; it ships its own control surface. Other registered commands (`config`, `doctor`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised. `dispatch` is composed with its resolution, summary, and reversal forms, and its help entries point at the dispatch reference page.
+`state` and `mcp` are not registered or claimed: the state layer ships no command surface and `mcp` is its own package surface. The resident daemon is not part of the prompt-required composition; it ships its own control surface. The coordinator family is part of the prompt-required composition: the production composer supplies its `CoordinatorComposition` (store, clock, id/fence factories, resolved coordinator settings, node process port with start-time identity, the delivered harness session port selected per harness kind, harness-session facts/effects, and the foreground cycle driver), and the shipped `coordinator status`, `start --foreground`, `stop`, and `tick` reach the handler. Its help entry points at the coordinator reference page. Other registered commands (`config`, `doctor`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised. `dispatch` is composed with its resolution, summary, and reversal forms, and its help entries point at the dispatch reference page.
 
 Program selection is strict. A missing prompt-required command is a composition gap and throws instead of shipping a partial surface; the entrypoint catches that throw and answers the invocation with the `fallback.internal` containment identity. Extra registrations are dropped. The production composer (`packages/cli/src/production.ts`) wires the delivered adapters — the state store, credential port, repository facts, git seams, GitHub client, and the command runtimes — and reuses the branding seam so the name has one source.
 
@@ -92,7 +93,7 @@ The bin is not part of the install or release surface. `scripts/install.sh` name
 | Level | Scope | Evidence |
 |---|---|---|
 | Behaviour | Root help, command help coverage, version identity and precedence, help/version isolation, composition honesty and fail-closed containment | `tests/behaviour/entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts`, `entrypoint-version.test.ts`, `entrypoint-help-isolation.test.ts`, `entrypoint-composition.test.ts` |
-| Structure | Bin and `main` manifest mapping, Bun shebang, composition invocation, installer absence | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts` |
+| Structure | Bin and `main` manifest mapping, Bun shebang, composition invocation, installer absence, and the shipped coordinator registration | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts`, `coordinator-production-composition.test.ts` |
 | Composition binding | Production queue repository binding derivation, the key-and-root pair, root sourcing and non-disclosure, and the queue entry invariant | `tests/behaviour/queue-production-binding.test.ts`, `queue-binding-invariant.test.ts`, `tests/structure/queue-binding-derivation.test.ts`, `queue-binding-fixture-shape.test.ts`, `tests/conformance/pilot/pilot-records.test.ts` |
 | Checks | Forbidden literals, content inventory, help/guide coverage | `scripts/checks/forbidden-literals.ts`, `tests/structure/content-inventory.test.ts`, `scripts/checks/help-guide-coverage.ts` |
 

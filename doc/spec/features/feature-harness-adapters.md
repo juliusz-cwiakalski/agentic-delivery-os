@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241"]
   related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -160,6 +160,31 @@ before a session existed; it does not assert a lane-permission policy verdict.
 | `packages/adapters/src/host/index.ts` | The harness seam's single child-process module and a pinned entry in the exact repository-wide `node:child_process` allowlist, exposing two seams: the one-shot `createHostSpawnRunner` (read-only listing and Claude Code) and the streaming `createHostSpawnStarter` (opencode spawn, resume, deliver). Both receive the constructed environment as data and read no ambient environment. |
 
 ## 3. Adapters
+
+> **Additive process-port capabilities (GH-241).** Coordinator supervision uses
+> the delivered `DaemonProcessPort` as its only process port. The port carries
+> `SIGKILL` in its `signal` set for the grace-escalation half and an optional
+> `startTimeMs(pid)` identity capability, implemented by the shipped
+> `createNodeProcessPort` from the Linux `/proc/<pid>/stat` start ticks plus
+> `/proc/stat` `btime`; off Linux, or when either file is unreadable, it yields no
+> reading and the kill path reports `identity-mismatch` rather than signalling an
+> unverified pid. The delivered harness session port carries spawn, resume,
+> deliver, collect, classify, liveness, and read-only session listing; the coordinator
+> profile uses spawn, resume, liveness, and listing, and reads progress from the
+> liveness report. Resume is a decision input, never a process capability.
+> Capability ownership is four-way and distinct: an undeclared or unavailable
+> harness **resume** selects `spawn-fresh` reason `session-interrupted` with no
+> error identity; a harness that cannot or will not **spawn** returns the
+> delivered `harness.capability.gap` / `harness.spawn.refused` at exit 1; a
+> missing process-port **alive**, kill-with-grace, or **start-time identity**
+> capability is `coordinator.process.capability-gap` at exit 2 with no destructive
+> action (a declared probe that returns no answer is `unknown`, the lease-age
+> fallback input, never a gap); an absent **progress** source is an `unknown`
+> evidence class and never a failure or a kill. The adapter maps a positive
+> `token-delta` or `session-traffic` reading to `newTurn`/`progressing`, a sourced
+> zero to `zero`, and an absent reading to `unknown` (never zero). `isAlive(pid)`
+> is the lease-liveness source, with lease age only the fallback when the declared
+> capability returns no answer for the handle.
 
 **opencode** (`packages/adapters/src/harness/opencode.ts`) spawns `run --format
 json` and decodes stdout as JSONL: each line is parsed independently, a trailing

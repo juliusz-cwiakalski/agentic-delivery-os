@@ -481,6 +481,22 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ["<binary> retro report --level milestone"],
     "retro",
   ),
+  entry(
+    ["coordinator"],
+    "Supervise the coordinator session: start, stop, status, tick",
+    ["<binary> coordinator <start --foreground [--fresh-budget]|stop|status [--live]|tick>"],
+    [
+      ["--foreground", "Run the foreground supervision loop (start only)"],
+      ["--fresh-budget", "Open a new restart budget epoch (start only)"],
+      ["--live", "Report bounded live process facts (status only)"],
+    ],
+    [
+      "<binary> coordinator status",
+      "<binary> coordinator start --foreground",
+      "<binary> coordinator tick --json",
+    ],
+    "coordinator",
+  ),
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

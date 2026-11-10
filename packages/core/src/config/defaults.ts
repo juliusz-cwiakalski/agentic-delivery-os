@@ -73,6 +73,14 @@ export const PRODUCTION_DEFAULTS = {
       preemption: 60000,
     },
   },
+  coordinator: {
+    "stuck-window": 600000,
+    "kill-grace": 20000,
+    "restart-budget": 10,
+    "resume-context-limit": 100000,
+    "collection-interval": 30000,
+    "progress-bound": 300000,
+  },
   daemon: {
     "heartbeat-interval": 5000,
     "heartbeat-cycle": 60000,

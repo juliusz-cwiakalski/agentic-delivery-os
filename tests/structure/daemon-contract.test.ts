@@ -106,3 +106,49 @@ import type { CommitGitPort } from "../../packages/core/src/contracts/index";
 type HasLogSince = "logSince" extends keyof CommitGitPort ? true : false;
 const logSinceIsDeclared: HasLogSince = true;
 void logSinceIsDeclared;
+
+/**
+ * TC-COORD-001 (daemon half, GH-241): the delivered `DaemonProcessPort` is
+ * extended additively — `signal` accepts `SIGKILL` and an optional
+ * `startTimeMs(pid)` identity capability is declared. No second process port
+ * exists and the harness session port keeps resume/spawn/progress.
+ */
+describe("GH-241 additive DaemonProcessPort capabilities", () => {
+  test("SIGKILL is accepted by the delivered signal signature", () => {
+    const port: DaemonProcessPort = {
+      spawnDetached: () => ({ code: "daemon.state-recovery-failed" }),
+      signal: (_pid, signal) => ({ ok: signal === "SIGKILL" || signal === "SIGTERM" }),
+      isAlive: () => false,
+    };
+    expect(port.signal(1, "SIGKILL")).toEqual({ ok: true });
+    expect(port.signal(1, "SIGINT")).toEqual({ ok: false });
+  });
+
+  test("startTimeMs is optional and additive; the port still works without it", () => {
+    const withoutIdentity: DaemonProcessPort = {
+      spawnDetached: () => ({ code: "daemon.state-recovery-failed" }),
+      signal: () => ({ ok: true }),
+      isAlive: () => true,
+    };
+    expect(withoutIdentity.startTimeMs).toBeUndefined();
+    const withIdentity: DaemonProcessPort = {
+      ...withoutIdentity,
+      startTimeMs: (pid) => (pid === 7 ? 1_700_000_000_000 : undefined),
+    };
+    expect(withIdentity.startTimeMs?.(7)).toBe(1_700_000_000_000);
+    expect(withIdentity.startTimeMs?.(8)).toBeUndefined();
+  });
+
+  test("the process-port capability owner is the coordinator identity, not harness", () => {
+    expect(COORDINATOR_CAPABILITY_OWNERSHIP["process-port"].identity).toBe(
+      "coordinator.process.capability-gap",
+    );
+    expect(COORDINATOR_CAPABILITY_OWNERSHIP["harness-spawn"].identity).toBe(
+      "harness.capability.gap",
+    );
+    expect(COORDINATOR_CAPABILITY_OWNERSHIP["harness-resume"].identity).toBeNull();
+  });
+});
+
+import type { DaemonProcessPort } from "../../packages/core/src/contracts/index";
+import { COORDINATOR_CAPABILITY_OWNERSHIP } from "../../packages/core/src/contracts/index";

@@ -101,6 +101,30 @@
       "text": "blockers.extra-code",
       "recognized": false,
       "resolves": false
+    },
+    {
+      "id": "coordinator-namespace-near-miss",
+      "text": "coordinators.already-running",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "coordinator-two-segment-not-reserved",
+      "text": "coordinator.alreadyrunning",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "coordinator-schema-name",
+      "text": "delivery.coordinator.fence.v1",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "coordinator-iteration-key",
+      "text": "coordinator.iterations:c-1",
+      "recognized": false,
+      "resolves": false
     }
   ]
 }

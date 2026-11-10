@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BLOCKERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, and the brief blocker-questions anchor, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239"]
+  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239", "GH-241"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -134,6 +134,8 @@ One pure ranking produces the order for every attention surface.
 5. Ranks are contiguous `1..N` over the fully ranked open set, assigned before any render cap.
 
 The declared pickup predicate is payload-determinable: an open question carrying `rank: 1` and `audience: "coordinator"` at the head of the digest ranking is the coordinator pickup signal. The channel only makes the predicate determinable; it wakes nothing and starts no iteration.
+
+**Coordination supervision as the enforcement arm (GH-241).** Coordinator supervision consumes this channel as its enforcement arm: it performs one verified ledger read per collection cycle, applies the delivered `isCoordinatorPickup` predicate strictly (rank 1, open — an absent `status` counts as open — and `coordinator` audience), and wakes the coordinator within one collection cycle. Exactly one durable wake record per question lifetime is appended on a successful wake; `already-woken`, `answered-before-wake`, `delivery-failed`, and `no-pickup` are tick results that append nothing, so a retry cannot duplicate a record. Restart exhaustion publishes exactly one owner-audience `decision-needed` question with `lane` `coordinator`, `ref` `<coordinatorId>#<budgetEpochId>`, and the durable `historyRef` on the question payload itself, and the digest and brief keep a reserved render-first slot for it. The coordinator consumes the delivered question vocabulary, ranking, audience routing, and command grammar without adding a question type, rank rule, or command.
 
 ### List surface
 
@@ -290,7 +292,7 @@ The contracts import only sibling shared-contract modules (the owner-gate audien
 
 | Element | Shape and persistence |
 |---|---|
-| Question record (EVT-1) | Kind `blocker.question`, payload schema `delivery.blocker.question.v1`: `schemaId`, `id`, `type`, `audience`, `lane`, `ref`, `question`, `options[]`, `askedAt`; append-only and immutable, one record per question id |
+| Question record (EVT-1) | Kind `blocker.question`, payload schema `delivery.blocker.question.v1`: `schemaId`, `id`, `type`, `audience`, `lane`, `ref`, `question`, `options[]`, `askedAt`, and an optional `historyRef` (the coordinator exhaustion reference); append-only and immutable, one record per question id |
 | Answer record (EVT-2) | Kind `blocker.answer`, payload schema `delivery.blocker.answer.v1`: `schemaId`, `questionId`, `answeringAudience`, `choice` or `text`, `answeredAt`, `applied: false`, embedded `laneResume`; the first record per question id is authoritative |
 | `laneResume` | `mode`, `sessionReentry`, `capabilitySource`, and `prefillCost` only on the fallback; cross-field consistency is validated at read |
 | Record keys | `blockers.questions:<id>` and `blockers.answers:<questionId>` under the boundary prefix `blockers.` |

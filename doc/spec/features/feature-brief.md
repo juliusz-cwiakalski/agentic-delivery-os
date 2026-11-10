@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRIEF
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; nine closed render surfaces (seven digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; zero brief-specific reads; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -77,6 +77,8 @@ The payload's `anchors` array carries exactly three ranked groups in decision-fi
 |---:|---|---|---|
 | 1 | `ready-to-merge` | The `changes-and-prs` section state | Non-draft pull requests with `deliveryState` `approved` whose item-level review signal is observed, ranked by numeric-aware identity ascending |
 | 2 | `blocker-questions` | The `typed-questions` section state | Rendered open questions in the digest ranking, one action per question, carrying type, audience, lane, and rank |
+
+**Reserved escalation slot (GH-241).** The `blocker-questions` group mirrors the digest's reserved escalation slot: an open owner-audience `decision-needed` coordinator question whose `ref` is `<coordinatorId>#<budgetEpochId>` renders first in the group, then up to seven other questions in rank order, with the lowest-ranked displaced and counted as omitted. The predicate is payload-only (type, audience, lane, and ref shape) and the group adds no anchor, surface, or read; the eight-question bound is unchanged.
 | 3 | `owner-gate-ages` | The `tracker` section state, or `unavailable` when the owner-hand-back family signal is unavailable | Owner-hand-back items, ranked by oldest observed age first with unknown ages last, then identity ascending |
 
 **Ready-to-merge** projects only observed collector evidence: `deliveryState` `approved`, `draft` `false`, and item-level `reviewState` `observed`, on a section that is `observed` or `degraded`. An item with an unknown review signal, a failed pull-request read, an unavailable binding, a draft or non-approved delivery state, or a cap-omitted position is never claimed. Each action cites that item's bounded evidence (`kind`, `deliveryState`, `draft`, `reviewState`) and carries the section state. The record has no verdict, authorization, or "safe to merge" field. When the section is `observed` with no qualifying pull request, the group is explicitly empty and states `none approved`, which is a verified empty, not a gap.

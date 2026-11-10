@@ -191,6 +191,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "daemon.socket-unreachable",
   "daemon.subscriber-degraded",
   "daemon.supervisor-unsupported",
+  // GH-241 pins the two two-segment coordinator identities exactly; the other
+  // four coordinator identities are three-segment. No coordinator.* wildcard
+  // and no generic two-segment widening.
+  "coordinator.already-running",
+  "coordinator.restart-budget-exhausted",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

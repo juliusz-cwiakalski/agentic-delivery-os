@@ -1,4 +1,10 @@
 {
   "baseline": ["fallback.invocation", "fallback.internal"],
-  "allowed": ["closeout.write.failed", "merge.landing-unverified"]
+  "allowed": [
+    "closeout.write.failed",
+    "merge.landing-unverified",
+    "coordinator.session.kill-failed",
+    "coordinator.escalation.publish-failed",
+    "coordinator.wake.delivery-failed"
+  ]
 }
