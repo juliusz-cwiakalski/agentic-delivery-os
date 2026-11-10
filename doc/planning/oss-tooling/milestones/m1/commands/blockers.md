@@ -1,6 +1,7 @@
 # blockers(1)
 
-Status: M1 planned (M1-S16). Proposed contract; scenario SC-M1-13.
+Status: Delivered M1-S16 (GH-230). Implemented contract; scenario
+SC-M1-13.
 
 ## NAME
 

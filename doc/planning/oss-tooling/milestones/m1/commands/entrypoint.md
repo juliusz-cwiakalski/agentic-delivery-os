@@ -22,8 +22,8 @@ The entrypoint is a non-installed Bun bin (`packages/cli/bin/delivery-os.ts`,
 Bun shebang, mapped in the CLI package `bin` manifest next to the `main`
 composition entry). It composes exactly the prompt-required command set:
 `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`,
-`plan`, `verify`, `merge`, `closeout`, `spend`, and `retro`. `state`, `mcp`,
-`dispatch`, and the resident daemon are not registered.
+`plan`, `verify`, `merge`, `closeout`, `dispatch`, `spend`, `retro`, and
+`coordinator`. `state`, `mcp`, and the resident daemon are not registered.
 
 The working name resolves as typed configuration, then a non-empty
 `DELIVERY_OS_WORKING_NAME` override, then the neutral default `delivery-os`.

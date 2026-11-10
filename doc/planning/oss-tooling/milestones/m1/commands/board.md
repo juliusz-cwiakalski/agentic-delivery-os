@@ -1,6 +1,7 @@
 # board(1)
 
-Status: M1 planned (M1-S5). Proposed contract.
+Status: Delivered M1-S5 (GH-229); the full board is planned in M2-S4.
+Proposed contract scoped to the M2-S4 remainder.
 
 ## NAME
 

@@ -1,7 +1,8 @@
 # watchdog(1)
 
-Status: M1 planned (M1-S1; M1-S15 adds progress signals). Proposed
-contract; scenario SC-M1-14.
+Status: Delivered M1-S1 (GH-221); M1-S15 adds progress signals; the
+supervision battery is planned in M2-S2. Proposed contract scoped to the
+M2-S2 remainder; scenario SC-M1-14.
 
 ## NAME
 

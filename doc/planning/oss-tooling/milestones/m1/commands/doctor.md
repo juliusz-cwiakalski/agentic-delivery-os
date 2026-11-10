@@ -1,6 +1,7 @@
 # doctor(1)
 
-Status: M1 planned (M1-S3). Proposed contract.
+Status: Delivered M1-S3 (GH-224). Implemented contract; no planned
+remainder.
 
 ## NAME
 

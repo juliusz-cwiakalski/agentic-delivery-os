@@ -1,6 +1,6 @@
 # retro(1)
 
-Status: M1 planned (M1-S8). Proposed contract.
+Status: Delivered M1-S8 (GH-232). Implemented contract.
 
 ## NAME
 

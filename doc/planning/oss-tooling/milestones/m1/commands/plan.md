@@ -1,7 +1,6 @@
 # plan(1)
 
-Status: M1-S13 shipped (GH-226); M1 milestone planned. Delivered
-contract.
+Status: Delivered M1-S13 (GH-226). Implemented contract.
 
 ## NAME
 

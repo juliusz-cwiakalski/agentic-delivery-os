@@ -1,6 +1,7 @@
 # verify deploy(1)
 
-Status: M1 planned (M1-S4). Proposed contract; scenario SC-M1-05.
+Status: Delivered M1-S4 (GH-225). Implemented contract; scenario
+SC-M1-05.
 
 ## NAME
 

@@ -1,6 +1,6 @@
 # state(1)
 
-Status: M1 planned (M1-S2). Proposed contract.
+Status: Delivered M1-S2 (GH-222). Implemented contract.
 
 ## NAME
 
