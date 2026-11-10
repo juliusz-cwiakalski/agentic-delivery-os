@@ -179,7 +179,7 @@ workItemRef: GH-279
 
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - "a pre-session refusal claims a lease, opens a session, branch, worktree, attempt, divergence, handover, or authority change"
     - "a refusing credential port still spawns or resumes, or a refusal returns state-unverified instead of its typed identity"
@@ -230,7 +230,7 @@ phases:
     tcCoverage:
       - "TC-DOCS-004 (manual half: the change record carries the four-assertion TDR-0015 amendment and names TDR-0020 as its durable home)"
     verification:
-      - "delivery-os plan validate GH-279 || verdict=valid, readyForDevelopment=true, eight phases echoed"
+      - "delivery-os plan validate GH-279 || verdict=valid, readyForDevelopment=true, nine phases echoed"
       - "bun test tests/checks/decision-record.test.ts || TDR-0019 and TDR-0020 pass the decision-record contract; no duplicate or reused id; the 00-index rows match the register"
       - "git ls-files --error-unmatch doc/decisions/TDR-0019-dispatch-admission-credential-preflight.md doc/decisions/TDR-0020-dispatch-divergence-recording-and-resolution.md doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md doc/decisions/00-index.md || all four decision paths are tracked on the branch (landed at ca4aa1a8); this planning record verifies them and stages nothing, because the delivery commit path unions only kind: delivery phases"
       - "grep -c '^  > \\*\\*Amendment (GH-279' doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md || exactly four additive notes (§1 Truth(W), §1 Coverage(W), §1 record-level degradation, §5); the §1 preamble bullet is excluded by the anchor"
@@ -384,6 +384,7 @@ phases:
       files:
         - "packages/core/src/app/dispatch-gate.ts"
         - "packages/core/src/app/dispatch-ledger.ts"
+        - "packages/core/src/app/index.ts"
         - "tests/behaviour/dispatch-resolve-diagnostics.test.ts"
         - "tests/structure/dispatch-resolve-composition.test.ts"
         - "tests/fixtures/dispatch/ledger.ts"
@@ -512,12 +513,20 @@ phases:
         - "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md"
         - "doc/00-index.md"
         - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md"
+        - "doc/overview/glossary.md"
+        - "doc/quality/test-specs/test-spec-dispatch-engine.md"
         - "doc/spec/features/feature-dispatch-engine.md"
         - "doc/spec/features/feature-adapter-ports.md"
         - "doc/spec/features/feature-status-digest.md"
         - "doc/spec/features/feature-result-contract.md"
         - "doc/spec/features/feature-doctor.md"
+        - "doc/spec/features/feature-cli-entrypoint.md"
+        - "doc/spec/features/feature-provider-client-seeds.md"
         - ".changeset/gh-279-dispatch-credential-preflight-minor.md"
+        - "scripts/checks/forbidden-literals.registry.json"
+        - "tests/conformance/dispatch/dispatch-e2e.test.ts"
+        - "tests/fixtures/queue/production/harness.ts"
+        - "tests/structure/content-inventory.test.ts"
         - "tests/checks/tracker-credential-provisioning-guide.test.ts"
         - "tests/checks/dispatch-doc-conformance.test.ts"
         - "tests/checks/reference-page-parity.test.ts"
@@ -547,4 +556,63 @@ phases:
       - "bun test tests/checks/error-table-sync.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/dispatch-token-home.test.ts || tables stay in sync at the current count; eleven tokens; zero new identities"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate (lint, format, typecheck, full bun test suite, dependency/secret boundaries, prompt conformance, help coverage, exports parity) is green"
       - "git diff --check || zero whitespace errors and zero conflict markers"
-      - "manual MV-1/MV-2/MV-3 evidence recorded in the change record and repeated in the pull request || one real credentialed dispatch reaches a verdict other than state-unverified and its record carries the artifact, tracker, and CI corroboration facts; one summary before/after a resolution shows the count moving by one and a resume reusing the open id; the record names TDR-0020 as the amendment home; no token printed, committed, or attached"
+      - "manual MV-1/MV-2/MV-3 recorded in the change record as operator-executed PR-time procedures with artifact, tracker, and CI corroboration fields, and repeated in the pull request || each procedure names the observation to attach and the fields that corroborate it; execution stays PR-time, so no delivery-time gate depends on observed facts; one real credentialed dispatch must reach a verdict other than state-unverified with its artifact, tracker, and CI corroboration; one summary before/after a resolution shows the count moving by one and a resume reusing the open id; the record names TDR-0020 as the amendment home; no token printed, committed, or attached"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 9 — code review remediation (iteration 1)
+  # Findings: code-review/review-iter-1.yaml (F-1..F-10).
+  # F-1 (branch-history subjects) is ACCEPTED per pm-notes D9: history is not
+  # rewritten because commits go only through the commit primitive. F-8 is
+  # ACCEPTED per D10; F-2, F-3, F-4, F-6, F-9, and F-10 are fixed; F-5 and F-7
+  # are record repairs. No behaviour in Phases 2-8 changes.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code Review Remediation (Iteration 1) — commit-subject acceptance, dead read-reason branch, doctor prefix derivation proof, sentinel surface, scope reconciliation, projection pin, MV evidence, entrypoint dependency, human prerequisite, TC labels"
+    kind: delivery
+    summary: "apply code review iteration 1 remediation"
+    leases:
+      - "repo:main-tools"
+    weightClass: standard
+    scope:
+      files:
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/code-review/review-iter-1.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-plan.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-pm-notes.yaml"
+        - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-change-record.md"
+        - "packages/core/src/app/dispatch.ts"
+        - "packages/core/src/app/dispatch-gate.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/domain/status.ts"
+        - "packages/adapters/src/credentials/index.ts"
+        - "packages/cli/src/entrypoint.ts"
+        - "tests/behaviour/dispatch-delivered-evidence-divergence.test.ts"
+        - "tests/behaviour/dispatch-admission-read-mapping.test.ts"
+        - "tests/behaviour/dispatch-resolve-diagnostics.test.ts"
+        - "tests/behaviour/doctor-tracker.test.ts"
+        - "tests/behaviour/providers/github-inputs.test.ts"
+        - "tests/behaviour/status-credential-prerequisite.test.ts"
+        - "tests/fixtures/doctor/harness.ts"
+        - "tests/fixtures/dispatch/golden/errors/config-credential-missing.json"
+        - "tests/fixtures/dispatch/golden/errors/input-value-rejected.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-auth-rejected.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-outage.json"
+        - "tests/fixtures/dispatch/golden/errors/provider-payload-invalid.json"
+        - "tests/structure/cli-edge-seam.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+    acCoverage: []
+    tcCoverage:
+      - "No new TC — remediation strengthens TC-READMAP-001..009 (kind+projection+exit pin), TC-DOCTCRED-001..002 (edge prefixed derivation), TC-STATCRED-001..004 (human prerequisite), TC-DIVREC-002 (ci-only negative), and TC-READMAP-010/TC-CREDNAME-006 (identifier labels); F-1, F-5, F-7 are record/history repairs with no new case."
+    verification:
+      - "review F-1 (medium) || ACCEPTED per pm-notes D9: the branch keeps the commit primitive's template subjects unchanged (no history rewrite, no tree change) because commits go only through the commit primitive; the acceptance is recorded in the change record and this evidence cites D9"
+      - "review F-2 (low) || packages/core/src/app/dispatch.ts unreadableTruthReason no longer returns a value it cannot reach: a ci-only unreadable read yields no truth:unreadable ref (undefined) and the ledger/state members are either removed or proven by a test; bun test tests/behaviour/dispatch-delivered-evidence-divergence.test.ts stays green"
+      - "review F-3 (low) || tests/behaviour/doctor-tracker.test.ts (or the doctor harness) drives a prefixed reference through the runtime derivation and asserts the hint names prefix+suffix, not the bare suffix; bun test tests/behaviour/doctor-tracker.test.ts green"
+      - "review F-4 (low) || DISPATCH_DIVERGENCE_NOT_FOUND is module-local: no package-root or app-barrel export, imported from app/dispatch-ledger by dispatch-gate and the tests; the per-file executable allowance stays because the module still exports the constant (the allowance is file-scoped, not root-scoped); bun test tests/checks/exports-parity.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts green"
+      - "review F-5 (low) || this phase's scope, the amended Phases 2-8 scope lists, and the pm-notes entry account for the nine consequential files and the seven reconciled feature specs; delivery-os plan validate GH-279 stays valid"
+      - "review F-6 (low) || the five admission goldens carry projectionClass and assertGolden compares it (or TC-READMAP-008 asserts classifyThrown(pair).projectionClass); bun test tests/behaviour/dispatch-admission-read-mapping.test.ts green"
+      - "review F-7 (low) || the change record records MV-1/MV-2/MV-3 as operator-executed PR-time procedures with artifact, tracker, and CI corroboration fields, actual execution stays PR-time, and the record states the deferral; dod_check does not depend on executed evidence"
+      - "review F-8 (low) || entrypoint.ts depends on core only for the pure source-key resolver (moved to core contracts and re-exported by the credentials subpath) or the entrypoint documents the deliberate adapters edge; bun test tests/structure/cli-edge-seam.test.ts tests/structure/entrypoint-bin.test.ts green"
+      - "review F-9 (low) || human status output names requires <sourceKey> (<referenceName>) on each affected section line, names only and never a value; bun test tests/behaviour/status-credential-prerequisite.test.ts tests/behaviour/status-output.test.ts green and the digest goldens unchanged"
+      - "review F-10 (info) || the adapter-stamping and redaction cases carry TC-READMAP-010 / TC-CREDNAME-006 in their names"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate gate is green after remediation"
+      - "git diff --check || zero whitespace errors and zero conflict markers"

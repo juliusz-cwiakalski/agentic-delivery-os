@@ -1,7 +1,9 @@
 {
+  "kind": "provider",
   "code": "provider.payload.invalid",
   "category": "platform",
   "retryable": false,
   "consequence": "unknown",
+  "projectionClass": "platform-provider",
   "exitCode": 2
 }

@@ -8,9 +8,9 @@ import { describe, expect, test } from "bun:test";
 import type { StatusDigest, StatusSection } from "../../packages/core/src/contracts/index";
 import {
   ADMISSION_CANARY,
+  type AdmissionHarnessOptions,
   createAdmissionHarness,
   readableAdmissionTransport,
-  type AdmissionHarnessOptions,
 } from "../fixtures/dispatch/admission";
 
 const statusOf = (observed: { readonly envelope?: { readonly data?: unknown } }): StatusDigest =>
@@ -90,6 +90,31 @@ describe("TC-STATCRED-003 no observed section, no fabricated zero, no finding", 
       expect(section.counts.observed).toBe(0);
     }
     expect(digest.summary.sections).toBe(9);
+  });
+});
+
+describe("TC-STATCRED-001 human output names the prerequisite on each affected section", () => {
+  test("the operator learns the required key without --json", async () => {
+    const harness = createAdmissionHarness({
+      label: "gh279-status-human-",
+      credential: "missing",
+    });
+    try {
+      const machine = await harness.run(["status", "--json"]);
+      const affected = sectionsWithCredentialReason(statusOf(machine)).length;
+      expect(affected).toBeGreaterThan(0);
+      const human = await harness.run(["status"]);
+      const occurrences = human.stdout.split("requires GITHUB_TOKEN (github-read)").length - 1;
+      expect(occurrences).toBe(affected);
+      const lines = human.stdout.split("\n");
+      for (const prefix of ["tracker    ", "changes    ", "ready      "]) {
+        expect(lines.find((line) => line.startsWith(prefix)) ?? "").toContain(
+          "requires GITHUB_TOKEN (github-read)",
+        );
+      }
+    } finally {
+      harness.dispose();
+    }
   });
 });
 

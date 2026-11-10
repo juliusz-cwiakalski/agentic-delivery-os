@@ -154,7 +154,6 @@ export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,
-  DISPATCH_DIVERGENCE_NOT_FOUND,
   foldDispatchDivergences,
   isEvidenceClass,
   readDispatchAttempts,

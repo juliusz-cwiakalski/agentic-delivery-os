@@ -15,13 +15,13 @@ import {
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
-  ERROR_TABLE,
   type DispatchAttemptRecord,
   type DispatchEnvelopeData,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
+  ERROR_TABLE,
   HARNESS_OUTCOMES,
   type HarnessEvidence,
   type HarnessExecutionEnvironmentDescriptor,
@@ -49,7 +49,6 @@ import {
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
   type DispatchRead,
-  type DispatchReadFailure,
   type DispatchTrackerFacts,
   deriveDispatchResult,
 } from "../domain/dispatch-result.js";
@@ -283,12 +282,19 @@ const isDeliveredEvidence = (input: {
   );
 };
 
-/** The failing read family of the delivered closed read set. */
-const unreadableTruthReason = (reads: DispatchTruthReads): DispatchReadFailure | undefined => {
-  for (const read of [reads.ledger, reads.tracker, reads.artifacts] as const) {
-    if (!read.ok) return read.reason;
-  }
-  return reads.ci.ok ? undefined : "state";
+/**
+ * The failing read family of the delivered closed read set.
+ *
+ * Only `tracker` and `artifact` are reachable here: `isDeliveredEvidence`
+ * already requires a readable ledger, and the derivation yields
+ * `state-unverified` only from an unreadable ledger, tracker, or artifact read.
+ * A `ci`-only failure is not a truth-read family (the spec forbids a `ci`
+ * reason), so it contributes no reference instead of being mislabelled.
+ */
+const unreadableTruthReason = (reads: DispatchTruthReads): "tracker" | "artifact" | undefined => {
+  if (!reads.tracker.ok) return "tracker";
+  if (!reads.artifacts.ok) return "artifact";
+  return undefined;
 };
 
 /** The delivered-evidence divergence shape used for per-work-item dedupe. */

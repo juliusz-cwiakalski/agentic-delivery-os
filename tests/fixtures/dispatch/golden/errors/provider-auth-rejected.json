@@ -1,7 +1,9 @@
 {
+  "kind": "provider",
   "code": "provider.auth.rejected",
   "category": "user",
   "retryable": false,
   "consequence": "not_landed",
+  "projectionClass": "user-validation",
   "exitCode": 1
 }

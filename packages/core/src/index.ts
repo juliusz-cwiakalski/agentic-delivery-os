@@ -102,7 +102,6 @@ export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,
-  DISPATCH_DIVERGENCE_NOT_FOUND,
   type DispatchAppendResult,
   type DispatchDivergenceSummary,
   type DispatchLedgerRead,

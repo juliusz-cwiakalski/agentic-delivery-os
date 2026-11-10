@@ -158,7 +158,7 @@ describe("GH-178 HTTP 404 is definitive absence, not a payload failure", () => {
     if (!result.ok) expect(result.code).toBe("provider.payload.invalid");
   });
 });
-describe("GH-279 a malformed 2xx carries the received status", () => {
+describe("TC-READMAP-010 a malformed 2xx carries the received status", () => {
   test("the real client and normalizer stamp httpStatus 200 on a decode failure", async () => {
     const transport = createFixtureTransport([
       { url: issueUrl, body: { number: ISSUE_NUMBER }, status: 200 },

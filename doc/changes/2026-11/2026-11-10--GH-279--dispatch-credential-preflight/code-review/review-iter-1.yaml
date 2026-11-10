@@ -1,0 +1,199 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-279
+branch: fix/GH-279/dispatch-credential-preflight
+status: FAIL
+summary: "The delivered behaviour meets the specification: all 30 acceptance criteria are implemented and covered by name-producing tests, the admission preflight runs before claimLease/spawn with zero side effects, the read outcome is classified from httpStatus (with the received-2xx stamp proven through the real GitHub client), resolve is local-only with preserved state identities and a distinguishable not-found, the delivered-evidence divergence predicate/dedupe/append order/orphan semantics hold, and status/doctor surfaces are additive with the help inventory unchanged. The FAIL is driven by branch history hygiene: 19 of 20 commits carry the commit primitive's template-fallback subject ('update <path>', truncated with an ellipsis) instead of the plan-declared phase summaries, and one subject carries a doubled 'docs(GH-279):' prefix. Code-level findings below are non-blocking advisories. Verified at review time: full suite 6973 pass / 4 skip / 0 fail (862 files), targeted admission/resolve/delivered-evidence/status/doctor/edge suites green, plan validate valid (8 phases), 30/30 ACs traced in the test plan's matrix, forbidden-literals and doc-distribution guards green, git diff --check clean."
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 8
+  info: 1
+spec_compliance: PASS
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: "git history 78e61207..HEAD (19 of 20 commits)"
+    message: >-
+      The plan declares "COMMIT HYGIENE: one commit per phase through the `commit`
+      primitive, subject = the phase `summary`" (chg-GH-279-plan.yaml:174-175). The
+      delivery commits run with the primitive's template fallback instead: 1c344ca2 →
+      "chore(GH-279): update packages/core/src/app/dispatch.ts", 106da48a/b4a0ffcf/71cf4e13/
+      64ea12ca/fe5b61fb → "chore(GH-279): update doc/changes/2026-11/2026-11-10--GH-279--dispatch-c…",
+      3fafa182 → "chore(GH-279): update .changeset/gh-279-dispatch-credential-preflight-m…",
+      9e89102a → "feat(GH-279): update doc/changes/…", 5a05fa38 → "docs(GH-279): update doc/changes/…".
+      ca4aa1a8 is malformed: "docs(GH-279): docs(GH-279): record credential-preflight and divergence…".
+      Only 7d95eeeb and 99497c63 carry a real phase summary, which proves the primitive
+      accepts `planSummary` and that phases 2-8 were committed without phase context
+      (type falls back to `chore`, `planSummary` absent). The truncation with "…" is
+      template behaviour, not authored prose, but the missing summary is the defect.
+    suggestion: >-
+      Before the branch is pushed (it is not pushed: 20 commits ahead of origin/main-tools,
+      no upstream), reword the delivery commits so each subject is its plan phase summary
+      (e.g. "feat(GH-279): declare dispatch preflight port and refusals", "feat(GH-279):
+      stamp 2xx status on GitHub decode failures", "feat(GH-279): preflight tracker
+      credential before spawn", "feat(GH-279): preserve typed identities on divergence
+      resolve", "feat(GH-279): record delivered-evidence divergences honestly", "feat(GH-279):
+      surface tracker credential prerequisite", "feat(GH-279): publish guide, change record,
+      and release note") and fix the doubled prefix in ca4aa1a8; keep the tree byte-identical.
+      If the deviation is intentional, record it as a pm-notes decision instead of leaving the
+      plan requirement unmet.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: "packages/core/src/app/dispatch.ts:287-292"
+    message: >-
+      `unreadableTruthReason` returns "state" when only the `ci` read failed, but a ci-only
+      failure can never reach it: `isDeliveredEvidence` already requires `reads.ledger.ok`, and
+      `deriveDispatchResult` only yields `state-unverified` from an unreadable ledger/tracker/
+      artifact (packages/core/src/domain/dispatch-result.ts:222-232), so the returns "ledger"
+      and "state" are unreachable and the ci → "state" mapping would mislabel the failing read
+      if a future path reached it (the spec forbids a `ci` reason and requires the reason to
+      name the failing read family).
+    suggestion: >-
+      Return `undefined` for the ci branch (or delete the loop's fallback) and narrow the
+      return type to the reachable reason set, with a comment naming why ledger/state cannot
+      occur; alternatively keep the union but assert the mapping in a test.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: testing
+    location: "tests/behaviour/doctor-tracker.test.ts:57-72 (with tests/fixtures/doctor/harness.ts:353)"
+    message: >-
+      The AC-F6-3 parity case "a derived-prefix reference names the full key" injects the
+      already-derived `envVar: "EXAMPLE_PRODUCT_TRACKER_TOKEN"` through `fakeDoctorRuntime`, so
+      only the hint-template substitution is proven. The prefixed derivation in
+      packages/cli/src/edge.ts:2547-2556 (`environmentPrefix` + suffix) is never exercised;
+      dropping the prefix there would still pass this test.
+    suggestion: >-
+      Add one case that drives `createDoctorCommandRuntime` (or the production composer) with an
+      `environment-prefixed` reference and asserts the hint contains `<prefix>TRACKER_TOKEN` and
+      not the bare suffix, matching the plan's "for a literal reference and for a prefixed
+      reference" claim.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: api-surface
+    location: "packages/core/src/index.ts:105, packages/core/src/app/index.ts:157, tests/structure/content-inventory.test.ts:121"
+    message: >-
+      `DISPATCH_DIVERGENCE_NOT_FOUND` is exported from the package root and added to the
+      content-inventory allowance. The plan declares "no new contracts export (the not-found
+      sentinel stays app-local)" (chg-GH-279-plan.yaml:403) and "no exported type name" for the
+      phase. The export is additive-minor and harmless, but it widens the public API beyond the
+      declared surface for a sentinel only used inside core and by tests.
+    suggestion: >-
+      Either keep the constant module-local (import it from `app/dispatch-ledger` in
+      dispatch-gate and the tests, which already can) or record the additive export in the plan /
+      change record so the declared surface matches the delivered one.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: "nine changed files outside every declared phase scope; doc/.../chg-GH-279-pm-notes.yaml phase-8 note"
+    message: >-
+      Files changed outside every phase `scope.files` declaration: doc/overview/glossary.md,
+      doc/quality/test-specs/test-spec-dispatch-engine.md, doc/spec/features/feature-cli-entrypoint.md,
+      doc/spec/features/feature-provider-client-seeds.md, packages/core/src/app/index.ts,
+      scripts/checks/forbidden-literals.registry.json, tests/conformance/dispatch/dispatch-e2e.test.ts,
+      tests/fixtures/queue/production/harness.ts, tests/structure/content-inventory.test.ts. Each is a
+      defensible consequence (re-exports, allowance, glossary, e2e/queue fixture adjustments for the
+      new preflight, spec reconciliation), but the plan and pm-notes do not account for them; the
+      phase-8 pm-notes entry also says "five feature specs are reconciled" while seven feature specs
+      changed.
+    suggestion: >-
+      Extend the relevant phase `scope.files` (or add a pm-notes entry naming the consequential files)
+      and correct the "five feature specs" count to seven; keep the e2e/queue fixture edits documented
+      as preflight consequences so the declared scope stays a truthful record.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: testing
+    location: "tests/behaviour/dispatch-admission-read-mapping.test.ts:53-60, tests/fixtures/dispatch/golden/errors/*.json"
+    message: >-
+      The plan claims "every pair asserted with kind AND projection AND exit"
+      (chg-GH-279-plan.yaml:366). `assertGolden` pins code, category, retryable, consequence and
+      exit, and TC-READMAP-008 pins `domainKind`, but `projectionClass` (user-validation vs
+      platform-provider) is never asserted directly; the projection is only transitive from the
+      pinned row fields.
+    suggestion: >-
+      Add `projectionClass` to the golden JSONs and to `assertGolden`, or assert
+      `classifyThrown(pair).projectionClass` per pair in TC-READMAP-008, so the plan's claim is
+      literally true.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: "doc/changes/.../chg-GH-279-change-record.md (Manual verification table)"
+    message: >-
+      MV-1/MV-2/MV-3 are not recorded. Plan phase 8 requires the manual evidence "recorded in the
+      change record and repeated in the pull request"; the record instead states the checks "were
+      not executed in the delivery sandbox ... operator attaches the observed facts at the pull
+      request". The spec (§18) does place MV-1 in the pull request, so this is a deferred obligation
+      rather than a breach, but no decision records the deferral and dod_check must not pass without
+      the artifact/tracker/CI corroboration.
+    suggestion: >-
+      Attach MV-1/MV-2/MV-3 with artifact + tracker + CI corroboration to the pull request at
+      pr_creation and record the PR URL as a pm-notes entry; if they cannot be produced, record an
+      explicit decision and treat it as an unmet DoD evidence item.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: medium
+    category: design
+    location: "packages/cli/src/entrypoint.ts:12,37,168-180"
+    message: >-
+      `entrypoint.ts` (documented as runtime-neutral, "read no ambient global and perform no I/O")
+      now statically imports `@delivery-os/adapters/credentials` for the pure
+      `resolveCredentialSourceKey`. The edge is matrix-legal (cli may wire adapters) and no ambient
+      read executes, but neutrality is now transitive through a module that also owns the
+      `process.env` reader. The feature spec had to be amended to describe the new import.
+    suggestion: >-
+      Consider moving `resolveCredentialSourceKey` (pure, brand + reference → key name) into
+      `packages/core/src/contracts` and re-exporting it from the credentials subpath, so the
+      runtime-neutral entrypoint depends only on core; otherwise note the dependency as a deliberate
+      exception in the entrypoint's doc comment.
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/status.ts:1947-2081 (renderStatusHuman)"
+    message: >-
+      The status prerequisite is machine-only: `credentialPrerequisite` is attached to the evidence
+      record but `renderStatusHuman` never renders it, so an operator running plain `status` sees
+      `tracker unknown` / `ci unknown` without learning that `GITHUB_TOKEN` is required. AC-F6-1 as
+      written is met (the evidence record carries the field), but F-6.2's stated value — "the operator
+      sees which key is required without running dispatch" (F-6 flow 6) — is only reachable with
+      `--json`.
+    suggestion: >-
+      Render the prerequisite on the affected section lines in human mode (e.g. append
+      "requires <sourceKey> (<referenceName>)" when the section state is unknown with that reason), or
+      record an explicit decision that machine-only is sufficient.
+    suppressed: false
+  - id: F-10
+    severity: info
+    confidence: high
+    category: testing
+    location: "tests/behaviour/providers/github-inputs.test.ts:161-200, tests/structure/cli-edge-seam.test.ts:266-322"
+    message: >-
+      TC-READMAP-010 and TC-CREDNAME-006 have no test whose name carries the identifier (siblings do,
+      e.g. TC-READMAP-001). The behaviour is proven, but the plan-to-test trace is grep-unverifiable and
+      TC-CREDNAME-006 is only mentioned in another file's header comment.
+    suggestion: >-
+      Name the new cases with their TC ids (`TC-READMAP-010 …`, `TC-CREDNAME-006 …`) so the traceability
+      convention and the plan's declarations line up.
+    suppressed: false
+reviewed_at: 2026-11-10T10:40:00Z
+next_step: "EXECUTE_REMEDIATION_PHASE — chg-GH-279-plan.yaml Phase 9 ('apply code review iteration 1 remediation') was appended by this review. Execute 9.1 (reword the branch commits to their plan phase summaries and fix the doubled prefix in ca4aa1a8) before the first push, then apply or explicitly accept the low/info advisories F-2..F-10, and re-review (iteration 2) before quality_gates."

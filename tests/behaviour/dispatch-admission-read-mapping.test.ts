@@ -14,21 +14,23 @@ import {
   ERROR_TABLE,
   type ExternalSystemInstance,
 } from "../../packages/core/src/contracts/index";
+import { fixtureBrand } from "../fixtures/credentials/cases";
 import {
   ADMISSION_CANARY,
+  type AdmissionObservation,
   runAdmission,
   scriptedIssueTransport,
-  type AdmissionObservation,
 } from "../fixtures/dispatch/admission";
-import { fixtureBrand } from "../fixtures/credentials/cases";
 
 const GOLDENS = "tests/fixtures/dispatch/golden/errors";
 
 type Golden = {
+  readonly kind: string;
   readonly code: string;
   readonly category: string;
   readonly retryable: boolean;
   readonly consequence: string;
+  readonly projectionClass: string;
   readonly exitCode: number;
 };
 
@@ -49,6 +51,13 @@ const assertGolden = (observed: AdmissionObservation, name: string): void => {
     retryable: expected.retryable,
     consequence: expected.consequence,
   });
+  // The envelope carries no projection field; classify the golden pair so the
+  // kind, projection, and exit stay asserted together (the adapter-local
+  // payload identity is deliberately not an error-table row).
+  const classified = classifyThrown({ kind: expected.kind, code: expected.code });
+  expect(classified.code).toBe(expected.code);
+  expect(classified.domainKind).toBe(expected.kind);
+  expect(classified.projectionClass).toBe(expected.projectionClass);
   expect(observed.exit).toBe(expected.exitCode);
   expect(observed.envelope?.exitCode).toBe(expected.exitCode);
 };
@@ -187,18 +196,19 @@ describe("TC-READMAP-007 malformed 2xx and transport throw stay distinguishable"
   });
 });
 
-describe("TC-READMAP-008 every mapped pair carries its own kind", () => {
+describe("TC-READMAP-008 every mapped pair carries its own kind and projection", () => {
   test("no pair classifies as fallback.internal and the vocabulary is unchanged", () => {
     const pairs = [
-      { kind: "provider", code: "provider.auth.rejected" },
-      { kind: "provider", code: "provider.outage" },
-      { kind: "provider", code: "provider.payload.invalid" },
-      { kind: "input", code: "input.value.rejected" },
-      { kind: "config", code: "config.credential.missing" },
+      { kind: "provider", code: "provider.auth.rejected", projectionClass: "user-validation" },
+      { kind: "provider", code: "provider.outage", projectionClass: "platform-provider" },
+      { kind: "provider", code: "provider.payload.invalid", projectionClass: "platform-provider" },
+      { kind: "input", code: "input.value.rejected", projectionClass: "user-validation" },
+      { kind: "config", code: "config.credential.missing", projectionClass: "user-validation" },
     ] as const;
     for (const pair of pairs) {
       expect(classifyThrown(pair).code).toBe(pair.code);
       expect(classifyThrown(pair).domainKind).toBe(pair.kind);
+      expect(classifyThrown(pair).projectionClass).toBe(pair.projectionClass);
     }
     expect(classifyThrown({ kind: "provider", code: "state.lock.busy" }).code).toBe(
       "fallback.internal",

@@ -63,6 +63,19 @@ decisions:
       sections whose credential-dependent source failed and absent on observing
       sections, discovered from the digest rather than hardcoded."
     date: 2026-11-10
+  - text: "D9 (PM-decided, review F-1 accepted): the delivery commit subjects are
+      primitive-generated template fallbacks because a numeric plan phase cannot be
+      passed to the commit primitive; they are conventional, specific to the staged
+      area, and within the 72-char cap. History rewriting is out of policy (commits
+      go only through the commit primitive). Accept the template subjects and do not
+      reword the branch history; the plan phase-9 escape clause records this."
+    date: 2026-11-10
+  - text: "D10 (PM-decided, review F-8/F-9 acceptance boundary): F-8 (entrypoint
+      importing the pure credential key resolver) is accepted as a low-risk layering
+      advisory because the import is pure and the boundary scan is green; F-9 is
+      fixed by rendering the status credentialPrerequisite in the human report when
+      it is cheap, otherwise accepted as machine-only and recorded."
+    date: 2026-11-10
 open_questions: []
 blockers: []
 notes:
@@ -207,10 +220,47 @@ notes:
       the redaction-registration fact; the dispatch reference page documents the
       pre-claimLease ordering, named key/reference, status-keyed mapping, 404
       caveat, per-work-item dedupe, and resolution path; the change record and
-      minor changeset land; five feature specs are reconciled; the forbidden-
-      literals registry and content allowance are updated. Aggregate gate:
+      minor changeset land; seven feature specs are reconciled; the glossary,
+      the dispatch test spec, the forbidden-literals registry, the e2e and queue
+      fixtures, and the content allowance are updated. Aggregate gate:
       TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0, 6973 pass / 4 skip / 0 fail,
       lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
       parity all green. doc-distribution guard green; git diff --check clean."
+    type: info
+    date: 2026-11-10
+  - text: "Scope reconciliation (review F-5): the nine files changed outside the
+      original phase scopes are now declared — packages/core/src/app/index.ts in
+      Phase 5 and, in Phase 8, doc/overview/glossary.md,
+      doc/quality/test-specs/test-spec-dispatch-engine.md,
+      doc/spec/features/feature-cli-entrypoint.md,
+      doc/spec/features/feature-provider-client-seeds.md,
+      scripts/checks/forbidden-literals.registry.json,
+      tests/conformance/dispatch/dispatch-e2e.test.ts,
+      tests/fixtures/queue/production/harness.ts, and
+      tests/structure/content-inventory.test.ts. Each is a re-export, glossary,
+      spec-reconciliation, or preflight-fixture consequence; seven feature specs
+      are reconciled, not five."
+    type: info
+    date: 2026-11-10
+  - text: "Plan phase 9 (apply code review iteration 1 remediation) complete in the
+      remediation commit that carries this note on fix/GH-279/dispatch-credential-preflight
+      (one commit, primitive-authored subject). Dispositions: F-1 accepted per D9
+      (history unchanged, tree unchanged); F-2 fixed (unreadableTruthReason returns
+      only tracker/artifact, ci-only yields no ref, TC-DIVREC-002 ci-only negative);
+      F-3 fixed (TC-DOCTCRED-002 drives the edge derivation for an
+      environment-prefixed reference); F-4 fixed (sentinel module-local, no
+      root/app-barrel export; the file-scoped executable allowance stays); F-5
+      fixed as a record repair (phase 5/8 scopes and the seven-spec count); F-6
+      fixed (goldens carry kind+projectionClass, assertGolden and TC-READMAP-008
+      pin kind/projection/exit); F-7 fixed as a PR-time procedure record; F-8
+      accepted per D10; F-9 fixed (human status renders requires <sourceKey>
+      (<referenceName>) on affected lines; TC-STATCRED-001); F-10 fixed (TC ids in
+      test names). Targeted suites: admission read mapping, delivered-evidence
+      divergence, doctor tracker, status prerequisite/output, github inputs,
+      cli-edge-seam, resolve diagnostics/composition, content and contract
+      inventories (127 pass). Aggregate gate: TMPDIR=$PWD/tmp/tmpdir pnpm check
+      exit 0, 6976 pass / 4 skip / 0 fail across 862 files;
+      lint/format/typecheck/boundaries/prompt-conformance/help-coverage/exports
+      parity all green."
     type: info
     date: 2026-11-10

@@ -274,7 +274,7 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
     ),
   });
 
-  test("the declared truth-read key is registered for redaction from injected facts", async () => {
+  test("TC-CREDNAME-006 the declared truth-read key is registered for redaction from injected facts", async () => {
     const canary = "planted-edge-truth-read-canary";
     const stdout = bufferSink();
     const stderr = bufferSink();
@@ -297,7 +297,7 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
     expect(stdout.value).toContain("[redacted]");
   });
 
-  test("a prefixed reference resolves its key from the injected brand", async () => {
+  test("TC-CREDNAME-006 a prefixed reference resolves its key from the injected brand", async () => {
     const canary = "planted-edge-prefixed-canary";
     const brand = resolveEntrypointBrand({ configuredWorkingName: "synthetic", environment: {} });
     const key = `${brand.environmentPrefix}TRACKER_TOKEN`;

@@ -18,8 +18,8 @@ import {
   type StateStorePort,
 } from "../../packages/core/src/contracts/index";
 import { DISPATCH_READ_FAILURE_SOURCES } from "../../packages/core/src/domain/dispatch-result";
-import { COMPLETED_EVIDENCE, SPAWN_REFUSED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import { COMPLETED_EVIDENCE, SPAWN_REFUSED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
 import { ledger, readFail, readOk } from "../fixtures/dispatch/truth";
 
@@ -111,6 +111,15 @@ describe("TC-DIVREC-002 each delivered-evidence conjunct falsified opens nothing
       reads: readsFrom({
         ledger: readOk(ledger({ completed: 1, total: 5, progressed: false })),
         tracker: readFail("tracker", "config.credential.missing"),
+      }),
+    },
+    {
+      // A ci-only failure is not a truth-read family: it contributes no
+      // `truth:unreadable` reference and is never mislabelled `state`.
+      label: "ci-only",
+      evidence: COMPLETED_EVIDENCE,
+      reads: readsFrom({
+        ci: { ok: false, reason: "state", identity: "ci.read-unreadable" },
       }),
     },
   ] as const;

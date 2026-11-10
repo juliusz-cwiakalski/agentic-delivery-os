@@ -1859,6 +1859,16 @@ const truncationSuffix = (section: StatusSection): string => {
   return section.truncated ? "+more" : "";
 };
 
+/**
+ * The operator-facing prerequisite on a section whose credential-dependent
+ * source failed. Names only: the value never enters the human digest.
+ */
+const prerequisiteSuffix = (section: StatusSection): string => {
+  const prerequisite = section.evidence.credentialPrerequisite;
+  if (prerequisite === undefined) return "";
+  return ` | requires ${prerequisite.sourceKey} (${prerequisite.referenceName})`;
+};
+
 const familyOf = (
   section: StatusSection,
   id: StatusTrackerFamilyId,
@@ -1972,7 +1982,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
       0,
     );
     lines.push(
-      `tracker    ${tracker.state}  hand-backs ${ownerHandBacks?.counts.total ?? 0} | gates ${gates} escalated | blocked ${blocked?.state ?? "unavailable"} | stalls ${stalls?.counts.total ?? 0} (${stalls?.counts.unknown ?? 0} unknown) | hygiene ${hygiene?.counts.total ?? 0} (${assertionUnknown} unknown)${truncationSuffix(tracker)}`,
+      `tracker    ${tracker.state}  hand-backs ${ownerHandBacks?.counts.total ?? 0} | gates ${gates} escalated | blocked ${blocked?.state ?? "unavailable"} | stalls ${stalls?.counts.total ?? 0} (${stalls?.counts.unknown ?? 0} unknown) | hygiene ${hygiene?.counts.total ?? 0} (${assertionUnknown} unknown)${truncationSuffix(tracker)}${prerequisiteSuffix(tracker)}`,
     );
   }
 
@@ -1994,7 +2004,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
         ? "unavailable"
         : "observed";
     lines.push(
-      `changes    ${changes.state}  active ${activeText} | PRs ${prCount} (review state ${review})${truncationSuffix(changes)}`,
+      `changes    ${changes.state}  active ${activeText} | PRs ${prCount} (review state ${review})${truncationSuffix(changes)}${prerequisiteSuffix(changes)}`,
     );
   }
 
@@ -2003,7 +2013,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     const jobs = runs.flatMap((run) => run.jobs);
     const failed = jobs.filter((job) => job.jobState === "failed").length;
     lines.push(
-      `ci         ${ci.state}  ${humanCiResult(ci.result)} (${failed}/${jobs.length} jobs)${truncationSuffix(ci)}`,
+      `ci         ${ci.state}  ${humanCiResult(ci.result)} (${failed}/${jobs.length} jobs)${truncationSuffix(ci)}${prerequisiteSuffix(ci)}`,
     );
   }
 
@@ -2028,7 +2038,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     const parkCount = parksKnown ? String(providers.parks?.length ?? 0) : "?";
     const entries = providers.state === "unknown" ? "?" : String(providers.entries?.length ?? 0);
     lines.push(
-      `providers  ${providers.state}  chain ${chain} | active parks ${parkCount} | ${entries} entries${truncationSuffix(providers)}`,
+      `providers  ${providers.state}  chain ${chain} | active parks ${parkCount} | ${entries} entries${truncationSuffix(providers)}${prerequisiteSuffix(providers)}`,
     );
   }
 
@@ -2036,7 +2046,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
   if (parked !== undefined) {
     const count = parked.state === "observed" ? String(parked.items?.length ?? 0) : "?";
     lines.push(
-      `parked     ${parked.state}  ${count} parked changes (git-ignored local state)${truncationSuffix(parked)}`,
+      `parked     ${parked.state}  ${count} parked changes (git-ignored local state)${truncationSuffix(parked)}${prerequisiteSuffix(parked)}`,
     );
   }
 
@@ -2054,12 +2064,12 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
           )
         : "?";
     lines.push(
-      `ready      ${ready.state}  ${count} ready-to-merge (merge-ready ${mergeReady})${truncationSuffix(ready)}`,
+      `ready      ${ready.state}  ${count} ready-to-merge (merge-ready ${mergeReady})${truncationSuffix(ready)}${prerequisiteSuffix(ready)}`,
     );
   }
 
   const spend = digest.sections.find((section) => section.id === "spend");
-  if (spend !== undefined) lines.push(spendHumanLine(spend));
+  if (spend !== undefined) lines.push(`${spendHumanLine(spend)}${prerequisiteSuffix(spend)}`);
 
   const typed = digest.sections.find((section) => section.id === "typed-questions");
   if (typed !== undefined) {
@@ -2068,7 +2078,9 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
       typed.state === "unknown" && typed.evidence.reasons.length > 0
         ? ` (${typed.evidence.reasons[0]})`
         : "";
-    lines.push(`questions  ${typed.state}  ${count} open${reason}${truncationSuffix(typed)}`);
+    lines.push(
+      `questions  ${typed.state}  ${count} open${reason}${truncationSuffix(typed)}${prerequisiteSuffix(typed)}`,
+    );
   }
 
   lines.push(attentionLine(digest));
