@@ -1,14 +1,14 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 1.1
+version: 1.2
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-10T21:20:00Z
+last_updated: 2026-11-10T22:40:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M2 planning surface against spec v1.2: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block, each run against base fab46636 before the change so the expected failures are falsifiable; preservation criteria carry retention oracles, whitelists, and negative self-tests. No product code, no test suite, and no tracker write."
+summary: "Docs-only verification of the M2 planning surface against spec v1.3: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 37 acceptance criteria are bound one-to-one to 37 test cases backed by 37 procedures (P01-P37) plus a P00 setup block, each run against base fab46636 before the change so the expected failures are falsifiable; preservation criteria carry retention oracles, whitelists, base-anchored windows, separator-position checks, and negative self-tests. No product code, no test suite, and no tracker write."
 links:
   change_spec: ./chg-GH-284-spec.md
   implementation_plan: ./chg-GH-284-plan.yaml
@@ -23,7 +23,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 ### 1.1 In Scope
 
-- `doc/planning/oss-tooling/backlog.md`: seven new M2 stories (S11-S17), the M2-S4 dependency amendment, the M2-S6 task-plus-dependency amendment, and byte-level preservation of every other entry.
+- `doc/planning/oss-tooling/backlog.md`: seven new M2 stories (S11-S17) inserted at the end of the Epic M2 block, after M2-S9's last content line and before the blank + `---` separator pair, the M2-S4 dependency amendment, the M2-S6 task-plus-dependency amendment, and byte-level preservation of every other entry including the separator and `## Epic M3` heading.
 - `doc/planning/oss-tooling/milestones/m1/commands/`: status-header-only edits on the fourteen pages in spec Appendix B, plus one bounded DESCRIPTION region of at most two adjacent sentences on `entrypoint.md` (DEC-16).
 - `doc/planning/oss-tooling/status.md`: one new dated `2026-11-10` section, four pointer insertions of at most three lines each, and whole-file line retention (no base line removed, reordered, or modified).
 - `doc/planning/oss-tooling/milestones/m2/`: the twelve-document pack (README, architecture, contracts, test-scenarios, journeys, entrypoint delta, six command pages).
@@ -39,7 +39,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 - **G-5 — "restated acceptance criteria" has a semantic residue.** P37 catches `- AC:` blocks and `**Given**` blocks; a paraphrase in prose is not machine-detectable. **Compensation:** reviewer reads the pack for any restated criterion and checks that it references story codes instead. Owner: `@reviewer`.
 - **G-6 — header, pointer, and entrypoint-region wording quality is approximated.** The checks ban `M1 planned`/`M1 milestone planned`, require delivered story codes plus GH references, require four pointers of at most three lines naming `2026-11-10`, and require the enumeration and not-registered statements to stay separate sentences; an ambiguous header or pointer can still pass the tokens. **Compensation:** the reviewer reads the fifteen edited headers, the four pointer insertions, and the corrected DESCRIPTION region once; the spec's reconciliation rule (F-5), F-6, and F-7 are the standards. Owner: `@reviewer`.
 - **G-7 — `pnpm check` proves no-regression, not document correctness.** It can stay green while a story loses a clause. It is a containment gate only; the content procedures carry the requirements.
-- **G-8 — passing preservation controls are not evidence of delivery.** P09, P10, P18, P29, P31, and P34 pass their retention or byte halves on the pre-change tree, and P36's guard half passes because nothing has changed yet. They become evidence only together with the non-vacuity guards and the diff-based procedures; the execution log labels them `PASS (control)`. The whole-file retention oracle replaces the earlier whole-section comparison, which could not coexist with the appended pointers this change requires: zero removals is necessary but not sufficient until additions appear inside the four-window whitelist, so pointer-content judgment moves to G-6 rather than to a byte oracle.
+- **G-8 — passing preservation controls are not evidence of delivery.** P09, P10, P18, P29, P31, and P34 pass their retention or byte halves on the pre-change tree, and P36's guard half passes because nothing has changed yet. They become evidence only together with the non-vacuity guards and the diff-based procedures; the execution log labels them `PASS (control)`. The whole-file retention oracle replaces the earlier whole-section comparison, which could not coexist with the appended pointers this change requires: zero removals is necessary but not sufficient until additions appear inside the base-anchored four-window whitelist, so pointer-content judgment moves to G-6 rather than to a byte oracle.
 - **G-9 — pack content quality is review, not a command.** The procedures prove the pack has the required headings, surfaces, scenario counts, and command sections; they do not prove the architecture is sound, the contracts are internally consistent, or a scenario is the right scenario. **Compensation:** the reviewer reads `architecture.md`, `contracts.md`, `test-scenarios.md`, and `journeys.md` against the ticket's blueprint brief and records the verdict; the story-to-artifact map in the README is the index for that read. Owner: `@reviewer`.
 - **Not applicable:** unit, integration, contract-execution, E2E, performance, migration, telemetry, and security-surface testing. There is no runtime code path, schema, or emitted artifact. Per `.ai/rules/testing-strategy.md`, a docs-only change uses static/diff and content checks plus the repository guards, and adds no committed test code; NFR-1 forbids touching `tests/**` and `scripts/**` anyway.
 
@@ -47,7 +47,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.2 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-16, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
+| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v1.3 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (37 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-17, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
 | [`chg-GH-284-pm-notes.yaml`](./chg-GH-284-pm-notes.yaml) | Binding decisions: S17 scope, daemon resolution, 14+1 reconciliation shape, history handling, no distribution marker, index registration, and the v1.1 reopen that replaced the non-existent mermaid validator |
 | GH-284 ticket (`juliusz-cwiakalski/agentic-delivery-os#284`) | Normative story text for the clause anchors in P02/P05 and the S17 acceptance list; read at authoring time |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review, never to the permanent suite |
@@ -70,7 +70,7 @@ Forward traceability: every AC appears exactly once, and every TC maps to exactl
 |---|---|---|---|
 | AC-F1-1 | Seven new M2 stories land in order with the story shape | TC-M2PLAN-001 | Covered |
 | AC-F1-2 | Clause anchors for S11-S16 are present in each story entry | TC-M2PLAN-002 | Covered |
-| AC-F1-3 | Append-only placement and hunk containment in the backlog | TC-M2PLAN-003 | Covered |
+| AC-F1-3 | Append-only placement inside the Epic M2 block, before the `---` separator, with hunk containment | TC-M2PLAN-003 | Covered |
 | AC-F2-1 | S17 entry carries goal, six task clauses, seven ACs, and the full dependency set | TC-M2PLAN-004 | Covered |
 | AC-F2-2 | S17 six task clauses are present and none is softened | TC-M2PLAN-005 | Covered |
 | AC-F2-3 | S17 acceptance block keeps seven independently identifiable criteria | TC-M2PLAN-006 | Covered |
@@ -200,7 +200,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 |---|---|---|---|---|---|---|
 | TC-M2PLAN-001 | Seven new M2 stories land in order with the story shape | Happy Path | Critical | High | AC-F1-1 | Static/diff + content |
 | TC-M2PLAN-002 | Clause anchors for S11-S16 are present in each story entry | Happy Path | Critical | High | AC-F1-2 | Static/diff + content |
-| TC-M2PLAN-003 | Append-only placement and hunk containment in the backlog | Regression | Critical | High | AC-F1-3 | Static/diff + content |
+| TC-M2PLAN-003 | Append-only placement inside the Epic M2 block, before the `---` separator, with hunk containment | Regression | Critical | High | AC-F1-3 | Static/diff + content |
 | TC-M2PLAN-004 | S17 entry carries goal, six task clauses, seven ACs, and the full dependency set | Happy Path | Critical | High | AC-F2-1 | Static/diff + content |
 | TC-M2PLAN-005 | S17 six task clauses are present and none is softened | Happy Path | Critical | High | AC-F2-2 | Static/diff + content |
 | TC-M2PLAN-006 | S17 acceptance block keeps seven independently identifiable criteria | Happy Path | Important | High | AC-F2-3 | Static/diff + content |
@@ -262,7 +262,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Expected Outcome**:
 
 - `m2_story_headings=7 new_found=7/7 order=OK`; `shape_ok=7/7`; exit 0.
-- Each new entry carries `- Goal:`, `- Tasks:`, `- AC:`, `- Depends on:` and no `- Ticket:` line.
+- Each new entry carries `- Goal:`, `- Tasks:`, `- AC:`, `- Depends on:` and no `- Ticket:` line; S17 is the seventh and the block still closes with the `---` separator before `## Epic M3` (the separator bytes and position are asserted by P03 under AC-F1-3/DEC-17).
 
 **Notes / Clarifications**:
 
@@ -299,7 +299,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `M2-S11=0/10`, `M2-S12=0/15`, `M2-S13=0/11`, `M2-S14=0/21`, `M2-S15=0/12`, `M2-S16=0/12`; `clauses_present=0/81`; verdict FAIL.
 - Result label for Section 10: **FAIL (change absent)**.
 
-#### TC-M2PLAN-003 - Append-only placement and hunk containment in the backlog
+#### TC-M2PLAN-003 - Append-only placement inside the Epic M2 block, before the `---` separator, with hunk containment
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -317,16 +317,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P03** (Section 7.1). The insertion window has two sources: its start is the line after M2-S9's end in the **base snapshot** (1170), and its end is the line before `## Epic M3` in the **head file**.
-2. Confirm `window_empty=no`, `backlog_hunks>=1`, `non_vacuous=yes`, and `hunks: inside=N outside=0`; the classifier self-tests must print `3/3` first.
+1. Run procedure **P03** (Section 7.1). The insertion window has two sources: its start is the line after M2-S9's last content line in the **base snapshot** (1167), and its end is the **head** `---` line that precedes `## Epic M3`, minus one.
+2. Confirm `window_empty=no`, `separator_sequence=identical`, `backlog_hunks>=1`, `non_vacuous=yes`, and `hunks: inside=N outside=0`; the classifier self-tests must print `4/4`, including the negative fixture that puts an insertion below the separator and the separator-deletion probe.
 
 **Expected Outcome**:
 
-- `insertion window: start=base M2-S9 end+1=1170 end=head Epic M3-1=N window=1170:N` with `window_empty=no`; `backlog_hunks=N` with `N>=1`; every hunk inside one of the seven new entries or the two amended entries; `hunks: inside=N outside=0`; `hunk confinement OK`; `classifier_self_tests=3/3`; exit 0.
+- `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=N window=1167:N` with `window_empty=no`; `separator_sequence=identical`; `backlog_hunks=N` with `N>=1`; every hunk inside one of the seven inserted entries or the two amended entries; `hunks: inside=N outside=0`; `hunk confinement OK`; `classifier_self_tests=4/4`; `insertion_below_separator=never`; exit 0.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `insertion window: start=base M2-S9 end+1=1170 end=head Epic M3-1=1169 window=1170:1169`; `window_empty=yes (expected before the change)`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=3/3`. The classifier and the base-derived start are proven live; the tree has nothing to classify yet.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The window is non-empty on the base (it admits the insertion point before the blank and separator); the tree has no hunk yet.
 - Result label for Section 10: **FAIL (vacuous: no hunk)**.
 
 #### TC-M2PLAN-004 - S17 entry carries goal, six task clauses, seven ACs, and the full dependency set
@@ -507,7 +507,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree; the non-vacuity half is supplied by P01 and by the mutation control.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged.
 - Result label for Section 10: **PASS (control)**.
 
 #### TC-M2PLAN-010 - Frontmatter, reading guide, and cross-cutting principles are byte-identical
@@ -770,17 +770,17 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P18** (Section 7.1), which uses whole-file line retention plus an added-line whitelist.
-2. Confirm `removed_lines=0`, `added_lines>0`, `pointer_runs=4`, `pointer_windows=4`, `bad_runs=0`, and that the three self-tests fire (`negative_modified=detected`, `negative_outside=detected`, `positive_pointer=permitted`).
+1. Run procedure **P18** (Section 7.1), which uses whole-file line retention plus an added-line whitelist. The paragraph, scheduling-section, and items windows are anchored to the **base** statement ends and mapped through the insertion offset, so an appended pointer cannot become the last non-blank line and shift its own window (D6).
+2. Confirm `removed_lines=0`, `added_lines>0`, `pointer_runs=4`, `pointer_windows=4`, `bad_runs=0`, that the three self-tests fire (`negative_modified=detected`, `negative_outside=detected`, `positive_pointer=permitted`), and that `reference_head_fixture=OK`.
 3. Do not use a whole-section `cmp`; the oracle prints `oracle=whole-file-line-retention`.
 
 **Expected Outcome**:
 
-- `windows:` line names the new-section range and the four pointer windows; `removed_lines=0`; `added_lines>0`; `section_lines>0`; `pointer_runs=4`; `pointer_windows=4`; `bad_runs=0`; `retention_oracle=OK`; `oracle=whole-file-line-retention (whole-section cmp not used)`; the three self-tests report `detected`, `detected`, `permitted`.
+- `windows(base-anchored):` names the new-section range and the four base-anchored pointer windows; `removed_lines=0`; `added_lines>0`; `section_lines>0`; `pointer_runs=4`; `pointer_windows=4`; `bad_runs=0`; `retention_oracle=OK`; `oracle=whole-file-line-retention (whole-section cmp not used)`; the three self-tests report `detected`, `detected`, `permitted`; `reference_head_fixture=OK` with `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`. Retention passes but the file has no addition, so the oracle is non-vacuous only after the change.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `windows(base-anchored): newsec=0..-1 title=2..4 paragraph=54..56 scheduling=148..150 items=101..103`; `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`; `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`; `reference_head_fixture=OK`. Retention passes but the file has no addition; the reference fixture proves an appended pointer is counted by its base-anchored window rather than shifting it.
 - Result label for Section 10: **FAIL (vacuous: no added line); retention PASS (control)**.
 
 #### TC-M2PLAN-019 - The M2 pack contains exactly the twelve documents and the README maps each one
@@ -1256,11 +1256,11 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Expected Outcome**:
 
-- `retention_oracle=OK`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=4/4`; zero removed, reordered, or modified base lines; every added line inside the new section or one of the four pointer insertions.
+- `retention_oracle=OK`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=4/4`; `sed_line_address_0_errors=0`; zero removed, reordered, or modified base lines; every added line inside the new section or one of the four pointer insertions.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`. Zero removals is a passing retention control; there are no additions or pointers yet.
+- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. Zero removals is a passing retention control; there are no additions or pointers yet, and the title group is addressable without a `sed` line-address-0 error.
 - Result label for Section 10: **FAIL (change absent); retention PASS (control)**.
 
 #### TC-M2PLAN-035 - Clause fidelity counts are zero missing, zero added, zero changed meaning
@@ -1472,17 +1472,23 @@ echo "missing=$((tot-pres)) total=$tot" > /tmp/gh284/p02.env
 
 ```bash
 range_of() { local h="$1"; local s n; s=$(grep -n -F "$h" "$BL" | cut -d: -f1); [ -z "$s" ] && { echo ""; return; }; n=$(awk -v s="$s" 'NR>s && /^#{2,3} /{print NR; exit}' "$BL"); echo "$s $(( ${n:-$((s+1))} - 1 ))"; }
-# Amended-entry ranges come from HEAD; the insertion window is anchored across revisions:
-#   start = the line after M2-S9's end in the BASE snapshot (before the change);
-#   end   = the line before `## Epic M3` in the HEAD file (after the change).
 r4=$(range_of '### M2-S4 Board'); r6=$(range_of '### M2-S6 Metrics and spend')
+# Insertion window (spec v1.3 / DEC-17): the stories belong INSIDE the Epic M2 block.
+#   start = the line after M2-S9's last content line in the BASE snapshot (1167);
+#   end   = the head revision's `---` line that precedes `## Epic M3`, minus one.
 s9b=$(grep -n '^### M2-S9 ' /tmp/gh284/base-backlog.md | cut -d: -f1)
-s9end_base=$(awk -v s="$s9b" 'NR>s && /^#{2,3} /{print NR-1; exit}' /tmp/gh284/base-backlog.md)
+s9last_base=$(awk -v s="$s9b" 'NR>s { if ($0 ~ /^---$/ || $0 ~ /^## /) exit; if (NF>0) l=NR } END{print l+0}' /tmp/gh284/base-backlog.md)
 m3h=$(grep -n '^## Epic M3' "$BL" | cut -d: -f1)
-newwin="$((s9end_base+1)):$((m3h-1))"
-echo "amended ranges (head): M2-S4=[${r4:-absent}] M2-S6=[${r6:-absent}]"
-echo "insertion window: start=base M2-S9 end+1=$((s9end_base+1)) end=head Epic M3-1=$((m3h-1)) window=$newwin"
-[ "$((s9end_base+1))" -le "$((m3h-1))" ] && echo "window_empty=no" || echo "window_empty=yes (expected before the change)"
+sepline=$(awk -v m="$m3h" 'NR<m && /^---$/{l=NR} END{print l+0}' "$BL")
+nes=$((s9last_base+1)); nee=$((sepline-1)); newwin="$nes:$nee"
+echo "insertion window: start=base M2-S9 last content+1=$nes end=head separator-1=$nee window=$newwin"
+[ "$nes" -le "$nee" ] && echo "window_empty=no" || echo "window_empty=yes"
+# The block-closing separator sequence (`---`, blank, `## Epic M3`) must be unchanged in content and order.
+m3b=$(grep -n '^## Epic M3' /tmp/gh284/base-backlog.md | cut -d: -f1)
+sep_base=$(awk -v m="$m3b" 'NR<m && /^---$/{l=NR} END{print l+0}' /tmp/gh284/base-backlog.md)
+base_seq=$(sed -n "${sep_base},$((sep_base+2))p" /tmp/gh284/base-backlog.md)
+head_seq=$(sed -n "${sepline},$((sepline+2))p" "$BL")
+[ "$base_seq" = "$head_seq" ] && echo "separator_sequence=identical" || { echo "separator_sequence=CHANGED"; printf '%s\n' "$head_seq"; }
 hunk_guard() { # $1..$n = "start:end" allowed ranges; hunk headers on stdin
   local -a R=("$@"); local inside=0 outside=0 h c d last ok i a b
   while IFS= read -r h; do
@@ -1507,14 +1513,15 @@ if [ "$hc" -ge 1 ]; then
 else
   echo "FAIL: no backlog hunk (change absent)"; echo "non_vacuous=no"
 fi
-# matcher self-tests: an amended-entry hunk is inside; an Epic M3 hunk is not;
-# and a synthetic later head (Epic M3 moved down) admits an insertion at the base-derived start.
+# classifier self-tests: start-of-window and amended-entry hunks are inside; an insertion
+# below the separator and a deletion of the separator line are outside.
 tests_ok=0
+printf '@@ -%d,0 +%d,1 @@\n' "$nes" "$nes" | hunk_guard "$newwin" >/dev/null && tests_ok=$((tests_ok+1))
 printf '@@ -%d,1 +%d,1 @@\n' "${r4%% *}" "${r4%% *}" | hunk_guard "${r4/ /:}" >/dev/null && tests_ok=$((tests_ok+1))
-printf '@@ -%d,1 +%d,1 @@\n' "$m3h" "$m3h" | hunk_guard "${r4/ /:}" >/dev/null || tests_ok=$((tests_ok+1))
-fakewin="$((s9end_base+1)):$((m3h+40-1))"
-printf '@@ -%d,0 +%d,2 @@\n' "$((s9end_base+1))" "$((s9end_base+1))" | hunk_guard "$fakewin" >/dev/null && tests_ok=$((tests_ok+1))
-echo "classifier_self_tests=$tests_ok/3"
+printf '@@ -%d,0 +%d,1 @@\n' "$((sepline+2))" "$((sepline+2))" | hunk_guard "$newwin" >/dev/null || tests_ok=$((tests_ok+1))
+printf '@@ -%d,1 +%d,0 @@\n' "$sepline" "$sepline" | hunk_guard "$newwin" >/dev/null || tests_ok=$((tests_ok+1))
+echo "classifier_self_tests=$tests_ok/4"
+echo "insertion_below_separator=never (negative fixture at separator+2 outside)"
 [ "$hc" -ge 1 ] && echo "P03 verdict: PASS" || { echo "P03 verdict: FAIL (vacuous: no hunk)"; }
 ```
 
@@ -1786,23 +1793,35 @@ echo "g4_pointer=$g4p/1"
 **P18 — whole-file line retention**
 
 ```bash
+head_line_for_base() { # $1=base $2=head $3=base line; pure insertions only (retention precondition)
+  local b="$3" off
+  off=$(diff -U0 "$1" "$2" | sed -nE 's/^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@.*/\1 \6/p' \
+    | awk -v b="$b" '{a=$1+0; d=($2==""?1:$2); if (a < b) s+=d} END{print s+0}')
+  echo $(( b + off ))
+}
 retention_oracle() { # $1=base file, $2=head file
   local base="$1" head="$2" removed added newsec newsec_end
   removed=$(diff --old-line-format='%L' --new-line-format='' --unchanged-line-format='' "$base" "$head" | wc -l)
   added=$(diff --old-line-format='' --new-line-format='%L' --unchanged-line-format='' "$base" "$head" | wc -l)
   newsec=$(grep -n '^## .*2026-11-10' "$head" | head -1 | cut -d: -f1)
   if [ -n "$newsec" ]; then newsec_end=$(awk -v s="$newsec" 'NR>s && /^## /{print NR-1; exit}' "$head"); [ -z "$newsec_end" ] && newsec_end=$(wc -l < "$head"); else newsec=0; newsec_end=-1; fi
-  local p2 p2e g3 g3e g4 g4e last
-  p2=$(grep -n 'M1 delivery starts now and runs beside' "$head" | head -1 | cut -d: -f1)
-  p2e=$(awk -v s="${p2:-1}" 'NR>=s && NF==0{print NR-1; exit}' "$head"); [ -z "$p2e" ] && p2e=${p2:-0}
-  g3=$(grep -n '^## M1 delivery: scheduling engine delivered (2026-11-07)' "$head" | cut -d: -f1)
-  g3e=$(awk -v s="${g3:-1}" 'NR>s && /^## /{print NR-1; exit}' "$head")
-  last=$(awk -v s="${g3:-1}" -v e="${g3e:-0}" 'NR>=s && NR<=e && NF>0{l=NR} END{print l+0}' "$head")
-  w1s=2; w1e=4; w2s=$(( ${p2e:-0} + 1 )); w2e=$(( ${p2e:-0} + 3 )); w3s=$(( ${last:-0} + 1 )); w3e=$(( ${last:-0} + 3 ))
-  g4=$(grep -n '^4\. \*\*Memory consolidation pass' "$head" | head -1 | cut -d: -f1)
-  g4e=$(awk -v s="${g4:-1}" 'NR<s && NF>0{l=NR} END{print l+0}' "$head")
-  w4s=$(( ${g4e:-0} + 1 )); w4e=$(( ${g4e:-0} + 3 ))
-  echo "windows: newsec=${newsec:-0}..${newsec_end} title=$w1s..$w1e paragraph=$w2s..$w2e scheduling=$w3s..$w3e items=$w4s..$w4e"
+  # Pointer windows are anchored to the BASE statement ends and mapped through the
+  # insertion offset, so an appended pointer cannot become the "last non-blank line"
+  # and shift its own window past itself (D6).
+  local bp bp2 bpe bg3 bg3e bg3last bg4 bg4e hpe hg3 hg4
+  bp2=$(grep -n 'M1 delivery starts now and runs beside' "$base" | head -1 | cut -d: -f1)
+  bpe=$(awk -v s="${bp2:-1}" 'NR>=s && NF==0{print NR-1; exit}' "$base"); [ -z "$bpe" ] && bpe=${bp2:-0}
+  bg3=$(grep -n '^## M1 delivery: scheduling engine delivered (2026-11-07)' "$base" | cut -d: -f1)
+  bg3e=$(awk -v s="${bg3:-1}" 'NR>s && /^## /{print NR-1; exit}' "$base")
+  bg3last=$(awk -v s="${bg3:-1}" -v e="${bg3e:-0}" 'NR>=s && NR<=e && NF>0{l=NR} END{print l+0}' "$base")
+  bg4=$(grep -n '^4\. \*\*Memory consolidation pass' "$base" | head -1 | cut -d: -f1)
+  bg4e=$(awk -v s="${bg4:-1}" 'NR<s && NF>0{l=NR} END{print l+0}' "$base")
+  hpe=$(head_line_for_base "$base" "$head" "$bpe")
+  hg3=$(head_line_for_base "$base" "$head" "$bg3last")
+  hg4=$(head_line_for_base "$base" "$head" "$bg4e")
+  local w1s=2 w1e=4 w2s w2e w3s w3e w4s w4e
+  w2s=$((hpe+1)); w2e=$((hpe+3)); w3s=$((hg3+1)); w3e=$((hg3+3)); w4s=$((hg4+1)); w4e=$((hg4+3))
+  echo "windows(base-anchored): newsec=${newsec:-0}..${newsec_end} title=$w1s..$w1e paragraph=$w2s..$w2e scheduling=$w3s..$w3e items=$w4s..$w4e"
   local -a alines; mapfile -t alines < <(diff -U0 "$base" "$head" | awk '
     /^@@/ { l=$0; sub(/^@@ -[0-9]+(,[0-9]+)? \+/,"",l); sub(/ .*/,"",l); sub(/,.*/,"",l); c=l+0; next }
     /^\+/ && !/^\+\+\+/ { print c; c++ }')
@@ -1839,13 +1858,29 @@ retention_oracle() { # $1=base file, $2=head file
 if retention_oracle /tmp/gh284/base-status.md "$ST"; then ro=1; else ro=0; fi
 echo "retention_oracle=$([ "$ro" -eq 1 ] && echo OK || echo FAILED)"
 echo "oracle=whole-file-line-retention (whole-section cmp not used)"
-# self-tests: a modified base line is removed; an unlisted append is outside; a <=3-line pointer after the title is permitted
+# self-tests: modified base line and outside append are rejected; a <=3-line title pointer is accepted
 sed 's/^Date: 2026-11-01/Date: 2026-11-02/' /tmp/gh284/base-status.md > /tmp/gh284/f-mod.md
 retention_oracle /tmp/gh284/base-status.md /tmp/gh284/f-mod.md > /tmp/gh284/st-mod.txt; grep -q 'removed_lines=1' /tmp/gh284/st-mod.txt && echo "negative_modified=detected" || echo "negative_modified=FAILED"
 cp /tmp/gh284/base-status.md /tmp/gh284/f-out.md; echo "random line" >> /tmp/gh284/f-out.md
 retention_oracle /tmp/gh284/base-status.md /tmp/gh284/f-out.md > /tmp/gh284/st-out.txt; grep -q 'bad_runs=1' /tmp/gh284/st-out.txt && echo "negative_outside=detected" || echo "negative_outside=FAILED"
 cp /tmp/gh284/base-status.md /tmp/gh284/f-ptr.md; sed -i '2i See the 2026-11-10 M2 planning snapshot.' /tmp/gh284/f-ptr.md
 retention_oracle /tmp/gh284/base-status.md /tmp/gh284/f-ptr.md > /tmp/gh284/st-ptr.txt; grep -q 'pointer_runs=1' /tmp/gh284/st-ptr.txt && echo "positive_pointer=permitted" || echo "positive_pointer=FAILED"
+# reference-shaped head fixture: four pointers plus a new dated section; must be accepted
+cp /tmp/gh284/base-status.md /tmp/gh284/f-ref.md
+p2b=$(grep -n 'M1 delivery starts now and runs beside' /tmp/gh284/f-ref.md | head -1 | cut -d: -f1)
+p2e=$(awk -v s="$p2b" 'NR>=s && NF==0{print NR-1; exit}' /tmp/gh284/f-ref.md)
+g3b=$(grep -n '^## M1 delivery: scheduling engine delivered (2026-11-07)' /tmp/gh284/f-ref.md | cut -d: -f1)
+g3e=$(awk -v s="$g3b" 'NR>s && /^## /{print NR-1; exit}' /tmp/gh284/f-ref.md)
+g3l=$(awk -v s="$g3b" -v e="$g3e" 'NR>=s && NR<=e && NF>0{l=NR} END{print l+0}' /tmp/gh284/f-ref.md)
+g4b=$(grep -n '^4\. \*\*Memory consolidation pass' /tmp/gh284/f-ref.md | cut -d: -f1)
+g4e=$(awk -v s="$g4b" 'NR<s && NF>0{l=NR} END{print l+0}' /tmp/gh284/f-ref.md)
+for spec in "$g3l:See the 2026-11-10 M2 planning snapshot." "$g4e:See the 2026-11-10 M2 planning snapshot." "$p2e:See the 2026-11-10 M2 planning snapshot." "1:M2 planning snapshot pointer: see 2026-11-10."; do
+  ln=${spec%%:*}; txt=${spec#*:}; sed -i "$((ln+1))i $txt" /tmp/gh284/f-ref.md
+done
+printf '## M2 planning snapshot (2026-11-10)\n\nM1 delivered 23 of 23 stories.\n' >> /tmp/gh284/f-ref.md
+retention_oracle /tmp/gh284/base-status.md /tmp/gh284/f-ref.md > /tmp/gh284/st-ref.txt
+sed -n 's/^whitelist: /reference_whitelist: /p' /tmp/gh284/st-ref.txt
+grep -q 'pointer_runs=4' /tmp/gh284/st-ref.txt && grep -q 'pointer_windows=4' /tmp/gh284/st-ref.txt && grep -q 'bad_runs=0' /tmp/gh284/st-ref.txt && echo "reference_head_fixture=OK" || { echo "reference_head_fixture=FAILED"; cat /tmp/gh284/st-ref.txt; }
 [ "$ro" -eq 1 ] && echo "P18 verdict: PASS" || echo "P18 verdict: FAIL (vacuous: no added line)"
 ```
 
@@ -2056,18 +2091,19 @@ if ! declare -f retention_oracle >/dev/null; then echo "FAIL: run P18 first (def
   echo "oracle=whole-file-line-retention (whole-section cmp not used)"
   echo "retention_oracle=$([ "$ro" -eq 1 ] && echo OK || echo FAILED)"
 fi
-# the four groups each carry one pointer: count anchors in HEAD and pointers within 3 lines after each anchor end
-g1=1
+# the four groups each carry one pointer; clamp the start so the title group (line 1) is addressable
+pcount=0; : > /tmp/gh284/p34.err
 g2e=$(grep -n 'remains the critical path for M0 exit\.' "$ST" | head -1 | cut -d: -f1)
 g3e=$(awk '/^## M1 delivery: scheduling engine delivered \(2026-11-07\)/{f=1} f&&/^## /&&!/scheduling engine delivered/{print NR-1; exit}' "$ST")
-g4e=$(grep -n '^4\. \*\*Memory consolidation pass' "$ST" | cut -d: -f1)
+g4e=$(grep -n '^4\. \*\*Memory consolidation pass' "$ST" | head -1 | cut -d: -f1)
 [ -n "$g4e" ] && g4e=$((g4e-1))
-pcount=0
-for e in "$g1" "$g2e" "$g3e" "$g4e"; do
+for e in 1 "$g2e" "$g3e" "$g4e"; do
   [ -z "$e" ] && continue
-  ptr "$(sed -n "$((e-1)),$((e+4))p" "$ST")" && pcount=$((pcount+1))
+  start=$(( e > 1 ? e - 1 : 1 ))
+  ptr "$(sed -n "${start},$((e+4))p" "$ST" 2>>/tmp/gh284/p34.err)" && pcount=$((pcount+1))
 done
 echo "pointer_groups=$pcount/4"
+echo "sed_line_address_0_errors=$(grep -c 'line address 0' /tmp/gh284/p34.err || true)"
 [ "${ro:-0}" -eq 1 ] && [ "$pcount" -eq 4 ] && echo "P34 verdict: PASS" || echo "P34 verdict: FAIL (change absent)"
 ```
 
@@ -2118,7 +2154,7 @@ echo; echo "##### done"
 |---|---|---|---|---|---|
 | TC-M2PLAN-001 | AC-F1-1 | P01 | `bash` block **P01** (Section 7.1) | Manual Only — uncommitted procedure | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; verdict FAIL. |
 | TC-M2PLAN-002 | AC-F1-2 | P02 | `bash` block **P02** (Section 7.1) | Manual Only — uncommitted procedure | `M2-S11=0/10`, `M2-S12=0/15`, `M2-S13=0/11`, `M2-S14=0/21`, `M2-S15=0/12`, `M2-S16=0/12`; `clauses_present=0/81`; verdict FAIL. |
-| TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 end+1=1170 end=head Epic M3-1=1169 window=1170:1169`; `window_empty=yes (expected before the change)`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=3/3`. |
+| TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. |
 | TC-M2PLAN-004 | AC-F2-1 | P04 | `bash` block **P04** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent`; verdict FAIL. |
 | TC-M2PLAN-005 | AC-F2-2 | P05 | `bash` block **P05** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | AC-F2-3 | P06 | `bash` block **P06** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent ac_items=0/7`; `ac_items=0`. |
@@ -2133,7 +2169,7 @@ echo; echo "##### done"
 | TC-M2PLAN-015 | AC-F6-1 | P15 | `bash` block **P15** (Section 7.1) | Manual Only — uncommitted procedure | `observed_families=16`; `enumerated_families=14`; `families_not_enumerated=coordinator dispatch`; `dispatch=claimed-not-registered (FAIL)`; `not_registered_extra_families= dispatch`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`; `positive_two_sentence=OK`; `negative_merged=detected`. |
 | TC-M2PLAN-016 | AC-F7-1 | P16 | `bash` block **P16** (Section 7.1) | Manual Only — uncommitted procedure | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. |
 | TC-M2PLAN-017 | AC-F7-2 | P17 | `bash` block **P17** (Section 7.1) | Manual Only — uncommitted procedure | All four groups retain their bytes (`yes`), but every pointer check is `no` and `g4_pointer=0/1`. |
-| TC-M2PLAN-018 | AC-F7-3 | P18 | `bash` block **P18** (Section 7.1) | Manual Only — uncommitted procedure | `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`. |
+| TC-M2PLAN-018 | AC-F7-3 | P18 | `bash` block **P18** (Section 7.1) | Manual Only — uncommitted procedure | `windows(base-anchored): newsec=0. |
 | TC-M2PLAN-019 | AC-F8-1 | P19 | `bash` block **P19** (Section 7.1) | Manual Only — uncommitted procedure | `pack_files=0/12`; `actual_files=0`; `README=absent`. |
 | TC-M2PLAN-020 | AC-F8-2 | P20 | `bash` block **P20** (Section 7.1) | Manual Only — uncommitted procedure | `architecture=absent`. |
 | TC-M2PLAN-021 | AC-F8-3 | P21 | `bash` block **P21** (Section 7.1) | Manual Only — uncommitted procedure | `contracts=absent`. |
@@ -2149,7 +2185,7 @@ echo; echo "##### done"
 | TC-M2PLAN-031 | AC-NFR4-1 | P31 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary and `exit=0` |
 | TC-M2PLAN-032 | AC-NFR5-1 | P32 | `TMPDIR="$(git rev-parse --show-toplevel)/../.tmp-gh284" pnpm check` | Existing guard — no change | `pnpm check` exit code and the last successful stage |
 | TC-M2PLAN-033 | AC-NFR6-1 | P33 | `bash` block **P33** (Section 7.1) | Manual Only — uncommitted procedure | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10)`; `inventory=c4:0/3 flows:0/6 park:0/1`. |
-| TC-M2PLAN-034 | AC-NFR7-1 | P34 | `bash` block **P34** (Section 7.1) | Manual Only — uncommitted procedure | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`. |
+| TC-M2PLAN-034 | AC-NFR7-1 | P34 | `bash` block **P34** (Section 7.1) | Manual Only — uncommitted procedure | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. |
 | TC-M2PLAN-035 | AC-NFR8-1 | P35 | `bash` block **P35** (Section 7.1) | Manual Only — uncommitted procedure | `P02 missing=81 total=81`; `P05 missing=6`; `P06 ac_items=0`; `missing_clauses=87`; `added_criteria=n/a (S17 absent)`; `changed_meaning=manual clause-by-clause review (declared gap G-1)`; verdict FAIL. |
 | TC-M2PLAN-036 | AC-NFR9-1 | P36 | `bun run scripts/checks/forbidden-literals.ts` + added-line scan | Existing guard plus uncommitted scan | `0 violations`, `seed_hits=0` |
 | TC-M2PLAN-037 | AC-NFR10-1 | P37 | `bash` block **P37** (Section 7.1) | Manual Only — uncommitted procedure | `changed_planning_files=0`; `broken_links=0`; `restated_ac_blocks=0`; `non_vacuous=no`. |
@@ -2170,7 +2206,7 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | P12 prints `MISSING` | A remainder lost its owner | Point `board` at M2-S4, `watchdog` at M2-S2, `mcp` at M3-S2. |
 | P13 prints `Current=PRESENT` or a missing header token | The daemon page still overclaims reachability (AC-F5-3) | State engine delivered by M1-S18 (GH-238), command not mounted, registration in the M2 delta note. |
 | P09/P10/P29 show any changed heading, body, or region | Backlog preservation broken (AC-F4-1/AC-F4-2/AC-NFR2-1) | Restore the region byte for byte; the message names the story or region. |
-| P03 prints `OUTSIDE` or `non_vacuous=no` | A backlog hunk escaped the new/amended entries, or no hunk exists | Revert the escaping hunk; a zero-hunk run is a missing deliverable. |
+| P03 prints `OUTSIDE`, `separator_sequence=CHANGED`, or `non_vacuous=no` | A backlog hunk escaped the inserted/amended entries, the insertion fell below the `---` separator, or no hunk exists | Move the insertion inside the Epic M2 block before the separator; a zero-hunk run is a missing deliverable. |
 | P07/P08 print `unexpected_lines>0` or a changed Goal/AC | An amendment touched more than the allowed lines (AC-F3-1/AC-F3-2) | Restore the untouched lines byte for byte. |
 | P02/P05 print `MISSING` | A ticket clause has no anchor in the story (AC-F1-2/AC-F2-2) | Restore the clause; then run the manual read (G-1). |
 | P35 prints `missing_clauses>0` | Fidelity is incomplete (AC-NFR8-1) | Restore the missing clause anchors; do not add a criterion. |
@@ -2178,7 +2214,8 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | P04/P06 print a missing dependency or fewer than seven ACs | The S17 entry is incomplete (AC-F2-1/AC-F2-3) | Restore the six dependencies and the seven-item numbered list. |
 | P16 prints `2026-11-10 section=absent` or a marker `MISSING` | The status snapshot is absent or incomplete (AC-F7-1) | Add the section; include 23/23 under a real alternation (no literal `|` in the phrase), the M2 state, #268/#280, and the maintenance convention. |
 | P17 prints a pointer `no` or `g4_pointer=0/1` | A superseded statement group lacks its one appended pointer (AC-F7-2) | Insert one pointer of at most three non-blank lines after the group (items 1-3 are one group), naming `2026-11-10`; do not rewrite original lines. |
-| P18/P34 print `removed_lines>0`, `bad_runs>0`, `pointer_runs<4`, or `pointer_windows<4` | A base line was removed, reordered, or modified, or an addition sits outside the whitelist (AC-F7-3/AC-NFR7-1) | Restore the base line byte for byte; confine additions to the new dated section or one of the four pointer insertions. Never substitute a whole-section `cmp`. |
+| P18/P34 print `removed_lines>0`, `bad_runs>0`, `pointer_runs<4`, or `pointer_windows<4` | A base line was removed, reordered, or modified, or an addition sits outside the base-anchored whitelist (AC-F7-3/AC-NFR7-1) | Restore the base line byte for byte; confine additions to the new dated section or one of the four base-anchored pointer windows. Never substitute a whole-section `cmp`. |
+| P34 prints `sed_line_address_0_errors>0` or `pointer_groups<4` because the title group is unreachable | The start address was not clamped to line 1 (D7) | Use `start=$(( e > 1 ? e - 1 : 1 ))` so the title group is addressable. |
 | P19/P20/P21/P22/P23 print `absent` or a missing marker | A pack document is missing or incomplete (AC-F8-*) | Add the document or the named section; keep the file set at exactly twelve. |
 | P22 prints `stories_below_two>0` or `total_scenarios<32` | Scenario coverage is short (AC-F8-4) | Add scenarios for the named story; keep the twelve mandatory anchors. |
 | P24/P25 print a header or section failure | A command contract is not man-page complete (AC-F9-1/AC-F9-2) | Restore `Status: Proposed (M2)`, `<binary>`, and the seven sections. |
@@ -2198,14 +2235,14 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 |---|---|---|
 | TR-1 | A prose oracle lets a lost clause pass as complete | 87 mechanical anchors (P02/P05) plus the recorded clause-by-clause read (G-1) |
 | TR-2 | A preservation control passes because nothing changed | Non-vacuity guards in P03/P14/P18/P28/P34/P36/P37 and mutation controls in P07/P09/P15/P18; the execution log labels controls |
-| TR-3 | A hunk-containment check silently accepts the next heading line or a moved entry | P03 derives the insertion start from the base snapshot and the end from the head Epic M3 line; P14 compares page hunks and P30 compares body bytes independently |
+| TR-3 | A hunk-containment check silently accepts the next heading line, a moved entry, or an insertion below the separator | P03 derives the start from the base M2-S9 last content line and the end from the head `---` before Epic M3, checks the separator sequence, and runs a below-separator negative fixture; P14 compares page hunks and P30 compares body bytes independently |
 | TR-4 | The entrypoint check hardcodes a family list and drifts from the product | P15 derives the set from live root `--help` |
 | TR-5 | The history oracle reverts to a whole-section `cmp`, which cannot coexist with permitted pointer insertions | P18/P34 use whole-file line retention plus an added-line whitelist; a removed, reordered, or modified base line fails |
 | TR-6 | `pnpm check` is green but unrelated to the documents | Content procedures carry the ACs; P32 is a no-regression gate only (G-7) |
 | TR-7 | The guard is silent on `doc/planning/**`, so "guard green" is misread as full hygiene | P31 records the guard's path set and P36 scans added lines with the production matcher |
 | TR-8 | The diagram check proves structure, not parseability | G-3 records the limit and assigns a rendered-preview read to the reviewer |
 | TR-9 | A check is run on a moving base | Three-dot diff plus snapshots from the pinned base `fab46636`; re-materialise in P00 if the base advances |
-| TR-10 | A retention oracle that only counts removals accepts a pointer appended in the wrong place, or two pointers in one group | Whitelist windows (new section plus four pointer windows), `pointer_runs=4`, `pointer_windows=4`, and three self-tests; the reviewer confirms pointer wording (G-6) |
+| TR-10 | A retention oracle that only counts removals accepts a pointer appended in the wrong place, or a head-anchored window shifts past the pointer it should count | Base-anchored whitelist windows (new section plus four pointer windows), `pointer_runs=4`, `pointer_windows=4`, three self-tests, and a reference-shaped-head fixture; the reviewer confirms pointer wording (G-6) |
 
 ### 8.2 Assumptions
 
@@ -2224,7 +2261,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 
 | ID | Question | Blocking? | Owner | Disposition |
 |---|---|---|---|---|
-| — | None outstanding | — | — | Closed by spec v1.2 and the pm-notes decisions |
+| — | None outstanding | — | — | Closed by spec v1.3 and the pm-notes decisions |
 
 ## 9. Plan Revision Log
 
@@ -2232,6 +2269,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 |---|---|---|---|
 | 1.0 | 2026-11-10 | @test-plan-writer | Initial test plan for spec v1.1: 37 ACs covered exactly once by 37 TCs (bidirectional traceability, no orphans), 38 procedure blocks (P00 base plus P01-P37), all 37 procedures run against base `fab46636` with observed results recorded (including both `pnpm check` runs), six pure preservation controls (P09, P10, P18, P29, P31, P34), partial controls recorded against P13, P17, P27, P30 and P36, non-vacuity labels on P03/P14/P28/P36/P37, the doc-distribution guard, the aggregate gate, the Appendix E structural diagram check, link and non-duplication checks, failure triage, and nine declared gaps with named owners. |
 | 1.1 | 2026-11-10 | @test-plan-writer | Reopened and aligned to spec v1.2 (DEC-16). **D1:** P03 now derives the M2 insertion window from two sources — start from the base snapshot's M2-S9 end (1170) and end from the head `## Epic M3` line minus one — and the classifier self-tests grow to 3/3; observed window `1170:1169` (empty before the change) and `backlog_hunks=0`, so the verdict stays `FAIL (vacuous)`. **D2:** P16 uses a real ERE alternation `23 of 23|23/23`, adds a `literal_pipe` prohibition and an `alternation_self_test=OK`; observed `new_sections=0`, `FAIL`. **D3:** P15/P30 implement the two-sentence bound: exactly 16 enumerated families, exactly `state`/`mcp`/resident daemon absent, separate sentences, one contiguous DESCRIPTION hunk with at most two adjacent sentences and every other byte identical; two-sentence and merged-sentence fixtures prove the oracle; observed `desc_hunks=0`, `enumerated_families=14`, `FAIL`. **D4:** P18/P34 replace the whole-section `cmp` with whole-file line retention plus an added-line whitelist (new section plus four pointer windows, ≤3 non-blank lines each); observed `removed_lines=0`, `added_lines=0`, self-tests `detected/detected/permitted`, `FAIL (vacuous)`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; G-6 and G-8 reworded for the new mechanisms. |
+| 1.2 | 2026-11-10 | @test-plan-writer | Reopened and aligned to spec v1.3 (DEC-17). **D5:** P03 now pins the insertion inside the Epic M2 block: start is the base M2-S9 last content line + 1 (1167), end is the head `---` line before `## Epic M3` minus 1; it asserts `separator_sequence=identical`, adds a below-separator negative fixture and a separator-deletion probe (`classifier_self_tests=4/4`), and observed `window=1167:1167`, `window_empty=no`, `separator_sequence=identical`, `backlog_hunks=0`, `FAIL (vacuous)`. **D6:** P18 re-anchors the paragraph/scheduling/items windows to the base statement ends and maps them through the insertion offset, so an appended pointer cannot become the `last non-blank` line and shift its own window; observed pre-change `pointer_runs=0`, `bad_runs=0`, and a reference-shaped-head fixture with `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`, `reference_head_fixture=OK`. **D7:** P34 clamps the title-group start to 1; observed `pointer_groups=0/4` with `sed_line_address_0_errors=0`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks; TC003/TC018/TC034 and G-8/TR-3/TR-10 updated. |
 
 ## 10. Test Execution Log
 
@@ -2241,13 +2279,13 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 |---|---|---|---|
 | TC-M2PLAN-001 | 2026-11-10 | FAIL (change absent) | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; verdict FAIL. The seven entries do not exist in the base tree. |
 | TC-M2PLAN-002 | 2026-11-10 | FAIL (change absent) | `M2-S11=0/10`, `M2-S12=0/15`, `M2-S13=0/11`, `M2-S14=0/21`, `M2-S15=0/12`, `M2-S16=0/12`; `clauses_present=0/81`; verdict FAIL. |
-| TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 end+1=1170 end=head Epic M3-1=1169 window=1170:1169`; `window_empty=yes (expected before the change)`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=3/3`. The classifier and the base-derived start are proven live; the tree has nothing to classify yet. |
+| TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The window is non-empty on the base (it admits the insertion point before the blank and separator); the tree has no hunk yet. |
 | TC-M2PLAN-004 | 2026-11-10 | FAIL (change absent) | `S17=absent`; verdict FAIL. No S17 entry exists in the base tree. |
 | TC-M2PLAN-005 | 2026-11-10 | FAIL (change absent) | `S17=absent clauses_present=0/6`; `missing=6`. |
 | TC-M2PLAN-006 | 2026-11-10 | FAIL (change absent) | `S17=absent ac_items=0/7`; `ac_items=0`. |
 | TC-M2PLAN-007 | 2026-11-10 | FAIL (no amendment; oracle self-test passes) | `changed_lines=0 unexpected_lines=0`; `depends=NOT expected (- Depends on: M1-S5, M1-S17.)`; `M2-S4 shape FAIL (no amendment)`. Self-test printed `changed_lines=2 unexpected_lines=2`, so the oracle fires. |
 | TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`. The identity halves are a passing control; the amendment is absent. |
-| TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree; the non-vacuity half is supplied by P01 and by the mutation control. |
+| TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged. |
 | TC-M2PLAN-010 | 2026-11-10 | PASS (control) | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. Passing control. |
 | TC-M2PLAN-011 | 2026-11-10 | FAIL (15 drift pages) | `pages=28`; `M1_planned_hits=9`; `M1_milestone_planned_hits=2`; `forbidden_phrase_pages=11`; `header_attribution=2/14` (`plan.md` and `commit.md` already carry their GH references but still contain `M1 milestone planned`). Missing tokens printed for the other twelve pages. |
 | TC-M2PLAN-012 | 2026-11-10 | FAIL (change absent) | All three `MISSING`. |
@@ -2256,7 +2294,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-015 | 2026-11-10 | FAIL (composition unchanged) | `observed_families=16`; `enumerated_families=14`; `families_not_enumerated=coordinator dispatch`; `dispatch=claimed-not-registered (FAIL)`; `not_registered_extra_families= dispatch`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`; `positive_two_sentence=OK`; `negative_merged=detected`. The two-sentence oracle self-tests fire; the page is still pre-change. |
 | TC-M2PLAN-016 | 2026-11-10 | FAIL (change absent) | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. The self-test proves the fixed `23 of 23\|23/23` alternation matches prose; the pre-change tree has no section to scan. |
 | TC-M2PLAN-017 | 2026-11-10 | FAIL (pointers absent); byte retention PASS (control) | All four groups retain their bytes (`yes`), but every pointer check is `no` and `g4_pointer=0/1`. Byte retention is a passing control; the four pointers are absent. |
-| TC-M2PLAN-018 | 2026-11-10 | FAIL (vacuous: no added line); retention PASS (control) | `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`. Retention passes but the file has no addition, so the oracle is non-vacuous only after the change. |
+| TC-M2PLAN-018 | 2026-11-10 | FAIL (vacuous: no added line); retention PASS (control) | `windows(base-anchored): newsec=0..-1 title=2..4 paragraph=54..56 scheduling=148..150 items=101..103`; `removed_lines=0`; `added_lines=0`; `section_lines=0`; `pointer_runs=0`; `pointer_windows=0`; `bad_runs=0`; `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `negative_modified=detected`; `negative_outside=detected`; `positive_pointer=permitted`; `reference_whitelist: section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`; `reference_head_fixture=OK`. Retention passes but the file has no addition; the reference fixture proves an appended pointer is counted by its base-anchored window rather than shifting it. |
 | TC-M2PLAN-019 | 2026-11-10 | FAIL (change absent) | `pack_files=0/12`; `actual_files=0`; `README=absent`. |
 | TC-M2PLAN-020 | 2026-11-10 | FAIL (change absent) | `architecture=absent`. |
 | TC-M2PLAN-021 | 2026-11-10 | FAIL (change absent) | `contracts=absent`. |
@@ -2272,7 +2310,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning` 
 | TC-M2PLAN-031 | 2026-11-10 | PASS (control) | `guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`. Passing control. |
 | TC-M2PLAN-032 | 2026-11-10 | PASS (TMPDIR-corrected); default run FAIL (pre-existing environment, G-2) | Default run: `pnpm_check_exit=1`; `7132 pass`, `1 fail`, `Ran 7137 tests across 880 files [346.56s]`; the sole failure is `CI baseline parity (hermetic partial clone) > a depth-1 checkout fails closed and the baseline fetch is the remedy`, caused by `git clone --local` failing with a cross-device link. Lint, format:check, and typecheck passed; the boundary, prompt, help, and exports stages did not run in that attempt. `TMPDIR`-corrected run: `tmpdir_check_exit=0`; `7133 pass`, `0 fail`, `Ran 7137 tests across 880 files [385.27s]`; `check:boundaries`, `prompt-conformance` (5 prompts clean), `help-guide-coverage`, and `exports-parity` all pass. |
 | TC-M2PLAN-033 | 2026-11-10 | FAIL (change absent) | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10)`; `inventory=c4:0/3 flows:0/6 park:0/1`. |
-| TC-M2PLAN-034 | 2026-11-10 | FAIL (change absent); retention PASS (control) | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`. Zero removals is a passing retention control; there are no additions or pointers yet. |
+| TC-M2PLAN-034 | 2026-11-10 | FAIL (change absent); retention PASS (control) | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. Zero removals is a passing retention control; there are no additions or pointers yet, and the title group is addressable without a `sed` line-address-0 error. |
 | TC-M2PLAN-035 | 2026-11-10 | FAIL (change absent; 87 missing anchors) | `P02 missing=81 total=81`; `P05 missing=6`; `P06 ac_items=0`; `missing_clauses=87`; `added_criteria=n/a (S17 absent)`; `changed_meaning=manual clause-by-clause review (declared gap G-1)`; verdict FAIL. |
 | TC-M2PLAN-036 | 2026-11-10 | PASS (guard control); FAIL (vacuous scan) | `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `added_lines=0`; `seed_hits=0`; `non_vacuous=no`. Zero violations is a passing guard control; the added-line scan is vacuous until the change lands. |
 | TC-M2PLAN-037 | 2026-11-10 | FAIL (vacuous: no changed file) | `changed_planning_files=0`; `broken_links=0`; `restated_ac_blocks=0`; `non_vacuous=no`. |

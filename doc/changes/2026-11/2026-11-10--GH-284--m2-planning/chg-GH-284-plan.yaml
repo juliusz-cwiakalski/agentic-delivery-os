@@ -1,17 +1,44 @@
 # GH-284 implementation plan — plan M2: engine-first operations, multi-repo
 # workstations, evidence inspection, and telemetry
 #
-# Plan revision: v1.0 (2026-11-10). Aligned to spec v1.1 and test plan v1.0.
+# Plan revision: v1.1 (2026-11-10). Aligned to spec v1.2 and test plan v1.1.
+#
+# Revision history:
+#   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
+#                     three mechanism defects XF-1, XF-2, XF-3 and the two
+#                     derivation defects XF-4 (sequencing) and XF-6 (P03 window)
+#   v1.1  2026-11-10  alignment to spec v1.2 (DEC-16) and test plan v1.1.
+#                     XF-1, XF-2, XF-3 and XF-6 are CLOSED upstream: the plan now
+#                     gates on the normative retention oracle plus addition
+#                     whitelist (NFR-7, AC-F7-2, AC-F7-3, AC-NFR7-1), on the
+#                     at-most-two-adjacent-sentence entrypoint bound (XF-6,
+#                     NFR-3, AC-F5-4, AC-F6-1), on P16's real alternation with
+#                     its literal_pipe prohibition, and on P03's base-anchored
+#                     insertion window. Two residual upstream defects are
+#                     recorded as XF-7 (P18/P34 statement-window anchoring and
+#                     P34's address-0 title group) and XF-8 (P03 pins the only
+#                     compliant backlog insertion position); both carry a
+#                     plan-pinned, executed check rather than a silent
+#                     workaround. Finding ids use the `XF-` prefix so they never
+#                     collide with the spec's `F-` capability ids cited in the
+#                     phase task trailers.
 #
 # Sources (single source of truth):
-#   - Spec: ./chg-GH-284-spec.md v1.1 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
-#     DEC-1..DEC-15, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
+#   - Spec: ./chg-GH-284-spec.md v1.2 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
+#     DEC-1..DEC-16, RSK-1..RSK-10, 37 ACs (§17.1 + §17.2), §17.3 DoD,
 #     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
 #     entrypoint), Appendix D (12-document pack manifest), Appendix E
-#     (structural diagram procedure).
-#   - Test plan: ./chg-GH-284-test-plan.md v1.0 — 37 TCs TC-M2PLAN-001..037,
+#     (structural diagram procedure). DEC-16 replaces the whole-section
+#     comparison with the status retention oracle and bounds entrypoint.md at
+#     one contiguous hunk over at most two adjacent DESCRIPTION sentences.
+#   - Test plan: ./chg-GH-284-test-plan.md v1.1 — 37 TCs TC-M2PLAN-001..037,
 #     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
 #     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
+#     v1.1 reopened P03 (base-anchored window, 3/3 classifier self-tests),
+#     P15/P30 (`entrypoint_oracle`, <=2 adjacent sentences), P16 (real
+#     alternation plus literal_pipe prohibition and alternation self-test),
+#     and P18/P34 (whole-file line retention plus added-line whitelist;
+#     `retention_oracle` is defined in P18 and reused by P34).
 #   - PM notes: ./chg-GH-284-pm-notes.yaml — binding decisions, the
 #     specification reopen that produced v1.1 (DEC-15), and the phase-9
 #     quality-gate environment fact.
@@ -61,70 +88,79 @@
 # below, where they are cross-references rather than phase mappings.
 #
 # Spec/test-plan cross-check (findings recorded, none silently smoothed):
-#   F-1 [CONFLICT, resolved by the retention reading]. P18/P34 compare every
-#       base `##` section with `cmp`, while P17 requires a 2026-11-10 pointer
-#       (a) within four lines of the title, (b) within eight lines of the
-#       "M1 delivery starts now and runs beside" statement, (c) inside the
-#       2026-11-07 scheduling-engine section, and (d) within twelve lines of
-#       each of items 1-3 of "Proposed next steps". Three of those groups live
-#       inside base sections, so cmp-equality and those pointers cannot both
-#       hold. Spec F-7 states both halves in one sentence ("keeps its bytes";
-#       "pointers are appended adjacent to the statement"), and AC-F7-2 says
-#       the groups "retain their original bytes" while carrying pointers. The
-#       coherent reading is retention (no original line removed, reordered, or
-#       modified), not absence of additions. Resolution D-8: every base section
-#       keeps every original line, in order, byte for byte; pointer text is
-#       additive only. Gate: P18/P34 run unmodified and are expected to report
-#       cmp-identical for the four pointer-free sections (sections_identical=
-#       4/7), and the P3 retention oracle reports removed_lines=0 for all seven.
-#       A removal, reflow, or reorder anywhere fails P3. Escalation: if the PM
-#       or the DoR gate rules for literal cmp-equality, AC-F7-2 becomes
-#       undeliverable for three of four groups and the spec must be reopened;
-#       stop rather than dropping pointers silently.
-#   F-2 [TEST-PLAN DEFECT, plan-pinned correction]. P16's marker
-#       `grep -Eiq '23 of 23\|23/23'` is not an alternation: in ERE `\|` is a
-#       literal pipe, so the pattern matches only a literal
-#       "23 of 23|23/23" and can never match prose. Resolution D-9: the new
-#       section states M1 delivery as "23 of 23"; the intended alternation is
-#       proven separately with `grep -Eiq '23 of 23|23/23'`. The other ten
-#       P16 markers run unmodified. Writing the literal pipe into status.md is
-#       forbidden. A test-plan v1.1 correction is recommended.
-#   F-3 [WORDING PRECISION]. AC-F5-4 says "exactly one sentence in its
-#       description differs"; the observed drift spans two ADJACENT sentences
-#       (the composed list omits `dispatch` and `coordinator`; the absent list
-#       wrongly includes `dispatch`), and both must change. Merging them into
-#       one sentence would break P15: `comp` captures everything up to the
-#       first period, so the absent families would fold into the composed set
-#       and P15 would print `dispatch=claimed-not-registered (FAIL)`.
-#       Resolution D-6: the composition statement is the two adjacent
-#       sentences, edited as one contiguous hunk, and no other sentence or
-#       byte of the page changes. Oracles: P14 entrypoint_hunks=1, P15
-#       families/absent checks, P30 body_identical=14/14.
-#   F-4 [SEQUENCING]. P2 lands the entrypoint/daemon pointer to
+#   XF-1 [CLOSED UPSTREAM — spec v1.2 / test plan v1.1]. The v1.0 plan reported
+#       the contradiction between P18/P34 whole-section `cmp` and the pointers
+#       P17 requires. It is now resolved normatively: NFR-7, AC-F7-2, AC-F7-3,
+#       AC-NFR7-1 and DEC-16 define a whole-file line-retention oracle (every
+#       base line present in head, same order, byte-identical; zero removed,
+#       reordered, or modified) with additions confined to the new dated
+#       2026-11-10 section plus one pointer per affected statement group; a
+#       whole-section `cmp` is explicitly forbidden as the oracle. P18/P34 now
+#       implement retention plus an added-line whitelist. The plan gates on
+#       that oracle (D-8, D-13) and asserts no cmp-equality anywhere.
+#   XF-2 [CLOSED UPSTREAM — test plan v1.1]. P16 now uses a real ERE
+#       alternation `23 of 23|23/23`, adds `literal_pipe=ABSENT` and an
+#       `alternation_self_test`. The plan keeps one prose constraint: the
+#       snapshot must never contain the literal phrase "23 of 23|23/23", and it
+#       states M1 delivery as "23 of 23".
+#   XF-3 [CLOSED UPSTREAM — spec v1.2, DEC-16]. The entrypoint bound is now one
+#       contiguous hunk over at most two adjacent DESCRIPTION sentences, with
+#       the enumeration and the not-registered statement kept as separate
+#       sentences and every other byte identical (spec F-6, NFR-3, AC-F5-4,
+#       AC-F6-1, AC-NFR3-1). P15/P30 implement `entrypoint_oracle` and print
+#       `desc_hunks`, `outside_desc_hunks`, `sentences_removed`,
+#       `sentences_added` and `entrypoint_bound`. The plan keeps the
+#       prohibition on merging the two sentences, because the enumeration
+#       extraction stops at the first period.
+#   XF-4 [SEQUENCING]. P2 lands the entrypoint/daemon pointer to
 #       ../../m2/entrypoint-delta.md, which P4 creates. P37 (broken links) is
 #       therefore a P6 gate, not a P2 gate; no broken link exists at the
 #       change head. P2 must not add any other link.
-#   F-5 [HYGIENE]. The ticket's S17 journey example names two commercial
+#   XF-5 [HYGIENE]. The ticket's S17 journey example names two commercial
 #       providers. NFR-9 forbids hosted/proprietary names, so the pack uses
 #       neutral profile labels (`profile-a`, `profile-b`) and no commercial
 #       provider name appears anywhere in the pack.
-#   F-6 [TEST-PLAN DEFECT, plan-pinned window]. P03 derives the insertion
-#       window as `${s9end+1}:${m3-1}`, where `s9end` is the line before the
-#       next `###`/`##` heading after M2-S9. The next heading IS `## Epic M3`
-#       on the base tree and the first new `### M2-S11` heading on the head
-#       tree, so the window collapses or inverts (base: `1170:1169`) and every
-#       inserted line is reported OUTSIDE. Corrected executable derivation,
-#       with r4/r6 unchanged and the start taken from the BASE snapshot:
-#         s9last=$(awk 'index($0,"### M2-S9 ")==1{s=1;next}
-#           s&&/^#{2,3} /{exit} s&&NF&&$0!="---"{last=NR}
-#           END{print last}' /tmp/gh284/base-backlog.md)
-#         newwin="$((s9last+1)):$((m3-1))"
-#       Verified on the base tree: M2-S9 starts at 1154, its last content line
-#       (`- Depends on: M2-S8.`) is 1165, Epic M3 is at 1170, so the window
-#       starts at 1166 and ends one line before the head's Epic M3. An
-#       insertion hunk there classifies INSIDE. A raw P03 run reports
-#       `outside>=1`; record both outputs and treat the raw failure as the
-#       declared defect, never as a backlog defect.
+#   XF-6 [CLOSED UPSTREAM — test plan v1.1]. P03 now derives the insertion
+#       window from two sources: start = the line after M2-S9's end in the BASE
+#       snapshot, end = the line before `## Epic M3` in the HEAD file, with 3/3
+#       classifier self-tests. The plan gates on that derivation (P1) and pins
+#       the resulting insertion position as XF-8.
+#   XF-7 [OPEN UPSTREAM DEFECT, plan-mitigated]. Two mechanical faults remain in
+#       the new retention oracle, both verified against a reference-shaped
+#       head built from fab46636:
+#       (a) `retention_oracle` derives the paragraph, scheduling and items
+#           windows as the three lines AFTER the head's last non-blank line of
+#           the statement. An appended pointer is itself non-blank and inside
+#           the same range, so it becomes the anchor and the window moves past
+#           it. The paragraph window is still reachable when the pointer is
+#           inserted after the paragraph's terminating blank line; the
+#           scheduling and items windows are unreachable by construction, so
+#           those two pointers are reported `OUTSIDE` and `pointer_runs` peaks
+#           at 2 of 4. Observed: `whitelist: section_lines=4 pointer_runs=2
+#           pointer_windows=2 bad_runs=2`, `retention_oracle=FAILED`, with
+#           `removed_lines=0` (so retention itself holds).
+#       (b) P34 counts the title group with `sed -n "$((g1-1)),…"` and
+#           `g1=1`, i.e. line address 0, which sed rejects: the title group is
+#           never counted and `pointer_groups` peaks at 3/4. Observed:
+#           `sed: invalid usage of line address 0` then `pointer_groups=3/4`.
+#       Mitigation D-13: P3 runs P18/P34 unmodified and records their raw
+#       output, then runs the base-anchored pointer-window check, which asks
+#       the same NFR-7/AC-F7-3 question against base-derived anchors and is the
+#       authoritative gate at this revision. Verified on a reference-shaped
+#       head: `section_lines=4 pointer_runs=4 distinct_anchors=4 bad_runs=0`.
+#       Reported for a test-plan v1.2 fix; the plan does not restate the
+#       procedure as if it passed.
+#   XF-8 [CONSTRAINT PINNED BY P03, spec-silent]. P03's window start is the BASE
+#       line of `## Epic M3` (1170), so the only compliant backlog insertion
+#       position is immediately before that heading, after the blank line that
+#       follows the `---` separator. Verified with P03's own `hunk_guard` on
+#       the base geometry: an insertion after `- Depends on: M2-S8.` yields
+#       `@@ -1166,0 +1167,14 @@` and classifies OUTSIDE the window
+#       `1170:1183`; an insertion after `---` yields `+1169,…` and is also
+#       OUTSIDE; only `+1170,…` is INSIDE. Consequence: the seven new stories
+#       land below the `---` separator, which stays byte-identical. AC-F1-1 and
+#       DEC-9 ("after M2-S9, before the Epic M3 heading") still hold, and no
+#       oracle inspects the separator.
 #
 # Delivery-planning decisions (placement, wording, sequencing; no behavioural
 # deviation):
@@ -139,28 +175,48 @@
 #   D-3 TC/AC ownership as tabulated above; each phase gate list proves only
 #       its own phases' TCs, and P6 re-runs the content procedures as
 #       regression proof without re-claiming their TCs.
-#   D-4 Backlog insertion point: after M2-S9's `- Depends on: M2-S8.` line and
-#       before the blank line that precedes `---` and `## Epic M3`; one blank
-#       line between entries; the file's two-space continuation indent; no
-#       `- Ticket:` line; no reflow of a neighbouring entry.
+#   D-4 Backlog insertion point (XF-8): insert the seven entries immediately
+#       before the `## Epic M3` heading, i.e. after the blank line that follows
+#       the `---` separator, so the first inserted line carries the base line
+#       number of `## Epic M3` and P03's window admits it. Do not insert after
+#       `- Depends on: M2-S8.` or directly after `---`: both land OUTSIDE.
+#       Keep the separator and both surrounding blank lines byte-identical; one
+#       blank line between entries; the file's two-space continuation indent;
+#       no `- Ticket:` line; no reflow of a neighbouring entry.
 #   D-5 M2-S6 wording. The story's existing task text already contains the
 #       seed token inside "`ados spend`"; those bytes are frozen. The new task
 #       clause must describe consuming M2-S14 telemetry for per-agent and
 #       per-model facts WITHOUT adding a seed literal, because P36 scans added
 #       lines.
-#   D-6 Entrypoint composition statement: two adjacent sentences, one
-#       contiguous edit (F-3).
+#   D-6 Entrypoint composition statement (XF-3, DEC-16): the enumeration
+#       sentence and the not-registered sentence are replaced in place as one
+#       contiguous hunk over at most two adjacent DESCRIPTION sentences, with
+#       their period boundary preserved, every other byte identical, and no
+#       third sentence touched.
 #   D-7 Command-page edits: status header only (lines 1..first `## `); title
 #       line byte-identical; no page may contain `M1 planned` or
 #       `M1 milestone planned` anywhere; no header may contain `Current`.
-#   D-8 Status pointers and retention (F-1): four groups, placements pinned in
-#       P3, original lines never removed or edited.
-#   D-9 Corrected P16 marker (F-2).
+#   D-8 Status pointers and retention (XF-1, NFR-7, DEC-16): exactly one pointer
+#       per statement group, four groups, each a new line of at most three
+#       non-blank lines that names the 2026-11-10 section; no original line
+#       removed, reordered, or modified. Placements, pinned because the oracles
+#       are positional: (G1) a new line 2, inside P18's fixed 2..4 title
+#       window; (G2) a new line after the blank line that closes the
+#       "Per backlog-ranking.md" paragraph, so that paragraph's last line stays
+#       the anchor; (G3) a new line after the scheduling section's last line,
+#       before the next `##` heading; (G4) exactly ONE pointer at the end of
+#       item 3 of "Proposed next steps" (no pointers on items 1 and 2), inside
+#       P34's items block. The new dated section is appended at EOF with its
+#       heading on the line immediately after the file's current last line: a
+#       leading blank line would start the added run before the section anchor.
+#   D-9 P16 prose constraint (XF-2): state M1 delivery as "23 of 23" and never
+#       write the literal phrase "23 of 23|23/23", which P16 now checks with
+#       `literal_pipe=ABSENT`.
 #   D-10 Pack conventions: exactly twelve files (no extras), line 1 `# <name>(1)`
 #       in commands/, line 3 exactly `Status: Proposed (M2)`, `<binary>`
 #       invocation prefix, bare command names, no `ados_distribution` marker,
 #       no line matching `^- AC:` and no `**Given**` in pack prose (P37), no
-#       commercial provider names (F-5), and every relative link resolved from
+#       commercial provider names (XF-5), and every relative link resolved from
 #       that file's own directory depth.
 #   D-11 Gate order: P28 -> P31 -> P32 -> P36 first (cheap containment and
 #       guards), then the content procedures, per test plan §7.1. A phase
@@ -172,6 +228,14 @@
 #       runs are recorded; the default failure is environmental, is not a
 #       regression, and must NOT be "fixed" (scripts/** and tests/** are out
 #       of scope).
+#   D-13 Pointer-window gate (XF-7). P3 runs P18/P34 unmodified and records
+#       their raw output, then runs the base-anchored pointer-window check
+#       pinned in P3's testGate, which classifies each added run against the
+#       nearest preceding unchanged line and accepts only the four pinned
+#       anchors. That check, plus `removed_lines=0` and the new-section
+#       containment, is the authoritative retention gate at this revision;
+#       the raw XF-7 output is evidence of the upstream defect, not of a
+#       document fault.
 #
 # Verification conventions (binding for every phase):
 #   - Run from the repository root on branch docs/GH-284/m2-planning.
@@ -191,8 +255,14 @@
 #     the PR body (test plan §6; spec §17.3 DoD).
 #   - `pnpm exec delivery-os --help` needs the built workspace; packages/*/dist
 #     is present in this checkout and P15 reads the live listing.
+#   - P18 defines `retention_oracle` for P34: run P18 first in the same shell,
+#     or P34 prints "FAIL: run P18 first".
+#   - XF-7 evidence: every P3/P6 run records the raw P18/P34 output AND the
+#     base-anchored pointer-window check. Neither the plan nor the reviewer
+#     treats the raw `pointer_runs=2` / `pointer_groups=3/4` lines as a
+#     document defect once the corrected check is green.
 #
-# Validation record (2026-11-10, plan revision v1.0):
+# Validation record (2026-11-10, plan revision v1.1):
 #   verdict=valid, readyForDevelopment=true, totalErrors=0,
 #   artifact=chg-GH-284-plan.yaml (kind=yaml),
 #   schemaVersion=delivery.plan.v1, tier=lite, phases=1..6.
@@ -208,13 +278,13 @@ tier:
     - "A product path outside doc/planning/oss-tooling/ appears in the diff with doc/changes/** excluded (P28)"
     - "A backlog hunk falls outside the seven new entries or the two amended entries, or a non-amended story body changes (P03, P29)"
     - "M2-S4 changes anything but its - Depends on: line, or M2-S6 loses a base task line or changes its heading, goal, or acceptance criterion (P07, P08)"
-    - "An M1 command page changes outside its status header, or entrypoint.md changes beyond the composition statement (P14, P30)"
-    - "A dated status section loses, reorders, or reflows an original line, or one of the four pointer groups is missing (P17, P18, P34, P3 retention oracle)"
+    - "An M1 command page changes outside its status header, or entrypoint.md changes beyond one contiguous hunk over at most two adjacent DESCRIPTION sentences (P14, P15, P30)"
+    - "A base status.md line is removed, reordered, or modified, an added line falls outside the new dated section and the four pointer insertions, or a pointer group is missing (P17, P18, P34, P3 pointer-window check)"
     - "The M2 pack does not hold exactly twelve documents, a required heading is absent, or fewer than 32 SC-M2 scenarios exist with two per story S2-S17 (P19, P20, P22, P33)"
     - "A command page lacks Status: Proposed (M2) on line 3, the <binary> prefix, or a required man-page section (P24, P25)"
-    - "A commercial, hosted, or proprietary provider name appears in the pack (NFR-9, F-5)"
+    - "A commercial, hosted, or proprietary provider name appears in the pack (NFR-9, XF-5)"
     - "The doc-distribution guard, the forbidden-literal guard, the structural diagram check, or the authoritative pnpm check is non-zero (P31, P32, P33, P36)"
-    - "Finding F-1 or F-2 is rejected by the PM or the DoR gate: stop and re-plan against a revised test plan instead of dropping a pointer or a marker"
+    - "Finding XF-7 is fixed upstream in a test-plan v1.2 while this plan still points at v1.1: re-read the reopened procedures before gating, and replace the XF-7 corrected check with the fixed procedure rather than keeping both"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -233,18 +303,21 @@ phases:
     summary: "docs(GH-284): add M2-S11..S17 stories and amend M2-S4/M2-S6 in the backlog"
     tasks:
       - |-
-        1.1 Append the seven new entries after M2-S9's `- Depends on: M2-S8.`
-        line and before the blank line that precedes `---` and
-        `## Epic M3` (D-4), in code order, one blank line between entries, in
-        the existing story shape. Headings exactly: `### M2-S11
+        1.1 Append the seven new entries immediately before the `## Epic M3`
+        heading, i.e. after the blank line that follows the `---` separator
+        (D-4, XF-8), in code order, one blank line between entries, in the
+        existing story shape. That position is the only one P03's base-anchored
+        window admits: an insertion after `- Depends on: M2-S8.` or directly
+        after `---` classifies OUTSIDE. Headings exactly: `### M2-S11
         Multi-repository workstations`, `### M2-S12 Evidence inspection and
         divergence resolution`, `### M2-S13 Public event taxonomy`,
         `### M2-S14 Harness telemetry v2`, `### M2-S15 Queue lifecycle
         completion`, `### M2-S16 Engine-first delivery operations`,
         `### M2-S17 Provider-aware peak pausing`. Each entry carries
         `- Goal:`, `- Tasks:`, `- AC:`, `- Depends on:` and NO `- Ticket:`
-        line. Keep the existing `---` separator and the Epic M3 heading
-        byte-identical. [F-1, DM-1, DEC-9; AC-F1-1; TC-M2PLAN-001]
+        line. Keep the `---` separator, its surrounding blank lines, and the
+        Epic M3 heading byte-identical. [F-1, DM-1, DEC-9; AC-F1-1;
+        TC-M2PLAN-001]
       - |-
         1.2 Transcribe each story verbatim in substance from the ticket body
         (`gh issue view 284 --repo juliusz-cwiakalski/agentic-delivery-os
@@ -289,14 +362,15 @@ phases:
         retirement note, or any other story heading or body. Do not renumber,
         reorder, or reflow an existing entry; do not add an `ados_distribution`
         marker; do not introduce the seed literals `ados`, `ADOS_`, or
-        `~/.ados` in added lines. Every diff hunk must lie inside one of the
-        seven new entries, M2-S4, or M2-S6 (P03 with `outside=0`).
+        `~/.ados` in added lines. Every diff hunk must lie inside P03's
+        insertion window (the block before `## Epic M3`), the M2-S4 entry, or
+        the M2-S6 entry (P03 with `outside=0`).
         [F-4, NFR-2, NFR-9; AC-F4-1, AC-F4-2, AC-NFR2-1; TC-M2PLAN-003, 009,
         010, 029]
     coverage:
       - "TC-M2PLAN-001 (complete: m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7, no Ticket line)"
       - "TC-M2PLAN-002 (complete: clauses_present=81/81; S11 10/10, S12 15/15, S13 11/11, S14 21/21, S15 12/12, S16 12/12)"
-      - "TC-M2PLAN-003 (complete: backlog_hunks>=1, hunks inside=M outside=0, hunk confinement OK, classifier_self_tests=2/2)"
+      - "TC-M2PLAN-003 (complete: backlog_hunks>=1, hunks inside=M outside=0, hunk confinement OK, classifier_self_tests=3/3, window_empty=no)"
       - "TC-M2PLAN-004 (complete: four labels present, six dependencies OK, ac_numbered_items=7/7)"
       - "TC-M2PLAN-005 (complete: clauses_present=6/6, softening may=ABSENT)"
       - "TC-M2PLAN-006 (complete: ac_items=7/7, duplicate_numbers=0)"
@@ -314,14 +388,15 @@ phases:
         P02 -> M2-S11 anchors=10/10, S12=15/15, S13=11/11, S14=21/21,
         S15=12/12, S16=12/12; clauses_present=81/81; P02 verdict: PASS
       - >-
-        P03 -> backlog_hunks=M with M>=1; amended regions printed for M2-S4,
-        M2-S6 and M2-S9; hunks: inside=M outside=0; hunk confinement OK;
-        classifier_self_tests=2/2; non_vacuous=yes; P03 verdict: PASS.
-        F-6: the window as written collapses (base `1170:1169`), so run P03
-        with the corrected derivation from F-6 (s9last from
-        /tmp/gh284/base-backlog.md, then
-        `newwin="$((s9last+1)):$((m3-1))"`) and record both the raw and the
-        corrected output.
+        P03 -> backlog_hunks=M with M>=1; amended ranges printed for M2-S4 and
+        M2-S6; `insertion window: start=base M2-S9 end+1=1170
+        end=head Epic M3-1=<m3h-1> window=1170:<m3h-1>`; window_empty=no;
+        hunks: inside=M outside=0; hunk confinement OK;
+        classifier_self_tests=3/3; non_vacuous=yes; P03 verdict: PASS.
+        XF-6 is closed upstream: the window is base-anchored, so no corrected
+        derivation is needed. XF-8: the insertion must sit immediately before
+        `## Epic M3`; an earlier position prints `OUTSIDE: @@ -1166,0
+        +1167,14 @@` against the window and fails.
       - >-
         P04 -> all four labels present; depends M1-S15/M1-S18/M1-S21/M1-S22/
         M2-S14/#280 OK; ac_numbered_items=7/7
@@ -354,7 +429,7 @@ phases:
       - "F-3/NFR-2: M2-S4 differs only on its dependency line; M2-S6 only gains the telemetry clause and M2-S14"
       - "F-4/NFR-2: frontmatter, reading guide, cross-cutting principles, retirement note, and every other entry byte-identical"
       - "NFR-9/D-5: no seed literal in added lines; the existing `ados spend` bytes stay untouched"
-      - "D-4: insertion window leaves the `---` separator and the Epic M3 heading byte-identical"
+      - "D-4/XF-8: the insertion sits immediately before `## Epic M3`; the `---` separator and the Epic M3 heading stay byte-identical"
 
   - id: 2
     title: "P2 — Reconcile the M1 command-page status headers and the entrypoint composition statement"
@@ -413,29 +488,37 @@ phases:
         persistence, degradation) survives as written. [F-5, F-10, DEC-2;
         AC-F5-3; TC-M2PLAN-013]
       - |-
-        2.4 entrypoint.md composition statement (D-6, F-3): replace the two
-        adjacent DESCRIPTION sentences that state the composition, and nothing
-        else. Sentence one keeps the literal prefix `command set: ` and lists
-        exactly the sixteen observed families, backticked, in the observed
-        order, ending with a period: `status`, `brief`, `queue`, `lanes`,
-        `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`,
-        `closeout`, `spend`, `retro`, `dispatch`, `coordinator` (no period may
-        appear inside the list). Sentence two states that `state`, `mcp`, and
-        the resident daemon are not registered and does not contain the token
-        `dispatch`. Derive the list from live root help, not from a hardcoded
-        memory; the observation is recorded in the P4 delta note. No other
-        sentence or byte of the page changes. [F-6, NFR-3, DEC-8; AC-F6-1;
-        TC-M2PLAN-015]
+        2.4 entrypoint.md composition statement (D-6, XF-3, DEC-16): replace the
+        two adjacent DESCRIPTION sentences that state the composition, and
+        nothing else, as ONE contiguous hunk. Sentence one keeps the literal
+        prefix `command set: ` and lists exactly the sixteen observed
+        families, backticked, in the observed order, ending with a period:
+        `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`,
+        `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`,
+        `dispatch`, `coordinator` (no period may appear inside the list).
+        Sentence two states that `state`, `mcp`, and the resident daemon are
+        not registered and does not contain the token `dispatch`. Keep the two
+        statements as SEPARATE sentences: merging them would fold the absent
+        families into the enumeration capture and P15 would print
+        `dispatch=claimed-not-registered (FAIL)`. The preceding sentence ("The
+        entrypoint is a non-installed Bun bin ...") and every following
+        paragraph keep their bytes, so `sentences_removed=2` and
+        `sentences_added=2`. Derive the list from live root help, not from a
+        hardcoded memory; the observation is recorded in the P4 delta note.
+        [F-6, NFR-3, DEC-8, DEC-16; AC-F6-1, AC-F5-4; TC-M2PLAN-015]
       - |-
         2.5 Containment. Change nothing at or after the first `## ` line of any
         page: the page title line stays byte-identical and every body hunk is a
-        failure (P14 with `outside=0`, P30 `body_identical=14/14`). No page may
-        contain `M1 planned` or `M1 milestone planned` anywhere in the file,
-        and no header may contain `Current`. Do not add an `ados_distribution`
-        marker. [F-5, NFR-3, NFR-4, DEC-13; AC-F5-4, AC-NFR3-1; TC-M2PLAN-014,
-        TC-M2PLAN-030]
+        failure (P14 with `outside=0`, P30 `body_identical=14/14`). On
+        entrypoint.md the single hunk must lie inside DESCRIPTION and cover at
+        most two adjacent sentences (`desc_hunks=1`, `outside_desc_hunks=0`,
+        `sentences_removed<=2`, `sentences_added=sentences_removed`). No page
+        may contain `M1 planned` or `M1 milestone planned` anywhere in the
+        file, and no header may contain `Current`. Do not add an
+        `ados_distribution` marker. [F-5, F-6, NFR-3, NFR-4, DEC-13, DEC-16;
+        AC-F5-4, AC-F6-1, AC-NFR3-1; TC-M2PLAN-014, TC-M2PLAN-030]
       - |-
-        2.6 Sequencing (F-4): the only link introduced is the pointer to
+        2.6 Sequencing (XF-4): the only link introduced is the pointer to
         `../../m2/entrypoint-delta.md`, which resolves when P4 lands. Do not add
         any other link, and do not run P37 in this phase.
     coverage:
@@ -443,8 +526,8 @@ phases:
       - "TC-M2PLAN-012 (complete: board -> M2-S4, watchdog -> M2-S2, mcp -> M3-S2)"
       - "TC-M2PLAN-013 (complete: header M1-S18/GH-238/not mounted/entrypoint delta OK; Current=ABSENT; daemon_body=byte-identical)"
       - "TC-M2PLAN-014 (complete: changed_pages=14/14, every hunk inside the header region, entrypoint_hunks=1, classifier self-tests OK)"
-      - "TC-M2PLAN-015 (complete: observed_families=16, composed_families=16, families_not_composed empty, state/mcp/resident daemon named absent, dispatch not claimed absent)"
-      - "TC-M2PLAN-030 (complete: body_identical=14/14; description sentence diff is the composition statement only; one-sentence mutation self-test applied)"
+      - "TC-M2PLAN-015 (complete: observed_families=16, enumerated_families=16, no family in either set difference, exactly state/mcp/resident daemon absent, dispatch not claimed absent, entrypoint_bound=OK, positive and merged-sentence fixtures behave)"
+      - "TC-M2PLAN-030 (complete: body_identical=14/14; entrypoint_bound=OK with desc_hunks=1, outside_desc_hunks=0, sentences_removed=2, sentences_added=2)"
     testGate:
       - "P00 — re-materialise the base snapshots inside P2"
       - >-
@@ -460,16 +543,22 @@ phases:
         entrypoint_hunks=1; classifier_inside=OK; classifier_outside=OK;
         non_vacuous=yes
       - >-
-        P15 -> observed_families=16; composed_families=16;
-        families_not_composed empty; not_registered state OK, mcp OK,
-        resident daemon OK; dispatch=not-claimed-absent OK
+        P15 -> observed_families=16; enumerated_families=16;
+        families_not_enumerated empty; enumerated_not_observed empty;
+        not_registered: state OK, mcp OK, resident daemon OK;
+        dispatch=not-claimed-absent OK; enumeration_contains_registration=OK;
+        registration_contains_enumeration=OK;
+        not_registered_extra_families=none;
+        entrypoint_bound=OK (one contiguous hunk, <=2 adjacent sentences,
+        every other byte identical); positive_two_sentence=OK;
+        negative_merged=detected; P15 verdict: PASS
       - >-
-        P30 -> body_identical=14/14; description_changed_sentence_lines>=2
-        (composition statement only); one_sentence_mutation=applied;
+        P30 -> body_identical=14/14; entrypoint_bound=OK (desc_hunks=1,
+        outside_desc_hunks=0, sentences_removed=2, sentences_added=2);
         P30 verdict: PASS
     invariants:
       - "F-5/DM-2/D-7: header-region-only diffs on the fourteen pages; title lines byte-identical; zero `M1 planned` / `M1 milestone planned` across the 28 command pages; no header containing `Current`"
-      - "F-6/DEC-8/F-3: the sixteen observed families, backticked, no period inside the list, absent families in a separate sentence without `dispatch`"
+      - "F-6/DEC-8/DEC-16: the sixteen observed families, backticked, no period inside the list, absent families in a separate sentence without `dispatch`, one contiguous DESCRIPTION hunk over at most two adjacent sentences"
       - "AC-F5-3: daemon body byte-identical, reachability corrected in the header only"
       - "NFR-4/DEC-6: no `ados_distribution` marker added anywhere"
 
@@ -488,99 +577,122 @@ phases:
     tasks:
       - |-
         3.1 Append ONE new `##` section at EOF, after the 2026-11-07 handover
-        amendment section, with a heading that carries the date `2026-11-10`
-        and names the M2 planning snapshot. The body states: M1 story delivery
-        complete at "23 of 23" through the eleven-phase lifecycle; the M2
-        planning state entered by this change (S2-S10 carried, S11-S17 added,
-        S1 retired into M1 with the gap deliberate, the M2-S4 and M2-S6
-        amendments, and no tickets created yet); the early inputs #268 and
-        #280; and the maintenance convention that future M2 story deliveries
-        keep the planning corpus current. It states that story delivery is not
-        milestone exit, claims no M0 or M1 exit, and contains no phrase of the
-        form "milestone exit met|complete|achieved". It names the backlog as
-        canonical for M2 scope. [F-7, DEC-5, RSK-8; AC-F7-1; TC-M2PLAN-016]
+        amendment section, with its `##` heading on the line immediately after
+        the file's current last line (no leading blank line: P18 classifies an
+        added run that starts before the heading as OUTSIDE). The heading
+        carries the date `2026-11-10` and names the M2 planning snapshot. The
+        body states: M1 story delivery complete at "23 of 23" through the
+        eleven-phase lifecycle; the M2 planning state entered by this change
+        (S2-S10 carried, S11-S17 added, S1 retired into M1 with the gap
+        deliberate, the M2-S4 and M2-S6 amendments, and no tickets created
+        yet); the early inputs #268 and #280; and the maintenance convention
+        that future M2 story deliveries keep the planning corpus current. It
+        states that story delivery is not milestone exit, claims no M0 or M1
+        exit, and contains no phrase of the form "milestone exit
+        met|complete|achieved". It names the backlog as canonical for M2 scope.
+        [F-7, DEC-5, RSK-8; AC-F7-1; TC-M2PLAN-016]
       - |-
-        3.2 Pointer group G1 (title framing). Insert one pointer paragraph
-        immediately after the H1 title, inside the first four lines of the
-        file (the P17 window), naming the 2026-11-10 snapshot and marking the
-        "milestone exit pending" framing superseded for M2 planning. The title
-        line itself stays byte-identical. [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
+        3.2 Pointer group G1 (title framing). Insert ONE pointer line as line 2,
+        inside P18's fixed 2..4 title window, of at most three non-blank lines,
+        naming the 2026-11-10 snapshot and marking the "milestone exit pending"
+        framing superseded for M2 planning. The title line itself stays
+        byte-identical and line 1. [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
       - |-
-        3.3 Pointer group G2. Append one pointer sentence to the paragraph that
-        begins "Per backlog-ranking.md reading notes ..." (the paragraph
-        carrying "M1 delivery starts now and runs beside the pilot"), placed
-        close enough that the token 2026-11-10 appears within eight lines after
-        that statement's line. Keep every original sentence of the paragraph
-        verbatim; the pointer is additive and must not restate or rewrite the
-        per-repository rule. [F-7, DEC-5; AC-F7-2; TC-M2PLAN-017]
+        3.3 Pointer group G2. Insert ONE pointer line AFTER the blank line that
+        closes the paragraph beginning "Per backlog-ranking.md reading notes
+        ..." (the paragraph carrying "M1 delivery starts now and runs beside
+        the pilot"), so that paragraph's own last line stays the anchor for
+        P17's eight-line window and P18's paragraph window; placing the pointer
+        inside the paragraph moves the anchor and classifies it OUTSIDE. Keep
+        every original sentence verbatim; the pointer must not restate or
+        rewrite the per-repository rule. [F-7, DEC-5; AC-F7-2; TC-M2PLAN-017]
       - |-
-        3.4 Pointer group G3. Append one pointer paragraph at the end of the
-        "## M1 delivery: scheduling engine delivered (2026-11-07)" section,
-        after its last line and before the next `##` heading, naming the
-        2026-11-10 snapshot as the current M1 delivery state. Every original
-        line of that section stays byte-identical and in place.
-        [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
+        3.4 Pointer group G3. Insert ONE pointer line after the last line of the
+        "## M1 delivery: scheduling engine delivered (2026-11-07)" section and
+        before the next `##` heading, naming the 2026-11-10 snapshot as the
+        current M1 delivery state. Every original line of that section stays
+        byte-identical and in place. [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
       - |-
-        3.5 Pointer group G4. Append one pointer sentence to each of items 1, 2,
-        and 3 of "## Proposed next steps", as a continuation-indented line
-        inside the item so the list numbering and the following items stay
-        intact; each pointer names the 2026-11-10 snapshot. Items 4-7 and every
+        3.5 Pointer group G4. Insert exactly ONE pointer line at the end of item
+        3 of "## Proposed next steps", as a continuation-indented line inside
+        the item's block so the list numbering and item 4 stay intact. Do not
+        add pointers to items 1 or 2: NFR-7 and AC-F7-2 allow one pointer per
+        statement group, and the group is "items 1-3". Items 4-7 and every
         other line stay untouched. [F-7, DEC-5; AC-F7-2; TC-M2PLAN-017]
       - |-
-        3.6 Retention and hygiene (D-8). In every base `##` section the
-        original lines must survive verbatim and in order: zero removed lines,
-        zero modified lines, no reflow, no reordering. Add no frontmatter, no
-        `ados_distribution` marker, and no seed literal in added lines. Do not
-        write the literal `M1 planned`. Pointers name the 2026-11-10 section;
-        they never substitute for the original text. [F-7, NFR-7, NFR-9;
-        AC-F7-3, AC-NFR7-1; TC-M2PLAN-018, TC-M2PLAN-034]
+        3.6 Retention and hygiene (D-8, D-13). No original line of any base
+        section is removed, reordered, or modified: `removed_lines=0` over the
+        whole file. Every added line either lies inside the new dated section
+        or is one of the four pointer insertions above, each naming the
+        2026-11-10 section. Do not use a whole-section comparison as evidence.
+        Add no frontmatter, no `ados_distribution` marker, and no seed literal
+        in added lines. Do not write `M1 planned`, and never write the literal
+        phrase "23 of 23|23/23". Pointers never substitute for original text.
+        [F-7, NFR-7, NFR-9, DEC-16; AC-F7-2, AC-F7-3, AC-NFR7-1;
+        TC-M2PLAN-018, TC-M2PLAN-034]
     coverage:
-      - "TC-M2PLAN-016 (complete: new_sections=1; all ten markers present; the 23-of-23 marker proven by the corrected alternation per F-2; exit_overclaim=ABSENT)"
-      - "TC-M2PLAN-017 (complete: title bytes retained + pointer present; g2 bytes retained + pointer present; g3 bytes retained + pointer present; g4_pointers=3/3)"
-      - "TC-M2PLAN-018 (complete: cmp-identical for the four pointer-free sections; retention oracle removed_lines=0 for all seven, so no historical claim was rewritten)"
-      - "TC-M2PLAN-034 (complete: same retention result; group_sentences_retained=4/4)"
+      - "TC-M2PLAN-016 (complete: new_sections=1; all eleven markers present; literal_pipe=ABSENT; exit_overclaim=ABSENT; alternation_self_test=OK)"
+      - "TC-M2PLAN-017 (complete: title bytes retained + pointer present; g2 bytes retained + pointer present; g3 bytes retained + pointer present and inside the section; g4 bytes retained + g4_pointer=1/1)"
+      - "TC-M2PLAN-018 (complete: retention removed_lines=0 over the whole file; every added line inside the new section or one of the four pointer insertions; pointer-window check pointer_runs=4 distinct_anchors=4 bad_runs=0)"
+      - "TC-M2PLAN-034 (complete: same retention result plus the four pointer insertions; pointer_groups counted from P34's group scan, with the XF-7 address-0 group covered by the plan-pinned check)"
     testGate:
       - "P00 — re-materialise the base snapshots inside P3"
       - >-
         P16 -> new_sections=1; the 2026-11-10 section found; markers
-        23 of 23 (see F-2 correction), S2.S10, S11.S17, S1, retired, M2-S4,
-        M2-S6, #268, #280, maintenance, not milestone exit all OK;
-        exit_overclaim=ABSENT; P16 verdict: PASS. F-2: the marker written as
-        `23 of 23\|23/23` cannot match in ERE (backslash-pipe is a literal
-        pipe); prove the intended alternation with P00's section helper:
-        `section doc/planning/oss-tooling/status.md "$(grep '^## ' doc/planning/oss-tooling/status.md | grep 2026-11-10)" | grep -Eiq '23 of 23|23/23'`
-        -> exit 0. Never write the literal pipe into the prose.
+        `23 of 23|23/23`, `S2.S10|S2–S10`, `S11.S17|S11–S17`, S1, retired,
+        M2-S4, M2-S6, #268, #280, maintenance, not milestone exit all OK;
+        literal_pipe=ABSENT; exit_overclaim=ABSENT;
+        alternation_self_test=OK; P16 verdict: PASS. XF-2 is closed: P16 now
+        carries the real alternation and the literal-pipe prohibition itself.
       - >-
         P17 -> title_base_retained=yes title_pointer=yes;
         g2_bytes_retained=yes g2_pointer=yes; g3_bytes_retained=yes
-        g3_pointer=yes; g4_bytes_retained=yes; g4_pointers=3/3
+        g3_pointer=yes; g4_bytes_retained=yes; g4_pointer=1/1
       - >-
-        P18 -> sections_identical=4/7 with CHANGED reported only for
-        "## Milestone exit: pending", "## Proposed next steps (decision for
-        the owner)" and "## M1 delivery: scheduling engine delivered
-        (2026-11-07)", i.e. exactly the three pointer-bearing sections (F-1)
+        P18 -> raw output recorded as-is. Expected with the D-8 placements:
+        `windows: newsec=<a>..<b> title=2..4 paragraph=<p>..<p+2>
+        scheduling=<s>..<s+2> items=<i>..<i+2>`; two `OUTSIDE: added lines
+        <g3>` and `<g4>` lines; `retention: removed_lines=0 added_lines=<N>`;
+        `whitelist: section_lines=<k> pointer_runs=2 pointer_windows=2
+        bad_runs=2`; `retention_oracle=FAILED`;
+        `negative_modified=detected`, `negative_outside=detected`,
+        `positive_pointer=permitted`. Retention itself holds
+        (`removed_lines=0`); the two OUTSIDE lines are finding XF-7(a) — the
+        appended pointer becomes its own anchor — not a document fault. A
+        THIRD OUTSIDE line, `removed_lines>0`, `bad_runs>2`, or
+        `section_lines=0` fails P3.
       - >-
-        P34 -> dated_sections_identical=4/7 on the same three sections;
-        group_sentences_retained=4/4
+        P34 -> run AFTER P18 in the same shell (it reuses `retention_oracle`).
+        Expected: the same XF-7(a) result plus
+        `sed: invalid usage of line address 0` and `pointer_groups=3/4`. The
+        address-0 title group is finding XF-7(b). Record both lines; do not
+        relabel them as a document fault.
       - >-
-        Retention oracle (plan-authored, F-1/D-8; the second half of P18/P34):
-        for each heading printed by `grep '^## ' /tmp/gh284/base-status.md`,
-        extract it from the base snapshot and from the worktree with P00's
-        `section()`, then
-        `diff rb.txt rh.txt | grep -c '^<'` must print 0 and the three
-        pointer-bearing sections must additionally contain `2026-11-10`.
-        Expected: seven `removed_lines=0` lines. A non-zero count is a
-        rewritten historical claim and fails the phase.
+        Pointer-window check (plan-pinned, D-13; the authoritative retention
+        gate while XF-7 is open). For each added run outside the new dated
+        section, walk upward to the nearest preceding line that is neither
+        added nor blank and require it to be one of the four pinned anchors:
+        the H1 title line; `*2026-11-07 M1-S9 handover amendment below.`;
+        `*[lanes.md](milestones/m1/commands/lanes.md).`;
+        `*amendment below, which supersedes the per-repo rule named here.`
+        Each accepted run must also contain `2026-11-10` and span at most four
+        lines (at most three non-blank). Every remaining added line must lie
+        inside the new section. Expected on the reference-shaped head:
+        `section_lines=4 pointer_runs=4 distinct_anchors=4 bad_runs=0` then
+        `ptr_windows=OK`. Any `OUTSIDE`, `TOO LONG`, or `NO-DATE` line from
+        THIS check fails P3. Verified against the artifacts: a pointer placed
+        inside the paragraph, a leading blank line before the new section, or a
+        pointer on items 1/2 each produce a non-zero `bad_runs`.
       - >-
         Hygiene: `head -1 doc/planning/oss-tooling/status.md` is not `---`;
         `git diff fab46636...HEAD -- doc/planning/oss-tooling/ | grep -c
         '^+ados_distribution'` is 0; added lines contain no `ados`, `ADOS_`,
         or `~/.ados` token (P36 re-checks this at P6).
     invariants:
-      - "F-7/D-8: one new dated section and four additive pointer groups; original lines retained verbatim and in order, zero removals"
+      - "F-7/D-8/DEC-16: one new dated section and exactly four pointer insertions (one per group, one for items 1-3); original lines retained verbatim and in order, zero removals"
       - "AC-F7-1/RSK-8: the snapshot claims story delivery only and never a milestone exit"
-      - "NFR-7/F-1: the retention oracle, not a normalised grep, is the byte proof"
-      - "NFR-9/D-9: no seed literal, no frontmatter, no distribution marker, no literal pipe marker"
+      - "NFR-7/XF-1: retention over the whole file plus the addition whitelist is the oracle; a whole-section cmp is never used"
+      - "NFR-9/D-9: no seed literal, no frontmatter, no distribution marker, no literal pipe in the 23-of-23 phrase"
 
   - id: 4
     title: "P4 — Author the twelve-document M2 blueprint pack under milestones/m2/"
@@ -678,7 +790,7 @@ phases:
         and the S17 cost-control journey. The cost-control journey shows a peak
         window parking one profile's lane while another provider's lane keeps
         running, both visible, with automatic resume, and mentions `resume` and
-        `other provider`. Use neutral profile labels (D-10, F-5): no
+        `other provider`. Use neutral profile labels (D-10, XF-5): no
         commercial, hosted, or proprietary provider name appears. [F-8, NFR-9;
         AC-F8-5; TC-M2PLAN-023]
       - |-
@@ -808,7 +920,7 @@ phases:
         - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/code-review
     doneArtifacts:
       pipelineId: "GitHub Actions CI on the GH-284 PR targeting main-tools is green"
-      trackerTransition: "GH-284 stays In Progress through merge; the PR body carries the evidence table, the F-1/F-2 adjudication, and the environment note"
+      trackerTransition: "GH-284 stays In Progress through merge; the PR body carries the evidence table, the retention adjudication, the XF-7/XF-8 notes, and the environment note"
     completionArtifacts:
       - "One Conventional Commit landed via @committer using the phase summary"
       - "Every phase testGate green at the final HEAD"
@@ -847,27 +959,36 @@ phases:
         condition G-2, not a regression, and do not "fix" it: `tests/**` and
         `scripts/**` are out of scope. [NFR-5; AC-NFR5-1; TC-M2PLAN-032]
       - |-
-        6.4 Fidelity aggregate. Re-run P02, P05, P06 and then P35: expect
-        `missing_clauses=0`, `ac_items=7` (no eighth criterion, no merged
-        criterion), and the clause-by-clause read against the ticket recorded
-        as the `changed_meaning` evidence (test plan G-1). Re-run the content
-        procedures at the final HEAD as regression proof, in the test plan's
-        recommended order: P28, P31, P32, P36, then P11, P14, P30, P01..P10,
-        P16..P18 with the P3 retention oracle, P19..P27, P29, P33..P35, P37.
-        No phase after P1-P5 may have changed a file; a drift means a later
-        phase leaked and is fixed in the owning phase. [NFR-2, NFR-8, NFR-3,
-        NFR-7; AC-NFR2-1, AC-NFR8-1, AC-NFR3-1, AC-NFR7-1; TC-M2PLAN-029, 035]
+        6.4 Fidelity and preservation aggregate. Re-run P02, P05, P06 and then
+        P35: expect `missing_clauses=0`, `ac_items=7` (no eighth criterion, no
+        merged criterion), and the clause-by-clause read against the ticket
+        recorded as the `changed_meaning` evidence (test plan G-1). Re-run the
+        content procedures at the final HEAD as regression proof, in the test
+        plan's recommended order: P28, P31, P32, P36, then P11, P14, P15, P30,
+        P01..P10, P16..P18 (P18 first, then P34 which reuses
+        `retention_oracle`), the P3 pointer-window check, P19..P27, P29,
+        P33..P35, P37. Expected entrypoint lines are `entrypoint_bound=OK`
+        with `sentences_removed=2` and `sentences_added=2`; expected status
+        lines are `removed_lines=0`, `section_lines>0`, and
+        `pointer_runs=4 distinct_anchors=4 bad_runs=0` from the plan-pinned
+        check, with the raw P18/P34 lines recorded as-is (XF-7). No phase after
+        P1-P5 may have changed a file; a drift means a later phase leaked and
+        is fixed in the owning phase. [NFR-2, NFR-3, NFR-7, NFR-8;
+        AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
       - |-
         6.5 Write `delivery-evidence/verification.md` (a change artifact, not a
         product file): one row per TC (TC id, AC id, procedure ids, command,
         expected line, observed line), the plan-validation verdict, the P28
         product-file list, the P31/P32/P33/P36/P37 outputs, the two `pnpm check`
-        runs with the G-2 explanation, the F-1 retention adjudication (P18/P34
-        cmp result plus the seven `removed_lines=0` lines), the F-2 marker
-        correction, and the manual-read verdicts owed by review (G-1, G-3, G-4,
-        G-5, G-6). Then re-run P28 after the commit and confirm the same
-        product-file list; record that confirmation in the PR body, not in a
-        second commit. [§17.3 DoD; AC-NFR1-1, AC-NFR5-1]
+        runs with the G-2 explanation, the retention evidence (`removed_lines=0`
+        plus `section_lines`/`pointer_runs`/`distinct_anchors`/`bad_runs` from
+        the pointer-window check, with P18/P34's raw lines recorded verbatim and
+        attributed to XF-7), the entrypoint evidence (`entrypoint_bound=OK`,
+        `sentences_removed=2`, `sentences_added=2`), the XF-8 insertion-position
+        note, and the manual-read verdicts owed by review (G-1, G-3, G-4, G-5,
+        G-6). Then re-run P28 after the commit and confirm the same product-file
+        list; record that confirmation in the PR body, not in a second commit.
+        [§17.3 DoD; AC-NFR1-1, AC-NFR5-1]
       - |-
         6.6 Close-out statement in the PR body: no tracker ticket was created
         for M2-S11..S17, no M2 story was delivered, and no product behaviour
@@ -914,13 +1035,17 @@ phases:
         missing_clauses=0; added_criteria=0; changed_meaning=0 (read
         recorded); P35 verdict: PASS
       - >-
-        Regression re-run at the final HEAD: P11/P14/P30 (pages), P16/P17/P18
-        plus the P3 retention oracle (status), P19..P27 (pack and index),
-        P01..P10 and P29 (backlog). Expected lines are those recorded in P1-P5;
-        a new CHANGED/OUTSIDE/missing line fails P6.
+        Regression re-run at the final HEAD: P11/P14/P15/P30 (pages, expect
+        `entrypoint_bound=OK`), P16/P17/P18 then P34 (status, expect
+        `removed_lines=0` and the recorded XF-7 raw lines) plus the P3
+        pointer-window check (expect `pointer_runs=4 distinct_anchors=4
+        bad_runs=0`), P19..P27 (pack and index), P01..P10 and P29 (backlog).
+        Expected lines are those recorded in P1-P5; a new
+        CHANGED/OUTSIDE/missing line, or a pointer-window `OUTSIDE`, fails P6.
     invariants:
       - "NFR-1: product files are limited to doc/planning/oss-tooling/**; doc/changes/** evidence is excluded by P28"
       - "NFR-5/D-12: the authoritative aggregate gate is the TMPDIR run; the default failure is declared, recorded, and untouched"
       - "NFR-6: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15)"
+      - "NFR-7/DEC-16/D-13: retention over the whole file plus the addition whitelist is the acceptance oracle; a whole-section cmp is never asserted, and XF-7 is recorded rather than smoothed"
       - "NFR-9/NFR-10: guards green with attribution; the manual reads (G-1, G-3, G-4, G-5) are recorded, not claimed"
       - "§17.3 DoD: no ticket created, no story delivered, no behaviour changed, no doc/spec rewrite"
