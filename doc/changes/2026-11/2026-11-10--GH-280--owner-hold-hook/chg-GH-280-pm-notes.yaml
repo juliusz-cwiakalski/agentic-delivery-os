@@ -384,3 +384,38 @@ notes:
       that command before claiming it is operator-visible."
     type: retro
     date: 2026-11-10
+  - text: "Plan phase 9 complete (review iteration 1 remediation, commit
+      e545b271e6e5db55f91a5638c0bf58c3dfe205e8). F-1 fixed by claim correction
+      per D20: the change record, changeset, delivery-modes guide, doctor command
+      page, feature-doctor, and feature-autonomous-delivery state doctor as a
+      command-runtime capability over a supplied DoctorComposition, remove the
+      doctor --json E2E step, and name status as the only production operator
+      surface; GAP-T8 records the production-doctor residual. F-2 accepted under
+      D21: the commit primitive composes the subject, template fallbacks are
+      accepted, and no history was rewritten. F-3 fixed by D22: new
+      tests/behaviour/owner-hold-production-composition.test.ts drives the real
+      createProductionComposer over a temp HOME whose
+      <stateDirectoryName>/owner-hold marker is materialized on disk for queue
+      list/plan, supplied-ref and no-ref claim, dispatch, and status, with a
+      marker-removal mutation control and an environment-source control; doctor
+      is not asserted. F-4/F-5 fixed by declaring the seven doc-sync files and
+      the non-formatting phase-8 edits in the change record. F-6/F-7/F-8 verified
+      in the spec and test plan (active/stuck blocking-array clarification, DM-4
+      {source; reason?}, §2/§7.3 refresh, D1 inline D12 supersession). F-9 fixed
+      the hook comment (4 096 characters vs the engine's 4 096-byte bound). F-10
+      made the adapter existence check error-aware (ENOENT absent; other stat
+      failures, including an unreadable parent store directory, unreadable and
+      fail-closed) with injected and root-skipped real tests. F-11 added the
+      remaining TC ids to the covering test names and a two-pass zero-count
+      recorder for TC-HOLDFACT-009 (zero credentials, transport, writes, spawns).
+      Verification: owner-hold fact/reader 30/30; production composition 3/3 plus
+      the structure pin 5/5; touched 12-file suite 232/232; pnpm typecheck green;
+      check:boundaries green (373 modules, 1101 deps; ambient/entrypoints/secret
+      clean); shellcheck 0 findings; hook suite 13/13; doc-distribution no drift
+      (82 in-scope docs); plan validate verdict=valid,
+      readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133
+      pass, 4 skip, 0 fail, 7137 tests across 880 files). No golden, closed set,
+      acceptance criterion, or product behaviour moved; manual TC-HOLDE2E-001
+      remains PR-scoped and not executed (GAP-T1)."
+    type: info
+    date: 2026-11-10
