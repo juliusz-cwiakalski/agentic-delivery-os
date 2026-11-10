@@ -225,6 +225,7 @@ import {
   type DoctorProviderCredentialPresence,
   type DoctorStateStoresRead,
   type DoctorWiringRead,
+  type OwnerHoldFact,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
@@ -1468,6 +1469,8 @@ export type StatusComposition = {
   readonly github: { readonly instance: ExternalSystemInstance };
   /** The declared truth-read reference names, when the composition is admitted. */
   readonly credentialReference?: { readonly referenceName: string; readonly sourceKey: string };
+  /** The per-pass owner-hold reader supplied by the production composition. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
 };
 
 /**
@@ -2428,6 +2431,7 @@ export const createStatusCommandRuntime = (
     },
     readSpend: (): SpendDigestSection => spendDigestFor(options),
     readCredentialPrerequisite: () => (admitted ? options.credentialReference : undefined),
+    ...(options.readOwnerHold === undefined ? {} : { readOwnerHold: options.readOwnerHold }),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };
@@ -2477,6 +2481,8 @@ export type DoctorComposition = {
   readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
   /** The additive retro registry store fact (GH-232 F-8). */
   readonly readRetroState?: () => DoctorStateStoresRead;
+  /** The per-run owner-hold reader supplied by the production composition. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
 };
 
 type DoctorLedgerSnapshot =
@@ -2708,6 +2714,7 @@ export const createDoctorCommandRuntime = (
         ],
       };
     },
+    ...(options.readOwnerHold === undefined ? {} : { readOwnerHold: options.readOwnerHold }),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };
@@ -3888,6 +3895,8 @@ export type QueueComposition = {
   readonly degraded?: readonly QueueDegradationReason[];
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
   readonly readyRuntime?: QueueReadyCommandRuntime;
+  /** The per-pass owner-hold reader supplied by the production composition. */
+  readonly readOwnerHold?: () => OwnerHoldFact;
   /** The additive live-watch seam (GH-238 F-13); absent degrades to polling. */
   readonly watch?: {
     readonly transport?: ControlTransport;
@@ -3912,6 +3921,12 @@ const queueStateFailure = (code: string): QueueRuntimeFailure => ({
   code,
   summary: `state read failed (${code})`,
 });
+
+/** The bounded claim summary naming the winning source and optional reason. */
+const ownerHoldSummary = (hold: Extract<OwnerHoldFact, { readonly active: true }>): string =>
+  hold.reason === undefined
+    ? `reason=owner-hold; owner hold active (${hold.source})`
+    : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`;
 
 /**
  * Resolve producer deploy expectations from the producer's own configuration
@@ -4014,6 +4029,9 @@ const buildQueueFacts = (
         expectations: resolveDeployExpectations(composition, fold.value),
       },
       runner: composition.runner ?? "runner-a",
+      ...(composition.readOwnerHold === undefined
+        ? {}
+        : { ownerHold: composition.readOwnerHold() }),
     },
     parkRecords: parks.pass.records,
   };
@@ -4043,6 +4061,9 @@ const recoverParksForMutation = (
     nowMs: composition.nowMs(),
     context,
     fenceToken: composition.newFenceToken(),
+    ...(composition.readOwnerHold === undefined
+      ? {}
+      : { ownerHold: composition.readOwnerHold() }),
   });
   if (recovered.ok) return undefined;
   return mapQueueFailure(recovered);
@@ -4297,6 +4318,17 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
       if (recovered !== undefined) return recovered;
       const built = buildQueueFacts(composition, parkContextFor(composition));
       if (!built.ok) return built;
+      // The hold gates BEFORE ref selection, so a no-ref claim never falls
+      // through to no-eligible-action; an unreadable store still fails above.
+      const hold = composition.readOwnerHold?.();
+      if (hold?.active === true) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.precondition.unmet",
+          summary: ownerHoldSummary(hold),
+        };
+      }
       const schedule = computeQueueSchedule(built.facts, { next: 20 });
       const selected =
         input.ref ?? schedule.nextActions.find((action) => action.preemption === undefined)?.ref;
@@ -4338,6 +4370,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         nowIso: composition.nowIso(),
         nowMs: composition.nowMs(),
         fenceToken: composition.newFenceToken(),
+        ...(hold === undefined ? {} : { ownerHold: hold }),
         precheck: () => precheck,
       });
       if (!claimed.ok) return mapQueueFailure(claimed);

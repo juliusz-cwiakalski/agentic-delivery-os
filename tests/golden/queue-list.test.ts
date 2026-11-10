@@ -27,4 +27,22 @@ describe("queue list golden", () => {
     expect(text).not.toContain("repositoryRoot");
     expect(text).not.toMatch(/\/work\/|\/home\//);
   });
+
+  test("the held list matches the new held golden and keeps the full blocking list", async () => {
+    const hold = {
+      active: true as const,
+      source: "marker" as const,
+      reason: "peak-hour cost pause",
+    };
+    const harness = createQueueEdgeHarness("golden-list-held", {
+      overrides: { readOwnerHold: () => hold },
+    });
+    await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"]);
+    const run = await harness.run(["queue", "list", "--json"]);
+    expect(run.exitCode).toBe(0);
+    const payload = JSON.parse(run.stdout);
+    expect(payload).toEqual(JSON.parse(readFileSync(join(GOLDEN, "queue-list-held.json"), "utf8")));
+    expect(payload.data.ownerHold).toEqual({ source: "marker", reason: "peak-hour cost pause" });
+    expect(payload.data.entries[0].blocking[0].reason).toBe("owner-hold");
+  });
 });

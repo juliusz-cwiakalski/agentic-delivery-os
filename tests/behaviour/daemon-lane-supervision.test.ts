@@ -17,6 +17,8 @@ import {
   type LaneObservation,
 } from "../../packages/core/src/contracts/index";
 import { classifyLaneProgress } from "../../packages/core/src/domain/daemon-lane";
+import { computeQueueSchedule } from "../../packages/core/src/domain/index";
+import { makeFacts } from "../fixtures/queue/schedule/harness";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = "2026-11-08T10:00:00Z";
@@ -262,6 +264,50 @@ describe("GH-238 lane supervision", () => {
       expect(updated?.resumeIntent).toEqual({ questionId: "Q-1", mode: "attach-continue" });
       const read = readDaemonLanes(store);
       if (read.ok) expect(read.latest?.resumeIntent?.questionId).toBe("Q-1");
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("GH-280 composed supervision derives from the held pass", () => {
+  test("a held schedule yields no action and no claim", async () => {
+    const { root, store } = isolation();
+    try {
+      const held = computeQueueSchedule({
+        ...makeFacts([{ ref: "GH-320", repository: "github.com/owner/repo-alpha" }]),
+        ownerHold: { active: true, source: "marker", reason: "peak-hour cost pause" },
+      });
+      let derived = false;
+      let claims = 0;
+      const fake = executor();
+      const result = await runSupervisionCycle({
+        store,
+        fenceToken: "fence",
+        ports: {
+          executor: fake.port,
+          nextAction: () => {
+            derived = true;
+            const found = held.nextActions[0];
+            return found === undefined
+              ? undefined
+              : {
+                  ref: found.ref,
+                  repository: found.repository ?? "github.com/owner/repo-alpha",
+                  weightClass: found.weightClass,
+                };
+          },
+          claim: () => {
+            claims += 1;
+            return { ok: false, code: "queue.precondition.unmet" };
+          },
+          release: () => true,
+          nowIso: () => NOW,
+        },
+      });
+      expect(derived).toBe(true);
+      expect(result.mode).toBe("idle");
+      expect(claims).toBe(0);
     } finally {
       removeRoot(root);
     }
