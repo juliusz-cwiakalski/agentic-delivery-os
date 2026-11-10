@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -55,10 +55,10 @@ than discovering work by hand.
   unavailable, unattempted, or unresolved source yields `unknown`.
 - **Per-repository single-flight.** `repo-exclusive` is the only implemented
   lease scope; `worktree` is declared and never acquired. The claim has two
-  stages: the pre-fence gate evaluates parks and the five non-exclusivity
-  readiness conditions, and the in-fence verified lease read owns the
-  exclusivity outcome, so a live holder is always a lease conflict and never a
-  precondition refusal. A live lease held by another holder refuses
+  stages: the pre-fence gate evaluates the owner hold first, then parks, then the
+  five non-exclusivity readiness conditions, and the in-fence verified lease read
+  owns the exclusivity outcome, so a live holder is always a lease conflict and
+  never a precondition refusal. A live lease held by another holder refuses
   `queue.lease-conflict`; a stale lease — heartbeat age at or beyond the TTL,
   the bound is inclusive — is taken over with previous-holder, lease,
   heartbeat-age, last-heartbeat, and takeover evidence plus a
@@ -230,9 +230,8 @@ Explicit denials: the hold adds **no** park cause, park condition type, recovery
 state, state record kind, or seventh queue-ready condition. It adds exactly one
 lane/blocking reason, `owner-hold`, pinned by exact two-way ordered equality
 against the closed-set fixture. The production resident daemon entry is not a
-claim source today; a composed supervision cycle whose next-action seam derives
-from the held pass receives no action, and the resident-daemon residual is
-unchanged.
+claim source; a composed supervision cycle whose next-action seam derives from
+the held pass receives no action, and the resident-daemon residual is unchanged.
 
 ## Command surfaces
 

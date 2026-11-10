@@ -176,7 +176,8 @@ $ <binary> dispatch handover github.com/owner/repo --revert
 `dispatch.session.spawn-failed`, `dispatch.restart-budget-exceeded`,
 `dispatch.resume-uneconomical`, `dispatch.state-unverified`. A pre-session
 refusal (unknown harness, rejected input, an unresolvable credential, a failing
-admission read, or a conflicting lease before a spawn) emits the classified
+admission read, an active owner hold reporting `queue.precondition.unmet` with
+reason `owner-hold`, or a conflicting lease before a spawn) emits the classified
 envelope and appends no attempt record; every attempt-stage failure is recorded
 with its pinned token and outcome. A local store fault during
 `dispatch dual-run resolve` keeps its own `kind: "state"` code; an absent

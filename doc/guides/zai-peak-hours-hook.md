@@ -280,7 +280,7 @@ correctly: e.g. a quota sleep that lands inside the peak window then sleeps on
 to peak end. v1 ships two conditions: `howLongToSleepDueToPeakHours` and
 `howLongToSleepDueToQuotaExhaustion`.
 
-The DM-1 contract now has a second shipped example,
+The DM-1 contract has a second shipped example,
 `pre-opencode-iteration-owner-hold.sh`, whose only default condition is
 `howLongToSleepDueToOwnerHold`. Conditions compose by **MAX**, and the
 owner-hold example applies **no fixed iteration cap**: a time-bounded condition

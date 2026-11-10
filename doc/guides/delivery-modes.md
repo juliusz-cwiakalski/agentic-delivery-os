@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280"]
   decisions: ["TDR-0002"]
 ---
 
@@ -158,9 +158,11 @@ evaluated and are never logged.
 
 ### Activation, lifecycle, and retry semantics
 
-`install.sh --local` installs the inactive example at
-`scripts/hooks/pre-opencode-iteration-zai.sh`. It does not activate it. Copy it
-to the default path, or set the path override to use any executable hook:
+`install.sh --local` installs both inactive examples at
+`scripts/hooks/pre-opencode-iteration-zai.sh` and
+`scripts/hooks/pre-opencode-iteration-owner-hold.sh`. It does not activate
+either. Copy one to the default path, or set the path override to use any
+executable hook:
 
 ```bash
 mkdir -p ~/.ados/hooks
@@ -171,7 +173,7 @@ ADOS_PRE_ITERATION_HOOK="$PWD/scripts/hooks/pre-opencode-iteration-zai.sh" \
   scripts/ceo-loop.sh
 ```
 
-`uninstall.sh --local` removes the installed example and its empty
+`uninstall.sh --local` removes the installed examples and any empty
 `scripts/hooks/` directory, but never removes an operator's hook at the default
 or overridden path.
 
@@ -220,7 +222,9 @@ relocation-safe).
 
 `install.sh --local` installs both inactive examples:
 `scripts/hooks/pre-opencode-iteration-zai.sh` and
-`scripts/hooks/pre-opencode-iteration-owner-hold.sh`. The owner-hold example
+`scripts/hooks/pre-opencode-iteration-owner-hold.sh`. Activate the owner-hold
+example like any hook: copy it to the default path or point
+`ADOS_PRE_ITERATION_HOOK` at it. The owner-hold example
 recognises exactly two settings: `ADOS_OWNER_HOLD` and
 `ADOS_OWNER_HOLD_POLL_SECONDS` (default `300`, accepted range `1`–`3600`; an
 unset, empty, or whitespace-only value defaults silently, any other invalid
@@ -253,7 +257,10 @@ A held claim or dispatch is a **classified user-validation refusal at exit 1**,
 not an internal wait. A caller that wants deferral semantics treats the
 `owner-hold` token as wait/do-not-abort, never as a transient retry. The hold is
 **not a kill switch**: a session that is already running continues until it ends
-or its provider cuts it out, which can still leave a `partial` lane. Read-only
+or its provider cuts it out, which can still leave a `partial` lane. Clearing the
+hold resumes the next pass from preserved queue, lease, park, and lane state: no
+record is rewritten, no work is redispatched from scratch, and no duplicate
+session is created. Read-only
 inspection (`status`, `doctor`, `queue list`, `queue plan`, `lanes`, and
 `queue watch`) remains available and reports the hold; `status` exposes it as
 `providers.evidence.ownerHold` and `doctor` keeps the provider check `ok` while
