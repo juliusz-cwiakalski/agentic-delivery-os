@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-09T10:31:06.980Z }
   system_spec_update: { started: null, completed: 2026-11-09T10:44:09.188Z }
   review_fix: { started: null, completed: 2026-11-10T07:19:06.028Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-10T07:34:13.291Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -133,6 +133,30 @@ blockers:
       unaffected, optional later hardening). Accepted carry: commit-body token
       stripping of TC- ids by the primitive is pre-existing and noted for a
       follow-up."
+    type: info
+    date: "2026-11-10"
+  - text: "Post-rebase plan-phase evidence map (SHAs changed by the rebase onto
+      origin/main-tools 78e61207; content and gate results unchanged): P1 =
+      8c9b6222 (contract/defaults/builder/composition + delivered fixture
+      repair; focused suites green); P2 = 54241176 (DispatchEnvelopeError
+      detail, HumanTextContext seam, golden/inventory pins; 29 pass / 0 fail);
+      P3 = 7d0040ea (default spawn, PATH, ambient canary, detail rendering; 18
+      pass / 0 fail); P4 = cef22b69 (changeset, decision record, bounded
+      real-CLI proof and aggregate gate); P5 = da683a67 with f854fd78 (host
+      stdin early-close guard and TC-HDA-036; host suites 11 pass / 0 fail, M-21
+      red 4/green 11). Review evidence commit 736ee99e; decision-record renumber
+      commit 4af1630b (TDR-0019 to avoid the main-tools coordinator
+      TDR-0017/TDR-0018 collision)."
+    type: info
+    date: "2026-11-10"
+  - text: "Phase 9 quality_gates = PASS on the rebased tree: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 in 339 s; lint and format clean (62 pre-existing
+      warnings, 0 errors); build and typecheck green; tests 6953 pass / 4 skip /
+      0 fail across 6957 tests and 859 files; boundaries 370 modules / 1086 deps
+      with ambient-globals 171, entrypoints and secret-read 339 clean;
+      prompt-conformance 5 clean; help-guide coverage complete; exports parity 5
+      publishables. forbidden-literals 5/5 scope classes, 0 violations. plan
+      validate remains valid/readyForDevelopment. Tree clean before and after."
     type: info
     date: "2026-11-10"
 notes:
