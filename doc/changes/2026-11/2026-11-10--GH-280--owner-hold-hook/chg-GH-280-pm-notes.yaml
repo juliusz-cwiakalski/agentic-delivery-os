@@ -232,3 +232,6 @@ notes:
   - text: "Plan phase 1 complete (commit c3fe7c8840806fb9fdf3ad1a9a2362514773190c): owner-hold fact contract, pure resolver, bounded marker reader, and the content/contract inventories. Verification: bun test owner-hold-fact + owner-hold-reader 27 pass; content-inventory + port-contract-inventory 17 pass; ambient-globals clean (173 files); forbidden-literals 27 pass; core/adapters typecheck clean."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 2 complete (commit fff2cb1011ab0357cf745f9bf5fe782ca38b832c): global queue gate, claim/fenced refusal, park-recovery skip, dispatch summary carriage, one owner-hold lane/blocking token, and exact two-way closed-set equality. Verification: queue-hold-schedule/dispatch/park-resume/payload + queue-lease/park/schedule + queue-scheduling-contract/queue-ready + error-table-sync 205 pass; content/port inventories pass; ambient-globals clean; forbidden-literals 27 pass; full pnpm typecheck clean."
+    type: info
+    date: 2026-11-10

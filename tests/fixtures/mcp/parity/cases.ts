@@ -41,6 +41,7 @@ import {
   makeWorkItem,
   missingLocalContext,
   pipelineRunRead,
+  providers,
   repository,
   runStatusCli,
   type StatusCallRecorder,
@@ -166,6 +167,17 @@ const notDeliveredFacts = () =>
     ci: pipelineRunRead([]),
   });
 
+const ownerHoldFacts = () =>
+  baseFacts({
+    providers: providers({
+      ownerHold: {
+        active: true,
+        source: "marker",
+        reason: "peak-hour cost pause",
+      },
+    }),
+  });
+
 const containmentFacts = () =>
   statusCaseFrom(
     "status-containment",
@@ -228,6 +240,10 @@ export const STATUS_CASES: readonly ToolParityCase[] = [
     schemaVersion: "delivery.status.v1",
   }),
   statusCase("status-cap-sized", capSizedFacts(), {
+    kind: "success",
+    schemaVersion: "delivery.status.v1",
+  }),
+  statusCase("status-owner-hold", ownerHoldFacts(), {
     kind: "success",
     schemaVersion: "delivery.status.v1",
   }),

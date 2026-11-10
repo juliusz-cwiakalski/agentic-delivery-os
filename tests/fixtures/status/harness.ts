@@ -454,7 +454,9 @@ export const createStatusRecorder = (): StatusCallRecorder => ({ calls: [] });
 export const statusRuntime = (
   facts: StatusFacts,
   recorder: StatusCallRecorder = createStatusRecorder(),
-): StatusCommandRuntime => ({
+): StatusCommandRuntime => {
+  const ownerHold = facts.providers.ownerHold;
+  return {
   readRepository: () => {
     recorder.calls.push("readRepository");
     return facts.repository;
@@ -479,6 +481,14 @@ export const statusRuntime = (
     recorder.calls.push("readProviderParks");
     return facts.providers.parks;
   },
+  ...(ownerHold === undefined
+    ? {}
+    : {
+        readOwnerHold: () => {
+          recorder.calls.push("readOwnerHold");
+          return ownerHold;
+        },
+      }),
   readLocalContext: () => {
     recorder.calls.push("readLocalContext");
     return facts.localContext;
@@ -499,7 +509,8 @@ export const statusRuntime = (
     recorder.calls.push("nowMs");
     return facts.nowMs;
   },
-});
+  };
+};
 
 export type StatusCliRun = {
   readonly exitCode: number;
