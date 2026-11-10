@@ -65,10 +65,10 @@ changes.
 
 ## Redaction
 
-The truth-read key is not currently registered for serialization redaction by
-the config-catalog path. This change registers the resolved key for redaction at
-the runtime edge whenever it is present, using the injected environment facts
-and the declared reference; it adds no ambient read and no new allowlist entry.
+The config-catalog path does not register the truth-read key for serialization
+redaction. The resolved key is registered for serialization redaction at the
+runtime edge whenever it is present, using the injected environment facts and
+the declared reference; this adds no ambient read and no new allowlist entry.
 That registration is why a diagnostic cannot echo the value.
 
 ## Diagnostics are names only

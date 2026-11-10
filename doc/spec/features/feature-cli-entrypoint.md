@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-CLI-ENTRYPOINT
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` and `coordinator` families, fail-closed `fallback.internal` containment for an uncomposed invocation, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
+summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` and `coordinator` families, fail-closed `fallback.internal` containment for an uncomposed invocation, the declared credential references registered for serialization redaction from the injected environment, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
-  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241"]
-  related_decisions: ["ADR-0003", "TDR-0005"]
+  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-279"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
     - "packages/cli/src/entrypoint.ts"
@@ -80,7 +80,9 @@ An empty override is ignored rather than rejecting the run, and an invalid overr
 
 ## Runtime neutrality and boundaries
 
-`packages/cli/src/entrypoint.ts` and `packages/cli/src/help.ts` are runtime-neutral: they import core contracts and branding data only, read no ambient global, and perform no I/O. `packages/cli/src/production.ts` and `packages/cli/bin/delivery-os.ts` are the declared process edges: the bin reads `process.env`, the working directory, and the home directory once and writes one exit code; the production composer constructs the Node file, process, state, git, and provider edges. Both files are exact, reason-bearing entries in the content inventory.
+`packages/cli/src/entrypoint.ts` and `packages/cli/src/help.ts` are runtime-neutral: they import core contracts, branding data, and the credentials adapter's pure source-key resolver; they read no ambient global and perform no I/O. `packages/cli/src/production.ts` and `packages/cli/bin/delivery-os.ts` are the declared process edges: the bin reads `process.env`, the working directory, and the home directory once and writes one exit code; the production composer constructs the Node file, process, state, git, and provider edges. Both files are exact, reason-bearing entries in the content inventory.
+
+The bin passes the declared credential references (`DECLARED_CREDENTIAL_REFERENCES`, the `github-read` reference in production) into `runEntrypoint` through the optional `credentialReferences` input. The entrypoint derives each reference's resolved source key and registers any non-empty value present in the injected environment for serialization redaction, so no diagnostic, envelope, or human text can echo the truth-read credential. An absent or empty value is not registered, and no ambient environment read is added.
 
 The entrypoint emits self-description text through the existing serialization chokepoint: help and version travel as the human-success payload of an inert synthetic command, so every byte passes the same redaction and write path as any other command and no second stream writer exists. The entrypoint never invokes `process.exit`; the bin sets `process.exitCode` from the returned code.
 
@@ -93,7 +95,7 @@ The bin is not part of the install or release surface. `scripts/install.sh` name
 | Level | Scope | Evidence |
 |---|---|---|
 | Behaviour | Root help, command help coverage, version identity and precedence, help/version isolation, composition honesty and fail-closed containment | `tests/behaviour/entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts`, `entrypoint-version.test.ts`, `entrypoint-help-isolation.test.ts`, `entrypoint-composition.test.ts` |
-| Structure | Bin and `main` manifest mapping, Bun shebang, composition invocation, installer absence, and the shipped coordinator registration | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts`, `coordinator-production-composition.test.ts` |
+| Structure | Bin and `main` manifest mapping, Bun shebang, composition invocation, installer absence, the shipped coordinator registration, and the declared credential-reference redaction registration | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts`, `cli-edge-seam.test.ts`, `coordinator-production-composition.test.ts` |
 | Composition binding | Production queue repository binding derivation, the key-and-root pair, root sourcing and non-disclosure, and the queue entry invariant | `tests/behaviour/queue-production-binding.test.ts`, `queue-binding-invariant.test.ts`, `tests/structure/queue-binding-derivation.test.ts`, `queue-binding-fixture-shape.test.ts`, `tests/conformance/pilot/pilot-records.test.ts` |
 | Checks | Forbidden literals, content inventory, help/guide coverage | `scripts/checks/forbidden-literals.ts`, `tests/structure/content-inventory.test.ts`, `scripts/checks/help-guide-coverage.ts` |
 
