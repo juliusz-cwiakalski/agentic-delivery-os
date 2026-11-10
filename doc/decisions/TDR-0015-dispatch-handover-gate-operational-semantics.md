@@ -5,7 +5,7 @@ decision_type: tdr
 status: Proposed
 created: 2026-11-08
 decision_date: null
-last_updated: 2026-11-08
+last_updated: 2026-11-10
 summary: "Fix the durable operational semantics of the M1-S9 handover gate: class exposure is separate from clean/corroborated success; every attempt carries a declared evidence class and only pilot evidence counts for production handover; the window is incident-exclusive with a reported start reason; the floor is 20 counted dispatches or 7 consecutive UTC dates and binds only the floor; comparison is family-wise with an explicit not-applicable marker; repository identity is the normalized host/owner/name remote key with a persisted first-use marker or a clean refusal; handovers are per-repository, append-only, idempotent, and read through a fail-safe dual-run authority view."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -60,20 +60,21 @@ revisit_triggers:
   - "The checkout's git common directory layout changes, or the delivered VCS-remote normalization changes: revisit the checkout-scoped identity marker. The state layer changes its fence or derived-document replacement semantics: revisit the atomic authority-view replacement."
   - "A handover or reversal replay ever appends a duplicate record or produces a non-dual-run default from an unreadable view: reopen the idempotency and fail-safe rules."
 links:
-  related_changes: ["GH-239", "GH-266", "GH-233"]
+  related_changes: ["GH-239", "GH-266", "GH-233", "GH-279"]
   supersedes: []
   superseded_by: []
   spec:
     - "doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/chg-GH-239-spec.md"
     - "doc/planning/oss-tooling/backlog.md"
     - "doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-spec.md"
+    - "doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-spec.md"
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
     - "packages/core/src/contracts/queue.ts"
     - "packages/core/src/contracts/state.ts"
     - "packages/core/src/domain/queue-graph.ts"
   diagrams: []
-  decisions: ["TDR-0005", "TDR-0010", "TDR-0014"]
+  decisions: ["TDR-0005", "TDR-0010", "TDR-0014", "TDR-0020"]
   experiments: []
   metrics: []
   roadmap_items: ["M1-S9"]
@@ -331,6 +332,7 @@ Legend: ✅ passes · ❌ fails. No alternative relies on an accepted-risk excep
 - **Recommendation:** Alternative 3.
 - **Authorized Decision:** **Pending.** The owner accepts, adjusts, or rejects this record at the GH-239 PR review. Until then the record is `Proposed`, grants no authority, and does not itself change the change artifacts. The change spec/test-plan/plan must reference TDR-0015 and be amended to these semantics before delivery (see Implementation Plan).
 - **Decider:** Juliusz Ćwiąkalski (owner). The AI does not accept this record.
+- **Amendment (GH-279):** [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md) amends **four assertions** of this record for the delivered-evidence case only — §1 `Truth(W)` (the not-applicable-comparison clause), §1 `Coverage(W)` ("creates no divergence"), §1 record-level degradation ("does not create a divergence"), and §5 ("a divergence record is appended iff `outcome = "mismatch"`"). Each affected assertion carries an additive note below. Every other clause here stands unchanged; this record's decision text and history are not rewritten, and no supersession is claimed. This record is itself `Proposed`: the additive amendment takes effect only if the owner accepts both this Proposed record and TDR-0020 at the GH-279 PR. **Spec pointer:** the GH-279 specification's F-4.9/DEC-3 sentence summarizes this as two changed gate behaviours; that sentence is a pointer, not the scope. The amendment is **four** TDR-0015 assertions — the three in §1 and the one in §5 — and **TDR-0020 is their durable home**.
 
 ### 1. Gate composition and reachability
 
@@ -341,13 +343,16 @@ Eligible(R) = Truth(W) ∧ Coverage(W) ∧ Floor(W) ∧ Corroborated(W)
 ```
 
 - **`Truth(W)`:** `falseSuccessIncidents(W) = 0` and `unresolvedDivergences(W) = 0`. A false-success incident is a success-claimed result contradicted by artifact, tracker, or CI truth. A divergence exists only when a comparison outcome is `mismatch`; a not-applicable comparison is never a divergence.
+  > **Amendment (GH-279, [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md)):** for the delivered-evidence case only — a not-applicable comparison whose comparison source was unavailable **on an attempt that carries delivered evidence** — the attempt records at most one open, resolvable divergence per (repository, work-item ref), and that divergence counts in `unresolvedDivergences(W)` until resolved. All other not-applicable comparisons remain non-divergences. This note is additive; the decision text above is unchanged.
 - **`Coverage(W)`:** the set of result tokens across `W` equals the eleven-token TDR-0005 set; every missing class is named. Coverage is **exposure**, not success. A `state-unverified` attempt counts for coverage, is not a success claim, creates no divergence, and does not by itself block eligibility.
+  > **Amendment (GH-279, [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md)):** for the delivered-evidence case only, a `state-unverified` attempt that carries delivered evidence **does** record the open divergence described above (or references the existing open one for the same work item); it remains a non-success token, remains exposure for coverage, and remains non-blocking **only on the corroboration condition** — it makes no success claim, so `Corroborated(W)` is satisfied vacuously. That non-blocking scope does **not** reach `Truth(W)`: the recorded delivered-evidence divergence counts in `unresolvedDivergences(W)` and therefore blocks eligibility until it is resolved, exactly as the `Truth(W)` amendment above states. This note is additive; the decision text above is unchanged.
 - **`Floor(W)`:** see decision 4. The floor binds only itself; it never substitutes for `Truth`, `Coverage`, or `Corroborated`.
 - **`Corroborated(W)`:** every counted dispatch whose token is a success claim (projection class `success`: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `finished`, `noop-lane-nothing-to-do`) has the evidence its outcome family requires. Non-success tokens (`failed`, `partial`, `max-restarts`, `state-unverified`, `noop-lane-permission`) make no success claim and satisfy this condition vacuously.
 
 Two failure scopes are distinct and must not be conflated:
 
 - **Record-level degradation.** An attempt whose comparison source or corroboration source cannot be read is recorded as unevaluable with its classified identity. It does not make the summary "unverifiable". If it is a non-success token, it still counts for coverage and does not block. If it is a success-claimed token, its claim is uncorroborated, so `Corroborated(W)` fails as one named unmet condition — it does not create a divergence, does not become a false-success incident, and does not reset the window.
+  > **Amendment (GH-279, [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md)):** for the delivered-evidence case only — an attempt that carries delivered evidence and whose truth read is unreadable — such an attempt records the single open delivered-evidence divergence described above instead of remaining divergence-free; it still does not become a false-success incident and still does not reset the window. A success-claimed token's uncorroborated status is unchanged. This note is additive; the decision text above is unchanged.
 - **Window-level unreadability.** An unreadable, torn, or truncated *ledger/evidence read* — the summary cannot see the evidence at all — makes eligibility `unverifiable` (neither eligible nor ineligible), with the degradation or truncation declared and no fabricated zeros.
 
 `pr-open-unverified` is a success-claimed token whose corroboration is the tracker fact that the PR is open. The URL-resolution failure is recorded as an engine-side attribute (`urlResolved: false`); it is not an unresolved divergence and not a permanently unsatisfied corroboration. This is what makes the class simultaneously coverable, comparable, and corroborable.
@@ -407,6 +412,7 @@ Invariants (declared once; no consumer may re-derive them):
 
 - `token = null` iff `class = "not-applicable"`; `outcome = "not-applicable"` iff `class = "not-applicable"`.
 - A divergence record is appended iff `outcome = "mismatch"`. `match` and `not-applicable` never create a divergence.
+  > **Amendment (GH-279, [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md)):** for the delivered-evidence case only, a `not-applicable` comparison with `reason = "comparison-source-unavailable"` on an attempt that carries delivered evidence may append the single open delivered-evidence divergence described in §1 (or reference the existing open one for the same work item). In that case the `state-unverified` bullet's "exposure-only" means "makes no success claim", not "records no obligation". All other `match` and `not-applicable` comparisons remain non-divergences. This note is additive; the decision text above is unchanged.
 - **`verify-change` family** (`failed`, `finished`, `partial`, `state-unverified`): the comparison unit is the verify-change ledger outcome token for the same reference, compared by exact token equality. `state-unverified` is the declared exception: the same unreadable truth that produced it makes the independent ledger comparison unavailable, so it carries `class = "not-applicable"`, `token = null`, `outcome = "not-applicable"`, `reason = "comparison-source-unavailable"` and is exposure-only.
 - **Dispatch-derived `failed` pairs**: a spawn failure (`dispatch.session.spawn-failed`) and a resume-economics refusal (`dispatch.resume-uneconomical`) produce no independently derived verify-change outcome for that attempt, so they carry `class = "not-applicable"`, `token = null`, `outcome = "not-applicable"`, `reason = "comparison-source-unavailable"`; they are exposure-only, create no divergence, and are not a new comparison family. `max-restarts` and harness-path `noop-lane-permission` remain dispatch-session tokens with reason `dispatch-session-family`.
 - **`tracker-truth` family** (`merged`, `blocked`, `pr-open`, `pr-open-unverified`): the comparison unit is PR/tracker state, not URL text. `pr-open-unverified` compares to independent tracker truth `pr-open` (equivalence rule: `pr-open-unverified ≡ pr-open` at tracker-state granularity), with `urlResolved` recorded as an attribute. `merged` and `blocked` compare to their tracker facts. URL resolution is never part of the comparison and never produces a mismatch.
@@ -495,6 +501,7 @@ The selected composite satisfies all constraints C-1…C-9. It keeps every class
 - [GH-239 plan](../changes/2026-11/2026-11-08--GH-239--dispatch-engine/chg-GH-239-plan.yaml) — phases 3, 4, 10.
 - [Amended M1-S9 backlog entry](../planning/oss-tooling/backlog.md) — the canonical four-condition `clean` bar.
 - [GH-266 specification](../changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-spec.md) — `CEO-D-073 (GH-266, 2026-11-07)`; DEC-1…DEC-4; the amended bar.
+- [GH-279 specification](../changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/chg-GH-279-spec.md) — F-4.9/DEC-3, the pointer to the amendment. Its "two changed behaviours" summary is a pointer only: the amendment is the four assertions noted above, whose durable home is [TDR-0020](TDR-0020-dispatch-divergence-recording-and-resolution.md).
 - [TDR-0005](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) — the closed eleven-token vocabulary, projection/derivation classes, and token-level parity.
 - [TDR-0010](TDR-0010-dispatch-session-classification-token-projection.md) — the dispatch-session projection, `outcome`-beside-`partial`, and spawn-refused rules.
 - [TDR-0014](TDR-0014-commit-effect-crash-safety-message-independent-identity.md) — additive-field, append-only, and fail-safe precedent for durable operational records.
