@@ -543,3 +543,91 @@ describe("TC-CLOSE-005 closeout kind classification and containment", () => {
     expect(classifyDomainKind("state", "state.store.torn").domainKind).toBe("state");
   });
 });
+
+describe("TC-CREDNAME-007 the trusted-refusal marker is narrow and required", () => {
+  const summary = 'credential key GITHUB_TOKEN is unset (reference github-read); export GITHUB_TOKEN="$(gh auth token)"';
+  const hint = "configure the declared credential reference and retry";
+  const canary = "planted-error-classification-canary";
+
+  const render = async (
+    failure: Record<string, unknown>,
+  ): Promise<{ readonly exit: number; readonly stdout: string; readonly stderr: string }> => {
+    const branded = resolveBrandIdentity({ workingName: "Fixture" });
+    if (!branded.ok) throw new Error("invalid fixture brand");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const deps: CliDependencies = {
+      brand: branded.value,
+      clock: { now: () => 1 },
+      newRunId: () => "run-trusted-refusal",
+      secrets: [canary],
+      program: {
+        commands: {
+          probe: {
+            handler: () => ({ error: failure }),
+          },
+        },
+      },
+    };
+    const exit = await runCli(
+      ["probe", "--json"],
+      {
+        stdout: { write: (text) => stdout.push(text) },
+        stderr: { write: (text) => stderr.push(text) },
+      },
+      deps,
+    );
+    return { exit, stdout: stdout.join(""), stderr: stderr.join("") };
+  };
+
+  test("the marked credential refusal forwards its bounded summary and hint in machine mode", async () => {
+    const rendered = await render({
+      kind: "config",
+      code: "config.credential.missing",
+      summary,
+      remediationHint: hint,
+      trustedRefusal: true,
+    });
+    const envelope = JSON.parse(rendered.stdout) as {
+      readonly error?: { readonly code?: string; readonly summary?: string; readonly remediationHint?: string };
+    };
+    expect(rendered.exit).toBe(1);
+    expect(envelope.error?.code).toBe("config.credential.missing");
+    expect(envelope.error?.summary).toBe(summary);
+    expect(envelope.error?.remediationHint).toBe(hint);
+    expect(rendered.stdout + rendered.stderr).not.toContain(canary);
+  });
+
+  test("an unmarked config-shaped failure still suppresses summary and hint", async () => {
+    const rendered = await render({
+      kind: "config",
+      code: "config.credential.missing",
+      summary,
+      remediationHint: hint,
+    });
+    const envelope = JSON.parse(rendered.stdout) as {
+      readonly error?: { readonly summary?: string; readonly remediationHint?: string };
+    };
+    expect(envelope.error?.summary).toBe(
+      classifyDomainKind("config", "config.credential.missing").summary,
+    );
+    expect(envelope.error?.remediationHint).not.toBe(hint);
+  });
+
+  test("the marker is honoured only for config.credential.missing", async () => {
+    const rendered = await render({
+      kind: "config",
+      code: "config.value.invalid",
+      summary,
+      remediationHint: hint,
+      trustedRefusal: true,
+    });
+    const envelope = JSON.parse(rendered.stdout) as {
+      readonly error?: { readonly summary?: string; readonly remediationHint?: string };
+    };
+    expect(envelope.error?.summary).toBe(
+      classifyDomainKind("config", "config.value.invalid").summary,
+    );
+    expect(envelope.error?.remediationHint).not.toBe(hint);
+  });
+});

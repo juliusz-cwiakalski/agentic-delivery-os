@@ -35,6 +35,8 @@ export type DispatchRuntimeFailure = {
   readonly kind: string;
   readonly code: string;
   readonly summary?: string;
+  /** The narrow trusted-refusal marker; set only for `config.credential.missing`. */
+  readonly trustedRefusal?: true;
 };
 
 /** The summary surface; phase 6 composes it. */

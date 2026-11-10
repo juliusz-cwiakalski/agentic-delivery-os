@@ -153,17 +153,27 @@ const explicitRemediationHint = (value: unknown): string | undefined => {
   return typeof hint === "string" && hint.length > 0 ? hint : undefined;
 };
 
+/**
+ * The narrow trusted-refusal marker the dispatch engine sets on its bounded
+ * credential refusal. It is honoured only for `config.credential.missing`; any
+ * other config-shaped failure stays suppressed.
+ */
+const trustedCredentialRefusal = (value: unknown): boolean =>
+  isRecord(value) &&
+  value.trustedRefusal === true &&
+  value.code === "config.credential.missing";
+
 const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
   // No untrusted config summary, even when the discriminator was malformed and
-  // classification contained it as fallback.internal.
+  // classification contained it as fallback.internal. The one exception is the
+  // engine's marked credential refusal, whose prose is identifier-only.
   const configShaped =
     isRecord(value) &&
     (value.kind === "config" ||
       (typeof value.code === "string" && value.code.startsWith("config.")));
-  const summary =
-    configShaped || entry.domainKind === "config" ? undefined : explicitSummary(value);
-  const hint =
-    configShaped || entry.domainKind === "config" ? undefined : explicitRemediationHint(value);
+  const suppressed = (configShaped || entry.domainKind === "config") && !trustedCredentialRefusal(value);
+  const summary = suppressed ? undefined : explicitSummary(value);
+  const hint = suppressed ? undefined : explicitRemediationHint(value);
   const resolved = hint === undefined ? entry : { ...entry, remediationHint: hint };
   return summary === undefined
     ? { type: "failure", entry: resolved, ...(value === undefined ? {} : { value }) }

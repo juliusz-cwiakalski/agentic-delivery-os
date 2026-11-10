@@ -1,0 +1,7 @@
+{
+  "code": "provider.payload.invalid",
+  "category": "platform",
+  "retryable": false,
+  "consequence": "unknown",
+  "exitCode": 2
+}

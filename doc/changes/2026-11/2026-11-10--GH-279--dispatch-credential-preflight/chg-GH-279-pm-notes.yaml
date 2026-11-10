@@ -146,3 +146,11 @@ notes:
       dispatch-token-home, and content-inventory (129 pass); pnpm build green."
     type: info
     date: 2026-11-10
+  - text: "Plan phase 3 (stamp 2xx status on GitHub decode failures) complete in
+      commit 106da48: the bounded read now returns the received status and the
+      issue normalizer stamps it onto provider.payload.invalid, so a malformed
+      2xx carries httpStatus while a transport throw stays status-absent; 404 and
+      other non-2xx keep their status. Tests: github-inputs, github-trap, and
+      github-closeout (30 pass); adapters tsc build green."
+    type: info
+    date: 2026-11-10

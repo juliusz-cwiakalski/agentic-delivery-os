@@ -100,6 +100,7 @@ import {
   type DispatchAdmission,
   type DispatchLeaseClaim,
   type DispatchPorts,
+  type DispatchPreflightResult,
   type DispatchRepositoryScope,
   type DispatchTruthReads,
   declareQueueEntry,
@@ -4490,6 +4491,12 @@ export type DispatchComposition = {
   readonly evidenceClass?: DispatchEvidenceClass;
   readonly repository: (ref: string) => string;
   readonly readTruth: (ref: string) => Promise<DispatchTruthReads>;
+  /**
+   * The admission precondition, invoked after harness/input validation and
+   * before `claimLease`, spawn, and resume. Production always supplies it; a
+   * direct composition may omit it and keep the delivered run order.
+   */
+  readonly preflight?: (ref: string) => Promise<DispatchPreflightResult>;
   readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
@@ -4678,6 +4685,7 @@ export const createDispatchCommandRuntime = (
             : { admitted: false, code: economics.code, resumeMode: plan.mode };
         }
       }
+      const preflight = composition.preflight;
       return runDispatch({
         store: composition.store,
         fenceToken: composition.fenceToken,
@@ -4693,6 +4701,7 @@ export const createDispatchCommandRuntime = (
         newAttemptId: () => composition.newAttemptId(input.ref),
         newDivergenceId: () => composition.newDivergenceId(input.ref),
         readTruth: () => composition.readTruth(input.ref),
+        ...(preflight === undefined ? {} : { preflight: () => preflight(input.ref) }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),

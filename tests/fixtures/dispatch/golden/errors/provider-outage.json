@@ -1,0 +1,7 @@
+{
+  "code": "provider.outage",
+  "category": "transient",
+  "retryable": true,
+  "consequence": "not_landed",
+  "exitCode": 2
+}
