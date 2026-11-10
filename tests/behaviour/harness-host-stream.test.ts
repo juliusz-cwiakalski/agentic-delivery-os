@@ -6,6 +6,7 @@
  * only harness suite allowed `process.execPath` (test plan TC-OCS-071).
  */
 import { describe, expect, test } from "bun:test";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -355,42 +356,213 @@ describe("TC-HDA-036 host child-stdin early close", () => {
   );
 });
 
-describe("ZZ spawn probe (temporary diagnostic)", () => {
-  test("sync vs async child spawn with an empty environment", async () => {
-    const { spawn, spawnSync } = await import("node:child_process");
-    const sync = spawnSync(process.execPath, ["-e", 'process.stdout.write("SYNC_OK")'], {
-      env: {},
-      cwd: process.cwd(),
-      encoding: "utf8",
+const MATRIX_BOUND_MS = 5_000;
+
+type MatrixOutcome = {
+  readonly variant: string;
+  readonly form: string;
+  readonly code: number | null;
+  readonly signal: string | null;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly mark: boolean;
+  readonly timedOut: boolean;
+  readonly error?: string;
+};
+
+type MatrixEntry = {
+  readonly variant: string;
+  readonly form: string;
+  readonly run: () => Promise<MatrixOutcome>;
+};
+
+const matrixScript = (variant: string): string => `process.stdout.write("MARK_${variant}")`;
+
+const toOutcome = (
+  variant: string,
+  form: string,
+  fields: Omit<MatrixOutcome, "variant" | "form" | "mark">,
+): MatrixOutcome => ({
+  variant,
+  form,
+  ...fields,
+  mark: fields.stdout.includes(`MARK_${variant}`),
+});
+
+const reportMatrix = (outcome: MatrixOutcome): void => {
+  console.error(
+    "[GH-277][matrix]",
+    JSON.stringify({ bun: process.versions.bun, exec: process.execPath, ...outcome }),
+  );
+};
+
+/** Collect one bounded `node:child_process` child; never rejects. */
+const collectSpawn = (
+  variant: string,
+  form: string,
+  child: ChildProcess,
+  options: { readonly resumeStdout?: boolean } = {},
+): Promise<MatrixOutcome> =>
+  new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (code: number | null, signal: string | null, error?: string): void => {
+      if (settled) return;
+      settled = true;
+      if (timer !== undefined) clearTimeout(timer);
+      resolve(
+        toOutcome(variant, form, {
+          code,
+          signal,
+          stdout,
+          stderr,
+          timedOut,
+          ...(error === undefined ? {} : { error }),
+        }),
+      );
+    };
+    timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, MATRIX_BOUND_MS);
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      stdout += chunk;
     });
-    console.error(
-      "[GH-277][probe-sync]",
-      JSON.stringify({
-        bun: process.versions.bun,
-        status: sync.status,
-        signal: sync.signal,
-        stdout: sync.stdout,
-        stderr: sync.stderr,
-        error: sync.error?.message,
-      }),
-    );
-    const asyncResult = await new Promise<Record<string, unknown>>((resolve) => {
-      const child = spawn(process.execPath, ["-e", 'process.stdout.write("ASYNC_OK")'], {
-        env: {},
-        cwd: process.cwd(),
-      });
-      let out = "";
-      let err = "";
-      child.stdout?.setEncoding("utf8");
-      child.stderr?.setEncoding("utf8");
-      child.stdout?.on("data", (c: string) => (out += c));
-      child.stderr?.on("data", (c: string) => (err += c));
-      child.on("error", (e) => resolve({ error: e.message }));
-      child.on("close", (code, signal) => resolve({ code, signal, out, err }));
-      child.stdin?.on("error", () => {});
-      child.stdin?.end();
+    child.stderr?.on("data", (chunk: string) => {
+      stderr += chunk;
     });
-    console.error("[GH-277][probe-async]", JSON.stringify(asyncResult));
-    expect(sync.status).toBe(0);
+    if (options.resumeStdout === true) child.stdout?.resume();
+    child.on("error", (error) => finish(null, null, error.message));
+    child.on("close", (code, signal) => finish(code, signal));
+    child.stdin?.on("error", () => {});
+    child.stdin?.end();
   });
+
+const spawnEntry = (
+  variant: string,
+  form: string,
+  start: () => ChildProcess,
+  options: { readonly resumeStdout?: boolean } = {},
+): MatrixEntry => ({
+  variant,
+  form,
+  run: () => collectSpawn(variant, form, start(), options),
+});
+
+const execFileCode = (error: Error | null): number | null => {
+  if (error === null) return 0;
+  if (!("code" in error)) return null;
+  const raw: unknown = error.code;
+  return typeof raw === "number" ? raw : null;
+};
+
+const execFileSignal = (error: Error | null): string | null => {
+  if (error === null || !("signal" in error)) return null;
+  const raw: unknown = error.signal;
+  return typeof raw === "string" ? raw : null;
+};
+
+const execFileTimedOut = (error: Error | null): boolean =>
+  error !== null && "killed" in error && error.killed === true;
+
+describe("ZZ spawn matrix (temporary diagnostic)", () => {
+  test("which async child-spawn form delivers stdout on this runner", async () => {
+    const exec = process.execPath;
+    const cwd = process.cwd();
+    const bunSpawnForm =
+      'Bun.spawn([exec, "-e", script], { env: {}, stdout: "pipe", stderr: "pipe" })';
+    const entries: readonly MatrixEntry[] = [
+      spawnEntry("A", 'spawn(exec, ["-e", script], {}) — inherited env, default stdio', () =>
+        spawn(exec, ["-e", matrixScript("A")], { cwd }),
+      ),
+      spawnEntry("B", 'spawn(exec, ["-e", script], { env: {} }) — empty env, default stdio', () =>
+        spawn(exec, ["-e", matrixScript("B")], { cwd, env: {} }),
+      ),
+      spawnEntry("C", 'spawn(..., { env: {}, stdio: ["pipe","pipe","pipe"] })', () =>
+        spawn(exec, ["-e", matrixScript("C")], { cwd, env: {}, stdio: ["pipe", "pipe", "pipe"] }),
+      ),
+      spawnEntry(
+        "D",
+        'spawn(..., { env: {} }) + stdout.on("data") + stdout.resume()',
+        () => spawn(exec, ["-e", matrixScript("D")], { cwd, env: {} }),
+        { resumeStdout: true },
+      ),
+      spawnEntry("E", 'spawn(..., { env: {}, stdio: ["ignore","pipe","pipe"] })', () =>
+        spawn(exec, ["-e", matrixScript("E")], {
+          cwd,
+          env: {},
+          stdio: ["ignore", "pipe", "pipe"],
+        }),
+      ),
+      {
+        variant: "F",
+        form: 'execFile(exec, ["-e", script], { env: {} }, cb)',
+        run: () =>
+          new Promise<MatrixOutcome>((resolve) => {
+            const child = execFile(
+              exec,
+              ["-e", matrixScript("F")],
+              { cwd, env: {}, encoding: "utf8", timeout: MATRIX_BOUND_MS },
+              (error, stdout, stderr) => {
+                resolve(
+                  toOutcome("F", 'execFile(exec, ["-e", script], { env: {} }, cb)', {
+                    code: execFileCode(error),
+                    signal: execFileSignal(error),
+                    stdout,
+                    stderr,
+                    timedOut: execFileTimedOut(error),
+                  }),
+                );
+              },
+            );
+            child.on("error", () => {});
+          }),
+      },
+      {
+        variant: "G",
+        form: bunSpawnForm,
+        run: async () => {
+          let timedOut = false;
+          const proc = Bun.spawn([exec, "-e", matrixScript("G")], {
+            cwd,
+            env: {},
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+          const timer = setTimeout(() => {
+            timedOut = true;
+            proc.kill("SIGKILL");
+          }, MATRIX_BOUND_MS);
+          const stdout = await new Response(proc.stdout).text();
+          const stderr = await new Response(proc.stderr).text();
+          const code = await proc.exited;
+          clearTimeout(timer);
+          return toOutcome("G", bunSpawnForm, {
+            code,
+            signal: null,
+            stdout,
+            stderr,
+            timedOut,
+          });
+        },
+      },
+      spawnEntry(
+        "H",
+        'spawn(..., { env: {}, detached: true, stdio: ["pipe","pipe","pipe"] })',
+        () =>
+          spawn(exec, ["-e", matrixScript("H")], {
+            cwd,
+            env: {},
+            detached: true,
+            stdio: ["pipe", "pipe", "pipe"],
+          }),
+      ),
+    ];
+    for (const entry of entries) reportMatrix(await entry.run());
+  }, 90_000);
 });
