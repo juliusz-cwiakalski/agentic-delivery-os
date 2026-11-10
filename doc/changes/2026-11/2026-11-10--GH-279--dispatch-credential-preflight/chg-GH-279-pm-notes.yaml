@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-10T10:57:00.459Z }
   quality_gates: { started: null, completed: 2026-11-10T11:06:39.746Z }
   dod_check: { started: null, completed: 2026-11-10T11:07:57.663Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-10T11:11:05.653Z }
 decisions:
   - text: "D1 (PM-decided): the credential preflight is a pre-session refusal. It
       runs before the queue-lease claim and before spawn/resume; it appends no
@@ -317,5 +317,13 @@ notes:
       in the change record, and the GitHub-backed gate evidence (ci-green,
       push-parity, owner-gate, squash-preflight) is unobtainable until the PR
       exists and a token is provisioned. DoD passes with those two records."
+    type: info
+    date: 2026-11-10
+  - text: "PR creation (phase 11):
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/282 (title
+      fix(GH-279): preflight truth-read credential before dispatch spawn; head
+      fix/GH-279/dispatch-credential-preflight -> base main-tools; open, not
+      merged). TDR-0019 and TDR-0020 remain Proposed for owner acceptance at
+      this PR. MV-1 remains a PR-time operator procedure."
     type: info
     date: 2026-11-10
