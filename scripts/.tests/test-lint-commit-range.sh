@@ -3,9 +3,10 @@
 #
 # Covers the gate's verdict parity, per-commit diagnostics, remediation modes,
 # base/binary resolution precedence, the terminal-condition exit contract,
-# read-only and no-network behaviour, and the runtime budget (TC-COMMITLINT-001
-# through TC-COMMITLINT-021). Fixtures are real temporary git repositories; the
-# lint tool is the repository's pinned commitlint binary.
+# read-only and no-network behaviour, the runtime budget (TC-COMMITLINT-001
+# through TC-COMMITLINT-021), and the worker pool's fail-closed, budget and
+# serial/parallel-determinism properties. Fixtures are real temporary git
+# repositories; the lint tool is the repository's pinned commitlint binary.
 set -Eeuo pipefail
 set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
@@ -282,6 +283,23 @@ _run_gate_with_path() {
   GATE_OUT="$(cat "${so}")"
   GATE_ERR="$(cat "${se}")"
   rm -f "${so}" "${se}"
+}
+
+# Source the gate in a throwaway subshell (its main guard keeps main() from
+# running, .ai/rules/bash.md 10.4) and return _detect_lint_jobs' answer for the
+# requested override. An empty override exercises the detected default.
+_detect_jobs_for() {
+  local -r override="$1"
+  (
+    if [[ -n "${override}" ]]; then
+      export ADOS_LINT_JOBS="${override}"
+    else
+      unset ADOS_LINT_JOBS
+    fi
+    # shellcheck disable=SC1090
+    source "${GATE}" >/dev/null 2>&1
+    _detect_lint_jobs
+  )
 }
 
 # Header field accessor (single-line header pinned by the gate's contract).
@@ -730,6 +748,11 @@ test_invalid_config_is_error() {
   assert_not_contains "${GATE_OUT}" "VERDICT: FAIL"
   assert_not_contains "${GATE_ERR}" "VERDICT: PASS"
   assert_not_contains "${GATE_ERR}" "VERDICT: FAIL"
+  # F-1: the cause names commitlint's own exit, never the worker's 0.
+  assert_matches '\(exit [1-9][0-9]*\)' "${GATE_OUT}" \
+    "The invalid-configuration cause must report commitlint's exit"
+  assert_not_contains "${GATE_OUT}" "(exit 0)" \
+    "The worker's exit must never mask commitlint's failure"
 }
 
 # TC-COMMITLINT-009 step 6: execution failure is ERROR and the shim provably ran
@@ -779,10 +802,72 @@ test_execution_failure_is_error() {
   assert_contains "${GATE_OUT}" "ERROR"
   assert_matches 'execution|could not render' "${GATE_OUT}"
   assert_matches 'config.*(fix|valid|install)|(fix|valid|install).*config' "${GATE_OUT}"
+  # F-1: the shim exits 3; the cause must say so instead of echoing the
+  # worker's own 0. This is the assertion that fails against a parse that
+  # reads the two space-separated fields as one token.
+  assert_contains "${GATE_OUT}" "(exit 3)" \
+    "The cause must name the shim's real exit, not the worker's"
+  assert_not_contains "${GATE_OUT}" "(exit 0)" \
+    "A non-zero commitlint failure must never be reported as exit 0"
   assert_not_contains "${GATE_OUT}" "VERDICT: PASS"
   assert_not_contains "${GATE_OUT}" "VERDICT: FAIL"
   assert_not_contains "${GATE_ERR}" "VERDICT: PASS"
   assert_not_contains "${GATE_ERR}" "VERDICT: FAIL"
+}
+
+# F-1 (iteration 2): the per-commit record is folded with a field separator
+# that includes a space, so `error <exit>` yields token=error and detail=<exit>
+# and the DM-1.h cause carries commitlint's exit. A record whose status is
+# present but whose evidence is not is still fail-closed. Both halves drive
+# _collect_lint_results directly through the main guard.
+test_status_record_parse_reports_real_exit() {
+  local repo
+  repo="$(_configured_repo fx-status-record)"
+  _branch_from_main "${repo}" "feat/GH-268/status-record"
+  _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
+  local sha
+  sha="$(git -C "${repo}" rev-parse HEAD)"
+
+  local rc out
+  rc=0
+  out="$(
+    (
+      # shellcheck disable=SC1090
+      source "${GATE}"
+      cd "${repo}" || exit 90
+      RESULT_DIR="${_test_tmpdir}/lint-commit-range.error-record"
+      mkdir -p "${RESULT_DIR}"
+      printf 'error 5\n' >"${RESULT_DIR}/0.status"
+      _collect_lint_results "${sha}"
+    ) 2>&1
+  )" || rc=$?
+
+  assert_exit_code 2 "${rc}" "An unrenderable verdict must exit 2"
+  assert_contains "${out}" "(exit 5)" \
+    "The error record's commitlint exit must survive the parse"
+  assert_not_contains "${out}" "(exit 0)" \
+    "The worker's exit must never replace the recorded cause"
+  assert_contains "${out}" "VERDICT: ERROR"
+  assert_not_contains "${out}" "VERDICT: PASS"
+
+  # Partial record: status says offender, the rules evidence is absent.
+  rc=0
+  out="$(
+    (
+      # shellcheck disable=SC1090
+      source "${GATE}"
+      cd "${repo}" || exit 90
+      RESULT_DIR="${_test_tmpdir}/lint-commit-range.partial-record"
+      mkdir -p "${RESULT_DIR}"
+      printf 'offender\n' >"${RESULT_DIR}/0.status"
+      _collect_lint_results "${sha}"
+    ) 2>&1
+  )" || rc=$?
+
+  assert_exit_code 2 "${rc}" "A partial offender record must be ERROR, never a pass"
+  assert_contains "${out}" "VERDICT: ERROR"
+  assert_not_contains "${out}" "VERDICT: PASS"
+  assert_not_contains "${out}" "VERDICT: FAIL"
 }
 
 # ============================================================================
@@ -1654,6 +1739,173 @@ test_runtime_budget_100_commits() {
 }
 
 # ============================================================================
+# WORKER POOL — fail-closed, budget validation, determinism
+# ============================================================================
+
+# F-2 (iteration 2): a worker that cannot record a verdict is ERROR, never PASS.
+# `git log` is forced to fail inside each worker through a PATH wrapper, so the
+# status record is never written while every earlier precondition still passes.
+test_missing_worker_record_is_error() {
+  local repo
+  repo="$(_configured_repo fx-missing-record)"
+  _branch_from_main "${repo}" "feat/GH-268/missing-record"
+  _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
+  _install_local_commitlint "${repo}"
+
+  local real_git wrapper_dir
+  real_git="$(command -v git)"
+  wrapper_dir="${_test_tmpdir}/git-fail-log"
+  mkdir -p "${wrapper_dir}"
+  {
+    printf '#!/bin/sh\n'
+    printf 'if [ "$1" = "log" ]; then\n'
+    printf '  printf "%%s\\n" "forced git log failure" >&2\n'
+    printf '  exit 9\n'
+    printf 'fi\n'
+    printf 'exec "%s" "$@"\n' "${real_git}"
+  } >"${wrapper_dir}/git"
+  chmod +x "${wrapper_dir}/git"
+
+  _run_gate_with_path "${repo}" "${wrapper_dir}:${PATH}" --base main
+
+  assert_exit_code 2 "${GATE_EXIT}" "A worker without a record must be ERROR"
+  assert_contains "${GATE_OUT}" "VERDICT: ERROR"
+  assert_contains "${GATE_OUT}" "could not render a verdict"
+  assert_not_contains "${GATE_OUT}" "VERDICT: PASS" "A missing record is never a pass"
+  assert_not_contains "${GATE_OUT}" "VERDICT: FAIL"
+  assert_contains "${GATE_ERR}" "VERDICT: ERROR"
+}
+
+# F-2 (iteration 2): an externally killed worker leaves no record, so the run is
+# ERROR/exit 2 and never a zero-offender PASS. A slow shim guarantees the worker
+# cannot have written its status before the harness kills it.
+test_killed_worker_is_error() {
+  local repo
+  repo="$(_configured_repo fx-killed-worker)"
+  _branch_from_main "${repo}" "feat/GH-268/killed-worker"
+  local i
+  for ((i = 0; i < 3; i++)); do
+    _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
+  done
+
+  [[ ! -d "${repo}/node_modules" ]] || {
+    printf '  Precondition failed: a local binary would hide the slow shim\n' >&2
+    return 1
+  }
+  local slow_dir
+  slow_dir="${_test_tmpdir}/slow-bin"
+  mkdir -p "${slow_dir}"
+  printf '#!/bin/sh\nsleep 3\nexec "%s" "$@"\n' "${HOST_COMMITLINT}" >"${slow_dir}/commitlint"
+  chmod +x "${slow_dir}/commitlint"
+
+  local out err gate_pid
+  out="${_test_tmpdir}/kill.out"
+  err="${_test_tmpdir}/kill.err"
+  (cd "${repo}" && ADOS_LINT_JOBS=3 PATH="${slow_dir}:${PATH}" "${GATE}" --base main) \
+    >"${out}" 2>"${err}" &
+  gate_pid=$!
+
+  # The workers are the gate's direct children and keep the gate's argv, so the
+  # victim is the first child whose command line names this script.
+  local victim="" attempt pid cmd
+  for ((attempt = 0; attempt < 200; attempt++)); do
+    [[ -z "${victim}" ]] || break
+    while IFS= read -r pid; do
+      [[ -n "${pid}" ]] || continue
+      cmd="$(ps -o args= -p "${pid}" 2>/dev/null || true)"
+      case "${cmd}" in
+        *lint-commit-range.sh*)
+          victim="${pid}"
+          break
+          ;;
+      esac
+    done < <(ps -o pid= --ppid "${gate_pid}" 2>/dev/null || true)
+    [[ -n "${victim}" ]] || sleep 0.1
+  done
+
+  [[ -n "${victim}" ]] || {
+    printf '  No worker was found to kill\n' >&2
+    kill "${gate_pid}" 2>/dev/null || true
+    return 1
+  }
+  kill -9 "${victim}" 2>/dev/null || true
+
+  local gate_exit=0
+  wait "${gate_pid}" || gate_exit=$?
+  GATE_OUT="$(cat "${out}")"
+  GATE_ERR="$(cat "${err}")"
+
+  assert_exit_code 2 "${gate_exit}" "A killed worker must be ERROR"
+  assert_contains "${GATE_OUT}" "VERDICT: ERROR"
+  assert_contains "${GATE_OUT}" "could not render a verdict"
+  assert_not_contains "${GATE_OUT}" "VERDICT: PASS" "A killed worker is never a pass"
+  assert_not_contains "${GATE_OUT}" "VERDICT: FAIL"
+  assert_contains "${GATE_ERR}" "VERDICT: ERROR"
+}
+
+# F-2 (iteration 2): ADOS_LINT_JOBS admits only a positive integer. The detected
+# default is bounded, a valid override is honoured (and clamped at the cap), and
+# a junk value warns and falls back instead of producing a wrong worker count.
+test_lint_jobs_validation() {
+  assert_matches '^[1-8]$' "$(_detect_jobs_for "")" \
+    "The detected default must be bounded by MAX_LINT_JOBS"
+  assert_eq "3" "$(_detect_jobs_for "3")" "A valid override must be honoured"
+  assert_eq "8" "$(_detect_jobs_for "999")" "An override above the cap must be clamped"
+
+  local err_file jobs value
+  err_file="${_test_tmpdir}/jobs-junk.err"
+  for value in abc 0 -2 "2 3"; do
+    : >"${err_file}"
+    jobs="$(_detect_jobs_for "${value}" 2>"${err_file}")"
+    assert_matches '^[1-8]$' "${jobs}" "A junk override must fall back to a bounded default"
+    assert_contains "$(cat "${err_file}")" "ignoring ADOS_LINT_JOBS='${value}'" \
+      "A junk override must be reported, not silently ignored"
+  done
+
+  # Behavioural half: a junk override warns and still renders a verdict.
+  local repo
+  repo="$(_configured_repo fx-jobs-junk)"
+  _branch_from_main "${repo}" "feat/GH-268/jobs-junk"
+  _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
+  _install_local_commitlint "${repo}"
+
+  export ADOS_LINT_JOBS="abc"
+  _run_gate "${repo}" --base main
+  unset ADOS_LINT_JOBS
+
+  assert_exit_code 0 "${GATE_EXIT}"
+  assert_contains "${GATE_OUT}" "VERDICT: PASS"
+  assert_contains "${GATE_ERR}" "ignoring ADOS_LINT_JOBS='abc'"
+}
+
+# F-2 (iteration 2): serial and parallel runs are byte-identical on a
+# multi-offender range, because diagnostics render in rev-list order after every
+# worker is reaped rather than in completion order.
+test_serial_and_parallel_output_identical() {
+  local repo
+  repo="$(_configured_repo fx-jobs-identity)"
+  _build_multi_three_offenders "${repo}"
+  _install_local_commitlint "${repo}"
+
+  local serial parallel
+  serial="${_test_tmpdir}/serial.out"
+  parallel="${_test_tmpdir}/parallel.out"
+  local c_serial=0 c_parallel=0
+  (cd "${repo}" && ADOS_LINT_JOBS=1 "${GATE}" --base main) >"${serial}" 2>/dev/null || c_serial=$?
+  (cd "${repo}" && ADOS_LINT_JOBS=8 "${GATE}" --base main) >"${parallel}" 2>/dev/null || c_parallel=$?
+
+  assert_exit_code 1 "${c_serial}" "The serial run must report the offenders"
+  assert_exit_code 1 "${c_parallel}" "The parallel run must report the offenders"
+  cmp -s "${serial}" "${parallel}" || {
+    printf '  Serial (ADOS_LINT_JOBS=1) and parallel (8) output differ\n' >&2
+    return 1
+  }
+  assert_eq "3" "$(grep -cE '^FAIL [0-9a-f]{7,} \(' "${parallel}")" \
+    "Every offender keeps exactly one headline block in both modes"
+  assert_contains "$(cat "${parallel}")" "3 offending commit(s)"
+}
+
+# ============================================================================
 # RUN TESTS
 # ============================================================================
 main() {
@@ -1678,6 +1930,7 @@ main() {
   run_test "TC-COMMITLINT-008 binary field in every outcome" test_header_binary_field_every_outcome
   run_test "TC-COMMITLINT-009 invalid configuration is ERROR" test_invalid_config_is_error
   run_test "TC-COMMITLINT-009 execution failure is ERROR (shim proven)" test_execution_failure_is_error
+  run_test "TC-COMMITLINT-009 status record reports the real exit (F-1)" test_status_record_parse_reports_real_exit
   run_test "TC-COMMITLINT-010 explicit base override precedence" test_base_override_precedence
   run_test "TC-COMMITLINT-010 environment base override" test_environment_base_precedence
   run_test "TC-COMMITLINT-010 configured base resolves" test_configured_base_resolves
@@ -1704,6 +1957,10 @@ main() {
   run_test "TC-COMMITLINT-020 exit-code matrix is exactly 0/1/2" test_exit_code_matrix
   run_test "TC-COMMITLINT-021 runtime budget for 20 commits" test_runtime_budget_20_commits
   run_test "TC-COMMITLINT-021 runtime budget for 100 commits" test_runtime_budget_100_commits
+  run_test "worker pool: missing record is ERROR (F-2)" test_missing_worker_record_is_error
+  run_test "worker pool: killed worker is ERROR (F-2)" test_killed_worker_is_error
+  run_test "worker pool: ADOS_LINT_JOBS validation (F-2)" test_lint_jobs_validation
+  run_test "worker pool: serial and parallel output identical (F-2)" test_serial_and_parallel_output_identical
 
   print_summary
 }

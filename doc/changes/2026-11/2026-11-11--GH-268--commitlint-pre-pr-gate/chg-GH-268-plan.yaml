@@ -162,11 +162,16 @@
 #     commitlint configuration reports SKIP regardless of base or binary state,
 #     and an unresolvable base is reported before a missing binary (e before g) or
 #     an unrenderable verdict (e before h).
-#   - Configuration discovery uses the same eight root candidates as
-#     scripts/checks/commitlint-authority.ts (commitlint.config.{js,cjs,mjs,ts},
-#     .commitlintrc{,.json,.yaml,.yml}) checked at the repository top level; the
-#     gate adds no config source and passes no --config, so the authority's
-#     discovery is mirrored rather than re-implemented (DEC-1, RSK-1).
+#   - Configuration discovery mirrors commitlint's own root resolution so a
+#     repository commitlint enforces is never misreported as unconfigured (a
+#     false SKIP would be a silent pass, F-3/NFR-2): the root config-file
+#     candidates (commitlint.config.{js,cjs,mjs,ts,cts},
+#     .commitlintrc{,.json,.yaml,.yml,.js,.cjs,.mjs,.ts,.cts}) checked at the
+#     repository top level, plus a root package.json `commitlint` object property
+#     (a dependency named commitlint carries a string version and is not treated
+#     as configuration). The gate adds no config source and passes no --config,
+#     so the authority's discovery is mirrored rather than re-implemented
+#     (DEC-1, RSK-1).
 #   - Binary resolution and disclosure (DEC-10, amended AC-F3-3): the lint tool
 #     is resolved repository-local first — `<repository-toplevel>/node_modules/.bin/commitlint`
 #     when present and executable — then by `command -v commitlint` on `PATH`.
@@ -332,7 +337,7 @@ workItemRef: GH-268
 
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6]
+  phases: [1, 2, 3, 4, 5, 6, 7]
   escalationTriggers:
     - "a path under .github/workflows/, .husky/, packages/**, or a commitlint configuration file appears in the change diff"
     - "the gate exits with a code outside {0, 1, 2} on a verdict-carrying run (the documented 130 interrupt path carries no verdict and is exempt), or returns PASS without resolving a base commit and a merge-base"
@@ -562,6 +567,8 @@ phases:
       - "test ! -e scripts/quality-gates.sh && test -z \"$(grep -n 'lint-commit-range' package.json)\" || the aggregate gate is untouched (NG-5, DEC-8): the script must not exist and the check chain must not reference the range lint"
       - "bash scripts/.tests/test-lint-commit-range.sh && bash scripts/.tests/test-deliver-ticket.sh && bash scripts/.tests/test-install.sh && bash scripts/.tests/test-uninstall.sh || every touched surface's suite is green at the final phase HEAD"
       - "test -z \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD | grep -vE '^(scripts/lint-commit-range\\.sh|scripts/\\.tests/test-lint-commit-range\\.sh|scripts/\\.tests/fixtures/lint-commit-range/|\\.opencode/agent/(committer|pm)\\.md|\\.ados-claude/agents/(committer|pm)\\.md|scripts/deliver-ticket\\.sh|scripts/\\.tests/test-deliver-ticket\\.sh|scripts/install\\.sh|scripts/uninstall\\.sh|scripts/\\.tests/test-(install|uninstall)\\.sh|AGENTS\\.md|doc/guides/change-lifecycle\\.md|doc/guides/autonomous-batch-delivery\\.md|doc/spec/features/|doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/)')\" || every changed path matches the allowlist regex (declared phase scopes plus .ados-claude/agents/{committer,pm}.md, doc/spec/features/**, doc/guides/autonomous-batch-delivery.md, and this change folder); any path outside it prints and fails, so a CI workflow, hook, commitlint config, package, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh change cannot pass"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
+      - "git diff --check || zero whitespace errors and zero conflict markers"
 
   # ---------------------------------------------------------------------------
   # PHASE 6 — code review remediation (iteration 1)
@@ -612,5 +619,41 @@ phases:
       - "pnpm check:prompt && bash scripts/.tests/test-doc-distribution.sh || prompt and doc-distribution conformance stay green"
       - "./scripts/lint-commit-range.sh --base main-tools || PASS over this change's own range, header names the repository-local binary with origin repository-local, and the verdict line is recorded in pm-notes before quality_gates completes"
       - "test -z \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD | grep -vE '^(scripts/lint-commit-range\\.sh|scripts/\\.tests/test-lint-commit-range\\.sh|scripts/\\.tests/fixtures/lint-commit-range/|\\.opencode/agent/(committer|pm)\\.md|\\.ados-claude/agents/(committer|pm)\\.md|scripts/deliver-ticket\\.sh|scripts/\\.tests/test-deliver-ticket\\.sh|scripts/install\\.sh|scripts/uninstall\\.sh|scripts/\\.tests/test-(install|uninstall)\\.sh|AGENTS\\.md|doc/guides/change-lifecycle\\.md|doc/guides/autonomous-batch-delivery\\.md|doc/spec/features/|doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/)')\" || every changed path matches the allowlist regex (declared phase scopes plus .ados-claude/agents/{committer,pm}.md, doc/spec/features/**, doc/guides/autonomous-batch-delivery.md, and this change folder); any path outside it prints and fails, so a CI workflow, hook, commitlint config, package, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh change cannot pass"
-      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
-      - "git diff --check || zero whitespace errors and zero conflict markers"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 7 — code review remediation (iteration 2)
+  #
+  # Appended by @reviewer after review-iter-2.yaml (Status: FAIL). Finding:
+  # DM-1.h execution-error diagnostics regressed when the worker pool landed.
+  # `_collect_lint_results` parses `<index>.status` with `read -r status_token
+  # detail` under the shell's global `IFS=$'\n\t'` (space is not a field
+  # separator), so a line `error <exit>` becomes the single token `error <exit>`;
+  # the `error` case never matches, the fallback reports the *worker's* exit
+  # status (0) instead of commitlint's, and the DM-1.h message prints "(exit 0)"
+  # for a commitlint run that exited non-zero. The outcome stays ERROR/exit 2
+  # (fail-closed intact), but the cause detail is wrong and the `error` branch is
+  # dead. The iteration-2 review also found no regression coverage for the new
+  # worker pool; this phase adds it.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Code-review remediation (iteration 2): correct DM-1.h status parsing and add worker-pool fail-closed/determinism regression tests"
+    kind: delivery
+    summary: "chore(GH-268): fix execution-error status parsing and test the worker pool"
+    leases:
+      - repo:main-tools
+    weightClass: standard
+    scope:
+      files:
+        - scripts/lint-commit-range.sh
+        - scripts/.tests/test-lint-commit-range.sh
+    interactions:
+      - kind: contract-file
+        target: scripts/lint-commit-range.sh
+        role: producer
+    verification:
+      - "parse `<index>.status` with a field separator that includes space (e.g. `IFS=' ' read -r status_token detail < file`) so `error <exit>` yields token=error and detail=<exit>; the `error` case must be reachable and the DM-1.h message must print commitlint's real exit (3 for fake-commitlint-exec-failure.sh), not the worker's 0"
+      - "add a suite assertion that the execution-failure shim's DM-1.h Cause line reports `exit 3` (or the shim's actual exit), which fails against the current `read`-under-global-IFS parse"
+      - "add suite cases: a missing/partial worker record (force `git log` to fail inside a worker) exits 2 and never PASS; a SIGKILLed worker exits 2 and never PASS; `ADOS_LINT_JOBS=abc` warns and still renders a verdict; `ADOS_LINT_JOBS=1` and the default produce byte-identical output over an offender range"
+      - "bash scripts/.tests/test-lint-commit-range.sh || suite green (45 existing plus the new DM-1.h and worker-pool cases)"
+      - "./scripts/lint-commit-range.sh --base main-tools || PASS over this change's own range; record the verdict in pm-notes before quality_gates completes"
+      - "reconcile the change spec §10 sentence 'the gate creates no files and leaves no state behind' with the worker pool's transient temp directory (created under TMPDIR and removed on EXIT): record in pm-notes that no persistent state is left and NFR-5's enumerated surfaces (working tree, index, refs, stash) stay untouched, or amend the owning doc"

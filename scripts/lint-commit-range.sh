@@ -3,7 +3,9 @@
 # repository's commitlint configuration and report per-commit attributed verdicts.
 #
 # Dependencies: bash>=4, git, commitlint (repository-local node_modules/.bin/commitlint
-# or a commitlint on PATH). Read-only and offline: the gate never fetches or writes.
+# or a commitlint on PATH). Read-only with respect to the repository and offline:
+# it never fetches, never writes refs, the index, the working tree, or the stash,
+# and removes its transient per-commit result directory on exit.
 # Run ./scripts/lint-commit-range.sh --help for the invocation and exit contract.
 set -Eeuo pipefail
 set -o errtrace
@@ -732,7 +734,11 @@ _collect_lint_results() {
       _report_lint_execution_error "${commits[index]}" "${WORKER_STATUS[index]:-unknown}"
       exit "${EXIT_UNVERIFIABLE}"
     fi
-    read -r status_token detail <"${prefix}.status" || status_token=""
+    # The shell's global IFS is $'\n\t', where a space is not a field
+    # separator; read the record with an explicit separator that includes it,
+    # otherwise `error <exit>` stays one token, the `error` branch below never
+    # matches, and the fallback reports the worker's exit instead of the cause.
+    IFS=' ' read -r status_token detail <"${prefix}.status" || status_token=""
 
     case "${status_token}" in
       clean) ;;
