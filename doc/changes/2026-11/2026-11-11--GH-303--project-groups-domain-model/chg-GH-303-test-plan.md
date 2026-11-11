@@ -448,22 +448,25 @@ disposable bash procedure: nothing is added to the permanent suite.
 
 **Preconditions**:
 
-- Base and head entries are both extracted.
+- Base and head backlog files are available; the entry body is extracted by file, never passed as text.
 
 **Steps**:
 
-1. Compare the Goal, Progress, AC, Ticket, and Depends blocks against the base byte for byte.
-2. Assert the AC block contains no `repos list` and the entry contains no `projectKey…repoKey` or `data.projects[]…data.repos[]` arrow clause.
-3. Assert the entry differs from base (non-vacuity) while none of the compared blocks changed.
+1. Extract the M2-S11 entry from the base snapshot and from the head **by file path**, then compare the five pinned blocks byte for byte: heading, `- Ticket:`, `- Progress:`, `- AC:`, `- Depends on:`.
+2. Assert the Goal is not pinned (F-1 lets its wording change) but still carries the delivered overview meaning and does not promise `repos list`.
+3. Assert the AC block contains no `repos list`, the entry contains no `projectKey…repoKey` or `data.projects[]…data.repos[]` arrow clause, and the entry differs from base (non-vacuity).
+4. Prove the oracle bites: a mutated head with one changed AC word must report `mutant_preserved_blocks=4/5`; a fabricated `- Depends on:` must report `mutant_depends=CHANGED`; a benign Goal reword must leave the pinned set intact; a Goal that promises `repos list` must be detected.
 
 **Expected Outcome**:
 
-- Each of the five blocks reports `byte-identical`; `repos_list_in_ac=ABSENT`; `field_rename_clause=ABSENT`.
-- `entry_change=non-vacuous`; `outside_tasks_edits=0`; verdict PASS.
+- `heading`, `Ticket:`, `Progress:`, `AC:`, `Depends on:` each report `byte-identical`; `preserved_blocks=5/5`.
+- `goal_pinned=no`; `goal_delivered_overview=OK`; `goal_promises_repos_list=ABSENT`.
+- `repos_list_in_ac=ABSENT`; `field_rename_clause=ABSENT`; `entry_change=non-vacuous`.
+- `mutant_ac=CHANGED`; `mutant_preserved_blocks=4/5`; `mutant_depends=CHANGED`; `mutant_goal_reword=accepted (pinned set untouched)`; `mutant_goal_meaning=detected`; verdict PASS.
 
 **Notes / Clarifications**:
 
-- A zero-diff entry FAILs: an absent amendment is not a pass.
+- The preserved set is exactly what AC-F1-1/AC-F1-2 pin: the heading, the GH-288 `Ticket` line, the `Progress` record, the delivered `AC` block, and the `Depends on` line. The Goal is deliberately **not** pinned — F-1 requires only that it keep the shipped overview meaning, and a conforming head rewords it to name the delivered `projects list` command, so a byte-identity check on the Goal would fail a legal head (the original helper compared nothing and nobody noticed). A zero-diff entry FAILs: an absent amendment is not a pass.
 
 
 #### TC-M2DOM-003 - Every transition item is owned by M2-S18 exactly once and M2-S11 names that owner
@@ -1051,11 +1054,11 @@ disposable bash procedure: nothing is added to the permanent suite.
 
 **Expected Outcome**:
 
-- `repos_v1_fields=11/11`; verdict PASS.
+- `repos_v1_fields=11/11`; `rv_unbound_scope=OK`; `rv_unbound_error_attachment=0`; verdict PASS.
 
 **Notes / Clarifications**:
 
-- `unbound` is a scope, not an error; TC-032 owns the command-page behaviour.
+- `unbound` is a declared scope at exit 0 and the contract must not attach it to an error identity or a non-zero exit; the page's error table is the other half of the same boundary and is asserted by TC-033.
 
 
 #### TC-M2DOM-023 - project-groups.v1 declares the group identity, optional workspace, and member fields with no crossed meaning
@@ -1359,21 +1362,25 @@ disposable bash procedure: nothing is added to the permanent suite.
 
 **Preconditions**:
 
-- `commands/repos.md` is present.
+- `commands/repos.md` is present with its SCOPE and ERRORS sections.
 
 **Steps**:
 
-1. Assert the three delivered error identities.
-2. Assert a non-work-tree path is the `unbound` scope and keeps exit 0.
-3. Assert the `repos.*` prefix change is S18 code work, and that no invented `repos.*` identity is stated as current truth.
+1. Parse the error table and read the exit cell of each delivered identity: `projects.identity-unreadable`, `projects.registry-corrupt`, `projects.state-unavailable`.
+2. Require the delivered exit values exactly (`1`, `2`, `2`), the three identities present, no invented `repos.*` identity stated as truth, and the `repos.*` prefix change recorded as S18 code work.
+3. Require `unbound` in the scope prose, no error-table identity cell naming it, no sentence attaching it to an error or a non-zero exit, and no sentence calling a non-work-tree root a failure.
+4. Prove both directions: a mutant whose identity row reads `0 for unbound, 2 otherwise` must change the parsed exit, and a mutant that refuses a non-work-tree root as a failure must be detected.
 
 **Expected Outcome**:
 
-- `identities=6/6`; `invented_identities=0`; verdict PASS.
+- `error_table_identity_unreadable_exit=1`; `error_table_registry_corrupt_exit=2`; `error_table_state_unavailable_exit=2`.
+- `identities=4/4`; `invented_identities=0`.
+- `unbound_in_scope=OK`; `unbound_as_error_row=0`; `unbound_error_attachment=0`; `non_worktree_failure_claim=0`.
+- `mutant_unbound_exit=detected`; `mutant_nonworktree_error=detected`; verdict PASS.
 
 **Notes / Clarifications**:
 
-- This is the delivered-semantics restoration that keeps the change docs-only.
+- This is the page-contract half of the delivered-semantics boundary; TC-022 asserts the contract-side statement in `repos.v1`. The table's meaning cell may name `unbound` to disclaim it (the conforming page does), so only the identity cell counts as an unbound failure row. The doc-sync re-check found the corpus page folding a non-work-tree root into `projects.identity-unreadable` with `0 for unbound, 2 otherwise`; this gate now catches that class.
 
 
 #### TC-M2DOM-034 - The STATE example is the host-root container with a PROJECT_KEY_PATTERN key and the mapping clause
@@ -2791,28 +2798,92 @@ printf '%s' "$eq" | grep -Eiq 'rename rule' && echo "transition_reference=OK" ||
 [ "$c" -eq 5 ] && printf '%s\n' "$e" | grep -Fxq -- '- Depends on: M0-S5, M1-S17.' && printf '%s\n' "$e" | grep -Fxq -- '- Ticket: GH-288 (milestone M2)' && printf '%s' "$e" | grep -Eiq 'Progress: delivered by GH-288' && printf '%s' "$ac" | grep -Eiq 'projects list' && printf '%s' "$ac" | grep -Eiq 'without manual configuration' && ! printf '%s' "$ac" | grep -Eiq 'repos list' && printf '%s' "$eq" | grep -Eiq 'projects list --flat' && printf '%s' "$eq" | grep -Eiq 'rename rule' && echo "P01 verdict: PASS" || echo "P01 verdict: FAIL"
 ```
 
-**P02 — AC-F1-2: inside the amended entry, no flat projects list, no rename**
+**P02 — AC-F1-2: inside the amended entry no flat projects list survives, no**
 
 ```bash
-# P02 — AC-F1-2: inside the amended entry, no flat projects list, no rename
-# clause, no delivered line weakened; the change is non-vacuous.
+# P02 — AC-F1-2: inside the amended entry no flat projects list survives, no
+# rename clause is added, and every block the spec pins is byte-identical.
+#
+# Pinned-byte blocks (spec AC-F1-1 pins these; the Goal is NOT among them):
+#   heading, - Ticket:, - Progress:, - AC:, - Depends on:
+# The Goal is intentionally rewordable (F-1: "keeps the shipped overview
+# meaning"), so it is asserted semantically, not by byte identity.
 [ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded" >&2; exit 1; }
 require_p00; need entry squash
-e=$(entry "$BL" '### M2-S11 '); b=$(entry "$SH/base-backlog.md" '### M2-S11 ')
-blk() { awk -v s="$2" 'index($0,s)==1{f=1;print;next} f&&/^- /{exit} f' "$1" 2>/dev/null; }
-for r in '- Goal:' '- Progress:' '- AC:' '- Ticket:' '- Depends on:'; do
-  bh=$(blk "$b" "$r"); hh=$(blk "$e" "$r")
-  [ "$bh" = "$hh" ] && echo "${r#- }=byte-identical" || echo "${r#- }=CHANGED"
+entry_of() { entry "$1" '### M2-S11 '; }                       # $1 = file path
+blk() { awk -v s="$1" 'index($0,s)==1{f=1;print;next} f&&/^- /{exit} f'; }   # $1 = block label; stdin = entry body
+goal_of() { entry_of "$1" | blk '- Goal:'; }
+b="$SH/base-backlog.md"; h="$BL"
+bb=$(entry_of "$b"); hb=$(entry_of "$h")
+[ -n "$bb" ] || { echo "base_s11=absent"; echo "P02 verdict: FAIL"; exit 0; }
+[ -n "$hb" ] || { echo "head_s11=absent"; echo "P02 verdict: FAIL (change absent)"; exit 0; }
+
+cmp_block() { # $1=label $2=base text $3=head text
+  if [ -z "$2" ] || [ -z "$3" ]; then echo "$1=EMPTY"; return 1; fi
+  if [ "$2" = "$3" ]; then echo "$1=byte-identical"; return 0; else echo "$1=CHANGED"; return 1; fi
+}
+ok=0
+for lab in '- Ticket:' '- Progress:' '- AC:' '- Depends on:'; do
+  cmp_block "${lab#- }" "$(entry_of "$b" | blk "$lab")" "$(entry_of "$h" | blk "$lab")" && ok=$((ok+1))
 done
-ac=$(blk "$e" '- AC:')
+bh=$(entry_of "$b" | head -1); hh=$(entry_of "$h" | head -1)
+cmp_block heading "$bh" "$hh" && ok=$((ok+1))
+echo "preserved_blocks=$ok/5"
+
+# Goal: not pinned; the delivered overview meaning must survive and the entry
+# must not promise `repos list` (F-1).
+g=$(goal_of "$h" | squash)
+printf '%s' "$g" | grep -Eiq 'overview' && printf '%s' "$g" | grep -Eiq 'managed checkout' \
+  && echo "goal_delivered_overview=OK" || echo "goal_delivered_overview=MISSING"
+printf '%s' "$g" | grep -Eiq 'repos list' && echo "goal_promises_repos_list=PRESENT (violation)" || echo "goal_promises_repos_list=ABSENT"
+echo "goal_pinned=no (rewordable per F-1; block list above is the pinned set)"
+
+ac=$(entry_of "$h" | blk '- AC:')
 printf '%s' "$ac" | grep -Eiq 'repos list' && echo "repos_list_in_ac=PRESENT (violation)" || echo "repos_list_in_ac=ABSENT"
-printf '%s' "$e" | grep -Eiq 'projectKey.{0,12}repoKey|data\.projects\[\].{0,12}data\.repos\[\]' && echo "field_rename_clause=PRESENT (violation)" || echo "field_rename_clause=ABSENT"
-printf '%s' "$e" | grep -Eiq 'Progress: delivered by GH-288' && echo "gh288_record=OK" || echo "gh288_record=MISSING"
-[ -n "$e" ] && [ "$e" != "$b" ] && echo "entry_change=non-vacuous" || echo "entry_change=ABSENT (no change)"
-changed=0; for r in '- Goal:' '- Progress:' '- AC:' '- Ticket:' '- Depends on:'; do
-  [ "$(blk "$b" "$r")" = "$(blk "$e" "$r")" ] || changed=$((changed+1)); done
-echo "outside_tasks_edits=$changed"
-[ -n "$e" ] && [ "$e" != "$b" ] && [ "$changed" -eq 0 ] && ! printf '%s' "$ac" | grep -Eiq 'repos list' && ! printf '%s' "$e" | grep -Eiq 'projectKey.{0,12}repoKey' && echo "P02 verdict: PASS" || echo "P02 verdict: FAIL"
+printf '%s' "$(entry_of "$h")" | grep -Eiq 'projectKey.{0,12}repoKey|data\.projects\[\].{0,12}data\.repos\[\]' \
+  && echo "field_rename_clause=PRESENT (violation)" || echo "field_rename_clause=ABSENT"
+[ -n "$(entry_of "$h")" ] && [ "$(entry_of "$h")" != "$(entry_of "$b")" ] \
+  && echo "entry_change=non-vacuous" || echo "entry_change=ABSENT (no change)"
+
+# --- non-vacuity proofs on the REAL head, plus one benign and one meaning-breaking Goal mutant ---
+cp "$h" "$SH/p02-mut-ac.md"
+awk '/^### M2-S11 /{f=1} f&&/^- AC:/{print "- AC: two checkouts of different repositories on one host, both using ref"; print "  GH-241, hold disjoint phase state and queue entries; `projects list`"; print "  lists them without manual configuration."; skip=1; next} f&&/^- Depends on:/{skip=0} f&&skip{next} {print}' "$h" > "$SH/p02-mut-ac.tmp" && mv "$SH/p02-mut-ac.tmp" "$SH/p02-mut-ac.md"
+cp "$h" "$SH/p02-mut-dep.md"
+awk '/^### M2-S11 /{f=1} f&&/^- Depends on: M0-S5, M1-S17\./{print "- Depends on: M0-S5, M1-S17, M2-S11."; next} {print}' "$h" > "$SH/p02-mut-dep.tmp" && mv "$SH/p02-mut-dep.tmp" "$SH/p02-mut-dep.md"
+cp "$h" "$SH/p02-mut-goal.md"
+awk '/^### M2-S11 /{f=1} f&&/^- Goal:/{print "- Goal: the delivered `projects list` command gives one CLI overview of every"; print "  managed checkout."; skip=1; next} f&&/^- Tasks:/{skip=0} f&&skip{next} {print}' "$h" > "$SH/p02-mut-goal.tmp" && mv "$SH/p02-mut-goal.tmp" "$SH/p02-mut-goal.md"
+cp "$h" "$SH/p02-mut-goalbad.md"
+awk '/^### M2-S11 /{f=1} f&&/^- Goal:/{print "- Goal: `repos list` is the one overview of every managed checkout."; skip=1; next} f&&/^- Tasks:/{skip=0} f&&skip{next} {print}' "$h" > "$SH/p02-mut-goalbad.tmp" && mv "$SH/p02-mut-goalbad.tmp" "$SH/p02-mut-goalbad.md"
+
+# gate-level proof: the same 5-block oracle run against the mutated head
+okm=0
+for lab in '- Ticket:' '- Progress:' '- AC:' '- Depends on:'; do
+  [ "$(entry_of "$SH/p02-mut-ac.md" | blk "$lab")" = "$(entry_of "$b" | blk "$lab")" ] && okm=$((okm+1))
+done
+[ "$(entry_of "$SH/p02-mut-ac.md" | head -1)" = "$(entry_of "$b" | head -1)" ] && okm=$((okm+1))
+echo "mutant_preserved_blocks=$okm/5 (expect 4/5; the AC byte change must be caught)"
+ma=$(entry_of "$SH/p02-mut-ac.md" | blk '- AC:'); ba=$(entry_of "$b" | blk '- AC:')
+[ "$ma" != "$ba" ] && echo "mutant_ac=CHANGED" || echo "mutant_ac=NOT-DETECTED"
+md=$(entry_of "$SH/p02-mut-dep.md" | blk '- Depends on:'); bd=$(entry_of "$b" | blk '- Depends on:')
+[ "$md" != "$bd" ] && echo "mutant_depends=CHANGED" || echo "mutant_depends=NOT-DETECTED"
+# benign Goal reword: the pinned set is untouched, so the gate still passes
+mg=$(goal_of "$SH/p02-mut-goal.md" | squash)
+pinned_ok=1
+for lab in '- Ticket:' '- Progress:' '- AC:' '- Depends on:'; do
+  [ "$(entry_of "$SH/p02-mut-goal.md" | blk "$lab")" = "$(entry_of "$b" | blk "$lab")" ] || pinned_ok=0
+done
+[ "$mg" != "$(goal_of "$b" | squash)" ] && [ "$pinned_ok" -eq 1 ] && echo "mutant_goal_reword=accepted (pinned set untouched)" || echo "mutant_goal_reword=UNEXPECTED"
+gb=$(goal_of "$SH/p02-mut-goalbad.md" | squash)
+printf '%s' "$gb" | grep -Eiq 'repos list' && echo "mutant_goal_meaning=detected" || echo "mutant_goal_meaning=NOT-DETECTED"
+
+[ "$ok" -eq 5 ] && [ "$okm" -eq 4 ] && [ -n "$(entry_of "$h")" ] && [ "$(entry_of "$h")" != "$(entry_of "$b")" ] \
+ && printf '%s' "$g" | grep -Eiq 'overview' && printf '%s' "$g" | grep -Eiq 'managed checkout' \
+ && ! printf '%s' "$g" | grep -Eiq 'repos list' \
+ && ! printf '%s' "$ac" | grep -Eiq 'repos list' \
+ && ! printf '%s' "$(entry_of "$h")" | grep -Eiq 'projectKey.{0,12}repoKey' \
+ && [ "$ma" != "$ba" ] && [ "$md" != "$bd" ] && [ "$pinned_ok" -eq 1 ] \
+ && printf '%s' "$gb" | grep -Eiq 'repos list' \
+ && echo "P02 verdict: PASS" || echo "P02 verdict: FAIL"
 ```
 
 **P03 — AC-F1-3: single ownership of the rename set by M2-S18**
@@ -3239,7 +3310,14 @@ body=$(section "$CT" '## repos.v1' | squash); n=0
 for f in 'data\.repos\[\]' 'repoKey' 'root' 'stateLocation' 'daemonReachable' 'daemon-not-mounted' 'unbound' 'handoverState' 'hostIndexRevision' 'M2-S18' 'rename'; do
   printf '%s' "$body" | grep -Eiq -- "$f" && n=$((n+1)) || echo "MISSING $f"; done
 echo "repos_v1_fields=$n/11"
-[ "$n" -eq 11 ] && echo "P22 verdict: PASS" || echo "P22 verdict: FAIL"
+# The contract must define `unbound` as a declared scope and must not attach it to
+# an error identity or a non-zero exit (delivered truth: scope at exit 0).
+printf '%s' "$body" | grep -Eiq 'declared .?unbound.? scope|the .?unbound.? scope' \
+  && echo "rv_unbound_scope=OK" || echo "rv_unbound_scope=MISSING"
+rvbad=$(printf '%s' "$body" | tr '.' '\n' | grep -Ei 'unbound' | grep -Ei 'fail|error|refus|exit[^.]{0,12}(1|2)([^0-9]|$)' | grep -Eiv 'never|not |isn.t|no error' | grep -c . || true)
+echo "rv_unbound_error_attachment=${rvbad:-0}"
+[ "$n" -eq 11 ] && printf '%s' "$body" | grep -Eiq 'declared .?unbound.? scope|the .?unbound.? scope' && [ "${rvbad:-0}" -eq 0 ] \
+  && echo "P22 verdict: PASS" || echo "P22 verdict: FAIL"
 ```
 
 **P23 — AC-F6-2: project-groups.v1, the group identity, and the member fields**
@@ -3428,24 +3506,62 @@ printf '%s' "$body" | grep -Eiq 'declared .?unbound.? scope' && echo "unbound_de
 [ "$n" -eq 11 ] && printf '%s' "$body" | grep -Eiq 'never a failure' && echo "P32 verdict: PASS" || echo "P32 verdict: FAIL"
 ```
 
-**P33 — AC-F7-3: the delivered `projects.*` identities are retained; a**
+**P33 — AC-F7-3: the delivered `projects.*` identities are retained with their**
 
 ```bash
-# P33 — AC-F7-3: the delivered `projects.*` identities are retained; a
-# non-work-tree root is the `unbound` scope at exit 0; a `repos.*` prefix
-# change is S18 code work, never current truth
+# P33 — AC-F7-3: the delivered `projects.*` identities are retained with their
+# delivered exit values, a non-work-tree root is the `unbound` scope at exit 0
+# and never an error, and a `repos.*` prefix change is S18 code work
 [ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded" >&2; exit 1; }
-require_p00; need squash
+require_p00; need squash section
 if [ ! -f "$R" ]; then echo "repos_md=absent"; echo "P33 verdict: FAIL (change absent)"; exit 0; fi
-sq=$(cat "$R" | squash); n=0
+sq=$(cat "$R" | squash)
+ERR=$(section "$R" '## ERRORS'); SCOPE=$(section "$R" '## SCOPE')
+err_exit() { printf '%s\n' "$ERR" | grep -E "^\| \`$1\`" | awk -F'|' '{v=$(NF-1); gsub(/^[ \t]+|[ \t]+$/,"",v); print v}'; }
+ie=$(err_exit projects.identity-unreadable); re=$(err_exit projects.registry-corrupt); se=$(err_exit projects.state-unavailable)
+echo "error_table_identity_unreadable_exit=${ie:-absent}"
+echo "error_table_registry_corrupt_exit=${re:-absent}"
+echo "error_table_state_unavailable_exit=${se:-absent}"
+# The three delivered identities must be present in the table (not invented ones).
+n=0
 for f in 'projects\.identity-unreadable' 'projects\.registry-corrupt' 'projects\.state-unavailable'; do
   printf '%s' "$sq" | grep -Eiq -- "$f" && n=$((n+1)) || echo "IDENTITY MISSING $f"; done
-printf '%s' "$sq" | grep -Eiq 'not a git work tree is the .?unbound.? scope|outside any git work tree uses the declared .?unbound.? scope' && n=$((n+1)) || echo "MISSING unbound-not-an-error"
-printf '%s' "$sq" | grep -Eiq 'unbound.{0,120}(exit ..?0|keeps its exit code)|keeps its exit code' && n=$((n+1)) || echo "MISSING exit-0 preservation"
 printf '%s' "$sq" | grep -Eiq 'repos\.\*.*error-prefix change is M2-S18 code work' && n=$((n+1)) || echo "MISSING repos.* code-work statement"
 inv=$(printf '%s' "$sq" | grep -Eoic 'repos\.identity-unreadable|repos\.index-corrupt|repos\.state-unavailable' || true)
-echo "identities=$n/6 invented_identities=${inv:-0}"
-[ "$n" -eq 6 ] && [ "${inv:-0}" -eq 0 ] && echo "P33 verdict: PASS" || echo "P33 verdict: FAIL"
+echo "identities=$n/4 invented_identities=${inv:-0}"
+# `unbound` is a declared scope (prose), never an error-table row, never an error exit.
+printf '%s' "$SCOPE" | grep -Eiq 'unbound' && echo "unbound_in_scope=OK" || echo "unbound_in_scope=MISSING"
+# A row *about* `unbound` is one whose error-identity cell names it. The delivered
+# table may (and should) mention the scope inside another row's meaning cell to
+# disclaim it, so only the identity cell counts here.
+urow=$(printf '%s\n' "$ERR" | grep -E '^[|] ' | awk -F'|' '{print $2}' | grep -Eic 'unbound' || true)
+echo "unbound_as_error_row=${urow:-0}"
+# A sentence may not attach `unbound` to an error/failure or a non-zero exit.
+uatt=$(printf '%s' "$sq" | tr '.' '\n' | grep -Ei 'unbound' | grep -Ei 'exit[^.]{0,12}(1|2)([^0-9]|$)|fail|error|refus' | grep -Eiv 'never|not |isn.t|no error' | grep -c . || true)
+echo "unbound_error_attachment=${uatt:-0}"
+# A non-work-tree root may not be described as a failure (negations excluded).
+nwt=$(printf '%s' "$sq" | tr '.' '\n' | grep -Ei 'not a git work tree|non-work-tree' | grep -Ei 'fail|error|refus|exit[^.]{0,8}(1|2)([^0-9]|$)' | grep -Eiv 'never|not |isn.t|n.t an error' | grep -c . || true)
+echo "non_worktree_failure_claim=${nwt:-0}"
+# --- both directions on the real page ---
+cp "$R" "$SH/p33-mut-exit.md"
+awk '{ if ($0 ~ /^\| `projects\.identity-unreadable`/) { sub(/\| 1 \|$/, "| 0 for `unbound`, 2 otherwise |") } print }' "$R" > "$SH/p33-mut-exit.tmp" && mv "$SH/p33-mut-exit.tmp" "$SH/p33-mut-exit.md"
+cp "$R" "$SH/p33-mut-nwt.md"
+python3 - "$SH/p33-mut-nwt.md" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+old = "It is never reported\nas a row and is never a failure."
+new = "A non-work-tree root is refused\nas a failure at exit 2."
+assert s.count(old) == 1, "fixture sentence not found"
+open(p, "w", encoding="utf-8").write(s.replace(old, new, 1))
+PY
+mut_exit=$(section "$SH/p33-mut-exit.md" '## ERRORS' | grep -E '^\| `projects\.identity-unreadable`' | awk -F'|' '{v=$(NF-1); gsub(/^[ \t]+|[ \t]+$/,"",v); print v}')
+[ "$mut_exit" != "1" ] && echo "mutant_unbound_exit=detected (exit cell = $mut_exit)" || echo "mutant_unbound_exit=NOT-DETECTED"
+mut_nwt=$(cat "$SH/p33-mut-nwt.md" | squash | tr '.' '\n' | grep -Ei 'not a git work tree|non-work-tree' | grep -Ei 'fail|refus|exit[^.]{0,8}(1|2)([^0-9]|$)' | grep -Eiv 'never|not |isn.t' | grep -c . || true)
+[ "${mut_nwt:-0}" -ge 1 ] && echo "mutant_nonworktree_error=detected" || echo "mutant_nonworktree_error=NOT-DETECTED"
+[ "$ie" = "1" ] && [ "$re" = "2" ] && [ "$se" = "2" ] && [ "$n" -eq 4 ] && [ "${inv:-0}" -eq 0 ] \
+ && printf '%s' "$SCOPE" | grep -Eiq 'unbound' && [ "${urow:-0}" -eq 0 ] && [ "${uatt:-0}" -eq 0 ] && [ "${nwt:-0}" -eq 0 ] \
+ && [ "$mut_exit" != "1" ] && [ "${mut_nwt:-0}" -ge 1 ] && echo "P33 verdict: PASS" || echo "P33 verdict: FAIL"
 ```
 
 **P34 — AC-F7-4: the STATE example is the host-root container with a**
@@ -4507,7 +4623,7 @@ echo "state_layer_project_scope=${stateproj:-0}"
 | TC ID | AC | Procedure | Execution command | Implementation status | Recorded evidence (base tree → conforming fixture) |
 |---|---|---|---|---|---|
 | TC-M2DOM-001 | AC-F1-1 | P01 | `bash` block **P01** | Manual Only — uncommitted procedure | base `retained_clauses=5/5; depends_line=exact; ticket_line_record=OK` → FAIL; fixture `retained_clauses=5/5; depends_line=exact; ticket_line_record=OK` → PASS |
-| TC-M2DOM-002 | AC-F1-2 | P02 | `bash` block **P02** | Manual Only — uncommitted procedure | base `Goal:=byte-identical; Progress:=byte-identical; AC:=byte-identical` → FAIL; fixture `Goal:=byte-identical; Progress:=byte-identical; AC:=byte-identical` → PASS |
+| TC-M2DOM-002 | AC-F1-2 | P02 | `bash` block **P02** | Manual Only — uncommitted procedure | base `Ticket:=byte-identical; Progress:=byte-identical; AC:=byte-identical; preserved_blocks=5/5; entry_change=ABSENT (no change); mutant_preserved_blocks=4/5 (expect 4/5; the AC byte change must be caught)` → FAIL; fixture `Ticket:=byte-identical; Progress:=byte-identical; AC:=byte-identical; preserved_blocks=5/5; entry_change=non-vacuous; mutant_preserved_blocks=4/5 (expect 4/5; the AC byte change must be caught)` → PASS |
 | TC-M2DOM-003 | AC-F1-3 | P03 | `bash` block **P03** | Manual Only — uncommitted procedure | base `s18=absent; owned_items=0/7` → FAIL; fixture `owned_items=7/7; s11_names_owner=OK; s11_duplicate_ownership=0` → PASS |
 | TC-M2DOM-004 | AC-F2-1 | P04 | `bash` block **P04** | Manual Only — uncommitted procedure | base `S18=absent; clauses_present=0/12` → FAIL; fixture `clauses_present=12/12 shape_labels=4/4 ticket_line=0 depends=exact` → PASS |
 | TC-M2DOM-005 | AC-F2-2 | P05 | `bash` block **P05** | Manual Only — uncommitted procedure | base `s18=absent` → FAIL; fixture `anchors=7/7 softening=0` → PASS |
@@ -4527,7 +4643,7 @@ echo "state_layer_project_scope=${stateproj:-0}"
 | TC-M2DOM-019 | AC-F5-2 | P19 | `bash` block **P19** | Manual Only — uncommitted procedure | base `MISSING declared membership; MISSING declared-only scan; MISSING undeclared-clone ban` → FAIL; fixture `anchors=5/5 mandatory_membership_claims=0` → PASS |
 | TC-M2DOM-020 | AC-F5-3 | P20 | `bash` block **P20** | Manual Only — uncommitted procedure | base `overview_mentions_member=0 overview_mentions_group=0; cross_repo_flow=absent cross_repo_mermaid=0; overview_group_scoped=MISSING` → FAIL; fixture `overview_mentions_member=1 overview_mentions_group=1; cross_repo_flow=present cross_repo_mermaid=1; overview_group_scoped=OK` → PASS |
 | TC-M2DOM-021 | AC-F5-4 | P21 | `bash` block **P21** | Manual Only — uncommitted procedure | base `discovery_root_named=MISSING; default_identifier_named=MISSING; distinct_statement=MISSING` → FAIL; fixture `discovery_root_named=OK; default_identifier_named=OK; distinct_statement=OK` → PASS |
-| TC-M2DOM-022 | AC-F6-1 | P22 | `bash` block **P22** | Manual Only — uncommitted procedure | base `repos_v1=absent` → FAIL; fixture `repos_v1_fields=11/11` → PASS |
+| TC-M2DOM-022 | AC-F6-1 | P22 | `bash` block **P22** | Manual Only — uncommitted procedure | base `repos_v1=absent` → FAIL; fixture `repos_v1_fields=11/11; rv_unbound_scope=OK; rv_unbound_error_attachment=0` → PASS |
 | TC-M2DOM-023 | AC-F6-2 | P23 | `bash` block **P23** | Manual Only — uncommitted procedure | base `project_groups_v1=absent` → FAIL; fixture `group_fields=11/11; projectKey_group_affirmations=0; member_field_ban=OK` → PASS |
 | TC-M2DOM-024 | AC-F6-3 | P24 | `bash` block **P24** | Manual Only — uncommitted procedure | base `MISSING hostIndexRevision; MISSING project-groups\.v1; MISSING alias payload\|delivered flat record set` → FAIL; fixture `delivered_fields=5/5; group_affirmations=0 group_fields=0` → PASS |
 | TC-M2DOM-025 | AC-F6-4 | P25 | `bash` block **P25** | Manual Only — uncommitted procedure | base `rename_rule_occurrences=0; two_shape_sentences=0 alias_paired_with_group=0 alias_occurrences=0; alias_token_defined=MISSING` → FAIL; fixture `rename_rule_occurrences=1; two_shape_sentences=0 alias_paired_with_group=0 alias_occurrences=16; alias_token_defined=OK` → PASS |
@@ -4538,7 +4654,7 @@ echo "state_layer_project_scope=${stateproj:-0}"
 | TC-M2DOM-030 | AC-F6-9 | P30 | `bash` block **P30** | Manual Only — uncommitted procedure | base `plan_shape=absent` → FAIL; fixture `plan_shape_behaviour=11/11` → PASS |
 | TC-M2DOM-031 | AC-F7-1 | P31 | `bash` block **P31** | Manual Only — uncommitted procedure | base `repos_md=absent; checks=0/12` → FAIL; fixture `checks=11/11 fields=5/5` → PASS |
 | TC-M2DOM-032 | AC-F7-2 | P32 | `bash` block **P32** | Manual Only — uncommitted procedure | base `repos_md=absent` → FAIL; fixture `scope_anchors=11/11; unbound_declared=OK` → PASS |
-| TC-M2DOM-033 | AC-F7-3 | P33 | `bash` block **P33** | Manual Only — uncommitted procedure | base `repos_md=absent` → FAIL; fixture `identities=6/6 invented_identities=0` → PASS |
+| TC-M2DOM-033 | AC-F7-3 | P33 | `bash` block **P33** | Manual Only — uncommitted procedure | base `repos_md=absent` → FAIL; fixture `error_table_identity_unreadable_exit=1; error_table_registry_corrupt_exit=2; error_table_state_unavailable_exit=2; mutant_unbound_exit=detected (exit cell = 0 for `unbound`, 2 otherwise); mutant_nonworktree_err…` → PASS |
 | TC-M2DOM-034 | AC-F7-4 | P34 | `bash` block **P34** | Manual Only — uncommitted procedure | base `repos_md=absent` → FAIL; fixture `state_container=OK; state_example_keys=delivery-a-1a2b3c4d; pattern_valid_keys=1` → PASS |
 | TC-M2DOM-035 | AC-F7-5 | P35 | `bash` block **P35** | Manual Only — uncommitted procedure | base `MISSING project-groups\.v1; MISSING data\.groups\[\]; MISSING groupKey` → FAIL; fixture `group_page_anchors=11/11; orphan_reason_paragraphs=0` → PASS |
 | TC-M2DOM-036 | AC-F7-6 | P36 | `bash` block **P36** | Manual Only — uncommitted procedure | base `MISSING classified partial result; MISSING not-yet-supported; MISSING exit-0 behaviour` → FAIL; fixture `behaviour_anchors=8/8 board_group_claims=0 two_shape=0` → PASS |
@@ -4698,7 +4814,7 @@ No spec gap blocks delivery. Flags raised for the author's awareness, all with a
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
-| 1.4 | 2026-11-11 | @test-plan-writer | Rebuilt against spec v1.4 after the six-critic review board on PR #306 (CTO, API Integration Engineer, Domain Expert, QA Engineer, SRE, Technical Writer) (decisions A-D, findings 1-18), with every procedure re-authored and re-executed in a fresh shell. **(1) 69 criteria, 69 cases, 69 procedures:** the AC set grew from 45 to 69 (56 functional + 13 non-functional), so the TC set was renumbered coherently `TC-M2DOM-001..069` and every listing (coverage tables, scenario index, scenario details, automation mapping, execution log) was regenerated from one table; traceability stays 1:1 in both directions. **(2) The v1.4 naming surface:** new shape-asserting procedures for `project-groups.v1` / `data.groups[]` / `groupKey` with no `projectKey` group identity (P23, P24, P56, P69), `repos.v1` / `data.repos[]` / `repoKey` (P22, P31, P34), `projects list --flat` returning `data.projects[]` (P06, P44), the single rename rule (P25, P68), the repository-vocabulary mapping clause on both pages (P26), configuration-only membership with an undeclared-clone seed (P27, P40), the classified partial aggregation that degrades one `state-unavailable` member at exit 0 rather than exit 2 (P28, P40), the queue/lane representation with its release rule (P29), the repository-key board boundary (P38), the `queue list --project <groupKey>` and `status --project <groupKey>` grammar (P39), the registry split with the ODR-0003 lock (P52, P53), the S4 edge (P17), per-member CI corroboration, dependency ordering and `closeout.data.members[]` (P13, P30, P41, P42), the help/version no-state-read rows (P31), and the six-page disambiguation (P55). **(3) Base values re-derived by execution:** base `723454e4` re-measured in a detached worktree — backlog 1460 lines, M2-S11 1169–1189, S17 last content 1291, separator 1293, `## Epic M3` 1295, window `1292:1292`, retirement note 1051–1054 and an empty context window `1055:1055`, 74 headings; `status.md` 225 lines with last heading 214; registry 141 (`queue` 89, `spend` 90); `architecture.md` 20 fences / 10 mermaid / 7 key flows; 12 pack rows, 12 index targets, 40 seeds / 40 asserts, 8 contract sections, `repos.md` absent, 0/15 product files. **(4) Conforming fixture:** a never-committed worktree at `723454e4` carrying the fifteen product files was built and measured (backlog 1530 lines, window `1309:1362`, S18 1310 / S19 1347, context `1055..1068` with 12 lines, headings 76, status 225→241 with the new section at 227 and 16 additions, registry 142, `architecture.md` 22/11/8, 13 pack rows, 13 targets, 53 seeds / 53 asserts, 16 contract sections, `repos.md` 130 lines, 15/15 product files, one rename-rule sentence). **(5) Sweep result:** in fresh shells the fixture is **68/69 PASS** and the base is **0/69** — every procedure carries at least one change-dependent assertion, so no procedure can pass at the base by preserving what already exists. **(6) Plan-gate contract kept:** P15/P16 are gated on invariants only (non-empty paragraph strictly between the retirement note and `### M2-S2`, hunk confinement with `outside=0`, `non_vacuous=yes`, `classifier_self_tests=3/3`); the head-derived line numbers and hunk counts stay observations. **(7) TMPDIR policy and base pin kept:** P61 uses the default `TMPDIR`, P62 the repository-filesystem one, and `BASE=723454e4` is pinned in P00. **(8) Board record:** the six critics — CTO, API Integration Engineer, Domain Expert, QA Engineer, SRE, and Technical Writer — returned decisions A-D and findings 1-18 (6 blocking, 10 should-fix, 2 cheap notes), which are the normative source for the 32 derived clauses P64 counts. **Corrections within v1.4 (no version bump, three oracle defects found by the plan-writer):** (a) TC-045/P45 no longer gates on `intro_two_per_story` — the phrase wraps across lines in the conforming intro, so the token read MISSING while the intro was correct; the gate is now `intro_range=OK`, `m2_s2_present=OK`, `m2_s19_present=OK` and `stories_below_two=0`, with both-direction self-tests. (b) TC-043/P43 no longer reports the corpus-wide `projects_list_asserts=2` (it counted the alias seed and read as a failure); the tokens are scoped to the seeds — `s11_01_assert_projects_list=0`, `s11_02_rename_asserted=OK`, `flat_assertions=0` — and a positional mutant proves both bite. (c) TC-034/P34's `state_example_keys` is now recorded in §10 (`delivery-a-1a2b3c4d`) as well as asserted. All three were re-run in fresh shells: conforming fixture PASS, base FAIL; 69 ACs / 69 TCs and the five listings stay at 69. |
+| 1.4 | 2026-11-11 | @test-plan-writer | Rebuilt against spec v1.4 after the six-critic review board on PR #306 (CTO, API Integration Engineer, Domain Expert, QA Engineer, SRE, Technical Writer) (decisions A-D, findings 1-18), with every procedure re-authored and re-executed in a fresh shell. **(1) 69 criteria, 69 cases, 69 procedures:** the AC set grew from 45 to 69 (56 functional + 13 non-functional), so the TC set was renumbered coherently `TC-M2DOM-001..069` and every listing (coverage tables, scenario index, scenario details, automation mapping, execution log) was regenerated from one table; traceability stays 1:1 in both directions. **(2) The v1.4 naming surface:** new shape-asserting procedures for `project-groups.v1` / `data.groups[]` / `groupKey` with no `projectKey` group identity (P23, P24, P56, P69), `repos.v1` / `data.repos[]` / `repoKey` (P22, P31, P34), `projects list --flat` returning `data.projects[]` (P06, P44), the single rename rule (P25, P68), the repository-vocabulary mapping clause on both pages (P26), configuration-only membership with an undeclared-clone seed (P27, P40), the classified partial aggregation that degrades one `state-unavailable` member at exit 0 rather than exit 2 (P28, P40), the queue/lane representation with its release rule (P29), the repository-key board boundary (P38), the `queue list --project <groupKey>` and `status --project <groupKey>` grammar (P39), the registry split with the ODR-0003 lock (P52, P53), the S4 edge (P17), per-member CI corroboration, dependency ordering and `closeout.data.members[]` (P13, P30, P41, P42), the help/version no-state-read rows (P31), and the six-page disambiguation (P55). **(3) Base values re-derived by execution:** base `723454e4` re-measured in a detached worktree — backlog 1460 lines, M2-S11 1169–1189, S17 last content 1291, separator 1293, `## Epic M3` 1295, window `1292:1292`, retirement note 1051–1054 and an empty context window `1055:1055`, 74 headings; `status.md` 225 lines with last heading 214; registry 141 (`queue` 89, `spend` 90); `architecture.md` 20 fences / 10 mermaid / 7 key flows; 12 pack rows, 12 index targets, 40 seeds / 40 asserts, 8 contract sections, `repos.md` absent, 0/15 product files. **(4) Conforming fixture:** a never-committed worktree at `723454e4` carrying the fifteen product files was built and measured (backlog 1530 lines, window `1309:1362`, S18 1310 / S19 1347, context `1055..1068` with 12 lines, headings 76, status 225→241 with the new section at 227 and 16 additions, registry 142, `architecture.md` 22/11/8, 13 pack rows, 13 targets, 53 seeds / 53 asserts, 16 contract sections, `repos.md` 130 lines, 15/15 product files, one rename-rule sentence). **(5) Sweep result:** in fresh shells the fixture is **68/69 PASS** and the base is **0/69** — every procedure carries at least one change-dependent assertion, so no procedure can pass at the base by preserving what already exists. **(6) Plan-gate contract kept:** P15/P16 are gated on invariants only (non-empty paragraph strictly between the retirement note and `### M2-S2`, hunk confinement with `outside=0`, `non_vacuous=yes`, `classifier_self_tests=3/3`); the head-derived line numbers and hunk counts stay observations. **(7) TMPDIR policy and base pin kept:** P61 uses the default `TMPDIR`, P62 the repository-filesystem one, and `BASE=723454e4` is pinned in P00. **(8) Board record:** the six critics — CTO, API Integration Engineer, Domain Expert, QA Engineer, SRE, and Technical Writer — returned decisions A-D and findings 1-18 (6 blocking, 10 should-fix, 2 cheap notes), which are the normative source for the 32 derived clauses P64 counts. **Corrections within v1.4 (no version bump, three oracle defects found by the plan-writer):** (a) TC-045/P45 no longer gates on `intro_two_per_story` — the phrase wraps across lines in the conforming intro, so the token read MISSING while the intro was correct; the gate is now `intro_range=OK`, `m2_s2_present=OK`, `m2_s19_present=OK` and `stories_below_two=0`, with both-direction self-tests. (b) TC-043/P43 no longer reports the corpus-wide `projects_list_asserts=2` (it counted the alias seed and read as a failure); the tokens are scoped to the seeds — `s11_01_assert_projects_list=0`, `s11_02_rename_asserted=OK`, `flat_assertions=0` — and a positional mutant proves both bite. (c) TC-034/P34's `state_example_keys` is now recorded in §10 (`delivery-a-1a2b3c4d`) as well as asserted. All three were re-run in fresh shells: conforming fixture PASS, base FAIL. (d) **TC-002/P02 (fourth correction):** `blk()` passed the entry **text** as awk's `$1` filename and read the pattern from an always-empty `$2`, so all five preservation checks compared two empty strings and reported `byte-identical` vacuously. The helper now extracts the entry **by file** (entry_of '<file>'), pipes the body into `blk '<label>'` (stdin), and compares the five blocks the spec actually pins — heading, `- Ticket:`, `- Progress:`, `- AC:`, `- Depends on:`. The Goal is not pinned (F-1 allows rewording; the conforming head names the delivered `projects list`), and its delivered-overview meaning is asserted instead. Non-vacuity is proved on the real head: a one-word AC mutation reports `mutant_preserved_blocks=4/5`, a fabricated dependency line reports `mutant_depends=CHANGED`, a benign Goal reword is accepted with the pinned set untouched, and a Goal promising `repos list` is detected. 69 ACs / 69 TCs and the five listings stay at 69. (e) **TC-033/P33 + TC-022/P22 (fifth correction, doc-sync re-check):** the corpus's `m2/commands/repos.md` error table folded a non-work-tree root into `projects.identity-unreadable` as `0 for unbound, 2 otherwise`, contradicting delivered truth and the page's own scope prose, and no procedure pinned the exit column. TC-033 (AC-F7-3, the page-contract case — TC-022 is the contracts `repos.v1` section) now parses the error table and gates `error_table_identity_unreadable_exit=1`, `error_table_registry_corrupt_exit=2`, `error_table_state_unavailable_exit=2`, `unbound_in_scope=OK`, `unbound_as_error_row=0`, `unbound_error_attachment=0` and `non_worktree_failure_claim=0`, with two mutants proving both directions (`mutant_unbound_exit=detected`, `mutant_nonworktree_error=detected`). TC-022 adds the contract-side half (`rv_unbound_scope=OK`, `rv_unbound_error_attachment=0`). 69 ACs / 69 TCs and the five listings stay at 69. |
 | 1.3 | 2026-11-11 | @test-plan-writer | Re-baselined after the branch was rebased onto `origin/main-tools` `723454e4` (GH-288 / PR #305 shipped the flat `projects list`); spec v1.3 is the binding source. Every base-observed value was re-derived by re-running each procedure in a fresh shell in a detached worktree at `723454e4`, and every procedure was also run at the rebased head. **(1) Base pin:** P00 `BASE` is `723454e4`; the base-observed values now reflect the GH-288 state — `backlog.md` 1460 lines, M2-S11 1169–1189 with its `Ticket`/`Progress` record, M2-S17 last content 1291, separator 1293, `## Epic M3` 1295, window `1292:1292`, retirement note 1051–1054, context `1055..1055`; `status.md` 225 lines with last heading 214 = `## M2 delivery snapshot (2026-11-11)`; registry 141 with `queue` at 89 and `spend` at 90; `architecture.md` 20 fences / 10 mermaid / 7 key flows; 40 seeds / 40 asserts; 74 headings. The head values are recorded separately: window `1303:1339`, S18/S19 at 1304/1325, context `1055..1064` with 8 lines, status new section at 227 with 26 additions (`225 → 251`), registry 142 with rows 89/90/91, `architecture.md` 22/11/8, `repos.md` 6 fences, 46 seeds / 46 asserts, headings 74 → 76. **(2) Registry (AC-NFR4-1):** P37, the §1.1/§2/§3/§5.2/§6/§7.2/§7.3 text, and the procedure note now assert 141 → 142 with `queue=89 repos=90 spend=91`; every hardcoded 139/140 and the old 88/89/90 indices are removed from the requirements, while the history rows keep their original recorded values. **(3) P28/P29/P34 at the real head:** P28 `new_section_count=1 new_section_line=227`, P29 `removed_lines=0 additions=26 added_outside_section=0 225→251`, P34 `product_files=13/13 expected_not_changed=0 other_scripts_changed=0` with no forbidden path; P34's post-commit comparison now sorts with `LC_ALL=C` so the committed range reports `post_commit_check=identical` instead of a locale-order false `DIFFERS`. No measurement pin was reintroduced: the §6 gate contract keeps P09/P10 invariants gated and `context_paragraph`/`paragraph_lines`/`backlog_hunks`/`inside` as observations. **(4) P32 naming matrix (AC-F14-1/AC-F14-2):** the rebase introduced two legitimate delivered-fact statements — `m2/commands/projects.md:34-36` (the sanctioned disambiguation sentence) and `status.md:216-220` (main-tools' verbatim delivered sentence) — which the previous `@flat` detector flagged. The `sanctioned()` predicate in P00 now accepts exactly: names `projects list` **and** (`flat enumeration` ∧ `repos list` ∧ (`renames` ∨ `shipped`)) ∨ ((`mounted` ∨ `delivered` ∨ `shipped`) ∧ (`host overview` ∨ `read-only host`)) ∨ `shipped name .projects` ∨ (`shipped as .ados projects list` ∧ `GH-288`). Proof: head `rows_with_survivors=0/17`, `regions_empty=0`, both sanctioned classes accepted in isolation; a planted ``The `projects list` command enumerates every managed checkout.`` still yields `FLAT` (detected); the base still observes `15/17` survivors, so the allowance did not defuse the scan. **(5) P36 delivered-claim detector (AC-NFR3-1):** the rebase preserves four GH-288 delivered facts — `m2/entrypoint-delta.md:85`, `m2/commands/projects.md:34`, `status.md:216`, `cli-command-registry.md:189` — which the previous claim grep counted. `sanctioned_claim()` now accepts exactly four shapes (a GH-288 delivery sentence, the sanctioned rename sentence including its wrapped form, the shipped-name statement, and the shipped-surface registry row) and still counts a claim that a NEW surface is delivered. Proof: head `delivered_claims=0`; a planted `Project groups are delivered.` line counts `1`; a planted `` `repos list` is shipped in GH-288. `` line counts `1`; the four legitimate lines are accepted together. **(6) Run:** at the rebased head **45/45 procedures PASS** (P39 by its classifier: repository-local `exit=0` `7206 pass / 4 skip / 0 fail`; default `exit=1` with `CI baseline parity` only, `7205 pass / 4 skip / 1 fail`; both re-runs recorded, `excused`). At base `723454e4` **38 FAIL / 6 PASS** (P29, P35, P38, P42, P43, P44 are labelled controls; P39 is a gate and is executed at the head, not as a base-tree control). **45 ACs / 45 TCs, 1:1; no TC renumbering.** |
 | 1.2 | 2026-11-11 | @test-plan-writer | Remediated DoR iteration 2 (`readiness-review/readiness-iter-2.md`) against spec v1.2, every changed procedure re-extracted from this file and executed **in a fresh shell** as `source P00; source Pn` on the base tree, on the conforming never-committed fixture (`/tmp/gh303/fx/repo`, base `5372dbac` + 13 files) and on a never-committed copy of it mutated per test. **(1) P22 anchor (finding 3):** `two branches\|two PRs` → `two (member )?branch(es)?\|two (pull requests?\|PRs?)`, so AC-F8-1's own vocabulary is accepted; AC-vocabulary conforming seed (`two member branch names and two pull-request numbers`) → `coverage_anchors=10/10`, **PASS**, where v1.1 reported `topic MISSING`; property-omitting variant → `9/10`, **FAIL**. **(2) P11 mandatory claim (finding 4):** the single-regex `workspace[^.]{0,120}required` is replaced by a sentence-scoped detector that drops negated/optional phrasing; the required sentence `an optional directory usable as a discovery root and never required` → `workspace_mandatory_claim=ABSENT`, **PASS** (v1.1 printed `PRESENT (violation)` on it), planted `The workspace directory is required.` → `PRESENT (violation, 1 sentence(s))`, offending sentence printed, **FAIL**; the claim is now a gate term, matching the plan's existing P11 token. **(3) P42 oracle (finding 6 + spec v1.2 AC-NFR9-1):** the oracle now reads the guard's exit status and the scan API instead of grepping the log for `^  - \|VIOLATION` (which printed `violations=0` on a red guard), and asserts AC-NFR9-1's exact scanned set; red fixture (planted `` `ados repos` `` in the new `status.md` section) → `forbidden_exit=1`, `FAIL … status.md:230: ados`, `violations=1`, `SEED_HIT …:230: ados`, **FAIL**; unregistered-but-present page → `failures=1`, `missing_from_scan=1`, `UNSCANNED …/repos.md`, **FAIL**; base → `planning_scanned=9/10`, `seed_hits=0`, **PASS (control)**; fixture → `scanned_total=140`, `planning_scanned=10/10`, `seed_hits=0`, **PASS**. **(4) TP-5/TP-7 (finding 5):** TP-5 no longer describes the withdrawn plan pin and states the ambiguity from F-12/AC-F12-1 alone with the parenthesised-date form as the invariant; TP-7 no longer cites a `board.md` deferral in spec §7.3 (which contains none) and records the deferral in the two places that hold it — this row and the plan's P5 constraint — while noting that §7.3 defers only *board scoping* to M2-S4. **(5) TC-042/AC-NFR9-1 alignment:** the scenario now enumerates the ten scanned documents, the two not-scanned ones and the zero-seed-literal count, and carries the version assertion binding it to spec v1.2 and plan v1.2. **(6) Plan-token alignment (iteration-2 blocking finding, plan-side owner):** §6 gains a **plan-gate contract** row that lists the P09/P10 outputs that are invariants (`paragraph_lines>0`, `paragraph_strictly_between=OK`, `blank_after_note=1`, `blank_before_s2=1`, the anchored note lines and byte-identity invariants; `hunk confinement OK`, `outside=0`, `non_vacuous=yes`, `classifier_self_tests=3/3`) and the fixture-specific measurements a plan must NOT pin (`context_paragraph=1055..1060`, `paragraph_lines=4`, `backlog_hunks=6`, `inside=6`), with the reason a measurement gate fails a conforming head; the summary, §2 reference and §6 caveat are restated for spec v1.2. Baseline counts unchanged: base **38 FAIL / 7 PASS** (P11, P22 still fail, P42 still a control), fixture **45/45 PASS**; **45 ACs / 45 TCs, 1:1**. **(7) Commit-safety false-positive (delivery blocker):** the P42 helper's local variable holding the seed match was named `token` and bound by assignment; the `commit` primitive's deterministic secret scanner read that keyword, the equals sign and the 20-character identifier that follows it as a credential assignment (`commit.safety.secret-suspected` on a variable name, not a secret). It is renamed to `seedMatch` in the assignment and in its two uses, so no credential-shaped assignment remains. The whole artifact now matches none of the scanner's content patterns — `SECRET_CONTENT_PATTERNS` from `packages/adapters/src/file/secret-scan.ts` run over the file reports `matching_patterns=0 flagged_lines=0`, and the exact-pattern grep reports `count=0`, while the same grep on a `/tmp` copy carrying the old identifier reports `count=1`, so the control bites. P42 re-run after the rename is unchanged: base `PASS (control, planning_scanned=9/10)`, conforming fixture `PASS (10/10, seed_hits=0)`, planted literal `FAIL` surfacing `SEED_HIT doc/planning/oss-tooling/status.md:230: ados`. No behaviour, emitted token name or count changed. |
 | 1.1 | 2026-11-11 | @test-plan-writer | Remediated DoR iteration 1 (`readiness-review/readiness-iter-1.md`) against spec v1.1, with every changed procedure executed in a **fresh shell** on the base tree and on a **conforming, never-committed worktree fixture** (`/tmp/gh303/fx/repo`, base `5372dbac` + the thirteen changes). **Blocking findings, fixed with proof:** (1) BL-18/P32 — replaced the `repos.{0,40}group` regex with sentence-level `@flat`/`@group`/`@both` detectors that attribute enumeration to `projects` and group semantics to `repos` only when the sentence has no `enumerat` predicate before the next `projects` clause; fixture `rows_with_survivors=0/17` on the ticket-verbatim S18/S19 text, base `15/17`, both direction self-tests `detected`, required boundary sentence not flagged. (2) P09/P10 — the context window is now `retirement-note last line + 1 .. ### M2-S2 - 1`; fixture `paragraph_lines=4 paragraph_strictly_between=OK blank_after_note=1 blank_before_s2=1`, P10 `backlog_hunks=6 inside=6 outside=0`; base `paragraph_lines=0`. (3) P19/P20/P21 — `$R` and `$PJ` are P00 variables; fresh-shell fixture `9/9 5/5`, `7/7 3/3 0`, P21 `PASS`. (4) Cross-procedure dependencies — every helper (`entry/section/firstsec/squash/clause_rows/fence_blocks/diffstat/newsec*/matrix_rows/path_of/region/forbidden_* /backlog_ranges/story_section`) and every path (`$A`, `$RG`, `$R`, `$PJ`, …) now lives in P00; each block opens with a loud guard and declares `need`; P17's missing `$ct` and P37's head-vs-base `reg_entries` bug are fixed, and P32 treats an empty region as a failure, so the STAT row can no longer fail open. (5) BL-S11 — the region anchor is `### M2-S11 `; base `BL-S11 forbidden=3 SURVIVOR` (two `projects list` statements plus the goal's overview claim), fixture `BL-S11 forbidden=0`, `P45 BL-S11 required=OK`. (6) P34 — restated as a base..worktree manifest check (`git diff --name-only "$BASE" -- .` plus untracked), decidable before the P5 commit; fixture `product_files=13/13 expected_not_changed=0 post_commit_check=pending`, base `0/13`. (7) TC-039/P39 — aligned to AC-NFR6-1 v1.1: repository-local full suite authoritative, both runs recorded, the two named default-only failures recorded and re-run and excused only while the local run is green, any other failure `delivery`; base `repo_local_exit=0 default_exit=1 default_failure_class=excused`, five classifier branches prove `none`/`excused` pass and unexcused/local-failure/no-rerun fail. (8) Stale P1 tokens — `P35` records base `74 → 74 added=0` and fixture `74 → 76 added=2`; P08/P09 base (1285/1287/1289, window 1286:1286; note 1051..1054, context 1055..1055) and fixture (1293/1310/1312, window 1294:1309; context 1055..1060) values are labelled separately. **Non-blocking 10–16:** TP-5 now enforces the date in the file's parenthesised form and P28 requires exactly one new `##` heading with none after it; §7.3 thresholds are `checks<9`/`checks<7`; P33 checks the six prose locations whose Appendix B row requires a boundary statement and leaves the two index rows to P26/P27; P32 carries a negative control that the unchanged base `commands/board.md` text is not flagged (`base_board_accepted=OK`); the spec §18/plan ordering deviation is declared as TP-8 and no oracle depends on commit order; the authoring-defect count is stated once (four); P02 counts flat statements so the mandated `projects list` transition clause is allowed. **Counts unchanged: 45 ACs (33 functional + 12 non-functional), 45 TCs, 1:1 mapping.** Base verdicts: 38 FAIL + 7 PASS (TC-029, TC-035, TC-038, TC-039, TC-042, TC-043, TC-044; TC-039 is policy-conforming rather than a preservation control); conforming fixture: 45/45 PASS. No product file, spec, plan, pm-notes, or other artifact was edited by this revision. |
@@ -4711,7 +4827,7 @@ Run date 2026-11-11. Every procedure was executed **in a fresh shell** as `sourc
 | TC ID | Run Date | Base `723454e4` | Conforming fixture | Notes |
 |---|---|---|---|---|
 | TC-M2DOM-001 | 2026-11-11 | FAIL | PASS | retained_clauses=5/5; ac_delivered_enumeration=OK |
-| TC-M2DOM-002 | 2026-11-11 | FAIL | PASS | entry_change=non-vacuous; outside_tasks_edits=0 |
+| TC-M2DOM-002 | 2026-11-11 | FAIL | PASS | mutant_preserved_blocks=4/5 (expect 4/5; the AC byte change must be caught); mutant_ac=CHANGED; mutant_depends=CHANGED |
 | TC-M2DOM-003 | 2026-11-11 | FAIL | PASS | s11_names_owner=OK; s11_duplicate_ownership=0 |
 | TC-M2DOM-004 | 2026-11-11 | FAIL | PASS | clauses_present=12/12 shape_labels=4/4 ticket_line=0 depends=exact |
 | TC-M2DOM-005 | 2026-11-11 | FAIL | PASS | anchors=7/7 softening=0 |
@@ -4731,7 +4847,7 @@ Run date 2026-11-11. Every procedure was executed **in a fresh shell** as `sourc
 | TC-M2DOM-019 | 2026-11-11 | FAIL | PASS | anchors=5/5 mandatory_membership_claims=0 |
 | TC-M2DOM-020 | 2026-11-11 | FAIL | PASS | flow_dependency_edges=OK; invariants=6/6 |
 | TC-M2DOM-021 | 2026-11-11 | FAIL | PASS | distinct_statement=OK; collapsed_sentences=0 |
-| TC-M2DOM-022 | 2026-11-11 | FAIL | PASS | repos_v1_fields=11/11 |
+| TC-M2DOM-022 | 2026-11-11 | FAIL | PASS | repos_v1_fields=11/11; rv_unbound_scope=OK; rv_unbound_error_attachment=0 |
 | TC-M2DOM-023 | 2026-11-11 | FAIL | PASS | group_fields=11/11 |
 | TC-M2DOM-024 | 2026-11-11 | FAIL | PASS | delivered_fields=5/5; group_affirmations=0 group_fields=0 |
 | TC-M2DOM-025 | 2026-11-11 | FAIL | PASS | rename_rule_occurrences=1 |
@@ -4741,8 +4857,8 @@ Run date 2026-11-11. Every procedure was executed **in a fresh shell** as `sourc
 | TC-M2DOM-029 | 2026-11-11 | FAIL | PASS | queue_lane_anchors=9/9 |
 | TC-M2DOM-030 | 2026-11-11 | FAIL | PASS | plan_shape_behaviour=11/11 |
 | TC-M2DOM-031 | 2026-11-11 | FAIL | PASS | checks=11/11 fields=5/5 |
-| TC-M2DOM-032 | 2026-11-11 | FAIL | PASS | scope_anchors=11/11 |
-| TC-M2DOM-033 | 2026-11-11 | FAIL | PASS | identities=6/6 invented_identities=0 |
+| TC-M2DOM-032 | 2026-11-11 | FAIL | PASS | scope_anchors=11/11; unbound_declared=OK |
+| TC-M2DOM-033 | 2026-11-11 | FAIL | PASS | mutant_unbound_exit=detected (exit cell = 0 for `unbound`, 2 otherwise); mutant_nonworktree_error=detected; error_table_identity_unreadable_exit=1 |
 | TC-M2DOM-034 | 2026-11-11 | FAIL | PASS | state_container=OK; state_example_keys=delivery-a-1a2b3c4d |
 | TC-M2DOM-035 | 2026-11-11 | FAIL | PASS | group_page_anchors=11/11 |
 | TC-M2DOM-036 | 2026-11-11 | FAIL | PASS | behaviour_anchors=8/8 board_group_claims=0 two_shape=0 |

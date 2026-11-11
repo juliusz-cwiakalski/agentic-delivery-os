@@ -99,7 +99,7 @@ a valid key.
 
 | Code | Meaning |
 |---|---|
-| `0` | The checkout list was produced (including the `unbound` scope) |
+| `0` | The checkout list was produced |
 | `1` | The request was refused, for example an unknown verb |
 | `2` | A platform or state failure prevented discovery |
 
@@ -125,13 +125,11 @@ $ <binary> repos list --json
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `projects.identity-unreadable` | The checkout identity cannot be derived; the root is not a git work tree and falls to the `unbound` scope | 0 for `unbound`, 2 otherwise |
+| `projects.identity-unreadable` | The invoking checkout's git metadata is unusable, or its identity marker is unreadable or inconsistent | 1 |
 | `projects.registry-corrupt` | The host index cannot be read; run discovery again | 2 |
 | `projects.state-unavailable` | A per-repository state location is missing or unreadable | 2 |
 
-A non-work-tree root is the declared `unbound` scope and never a failure, so
-it keeps its exit code and is not an error row. The delivered `projects.*`
-error identities are current truth; a `repos.*` error-prefix change is M2-S18 code work and is not current truth.
+The delivered `projects.*` error identities are current truth; a `repos.*` error-prefix change is M2-S18 code work and is not current truth.
 
 ## SEE ALSO
 

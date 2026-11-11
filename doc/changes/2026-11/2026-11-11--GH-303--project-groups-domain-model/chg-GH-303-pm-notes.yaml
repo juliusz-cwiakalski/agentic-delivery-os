@@ -1011,3 +1011,32 @@ notes:
       now states."
     type: "info"
     date: "2026-11-11"
+  - text: "DOC-SYNC RE-CHECK REMEDIATION (P3-scoped second commit inside the
+      phase): doc-sync found a delivered-semantics contradiction in
+      doc/planning/oss-tooling/milestones/m2/commands/repos.md at the ERRORS
+      table (line 128) — it folded a non-work-tree root into
+      `projects.identity-unreadable` with `0 for unbound, 2 otherwise`, and the
+      EXIT STATUS row 0 repeated `unbound`, so the page self-contradicted against
+      the SCOPE prose and delivered truth. Fix: `projects.identity-unreadable`
+      is exit `1` and means the invoking checkout's git metadata is unusable or
+      its identity marker is unreadable/inconsistent; `projects.registry-corrupt`
+      is exit `2`; `projects.state-unavailable` is exit `2`; `unbound` now
+      appears only in SCOPE as the declared scope at exit 0 with one bounded
+      warning, and no sentence calls a non-work-tree root a failure; the
+      `repos.*` error-prefix change stays declared as M2-S18 code work and not
+      current truth. The mapping clause, host-root STATE example,
+      PROJECT_KEY_PATTERN key, and --help/--version rows are intact. The
+      test-plan v1.4 P02/P22/P33 oracle corrections that gate these values ride
+      in this same commit. Tokens at the new tree: P22 PASS
+      (repos_v1_fields=11/11, rv_unbound_scope=OK,
+      rv_unbound_error_attachment=0); P33 PASS
+      (error_table_identity_unreadable_exit=1,
+      error_table_registry_corrupt_exit=2,
+      error_table_state_unavailable_exit=2, identities=4/4,
+      unbound_in_scope=OK, unbound_as_error_row=0,
+      unbound_error_attachment=0, non_worktree_failure_claim=0,
+      mutant_unbound_exit=detected, mutant_nonworktree_error=detected);
+      distribution guard exit 0; forbidden-literals exit 0, 5/5 classes, 0
+      violations; lint GH-303 exit 0 conforms."
+    type: "info"
+    date: "2026-11-11"
