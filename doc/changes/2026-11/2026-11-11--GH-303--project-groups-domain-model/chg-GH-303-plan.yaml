@@ -9,13 +9,15 @@
 # naming and identity matrix, Appendix C 15-file manifest, Appendix D gate
 # record) and test plan v1.4 (69 TCs TC-M2DOM-001..069, procedures P00..P69 in
 # §7.1, §7.2 TC -> procedure map, §1.2 declared gaps G-1..G-10, §6 base-observed
-# versus fixture-observed expectations plus the binding "Plan-gate contract for
-# P15/P16" row, §8.4 interpretation decisions TP-1..TP-10, §10 sweep log).
+# versus head-observed facts plus the binding "Plan-gate contract for P15/P16"
+# row, §8.4 interpretation decisions TP-1..TP-10, §10 sweep log).
 # Revision provenance, the board decisions, and the fixed defects are declared
 # under `revision:`.
 #
-# Merged truth at this base: the change base `723454e4` is `main-tools` with
-# GH-288 / PR #305 merged. M2-S11 is delivered, the flat `projects list` has
+# Merged truth at this base: the change base `3c9f8a59` is `main-tools` with
+# GH-288 / PR #305 merged and GH-268's pre-PR commitlint range gate plus
+# GH-286's daemon command mounting landed on top; the delivered head is
+# `087c146d`. M2-S11 is delivered, the flat `projects list` has
 # shipped and is mounted, and current truth (feature-projects,
 # feature-cli-entrypoint, the migration guide, TDR-0022) describes that shipped
 # behaviour. This change's planning corpus records the prospective split: from
@@ -29,22 +31,32 @@
 # AC-F2-1, AC-F6-3, AC-F7-1, AC-F7-3, AC-F10-1, AC-F12-1, AC-F13-1,
 # AC-NFR3-1, AC-F14-2, DEC-18, DEC-19..DEC-22).
 #
+# GH-286 is the other delivered fact set at this base: `## Observed composition`
+# records `Seventeen families`, the `daemon --help` and lifecycle-verb mount
+# statements are present, `## The daemon registration gap (closed)` records
+# `#286`, and `## Where this note is read` keeps the `milestone snapshot`
+# sentence. P47 preserves those six statements plus byte identity of the two
+# delivered `entrypoint-delta.md` sections; the pre-GH-286 tokens (`Sixteen
+# families`, `unknown flag`, `unexpected argument`) no longer exist at this base
+# and are never cited.
+#
 # Sources (single source of truth):
 #   - Spec: ./chg-GH-303-spec.md v1.4 — F-1..F-14, NFR-1..NFR-13, DM-1..DM-13,
 #     DEC-1..DEC-32, RSK-1..RSK-21, AC-F1-1..AC-F14-3, AC-NFR1-1..AC-NFR13-1,
 #     §17.3 DoD, Appendices A-D.
 #   - Test plan: ./chg-GH-303-test-plan.md v1.4 — 69 TCs and 69 procedures
 #     P00..P69, §3.1/§3.3 one-to-one AC <-> TC coverage, §5.1/§5.2 scenarios,
-#     §6 base-observed and fixture-observed facts plus the P15/P16 gate
+#     §6 base-observed and head-observed facts plus the P15/P16 gate
 #     contract, §7.1 procedure pack, §7.2 mapping, §7.3 triage, §8.4 TP-1..TP-10,
-#     §10 execution log (base 0/69, conforming fixture 68/69 — the single
-#     non-PASS is the aggregate gate P62, recorded as a delivery-time
-#     obligation).
+#     §10 execution log (base `3c9f8a59` 0/69, delivered head `087c146d` 69/69 —
+#     P62 PASS as `excused`: green repository-local run, one recorded and re-run
+#     default-run `CI baseline parity` failure).
 #   - PM notes: ./chg-GH-303-pm-notes.yaml — docs-only autonomous delivery and
 #     the recorded repository/guard/TMPDIR facts.
 #   - Ticket: juliusz-cwiakalski/agentic-delivery-os#303 — normative clause
 #     source for the M2-S11 amendment and the S18/S19 story text.
-#   - Base revision: 723454e4. Every preservation oracle compares against it.
+#   - Base revision: 3c9f8a59 (3c9f8a59aa1d38adc0fd5dbefdf8acc71c0f0135). Every
+#     preservation oracle compares against it; the delivered head is 087c146d.
 #
 # Change shape: docs-only. Exactly fifteen product files change — fourteen under
 # doc/planning/oss-tooling/** (thirteen modified plus the new
@@ -270,17 +282,20 @@ tier:
       code (P66, AC-NFR10-1)
     - >-
       The spec or test plan is revised past the versions this plan cites, or the
-      base advances past 723454e4: re-read the reopened procedures, re-run P00
+      base advances past 3c9f8a59: re-read the reopened procedures, re-run P00
       and every affected gate, refresh the pins in this plan, and revise the plan
       rather than mixing revisions (TR-9)
     - >-
-      A GH-288 delivered fact is removed, reworded as plan, or overwritten — the
-      M2-S11 `Ticket`/`Progress` record, the `projects.v1` closed daemon reason
-      vocabulary and `unbound` scope, the `projects.*` error identities, the
-      host-root state layout, the mounted delta note, the registry
-      "Shipped in GH-288 (M2-S11)" statement, or the 2026-11-11 status snapshot —
-      or a conflict marker remains in any product file (DEC-18, AC-F1-1,
-      AC-F7-1, AC-F7-3, AC-F12-1, AC-F13-1, AC-NFR3-1)
+      A GH-288 or GH-286 delivered fact is removed, reworded as plan, or
+      overwritten — the M2-S11 `Ticket`/`Progress` record, the `projects.v1`
+      closed daemon reason vocabulary and `unbound` scope, the `projects.*`
+      error identities, the host-root state layout, the mounted delta note,
+      the registry "Shipped in GH-288 (M2-S11)" statement, the 2026-11-11
+      status snapshot, the GH-286 `Seventeen families` observation, the
+      `daemon --help` and lifecycle-verb mount statements, `#286`, or the
+      `milestone snapshot` sentence — or a conflict marker remains in any
+      product file (DEC-18, AC-F1-1, AC-F7-1, AC-F7-3, AC-F12-1, AC-F13-1,
+      AC-NFR3-1)
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
@@ -365,6 +380,58 @@ revision:
       17-18, decisions A-D) together with the local review verdict, and to
       remediate only the defects those verdicts name. A remediation that is not
       traceable to a named finding is out of scope for P6.
+  rebase:
+    version: "1.4"
+    rebasedAt: "2026-11-11"
+    driver: "GH-286 daemon command mounting on top of GH-268"
+    baseRevision: "3c9f8a59"
+    baseRevisionFull: "3c9f8a59aa1d38adc0fd5dbefdf8acc71c0f0135"
+    headRevision: "087c146d"
+    clause: >-
+      Second rebase inside plan v1.4, recorded without a version bump: the branch
+      now sits on `origin/main-tools` `3c9f8a59` (GH-286 daemon command mounting
+      on top of GH-268's pre-PR commitlint range gate, itself on top of GH-288 /
+      PR #305), and every base-derived expectation in this plan was re-bound by
+      re-measurement instead of being carried over from a previous revision. The
+      base facts are unchanged in shape: backlog 1460 lines, M2-S17 last content
+      1291, closing separator 1293, `## Epic M3` 1295, insertion window
+      `1292:1292`, 74 story headings; `status.md` 225 lines with last heading 214;
+      registry 141 with `queue.md` at 89 and `spend.md` at 90; `architecture.md`
+      20 fences / 10 mermaid / 7 key flows; 12 pack rows, 12 M2 index targets, 40
+      seeds and 40 `Assert:` lines, 8 contract sections, `commands/repos.md`
+      absent. The delivered-head observations moved with the rebase: backlog 1531
+      lines with insertion window `1310:1363` and 76 headings (`74 -> 76`),
+      `status.md` 225 -> 252 with 27 additions and the new section at line 227,
+      registry 142 with `queue=89 repos=90 spend=91`, `contracts.md` 15 sections,
+      `commands/repos.md` 142 lines, 53 seeds / 53 assertions (8 S18 + 5 S19,
+      alias seed `SC-M2-S18-08`), 13 pack rows, 13 M2 index targets,
+      `product_files=15/15`, one rename-rule sentence.
+    expectationsRebound: >-
+      Two oracle outcomes changed at the new base and both are recorded here
+      rather than patched in place. P57 re-measures `product_files=15/15` with
+      `expected_not_changed=0`, `unexpected_changed=` empty,
+      `other_scripts_changed=0`, and no forbidden-root hit (the stale base
+      reported `product_files=135/15`). P62 reports `change_present=yes` and
+      `code_fingerprint_match=yes` — the record's code fingerprint is the sha256
+      of an empty code diff, which matches the true base because the change adds
+      no code under `packages/`, `tests/`, or `scripts/` apart from the one
+      registry row — with `repo_local_exit=0` (authoritative) and `default_exit=1`
+      carrying only `CI baseline parity`, recorded and re-run as `excused`
+      (`rerun_recorded=yes`). P47's preserved set was re-anchored to the GH-286
+      delivered wording — `Seventeen families`, the `daemon --help` and
+      lifecycle-verb mount statements, `#286`, `milestone snapshot` — plus byte
+      identity of `## Observed composition` and `## The daemon registration gap
+      (closed)`, giving `preserved_delivered=6/6`,
+      `observed_composition=byte-identical`, `daemon_gap=byte-identical`, and both
+      mutants (`mutant_delivered_rewritten=detected`,
+      `mutant_composition=detected`) still biting. The pre-GH-286 tokens
+      (`Sixteen families`, `unknown flag`, `unexpected argument`) were legitimately
+      replaced by GH-286 and are cited nowhere in this plan.
+    sweep: >-
+      Test plan v1.4 §10 re-run in fresh shells: base `3c9f8a59` 0/69 PASS and
+      delivered head `087c146d` 69/69 PASS. The phase model, the fifteen product
+      files, and the 69 AC / 69 TC partition are unchanged by the rebase, and no
+      gate pins a measurement.
   history:
     - version: "1.0"
       date: "2026-11-11"
@@ -394,12 +461,14 @@ revision:
     - version: "1.4"
       date: "2026-11-11"
       evidence: >-
-        Test plan v1.4 §10 records the full procedure sweep at base 723454e4
-        (0/69 PASS — every procedure FAILs because the change is absent) and on
-        the conforming never-committed fixture (68/69 PASS). The single non-PASS
-        is P62, the aggregate gate, whose authoritative repository-local run is
-        red on this host for wall-clock timeouts and is recorded as a
-        delivery-time obligation rather than excused (test plan §1.2 G-6, UG-1).
+        Test plan v1.4 §10 records the full procedure sweep at base `3c9f8a59`
+        (0/69 PASS — every procedure FAILs because the change is absent) and at
+        the delivered head `087c146d` (69/69 PASS). P62 passes as `excused` per
+        AC-NFR6-1: the repository-local run is green (`repo_local_exit=0`), the
+        default run fails only `tests/checks/ci-baseline-parity.test.ts`, and that
+        failure is recorded and re-run (`rerun_recorded=yes`) behind the green
+        authoritative run on the same head. `code_fingerprint_match=yes` binds the
+        record to the change tree.
       findings:
         - id: "board-1"
           facet: cross_artifact_consistency
@@ -491,29 +560,35 @@ revision:
             `epic_heading=OK`) and P16 on `hunk confinement OK`, `outside=0`,
             `non_vacuous=yes`, `classifier_self_tests=3/3`. No other gate pins a
             measurement, and the v1.4 head values (`context_paragraph=1055..1068`,
-            `paragraph_lines=12`, `backlog_hunks=5`, `new_section_line=227`,
-            `additions=16`, `s18_seeds=7`, `s19_seeds=6`) survive only under
-            `adoptedExpectations.nonGatedMeasurements`.
+            `paragraph_lines=12`, `backlog_hunks=6`, `new_section_line=227`,
+            `additions=27`, `s18_seeds=8`, `s19_seeds=5`) survive only under
+            `adoptedExpectations.nonGatedMeasurements`, as observations.
         - id: "rebaseline"
           facet: cross_artifact_consistency
           severity: minor
           change: >-
             Every re-baselined value is taken from test plan v1.4 §6 base-observed
-            and fixture-observed rows rather than from the v1.3 plan: base backlog
-            1460 lines with the insertion window `1292:1292` and 74 headings,
-            base status 225 lines with last heading 214, base registry 141 with
-            `queue.md` at 89 and `spend.md` at 90, base architecture 20 fences /
-            10 mermaid / 7 key flows, base 40 seeds, base 12 pack rows and 12 M2
-            index targets, `commands/repos.md` absent; fixture backlog 1530 lines
-            with window `1309:1362` and 76 headings, status 225 -> 241 with 16
-            additions, registry 142 with `queue=89 repos=90 spend=91`,
-            architecture 22/11/8, `contracts.md` 16 sections, `commands/repos.md`
-            130 lines, 53 seeds / 53 asserts (7 S18 + 6 S19), 13 pack rows and 13
+            and head-observed rows rather than from an earlier plan revision: base
+            backlog 1460 lines with the insertion window `1292:1292` and 74
+            headings, base status 225 lines with last heading 214, base registry 141
+            with `queue.md` at 89 and `spend.md` at 90, base architecture 20 fences
+            / 10 mermaid / 7 key flows, base 40 seeds, base 12 pack rows and 12 M2
+            index targets, `commands/repos.md` absent; delivered head backlog 1531
+            lines with window `1310:1363` and 76 headings, status 225 -> 252 with 27
+            additions at line 227, registry 142 with `queue=89 repos=90 spend=91`,
+            architecture 22/11/8, `contracts.md` 15 sections, `commands/repos.md`
+            142 lines, 53 seeds / 53 asserts (8 S18 + 5 S19), 13 pack rows and 13
             M2 index targets, `product_files=15/15`, one rename-rule sentence.
+      rebase: >-
+        Second rebase inside v1.4 onto `origin/main-tools` `3c9f8a59` (GH-286
+        daemon command mounting on top of GH-268): the base pin, the merged-truth
+        record, every base-derived gate expectation, and the P47 preserved set were
+        re-bound by re-measurement at head `087c146d`; see `revision.rebase` and
+        the re-run sweep (base 0/69, head 69/69).
   adoptedExpectations:
     baseObserved:
       note: >-
-        Measured at 723454e4 and quoted only where a gate is a base control or a
+        Measured at 3c9f8a59 and quoted only where a gate is a base control or a
         byte-identity comparison. Source: test plan v1.4 §6.
       backlogLines: 1460
       backlogStoryHeadings: "74"
@@ -541,59 +616,60 @@ revision:
       m2IndexTargets: 12
       productFiles: "0/15"
       renameRuleSentences: 0
-    fixtureDerived:
+    headObserved:
       note: >-
-        Head-observed facts of the conforming fixture at 723454e4 (test plan
-        v1.4 §6, §10). They are evidence that an oracle is satisfiable and the
-        bounded expectation of the phase that owns the counter — never a
-        universal literal, and never a substitute for the procedure recomputing
-        its own ranges.
-      backlogLines: 1530
+        Head-observed facts of the delivered head `087c146d` (test plan v1.4 §6,
+        §10). They are evidence that an oracle is satisfiable and the bounded
+        expectation of the phase that owns the counter — never a universal
+        literal, and never a substitute for the procedure recomputing its own
+        ranges.
+      backlogLines: 1531
       backlogStoryHeadings: "76"
       backlogHeadingsAdded: 2
-      m2S11Entry: "1182..1206"
-      s18Line: 1310
-      s19Line: 1347
+      m2S11Entry: "1182..1207"
+      s18Line: 1311
+      s19Line: 1346
       m2S4Line: 1117
-      statusLines: 241
+      backlogHunks: 6
+      statusLines: 252
+      statusAdditions: 27
+      statusNewSectionLine: 227
       registryEntries: 142
-      contractsSections: 16
-      reposPageLines: 130
+      contractsSections: 15
+      reposPageLines: 142
       packRows: 13
       m2IndexTargets: 13
       productFiles: "15/15"
       renameRuleSentences: 1
-      seedCounts: "53 seeds / 53 Assert: lines (7 S18-sourced + 6 S19-sourced)"
+      seedCounts: "53 seeds / 53 Assert: lines (8 S18-sourced + 5 S19-sourced; alias seed SC-M2-S18-08)"
     nonGatedMeasurements:
       note: >-
         Recorded as satisfiability evidence only. These are functions of one
         author's prose and of every line the head adds earlier in a file; test
         plan v1.4 §6 says a plan must NOT pin them, so no gate in this plan
         asserts any of them.
-      p14Fixture:
-        s17LastContentLine: 1308
-        epicM2SeparatorLine: 1363
-        epicM3Line: 1365
-        insertionWindow: "1309:1362"
-      p15Fixture:
+      p14Head:
+        s17LastContentLine: 1309
+        epicM2SeparatorLine: 1364
+        epicM3Line: 1366
+        insertionWindow: "1310:1363"
+      p15Head:
         contextParagraph: "1055..1068"
         contextParagraphLines: 12
-      p16Fixture:
-        backlogHunks: 5
-        hunksInside: 5
-      p40Fixture:
-        s18Seeds: 7
-      p41Fixture:
-        s19Seeds: 6
-      p50Fixture:
+      p16Head:
+        backlogHunks: 6
+        hunksInside: 6
+      p40Head:
+        s18Seeds: 8
+      p41Head:
+        s19Seeds: 5
+      p50Head:
         newSectionLine: 227
-      p51Fixture:
-        additions: 16
-        lineSpan: "225 -> 241"
-      p60Fixture:
+      p51Head:
+        additions: 27
+        lineSpan: "225 -> 252"
+      p60Head:
         registryRowPositions: "queue=89 repos=90 spend=91"
-      p25Fixture:
-        aliasOccurrences: 16
       satisfiabilityCounterexamples:
         p15SevenLineParagraph: >-
           `paragraph_lines=7` with `paragraph_strictly_between=OK`, both
@@ -619,15 +695,32 @@ sources:
   pmNotes: ./chg-GH-303-pm-notes.yaml
   ticket: "juliusz-cwiakalski/agentic-delivery-os#303"
   boardRecord: "six-critic review board on PR #306 (spec Appendix A.2)"
-  baseRevision: "723454e4"
-  baseRevisionFull: 723454e4e5d86381f0cf2005065a7519dea4326e
+  baseRevision: "3c9f8a59"
+  baseRevisionFull: "3c9f8a59aa1d38adc0fd5dbefdf8acc71c0f0135"
+  headRevision: "087c146d"
   evidenceSweep: >-
-    test plan v1.4 §10 — base 723454e4 0/69 PASS; conforming fixture 68/69 PASS
-    (P62 the sole non-PASS, recorded as a delivery-time obligation)
+    test plan v1.4 §10 — base `3c9f8a59` 0/69 PASS; delivered head `087c146d`
+    69/69 PASS (P62 PASS as `excused`: green repository-local run, one recorded
+    and re-run default-run `CI baseline parity` failure)
 mergedTruth:
   note: >-
-    Facts this base already carries. They are stated here so no phase can
-    restate them as plan or contradict them.
+    Facts this base already carries (base `3c9f8a59` = `main-tools` after
+    GH-288 / PR #305, GH-268's pre-PR commitlint range gate, and GH-286's daemon
+    command mounting; delivered head `087c146d`). They are stated here so no
+    phase can restate them as plan or contradict them.
+  gh286DaemonCommandMounting:
+    status: merged
+    detail: >-
+      GH-286 mounted the daemon verbs into the entrypoint, and its wording is the
+      delivered text at this base: `## Observed composition` records
+      `Seventeen families`, the `daemon --help` and lifecycle-verb mount
+      statements are present, `## The daemon registration gap (closed)` records
+      `#286`, and `## Where this note is read` keeps the `milestone snapshot`
+      sentence. P47 preserves those six statements (`preserved_delivered=6/6`)
+      plus byte identity of `## Observed composition` and
+      `## The daemon registration gap (closed)`; the pre-GH-286 tokens
+      (`Sixteen families`, `unknown flag`, `unexpected argument`) no longer exist
+      at this base and are cited nowhere.
   gh288ShippedFlatProjectsList:
     status: merged
     detail: >-
@@ -658,7 +751,9 @@ mergedTruth:
       entrypoint-delta note, the shipped `projects` registry attribution, and the
       2026-11-11 status snapshot. Where a page's surface name moves, the
       delivered fact is carried to the location that owns the delivered surface,
-      never dropped.
+      never dropped. The GH-286 daemon-mount wording is a separate, equally
+      binding preservation set, gated by P47's `preserved_delivered=6/6`, so no
+      phase conflates the two counts.
   noConflictMarkers:
     status: binding
     detail: >-
@@ -740,9 +835,11 @@ gateCommands:
       environmental exemption for the repository-local run (P62,
       AC-NFR6-1(a), UG-1)
     observedAtPlanTime: >-
-      red on this host (test plan §1.2 G-6, §10: `repo_local_exit=1`, a
-      wall-clock timeout under a sibling delivery's load), recorded as a
-      delivery-time obligation, never as an excuse
+      green at the delivered head `087c146d` (test plan §1.2 G-6, §10:
+      `repo_local_exit=0`; the earlier red plan-time runs on a loaded host were
+      wall-clock timeouts and were never excused). The `code_fingerprint_match=yes`
+      record binds that run to the change tree, and any failure on the delivery
+      head remains a delivery failure, never an excuse
   aggregateGateRecorded:
     command: "env -u TMPDIR pnpm check"
     tmpdir: "default (environment TMPDIR)"
@@ -755,7 +852,7 @@ gateCommands:
       `repo_local_exit=0` on the same head; any other default-run failure is a
       delivery failure to investigate (P62, AC-NFR6-1(b)(c)(d), UG-1)
   aggregateGateRerunRecord:
-    artifact: "/tmp/gh303/p62-rerun.txt (P62 `$SH/p62-rerun.txt`)"
+    artifact: "tmp/tmpdir/gh303/p62-record/p62-rerun.txt (P62 `$REC/p62-rerun.txt`; `P62_RECORD_DIR` overrides `$REC`)"
     required: "whenever a default-run failure is being excused"
     expectation: >-
       present and non-empty, naming each excused test with its isolation re-run
@@ -861,8 +958,9 @@ crossArtifactResolutions:
       P62 is a delivery-time gate: it requires a record taken on a real install
       with a repository-filesystem `TMPDIR`, binds it to a code-tree fingerprint
       (NFR-1 forbids code changes, so docs cannot alter the suite's result) and
-      to a change-presence check, and classifies per the AC. The plan records the
-      observed red run rather than weakening the criterion (UG-1).
+      to a change-presence check, and classifies per the AC. The plan cites the
+      recorded head run (`code_fingerprint_match=yes`, `repo_local_exit=0`) and
+      never weakens the criterion (UG-1).
   TP-10:
     tension: "AC-F8-1 requires a seed covering `queue list --project <groupKey>` and `status --project <groupKey>`, while AC-F8-3 restricts every assertion to `project-groups.v1`, `repos.v1`, `plan.data.members[]`, `closeout.data.members[]`, and `verify gates`."
     governing: "AC-F8-1 (TC-M2DOM-040), AC-F8-3 (TC-M2DOM-042), AC-F6-7 (TC-M2DOM-028)."
@@ -876,11 +974,13 @@ upstreamGaps:
   - id: UG-1
     severity: medium
     summary: >-
-      The authoritative repository-local aggregate gate is red at plan time on
-      this host — a wall-clock timeout under a sibling delivery's load — and the
-      default-TMPDIR run is separately known to fail
-      `tests/checks/ci-baseline-parity.test.ts` and, standalone, the TC-WIRE-002
-      5000 ms timeout (test plan §1.2 G-6, §10; AC-NFR6-1).
+      The aggregate gate is environment-sensitive: the default-TMPDIR run fails
+      `tests/checks/ci-baseline-parity.test.ts`, earlier plan-time runs on a loaded
+      host also produced wall-clock timeouts (5 s and 30 s), and only the
+      repository-local TMPDIR run is authoritative (test plan §1.2 G-6, §10;
+      AC-NFR6-1). At the delivered head `087c146d` the repository-local run is
+      green (`repo_local_exit=0`) and only `CI baseline parity` fails under the
+      default TMPDIR.
     disposition: >-
       AC-NFR6-1 names both default-run failures and admits them only as recorded,
       re-run exemptions behind a green repository-local run on the same head, so
@@ -891,8 +991,8 @@ upstreamGaps:
       test names; the excused pair is re-run with the record captured in
       `p62-rerun.txt` (a required artifact); any other default-run failure, or an
       excused pair without a green repository-local run, FAILS the phase. The
-      plan reports the observed red run instead of excusing it (AC-NFR6-1,
-      test plan TP-9).
+      plan cites the recorded head run and never treats an earlier red plan-time
+      run as an exemption (AC-NFR6-1, test plan TP-9).
     owner: "@runner (phase 9 quality_gates); escalation target: ticket owner"
   - id: UG-2
     severity: low
@@ -937,34 +1037,33 @@ upstreamGaps:
   - id: UG-5
     severity: low
     summary: >-
-      TC-M2DOM-045's expected outcome requires `intro_two_per_story=OK` while
-      test plan §10 records `intro_two_per_story=MISSING` on the conforming
-      fixture, so a literal reading of §5.2 fails a conforming head.
+      TC-M2DOM-045 once required an `intro_two_per_story` token that read MISSING
+      on a conforming head because the phrase wraps across lines; test plan v1.4
+      replaced it with the property it names plus the two range endpoints.
     disposition: >-
-      The plan gates the two tokens that are green on the fixture and that
-      AC-F8-6 actually requires — `intro_range=OK` and `stories_below_two=0`
-      (46 seeds / 46 asserts at base, 53 / 53 on the fixture, every story at two
-      or more) — and records `intro_two_per_story` as a reported observation,
-      never a gate. Flagged for @test-plan-writer: either the fixture text must
-      state the two-per-story sentence P45 looks for, or the token must be
-      dropped from §5.2.
-    owner: "@test-plan-writer; @coder at P3 keeps the intro sentence present"
+      The plan gates the tokens AC-F8-6 requires and that the procedure now emits
+      — `intro_range=OK`, `m2_s2_present=OK`, `m2_s19_present=OK`, and
+      `stories_below_two=0` (40 seeds / 40 `Assert:` lines at base `3c9f8a59`,
+      53 / 53 at the delivered head `087c146d`, 18 stories each at two or more) —
+      and never gates the phrase. Resolved in test plan v1.4; the intro sentence
+      stays present at P3.
+    owner: "@coder at P3 keeps the intro sentence present"
   - id: UG-6
     severity: low
     summary: >-
-      Two execution-log notes in test plan §10 report counters that the
-      corresponding §5.2 expected outcomes do not use: TC-M2DOM-043 logs
-      `projects_list_asserts=2` while its expected outcome requires
-      `s11_01_assert_projects_list=0`, and TC-M2DOM-034 logs
-      `bare_basename_keys=0` with `mapping_clause_on_page=OK` but no
-      `state_example_keys` value.
+      Two execution-log notes once reported counters that the corresponding §5.2
+      expected outcomes did not use: TC-M2DOM-043 logged
+      `projects_list_asserts=2` while its outcome required a zero count, and
+      TC-M2DOM-034 logged `bare_basename_keys=0` without a `state_example_keys`
+      value.
     disposition: >-
-      The plan gates the §5.2 expected outcomes, which are the normative
-      expectation and which the fixture run satisfied (both procedures PASS). The
-      §10 log lines are recorded observations of a different counter surface; no
-      gate reads them. Flagged for @test-plan-writer to align the log note with
-      the expected outcome or to state that the counters are distinct.
-    owner: "@test-plan-writer; no phase is blocked"
+      Resolved in test plan v1.4: TC-043's tokens are scoped to the S11 seeds
+      (`s11_01_assert_projects_list=0`, `s11_02_rename_asserted=OK`,
+      `flat_assertions=0`) with a positional mutant, and TC-034 records
+      `state_example_keys=delivery-a-1a2b3c4d`. The plan gates the §5.2 expected
+      outcomes, which the delivered head satisfies (P43 and P34 PASS), and reads
+      no §10 counter as a gate.
+    owner: "no phase is blocked"
 coverageSummary:
   acceptanceCriteria: 69
   testCases: 69
@@ -1020,7 +1119,7 @@ phases:
       - "Forbidden-literal scope (AC-NFR9-1, NFR-9): `backlog.md` is NOT registered, so the guard does not literal-scan it and the `<binary>` invocation-prefix rule does not apply here. NFR-9(c) still applies to every added or changed line: no private fleet, repository, host, hosted, or proprietary product name."
     gates:
       - >-
-        P00 — executed once in a fresh shell against base 723454e4: base
+        P00 — executed once in a fresh shell against base 3c9f8a59: base
         snapshots plus `entry()`, `story_section()`, `section()`, `firstsec()`,
         `squash()`, `clause_rows()`, `fence_blocks()`, the retention helpers
         (`diffstat()`, `newsecs_of()`, `newsec_of()`, `newsec_count()`),
@@ -1074,7 +1173,7 @@ phases:
         `blank_line_before_separator=1`; `placement=inside-window`; P14 verdict:
         PASS. (Base observation: `s17_last=1291 separator=1293 epic_m3=1295
         window=1292:1292`. The head numbers in
-        `adoptedExpectations.nonGatedMeasurements.p14Fixture` are observations,
+        `adoptedExpectations.nonGatedMeasurements.p14Head` are observations,
         not gate values.)
       - >-
         P15 — invariants only, per test plan v1.4 §6 "Plan-gate contract for
@@ -1325,7 +1424,7 @@ phases:
       - "Every S18/S19 `Assert:` line reads only `project-groups.v1`, `repos.v1`, `plan.data.members[]`, `closeout.data.members[]`, or `verify gates` `data.definitionOfDone`/`blockingMembers[]`; zero assertions use a `change.data.*` family; the `closeout.data.members[]` assertion is backed by the P2 contract declaration (AC-F8-3, BRD-23, BRD-24, TP-10)."
       - "The two S11 seeds are reconciled: `SC-M2-S11-01` names the flat record set through `repos list`, and `SC-M2-S11-02` is prospective — asserting the S18 rename and the alias payload rather than the delivered surface as `repos list` today; no seed asserts a shipped `projects list` group enumeration (AC-F8-4, DEC-11, BRD-6)."
       - "`journeys.md`'s opening journey is a group-scoped morning overview showing membership from configuration, the flat view from `repos list`, the group view from `projects list`, the project-scoped queue and status reads, workspace optionality, same-ref disjointness, and one time-scoped disambiguation referencing the rename rule (AC-F9-1)."
-      - "`entrypoint-delta.md` lists `repos` as the flat record set owned by M2-S18 and `projects` as the group surface owned by M2-S18, keeps the **Mounted by GH-288 (M2-S11)** note stating that the shipped `projects list` is the delivered flat surface, phrases the reference-page move as pending S18 code work rather than as an effect of this change, and leaves the observed composition, daemon gap, and snapshot statement unchanged in meaning (AC-F10-1, BRD-32)."
+      - "`entrypoint-delta.md` lists `repos` as the flat record set owned by M2-S18 and `projects` as the group surface owned by M2-S18, keeps the **Mounted by GH-288 (M2-S11)** note stating that the shipped `projects list` is the delivered flat surface, keeps the GH-286 delivered wording intact (`Seventeen families`, the `daemon --help` and lifecycle-verb mount statements, `#286`, the `milestone snapshot` sentence) with `## Observed composition` and `## The daemon registration gap (closed)` byte-identical to the base, and phrases the reference-page move as pending S18 code work rather than as an effect of this change (AC-F10-1, BRD-32, P47)."
       - "Both command pages keep the exact header `Status: Proposed (M2)`; no page claims delivery of `repos`, project groups, workspace discovery, or cross-repository changes, and none is relabelled as a snapshot (AC-NFR3-1)."
       - "Guard sequencing: the new `commands/repos.md` is unregistered until P4, so the forbidden-literals guard is red at this boundary by construction. P3 therefore claims NO guard gate, and P4 lands immediately after with no intervening commit."
       - "Forbidden-literal constraint (AC-NFR9-1(b)): all seven files are in the twelve-document scanned set. None may contain `ados`, `ADOS_`, or `~/.ados`, and every command name carries the `<binary>` invocation prefix — including in seeds, examples, and help/usage blocks."
@@ -1372,13 +1471,18 @@ phases:
       - >-
         P44 -> `alias_shape_seeds>=1`; P44 verdict: PASS
       - >-
-        P45 -> `intro_range=OK`; `stories_below_two=0`; P45 verdict: PASS
-        (`intro_two_per_story` is reported, never gated — test plan §10 records
-        it MISSING on a conforming head, UG-5)
+        P45 -> `intro_range=OK`; `m2_s2_present=OK`; `m2_s19_present=OK`;
+        `stories=18`; `stories_below_two=0`; `self_test_short_story=detected`;
+        `self_test_complete=OK`; P45 verdict: PASS (the phrase is never gated —
+        test plan v1.4 gates the property it names, UG-5)
       - >-
         P46 -> `journey_anchors=8/8`; P46 verdict: PASS
       - >-
-        P47 -> `delta_anchors=7/7`; `host_overview_claims=0`; `preserved=5/5`;
+        P47 -> `delta_anchors=7/7`; `host_overview_claims=0`;
+        `preserved_delivered=6/6` (`Seventeen families`, the `daemon --help` and
+        lifecycle-verb mount statements, `#286`, `milestone snapshot`);
+        `observed_composition=byte-identical`; `daemon_gap=byte-identical`;
+        `mutant_delivered_rewritten=detected`; `mutant_composition=detected`;
         P47 verdict: PASS
       - >-
         P63 control for the two new diagram-bearing pages: every fence count
@@ -1391,7 +1495,7 @@ phases:
       - "`commands/projects.md` is the group page with `project-groups.v1`, `data.groups[]`, `groupKey`, member `daemonReachable` attached to the member field, the aggregation and partial-failure behaviour, the scoped grammar, the `--flat` pointer, and no group-scoped board claim; the two pages never name each other's surface or contract."
       - "`commands/queue.md` carries the group grammar in its synopsis and OPTIONS; `commands/board.md` is on the repository-key boundary with a repository-vocabulary envelope and refusal identity and the corrected M2-S11 attribution."
       - "`test-scenarios.md` opens with S2 through S19, carries at least five S18 and five S19 seeds with exactly one `Assert:` line each, asserts only declared envelopes, includes the undeclared-clone, CI-corroboration, dependency-ordering, and alias-shape seeds, and reconciles both S11 seeds with `SC-M2-S11-02` prospective."
-      - "`journeys.md`'s opening journey is group-scoped and disambiguated; `entrypoint-delta.md` records the split, keeps the GH-288 mount note, and phrases the reference-page move as pending S18 code work."
+      - "`journeys.md`'s opening journey is group-scoped and disambiguated; `entrypoint-delta.md` records the split, keeps the GH-288 mount note and the GH-286 delivered wording byte-identically, and phrases the reference-page move as pending S18 code work."
       - "No page claims delivery, no page is relabelled as a snapshot, `plan validate` and `lint plan` are valid, and this phase claims no guard gate (the new page is unregistered until P4)."
     coverage:
       acceptanceCriteria:
@@ -1450,7 +1554,7 @@ phases:
       - phase: 3
         reason: "The registration is for the page P3 creates; before P3 it would be an entry for a non-existent document, and between P3 and this phase the guard is red by construction."
     constraints:
-      - "Add exactly one row: `doc/planning/oss-tooling/milestones/m2/commands/repos.md`. `registered` must hold exactly one more entry than at base `723454e4` (141 -> 142)."
+      - "Add exactly one row: `doc/planning/oss-tooling/milestones/m2/commands/repos.md`. `registered` must hold exactly one more entry than at base `3c9f8a59` (141 -> 142)."
       - "Place the row inside the existing `doc/planning/oss-tooling/milestones/m2/commands/` group so the surrounding rows keep their relative order; the new entry sits between the `queue.md` and `spend.md` entries. The list has no sorting requirement, and the one pre-existing out-of-order pair elsewhere is not re-sorted (DEC-15)."
       - "Introduce no duplicate entry, change no other entry's bytes, and keep the file valid JSON with its existing key order and formatting."
       - "Do not widen the allowlist, do not add a scope class, do not touch `forbidden-literals.ts`, and do not add an exclusion for any document (NFR-8/NG-8: no new tooling or gate)."
@@ -1569,11 +1673,11 @@ phases:
       - >-
         P61 -> `dist_guard_exit=0`; `planning_markers=0`; P61 verdict: PASS
       - >-
-        P62 -> both runs recorded; `repo_local_exit=0` (authoritative);
-        `default_failure_class=none` or `excused` with
-        `rerun_recorded=yes`; fingerprint match; P62 verdict: PASS. A
-        non-zero repository-local exit FAILS the phase with no environmental
-        exemption (UG-1).
+        P62 -> `change_present=yes`; `code_fingerprint_match=yes`; both runs
+        recorded; `repo_local_exit=0` (authoritative); `default_exit=1` with only
+        `CI baseline parity`; `default_failure_class=excused`;
+        `rerun_recorded=yes`; P62 verdict: PASS. A non-zero repository-local exit
+        FAILS the phase with no environmental exemption (UG-1).
       - >-
         P63 -> no odd fence; no untagged diagram; no bad keyword;
         `c4_headings=1/1/1`; `key_flows_headings=8/8`; P63 verdict: PASS
