@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-11T19:58:51.110Z }
   review_fix: { started: null, completed: 2026-11-11T21:24:17.505Z }
   quality_gates: { started: null, completed: 2026-11-11T21:49:00.928Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-11T21:49:46.242Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -430,4 +430,23 @@ notes:
       Flagged for the owner: the duplicate drivers should be reaped, not
       tolerated."
     type: risk
+    date: "2026-11-11"
+  - text: "DoD verification (phase 10). All nine prior phases completed in the
+      registry. All five declared plan phases carry a pm-notes notes entry
+      naming the plan phase id, its commit (415395f8, a40c4bc8, b95695dc,
+      9d56ebeb, 6bd89e5f) and the test result; plan validate is valid. All 36
+      ACs are satisfied: review iteration 2 traced 36/36, and the two criteria
+      that were unsatisfiable as written were corrected in spec v1.5 (AC-F2-2
+      digest wording, AC-F4-3 permission-denied exit 1) with no behaviour
+      change. Review iteration 2 = PASS. Quality gates green (aggregate 7325
+      pass / 4 skip / 0 fail; range lint PASS, 25 commits, 0 offending, mode
+      none). Current truth is reconciled with no residual documentation gaps:
+      the backlog M2-S12 Progress marker, status snapshot, registry grammar, M2
+      attempts page and contracts, entrypoint-delta, architecture, journeys,
+      test-scenarios, the dispatch feature spec, result contract, test-spec
+      coverage, doc index and overview pages all state the delivered behaviour,
+      including the delivered five-field envelope and the permission-denied
+      exit. Code-review artifacts for iterations 1 and 2 are committed in the
+      change folder."
+    type: info
     date: "2026-11-11"
