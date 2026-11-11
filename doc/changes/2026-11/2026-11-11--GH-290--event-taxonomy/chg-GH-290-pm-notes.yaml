@@ -137,3 +137,31 @@ notes:
       iteration 4 remain open for their owning phases.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 2 complete (commit 2d0399bb): the generated reference surface.
+      `packages/cli/src/commands/events.ts` renders `events list` / `events
+      describe <topic>` from the declaration alone (machine record keys exactly
+      name/version/shape/frame/lane/kinds/payloadFields/ordering/overflow plus
+      the single `parent` on queue.graph; derived first-seen payload union;
+      `{0,1,2}` exit projection with `events.verb-unknown` and
+      `events.topic-unknown` refusals and the injected-invalid-declaration
+      `events.taxonomy-unavailable` at exit 2 rendering no page), and
+      `packages/cli/src/output/events-text.ts` renders the six-row table and the
+      per-topic page inside the 40-line / 8 192-byte human bound. The edge
+      registers `events` when its runtime is supplied and the production
+      composer supplies it unconditionally (`events: {}`), so the family is
+      composed but not yet prompt-required (that is Phase 5). Goldens for the
+      table and both representative pages are committed under
+      tests/fixtures/events/goldens with a generation header; TC-EVT-010..016 and
+      TC-EVT-080 are implemented. Gate: `pnpm typecheck` green; the seven-suite
+      Phase-2 batch reports 64 pass / 0 fail (p95 for all four forms 0.02-0.09
+      ms); content-inventory green; exports-parity, workspace-entrypoints, and
+      ambient-globals all OK. Deviations: the delivered `cli-edge-seam` suite's
+      optional-human-text declarer list gains `events.ts` (a membership row that
+      follows the new renderer, no assertion relaxed) and, as recorded for
+      Phase 1, commit subjects come from the primitive's deterministic template
+      over the union scope, so they name the top staged path (the same F-9
+      template-subject limitation GH-286 recorded); staging is otherwise exactly
+      this phase's declared scope.
+    type: "info"
+    date: "2026-11-12"

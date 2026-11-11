@@ -67,6 +67,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "recordResumeIntent",
     "runSupervisionCycle",
   ],
+  "core/src/domain/event-projection.ts": [
+    "createEventProjector",
+    "EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK",
+    "EVENT_TOPICS",
+  ],
   "core/src/domain/dispatch-authority.ts": [
     "buildDispatchAuthorityView",
     "dualRunAuthority",

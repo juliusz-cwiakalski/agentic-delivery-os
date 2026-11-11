@@ -120,6 +120,7 @@
     "src/domain/economics-resume.ts",
     "src/domain/economics-view.ts",
     "src/domain/effect-protocol.ts",
+    "src/domain/event-projection.ts",
     "src/domain/harness-canonical.ts",
     "src/domain/harness-capability.ts",
     "src/domain/harness-classify.ts",
