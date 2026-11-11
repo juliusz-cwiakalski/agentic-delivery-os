@@ -277,3 +277,30 @@ notes:
       run: PR URL and the tracker transition, both owned by lifecycle phase 11."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 6 COMPLETE — code-review remediation. Commit 8deecedf (plus
+      the runtime fix committed next). Reviewer findings closed: rule ids now
+      parse only from commitlint problem lines, so a message containing `[docs]`
+      no longer reports a phantom rule; the diagnostic budget is two-pass, so
+      55 offenders yield 55 headline blocks under the 200-line cap; config
+      detection matches commitlint's own resolution (added
+      `.commitlintrc.js/.cjs/.mjs` and the root `package.json` `commitlint`
+      field), removing the false SKIP for adopters; a bounded subject excerpt is
+      emitted; excerpts sanitize control/ANSI bytes; the committer prompt example
+      uses a placeholder instead of this ticket id (plugin regenerated); the
+      header prints the ref actually used; and `git rev-list` status is checked
+      so a failure cannot become a zero-commit PASS. Suite grew 39 → 45 cases."
+    type: info
+    date: "2026-11-11"
+  - text: "Runtime defect found and fixed during phase-9 preparation: the gate
+      spawned one commitlint process per commit serially (~0.44 s each), so a
+      20-commit range measured 10.6–11.4 s against the AC-NFR4-1 10 s budget and
+      a 25-commit branch range took 13.6 s. `@fixer` moved the per-commit lint to
+      a bounded worker pool (default min(nproc,8), `ADOS_LINT_JOBS` override,
+      serial fallback when neither nproc nor getconf exists) that still runs one
+      invocation per commit and folds results in rev-list order, preserving
+      per-commit attribution, byte-identical output, the two-pass budget and
+      fail-closed handling (a killed worker is ERROR/exit 2, never PASS). Measured
+      after: 20-commit case 2.0–2.5 s over three runs (45/45 each), real branch
+      range 2.5 s. The budget assertion was not weakened."
+    type: info
+    date: "2026-11-11"

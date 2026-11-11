@@ -30,6 +30,10 @@ readonly MAX_RULE_LINES_PER_COMMIT=20
 readonly MAX_DIAGNOSTIC_LINES=200
 readonly MAX_EXCERPT_CHARS=160
 readonly CONDENSE_THRESHOLD=3
+# Commitlint is spawned once per commit, so the wall-clock cost is bounded by
+# running those independent processes concurrently. The cap keeps a large host
+# from oversubscribing memory with node processes.
+readonly MAX_LINT_JOBS=8
 
 # The configuration filenames mirror commitlint's own cosmiconfig search places
 # at the repository root, so a repository commitlint would enforce is never
@@ -78,6 +82,13 @@ OFFENDER_RULES=()
 DIAGNOSTIC_LINES=()
 DIAGNOSTIC_APPENDED=0
 
+# Per-commit worker scaffolding. Workers cannot mutate the parent's arrays, so
+# each writes only into its own files under RESULT_DIR; the parent renders in
+# rev-list order once every worker has been reaped.
+RESULT_DIR=""
+declare -a WORKER_PIDS=()
+declare -a WORKER_STATUS=()
+
 # ============================================================================
 # TRAPS
 # ============================================================================
@@ -87,10 +98,18 @@ _on_err() {
 }
 
 _on_exit() {
-  :
+  if [[ -n "${RESULT_DIR}" && -d "${RESULT_DIR}" && "${RESULT_DIR}" == */lint-commit-range.* ]]; then
+    rm -rf -- "${RESULT_DIR}"
+  fi
 }
 
 _on_interrupt() {
+  if ((${#WORKER_PIDS[@]})); then
+    local pid
+    for pid in "${WORKER_PIDS[@]}"; do
+      kill "${pid}" 2>/dev/null || true
+    done
+  fi
   printf '[WARN]  %s interrupted; no verdict was produced\n' "${LOG_TAG}" >&2
   exit 130
 }
@@ -124,6 +143,9 @@ Environment:
   ADOS_BASE_BRANCH           Environment override for the base ref.
   ADOS_PR_INSTRUCTIONS_FILE  Project configuration file that may declare the
                              default base branch.
+  ADOS_LINT_JOBS             Maximum number of per-commit commitlint workers
+                             to run in parallel. Defaults to the detected CPU
+                             count, capped at 8; 1 forces serial execution.
 
 Exit codes:
   0 - PASS or SKIP (all commits satisfy the configuration, or the repository
@@ -563,16 +585,31 @@ _render_diagnostics() {
   done
 }
 
-# Lint one commit. Returns 0 for a clean commit, 1 for an offender, and 2 when
-# the tool cannot render a verdict (an environment error, never a violation).
-_lint_commit() {
-  local -r sha="$1"
+# Lint one commit into its own per-index result files. Runs in a background
+# subshell, so it must never write shared state or stdout: the parent renders
+# diagnostics only after every worker is reaped, in rev-list order, which keeps
+# the output byte-identical regardless of completion order.
+#
+# Files written (status last, so its presence means the record is complete):
+#   <index>.message  the commit message
+#   <index>.rules    one deduplicated rule id per line (offenders only)
+#   <index>.status   `clean`, `offender`, or `error <commitlint-exit>`
+#
+# Returns 0 for every handled outcome. A non-zero return means the worker could
+# not record a verdict (for example, it was killed); the collector turns a
+# missing record into a fail-closed ERROR rather than a silent pass.
+_lint_commit_to_result() {
+  local -r index="$1" sha="$2"
+  local -r prefix="${RESULT_DIR}/${index}"
   local message output status=0
-  message="$(git log -1 --format=%B "${sha}")"
 
+  message="$(git log -1 --format=%B "${sha}")" || return 3
   output="$(printf '%s' "${message}" | "${LINT_BINARY}" --color=false 2>&1)" || status=$?
 
+  printf '%s' "${message}" >"${prefix}.message" || return 3
+
   if [[ "${status}" -eq 0 ]]; then
+    printf 'clean\n' >"${prefix}.status" || return 3
     return 0
   fi
 
@@ -580,8 +617,8 @@ _lint_commit() {
   mapfile -t parsed_rules < <(_extract_problem_rule_ids <<<"${output}")
 
   if [[ "${status}" -ge 2 || "${#parsed_rules[@]}" -eq 0 ]]; then
-    _report_lint_execution_error "${sha}" "${status}"
-    return 2
+    printf 'error %s\n' "${status}" >"${prefix}.status" || return 3
+    return 0
   fi
 
   local -a unique_rules=()
@@ -591,20 +628,147 @@ _lint_commit() {
     if [[ -z "${seen[${rule}]:-}" ]]; then
       seen["${rule}"]=1
       unique_rules+=("${rule}")
-      RULE_HITS["${rule}"]=1
     fi
   done
 
-  OFFENDER_SHAS+=("${sha}")
-  OFFENDER_MESSAGES+=("${message}")
-  OFFENDER_RULES+=("$(printf '%s\n' "${unique_rules[@]}")")
-  OFFENDER_COUNT=$((OFFENDER_COUNT + 1))
-  return 1
+  printf '%s\n' "${unique_rules[@]}" >"${prefix}.rules" || return 3
+  printf 'offender\n' >"${prefix}.status" || return 3
+  return 0
+}
+
+# Worker budget: the requested override when valid, otherwise the detected CPU
+# count (which already honours affinity), capped at MAX_LINT_JOBS. Any inability
+# to detect a count degrades to a single worker, never to a wrong value.
+_detect_lint_jobs() {
+  local requested="${ADOS_LINT_JOBS:-}"
+  local detected=""
+
+  if [[ -n "${requested}" ]]; then
+    if [[ "${requested}" =~ ^[1-9][0-9]*$ ]]; then
+      detected="${requested}"
+    else
+      log_warn "ignoring ADOS_LINT_JOBS='${requested}': expected a positive integer"
+    fi
+  fi
+
+  if [[ -z "${detected}" ]]; then
+    if command -v nproc >/dev/null 2>&1; then
+      detected="$(nproc 2>/dev/null || true)"
+    elif command -v getconf >/dev/null 2>&1; then
+      detected="$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)"
+    fi
+  fi
+
+  if [[ ! "${detected}" =~ ^[1-9][0-9]*$ ]]; then
+    detected=1
+  fi
+  if ((detected > MAX_LINT_JOBS)); then
+    detected="${MAX_LINT_JOBS}"
+  fi
+  printf '%s' "${detected}"
+}
+
+# Run at most `jobs` workers at a time, reaping the oldest whenever the budget
+# is full, then drain the remainder. Every wait is guarded because workers
+# legitimately exit non-zero on a violation or an unrenderable verdict.
+_start_lint_workers() {
+  local -a commits=("$@")
+  local -r total="${#commits[@]}"
+  ((total > 0)) || return 0
+
+  local jobs
+  jobs="$(_detect_lint_jobs)"
+  if ((jobs > total)); then
+    jobs="${total}"
+  fi
+
+  local -a pids=()
+  local -i started=0 reaped=0 index
+  for ((index = 0; index < total; index++)); do
+    _lint_commit_to_result "${index}" "${commits[index]}" &
+    pids[index]=$!
+    WORKER_PIDS+=("$!")
+    started=$((started + 1))
+
+    if ((started - reaped >= jobs)); then
+      _reap_worker "${reaped}" "${pids[reaped]}"
+      reaped=$((reaped + 1))
+    fi
+  done
+
+  for ((index = reaped; index < total; index++)); do
+    _reap_worker "${index}" "${pids[index]}"
+  done
+  WORKER_PIDS=()
+}
+
+# Wait for one worker and remember its exit status so a missing result record
+# can be reported with the status that produced it (a killed worker reports its
+# signal status instead of appearing clean).
+_reap_worker() {
+  local -r index="$1" pid="$2"
+  local status=0
+  # A signal-killed worker makes bash print an asynchronous "[pid] Killed"
+  # notice on the shell's stderr; the collector reports the failure instead, so
+  # the notice is suppressed rather than leaking a non-deterministic pid.
+  wait "${pid}" 2>/dev/null || status=$?
+  WORKER_STATUS[index]="${status}"
+}
+
+# Fold the per-index records into the run state in rev-list order. The first
+# unrenderable verdict aborts with ERROR exactly as the serial walk did; an
+# absent record means the worker never rendered one, so it is an ERROR
+# (fail-closed) and never a zero-offender PASS.
+_collect_lint_results() {
+  local -a commits=("$@")
+  local -r total="${#commits[@]}"
+  local -i index
+
+  for ((index = 0; index < total; index++)); do
+    local prefix="${RESULT_DIR}/${index}"
+    local status_token="" detail=""
+
+    if [[ ! -r "${prefix}.status" ]]; then
+      _report_lint_execution_error "${commits[index]}" "${WORKER_STATUS[index]:-unknown}"
+      exit "${EXIT_UNVERIFIABLE}"
+    fi
+    read -r status_token detail <"${prefix}.status" || status_token=""
+
+    case "${status_token}" in
+      clean) ;;
+      offender)
+        if [[ ! -r "${prefix}.message" || ! -r "${prefix}.rules" ]]; then
+          _report_lint_execution_error "${commits[index]}" "${WORKER_STATUS[index]:-unknown}"
+          exit "${EXIT_UNVERIFIABLE}"
+        fi
+        local message rule
+        local -a unique_rules=()
+        message="$(<"${prefix}.message")"
+        mapfile -t unique_rules <"${prefix}.rules"
+        for rule in "${unique_rules[@]}"; do
+          RULE_HITS["${rule}"]=1
+        done
+        OFFENDER_SHAS+=("${commits[index]}")
+        OFFENDER_MESSAGES+=("${message}")
+        OFFENDER_RULES+=("$(printf '%s\n' "${unique_rules[@]}")")
+        OFFENDER_COUNT=$((OFFENDER_COUNT + 1))
+        ;;
+      error)
+        _report_lint_execution_error "${commits[index]}" "${detail:-unknown}"
+        exit "${EXIT_UNVERIFIABLE}"
+        ;;
+      *)
+        _report_lint_execution_error "${commits[index]}" "${WORKER_STATUS[index]:-unknown}"
+        exit "${EXIT_UNVERIFIABLE}"
+        ;;
+    esac
+  done
 }
 
 # Report an unrenderable verdict with a cause and a remediation hint. No
 # diagnostic rule line and no remediation mode is emitted: this is not a defect
-# in the message.
+# in the message. The caller owns the process exit so every return path stays
+# explicit.
 _report_lint_execution_error() {
   local -r sha="$1" status="$2"
   local short_sha
@@ -613,7 +777,6 @@ _report_lint_execution_error() {
     "${short_sha}" "${sha}" "${status}"
   printf 'Hint: fix or validate the commitlint configuration, install the configured shareable config, and re-run.\n'
   _print_verdict "ERROR" "cannot verify: commitlint could not render a verdict for commit ${short_sha}"
-  exit "${EXIT_UNVERIFIABLE}"
 }
 
 # ============================================================================
@@ -743,10 +906,15 @@ main() {
     exit "${EXIT_PASS}"
   fi
 
-  local sha
-  for sha in "${commits[@]}"; do
-    _lint_commit "${sha}" || true
-  done
+  if ! RESULT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lint-commit-range.XXXXXXXX")"; then
+    printf 'Cause: the gate could not create a temporary directory for per-commit results.\n'
+    printf 'Hint: ensure TMPDIR points to a writable directory, then re-run.\n'
+    _print_verdict "ERROR" "cannot verify: the gate could not create a temporary result directory"
+    exit "${EXIT_UNVERIFIABLE}"
+  fi
+
+  _start_lint_workers "${commits[@]}"
+  _collect_lint_results "${commits[@]}"
 
   _render_diagnostics
 
