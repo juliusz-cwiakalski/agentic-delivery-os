@@ -241,3 +241,34 @@ notes:
       recorded here instead."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 2 complete (commit a40c4bc8). The `dispatch attempts`
+      branch, its command-owned grammar (canonical ref, canonical decimal
+      limit 1..100 defaulting to 20, unknown flag, unexpected positional - all
+      input.value.rejected before any runtime call), `acceptsAnyFlag: true`
+      plus the handler guard that keeps the four delivered forms at
+      fallback.invocation, the bounded deterministic digest (summary line,
+      seven cells, closed corroboration derivation, truncation line with at
+      most 37 rows beside it, coverage/floor pointer, 40-line/8,192-byte
+      budget), the edge composition with optional attempts ports, the
+      production composition (persistence-disabled identity, no scheduler key,
+      local PM context seam), the harness invoke(), the production fixture and
+      the two digests. Green: attempts-ref 21/21, attempts-contract 15/15,
+      attempts-bounds 10/10, attempts-digest 10/10, attempts-refusals 5/5,
+      attempts-scope 4/4, taxonomy 3/3, additive-stability 10/10, the 416
+      delivered dispatch suites, error-table 102/102 plus sync, literals and
+      boundaries, and the aggregate pnpm check 7284 pass / 4 skip / 0 fail
+      (exit 0). Three deviations, all forced by delivered truth rather than
+      preference: (1) the release gate reds every boundary with a packages/
+      diff unless exactly one changeset is added, so
+      .changeset/gh-289-dispatch-attempt-read-side-minor.md landed here rather
+      than in phase 5, which now verifies it and keeps it byte-identical; the
+      plan's per-phase green invariant wins over the phase's file list. (2)
+      The delivered CommandResult envelope carries no `kind` field, so cell 7
+      asserts error.code fallback.invocation plus exit 1 plus a throwing store
+      seam instead of asserting `kind: fallback` (DoR residual risk R1). (3)
+      The delivered `state.permission.denied` row projects user-validation and
+      therefore exits 1, not 2; the store-fault cell asserts the delivered row
+      identity and its delivered projection, and this is recorded as a
+      spec-vs-code gap for @doc-syncer rather than fixed by adding a row."
+    type: info
+    date: "2026-11-11"

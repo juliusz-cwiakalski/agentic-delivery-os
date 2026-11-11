@@ -14,6 +14,7 @@ import {
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
   type DispatchEnvelopeData,
+  type DispatchResolveData,
   type DispatchSummaryData,
 } from "@delivery-os/core/contracts";
 import { projectExitCode } from "../projection.js";
@@ -146,6 +147,10 @@ export const renderDispatchAttemptsText = (data: DispatchAttemptsData): string =
   }
   return render(0);
 };
+
+/** The one deterministic resolve line (GH-289 F-6, AC-F6-5). */
+export const renderDispatchResolveText = (data: DispatchResolveData): string =>
+  `divergence=${data.divergenceId}; state=${data.state}; appended=${data.resolved ? "true" : "false"}; unresolved=${data.divergences.unresolved}; mode=local-evidence; repository=${data.repository}\n`;
 
 /** The handover/reversal text. */
 export const renderDispatchHandoverText = (data: {

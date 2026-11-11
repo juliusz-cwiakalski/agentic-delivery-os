@@ -310,6 +310,38 @@ export type DispatchEnvelopeData = {
   };
 };
 
+/**
+ * The one shared repository-scoped divergence block (GH-289 F-5, F-7; DEC-15).
+ *
+ * `unresolved` is the exact folded open count for the reported repository,
+ * `unresolvedIds` is its declared at-most-20 list, and `idsTruncated` is true
+ * exactly when identifiers were omitted. No surface derives the count from the
+ * list's length.
+ */
+export type DispatchDivergenceBlock = {
+  readonly reported: number;
+  readonly resolved: number;
+  readonly unresolved: number;
+  readonly unresolvedIds: readonly string[];
+  readonly idsTruncated: boolean;
+};
+
+/**
+ * The dual-run resolve success data (GH-289 F-5, DM-3): the five delivered keys
+ * keep their names and order, followed by the additive mode, subject repository
+ * and the shared divergence block.
+ */
+export type DispatchResolveData = {
+  readonly divergenceId: string;
+  readonly state: "open" | "resolved";
+  readonly resolved: boolean;
+  readonly note?: string;
+  readonly principal?: string;
+  readonly mode: "local-evidence";
+  readonly repository: string;
+  readonly divergences: DispatchDivergenceBlock;
+};
+
 /** One unmet gate condition with its declared detail. */
 export type DispatchUnmetCondition = {
   readonly condition: DispatchHandoverCondition;
@@ -333,12 +365,7 @@ export type DispatchSummaryData = {
   readonly countedEvidenceClass: DispatchEvidenceClass;
   readonly excludedEvidenceClasses: readonly DispatchExcludedEvidenceClass[];
   readonly incidents: number;
-  readonly divergences: {
-    readonly reported: number;
-    readonly resolved: number;
-    readonly unresolved: number;
-    readonly unresolvedIds: readonly string[];
-  };
+  readonly divergences: DispatchDivergenceBlock;
   readonly coverage: {
     readonly present: readonly DeliveryResultToken[];
     readonly missing: readonly DeliveryResultToken[];
