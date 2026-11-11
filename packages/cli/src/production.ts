@@ -564,13 +564,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         nowIso,
       });
       // With no absolute `XDG_CONFIG_HOME` and no home the user configuration
-      // root is unresolvable: `install` refuses with `config.value.invalid`
-      // before the unsupported and missing-entry-path refusals, writes no unit
-      // and no ownership marker, invokes no supervisor command, and creates no
-      // configuration-root directory (AC-F7-2, DM-6). Every other subcommand
-      // keeps the resolved runtime.
+      // root is unresolvable: `install` AND `uninstall` refuse with
+      // `config.value.invalid` before the unsupported and missing-entry-path
+      // refusals, write no unit and no ownership marker, invoke no supervisor
+      // command, create no configuration-root directory, and never search the
+      // state directory (AC-F7-2, DM-6, NF-7). Every other subcommand keeps the
+      // resolved runtime.
       if (supervisorConfigDirectory !== undefined) return composed;
-      return { ...composed, install: async () => daemonConfigurationRefusal() };
+      return {
+        ...composed,
+        install: async () => daemonConfigurationRefusal(),
+        uninstall: async () => daemonConfigurationRefusal(),
+      };
     })();
 
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);

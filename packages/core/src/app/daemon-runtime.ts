@@ -3,9 +3,13 @@
  * EVT-1, EVT-2; AC-F1-1, AC-F3-2, AC-F5-1, AC-F12-2).
  *
  * Acquire/take over the daemon lock, reconcile, append the instance acquisition,
- * open the transport, begin the heartbeat, and serve. Drain releases cleanly and
- * records live lanes detached; immediate stops without signalling any lane. An
- * unclean exit appends nothing and leaves a stale lock for the next start.
+ * open the transport, begin the heartbeat, and serve. A lock the staleness
+ * evaluation has proved dead (contract conformance to DEC-6/RSK-11) is removed
+ * by a compare-and-delete on the observed token immediately before the
+ * exclusive re-acquire, so a crash never wedges a restart and a concurrent
+ * winner's fresh lock is never removed. Drain releases cleanly and records live
+ * lanes detached; immediate stops without signalling any lane. An unclean exit
+ * appends nothing and leaves a stale lock for the next start to take over.
  */
 import {
   DAEMON_INSTANCE_PAYLOAD_SCHEMA,
@@ -287,11 +291,22 @@ export const createDaemonRuntime = (ports: DaemonRuntimePorts): DaemonRuntime =>
       if (decision.kind === "unreadable") {
         return { ok: false, code: "daemon.state-recovery-failed", detail: decision.path };
       }
+      if (decision.kind === "takeover") {
+        // Contract conformance (GH-286 NF-1; DEC-6, RSK-11): the staleness
+        // evaluation PROVED the observed lock dead, so the record it observed is
+        // removed before the exclusive re-acquire. The removal is a
+        // compare-and-delete keyed on that observed `lockToken`: a lock a
+        // concurrent starter replaced in the meantime answers
+        // `state.lock.busy` and is left in place, and a refused removal falls
+        // through to the delivered busy mapping below rather than inventing a
+        // refusal. `evaluateDaemonLock` stays the only staleness decision.
+        ports.lock.remove(decision.previous.lockToken);
+      }
       const at = nowIso();
-      const token = ports.newLockToken();
+      const newToken = ports.newLockToken();
       const instanceId = ports.newInstanceId();
       const acquired = ports.lock.acquire({
-        lockToken: token,
+        lockToken: newToken,
         instanceId,
         pid: ports.pid ?? 0,
         scope: daemonScopeDigest(ports.store.identity.stateDirectory),
@@ -305,13 +320,13 @@ export const createDaemonRuntime = (ports: DaemonRuntimePorts): DaemonRuntime =>
           detail: acquired.path,
         };
       }
-      lockToken = token;
+      lockToken = newToken;
       const instance: DaemonInstanceRecord = {
         schema: DAEMON_INSTANCE_PAYLOAD_SCHEMA,
         instanceId,
         pid: ports.pid ?? 0,
         scope: daemonScopeDigest(ports.store.identity.stateDirectory),
-        lockToken: token,
+        lockToken: newToken,
         operation: decision.kind === "takeover" ? "taken-over" : "acquired",
         acquiredAt: at,
         heartbeatAt: at,
@@ -322,7 +337,7 @@ export const createDaemonRuntime = (ports: DaemonRuntimePorts): DaemonRuntime =>
       };
       const instanceAppend = appendDaemonInstance(ports.store, ports.newFenceToken(), instance);
       if (!instanceAppend.ok) {
-        ports.lock.remove(token);
+        ports.lock.remove(newToken);
         lockToken = undefined;
         return { ok: false, code: "daemon.state-recovery-failed", detail: instanceAppend.path };
       }

@@ -16,6 +16,7 @@ import { resolveStateDirectoryScope } from "../../packages/core/src/config/index
 import {
   createMountHarness,
   mountComposition,
+  mountSettings,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
@@ -267,6 +268,157 @@ describe("TC-DAEMON-030 detached readiness is tied to this spawn", () => {
       const after = readDaemonInstance(harness.store);
       expect(after.ok && after.latest?.pid).toBe(111);
       expect(after.ok && after.latest?.operation).toBe("acquired");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("(d) the accepted takeover is produced by the composed runtime, not by a fixture", async () => {
+    const harness = createMountHarness({ label: "start-030-takeover-real" });
+    try {
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      // The SIGKILL residue: a stale lock record plus the stale acquisition.
+      const staleLock = harness.lock.acquire({
+        lockToken: "lock-crash-victim",
+        instanceId: "instance-crash-victim",
+        pid: 111,
+        scope: scopeOf(harness.stateDirectory),
+        acquiredAt: "2026-11-11T09:00:00Z",
+        heartbeatAt: "2026-11-11T09:00:00Z",
+      });
+      expect(staleLock.ok).toBe(true);
+      appendInstance(harness.store, {
+        instanceId: "instance-crash-victim",
+        pid: 111,
+        scope: scopeOf(harness.stateDirectory),
+        recordedAt: "2026-11-11T09:00:00Z",
+        heartbeatAt: "2026-11-11T09:00:00Z",
+      });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-crash-victim",
+        beatAt: "2000-01-01T00:00:00Z",
+      });
+
+      // The child is the composed runtime over the same store, lock, and clock:
+      // its engine decides the takeover, reaps the proved-dead record, acquires,
+      // and appends the `taken-over` instance the parent then accepts.
+      let childOrdinal = 0;
+      const childToken = (prefix: string) => () => {
+        childOrdinal += 1;
+        return `${prefix}-${childOrdinal}`;
+      };
+      let child: Promise<unknown> | undefined;
+      harness.processPort.onSpawn(() => {
+        child = invoke(
+          createDaemonCommandRuntime(
+            mountComposition(harness, {
+              pid: 222,
+              newFenceToken: childToken("child-fence"),
+              newLockToken: () => "lock-successor",
+              newInstanceId: () => "instance-successor",
+            }),
+          ),
+          ["start"],
+        );
+      });
+      const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
+      const result = await invoke(runtime, ["start"]);
+      expect(isSuccess(result)).toBe(true);
+      if (!isSuccess(result)) return;
+      expect(child).toBeDefined();
+      expect(isSuccess(await child)).toBe(true);
+
+      const durable = readDaemonInstance(harness.store);
+      expect(durable.ok).toBe(true);
+      if (!durable.ok || durable.latest === undefined) return;
+      expect(durable.latest.instanceId).toBe("instance-successor");
+      expect(durable.latest.operation).toBe("taken-over");
+      expect(durable.latest.takeover?.previousInstanceId).toBe("instance-crash-victim");
+      expect(durable.latest.takeover?.previousLockToken).toBe("lock-crash-victim");
+      const receipt = result.data as { instance: { instanceId: string; pid: number } };
+      expect(receipt.instance.instanceId).toBe("instance-successor");
+      expect(receipt.instance.pid).toBe(222);
+      // The receipt names the surviving holder, never the crash victim's pid.
+      expect(JSON.stringify(result)).not.toContain(`"pid":111`);
+      const held = harness.lock.read();
+      expect(held.state).toBe("held");
+      if (held.state === "held") expect(held.record.lockToken).toBe("lock-successor");
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("TC-DAEMON-030 the detached receipt folds the composed staleness bound", () => {
+  test("a non-default lock staleness makes the receipt agree with status and the durable age", async () => {
+    const harness = createMountHarness({
+      label: "start-030-receipt-bound",
+      values: { daemon: { "lock-staleness": 1500, "heartbeat-interval": 250 } },
+    });
+    try {
+      expect(harness.settings.lockStalenessMs).toBe(1500);
+      expect(harness.settings.heartbeatIntervalMs).toBe(250);
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      // The child's beat is 2 050 ms old at acceptance: stale under the composed
+      // 1 500 ms bound, running under the shipped 30 000 ms default.
+      const staleBeatAt = new Date(harness.clock.nowMs() - 2050).toISOString();
+      harness.processPort.onSpawn(() => {
+        appendInstance(harness.store, { pid: 987, scope: scopeOf(harness.stateDirectory) });
+        appendHeartbeat(harness.store, { beatAt: staleBeatAt });
+      });
+      const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
+      const result = await invoke(runtime, ["start"]);
+      expect(isSuccess(result)).toBe(true);
+      if (!isSuccess(result)) return;
+      const receipt = result.data as {
+        instance: { pid: number };
+        heartbeat: { intervalMs: number; ageMs: number };
+        degraded: readonly string[];
+      };
+      expect(receipt.instance.pid).toBe(987);
+      expect(receipt.heartbeat.intervalMs).toBe(250);
+      // The age is the composed instant minus the durable beat, past the composed
+      // 1 500 ms bound and far inside the shipped 30 000 ms default.
+      const ageMs = harness.clock.nowMs() - Date.parse(staleBeatAt);
+      expect(receipt.heartbeat.ageMs).toBe(ageMs);
+      expect(receipt.heartbeat.ageMs).toBeGreaterThan(1500);
+      expect(receipt.heartbeat.ageMs).toBeLessThan(30_000);
+      // The fold used the composed bound: the shipped default would say running.
+      expect(receipt.degraded).toContain("daemon-heartbeat-stale");
+
+      const durable = readDaemonHeartbeat(harness.store);
+      expect(durable.ok).toBe(true);
+      if (durable.ok && durable.latest !== undefined) {
+        expect(receipt.heartbeat.ageMs).toBe(
+          harness.clock.nowMs() - Date.parse(durable.latest.beatAt),
+        );
+      }
+
+      // `status` agrees with the receipt on the same store and instant.
+      const status = await invoke(runtime, ["status"]);
+      expect(isSuccess(status)).toBe(true);
+      if (!isSuccess(status)) return;
+      const statusData = status.data as {
+        instance: { pid: number } | null;
+        heartbeat: { intervalMs: number; ageMs: number; state: string };
+        degraded: readonly string[];
+      };
+      expect(statusData.instance?.pid).toBe(987);
+      expect(statusData.heartbeat.intervalMs).toBe(250);
+      expect(statusData.heartbeat.ageMs).toBe(receipt.heartbeat.ageMs);
+      expect(statusData.heartbeat.state).toBe("stale");
+      expect(statusData.degraded).toContain("daemon-heartbeat-stale");
+
+      // Non-vacuity: the shipped default bound classifies the same age as running.
+      const defaults = createDaemonCommandRuntime(
+        mountComposition(harness, { settings: mountSettings(harness.stateDirectory) }),
+      );
+      const defaultStatus = await invoke(defaults, ["status"]);
+      expect(isSuccess(defaultStatus)).toBe(true);
+      if (isSuccess(defaultStatus)) {
+        const data = defaultStatus.data as { heartbeat: { state: string } };
+        expect(data.heartbeat.state).toBe("running");
+      }
     } finally {
       harness.dispose();
     }

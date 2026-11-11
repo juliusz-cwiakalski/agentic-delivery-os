@@ -134,6 +134,46 @@ const isFailure = (value: unknown): value is { error: { code: string; kind: stri
   typeof value === "object" && value !== null && "error" in value;
 
 describe("TC-DAEMON-100 the installed unit", () => {
+  test("the success path inspects the supervisor exactly once", async () => {
+    const harness = createMountHarness({ label: "install-100c" });
+    try {
+      const recorder = createRecordingSupervisor();
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      const program = createProductionComposer({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        workingName: harness.brand.binaryName,
+        supervisor: recorder.port,
+        daemonEntry: entry,
+      })(harness.brand);
+      const result = await program.commands.daemon?.handler({
+        positionals: ["install"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(result !== undefined && "data" in result).toBe(true);
+      if (result !== undefined && "data" in result) {
+        expect((result.data as { result: string }).result).toBe("installed");
+        expect((result.data as { supervisor: { unit: string } }).supervisor.unit).toBe(
+          `${harness.brand.binaryName}-daemon.service`,
+        );
+      }
+      // One inspection and one install: a restored second inspection is visible.
+      expect(recorder.counters.inspects).toBe(1);
+      expect(recorder.counters.writes).toBe(1);
+      expect(recorder.counters.enables).toBe(1);
+      expect(recorder.counters.lingers).toBe(1);
+      expect(recorder.counters.uninstalls).toBe(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+
   test("the unit carries the absolute entry path and the exact environment binding", async () => {
     const harness = createMountHarness({ label: "install-100" });
     try {
@@ -555,6 +595,7 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
     readonly home: string;
     readonly daemonEntry?: string;
     readonly supervisor: SupervisorPort;
+    readonly subcommand?: string;
   }) => {
     const harness = createMountHarness({ label: "install-no-home" });
     try {
@@ -573,7 +614,7 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
       })(harness.brand);
       const before = listDirectory(harness.root);
       const result = await program.commands.daemon?.handler({
-        positionals: ["install"],
+        positionals: [options.subcommand ?? "install"],
         flags: {},
         global: {},
       } as never);
@@ -617,6 +658,54 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
       expect(run.result.error.code).not.toBe("daemon.state-recovery-failed");
     }
     expect(recorder.counters.inspects).toBe(0);
+  });
+
+  test("uninstall refuses on the same rule instead of searching the state directory", async () => {
+    const recorder = createRecordingSupervisor({ installed: true });
+    const run = await installOver({ home: "", supervisor: recorder.port, subcommand: "uninstall" });
+    expect(run.result !== undefined && "error" in run.result).toBe(true);
+    if (run.result !== undefined && "error" in run.result) {
+      expect(run.result.error.code).toBe("config.value.invalid");
+      expect(exitFor("config.value.invalid")).toBe(1);
+    }
+    expect(run.result !== undefined && "data" in run.result).toBe(false);
+    // No supervisor command at all: not an inspection, not an uninstall.
+    expect(recorder.counters.inspects).toBe(0);
+    expect(recorder.counters.uninstalls).toBe(0);
+    // No configuration-root directory and no state-directory search artifact.
+    expect(run.after).toEqual(run.before);
+  });
+
+  test("the control: with a home present the same composition's uninstall runs ownership-scoped", async () => {
+    const harness = createMountHarness({ label: "install-home-uninstall" });
+    try {
+      const recorder = createRecordingSupervisor({ installed: true });
+      const program = createProductionComposer({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        workingName: harness.brand.binaryName,
+        supervisor: recorder.port,
+      })(harness.brand);
+      const result = await program.commands.daemon?.handler({
+        positionals: ["uninstall"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(result !== undefined && "data" in result).toBe(true);
+      if (result !== undefined && "data" in result) {
+        expect((result.data as { result: string }).result).toBe("uninstalled");
+      }
+      // The root resolved, so exactly one ownership-scoped uninstall ran.
+      expect(recorder.counters.uninstalls).toBe(1);
+      expect(recorder.installed()).toBe(false);
+    } finally {
+      harness.dispose();
+    }
   });
 
   test("the control: with a home present the same composition reaches the entry-path guard", async () => {

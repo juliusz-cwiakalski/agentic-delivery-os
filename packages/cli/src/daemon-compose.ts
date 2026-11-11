@@ -426,6 +426,16 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     composition.supervisorKind ??
     (platform === "linux" ? "systemd-user" : platform === "darwin" ? "launchd" : "windows-service");
   const scope = daemonScopeDigest(composition.stateDirectory);
+  /**
+   * The composed platform supervisor. The user configuration root is resolved
+   * ONCE by the composing layer (`production.ts`): an absolute non-empty
+   * `XDG_CONFIG_HOME` wins, else `<home>/.config` only when a home exists, else
+   * the root is unresolvable and BOTH `install` and `uninstall` are replaced by
+   * the delivered `config.value.invalid` refusal there, before any adapter is
+   * constructed (AC-F7-2, GH-286 NF-7). A composition that supplies no
+   * configuration root keeps the delivered adapter construction, which is the
+   * GH-238 composition contract.
+   */
   const composedSupervisor = (): SupervisorPort =>
     composition.supervisor ??
     createSupervisorAdapter({
@@ -952,6 +962,10 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       return failure(installed.code, summary.length === 0 ? undefined : summary);
     },
     uninstall: async () => {
+      // The configuration-root decision is the composing layer's: an
+      // unresolvable root replaces this handler with the delivered
+      // `config.value.invalid` refusal, so the state directory is never
+      // substituted for the user configuration root (AC-F7-2, NF-7).
       const removed = uninstallSupervisor(composedSupervisor(), composition.unit);
       return removed.ok ? { data: removed.data } : failure(removed.code, removed.detail);
     },
@@ -1083,5 +1097,12 @@ const controlHandlers = (
     void holder.current?.stop("immediate");
     return { ok: true as const, data: { stopping: true as const } };
   },
+  /**
+   * `takeover` stays a constant refusal with its delivered identity. The control
+   * error frame echoes `type: "status"` for a `takeover` request because the
+   * delivered GH-238 transport frame carries that constant; it predates this
+   * change, no assertion here pins it, and it is explicitly OUT OF SCOPE for
+   * GH-286 (NF-8). A future protocol pass owns the echo and the frame shape.
+   */
   takeover: () => ({ ok: false as const, code: "daemon.takeover-refused" }),
 });

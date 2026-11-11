@@ -2,7 +2,9 @@
  * TC-HOLDDOCS-001/002/003 (GH-280) — the operator guides state the two
  * semantics and the MAX-floor rule, and the reconciled feature specs and command
  * pages record the gate, the additive members, the one doctor annotation reason,
- * the clamp, the explicit denials, and the absence of a marker-path override.
+ * the clamp, the explicit denials, and the absence of a marker-path override —
+ * the marker path is derived from the resolved store directory, never configured
+ * separately, and the home default is never moved.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -30,15 +32,26 @@ describe("TC-HOLDDOCS-001 the delivery-modes guide states both semantics and the
     ]);
   });
 
-  test("the fixed path, fail-closed marker, poll, unbounded driver, and MAX floor are documented", () => {
+  test("the store-derived marker path, fail-closed marker, poll, unbounded driver, and MAX floor are documented", () => {
     expectAll(text, [
-      "no marker-path override and no store relocation",
+      "There is no marker-path override",
+      "the marker follows the store directory the typed engine resolves",
+      "an absolute `<PREFIX>_STATE_DIR` wins and relocates the store and the marker together",
+      "otherwise the home-based `<home>/<brand.stateDirectoryName>` applies",
+      "accepts no marker-path setting",
+      "existing state at the home default is never moved",
       "fail closed",
       "default `300`, accepted range `1`–`3600`",
       "no fixed iteration cap",
       "Conditions compose by **MAX**",
       "the hold is the floor",
     ]);
+  });
+
+  test("the retired fixed-path claim is gone and the marker is never configured apart from the store", () => {
+    const normalized = text.replace(/\s+/g, " ");
+    expect(normalized).not.toContain("no store relocation");
+    expect(normalized).not.toContain("a fixed marker path");
   });
 
   test("the owner-hold/owner-gate distinction, the refusal semantics, and the kill-switch limit are documented", () => {
