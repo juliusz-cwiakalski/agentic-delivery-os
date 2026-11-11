@@ -239,7 +239,8 @@ M2 changes where state lives, not only what it contains.
 - **Per-repository state.** The state root resolves from the checkout identity
   (the git common dir marker), so two checkouts on one host never share phase
   state, queue entries, or lane leases. The host-level index names each
-  project key, root, and state location; it is the only host-wide file.
+  project key, root, and state location; it is the only host-wide index file,
+  and the host-wide owner-hold marker also lives at the host root.
 - **Migration.** Existing single-store users get a migration note and a
   one-step move into the per-repository root; no state file is rewritten in
   place.

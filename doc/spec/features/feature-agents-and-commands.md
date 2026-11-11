@@ -11,7 +11,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241"]
+  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-288"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---
@@ -94,7 +94,7 @@ Three deterministic checks enforce the invariants and keep them from decaying af
 | Check | Scope | Failure |
 |---|---|---|
 | `scripts/checks/prompt-conformance.ts` (`pnpm check:prompt`) | Every `.md` under the declared scan roots `.opencode/agent` and `.opencode/command`, plus the required/forbidden phrase inventory in `tests/fixtures/prompt-inventory/lifecycle.json` | A non-negated line matching a rule, a missing required phrase, a forbidden literal, or a retired literal from `tests/fixtures/prompt-inventory/retained-retired.json` |
-| `scripts/checks/help-guide-coverage.ts` (`pnpm check:help`) | The `PROMPT_REQUIRED_COMMANDS` set against `tests/fixtures/help-guide/coverage.json` and the M1 reference pages under `doc/planning/oss-tooling/milestones/m1/commands/` | A missing command row, a missing page, a page without `--help` or `--version`, a missing entrypoint page, or an inventory row naming a non-prompt-required command |
+| `scripts/checks/help-guide-coverage.ts` (`pnpm check:help`) | The `PROMPT_REQUIRED_COMMANDS` set against `tests/fixtures/help-guide/coverage.json` and one reference page per command, resolved through the per-command page root: the M1 pages under `doc/planning/oss-tooling/milestones/m1/commands/`, the `verify-change` page for `verify`, and the M2 page `doc/planning/oss-tooling/milestones/m2/commands/projects.md` for `projects` | A missing command row, a missing page, a page without `--help` or `--version`, a missing entrypoint page, or an inventory row naming a non-prompt-required command |
 | `tests/checks/doc-conformance.test.ts` | The change spec's §16.1.1 stale/required phrase table (the single source for named phrases) over the affected `doc/spec/features/**` pages, plus the reconciled guides, man page, and reference pages | A stale phrase still present or a required current-truth phrase missing |
 
 The prompt rules reject plan progress (`plan.no-progress`), hand-edited phase state (`phase.no-hand-edit`), a written `phases.pr_creation.url` (`phase.no-pr-url-write`), raw git writes (`git.no-raw-write`), and platform merge or PR-list discovery (`retired.platform`). A line that is a negation — containing `never`, `not`, `do not`, `don't`, `must not`, or `no` — is allowed, so a prompt can teach the prohibition itself. The scan is deterministic and non-vacuous: identical trees yield identical findings, and a mutated fixture fails.

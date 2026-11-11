@@ -14,3 +14,4 @@ export {
 export type CliOutputPlaceholder = { readonly __tier: "output" };
 export { renderDeployHuman } from "./deploy-text.js";
 export { renderDryRunHuman, renderMergeHuman } from "./merge-text.js";
+export { daemonCell, renderProjectsText } from "./projects-text.js";

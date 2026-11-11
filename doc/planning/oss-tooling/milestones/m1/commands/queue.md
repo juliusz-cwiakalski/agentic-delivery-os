@@ -234,7 +234,8 @@ refuses before acquiring the fence. `queue add`, `queue prioritize`, `queue dep`
 and `queue release` still work while held; the mutating park-recovery pass is
 skipped.
 
-The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
-marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
-override, store relocation, new command, new flag, new `--park` cause, or new
-exit code.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the host-wide marker
+`<host root>/owner-hold`, where the host root is an absolute `<PREFIX>_STATE_DIR`
+when set and otherwise `<home>/<stateDirectoryName>`; there is no marker-path
+override, and the hold never narrows to one project. The hold adds no new
+command, no new flag, no new `--park` cause, and no new exit code.

@@ -1167,6 +1167,12 @@ the gap is deliberate. M2 stories keep their codes.
 - Depends on: M2-S8.
 
 ### M2-S11 Multi-repository workstations
+- Ticket: GH-288 (milestone M2)
+- Progress: delivered by GH-288 — the two-layer state scope (host root plus a
+  per-repository project root), the checkout identity marker with its minted
+  project key, the derived host index with bounded maintenance and the
+  collision guard, the read-only `projects list [--json]` overview, the
+  one-step migration guide, and the host-wide owner hold preserved.
 - Goal: Multiple delivery-managed repositories on one workstation are
   first-class: state is scoped per repository so same-ref collisions are
   impossible, and a projects command gives one CLI overview of every managed

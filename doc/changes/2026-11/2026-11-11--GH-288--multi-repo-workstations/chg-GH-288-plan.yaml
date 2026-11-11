@@ -1,0 +1,1447 @@
+# GH-288 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.0
+# (2026-11-11). Rewritten against spec v1.2 (38 ACs) and test plan v3 (42 TCs), and
+# against the DoR iteration-1 findings (readiness-review/readiness-iter-1.md).
+#
+# REVISION NOTE (revision 2.0, amended after DoR iteration 2 —
+# readiness-review/readiness-iter-2.md). Numbering stays 2.0: this pass is
+# mechanical, changing scope declarations and wording only. No AC or TC ownership,
+# no phase count, no tier, no interaction, and no parsed key changes.
+#   B13 the second new user-facing document is registered where it is created:
+#       phase 6 now scopes `scripts/checks/forbidden-literals.registry.json`
+#       (the new `feature-projects` page is absent at `corpusBaseline`, so the
+#       scan fails an unregistered new doc under `doc/`) and `doc/00-index.md`
+#       (the landing page hand-lists every feature page). The registry-diff claim
+#       is now true at every boundary: exactly one addition at phase 5's boundary
+#       (the migration guide) and exactly two in the final tree (guide + page).
+#   B14 the mount unit's missing members are scoped: `packages/cli/src/edge.ts`
+#       (`ConfigProgramOptions` and the `commands` map that `production.ts` passes
+#       to `createConfigProgram`; without it the built entrypoint throws for the
+#       new prompt-required name) and
+#       `tests/behaviour/entrypoint-composition.test.ts` (TC-ENTRY-009's literal
+#       EXPECTED command list). The "both gates assert set equality" statements
+#       are corrected to "three pins": the coverage gate, the parity test, and
+#       TC-ENTRY-009. Every other `PROMPT_REQUIRED_COMMANDS` consumer was
+#       re-checked and is list-driven (`tests/fixtures/entrypoint/programs.ts`,
+#       `tests/behaviour/entrypoint-help-coverage.test.ts`,
+#       `tests/structure/cli-edge-seam.test.ts`,
+#       `tests/structure/entrypoint-bin.test.ts`,
+#       `tests/structure/coordinator-production-composition.test.ts`,
+#       `tests/structure/dispatch-help-inventory.test.ts`), so none carries a
+#       second literal command inventory.
+#   B15 the root entry is scoped where the new app symbol is consumed: phase 2
+#       gains `packages/core/src/index.ts`, because it re-exports app symbols by
+#       an explicit name list and the CLI may import core only from `.` and the
+#       declared subpaths. The export addition introduces no new subpath.
+#   F5/F6 doc obligations: `doc/00-index.md` joins phase 6, and the
+#       doc-distribution guard — which is NOT part of `pnpm check` — is named as
+#       an explicit command in the phases that add or edit a scanned doc (phase 5
+#       adds the guide marked `redistributable`; phase 6 edits `doc/00-index.md`,
+#       whose marker stays `redistributable`, and adds the feature page marked
+#       `internal` like every other feature spec).
+#
+# One ticket, one PR against main-tools, six delivery phases. Every phase is an
+# independently committable slice that is green at its own boundary: no phase needs
+# a later phase to compile, to assert, or to be meaningful. Extra phase data (goal,
+# work items, test obligations, done-when, non-goals, commit subject, gate commands,
+# evidence notes) is carried in YAML comments so the parsed document stays
+# schema-strict: the only parsed keys are schemaVersion, workItemRef, tier,
+# defaultLeases, defaultWeightClass and phases (id, title, kind, summary, scope,
+# interactions, doneArtifacts, leases, weightClass, leaseClass). The plan declares
+# phases and scope only; phase progress is a pm-notes `notes:` entry, never a plan
+# field, and there is no `tasks` key and no progress log.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-288-spec.md (v1.2; F-1..F-10, AC-F1-1..AC-F10-3 — 38
+#                criteria including AC-F1-6 (same-basename keys), AC-F3-4 (list
+#                writes nothing) and AC-F3-5 (four state-location cells);
+#                DM-1..DM-7; NFR-1..NFR-11; DEC-1..DEC-19; Appendix A state-scope
+#                matrix rows 1-12 plus the unbound row, Appendix B handover matrix,
+#                Appendix C daemon reason vocabulary, Appendix D evidence map,
+#                Appendix E seed reconciliation; §16.1 documentation impact and
+#                its phase-7 handoff facts; §17 evidence classes; §18 order)
+#   - Test plan: ./chg-GH-288-test-plan.md (v3; 42 TCs TC-PROJ-001..042 with
+#                cross-cutting TC-036/037/038; procedures P1..P8; §3 coverage, §5
+#                scenarios, §6 environments/fixtures, §7 automation mapping and
+#                phase-grouping rules, §8.1 risks TR-1..TR-14, §8.3 closed findings
+#                and cross-artifact handoffs X-1..X-4, §10 evidence)
+#   - DoR gate:  ./readiness-review/readiness-iter-1.md (NOT_READY; the blocking
+#                findings this revision must discharge are B3, B4, B5, B8, B9,
+#                B10/B11 and B12, plus advisories A7 and A8)
+#   - Ticket:    GH-288 (M2-S11). AC-1 → AC-F1-1/AC-F1-2; AC-2 → AC-F2-2 with
+#                AC-F2-1 and AC-F3-1 supplying the shape (spec §"AUTHORING
+#                GUIDELINES").
+#   - M2 pack:   doc/planning/oss-tooling/milestones/m2/{contracts.md
+#                (projects.v1), architecture.md, commands/projects.md,
+#                entrypoint-delta.md, test-scenarios.md}
+#   - Schema:    doc/spec/features/feature-plan-schema.md,
+#                packages/core/src/domain/plan-validate.ts,
+#                doc/templates/implementation-plan-template.md
+#   - Rules:     AGENTS.md, .ai/rules/typescript.md, .ai/rules/testing-strategy.md,
+#                .ai/rules/bash.md, .dependency-cruiser.cjs
+#
+# DoR ITERATION-1 REMEDIATIONS AND WHERE EACH IS DISCHARGED:
+#   B3  mount unit atomicity (critical): the mount obligations are ONE phase.
+#       Phase 3 lands, as one indivisible unit: `projects` in
+#       PROMPT_REQUIRED_COMMANDS, the command definition and its composition in
+#       `packages/cli/src/edge.ts` and `packages/cli/src/production.ts`, the
+#       root/family/verb help entries, the M2 reference page containing `--help`
+#       and `--version`, the coverage-inventory row plus the per-command page root
+#       in BOTH gates, and the three error-table rows with the result-contract
+#       page. THREE pins assert the command set: `scripts/checks/help-guide-coverage.ts`
+#       (set equality with the inventory), `tests/checks/reference-page-parity.test.ts`
+#       (set equality with PROMPT_REQUIRED_COMMANDS), and TC-ENTRY-009's literal
+#       expectation in `tests/behaviour/entrypoint-composition.test.ts`. No
+#       intermediate tree is green: no phase enables the prompt set before the
+#       page and rows exist, and no phase asserts prompt-set membership before
+#       the mount unit. TC-PROJ-030 carries the whole unit and is owned by phase
+#       3; TC-PROJ-020 no longer asserts prompt-set membership (it stops at one
+#       implementation, zero inline composition, one precedence site, and the
+#       consumer allowlist). No phase before 3 asserts prompt-set membership and
+#       no phase after 3 may weaken it (they re-run the gates only).
+#   B4  phase-1 host-root assertion (critical): phase 1 does NOT create the host
+#       index and does NOT require it. TC-PROJ-001 asserts the absence of store
+#       artifacts at the host root (the exact per-lifecycle-state sets live in
+#       TC-PROJ-041, phase 3), so phase 1's green set is index-free. Decision
+#       recorded: the index is created in phase 2, and no phase-1 obligation
+#       depends on it.
+#   B5  policy tier (critical): the single state-scope policy lives at
+#       `packages/core/src/app/state-scope.ts` — the only core tier allowed to
+#       import `domain`, `config` and `contracts` together. No phase places it in
+#       `packages/core/src/domain/`, and no sentence in this plan implies a domain
+#       module. The host-root rule's implementation (including the `_STATE_DIR`
+#       read and its precedence) MOVES out of
+#       `packages/core/src/config/catalog.ts` into the policy, because
+#       `tier-domain-only-contracts`/the tier matrix forbid `domain`→`config` and
+#       because TC-PROJ-020 asserts exactly one home-plus-brand composition site.
+#       Git and filesystem I/O stay in `packages/adapters`. No new package; no new
+#       subpath — the policy is exported from the existing `@delivery-os/core`
+#       root entry and `packages/core/package.json` `exports` is unchanged
+#       (verified by `scripts/checks/workspace-entrypoints.ts`,
+#       `tests/structure/subpaths.test.ts` and `pnpm check:boundaries`).
+#   B8  M2 page edits (major): phase 6 completes the contract refinement of
+#       `doc/planning/oss-tooling/milestones/m2/commands/projects.md` — the
+#       `projects.identity-unreadable` row no longer claims "the root is not a git
+#       work tree", a new explicit `unbound` row (exit 0, one warning, no
+#       registration), the closed `daemon` column vocabulary in the OUTPUT text
+#       AND the EXAMPLES, the `projects.state-unavailable` wording ("present but
+#       unreadable" / unestablishable, with an absent root being first use), and
+#       the `state` example path aligned with `<host root>/projects/<key>` —
+#       while `Status: Proposed (M2)` stays, because the pack stays planned until
+#       M2 exit. Phase 3 owns only the mount-critical additions to that page
+#       (`--help`/`--version` and registration), which the parity gate needs.
+#   B9  forbidden-literals registry (critical): every new document under the
+#       scanned `doc/` roots is registered in the SAME phase that adds it, because
+#       `scripts/checks/forbidden-literals.ts` fails an unregistered new doc and
+#       `tests/checks/forbidden-literals.test.ts` scans the whole root, so
+#       `pnpm check` reds the moment the doc lands. Phase 5 adds the migration
+#       guide to `scripts/checks/forbidden-literals.registry.json` (B9) and phase
+#       6 adds the `feature-projects` page plus its `doc/00-index.md` row (B13);
+#       the registry diff is exactly one addition at phase 5's boundary and
+#       exactly two in the final tree. No seed is removed and no shipped source
+#       file is allowlisted.
+#   B10/B11 evidence and socket site (major): AC-F6-4 is `mutation-verified` by
+#       procedure P8, which reverts the COMPOSING SITE's argument (project root →
+#       host root) and must red the assertion; the plan names that site explicitly
+#       (see phase 4) and records that `resolveDaemonSettings` currently has NO
+#       caller anywhere in `packages/**` and that
+#       `packages/cli/src/daemon-compose.ts` derives no socket path of its own (it
+#       consumes `settings.socketPath`). The phase-4 work item therefore scopes
+#       the site as "the one place that supplies a state directory to the settings
+#       resolution", never as "the module derives a socket path".
+#   B12 TDR-0022 (major): phase 1 owns authoring
+#       `doc/decisions/TDR-0022-*.md` through `@decision-advisor` (covering
+#       DEC-1, DEC-3, DEC-12, DEC-13 per DEC-19), registered in
+#       `doc/decisions/00-index.md`. It is phase 1's first work item and a
+#       prerequisite deliverable: delivery does not start before the record
+#       exists.
+#   A7  license header: the new guide's header block is generated by
+#       `scripts/add-header-location.sh` (agents never hand-write it) and the guide
+#       declares `ados_distribution: redistributable`; phase 5's done-when runs
+#       the distribution guard so the install set stays consistent.
+#   A8  phase-2 done-when: phase 2 no longer claims corrupt-index recovery. The
+#       corrupt-read refusal and the evidence-preserving replacement are proven by
+#       TC-PROJ-008 at phase 3 and by TC-PROJ-027 at phase 5; phase 2 claims only
+#       the seam behaviour it can prove at its own boundary (TC-PROJ-009).
+#   X-1 mapping: this revision maps 38 ACs and 42 TCs exactly once each.
+#   X-2 index write rule: the spec now pins one read, at most one write, ZERO
+#       writes and no revision advance when nothing changed, and no maintenance on
+#       the `projects list` path. Phase 2's done-when is worded that way.
+#   X-3 composing site: named in phase 4 (see B10/B11 above).
+#   X-4 TDR-0022: scoped into phase 1 (see B12 above).
+#
+# PHASE ORDER AND WHY (spec §18 "Order within the change", with B3 folded in):
+#   1 identity + key derivation + the app-tier policy + the per-project store root,
+#     plus TDR-0022 — everything else consumes them and the isolation evidence is
+#     the ticket's reason to exist
+#   2 the derived host index — discovery cannot exist before it and the surface
+#     reads it
+#   3 the `projects` surface AND its mount, as one indivisible unit (B3) — the
+#     command, the projections, the three error rows, the help entries, the page,
+#     the coverage row/pages root, and the prompt-set entry are jointly
+#     satisfiable only, and the surface is the only observable of the index
+#   4 one policy on every remaining surface (MCP, the daemon settings site, the
+#     bash fallback) and the structural single-implementation pin
+#   5 migration, legacy detection, the four state-location cells, and the guide
+#   6 reconciliation, evidence, and release — the durable record of the delivery
+#
+# AC OWNERSHIP (all 38 ACs, exactly one owning phase each; a later phase may
+# re-run an assertion, which is additive and never transfers ownership):
+#   phase 1  AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4
+#   phase 2  AC-F2-4                    (pruning is index-only; state survives)
+#   phase 3  AC-F1-5, AC-F1-6, AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-5, AC-F3-1,
+#            AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1,
+#            AC-F5-2, AC-F5-3, AC-F9-1, AC-F9-2, AC-F9-3, AC-F9-4
+#   phase 4  AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F7-1
+#   phase 5  AC-F3-5, AC-F8-1, AC-F8-2, AC-F8-3
+#   phase 6  AC-F10-1, AC-F10-2, AC-F10-3
+#   (4 + 1 + 20 + 6 + 4 + 3 = 38; no AC is unmapped and no AC id is invented.)
+#
+# TC OWNERSHIP (42/42, each owned exactly once). Cross-cutting, AC-less by design:
+# TC-PROJ-036 (state contract preserved, NFR-2/NFR-10), TC-PROJ-037 (bounded work,
+# NFR-4), TC-PROJ-038 (test isolation, NFR-8). TC-PROJ-039 is the revert/mutation
+# evidence bundle and owns no AC either; it serves the evidence classes of
+# AC-F1-1, AC-F2-1, AC-F2-4, AC-F2-5, AC-F4-2, AC-F4-3, AC-F6-2, AC-F6-4,
+# AC-F6-5 and AC-F8-2.
+#   phase 1  TC-PROJ-001, TC-PROJ-002, TC-PROJ-003, TC-PROJ-004,
+#            TC-PROJ-038 (cross-cutting)
+#   phase 2  TC-PROJ-009
+#   phase 3  TC-PROJ-005, TC-PROJ-006, TC-PROJ-007, TC-PROJ-008, TC-PROJ-010,
+#            TC-PROJ-011, TC-PROJ-012, TC-PROJ-013, TC-PROJ-014, TC-PROJ-015,
+#            TC-PROJ-016, TC-PROJ-017, TC-PROJ-018, TC-PROJ-019, TC-PROJ-029,
+#            TC-PROJ-030, TC-PROJ-031, TC-PROJ-032, TC-PROJ-037 (cross-cutting),
+#            TC-PROJ-040, TC-PROJ-041
+#   phase 4  TC-PROJ-020, TC-PROJ-021, TC-PROJ-022, TC-PROJ-023, TC-PROJ-024,
+#            TC-PROJ-025
+#   phase 5  TC-PROJ-026, TC-PROJ-027, TC-PROJ-028, TC-PROJ-042
+#   phase 6  TC-PROJ-033, TC-PROJ-034, TC-PROJ-035, TC-PROJ-036 (cross-cutting),
+#            TC-PROJ-039 (evidence bundle)
+#   (5 + 1 + 21 + 6 + 4 + 5 = 42; no TC is unowned and no TC id is invented.)
+#
+# DEVIATIONS from test-plan §7 "Phase grouping", each a fact about where the
+# assertion can be green rather than a scope reduction (the test plan's own rules
+# permit the deviation and ask the plan to say which):
+#   - TC-PROJ-001/002 are owned by phase 1: they read store artifacts directly and
+#     drive delivered commands, resolve the project root through the policy, need
+#     no `projects list` and (per B4) assert absence-of-store-artifacts at the host
+#     root rather than the index set.
+#   - TC-PROJ-005 is owned by phase 3: its assertions include that
+#     `projects list --json` does not report the unbound scope as a project row and
+#     still reports the registered projects, so it cannot be green before the
+#     surface exists. The unbound implementation still lands in phase 1.
+#   - TC-PROJ-006/007/008/010 are owned by phase 3, not phase 2: each asserts
+#     through `projects list`. Only TC-PROJ-009 is index-only, so it is phase 2's
+#     owning TC.
+#   - TC-PROJ-020 is owned by phase 4, not phase 1: it asserts exactly one
+#     derivation site AND all three consuming sites (production, MCP serve, the
+#     runtime-aware edge) with the seven-consumer allowlist, so it cannot be green
+#     before MCP consumes the policy. It no longer asserts prompt-set membership.
+#   - TC-PROJ-030 is owned by phase 3 (the mount unit phase) and not by a later
+#     phase: it is the criterion of the phase that lands all six members together.
+#     Phases 4-6 re-run the help/parity gates but never move the unit.
+#   - TC-PROJ-031 is owned by phase 3 because `packages/cli/src/classify.ts`
+#     resolves an error code absent from ERROR_TABLE to `fallback.internal`, so the
+#     three rows must land with the command that emits them; TC-PROJ-013 in the
+#     same phase asserts those exact codes at exit 1/2, and the rows are part of
+#     the phase-3 mount unit.
+#   - TC-PROJ-037 is owned by phase 3, not phase 2: it measures `projects list`
+#     latency at 25 and 200 projects as well as maintenance cost.
+#   - TC-PROJ-040 is owned by phase 3: cells 1-3 and 5-6 are green in phase 1 (the
+#     file `tests/behaviour/projects-identity.test.ts` is created there), but cell
+#     4 needs the index key guard (phase 2) and the surface (phase 3), so the TC is
+#     green only at phase 3's boundary. AC-F1-6 is therefore owned by phase 3.
+#   - TC-PROJ-042 is owned by phase 5: cells 1 and 3 are `projects list`
+#     behaviours and cell 4 is the marker-write failure, but cell 2 needs the
+#     legacy detector, so the file is green only at phase 5's boundary. AC-F3-5
+#     is therefore owned by phase 5.
+#   - TC-PROJ-039 is owned by phase 6 because it records the red sets produced by
+#     every earlier phase.
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; every line stays within 100 characters):
+#   phase 1  feat(projects): mint checkout identity keys behind an app-tier policy
+#   phase 2  feat(projects): maintain a derived host index with bounded writes
+#   phase 3  feat(projects): mount projects list as one reachable unit
+#   phase 4  feat(projects): consume one state-scope policy on every surface
+#   phase 5  feat(projects): detect legacy stores and document the one-step move
+#   phase 6  docs(projects): reconcile the corpus and close the minor release
+#
+# TEST ISOLATION IS A GATE CONDITION IN EVERY PHASE THAT TOUCHES STATE (NFR-8,
+# TC-PROJ-038, spec RSK-12): every suite creates a per-test host root and a
+# per-test home that is a distinct directory and neither an ancestor of the other
+# (TR-10), sets the brand-derived `<PREFIX>_STATE_DIR` override to the absolute
+# host root, and the fixture guard throws before a store is opened if the root is
+# the live workspace root, an ancestor of it, the home-derived real state
+# directory, or outside the approved base. A post-run fingerprint of the real state
+# directory must be unchanged. No suite may compose the production program with
+# `cwd` set to this repository (an identity marker would be minted in the live git
+# common directory), and the aggregate gate runs as
+# `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`.
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - STATE_SCHEMA_VERSION stays `delivery.state.v1`; workspaceId stays `default`;
+#     the store artifact names, key prefixes, record kinds, fold rules, validation
+#     predicates and modes inside a root are unchanged (NG-1, DEC-2). Isolation
+#     comes from the root; `packages/core/src/contracts/state.ts` and
+#     `packages/core/src/contracts/registry.ts` are deliberately untouched.
+#   - Project identity is the checkout identity marker in the git COMMON
+#     directory — never the path and never the remote identity (DEC-3, RSK-3,
+#     RSK-4). The key is `<sanitised basename>-<eight lowercase hex of the
+#     identifier>`: the basename is lowercased, non-`[a-z0-9]` runs collapse to one
+#     `-`, leading/trailing separators are stripped, the result is at most 32
+#     characters, a basename that sanitises to nothing falls back to `project`, and
+#     `unbound` is refused as a basename. The mint-time basename travels in the
+#     marker, so a rename cannot re-key a project, and two same-basename checkouts
+#     cannot collide by construction (AC-F1-6, DEC-18).
+#   - The identity outcome is a closed table (DEC-17): not a work tree →
+#     `unbound` (exit 0, one warning, never a refusal); git metadata present but
+#     unusable (an empty `gitdir:` value) → identity refusal; marker absent →
+#     mint; marker unreadable, invalid, missing a field, or inconsistent with its
+#     key/identifier → identity refusal; marker write failure → state-location
+#     failure. `findGitRoot` returning `undefined` is the `unbound` state and is
+#     never an identity failure.
+#   - The host root is the delivered override-aware rule, implemented ONCE inside
+#     `packages/core/src/app/state-scope.ts`: an absolute `<PREFIX>_STATE_DIR` wins,
+#     otherwise the injected home plus `brand.stateDirectoryName`; a non-absolute
+#     override is `config.value.invalid`; the `_STATE_DIR` suffix, the override read
+#     and its precedence appear in exactly one place. No surface composes
+#     home-plus-brand inline afterwards (DEC-12, NFR-9, AC-F6-1).
+#   - The host index is `<host root>/host-index.json` with schema identity
+#     `delivery.projects.host-index.v1`, declared once in
+#     `packages/core/src/contracts/projects.ts`; its name is excluded by name from
+#     the legacy-detection predicate, together with the host-wide owner-hold marker
+#     and the `unbound` scope (A4). The index is derived, revisioned, never
+#     authoritative, and always re-derived for `stateLocation`.
+#   - Index maintenance: at most once per store-opening invocation inside a
+#     checkout; exactly one read and at most one write; ZERO writes and no revision
+#     advance when nothing changed; never run on the `projects list` path (A3,
+#     DEC-5, AC-F3-4).
+#   - Absent is not corrupt: no index means an empty successful list at revision 0
+#     (DEC-5, DEC-14); a present but unparsable index is corruption for a read,
+#     preserved once as a timestamped sibling before maintenance replaces it.
+#   - `daemonReachable` is `{ reachable, reason? }` with the closed reason
+#     vocabulary of Appendix C; `handoverState` is `engine` | `shell` |
+#     `in-transition` and only ever derived by comparing the folded handover truth
+#     with the derived authority document (Appendix B, DEC-7).
+#   - The owner hold stays host-wide at the host root (DEC-9); no per-project
+#     marker exists, and the hold's marker is never moved by migration.
+#   - The `projects list` envelope adds no top-level key: `data` carries exactly
+#     `projects` and `hostIndexRevision`, and each entry carries exactly
+#     `projectKey`, `root`, `stateLocation`, `daemonReachable`, `handoverState`.
+#   - Exactly three new error rows under one new domain kind
+#     (`projects.identity-unreadable`, `projects.registry-corrupt`,
+#     `projects.state-unavailable`); all three are three-segment codes, so
+#     RESERVED_TWO_SEGMENT_CODES is unchanged, and no existing row is added,
+#     retired, reworded, or reordered.
+#   - No new package, no new external dependency, no new subpath, and no new
+#     hardcoded product or binary literal: every name resolves from the injected
+#     brand identity, marker/index names live in one contracts constant that tests
+#     import rather than spell, and every new document under the scanned `doc/`
+#     roots is registered in the forbidden-literals registry in the phase that
+#     adds it rather than exempted (NFR-10, AC-F9-4): the migration guide in
+#     phase 5, the `feature-projects` page in phase 6.
+#   - Boundaries hold in every phase (`.dependency-cruiser.cjs`,
+#     `.ai/rules/typescript.md`): `packages/core/src/domain` imports `contracts`
+#     only; `packages/core/src/app` is the only tier that may import `domain`,
+#     `config` and `contracts` together; filesystem and git I/O live in
+#     `packages/adapters`; CLI and MCP each own their composition and neither
+#     imports the other; `packages/cli/src/help/prompt-required-commands.ts` stays
+#     dependency-free.
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (`system_spec_update`, `@doc-syncer`;
+# declared here so nothing is dropped after DoD. Plan phase 6 authors the same
+# pages so the handoff is a verification of current truth, not a first write):
+#   - doc/spec/features/feature-state-layer.md: the two-layer state root; the host
+#     index named as the only host-wide INDEX document (the host-wide owner-hold
+#     marker also lives at the host root — do not repeat "the only host-level
+#     document"); the same delivered artifacts opened per project root; the
+#     override-aware rule as the store's host-root rule (the store honours it after
+#     this change); migration is a move, never a rewrite.
+#   - doc/spec/features/feature-cli-entrypoint.md: `projects list` in the
+#     prompt-required table; state resolution stated as the two-layer policy in
+#     `packages/core/src/app/state-scope.ts` that honours the override, replacing
+#     the inline home-plus-brand composition; the unmounted-daemon statement stays
+#     and is referenced by the degradation reason.
+#   - doc/spec/features/feature-branding-seam.md: `stateDirectoryName` names the
+#     host root from which project roots derive (consumer list updated).
+#   - doc/spec/features/feature-projects.md (new): `projects.v1`, the envelope and
+#     text contract, exit codes, the three error identities, discovery and pruning
+#     rules, the handover and daemon projections, the identity marker with its key
+#     format and closed identity outcomes, and the read-only posture.
+#   - doc/spec/features/feature-result-contract.md: the three identities under the
+#     new domain kind (authored in plan phase 3 so the bidirectional sync gate is
+#     green from the phase that emits them; phase 6 re-verifies it).
+#   - doc/spec/features/feature-dispatch-engine.md: the authority view is consumed
+#     from the project state root, and the shell fallback resolves the project root
+#     before reading the document.
+#   - doc/spec/features/feature-owner-gate-sla.md: the owner-hold marker is
+#     host-wide and read at the host root.
+#   - Additive reconciliations beyond spec §16.1, because these pages state a state
+#     root that this change moves and would otherwise contradict the delivered
+#     behaviour: doc/spec/features/feature-config-layer.md (the override rule now
+#     lives in the app-tier policy and the store honours it, so the "not relocated
+#     by this scope" clause is retired and the host root is named),
+#     doc/spec/features/feature-audit-ledger.md (the runtime-aware edge's audit
+#     store resolves the project root through the policy, not home plus brand
+#     inline), doc/spec/features/feature-resident-daemon.md (the socket path and
+#     the supervisor `Environment=` binding derive from the project state root once
+#     a composing site supplies it; the family stays unmounted).
+#   - doc/planning/oss-tooling/backlog.md (M2-S11 progress markers),
+#     doc/planning/oss-tooling/status.md (M2 delivery snapshot per its own
+#     maintenance convention), doc/planning/oss-tooling/cli-command-registry.md
+#     (`projects` row moved from planned to delivered by this change),
+#     doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md (observed
+#     composition gains `projects`; the remaining M2 additions stay planned),
+#     doc/planning/oss-tooling/milestones/m2/commands/projects.md (the B8 contract
+#     refinements; `Status: Proposed (M2)` and the planned-until-exit semantics are
+#     retained), doc/planning/oss-tooling/milestones/m2/README.md (only if its
+#     status note needs adjusting).
+#   - Current-truth facts the reconciliation must state, not paraphrase away:
+#     three derivation sites existed and only the runtime-aware edge honoured the
+#     override before this change, so the store now relocates for a host that sets
+#     it; the resident daemon is still unmounted and the settings resolution has no
+#     caller, so the overview reports the unmounted reason and the socket criterion
+#     is asserted at the composing site; `projects list` is read-only with no
+#     exception; discovery is derived from use and is not a filesystem crawl; two
+#     clones of one remote are two projects, all linked worktrees of one clone are
+#     one project, and two same-basename checkouts are two projects with distinct
+#     keys.
+#   - Decision record: `doc/decisions/TDR-0022-*.md` exists from phase 1 (DEC-19)
+#     and covers DEC-1, DEC-3, DEC-12 and DEC-13; lifecycle phase 7
+#     (`system_spec_update`) verifies it is still indexed and that the system specs
+#     cite it rather than restating it.
+#
+# EVIDENCE DISCIPLINE (spec §17 classes, carried not upgraded):
+#   - Suite: the phase gates below. `mutation-verified` items are proven by
+#     procedures P1..P8 and recorded in TC-PROJ-039 (phase 6) and test-plan §10:
+#     P1 two-layer resolution reverted to the single host root; P2 absent index
+#     mapped to corruption; P3 pruning that deletes the referenced state root; P4
+#     trusting the recorded state location; P5 making `in-transition`
+#     unreachable; P6 widening the bash search instead of resolving the root; P7
+#     removing the legacy detection; P8 reverting the daemon composing site's
+#     argument to the host root (AC-F6-4's own class).
+#   - Review-verified: AC-F8-3, AC-F10-1, AC-F10-2 and the diff halves of
+#     AC-F9-2, AC-F9-3 and AC-F10-3. No permanent suite asserts a diff against a
+#     moving base, so these are recorded as review evidence and never claimed as
+#     suite. The exact review checks are named in TC-PROJ-030 step 6 (M1 snapshot
+#     unmodified), TC-PROJ-031 step 6 (no pre-existing error row touched),
+#     TC-PROJ-035 step 3 (no `package.json`/`pnpm-lock.yaml` change) and
+#     TC-PROJ-034 (the M2 page's error row and daemon example agree with AC-F1-5
+#     and AC-F3-2).
+#   - NFR-2 is asserted by the existing state/audit/retro suites staying green
+#     UNMODIFIED plus a review-verified diff (TC-PROJ-036, phase 6).
+#
+# ROLLBACK: reverting the change restores the single-root behaviour. A host that
+# has already migrated must move the artifacts back; nothing was rewritten and
+# nothing was re-keyed, so the inverse move is sufficient (spec §18, §19). No
+# schema, record, envelope, or exit projection rollback is required, and no feature
+# flag exists because a flag would have to select between two state roots — the
+# ambiguity this change removes. TDR-0022 stays valid as a record of the design
+# even if the change is reverted; a reversal is recorded in the record's history.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-288
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+  escalationTriggers:
+    - decision-record-tdr-0022-missing-or-not-indexed-before-delivery-starts
+    - state-record-contract-schema-version-key-prefix-or-layout-changed
+    - project-key-derived-from-a-path-or-a-remote-instead-of-the-marker
+    - key-not-unique-per-checkout-or-discriminator-dropped
+    - prompt-set-inventory-page-or-error-rows-landed-in-separate-phases
+    - second-state-scope-derivation-or-inline-home-plus-brand-composition
+    - policy-placed-in-the-domain-tier-or-config-still-composes-home-plus-brand
+    - host-index-treated-as-authoritative-or-pruning-deletes-a-state-root
+    - projects-list-writes-index-revision-prunes-or-creates-a-project-root
+    - daemon-or-handover-claim-not-backed-by-a-derived-fact
+    - owner-hold-narrowed-to-a-project
+    - fourth-error-row-or-two-segment-code-added
+    - m1-reference-page-or-existing-error-row-modified
+    - migration-guide-unregistered-new-package-dependency-subpath-or-brand-literal
+    - test-writes-to-the-real-user-state-directory-or-the-live-checkout
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Identity, key derivation, the app-tier policy, per-project store root
+  # Commit: feat(projects): mint checkout identity keys behind an app-tier policy
+  #
+  # Goal: resolve delivery state as two layers — the delivered host root plus a
+  # per-repository project root derived from the checkout identity — behind one
+  # app-tier policy, and open the production store at that root, so two checkouts
+  # of different repositories (even with the same basename) can never write the
+  # same phase document or queue key for one ref.
+  #
+  # Work (1.0 is a prerequisite: delivery does not start before it exists):
+  #  1.0 AUTHOR `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md`
+  #      through `@decision-advisor` (DEC-19): it covers DEC-1 (the durable
+  #      workstation state layout: host root plus `projects/<key>`, host index at
+  #      `<host root>/host-index.json`), DEC-3 (project identity minted from the
+  #      checkout identity marker with the key/discriminator format), DEC-12 (one
+  #      state-scope policy in the app tier, exported from the core root entry,
+  #      consumed by every surface) and DEC-13 (the help gates learn a per-command
+  #      reference-page root), with their consequences for later changes. Register
+  #      it in `doc/decisions/00-index.md` at the next free id. Do NOT restate the
+  #      contents in this plan.
+  #  1.1 packages/core/src/contracts/projects.ts (new, data only): the identity
+  #      marker name and schema, the key format constants and basename bounds, the
+  #      host index artifact name (`host-index.json`), its schema identity
+  #      (`delivery.projects.host-index.v1`) and entry bounds, the project container
+  #      segment, the declared `unbound` segment, the closed identity-outcome
+  #      vocabulary, and the closed daemon/handover vocabularies. No product or
+  #      binary literal; tests import these constants instead of spelling names.
+  #  1.2 packages/core/src/app/state-scope.ts (new, APP tier — never domain): the
+  #      single state-scope rule over injected facts (home, environment record,
+  #      brand state directory name, resolved checkout identity, marker port,
+  #      index port). It owns the HOST-ROOT RULE (the absolute `<PREFIX>_STATE_DIR`
+  #      override wins, otherwise home plus brand, a relative override is
+  #      `config.value.invalid`) — the implementation MOVES here from
+  #      `packages/core/src/config/catalog.ts` — plus the project root
+  #      `<host root>/projects/<key>`, the declared `unbound` scope, the closed
+  #      identity outcome, the key minting rules (sanitised mint-time basename ≤ 32
+  #      chars, `project` fallback, `unbound` refused, discriminator = first eight
+  #      lowercase hex of the identifier), and the marker read validation that
+  #      refuses a key whose basename or discriminator disagrees with the recorded
+  #      identifier. Pure: no filesystem, git, clock, or process access; I/O arrives
+  #      through the injected ports.
+  #  1.3 packages/core/src/config/catalog.ts: remove `resolveStateDirectoryScope`
+  #      and `StateDirectoryScopeInput` once the policy owns the rule (the config
+  #      catalog keeps `resolveDaemonSettings` and everything else, unchanged);
+  #      update `packages/core/src/config/index.ts` and
+  #      `packages/core/src/index.ts` so the policy is exported from the existing
+  #      `@delivery-os/core` root entry and `packages/core/package.json` `exports`
+  #      gains nothing.
+  #  1.4 packages/adapters/src/file/project-identity.ts (new): the create-once
+  #      marker read/mint inside the checkout's git common directory, following the
+  #      delivered dispatch-identity discipline exactly — synced sibling plus link,
+  #      0600, never rewritten, a race loser reads the winner's file, no temp
+  #      sibling left behind, shared by the clone's worktrees, travelling with a
+  #      renamed or moved checkout; a marker that cannot be created is a
+  #      state-location failure, never a path-derived substitute.
+  #  1.5 packages/adapters/src/repo/index.ts: add a closed-outcome checkout read
+  #      that distinguishes "not inside a git work tree" (→ `unbound`) from "git
+  #      metadata present but unusable" (an empty `gitdir:` value → identity
+  #      refusal), reusing `findGitRoot` and `resolveCheckoutGitDirectories`
+  #      internally; no new process spawn, no network, no ascent above the first
+  #      `.git` entry.
+  #  1.6 packages/cli/src/production.ts: split the two roots — `hostRoot` from the
+  #      policy feeds the owner-hold read (host-wide, unchanged semantics), and
+  #      `projectRoot` feeds the store, the dispatch state root, the retro sidecar
+  #      and the coordinator state directory; open the store with workspaceId
+  #      `default` and the unchanged layout; emit exactly one bounded warning and
+  #      open the declared unbound root for an invocation outside any git work tree
+  #      (registering nothing, exit code unchanged); surface the identity refusal
+  #      and the state-location failure as classified failures under the three
+  #      codes declared in phase 3.
+  #  1.7 packages/cli/src/edge.ts: `stateDirectoryFor` consumes the policy instead
+  #      of the removed catalog helper (the runtime-aware edge is the third of the
+  #      three historical derivation sites and honours the override today), and
+  #      `tests/behaviour/config-resolver.test.ts` re-points its host-root
+  #      assertions at the policy. Do not add a second precedence site.
+  #  1.8 Test isolation fixtures (new): tests/fixtures/projects/state-scope.ts
+  #      (approved base `tmp/tmpdir`, host-root factory, a home distinct by
+  #      construction, the brand-derived override name, the pre-write guard, the
+  #      real-state fingerprint, the non-checkout helper with its
+  #      `findGitRoot === undefined` pre-assertion), temp-repos.ts (real `git init`
+  #      repositories, same-basename parents, clones, linked worktrees, nested
+  #      repository, sanitized git environment, GIT_CEILING_DIRECTORIES pinned),
+  #      production.ts (the production-composition harness: host root, home, cwd,
+  #      the declared seams, `run(argv)`, project-root resolution, host/project
+  #      snapshots — and NO way to inject a root or a key), and markers.ts (marker
+  #      read/write helpers for the corruption and copied-marker cells, built on the
+  #      product's own seam).
+  #  1.9 Existing suites that pinned the host-root store path or composed the
+  #      production program from this repository's own `cwd` are updated to derive
+  #      the project root through the policy and to use a temporary checkout or
+  #      non-checkout `cwd`: the queue production harness, the dispatch admission
+  #      fixture, the production-composition suite, the owner-hold
+  #      production-composition suite, and the coordinator/dispatch structural
+  #      composition suites named in scope.
+  #  1.10 Registration: `tests/structure/inventory.json` row and the
+  #      `EXECUTABLE_ALLOWANCES` row in tests/structure/content-inventory.test.ts
+  #      for every new module, and the existing row of every module that gains or
+  #      loses an export (`catalog.ts`, `config/index.ts`, `core/index.ts`,
+  #      `repo/index.ts`, `edge.ts`).
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-PROJ-001  two real checkouts, one ref: disjoint phase documents and
+  #                disjoint queue records under two project roots, and NO store
+  #                artifact at the host root (absence, not an exact set — B4)
+  #   TC-PROJ-002  no read surface observes the other checkout
+  #   TC-PROJ-003  identity matrix: nested, linked worktree, rename, move,
+  #                nested repository
+  #   TC-PROJ-004  two clones are two projects; one clone's worktrees are one;
+  #                marker create-once/0600/no-literal discipline
+  #   TC-PROJ-038  cross-cutting: the isolation guard, the leak detector, and the
+  #                fixture meta-assertions (home distinct from the host root)
+  #
+  # Done when: TDR-0022 exists and is registered in the decision index; those five
+  # suites are green; the store file names under each project root are exactly the
+  # delivered layout and the host root holds no store artifact (and no index — the
+  # index is phase 2's); the policy is the only module that reads `_STATE_DIR` or
+  # composes home plus brand (`grep`-free: `pnpm check:boundaries` plus the phase-4
+  # structural assertion are the permanent guards); `pnpm typecheck`,
+  # `pnpm check:boundaries`, `bun run scripts/checks/prompt-conformance.ts`,
+  # `bun run scripts/checks/workspace-entrypoints.ts`, `tests/structure/subpaths.test.ts`
+  # and `biome check` are green; the existing state, queue, dispatch, coordinator,
+  # config and audit suites are green without assertion edits; no test writes
+  # outside its temporary root.
+  #
+  # Non-goals (a later phase owns each): the host index and maintenance (phase 2);
+  # the `projects` family, its projections, its error rows and its mount (phase 3);
+  # MCP, the daemon settings site and the bash fallback (phase 4); the legacy
+  # detection warning and the guide (phase 5); reconciliation and release
+  # (phase 6).
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "TDR-0022, checkout identity and key minting, the app-tier state-scope policy, and the per-project state root"
+    kind: delivery
+    summary: >-
+      Author TDR-0022 first (the decision record is a prerequisite: delivery does
+      not start before it exists) and then make state resolution two layers behind
+      one app-tier policy: `packages/core/src/app/state-scope.ts` owns the host-root
+      rule (an absolute `<PREFIX>_STATE_DIR` wins, otherwise injected home plus
+      `brand.stateDirectoryName`, a relative override is `config.value.invalid`),
+      the project root `<host root>/projects/<projectKey>`, and the declared
+      `unbound` scope, with the host-root implementation moved out of the config
+      catalog so exactly one home-plus-brand composition and one override
+      precedence remain; the project key is minted once as
+      `<sanitised mint-time basename>-<eight hex of the identifier>` (≤ 32
+      characters, `project` fallback, `unbound` refused) and persisted in a
+      create-once marker inside the git common directory (atomic synced sibling
+      plus link, 0600, never rewritten, shared by the clone's worktrees, travelling
+      with a rename), while the identity outcome is a closed table with git metadata
+      unusable and marker corruption as refusals and a missing marker as mint; the
+      production composition opens the store, the dispatch state root, the retro
+      sidecar and the coordinator state at the project root and keeps the owner-hold
+      read at the host root, and the new suites carry the isolation contract —
+      per-test host root, a home distinct by construction, the brand-derived
+      override, a pre-write guard and a leak fingerprint — with every existing
+      production-composition fixture repointed at the policy.
+    scope:
+      files:
+        - doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md
+        - doc/decisions/00-index.md
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/state-scope.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/index.ts
+        - packages/adapters/src/repo/index.ts
+        - packages/adapters/src/file/project-identity.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/behaviour/config-resolver.test.ts
+        - tests/fixtures/projects/state-scope.ts
+        - tests/fixtures/projects/temp-repos.ts
+        - tests/fixtures/projects/production.ts
+        - tests/fixtures/projects/markers.ts
+        - tests/fixtures/queue/production/harness.ts
+        - tests/fixtures/dispatch/admission.ts
+        - tests/behaviour/projects-scope-isolation.test.ts
+        - tests/behaviour/projects-identity.test.ts
+        - tests/behaviour/production-composition.test.ts
+        - tests/behaviour/owner-hold-production-composition.test.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/structure/coordinator-production-composition.test.ts
+        - tests/structure/coordinator-production-session.test.ts
+        - tests/checks/projects-test-isolation.test.ts
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/state-scope.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: producer
+      - kind: contract-file
+        target: doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-288 in progress; TDR-0022 authored and indexed; phase 1 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Derived host index: document, revision, bounded maintenance
+  # Commit: feat(projects): maintain a derived host index with bounded writes
+  #
+  # Goal: make discovery work without a hand-written registry, and make the index a
+  # derived cache that can never be authoritative over delivery state.
+  #
+  # Work:
+  #  2.1 packages/core/src/contracts/projects.ts: add the index entry payload type
+  #      (project key, identifier, absolute checkout root, derived state location,
+  #      last-written time), the revision type and the bounds (the artifact name and
+  #      schema identity were pinned in phase 1). The index is not a state record
+  #      and adds no record kind.
+  #  2.2 packages/core/src/app/host-index.ts (new, app tier — it composes config and
+  #      contracts and needs no domain import): the pure fold — parse/validate the
+  #      document, upsert the current project, prune only provably dead entries
+  #      (recorded root absent, or the root's marker resolves to a different
+  #      identifier), leave uncertain entries, compute the next revision, re-derive
+  #      every state location from its key and report a disagreement as a warning
+  #      that never redirects a read, and enforce the DEC-18 key guard (a key held
+  #      under a different identifier keeps the existing entry unchanged and yields
+  #      the conflicting-registration outcome). No index write when nothing changed.
+  #  2.3 packages/adapters/src/file/host-index-store.ts (new): read (absent,
+  #      parsable, corrupt), atomic replace through a synced sibling plus rename,
+  #      preserve a corrupt document as a timestamped sibling exactly once before a
+  #      fresh index is written, and expose the index-access fact (read/write/list
+  #      counters) declared among the production composition facts — the counters
+  #      accept no root, no key and no path, so TR-1 still holds.
+  #  2.4 packages/cli/src/production.ts: run maintenance at most once per
+  #      store-opening invocation whose scope resolves inside a checkout — exactly
+  #      one index read, at most one write, ZERO writes and no revision advance when
+  #      nothing changed, no filesystem crawl, and never on the `projects list` path
+  #      (the path does not exist yet; the rule is stated here and asserted by
+  #      TC-PROJ-041 in phase 3). Record the legacy-detection exclusions (the index,
+  #      the owner-hold marker, the `unbound` scope) as declared data for phase 5.
+  #  2.5 packages/core/src/index.ts (B15): the root entry re-exports app symbols by
+  #      an explicit name list, and the CLI may import core only from `.` and its
+  #      declared subpaths, so the new app-tier names the production composition
+  #      consumes (the host-index fold and its result/entry types, and the state
+  #      scope policy already exported in phase 1) are added to that list here.
+  #      This is an additive re-export of an existing module: the core package
+  #      manifest's `exports` map gains nothing, so no new subpath exists, and
+  #      `scripts/checks/workspace-entrypoints.ts` plus
+  #      `tests/structure/subpaths.test.ts` stay green.
+  #  2.6 Registration: inventory and executable-allowance rows for the two new
+  #      modules, and the existing row of the root entry if it lists its exports.
+  #
+  # Test obligations (owning TC; must be green at this boundary):
+  #   TC-PROJ-009  pruning is index-only: the vanished-root entry and the
+  #                re-keyed entry are removed, the referenced state roots are
+  #                byte- and mode-identical afterwards, re-registration restores
+  #                the same key and state location, and a marker replacement
+  #                changes the key (P3 mutation: deleting the referenced state
+  #                root during pruning must red it).
+  #
+  # Done when: TC-PROJ-009 is green; the revision advances by exactly one per
+  # genuine change and does NOT advance (and no write occurs) when nothing changed;
+  # the counter fact shows at most one read and one write per maintaining
+  # invocation; pruning never deletes a state root; the DEC-18 guard leaves the
+  # existing entry byte-identical and advances no revision; the root entry exports
+  # the new app-tier names with `packages/core/package.json` `exports` unchanged;
+  # `tests/structure/inventory.json` and the executable allowlist are updated;
+  # `pnpm typecheck`, `pnpm check:boundaries`,
+  # `bun run scripts/checks/workspace-entrypoints.ts`,
+  # `tests/structure/subpaths.test.ts` and `biome check` are green.
+  # Isolation: the index suites run over the phase-1 host-root/home pair and the
+  # pre-write guard; no suite writes to the real state directory or the live
+  # checkout.
+  # NOT claimed here (A8): corrupt-index READ refusal and evidence-preserving
+  # replacement are proven by TC-PROJ-008 at phase 3 and by TC-PROJ-027 at phase 5;
+  # this phase implements the seam behaviour but asserts only TC-PROJ-009.
+  #
+  # Non-goals: the `projects` surface and its mount (phase 3 — including the
+  # `projects list` write-nothing assertion); MCP, the daemon settings site and the
+  # bash fallback (phase 4); the legacy warning and the guide (phase 5).
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Derived host index: document, revision, bounded maintenance, and the DEC-18 key guard"
+    kind: delivery
+    summary: >-
+      Add the host-level index as a derived, revisioned cache at
+      `<host root>/host-index.json`: one entry per registered project (key,
+      identifier, absolute checkout root, derived state location, last write) plus
+      a schema identity and a monotonic revision; a pure app-tier fold decides the
+      upsert, the provably-dead prune (recorded root absent, or the root's marker
+      now resolves to a different identifier), the revision and the DEC-18 key guard
+      (a key held under another identifier keeps the existing entry unchanged and
+      reports the conflict), while the adapter owns the read, the atomic replace,
+      the corrupt-versus-absent distinction and the once-only preservation of a
+      corrupt document before a fresh index is written; an observability-only
+      index-access fact exposes read/write/list counters without accepting a root,
+      key or path; maintenance runs at most once per store-opening invocation inside
+      a checkout with exactly one read and at most one write, zero writes and no
+      revision advance when nothing changed, never on a `projects list` path, and
+      removes index entries only and never a state root, with every reported state
+      location always re-derived from its key.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/app/host-index.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/adapters/src/file/host-index-store.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/production.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/projects/host-index.ts
+        - tests/fixtures/projects/host-root.ts
+        - tests/behaviour/projects-host-index.test.ts
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/file/host-index-store.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-288 in progress; phase 2 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The `projects` surface AND its mount, as one indivisible unit (B3)
+  # Commit: feat(projects): mount projects list as one reachable unit
+  #
+  # Goal: deliver the host overview — the family's only verb, its contract, its two
+  # health projections, its three error identities — and make it reachable in one
+  # step. This phase is the change's largest slice by design: three pins assert the
+  # composed command set (`scripts/checks/help-guide-coverage.ts` set equality with
+  # the inventory, `tests/checks/reference-page-parity.test.ts` set equality with
+  # PROMPT_REQUIRED_COMMANDS, and TC-ENTRY-009's literal expectation in
+  # `tests/behaviour/entrypoint-composition.test.ts`), so the prompt-set entry, the
+  # command definition and its composition, the help entries, the reference page,
+  # the coverage-inventory row and the three error rows are green only together
+  # (DoR B3, B14; TC-PROJ-030).
+  #
+  # Work:
+  #  3.1 packages/core/src/contracts/projects.ts: the `projects list` command
+  #      identity, the `projects.v1` data shape (`projects[]` with exactly the five
+  #      fields plus `hostIndexRevision`), and the three error codes.
+  #  3.2 packages/core/src/contracts/error-table.ts: add `projects` to DOMAIN_KINDS
+  #      once and exactly three rows (identity-unreadable: refusal, exit 1
+  #      projection; registry-corrupt: state; state-unavailable: state). No existing
+  #      row is added, retired, reworded or reordered; no two-segment reservation
+  #      changes because all three codes are three-segment.
+  #  3.3 doc/spec/features/feature-result-contract.md: document the three rows so
+  #      the bidirectional sync gate is green from this boundary.
+  #  3.4 packages/core/src/app/projects.ts (new, app tier): the handover projection
+  #      (engine only on agreement between the folded latest handover operation and
+  #      the derived authority document; shell on dual-run or absent evidence;
+  #      in-transition only on a detected disagreement, including a malformed
+  #      document), the daemon projection (the closed reason selector over the
+  #      unmounted build, an absent state root, an absent socket and a refused
+  #      connect), the deterministic row ordering by project key, the DEC-16 naming
+  #      rule (invoking checkout root plus the failing `.git` path, or the key and
+  #      identifier the marker holds; the conditional key/state-location naming for
+  #      state failures per DEC-8/DEC-16), the state-location classification (first
+  #      use, present-but-unreadable root, uncreatable marker) with the legacy cell
+  #      wired in phase 5 when its detector exists, and the read-side assembly over
+  #      the injected index, policy, handover and probe ports. Read-only: it never
+  #      writes, never prunes, never migrates, never creates a project root and
+  #      never runs maintenance.
+  #  3.5 packages/adapters/src/daemon/unix.ts: add one bounded, read-only connect
+  #      probe (declared timeout, no payload, no command, no authentication attempt,
+  #      and no call at all when the build declares no daemon capability), exported
+  #      from the daemon adapter barrel.
+  #  3.6 packages/cli/src/commands/projects.ts (new): the closed grammar (`list`
+  #      only; `--json` global; an unknown or absent verb refused under the shared
+  #      invocation classification at exit 1 without reading the index), the
+  #      envelope projection, and the exit projection (0 produced, 1 refused, 2
+  #      state). packages/cli/src/output/projects-text.ts (new) renders the
+  #      deterministic table `key | root | state | daemon | handover` sorted by key,
+  #      with the daemon reason rendered as its token and never as a bare negative.
+  #      Both are registered through the existing barrels.
+  #  3.7 packages/cli/src/production.ts composes the family over the index seam,
+  #      the policy, the handover fold, the mount capability and the probe, and keeps
+  #      the `projects list` path free of maintenance.
+  #  3.8 THE MOUNT UNIT, landed together: (a)
+  #      packages/cli/src/help/prompt-required-commands.ts gains `projects`; (b)
+  #      packages/cli/src/help.ts gains the root entry, the family entry and the
+  #      `projects list` entry, each with the five declared sections, the shared
+  #      exit-code block, at least one example, and a see-also pointer to the M2
+  #      page; (c) doc/planning/oss-tooling/milestones/m2/commands/projects.md gains
+  #      `--help` and `--version` and is registered as the reference page, keeping
+  #      `Status: Proposed (M2)` (its content refinements are phase 6's work);
+  #      (d) tests/fixtures/help-guide/coverage.json gains `projects` in `commands`,
+  #      the M2 page in `referencePages`, and the per-command page-root entry; (e)
+  #      scripts/checks/help-guide-coverage.ts and
+  #      tests/checks/reference-page-parity.test.ts learn that page-root mapping so
+  #      an M2 page serves an M2 command while every M1 page stays byte-unchanged
+  #      (DEC-13), with tests/checks/help-guide-coverage-mutants.test.ts proving the
+  #      map is honoured and that an unregistered page still fails; (f)
+  #      packages/cli/src/edge.ts registers the family — `ConfigProgramOptions`
+  #      gains the `projects` composition option and the `commands` map gains the
+  #      `projects` definition behind its explicit `if (options.projects !==
+  #      undefined)` block — because `selectPromptRequiredProgram` THROWS for a
+  #      prompt-required name the program lacks, and `production.ts` only passes
+  #      options to `createConfigProgram`; (g)
+  #      tests/behaviour/entrypoint-composition.test.ts updates TC-ENTRY-009's
+  #      literal EXPECTED command list (the third pin, B14). No intermediate tree is
+  #      green: the prompt set, the inventory, the page, the rows, the composition
+  #      and the composition expectation land in this one phase.
+  #  3.9 Registration: inventory and executable-allowance rows for the new modules
+  #      and the new probe export on the existing daemon adapter file.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-PROJ-005  declared `unbound` scope: exit unchanged, no registration, no
+  #                project root, one bounded warning, never a path-derived key, and
+  #                not reported as a project row
+  #   TC-PROJ-006  absent index is an ordinary first run (P2 mutation)
+  #   TC-PROJ-007  discovery without a registry: two rows, five fields, from any
+  #                directory
+  #   TC-PROJ-008  corrupt index: refusal that changes no file, then
+  #                evidence-preserving recovery
+  #   TC-PROJ-010  monotonic revision on change, zero writes when unchanged; state
+  #                location always re-derived (P4)
+  #   TC-PROJ-011  envelope shape: exactly five fields, key order, no new
+  #                top-level key
+  #   TC-PROJ-012  deterministic table, reason rendering, read-only listing
+  #   TC-PROJ-013  exit-code matrix, DEC-16/DEC-17 naming, bytes-provable
+  #                provocations, anti-collapse controls, three identities
+  #   TC-PROJ-014  handover `engine` and `shell` rows
+  #   TC-PROJ-015  every disagreement cell is `in-transition` (P5)
+  #   TC-PROJ-016  no invented handover state; unreadable state is an error
+  #   TC-PROJ-017  unmounted ship: declared reason, no probe, exit 0
+  #   TC-PROJ-018  mounted probe: bound socket reachable, absent socket declared
+  #   TC-PROJ-019  closed vocabulary, bounded probe, no write, no command
+  #   TC-PROJ-029  `projects` reachable from the built help surface, no side
+  #                effects
+  #   TC-PROJ-030  the mount unit as one indivisible unit: prompt set, help
+  #                entries, page with `--help`/`--version`, inventory row and page
+  #                root, error rows, the composed command definition and TC-ENTRY-009's
+  #                expectation all present in one run; the coverage gate and the
+  #                parity test green with set equality both ways; the restriction
+  #                step keeps `projects`; the mutants still detect a removed row and
+  #                a page missing `--version`; the review half records zero changed
+  #                paths under the M1 snapshot
+  #   TC-PROJ-031  exactly three error rows under one new domain kind, documented
+  #                both ways (the unchanged-row half is review-verified)
+  #   TC-PROJ-032  no new hardcoded product or binary literal
+  #   TC-PROJ-037  cross-cutting: bounded work — latency at 25 and 200 projects,
+  #                maintenance cost, read/write counts, no crawl
+  #   TC-PROJ-040  same-basename checkouts: key shape, distinctness, immutability,
+  #                fallback and bounds, and the DEC-18 collision guard through the
+  #                surface (cells 1-3 and 5-6 are exercised from phase 1)
+  #   TC-PROJ-041  `projects list` writes nothing: byte/mode/mtime snapshot of the
+  #                host index and the `projects/` container across the
+  #                never-invoked, after-one-store-opening-invocation and
+  #                list-only states, plus the absence of store artifacts
+  #
+  # Done when: those twenty-one suites are green; the three codes resolve through
+  # `packages/cli/src/classify.ts` (never `fallback.internal`);
+  # `pnpm build && bun test tests/behaviour/projects-help.test.ts` passes for the
+  # subprocess cell; `bun test tests/behaviour/entrypoint-composition.test.ts`
+  # (TC-ENTRY-009) is green with `projects` composed and advertised;
+  # `pnpm check:help`, the parity and mutants suites,
+  # `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts`,
+  # `bun run scripts/checks/error-table-sync.ts`,
+  # `bun run scripts/checks/forbidden-literals.ts`,
+  # `bun run scripts/checks/privacy-literals.ts`, `pnpm check:boundaries` and the
+  # aggregate gate (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) are
+  # green; the two-run text output is byte-identical and the surface writes nothing.
+  # Isolation: the surface suites use the phase-1 host-root/home pair, the
+  # production harness (which exposes no way to inject a root or a key), real-socket
+  # cells for the mounted probe, and the leak fingerprint; the 200-row latency cell
+  # seeds index rows rather than 200 real checkouts.
+  # Cross-reference (not owned here): TC-PROJ-040 cells 1-3 and 5-6 are exercised by
+  # the identity file created in phase 1, but the TC is owned by this phase because
+  # cell 4 needs the index and the surface.
+  #
+  # Non-goals: MCP, the daemon settings composing site and the bash fallback
+  # (phase 4); the legacy-detection warning, the guide and the state-location cell
+  # that needs the detector (phase 5, which owns TC-PROJ-042); the M2 page's
+  # contract refinements and the system-spec reconciliation (phase 6). No phase
+  # after this one may move a member of the mount unit; they re-run the gates only.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "`projects` surface and its mount unit: envelope, table, exits, handover, daemon, identities, help, page, inventory"
+    kind: delivery
+    summary: >-
+      Deliver the family's only verb and mount it in one indivisible step: the
+      envelope carries `data.projects[]` with exactly projectKey, root,
+      stateLocation, `daemonReachable` as `{ reachable, reason? }` and
+      handoverState, plus `data.hostIndexRevision`, with no new top-level key, while
+      the human output is a byte-deterministic table key|root|state|daemon|handover
+      sorted by key; the handover state is derived by comparing the folded latest
+      handover operation with the project's derived authority document (engine only
+      on agreement, shell as the safe default, in-transition only on a detected
+      disagreement), daemon reachability comes from an injected mount capability
+      with the closed reason vocabulary so the shipped build declares the unmounted
+      reason without probing while a mounted composition performs one bounded
+      write-free connect, the four state-location cells are classified honestly
+      with an absent root as first use and a present-but-unreadable root as
+      `projects.state-unavailable`, a same-basename collision is refused by the
+      DEC-18 guard instead of adopting another project's root, the three error
+      identities land in one new domain kind with the result-contract page synced
+      and the DEC-16 naming rule implemented exactly, and the same commit mounts the
+      family: `projects` in the prompt-required set, its definition composed in the
+      edge's command map so the entrypoint does not throw, the root/family/verb help
+      entries with an example and the shared exit block, the M2 reference page with
+      `--help`/`--version`, the coverage-inventory row and the per-command page root
+      in both help gates, and the entrypoint composition expectation — because the
+      coverage gate, the parity test and that expectation each pin the command set,
+      so no intermediate tree is green.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/app/projects.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/adapters/src/daemon/unix.ts
+        - packages/adapters/src/daemon/index.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/projects-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/spec/features/feature-result-contract.md
+        - scripts/checks/help-guide-coverage.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/checks/reference-page-parity.test.ts
+        - tests/checks/help-guide-coverage-mutants.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/projects/production.ts
+        - tests/fixtures/projects/host-index.ts
+        - tests/fixtures/projects/host-root.ts
+        - tests/behaviour/projects-identity.test.ts
+        - tests/behaviour/projects-host-index.test.ts
+        - tests/behaviour/projects-list-contract.test.ts
+        - tests/behaviour/projects-handover.test.ts
+        - tests/behaviour/projects-daemon-reachability.test.ts
+        - tests/behaviour/projects-help.test.ts
+        - tests/behaviour/projects-performance.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/help-guide/coverage.json
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-288 in progress; phase 3 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — One state-scope policy on every remaining surface
+  # Commit: feat(projects): consume one state-scope policy on every surface
+  #
+  # Goal: leave exactly one implementation of the state-scope rule and make every
+  # surface that opens a store or derives a state path consume it, so no surface
+  # keeps reading the old location and the store honours the delivered override.
+  #
+  # Work:
+  #  4.1 packages/mcp/src/serve.ts: compose its store and its owner-hold read over
+  #      the policy instead of its own inline derivation (fence namespace `mcp`
+  #      unchanged; tool names, payloads and error parity unchanged). The MCP
+  #      surface must not import the CLI.
+  #  4.2 The daemon settings composing site (B10/B11, X-3): the ONE place that
+  #      supplies a state directory to `resolveDaemonSettings` gains its single call
+  #      site in `packages/cli/src/daemon-compose.ts`, passing the POLICY-DERIVED
+  #      PROJECT state root. Two facts must be recorded, not glossed:
+  #      `resolveDaemonSettings` has NO caller anywhere in `packages/**` today, and
+  #      `daemon-compose.ts` derives NO socket path of its own (it consumes
+  #      `settings.socketPath`/an override). This phase therefore creates the single
+  #      call site and pins its argument; it does not "add socket derivation" to that
+  #      module and does not mount the daemon family (NG-4). The structural half
+  #      asserts the argument is the policy-derived project root and that the
+  #      settings resolution has exactly one call site.
+  #  4.3 packages/core/src/app/state-scope.ts: expose the host root and the project
+  #      root as the two declared outputs every consumer selects from, so the
+  #      owner-hold read (host root) and the store/socket/audit paths (project root)
+  #      cannot diverge.
+  #  4.4 scripts/lib/dispatch-authority.sh: resolve the project state root before
+  #      looking for the derived authority document, keeping the environment
+  #      override precedence first and the repository-local then home defaults, and
+  #      keeping `find -maxdepth 2` unchanged — the document now sits at
+  #      `documents.<workspace>/dispatch-authority.json` inside the project root, so
+  #      widening the search instead of resolving the root would leave the bash
+  #      stack permanently on dual-run (RSK-10). An absent marker or project root
+  #      resolves to dual-run exactly as before.
+  #  4.5 tests/structure/projects-state-scope-policy.test.ts (new): the single
+  #      implementation in `packages/core/src/app/state-scope.ts`, no new subpath,
+  #      all three historical sites consuming it, the seven-consumer allowlist plus
+  #      the shell fallback, one `_STATE_DIR` read and one precedence site, the pure
+  #      override-branch assertions, and the seeded negative controls.
+  #  4.6 tests/structure/dispatch-bash-authority.test.ts: extend the existing owner
+  #      of the "authority read is a plain file read" invariant with the project-root
+  #      resolution and the unchanged `-maxdepth 2`; keep
+  #      `scripts/.tests/test-dispatch-bash-fallback.sh` green with its fixture
+  #      updated to a project-root layout.
+  #  4.7 tests/behaviour/mcp-node-smoke.test.ts: keep the MCP smoke hermetic now
+  #      that the MCP store resolves a project root (a temporary checkout or a
+  #      non-checkout cwd; never this repository's own checkout).
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-PROJ-020  structural: one policy in the app tier, exported from the root
+  #                entry with no new subpath, three derivation sites and the
+  #                seven-consumer allowlist consuming it, zero inline composition,
+  #                one override read and one precedence site (revert-detecting)
+  #   TC-PROJ-021  write placement, override honouring (including the audit
+  #                ledger), read parity across the command families, and the exact
+  #                host-root set after one store-opening invocation (P1 revert)
+  #   TC-PROJ-022  MCP and CLI open the identical project root under the override
+  #   TC-PROJ-023  daemon socket through the composing site: its argument is the
+  #                policy-derived project root, the settings resolution has exactly
+  #                one call site, derivation and containment hold in the project
+  #                root (proven by mutation P8, whose red set is recorded with the
+  #                phase-6 evidence bundle)
+  #   TC-PROJ-024  bash fallback resolves the project root, keeps override
+  #                precedence, and does not widen its search (P6 mutation)
+  #   TC-PROJ-025  owner hold stays host-wide across projects
+  #
+  # Done when: those six suites are green plus
+  # `bash scripts/.tests/test-dispatch-bash-fallback.sh`; the structural scan names
+  # any added consumer in its failure message; `pnpm check:boundaries` green with no
+  # new dependency edge and `packages/core/package.json` `exports` unchanged; the
+  # existing MCP parity, state, audit, retro and config suites are green.
+  # The P8 mutation itself is executed and recorded at phase 6 (TC-PROJ-039); this
+  # phase's gate asserts the structural half and the behavioural cells.
+  #
+  # Non-goals: the legacy detection warning, the guide and the state-location cell
+  # that needs the detector (phase 5); reconciliation and release (phase 6). The
+  # mount unit from phase 3 is untouched and its gates are re-run green.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "One state-scope policy on every remaining surface: MCP, the daemon settings site, the bash fallback"
+    kind: delivery
+    summary: >-
+      Close the single-policy invariant on the surfaces phase 1 did not convert:
+      the MCP serve composition consumes the policy for its store and its owner-hold
+      read (tool names, payloads and error parity unchanged, and no MCP import of the
+      CLI), the daemon settings composing site gains its single
+      `resolveDaemonSettings` call site and supplies the policy-derived PROJECT state
+      root rather than the host root — recorded explicitly, because that settings
+      resolution has no caller in the delivered tree and the daemon composition
+      derives no socket path of its own — the policy exposes the host root and the
+      project root as two declared outputs so the owner-hold read and the store
+      paths cannot diverge, and the CLI-independent bash authority read resolves the
+      project root before locating the derived document while keeping its override
+      precedence and its `-maxdepth 2` search; the structural suite pins one
+      implementation, no new subpath, all three historical sites, the seven-consumer
+      allowlist plus the shell fallback, one override read and one precedence site,
+      and it fails by name on any eighth surface that re-derives a path.
+    scope:
+      files:
+        - packages/core/src/app/state-scope.ts
+        - packages/mcp/src/serve.ts
+        - packages/cli/src/daemon-compose.ts
+        - scripts/lib/dispatch-authority.sh
+        - scripts/.tests/test-dispatch-bash-fallback.sh
+        - tests/structure/projects-state-scope-policy.test.ts
+        - tests/structure/dispatch-bash-authority.test.ts
+        - tests/behaviour/projects-state-placement.test.ts
+        - tests/behaviour/projects-scope-mcp.test.ts
+        - tests/behaviour/projects-daemon-socket.test.ts
+        - tests/behaviour/projects-owner-hold.test.ts
+        - tests/behaviour/mcp-node-smoke.test.ts
+        - tests/fixtures/dispatch/admission.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/state-scope.ts
+        role: producer
+      - kind: contract-file
+        target: scripts/lib/dispatch-authority.sh
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-288 in progress; phase 4 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Migration, legacy detection, the four state-location cells, the guide
+  # Commit: feat(projects): detect legacy stores and document the one-step move
+  #
+  # Goal: make the upgrade path one reversible directory move, make the unmigrated
+  # condition visible instead of silent, and classify every state-location cell
+  # honestly (AC-F3-5, AC-F8-1/2/3).
+  #
+  # Work:
+  #  5.1 packages/adapters/src/file/state-root-inventory.ts (new, small): read the
+  #      delivered artifact names present directly at a state root (no recursion),
+  #      so the composition can tell "the host root still holds a store" from "it
+  #      does not" without opening a store there.
+  #  5.2 packages/core/src/app/state-scope.ts: the pure legacy-detection predicate —
+  #      the host root holds at least one delivered store artifact AND the resolved
+  #      project state root is absent AND the artifact is not the host index, the
+  #      owner-hold marker, or the `unbound` scope (A4) — returning the declared
+  #      warning fact. No move, no delete, no migration command exists anywhere.
+  #  5.3 packages/cli/src/production.ts: emit exactly one bounded warning naming the
+  #      migration note on a state-opening invocation, move nothing, delete nothing,
+  #      leave the exit code unchanged, and emit nothing on a migrated host.
+  #  5.4 packages/core/src/app/projects.ts: the `projects list` path reports the
+  #      same warning once for the legacy cell (AC-F3-5 cell 2 classifies it as a
+  #      warning, not `projects.state-unavailable`) while staying write-free, and
+  #      reports `projects.state-unavailable` with the conditional naming for a
+  #      present-but-unreadable root and an uncreatable marker (DEC-8/DEC-16).
+  #  5.5 doc/guides/migrating-to-per-repository-state.md (new guide): the
+  #      primary-checkout designation, the artifact set moved as one unit with names
+  #      and modes unchanged, the verification step, the fresh-start consequence for
+  #      other checkouts, owner-hold continuity at the host root, the `unbound` scope
+  #      for out-of-checkout invocations, the environment-override caveat, the
+  #      reversal step, and the statement that the marker is authoritative and must
+  #      not be deleted. Its header block is GENERATED with
+  #      `scripts/add-header-location.sh doc/guides/migrating-to-per-repository-state.md`
+  #      (never hand-written — A7) and it declares
+  #      `ados_distribution: redistributable`.
+  #  5.6 scripts/checks/forbidden-literals.registry.json: add the guide to
+  #      `registered` in this same phase (B9); the scan reds on an unregistered new
+  #      doc under `doc/`, so the registry row and the guide are one commit. No seed
+  #      may be removed and no shipped source file may be allowlisted.
+  #  5.7 Registration: inventory and executable-allowance row for the new adapter
+  #      module.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-PROJ-026  migration preserves every byte and mode, the audit chain still
+  #                verifies, the retro sidecar still reads, the same reads work
+  #                after the move, and the inverse move restores the pre-migration
+  #                reads
+  #   TC-PROJ-027  legacy detection warns once, moves nothing, deletes nothing,
+  #                keeps the exit code, and stays silent on a migrated host
+  #                (P7 mutation)
+  #   TC-PROJ-028  the guide's content, distribution class, header block and
+  #                registry registration (review-verified content plus the suite
+  #                halves: the distribution guard and the literal scan)
+  #   TC-PROJ-042  the four state-location cells: first use (exit 0, no warning,
+  #                `shell`, an absent-root daemon reason), the legacy warning as a
+  #                warning and not an error, a present-but-unreadable root naming
+  #                key and state location, and an uncreatable marker naming the
+  #                checkout root and the failing marker path — with no error outside
+  #                the three identities and the exit set `{0, 2}`
+  #
+  # Done when: those four suites are green plus
+  # `bash scripts/.tests/test-doc-distribution.sh` (the guide is a
+  # `redistributable` `doc/guides/*.md` file and that guard is NOT part of
+  # `pnpm check`, so it is run explicitly here and in phase 6),
+  # `bun run scripts/checks/forbidden-literals.ts` and
+  # `bun test tests/checks/forbidden-literals.test.ts`; the registry diff at THIS
+  # boundary is exactly one addition (the migration guide) with unchanged scopes
+  # and seeds — the final tree carries two, because the reconciliation phase
+  # registers the `feature-projects` page it adds (B13); no product code path moves
+  # or deletes a state file; `biome check` green.
+  # Isolation: the migration fixture is built entirely through the delivered APIs
+  # under a per-test host root, moved with plain `rename`, and cleaned in a
+  # `finally`; the uncreatable-marker cell is provoked structurally (the marker
+  # parent is a regular file), not by permissions.
+  #
+  # Non-goals: automatic migration, a migration command, re-attribution of
+  # historical records, per-project owner holds (all out of scope, spec §7.2);
+  # reconciliation and release (phase 6).
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "One-step migration, legacy detection, the four state-location cells, and the delivered migration guide"
+    kind: delivery
+    summary: >-
+      Turn the upgrade into a documented, reversible move and classify every
+      state-location outcome honestly: a state-opening invocation whose scope
+      resolves to an absent project root while the host root still holds a delivered
+      store artifact emits exactly one bounded warning naming the migration note,
+      moves nothing, deletes nothing and changes no exit code (a migrated host emits
+      none, and the host index, the owner-hold marker and the `unbound` scope are
+      excluded from the predicate by name), the `projects list` path reports the same
+      warning once without writing and reports `projects.state-unavailable` — with
+      the DEC-16 conditional naming — for a present-but-unreadable root and an
+      uncreatable marker, while an absent root stays first use; the guide ships with
+      a generated header block, a declared distribution class and its
+      forbidden-literals registry row in the same commit, and states the primary
+      designation, the one move, the verification, the fresh-start consequence, the
+      owner-hold continuity, the unbound scope, the now-honoured override and the
+      reversal.
+    scope:
+      files:
+        - packages/adapters/src/file/state-root-inventory.ts
+        - packages/adapters/src/file/index.ts
+        - packages/core/src/app/state-scope.ts
+        - packages/core/src/app/projects.ts
+        - packages/cli/src/production.ts
+        - doc/guides/migrating-to-per-repository-state.md
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/behaviour/projects-migration.test.ts
+        - tests/behaviour/projects-list-contract.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/file/state-root-inventory.ts
+        role: producer
+      - kind: contract-file
+        target: scripts/checks/forbidden-literals.registry.json
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-288 in progress; phase 5 evidence recorded in pm-notes notes"
+    weightClass: standard
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Reconciliation, evidence, and the five-package minor release
+  # Commit: docs(projects): reconcile the corpus and close the minor release
+  #
+  # Goal: leave the durable record correct — the M2 page's contract refinements,
+  # the system specs, the new feature page, the planning corpus, the execution
+  # evidence, and the release artifact — and close the change. Nothing here changes
+  # product behaviour.
+  #
+  # Work:
+  #  6.1 doc/planning/oss-tooling/milestones/m2/commands/projects.md (B8): complete
+  #      the contract refinement — (a) the `projects.identity-unreadable` row no
+  #      longer claims "the root is not a git work tree" (that condition is the
+  #      declared `unbound` scope at exit 0) and names the marker and git-metadata
+  #      conditions instead; (b) a new explicit `unbound` row (exit 0, one warning,
+  #      no registration); (c) the closed `daemon` column vocabulary
+  #      (`daemon-not-mounted`, `state-absent`, `socket-absent`,
+  #      `socket-unreachable`, reachable) in the OUTPUT text AND the EXAMPLES,
+  #      replacing bare `reachable`/`unreachable`; (d) `projects.state-unavailable`
+  #      documented as present-but-unreadable or unestablishable, with an absent root
+  #      being first use; (e) the `state` example path aligned with
+  #      `<host root>/projects/<key>`. Keep `Status: Proposed (M2)` and the
+  #      planned-until-M2-exit semantics; the page remains the one place the pack's
+  #      own command page is restated, as a refinement under the pack's rule.
+  #  6.2 The system specs named in the header's lifecycle-phase-7 handoff
+  #      obligations are authored here so the handoff is a verification:
+  #      feature-state-layer, feature-cli-entrypoint, feature-branding-seam,
+  #      feature-dispatch-engine, feature-owner-gate-sla, and the new
+  #      feature-projects page. The state-layer page must not repeat "the only
+  #      host-level document" — the host-wide owner-hold marker also lives at the
+  #      host root. Three additive reconciliations are included because those pages
+  #      state a state root this change moves: feature-config-layer (the override
+  #      rule now lives in the app-tier policy and the store honours it; the
+  #      "not relocated by this scope" clause is retired), feature-audit-ledger
+  #      (the edge's audit store resolves the project root through the policy), and
+  #      feature-resident-daemon (the socket path and supervisor `Environment=`
+  #      binding derive from the project state root once a composing site supplies
+  #      it, while the family stays unmounted). feature-result-contract was authored
+  #      in phase 3 and is re-verified here without being re-scoped.
+  #  6.3 The planning corpus records the delivery per its own conventions: the
+  #      M2-S11 backlog progress markers, the M2 status snapshot entry, the command
+  #      registry row moving `projects` from planned to delivered by this change, the
+  #      M2 entrypoint delta listing `projects` as mounted while the other M2
+  #      additions stay planned, and the M2 pack index only if its status note needs
+  #      adjusting.
+  #  6.4 TDR-0022 verification: the record authored in phase 1 is present, indexed
+  #      and cited by the changed system specs; this phase does not author it.
+  #  6.5 The release artifact: exactly one added changeset,
+  #      `.changeset/gh-288-multi-repo-workstations-minor.md`, declaring all five
+  #      fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`,
+  #      `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) at
+  #      `minor` with a non-empty body. `tests/checks/privacy-release.test.ts`
+  #      TC-RELEASE-001/002 pins exactly that shape: a `patch` entry, a missing
+  #      package, a sixth package, `@delivery-os/testkit`, or a second added
+  #      changeset fails the gate, and every pre-existing changeset stays
+  #      byte-identical. The no-dependency/no-lockfile clause of AC-F10-3 is
+  #      review-verified by diffing the branch for `package.json` and
+  #      `pnpm-lock.yaml`; the release suite cannot assert it (B10).
+  #  6.6 Evidence: test-plan §10 records per-TC execution evidence, the
+  #      informational wall-clock per new file, and the P1..P8 revert/mutation
+  #      bundle (TC-PROJ-039), including P8 (revert the daemon composing site's
+  #      argument to the host root and confirm the assertion reds) and P4's
+  #      unchanged-state half (zero writes, no revision advance): each procedure
+  #      applied, its named assertion red under the configuration that must red,
+  #      restored, and re-run green.
+  #  6.7 Registration and indexing (B13, F5): the new
+  #      `doc/spec/features/feature-projects.md` is added to
+  #      `scripts/checks/forbidden-literals.registry.json` `registered` in this
+  #      phase — it is absent at `corpusBaseline` and the doc-class scan fails an
+  #      unregistered new doc, so `pnpm check` would red on the page — and its row
+  #      is added to `doc/00-index.md`, which hand-lists every feature page. The
+  #      page declares `ados_distribution: internal` like every other feature spec;
+  #      `doc/00-index.md` keeps its `redistributable` marker. The registry diff in
+  #      the final tree is exactly two additions (the phase-5 guide and this page),
+  #      with unchanged scopes and seeds and no shipped-source allowlist entry.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-PROJ-033  system-spec reconciliation (review-verified)
+  #   TC-PROJ-034  planning-corpus reconciliation, including the M2 page's
+  #                error-row/`unbound`-row/daemon-vocabulary/state-path agreement
+  #                with AC-F1-5 and AC-F3-2 (review-verified)
+  #   TC-PROJ-035  release changeset shape (suite, TC-RELEASE-001/002) plus the
+  #                review-verified no-dependency/no-lockfile diff
+  #   TC-PROJ-036  cross-cutting: the state contract preserved and the existing
+  #                state/audit/retro/inventory suites green without modification
+  #                (the diff half is review-verified)
+  #   TC-PROJ-039  the revert and mutation evidence bundle P1..P8 (review-verified;
+  #                it serves the evidence classes of AC-F1-1, AC-F2-1, AC-F2-4,
+  #                AC-F2-5, AC-F4-2, AC-F4-3, AC-F6-2, AC-F6-4, AC-F6-5, AC-F8-2)
+  #
+  # Done when: every earlier phase's owning TCs are green in one run;
+  # `bun test tests/checks/privacy-release.test.ts` (release shape) is green and the
+  # branch diff for `package.json`, `pnpm-lock.yaml` and
+  # `packages/*/package.json` is empty (the review-verified half of AC-F10-3);
+  # `bun run scripts/checks/forbidden-literals.ts` and
+  # `bun test tests/checks/forbidden-literals.test.ts` are green with the final-tree
+  # registry diff at exactly two additions (the phase-5 guide and the
+  # `feature-projects` page) and unchanged scopes and seeds;
+  # `bash scripts/.tests/test-doc-distribution.sh` is green — run explicitly,
+  # because it is NOT part of `pnpm check` and this phase edits the scanned
+  # `doc/00-index.md` and adds the `internal` feature page; `doc/00-index.md` links
+  # the new feature page; the aggregate gate
+  # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) is green; and
+  # `./node_modules/.bin/delivery-os plan validate GH-288 --json` answers valid.
+  #
+  # Phase-7 handoff obligations (see the header block; nothing is silently
+  # dropped): the seven system-spec pages, the five planning-corpus documents, the
+  # M2 page refinement, TDR-0022 and the current-truth facts listed there are the
+  # `@doc-syncer` inputs for lifecycle phase 7 (`system_spec_update`), which
+  # re-verifies them before DoD. The PR is opened at lifecycle phase 11 by
+  # `@pr-manager` and recorded as a pm-notes `notes:` entry; it is not a
+  # deliverable of this phase.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Reconciliation, execution evidence, and the five-package minor release"
+    kind: delivery
+    summary: >-
+      Author the durable record and close the release without changing product
+      behaviour: the M2 command page gains its five contract refinements (the
+      identity-unreadable row no longer claims "not a git work tree", an explicit
+      `unbound` row, the closed daemon vocabulary in text and examples, the
+      present-but-unreadable state-unavailable wording, and the corrected state
+      example path) while keeping its proposed status; the state-layer,
+      CLI-entrypoint, branding-seam, dispatch-engine and owner-gate specs state the
+      two-layer state root, the host index as the only host-wide index document
+      beside the owner-hold marker, the prompt-required `projects list`, the
+      now-honoured override, the project-root authority read and the host-wide hold,
+      and a new feature-projects page covers the surface, with TDR-0022 cited rather
+      than restated; the planning corpus records the delivery with M2-S11 progress
+      markers, a status snapshot entry, the registry row marked delivered by this
+      change and an entrypoint delta that lists `projects` as mounted while other M2
+      additions stay planned; the new feature page is registered in the
+      forbidden-literals registry and linked from the documentation index (the
+      second and final registry addition, after the migration guide), one added
+      changeset declares all five fixed-group packages at `minor` with pre-existing
+      changesets byte-identical, the no-dependency/no-lockfile clause is
+      review-verified, the doc-distribution guard is run explicitly because it is
+      not part of the aggregate gate, the P1..P8 execution evidence is recorded, and
+      the aggregate gate is green under a repository-local temporary directory.
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/spec/features/feature-projects.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-branding-seam.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-owner-gate-sla.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-audit-ledger.md
+        - doc/spec/features/feature-resident-daemon.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/00-index.md
+        - .changeset/gh-288-multi-repo-workstations-minor.md
+        - scripts/checks/forbidden-literals.registry.json
+        - doc/changes/2026-11/2026-11-11--GH-288--multi-repo-workstations/chg-GH-288-test-plan.md
+    interactions:
+      - kind: contract-file
+        target: .changeset/gh-288-multi-repo-workstations-minor.md
+        role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-projects.md
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "PR for feat/GH-288/multi-repo-workstations targeting main-tools, opened at lifecycle phase 11 by @pr-manager and recorded as a pm-notes notes entry"
+      pipelineId: "pnpm check aggregate gate green under TMPDIR=$PWD/tmp/tmpdir, with the release, doc-distribution and literal gates green"
+      trackerTransition: "GH-288 in review; DoD evidence per phase recorded in pm-notes notes"
+    weightClass: standard

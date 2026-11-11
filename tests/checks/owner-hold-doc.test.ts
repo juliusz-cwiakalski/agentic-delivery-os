@@ -32,7 +32,7 @@ describe("TC-HOLDDOCS-001 the delivery-modes guide states both semantics and the
 
   test("the fixed path, fail-closed marker, poll, unbounded driver, and MAX floor are documented", () => {
     expectAll(text, [
-      "no marker-path override and no store relocation",
+      "There is no marker-path override, and no per-project marker narrows the hold",
       "fail closed",
       "default `300`, accepted range `1`–`3600`",
       "no fixed iteration cap",
@@ -126,7 +126,7 @@ describe("TC-HOLDDOCS-003 the feature specs and command pages are reconciled", (
       "owner-hold",
       "no ref",
       "`queue ready` is unchanged",
-      "new command, new flag",
+      "no new command, no new flag",
     ]);
     const status = read("doc/planning/oss-tooling/milestones/m1/commands/status.md");
     expectAll(status, [

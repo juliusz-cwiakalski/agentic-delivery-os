@@ -15,6 +15,8 @@ import {
 import {
   createControlServer,
   createDaemonRuntime,
+  createLaneLaunchPlanner,
+  type DispatchTruthReads,
   daemonScopeDigest,
   decodeControlLine,
   detectDaemonEffects,
@@ -26,15 +28,15 @@ import {
   readDaemonLanes,
   readDaemonStatus,
   readQueueEntries,
+  recordDaemonDispatchResult,
   recordResumeIntent,
+  resolveDaemonSettings,
   runSupervisionCycle,
   uninstallSupervisor,
-  createLaneLaunchPlanner,
-  recordDaemonDispatchResult,
-  type DispatchTruthReads,
 } from "@delivery-os/core";
 import {
   CONTROL_PROTOCOL_CURRENT,
+  type ConfigFailure,
   type ControlTopic,
   type ControlTransport,
   DAEMON_HEARTBEAT_STATES,
@@ -55,21 +57,22 @@ import {
   type DaemonSupervisorDescriptor,
   type DaemonSupervisorKind,
   type DaemonWakePort,
-  ECONOMICS_EXHAUSTION_OPTIONS,
-  type LaneExecutorPort,
-  LOCAL_CALLER_PRINCIPAL,
-  QUEUE_MAX_ENTRIES,
-  type StateStorePort,
-  type SupervisorPort,
-  type HarnessExecutionEnvironmentDescriptor,
-  type HarnessEvidence,
-  type HarnessKind,
-  type HarnessSessionPort,
-  type LaneHandle,
-  type LaneLaunchRequest,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
-  DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  ECONOMICS_EXHAUSTION_OPTIONS,
+  type HarnessEvidence,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessKind,
+  type HarnessSessionPort,
+  type LaneExecutorPort,
+  type LaneHandle,
+  type LaneLaunchRequest,
+  LOCAL_CALLER_PRINCIPAL,
+  QUEUE_MAX_ENTRIES,
+  type Result,
+  type StateStorePort,
+  type SupervisorPort,
 } from "@delivery-os/core/contracts";
 import {
   appendBlockerQuestion,
@@ -78,6 +81,21 @@ import {
   readBlockerLedger,
   readEconomicsRecords,
 } from "@delivery-os/core/state";
+/**
+ * The ONE place that supplies a state directory to the delivered daemon settings
+ * resolution (GH-288 F-6, AC-F6-4, DEC-12).
+ *
+ * The caller passes the policy-derived PROJECT state root, so the socket path
+ * derives from the repository's own state root and the delivered
+ * inside-the-state-directory rule keeps refusing an outside path. The settings
+ * resolution itself is unchanged and the daemon family stays unmounted (NG-4);
+ * reverting this argument to the host root is the mutation AC-F6-4 records.
+ */
+export const resolveProjectDaemonSettings = (
+  projectStateRoot: string,
+): Result<DaemonSettings, ConfigFailure> =>
+  resolveDaemonSettings({}, {}, { stateDirectory: projectStateRoot });
+
 import type { DaemonCommandRuntime as CommandRuntime } from "./commands/daemon.js";
 
 export type DaemonComposition = {

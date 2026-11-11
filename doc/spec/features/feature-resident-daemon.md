@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed only when a daemon runtime is supplied and not mounted at the production entrypoint, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -55,10 +55,18 @@ production entrypoint supplies none, so `<binary> daemon ...` reaches no
 lifecycle handler and the invocation is refused at the entrypoint. Mounting the
 family is product work tracked in the
 [M2 entrypoint delta](../../planning/oss-tooling/milestones/m2/entrypoint-delta.md).
-The state directory is selected process-wide by the brand-derived `<PREFIX>_STATE_DIR`
-environment variable when set and otherwise by
-`<home>/<brand.stateDirectoryName>`; there is no `--state-dir` flag and no
-state-directory configuration key.
+The state directory is selected process-wide by the one state-scope policy: an
+absolute `<PREFIX>_STATE_DIR` when set, otherwise the injected home plus
+`<brand.stateDirectoryName>`, which names the host root. There is no `--state-dir`
+flag and no state-directory configuration key.
+
+The daemon's own state is project-owned. The single composing site that supplies a
+state directory to the delivered settings resolution
+(`resolveProjectDaemonSettings` in `packages/cli/src/daemon-compose.ts`) passes the
+policy-derived **project** state root, so the derived socket path and the
+supervisor `Environment=` binding lie inside `<host root>/projects/<project key>`
+and an explicit socket path outside it is refused. The settings resolution has
+exactly one call site, and the family stays unmounted in this build.
 
 - `start` acquires the daemon lock, reconciles, appends one instance record,
   appends one reconciliation record, opens the transport, writes the first
@@ -272,7 +280,8 @@ configured rate. A one-shot read carries no resident backoff state.
 
 The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`,
 `Type=simple`, `Restart=on-failure`, and
-`Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>`. The unit
+`Environment=<PREFIX>_STATE_DIR=<canonical absolute host root>`, and the socket
+path passed to the composed transport is derived from the project state root. The unit
 and the secret-free ownership marker are written by the composed platform
 supervisor adapter; on Linux the real systemd user adapter is composed by
 default. Linger is enabled and reported. A linger failure removes the unit and

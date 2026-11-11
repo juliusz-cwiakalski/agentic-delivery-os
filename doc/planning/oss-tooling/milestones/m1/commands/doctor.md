@@ -80,6 +80,8 @@ production, `status` carries the hold in its digest, and the queue read surfaces
 (`queue list`, `queue plan`, `lanes`, and `queue watch`) report it on their own
 surfaces.
 
-The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
-marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
-override, store relocation, new flag, or exit code.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the host-wide marker
+`<host root>/owner-hold`, where the host root is an absolute `<PREFIX>_STATE_DIR`
+when set and otherwise `<home>/<stateDirectoryName>`; there is no marker-path
+override, and the hold never narrows to one project. The hold does not relocate
+the store and adds no flag or exit code.

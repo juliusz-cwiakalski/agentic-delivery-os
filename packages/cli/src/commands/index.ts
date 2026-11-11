@@ -14,6 +14,7 @@ export { createCloseoutCommandDefinition } from "./closeout.js";
 export type { CommitCommandRuntime, CommitContext } from "./commit.js";
 export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
+export { createConfigCommandDefinition } from "./config.js";
 export type { CoordinatorCommandRuntime } from "./coordinator.js";
 export { createCoordinatorCommandDefinition } from "./coordinator.js";
 export type {
@@ -27,8 +28,10 @@ export type {
   CoordinatorSupervisorPorts,
 } from "./coordinator-loop.js";
 export { createCoordinatorSupervisor } from "./coordinator-loop.js";
-export { createConfigCommandDefinition } from "./config.js";
 export type { DaemonCommandRuntime } from "./daemon.js";
+export { createDaemonCommandDefinition } from "./daemon.js";
+export type { DbCommandRuntime } from "./db.js";
+export { createDbCommandDefinition } from "./db.js";
 export type {
   DispatchCommandRuntime,
   DispatchHandoverRuntime,
@@ -37,10 +40,6 @@ export type {
   DispatchSummaryRuntime,
 } from "./dispatch.js";
 export { createDispatchCommandDefinition } from "./dispatch.js";
-
-export { createDaemonCommandDefinition } from "./daemon.js";
-export type { DbCommandRuntime } from "./db.js";
-export { createDbCommandDefinition } from "./db.js";
 export type { DoctorCommandRuntime } from "./doctor.js";
 export { createDoctorCommandDefinition } from "./doctor.js";
 export type { LanesCommandRuntime, LanesRuntimeRead } from "./lanes.js";
@@ -65,6 +64,8 @@ export type {
 export { createPhaseCommandDefinition } from "./phase.js";
 export type { PlanCommandRuntime } from "./plan.js";
 export { createPlanCommandDefinition } from "./plan.js";
+export type { ProjectsCommandRuntime, ProjectsRuntimeRead } from "./projects.js";
+export { createProjectsCommandDefinition } from "./projects.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
 export type {

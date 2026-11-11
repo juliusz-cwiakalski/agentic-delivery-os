@@ -21,10 +21,12 @@
 # brand-derived <PREFIX>_OWNER_HOLD variable so the environment source matches
 # what the typed engine reads.
 #
-# The marker source is the fixed production store path
-# $HOME/.delivery-os-state/owner-hold. The example accepts NO marker-path
-# override and no store relocation: a shell-only path would leave the typed
-# engine unheld.
+# The marker source is the host root's marker, $HOME/.delivery-os-state/owner-hold
+# by default. The hold is host-wide: the typed engine reads it at the host root
+# (an absolute <PREFIX>_STATE_DIR when set, otherwise
+# <home>/<brand.stateDirectoryName>) and never per project, so one marker stops
+# every project on the host. The example accepts NO marker-path override: a
+# shell-only path would leave the typed engine unheld.
 #
 # Condition-function contract (DM-1): a condition is a function named
 # howLongToSleepDueTo<Reason>() that echoes exactly ONE non-negative integer to

@@ -16,6 +16,7 @@ import {
   createCapsuleFileRuntime,
   createCommitlintProbe,
   createSecretScanner,
+  ensureProjectIdentityMarkerText,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
@@ -29,6 +30,7 @@ import {
   readMemoryFacts,
   readPlanArtifact,
   readPmNotesText,
+  readProjectIdentityMarker,
   runtimePlatform,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
@@ -63,6 +65,7 @@ import {
   parseGitHubRemote,
   type RepositoryIo,
   type RepositoryRootFacts,
+  readCheckoutIdentity,
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
@@ -150,10 +153,11 @@ import {
   resolveCloseoutBaseRef,
   resolveConfig,
   resolveDispatchDivergenceEvidence,
+  resolveHostStateRoot,
   resolveMergeGateSet,
+  resolveProjectScope,
   resolveQueueSettings,
   resolveQueueWeight,
-  resolveStateDirectoryScope,
   revertDispatchHandoverEvidence,
   runCloseout,
   runCommitAct,
@@ -162,6 +166,7 @@ import {
   serializeCapsuleEvent,
   sha256Hex,
   spendDigestSection,
+  stateScopeRoots,
   summarizeDispatchEvidence,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -225,7 +230,6 @@ import {
   type DoctorProviderCredentialPresence,
   type DoctorStateStoresRead,
   type DoctorWiringRead,
-  type OwnerHoldFact,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
@@ -236,6 +240,7 @@ import {
   type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
+  type OwnerHoldFact,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
   type PhaseTransitionRecord,
@@ -337,18 +342,18 @@ import {
   createConfigCommandDefinition,
 } from "./commands/config.js";
 import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
-import {
-  createCoordinatorCommandDefinition,
-  createCoordinatorSupervisor,
-  type CoordinatorCommandRuntime,
-  type CoordinatorSupervisorPorts,
-} from "./commands/index.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import {
   createDispatchCommandDefinition,
   type DispatchCommandRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
+import {
+  type CoordinatorCommandRuntime,
+  type CoordinatorSupervisorPorts,
+  createCoordinatorCommandDefinition,
+  createCoordinatorSupervisor,
+} from "./commands/index.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
   createLintCommandDefinition,
@@ -364,6 +369,10 @@ import {
   type PhasePlanRead,
 } from "./commands/phase.js";
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
+import {
+  createProjectsCommandDefinition,
+  type ProjectsCommandRuntime,
+} from "./commands/projects.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
@@ -1384,8 +1393,14 @@ export type EdgeOptions = {
   readonly secretKeys?: readonly string[];
   /** Injected stream capability fact; omitted means non-interactive. */
   readonly isTTY?: boolean;
-  /** Injected state directory; defaults to `<home>/<stateDirectoryName>`. */
+  /** Injected state directory (an explicit project root); wins over the policy. */
   readonly stateDirectory?: string;
+  /**
+   * The invoking working directory. When supplied, the audit store opens at the
+   * policy-derived PROJECT root for that checkout (GH-288 AC-F6-1/AC-F6-2), so
+   * the audit ledger lives beside the delivery store it describes.
+   */
+  readonly cwd?: string;
   /** Injected home directory; defaults to the environment record's HOME. */
   readonly homeDirectory?: string;
   /** Injected workspace identity for the audit store. */
@@ -1397,13 +1412,29 @@ export type EdgeOptions = {
 const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
   if (options.stateDirectory !== undefined) return options.stateDirectory;
   const environment = options.environment ?? {};
-  const scope = resolveStateDirectoryScope({
+  const home = options.homeDirectory === undefined ? {} : { homeDirectory: options.homeDirectory };
+  if (options.cwd !== undefined) {
+    const scope = resolveProjectScope({
+      environment,
+      environmentPrefix: options.brand.environmentPrefix,
+      stateDirectoryName: options.brand.stateDirectoryName,
+      ...home,
+      checkout: readCheckoutIdentity({ cwd: options.cwd, io: nodeRepositoryIo() }),
+      ports: {
+        readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+        writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+        newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+      },
+    });
+    return scope.ok ? stateScopeRoots(scope.value).projectRoot : undefined;
+  }
+  const host = resolveHostStateRoot({
     environment,
     environmentPrefix: options.brand.environmentPrefix,
     stateDirectoryName: options.brand.stateDirectoryName,
-    ...(options.homeDirectory === undefined ? {} : { homeDirectory: options.homeDirectory }),
+    ...home,
   });
-  return scope.ok ? scope.value : undefined;
+  return host.ok ? host.value : undefined;
 };
 
 /**
@@ -2998,6 +3029,7 @@ export type ConfigProgramOptions = {
   readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
+  readonly projects?: ProjectsCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -3528,6 +3560,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.lanes !== undefined) {
     commands.lanes = createLanesCommandDefinition(createLanesCommandRuntime(options.lanes));
+  }
+  // The mount unit's command definition: composed here because the entrypoint
+  // throws for a prompt-required name the program lacks (GH-288 F-9, DEC-13).
+  if (options.projects !== undefined) {
+    commands.projects = createProjectsCommandDefinition(options.projects);
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);

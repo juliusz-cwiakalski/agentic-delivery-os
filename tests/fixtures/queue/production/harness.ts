@@ -35,6 +35,7 @@ import {
   STATE_SCHEMA_VERSION,
 } from "../../../../packages/core/src/state/index";
 import { streamStarterFromRunner } from "../../harness/stream";
+import { projectScopeFor } from "../../projects/state-scope";
 
 const WORKING_NAME = "delivery-os";
 const BASE = join(process.cwd(), "tmp", "tmpdir");
@@ -163,7 +164,16 @@ export const createProductionQueueHarness = (
   mkdirSync(BASE, { recursive: true });
   const ownedHome = options.home === undefined;
   const home = options.home ?? mkdtempSync(join(BASE, `gh273-${options.label}-`));
-  const stateDirectory = join(home, brand.stateDirectoryName);
+  // The two-layer scope: the host root is the home default (no override is
+  // injected here), and every store artifact lives under the derived project
+  // root of the checkout this harness composes (GH-288 F-1).
+  const hostRoot = join(home, brand.stateDirectoryName);
+  const stateDirectory = projectScopeFor({
+    cwd: options.workingDirectory,
+    hostRoot,
+    home,
+    brand,
+  }).scope.stateLocation;
   const spawns: RecordedSpawn[] = [];
   const transportCalls: RecordedTransport[] = [];
   const gitCalls: RecordedGit[] = [];

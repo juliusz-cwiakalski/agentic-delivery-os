@@ -1414,6 +1414,56 @@ export {
   type CallerPrincipalKind,
   LOCAL_CALLER_PRINCIPAL,
 } from "./principal.js";
+// The two-layer state-scope vocabulary (GH-288 F-1, F-2, F-3, DM-1..DM-3):
+// the identity-marker and host-index artifact names and schemas, the project
+// key bounds and pattern, the declared `unbound` segment, the closed
+// identity/daemon/handover vocabularies, and the three contract error
+// identities. Data and types only; the pure policy lives in the core app tier.
+export {
+  DAEMON_REACHABILITY_REASONS,
+  type DaemonReachability,
+  type DaemonReachabilityReason,
+  HANDOVER_STATES,
+  type HandoverState,
+  HOST_INDEX_ARTIFACT_NAME,
+  HOST_INDEX_CORRUPT_SUFFIX,
+  HOST_INDEX_DOCUMENT_FIELDS,
+  HOST_INDEX_ENTRY_FIELDS,
+  HOST_INDEX_INITIAL_REVISION,
+  HOST_INDEX_MAINTENANCE_OUTCOMES,
+  HOST_INDEX_MAX_ENTRIES,
+  HOST_INDEX_SCHEMA,
+  type HostIndexConflict,
+  type HostIndexDocument,
+  type HostIndexEntry,
+  type HostIndexMaintenanceOutcome,
+  type HostIndexRegistration,
+  PROJECT_IDENTIFIER_HEX_LENGTH,
+  PROJECT_IDENTITY_MARKER_NAME,
+  PROJECT_IDENTITY_OUTCOMES,
+  PROJECT_IDENTITY_SCHEMA,
+  PROJECT_KEY_DISCRIMINATOR_HEX_LENGTH,
+  PROJECT_KEY_FALLBACK_BASENAME,
+  PROJECT_KEY_MAX_BASENAME_LENGTH,
+  PROJECT_KEY_PATTERN,
+  PROJECT_STATE_LOCATIONS,
+  PROJECT_UNBOUND_SEGMENT,
+  PROJECTS_COMMAND_FAMILY,
+  STATE_MIGRATION_NOTE_PATH,
+  PROJECTS_CONTAINER_SEGMENT,
+  PROJECTS_ENTRY_FIELDS,
+  PROJECTS_ERROR_CODES,
+  PROJECTS_LIST_DATA_FIELDS,
+  PROJECTS_LIST_VERB,
+  type ProjectIdentityMarker,
+  type ProjectIdentityMarkerRead,
+  type ProjectIdentityOutcome,
+  type ProjectScope,
+  type ProjectStateLocation,
+  type ProjectsErrorCode,
+  type ProjectsListData,
+  type ProjectsListEntry,
+} from "./projects.js";
 // Provider-engine vocabulary (GH-182 F-1..F-9, DM-1..DM-13): types and the
 // closed sets/allowlists only; the pure policy lives in `./provider`.
 export {

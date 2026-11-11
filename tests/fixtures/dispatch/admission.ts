@@ -33,6 +33,7 @@ import {
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
 import { streamStarterFromRunner } from "../harness/harness-io";
+import { projectScopeFor } from "../projects/state-scope";
 
 const ROOT = process.cwd();
 const GITHUB_ORIGIN = "https://github.com/owner/repo.git";
@@ -187,13 +188,20 @@ export const createAdmissionHarness = (options: AdmissionHarnessOptions = {}): A
   mkdirSync(base, { recursive: true });
   const home = mkdtempSync(join(base, options.label ?? "gh279-admission-"));
   const checkout = createCheckout(home, "checkout", options.originUrl ?? GITHUB_ORIGIN);
+  // The store opens at the checkout's derived project root, not the host root.
+  const stateDirectory = projectScopeFor({
+    cwd: checkout,
+    hostRoot: join(home, brand.stateDirectoryName),
+    home,
+    brand,
+  }).scope.stateLocation;
   const store = createStateStore(
     {
       level: "local",
       workspaceId: "default",
       fenceNamespace: "cli",
       schemaVersion: STATE_SCHEMA_VERSION,
-      stateDirectory: join(home, brand.stateDirectoryName),
+      stateDirectory,
     },
     { driver: "jsonl", edge: createNodeStateEdge() },
   );

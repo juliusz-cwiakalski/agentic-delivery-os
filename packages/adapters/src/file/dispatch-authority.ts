@@ -78,6 +78,41 @@ export const readDispatchAuthority = (
   }
 };
 
+/**
+ * The raw authority-document state for one state root (GH-288 F-4, DEC-7).
+ *
+ * The safe-default readers above collapse "absent" and "malformed" into
+ * `dual-run`, which is right for the shell fallback and wrong for the projects
+ * projection: a malformed document beside an authoritative ledger is a detected
+ * disagreement, not absent evidence. This read keeps the three cases distinct
+ * and scans only the `documents.*` directories of the given root.
+ */
+export type DispatchAuthorityFact =
+  | { readonly state: "absent" }
+  | { readonly state: "malformed" }
+  | { readonly state: "valid"; readonly view: DispatchAuthorityView };
+
+export const readDispatchAuthorityFact = (stateRoot: string): DispatchAuthorityFact => {
+  let malformed = false;
+  try {
+    if (!existsSync(stateRoot)) return { state: "absent" };
+    const directories = readdirSync(stateRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith("documents."))
+      .map((entry) => entry.name)
+      .sort();
+    for (const directory of directories) {
+      const path = join(stateRoot, directory, DISPATCH_AUTHORITY_DOCUMENT_NAME);
+      if (!existsSync(path)) continue;
+      const view = parse(readFileSync(path, "utf8"));
+      if (view !== undefined) return { state: "valid", view };
+      malformed = true;
+    }
+  } catch {
+    return { state: "absent" };
+  }
+  return malformed ? { state: "malformed" } : { state: "absent" };
+};
+
 /** Read every parseable view in a state root (diagnostics and tests only). */
 export const listDispatchAuthority = (stateRoot: string): readonly DispatchAuthorityView[] => {
   try {

@@ -11,10 +11,12 @@ import { runHelpGuideCoverage } from "../../scripts/checks/help-guide-coverage";
 const ROOT = process.cwd();
 const COVERAGE = "tests/fixtures/help-guide/coverage.json";
 const COMMANDS = "doc/planning/oss-tooling/milestones/m1/commands";
+const M2_COMMANDS = "doc/planning/oss-tooling/milestones/m2/commands";
 
 const tempRoot = (): string => {
   const root = mkdtempSync(join(tmpdir(), "gh242-help-"));
   cpSync(join(ROOT, COMMANDS), join(root, COMMANDS), { recursive: true });
+  cpSync(join(ROOT, M2_COMMANDS), join(root, M2_COMMANDS), { recursive: true });
   cpSync(join(ROOT, COVERAGE), join(root, COVERAGE));
   return root;
 };

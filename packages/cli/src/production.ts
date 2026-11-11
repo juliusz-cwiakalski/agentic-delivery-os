@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -16,15 +16,25 @@ import {
 import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
+  createHostIndexAccess,
   ensureDispatchIdentityMarkerText,
+  ensureProjectIdentityMarkerText,
+  type HostIndexAccess,
+  hostIndexDocumentPath,
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
+  preserveCorruptHostIndex,
+  readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
+  readHostIndexFile,
   readOwnerHoldMarker,
   readPmNotesText,
+  readProjectIdentityMarker,
+  readStateRootArtifacts,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
+  replaceHostIndexFile,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
 import {
@@ -44,32 +54,49 @@ import {
   findGitRoot,
   nodeRepositoryIo,
   parseGitHubRemote,
+  readCheckoutIdentity,
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import {
+  type AuthorityEvidence,
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
   claimQueueLease,
   classifyHarnessEvidence,
+  classifyProjectStateLocation,
   classifyVerifyDocument,
+  type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
-  type DispatchPrFact,
   type DispatchPreflightError,
   type DispatchPreflightResult,
+  type DispatchPrFact,
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
   EvaluateVerifyChange,
+  foldDispatchHandover,
+  type HandoverEvidence,
   type HarnessSettings,
+  type HostIndexRootProbe,
   type LaneSettings,
+  legacyStoreWarning,
+  maintainHostIndex,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
+  orderProjectEntries,
   PRODUCTION_DEFAULTS,
+  type ProjectsScopeFailure,
+  parseHostIndexDocument,
+  parseProjectIdentityMarker,
+  projectHandoverState,
+  projectListEntry,
+  projectStateRoot,
   readDaemonLanes,
+  readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
   resolveConfig,
@@ -78,7 +105,11 @@ import {
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
+  resolveProjectScope,
+  selectDaemonReachability,
+  serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
@@ -87,6 +118,7 @@ import {
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
+  type DaemonReachability,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -101,12 +133,15 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessSessionHandle,
-  type OwnerHoldFact,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
+  HOST_INDEX_INITIAL_REVISION,
   LOCAL_CALLER_PRINCIPAL,
+  type OwnerHoldFact,
   type PipelineRun,
+  PROJECTS_COMMAND_FAMILY,
+  type ProjectsListEntry,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   VERIFY_GATES_CI_RUN_LIMIT,
@@ -121,6 +156,8 @@ import {
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
+import type { ProjectsRuntimeRead } from "./commands/projects.js";
+import { resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
   type CoordinatorComposition,
@@ -141,7 +178,9 @@ import {
   type DispatchComposition,
   type DispatchLaneFacts,
 } from "./edge.js";
-import type { EntrypointComposer } from "./entrypoint.js";
+import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
+import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
+import type { CommandDefinition, CommandProgram } from "./index.js";
 
 const PROVIDER_FAILURE = "config.credential.missing";
 
@@ -267,6 +306,89 @@ export type ProductionCompositionFacts = {
   readonly coordinatorSessionFacts?: () => CoordinatorSessionFacts;
   /** The foreground loop wait override; production uses the resolved interval. */
   readonly coordinatorCollectionIntervalMs?: number;
+  /**
+   * The observability-only host-index access counters. They accept no root, no
+   * key, and no path, so a composition test reads the bound without injecting
+   * state (GH-288 F-2, TR-1).
+   */
+  readonly hostIndexAccess?: HostIndexAccess;
+  /**
+   * The injected resident-daemon composition (GH-288 F-5). The shipped binary
+   * supplies none, so the build declares the unmounted reason and never probes;
+   * a composition that mounts the daemon probes honestly.
+   */
+  readonly daemon?: DaemonComposition;
+};
+
+/** The one bounded warning an invocation outside any checkout emits (DEC-10). */
+const UNBOUND_SCOPE_WARNING =
+  "outside any git work tree: delivery state is not repository-scoped (unbound scope)";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const withWarning = (result: unknown, warning: string): unknown => {
+  if (!isRecord(result) || (!Object.hasOwn(result, "data") && !Object.hasOwn(result, "error"))) {
+    return result;
+  }
+  const existing = Array.isArray(result.warnings)
+    ? result.warnings.filter((entry): entry is string => typeof entry === "string")
+    : [];
+  return { ...result, warnings: [...existing, warning] };
+};
+
+/** Append the bounded scope warnings to every composed handler's outcome. */
+const withScopeWarnings = (
+  program: CommandProgram,
+  warnings: readonly string[],
+): CommandProgram => {
+  const commands: Record<string, CommandDefinition> = {};
+  for (const [name, definition] of Object.entries(program.commands)) {
+    commands[name] = {
+      ...definition,
+      handler: (invocation) => {
+        const outcome = definition.handler(invocation);
+        const merged = (value: unknown): unknown =>
+          warnings.reduce<unknown>((current, warning) => withWarning(current, warning), value);
+        return outcome instanceof Promise ? outcome.then(merged) : merged(outcome);
+      },
+    };
+  }
+  return { commands };
+};
+
+/**
+ * The classified scope-refusal program (GH-288 F-1, DEC-16, DEC-17).
+ *
+ * Every command maps the same identity/state state to the same classified
+ * outcome, so a refusal is reported through the family's declared identity and
+ * its exit projection instead of being contained as `fallback.internal`. The
+ * program keeps exactly the prompt-required set, so the entrypoint's restriction
+ * step still finds every name it expects.
+ */
+const scopeRefusalProgram = (
+  failure: ProjectsScopeFailure,
+  warnings: readonly string[] = [],
+): CommandProgram => {
+  const summary =
+    failure.kind === "config"
+      ? `the state-directory scope is invalid (${failure.key})`
+      : failure.summary;
+  const kind = failure.kind === "config" ? "config" : "projects";
+  const definition: CommandDefinition = {
+    // The refusal is the same for every command, so the grammar admits any flag
+    // and positional shape and the classified scope failure answers instead of
+    // the parser: the identity outcome must not depend on which command was asked.
+    acceptsAnyFlag: true,
+    positionals: { max: 3 },
+    handler: () => ({
+      error: { kind, code: failure.code, summary },
+      ...(warnings.length === 0 ? {} : { warnings }),
+    }),
+  };
+  const commands: Record<string, CommandDefinition> = {};
+  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definition;
+  return { commands };
 };
 
 /**
@@ -277,25 +399,45 @@ export type ProductionCompositionFacts = {
  * own brand check.
  */
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
-  return (brand: BrandIdentity) => {
+  return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
     const environment = facts.environment;
     const cwd = facts.cwd;
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
-    const stateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
+    // The two layers (GH-288 F-1, DEC-12): the delivered host root holds
+    // host-wide controls only, and the derived project root holds every
+    // delivery artifact of this checkout. One policy resolves both; no inline
+    // home-plus-brand composition survives here.
+    const scope = resolveProjectScope({
+      environment,
+      environmentPrefix: brand.environmentPrefix,
+      stateDirectoryName: brand.stateDirectoryName,
+      homeDirectory,
+      checkout: readCheckoutIdentity({ cwd, io: nodeRepositoryIo() }),
+      ports: {
+        readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+        writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+        newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+      },
+    });
+    if (!scope.ok) return scopeRefusalProgram(scope.error);
+    const roots = stateScopeRoots(scope.value);
+    const hostRoot = roots.hostRoot;
+    const stateDirectory = roots.projectRoot;
     const changesDirectory = `${cwd}/doc/changes`;
     // One per-pass owner-hold resolution over the injected environment and the
-    // fixed production store directory (GH-280 F-1, D12). Never cached.
+    // host root (GH-280 F-1, D12; GH-288 F-7 keeps the hold host-wide). Never
+    // cached.
     const readOwnerHold = (): OwnerHoldFact => {
       const marker = readOwnerHoldMarker(
-        { storeDirectory: stateDirectory },
+        { storeDirectory: hostRoot },
         nodeOwnerHoldMarkerFileSystem(),
       );
       return resolveOwnerHoldFact({
         environment,
         environmentPrefix: brand.environmentPrefix,
-        storeDirectory: stateDirectory,
+        storeDirectory: hostRoot,
         marker,
       });
     };
@@ -307,6 +449,80 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const nowMs = (): number => Date.now();
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
+
+    // The derived host index: exactly one read and at most one write per
+    // store-opening invocation whose scope resolves inside a checkout, no
+    // filesystem crawl, and no maintenance on a read-only list path (F-2,
+    // DEC-4, DEC-5, DEC-14, DEC-18). A key held under another identifier is
+    // never adopted: the invocation refuses before opening the store.
+    const hostIndexAccess = facts.hostIndexAccess ?? createHostIndexAccess();
+    const maintenanceWarnings: string[] = [];
+    const probeRecordedRoot = (root: string): HostIndexRootProbe => {
+      if (!existsSync(root)) return { state: "absent" };
+      const identity = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      if (identity.kind !== "resolved") return { state: "uncertain" };
+      const markerRead = readProjectIdentityMarker(identity.commonDir);
+      if (markerRead.state !== "present") return { state: "uncertain" };
+      const marker = parseProjectIdentityMarker(markerRead.text);
+      return marker === undefined
+        ? { state: "uncertain" }
+        : { state: "resolved", projectIdentifier: marker.projectIdentifier };
+    };
+    const maintainsIndex = invocation?.command !== PROJECTS_COMMAND_FAMILY;
+    // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
+    // reported once per state-opening invocation, moves nothing, deletes
+    // nothing, and never changes the exit code. A migrated host emits nothing.
+    const legacyWarning =
+      maintainsIndex && scope.value.scope.kind === "project"
+        ? legacyStoreWarning({
+            hostArtifacts: readStateRootArtifacts(hostRoot),
+            projectRootExists: existsSync(scope.value.scope.stateLocation),
+          })
+        : undefined;
+    if (legacyWarning !== undefined) maintenanceWarnings.push(legacyWarning);
+    if (maintainsIndex && scope.value.scope.kind === "project") {
+      const current = scope.value.scope;
+      hostIndexAccess.countRead();
+      const read = readHostIndexFile(hostRoot);
+      if (read.state !== "unreadable") {
+        const document = read.state === "present" ? parseHostIndexDocument(read.text) : undefined;
+        const corrupt = read.state === "present" && document === undefined;
+        const maintained = maintainHostIndex({
+          hostRoot,
+          document,
+          corrupt,
+          registration: {
+            projectKey: current.projectKey,
+            projectIdentifier: current.projectIdentifier,
+            root: current.checkoutRoot,
+            stateLocation: current.stateLocation,
+            recordedAt: nowIso(),
+          },
+          probe: probeRecordedRoot,
+        });
+        maintenanceWarnings.push(...maintained.warnings);
+        if (maintained.next !== undefined) {
+          if (maintained.preserveCorruptAs !== undefined && read.state === "present") {
+            preserveCorruptHostIndex(hostRoot, maintained.preserveCorruptAs, read.text);
+          }
+          hostIndexAccess.countWrite();
+          replaceHostIndexFile(hostRoot, serializeHostIndexDocument(maintained.next));
+        }
+        if (maintained.conflict !== undefined) {
+          return scopeRefusalProgram(
+            {
+              kind: "state",
+              code: "projects.state-unavailable",
+              summary:
+                `project key ${maintained.conflict.projectKey} is registered to another project ` +
+                `identifier (${maintained.conflict.existingIdentifier}); this checkout ` +
+                `(${maintained.conflict.candidateRoot}) cannot establish its state location`,
+            },
+            maintenanceWarnings,
+          );
+        }
+      }
+    }
 
     const store = createStateStore(
       {
@@ -1505,6 +1721,207 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /**
+     * The `projects list` host overview (GH-288 F-3, F-4, F-5, DEC-5, DEC-8).
+     *
+     * Read-only by construction: one index read, no maintenance, no prune, no
+     * project-root creation, and no write of any kind. A present-but-unreadable
+     * state location fails the whole answer instead of fabricating a row.
+     */
+    const readProjectHandover = (
+      stateLocation: string,
+      projectKey: string,
+    ):
+      | { readonly ok: true; readonly state: "engine" | "shell" | "in-transition" }
+      | { readonly ok: false; readonly summary: string } => {
+      const projectStore = createStateStore(
+        {
+          level: "local",
+          workspaceId,
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: stateLocation,
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      );
+      const ledger = readDispatchHandover(projectStore);
+      if (!ledger.ok) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} has a state location whose dispatch ledger cannot be read (${stateLocation})`,
+        };
+      }
+      let operation: HandoverEvidence = "none";
+      if (ledger.records.length > 0) {
+        const folded = foldDispatchHandover(ledger.records);
+        const latest = [...folded]
+          .sort((left, right) =>
+            left.recordedAt < right.recordedAt ? -1 : left.recordedAt > right.recordedAt ? 1 : 0,
+          )
+          .at(-1);
+        operation = latest?.authority ?? "none";
+      }
+      const fact = readDispatchAuthorityFact(stateLocation);
+      const authority: AuthorityEvidence =
+        fact.state === "valid"
+          ? { state: "valid", authority: fact.view.authority }
+          : { state: fact.state === "malformed" ? "malformed" : "absent" };
+      return { ok: true, state: projectHandoverState({ operation, authority }) };
+    };
+
+    const readDaemonReachability = async (
+      stateLocation: string,
+      stateRootPresent: boolean,
+    ): Promise<
+      | { readonly ok: true; readonly value: DaemonReachability }
+      | { readonly ok: false; readonly summary: string }
+    > => {
+      const composition = facts.daemon;
+      if (composition === undefined || !composition.mounted) {
+        return { ok: true, value: selectDaemonReachability({ mount: { mounted: false } }) };
+      }
+      const capability = composition.capability?.();
+      if (capability === undefined) {
+        return { ok: true, value: selectDaemonReachability({ mount: { mounted: false } }) };
+      }
+      if (!stateRootPresent) {
+        return {
+          ok: true,
+          value: selectDaemonReachability({
+            mount: { mounted: true },
+            probe: { stateRoot: "absent" },
+          }),
+        };
+      }
+      const settings = resolveProjectDaemonSettings(stateLocation);
+      if (!settings.ok) {
+        return {
+          ok: false,
+          summary: `project state location ${stateLocation} cannot derive a socket path (${settings.error.code})`,
+        };
+      }
+      const socket = await capability.probe({
+        socketPath: settings.value.socketPath,
+        timeoutMs: settings.value.responseTimeoutMs,
+      });
+      return {
+        ok: true,
+        value: selectDaemonReachability({
+          mount: { mounted: true },
+          probe: { stateRoot: "present", socket },
+        }),
+      };
+    };
+
+    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+      hostIndexAccess.countList();
+      const read = readHostIndexFile(hostRoot);
+      if (read.state === "absent") {
+        return {
+          ok: true,
+          data: { projects: [], hostIndexRevision: HOST_INDEX_INITIAL_REVISION },
+        };
+      }
+      const indexPath = hostIndexDocumentPath(hostRoot);
+      if (read.state === "unreadable") {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but unreadable`,
+        };
+      }
+      const document = parseHostIndexDocument(read.text);
+      if (document === undefined) {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but cannot be parsed`,
+        };
+      }
+      const entries: ProjectsListEntry[] = [];
+      const warnings: string[] = [];
+      let legacyChecked = false;
+      for (const entry of document.projects) {
+        // A recorded checkout root that no longer exists is not reported: the
+        // entry stays in the index for the next maintenance prune (spec F-3).
+        if (!existsSync(entry.root)) continue;
+        const stateLocation = projectStateRoot(hostRoot, entry.projectKey);
+        let stat: ReturnType<typeof statSync> | undefined;
+        try {
+          stat = statSync(stateLocation);
+        } catch {
+          stat = undefined;
+        }
+        // A bounded directory listing proves readability, so a present but
+        // unreadable root reaches `projects.state-unavailable` here rather than
+        // only failing later inside the store open.
+        let readable = false;
+        if (stat?.isDirectory() === true) {
+          try {
+            readdirSync(stateLocation);
+            readable = true;
+          } catch {
+            readable = false;
+          }
+        }
+        const classification = classifyProjectStateLocation({
+          exists: stat !== undefined,
+          directory: stat?.isDirectory() === true,
+          readable,
+        });
+        if (classification === "first-use" && !legacyChecked) {
+          // AC-F3-5 cell 2: an absent root beside a host-root store is a
+          // warning, never `projects.state-unavailable`, and the list stays
+          // write-free while reporting it once.
+          legacyChecked = true;
+          const legacy = legacyStoreWarning({
+            hostArtifacts: readStateRootArtifacts(hostRoot),
+            projectRootExists: false,
+          });
+          if (legacy !== undefined) warnings.push(legacy);
+        }
+        if (classification === "state-unavailable") {
+          return {
+            ok: false,
+            code: "projects.state-unavailable",
+            summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
+          };
+        }
+        const handover =
+          classification === "first-use"
+            ? ({ ok: true, state: "shell" } as const)
+            : readProjectHandover(stateLocation, entry.projectKey);
+        if (!handover.ok) {
+          return { ok: false, code: "projects.state-unavailable", summary: handover.summary };
+        }
+        const daemon = await readDaemonReachability(stateLocation, classification === "ready");
+        if (!daemon.ok) {
+          return { ok: false, code: "projects.state-unavailable", summary: daemon.summary };
+        }
+        if (entry.stateLocation !== stateLocation) {
+          warnings.push(
+            `project ${entry.projectKey} recorded state location ${entry.stateLocation} ` +
+              `disagrees with the location derived from its key (${stateLocation}); ` +
+              "the derived location is reported",
+          );
+        }
+        entries.push(
+          projectListEntry({
+            projectKey: entry.projectKey,
+            root: entry.root,
+            stateLocation,
+            daemonReachable: daemon.value,
+            handoverState: handover.state,
+          }),
+        );
+      }
+      return {
+        ok: true,
+        data: { projects: orderProjectEntries(entries), hostIndexRevision: document.revision },
+        ...(warnings.length === 0 ? {} : { warnings }),
+      };
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -1556,12 +1973,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newFenceToken,
       },
       coordinator: createProductionCoordinatorComposition(),
+      projects: { readProjects },
     };
 
     const program = createConfigProgram(configured);
     if (!program.ok) {
       throw new Error(`brand resolution failed: ${program.error.field}:${program.error.code}`);
     }
-    return program.program;
+    // An invocation outside every checkout keeps the declared `unbound` scope,
+    // its exit code, and nothing registered: only one bounded warning changes.
+    // Maintenance warnings (a repaired state location, a preserved corrupt
+    // index) travel the same channel and never change an outcome.
+    const warnings =
+      scope.value.outcome === "unbound"
+        ? [UNBOUND_SCOPE_WARNING, ...maintenanceWarnings]
+        : maintenanceWarnings;
+    return warnings.length === 0 ? program.program : withScopeWarnings(program.program, warnings);
   };
 };

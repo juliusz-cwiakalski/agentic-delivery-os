@@ -33,6 +33,7 @@ export const DOMAIN_KINDS = [
   "dispatch",
   "daemon",
   "coordinator",
+  "projects",
 ] as const;
 
 /**
@@ -1427,5 +1428,38 @@ export const ERROR_TABLE = [
       "Retry the next tick once the session can be woken; no wake record landed, so the one-wake-per-question budget is unspent and the retry cannot duplicate a record.",
     projectionClass: "platform-provider",
     summary: "The coordinator pickup wake could not be delivered.",
+  },
+  {
+    code: "projects.identity-unreadable",
+    domainKind: "projects",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named checkout's identity: resolve the named `.git` metadata or restore a readable, internally consistent identity marker, then retry; no path-derived key is ever substituted.",
+    projectionClass: "user-validation",
+    summary: "The invoking checkout's identity cannot be read.",
+  },
+  {
+    code: "projects.registry-corrupt",
+    domainKind: "projects",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Run a state-opening command inside a checkout to repair the host index (the corrupt bytes are preserved as a timestamped sibling), then retry the listing; the failed read changed nothing.",
+    projectionClass: "platform-provider",
+    summary: "The host index is present but cannot be parsed.",
+  },
+  {
+    code: "projects.state-unavailable",
+    domainKind: "projects",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named project state location or the named identity marker path and retry; the overview answers honestly or fails, and never fabricates a row or a handover state.",
+    projectionClass: "platform-provider",
+    summary: "A project state location cannot be established or read.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

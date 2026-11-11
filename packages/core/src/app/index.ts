@@ -6,6 +6,172 @@
 /** Placeholder marker for the application tier. */
 export type AppPlaceholder = { readonly __tier: "app" };
 
+export {
+  type ControlHandlerResult,
+  type ControlServer,
+  type ControlServerHandlers,
+  type ControlServerOptions,
+  type ControlSubscribeAccept,
+  createControlServer,
+} from "./control-server.js";
+
+/**
+ * The daemon execution ledgers (GH-238 F-2, F-7): instance, heartbeat, lane,
+ * reconciliation, and preemption records over the injected state port.
+ */
+export {
+  appendDaemonHeartbeat,
+  appendDaemonInstance,
+  appendDaemonLane,
+  appendDaemonPreemption,
+  appendDaemonReconciliation,
+  type DaemonAppendResult,
+  type DaemonLedgerRead,
+  readDaemonHeartbeat,
+  readDaemonInstance,
+  readDaemonLanes,
+  readDaemonPreemptions,
+  readDaemonReconciliations,
+} from "./daemon.js";
+export {
+  type DaemonDispatchResultInput,
+  type DaemonDispatchResultOutcome,
+  daemonAttemptId,
+  recordDaemonDispatchResult,
+} from "./daemon-dispatch-result.js";
+export {
+  type ApplyPreemptionInput,
+  type ApplyPreemptionResult,
+  applyPreemption,
+  type PreemptionBoundaryObservation,
+  type PreemptionReleasePort,
+  type ReevaluatePendingInput,
+  reevaluatePendingPreemptions,
+} from "./daemon-preemption.js";
+export {
+  type DaemonEvidenceProvider,
+  type DaemonReconcileInput,
+  type DaemonReconcileResult,
+  reconcileDaemon,
+} from "./daemon-reconcile.js";
+export {
+  createDaemonRuntime,
+  type DaemonRuntime,
+  type DaemonRuntimeFailure,
+  type DaemonRuntimePorts,
+  type DaemonRuntimeState,
+  readRuntimeHeartbeat,
+  readRuntimeInstance,
+} from "./daemon-runtime.js";
+export {
+  type DaemonStatusInput,
+  type DaemonStatusRead,
+  readDaemonStatus,
+} from "./daemon-status.js";
+export {
+  recordResumeIntent,
+  runSupervisionCycle,
+  SUPERVISE_ONLY_DEGRADATION,
+  type SupervisionAction,
+  type SupervisionHandle,
+  type SupervisionInput,
+  type SupervisionPorts,
+  type SupervisionResult,
+} from "./daemon-supervision.js";
+export {
+  installSupervisor,
+  type SupervisorResult,
+  uninstallSupervisor,
+} from "./daemon-supervisor.js";
+export {
+  boundLastMessage,
+  type DispatchAdmission,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
+  runDispatch,
+} from "./dispatch.js";
+export {
+  type DispatchGateRead,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+} from "./dispatch-gate.js";
+export {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  appendDispatchHandover,
+  type DispatchAppendResult,
+  type DispatchDivergenceSummary,
+  type DispatchLedgerRead,
+  foldDispatchDivergences,
+  isEvidenceClass,
+  readDispatchAttempts,
+  readDispatchDivergences,
+  readDispatchHandover,
+  resolveDispatchDivergence,
+  summarizeDispatchDivergences,
+  writeDispatchAuthority,
+} from "./dispatch-ledger.js";
+export {
+  appendCommandReceipt,
+  appendOutboxEffect,
+  type BeginCommitEffectInput,
+  beginCommitEffect,
+  type DaemonEffectDetectionInput,
+  detectDaemonEffects,
+  type EffectAppendResult,
+  type EffectLedgerRead,
+  type RecoverCommitEffectInput,
+  type RecoverCommitEffectResult,
+  readCommandReceipts,
+  readOutboxEffects,
+  recordRedriveRequest,
+  recoverCommitEffect,
+} from "./effects.js";
+/**
+ * The derived host-index fold (GH-288 F-2, DEC-4, DEC-14, DEC-18): the pure
+ * upsert/prune/revision rule over one read, with the DEC-18 key guard.
+ */
+export {
+  corruptHostIndexSiblingName,
+  type HostIndexMaintenanceInput,
+  type HostIndexMaintenanceResult,
+  type HostIndexRootProbe,
+  maintainHostIndex,
+  parseHostIndexDocument,
+  serializeHostIndexDocument,
+} from "./host-index.js";
+export {
+  createResidentPolling,
+  type ResidentPolling,
+  type ResidentPollingInput,
+} from "./polling.js";
+/**
+ * The `projects list` projections (GH-288 F-3, F-4, F-5, DEC-6, DEC-7, DEC-8):
+ * the handover matrix, the daemon reason selector, the exact five-field row, and
+ * the key ordering.
+ */
+export {
+  type AuthorityEvidence,
+  classifyProjectStateLocation,
+  type DaemonComposition,
+  type DaemonMountCapability,
+  type DaemonMountFact,
+  type DaemonProbeFacts,
+  type DaemonSocketFact,
+  daemonReasonFor,
+  type HandoverEvidence,
+  orderProjectEntries,
+  projectHandoverState,
+  projectListEntry,
+  selectDaemonReachability,
+} from "./projects.js";
 /**
  * The queue/scheduling use-case orchestration (GH-237 F-1..F-12): the intent,
  * lease, park, and incident ledgers over the injected `StateStorePort`, composed
@@ -52,142 +218,37 @@ export {
   recoverQueueParks,
   releaseQueueLease,
 } from "./queue.js";
-
 /**
- * The daemon execution ledgers (GH-238 F-2, F-7): instance, heartbeat, lane,
- * reconciliation, and preemption records over the injected state port.
+ * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
+ * derived project root, the declared `unbound` scope, and the closed identity
+ * outcomes over injected facts and the marker seam.
  */
 export {
-  appendDaemonHeartbeat,
-  appendDaemonInstance,
-  appendDaemonLane,
-  appendDaemonPreemption,
-  appendDaemonReconciliation,
-  type DaemonAppendResult,
-  type DaemonLedgerRead,
-  readDaemonHeartbeat,
-  readDaemonInstance,
-  readDaemonLanes,
-  readDaemonPreemptions,
-  readDaemonReconciliations,
-} from "./daemon.js";
+  type CheckoutIdentityFacts,
+  checkoutDirectoryName,
+  type HostStateRootInput,
+  hostIndexPath,
+  type LegacyStoreFacts,
+  legacyStoreWarning,
+  type ProjectIdentityPorts,
+  type ProjectScopeInput,
+  type ProjectScopeOutcome,
+  type ProjectsScopeFailure,
+  parseProjectIdentityMarker,
+  projectDiscriminator,
+  projectKeyFor,
+  projectStateRoot,
+  projectsContainerPath,
+  resolveHostStateRoot,
+  resolveProjectScope,
+  type StateScopeRoots,
+  sanitizeProjectBasename,
+  serializeProjectIdentityMarker,
+  stateScopeRoots,
+  unboundStateRoot,
+} from "./state-scope.js";
 export {
-  createControlServer,
-  type ControlHandlerResult,
-  type ControlServer,
-  type ControlServerHandlers,
-  type ControlServerOptions,
-  type ControlSubscribeAccept,
-} from "./control-server.js";
-export {
-  type DaemonEvidenceProvider,
-  type DaemonReconcileInput,
-  type DaemonReconcileResult,
-  reconcileDaemon,
-} from "./daemon-reconcile.js";
-export {
-  type DaemonStatusInput,
-  type DaemonStatusRead,
-  readDaemonStatus,
-} from "./daemon-status.js";
-export {
-  createDaemonRuntime,
-  readRuntimeHeartbeat,
-  readRuntimeInstance,
-  type DaemonRuntime,
-  type DaemonRuntimeFailure,
-  type DaemonRuntimePorts,
-  type DaemonRuntimeState,
-} from "./daemon-runtime.js";
-export {
-  createResidentPolling,
-  type ResidentPolling,
-  type ResidentPollingInput,
-} from "./polling.js";
-export {
-  recordResumeIntent,
-  runSupervisionCycle,
-  SUPERVISE_ONLY_DEGRADATION,
-  type SupervisionAction,
-  type SupervisionHandle,
-  type SupervisionInput,
-  type SupervisionPorts,
-  type SupervisionResult,
-} from "./daemon-supervision.js";
-export {
-  appendCommandReceipt,
-  appendOutboxEffect,
-  beginCommitEffect,
-  detectDaemonEffects,
-  type BeginCommitEffectInput,
-  type DaemonEffectDetectionInput,
-  type EffectAppendResult,
-  type EffectLedgerRead,
-  readCommandReceipts,
-  readOutboxEffects,
-  recordRedriveRequest,
-  recoverCommitEffect,
-  type RecoverCommitEffectInput,
-  type RecoverCommitEffectResult,
-} from "./effects.js";
-export {
-  applyPreemption,
-  reevaluatePendingPreemptions,
-  type ApplyPreemptionInput,
-  type ApplyPreemptionResult,
-  type PreemptionBoundaryObservation,
-  type PreemptionReleasePort,
-  type ReevaluatePendingInput,
-} from "./daemon-preemption.js";
-export {
-  watchLines,
   type WatchInput,
   type WatchRead,
+  watchLines,
 } from "./watch.js";
-export {
-  installSupervisor,
-  type SupervisorResult,
-  uninstallSupervisor,
-} from "./daemon-supervisor.js";
-
-export {
-  appendDispatchAttempt,
-  appendDispatchDivergence,
-  appendDispatchHandover,
-  foldDispatchDivergences,
-  isEvidenceClass,
-  readDispatchAttempts,
-  readDispatchDivergences,
-  readDispatchHandover,
-  resolveDispatchDivergence,
-  summarizeDispatchDivergences,
-  writeDispatchAuthority,
-  type DispatchAppendResult,
-  type DispatchDivergenceSummary,
-  type DispatchLedgerRead,
-} from "./dispatch-ledger.js";
-export {
-  boundLastMessage,
-  runDispatch,
-  type DispatchAdmission,
-  type DispatchLeaseClaim,
-  type DispatchPorts,
-  type DispatchRunResult,
-  type DispatchTruthReads,
-} from "./dispatch.js";
-export {
-  handoverDispatchEvidence,
-  readDispatchGate,
-  resolveDispatchDivergenceEvidence,
-  revertDispatchHandoverEvidence,
-  summarizeDispatchEvidence,
-  type DispatchGateRead,
-  type DispatchHandoverResult,
-  type DispatchSummaryResult,
-} from "./dispatch-gate.js";
-export {
-  daemonAttemptId,
-  recordDaemonDispatchResult,
-  type DaemonDispatchResultInput,
-  type DaemonDispatchResultOutcome,
-} from "./daemon-dispatch-result.js";

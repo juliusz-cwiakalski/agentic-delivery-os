@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the five additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, the six additive coordinator iteration, restart, stuck, exhaustion, wake, and fence record kinds with coordinator-scoped key prefixes and ledger-sequence folds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -17,6 +17,29 @@ links:
 ## Overview
 
 The state layer is the durable local substrate later verification reads through. A store is opened from an injected identity — level, workspace identifier, fence namespace, schema version, and a concrete state directory — and exposes one driver-neutral port: append, read with a key-set assertion, read the verified record list, replace a derived document, acquire/release/recover a fence, check integrity, repair a terminal torn tail, run the explicit guided salvage operation, and read or get-or-create a store-managed artifact.
+
+### State root scope
+
+A store is opened per repository. Two layers resolve its directory: the **host
+root** — an absolute `<PREFIX>_STATE_DIR` environment override when set,
+otherwise the injected home plus `brand.stateDirectoryName` — and the **project
+state root** `<host root>/projects/<project key>`, derived from the checkout's
+identity marker (see [Projects Host Overview](feature-projects.md)). Every
+delivery artifact lives under the project root; the host root keeps only the
+host-wide documents: the derived host index `host-index.json` (the only host-wide
+*index* document) and the host-wide owner-hold marker, plus the `projects/`
+container and the declared `unbound/` scope.
+
+The workspace identifier stays `default` inside every project root and the
+artifact names, modes, record kinds, fold rules, validation predicates, and
+schema version are unchanged: isolation comes from the root, not from re-keying
+the workspace. The delivered override-aware rule is the store's host-root rule,
+so the store honours the override. Migration of an existing single store is one
+directory move that rewrites nothing (see
+[Migrating to Per-Repository Delivery State](../../guides/migrating-to-per-repository-state.md)).
+The durable record of these choices is
+[TDR-0022](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md);
+this page states the delivered behaviour and does not restate the decision.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 

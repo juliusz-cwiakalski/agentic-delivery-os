@@ -53,6 +53,12 @@ export type CommandDefinition = {
   readonly requiresValue?: readonly string[];
   readonly conflicts?: readonly (readonly [string, string])[];
   readonly positionals?: { readonly max: number };
+  /**
+   * Admit any `--flag` for a definition whose handler refuses before it reads
+   * anything, so the refusal identity (not the parser) answers the invocation.
+   * The classified scope-refusal program is the only user of this.
+   */
+  readonly acceptsAnyFlag?: boolean;
   readonly humanSuccess?: boolean;
   readonly humanText?: (
     data: unknown,
@@ -130,6 +136,8 @@ type Outcome =
       readonly summary?: string;
       readonly message?: string;
       readonly value?: unknown;
+      /** Safe structured notices; emitted once each on stderr in every mode. */
+      readonly warnings?: readonly string[];
     };
 
 type ParsedInvocation =
@@ -209,7 +217,11 @@ const outcomeFromResult = (result: unknown): Outcome => {
   }
   if (hasError) {
     const failure = result.error;
-    return failureOutcome(classifyThrown(failure), failure);
+    const failureWarnings = Array.isArray(result.warnings)
+      ? result.warnings.filter((warning): warning is string => typeof warning === "string")
+      : [];
+    const outcome = failureOutcome(classifyThrown(failure), failure);
+    return failureWarnings.length === 0 ? outcome : { ...outcome, warnings: failureWarnings };
   }
   const warnings = Array.isArray(result.warnings)
     ? result.warnings.filter((warning): warning is string => typeof warning === "string")
@@ -256,7 +268,7 @@ const parseInvocation = (argv: readonly string[], program: CommandProgram): Pars
       positionals.push(token);
       continue;
     }
-    if (!allowedFlags.has(token)) {
+    if (!definition.acceptsAnyFlag && !allowedFlags.has(token)) {
       return { ok: false, reason: `unknown flag "${token}"` };
     }
     if ((definition.requiresValue ?? []).includes(token)) {
@@ -447,9 +459,7 @@ export async function runCli(
         pretty,
         ...(humanSuccess && outcome.type === "success" ? { humanJson: outcome.data } : {}),
         ...(humanText === undefined ? {} : { humanText }),
-        ...(outcome.type === "success" && outcome.warnings !== undefined
-          ? { warnings: outcome.warnings }
-          : {}),
+        ...(outcome.warnings !== undefined ? { warnings: outcome.warnings } : {}),
       },
     );
   } catch {
