@@ -373,3 +373,34 @@ notes:
       plan validate verdict=valid."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 3 (command pages, seeds, journey, entrypoint delta) complete
+      at commit 7ee9ec1f. Scope: new milestones/m2/commands/repos.md, rewritten
+      milestones/m2/commands/projects.md, milestones/m2/test-scenarios.md,
+      milestones/m2/journeys.md, milestones/m2/entrypoint-delta.md. One
+      cross-phase correction travelled in this commit and is recorded rather
+      than hidden: backlog.md line 1187 read 'if a flat `projects list` had
+      shipped', and P36's delivered-claim detector matches `shipped` in a line
+      naming `projects`, so the word became 'landed'. No other backlog byte
+      changed and the 13-file manifest is unaffected. Gates on enumerated
+      tokens: P19 checks=9/9 fields=5/5; P20 checks=7/7 fields=3/3
+      forbidden_flat_statements=0; P21 repos_page repos.v1>=1 projects[]=0
+      header=1 not_registered=1, projects_page projects.v1>=1 repos.v1=0
+      repos[]=0 header=1 not_registered=1; P22 s18_seeds=3 s19_seeds=3
+      assert_violations=0 coverage_anchors=10/10; P23
+      s11_01_assert_repos_list=1 s11_01_assert_projects_list=0,
+      s11_02_title/body repos_list, assert_fields=5/5,
+      flat_assert_survivors=0; P24 project_scoped/member_outside_shared_dir/
+      flat_view/group_view/scoped_reads/workspace_optional_stated/
+      same_ref_disjoint=OK, journey_anchors=4/4; P25 repos_addition=OK
+      projects_addition=OK mount_names_both=OK
+      host_overview_claims=0 and the five preserved tokens OK; P36
+      proposed_headers=2/2 delivered_claims=0 pack_statement=verbatim
+      snapshot_relabels=0; P43 broken_links=0 restated_ac_blocks=0; P38
+      dist_guard_exit=0 planning_markers=0; lint exit 0; plan validate
+      verdict=valid. P42/P37 and `pnpm check` were explicitly NOT gates at this
+      boundary: the new page is unregistered until P4, and the guard's single
+      red finding was exactly
+      'unregistered user-facing doc absent at corpusBaseline:
+      doc/planning/oss-tooling/milestones/m2/commands/repos.md'."
+    type: "info"
+    date: "2026-11-11"
