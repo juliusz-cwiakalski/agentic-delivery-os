@@ -141,3 +141,36 @@ notes:
       digests across PASS, FAIL, SKIP and ERROR. No stash was touched or dropped."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 2 COMPLETE — the stated commit-message contract and the
+      quality_gates wiring. Commit 8a1a43de: .opencode/agent/committer.md gains a
+      <message_contract> block (conventional `type(scope): summary` subject
+      carrying the work item ref; body and footer lines within 100 characters;
+      no plain 'Merge remote-tracking branch ...' subject left behind; both
+      remediation modes SURGICAL REWORD / CONDENSE-TO-ONE by offending-commit
+      count; the four-clause ownership split), .opencode/agent/pm.md step 8 gains
+      the range lint as a required step before `phase complete` (PASS/SKIP
+      proceed, FAIL loops in the named mode through @coder and re-runs, ERROR is
+      never a pass and blocks completion, verdict recorded as a pm-notes notes
+      entry, ownership restated), and .ados-claude/agents/{committer,pm}.md were
+      regenerated together. Delivered criterion: AC-F4-1 (TC-PROMPT-001,
+      TC-PROMPT-002, TC-PROMPT-003). Verification observed: pnpm check:prompt ->
+      'prompt-conformance: 5 prompt(s) clean'; the load-bearing prohibition
+      survives byte-identical ('Never run `git add`, `git commit`, `git reset`,'
+      now at committer.md:39 after the insertion); the raw-write scan over both
+      prompts yields only negated matches (empty after the negation filter);
+      SURGICAL REWORD/CONDENSE-TO-ONE, 'Merge remote-tracking branch'/100,
+      type(scope)/conventional and the ownership greps all hit;
+      lint-commit-range/phase complete/unable to verify/ERROR/pm-notes all present
+      in pm.md step 8; scripts/build-claude-plugin.sh rebuilt 24 agents and 20
+      skills and left no pending .ados-claude change (porcelain empty), and the
+      .ados-claude diff since the delivery base is exactly
+      .ados-claude/agents/committer.md and .ados-claude/agents/pm.md. Mechanism
+      note on subjects: the commit primitive's template derives the subject from
+      the top staged path for a standalone commit, because a lifecycle phase that
+      maps to several plan phases suppresses the per-phase summary (the union is
+      only used when every matching summary is identical); every commit of this
+      change is therefore 'chore(GH-268): update <top-path>', which is
+      conventional and carries the work item ref as required, but not the plan
+      phase summary the plan's pins describe."
+    type: info
+    date: "2026-11-11"
