@@ -223,3 +223,30 @@ invocations, the one-step migration is documented in
 [the migration guide](../../guides/migrating-to-per-repository-state.md), and the
 owner hold stays host-wide. The remaining M2 stories are unaffected by this
 delivery and stay planned.
+
+## M2 domain-model amendment (2026-11-11)
+
+Planning state only: this section records the GH-303 amendment to the M2 plan
+and claims no M2 delivery and no milestone exit.
+
+1. The domain model is three-level: a repository is one checkout and the
+   delivery unit, a project group is a configured group of repositories whose
+   membership is declared in configuration, and a workspace is an optional
+   discovery root that is never required.
+2. The contracts split cleanly: `project-groups.v1` with `data.groups[]` and
+   `groupKey` is the group contract, the delivered `projects.v1` payload
+   (`data.projects[]`, `projectKey`) stays the flat record set, and the
+   planned flat surface is `repos.v1` with `data.repos[]` and `repoKey`. The
+   rename rule and its `projects list --flat` alias are recorded once in the
+   contracts; M2-S18 owns the rename and retires the alias at the M3 boundary.
+3. M2-S18 also owns configuration-only membership, the scoped-read grammar
+   `queue list --project <groupKey>` and `status --project <groupKey>`, and the
+   superseding decision record.
+4. `board --project` stays a repository key; the board is not group-scoped,
+   while queue and status are.
+5. The command registry splits into one delivered `projects` row (M2-S11,
+   shipped in GH-288) and one prospective `repos` row marked Not delivered
+   pending the superseding decision record and code change required by
+   ODR-0003.
+6. M2-S4 depends on M2-S18, so the advisory phrase is removed from the pack
+   map row.

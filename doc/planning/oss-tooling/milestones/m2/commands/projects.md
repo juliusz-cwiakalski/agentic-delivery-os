@@ -4,121 +4,154 @@ Status: Proposed (M2)
 
 ## NAME
 
-`projects` - one overview of every delivery-managed checkout on the host.
+`projects` - the group surface: configured groups with their member
+repositories, health, and state.
 
 ## SYNOPSIS
 
 ```
 <binary> projects list [--json]
+<binary> projects list --project <groupKey> [--json]
+<binary> projects list --flat [--json]
 <binary> projects --help
 <binary> projects list --help
-<binary> --version
+<binary> projects --version
 ```
 
 ## DESCRIPTION
 
-Read-only host overview. Each managed checkout is identified by its checkout
-identity (the git common dir marker), and its state lives under a
-per-repository root, so two checkouts of different repositories never share
-phase state, queue entries, or lane leases - even when both use the same ref.
+Read-only group view. A project is a named group of repositories that belong
+together, and its membership is declared in configuration rather than inferred
+from a directory. `projects list` renders every configured group with its
+member repositories, their health, and their state, under the
+`project-groups.v1` contract.
 
-`projects list` reports one row per project: the repo key, the checkout root,
-the state location, daemon reachability, and the handover state. No manual
-registry is required; the host index is discovered from the checkouts.
+Group-scoped reads take the group key: `queue list --project <groupKey>` and
+`status --project <groupKey>` answer what one group has running, waiting, and
+parked. A registered `workspaceRoot` adds discovery of the declared members
+inside that directory; it is never required, and a group whose members live in
+unrelated directories reads identically. Scan results never admit an
+undeclared clone.
 
-This page is the M2-S11 contract and records the planned end state until M2
-exits; the observed root-listing composition is recorded in
-[../entrypoint-delta.md](../entrypoint-delta.md) rather than here. See
-[../contracts.md](../contracts.md) for `projects.v1`.
+The naming boundary is fixed: `repos` is the flat record set, and `projects`
+groups it. The time-scoped disambiguation: before M2-S18 the shipped
+`projects list` was the delivered flat record set, and from M2-S18 the rename
+rule makes `projects list` the group surface while `repos list` takes the flat
+enumeration. The flat page is [./repos.md](./repos.md) and its contract lives
+in [../contracts.md](../contracts.md).
+
+This surface is proposed for M2-S18 and is not yet registered at the root
+listing. The group contract is `project-groups.v1`, the configuration document
+is `<configDirectoryName>/projects.yaml` (schema
+`delivery.projects.groups.v1`), and the aggregation behaviour is declared in
+the project-scoped aggregation clause; all three are in
+[../contracts.md](../contracts.md). See
+[../entrypoint-delta.md](../entrypoint-delta.md) for the root listing delta.
 
 ## OPTIONS
 
 | Option | Meaning |
 |---|---|
-| `list` | Enumerate managed projects. The only verb in this contract. |
+| `list` | Render configured groups with their members. |
+| `--project <groupKey>` | Scope the read to one group. |
+| `--flat` | The deprecation alias defined by the rename rule: return the delivered flat payload instead of groups. |
 | `--json` | Emit the machine envelope instead of the human table. |
-| `--help` | Print this command's help and exit without reading state, git, configuration, or the network. |
-| `--version` | Print the binary's version and build identity and exit without reading state. |
+| `--help` | Print command or verb help and exit without reading state, git, configuration, or the network. |
+| `--version` | Print the binary's version and build identity and exit without reading state, git, configuration, or the network. |
 
 ## OUTPUT
 
-Text: a deterministic table with one row per project and the columns `key`,
-`root`, `state`, `daemon`, `handover`, sorted by repo key. The `daemon` cell is
-the closed vocabulary below: `daemon-not-mounted` (the shipped build composes no
-resident daemon), `state-absent` (the project has no state root yet),
-`socket-absent` (the derived socket path does not exist), `socket-unreachable`
-(the socket exists and a bounded connect fails), or `reachable` with no reason.
-A bare negative is never rendered.
+Text: a group block per group with one member line per repository and the
+columns `group`, `member`, `tracker`, `state`, `health`, `daemon`.
 
-Envelope `data` carries:
+Envelope `data.groups[]` carries exactly one entry per configured group, and
+`data.groups[]` carries a `groupKey` for each such group. Each entry holds:
 
 | Key | Contract |
 |---|---|
-| `projects[]` | One entry per managed checkout |
-| `projects[].projectKey` | Stable repo key derived from the checkout identity |
-| `projects[].root` | Absolute checkout root |
-| `projects[].stateLocation` | Per-repository state root |
-| `projects[].daemonReachable` | `{ reachable }` or `{ reachable: false, reason }` with the closed reason set below |
-| `projects[].handoverState` | `engine`, `shell`, or `in-transition` |
-| `hostIndexRevision` | Revision of the host-level index that produced the list |
+| `data.groups[].groupKey` | Group identity of the group |
+| `data.groups[].name` | Display name of the group |
+| `data.groups[].workspaceRoot` | Optional workspace root used for discovery, absent when none is configured |
+| `data.groups[].members[]` | One entry per declared member repository |
+| `data.groups[].members[].repoKey` | Repo key of that member |
+| `data.groups[].members[].root` | Absolute root of that member |
+| `data.groups[].members[].trackerKind` | Tracker kind declared for that member |
+| `data.groups[].members[].state` | Delivery state of that member |
+| `data.groups[].members[].health` | Health of that member, including a `not-yet-supported` classification when its tracker kind has no implemented adapter |
+| `data.groups[].members[].daemonReachable` | Daemon reachability for that member, plus a degradation reason when false |
 
-The `daemonReachable.reason` vocabulary is closed: `daemon-not-mounted`,
-`state-absent`, `socket-absent`, `socket-unreachable`. The first applicable
-reason wins, in that order: an unmounted build declares the mount state and
-performs no probe, and an absent state root makes the socket question
-unanswerable.
+The `data.groups[].members[].daemonReachable.reason` vocabulary is closed:
+`daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`.
+The first applicable reason wins, in that order: an unmounted build declares
+the mount state and performs no probe, and an absent state root makes the
+socket question unanswerable.
+
+Aggregation reads the members from configuration in declared order. One
+`state-unavailable` member produces a classified partial result at exit `0`
+with `partial` true and the degraded member named, so the readable members are
+still returned; a `not-yet-supported` member contributes no records and never
+fails the read. Exit `2` occurs only when the configuration document or the
+invoking scope cannot be read.
 
 ## EXIT STATUS
 
 | Code | Meaning |
 |---|---|
-| `0` | The project list was produced; also the declared `unbound` scope outside any work tree |
-| `1` | The request was refused, for example an unknown verb, or the invoking checkout's identity cannot be read |
-| `2` | A platform or state failure prevented discovery |
+| `0` | The group listing was produced, including a classified partial result |
+| `1` | The request was refused, for example an unknown group key |
+| `2` | The configuration document or the invoking scope cannot be read |
 
 ## EXAMPLES
 
 ```
 $ <binary> projects list
-KEY              ROOT                 STATE                                     DAEMON              HANDOVER
-delivery-a-1a2b3c4d  /work/delivery-a  /srv/delivery-state/projects/delivery-a-1a2b3c4d  daemon-not-mounted  engine
-delivery-b-5e6f7a8b  /work/delivery-b  /srv/delivery-state/projects/delivery-b-5e6f7a8b  socket-absent       shell
+GROUP       MEMBER                    TRACKER  STATE   HEALTH    DAEMON
+platform    delivery-a-1a2b3c4d       github   engine  healthy   reachable
+platform    delivery-b-5e6f7a8b       github   engine  degraded  unreachable
 ```
 
 ```
-$ <binary> projects list --json
+$ <binary> projects list --project platform --json
 {
   "ok": true,
   "command": "projects list",
-  "data": { "projects": [ { "projectKey": "delivery-a", "...": "..." } ], "hostIndexRevision": 12 }
+  "data": { "groups": [ { "groupKey": "platform", "members": [ { "repoKey": "delivery-a-1a2b3c4d", "...": "..." } ] } ] }
 }
 ```
 
 ## SCOPE
 
 `projects list` performs no index maintenance, prunes nothing, replaces no
-corrupt file, creates no project state root, and writes no index or store
-content. Two side effects are permitted: the invoking checkout's identity marker
-is created once inside its git common directory when it is absent, as it is for
-every composed command, and opening a project's store read-only to read its
-handover evidence removes a leftover `*.tmp` sibling. Neither can create, change,
-or prune an index entry, a phase document, a queue record, or any other store
-content.
+corrupt file, and creates no group state root. Two side effects are permitted:
+the invoking checkout's identity marker is created once inside its git common
+directory when it is absent, and opening a member's store read-only to read
+its handover evidence removes a leftover `*.tmp` sibling. Neither can create,
+change, or prune an index entry, a phase document, a queue record, or any
+other store content.
 
-An invocation outside any git work tree uses the declared host-scoped `unbound`
-state root beside the project container, emits one bounded warning that its
-state is not repository-scoped, registers no project, creates no project root,
-and keeps its exit code. It is never reported as a project row.
+Outside the projects family itself, only queue and status are group-scoped.
+`board --project` stays a repository key and is never group-scoped, and this
+page makes no group-scoped board claim.
+
+The repository vocabulary is permanent: the `project-identity.json` marker,
+the `<host root>/projects/<key>` container, the host index's `projects[]` and
+`projectKey` fields, and the `--project-root` flag each denote a repository checkout
+and keep that meaning unless a code change renames them.
+
+`projects list --flat` is only the deprecation alias defined by the rename
+rule: it returns the delivered flat payload and is not restated here.
 
 ## ERRORS
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `projects.identity-unreadable` | The **invoking** checkout's identity cannot be read: git metadata is present but unusable, or the identity marker is unreadable, invalid, or inconsistent with its recorded key. A path that is not a git work tree is not this error — it is the `unbound` scope below | 1 |
-| `projects.registry-corrupt` | The host index is present but cannot be parsed; a state-opening invocation repairs it, preserving the corrupt bytes as a timestamped sibling | 2 |
-| `projects.state-unavailable` | A project state location is present but unreadable or cannot be established, or the identity marker cannot be created. An **absent** root is ordinary first use, not this error | 2 |
+| `projects.config-invalid` | The configuration document contradicts itself or fails schema/content validation | 1 |
+| `projects.unknown-group` | The requested group key is not configured | 1 |
+| `projects.scope-unavailable` | The configuration document cannot be read, or the invoking scope is unavailable | 2 |
 
 ## SEE ALSO
 
-[projects.v1](../contracts.md), [architecture: multi-repository overview](../architecture.md),
+[project-groups.v1](../contracts.md), [repos](./repos.md),
+[architecture: multi-repository overview](../architecture.md),
+[entrypoint delta](../entrypoint-delta.md),
 [backlog](../../../backlog.md)

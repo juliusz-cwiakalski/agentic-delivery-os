@@ -1,0 +1,181 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-303
+branch: docs/GH-303/project-groups-domain-model
+status: FAIL
+summary: >-
+  The delivered corpus satisfies almost every acceptance criterion and the
+  coder's evidence is reproducible: all 45 procedure blocks (P00-P45) were
+  re-extracted and re-run in fresh shells from a clean tree, together with
+  `delivery-os plan validate GH-303` (valid), `delivery-os lint GH-303`
+  (conforms) and `scripts/.tests/test-doc-distribution.sh` (exit 0), and every
+  re-run procedure reports the verdict the change artifacts claim
+  (13/13 product-file containment, 140 registry rows with the single row
+  between `queue.md` and `spend.md`, 26/26 clause anchors, Appendix B 17/17,
+  planned-not-delivered 2/2 headers with 0 delivery claims, `status.md`
+  additions confined to one new section). It still fails on two
+  reader-facing statement defects that the pattern-based oracles cannot see
+  (test plan G-4 assigns exactly this residue to the reviewer): the page that
+  owns the three-level model still opens by calling delivery repositories
+  "first-class projects", and a touched scenario file still uses `project
+  key`/`data.projects` for repositories, so NFR-12/AC-F14-1's zero-occurrence
+  statement is not met in the twelve touched documents. Three minor
+  conformance items (a merged S18 acceptance pair, an index row that counts
+  nine flows against eight, and undeclared P5-phase edits to three files) and
+  one recorded deferral (`commands/board.md`) complete the record. All six are
+  cheap to fix; none requires a manifest change.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 3
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m2/architecture.md:3
+    message: >-
+      The opening sentence of the page that owns the new model still states the
+      old one: "The system at M2 exit: one workstation manages several delivery
+      repositories as first-class projects". Forty-five lines later the same
+      page defines "A **project** is a named group of repositories", so the
+      document now contradicts itself, and `projects` occurs with
+      flat-enumeration (checkout) meaning inside one of the twelve touched
+      documents. `architecture.md:31` carries the same residue, where the C4
+      Level 1 engine node still enumerates "projects" among the engine
+      capabilities while C4 Level 2 renames that plane to "repository plane"
+      (line 74). P32/P45 pass because the detectors only fire on enumeration
+      predicates and neither line sits in an Appendix B region; F-14 ("a
+      location that names only one uses it with the correct meaning"),
+      AC-F14-1 (zero occurrences of `projects` denoting the flat enumeration in
+      the twelve documents) and NFR-12's first clause are therefore unmet.
+    suggestion: >-
+      Reword the intro to the delivered model (for example "one workstation
+      manages several delivery repositories, grouped as configured projects,
+      each owning its own state") and rename the C4 Level 1 engine capability
+      "projects" to match the renamed repository plane. Both edits are inside a
+      file already in the thirteen-file manifest, so no scope change is needed.
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:61
+    message: >-
+      `SC-M2-S4-02` still uses the group name for repositories inside a touched
+      document: "every lane appears under its project key" (line 61) and
+      "Assert: `board --all.data.projects` holds both project keys" (line 64).
+      AC-F14-1 requires zero `projects` occurrences with flat-enumeration
+      meaning across the twelve planning documents, and test plan §1.2 G-4
+      explicitly says such residue survives the pattern scan and must be caught
+      by the reviewer, so this is the finding that gap anticipates rather than a
+      new requirement. Because the seed asserts against the untouched board
+      envelope, it cannot be fully corrected without the board page decision
+      the plan defers (TP-7), but the residue is currently recorded nowhere.
+    suggestion: >-
+      Reword the seed prose to repository keys (leaving the `data.projects`
+      field name as the board envelope it currently asserts), or add this seed
+      to the deferred item beside `commands/board.md` in test plan §8.4 TP-7 and
+      plan P5's constraint, naming the owning story (M2-S4) so the residue is
+      tracked rather than silent.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/backlog.md:1314
+    message: >-
+      The M2-S18 acceptance block has four numbered items for five ticket
+      clauses: Appendix A's S18-A3 ("`projects list` shows the group with both
+      members and their state") and S18-A4 ("queue and status accept a project
+      scope") share item 3. NFR-8 says "0 clauses weakened to 'may', merged, or
+      dropped", AC-F2-1 counts "5 acceptance" clauses, and plan P1's
+      definitionOfDone repeats "no clause added, omitted, weakened, merged, or
+      reordered" - while the plan constrains only S19 to "exactly three items,
+      each independently identifiable" (plan line 740), so S19 kept its three
+      criteria separate and S18 did not. P03/P41 report 12/12 and 26/26 because
+      the anchors are vocabulary scans that cannot see item boundaries.
+    suggestion: >-
+      Split item 3 into two numbered items (group listing with both members and
+      their state; queue and status accept a project scope), leaving items 1, 2
+      and 4 as they are, so the block carries five identifiable acceptance
+      clauses as Appendix A and AC-F2-1 count.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: docs-consistency
+    location: doc/planning/oss-tooling/milestones/m2/README.md:29
+    message: >-
+      The `architecture.md` purpose row now reads "the seven key flows, the S17
+      park/resume flow, the cross-repository change flow", which enumerates to
+      nine flows, while `## Key flows` holds exactly eight `###` headings (the
+      six base flows plus `S17 park and resume under a provider peak` plus the
+      new `Cross-repository change`, as NFR-7 and P40 pin). The base row read
+      "the six key flows, the S17 park/resume flow" (six plus one equals the
+      seven base headings), so the new wording double-counts the
+      cross-repository flow and no procedure checks this row's arithmetic (P26
+      checks row count, map rows and planned-until-exit only).
+    suggestion: >-
+      Restate the row as "the eight key flows" (or "the seven key flows, the
+      cross-repository change flow") so the count matches the eight headings the
+      structural read enforces.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-pm-notes.yaml:421
+    message: >-
+      The commit declared as plan phase 5 (`0aba071e`) also modified
+      `backlog.md`, `architecture.md` and `journeys.md`, which are outside
+      `phases[4].scope.files` in `chg-GH-303-plan.yaml` (lines 1180-1185) and
+      outside the four-file scope the P5 pm-notes entry lists (line 421: the two
+      indices, `status.md`, `cli-command-registry.md`). The extra edits are
+      cosmetic (one context-paragraph re-wrap, one journey re-wrap, one stray
+      blank line removed) and stay inside the thirteen-file manifest and the
+      spec's permitted regions, so no guard or AC breaks - but the per-phase
+      evidence does not describe the commit that was made, which is exactly the
+      plan-audit scope-deviation gap the phase record is supposed to close.
+    suggestion: >-
+      Record the three P5 touch-ups in the P5 pm-notes entry (files, reason -
+      line-length/blank-line clean-up surfaced by the closing verification
+      battery - and gate re-runs) so phase evidence matches `0aba071e`, or move
+      such edits to their owning phases in future runs.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: docs-consistency
+    location: doc/planning/oss-tooling/milestones/m2/commands/board.md:24
+    message: >-
+      Recording, not re-raising: the untouched board page still means repository
+      by "project" throughout (`projects[]` = "Project keys included in the
+      board" at line 51 with the example `["delivery-a"]`, `--project <key>` at
+      lines 24/39/77/85, `board.project-unknown` "not in the host index") and now
+      links to the redefined `projects.v1` (line 90), while `journeys.md:24`
+      newly asserts `board --project <key>` with group meaning. The page's
+      reconciliation is declared deferred in test plan §8.4 TP-7, plan P5's
+      constraint (line 1204) and readiness iteration 1 finding 13, so it is an
+      accepted residual and not a delivery failure; the new evidence is that the
+      same option name now carries two meanings across the pack, which a reader
+      of journeys then board will hit.
+    suggestion: >-
+      Keep the deferral, but give it an owner and a checkpoint in the M2-S4
+      delivery (board page: `repos[]` for the flat list and a group-scoped
+      `projects list` read) so the option name is reconciled before the board
+      story delivers against the group envelope.
+    suppressed: false
+reviewed_at: 2026-11-11T16:05:00Z
+next_step: >-
+  CALL_CODER then re-review. Fix F-1 and F-2 (the two statement-level
+  spec-compliance failures), then F-3, F-4 and F-5 as small conformance edits;
+  none needs a manifest or spec change. Plan phase 6 (conditional review
+  remediation) opens with this FAIL verdict; after remediation re-run
+  P01/P03/P05/P26/P32/P40/P41/P43/P45 plus the two guards and the aggregate gate
+  on the new head before re-review.

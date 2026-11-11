@@ -33,11 +33,16 @@ exit 0
 
 ## M2-planned additions
 
-- `projects` becomes a root family: the host overview of managed checkouts.
-  **Mounted by GH-288 (M2-S11):** `projects list` is in the prompt-required set,
-  composed by the production entrypoint, advertised in root `--help`, and served
-  by the M2 command page as its reference page. The remaining additions below
-  stay planned.
+- `repos` becomes a root family: the flat record set of managed checkouts,
+  owned by M2-S18.
+- `projects` becomes a root family: the group surface with members, their
+  health, and their state, owned by M2-S18.
+- **Mounted by GH-288 (M2-S11):** the shipped `projects list` is the delivered
+  flat surface — in the prompt-required set, composed by the production
+  entrypoint, advertised in root `--help`, and served by the M2 command page
+  as its reference page. The rename of that shipped surface to `repos list`,
+  with the `projects list --flat` alias, is pending M2-S18 code work; the
+  remaining additions below stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
   read side.
 - `events` joins the subscribe surface as the taxonomy reference; the daemon
@@ -70,12 +75,15 @@ family is mounted.
 
 The entrypoint composes exactly the prompt-required command set and drops
 extras, so a command definition existing in the edge composition is not
-enough. Mounting a family takes a prompt-set change plus a help reference page
-per command; only then does the family appear in root `--help`. GH-288 mounted
-`projects` that way — prompt-set entry, edge composition, help entries, the M2
-reference page, the coverage-inventory row and the per-command page root. The
-remaining M2 additions (`events`, `board`, `dispatch attempts`, `spend` v2)
-stay planned until their own stories mount them.
+enough. Mounting `repos`, `projects`, `events`, or `board` takes a prompt-set
+change plus a help reference page per command; only then does the family
+appear in root `--help`. GH-288 mounted the flat enumeration that way under its
+shipped name `projects`: prompt-set entry, edge composition, help entries, the
+M2 reference page, the coverage-inventory row and the per-command page root.
+Carrying that reference page to [commands/repos.md](commands/repos.md) is
+pending M2-S18 code work, not an effect of this change. The remaining M2
+additions (`events`, `board`, `dispatch attempts`, `spend` v2) stay planned
+until their own stories mount them.
 
 ## Where this note is read
 
@@ -89,6 +97,7 @@ The note is reachable from the milestone index, which lists
 index in [README.md](README.md).
 
 Read it with the M2 command contracts it introduces:
+[commands/repos.md](commands/repos.md),
 [commands/projects.md](commands/projects.md),
 [commands/attempts.md](commands/attempts.md),
 [commands/events.md](commands/events.md),

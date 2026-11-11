@@ -16,6 +16,7 @@ dependency edges, and reconciliation, on top of the delivered lease release.
 <binary> queue dep add <ref> <on-ref> [--json]
 <binary> queue dep remove <ref> <on-ref> [--json]
 <binary> queue reconcile [--ref <ref>] [--json]
+<binary> queue list --project <groupKey> [--json]
 ```
 
 ## DESCRIPTION
@@ -63,6 +64,7 @@ spelling, and `reconcile` are planned for M2-S15. See
 | `--until <iso>` | On `release`: the timestamp at which the park condition is expected to clear. |
 | `--reason <reason>` | Required on `remove`: `landed`, `abandoned`, `superseded`, or `reconciled`. |
 | `--ref <ref>` | Scope `reconcile` to one ref. |
+| `--project <groupKey>` | On `list`: scope the read to one configured group. |
 | `--json` | Emit the machine envelope. |
 
 ## OUTPUT

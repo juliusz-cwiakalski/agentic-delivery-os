@@ -72,7 +72,7 @@ order:
 
 - Deliver: dispatch, plan, commit, verify change, verify gates, merge, verify deploy, closeout
 - See: status, queue (ready-set, queue/lane engine), board, brief, blockers
-- Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, daemon, supervise, repos
+- Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, daemon, supervise, projects, repos
 - Learn: retro, metrics, spend, policy
 - Surfaces: mcp, harness (opencode, Claude Code)
 - Maintain: update
@@ -186,12 +186,13 @@ GitHub, Azure on demand).
 | `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the ceremony tier engine (per-tier phase sets and escalation triggers as data, consuming M1-S13 plan tiers); the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging; the first message type of the typed message contract (origin, receipt, TTL), extensible to agent-to-agent messaging (concepts/inter-agent-communication.md) | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
-| `ados projects` | Workstation overview of managed checkouts: repo key, root, state location, daemon reachability, handover state; per-repository state scoping from the checkout identity (git common dir marker) with a host-level index. Shipped in GH-288 (M2-S11) | operator, coordinator | M2-S11 (shipped in GH-288) | - |
+| `ados repos` | Flat record set of managed checkouts under `repos.v1`: `data.repos[]` with `repoKey`, root, state location, daemon reachability, handover state, from the checkout identity; per-repository state scoping with a host-level index. Not delivered: pending the superseding decision record and code change required by ODR-0003 | operator, coordinator | - | M2-S18 (rename and `projects list --flat` alias), M3-S6 (clone, branch, and worktree hygiene verbs) |
+| `ados projects` | The delivered flat record set as `projects list` (GH-288), becoming the group surface under `project-groups.v1`: configured groups with their member repositories, health, and state; group-scoped queue and status reads; the delivered record set stays reachable through the `projects list --flat` alias owned by M2-S18 until the M3 boundary | operator, coordinator | M2-S11 (shipped in GH-288) | M2-S18 (group surface and the `--flat` retirement) |
 | `ados events` | Subscribe event-taxonomy reference: lists the versioned topics (`queue` and `lanes`, extended by `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`) with their kinds, payload shape, ordering guarantee, and overflow-to-repoll rule | sessions, coordinator | M2-S13 | - |
 
 `attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12)
 and not a root family.
-Boundary note: `projects` (workstation overview, M2-S11) and the future M3 `repos` family are distinct surfaces, so the names never collide.
+Boundary note: the naming boundary is `repos` = the flat record set of managed checkouts (and, later, its clone/branch/worktree hygiene subcommands) and `projects` = the group surface; the rename rule pins the transition and the two names never carry the same meaning.
 
 ### M3: Surfaces, adapters, validators
 
@@ -200,7 +201,6 @@ Boundary note: `projects` (workstation overview, M2-S11) and the future M3 `repo
 | `ados harness` | Harness integrations: list configured harnesses; install or update the ados plugin for a harness (opencode, Claude Code; pi.dev candidate), generated from the canonical source with sync verification (concepts/harness-adapters.md) | sessions, operator | M3-S1 | - |
 | `ados policy` | Policy as code, two jobs: fleet policy check and apply (declared repository policy: branch protection, required checks, merge rules) with exception profiles and timestamped snapshots for rollback and forensics; and a rules register that flags prose rules without a mechanical check (concepts/policy-as-code.md) | operator, coordinator | M3-S5 | - |
 | `ados memory` | Memory governance family: lint (schema, provenance, budgets, index coverage), candidates, promote, supersede, conflicts, stale, doctor (full audit), compile (project canonical memory into each harness's native formats) | all agents, coordinator | M3-S8, M3-S9 | `doctor` continues the health-check family; see concepts/memory-architecture.md |
-| `ados repos` | Clone, branch, and worktree hygiene with safety rails; never touches repos with live deliveries; worktree-aware (worktree-per-delivery is the parked parallel mode's mechanism) | operator, coordinator | M3-S6 | - |
 
 ### M4: Public release readiness
 
