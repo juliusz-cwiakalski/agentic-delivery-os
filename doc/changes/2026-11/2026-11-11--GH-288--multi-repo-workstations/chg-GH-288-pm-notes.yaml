@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-11T10:15:40.606Z }
   delivery: { started: null, completed: 2026-11-11T13:45:00.757Z }
   system_spec_update: { started: null, completed: 2026-11-11T14:03:13.006Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-11T15:48:20.905Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -142,8 +142,8 @@ notes:
     date: "2026-11-11"
   - text: "Plan phase 1 complete (commit 859e1b60). TDR-0022 authored via
       @decision-advisor and indexed; checkout identity marker (create-once,
-      atomic sibling+link, 0600, in the git common directory, recording basename,
-      identifier and minted key); app-tier policy at
+      atomic sibling+link, 0600, in the git common directory, recording
+      basename, identifier and minted key); app-tier policy at
       packages/core/src/app/state-scope.ts (override else home+brand,
       <host>/projects/<key>, declared unbound scope) with the host-root rule
       removed from config/catalog.ts; core entry exports; adapter git/filesystem
@@ -152,8 +152,8 @@ notes:
       modules 0 violations."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 2 complete (commit e581e4e2). Derived host index
-      (<host root>/host-index.json, delivery.projects.host-index.v1) with schema,
+  - text: "Plan phase 2 complete (commit e581e4e2). Derived host index (<host
+      root>/host-index.json, delivery.projects.host-index.v1) with schema,
       monotonic revision, bounded maintenance on store-opening invocations only,
       provably-dead pruning, corrupt-file preservation, always re-derived
       stateLocation and the DEC-18 key guard. Green: projects-host-index 2/2
@@ -162,8 +162,8 @@ notes:
       v1-contract-inventory.json regenerated (pinned contract inventory)."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 3 complete (commit ec361895). The projects list family and
-      its indivisible mount unit: command definition, envelope/text projection,
+  - text: "Plan phase 3 complete (commit ec361895). The projects list family and its
+      indivisible mount unit: command definition, envelope/text projection,
       handover engine|shell|in-transition, daemon reachability with the closed
       reason vocabulary and injected mount capability, DEC-16 refusal naming and
       projection, prompt-required set entry, edge.ts composition, help entries,
@@ -199,35 +199,35 @@ notes:
       6/6, test-doc-distribution.sh clean (83 in-scope docs)."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 6 complete (commit 9f6a4a64). Reconciliation and release:
-      new doc/spec/features/feature-projects.md (internal), doc/00-index entry,
+  - text: "Plan phase 6 complete (commit 9f6a4a64). Reconciliation and release: new
+      doc/spec/features/feature-projects.md (internal), doc/00-index entry,
       forbidden-literals registry second addition, M2 page refinements (a)-(e)
       keeping Status: Proposed (M2), current-truth reconciliation of the
       state-layer, CLI-entrypoint, branding-seam, dispatch-engine,
       owner-gate-sla, config-layer, audit-ledger, resident-daemon and
       scheduling-engine pages, planning-corpus updates (backlog markers, status
       snapshot, command registry, M2 entrypoint delta), test-plan section 10
-      execution evidence with P1-P8. Aggregate
-      TMPDIR=$PWD/tmp/tmpdir pnpm check: 7200 pass / 4 skip / 0 fail across 895
-      files, exit 0 (519s); plan validate valid/readyForDevelopment true;
-      check:help, reference-page-parity, error-table-sync, privacy-release,
-      subpaths, boundaries, prompt-conformance, exports-parity,
-      forbidden/privacy literals, doc-distribution and git diff --check all
-      green."
+      execution evidence with P1-P8. Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: 7200 pass / 4 skip / 0 fail across 895 files, exit 0 (519s); plan
+      validate valid/readyForDevelopment true; check:help,
+      reference-page-parity, error-table-sync, privacy-release, subpaths,
+      boundaries, prompt-conformance, exports-parity, forbidden/privacy
+      literals, doc-distribution and git diff --check all green."
     type: info
     date: "2026-11-11"
   - text: "Phase 7 doc-sync complete (commit f5fa0813, 29 files). Reconciled real
       contradictions found by verification rather than trust: owner-hold marker
       path in glossary/doctor/status-digest/M1 queue+status+doctor pages/
       delivery-modes/autonomous-delivery/test specs, audit-store derivation and
-      the 38->41 two-segment error allowlist in the result contract, daemon field
-      vocabulary in the M2 contracts, the MCP composition's project-root store and
-      marker write, the per-command page root in agents-and-commands, the app-tier
-      placeholder row, plus the host-index entry bound, the 00-index guide row and
-      GH-288 traceability links. Residual gap fixed in the same commit: the
-      pre-iteration owner-hold hook comment. Checks: test-doc-distribution 83
-      in-scope docs clean, forbidden-literals 141 docs clean, doc-conformance +
-      error-table-sync + reference-page-parity 111 pass."
+      the 38->41 two-segment error allowlist in the result contract, daemon
+      field vocabulary in the M2 contracts, the MCP composition's project-root
+      store and marker write, the per-command page root in agents-and-commands,
+      the app-tier placeholder row, plus the host-index entry bound, the
+      00-index guide row and GH-288 traceability links. Residual gap fixed in
+      the same commit: the pre-iteration owner-hold hook comment. Checks:
+      test-doc-distribution 83 in-scope docs clean, forbidden-literals 141 docs
+      clean, doc-conformance + error-table-sync + reference-page-parity 111
+      pass."
     type: info
     date: "2026-11-11"
   - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml). Two blocking:
@@ -236,16 +236,41 @@ notes:
       stateLocation (reproduced); F-2 no per-plan-phase pm-notes evidence (this
       entry set closes it; PM-owned, no code change). Ten advisories, of which
       F-3 (list reports vanished-root rows against F-3/§8.1), F-4 (list path not
-      literally write-free: leftover *.tmp removal and first-use marker minting),
-      F-6 (bash fallback honours ADOS_DISPATCH_STATE_ROOT while the typed store
-      honours <PREFIX>_STATE_DIR; migration note silent), F-9 (readable flag makes
-      the unreadable-root branch dead), F-12 (preserveCorruptHostIndex mkdir
-      outside try), F-5 (M1 snapshot pages edited) and F-10 (NFR-4 wording vs the
-      delivered non-projects-verbs-maintain rule) are being remediated; F-7
-      (maintenance p95 probe), F-8 (consumer count wording) and F-11 (process
-      deviations: changeset in phase 3, template commit subjects, four justified
+      literally write-free: leftover *.tmp removal and first-use marker
+      minting), F-6 (bash fallback honours ADOS_DISPATCH_STATE_ROOT while the
+      typed store honours <PREFIX>_STATE_DIR; migration note silent), F-9
+      (readable flag makes the unreadable-root branch dead), F-12
+      (preserveCorruptHostIndex mkdir outside try), F-5 (M1 snapshot pages
+      edited) and F-10 (NFR-4 wording vs the delivered
+      non-projects-verbs-maintain rule) are being remediated; F-7 (maintenance
+      p95 probe), F-8 (consumer count wording) and F-11 (process deviations:
+      changeset in phase 3, template commit subjects, four justified
       out-of-scope files) are recorded as accepted with rationale."
     type: blocker
+    date: "2026-11-11"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml), one
+      documentation-only blocker: the narrowed write-free posture had not
+      propagated to six statements that still claimed an absolute guarantee,
+      plus a vacuous TC-BASH-007. Remediated in commit c7a12e09 (docs + bash
+      fixture seed/HOME fix, no product behaviour change) and followed by direct
+      PM alignment of the remaining statements (spec OQ-3, DEC-5, §16.1, §20;
+      test plan §3.2, §8.4, TC-PROJ-034) with spec v1.4 and test-plan revision
+      6."
+    type: info
+    date: "2026-11-11"
+  - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml), 0 blocking, 2
+      advisories (one stale 'without exception' phrase, now aligned; historical
+      revision rows kept as history). Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: exit 0, 7206 pass / 4 skip / 0 fail across 895 files in 572.54s;
+      the known privacy-ci-wiring TC-WIRE-002 5s-timeout flake did not recur. AC
+      traceability 38/38 with no AC added, removed, renumbered or weakened;
+      TC-BASH-007 independently proven non-vacuous by a precedence-reversal
+      mutation (8/1 red, 9/9 restored). Accepted residuals: code-review/*.yaml
+      were untracked until the review_fix completion commit; commit subjects are
+      primitive-computed; tests/checks/owner-hold-doc.test.ts was an
+      out-of-plan-scope repair of two stale doc assertions; the index-root stat
+      and the process-free identity read are scoped review-verified choices."
+    type: info
     date: "2026-11-11"
   - text: "Scope clarifications resolved without human input: the M2 pack fixes the
       contract (projectKey from the git common dir marker, stateLocation per

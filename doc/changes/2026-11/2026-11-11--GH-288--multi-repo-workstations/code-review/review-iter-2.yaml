@@ -1,0 +1,315 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-288
+branch: feat/GH-288/multi-repo-workstations
+status: FAIL
+summary: >-
+  Second local review of GH-288 after remediation commit 887c00d7 (plus
+  29f7c9cf). Both iteration-1 blocking findings are closed and verified
+  independently, not taken on trust. F-1 is total: `parseHostIndexDocument`
+  re-validates every index key against the declared `PROJECT_KEY_PATTERN`
+  (imported from contracts, not re-spelled), the 32-character mint bound, the
+  `sanitizeProjectBasename` fixpoint and, through that fixpoint, the reserved
+  `unbound` basename; both index consumers (`production.ts:488` maintenance and
+  `production.ts:1833` list) parse through it, the handover read and
+  `projectStateRoot` only ever receive the derived path, and a legitimately
+  minted key still parses - including a `unbound-alpha-<hex>` checkout, which
+  registers and is reported (projects-identity TC-PROJ-005/040), so the frozen
+  key rule is intact. F-2 is closed: `chg-GH-288-pm-notes.yaml` now carries one
+  evidence entry per delivery plan phase 1-6 (859e1b60, e581e4e2, ec361895,
+  3480e4b8, cad45ee3, 9f6a4a64), plus the doc-sync entry (f5fa0813) and the
+  review-iteration-1 disposition; every named SHA matches git history, each
+  entry names the suites and gate results, and the delivery/doc-sync phase
+  timestamps bracket the commits they describe. Advisories F-3..F-12 are closed
+  or reduced to documented residuals (vanished-root rows filtered and the guide
+  reconciled, the readability probe made real, `mkdir` contained, NFR-4/NFR-9
+  and §4.1 wording corrected, the M1 snapshot exception declared in DEC-13,
+  AC-F9-2 and §16.1 with exactly the three owner-hold paragraphs and no other
+  M1 page touched, the shell-side override declared as its own contract with two
+  new bash cells). Every gate I re-ran is green: pnpm typecheck, pnpm
+  check:boundaries (383 modules, 0 violations), pnpm check:help, the 13 projects
+  behaviour suites (50 pass), the structure and checks suites (122 pass,
+  including owner-hold-doc, error-table-sync and reference-page-parity), the
+  test-isolation guard (8 pass), the bash authority suite (7 pass), the fallback
+  matrix (9/9) and TMPDIR=$PWD/tmp/tmpdir pnpm check (exit 0, 7206 pass / 4
+  skip / 0 fail across 895 files, 474 s; the known privacy-ci-wiring flake did
+  not recur).
+
+  The change still FAILs on one artifact-consistency defect that the F-4
+  narrowing introduced, not on code. AC-F3-4 and F-3 now permit exactly two
+  side effects, but six statements outside that narrowing still assert an
+  absolute write-free posture: spec §8.1 and the §13 traceability row ("`projects
+  list` writes nothing"), the test plan's AC-F3-4 mapping row and its TC-PROJ-041
+  title (still "no state mutation"), `doc/spec/features/feature-projects.md`
+  ("writes nothing" and "host-root and `projects/` bytes, modes, and mtimes are
+  unchanged across a listing") and the M2 `projects list` contract page ("writes
+  nothing under the host root", although the store open removes a leftover
+  `*.tmp` under `<host root>/projects/<key>/`). The result is a spec that
+  contradicts itself, a test plan whose AC text no longer mirrors the spec, and a
+  delivered system spec plus command page that overclaim a read-only guarantee
+  the code does not keep. Advisories record the missing spec/test-plan
+  revision-log rows for this review-fix revision, a vacuous TC-BASH-007, and one
+  unrecorded out-of-scope test file.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 2
+  low: 1
+  info: 3
+spec_compliance: FAIL
+plan_compliance: PASS
+artifact_consistency: FAIL
+ac_traceability:
+  result: "38/38 ACs are still implemented with owning evidence and no AC is orphaned or contradicted by the code. The review-fix changes map cleanly: the key re-validation implements F-2 prose plus §21 and is proven under AC-F2-3 (a present-but-unparsable index refuses at exit 2 with projects.registry-corrupt and changes no file) by seven tampered-key cells (dot, dot-dot, empty, colon, whitespace, over-long, unbound-prefixed) plus a minted-shape control; the vanished-root rule now matches F-3 prose and §8.1 Flow 3 and is proven by TC-PROJ-010 (row withheld, entry retained, row restored when the root returns); the narrowed AC-F3-4 is proven by TC-PROJ-041 plus the two new side-effect cells (a seeded leftover `*.tmp` is the only removal; a marker-less checkout mints only the 0600 identity marker); the real readability probe is proven by the new unreadable-directory cell (state-unavailable with key and location, root-proof regular-file cell retained). Two residues remain and are recorded, not hidden: the vanished-root statement in F-3 still owns no AC (unchanged from iteration 1), and the AC-F3-4 text now differs from its test-plan mapping row (finding F-1). No AC was added, removed or renumbered by the remediation."
+  ticket_acs: "AC-1 (two same-host checkouts hold disjoint state, no cross-observation) and AC-2 (`projects list` discovers both from the derived index, no hand-written registry) remain met; the tampered-key fix strengthens AC-2's discovery path and no test was deleted to make it pass."
+  by_capability:
+    F-1: "AC-F1-1..AC-F1-6 met; the minted-key rule is unchanged and re-verified by the parser control cell and the unbound-alpha round trip"
+    F-2: "AC-F2-1..AC-F2-5 met; tampered keys are now corruption under AC-F2-3, recorded location still never trusted (AC-F2-5)"
+    F-3: "AC-F3-1..AC-F3-5 met; F-3 vanished-root prose now met (no AC owns it, as in iteration 1); AC-F3-4 narrowed and proven"
+    F-4: "AC-F4-1..AC-F4-3 met (unchanged)"
+    F-5: "AC-F5-1..AC-F5-3 met (unchanged)"
+    F-6: "AC-F6-1..AC-F6-5 met; cross-surface override divergence now documented as two contracts plus TC-BASH-008/009"
+    F-7: "AC-F7-1 met (unchanged)"
+    F-8: "AC-F8-1..AC-F8-3 met; the migration note gained the two-variable and write-free sections (review-verified only)"
+    F-9: "AC-F9-1..AC-F9-4 met; AC-F9-2's M1 half is now review-verified against a declared three-page exception"
+    F-10: "AC-F10-1..AC-F10-3 met except the feature-projects page's write-free statements, which finding F-1 records"
+iteration_1_disposition:
+  - id: F-1
+    verdict: CLOSED
+    assessment: "parseHostIndexDocument now rejects any key that is not a minted key (pattern + bound + sanitisation fixpoint + unbound reservation). Both read paths parse through it; a corrupt document yields registry-corrupt before any store opens, and the maintenance path replaces a corrupt document with a fresh single-registration index, so no path is composed from a tampered key. Legit keys, including `unbound-alpha-<hex>`, still parse."
+  - id: F-2
+    verdict: CLOSED
+    assessment: "One pm-notes notes entry per plan phase 1-6 with commit, suites and gate results; SHAs verified against git log, phase timestamps bracket the commits, and the review-fix revision is recorded as its own entry."
+  - id: F-3
+    verdict: CLOSED
+    assessment: "readProjects skips an entry whose recorded checkout root is absent (production.ts:1847); spec F-3, §8.1 Flow 3, the migration guide troubleshooting row and TC-PROJ-010 all agree."
+  - id: F-4
+    verdict: CLOSED_WITH_DEFECT
+    assessment: "The two side effects are now declared and each has its own cell (leftover *.tmp removal; marker mint). The declaration was not propagated to §8.1, the §13 row, the test-plan AC row and TC title, feature-projects.md and the M2 page - recorded as finding F-1 of this iteration."
+  - id: F-5
+    verdict: CLOSED
+    assessment: "DEC-13, AC-F9-2, §16.1 and the phase-7 handoff now declare the M1 exception; the branch diff under milestones/m1 edits exactly doctor/queue/status, one owner-hold paragraph each, and no other page."
+  - id: F-6
+    verdict: CLOSED_WITH_DEFECT
+    assessment: "The two-variable contract is declared in the spec and the migration guide and pinned by TC-BASH-008/009. The isolation change that added HOME to the fallback test runner made TC-BASH-007 vacuous - recorded as finding F-3 of this iteration."
+  - id: F-7
+    verdict: CLOSED
+    assessment: "NFR-4 now bounds the maintenance step including the per-entry existence probe and the test measures with a probe of that shape. The production probe additionally reads git metadata per entry, but readCheckoutIdentity spawns no process (packages/adapters/src/repo/index.ts:103-118), so the additional cost is a bounded set of syscalls of the same order."
+  - id: F-8
+    verdict: CLOSED
+    assessment: "NFR-9 dropped the inflated seven-consumer claim for four consuming files plus a whole-tree AST scan, and the new in-file pins (stateRoot/retro/owner-hold in production.ts, hostRoot in mcp serve) name the in-file surfaces."
+  - id: F-9
+    verdict: CLOSED
+    assessment: "readProjects now passes a real readability result derived from readdirSync, so classifyProjectStateLocation's unreadable branch can fire; the new cell provokes it (0100) and is skipped only under uid 0, where the retained regular-file cell is root-proof."
+  - id: F-10
+    verdict: CLOSED
+    assessment: "§4.1's F-2 paragraph and NFR-4 now say no maintenance on `projects list`, the only verb that does not open a store, and name `status`/`queue list` as maintaining, matching production.ts:471."
+  - id: F-11
+    verdict: PARTIALLY_CLOSED
+    assessment: "The recorded deviations are accepted and documented, but the review-fix commit adds tests/checks/owner-hold-doc.test.ts, which no plan phase scope declares and the pm-notes review entry does not name (finding F-4 of this iteration)."
+  - id: F-12
+    verdict: CLOSED
+    assessment: "mkdirSync now sits inside preserveCorruptHostIndex's try block and the function returns false on any failure, matching replaceHostIndexFile."
+findings:
+  - id: F-1
+    severity: high
+    blocking: true
+    confidence: high
+    category: spec-compliance
+    location: "chg-GH-288-spec.md:286 (§8.1),:682 (Appendix D); chg-GH-288-test-plan.md:91,227,1799; doc/spec/features/feature-projects.md:29,131-136; doc/planning/oss-tooling/milestones/m2/commands/projects.md:99-101"
+    message: >-
+      The remediation narrowed AC-F3-4 and F-3 to "no index write, no revision
+      change, no prune, no corrupt-file replacement, no project-root creation,
+      and no write to any store artifact's content, except two permitted side
+      effects", but the narrowing reached only F-3, AC-F3-4, the migration guide
+      and the TC-PROJ-041/042 result rows. Six other statements still assert an
+      absolute write-free posture and now contradict the criterion they cite:
+      (a) spec §8.1, "Performs no index maintenance, creates no project state
+      root, performs no migration, and writes nothing"; (b) the §13 traceability
+      row "`projects list` writes nothing | AC-F3-4"; (c) the test plan's AC-F3-4
+      mapping row, which still reads "identical ... no state mutation" and so no
+      longer mirrors the spec's AC text (an AC/TC traceability break); (d) the
+      TC-PROJ-041 title, "`projects list` writes nothing"; (e) the delivered
+      system spec, `doc/spec/features/feature-projects.md:29` ("...and writes
+      nothing") and its Read-only bullet ("no write under the host root. Host-root
+      and `projects/` bytes, modes, and mtimes are unchanged across a listing");
+      and (f) the M2 command contract page, "writes nothing under the host root".
+      All six are false as delivered for at least one of the two declared side
+      effects: scope resolution mints the invoking checkout's identity marker
+      when it is absent (a byte write), and opening a project store to read
+      handover evidence removes a leftover `*.tmp` sibling under
+      `<host root>/projects/<project key>/documents.<ws>/` (a removal under the
+      host root, which is why F-3 calls it a write). Iteration 1's F-4 asked for
+      exactly one of two outcomes; the team chose "state explicitly that the side
+      effects are permitted", so the explicit statement must be the only claim
+      left standing.
+    suggestion: >-
+      Propagate the narrowed claim in one pass, with no code change: qualify the
+      §8.1 row and the traceability row ("writes no index or store content; F-3
+      names the two permitted side effects"), replace the test plan's AC-F3-4
+      mapping row with the spec's sentence and retitle TC-PROJ-041, qualify
+      feature-projects.md line 29 and its Read-only bullet (the marker mint and
+      the temp-sibling removal, with bytes/modes/mtimes unchanged for every other
+      file), and qualify the M2 page the same way. Add the review-fix revision row
+      to spec §25 and test plan §9 while touching them (see F-2).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    blocking: false
+    confidence: high
+    category: documentation
+    location: "chg-GH-288-spec.md:707-714 (§25); chg-GH-288-test-plan.md:2148-2155 (§9); chg-GH-288-test-plan.md:2173 (§10 aggregate row)"
+    message: >-
+      The review-fix revision is not recorded in either document history. Spec
+      §25 stops at 1.3 ("No AC, DEC, requirement, or behaviour changed"), yet
+      887c00d7 changed AC-F3-4, AC-F9-2, DEC-13, NFR-4 and NFR-9 and added the
+      §16.1 exception row - a row the document's own convention requires for far
+      smaller edits. Test plan §9 stops at revision 4 while §10's expected results
+      were rewritten and a remediation paragraph added. §10's aggregate gate row
+      also still cites the pre-remediation tree (7200 pass / 895 files); the
+      current tree is green but at 7206 pass. The missing rows are what let the
+      stale "writes nothing" claims survive: a reader of the history cannot see
+      that the criterion changed.
+    suggestion: >-
+      Add one §25 row (spec) and one §9 row (test plan) for the review-fix
+      revision naming the narrowed AC-F3-4/F-3, the DEC-13/AC-F9-2 M1 exception,
+      the NFR-4/NFR-9/F-6 reconcilations and the new cells, and refresh §10's
+      aggregate row after the review-fix tree is re-gated.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    blocking: false
+    confidence: high
+    category: testing
+    location: "scripts/.tests/test-dispatch-bash-fallback.sh:127,226-238"
+    message: >-
+      TC-BASH-007 ("the environment override keeps precedence over the home
+      default") no longer tests precedence. The isolation change at line 127
+      forces `HOME=${_test_tmpdir}/home` (an uncreated directory) on every cell,
+      so the `HOME="${home_root}"` that the cell sets at line 232 never reaches
+      the fallback; and the seed at line 230 puts the authoritative document at
+      `<home_root>/projects/<key>/documents.workspace-a/` while
+      `_dispatch_authority_host_root` (scripts/lib/dispatch-authority.sh:66)
+      resolves the home default as `${HOME}/.delivery-os`, one level lower. I
+      reproduced both halves against the delivered scripts: a flat seed yields no
+      pointer, the same document under `<HOME>/.delivery-os/...` yields the
+      pointer, and the cell still passes either way, so it cannot detect a
+      reversed precedence. The product behaviour is correct (override wins over a
+      correctly seeded home, verified directly); the defect is the evidence, and
+      the depth half pre-dates this remediation.
+    suggestion: >-
+      Seed the home store at `<home_root>/.delivery-os/projects/<key>/documents.<ws>/`
+      and give `_run_cell` an explicit home parameter (default
+      `${_test_tmpdir}/home`, overridden by the precedence cell) instead of
+      clobbering HOME, so the cell fails under a reversed precedence. Add a
+      control cell that asserts the pointer appears with the home default alone.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    blocking: false
+    confidence: high
+    category: plan-compliance
+    location: "tests/checks/owner-hold-doc.test.ts:35,129"
+    message: >-
+      The review-fix commit edits `tests/checks/owner-hold-doc.test.ts`, which no
+      delivery plan phase scope declares, and the pm-notes review-iteration-1
+      entry does not name it. The two assertion updates are legitimate
+      current-truth reconciliations of phrases that f5fa0813 rewrote (the hold
+      stays host-wide and adds no command or flag; nothing was weakened), but they
+      also reveal that the doc-sync commit left this gate red between f5fa0813 and
+      887c00d7 without the pm-notes deviations recording the repair.
+    suggestion: >-
+      Name the file and the repair in the pm-notes review entry (or add it to the
+      plan's declared test scope in a revision note), as F-11 asked for the other
+      out-of-scope additions.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    blocking: false
+    confidence: high
+    category: security
+    location: "packages/cli/src/production.ts:1847"
+    message: >-
+      The vanished-root filter makes the list path stat an index-supplied
+      absolute `entry.root` before anything is derived. This is a read-only
+      existence check whose result only decides whether a row is reported; the
+      value is never composed into a state path, and maintenance already probes
+      recorded roots the same way, so no privilege boundary is crossed. Recorded
+      so §21's "no untrusted input at the surface" claim is understood as
+      covering this one added read.
+    suggestion: >-
+      No action required. If §21 is next revised, say that recorded roots are
+      stat-only inputs and that no state path is ever composed from them.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    blocking: false
+    confidence: high
+    category: testing
+    location: "chg-GH-288-spec.md:357 (NFR-4); tests/behaviour/projects-performance.test.ts:195"
+    message: >-
+      NFR-4's ceiling is now honestly scoped to "one index read, the pure fold,
+      and the per-entry recorded-root existence probe", measured with a probe of
+      that shape over 200 materialized roots. The production probe adds
+      `readCheckoutIdentity` plus a marker read per entry; I confirmed that path
+      spawns no process (packages/adapters/src/repo/index.ts:84-118), so the
+      additional cost is a bounded set of filesystem syscalls of the same order as
+      the measured probe. Iteration-1 F-7 is therefore closed as scoped, not
+      merely reworded; recorded so a later reviewer does not reopen it.
+    suggestion: >-
+      No action required while the probe stays process-free. If a future probe
+      spawns a subprocess, the NFR must be re-measured with it.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    blocking: false
+    confidence: high
+    category: documentation
+    location: "doc/guides/migrating-to-per-repository-state.md:103-116,135-146"
+    message: >-
+      The two new guide sections (the two-variable fallback requirement and
+      "What `projects list` writes") are the normative statement F-6 and F-4 rely
+      on, but no gate pins them: tests/behaviour/projects-migration.test.ts
+      asserts none of their phrases, so the statements that closed F-4/F-6 could
+      drift silently. Review-verified only, which is acceptable for AC-F8-3's
+      evidence class.
+    suggestion: >-
+      Optional: extend TC-PROJ-028's expected-statement set with the fallback
+      variable requirement and the two permitted side effects.
+    suppressed: false
+    published_url: null
+    published_at: null
+verified_gates:
+  typecheck: "pass (pnpm typecheck, 6 packages + tests/types)"
+  boundaries: "pass (depcruise 383 modules 0 violations; ambient-globals 177 clean; workspace-entrypoints; secret-read-boundary 351 clean)"
+  help: "pass (all prompt-required commands covered)"
+  projects_behaviour: "pass (13 suites + mcp-node-smoke, 50 pass / 0 fail)"
+  structure_and_checks: "pass (projects-state-scope-policy, owner-hold-doc, error-table-sync, reference-page-parity: 122 pass / 0 fail)"
+  isolation_guard: "pass (tests/checks/projects-test-isolation.test.ts, 8 pass)"
+  bash_authority: "pass (tests/structure/dispatch-bash-authority.test.ts, 7 pass)"
+  bash_fallback: "pass (scripts/.tests/test-dispatch-bash-fallback.sh, 9/9)"
+  aggregate: "pass (TMPDIR=$PWD/tmp/tmpdir pnpm check, exit 0, 7206 pass / 4 skip / 0 fail across 895 files, 473.8 s; the known privacy-ci-wiring TC-WIRE-002 flake did not recur)"
+reviewed_at: 2026-11-11T16:11:46Z
+next_step: >-
+  CALL_CODER is not needed: the code is correct. One documentation pass closes
+  F-1 (propagate the narrowed AC-F3-4/F-3 claim to spec §8.1 and §13, the test
+  plan's AC-F3-4 row and TC-PROJ-041 title, feature-projects.md and the M2
+  projects page) plus F-2 (one revision-log row per document and a refreshed §10
+  aggregate row); then fix TC-BASH-007's seed depth and HOME plumbing (F-3) and
+  record the owner-hold-doc test repair (F-4). Re-run the doc-conformance,
+  error-table-sync, reference-page-parity and bash-fallback suites plus the
+  aggregate gate, then re-review; do not touch source, plan phase state, or the
+  phase-1-6 evidence entries.

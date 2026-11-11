@@ -1,0 +1,327 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-288
+branch: feat/GH-288/multi-repo-workstations
+status: FAIL
+summary: |
+  First local review of the 119-file / ~14.9k-insertion GH-288 change against
+  spec v1.3 (38 ACs), test plan v4 (42 TCs, P1-P8) and plan revision 2.0.
+  All 38 ACs trace to delivered code with an owning suite or review-verified
+  evidence; the two ticket acceptance criteria are demonstrably met (two
+  same-host checkouts working GH-241 hold disjoint phase documents and queue
+  records and no read surface observes the other; `projects list` enumerates
+  both registered checkouts from a derived host index with no hand-written
+  registry). Every quality gate I re-ran is green: pnpm build, pnpm typecheck,
+  pnpm check:boundaries (depcruise + ambient + workspace-entrypoints +
+  secret-read), pnpm check:help, reference-page parity, error-table sync,
+  privacy-release, doc-distribution, forbidden-literals, privacy-literals,
+  prompt-conformance, exports-parity, subpaths, plus the projects suites (68
+  pass), the affected legacy suites (102 pass) and the bash fallback
+  (7/7). The design is strong and the tests are non-tautological: isolation is
+  proven by record content (phase count 2 vs 1, queue priority 1 vs 5), the
+  handover matrix is seeded through the delivered ledger APIs, the daemon probe
+  counts real connections and zero frames, migration compares per-file digests
+  and modes, and the test-isolation guard has live negative controls.
+
+  The change is FAIL because of one code defect that contradicts the spec's own
+  security claim, plus a delivery-record gap: (1) the host index's `projectKey`
+  is not validated as a single path segment, and a tampered index entry with
+  key `..` is accepted and derives `stateLocation` `<host root>/projects/..`,
+  escaping the project container (spec §21, F-2) - confirmed by running the
+  built binary; (2) no per-plan-phase `pm-notes` completion evidence exists for
+  delivery plan phases 1-6. Advisories record the remaining spec-fidelity and
+  evidence gaps (vanished-root rows, the list path not being literally
+  write-free, three M1 snapshot pages edited against AC-F9-2, the bash override
+  variable divergence, the performance probe not exercised, a narrower
+  structural allowlist than claimed, NFR-4 wording, and process deviations).
+spec_compliance: FAIL
+plan_compliance: FAIL
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 5
+  low: 5
+  info: 0
+ac_traceability:
+  result: "38/38 ACs implemented with owning evidence; ticket AC-1 -> AC-F1-1/AC-F1-2 (suite, revert-sensitive), ticket AC-2 -> AC-F2-2 with AC-F2-1/AC-F3-1 supplying the shape. No AC is orphaned or contradicted. One functional-capability statement in F-3 (a project whose checkout root vanished is 'not reported') is not met by the code and owns no AC; see F-3 below."
+  ticket_acs: "AC-1 met (TC-PROJ-001/002); AC-2 met (TC-PROJ-007 + TC-PROJ-011 + TC-PROJ-006)"
+  by_capability:
+    F-1: "AC-F1-1..AC-F1-6 met (TC-PROJ-001/002/003/004/005/040)"
+    F-2: "AC-F2-1..AC-F2-5 met (TC-PROJ-006/007/008/009/010); F-3 vanished-root prose not met (F-3 finding)"
+    F-3: "AC-F3-1..AC-F3-5 met (TC-PROJ-011/012/013/041/042)"
+    F-4: "AC-F4-1..AC-F4-3 met (TC-PROJ-014/015/016)"
+    F-5: "AC-F5-1..AC-F5-3 met (TC-PROJ-017/018/019)"
+    F-6: "AC-F6-1..AC-F6-5 met (TC-PROJ-020/021/022/023/024); bash override divergence advisory"
+    F-7: "AC-F7-1 met (TC-PROJ-025)"
+    F-8: "AC-F8-1..AC-F8-3 met (TC-PROJ-026/027/028)"
+    F-9: "AC-F9-1..AC-F9-4 met except the M1-snapshot-unchanged review half (F-5 finding)"
+    F-10: "AC-F10-1..AC-F10-3 met (review-verified + privacy-release)"
+findings:
+  - id: F-1
+    severity: high
+    blocking: true
+    confidence: high
+    category: security
+    location: packages/core/src/app/host-index.ts:103
+    message: >-
+      The untrusted host index's `projectKey` is not validated as a single path
+      segment: `parseHostIndexDocument` rejects only keys containing `/` or
+      `\`, so `.` and `..` (and any other non-slash string) are accepted. The
+      list path then calls `projectStateRoot(hostRoot, entry.projectKey)`
+      (state-scope.ts:138), so a tampered entry with key `..` yields
+      `<host root>/projects/..`, which resolves to the host root and escapes the
+      project container. I reproduced it with the built binary: a host index
+      containing one entry with `projectKey: ".."` is accepted and reported
+      with `stateLocation: "<host>/projects/.."`, and the overview constructs a
+      store there to derive handover. This contradicts spec §21 ("Project keys
+      ... validated as a single path segment before use, so a tampered key
+      cannot escape the project container") and F-2 (the reported state location
+      can never be redirected).
+    suggestion: >-
+      Reject any index `projectKey` that is not a lone segment matching the
+      declared `PROJECT_KEY_PATTERN` (imported from contracts, not re-spelled)
+      in `parseHostIndexDocument` (or at minimum reject `.` and `..` and any
+      key failing the pattern), so a tampered document is treated as corrupt
+      rather than traversed. Add a cell to `projects-list-contract.test.ts`
+      that seeds keys `.` and `..` and asserts `projects.registry-corrupt`
+      (or an ignored entry), never a row whose `stateLocation` leaves
+      `<host root>/projects/`.
+  - id: F-2
+    severity: high
+    blocking: true
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-288--multi-repo-workstations/chg-GH-288-pm-notes.yaml:20
+    message: >-
+      Delivery plan phases 1-6 have no completion evidence in pm-notes. The
+      `notes:` array holds only intake, DoR and retro entries; it contains no
+      "Plan phase N complete (commit <sha>): ... verification ..." entry for any
+      of 859e1b60, e581e4e2, ec361895, 3480e4b8, cad45ee3, 9f6a4a64. The plan
+      states "phase progress is a pm-notes `notes:` entry, never a plan field",
+      and the DoD phase requires per-phase pm-notes evidence; GH-280 (a sibling
+      change one day earlier) records exactly this shape. This is gap type
+      OPEN_PHASES / EVIDENCE_MISSING for all six phases.
+    suggestion: >-
+      @pm appends one `notes:` entry per delivery plan phase naming the phase
+      id, its commit hash, and the owning TCs green at that boundary (the test
+      plan §10 already carries the per-TC results). Do not edit source, spec,
+      plan or test plan to close this.
+  - id: F-3
+    severity: medium
+    blocking: false
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1844
+    message: >-
+      `readProjects` reports every entry in the host index and never checks
+      whether the recorded checkout `root` still exists, so `projects list`
+      emits a row for a project whose checkout was moved or deleted. Spec F-3
+      says "a project whose root has vanished is not invented and not reported,
+      and is removed by the next maintenance run", and §8.1 Flow 3 repeats it.
+      The deviation is entrenched by design in the delivered migration guide
+      (doc/guides/migrating-to-per-repository-state.md:126) and by the
+      200-project performance test, which seeds 200 non-existent roots and
+      expects 200 rows. I confirmed a row is reported for a non-existent `root`.
+    suggestion: >-
+      Either filter rows whose `entry.root` is absent (and emit the declared
+      stale-entry warning) in `readProjects`, or record a spec v1.4 amendment
+      that the delivered behaviour is "report a stale entry until the next
+      maintenance prunes it" and update §8.1 Flow 3 plus the guide. Do not leave
+      F-3 prose and the delivered guide contradicting each other.
+  - id: F-4
+    severity: medium
+    blocking: false
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:1737
+    message: >-
+      The `projects list` path is not literally write-free, so F-3's "writes
+      nothing outside the process" and AC-F3-4's intent are under-enforced in
+      two places. (a) `readProjectHandover` constructs a full state store per
+      project; `createStateStore` runs its open check at construction
+      (packages/core/src/state/index.ts:361), which deletes leftover `*.tmp`
+      files under `documents.<ws>/` and `<index>.tmp` - a filesystem write on a
+      read-only command. (b) Scope resolution mints `.git/project-identity.json`
+      on a fresh checkout before the list runs; I confirmed the built binary
+      writes a 0600 marker on `projects list` in a marker-less checkout. The
+      AC-F3-4/TC-PROJ-041 snapshot seeds clean stores and never exercises either
+      case.
+    suggestion: >-
+      Derive the handover evidence without constructing the store (or gate the
+      temp cleanup to write paths), and either skip marker minting for the
+      read-only verb or state explicitly that identity minting is permitted.
+      Extend the write-nothing suite with a project carrying a stale `.tmp` and
+      with a fresh-checkout cell that asserts the marker is or is not minted.
+  - id: F-5
+    severity: medium
+    blocking: false
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m1/commands/doctor.md:83
+    message: >-
+      AC-F9-2 and DEC-13 require the M1 milestone snapshot pages to stay
+      unmodified ("the M1 snapshot is a dated record that stays as written"),
+      but the doc-sync commit f5fa0813 rewrites the owner-hold marker-path
+      paragraph in three M1 command pages
+      (milestones/m1/commands/doctor.md, queue.md, status.md) to the new
+      `<host root>/owner-hold` wording. The edits are arguably necessary for
+      current truth because the store now honours `<PREFIX>_STATE_DIR`, but they
+      are outside §16.1's declared documentation-impact set and falsify AC-F9-2's
+      review-verified half.
+    suggestion: >-
+      Record the M1-page reconciliation as an explicit spec refinement (spec
+      §16.1 + AC-F9-2 wording change to "M1 snapshot pages unmodified except the
+      owner-hold path statement reconciled for the now-honoured override"), or
+      revert those three edits and accept the stale M1 wording. The review
+      evidence must not claim the half held when the diff shows otherwise.
+  - id: F-6
+    severity: medium
+    blocking: false
+    confidence: medium
+    category: spec-compliance
+    location: scripts/lib/dispatch-authority.sh:58
+    message: >-
+      The shell fallback honours `ADOS_DISPATCH_STATE_ROOT` for its host root,
+      while the typed store and every other surface now honour the
+      brand-derived `<PREFIX>_STATE_DIR` (state-scope.ts:56). On a host that sets
+      only `<PREFIX>_STATE_DIR`, the typed store relocates but the fallback keeps
+      its old root, finds no project authority document and stays `dual-run`.
+      G-6/§7.1 claim every surface honours the delivered override, and the
+      migration guide's override section never mentions
+      `ADOS_DISPATCH_STATE_ROOT`. AC-F6-5's literal wording ("precedence
+      unchanged") is satisfied, but the cross-surface agreement is not.
+    suggestion: >-
+      Have `_dispatch_authority_host_root` also prefer the brand-derived
+      `ADOS_STATE_DIR` (the shipped fallback is already brand-specific), or
+      document in the migration note that a host setting `<PREFIX>_STATE_DIR`
+      must also set `ADOS_DISPATCH_STATE_ROOT` for the fallback, and add a bash
+      cell that sets only the typed override.
+  - id: F-7
+    severity: medium
+    blocking: false
+    confidence: high
+    category: testing
+    location: tests/behaviour/projects-performance.test.ts:191
+    message: >-
+      TC-PROJ-037 measures the maintenance cost by calling `maintainHostIndex`
+      with `probe: () => ({ state: "uncertain" })`, so the <=10 ms p95 excludes
+      the production per-entry probe (`existsSync` + `readCheckoutIdentity` +
+      marker read) that the real maintenance step runs for every index entry;
+      the 200-project list latency is measured over empty seeded roots. The real
+      path is O(n) with cheap stats, but NFR-4's maintenance threshold is not
+      proven for the production probe and the test can pass while the real cost
+      regresses.
+    suggestion: >-
+      Measure `maintainHostIndex` with the real `probeRecordedRoot` (or a
+      representative bounded probe) over 200 entries and record the p95, or
+      explicitly scope the NFR to the pure fold and say so in the spec.
+  - id: F-8
+    severity: low
+    blocking: false
+    confidence: high
+    category: testing
+    location: tests/structure/projects-state-scope-policy.test.ts:28
+    message: >-
+      The structural single-policy assertion's `STATE_CONSUMERS` allowlist has
+      four entries (production, mcp serve, edge, daemon-compose), not the
+      "seven-consumer allowlist plus the shell fallback" that NFR-9 and the plan
+      claim. The dispatch state root, retro sidecar and owner-hold read are
+      inside production.ts and are pinned only by substring checks and the
+      behaviour suites. The effective anti-recurrence guard is the AST scan for
+      any home-plus-brand composition / duplicate `_STATE_DIR` read anywhere in
+      packages (which is strong), but the review artifact should not overstate
+      the assertion.
+    suggestion: >-
+      Either add the declared seven surfaces to the structural assertion, or
+      correct NFR-9/plan wording to "one policy module plus the four files that
+      consume it, with a whole-tree scan for re-derived paths".
+  - id: F-9
+    severity: low
+    blocking: false
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:1855
+    message: >-
+      `readProjects` passes `readable: stat !== undefined` to
+      `classifyProjectStateLocation`, so the classification's "unreadable"
+      branch can never fire from readability; a present-but-unreadable directory
+      is classified "ready" and only later fails via the store's permission
+      check. The observable outcome is still `projects.state-unavailable`, but
+      the parameter is misleading dead logic and the intended DEC-8 cell is
+      proven only indirectly.
+    suggestion: >-
+      Pass a real readability probe (e.g. an access/list check), or drop the
+      `readable` parameter and classify on exists/non-directory only with a
+      comment that the store open enforces readability.
+  - id: F-10
+    severity: low
+    blocking: false
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-288--multi-repo-workstations/chg-GH-288-spec.md:340
+    message: >-
+      NFR-4 and §4.1 say index maintenance never runs on "`projects list` or any
+      other read-only verb", but the delivered and tested rule runs maintenance
+      on every non-`projects` command, including the read-only reads `status`
+      and `queue list` (TC-PROJ-009/010 explicitly assert maintenance runs on
+      `queue list`). The spec text is self-contradictory with its own
+      "store-opening invocation" definition; the implementation matches the
+      plan's intended reading.
+    suggestion: >-
+      Amend NFR-4/§4.1 to "never on `projects list` (the only verb that does not
+      open a store)" or enumerate which store-opening verbs maintain.
+  - id: F-11
+    severity: low
+    blocking: false
+    confidence: high
+    category: plan-compliance
+    location: .changeset/gh-288-multi-repo-workstations-minor.md:1
+    message: >-
+      Declared plan-vs-delivery deviations, judged individually safe: (i) the
+      release changeset landed in the phase-3 commit ec361895, not phase 6; the
+      final tree still holds exactly one added five-package `minor` changeset
+      with pre-existing changesets byte-identical, so the release gate is
+      unaffected. (ii) The six plan-phase commits carry the commit primitive's
+      template subjects ("feat(GH-288): update <first file>") rather than the
+      plan's declared "feat(projects): ..." subjects - the same accepted tooling
+      limitation recorded in GH-280 D21; the plan's "subjects declared so the
+      commit path and review agree" is false. (iii) Out-of-scope file additions
+      are justified and safe: `packages/cli/src/index.ts` (default-off
+      `acceptsAnyFlag` + warnings-on-failure propagation, needed so scope
+      refusals are reported through the family identity rather than the parser),
+      `packages/core/src/contracts/projects.ts` (`STATE_MIGRATION_NOTE_PATH`
+      added in phase 5, single declaration), `tests/fixtures/ports/v1-contract-inventory.json`
+      (additive contract exports), `tests/structure/owner-hold-composition.test.ts`
+      (assertion follows the serve.ts rewrite, same intent). The changeset's
+      phase and the out-of-scope files are not recorded in the pm-notes
+      deviations.
+    suggestion: >-
+      Record these deviations in the pm-notes (alongside F-2's phase evidence) so
+      the DoD record matches the tree, and add the extra files to the plan's
+      declared scope in a revision note rather than leaving them implicit.
+  - id: F-12
+    severity: low
+    blocking: false
+    confidence: high
+    category: robustness
+    location: packages/adapters/src/file/host-index-store.ts:103
+    message: >-
+      `preserveCorruptHostIndex` calls `mkdirSync(dirname(path), { recursive:
+      true })` outside its try/catch, so it can throw and break the seam's
+      "never throws" posture. It is only reachable when the host root exists
+      (an index file was read), so the practical exposure is small, but the
+      contract is stated more strongly than the code.
+    suggestion: >-
+      Move the `mkdirSync` inside the try block (or guard with
+      `existsSync`/`statSync().isDirectory()`) and return `false` on failure, as
+      `replaceHostIndexFile` already does.
+reviewed_at: 2026-11-11T15:35:00Z
+next_step: >-
+  CALL_CODER for F-1 (validate the index `projectKey` against
+  PROJECT_KEY_PATTERN; add the tampered-key cell) and F-2 (pm appends per-phase
+  completion notes); then re-run the projects suites plus the full gate and
+  re-review. The advisories (F-3..F-12) may be recorded as spec/plan amendments
+  or accepted with reasons, but F-3 (F-2 vanished-root prose), F-5 (AC-F9-2
+  review half) and F-6 (bash override) must at least be resolved by an explicit
+  decision, not left silent.

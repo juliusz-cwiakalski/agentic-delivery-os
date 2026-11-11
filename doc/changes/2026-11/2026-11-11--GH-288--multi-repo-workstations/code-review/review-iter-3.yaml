@@ -1,0 +1,172 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-288
+branch: feat/GH-288/multi-repo-workstations
+status: PASS
+summary: >-
+  Final (iteration 3) local review of GH-288 after the iteration-2 remediation
+  commit c7a12e09 and the iteration-3 direct documentation edits (uncommitted
+  working-tree changes to chg-GH-288-spec.md and chg-GH-288-test-plan.md). The
+  code and shipped docs are correct and were re-verified, not taken on trust.
+  Both iteration-2 blockers of record are closed: the previously narrowed
+  write-free posture is now consistent across the six places iteration 2 named
+  (spec §8.1 contract row, Appendix D traceability row, test-plan AC-F3-4
+  mapping row, TC-PROJ-041 title, doc/spec/features/feature-projects.md, the M2
+  commands/projects.md SCOPE) and the further statements iteration 2 missed (spec
+  OQ-3, DEC-5, §16.1's projects.md row, §20's permissions bullet; test-plan §3.2
+  matrix row, the TC-PROJ-008 notes) were aligned by direct edit; spec §25 v1.4
+  and test-plan §9 revision 6 record the alignments. TC-BASH-007 is no longer
+  vacuous: the fixture parameterises HOME instead of clobbering it, seeds the home
+  store at the delivered `.delivery-os` depth, and a control cell proves the home
+  default is read; I independently confirmed a precedence-reversal mutation reds
+  exactly TC-BASH-007 (8 pass / 1 fail) while the restored suite is 9/9. Every
+  required gate is green: pnpm typecheck, pnpm check:boundaries (383 modules, 0
+  violations; ambient 177, entrypoints, secret-read 351 clean), pnpm check:help,
+  the 15 projects/isolation/policy files (67 pass), the four required checks
+  owner-hold-doc/error-table-sync/reference-page-parity/doc-conformance (121
+  pass), the bash fallback (9/9), and TMPDIR=$PWD/tmp/tmpdir pnpm check (exit 0,
+  7206 pass / 4 skip / 0 fail across 895 files, 572.54 s; the known
+  privacy-ci-wiring TC-WIRE-002 flake did not recur). One residual wording nit
+  remains but is not material: test-plan TC-PROJ-034's expected-outcome line still
+  says the M2 page "states that listing is read-only without exception", which is
+  broader than AC-F3-4 and now contradicts the delivered page. The shipped
+  contract (feature-projects.md and the M2 SCOPE) is correct, so this ships no
+  false contract claim; it is recorded as a low advisory, not a blocker. AC
+  traceability is 38/38 with no AC weakened in substance and no test made
+  vacuous.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+artifact_consistency: PASS
+ac_traceability:
+  result: >-
+    38/38 acceptance criteria remain implemented with owning evidence; the spec
+    AC table, test-plan §3.1 mapping rows and the distinct AC id set are all 38,
+    and no AC was added, removed or renumbered by the review-fix or the
+    iteration-3 edits. AC-F3-4 was narrowed in c7a12e09 to the delivered truth
+    (no write to any store artifact's content, except the first-use identity
+    marker and a leftover *.tmp removal) and each permitted side effect now has
+    its own mutation-sensitive cell in tests/behaviour/projects-list-contract.test.ts
+    ("a leftover store temp file is the only thing the read removes";
+    "a fresh checkout mints its identity marker and nothing else"), so coverage
+    was strengthened, not weakened. No test was deleted or made vacuous.
+  ticket_acs: >-
+    AC-1 (two same-host checkouts hold disjoint state, no cross-observation) and
+    AC-2 (projects list discovers both from the derived index, no hand-written
+    registry) remain met; the iteration-1 tampered-key fix still guards AC-2's
+    discovery path and no test was removed to make it pass.
+  by_capability:
+    F-1: "AC-F1-1..AC-F1-6 met (keys re-validated at parse; minted-key rule re-verified by the parser control cell)"
+    F-2: "AC-F2-1..AC-F2-5 met; tampered keys are corruption under AC-F2-3; recorded location never trusted (AC-F2-5)"
+    F-3: "AC-F3-1..AC-F3-5 met; AC-F3-4 now proven by TC-PROJ-041 plus a cell per permitted side effect; vanished-root prose met (TC-PROJ-010)"
+    F-4: "AC-F4-1..AC-F4-3 met"
+    F-5: "AC-F5-1..AC-F5-3 met"
+    F-6: "AC-F6-1..AC-F6-5 met; shell override documented as its own contract (TC-BASH-008/009)"
+    F-7: "AC-F7-1 met"
+    F-8: "AC-F8-1..AC-F8-3 met"
+    F-9: "AC-F9-1..AC-F9-4 met; unreadable-directory provocation (0100, uid-0 guarded) exercised"
+    F-10: "AC-F10-1..AC-F10-3 met; feature page and M2 SCOPE now state the posture with the two declared side effects"
+iteration_2_disposition:
+  - id: F-1 (iteration 2)
+    verdict: CLOSED
+    assessment: >-
+      All six named places are narrowed (verified in-tree): spec §8.1 and
+      Appendix D say "writes no index or store content" plus the two declared
+      side effects; test-plan AC-F3-4 row mirrors the spec sentence; TC-PROJ-041
+      is retitled "writes no index or store content"; feature-projects.md and the
+      M2 SCOPE state the two permitted side effects. The further statements the
+      remediation missed were then aligned by direct edit: spec OQ-3, DEC-5,
+      §16.1 projects.md row and §20 permissions bullet now all say "writes no
+      index or store content; only the two side effects F-3 declares"; test-plan
+      §3.2 matrix row and TC-PROJ-008 notes are aligned. The spec is no longer
+      self-contradictory apart from one residual test-plan line (advisory F-1).
+  - id: F-2 (iteration 2)
+    verdict: CLOSED
+    assessment: >-
+      Spec §25 v1.4 exists and names the OQ-3/DEC-5/§16.1/§20 alignments; test-plan
+      §9 revision 5 (review fix) and revision 6 (iteration-3 alignment) exist; §10's
+      aggregate row cites 7206 pass / 4 skip / 0 fail across 895 files, which my
+      independent TMPDIR run reproduced exactly (7206/4/0, exit 0).
+  - id: F-3 (iteration 2)
+    verdict: CLOSED
+    assessment: >-
+      TC-BASH-007 is non-vacuous. _run_cell takes an explicit home (default
+      ${_test_tmpdir}/home) and no longer clobbers HOME; _seed_home_authority seeds
+      at `<home>/.delivery-os/...` matching _dispatch_authority_host_root's
+      `${HOME}/.delivery-os`; a control cell proves the home default is read with
+      no override. My precedence-reversal mutation reds exactly TC-BASH-007
+      (8 pass / 1 fail), and the restored suite is 9/9.
+  - id: F-4 (iteration 2)
+    verdict: CLOSED_AS_ACCEPTED
+    assessment: >-
+      The tests/checks/owner-hold-doc.test.ts repair remains out-of-plan-scope but
+      is a legitimate current-truth assertion update; carried as an accepted
+      residual (task-sanctioned), not a blocker.
+accepted_residuals:
+  - "docs/changes/**/code-review/*.yaml untracked: scope artifact to be committed by PM; not a blocker."
+  - "Primitive-computed commit subjects (feat(GH-288): update <first file>) vs plan-declared subjects: accepted tooling limitation."
+  - "tests/checks/owner-hold-doc.test.ts out-of-plan-scope repair: legitimate current-truth update; accepted."
+  - "Index-supplied recorded-root existence stat before any derivation: read-only, result only decides whether a row is reported; accepted."
+  - "Process-free checkout identity read on the list path (NFR-4 probe stays syscall-bounded): accepted."
+  - "Guide statements (migration guide two-variable + write-free sections) review-verified only: accepted evidence class for AC-F8-3."
+findings:
+  - id: F-1
+    severity: low
+    blocking: false
+    confidence: high
+    category: documentation
+    location: "chg-GH-288-test-plan.md:1545 (TC-PROJ-034 Expected Outcome)"
+    message: >-
+      TC-PROJ-034's expected-outcome line still says the M2 page "states that
+      listing is read-only without exception". This is broader than AC-F3-4 (which
+      permits the two declared side effects) and now contradicts the delivered M2
+      SCOPE, which states those two side effects explicitly. The shipped contract
+      pages (feature-projects.md and the M2 commands/projects.md SCOPE) are
+      correct, so this is a stale description in the test plan, not a shipped
+      false contract claim. It also makes test-plan §9 revision 6's "the
+      write-posture wording is unified everywhere it appeared" slightly overstated.
+    suggestion: >-
+      Change "states that listing is read-only without exception" to "states the
+      read-only posture with the two declared side effects F-3 names" so the
+      review cell matches the page it checks and revision 6 becomes literally
+      true. No AC, mapping or test change needed.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: info
+    blocking: false
+    confidence: high
+    category: documentation
+    location: "chg-GH-288-spec.md:713 (§25 v1.2); chg-GH-288-test-plan.md:2154 (§9 revision 3)"
+    message: >-
+      Historical revision-log rows still phrase the past state as "AC-F3-4 added
+      (list writes nothing)" / "projects list writes nothing". These describe the
+      v1.2 / revision-3 state at the time and are not current contract claims, so
+      the §25 v1.4 "no statement in this document still asserts an absolute
+      write-free guarantee" is correct as written for current truth. No action
+      required; noted so a later reader does not mistake the history for a live
+      claim.
+    suggestion: >-
+      Optional: if strict literal cleanliness is wanted, annotate the historical
+      rows as superseded, but this is not required and no change is proposed.
+    suppressed: false
+    published_url: null
+    published_at: null
+verified_gates:
+  typecheck: "pass (pnpm typecheck: 6 packages + tests/types)"
+  boundaries: "pass (depcruise 383 modules 0 violations; ambient-globals 177 clean; workspace-entrypoints; secret-read-boundary 351 clean)"
+  help: "pass (help-guide-coverage: all prompt-required commands covered)"
+  four_checks: "pass (owner-hold-doc + error-table-sync + reference-page-parity + doc-conformance: 121 pass / 0 fail)"
+  projects_suites: "pass (tests/behaviour/projects-*.test.ts + projects-test-isolation + projects-state-scope-policy: 67 pass / 0 fail across 15 files)"
+  bash_fallback: "pass (9/9; TC-BASH-007 mutation-sensitive — precedence reversal reds it 8/1, restored 9/9)"
+  aggregate: "pass (TMPDIR=$PWD/tmp/tmpdir pnpm check: exit 0, 7206 pass / 4 skip / 0 fail across 895 files, 572.54 s; the known privacy-ci-wiring TC-WIRE-002 flake did not recur)"
+  testplan_section10_matches: "yes (7206 pass / 4 skip / 0 fail / 895 files / exit 0 — identical to the cited row)"
+reviewed_at: 2026-11-11T15:47:17Z
+next_step: PROCEED
