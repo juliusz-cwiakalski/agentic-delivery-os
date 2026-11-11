@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-10T23:14:45.991Z }
   quality_gates: { started: null, completed: 2026-11-10T23:29:00.468Z }
   dod_check: { started: null, completed: 2026-11-10T23:30:01.411Z }
-  pr_creation: { started: null, completed: 2026-11-10T23:32:06.055Z }
+  pr_creation: { started: null, completed: 2026-11-11T00:39:40.747Z }
 decisions:
   - text: "Intake state: GH-284 open with label `change` only, zero comments; branch
       docs/GH-284/m2-planning exists locally with zero unique commits (HEAD ==
@@ -812,4 +812,51 @@ notes:
       hand-composed lifecycle commit by default; no earlier commit was amended
       or rewritten."
     type: "retro"
+    date: "2026-11-11"
+  - text: "REVIEW BOARD 2 (external, on PR 285): FAIL with 11 blocking/should-fix
+      findings plus cheap notes, all addressed. CG-REC-001 state.md now names
+      the delivered state layer and attests no command surface (SYNOPSIS and the
+      command-surfacing DESCRIPTION sentence removed under DEC-39's bounded body
+      exception); CG-DEP-001 S15 gains M2-S13 and S16 gains M2-S12 and M2-S13
+      (sanctioned by DEC-27, every other token byte-identical and the clause
+      table records them as sanctioned so NFR-8 does not read them as drift);
+      CG-MAP-001 S3/S5 and S10 rows are advisory and SC-M2-S2-01 uses one
+      repository (DEC-28, rejecting the alternative of widening S2's dependency
+      set); CG-CON-001 the pack uses the delivered `dispatch dual-run resolve
+      <divergence-id> --note <text>` grammar with no --ref and documents per-ref
+      attempts.v1 whose repository history is the union over refs (DEC-29);
+      CG-EVT-001/002 the four new topics extend the delivered queue and lanes
+      topics, status is a wire type, queue.graph extends queue (DEC-30);
+      CG-S17-001 the park rule schema carries graceSeconds bounded by the
+      buffer, the zero-spend evidence form is declared (per-call ledger or
+      provider-usage read), a stop event kind plus status/brief park fields make
+      AC6 checkable, AC5 is scoped from the park timestamp, and SC-M2-S17-06/07
+      cover AC1 and AC6 (DEC-31, AC-F8-7 added); CG-DEPTH-001 all 40 seeds carry
+      one machine-checkable Assert line with the assertion count equal to the
+      scenario count (DEC-32, AC-F8-6 added); CG-EP-001 the delta note states
+      the prompt-required composition and drops-extras mount mechanism, so
+      mounting projects/events/board needs a prompt-set change plus a help
+      reference page per command, and names #286 (DEC-33); CG-DAEMON-001 #286 is
+      referenced from daemon.md, the delta note and the S13/S17 prerequisite
+      prose (DEC-34); CG-DOCTOR-001 doctor.md joins the reachability set with
+      its follow-up status (DEC-35); CG-TOL-001 the reconciliation tolerance
+      default is at most 2 percent of session totals with S14 required to adopt
+      or justify it (DEC-36); CG-REG-001 a bounded cli-command-registry.md edit
+      registers projects (M2-S11) and events (M2-S13), notes attempts as a
+      dispatch subfamily, and states the projects versus M3 repos boundary
+      (DEC-37); and CG-STATUS-001/CG-MAP-002/003/CG-EVT-002 are accepted as
+      small product edits (DEC-38). CG-SCEN-001 and CG-GUARD-001 are accepted
+      as-is; the PR body now carries the compensating-control sentence that the
+      guard registers brand literals only and content review is the control."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Containment after the review-board remediation: 32 delivery product files
+      (31 planning, including the bounded cli-command-registry.md edit, plus the
+      forbidden-literals registry) and 3 system_spec_update files, 35 total.
+      Acceptance criteria: 39 — the two new ones are AC-F8-6 (scenario assertion
+      contract) and AC-F8-7 (S17 evidence surfaces). Plan phases: eight, with P8
+      owning the board remediation; 39 TCs mapped exactly once across P1-P8.
+      This supersedes the 37-AC and 34-file counts recorded in the earlier DoD
+      note."
+    type: "info"
     date: "2026-11-11"
