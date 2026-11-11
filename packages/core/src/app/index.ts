@@ -103,6 +103,12 @@ export {
   summarizeDispatchEvidence,
 } from "./dispatch-gate.js";
 export {
+  type DispatchAttemptsReadInput,
+  type DispatchAttemptsReadPorts,
+  type DispatchAttemptsReadResult,
+  readDispatchAttemptHistory,
+} from "./dispatch-attempts.js";
+export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,

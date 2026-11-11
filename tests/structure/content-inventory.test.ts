@@ -97,6 +97,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveDispatchIdentity",
     "serializeIdentityMarker",
   ],
+  "core/src/app/dispatch-attempts.ts": ["readDispatchAttemptHistory"],
   "core/src/app/dispatch.ts": ["boundLastMessage", "runDispatch"],
   "core/src/app/dispatch-gate.ts": [
     "handoverDispatchEvidence",
@@ -105,6 +106,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "revertDispatchHandoverEvidence",
     "summarizeDispatchEvidence",
   ],
+  "core/src/domain/dispatch-attempts.ts": ["orderAttempts", "projectAttempt", "selectAttemptsPage"],
   "core/src/domain/dispatch-gate.ts": [
     "COUNTED_EVIDENCE_CLASS",
     "countedEvidenceClass",
@@ -603,6 +605,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "COMMIT_TYPES",
   ],
   "core/src/contracts/dispatch.ts": [
+    "ATTEMPTS_DEFAULT_LIMIT",
+    "ATTEMPTS_HUMAN_ROW_BUDGET",
+    "ATTEMPTS_LIMIT_PATTERN",
+    "ATTEMPTS_MAX_LIMIT",
+    "ATTEMPTS_MIN_LIMIT",
     "DISPATCH_ATTEMPT_KEY_PREFIX",
     "DISPATCH_ATTEMPT_PAYLOAD_SCHEMA",
     "DISPATCH_ATTEMPT_RECORD_KIND",

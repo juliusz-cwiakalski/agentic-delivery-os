@@ -792,6 +792,12 @@ export {
 // three additive record kinds, the derived authority view, the declared
 // comparison record, the closed evidence-class union, and the gate vocabulary.
 export {
+  ATTEMPTS_DEFAULT_LIMIT,
+  ATTEMPTS_HUMAN_ROW_BUDGET,
+  ATTEMPTS_LIMIT_PATTERN,
+  ATTEMPTS_MAX_LIMIT,
+  ATTEMPTS_MIN_LIMIT,
+  type AttemptsRefSource,
   DISPATCH_ATTEMPT_KEY_PREFIX,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_ATTEMPT_RECORD_KIND,
@@ -833,6 +839,9 @@ export {
   DISPATCH_RESUME_MODES,
   DISPATCH_WINDOW_START_REASONS,
   type DispatchAttemptRecord,
+  type DispatchAttemptView,
+  type DispatchAttemptsData,
+  type DispatchAttemptsTruncation,
   type DispatchAuthorityReadPort,
   type DispatchAuthorityView,
   type DispatchComparisonClass,

@@ -363,6 +363,76 @@ export type DispatchSummaryData = {
   };
 };
 
+/**
+ * The attempts read-side reference source (GH-289 F-2): `flag` when the caller
+ * supplied `--ref`, `active-change` when it resolved from the local context.
+ */
+export type AttemptsRefSource = "flag" | "active-change";
+
+/**
+ * One projected attempt (GH-289 F-2, DM-2, Appendix D).
+ *
+ * Exactly sixteen consumer fields: the attempt's identity, its result, its
+ * comparison, its corroboration triple, its single divergence reference, its
+ * timing, and its bounded citations. `endedAt` is the consumer name for the
+ * record's finish timestamp; `divergenceRef` is singular or explicit `null`.
+ */
+export type DispatchAttemptView = {
+  readonly attemptId: string;
+  readonly repository: string;
+  readonly ref: string;
+  readonly harness: HarnessKind;
+  readonly evidenceClass: DispatchEvidenceClass;
+  readonly outcome: HarnessOutcome;
+  readonly token: DispatchToken;
+  readonly startedAt: string;
+  readonly endedAt: string;
+  readonly divergenceRef: string | null;
+  readonly corroboration: DispatchCorroborationRecord;
+  readonly falseSuccess: boolean;
+  readonly comparison: {
+    readonly class: DispatchComparisonClass;
+    readonly token: DispatchToken | null;
+    readonly outcome: DispatchComparisonOutcome;
+  };
+  readonly resumeMode: DispatchResumeMode | null;
+  readonly evidenceRefs: readonly DispatchEvidenceReference[];
+  readonly recordedAt: string;
+};
+
+/** The single declared truncation object (GH-289 DM-5); ledger scope wins. */
+export type DispatchAttemptsTruncation = {
+  readonly scope: "ledger" | "page";
+  readonly bound: number;
+  readonly omittedRecords: number;
+};
+
+/**
+ * The `attempts.v1` read-side data (GH-289 F-2, DM-1, Appendix D).
+ *
+ * Eight always-present keys plus `truncation` only when a bound binds and one
+ * declared `excluded.foreignRepository` count over the retained ledger window.
+ */
+export type DispatchAttemptsData = {
+  readonly repository: string;
+  readonly ref: string;
+  readonly refSource: AttemptsRefSource;
+  readonly limit: number;
+  readonly matched: number;
+  readonly hasMore: boolean;
+  readonly attempts: readonly DispatchAttemptView[];
+  readonly excluded: { readonly foreignRepository: number };
+  readonly truncation?: DispatchAttemptsTruncation;
+};
+
+/** The attempts-only page bounds (GH-289 DM-4); the byte/line budgets are shared. */
+export const ATTEMPTS_DEFAULT_LIMIT = 20 as const;
+export const ATTEMPTS_MIN_LIMIT = 1 as const;
+export const ATTEMPTS_MAX_LIMIT = 100 as const;
+export const ATTEMPTS_HUMAN_ROW_BUDGET = 37 as const;
+/** The canonical decimal limit form: no sign, no whitespace, no leading zero. */
+export const ATTEMPTS_LIMIT_PATTERN = "[1-9][0-9]*" as const;
+
 /** Bounded read and output constants (NFR-4). */
 export const DISPATCH_MAX_ATTEMPT_RECORDS = 5000 as const;
 export const DISPATCH_MAX_MACHINE_BYTES = 65536 as const;
