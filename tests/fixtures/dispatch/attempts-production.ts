@@ -10,7 +10,10 @@
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readDispatchIdentityMarkerText } from "../../../packages/adapters/src/file/dispatch-identity";
+import {
+  dispatchIdentityMarkerPath,
+  readDispatchIdentityMarkerText,
+} from "../../../packages/adapters/src/file/dispatch-identity";
 import { readProjectIdentityMarker } from "../../../packages/adapters/src/file/project-identity";
 import {
   appendDispatchAttempt,
@@ -20,12 +23,12 @@ import type {
   DispatchAttemptRecord,
   DispatchDivergenceRecord,
 } from "../../../packages/core/src/contracts/index";
-import type { HostFixture } from "../projects/state-scope";
 import {
   createProductionProjectsHarness,
   type ProductionProjectsHarness,
   type ProductionRun,
 } from "../projects/production";
+import type { HostFixture } from "../projects/state-scope";
 import { createRepository, git } from "../projects/temp-repos";
 
 /** The store file set whose bytes, modes, and mtimes a read must not change. */
@@ -75,6 +78,8 @@ export type AttemptsProductionCheckout = {
   readonly writeContext: (ref: string) => void;
   readonly removeContext: () => void;
   readonly dispatchIdentityMarker: () => string | undefined;
+  /** Write a torn binding marker, so the read's non-repair is observable. */
+  readonly writeDispatchIdentityMarker: (text: string) => void;
   readonly projectIdentityMarker: () => ReturnType<typeof readProjectIdentityMarker>;
   readonly run: (argv: readonly string[]) => Promise<ProductionRun>;
 };
@@ -133,6 +138,9 @@ const checkoutOf = (
     },
     removeContext: () => rmSync(contextPath, { force: true }),
     dispatchIdentityMarker: () => readDispatchIdentityMarkerText(join(checkout, ".git")),
+    writeDispatchIdentityMarker: (text: string) => {
+      writeFileSync(dispatchIdentityMarkerPath(join(checkout, ".git")), text);
+    },
     projectIdentityMarker: () => readProjectIdentityMarker(join(checkout, ".git")),
     run: harness.run,
   };

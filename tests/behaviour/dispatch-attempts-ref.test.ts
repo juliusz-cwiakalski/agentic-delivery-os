@@ -4,7 +4,9 @@
  *
  * Every refusal asserts zero store reads, nothing appended, and the delivered
  * identity (`input.value.rejected` at exit 1), because the grammar runs before
- * any runtime call.
+ * any runtime call. "Nothing appended" is observed through the store port's
+ * append counter — the declared observable for that claim — and each refusal
+ * summary must name the supplied value or token.
  */
 import { describe, expect, test } from "bun:test";
 import type { DispatchAttemptsData } from "../../packages/core/src/contracts/index";
@@ -190,15 +192,56 @@ describe("TC-ATTEMPT-004 total order through the command", () => {
 });
 
 describe("TC-ATTEMPT-039 request grammar refusals", () => {
-  const cases: readonly { readonly label: string; readonly argv: readonly string[] }[] = [
-    { label: "non-canonical ref", argv: ["dispatch", "attempts", "--ref", "241", "--json"] },
-    { label: "unknown flag", argv: ["dispatch", "attempts", "--nope", "--json"] },
+  const cases: readonly {
+    readonly label: string;
+    readonly argv: readonly string[];
+    readonly names: string;
+  }[] = [
+    {
+      label: "digits-only ref",
+      argv: ["dispatch", "attempts", "--ref", "241", "--json"],
+      names: '"241" is not a canonical work item reference',
+    },
+    {
+      label: "lowercase-prefix ref",
+      argv: ["dispatch", "attempts", "--ref", "gh-241", "--json"],
+      names: '"gh-241" is not a canonical work item reference',
+    },
+    {
+      label: "ref without digits",
+      argv: ["dispatch", "attempts", "--ref", "GH-", "--json"],
+      names: '"GH-" is not a canonical work item reference',
+    },
+    {
+      label: "ref without separator",
+      argv: ["dispatch", "attempts", "--ref", "GH241", "--json"],
+      names: '"GH241" is not a canonical work item reference',
+    },
+    {
+      label: "ref with a trailing segment",
+      argv: ["dispatch", "attempts", "--ref", "GH-241-extra", "--json"],
+      names: '"GH-241-extra" is not a canonical work item reference',
+    },
+    {
+      label: "empty ref",
+      argv: ["dispatch", "attempts", "--ref", "", "--json"],
+      names: '"" is not a canonical work item reference',
+    },
+    {
+      label: "unknown flag",
+      argv: ["dispatch", "attempts", "--nope", "--json"],
+      names: 'unknown option "--nope"',
+    },
     {
       label: "unexpected positional",
       argv: ["dispatch", "attempts", "GH-289", "extra", "--json"],
+      names: 'unexpected argument "GH-289"',
     },
   ];
 
+  // The declared observable for "nothing appended" is the store port's append
+  // counter: the grammar refuses before any runtime call, so no append reaches
+  // the counted port and the store's bytes therefore cannot change.
   for (const entry of cases) {
     test(`${entry.label} exits 1 with input.value.rejected and zero reads`, async () => {
       await withHarness({ label: "grammar", records: ledgerOf(2) }, async (harness) => {
@@ -208,6 +251,7 @@ describe("TC-ATTEMPT-039 request grammar refusals", () => {
         expect(result.error?.code).toBe("input.value.rejected");
         expect(result.readCount).toBe(0);
         expect(harness.counters.append).toBe(appendsBefore);
+        expect(result.error?.summary).toContain(entry.names);
         expect(`${result.stdout}${result.stderr}`).not.toMatch(/attempts\./);
       });
     });

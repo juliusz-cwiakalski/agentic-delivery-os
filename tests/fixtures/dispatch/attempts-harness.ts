@@ -15,8 +15,8 @@ import { createDispatchCommandDefinition } from "../../../packages/cli/src/comma
 import { createDispatchGateRuntime } from "../../../packages/cli/src/edge";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import {
-  readDispatchAttemptHistory,
   type DispatchAttemptsReadInput,
+  readDispatchAttemptHistory,
 } from "../../../packages/core/src/app/dispatch-attempts";
 import {
   appendDispatchAttempt,
@@ -96,6 +96,7 @@ export type StoreCounters = {
   readonly readRecords: number;
   readonly append: number;
   readonly acquireFence: number;
+  readonly releaseFence: number;
   readonly replaceDocument: number;
 };
 
@@ -103,6 +104,7 @@ const countersOf = (): { -readonly [K in keyof StoreCounters]: number } => ({
   readRecords: 0,
   append: 0,
   acquireFence: 0,
+  releaseFence: 0,
   replaceDocument: 0,
 });
 
@@ -127,6 +129,10 @@ export const countStore = (
     acquireFence: (token) => {
       counters.acquireFence += 1;
       return store.acquireFence(token);
+    },
+    releaseFence: (handle) => {
+      counters.releaseFence += 1;
+      return store.releaseFence(handle);
     },
     replaceDocument: (handle, request) => {
       counters.replaceDocument += 1;

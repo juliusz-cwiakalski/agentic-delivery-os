@@ -16,14 +16,16 @@ import {
 } from "../../packages/core/src/app/dispatch-ledger";
 import type { DispatchAttemptsData } from "../../packages/core/src/contracts/index";
 import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
+import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
 import {
   createAttemptsProductionFixture,
   evidenceFiles,
+  readStoreFile,
   snapshotStore,
 } from "../fixtures/dispatch/attempts-production";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
-import { createHostFixture, nonCheckoutDirectory } from "../fixtures/projects/state-scope";
 import { createProductionProjectsHarness } from "../fixtures/projects/production";
+import { createHostFixture, nonCheckoutDirectory } from "../fixtures/projects/state-scope";
 
 const REPO_A = "github.com/owner/repo-a";
 const REPO_B = "github.com/owner/repo-b";
@@ -144,7 +146,40 @@ describe("TC-ATTEMPT-013 outside any checkout", () => {
 });
 
 describe("TC-ATTEMPT-014 read-only with respect to evidence", () => {
-  test("zero appends, unchanged evidence bytes, and no binding marker", async () => {
+  /**
+   * The production composer exposes no store seam by design, so the store-port
+   * counters (append / fence acquire / fence release) run over the in-process
+   * composition of the same command definition, gate runtime, and app read. The
+   * production-composition cells below prove the same property by hashing every
+   * store byte, by both markers, and by the host-index write counters.
+   */
+  test("a successful read performs zero appends, zero fence acquisitions, zero releases", async () => {
+    const harness = createAttemptsHarness({ label: "scope-read-counters", records: ledgerOf(2) });
+    try {
+      const readsBefore = harness.counters.readRecords;
+      const appendsBefore = harness.counters.append;
+      const acquiresBefore = harness.counters.acquireFence;
+      const releasesBefore = harness.counters.releaseFence;
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      // A successful read, not a refusal: the seeded page is returned.
+      expect(dataOf(result.data).attempts).toHaveLength(2);
+      expect(harness.counters.readRecords - readsBefore).toBe(1);
+      expect(harness.counters.append).toBe(appendsBefore);
+      expect(harness.counters.acquireFence).toBe(acquiresBefore);
+      expect(harness.counters.releaseFence).toBe(releasesBefore);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("sha256-stable evidence, unchanged counts, and permitted effects only", async () => {
     const host = createHostFixture("gh289-scope-readonly");
     const fixture = createAttemptsProductionFixture({
       host,
@@ -153,24 +188,89 @@ describe("TC-ATTEMPT-014 read-only with respect to evidence", () => {
     try {
       fixture.a.seedAttempts(ledgerOf(2, { repository: REPO_A }));
       fixture.a.seedDivergences([makeDivergence({ repository: REPO_A })]);
-      const before = evidenceFiles(snapshotStore(fixture.a.harness.stateLocation));
+      const stateDirectory = fixture.a.harness.stateLocation;
+      // sha256 is the primary "bytes unchanged" evidence (TR-2); mode and mtime
+      // are the corroborating fingerprint.
+      const hashesBefore = fixture.a.harness.snapshot(stateDirectory);
+      const looseBefore = snapshotStore(stateDirectory);
+      const evidenceBefore = evidenceFiles(hashesBefore);
+      const ledgerNames = Object.keys(evidenceBefore);
+      expect(ledgerNames.length).toBeGreaterThan(0);
+      const ledgerBytes = ledgerNames.map((name) => readStoreFile(stateDirectory, name));
       const attemptsBefore = readDispatchAttempts(fixture.a.harness.store);
       const divergencesBefore = readDispatchDivergences(fixture.a.harness.store);
       const handoversBefore = readDispatchHandover(fixture.a.harness.store);
+      const projectMarkerBefore = fixture.a.projectIdentityMarker();
       expect(fixture.a.dispatchIdentityMarker()).toBeUndefined();
+      const writesBefore = fixture.a.harness.hostIndexAccess.writes;
 
-      const result = await fixture.a.run(["dispatch", "attempts", "--ref", ATTEMPTS_REF, "--json"]);
-      expect(result.exitCode).toBe(0);
+      const machine = await fixture.a.run([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      expect(machine.exitCode).toBe(0);
+      expect(dataOf(machine.envelope?.data).attempts).toHaveLength(2);
+      // A first invocation may register the project: at most one index write.
+      const firstWrites = fixture.a.harness.hostIndexAccess.writes - writesBefore;
+      expect(firstWrites).toBeLessThanOrEqual(1);
+      const projectMarkerAfterFirst = fixture.a.projectIdentityMarker();
+      expect(projectMarkerAfterFirst.state).toBe("present");
 
-      const after = evidenceFiles(snapshotStore(fixture.a.harness.stateLocation));
-      expect(after).toEqual(before);
+      // The second (text) invocation runs over unchanged index content.
+      const secondWritesBefore = fixture.a.harness.hostIndexAccess.writes;
+      const text = await fixture.a.run(["dispatch", "attempts", "--ref", ATTEMPTS_REF]);
+      expect(text.exitCode).toBe(0);
+      expect(text.stdout).toContain(REPO_A);
+      expect(fixture.a.harness.hostIndexAccess.writes - secondWritesBefore).toBe(0);
+      // No absolute path is disclosed by the digest (NFR-6).
+      for (const absolute of [host.hostRoot, fixture.a.checkout, host.home]) {
+        expect(text.stdout).not.toContain(absolute);
+      }
+
+      // Every store artifact is byte-, mode-, and mtime-identical.
+      const hashesAfter = fixture.a.harness.snapshot(stateDirectory);
+      expect(hashesAfter).toEqual(hashesBefore);
+      expect(evidenceFiles(hashesAfter)).toEqual(evidenceBefore);
+      expect(snapshotStore(stateDirectory)).toEqual(looseBefore);
+      expect(ledgerNames.map((name) => readStoreFile(stateDirectory, name))).toEqual(ledgerBytes);
       expect(countOf(readDispatchAttempts(fixture.a.harness.store))).toBe(countOf(attemptsBefore));
       expect(countOf(readDispatchDivergences(fixture.a.harness.store))).toBe(
         countOf(divergencesBefore),
       );
       expect(countOf(readDispatchHandover(fixture.a.harness.store))).toBe(countOf(handoversBefore));
-      // A read never creates, repairs, or re-persists the binding marker.
+
+      // The dispatch repository binding marker is neither created nor repaired.
       expect(fixture.a.dispatchIdentityMarker()).toBeUndefined();
+      // The project checkout identity marker is create-once and never rewritten:
+      // a run that finds it present leaves it byte-identical.
+      expect(fixture.a.projectIdentityMarker()).toEqual(projectMarkerAfterFirst);
+      if (projectMarkerBefore.state === "present") {
+        expect(projectMarkerAfterFirst).toEqual(projectMarkerBefore);
+      }
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("a torn dispatch binding marker is not repaired by a read", async () => {
+    const host = createHostFixture("gh289-scope-torn-binding");
+    const fixture = createAttemptsProductionFixture({
+      host,
+      origins: { a: ORIGIN_A, b: ORIGIN_B },
+    });
+    try {
+      fixture.a.seedAttempts(ledgerOf(1, { repository: REPO_A }));
+      const torn = '{"repository":"github.com/owner/repo","schema":"dispatch.iden';
+      fixture.a.writeDispatchIdentityMarker(torn);
+      expect(fixture.a.dispatchIdentityMarker()).toBe(torn);
+
+      const result = await fixture.a.run(["dispatch", "attempts", "--ref", ATTEMPTS_REF, "--json"]);
+      expect(result.exitCode).toBe(0);
+      expect(dataOf(result.envelope?.data).attempts).toHaveLength(1);
+      expect(fixture.a.dispatchIdentityMarker()).toBe(torn);
     } finally {
       fixture.dispose();
     }

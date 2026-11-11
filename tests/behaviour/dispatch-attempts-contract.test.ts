@@ -19,9 +19,14 @@ import {
   projectAttempt,
   selectAttemptsPage,
 } from "../../packages/core/src/domain/dispatch-attempts";
-import { DISPATCH_NOW } from "../fixtures/dispatch/harness";
-import { ATTEMPTS_REF, ledgerOf, maximalAttempt } from "../fixtures/dispatch/attempt-records";
+import {
+  ATTEMPTS_REF,
+  ledgerOf,
+  maximalAttempt,
+  maximalEvidenceRefs,
+} from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
+import { DISPATCH_NOW } from "../fixtures/dispatch/harness";
 import { comparisonForToken, makeAttempt, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const DECLARED_FIELDS = [
@@ -324,6 +329,65 @@ describe("TC-ATTEMPT-006..008 command-level projection", () => {
 });
 
 describe("TC-ATTEMPT-028 cells 1-3 the read side carries no gate key", () => {
+  /** The eight always-present envelope keys; `truncation` joins only when a bound binds. */
+  const ENVELOPE_FIELDS = [
+    "attempts",
+    "excluded",
+    "hasMore",
+    "limit",
+    "matched",
+    "ref",
+    "refSource",
+    "repository",
+  ] as const;
+
+  test("a page with no bound binding carries exactly the eight envelope keys", async () => {
+    const harness = createAttemptsHarness({ label: "envelope-plain", records: ledgerOf(5) });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--limit",
+        "3",
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      const data = result.data as DispatchAttemptsData;
+      expect(Object.keys(data).sort()).toEqual([...ENVELOPE_FIELDS].sort());
+      expect(Object.hasOwn(data, "truncation")).toBe(false);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("a bound-binding read adds exactly `truncation` and no other key", async () => {
+    const harness = createAttemptsHarness({
+      label: "envelope-bound",
+      records: ledgerOf(100, { evidenceRefs: maximalEvidenceRefs() }),
+    });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--limit",
+        "100",
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      const data = result.data as DispatchAttemptsData & {
+        readonly truncation: { readonly scope: string };
+      };
+      expect(Object.keys(data).sort()).toEqual([...ENVELOPE_FIELDS, "truncation"].sort());
+      expect(data.truncation.scope).toBe("page");
+    } finally {
+      harness.dispose();
+    }
+  });
+
   test("no coverage, floor, verdict, eligibility or unmetConditions key at any depth", async () => {
     const harness = createAttemptsHarness({ label: "contract-gate-keys", records: ledgerOf(4) });
     try {
