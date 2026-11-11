@@ -1,0 +1,3 @@
+feat(GH-268): add a valid conventional fixture commit
+
+A body line that stays under the limit.
