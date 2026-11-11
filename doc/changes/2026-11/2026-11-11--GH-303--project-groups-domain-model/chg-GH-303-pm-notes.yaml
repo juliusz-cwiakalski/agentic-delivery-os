@@ -8,7 +8,7 @@ phases:
   specification: { started: null, completed: 2026-11-11T12:22:12.001Z }
   test_planning: { started: null, completed: 2026-11-11T12:22:19.982Z }
   delivery_planning: { started: null, completed: 2026-11-11T12:22:29.373Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -234,5 +234,76 @@ notes:
       short-circuits to PASS, cls=excused runs the second test and PASSes, and
       only a cls=delivery pairing reaches FAIL. No test-plan edit is needed; the
       plan gates on the classifier token anyway."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR iteration 2: NOT_READY — 9/10 facets PASS; cross_artifact_consistency
+      FAIL on one blocking finding: plan v1.1 gated P09/P10 measurement literals
+      (paragraph_lines=4, context_paragraph=1055..1060, backlog_hunks=6,
+      inside=6) and a DoD 'six zero-context hunks' claim, all of which a
+      conforming head can legitimately violate (proved with a 6-line and a
+      5-hunk conforming head that still passed every procedure). Record:
+      readiness-review/readiness-iter-2.md. Five non-blocking: spec §8.5 still
+      called the M2-S4 advisory note existing; P22's anchor rejected AC-F8-1's
+      own vocabulary; P11 flagged the required 'never required' sentence;
+      TP-5/TP-7 carried stale references; P42 printed violations=0 while the
+      guard was red."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR iteration 2 remediation complete. Spec v1.2: §8.5 now states the
+      M2-S4 advisory note is added by this change, and NFR-9/AC-NFR9-1 record
+      the forbidden-literal scanned set — twelve planning documents touched, ten
+      literal-scanned (milestones/README, m2/README, m2/architecture,
+      m2/contracts, m2/commands/projects, m2/commands/repos, m2/test-scenarios,
+      m2/journeys, m2/entrypoint-delta, status), two exempt (backlog.md,
+      cli-command-registry.md), zero seed literals (`ados`, `ADOS_`, `~/.ados`)
+      and `<binary>` prefixes in the scanned set; 45 ACs unchanged. Test plan
+      v1.2: P22 anchor accepts AC-F8-1's wording, P11 gains a sentence-scoped
+      negation/optionality filter, P42 consumes the guard exit status and its
+      FAIL lines (red guard with a planted `ados` in status.md now fails with
+      file:line:token; green shows planning_scanned=10/10), TP-5/TP-7 corrected,
+      and §6 records the invariant-vs-measurement contract for P09/P10. Plan
+      v1.2: every measurement literal removed from gates, DoD restated as hunk
+      confinement with no count, forbidden-literal contract added as a
+      constraint on P1/P2/P3/P5 and a P42 gate (planning_scanned=10/10,
+      seed_hits=0, violations=0, failures=0), sources pinned to spec/test plan
+      v1.2."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Delivery blocker found by the phase command and fixed upstream: the
+      commit primitive's deterministic secret scan matched the test plan's
+      sample line, where a local named token was assigned the result of
+      matchSeedLiteral, and read the assignment as a credential; all three phase
+      completions were refused with commit.safety.secret-suspected. The
+      test-plan owner renamed the sample local to seedMatch and swept the whole
+      file with the same scanner (5 patterns, 0 matches, control still flags the
+      old shape). Re-running the completions landed them. Improvement: artifact
+      authors writing sample code must run the repo's secret scanner over their
+      own text before publishing, and prose that quotes a scanner-tripping
+      sample must be paraphrased."
+    type: "retro"
+    date: "2026-11-11"
+  - text: "DoR iteration 3: READY — 10/10 facets PASS, blocking set empty. Record:
+      readiness-review/readiness-iter-3.md. The reviewer proved the iteration-2
+      blocking finding closed by execution: five independent conforming heads
+      (4-line vs 7-line paragraph, 6-hunk vs 5-hunk diff) all PASS the invariant
+      gates, while a paragraph below M2-S2, a neighbour-story edit, and a
+      missing blank line are each REJECTED; zero measurement literals remain in
+      any gate/DoD/constraint. P11/P22/P42 re-proved on base, conforming and
+      planted negatives; the ten scanned paths match AC-NFR9-1 byte-for-byte; 45
+      ACs / 45 TCs 1:1; 13 product files with no board.md; plan validate valid
+      and readyForDevelopment; both lints green; the secret-scan finding is
+      gone."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Accepted residual from DoR iteration 3 (non-blocking, routed to delivery
+      not to another planning round): the P09/P10/P11 summary verdict clauses
+      omit the property they test, so a violating head can still print 'Pn
+      verdict: PASS'. The plan does not gate on those summary lines — its gates
+      enumerate the tokens, and the reviewer proved the enumerated gates reject
+      every violating head. Delivery instruction: @coder evaluates the
+      enumerated gate tokens, never the summary verdict line. Nits accepted
+      as-is: AC-F13-1's 'delivered later' wording trips P36's negative
+      vocabulary (the plan works around it deliberately) and the pm-notes
+      artifact-version citations were updated to v1.2 here."
     type: "decision"
     date: "2026-11-11"
