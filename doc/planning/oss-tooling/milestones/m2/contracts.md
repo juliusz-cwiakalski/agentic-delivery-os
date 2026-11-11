@@ -19,24 +19,84 @@ unchanged. M2 surfaces extend them additively:
 - Every surface that reads or mutates state validates at the boundary and
   writes through the state layer.
 
-## projects.v1
+## repos.v1
 
-The project overview contract, owned by M2-S11.
+The flat enumeration contract, owned by the amended M2-S11. The shipped
+`projects list` surface is this flat enumeration: the change renames the
+command to `repos list` and its record identity field `projectKey` to
+`repoKey`, without changing the record shape.
 
-- **Record fields.** `projectKey` (stable repository identity derived from the
-  checkout identity: the git common dir marker), `root` (absolute checkout
-  root), `stateLocation` (the per-repository state root), `daemonReachable`
-  (`{ reachable }` or `{ reachable: false, reason }` with the closed reason
-  vocabulary `daemon-not-mounted`, `state-absent`, `socket-absent`,
-  `socket-unreachable`), `handoverState` (`engine`, `shell`, or
-  `in-transition`).
-- **Envelope.** `<binary> projects list --json` returns
-  `data.projects[]` with exactly those fields plus a host index revision.
+- **Record fields.** `repoKey` (the stable repo key derived from the checkout
+  identity: the git common dir marker; shipped as `projectKey`), `root` (the
+  absolute checkout root), `stateLocation` (the per-repository state
+  location), `daemonReachable` (daemon reachability: `{ reachable }` or
+  `{ reachable: false, reason }` with the closed reason vocabulary
+  `daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`,
+  so a bare negative always carries a degradation reason), `handoverState`
+  (the handover state: `engine`, `shell`, or `in-transition`).
+- **Envelope.** `<binary> repos list --json` returns `data.repos[]` with
+  exactly those fields plus a host index revision; the shipped
+  `projects list --json` returns the same records as `data.projects[]` until
+  the alias retires.
 - **Isolation.** Two checkouts of different repositories, both on the same
   ref, hold disjoint phase state and queue entries. The contract forbids a
   shared store keyed only by ref.
 - **Migration.** Existing single-store installs migrate by moving into the
   per-repository root; the migration note is part of the story's deliverables.
+
+## projects.v1
+
+The group envelope, owned by M2-S18. Consumers of `projects.v1` read the group
+envelope with its members: the board (M2-S4, advisory until the owning story
+declares the edge), the queue and status reads that accept a project scope,
+and the project index rows in this pack.
+
+- **Group fields.** `projectKey` is the group identity and `name` is its
+  display name; `workspaceRoot` is the optional workspace root and discovery
+  root, absent when the project declares none; `scope` is the project scope
+  accepted by queue and status reads.
+- **Member fields.** `members[]` carries one entry per declared member, each
+  with its own `repoKey`, `root`, `trackerKind`, `state`, and `health`. A
+  member field never denotes the group, and no group-named field denotes a
+  repository.
+- **Envelope.** `<binary> projects list --json` returns `data.projects[]`,
+  one entry per configured group, each carrying its `members[]` and the
+  optional `workspaceRoot`.
+- **Membership.** The member list is the configured membership; the envelope
+  never infers a member from a directory scan.
+
+## Project configuration schema
+
+The planned configuration document that declares project membership, owned by
+M2-S18.
+
+- **Declared fields.** A project name; its `members[]`, each naming a member
+  repository and the tracker kind for that member; an optional
+  `workspaceRoot` workspace discovery root; and the project `scope` handed to
+  the queue and status reads.
+- **Mixed tracker kinds.** A configuration mixing tracker kinds is valid at
+  validation time: the tracker kind is per member and each one names the
+  adapter family it uses, so only GitHub being exercised initially does not
+  narrow the schema. A member whose tracker kind has no implemented adapter is
+  classified `not-yet-supported` in the group listing rather than rejected.
+- **No workspace root.** A configuration with no workspace root is valid and
+  behaves identically: `workspaceRoot` is a discovery convenience, and
+  membership resolves from the declared members wherever their checkouts live.
+- **Validation.** Membership is validated at load time, so an unreadable or
+  contradictory project document is a classified configuration error rather
+  than a silently empty group.
+
+## Cross-repository change plan shape
+
+The planned plan declaration for one change over member repositories of one
+project, owned by M2-S19.
+
+- **Members and slices.** The plan declares member repositories and their slices: the part of the change that belongs to each member.
+- **One lifecycle, per-member delivery.** One lifecycle drives a branch and a pull request per member repository, under one review flow.
+- **Gates and definition of done.** Per-member gates decide each member, and one shared definition of done decides the change; evidence corroborates CI truth per member before the change counts done.
+- **Dependency edges.** Member steps carry dependency edges where order matters, so a slice that needs an earlier member's branch waits for it.
+- **Closeout.** Closeout runs across member repositories: branch cleanup and issue closure per tracker.
+- **Evidence.** Evidence enumerates every member pull request, so a partly landed change is visible as such and a failing member is named.
 
 ## attempts.v1
 
