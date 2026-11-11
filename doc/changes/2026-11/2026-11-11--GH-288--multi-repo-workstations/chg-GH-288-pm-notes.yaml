@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-11T15:48:20.905Z }
   quality_gates: { started: null, completed: 2026-11-11T15:57:22.732Z }
   dod_check: { started: null, completed: 2026-11-11T15:57:34.289Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-11T16:01:11.421Z }
 decisions: []
 open_questions: []
 blockers: []
@@ -271,6 +271,27 @@ notes:
       out-of-plan-scope repair of two stale doc assertions; the index-root stat
       and the process-free identity read are scoped review-verified choices."
     type: info
+    date: "2026-11-11"
+  - text: "PR created: #305
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/305
+      targeting main-tools from feat/GH-288/multi-repo-workstations (title
+      'feat(GH-288): per-repository state scoping and the projects overview',
+      body closes #288). Ticket labels moved to change+review+in-progress. Left
+      open for human review; not merged, no auto-merge. Merge authority stays
+      with the CEO."
+    type: info
+    date: "2026-11-11"
+  - text: "DoD check verified: all declared plan phases 1-6 have pm-notes evidence
+      naming the commit and verification; 38/38 ACs satisfied per review-iter-3
+      PASS; current-truth docs reconciled with no residual gaps after the
+      doc-sync pass; aggregate gate green (7206 pass / 4 skip / 0 fail, 895
+      files); lifecycle phases completed through quality_gates before
+      pr_creation. Delivery retrospective: two DoR cycles and three review
+      cycles, all rooted in declared-file/scope completeness and documentation
+      precision rather than design drift; the change also had to migrate its own
+      state store mid-delivery (done by non-destructive copy) because the
+      delivered policy took effect on this checkout."
+    type: retro
     date: "2026-11-11"
   - text: "Scope clarifications resolved without human input: the M2 pack fixes the
       contract (projectKey from the git common dir marker, stateLocation per
