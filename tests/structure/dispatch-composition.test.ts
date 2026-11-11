@@ -61,10 +61,11 @@ import {
 } from "../../packages/core/src/state/index";
 import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
-import { readFail } from "../fixtures/dispatch/truth";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
+import { readFail } from "../fixtures/dispatch/truth";
 import { streamStarterFromRunner } from "../fixtures/harness/harness-io";
+import { projectScopeFor } from "../fixtures/projects/state-scope";
 
 const ROOT = process.cwd();
 
@@ -147,7 +148,12 @@ describe("the production composer builds a real harness session port", () => {
       expect(brandResult.ok).toBe(true);
       if (!brandResult.ok) return;
       const brand = brandResult.value;
-      const stateDirectory = join(home, brand.stateDirectoryName);
+      const stateDirectory = projectScopeFor({
+        cwd: checkout.directory,
+        hostRoot: join(home, brand.stateDirectoryName),
+        home,
+        brand,
+      }).scope.stateLocation;
       const store = createStateStore(
         {
           level: "local",
@@ -380,7 +386,12 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
         workspaceId: "default",
         fenceNamespace: "cli",
         schemaVersion: STATE_SCHEMA_VERSION,
-        stateDirectory: join(home, brand.stateDirectoryName),
+        stateDirectory: projectScopeFor({
+          cwd: checkout.directory,
+          hostRoot: join(home, brand.stateDirectoryName),
+          home,
+          brand,
+        }).scope.stateLocation,
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
@@ -729,7 +740,12 @@ const createProductionHarness = (input: {
       workspaceId: "default",
       fenceNamespace: "cli",
       schemaVersion: STATE_SCHEMA_VERSION,
-      stateDirectory: join(home, brand.stateDirectoryName),
+      stateDirectory: projectScopeFor({
+        cwd: checkout.directory,
+        hostRoot: join(home, brand.stateDirectoryName),
+        home,
+        brand,
+      }).scope.stateLocation,
     },
     { driver: "jsonl", edge: createNodeStateEdge() },
   );
@@ -1097,8 +1113,8 @@ describe("the production composer keeps the repository identity rename-invariant
         originUrl: "https://github.com/acme/beta.git",
       });
       try {
-        // The same home/state root serves both checkouts; each queue entry names
-        // its own repository.
+        // One home, two checkouts: each queue entry names its own repository and
+        // each project keeps its own dispatch ledger.
         for (const [harness, ref, repository] of [
           [alpha, "GH-901", "github.com/acme/alpha"],
           [beta, "GH-902", "github.com/acme/beta"],
@@ -1115,13 +1131,19 @@ describe("the production composer keeps the repository identity rename-invariant
           expect(run.exit).toBe(2);
         }
 
-        const attempts = readDispatchAttempts(beta.store);
-        expect(attempts.ok).toBe(true);
-        const repositoryByRef = new Map(
-          attempts.ok ? attempts.records.map((record) => [record.ref, record.repository]) : [],
-        );
-        expect(repositoryByRef.get("GH-901")).toBe("github.com/acme/alpha");
-        expect(repositoryByRef.get("GH-902")).toBe("github.com/acme/beta");
+        // Two checkouts in one home are two projects with two state roots
+        // (GH-288 F-1): neither attempt ledger observes the other's record.
+        expect(alpha.store.identity.stateDirectory).not.toBe(beta.store.identity.stateDirectory);
+        const alphaAttempts = readDispatchAttempts(alpha.store);
+        const betaAttempts = readDispatchAttempts(beta.store);
+        expect(alphaAttempts.ok).toBe(true);
+        expect(betaAttempts.ok).toBe(true);
+        const repositoryByRef = (read: typeof alphaAttempts): Map<string, string | undefined> =>
+          new Map(read.ok ? read.records.map((record) => [record.ref, record.repository]) : []);
+        expect(repositoryByRef(alphaAttempts).get("GH-901")).toBe("github.com/acme/alpha");
+        expect(repositoryByRef(alphaAttempts).has("GH-902")).toBe(false);
+        expect(repositoryByRef(betaAttempts).get("GH-902")).toBe("github.com/acme/beta");
+        expect(repositoryByRef(betaAttempts).has("GH-901")).toBe(false);
         expect(markerOf(alpha.commonDir)).toBe(serializeIdentityMarker("github.com/acme/alpha"));
         expect(markerOf(beta.commonDir)).toBe(serializeIdentityMarker("github.com/acme/beta"));
 

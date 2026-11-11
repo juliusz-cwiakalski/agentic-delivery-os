@@ -4,6 +4,11 @@
  */
 
 export {
+  type CapsuleRuntimeOptions,
+  createCapsuleFileRuntime,
+  nodeCapsuleFileSystemFacts,
+} from "./capsule.js";
+export {
   type ChangeFolderFileSystem,
   type ChangeFolderLookup,
   type ChangeFolderRequest,
@@ -30,10 +35,17 @@ export {
   runtimePlatform,
 } from "./config-source.js";
 export {
-  type CapsuleRuntimeOptions,
-  createCapsuleFileRuntime,
-  nodeCapsuleFileSystemFacts,
-} from "./capsule.js";
+  dispatchAuthorityDocumentName,
+  dualRunDispatchAuthority,
+  listDispatchAuthority,
+  readDispatchAuthority,
+} from "./dispatch-authority.js";
+export {
+  dispatchIdentityMarkerPath,
+  ensureDispatchIdentityMarkerText,
+  readDispatchIdentityMarkerText,
+  replaceDispatchIdentityMarkerText,
+} from "./dispatch-identity.js";
 export {
   applyPromotionWrite,
   checkPromotionConfinement,
@@ -42,17 +54,17 @@ export {
   readMemoryFacts,
 } from "./memory-promotion.js";
 export {
+  nodeOwnerHoldMarkerFileSystem,
+  type OwnerHoldMarkerFileSystem,
+  type OwnerHoldMarkerReadInput,
+  ownerHoldMarkerPath,
+  readOwnerHoldMarker,
+} from "./owner-hold-marker.js";
+export {
   type PlanArtifactRequest,
   readPlanArtifact,
 } from "./plan-artifact.js";
 export { readLocalPmContext } from "./pm-context.js";
-export {
-  nodeOwnerHoldMarkerFileSystem,
-  ownerHoldMarkerPath,
-  readOwnerHoldMarker,
-  type OwnerHoldMarkerFileSystem,
-  type OwnerHoldMarkerReadInput,
-} from "./owner-hold-marker.js";
 export {
   nodePmNotesFileSystemFacts,
   type PmNotesEntryEdit,
@@ -68,6 +80,11 @@ export {
   stagePmNotesPhaseEntry,
 } from "./pm-notes-parser.js";
 export {
+  ensureProjectIdentityMarkerText,
+  projectIdentityMarkerPath,
+  readProjectIdentityMarker,
+} from "./project-identity.js";
+export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,
   SECRET_FILENAME_PATTERNS,
@@ -78,15 +95,3 @@ export {
   parseConfigYaml,
   parserHostSwitchBlocked,
 } from "./yaml-parser.js";
-export {
-  dualRunDispatchAuthority,
-  dispatchAuthorityDocumentName,
-  listDispatchAuthority,
-  readDispatchAuthority,
-} from "./dispatch-authority.js";
-export {
-  dispatchIdentityMarkerPath,
-  ensureDispatchIdentityMarkerText,
-  readDispatchIdentityMarkerText,
-  replaceDispatchIdentityMarkerText,
-} from "./dispatch-identity.js";

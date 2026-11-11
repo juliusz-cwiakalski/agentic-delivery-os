@@ -17,12 +17,14 @@ import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
   ensureDispatchIdentityMarkerText,
+  ensureProjectIdentityMarkerText,
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   readDispatchIdentityMarkerText,
   readOwnerHoldMarker,
   readPmNotesText,
+  readProjectIdentityMarker,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
   runtimePlatform,
@@ -44,6 +46,7 @@ import {
   findGitRoot,
   nodeRepositoryIo,
   parseGitHubRemote,
+  readCheckoutIdentity,
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
@@ -56,9 +59,9 @@ import {
   classifyVerifyDocument,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
-  type DispatchPrFact,
   type DispatchPreflightError,
   type DispatchPreflightResult,
+  type DispatchPrFact,
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
@@ -69,6 +72,7 @@ import {
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
   PRODUCTION_DEFAULTS,
+  type ProjectsScopeFailure,
   readDaemonLanes,
   readQueueEntries,
   releaseQueueLease,
@@ -78,6 +82,7 @@ import {
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
+  resolveProjectScope,
   serializeIdentityMarker,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -101,11 +106,11 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessSessionHandle,
-  type OwnerHoldFact,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
   LOCAL_CALLER_PRINCIPAL,
+  type OwnerHoldFact,
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -142,6 +147,7 @@ import {
   type DispatchLaneFacts,
 } from "./edge.js";
 import type { EntrypointComposer } from "./entrypoint.js";
+import type { CommandDefinition, CommandProgram } from "./index.js";
 
 const PROVIDER_FAILURE = "config.credential.missing";
 
@@ -270,6 +276,58 @@ export type ProductionCompositionFacts = {
 };
 
 /**
+ * A classified state-scope failure raised at composition time (GH-288 F-1,
+ * DEC-17). The composing surface converts it into the family's contract error
+ * identity; it never becomes a path-derived substitute root.
+ */
+const projectsScopeFailure = (failure: ProjectsScopeFailure): Error => {
+  const error = new Error(
+    failure.kind === "config"
+      ? `the state-directory scope is invalid (${failure.key})`
+      : failure.summary,
+  );
+  return Object.assign(error, {
+    name: "ProjectsScopeError",
+    code: failure.code,
+    scopeFailure: failure,
+  });
+};
+
+/** The one bounded warning an invocation outside any checkout emits (DEC-10). */
+const UNBOUND_SCOPE_WARNING =
+  "outside any git work tree: delivery state is not repository-scoped (unbound scope)";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const withWarning = (result: unknown, warning: string): unknown => {
+  if (!isRecord(result) || (!Object.hasOwn(result, "data") && !Object.hasOwn(result, "error"))) {
+    return result;
+  }
+  const existing = Array.isArray(result.warnings)
+    ? result.warnings.filter((entry): entry is string => typeof entry === "string")
+    : [];
+  return { ...result, warnings: [...existing, warning] };
+};
+
+/** Append exactly one bounded warning to every composed handler's outcome. */
+const withScopeWarning = (program: CommandProgram, warning: string): CommandProgram => {
+  const commands: Record<string, CommandDefinition> = {};
+  for (const [name, definition] of Object.entries(program.commands)) {
+    commands[name] = {
+      ...definition,
+      handler: (invocation) => {
+        const outcome = definition.handler(invocation);
+        return outcome instanceof Promise
+          ? outcome.then((value) => withWarning(value, warning))
+          : withWarning(outcome, warning);
+      },
+    };
+  }
+  return { commands };
+};
+
+/**
  * Compose the prompt-required program over the delivered adapters.
  *
  * The composed brand is supplied by the entrypoint, so the name seam has one
@@ -283,19 +341,38 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
-    const stateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
+    // The two layers (GH-288 F-1, DEC-12): the delivered host root holds
+    // host-wide controls only, and the derived project root holds every
+    // delivery artifact of this checkout. One policy resolves both; no inline
+    // home-plus-brand composition survives here.
+    const scope = resolveProjectScope({
+      environment,
+      environmentPrefix: brand.environmentPrefix,
+      stateDirectoryName: brand.stateDirectoryName,
+      homeDirectory,
+      checkout: readCheckoutIdentity({ cwd, io: nodeRepositoryIo() }),
+      ports: {
+        readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+        writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+        newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+      },
+    });
+    if (!scope.ok) throw projectsScopeFailure(scope.error);
+    const hostRoot = scope.value.scope.hostRoot;
+    const stateDirectory = scope.value.scope.stateLocation;
     const changesDirectory = `${cwd}/doc/changes`;
     // One per-pass owner-hold resolution over the injected environment and the
-    // fixed production store directory (GH-280 F-1, D12). Never cached.
+    // host root (GH-280 F-1, D12; GH-288 F-7 keeps the hold host-wide). Never
+    // cached.
     const readOwnerHold = (): OwnerHoldFact => {
       const marker = readOwnerHoldMarker(
-        { storeDirectory: stateDirectory },
+        { storeDirectory: hostRoot },
         nodeOwnerHoldMarkerFileSystem(),
       );
       return resolveOwnerHoldFact({
         environment,
         environmentPrefix: brand.environmentPrefix,
-        storeDirectory: stateDirectory,
+        storeDirectory: hostRoot,
         marker,
       });
     };
@@ -1562,6 +1639,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     if (!program.ok) {
       throw new Error(`brand resolution failed: ${program.error.field}:${program.error.code}`);
     }
-    return program.program;
+    // An invocation outside every checkout keeps the declared `unbound` scope,
+    // its exit code, and nothing registered: only one bounded warning changes.
+    return scope.value.outcome === "unbound"
+      ? withScopeWarning(program.program, UNBOUND_SCOPE_WARNING)
+      : program.program;
   };
 };

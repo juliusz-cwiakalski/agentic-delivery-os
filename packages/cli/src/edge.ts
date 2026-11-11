@@ -150,10 +150,10 @@ import {
   resolveCloseoutBaseRef,
   resolveConfig,
   resolveDispatchDivergenceEvidence,
+  resolveHostStateRoot,
   resolveMergeGateSet,
   resolveQueueSettings,
   resolveQueueWeight,
-  resolveStateDirectoryScope,
   revertDispatchHandoverEvidence,
   runCloseout,
   runCommitAct,
@@ -225,7 +225,6 @@ import {
   type DoctorProviderCredentialPresence,
   type DoctorStateStoresRead,
   type DoctorWiringRead,
-  type OwnerHoldFact,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
@@ -236,6 +235,7 @@ import {
   type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
+  type OwnerHoldFact,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
   type PhaseTransitionRecord,
@@ -337,18 +337,18 @@ import {
   createConfigCommandDefinition,
 } from "./commands/config.js";
 import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
-import {
-  createCoordinatorCommandDefinition,
-  createCoordinatorSupervisor,
-  type CoordinatorCommandRuntime,
-  type CoordinatorSupervisorPorts,
-} from "./commands/index.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import {
   createDispatchCommandDefinition,
   type DispatchCommandRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
+import {
+  type CoordinatorCommandRuntime,
+  type CoordinatorSupervisorPorts,
+  createCoordinatorCommandDefinition,
+  createCoordinatorSupervisor,
+} from "./commands/index.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
   createLintCommandDefinition,
@@ -1397,7 +1397,7 @@ export type EdgeOptions = {
 const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
   if (options.stateDirectory !== undefined) return options.stateDirectory;
   const environment = options.environment ?? {};
-  const scope = resolveStateDirectoryScope({
+  const scope = resolveHostStateRoot({
     environment,
     environmentPrefix: options.brand.environmentPrefix,
     stateDirectoryName: options.brand.stateDirectoryName,

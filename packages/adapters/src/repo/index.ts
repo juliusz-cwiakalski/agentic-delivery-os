@@ -76,6 +76,47 @@ export const resolveCheckoutGitDirectories = (input: {
   return root === undefined ? undefined : resolveGitDir(root, input.io);
 };
 
+/**
+ * The closed checkout-identity read (GH-288 F-1, DEC-17).
+ *
+ * Distinguishes "not inside a git work tree" from "git metadata present but
+ * unusable", which the delivered root finder collapses: a `.git` file with a
+ * `gitdir:` prefix but an empty value passes the root test and then fails
+ * directory resolution. It reuses the delivered finder and resolver, spawns no
+ * process, and never ascends above the first `.git` entry.
+ */
+export type CheckoutIdentityRead =
+  | { readonly kind: "unbound" }
+  | {
+      readonly kind: "unreadable";
+      readonly checkoutRoot: string;
+      readonly dotGitPath: string;
+    }
+  | {
+      readonly kind: "resolved";
+      readonly checkoutRoot: string;
+      readonly gitDir: string;
+      readonly commonDir: string;
+    };
+
+/** Read the closed checkout-identity facts from the injected working directory. */
+export const readCheckoutIdentity = (input: {
+  readonly cwd: string;
+  readonly io: RepositoryIo;
+}): CheckoutIdentityRead => {
+  const root = findGitRoot(input.cwd, input.io);
+  if (root === undefined) return { kind: "unbound" };
+  const directories = resolveCheckoutGitDirectories({ cwd: input.cwd, io: input.io });
+  return directories === undefined
+    ? { kind: "unreadable", checkoutRoot: root, dotGitPath: join(root, ".git") }
+    : {
+        kind: "resolved",
+        checkoutRoot: root,
+        gitDir: directories.gitDir,
+        commonDir: directories.commonDir,
+      };
+};
+
 /** The checkout HEAD facts (branch, full SHA, detached marker). */
 export type RepositoryHeadFacts = {
   readonly branch?: string;

@@ -4,6 +4,8 @@
  * resume effects. No capability-gap is returned for a delivered capability.
  */
 import { describe, expect, test } from "bun:test";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   CLAUDE_CAPABILITIES,
   createClaudeSession,
@@ -59,8 +61,15 @@ const invokeCoordinator = async (input: {
 }> => {
   const stdout = bufferSink();
   const stderr = bufferSink();
+  // A temporary checkout with its own `.git` (never this repository) and a home
+  // that is a distinct directory, so the identity marker and the project root
+  // stay inside the fixture.
+  const home = join(input.root, "home");
+  const checkout = join(input.root, "checkout");
+  mkdirSync(join(checkout, ".git"), { recursive: true });
+  mkdirSync(home, { recursive: true });
   const environment = {
-    HOME: input.root,
+    HOME: home,
     PATH: process.env.PATH ?? "/usr/bin:/bin",
     HARNESS_MODEL: "synthetic/model-large",
     HARNESS_SMALL_MODEL: "synthetic/model-small",
@@ -68,8 +77,8 @@ const invokeCoordinator = async (input: {
   };
   const facts = {
     environment,
-    cwd: input.root,
-    homeDirectory: input.root,
+    cwd: checkout,
+    homeDirectory: home,
     workingName: "delivery-os",
     processId: process.pid,
     harnessSpawnRunner: runner,
