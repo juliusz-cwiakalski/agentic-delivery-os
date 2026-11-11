@@ -337,3 +337,39 @@ notes:
       boundary as expected — contracts.md lands in P2 — and is a P2 gate."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 2 (architecture + contracts) complete at commit ffaa1e34.
+      Scope: milestones/m2/architecture.md and milestones/m2/contracts.md. The
+      architecture draws the three levels in the C4 Level 1 context (project →
+      member repositories with declared membership, workspace optional and
+      discovery-only), rewrites the overview flow as project-scoped, adds the
+      eighth key flow `### Cross-repository change`, extends the boundary
+      invariants with the naming boundary, declared membership, workspace
+      optionality and one lifecycle per cross-repository change, and renames the
+      flat layer's components/index from project wording to repository wording.
+      contracts.md replaces the flat `## projects.v1` with `## repos.v1`
+      (`repoKey`, root, state location, daemon reachability with a degradation
+      reason, handover state, host index revision), redefines `## projects.v1`
+      as the group envelope (group identity and name, members with their own
+      repoKey/root/trackerKind/state/health, optional workspace root, project
+      scope) with the consumer note, and adds `## Project configuration schema`
+      (mixed tracker kinds valid at validation, not-yet-supported for an
+      unimplemented member, no-workspace configuration valid) and
+      `## Cross-repository change plan shape`. Gates on enumerated tokens: P11
+      repository_as_delivery_unit=OK, project_as_group=OK,
+      workspace_in_diagram=OK, workspace_optional_in_diagram=OK,
+      workspace_mandatory_claim=ABSENT; P12 membership_declared=OK,
+      workspace_never_required=OK, unrelated_dirs=OK, identical_behaviour=OK,
+      member_must_be_inside=ABSENT; P13 overview member/group/workspace >=1,
+      cross_repo_flow_heading=present, cross_repo_mermaid=1, four invariants
+      >=1 each; P14 repos_v1_fields=7/7 owned_by_M2-S11=OK; P15 all six group
+      fields OK, group_named_key_denotes_repo=ABSENT, group_identity_name=OK;
+      P16 fields=8/8; P17 elements=8/8; P07 s19_task_to_contract=6/6; P04
+      s18_nyts=1 contracts_nyts=1, s18_validation=OK,
+      s18_rather_than_rejected=OK, softening=ABSENT; P40 c4_headings=1/1/1
+      key_flows_headings=8/8 flow_ownership_bad=0, every touched file with even
+      fences and no untagged diagram (architecture fences=22 mermaid=11);
+      P38 dist_guard_exit=0 planning_markers=0; P42 forbidden_exit=0
+      violations=0 failures=0 seed_hits=0 planning_scanned=9/10; lint exit 0;
+      plan validate verdict=valid."
+    type: "info"
+    date: "2026-11-11"

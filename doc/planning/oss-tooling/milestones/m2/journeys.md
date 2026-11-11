@@ -7,18 +7,25 @@ true. Scope is in [../../backlog.md](../../backlog.md); the surfaces are in
 
 ## Multi-repo morning overview
 
-The owner starts the day with three delivery repositories on one workstation.
-A single overview answers the only question that matters: what is running,
-what is waiting, and what needs a decision.
+The owner starts the day with one project: three member repositories on one
+workstation, and one of those members lives outside any shared directory.
 
-1. `<binary> projects list` shows each project key, root, state location,
-   daemon reachability, and handover state. Nothing was registered by hand;
-   the host index was built from each checkout's identity.
-2. `<binary> board --all` renders one board across the projects: active lanes,
-   open gates, owner asks, and parked work, each under its project key.
-3. Two projects use the same ref number. Their lanes, phase state, and queue
+1. `<binary> projects list` shows the project with its members, their health,
+   and their state. Membership was declared in configuration, so nothing was
+   registered by hand and no directory scan decided the group.
+2. `<binary> repos list` shows the flat enumeration behind that group: each
+   member's repo key, root, state location, daemon reachability, and handover
+   state, discovered from each checkout's identity.
+3. The naming boundary holds in this view too: `repos` is the flat enumeration of checkouts, and `projects` groups them.
+4. `<binary> queue --project <key>` and `<binary> status --project <key>` scope
+   both reads to the project, so running, waiting, and parked work arrive
+   already filtered.
+5. `<binary> board --project <key>` renders the same scope as a board.
+6. The same project configured without a shared workspace reads identically,
+   because a workspace is a discovery root and never a requirement.
+7. Two members use the same ref number. Their lanes, phase state, and queue
    entries stay disjoint, so the overview never mixes them.
-4. The owner opens the one ask that needs a decision and leaves the rest
+8. The owner opens the one ask that needs a decision and leaves the rest
    running.
 
 ## Inspecting evidence before a handover decision

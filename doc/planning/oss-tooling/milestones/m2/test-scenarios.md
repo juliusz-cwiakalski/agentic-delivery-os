@@ -179,16 +179,16 @@ ref, when each records phase state and a queue entry, then the phase state and
 queue entries are disjoint, and neither checkout observes the other's
 documents.
 
-Assert: the two checkouts' phase-state and queue files are disjoint and neither `projects list` row references the other ref.
+Assert: the two checkouts' phase-state and queue files are disjoint and neither `repos list` row references the other ref.
 
-### SC-M2-S11-02 `projects list` enumerates both checkouts without manual configuration
+### SC-M2-S11-02 `repos list` enumerates both checkouts without manual configuration
 
 Given two managed checkouts with no hand-written registry, when
-`<binary> projects list --json` runs, then the machine envelope returns both
-projects with repo key, root, state location, daemon reachability, and
+`<binary> repos list --json` runs, then the machine envelope returns both
+checkouts with repo key, root, state location, daemon reachability, and
 handover state.
 
-Assert: `projects list --json.data.projects[]` carries both projects with `projectKey`, `root`, `stateLocation`, `daemonReachable`, and `handoverState`.
+Assert: `repos list --json.data.repos[]` carries both checkouts with `repoKey`, `root`, `stateLocation`, `daemonReachable`, and `handoverState`.
 
 ## M2-S12 Evidence inspection and divergence resolution
 
@@ -352,6 +352,65 @@ resumed at window end, when `status` and `brief` are read, then each shows the
 park fields and the ledger carries stop, park, and resume events.
 
 Assert: `status` and `brief` each show `parkedCount`, `reason`, and `until`, and the ledger holds stop, park, and resume events for the lane.
+
+## M2-S18 Project groups
+
+### SC-M2-S18-01 Project members are discoverable through a registered workspace directory
+
+Given a project whose configuration names two member repositories cloned
+inside one directory, when that directory is registered as the workspace
+discovery root and `<binary> projects list --json` runs, then both members
+appear under the project with their health and state.
+
+Assert: `projects list --json.data.projects[].members[]` holds both declared member repo keys.
+
+### SC-M2-S18-02 The same project without a workspace root reads identically
+
+Given the same two-member project configured with no workspace root, with its
+member checkouts in unrelated directories, when
+`<binary> projects list --project <key> --json` runs, then the envelope
+carries the same members, health, and state as the registered-workspace case.
+
+Assert: the two envelopes differ in no member field, and only `workspaceRoot` is absent.
+
+### SC-M2-S18-03 Project-scoped queue and status reads accept a mixed tracker-kind configuration
+
+Given a configuration mixing tracker kinds where one member's tracker kind has
+no implemented adapter, when `<binary> projects list` and the project-scoped
+queue and status reads run, then the mixed configuration is accepted at
+validation time, the unimplemented member is classified `not-yet-supported`
+rather than rejected, and the queue and status reads return only that
+project's entries.
+
+Assert: the project-scoped `queue` and `status` envelopes carry that project's key, and the unimplemented member carries `health == "not-yet-supported"`.
+
+## M2-S19 Cross-repository changes
+
+### SC-M2-S19-01 One lifecycle drives two member branches and two pull requests
+
+Given a change spanning two member repositories of one project, when the
+lifecycle runs, then one spec and plan are produced, each member receives its
+own branch and pull request, one review flow covers both, and the closeout
+lands both.
+
+Assert: `closeout.data.members[]` names both member branches with cleanup results and both pull-request numbers in the evidence.
+
+### SC-M2-S19-02 A failing member blocks the shared definition of done
+
+Given a two-repository change where one member's gates fail, when the change
+is evaluated, then the failing member blocks the shared definition of done and
+is named in the envelope.
+
+Assert: `change.data.definitionOfDone == "blocked"` and `change.data.blockingMember` equals the failing member's repo key.
+
+### SC-M2-S19-03 Member dependency edges order the slices
+
+Given a two-repository change where the second member's slice needs the first
+member's branch, when the plan is executed, then the dependency edge holds the
+second member's step until the first member's pull request lands, and the
+evidence enumerates every member pull request in landing order.
+
+Assert: `plan.data.members[1].dependsOn` equals the first member's repo key and the evidence lists one pull request per member.
 
 ## Cross-story scenarios
 

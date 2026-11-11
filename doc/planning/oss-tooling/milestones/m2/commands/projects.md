@@ -4,12 +4,14 @@ Status: Proposed (M2)
 
 ## NAME
 
-`projects` - one overview of every delivery-managed checkout on the host.
+`projects` - the group surface: configured projects with their member
+repositories, health, and state.
 
 ## SYNOPSIS
 
 ```
 <binary> projects list [--json]
+<binary> projects list --project <key> [--json]
 <binary> projects --help
 <binary> projects list --help
 <binary> --version
@@ -17,50 +19,60 @@ Status: Proposed (M2)
 
 ## DESCRIPTION
 
-Read-only host overview. Each managed checkout is identified by its checkout
-identity (the git common dir marker), and its state lives under a
-per-repository root, so two checkouts of different repositories never share
-phase state, queue entries, or lane leases - even when both use the same ref.
+Read-only group view. A project is a named group of repositories that belong
+together, and its membership is declared in configuration rather than inferred
+from a directory. `projects list` renders every configured project with its
+member repositories, their health, and their state.
 
-`projects list` reports one row per project: the repo key, the checkout root,
-the state location, daemon reachability, and the handover state. No manual
-registry is required; the host index is discovered from the checkouts.
+Project-scoped reads take the project scope: `queue` and `status` accept a
+project scope, so a reader can ask what one project has running, waiting, and
+parked without scanning a host-wide list. A registered workspace root adds
+discovery of managed clones inside that directory; it is never required, and a
+project whose members live in unrelated directories reads identically.
 
-This page is the M2-S11 contract and records the planned end state until M2
-exits; the observed root-listing composition is recorded in
-[../entrypoint-delta.md](../entrypoint-delta.md) rather than here. See
-[../contracts.md](../contracts.md) for `projects.v1`.
+The naming boundary is fixed: `repos` enumerates managed checkouts, and
+`projects` groups them. The shipped `projects list` surface is the flat
+enumeration this change renames to `repos list`; it is not the group surface
+documented here. This page documents the group surface only; the flat
+enumeration has its own page at [./repos.md](./repos.md) and its own contract
+in [../contracts.md](../contracts.md).
+
+This surface is proposed for M2-S18 and is not yet registered at the root
+listing. The machine envelope is `projects.v1` in
+[../contracts.md](../contracts.md); the configuration document is the project
+configuration schema in the same file. See
+[../entrypoint-delta.md](../entrypoint-delta.md) for the root listing delta.
 
 ## OPTIONS
 
 | Option | Meaning |
 |---|---|
-| `list` | Enumerate managed projects. The only verb in this contract. |
+| `list` | Render configured projects with their members. |
+| `--project <key>` | Scope the read to one project. |
 | `--json` | Emit the machine envelope instead of the human table. |
 | `--help` | Print this command's help and exit without reading state, git, configuration, or the network. |
 | `--version` | Print the binary's version and build identity and exit without reading state. |
 
 ## OUTPUT
 
-Text: a deterministic table with one row per project and the columns `key`,
-`root`, `state`, `daemon`, `handover`, sorted by repo key. The `daemon` cell is
-the closed vocabulary below: `daemon-not-mounted` (the shipped build composes no
-resident daemon), `state-absent` (the project has no state root yet),
-`socket-absent` (the derived socket path does not exist), `socket-unreachable`
-(the socket exists and a bounded connect fails), or `reachable` with no reason.
-A bare negative is never rendered.
+Text: a project block per group with one member line per repository and the
+columns `project`, `member`, `tracker`, `state`, `health`.
 
 Envelope `data` carries:
 
 | Key | Contract |
 |---|---|
-| `projects[]` | One entry per managed checkout |
-| `projects[].projectKey` | Stable repo key derived from the checkout identity |
-| `projects[].root` | Absolute checkout root |
-| `projects[].stateLocation` | Per-repository state root |
-| `projects[].daemonReachable` | `{ reachable }` or `{ reachable: false, reason }` with the closed reason set below |
-| `projects[].handoverState` | `engine`, `shell`, or `in-transition` |
-| `hostIndexRevision` | Revision of the host-level index that produced the list |
+| `projects[]` | One entry per configured project |
+| `projects[].projectKey` | Group identity of the project |
+| `projects[].name` | Display name of the group |
+| `projects[].workspaceRoot` | Optional workspace root used for discovery, absent when none is configured |
+| `projects[].scope` | Project scope accepted by queue and status reads |
+| `projects[].members[]` | One entry per declared member repository |
+| `projects[].members[].repoKey` | Repo key of that member |
+| `projects[].members[].root` | Absolute root of that member |
+| `projects[].members[].trackerKind` | Tracker kind declared for that member |
+| `projects[].members[].state` | Delivery state of that member |
+| `projects[].members[].health` | Health of that member, including a `not-yet-supported` classification when its tracker kind has no implemented adapter |
 
 The `daemonReachable.reason` vocabulary is closed: `daemon-not-mounted`,
 `state-absent`, `socket-absent`, `socket-unreachable`. The first applicable
@@ -72,25 +84,25 @@ unanswerable.
 
 | Code | Meaning |
 |---|---|
-| `0` | The project list was produced; also the declared `unbound` scope outside any work tree |
-| `1` | The request was refused, for example an unknown verb, or the invoking checkout's identity cannot be read |
-| `2` | A platform or state failure prevented discovery |
+| `0` | The group listing was produced |
+| `1` | The request was refused, for example an unknown project key |
+| `2` | A platform or state failure prevented the read |
 
 ## EXAMPLES
 
 ```
 $ <binary> projects list
-KEY              ROOT                 STATE                                     DAEMON              HANDOVER
-delivery-a-1a2b3c4d  /work/delivery-a  /srv/delivery-state/projects/delivery-a-1a2b3c4d  daemon-not-mounted  engine
-delivery-b-5e6f7a8b  /work/delivery-b  /srv/delivery-state/projects/delivery-b-5e6f7a8b  socket-absent       shell
+PROJECT    MEMBER        TRACKER STATE   HEALTH
+platform   delivery-a    github  engine  healthy
+platform   delivery-b    github  engine  degraded
 ```
 
 ```
-$ <binary> projects list --json
+$ <binary> projects list --project platform --json
 {
   "ok": true,
   "command": "projects list",
-  "data": { "projects": [ { "projectKey": "delivery-a", "...": "..." } ], "hostIndexRevision": 12 }
+  "data": { "projects": [ { "projectKey": "platform", "members": [ { "repoKey": "delivery-a", "...": "..." } ] } ] }
 }
 ```
 
@@ -114,11 +126,13 @@ and keeps its exit code. It is never reported as a project row.
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `projects.identity-unreadable` | The **invoking** checkout's identity cannot be read: git metadata is present but unusable, or the identity marker is unreadable, invalid, or inconsistent with its recorded key. A path that is not a git work tree is not this error — it is the `unbound` scope below | 1 |
-| `projects.registry-corrupt` | The host index is present but cannot be parsed; a state-opening invocation repairs it, preserving the corrupt bytes as a timestamped sibling | 2 |
-| `projects.state-unavailable` | A project state location is present but unreadable or cannot be established, or the identity marker cannot be created. An **absent** root is ordinary first use, not this error | 2 |
+| `projects.config-invalid` | The project configuration cannot be read or contradicts itself | 1 |
+| `projects.unknown-project` | The requested project key is not configured | 1 |
+| `projects.state-unavailable` | A member's per-repository state is missing or unreadable | 2 |
 
 ## SEE ALSO
 
-[projects.v1](../contracts.md), [architecture: multi-repository overview](../architecture.md),
+[projects.v1](../contracts.md), [repos](./repos.md),
+[architecture: multi-repository overview](../architecture.md),
+[entrypoint delta](../entrypoint-delta.md),
 [backlog](../../../backlog.md)

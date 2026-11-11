@@ -1190,7 +1190,7 @@ the repository family and the project family separately.
   repo key, root, state location, daemon reachability, handover state;
   migration note for existing single-store users; tests proving two checkouts
   using the same ref cannot observe each other's documents; transition note:
-  if a flat `projects list` had shipped before the group story (M2-S18), the
+  if a flat `projects list` had landed before the group story (M2-S18), the
   group story renames it with a deprecation alias.
 - AC: two checkouts of different repositories on one host, both using ref
   GH-241, hold disjoint phase state and queue entries; `repos list`
