@@ -132,6 +132,28 @@ export type DaemonReachabilityReason = (typeof DAEMON_REACHABILITY_REASONS)[numb
 export const HANDOVER_STATES = ["engine", "shell", "in-transition"] as const;
 export type HandoverState = (typeof HANDOVER_STATES)[number];
 
+/** The one verb of the family (F-3); no other verb exists in this contract. */
+export const PROJECTS_COMMAND_FAMILY = "projects" as const;
+
+/** The family's only verb. */
+export const PROJECTS_LIST_VERB = "list" as const;
+
+/** The exact entry field set, in output order (F-3, DM-4, AC-F3-1). */
+export const PROJECTS_ENTRY_FIELDS = [
+  "projectKey",
+  "root",
+  "stateLocation",
+  "daemonReachable",
+  "handoverState",
+] as const;
+
+/** The exact `data` field set, in output order; no new top-level key (F-3). */
+export const PROJECTS_LIST_DATA_FIELDS = ["projects", "hostIndexRevision"] as const;
+
+/** The closed state-location classification vocabulary (DEC-8). */
+export const PROJECT_STATE_LOCATIONS = ["first-use", "ready", "state-unavailable"] as const;
+export type ProjectStateLocation = (typeof PROJECT_STATE_LOCATIONS)[number];
+
 /** The daemon reachability value: nested so the entry keeps five fields (DEC-6). */
 export type DaemonReachability =
   | { readonly reachable: true }
@@ -165,6 +187,21 @@ export type HostIndexDocument = {
   readonly schema: typeof HOST_INDEX_SCHEMA;
   readonly revision: number;
   readonly projects: readonly HostIndexEntry[];
+};
+
+/** One `projects list` row: exactly the five contract fields (F-3, AC-F3-1). */
+export type ProjectsListEntry = {
+  readonly projectKey: string;
+  readonly root: string;
+  readonly stateLocation: string;
+  readonly daemonReachable: DaemonReachability;
+  readonly handoverState: HandoverState;
+};
+
+/** The `projects.v1` machine payload: the rows plus the revision that produced them. */
+export type ProjectsListData = {
+  readonly projects: readonly ProjectsListEntry[];
+  readonly hostIndexRevision: number;
 };
 
 /**

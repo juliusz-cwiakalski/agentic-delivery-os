@@ -10,6 +10,9 @@ Status: Proposed (M2)
 
 ```
 <binary> projects list [--json]
+<binary> projects --help
+<binary> projects list --help
+<binary> --version
 ```
 
 ## DESCRIPTION
@@ -33,6 +36,8 @@ listing delta and [../contracts.md](../contracts.md) for `projects.v1`.
 |---|---|
 | `list` | Enumerate managed projects. The only verb in this contract. |
 | `--json` | Emit the machine envelope instead of the human table. |
+| `--help` | Print this command's help and exit without reading state, git, configuration, or the network. |
+| `--version` | Print the binary's version and build identity and exit without reading state. |
 
 ## OUTPUT
 

@@ -28,7 +28,16 @@ const REFERENCE_ROOT = "doc/planning/oss-tooling/milestones/m1";
 const MAN_PAGE = `${REFERENCE_ROOT}/man-page.md`;
 const ENTRYPOINT_PAGE = `${REFERENCE_ROOT}/commands/entrypoint.md`;
 
+/**
+ * The per-command reference-page root (GH-288 DEC-13). A command family
+ * documents itself in its own milestone's page root, so an M2 page serves an M2
+ * command while every M1 snapshot page stays byte-unchanged.
+ */
+const M2_REFERENCE_ROOT = "doc/planning/oss-tooling/milestones/m2";
+
 const page = (name: string): string => `${REFERENCE_ROOT}/commands/${name}.md`;
+
+const pageIn = (root: string, name: string): string => `${root}/commands/${name}.md`;
 
 const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--json", "Emit the machine envelope instead of the human report"],
@@ -497,6 +506,22 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     "coordinator",
   ),
+  {
+    path: ["projects"],
+    summary: "One overview of every delivery-managed checkout on the host",
+    usage: ["<binary> projects <list> [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> projects list", "<binary> projects list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
+  },
+  {
+    path: ["projects", "list"],
+    summary: "List every discovered project with its state and health",
+    usage: ["<binary> projects list [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> projects list", "<binary> projects list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
+  },
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

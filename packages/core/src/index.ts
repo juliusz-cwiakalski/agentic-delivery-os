@@ -130,6 +130,19 @@ export {
   recordRedriveRequest,
   recoverCommitEffect,
 } from "./app/effects.js";
+/**
+ * The derived host-index fold (GH-288 F-2, DEC-4, DEC-14, DEC-18): the pure
+ * upsert/prune/revision rule over one read, with the DEC-18 key guard.
+ */
+export {
+  corruptHostIndexSiblingName,
+  type HostIndexMaintenanceInput,
+  type HostIndexMaintenanceResult,
+  type HostIndexRootProbe,
+  maintainHostIndex,
+  parseHostIndexDocument,
+  serializeHostIndexDocument,
+} from "./app/host-index.js";
 // The queue/scheduling use-case orchestration (GH-237): ledgers over the
 // injected state port, composed from the pure domain policy in the app tier.
 export {
@@ -190,6 +203,26 @@ export {
   releaseQueueLease,
 } from "./app/index.js";
 /**
+ * The `projects list` projections (GH-288 F-3, F-4, F-5, DEC-6, DEC-7, DEC-8):
+ * the handover matrix, the daemon reason selector, the exact five-field row, and
+ * the key ordering.
+ */
+export {
+  type AuthorityEvidence,
+  classifyProjectStateLocation,
+  type DaemonComposition,
+  type DaemonMountCapability,
+  type DaemonMountFact,
+  type DaemonProbeFacts,
+  type DaemonSocketFact,
+  daemonReasonFor,
+  type HandoverEvidence,
+  orderProjectEntries,
+  projectHandoverState,
+  projectListEntry,
+  selectDaemonReachability,
+} from "./app/projects.js";
+/**
  * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
  * derived project root, the declared `unbound` scope, and the closed identity
  * outcomes over injected facts and the marker seam. Exported from this existing
@@ -215,19 +248,6 @@ export {
   serializeProjectIdentityMarker,
   unboundStateRoot,
 } from "./app/state-scope.js";
-/**
- * The derived host-index fold (GH-288 F-2, DEC-4, DEC-14, DEC-18): the pure
- * upsert/prune/revision rule over one read, with the DEC-18 key guard.
- */
-export {
-  corruptHostIndexSiblingName,
-  type HostIndexMaintenanceInput,
-  type HostIndexMaintenanceResult,
-  type HostIndexRootProbe,
-  maintainHostIndex,
-  parseHostIndexDocument,
-  serializeHostIndexDocument,
-} from "./app/host-index.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";
 export {
   BOOTSTRAP_DESCRIPTOR,

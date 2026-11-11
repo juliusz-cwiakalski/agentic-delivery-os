@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, statSync, writeFileSync } from "node:fs";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -20,10 +20,12 @@ import {
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
   type HostIndexAccess,
+  hostIndexDocumentPath,
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   preserveCorruptHostIndex,
+  readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
   readHostIndexFile,
   readOwnerHoldMarker,
@@ -56,12 +58,15 @@ import {
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import {
+  type AuthorityEvidence,
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
   claimQueueLease,
   classifyHarnessEvidence,
+  classifyProjectStateLocation,
   classifyVerifyDocument,
+  type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
   type DispatchPreflightError,
@@ -71,6 +76,8 @@ import {
   type DispatchTrackerFacts,
   type DispatchTruthReads,
   EvaluateVerifyChange,
+  foldDispatchHandover,
+  type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
   type LaneSettings,
@@ -78,20 +85,27 @@ import {
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
+  orderProjectEntries,
   PRODUCTION_DEFAULTS,
   type ProjectsScopeFailure,
   parseHostIndexDocument,
   parseProjectIdentityMarker,
+  projectHandoverState,
+  projectListEntry,
+  projectStateRoot,
   readDaemonLanes,
+  readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
   resolveConfig,
   resolveCoordinatorSettings,
+  resolveDaemonSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
   resolveProjectScope,
+  selectDaemonReachability,
   serializeHostIndexDocument,
   serializeIdentityMarker,
   type VerifyDocumentClassification,
@@ -102,6 +116,7 @@ import {
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
+  type DaemonReachability,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -119,9 +134,12 @@ import {
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
+  HOST_INDEX_INITIAL_REVISION,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   type PipelineRun,
+  PROJECTS_COMMAND_FAMILY,
+  type ProjectsListEntry,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   VERIFY_GATES_CI_RUN_LIMIT,
@@ -136,6 +154,7 @@ import {
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
+import type { ProjectsRuntimeRead } from "./commands/projects.js";
 import {
   type ConfigProgramOptions,
   type CoordinatorComposition,
@@ -156,7 +175,8 @@ import {
   type DispatchComposition,
   type DispatchLaneFacts,
 } from "./edge.js";
-import type { EntrypointComposer } from "./entrypoint.js";
+import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
+import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
 
 const PROVIDER_FAILURE = "config.credential.missing";
@@ -289,24 +309,12 @@ export type ProductionCompositionFacts = {
    * state (GH-288 F-2, TR-1).
    */
   readonly hostIndexAccess?: HostIndexAccess;
-};
-
-/**
- * A classified state-scope failure raised at composition time (GH-288 F-1,
- * DEC-17). The composing surface converts it into the family's contract error
- * identity; it never becomes a path-derived substitute root.
- */
-const projectsScopeFailure = (failure: ProjectsScopeFailure): Error => {
-  const error = new Error(
-    failure.kind === "config"
-      ? `the state-directory scope is invalid (${failure.key})`
-      : failure.summary,
-  );
-  return Object.assign(error, {
-    name: "ProjectsScopeError",
-    code: failure.code,
-    scopeFailure: failure,
-  });
+  /**
+   * The injected resident-daemon composition (GH-288 F-5). The shipped binary
+   * supplies none, so the build declares the unmounted reason and never probes;
+   * a composition that mounts the daemon probes honestly.
+   */
+  readonly daemon?: DaemonComposition;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
@@ -347,6 +355,40 @@ const withScopeWarnings = (
 };
 
 /**
+ * The classified scope-refusal program (GH-288 F-1, DEC-16, DEC-17).
+ *
+ * Every command maps the same identity/state state to the same classified
+ * outcome, so a refusal is reported through the family's declared identity and
+ * its exit projection instead of being contained as `fallback.internal`. The
+ * program keeps exactly the prompt-required set, so the entrypoint's restriction
+ * step still finds every name it expects.
+ */
+const scopeRefusalProgram = (
+  failure: ProjectsScopeFailure,
+  warnings: readonly string[] = [],
+): CommandProgram => {
+  const summary =
+    failure.kind === "config"
+      ? `the state-directory scope is invalid (${failure.key})`
+      : failure.summary;
+  const kind = failure.kind === "config" ? "config" : "projects";
+  const definition: CommandDefinition = {
+    // The refusal is the same for every command, so the grammar admits any flag
+    // and positional shape and the classified scope failure answers instead of
+    // the parser: the identity outcome must not depend on which command was asked.
+    acceptsAnyFlag: true,
+    positionals: { max: 3 },
+    handler: () => ({
+      error: { kind, code: failure.code, summary },
+      ...(warnings.length === 0 ? {} : { warnings }),
+    }),
+  };
+  const commands: Record<string, CommandDefinition> = {};
+  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definition;
+  return { commands };
+};
+
+/**
  * Compose the prompt-required program over the delivered adapters.
  *
  * The composed brand is supplied by the entrypoint, so the name seam has one
@@ -354,7 +396,7 @@ const withScopeWarnings = (
  * own brand check.
  */
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
-  return (brand: BrandIdentity) => {
+  return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
     const environment = facts.environment;
     const cwd = facts.cwd;
     const ownProcessId = facts.processId ?? 0;
@@ -376,7 +418,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
       },
     });
-    if (!scope.ok) throw projectsScopeFailure(scope.error);
+    if (!scope.ok) return scopeRefusalProgram(scope.error);
     const hostRoot = scope.value.scope.hostRoot;
     const stateDirectory = scope.value.scope.stateLocation;
     const changesDirectory = `${cwd}/doc/changes`;
@@ -422,7 +464,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? { state: "uncertain" }
         : { state: "resolved", projectIdentifier: marker.projectIdentifier };
     };
-    if (scope.value.scope.kind === "project") {
+    const maintainsIndex = invocation?.command !== PROJECTS_COMMAND_FAMILY;
+    if (maintainsIndex && scope.value.scope.kind === "project") {
       const current = scope.value.scope;
       hostIndexAccess.countRead();
       const read = readHostIndexFile(hostRoot);
@@ -451,14 +494,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           replaceHostIndexFile(hostRoot, serializeHostIndexDocument(maintained.next));
         }
         if (maintained.conflict !== undefined) {
-          throw projectsScopeFailure({
-            kind: "state",
-            code: "projects.state-unavailable",
-            summary:
-              `project key ${maintained.conflict.projectKey} is registered to another project ` +
-              `identifier (${maintained.conflict.existingIdentifier}); this checkout ` +
-              `(${maintained.conflict.candidateRoot}) cannot establish its state location`,
-          });
+          return scopeRefusalProgram(
+            {
+              kind: "state",
+              code: "projects.state-unavailable",
+              summary:
+                `project key ${maintained.conflict.projectKey} is registered to another project ` +
+                `identifier (${maintained.conflict.existingIdentifier}); this checkout ` +
+                `(${maintained.conflict.candidateRoot}) cannot establish its state location`,
+            },
+            maintenanceWarnings,
+          );
         }
       }
     }
@@ -1660,6 +1706,180 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /**
+     * The `projects list` host overview (GH-288 F-3, F-4, F-5, DEC-5, DEC-8).
+     *
+     * Read-only by construction: one index read, no maintenance, no prune, no
+     * project-root creation, and no write of any kind. A present-but-unreadable
+     * state location fails the whole answer instead of fabricating a row.
+     */
+    const readProjectHandover = (
+      stateLocation: string,
+      projectKey: string,
+    ):
+      | { readonly ok: true; readonly state: "engine" | "shell" | "in-transition" }
+      | { readonly ok: false; readonly summary: string } => {
+      const projectStore = createStateStore(
+        {
+          level: "local",
+          workspaceId,
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: stateLocation,
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      );
+      const ledger = readDispatchHandover(projectStore);
+      if (!ledger.ok) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} has a state location whose dispatch ledger cannot be read (${stateLocation})`,
+        };
+      }
+      let operation: HandoverEvidence = "none";
+      if (ledger.records.length > 0) {
+        const folded = foldDispatchHandover(ledger.records);
+        const latest = [...folded]
+          .sort((left, right) =>
+            left.recordedAt < right.recordedAt ? -1 : left.recordedAt > right.recordedAt ? 1 : 0,
+          )
+          .at(-1);
+        operation = latest?.authority ?? "none";
+      }
+      const fact = readDispatchAuthorityFact(stateLocation);
+      const authority: AuthorityEvidence =
+        fact.state === "valid"
+          ? { state: "valid", authority: fact.view.authority }
+          : { state: fact.state === "malformed" ? "malformed" : "absent" };
+      return { ok: true, state: projectHandoverState({ operation, authority }) };
+    };
+
+    const readDaemonReachability = async (
+      stateLocation: string,
+      stateRootPresent: boolean,
+    ): Promise<
+      | { readonly ok: true; readonly value: DaemonReachability }
+      | { readonly ok: false; readonly summary: string }
+    > => {
+      const composition = facts.daemon;
+      if (composition === undefined || !composition.mounted) {
+        return { ok: true, value: selectDaemonReachability({ mount: { mounted: false } }) };
+      }
+      const capability = composition.capability?.();
+      if (capability === undefined) {
+        return { ok: true, value: selectDaemonReachability({ mount: { mounted: false } }) };
+      }
+      if (!stateRootPresent) {
+        return {
+          ok: true,
+          value: selectDaemonReachability({
+            mount: { mounted: true },
+            probe: { stateRoot: "absent" },
+          }),
+        };
+      }
+      const settings = resolveDaemonSettings({}, {}, { stateDirectory: stateLocation });
+      if (!settings.ok) {
+        return {
+          ok: false,
+          summary: `project state location ${stateLocation} cannot derive a socket path (${settings.error.code})`,
+        };
+      }
+      const socket = await capability.probe({
+        socketPath: settings.value.socketPath,
+        timeoutMs: settings.value.responseTimeoutMs,
+      });
+      return {
+        ok: true,
+        value: selectDaemonReachability({
+          mount: { mounted: true },
+          probe: { stateRoot: "present", socket },
+        }),
+      };
+    };
+
+    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+      hostIndexAccess.countList();
+      const read = readHostIndexFile(hostRoot);
+      if (read.state === "absent") {
+        return {
+          ok: true,
+          data: { projects: [], hostIndexRevision: HOST_INDEX_INITIAL_REVISION },
+        };
+      }
+      const indexPath = hostIndexDocumentPath(hostRoot);
+      if (read.state === "unreadable") {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but unreadable`,
+        };
+      }
+      const document = parseHostIndexDocument(read.text);
+      if (document === undefined) {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but cannot be parsed`,
+        };
+      }
+      const entries: ProjectsListEntry[] = [];
+      const warnings: string[] = [];
+      for (const entry of document.projects) {
+        const stateLocation = projectStateRoot(hostRoot, entry.projectKey);
+        let stat: ReturnType<typeof statSync> | undefined;
+        try {
+          stat = statSync(stateLocation);
+        } catch {
+          stat = undefined;
+        }
+        const classification = classifyProjectStateLocation({
+          exists: stat !== undefined,
+          directory: stat?.isDirectory() === true,
+          readable: stat !== undefined,
+        });
+        if (classification === "state-unavailable") {
+          return {
+            ok: false,
+            code: "projects.state-unavailable",
+            summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
+          };
+        }
+        const handover =
+          classification === "first-use"
+            ? ({ ok: true, state: "shell" } as const)
+            : readProjectHandover(stateLocation, entry.projectKey);
+        if (!handover.ok) {
+          return { ok: false, code: "projects.state-unavailable", summary: handover.summary };
+        }
+        const daemon = await readDaemonReachability(stateLocation, classification === "ready");
+        if (!daemon.ok) {
+          return { ok: false, code: "projects.state-unavailable", summary: daemon.summary };
+        }
+        if (entry.stateLocation !== stateLocation) {
+          warnings.push(
+            `project ${entry.projectKey} recorded state location ${entry.stateLocation} ` +
+              `disagrees with the location derived from its key (${stateLocation}); ` +
+              "the derived location is reported",
+          );
+        }
+        entries.push(
+          projectListEntry({
+            projectKey: entry.projectKey,
+            root: entry.root,
+            stateLocation,
+            daemonReachable: daemon.value,
+            handoverState: handover.state,
+          }),
+        );
+      }
+      return {
+        ok: true,
+        data: { projects: orderProjectEntries(entries), hostIndexRevision: document.revision },
+        ...(warnings.length === 0 ? {} : { warnings }),
+      };
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -1711,6 +1931,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newFenceToken,
       },
       coordinator: createProductionCoordinatorComposition(),
+      projects: { readProjects },
     };
 
     const program = createConfigProgram(configured);

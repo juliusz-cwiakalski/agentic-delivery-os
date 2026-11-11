@@ -35,10 +35,12 @@ export {
   runtimePlatform,
 } from "./config-source.js";
 export {
+  type DispatchAuthorityFact,
   dispatchAuthorityDocumentName,
   dualRunDispatchAuthority,
   listDispatchAuthority,
   readDispatchAuthority,
+  readDispatchAuthorityFact,
 } from "./dispatch-authority.js";
 export {
   dispatchIdentityMarkerPath,
@@ -46,6 +48,16 @@ export {
   readDispatchIdentityMarkerText,
   replaceDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";
+export {
+  createHostIndexAccess,
+  type HostIndexAccess,
+  type HostIndexRead,
+  hostIndexDocumentPath,
+  hostIndexExists,
+  preserveCorruptHostIndex,
+  readHostIndexFile,
+  replaceHostIndexFile,
+} from "./host-index-store.js";
 export {
   applyPromotionWrite,
   checkPromotionConfinement,
@@ -84,16 +96,6 @@ export {
   projectIdentityMarkerPath,
   readProjectIdentityMarker,
 } from "./project-identity.js";
-export {
-  createHostIndexAccess,
-  type HostIndexAccess,
-  type HostIndexRead,
-  hostIndexDocumentPath,
-  hostIndexExists,
-  preserveCorruptHostIndex,
-  readHostIndexFile,
-  replaceHostIndexFile,
-} from "./host-index-store.js";
 export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,

@@ -365,6 +365,10 @@ import {
 } from "./commands/phase.js";
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
+  createProjectsCommandDefinition,
+  type ProjectsCommandRuntime,
+} from "./commands/projects.js";
+import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
@@ -2998,6 +3002,7 @@ export type ConfigProgramOptions = {
   readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
+  readonly projects?: ProjectsCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -3528,6 +3533,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.lanes !== undefined) {
     commands.lanes = createLanesCommandDefinition(createLanesCommandRuntime(options.lanes));
+  }
+  // The mount unit's command definition: composed here because the entrypoint
+  // throws for a prompt-required name the program lacks (GH-288 F-9, DEC-13).
+  if (options.projects !== undefined) {
+    commands.projects = createProjectsCommandDefinition(options.projects);
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);

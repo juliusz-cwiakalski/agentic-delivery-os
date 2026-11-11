@@ -176,6 +176,39 @@ export const parseProjectIdentityMarker = (text: string): ProjectIdentityMarker 
   return { schema: PROJECT_IDENTITY_SCHEMA, projectKey, projectIdentifier, basename };
 };
 
+/**
+ * The lenient marker fields used only for DEC-16 naming: when the bytes parse
+ * but the payload is out of shape, the recorded key and identifier are still
+ * named in the refusal when they are readable as strings.
+ */
+const lenientIdentityFields = (
+  text: string,
+): {
+  readonly projectKey?: string;
+  readonly projectIdentifier?: string;
+} => {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!isRecord(parsed)) return {};
+    const { projectKey, projectIdentifier } = parsed;
+    return {
+      ...(typeof projectKey === "string" ? { projectKey } : {}),
+      ...(typeof projectIdentifier === "string" ? { projectIdentifier } : {}),
+    };
+  } catch {
+    return {};
+  }
+};
+
+const markerNaming = (text: string): string => {
+  const fields = lenientIdentityFields(text);
+  if (fields.projectKey === undefined && fields.projectIdentifier === undefined) return "";
+  const key = fields.projectKey === undefined ? "" : `key ${fields.projectKey}`;
+  const identifier =
+    fields.projectIdentifier === undefined ? "" : `identifier ${fields.projectIdentifier}`;
+  return ` (${[key, identifier].filter((part) => part.length > 0).join(", ")})`;
+};
+
 /** The closed-outcome checkout facts supplied by the adapter seam (DEC-17). */
 export type CheckoutIdentityFacts =
   | { readonly kind: "unbound" }
@@ -319,7 +352,8 @@ export const resolveProjectScope = (
         ok: false,
         error: identityFailure(
           `the identity marker of checkout ${checkout.checkoutRoot} is invalid or ` +
-            `inconsistent with its recorded key (${checkout.commonDir}/${PROJECT_IDENTITY_MARKER_NAME})`,
+            `inconsistent with its recorded key${markerNaming(read.text)} ` +
+            `(${checkout.commonDir}/${PROJECT_IDENTITY_MARKER_NAME})`,
         ),
       };
     }

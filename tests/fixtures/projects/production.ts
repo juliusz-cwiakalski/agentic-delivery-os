@@ -29,6 +29,7 @@ import type {
 } from "../../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../packages/cli/src/production";
+import type { DaemonComposition } from "../../../packages/core/src/app/projects";
 import { queueGraphDocumentPath, readQueueEntries } from "../../../packages/core/src/app/queue";
 import type {
   BrandIdentity,
@@ -97,6 +98,8 @@ export type ProductionProjectsHarnessOptions = {
   /** Extra environment entries for the composed program. */
   readonly environmentExtra?: Readonly<Record<string, string>>;
   readonly credential?: "resolved" | "missing";
+  /** The injected resident-daemon mount capability; absent means unmounted. */
+  readonly daemon?: DaemonComposition;
 };
 
 const hashFile = (path: string): string =>
@@ -168,7 +171,7 @@ export const createProductionProjectsHarness = (
   // One composition per invocation, exactly like the delivered entrypoint: the
   // harness never reuses a composed program, so per-invocation work (index
   // maintenance, counters) is observable.
-  const composeProgram = () => {
+  const composeProgram = (command?: string) => {
     const composer = createProductionComposer({
       environment: {
         HOME: host.home,
@@ -202,22 +205,32 @@ export const createProductionProjectsHarness = (
       },
       gitChildRunner: gitRunner,
       hostIndexAccess,
+      ...(options.daemon === undefined ? {} : { daemon: options.daemon }),
     });
-    return composer(brand);
+    return command === undefined ? composer(brand) : composer(brand, { command });
   };
-  const resolved = projectScopeFor({
-    cwd: options.workingDirectory,
-    hostRoot: host.hostRoot,
-    home: host.home,
-    brand,
-  });
+  // A checkout whose identity cannot be read still composes: every command then
+  // answers through the classified refusal program, which the suite asserts.
+  const resolved = (() => {
+    try {
+      return projectScopeFor({
+        cwd: options.workingDirectory,
+        hostRoot: host.hostRoot,
+        home: host.home,
+        brand,
+      });
+    } catch {
+      return undefined;
+    }
+  })();
+  const stateDirectory = resolved?.scope.stateLocation ?? join(host.hostRoot, ".unresolved-scope");
   const store = createStateStore(
     {
       level: "local",
       workspaceId: "default",
       fenceNamespace: "cli",
       schemaVersion: STATE_SCHEMA_VERSION,
-      stateDirectory: resolved.scope.stateLocation,
+      stateDirectory,
     },
     { driver: "jsonl", edge: createNodeStateEdge() },
   );
@@ -235,7 +248,7 @@ export const createProductionProjectsHarness = (
       clock: { now: () => Date.parse("2026-11-11T10:00:00.000Z") },
       newRunId: () => `run-gh288-${String(runOrdinal)}`,
       secrets: [],
-      program: composeProgram(),
+      program: composeProgram(argv.find((token) => token.length > 0 && !token.startsWith("-"))),
     });
     const stdout = out.join("");
     const stderr = err.join("");
@@ -265,8 +278,12 @@ export const createProductionProjectsHarness = (
     checkout: options.workingDirectory,
     workingDirectory: options.workingDirectory,
     projectKey:
-      resolved.scope.kind === "project" ? resolved.scope.projectKey : resolved.scope.stateLocation,
-    stateLocation: resolved.scope.stateLocation,
+      resolved === undefined
+        ? ""
+        : resolved.scope.kind === "project"
+          ? resolved.scope.projectKey
+          : resolved.scope.stateLocation,
+    stateLocation: resolved?.scope.stateLocation ?? stateDirectory,
     store,
     hostIndexAccess,
     spawns,

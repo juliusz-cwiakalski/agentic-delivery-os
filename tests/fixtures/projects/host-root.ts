@@ -6,8 +6,9 @@
  * mode claim rather than an existence claim.
  */
 import { createHash } from "node:crypto";
-import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { hostIndexDocumentPath } from "../../../packages/adapters/src/file/host-index-store";
 
 export type TreeSnapshot = {
   readonly files: Readonly<Record<string, { readonly sha256: string; readonly mode: number }>>;
@@ -70,4 +71,55 @@ export const snapshotDifferences = (before: TreeSnapshot, after: TreeSnapshot): 
     if (before.directories[name] === undefined) differences.push(`added directory ${name}`);
   }
   return differences.sort();
+};
+
+/**
+ * A byte-and-mtime fingerprint of the host root (GH-288 TC-PROJ-041).
+ *
+ * The index is compared on bytes, mode, and mtime — a byte-identical rewrite
+ * still means the command wrote — and the `projects/` container on every entry's
+ * name, kind, mode, mtime, and content hash. Reads never change an mtime, so two
+ * consecutive fingerprints are equal exactly when nothing wrote.
+ */
+export const hostRootFingerprint = (hostRoot: string): string => {
+  const parts: string[] = [];
+  const indexPath = hostIndexDocumentPath(hostRoot);
+  try {
+    const stat = statSync(indexPath);
+    parts.push(
+      `index:file:${String(stat.mode & 0o777)}:${String(stat.mtimeMs)}:${createHash("sha256")
+        .update(readFileSync(indexPath))
+        .digest("hex")}`,
+    );
+  } catch {
+    parts.push("index:absent");
+  }
+  const projects = join(hostRoot, "projects");
+  const walk = (relative: string): void => {
+    const directory = relative.length === 0 ? projects : join(projects, relative);
+    if (!existsSync(directory)) return;
+    const stat = statSync(directory);
+    parts.push(
+      `dir:${relative.length === 0 ? "." : relative}:${String(stat.mode & 0o777)}:${String(stat.mtimeMs)}`,
+    );
+    const entries: Dirent[] = readdirSync(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const next = relative.length === 0 ? entry.name : `${relative}/${entry.name}`;
+      const path = join(projects, next);
+      const entryStat = statSync(path);
+      if (entry.isDirectory()) {
+        walk(next);
+        continue;
+      }
+      parts.push(
+        `file:${next}:${String(entryStat.mode & 0o777)}:${String(entryStat.mtimeMs)}:${createHash(
+          "sha256",
+        )
+          .update(readFileSync(path))
+          .digest("hex")}`,
+      );
+    }
+  };
+  walk("");
+  return parts.sort().join("\n");
 };

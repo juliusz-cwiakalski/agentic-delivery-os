@@ -16,6 +16,7 @@
     "src/app/effects.ts",
     "src/app/index.ts",
     "src/app/polling.ts",
+    "src/app/projects.ts",
     "src/app/queue.ts",
     "src/app/state-scope.ts",
     "src/app/watch.ts",
@@ -297,6 +298,7 @@
     "src/commands/merge.ts",
     "src/commands/phase.ts",
     "src/commands/plan.ts",
+    "src/commands/projects.ts",
     "src/commands/provider.ts",
     "src/commands/queue.ts",
     "src/commands/retro.ts",
@@ -320,6 +322,7 @@
     "src/output/index.ts",
     "src/output/merge-text.ts",
     "src/output/plan-text.ts",
+    "src/output/projects-text.ts",
     "src/output/serialize.ts",
     "src/production.ts",
     "src/projection.ts"

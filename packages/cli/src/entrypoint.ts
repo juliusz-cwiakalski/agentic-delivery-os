@@ -45,8 +45,20 @@ export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRON
 
 export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
 
+/**
+ * The invocation fact the entrypoint hands the composer (GH-288 F-3, DEC-5).
+ *
+ * The composition root needs the command token for exactly one decision: the
+ * read-only `projects list` surface must not run store-opening maintenance. No
+ * other behaviour may branch on it.
+ */
+export type EntrypointInvocationFact = { readonly command: string };
+
 /** Composes the prompt-required program; help/version never calls it. */
-export type EntrypointComposer = (brand: BrandIdentity) => CommandProgram;
+export type EntrypointComposer = (
+  brand: BrandIdentity,
+  invocation?: EntrypointInvocationFact,
+) => CommandProgram;
 
 /** Injected entrypoint facts; every dynamic value arrives through options. */
 export type EntrypointOptions = {
@@ -258,7 +270,7 @@ export const runEntrypoint = async (
   const command = first;
   const composed = (() => {
     try {
-      return selectPromptRequiredProgram(entrypoint.composeProgram(entrypoint.brand));
+      return selectPromptRequiredProgram(entrypoint.composeProgram(entrypoint.brand, { command }));
     } catch {
       // A composition gap is reported as the containment identity, never as a
       // silent success or an unclassified crash.
