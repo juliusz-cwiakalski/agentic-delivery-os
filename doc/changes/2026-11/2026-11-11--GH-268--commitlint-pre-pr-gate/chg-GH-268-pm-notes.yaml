@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T01:59:42.408Z }
   delivery_planning: { started: null, completed: 2026-11-11T01:59:47.446Z }
   dor_check: { started: null, completed: 2026-11-11T01:59:53.423Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-11T10:48:32.852Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -114,41 +114,42 @@ notes:
     date: "2026-11-11"
   - text: "Plan phase 1 COMPLETE — branch-range commit-message gate and its proof.
       Commit 5c5ebb7e: scripts/lint-commit-range.sh (gate, 645 lines),
-      scripts/.tests/test-lint-commit-range.sh (suite), and 9 committed fixtures;
-      both files committed mode 100755 (verified via git ls-files -s and test -x).
-      Delivered criteria: AC-F1-1, AC-F1-2, AC-F2-1, AC-F2-2, AC-F3-1..AC-F3-6,
-      AC-NFR4-1, AC-NFR6-1. Verification observed: bash -n clean; suite 39/39
-      PASS (TC-COMMITLINT-001..021); --help and --version exit 0 with a
-      semver-shaped 1.0.0; usage documents 0/1/2 with meanings plus the 130
-      interrupt carve-out; --nonsense exits 2 naming the accepted invocation with
-      GIT_TRACE showing zero rev-list/merge-base/rev-parse/for-each-ref calls;
-      exit literals limited to 2 plus exactly one 130 inside _on_interrupt,
-      installed by trap (INT/TERM); zero network helpers and zero network git
-      subcommands; worktree empty and index/ref/stash digests identical across a
-      PASS run and a usage-error run. Dogfood: ./scripts/lint-commit-range.sh
-      --base main-tools -> 'VERDICT: PASS — 18 commits in range; 0 offending
-      commit(s); 0 distinct rule(s) hit', binary=node_modules/.bin/commitlint
-      origin=repository-local, no PATH prefix. Two notes on the phase: (a) the
-      gate gained PURE:/IMPURE: section markers so the plan's declared bash
-      posture (per .ai/rules/bash.md section 10.2) holds — comment-only, suite
-      re-run green; (b) one declared verification literal is not literally
-      satisfiable and is recorded rather than weakened: plan line 13 also asserts
-      'test -z \"$(git stash list)\"', but two user-owned stashes predate this
-      change (stash@{0} feat/GH-112 and stash@{1} feat/GH-37, both 2026-07-04).
-      The property the line exists to protect — the stash is unchanged by the
-      gate — is proven directly: identical stash-list digest before/after PASS
-      and usage-error runs, plus TC-COMMITLINT-018's index/ref/file-list/fsck
-      digests across PASS, FAIL, SKIP and ERROR. No stash was touched or dropped."
+      scripts/.tests/test-lint-commit-range.sh (suite), and 9 committed
+      fixtures; both files committed mode 100755 (verified via git ls-files -s
+      and test -x). Delivered criteria: AC-F1-1, AC-F1-2, AC-F2-1, AC-F2-2,
+      AC-F3-1..AC-F3-6, AC-NFR4-1, AC-NFR6-1. Verification observed: bash -n
+      clean; suite 39/39 PASS (TC-COMMITLINT-001..021); --help and --version
+      exit 0 with a semver-shaped 1.0.0; usage documents 0/1/2 with meanings
+      plus the 130 interrupt carve-out; --nonsense exits 2 naming the accepted
+      invocation with GIT_TRACE showing zero
+      rev-list/merge-base/rev-parse/for-each-ref calls; exit literals limited to
+      2 plus exactly one 130 inside _on_interrupt, installed by trap (INT/TERM);
+      zero network helpers and zero network git subcommands; worktree empty and
+      index/ref/stash digests identical across a PASS run and a usage-error run.
+      Dogfood: ./scripts/lint-commit-range.sh --base main-tools -> 'VERDICT:
+      PASS — 18 commits in range; 0 offending commit(s); 0 distinct rule(s)
+      hit', binary=node_modules/.bin/commitlint origin=repository-local, no PATH
+      prefix. Two notes on the phase: (a) the gate gained PURE:/IMPURE: section
+      markers so the plan's declared bash posture (per .ai/rules/bash.md section
+      10.2) holds — comment-only, suite re-run green; (b) one declared
+      verification literal is not literally satisfiable and is recorded rather
+      than weakened: plan line 13 also asserts 'test -z \"$(git stash list)\"',
+      but two user-owned stashes predate this change (stash@{0} feat/GH-112 and
+      stash@{1} feat/GH-37, both 2026-07-04). The property the line exists to
+      protect — the stash is unchanged by the gate — is proven directly:
+      identical stash-list digest before/after PASS and usage-error runs, plus
+      TC-COMMITLINT-018's index/ref/file-list/fsck digests across PASS, FAIL,
+      SKIP and ERROR. No stash was touched or dropped."
     type: info
     date: "2026-11-11"
   - text: "Plan phase 2 COMPLETE — the stated commit-message contract and the
-      quality_gates wiring. Commit 8a1a43de: .opencode/agent/committer.md gains a
-      <message_contract> block (conventional `type(scope): summary` subject
+      quality_gates wiring. Commit 8a1a43de: .opencode/agent/committer.md gains
+      a <message_contract> block (conventional `type(scope): summary` subject
       carrying the work item ref; body and footer lines within 100 characters;
       no plain 'Merge remote-tracking branch ...' subject left behind; both
       remediation modes SURGICAL REWORD / CONDENSE-TO-ONE by offending-commit
-      count; the four-clause ownership split), .opencode/agent/pm.md step 8 gains
-      the range lint as a required step before `phase complete` (PASS/SKIP
+      count; the four-clause ownership split), .opencode/agent/pm.md step 8
+      gains the range lint as a required step before `phase complete` (PASS/SKIP
       proceed, FAIL loops in the named mode through @coder and re-runs, ERROR is
       never a pass and blocks completion, verdict recorded as a pm-notes notes
       entry, ownership restated), and .ados-claude/agents/{committer,pm}.md were
@@ -160,16 +161,16 @@ notes:
       prompts yields only negated matches (empty after the negation filter);
       SURGICAL REWORD/CONDENSE-TO-ONE, 'Merge remote-tracking branch'/100,
       type(scope)/conventional and the ownership greps all hit;
-      lint-commit-range/phase complete/unable to verify/ERROR/pm-notes all present
-      in pm.md step 8; scripts/build-claude-plugin.sh rebuilt 24 agents and 20
-      skills and left no pending .ados-claude change (porcelain empty), and the
-      .ados-claude diff since the delivery base is exactly
+      lint-commit-range/phase complete/unable to verify/ERROR/pm-notes all
+      present in pm.md step 8; scripts/build-claude-plugin.sh rebuilt 24 agents
+      and 20 skills and left no pending .ados-claude change (porcelain empty),
+      and the .ados-claude diff since the delivery base is exactly
       .ados-claude/agents/committer.md and .ados-claude/agents/pm.md. Mechanism
       note on subjects: the commit primitive's template derives the subject from
-      the top staged path for a standalone commit, because a lifecycle phase that
-      maps to several plan phases suppresses the per-phase summary (the union is
-      only used when every matching summary is identical); every commit of this
-      change is therefore 'chore(GH-268): update <top-path>', which is
+      the top staged path for a standalone commit, because a lifecycle phase
+      that maps to several plan phases suppresses the per-phase summary (the
+      union is only used when every matching summary is identical); every commit
+      of this change is therefore 'chore(GH-268): update <top-path>', which is
       conventional and carries the work item ref as required, but not the plan
       phase summary the plan's pins describe."
     type: info
@@ -178,51 +179,101 @@ notes:
       the forbidden subject. Commit 7c789e7d changes one line of
       scripts/deliver-ticket.sh inside build_delivery_prompt: 'git merge
       origin/${base_branch}' becomes 'git merge --no-ff origin/${base_branch} -m
-      \"chore(${ticket_ref}): sync with ${base_branch}\"'; the fetch line and every
-      other instruction are untouched. scripts/.tests/test-deliver-ticket.sh
-      replaces the old assertion with a shared assert_resume_sync_contract helper
-      (exactly one merge line, -m with a conventional chore/build/ci subject
-      naming the work item ref, zero bare 'git merge origin/<ref>' lines, fetch
-      preserved) and adds TC-DT-08g3, a counterexample probe that reverts the
-      instruction in a throwaway copy of the script under test and requires the
-      helper to reject it. Delivered criterion: AC-F5-1 (TC-PROMPT-004,
-      TC-PROMPT-005, TC-PROMPT-006). Verification observed: suite 136/136 PASS
-      including both resume-sync tests; test-deliver-ticket-result-tuples.sh and
+      \"chore(${ticket_ref}): sync with ${base_branch}\"'; the fetch line and
+      every other instruction are untouched.
+      scripts/.tests/test-deliver-ticket.sh replaces the old assertion with a
+      shared assert_resume_sync_contract helper (exactly one merge line, -m with
+      a conventional chore/build/ci subject naming the work item ref, zero bare
+      'git merge origin/<ref>' lines, fetch preserved) and adds TC-DT-08g3, a
+      counterexample probe that reverts the instruction in a throwaway copy of
+      the script under test and requires the helper to reject it. Delivered
+      criterion: AC-F5-1 (TC-PROMPT-004, TC-PROMPT-005, TC-PROMPT-006).
+      Verification observed: suite 136/136 PASS including both resume-sync
+      tests; test-deliver-ticket-result-tuples.sh and
       test-deliver-ticket-result-tuples-modes.sh green; the diff since the
-      delivery base for deliver-ticket.sh contains zero changed content lines that
-      do not mention 'git merge' (confinement to build_delivery_prompt's merge
-      instruction); zero bare-merge matches in the script and zero in the
+      delivery base for deliver-ticket.sh contains zero changed content lines
+      that do not mention 'git merge' (confinement to build_delivery_prompt's
+      merge instruction); zero bare-merge matches in the script and zero in the
       generated prompt; worktree clean at the phase boundary. One mechanism
       deviation, recorded not weakened: TC-PROMPT-005 describes the probe as a
       'cp -a' copy of the repository with the suite re-run from the copy. The
       probe here copies only scripts/deliver-ticket.sh and evaluates the shared
       assertion against the prompt it builds. Rationale: a full-repository copy
-      carries the 280 MB node_modules tree and a nested full-suite run (~60 s) that
-      would re-enter this same probe; copying the single script under test
-      exercises the identical assertions and isolates the reverted instruction as
-      the only cause of failure, which is stronger evidence than a nested run that
-      could fail for unrelated reasons. The probe also asserts the delivery tree
-      still carries the conventional-subject instruction after it runs."
+      carries the 280 MB node_modules tree and a nested full-suite run (~60 s)
+      that would re-enter this same probe; copying the single script under test
+      exercises the identical assertions and isolates the reverted instruction
+      as the only cause of failure, which is stronger evidence than a nested run
+      that could fail for unrelated reasons. The probe also asserts the delivery
+      tree still carries the conventional-subject instruction after it runs."
     type: info
     date: "2026-11-11"
   - text: "Plan phase 4 COMPLETE — the range gate reaches adopters. Commit e1998639:
-      scripts/install.sh ADOS_DELIVERY_SCRIPTS gains scripts/lint-commit-range.sh
-      (now seven entries, alongside the pre-existing scripts/lib/dispatch-authority.sh
-      entry), scripts/uninstall.sh adds the gate to its unconditional delivery
-      removal list, test-install.sh seeds the gate in create_mock_ados_source and
-      adds test_local_install_delivery_gate_script (static registration through the
-      sourced array, installed executable, byte-identical to source, and refreshed
-      when the installed copy is locally modified), test-uninstall.sh seeds the gate
-      plus an unrelated user scripts file and adds the removal and dry-run tests.
-      Delivered criterion: AC-F7-1 (TC-DIST-001, TC-DIST-002, TC-DIST-003).
-      Verification observed: test-install.sh 56/56 PASS, test-uninstall.sh 32/32
-      PASS, test-doc-distribution.sh green (82 in-scope docs, no drift),
-      scripts/test-all.sh exit 0 with its own output naming
+      scripts/install.sh ADOS_DELIVERY_SCRIPTS gains
+      scripts/lint-commit-range.sh (now seven entries, alongside the
+      pre-existing scripts/lib/dispatch-authority.sh entry),
+      scripts/uninstall.sh adds the gate to its unconditional delivery removal
+      list, test-install.sh seeds the gate in create_mock_ados_source and adds
+      test_local_install_delivery_gate_script (static registration through the
+      sourced array, installed executable, byte-identical to source, and
+      refreshed when the installed copy is locally modified), test-uninstall.sh
+      seeds the gate plus an unrelated user scripts file and adds the removal
+      and dry-run tests. Delivered criterion: AC-F7-1 (TC-DIST-001, TC-DIST-002,
+      TC-DIST-003). Verification observed: test-install.sh 56/56 PASS,
+      test-uninstall.sh 32/32 PASS, test-doc-distribution.sh green (82 in-scope
+      docs, no drift), scripts/test-all.sh exit 0 with its own output naming
       '.tests/test-lint-commit-range.sh' (so -perm -u+x discovery really ran the
-      change's primary suite), and git ls-files -s reports 100755 for the gate, its
-      suite, deliver-ticket.sh and its suite. Carried, not fixed here: the
-      pre-existing omission of scripts/lib/dispatch-authority.sh from uninstall.sh's
-      unconditional list is unchanged (it is a declared docHandoff, not a delivery
-      edit); the gate is registered on both sides as the plan requires."
+      change's primary suite), and git ls-files -s reports 100755 for the gate,
+      its suite, deliver-ticket.sh and its suite. Carried, not fixed here: the
+      pre-existing omission of scripts/lib/dispatch-authority.sh from
+      uninstall.sh's unconditional list is unchanged (it is a declared
+      docHandoff, not a delivery edit); the gate is registered on both sides as
+      the plan requires."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 5 COMPLETE — documentation truth, self-application,
+      conformance battery. Commit 4d66f399. AGENTS.md states the gate as a
+      supplementary lifecycle pre-PR check inside the delivery-process notes
+      (what it lints, its four verdicts, the remediation loop, the
+      record-as-notes rule, and that it is not part of `pnpm check`, `/check` or
+      `/check-fix` because those keep their working-tree resolution contract),
+      and the delivery-infrastructure bullet now names the gate as an
+      ADOS_DELIVERY_SCRIPTS member; the `/check` and `/check-fix` rows are
+      byte-unchanged (exactly one match each, verified with the backticked ERE
+      literals) and no run-all-quality-gates instruction or
+      scripts/quality-gates.sh mention exists. doc/guides/change-lifecycle.md
+      section 9 names the range lint in Actions (with the FAIL mode loop and the
+      ERROR-is-not-a-pass rule) and in Exit criteria (PASS or SKIP, verdict
+      recorded in pm-notes, unresolved ERROR blocks completion); its
+      `ados_distribution: redistributable` marker is retained and GH-268 joined
+      related_changes. One in-scope repair: the change folder's own
+      readiness-review/readiness-iter-2.md carried an absolute user path that
+      `privacy-literals` flagged as private.absolute-user-path (a pre-existing
+      violation inside this change's artifacts, not a delivery edit); the path
+      was redacted to `<sibling-checkout>/node_modules/.bin/commitlint`, leaving
+      the finding intact. Delivered criteria: AC-F6-1, AC-F6-2, AC-F8-1,
+      AC-NFR8-1. DOGFOOD (TC-DOGFOOD-001, published invocation, no PATH prefix),
+      verbatim: 'RANGE LINT: base=main-tools source=explicit
+      merge-base=5372dbacb9c36e1d79d1e55873264155a53f44ff
+      head=4d66f3999ee2bb83b1cc9909cabfa576ea81832a commits=22
+      binary=node_modules/.bin/commitlint origin=repository-local' and 'VERDICT:
+      PASS — 22 commits in range; all satisfy the configuration' (exit 0; 0
+      offenders; mode none). Origin is repository-local, so no parity risk to
+      reconcile. Conformance battery: bun test
+      tests/checks/doc-conformance.test.ts 11/11; pnpm check:prompt 5 prompts
+      clean; pnpm check:help all prompt-required commands covered;
+      test-doc-distribution.sh no drift (82 docs); commitlint-authority one root
+      conventional config; exports-parity 5 publishables; bun test tests/checks
+      676/676; the four touched suites 39/39, 136/136, 56/56, 32/32;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (7133 pass, 4 skip, 0 fail); git
+      diff --check clean. One environment flake, recorded: the first full pnpm
+      check failed only TC-WATCHDOG-011 on its 5000 ms timeout while the suite
+      ran under load; the file passes 13/13 in isolation and the full re-run is
+      green, with no assertion changed. Allowlist: every changed path since the
+      delivery base matches the declared allowlist (no doc/spec/**, no CI
+      workflow, no .husky, no commitlint configuration, no packages/**, no
+      package.json, no scripts/quality-gates.sh). Release obligations: no
+      changeset, because no package surface moves (NG-5, DEC-8); the release
+      artifact is the pull request to main-tools. Out of scope for this delivery
+      run: PR URL and the tracker transition, both owned by lifecycle phase 11."
     type: info
     date: "2026-11-11"
