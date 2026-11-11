@@ -871,3 +871,54 @@ notes:
       green in isolation. No pull request merge is performed by this step."
     type: "info"
     date: "2026-11-11"
+  - text: "Merge conclusion and integration fix, recorded on the re-verified tree.
+      The resume merge of `origin/main-tools` (GH-288, 723454e4) is commit
+      `a5be1437`, a true merge commit whose tree carries every union resolution:
+      `doc/decisions/00-index.md` lists GH-288's TDR-0022 and GH-286's renumbered
+      TDR-0023, the planning corpus keeps GH-288's M2-S11 delivered markers
+      alongside the GH-286 daemon sections, and the prompt-required set carries
+      all eighteen families (`daemon` and `projects` both present, no duplicate).
+      The integration fix is `ed18497d`. Its defect: after the merge the unit's
+      working directory existed only in the adapter's local renderer, while the
+      delivered pure contract `SystemdUnitInput` and `renderSystemdUnit` in
+      `packages/core/src/domain/daemon-supervisor.ts` carried no working
+      directory at all, so a render through the delivered domain renderer
+      produced a unit with no `WorkingDirectory=` line and the composition's
+      resolved checkout root could not reach the rendered text. The fix gives the
+      domain contract the optional `workingDirectory` field and emits
+      `WorkingDirectory=<checkout root>` between `ExecStart` and `Environment`,
+      keeps the adapter's pass-through, and has the composition supply the root
+      that `resolveProjectScope` resolved (`scope.checkoutRoot`, and `cwd` for
+      the declared `unbound` scope) while the state-directory binding keeps
+      naming the HOST root, so the installed process re-derives the same project
+      state root instead of nesting a second `projects/` segment (GH-288 F-1,
+      GH-286 F-3). Nothing was relaxed to get there: TC-DAEMON-100 gained one
+      production-shaped cell asserting the host-root binding, the checkout
+      working directory, exactly one `Environment=` and one `WorkingDirectory=`
+      line, and the project-root scope digest. One reconciliation differs from
+      the wording of the note above and supersedes it: `daemon-compose` keeps a
+      single exported seam, `resolveProjectDaemonSettings(projectStateRoot,
+      acquired?)`, rather than a second helper, so GH-288's AC-F6-4 invariant
+      stands unchanged (exactly one `resolveDaemonSettings` call site, in the one
+      composing file). GH-288's own TC-PROJ-023 caller assertion is the only
+      amended cell: it now permits and pins the two composed invocations that
+      both live in `packages/cli/src/production.ts` (the host overview probe with
+      the shipped defaults and the mounted family with its acquired
+      configuration), both supplying the policy-derived project root, so a third
+      surface still fails the assertion. Verified on this tree: `pnpm typecheck`
+      0, `pnpm lint` 0, `pnpm format:check` 0, `pnpm check:boundaries` 0,
+      prompt-conformance clean (5 prompts), help-guide-coverage covered,
+      exports-parity 0, doc-conformance, error-table-sync, and
+      reference-page-parity green (114 cases), test-doc-distribution no drift (83
+      docs), `plan validate GH-286` verdict=valid readyForDevelopment=true,
+      `git diff --check` clean; the full battery `bun test --max-concurrency 4`
+      reached 7360 pass, 4 skip, 0 fail across 912 files, and
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exited 0. Two earlier battery attempts
+      on the same tree each carried one host-load timing failure
+      (`privacy-ci-wiring` TC-WIRE-002 over its 5 s default, and
+      `daemon-foreground-stop-latency` TC-DAEMON-121 at 250.21 ms against a
+      250 ms budget); both pass in isolation and the privacy guard also fails the
+      same 5 s default on the pre-merge tree on this host, so neither is
+      attributable to this integration, and no delivered guard was edited."
+    type: "info"
+    date: "2026-11-11"
