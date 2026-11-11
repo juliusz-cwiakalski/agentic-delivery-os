@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-11T11:04:45.981Z }
   delivery: { started: null, completed: 2026-11-11T12:24:26.212Z }
   system_spec_update: { started: null, completed: 2026-11-11T12:46:44.491Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-11T16:46:50.772Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -19,52 +19,55 @@ open_questions: []
 blockers: []
 notes:
   - text: "Plan phase 9 commit: 1df9e74e. Phase 9 (review-iteration-1 remediation)
-      complete. F-1: the detached start reads the latest instance BEFORE spawning;
-      a live acquisition (acquired|taken-over, owned heartbeat strictly under the
-      composed lock staleness) refuses daemon.already-running with zero spawns and
-      zero appends; after the spawn only a record whose instanceId differs or
-      whose recordedAt is at/after the spawn time is accepted, and its operation
-      must be acquired or taken-over, so a crash victim's stale acquired record is
-      the classified readiness timeout at exit 2 and a legitimate takeover is
-      accepted on the first poll; the 20 x 50 ms window is unchanged. The three
-      cells run through the real createDaemonCommandRuntime with the recording
-      process port. F-2: TC-037 refuses only the release append and asserts
-      state.write.failed at exit 2, no data, both listeners removed, one attempt,
-      and the durable record still acquired. F-3: TC-038 counts terminal records
-      (exactly one) and the duplicate-terminal mutant now appends two executed
-      records (clock advanced between signals). F-4: 18 of 21 controls load and
-      run the mutated module (relative imports rewritten); literal-socket,
-      unit-under-state-dir and xdg-relative-joined are declared structural with
-      reasons in the suite header. F-5: daemonReachable is one exported predicate
-      with injected nowMs/lockStalenessMs; the projection, boundary and read-cost
-      cells use it; the export required one content-inventory allowance row and
-      exports-parity is green. F-6: the watch iteration is awaited, p95 is measured
-      and recorded per run, and the signal-to-cancellation split is measured
-      (~232-235 ms) on the delivered real clock; the relative-p95 10% clause is
-      recorded as UNMET in test plan 10.3 with its reason and substitute
-      assertion. F-7: configured, empty-branch and invalid-branch
-      configuration-acquisition cells added. F-8: feature-config-layer.md corrects
-      the owner-hold relocation and scopes the no-home failure to the daemon
-      family. F-10: already declared by the phase-7 scope in plan v1.5. F-11: one
-      supervisor inspection per install, then port.install directly. F-12: the
-      receipt folds readDaemonStatus with the composed heartbeat interval and lock
-      staleness. F-13: an unresolvable user configuration root refuses install with
-      config.value.invalid at exit 1 (no unit, marker, supervisor call, or created
-      directory, and before the entry-path guard). F-14: the status suite already
-      consumes normalizeStatus and status-unreachable.json; verified green, no edit.
-      F-15: empty finally, require() calls, dead Bun.file binding, void silencers
-      and as-never casts removed. Plan v1.6 declares the two structural guard sites
-      the refactor anchors (content-inventory allowance row and the hermetic
-      resolver-span anchor) with no assertion weakened. Gate: 129 tests across the
-      four Phase-9 groups, 0 fail; full battery under TMPDIR=$PWD/tmp/tmpdir at
-      --max-concurrency 4 is 7272 pass, 0 fail, 895 files in 510.8 s, and at default
-      concurrency 7268 pass, 4 skip, 0 fail in 508.0 s; pnpm typecheck, pnpm lint,
-      pnpm format:check, help-guide-coverage, doc-conformance, exports-parity, the
-      doc-distribution guard and git diff --check are green. AC-NFR-2's relative
-      p95 clause is the one unmet criterion and is recorded, not relaxed. The
-      commit was landed by the concurrent orchestration in this worktree with the
-      primitive template subject (F-9 recurs); the two trailing doc-sync pages are
-      pending in the worktree. Not pushed and no pull request opened."
+      complete. F-1: the detached start reads the latest instance BEFORE
+      spawning; a live acquisition (acquired|taken-over, owned heartbeat
+      strictly under the composed lock staleness) refuses daemon.already-running
+      with zero spawns and zero appends; after the spawn only a record whose
+      instanceId differs or whose recordedAt is at/after the spawn time is
+      accepted, and its operation must be acquired or taken-over, so a crash
+      victim's stale acquired record is the classified readiness timeout at exit
+      2 and a legitimate takeover is accepted on the first poll; the 20 x 50 ms
+      window is unchanged. The three cells run through the real
+      createDaemonCommandRuntime with the recording process port. F-2: TC-037
+      refuses only the release append and asserts state.write.failed at exit 2,
+      no data, both listeners removed, one attempt, and the durable record still
+      acquired. F-3: TC-038 counts terminal records (exactly one) and the
+      duplicate-terminal mutant now appends two executed records (clock advanced
+      between signals). F-4: 18 of 21 controls load and run the mutated module
+      (relative imports rewritten); literal-socket, unit-under-state-dir and
+      xdg-relative-joined are declared structural with reasons in the suite
+      header. F-5: daemonReachable is one exported predicate with injected
+      nowMs/lockStalenessMs; the projection, boundary and read-cost cells use
+      it; the export required one content-inventory allowance row and
+      exports-parity is green. F-6: the watch iteration is awaited, p95 is
+      measured and recorded per run, and the signal-to-cancellation split is
+      measured (~232-235 ms) on the delivered real clock; the relative-p95 10%
+      clause is recorded as UNMET in test plan 10.3 with its reason and
+      substitute assertion. F-7: configured, empty-branch and invalid-branch
+      configuration-acquisition cells added. F-8: feature-config-layer.md
+      corrects the owner-hold relocation and scopes the no-home failure to the
+      daemon family. F-10: already declared by the phase-7 scope in plan v1.5.
+      F-11: one supervisor inspection per install, then port.install directly.
+      F-12: the receipt folds readDaemonStatus with the composed heartbeat
+      interval and lock staleness. F-13: an unresolvable user configuration root
+      refuses install with config.value.invalid at exit 1 (no unit, marker,
+      supervisor call, or created directory, and before the entry-path guard).
+      F-14: the status suite already consumes normalizeStatus and
+      status-unreachable.json; verified green, no edit. F-15: empty finally,
+      require() calls, dead Bun.file binding, void silencers and as-never casts
+      removed. Plan v1.6 declares the two structural guard sites the refactor
+      anchors (content-inventory allowance row and the hermetic resolver-span
+      anchor) with no assertion weakened. Gate: 129 tests across the four
+      Phase-9 groups, 0 fail; full battery under TMPDIR=$PWD/tmp/tmpdir at
+      --max-concurrency 4 is 7272 pass, 0 fail, 895 files in 510.8 s, and at
+      default concurrency 7268 pass, 4 skip, 0 fail in 508.0 s; pnpm typecheck,
+      pnpm lint, pnpm format:check, help-guide-coverage, doc-conformance,
+      exports-parity, the doc-distribution guard and git diff --check are green.
+      AC-NFR-2's relative p95 clause is the one unmet criterion and is recorded,
+      not relaxed. The commit was landed by the concurrent orchestration in this
+      worktree with the primitive template subject (F-9 recurs); the two
+      trailing doc-sync pages are pending in the worktree. Not pushed and no
+      pull request opened."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 8 commit: 05860165. Delivery lifecycle boundary: `phase
@@ -510,29 +513,29 @@ notes:
     date: "2026-11-11"
   - text: "Review iteration 1: FAIL. 47/50 ACs PASS, 3 PARTIAL, 1 FAIL. Blocking
       F-1: the detached-start readiness poll accepts any existing 'acquired'
-      instance record, so a start after a crash reports success with the dead pid
-      (AC-F2-2 FAIL), a legitimate 'taken-over' acquisition times out, and a bare
-      start against a live daemon reports success instead of
+      instance record, so a start after a crash reports success with the dead
+      pid (AC-F2-2 FAIL), a legitimate 'taken-over' acquisition times out, and a
+      bare start against a live daemon reports success instead of
       daemon.already-running (AC-NFR-6/NFR-9). Blocking F-2: TC-037's failing
-      store delegates straight through and the verdict accepts success or failure.
-      Blocking F-3: TC-038 never counts terminal instance records and its mutant
-      contains a dead guard. Medium: F-4 mutant non-vacuity, F-5 predicate
-      re-implemented in tests, F-6 unmeasured latency clauses, F-7 untested
-      production config path plus an undeclared invalid-branch divergence, F-8
-      config-layer doc inaccuracy, F-11 double supervisor inspect, F-12 receipt
-      folded with default staleness, F-13 root-level config root with no home,
-      F-14 dead fixtures, F-15 test hygiene. F-9 (commit subjects from the
-      primitive template) accepted and recorded as a tooling limitation: the
-      primitive is the only permitted write path and rewriting its commits by
-      hand is not authorised. F-10 (nine reconciled docs beyond phase-7 scope) to
-      be declared in the spec/plan rather than reverted. Verdict persisted at
-      review/review-iter-1.md."
+      store delegates straight through and the verdict accepts success or
+      failure. Blocking F-3: TC-038 never counts terminal instance records and
+      its mutant contains a dead guard. Medium: F-4 mutant non-vacuity, F-5
+      predicate re-implemented in tests, F-6 unmeasured latency clauses, F-7
+      untested production config path plus an undeclared invalid-branch
+      divergence, F-8 config-layer doc inaccuracy, F-11 double supervisor
+      inspect, F-12 receipt folded with default staleness, F-13 root-level
+      config root with no home, F-14 dead fixtures, F-15 test hygiene. F-9
+      (commit subjects from the primitive template) accepted and recorded as a
+      tooling limitation: the primitive is the only permitted write path and
+      rewriting its commits by hand is not authorised. F-10 (nine reconciled
+      docs beyond phase-7 scope) to be declared in the spec/plan rather than
+      reverted. Verdict persisted at review/review-iter-1.md."
     type: "blocker"
     date: "2026-11-11"
-  - text: "Retro (review iteration 1): the readiness poll defect is a case where
-      the plan's AC text was right, the code was wrong, and every new test
-      asserted the happy path plus one injected-store variant — so the defect sat
-      in a cell no suite exercised. The next pass must assert the three
+  - text: "Retro (review iteration 1): the readiness poll defect is a case where the
+      plan's AC text was right, the code was wrong, and every new test asserted
+      the happy path plus one injected-store variant — so the defect sat in a
+      cell no suite exercised. The next pass must assert the three
       pre-spawn/post-spawn outcomes (live refusal, takeover acceptance, stale
       record rejection) against the real runtime rather than fixtures that write
       'acquired' directly."
@@ -541,16 +544,17 @@ notes:
   - text: "Review iteration 2: FAIL. 49/50 ACs PASS, 1 PARTIAL (AC-NFR-2's
       relative-p95 clause, recorded as a deferral in test-plan §10.3), 0 FAIL.
       F-2/F-3/F-4/F-5/F-6/F-7/F-8/F-11/F-12/F-13/F-14/F-15 closed; F-1 partially
-      closed. Blocking NF-1: a crashed daemon can never be restarted — the engine
-      evaluates a takeover decision but then calls the exclusive-create lock
-      acquire, so the leftover lock returns state.lock.busy and start reports
-      daemon.already-running naming only the lock path; the control-plane
-      takeover is a constant refusal. Reproduced after SIGKILL + 35 s. This
-      falsifies DEC-6, RSK-11, the F-4 socket sentence and the resident-daemon
-      page. NF-2: six reconciled docs are declared in no phase scope. NF-3:
-      F-11/F-12 have no regression assertion. NF-4: three production copies of
-      the reachability rule. NF-5: commit subjects mislabel code under docs.
-      NF-6/7/8 minor. Verdict persisted at review/review-iter-2.md."
+      closed. Blocking NF-1: a crashed daemon can never be restarted — the
+      engine evaluates a takeover decision but then calls the exclusive-create
+      lock acquire, so the leftover lock returns state.lock.busy and start
+      reports daemon.already-running naming only the lock path; the
+      control-plane takeover is a constant refusal. Reproduced after SIGKILL +
+      35 s. This falsifies DEC-6, RSK-11, the F-4 socket sentence and the
+      resident-daemon page. NF-2: six reconciled docs are declared in no phase
+      scope. NF-3: F-11/F-12 have no regression assertion. NF-4: three
+      production copies of the reachability rule. NF-5: commit subjects mislabel
+      code under docs. NF-6/7/8 minor. Verdict persisted at
+      review/review-iter-2.md."
     type: "blocker"
     date: "2026-11-11"
   - text: "PM decision on NF-1 (recorded): fix the engine's stale-lock takeover
@@ -560,10 +564,10 @@ notes:
       the staleness evaluation has proved dead before re-acquiring it. The fix
       removes that lock only on a verified takeover decision, then re-acquires
       exclusively, so two concurrent starters still race safely (one wins, the
-      loser sees state.lock.busy mapped to already-running). Scoped as a
-      Phase-9 continuation with its own crash-restart regression test, declared
-      as a contract-conformance fix rather than a semantic change (NG-1), with a
-      spec note."
+      loser sees state.lock.busy mapped to already-running). Scoped as a Phase-9
+      continuation with its own crash-restart regression test, declared as a
+      contract-conformance fix rather than a semantic change (NG-1), with a spec
+      note."
     type: "decision"
     date: "2026-11-11"
   - text: "Review iteration 3 + confirmation pass: all five named findings closed.
@@ -571,13 +575,13 @@ notes:
       exception), NF3-2 (§16 now names twenty reconciled pages), NF3-3
       (listeners registered before the readiness point with a buffered signal;
       the createDaemonMainEntry seam got the same treatment and stays unused in
-      production), NF3-4 (cross-file real-child gate plus quiescent kill; the two
-      real-child cases ran 5/5 clean at default concurrency), NF3-5 (a
+      production), NF3-4 (cross-file real-child gate plus quiescent kill; the
+      two real-child cases ran 5/5 clean at default concurrency), NF3-5 (a
       compare-and-delete failure surfaces its own identity via AC-F2-12). Spec
       v1.6 has 52 ACs, the test plan 55 TCs with 52/52 coverage, and the plan is
-      at revision 1.8 with the foreground ordering corrected. Commits:
-      885d8dcc (remediation), 7b8e68b9 (scope + evidence), 46ff9428 (spec/test
-      plan/doc alignment), and the plan/pin commit that follows. Full battery at
+      at revision 1.8 with the foreground ordering corrected. Commits: 885d8dcc
+      (remediation), 7b8e68b9 (scope + evidence), 46ff9428 (spec/test plan/doc
+      alignment), and the plan/pin commit that follows. Full battery at
       --max-concurrency 4: 7286 pass / 4 skip / 0 fail. Also recorded: two
       concurrent deliver-ticket runs targeted this worktree during the session,
       and one of their commits (97a3f410) landed doc reconciliation into this
@@ -597,21 +601,22 @@ notes:
       stays the only staleness decision. Evidence: new
       tests/behaviour/daemon-crash-restart.test.ts (hermetic residue at/past the
       bound -> exit 0 with a taken-over instance naming the dead instance and
-      token, inside the bound -> daemon.already-running with zero appends and the
-      dead lock intact, two concurrent starters -> one winner and one refused
-      compare-and-delete, plus ONE real SIGKILLed #!/usr/bin/env bun child under
-      daemon.lock-staleness 1500 reaped in finally) and a composed-runtime
-      takeover step in tests/behaviour/daemon-start-detached.test.ts. Non-vacuity
-      observed: before the rebuilt engine the same case failed with
-      daemon.already-running naming only the lock path (the reviewer's
-      reproduction). 9.16: the six NF-2 pages are declared in the Phase-7
-      (task 7.9) and Phase-9 scopes of plan v1.7, their content re-read and
-      accurate, re-edited in neither; the spec 16 completeness sentence remains a
-      spec-owner handoff (pm re-delegation to @spec-writer) because change
-      artifacts' normative content is not a coder edit. 9.17: added the two
-      missing regression assertions (receipt/status agreement under a non-default
-      lock staleness with the shipped default as a running control, and
-      inspects === 1 on the install SUCCESS path). 9.18: new
+      token, inside the bound -> daemon.already-running with zero appends and
+      the dead lock intact, two concurrent starters -> one winner and one
+      refused compare-and-delete, plus ONE real SIGKILLed #!/usr/bin/env bun
+      child under daemon.lock-staleness 1500 reaped in finally) and a
+      composed-runtime takeover step in
+      tests/behaviour/daemon-start-detached.test.ts. Non-vacuity observed:
+      before the rebuilt engine the same case failed with daemon.already-running
+      naming only the lock path (the reviewer's reproduction). 9.16: the six
+      NF-2 pages are declared in the Phase-7 (task 7.9) and Phase-9 scopes of
+      plan v1.7, their content re-read and accurate, re-edited in neither; the
+      spec 16 completeness sentence remains a spec-owner handoff (pm
+      re-delegation to @spec-writer) because change artifacts' normative content
+      is not a coder edit. 9.17: added the two missing regression assertions
+      (receipt/status agreement under a non-default lock staleness with the
+      shipped default as a running control, and inspects === 1 on the install
+      SUCCESS path). 9.18: new
       tests/behaviour/daemon-staleness-agreement.test.ts asserts
       liveHolder/daemonReachable/evaluateDaemonLock agree one ms below, at, and
       one ms above the bound, on absent lock+instance, and on a torn lock, and
@@ -621,26 +626,27 @@ notes:
       the live refusal, the post-crash takeover, the stale rejection, the
       inside-bound control, the concurrent starters, the composed-runtime
       takeover and the receipt/status agreement cell; 10.1/10.2/10.3 updated.
-      9.20: uninstall now refuses on the same unresolvable user-configuration-root
-      rule as install. Implemented at the ONE resolution point (production.ts
-      replaces both handlers with config.value.invalid before any adapter is
-      constructed), not inside daemon-compose.ts, because a runtime-level guard
-      would change the delivered GH-238 composition contract pinned by
-      tests/behaviour/daemon-supervisor-install.test.ts (a control outside the
-      Phase-9 scope); daemon-compose documents the split. Symmetric suite cells
-      added: the no-home fixture refuses uninstall with zero inspections and zero
-      uninstalls and no directory created, and the home-present control still runs
-      exactly one ownership-scoped uninstall. 9.21: NF-8 recorded as an
-      out-of-scope comment at the constant takeover refusal in
-      daemon-compose.ts (delivered GH-238 frame echo, no assertion pins it, no
-      envelope change). 9.22: commit-subject limitation recorded in plan v1.7 and
-      here — 97a3f410 and 72e2c1a7 carry docs-class subjects while carrying the
-      liveHolder evidence, refusal detail and start-suite cells, and the change
-      semantics are carried by the pull-request description; no commit was
-      rewritten. Gate at HEAD 72e2c1a7: the reviewer's iteration-2 evidence
-      records 105 + 206 + 7 tests green plus help-guide-coverage, doc-conformance,
-      error-table-sync, the distribution guard and plan validate valid. Gate for
-      this continuation: 68 tests across the remediation group, 53 across the
+      9.20: uninstall now refuses on the same unresolvable
+      user-configuration-root rule as install. Implemented at the ONE resolution
+      point (production.ts replaces both handlers with config.value.invalid
+      before any adapter is constructed), not inside daemon-compose.ts, because
+      a runtime-level guard would change the delivered GH-238 composition
+      contract pinned by tests/behaviour/daemon-supervisor-install.test.ts (a
+      control outside the Phase-9 scope); daemon-compose documents the split.
+      Symmetric suite cells added: the no-home fixture refuses uninstall with
+      zero inspections and zero uninstalls and no directory created, and the
+      home-present control still runs exactly one ownership-scoped uninstall.
+      9.21: NF-8 recorded as an out-of-scope comment at the constant takeover
+      refusal in daemon-compose.ts (delivered GH-238 frame echo, no assertion
+      pins it, no envelope change). 9.22: commit-subject limitation recorded in
+      plan v1.7 and here — 97a3f410 and 72e2c1a7 carry docs-class subjects while
+      carrying the liveHolder evidence, refusal detail and start-suite cells,
+      and the change semantics are carried by the pull-request description; no
+      commit was rewritten. Gate at HEAD 72e2c1a7: the reviewer's iteration-2
+      evidence records 105 + 206 + 7 tests green plus help-guide-coverage,
+      doc-conformance, error-table-sync, the distribution guard and plan
+      validate valid. Gate for this continuation: 68 tests across the
+      remediation group, 53 across the
       degradation/install/status/production-composition group, 47 across the
       mount-help/state-scope/stop-safety/lock/lifecycle/watch group, and the
       full daemon+contract battery 371 pass / 0 fail; pnpm typecheck, pnpm lint,
@@ -650,54 +656,55 @@ notes:
       7287 tests across 897 files in 465.96 s. Two earlier runs of the same
       battery each reported one failure: a REAL pre-existing red at HEAD
       72e2c1a7, TC-HOLDDOCS-001, which still pinned the retired 'no marker-path
-      override and no store relocation' claim that the trailing doc-sync commit's
-      store-derived wording had removed; it is reconciled by that guard's
-      marker-path cells (declared in the change spec s.8.5 and AC-F8-4), which
-      assert the delivered statement and additionally forbid the retired claim,
-      while doc/guides/delivery-modes.md keeps its store-derived wording; and one
-      5 s TC-WIRE-002 timeout in tests/checks/privacy-ci-wiring.test.ts that is
-      green in isolation (14/14 in 10.45 s) and green in the final run. The
-      pre-existing local `token` binding in daemon-runtime.ts tripped the commit
-      primitive's deterministic secret scanner as a false positive on the
-      assignment that mints the lock token, so that local was renamed
-      `newToken` (behaviour-neutral; the affected suites and typecheck re-run
-      green). Not pushed and no pull request opened."
+      override and no store relocation' claim that the trailing doc-sync
+      commit's store-derived wording had removed; it is reconciled by that
+      guard's marker-path cells (declared in the change spec s.8.5 and AC-F8-4),
+      which assert the delivered statement and additionally forbid the retired
+      claim, while doc/guides/delivery-modes.md keeps its store-derived wording;
+      and one 5 s TC-WIRE-002 timeout in tests/checks/privacy-ci-wiring.test.ts
+      that is green in isolation (14/14 in 10.45 s) and green in the final run.
+      The pre-existing local `token` binding in daemon-runtime.ts tripped the
+      commit primitive's deterministic secret scanner as a false positive on the
+      assignment that mints the lock token, so that local was renamed `newToken`
+      (behaviour-neutral; the affected suites and typecheck re-run green). Not
+      pushed and no pull request opened."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 9 final gate (tasks 9.15-9.22 bookkeeping, closing note): this
       note supersedes the aggregate numbers of the note above. 92d2df11 is the
       bookkeeping commit of record for the iteration-2 continuation (plan v1.7
-      header, the spec 8.5 and AC-F8-4 permitted-update sites, the owner-hold doc
-      guard, the crash-restart and staleness-agreement suites, the uninstall
+      header, the spec 8.5 and AC-F8-4 permitted-update sites, the owner-hold
+      doc guard, the crash-restart and staleness-agreement suites, the uninstall
       symmetry fix and the pm-notes evidence); 1df9e74e carries the primary
       Phase-9 remediation and 97a3f410 and 72e2c1a7 the trailing doc-sync pages.
       The doc guard is reconciled honestly rather than by restating the retired
       claim: doc/guides/delivery-modes.md keeps its store-derived wording (the
-      marker follows the resolved store directory, an absolute <PREFIX>_STATE_DIR
-      relocates store and marker together, otherwise the home-based
-      <home>/<brand.stateDirectoryName> applies, there is no marker-path setting,
-      and the home default is never moved) and tests/checks/owner-hold-doc.test.ts
-      pins that truth with one added negative cell asserting the retired 'no
-      store relocation' phrase is absent; every other assertion in the guard is
-      intact. The guard file is a declared Phase-9 scope file and a named
-      permitted-update site in spec 8.5 and AC-F8-4 (the PM-authorised mechanical
-      list extension, which changes no criterion's meaning). Final full battery
-      under TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4: 7284 pass, 4 skip, 0
-      fail, 7288 tests across 897 files in 488.11 s — one more passing test than
-      the 7283 recorded above, because the guard's added negative cell is a new
-      test. Gates at this tree: owner-hold-doc plus doc-conformance 22/22; the
-      crash-restart, staleness-agreement, start-detached, install-mount, lock and
-      lock-concurrency suites 57/57; the remaining Phase-9 daemon suites 110/110;
-      the remediation group 68/68; the lock/lifecycle/degradation group 76/76;
-      pnpm typecheck clean; pnpm lint exit 0 (72 pre-existing warnings, 25
-      infos, 0 errors); pnpm format:check clean; plan validate verdict=valid,
+      marker follows the resolved store directory, an absolute
+      <PREFIX>_STATE_DIR relocates store and marker together, otherwise the
+      home-based <home>/<brand.stateDirectoryName> applies, there is no
+      marker-path setting, and the home default is never moved) and
+      tests/checks/owner-hold-doc.test.ts pins that truth with one added
+      negative cell asserting the retired 'no store relocation' phrase is
+      absent; every other assertion in the guard is intact. The guard file is a
+      declared Phase-9 scope file and a named permitted-update site in spec 8.5
+      and AC-F8-4 (the PM-authorised mechanical list extension, which changes no
+      criterion's meaning). Final full battery under TMPDIR=$PWD/tmp/tmpdir at
+      --max-concurrency 4: 7284 pass, 4 skip, 0 fail, 7288 tests across 897
+      files in 488.11 s — one more passing test than the 7283 recorded above,
+      because the guard's added negative cell is a new test. Gates at this tree:
+      owner-hold-doc plus doc-conformance 22/22; the crash-restart,
+      staleness-agreement, start-detached, install-mount, lock and
+      lock-concurrency suites 57/57; the remaining Phase-9 daemon suites
+      110/110; the remediation group 68/68; the lock/lifecycle/degradation group
+      76/76; pnpm typecheck clean; pnpm lint exit 0 (72 pre-existing warnings,
+      25 infos, 0 errors); pnpm format:check clean; plan validate verdict=valid,
       readyForDevelopment=true; git diff --check clean. Test plan 10.2 carries
-      these numbers. Accepted limitation (F-9, NF-5): phase-mode commits take the
-      commit primitive's deterministic template subject, so 92d2df11 and the
+      these numbers. Accepted limitation (F-9, NF-5): phase-mode commits take
+      the commit primitive's deterministic template subject, so 92d2df11 and the
       follow-up bookkeeping commit carry a docs-class subject over change
       artifacts and source, and the change semantics live in the pull-request
-      description; no commit subject was rewritten by hand. Not pushed and no pull
-      request opened."
+      description; no commit subject was rewritten by hand. Not pushed and no
+      pull request opened."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 9 (review-iteration-3 closure): 885d8dcc carries the
@@ -712,36 +719,36 @@ notes:
       adopts the same order by opening signals.waitForStop() before start (it
       remains unused by every production surface). The real-child re-entry case
       pins the observable: a stop issued immediately after the start receipt
-      records exactly one drain release. NF3-4 (real-child determinism): the crash
-      and re-entry cases serialize their spawned children through the shared
-      gate tests/fixtures/daemon/real-child-gate.ts (bounded wait, stale-holder
-      takeover), and the crash case kills its victim in a quiescent window (the
-      start's initial heartbeat has landed and the store's write fence is
-      released) with a delivered recoverFence belt for a stale fence, so the
-      residue under test is the daemon lock and not a store fence or unhardened
-      ledger (state semantics stay out of scope, NG-1); the delivered 20 x 50 ms
-      readiness window is unchanged (AC-F2-2). Evidence: the two real-child
-      files at default concurrency 5/5 runs (6 tests, 0 fail, 2.45-2.57 s), the
-      nine-suite narrow battery 10/10 and 8/8 under six CPU load generators, and
-      the full battery below. NF3-5: a compare-and-delete that cannot write now
-      surfaces its own identity (state.write.failed) instead of a bare
-      daemon.already-running, while a genuine race loser's state.lock.busy still
-      maps to busy; a hermetic cell asserts the identity, no append, and the dead
-      lock left in place. Traceability: spec v1.5's AC-F2-11 is covered by
-      extending TC-DAEMON-030 (related IDs plus steps 10/12/13 and new step 16),
-      no TC was added, and the test plan now reports 51/51 ACs with the TC map
-      unchanged at 55/55. Gates at 885d8dcc: pnpm typecheck clean; pnpm lint exit
-      0 (72 pre-existing warnings, 25 infos, 0 errors); pnpm format:check clean;
-      plan validate verdict=valid readyForDevelopment=true; git diff --check
-      clean; full battery under TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4:
-      7286 pass, 4 skip, 0 fail, 61950 expect() calls across 897 files in
-      384.78 s. Scope: this bookkeeping commit also adds
-      packages/cli/src/daemon-main.ts to the Phase-9 scope, which the commit
-      primitive flagged as the only scope drift in 885d8dcc; the file is the
-      delivered seam the TC-DAEMON-039 fixture exercises, it adopts no lifetime
-      ownership in the product, and the Phase-4 disposition's 'unmodified'
-      sentence is superseded for that one seam by this declared extension. The
-      real-reentry suite was edited in Phase 9 but is already declared by Phase 4.
-      Not pushed and no pull request opened."
+      records exactly one drain release. NF3-4 (real-child determinism): the
+      crash and re-entry cases serialize their spawned children through the
+      shared gate tests/fixtures/daemon/real-child-gate.ts (bounded wait,
+      stale-holder takeover), and the crash case kills its victim in a quiescent
+      window (the start's initial heartbeat has landed and the store's write
+      fence is released) with a delivered recoverFence belt for a stale fence,
+      so the residue under test is the daemon lock and not a store fence or
+      unhardened ledger (state semantics stay out of scope, NG-1); the delivered
+      20 x 50 ms readiness window is unchanged (AC-F2-2). Evidence: the two
+      real-child files at default concurrency 5/5 runs (6 tests, 0 fail,
+      2.45-2.57 s), the nine-suite narrow battery 10/10 and 8/8 under six CPU
+      load generators, and the full battery below. NF3-5: a compare-and-delete
+      that cannot write now surfaces its own identity (state.write.failed)
+      instead of a bare daemon.already-running, while a genuine race loser's
+      state.lock.busy still maps to busy; a hermetic cell asserts the identity,
+      no append, and the dead lock left in place. Traceability: spec v1.5's
+      AC-F2-11 is covered by extending TC-DAEMON-030 (related IDs plus steps
+      10/12/13 and new step 16), no TC was added, and the test plan now reports
+      51/51 ACs with the TC map unchanged at 55/55. Gates at 885d8dcc: pnpm
+      typecheck clean; pnpm lint exit 0 (72 pre-existing warnings, 25 infos, 0
+      errors); pnpm format:check clean; plan validate verdict=valid
+      readyForDevelopment=true; git diff --check clean; full battery under
+      TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4: 7286 pass, 4 skip, 0 fail,
+      61950 expect() calls across 897 files in 384.78 s. Scope: this bookkeeping
+      commit also adds packages/cli/src/daemon-main.ts to the Phase-9 scope,
+      which the commit primitive flagged as the only scope drift in 885d8dcc;
+      the file is the delivered seam the TC-DAEMON-039 fixture exercises, it
+      adopts no lifetime ownership in the product, and the Phase-4 disposition's
+      'unmodified' sentence is superseded for that one seam by this declared
+      extension. The real-reentry suite was edited in Phase 9 but is already
+      declared by Phase 4. Not pushed and no pull request opened."
     type: "info"
     date: "2026-11-11"
