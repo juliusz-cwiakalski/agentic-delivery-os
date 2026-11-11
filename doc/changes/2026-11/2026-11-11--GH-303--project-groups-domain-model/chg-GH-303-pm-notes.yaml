@@ -608,3 +608,87 @@ notes:
       fixes."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 6 (review remediation) complete at commit d647f47b. One
+      product commit, no new product path: the thirteen-file manifest is
+      unchanged (P34 product_files=13/13) and m2/commands/board.md stays
+      byte-identical. Findings and resolutions: F-1 (HIGH) —
+      m2/architecture.md:3-6 now opens on the three-level model ('one
+      workstation manages several delivery repositories, grouped as configured
+      projects'), and the C4 Level 1 engine node at :31 reads 'repository
+      plane, queue, dispatch, events, telemetry, handover gate' instead of
+      listing 'projects'; fences stay even with the mermaid tag and all eleven
+      diagram keywords, C4 headings stay 1/1/1, Key flows stays 8/8. F-2
+      (MEDIUM) — m2/test-scenarios.md:61-64 SC-M2-S4-02 now says 'every lane
+      appears under its repository key' and asserts both repository keys with
+      the per-repository boards; the `data.projects` envelope name stays as the
+      current board contract and the seed has exactly one Assert line (the fix
+      is preferred over the TP-7 deferral). F-3 (LOW) — backlog.md:1314-1315
+      splits S18-A3 and S18-A4 into items 3 and 4, so the five S18 acceptance
+      clauses are five numbered items with unchanged wording and the four-label
+      shape intact. F-4 (LOW) — m2/README.md:29 now reads 'the eight key
+      flows, including the S17 park/resume flow and the cross-repository change
+      flow'. F-5 (LOW) — the P5 scope disclosure is recorded at pm-notes:525.
+      F-6 (INFO) — deferral ownership is recorded in the preceding note:
+      board.md still means a repository by 'project', deferred by TP-7 with
+      M2-S4 as the owning checkpoint. Outcome: the reviewer's two
+      statement-level spec-compliance defects and its two conformance defects
+      are closed in the files the verdict names. Why: AC-F14-1 and NFR-12
+      require zero `projects` occurrences denoting the flat enumeration in the
+      twelve documents, and the page that owns the model must not contradict
+      it. Verification, fresh shells at HEAD d647f47b: P01 PASS (retained 5/5,
+      depends exact, fields OK, transition OK, old goal ABSENT); P02 PASS
+      (flat=0 raw=1 repos_list=3 group=0 copies=1); P03 PASS (12/12 shape 4/4
+      ticket 0); P05 PASS (11/11); P11 PASS (four OK, claim ABSENT); P12 PASS
+      (four OK, violation ABSENT); P13 PASS (1/1/1, cross-repo mermaid=1,
+      invariants 1/1/1/1); P19 PASS (9/9 5/5); P20 PASS (7/7 3/3 0); P21 PASS
+      (repos.v1=2 projects[]=0; projects.v1=2 repos=0); P22 PASS (s18=3 s19=3
+      assert_violations=0 coverage 10/10); P23 PASS; P24 PASS; P25 PASS; P26
+      PASS (pack rows 13/13); P27 PASS (13/13, m0/m1 byte-identical); P32 PASS
+      (17 rows, 0 empty, 0/17 survivors, self-tests detected/OK, base board
+      OK); P33 PASS (6/6); P36 PASS (2/2 headers, 0 delivered claims, pack
+      verbatim, snapshot 0); P37 PASS (140 vs 139, repos row between queue and
+      spend, 0 duplicates); P40 PASS (C4 1/1/1, key flows 8/8,
+      flow_ownership_bad=0); P41 PASS (26/26); P42 PASS (exit 0, 5/5 classes,
+      140 scanned, planning 10/10, violations=0, failures=0, seed_hits=0); P43
+      PASS (broken=0, restated=0); P45 PASS (17/17, 0 empty, fixtures
+      OK/detected); P34 PASS (13/13, expected_not_changed=0, unexpected empty,
+      other_scripts=0; post_commit_check=identical when the comparison runs
+      under a single collation, the same LANG=pl_PL.UTF-8 instrument artifact
+      recorded at P5); P38 PASS (dist_guard_exit=0, planning_markers=0; the
+      distribution guard also exits 0 run directly with the default TMPDIR);
+      plan validate verdict=valid; lint GH-303 conforms. Gate runs:
+      repository-local TMPDIR pnpm check at HEAD d647f47b -> local_run1_rc=0,
+      7133 pass / 4 skip / 0 fail, load 6.04 before and 8.38 after with 20
+      competing processes (green on the first run; no excuse used). The
+      default-TMPDIR companion -> default_rc=1, 7132 pass / 4 skip / 1 fail,
+      the single failure CI baseline parity (cross-device hardlink); P39
+      default_failure_class=excused, rerun_recorded=yes (parity fails
+      standalone under the default TMPDIR in 11.30ms and passes standalone
+      under the repository-local TMPDIR in 3.76s; TC-WIRE-002 was absent from
+      this default run, passes 5/5 standalone in 19.00ms, and the full local
+      suite has 0 failures), P39 verdict PASS (excused). An earlier local run
+      at the same head failed only TC-WIRE-002 at 5245.64ms under load 7.7
+      with competing suites; the fresh run above is the authoritative one and
+      is green. Free-text sweep (both names, every .md under
+      doc/planning/oss-tooling, 148 matching lines read): after the fix, no
+      `projects`/`projects list` statement in the twelve documents denotes the
+      flat enumeration and no `repos`/`repos list` statement denotes a group,
+      except the declared board deferral (board.md `projects[]`/`--project`,
+      test-scenarios.md:64 `data.projects`, owner M2-S4). Pre-existing M1-era
+      'projects' for managed checkouts survives only in backlog.md:847/863
+      (unchanged base lines in M1 stories, protected by P10 hunk confinement
+      and P35 story preservation) and outside the manifest in
+      m1/architecture.md:225/426 and m1/contracts.md:361; m1/man-page.md:109
+      still says `repos` is not delivered until M3-S6 (the hygiene family,
+      not the flat enumeration). Generic-English uses (a response 'projects'
+      to exit 2, tracker projects, adopting projects) and VCS repos are not
+      the domain entities. Residual: the board deferral and the recorded
+      M1-era wording above; no gate, procedure, or scan was weakened, no TC
+      ownership moved, and both command pages stay Status: Proposed (M2) with
+      no delivery claim (P36 delivered_claims=0, snapshot_relabels=0). Message
+      mechanism: the primitive's transport is none, so the subject is a
+      template and the finding ids plus outcome/why/verification live in this
+      ledger entry rather than the commit body, the same recorded deviation as
+      P1-P5."
+    type: "info"
+    date: "2026-11-11"
