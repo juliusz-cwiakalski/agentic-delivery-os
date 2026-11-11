@@ -1,6 +1,6 @@
 ---
 id: chg-GH-268-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-11
 last_updated: 2026-11-11
 owners: ["engineering"]
@@ -33,8 +33,8 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 ### 1.2 Out of Scope & Known Gaps
 
 - **Diff-shape confinement is not a permanent suite assertion.** `AC-NFR8-1` asserts a property of the change diff, and `.ai/rules/testing-strategy.md` forbids permanent suites from asserting against a moving base branch. It is verified at PR time (`TC-CONFINE-001`) plus permanent tree invariants (`TC-CONFINE-002`).
-- **No AC covers `DM-1.h` (invalid configuration / execution failure) or `DM-1.i` (usage error).** Both are spec-mandated terminal conditions in §5.1 but appear in no acceptance criterion; they are covered by `TC-COMMITLINT-009` and `TC-COMMITLINT-012` as spec-implied, and reported as a traceability gap in §8.3.
-- **`NFR-4` runtime and `NFR-6` bounded output have no dedicated AC.** Covered by `TC-COMMITLINT-021` and `TC-COMMITLINT-015`; the runtime assertion is a coarse budget, not a benchmark.
+- **All 19 ACs are traced after the specification correction.** `AC-F3-5`, `AC-F3-6`, `AC-NFR4-1`, and `AC-NFR6-1` close the former gaps on `DM-1.h`, `DM-1.i`, `NFR-4`, and `NFR-6`. They map onto the TCs that already asserted the behaviour — `TC-COMMITLINT-009`, `TC-COMMITLINT-012`, `TC-COMMITLINT-021`, and `TC-COMMITLINT-015` — whose expected results were extended where the new criteria demand more than the original assertions (no duplicate TCs were added).
+- **The runtime and bounded-output assertions are budgets, not benchmarks.** `TC-COMMITLINT-021` measures wall-clock time against the two documented budgets, and `TC-COMMITLINT-015` counts lines and excerpt widths; neither is a statistical performance profile, and a loaded runner is the accepted measurement risk (§8.1 TR-1).
 - **Plain merge subjects are not rejected** (spec DEC-4 / OQ-1). `TC-COMMITLINT-004` asserts they *pass*, which is the parity contract, not an omission.
 - **CI behaviour is not re-tested.** The `ts-commitlint` workflow is unchanged (`NG-1`); only its continued presence and shape are asserted (`TC-CONFINE-002`).
 - **Adopter behaviour is tested in sandboxed temp projects,** not by installing into this repository.
@@ -73,12 +73,16 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 | AC-F3-2 | Unresolvable base override / configured base / merge-base → "unable to verify" exit, cause + hint, never a pass | TC-COMMITLINT-010, TC-COMMITLINT-011 | Covered |
 | AC-F3-3 | Configured repo without usable binary → unable-to-verify naming the tool; no configuration → explicit skip exit 0 | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-COMMITLINT-009 | Covered |
 | AC-F3-4 | No network; working tree/index/refs/stash unchanged; every outcome maps to exactly one of three exit codes | TC-COMMITLINT-018, TC-COMMITLINT-019, TC-COMMITLINT-020 | Covered |
+| AC-F3-5 | Configured commitlint cannot render a verdict (invalid config / execution failure) → `ERROR` exit 2 with cause + hint; never `FAIL`-with-violations, never `PASS` | TC-COMMITLINT-009 | Covered (assertions extended) |
+| AC-F3-6 | Unknown argument / invalid base syntax → exit 2 with usage naming the accepted invocation and the offending argument; no range check | TC-COMMITLINT-012 | Covered (assertions extended) |
 | AC-F4-1 | Committer + PM state subject rule, ≤100-char body/footer, no plain merge subject, both remediation modes — constraints, no raw git recipe | TC-PROMPT-001, TC-PROMPT-002, TC-PROMPT-003 | Covered |
 | AC-F5-1 | Resume-sync emits a conventional-subject sync merge referencing the work item; assertion matches; no other section changes meaning | TC-PROMPT-004, TC-PROMPT-005, TC-PROMPT-006 | Covered |
 | AC-F6-1 | `quality_gates` requires the range lint; remediation loop; unresolved error never recorded as pass; verdict recorded as PM-notes evidence | TC-PROMPT-002, TC-DOGFOOD-001 | Covered |
 | AC-F6-2 | `AGENTS.md` states the gate as supplementary pre-PR gate; no new "run all quality gates" instruction; `/check` unchanged | TC-DOC-001 | Covered |
 | AC-F7-1 | Gate present + executable after install, removed on uninstall, installer/uninstaller suites green | TC-DIST-001, TC-DIST-002, TC-DIST-003 | Covered |
 | AC-F8-1 | Feature pages, lifecycle guide, `AGENTS.md` describe the delivered gate/contract; markers kept; no new conformance violation | TC-DOC-002, TC-DOC-003, TC-DOC-004, TC-DOC-005, TC-DOC-006, TC-DOC-007 | Covered |
+| AC-NFR4-1 | ≤20-commit run ≤10 s, ≤100-commit run ≤60 s, zero network calls; suite asserts both budgets | TC-COMMITLINT-021, TC-COMMITLINT-019 | Covered (assertions extended) |
+| AC-NFR6-1 | ≤20 rule lines per commit, excerpt ≤160 chars, ≤200 diagnostic lines, summary still reports offender count and distinct rules hit | TC-COMMITLINT-015 | Covered (assertions extended) |
 | AC-NFR8-1 | No CI change, no hook enforcement, no rewrite/auto-fix automation, no change to `pnpm check`, `/check`, or `/check-fix` semantics, no CLI/MCP surface change, no commitlint config/rule change | TC-CONFINE-001, TC-CONFINE-002 | Covered (PR-time + tree invariants) |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
@@ -95,8 +99,8 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 | DM-1.e | Base override / configured base does not resolve → ERROR, exit 2 | TC-COMMITLINT-010 | Covered |
 | DM-1.f | Merge-base undeterminable (unrelated / shallow) → ERROR, exit 2 | TC-COMMITLINT-011 | Covered |
 | DM-1.g | Configuration present, binary unavailable → ERROR naming the tool, exit 2 | TC-COMMITLINT-008 | Covered |
-| DM-1.h | Verdict cannot be rendered (invalid config, execution failure) → ERROR, exit 2 | TC-COMMITLINT-009 | Covered (spec-implied; no AC) |
-| DM-1.i | Usage error (unknown argument, invalid base syntax) → ERROR, exit 2 | TC-COMMITLINT-012 | Covered (spec-implied; no AC) |
+| DM-1.h | Verdict cannot be rendered (invalid config, execution failure) → ERROR, exit 2 | TC-COMMITLINT-009 | Covered (AC-F3-5) |
+| DM-1.i | Usage error (unknown argument, invalid base syntax) → ERROR, exit 2 | TC-COMMITLINT-012 | Covered (AC-F3-6) |
 | DM-2 | Per-commit diagnostic block: short + full SHA, bounded subject, per-rule id + line + bounded excerpt, oldest→newest, deterministic | TC-COMMITLINT-013, TC-COMMITLINT-014, TC-COMMITLINT-015 | Covered |
 | DM-3 | Remediation-mode rule: 1–2 → `SURGICAL REWORD`, ≥3 → `CONDENSE-TO-ONE`, counted per commit, advisory | TC-COMMITLINT-016, TC-COMMITLINT-017 | Covered |
 
@@ -107,9 +111,9 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 | NFR-1 | 0 variance, stable ordering | TC-COMMITLINT-014 | Covered |
 | NFR-2 | 0 silent passes across precondition scenarios | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-COMMITLINT-009, TC-COMMITLINT-010, TC-COMMITLINT-011, TC-COMMITLINT-020 | Covered |
 | NFR-3 | 0 false failures on valid conventional history | TC-COMMITLINT-002, TC-COMMITLINT-003, TC-COMMITLINT-004, TC-COMMITLINT-005 | Covered |
-| NFR-4 | ≤10 s for ≤20 commits; 0 network calls | TC-COMMITLINT-019, TC-COMMITLINT-021 | Covered |
+| NFR-4 | ≤10 s for ≤20 commits; ≤60 s for ≤100 commits; 0 network calls | TC-COMMITLINT-019, TC-COMMITLINT-021 | Covered (AC-NFR4-1) |
 | NFR-5 | 0 working-tree, index, ref, or stash changes | TC-COMMITLINT-018 | Covered |
-| NFR-6 | ≤20 rule lines/commit, ≤200 diagnostic lines, excerpt ≤160 chars | TC-COMMITLINT-015 | Covered (no AC) |
+| NFR-6 | ≤20 rule lines/commit, ≤200 diagnostic lines, excerpt ≤160 chars | TC-COMMITLINT-015 | Covered (AC-NFR6-1) |
 | NFR-7 | Exactly three codes with fixed meanings | TC-COMMITLINT-012, TC-COMMITLINT-020 | Covered |
 | NFR-8 | 0 out-of-scope changes | TC-CONFINE-001, TC-CONFINE-002 | Covered (PR-time + tree invariants) |
 | NFR-9 | Aggregate gate, prompt-conformance, doc-conformance, doc-distribution all green | TC-PROMPT-003, TC-DOC-006, TC-DOC-007 | Covered |
@@ -146,19 +150,19 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 | TC-COMMITLINT-006 | Empty range passes and states zero commits | Integration | Bash suite | High | AC-F3-1, DM-1.b |
 | TC-COMMITLINT-007 | No commitlint configuration → explicit skip, exit 0 | Integration | Bash suite | Critical | AC-F3-3, DM-1.d |
 | TC-COMMITLINT-008 | Configured repo without commitlint binary → error naming the tool | Integration | Bash suite | Critical | AC-F3-3, DM-1.g, NFR-2 |
-| TC-COMMITLINT-009 | Invalid configuration → error, not a violation verdict | Integration | Bash suite | Important | DM-1.h, NFR-2 |
+| TC-COMMITLINT-009 | Invalid configuration → error, not a violation verdict | Integration | Bash suite | Important | AC-F3-5, DM-1.h, NFR-2 |
 | TC-COMMITLINT-010 | Base resolution precedence and unresolvable base error | Integration | Bash suite | Critical | AC-F3-2, DM-1.e, DEC-7 |
 | TC-COMMITLINT-011 | Undeterminable merge-base (unrelated and shallow history) errors | Integration | Bash suite | Critical | AC-F3-2, DM-1.f |
-| TC-COMMITLINT-012 | Usage error, `--help`, and `--version` exit cleanly | Contract | Bash suite | Important | DM-1.i, NFR-7 |
+| TC-COMMITLINT-012 | Usage error, `--help`, and `--version` exit cleanly | Contract | Bash suite | Important | AC-F3-6, DM-1.i, NFR-7 |
 | TC-COMMITLINT-013 | Per-commit diagnostic block content and oldest→newest ordering | Integration | Bash suite | High | AC-F2-1, DM-2, NFR-10 |
 | TC-COMMITLINT-014 | Repeated runs are byte-identical (determinism) | Integration | Bash suite | Important | NFR-1, AC-F2-1 |
-| TC-COMMITLINT-015 | Diagnostic output is bounded | Integration | Bash suite | Important | NFR-6 |
+| TC-COMMITLINT-015 | Diagnostic output is bounded | Integration | Bash suite | Important | AC-NFR6-1, NFR-6 |
 | TC-COMMITLINT-016 | Remediation mode thresholds: 1, 2, ≥3 offenders | Integration | Bash suite | High | AC-F2-2, DM-3 |
 | TC-COMMITLINT-017 | Offenders counted per commit, not per violation | Integration | Bash suite | High | AC-F2-2, DM-3 |
 | TC-COMMITLINT-018 | Read-only across every terminal outcome | Integration | Bash suite | Critical | AC-F3-4, NFR-5 |
-| TC-COMMITLINT-019 | No network access on any path | Integration | Bash suite | Critical | AC-F3-4, NFR-4, DEC-7 |
+| TC-COMMITLINT-019 | No network access on any path | Integration | Bash suite | Critical | AC-F3-4, AC-NFR4-1, NFR-4, DEC-7 |
 | TC-COMMITLINT-020 | Exit-code matrix is exactly 0 / 1 / 2 | Contract | Bash suite | Critical | AC-F3-4, NFR-2, NFR-7 |
-| TC-COMMITLINT-021 | Runtime budget for a 20-commit range | Performance | Bash suite | Low | NFR-4 |
+| TC-COMMITLINT-021 | Runtime budget for a 20-commit range | Performance | Bash suite | Low | AC-NFR4-1, NFR-4 |
 | TC-PROMPT-001 | Committer prompt states the full message contract | Static check | Manual + static | High | AC-F4-1 |
 | TC-PROMPT-002 | PM `quality_gates` requires the gate, loops, and records evidence | Static check | Manual + static | Critical | AC-F6-1, AC-F4-1 |
 | TC-PROMPT-003 | Contract is constraints, not raw git recipes; conformance green | Static check | Automated | Critical | AC-F4-1, NFR-9 |
@@ -377,7 +381,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Negative
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: F-3, DM-1.h, NFR-2, DM-1.c distinction
+**Related IDs**: F-3, AC-F3-5, DM-1.h, NFR-2, DM-1.c distinction
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_invalid_config_is_error`
@@ -391,11 +395,14 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 2. Assert exit code `2` and that the output contains `ERROR`.
 3. Assert the output does **not** present the failure as a message violation: no `SURGICAL REWORD` / `CONDENSE-TO-ONE` mode line and no rule-id/line-number diagnostic pair.
 4. Assert the output carries a remediation hint (a match on `config` plus `install`/`fix`/`valid` wording, or the documented equivalent).
+5. Assert the outcome triad of AC-F3-5 explicitly: the output contains no `PASS` token and no `FAIL` violation verdict, only `ERROR` — in both `stdout` and `stderr` (the failing verdict line is mirrored to stderr, spec §10).
+6. Repeat steps 1–5 for the **execution-failure** sub-case of AC-F3-5: prepend a shim directory to `PATH` whose `commitlint` executable exits `3` with a transport-free error message and no parseable problems (`fake-commitlint-exec-failure.sh`); assert the gate still reports `ERROR`/exit `2` with a cause and a remediation hint, never `FAIL` with diagnostics and never `PASS`.
 
 **Expected Outcome**:
 - Then an unusable configuration is reported as "unable to verify" with its cause, not as a commit-message defect (DM-1.h): an environment fault must not be mistaken for a violation (RSK-2).
+- Then the `ERROR`-not-`FAIL`-not-`PASS` triad holds on both streams and for both sub-cases — invalid configuration and execution failure (AC-F3-5), so a caller capturing one stream cannot misread the outcome.
 
-**Notes / Clarifications**: No AC covers DM-1.h; see §1.2 and §8.3. The invalid config fixture is committed as `.txt` and copied to `commitlint.config.js` inside the temp repo so `biome lint`/`format:check` never parse intentionally broken JavaScript.
+**Notes / Clarifications**: Covered by AC-F3-5 (added by the specification correction). The invalid config fixture is committed as `.txt` and copied to `commitlint.config.js` inside the temp repo so `biome lint`/`format:check` never parse intentionally broken JavaScript; the execution-failure shim is a `.sh` fixture used only through `PATH`, never installed into the repository's `node_modules/.bin`.
 
 #### TC-COMMITLINT-010 - Base resolution precedence and unresolvable base error
 
@@ -454,7 +461,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Negative / Contract
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: F-1 (identity and invocation), DM-1.i, NFR-7, bash rules §4/§10.5
+**Related IDs**: F-1 (identity and invocation), AC-F3-6, DM-1.i, NFR-7, bash rules §4/§10.5
 **Test Type(s)**: Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_unknown_argument_usage_error`, `test_help_and_version`
@@ -468,9 +475,13 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 3. Run `--help`; assert exit code `0`, stdout contains `Usage:`, the documented invocation, and the three exit codes with their meanings.
 4. Run `--version`; assert exit code `0` and a semantic-version-shaped token (assert a match on `^[0-9]+\.[0-9]+\.[0-9]+`).
 5. Static assertion over the script text: the only numeric literals passed to `exit` are `0`, `1`, and `2` (assert a `grep -oE 'exit [[:digit:]]+'` result set equals exactly that set).
+6. Assert the usage-error output names the **accepted invocation**, not only the word `Usage:`: `--nonsense` and the valueless `--base` runs must both print the documented form (`./scripts/lint-commit-range.sh [--base REF]`) alongside the offending argument (AC-F3-6).
+7. Assert **no range check** is performed on a usage error: run the same `--nonsense` invocation with `GIT_TRACE=1` and assert the trace contains no `rev-list`, `merge-base`, `rev-parse`, or `for-each-ref` invocation, and that the output contains no commit count, short SHA, or merge-base line (AC-F3-6).
+8. Assert the invalid-base-syntax variant is a usage error, not a base-resolution error: a malformed ref (for example `--base --not-a-ref` or `--base ''`) exits `2` with usage text and no `ERROR` cause/hint block reserved for `DM-1.e`.
 
 **Expected Outcome**:
 - Then usage problems are exit `2` with usage text, help/version are exit `0`, and the script cannot leak an undocumented exit code (DM-1.i, NFR-7).
+- Then a malformed or unknown argument is rejected before any history is consulted: the output names the accepted invocation and the offending argument, and no range check runs (AC-F3-6).
 
 #### TC-COMMITLINT-013 - Per-commit diagnostic block content and oldest→newest ordering
 
@@ -526,7 +537,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: F-2, NFR-6, DM-2
+**Related IDs**: F-2, AC-NFR6-1, NFR-6, DM-2
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_output_is_bounded`
@@ -540,9 +551,12 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 2. Assert the rule lines attributable to the first commit are ≤20 (count lines matching `line[= ]+[0-9]+` between the first and second block headers).
 3. Assert the total diagnostic line count is ≤200 (`wc -l`).
 4. Assert every excerpt is ≤160 characters: extract the text after the last ` · ` separator on diagnostic lines and assert `awk` length ≤160.
+5. Assert the **summary is still informative** under bounding (AC-NFR6-1): the summary block reports the offending-commit count (`2`) and the distinct-rules-hit count (≥2), so truncation never destroys the aggregate verdict.
+6. Assert the bound applies per commit, not only in total: for each block, count rule lines between consecutive block headers and assert each count is ≤20 (the first commit is the pathological one; the second must also satisfy the bound).
 
 **Expected Outcome**:
 - Then a pathological commit cannot flood a log: ≤20 rule lines per commit, ≤200 diagnostic lines total, excerpt ≤160 characters (NFR-6), while still naming the commit (NFR-10).
+- Then bounding does not cost the aggregate signal: the summary still reports the offending-commit count and the distinct rules hit (AC-NFR6-1).
 
 **Notes / Clarifications**: Exact template separators are not pinned by the spec (OQ-3). If the implementation uses a different separator, adapt the extraction only — the bounds are the contract.
 
@@ -618,7 +632,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Negative / Contract
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-3, AC-F3-4, NFR-4, DEC-7, spec §8.1, §21
+**Related IDs**: F-1, F-3, AC-F3-4, AC-NFR4-1, NFR-4, DEC-7, spec §8.1, §21
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_no_network_access`
@@ -633,7 +647,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 3. **Git trace scan.** Run the gate with `GIT_TRACE=1 GIT_TRACE2_EVENT=""`; assert the trace contains no line matching the transport alternation `fetch`, `push`, `ls-remote`, `clone`, or `git-remote-*`.
 
 **Expected Outcome**:
-- Then no invocation touches the network: no network tool is executed, and git performs no transport operation (AC-F3-4, NFR-4, DEC-7).
+- Then no invocation touches the network: no network tool is executed, and git performs no transport operation (AC-F3-4, AC-NFR4-1 zero-network clause, NFR-4, DEC-7).
 
 **Notes / Clarifications**: The remediation hint for an unfetched base legitimately *mentions* `git fetch`; assertion 1 must distinguish a printed hint from an executed command — the recommended implementation keeps hints inside quoted strings passed to a logger.
 
@@ -664,22 +678,25 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Performance
 **Impact Level**: Minor
 **Priority**: Low
-**Related IDs**: NFR-4, RSK-4
+**Related IDs**: F-1, F-3, AC-NFR4-1, NFR-4, RSK-4
 **Test Type(s)**: Performance
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_runtime_budget_20_commits`
+**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_runtime_budget_20_commits`, `test_runtime_budget_100_commits`
 **Tags**: @bash, @gate, @perf
 
-**Preconditions**: Fixture `FX-20`: 20 valid conventional commits on the feature branch; real commitlint binary available.
+**Preconditions**: Fixture `FX-20`: 20 valid conventional commits on the feature branch; fixture `FX-100`: 100 valid conventional commits on the feature branch; real commitlint binary available.
 
 **Steps**:
 1. Record `start=$SECONDS` (or `date +%s%N`) immediately before the run.
 2. Run the gate with `--base main`; record elapsed time and exit code `0`.
 3. Assert elapsed ≤10 seconds.
 4. Guard non-vacuity: assert the reported commit count is `20`.
+5. Repeat steps 1–4 on `FX-100`, asserting the reported commit count is `100` and the elapsed time is ≤60 seconds (AC-NFR4-1 second budget).
+6. Assert the zero-network clause of AC-NFR4-1 on the reference runs: the same invocation completes with the poison-`PATH` shims in place and `NETWORK_MARKER` absent, and the `GIT_TRACE` capture shows no transport verb (`TC-COMMITLINT-019` owns the full no-network assertion; this step ties it to the timed reference runs).
 
 **Expected Outcome**:
 - Then a ≤20-commit range completes within the 10-second budget on a developer machine (NFR-4).
+- Then the ≤100-commit range completes within the 60-second budget, and neither timed run performs a network call (AC-NFR4-1).
 
 **Notes / Clarifications**: Coarse budget, not a benchmark; a loaded CI runner can approach it. If it flakes, raise the *measurement* margin in the harness (e.g. assert ≤10 s three-times-median), never the spec threshold (see §8.1).
 
@@ -1166,6 +1183,7 @@ export LC_ALL=C TZ=UTC
 | `FX-UNRELATED` | orphan branch with no common ancestor | TC-COMMITLINT-011, TC-COMMITLINT-020 (row f) |
 | `FX-SHALLOW` | `git clone --depth 1 file://…` clone | TC-COMMITLINT-011 |
 | `FX-20` | 20 valid conventional commits | TC-COMMITLINT-021 |
+| `FX-100` | 100 valid conventional commits (generated in a loop with `git commit --allow-empty -F`) | TC-COMMITLINT-021 |
 | Poison bin | shims for `curl`, `wget`, `ssh`, `scp`, `nc`, `git-remote-https`, `git-remote-http` writing to `NETWORK_MARKER` | TC-COMMITLINT-019 |
 
 Committed fixture data lives in `scripts/.tests/fixtures/lint-commit-range/`:
@@ -1180,6 +1198,7 @@ Committed fixture data lives in `scripts/.tests/fixtures/lint-commit-range/`:
 | `msg-wip.txt` | `wip stuff` + over-long body | upstream-dirty and offender fixtures |
 | `commitlint.config.valid.txt` | `export default { extends: ["@commitlint/config-conventional"] };` | copied to `commitlint.config.js` when a fixture needs an explicitly valid config |
 | `commitlint.config.invalid.txt` | syntactically invalid module text | **`.txt` on purpose** — a `.js` here would be parsed by `biome lint`/`format:check` and turn the aggregate gate red |
+| `fake-commitlint-exec-failure.sh` | shim that exits `3` with an error on stderr and no parseable problems | `DM-1.h` execution-failure sub-case of `TC-COMMITLINT-009`; reached only through `PATH`, never installed into `node_modules/.bin` |
 
 Binary availability per case:
 
@@ -1273,16 +1292,16 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 | OQ-1 | The spec does not pin **which commitlint output format** the gate consumes nor how it distinguishes `DM-1.c` (violations) from `DM-1.h` (execution/config failure). Tests need that boundary to assert reliably. | Test-fixture fidelity (not the gate's behaviour contract) | `@plan-writer` / delivery planning: pin invocation + parse contract (recommended: run the CLI per commit or over the range with a machine-parseable formatter, and treat non-zero-with-no-parsed-problems as `DM-1.h`). Until then, `TC-COMMITLINT-009` asserts the distinction by observable behaviour only. |
 | OQ-2 | The spec says "the project's configured delivery base branch (with the established environment override)" without naming the variable or file; and it does not state the binary-resolution mechanism. | `TC-COMMITLINT-010`, `TC-COMMITLINT-008` exact inputs | Reuse `ADOS_BASE_BRANCH` + `pr-instructions.md` + default `main`, and PATH-based `require_cmd commitlint`; if planning pins a different seam, update only the variable names in those TCs. |
 | OQ-3 | The exact diagnostic line template (`FAIL SHORT_SHA (FULL_SHA) · rule=RULE_ID line=N · EXCERPT`) appears only as an example in spec §6 Flow 2, not as a normative grammar. | Nothing (assertions target semantics) | Delivery planning may pin a template; the bounds in `NFR-6` and the fields in `DM-2` are the contract. |
-| OQ-4 | No AC covers `DM-1.h` (invalid configuration) or `DM-1.i` (usage error), and no AC covers `NFR-6` (bounded output) or `NFR-4` (runtime). | Nothing (covered as spec-implied) | Reported as a spec traceability gap for the readiness gate; TCs exist so the behaviours are still verified. |
-| OQ-5 | Spec OQ-1 (plain merge subjects as a hard failure) remains open and non-blocking. | Nothing | `TC-COMMITLINT-004` pins today's parity behaviour; if OQ-1 is later decided differently, that TC changes with the configuration, not with the gate. |
-| OQ-6 | Whether the `/check` resolution contract requires an `AGENTS.md` quality-gates command for adopters. | `TC-DOC-001` step 4 | Spec DEC-8/NG-5 say no; the test asserts the absence of a new "run all quality gates" instruction. |
-| OQ-7 | Does the suite need a documented escape hatch for environments where the real commitlint binary cannot be installed (e.g. offline sandboxes)? | CI ergonomics | Recommendation: no silent skip (fail closed, matching the gate's own philosophy); if an escape hatch is added it must print an explicit `SKIP` and the aggregate gate must not depend on it. |
+| OQ-4 | Spec OQ-1 (plain merge subjects as a hard failure) remains open and non-blocking. | Nothing | `TC-COMMITLINT-004` pins today's parity behaviour; if OQ-1 is later decided differently, that TC changes with the configuration, not with the gate. |
+| OQ-5 | Whether the `/check` resolution contract requires an `AGENTS.md` quality-gates command for adopters. | `TC-DOC-001` step 4 | Spec DEC-8/NG-5 say no; the test asserts the absence of a new "run all quality gates" instruction. |
+| OQ-6 | Does the suite need a documented escape hatch for environments where the real commitlint binary cannot be installed (e.g. offline sandboxes)? | CI ergonomics | Recommendation: no silent skip (fail closed, matching the gate's own philosophy); if an escape hatch is added it must print an explicit `SKIP` and the aggregate gate must not depend on it. |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1 | 2026-11-11 | @test-plan-writer | Initial test plan derived from `chg-GH-268-spec.md` v1.0: 40 TCs covering AC-F1-1…AC-NFR8-1, DM-1.a–i, DM-2, DM-3, NFR-1…NFR-10, fixture matrix, read-only/no-network instrumentation, conformance battery, and the dogfood gate run. |
+| 0.2 | 2026-11-11 | @test-plan-writer | Re-traced against `chg-GH-268-spec.md` v1.1 (19 ACs): mapped the four appended criteria onto the existing TCs (`AC-F3-5` → `TC-COMMITLINT-009`, `AC-F3-6` → `TC-COMMITLINT-012`, `AC-NFR4-1` → `TC-COMMITLINT-021` + `TC-COMMITLINT-019`, `AC-NFR6-1` → `TC-COMMITLINT-015`), extended those four TCs' steps/expected results with the assertions the new criteria add (including the `DM-1.h` execution-failure sub-case via a PATH shim, the no-range-check assertion for usage errors, the second runtime budget, and the summary-informativeness assertion), added `FX-100`, and removed the resolved `OQ-4` traceability item (OQ-5…7 renumbered to OQ-4…6). No TC id was added, removed, or renumbered. |
 
 ## 10. Test Execution Log
 
