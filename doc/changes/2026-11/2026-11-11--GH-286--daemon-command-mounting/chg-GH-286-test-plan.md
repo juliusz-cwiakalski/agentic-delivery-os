@@ -1,14 +1,14 @@
 ---
 id: chg-GH-286-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-11T02:25:00Z
-last_updated: 2026-11-11T02:25:00Z
+last_updated: 2026-11-11T14:40:00Z
 owners: [engineering]
 service: delivery-os daemon lifecycle mount (production composition, detached re-entry, foreground lifetime, durable degradation, install identity, help/coverage)
 labels: [cli, daemon, entrypoint, degradation, help, process-lifecycle, install, m1]
 version_impact: minor
-summary: "Mount the delivered daemon lifecycle family in the production entrypoint and prove every property the ticket actually asks for: `daemon` becomes prompt-required with an unconditional runtime, a bare start re-enters the running entry path as a detached child whose only environment value is the state-directory variable and whose success is a durable `acquired` instance (never the child's output), a foreground start owns its lifetime through the injected signal host (SIGTERM → drain, SIGINT → immediate, listeners removed in a `finally`, start snapshot returned at exit), one `resolveStateDirectoryScope` value drives the store, lock, settings, socket, supervisor scope, re-entry binding, unit, and read side, the composed unix transport is composed at the resolved socket path, `QueueComposition.degraded` becomes a per-projection resolver over durable instance+heartbeat records (live ⇒ `[]`, released/absent/stale/torn ⇒ `[\"daemon-unreachable\"]`) instead of the hardcoded constant, the composing pid is recorded and a non-positive recorded pid is refused before any signal call (zero signal calls, so no process group can be addressed), and `daemon install` writes `${brand.binaryName}-daemon.service` under `XDG_CONFIG_HOME` or `<home>/.config` with the absolute entry path as `ExecStart` and the exact `<PREFIX>_STATE_DIR` binding, classifying an unsupported supervisor with no unit left behind. 47 acceptance criteria (41 capability + 6 NFR) are bound to 50 test cases, every case carries an explicit planned file path with new-versus-update status, the negative and refusal paths are proven as absences with call counters rather than by a passing happy path, and the additive contract is proven by byte-identical array-valued `degraded` output, an unchanged error table, an unchanged STATE_SCHEMA_VERSION, unchanged help/version purity, and `--help` for all five subcommands. One case is integration-marked (a bounded real detached re-entry smoke inside a temp root) and one is a manual Linux user-manager verification; every other proof is deterministic over injected ports with no socket, no real signal, and no sleep."
+summary: "Mount the delivered daemon lifecycle family in the production entrypoint and prove every property the ticket actually asks for: `daemon` becomes prompt-required with an unconditional runtime, a bare start re-enters the running entry path as a detached child whose environment is the composing `PATH`, `HOME` (or `USERPROFILE`), and a set working-name override beneath the authoritative `<PREFIX>_STATE_DIR` binding written last, and whose success is a durable `acquired` instance (never the child's output), a foreground start owns its lifetime through the injected signal host (SIGTERM → drain, SIGINT → immediate, listeners removed in a `finally`, start snapshot returned at exit), one `resolveStateDirectoryScope` value drives the store, lock, settings, socket, supervisor scope, re-entry binding, unit, and read side, the composed unix transport is composed at the resolved socket path, `QueueComposition.degraded` becomes a per-projection resolver over durable instance+heartbeat records (live with an owning heartbeat strictly below the bound ⇒ `[]`, released/absent/at-or-beyond-bound/torn/unowned ⇒ `[\"daemon-unreachable\"]`) instead of the hardcoded constant, the composing pid is recorded and a non-positive recorded pid is refused before any signal call (zero signal calls, so no process group can be addressed), and `daemon install` writes `${brand.binaryName}-daemon.service` under `XDG_CONFIG_HOME` or `<home>/.config` with the absolute entry path as `ExecStart` and the exact `<PREFIX>_STATE_DIR` binding, classifying an unsupported supervisor with no unit left behind. 49 acceptance criteria (43 capability + 6 NFR) are bound to 53 test cases, every case carries an explicit planned file path with new-versus-update status, the negative and refusal paths are proven as absences with call counters rather than by a passing happy path, and the additive contract is proven by byte-identical array-valued `degraded` output, an unchanged error table, an unchanged STATE_SCHEMA_VERSION, unchanged help/version purity, and `--help` for all five subcommands. One case is integration-marked (a bounded real `#!/usr/bin/env bun` detached re-entry smoke inside a temp root) and one is a manual Linux user-manager verification; every other proof is deterministic over injected ports with no socket, no real signal, and no sleep."
 links:
   change_spec: ./chg-GH-286-spec.md
   implementation_plan: ./chg-GH-286-plan.yaml
@@ -19,26 +19,26 @@ links:
 
 ## 1. Scope and Objectives
 
-This change mounts an already-delivered command family, so the risk is not that the engine breaks — it is that the mount looks done while one of six independent facts is false. The tests must therefore protect six properties at once, and each one is proven as a structural or durable fact rather than an impression. **First, the mount is unconditional.** `daemon` joins `PROMPT_REQUIRED_COMMANDS` and the production composer supplies a runtime on every path, because `selectPromptRequiredProgram` throws when a prompt-required command is missing; a conditionally registered family would turn every CLI invocation into the `fallback.internal` containment. An absent entry path, signal host, or supervisor must degrade one start or install shape and never remove the command (`TC-DAEMON-010`, `TC-DAEMON-014`, `TC-DAEMON-032`, `TC-DAEMON-104`). **Second, residency is a durable fact, not a return.** A bare `start` spawns the running entry path with exactly the state-directory variable in its environment and reports success only after a durable `acquired` instance exists; a readiness timeout is a classified failure that appends nothing and claims nothing (`TC-DAEMON-030`, `TC-DAEMON-031`). A foreground start owns its lifetime: `SIGTERM` drains, `SIGINT` stops immediately, both listeners are removed in a `finally`, a failed release still terminates the loop, a second signal cannot produce a second stop, and the snapshot captured at start is what the command returns (`TC-DAEMON-033`..`TC-DAEMON-038`).
+This change mounts an already-delivered command family, so the risk is not that the engine breaks — it is that the mount looks done while one of six independent facts is false. The tests must therefore protect six properties at once, and each one is proven as a structural or durable fact rather than an impression. **First, the mount is unconditional.** `daemon` joins `PROMPT_REQUIRED_COMMANDS` and the production composer supplies a runtime on every path, because `selectPromptRequiredProgram` throws when a prompt-required command is missing; a conditionally registered family would turn every CLI invocation into the `fallback.internal` containment. An absent entry path, signal host, or supervisor must degrade one start or install shape and never remove the command (`TC-DAEMON-010`, `TC-DAEMON-014`, `TC-DAEMON-032`, `TC-DAEMON-104`). **Second, residency is a durable fact, not a return.** A bare `start` spawns the running entry path with the composing `PATH`, `HOME` (or `USERPROFILE`), and a set working-name override beneath the authoritative state-directory binding written last, and reports success only after a durable `acquired` instance exists; the environment is exactly that declared set, so a `#!/usr/bin/env bun` entry resolves the same interpreter the parent used, and a caller that stripped `PATH` or `HOME` fails closed instead of being repaired (`TC-DAEMON-030`, `TC-DAEMON-031`, `TC-DAEMON-040`, `TC-DAEMON-041`). A readiness timeout is a classified failure that appends nothing and claims nothing (`TC-DAEMON-031`). A foreground start owns its lifetime: `SIGTERM` drains, `SIGINT` stops immediately, both listeners are removed in a `finally`, a failed release still terminates the loop, a second signal cannot produce a second stop, and the snapshot captured at start is what the command returns (`TC-DAEMON-033`..`TC-DAEMON-038`).
 
-**Third, one state directory, or none of the identities agree.** The production composition resolves its directory through `resolveStateDirectoryScope` and uses that one value for the store, the daemon lock, the resolved daemon settings, the control socket, the supervisor scope, the re-entry environment, and the queue/lanes read side; the detached child, whose environment is replaced, resolves the same value from the same variable, and the installed unit binds that variable to that directory. Two resolutions would put the ledger, the lock, and the socket in different places — the "works in tests, writes to the wrong ledger" class of failure this story exists to remove (`TC-DAEMON-050`..`TC-DAEMON-053`). **Fourth, degradation becomes a derived fact in both directions.** `QueueComposition.degraded` accepts a resolver and is resolved at every projection — the schedule read, the mutation outcome, the lanes read, and each watch iteration — from the latest instance operation plus a heartbeat that belongs to it and is within the configured lock staleness. The proof is bidirectional and adversarial: a live fresh instance must yield `[]` (`TC-DAEMON-070`), a released or immediate-stopped instance, an absent instance, and a stale heartbeat must each yield `["daemon-unreachable"]` (`TC-DAEMON-071`..`TC-DAEMON-073`), a watch must flip within one iteration in both directions (`TC-DAEMON-074`), a torn or unreadable read must degrade rather than assert (`TC-DAEMON-076`), and the read must not gain a socket, a process probe, or a sleep (`TC-DAEMON-120`).
+**Third, one state directory, or none of the identities agree.** The production composition resolves its directory through `resolveStateDirectoryScope` and uses that one value for the store, the daemon lock, the resolved daemon settings, the control socket, the supervisor scope, the re-entry environment, and the queue/lanes read side; the detached child, whose environment is rebuilt, resolves the same value from the same variable — written last, so the forwarded `PATH`, home, and working-name override cannot influence it — and the installed unit binds that variable to that directory. Two resolutions would put the ledger, the lock, and the socket in different places — the "works in tests, writes to the wrong ledger" class of failure this story exists to remove (`TC-DAEMON-050`..`TC-DAEMON-053`). **Fourth, degradation becomes a derived fact in both directions.** `QueueComposition.degraded` accepts a resolver and is resolved at every projection — the schedule read, the mutation outcome, the lanes read, and each watch iteration — from the latest instance operation plus a heartbeat that belongs to it and is strictly within the configured lock staleness. The proof is bidirectional and adversarial: a live fresh instance must yield `[]` (`TC-DAEMON-070`), a released or immediate-stopped instance, an absent instance, and a heartbeat at or beyond the bound must each yield `["daemon-unreachable"]` (`TC-DAEMON-071`..`TC-DAEMON-073`), a watch must flip within one iteration in both directions (`TC-DAEMON-074`), a torn or unreadable read must degrade rather than assert (`TC-DAEMON-076`), an unowned heartbeat must degrade while the delivered status fold calls it `running` — the one declared divergence, named rather than smoothed over (`TC-DAEMON-078`) — and the read must not gain a socket, a process probe, or a sleep (`TC-DAEMON-120`).
 
 **Fifth, the pid is real and the stop fails closed.** The composing pid is recorded so an instance carries the process that actually acquired the lock, and a cross-process `stop` refuses any durable record whose pid is not a positive integer with the delivered recovery identity and **zero** process-port signal calls — because the engine's `0` fallback addresses the caller's own process group. The refusal is proven by a call counter, not by an exit code alone (`TC-DAEMON-090`..`TC-DAEMON-092`). **Sixth, the change stays additive.** No exported signature narrows; `DaemonComposition` and `ProductionCompositionFacts` gain only optional inputs; `QueueComposition.degraded` widens to a union whose array member is byte-identical; the command definition, its grammar, its envelopes, the error table, and `STATE_SCHEMA_VERSION` are untouched. The additive half is proven by controls that must pass **unmodified** plus equality oracles that would fail on a reworded payload (`TC-DAEMON-110`..`TC-DAEMON-114`).
 
 The plan is deliberately adversarial about the failure modes the ticket names. **False green from a returning child**: a `start` that reports success without a durable `acquired` instance must fail (`TC-DAEMON-031`), and the readiness oracle reads the store, never the child's streams. **Permanent honesty about a dead daemon**: a hardcoded `["daemon-unreachable"]` would still pass a one-directional test, so the live direction is asserted first and a source-level mutant re-hardcoding the marker must be caught (`TC-DAEMON-070`, `TC-DAEMON-077`). **Process-group signalling**: a refusal test that only checks the exit code can pass while the signal was already sent, so the assertion is `signal` called zero times (`TC-DAEMON-091`). **A unit that cannot start**: an install test that only checks the file exists can pass with a bare `ExecStart` under the state directory, so the oracle parses the rendered unit's `ExecStart` and `Environment=` lines and asserts the absolute entry path and the resolved directory (`TC-DAEMON-100`, `TC-DAEMON-101`). **A degraded guard**: adding `daemon` to the prompt-required set without a reference page, a coverage inventory row, and a doc-conformance page entry fails three guards at once, so the guard fixtures and the conformance page list are updated in the same phase as the mount (`TC-DAEMON-013`).
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Where delivery owns a name (a helper module, a private function, a payload field beyond the ones the specification pins), the scenario asserts the declared property through the public composition or the injected port and names the seam, never a guessed spelling. All 47 acceptance criteria are covered; there are no TODO rows, no orphan cases, and no open questions.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Where delivery owns a name (a helper module, a private function, a payload field beyond the ones the specification pins), the scenario asserts the declared property through the public composition or the injected port and names the seam, never a guessed spelling. All 49 acceptance criteria are covered; there are no TODO rows, no orphan cases, and no open questions.
 
 ### 1.1 In Scope
 
 - The `daemon` prompt-required membership, the unconditional production runtime, the reachable lifecycle handlers, and the `fallback.internal` containment that must not fire (F-1; AC-F1-1, AC-F1-5, AC-F8-4).
 - The help inventory addition (family entry plus one entry per subcommand), the `daemon` reference page's five-section help coverage, root `--help` listing membership, and the two guard fixtures plus the doc-conformance page list (F-1; AC-F1-2..AC-F1-4, DM-6).
-- Detached re-entry: the spawn request's entry path, argument vector, and single-variable environment; the durable readiness poll (20 × 50 ms); the start receipt's provenance from durable state (F-2, F-3; AC-F2-1, AC-F2-2, AC-F3-2; DM-1; EVT-1).
+- Detached re-entry: the spawn request's entry path, argument vector, and the declared environment set (authoritative state-directory binding written last, plus the composing `PATH`, `HOME`/`USERPROFILE`, and a set working-name override); a `#!/usr/bin/env bun` entry starting from that environment; the fail-closed outcome for a caller that stripped `PATH`/`HOME`; the durable readiness poll (20 × 50 ms); the start receipt's provenance from durable state (F-2, F-3; AC-F2-1, AC-F2-2, AC-F2-10, AC-F3-2; DM-1, DM-5; EVT-1).
 - The signal-owned foreground lifetime: readiness snapshot capture, `SIGINT`/`SIGTERM` listeners, the resident loop, mode selection by first signal (`drain`/`immediate`), listener removal in a `finally`, cancellation-first termination, the returned snapshot, the double-signal single-stop rule, and the no-signal-host embedder shape (F-2, F-6; AC-F2-3..AC-F2-9; DM-2).
 - Cross-process `stop`: drained-lane detach evidence, the `draining` vs `noop` split, the refusal of a non-positive recorded pid before any signal, and the signal-target assertions (F-6; AC-F2-7, AC-F6-2, AC-F6-3; EVT-3).
 - One state-directory scope across the parent, the detached child, the installed unit, the store, the lock, the socket, the supervisor scope, and the read side, including the invalid-override path that must not suppress the mount (F-3; AC-F3-1..AC-F3-4; DM-5, DM-6).
-- The composed control plane: settings resolved through the delivered resolver over the resolved directory (empty-branch fallback), the delivered unix transport at the resolved socket path, the ownership predicate, `status --live` reachability and freshness classification, and the plain-status degraded success (F-4; AC-F4-1..AC-F4-4; NFR-6).
-- The degradation resolver: the array-or-function union, per-projection resolution (schedule, mutation outcome, lanes, watch iteration), the durable reachability predicate, both directions of the marker, agreement with the status fold, and the torn-read fail-closed path (F-5; AC-F5-1..AC-F5-7; DM-3, DM-4; NFR-3).
+- The composed control plane: settings resolved through the delivered resolver over the resolved directory (empty-branch fallback), the delivered unix transport at the resolved socket path, the ownership predicate, `status --live` reachability and freshness classification, and the plain-status probe that reports reachability and stays a degraded success (F-4; AC-F4-1..AC-F4-4; NFR-6).
+- The degradation resolver: the array-or-function union, per-projection resolution (schedule, mutation outcome, lanes, watch iteration), the durable reachability predicate (owning instance, heartbeat strictly below the bound), both directions of the marker, agreement with the status fold on owned cells, the declared unowned-heartbeat divergence, and the torn-read fail-closed path (F-5; AC-F5-1..AC-F5-8; DM-3, DM-4; NFR-3).
 - The composing pid and its propagation to the instance record, plus the fail-closed refusal with zero signal calls (F-6; AC-F6-1..AC-F6-3; DM-1; EVT-1; NFR-8).
 - Install identity: the brand-derived unit name, the absolute entry path, the configuration-root selection, the state-directory binding, unit enable, linger enable, the receipt descriptor, the unsupported-supervisor classification with rollback, the ownership-scoped uninstall, and the no-entry-path refusal (F-7; AC-F7-1..AC-F7-5; DM-6).
 - The additive contract and non-regression: unchanged error table, unchanged `STATE_SCHEMA_VERSION`, byte-identical array-valued `degraded` output, preserved absent-`degraded` fallback, preserved help/version purity, and the delivered suites passing with only the declared mount updates (F-8; AC-F8-1..AC-F8-4, AC-NFR-1; DM-7).
@@ -53,9 +53,10 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] A `--state-dir` flag, a daemon state-directory configuration key, or a second state-directory resolution (NG-5).
 - [OUT] Multi-state-directory installs, a coordinator unit, a second OS supervisor adapter, or remote/container transports (NG-7). One unit name per user is declared and `TC-DAEMON-100` asserts the exact single name.
 - [OUT] `daemon status` reporting installation truth by inspecting the supervisor; the install and uninstall receipts remain the truth (DEC-14). `TC-DAEMON-060` pins `installed: false` in the status descriptor and does not treat it as a defect.
-- [OUT] Forwarding the effective working-name override into the re-entry environment. The tested configuration is the shipped default brand; `TC-DAEMON-051` asserts the single-variable environment and `TR-6` records the declared limitation (RSK-6, DEC-16).
+- [OUT] Repairing an environment the caller has already destroyed. The re-entry environment forwards the composing `PATH`, `HOME`/`USERPROFILE`, and a set working-name override through one optional composition input, so `TC-DAEMON-040` asserts that exact key set and `TC-DAEMON-039` proves the shipped `#!/usr/bin/env bun` entry starts from it; a caller that strips `PATH`/`HOME` cannot be repaired by the spawn, and `TC-DAEMON-041` asserts the fail-closed outcome rather than a PATH guess (RSK-2, DEC-16).
+- [OUT] Making the status fold and the degradation predicate agree on an unowned heartbeat. They intentionally do not: the predicate requires an owner, the delivered fold reports `running` for a fresh heartbeat nobody owns, and `TC-DAEMON-078` asserts the degraded marker alongside the fold's `running` state, naming the divergence. No case asserts that the two rules are equivalent outside the owned-cell domain of AC-F5-6 (DM-4, DEC-7).
 - [OUT] Moving or migrating existing state when `<PREFIX>_STATE_DIR` is set. No test asserts a copy, a backfill, or a migration (NG-4, §19).
-- [GAP-T1 — "no semantic change to delivered assertions" is review-attested, not machine-checkable] AC-F8-4 requires the delivered suites to pass "with only the mount-specific updates named in §8.5". The gate run proves the pass half mechanically (`TC-DAEMON-113`); the "only these updates" half is a diff-shape claim, which `.ai/rules/testing-strategy.md` assigns to review and CI PR-time gates rather than to a permanent suite. **Compensation:** the four permitted update sites are enumerated by file and by changed assertion in §7 and in `TC-DAEMON-113`; `@reviewer` verifies at phase 8 that no other assertion changed, and any deviation is a finding. Owner: `@reviewer`.
+- [GAP-T1 — "no semantic change to delivered assertions" is review-attested, not machine-checkable] AC-F8-4 requires the delivered suites to pass "with only the mount-specific updates named in §8.5". The gate run proves the pass half mechanically (`TC-DAEMON-113`); the "only these updates" half is a diff-shape claim, which `.ai/rules/testing-strategy.md` assigns to review and CI PR-time gates rather than to a permanent suite. **Compensation:** the permitted update sites are enumerated by file and by changed assertion in §7 and in `TC-DAEMON-113`, and the set is derived from the delivered tree — every suite that carries the prompt-required enumeration or the family list derived from it — rather than from a sentence or a count; `@reviewer` verifies at phase 8 that no other assertion changed, and any deviation is a finding. Owner: `@reviewer`.
 - [GAP-T2 — the two-process drain is proven sequentially, not concurrently] AC-F2-7 describes a second process signalling a resident daemon. The deterministic proof runs the resident handler in-process over a real temp store and the stopper over a **second store handle** to the same root, then advances the handler and re-reads; it exercises the same records and the same signal path without a real race or a sleep. The real detached form is one bounded, opt-in integration case (`TC-DAEMON-039`). No scenario relies on wall-clock ordering between two live processes.
 - [GAP-T3 — absences need three observations] "No spawn", "zero signal calls", "no socket connect", "no process probe", "no sleep", "no unit written", and "nothing appended" are absences. Each is proven by (i) the seam not being reachable or being a recording fake, (ii) a zero counter on that fake, and (iii) an unchanged durable record count or directory listing — plus a source-level scan or mutant where one exists. A single passing assertion is never accepted as proof of an absence.
 - [GAP-T4 — real systemd is never touched by an automated case] Install is proven through the injected supervisor port (DEC-11): the unit text is asserted from the captured write, the enable and linger commands from the recorded command list, and the rollback from the recorded sequence. An actual user-manager unit load is a manual host verification (`TC-DAEMON-105`, `Manual Only`), bounded to a temp `XDG_CONFIG_HOME` and recorded in §10. No automated suite calls `systemctl`.
@@ -66,23 +67,23 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-286-spec.md`](./chg-GH-286-spec.md) v1.0 | Binding source: F-1..F-8, **47 ACs** (AC-F1-1..AC-F1-5, AC-F2-1..AC-F2-9, AC-F3-1..AC-F3-4, AC-F4-1..AC-F4-4, AC-F5-1..AC-F5-7, AC-F6-1..AC-F6-3, AC-F7-1..AC-F7-5, AC-F8-1..AC-F8-4, AC-NFR-1..AC-NFR-6), DM-1..DM-7, EVT-1..EVT-3, NFR-1..NFR-12, RSK-1..RSK-12, DEC-1..DEC-16, §6 flows 1-6, §11 risks, Appendix C (closed vocabularies), Appendix D (mount exit matrix), Appendix E (identity matrix), Appendix F (production composition values) |
-| [`TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md`](../../../decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md) | Binding decision record: C-1..C-8 and DC-1..DC-4 (entry-path re-entry and signal-owned lifetime, per-read durable degradation, composing pid with fail-closed stop, brand-derived install identity, one state-directory scope) |
+| [`chg-GH-286-spec.md`](./chg-GH-286-spec.md) v1.1 | Binding source: F-1..F-8, **49 ACs** (AC-F1-1..AC-F1-5, AC-F2-1..AC-F2-10, AC-F3-1..AC-F3-4, AC-F4-1..AC-F4-4, AC-F5-1..AC-F5-8, AC-F6-1..AC-F6-3, AC-F7-1..AC-F7-5, AC-F8-1..AC-F8-4, AC-NFR-1..AC-NFR-6), DM-1..DM-7, EVT-1..EVT-3, NFR-1..NFR-12, RSK-1..RSK-13, DEC-1..DEC-17, §6 flows 1-6, §11 risks, Appendix C (closed vocabularies), Appendix D (mount exit matrix), Appendix E (identity matrix), Appendix F (production composition values) |
+| [`TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md`](../../../decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md) | Binding decision record: C-1..C-8 and DC-1..DC-4 (entry-path re-entry and signal-owned lifetime, per-read durable degradation, composing pid with fail-closed stop, brand-derived install identity, one state-directory scope). DC-1's re-entry environment is read in its **2026-11-11 amendment** (state-directory binding authoritative and written last, plus the composing `PATH`, `HOME`/`USERPROFILE`, and a non-empty working-name override, one optional additive input). |
 | [`chg-GH-286-pm-notes.yaml`](./chg-GH-286-pm-notes.yaml) | Context only: clarify-scope findings, the four routed design choices, and the specification-completion note. The specification is the source of truth. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,types,behaviour,conformance,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate |
 | [`.ai/rules/typescript.md`](../../../../.ai/rules/typescript.md) | Strict typing; injected clock/randomness/environment; data-only contracts; pure domain; adapters own I/O; the error contract; injected fakes over `mock.module` |
-| **Delivered composition seams under test** | `packages/cli/src/production.ts` (`createProductionComposer`, `ProductionCompositionFacts`, the hardcoded `degraded: ["daemon-unreachable"]`, the inline `<home>/<brand.stateDirectoryName>` template), `packages/cli/bin/delivery-os.ts` (`process.argv[1]`, `processId`, `signalHost`), `packages/cli/src/entrypoint.ts` (`runEntrypoint`, `selectPromptRequiredProgram`), `packages/cli/src/edge.ts` (`ConfigProgramOptions.daemon`, `QueueComposition`), `packages/cli/src/daemon-compose.ts` (`DaemonComposition`, `createDaemonCommandRuntime`, the 20 × 50 ms readiness poll, the detached spawn, the cross-process signal path, install/uninstall), `packages/cli/src/daemon-main.ts` (`createDaemonMainEntry`), `packages/cli/src/help.ts` (`ROOT_HELP`, `COMMAND_HELP`, `entry(...)`, `allHelpEntries`, `helpEntryFor`), `packages/cli/src/help/prompt-required-commands.ts` (`PROMPT_REQUIRED_COMMANDS`) |
+| **Delivered composition seams under test** | `packages/cli/src/production.ts` (`createProductionComposer`, `ProductionCompositionFacts`, the hardcoded `degraded: ["daemon-unreachable"]`, the inline `<home>/<brand.stateDirectoryName>` template), `packages/cli/bin/delivery-os.ts` (`process.argv[1]`, `processId`, `signalHost`), `packages/cli/src/entrypoint.ts` (`runEntrypoint`, `selectPromptRequiredProgram`), `packages/cli/src/edge.ts` (`ConfigProgramOptions.daemon`, `QueueComposition`), `packages/cli/src/daemon-compose.ts` (`DaemonComposition` including the optional re-entry environment input, `createDaemonCommandRuntime`, the 20 × 50 ms readiness poll, the detached spawn whose `environment` object carries the authoritative state binding written last, the cross-process signal path, install/uninstall), `packages/cli/src/daemon-main.ts` (`createDaemonMainEntry`), `packages/cli/src/help.ts` (`ROOT_HELP`, `COMMAND_HELP`, `entry(...)`, `allHelpEntries`, `helpEntryFor`), `packages/cli/src/help/prompt-required-commands.ts` (`PROMPT_REQUIRED_COMMANDS`) |
 | **Delivered core/adapters contracts consumed unchanged** | `packages/core/src/config/catalog.ts` (`resolveStateDirectoryScope`, `DAEMON_BRANCH`, `resolveDaemonSettings`), `packages/core/src/contracts/daemon.ts` (`DaemonProcessPort`, `DaemonStartData`, `DaemonStopData`, `DaemonInstallData`, `DaemonSupervisorDescriptor`, `DaemonInstanceRecord`), `packages/core/src/app/daemon-status.ts` (`readDaemonStatus`), `packages/core/src/app/daemon-supervisor.ts` (`installSupervisor`, `uninstallSupervisor`), `packages/core/src/domain/daemon-supervisor.ts` (`renderSystemdUnit`), `packages/adapters/src/daemon/supervisor.ts` (`createSupervisorAdapter`, `absentSupervisorDescriptor`), `packages/adapters/src/daemon/process.ts` (`createNodeProcessPort`), `packages/core/src/state/index.ts` (store, `createDaemonLockPort`) |
 | **Guards and fixtures under test** | `scripts/checks/help-guide-coverage.ts` (`runHelpGuideCoverage`, `COVERAGE_PATH`), `tests/fixtures/help-guide/coverage.json` (`commands`, `referencePages`), `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/checks/doc-conformance.test.ts` (`PROMPT_REQUIRED_PAGES`), `scripts/checks/prompt-conformance.ts`, `scripts/checks/error-table-sync.ts`, `scripts/checks/ambient-globals.ts`, `scripts/checks/workspace-entrypoints.ts`, `scripts/checks/exports-parity.ts`, `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` |
 | **Reference page under reconciliation** | `doc/planning/oss-tooling/milestones/m1/commands/daemon.md` — its `## HELP` section must carry both `--help` and `--version` for `runHelpGuideCoverage` and `PROMPT_REQUIRED_PAGES` |
 | **Precedent to mirror** | `tests/structure/coordinator-production-composition.test.ts` (GH-241: temp root, injected facts, `program.commands.<family>` defined, prompt-required membership, declared flag list) and `tests/behaviour/daemon-hermetic.test.ts` (GH-238: armed `fetch` guard plus source scans for the absence claims) |
-| **Delivered suites that must keep passing** | `tests/behaviour/daemon-{lifecycle,degradation,lock,lock-concurrency,supervisor-install,watch-state-changes,polling,reconciliation*}.test.ts`, `tests/behaviour/queue-cli.test.ts`, `tests/behaviour/queue-watch.test.ts`, `tests/behaviour/lanes.test.ts`, `tests/behaviour/lanes-watch.test.ts`, `tests/behaviour/entrypoint-*.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract}.test.ts`, `tests/golden/daemon-*.test.ts`, `tests/golden/{queue-list,lanes-list}.test.ts`, `tests/checks/doc-conformance.test.ts` |
+| **Delivered suites that must keep passing** | `tests/behaviour/daemon-{lifecycle,degradation,lock,lock-concurrency,supervisor-install,watch-state-changes,polling,reconciliation*}.test.ts`, `tests/behaviour/queue-cli.test.ts`, `tests/behaviour/queue-watch.test.ts`, `tests/behaviour/lanes.test.ts`, `tests/behaviour/lanes-watch.test.ts`, `tests/behaviour/entrypoint-{help,help-coverage,help-isolation,version,composition}.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract}.test.ts`, `tests/golden/daemon-*.test.ts`, `tests/golden/{queue-list,lanes-list}.test.ts`, `tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage}.test.ts` |
 | **Ticket** | GitHub issue `juliusz-cwiakalski/agentic-delivery-os#286` — mount the daemon lifecycle command in the entrypoint |
 | **TMPDIR caveat** | `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` — `tests/checks/ci-baseline-parity.test.ts` runs `git clone --local`, which fails on a cross-device hardlink error when `TMPDIR` is tmpfs; the canonical local gate is `TMPDIR="$PWD/tmp/tmpdir" pnpm check` |
 
 ## 3. Coverage Overview
 
-All 47 acceptance criteria map to at least one named scenario and there are no TODO or uncovered criteria. Every TC names at least one AC; no case is an orphan. The matching is deliberately uneven in one direction only: a few criteria that fail independently across several observables are covered by more than one case (AC-F2-1/AC-F2-7 add the integration-marked real re-entry, AC-F4-1 adds the status-fold agreement, AC-F5-1..AC-F5-3/AC-F5-7 add the production-wiring case, AC-F7-1 adds the manual host verification, AC-F8-4 names the delivered suites it protects), and no criterion is covered only by a manual case.
+All 49 acceptance criteria map to at least one named scenario and there are no TODO or uncovered criteria. Every TC names at least one AC; no case is an orphan. The matching is deliberately uneven in one direction only: a few criteria that fail independently across several observables are covered by more than one case (AC-F2-1/AC-F2-7 add the integration-marked real re-entry, AC-F2-10 adds the re-entry environment composition and its fail-closed residual, AC-F4-1 adds the status-fold agreement, AC-F5-1..AC-F5-3/AC-F5-7 add the production-wiring case, AC-F5-6/AC-F5-8 partition the fold-agreement and fold-divergence cells, AC-F7-1 adds the manual host verification, AC-F8-4 names the delivered suites it protects), and no criterion is covered only by a manual case.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
@@ -93,7 +94,7 @@ All 47 acceptance criteria map to at least one named scenario and there are no T
 | AC-F1-3 | `help-guide-coverage` reports zero failures (page exists, carries `--help` and `--version`, is in both `commands` and `referencePages`), reference-page parity holds, and the doc-conformance page list includes `daemon` | TC-DAEMON-013 | Covered |
 | AC-F1-4 | `<binary> daemon <start\|stop\|status\|install\|uninstall> --help` exits `0` with that subcommand's usage and options, never an unknown-flag refusal | TC-DAEMON-012, TC-DAEMON-113 | Covered |
 | AC-F1-5 | A composer with no entry path, no signal host, and no injected supervisor still registers and selects `daemon` | TC-DAEMON-014, TC-DAEMON-032 | Covered |
-| AC-F2-1 | A bare `start` spawns the entry path as `daemon start --foreground` with exactly the state-directory variable, waits for a durable `acquired` instance, and reports a receipt whose pid/socket/heartbeat come from durable state | TC-DAEMON-030, TC-DAEMON-039 | Covered |
+| AC-F2-1 | A bare `start` spawns the entry path as `daemon start --foreground` with the resolved state-directory binding written last plus the composing `PATH`, `HOME`/`USERPROFILE`, and a set working-name override, waits for a durable `acquired` instance, and reports a receipt whose pid/socket/heartbeat come from durable state | TC-DAEMON-030, TC-DAEMON-039, TC-DAEMON-040 | Covered |
 | AC-F2-2 | A readiness timeout returns `daemon.state-recovery-failed` with the timeout detail at exit `2`, claims no success, and appends nothing | TC-DAEMON-031 | Covered |
 | AC-F2-3 | With no entry path, a bare `start` runs in the invoking process, returns at readiness, stays mounted, and attempts no spawn | TC-DAEMON-032 | Covered |
 | AC-F2-4 | `start --foreground` captures the snapshot, installs both listeners, advances heartbeats, drains on `SIGTERM`, appends one `released`/`releaseReason=drain`, removes both listeners, and returns the start snapshot at exit `0` | TC-DAEMON-033, TC-DAEMON-121 | Covered |
@@ -102,21 +103,23 @@ All 47 acceptance criteria map to at least one named scenario and there are no T
 | AC-F2-7 | A second process runs `stop --mode drain`, sends `SIGTERM` to the recorded positive pid, reports `result=draining` at exit `0` without claiming completion; the resident then records `released`/`drain` and detaches delivering lanes | TC-DAEMON-036, TC-DAEMON-039 | Covered |
 | AC-F2-8 | A failed release append still terminates the loop (cancellation first), removes both listeners in the `finally`, and returns the delivered state-write identity at exit `2` | TC-DAEMON-037 | Covered |
 | AC-F2-9 | Two signals produce exactly one stop and exactly one terminal instance record, and no handler outlives the invocation | TC-DAEMON-038 | Covered |
+| AC-F2-10 | With a non-empty `PATH`, a home directory, and a `#!/usr/bin/env bun` entry script, a bare `start` spawns a child that resolves its interpreter from the forwarded `PATH`, reaches a durable `acquired` instance within the readiness window, and records its own pid; with no `PATH` or no home directory in the composing environment, the child acquires nothing, the start fails closed as AC-F2-2 states, and no state directory is resolved from an empty home | TC-DAEMON-039, TC-DAEMON-040, TC-DAEMON-041 | Covered |
 | AC-F3-1 | An absolute `<PREFIX>_STATE_DIR` override drives the store, lock, settings, socket, supervisor scope, and daemon composition to that one directory, and the edge's reported directory equals the composition's | TC-DAEMON-050 | Covered |
-| AC-F3-2 | The spawned child resolves the identical directory from the single variable it receives (no `HOME`, no `PATH`) and its `acquired` instance carries the same scope digest the parent expects | TC-DAEMON-030, TC-DAEMON-051 | Covered |
+| AC-F3-2 | The spawned child receives the state-directory binding last, alongside the forwarded `PATH`, `HOME`/`USERPROFILE`, and a non-empty working-name override, resolves the identical directory from that binding even when the forwarded environment carries a different value of the same name, and its `acquired` instance carries the same scope digest the parent expects | TC-DAEMON-030, TC-DAEMON-040, TC-DAEMON-051 | Covered |
 | AC-F3-3 | With no override the resolved directory is byte-identical to the previous `<home>/<brand.stateDirectoryName>` value | TC-DAEMON-052 | Covered |
 | AC-F3-4 | A non-absolute override keeps `daemon` composed and mounted, keeps the home-based value, throws nowhere, and leaves the invalid report to the delivered resolution edge | TC-DAEMON-053 | Covered |
-| AC-F4-1 | A plain `status` in a new process reports instance identity/pid/scope/acquisition time/mode, heartbeat age and interval, socket path and reachability, supervisor descriptor, and a `degraded` list derived from durable state at exit `0`; a live fresh instance yields empty derived markers | TC-DAEMON-060, TC-DAEMON-075 | Covered |
+| AC-F4-1 | A plain `status` in a new process reads durable state **and** probes the composed socket, reporting instance identity/pid/scope/acquisition time/mode, heartbeat age and interval, socket path and observed reachability, supervisor descriptor, and a `degraded` list derived from durable state at exit `0`; a live fresh instance yields empty derived markers | TC-DAEMON-060, TC-DAEMON-075 | Covered |
 | AC-F4-2 | `status --live` probes the composed transport and returns `live: true` with the socket reachable and the heartbeat `running` at exit `0` | TC-DAEMON-061 | Covered |
-| AC-F4-3 | With no reachable daemon, `status --live` fails closed as `daemon.socket-unreachable` (or `daemon.heartbeat-stale` when the socket answers but the beat is stale) at exit `2`, while plain `status` remains a degraded success at exit `0` | TC-DAEMON-062 | Covered |
+| AC-F4-3 | With no reachable daemon, `status --live` fails closed as `daemon.socket-unreachable` (or `daemon.heartbeat-stale` when the socket answers but the beat is stale) at exit `2`, while plain `status` probes the same socket, reports it unreachable, carries `daemon-unreachable` in `degraded`, claims no live status, and exits `0` | TC-DAEMON-062 | Covered |
 | AC-F4-4 | A configured socket path and heartbeat interval reach the composed runtime (observable in the status payload and in advancing heartbeat ordinals); when configuration cannot be acquired the same resolver runs over an empty branch and shipped defaults apply | TC-DAEMON-063 | Covered |
-| AC-F5-1 | A live instance (`acquired` or `taken-over`) with a heartbeat belonging to it and an age within the lock staleness yields `degraded: []` from both `queue list` and `lanes list` | TC-DAEMON-070, TC-DAEMON-077 | Covered |
+| AC-F5-1 | A live instance (`acquired` or `taken-over`) with a heartbeat belonging to it and an age strictly below the lock staleness yields `degraded: []` from both `queue list` and `lanes list` | TC-DAEMON-070, TC-DAEMON-077 | Covered |
 | AC-F5-2 | A latest operation of `released` or `immediate-stop` yields `degraded: ["daemon-unreachable"]` from both reads | TC-DAEMON-071, TC-DAEMON-077 | Covered |
 | AC-F5-3 | No instance record at all yields `degraded: ["daemon-unreachable"]` at exit `0` from both reads | TC-DAEMON-072, TC-DAEMON-077 | Covered |
-| AC-F5-4 | An `acquired` instance whose latest heartbeat is older than the lock staleness yields `degraded: ["daemon-unreachable"]` from both reads | TC-DAEMON-073 | Covered |
+| AC-F5-4 | An `acquired` instance whose latest heartbeat age is at or beyond the lock staleness yields `degraded: ["daemon-unreachable"]` from both reads | TC-DAEMON-073 | Covered |
 | AC-F5-5 | A queue or lanes watch re-resolves at each iteration, so a start and then a release flip the marker in both directions within one iteration | TC-DAEMON-074 | Covered |
-| AC-F5-6 | For the same store and instant, no-degradation implies the status fold reports `running`, and degradation implies it does not — one shared staleness bound | TC-DAEMON-060, TC-DAEMON-075 | Covered |
+| AC-F5-6 | For a store whose latest heartbeat is owned by the instance record, or which has no heartbeat at all, no-degradation implies the status fold reports `running`, and degradation implies it reports `stale` or `stopped` — one shared bound applied as strictly-below on both surfaces | TC-DAEMON-060, TC-DAEMON-070, TC-DAEMON-073, TC-DAEMON-075 | Covered |
 | AC-F5-7 | A torn or unreadable instance or heartbeat read yields `["daemon-unreachable"]`, opens no socket, raises no error identity, and fabricates nothing; an unreadable queue store still fails through its own delivered `state.*` identity | TC-DAEMON-076, TC-DAEMON-077 | Covered |
+| AC-F5-8 | An unowned heartbeat (no instance record, or a latest heartbeat whose `instanceId` is not the latest instance's) with a `beatAt` strictly below the bound yields `["daemon-unreachable"]` from both reads while the delivered status fold reports `running` for the same store and instant, with the divergence named as intentional ownership-versus-liveness | TC-DAEMON-078 | Covered |
 | AC-F6-1 | A production start writes an instance `pid` equal to the composing process id, a positive integer never `0`, reported by both `daemon status` and the start receipt | TC-DAEMON-090 | Covered |
 | AC-F6-2 | A durable instance record whose pid is `0`, negative, or non-integer makes a cross-process `stop` return `daemon.state-recovery-failed` at exit `2` with **zero** process-port signal calls | TC-DAEMON-091 | Covered |
 | AC-F6-3 | A positive pid receives `SIGTERM` for `drain` and `SIGINT` for `immediate`, that pid only, no group target; a failed signal call returns the delivered recovery identity at exit `2` | TC-DAEMON-036, TC-DAEMON-092 | Covered |
@@ -128,17 +131,17 @@ All 47 acceptance criteria map to at least one named scenario and there are no T
 | AC-F8-1 | No error-table row is added, removed, or reworded; every identity this change reaches is an existing row; every path exits only `0`, `1`, or `2` | TC-DAEMON-110 | Covered |
 | AC-F8-2 | `STATE_SCHEMA_VERSION` is unchanged, no record kind or payload schema is added, no migration exists, and the only record-shape change is the value of `daemon.instance.pid` | TC-DAEMON-111 | Covered |
 | AC-F8-3 | An array-valued `degraded` produces byte-identical `queue list`, `lanes list`, and mutation payloads; omitting `degraded` keeps the delivered `["daemon-unreachable"]` fallback | TC-DAEMON-112 | Covered |
-| AC-F8-4 | The delivered daemon, queue, lanes, transport, entrypoint-help, parity, scheduling-contract, vocabulary, and doc-conformance suites pass with only the declared mount updates and no semantic assertion change | TC-DAEMON-113, TC-DAEMON-010, TC-DAEMON-012, TC-DAEMON-013 | Covered |
+| AC-F8-4 | The delivered daemon, queue, lanes, transport, entrypoint-help, entrypoint help coverage, parity, scheduling-contract, vocabulary, and doc-conformance suites pass with only the declared mount updates (derived from the tree: the family lists, the `daemon` absence assertions, the command enumeration, the coverage inventory rows, the conformance page list) and no semantic assertion change | TC-DAEMON-113, TC-DAEMON-010, TC-DAEMON-012, TC-DAEMON-013 | Covered |
 | AC-NFR-1 | Any `--help` or `--version` performs zero state, configuration, git, network, or filesystem reads, writes nothing, and invokes no command composer | TC-DAEMON-114 | Covered |
-| AC-NFR-2 | A `queue list` or `lanes list` degradation resolution performs at most two durable state reads, opens no socket, probes no process, sleeps zero times, and keeps p95 within 10% of the delivered baseline | TC-DAEMON-076, TC-DAEMON-120 | Covered |
+| AC-NFR-2 | A `queue list` or `lanes list` degradation resolution performs at most two **additional** daemon-fact reads (latest instance, latest heartbeat) beyond the store reads the projection already performs, opens no socket, probes no process, sleeps zero times, and keeps p95 within 10% of the delivered baseline | TC-DAEMON-076, TC-DAEMON-120 | Covered |
 | AC-NFR-3 | A foreground daemon handling `SIGTERM` stops, appends its release, and exits within 1 000 ms, with loop cancellation observed within 250 ms | TC-DAEMON-033, TC-DAEMON-121 | Covered |
 | AC-NFR-4 | `daemon status` p95 ≤ 1 000 ms and `daemon status --live` p95 ≤ 2 000 ms on the reference store, with every output inside the delivered bounds | TC-DAEMON-122 | Covered |
-| AC-NFR-5 | No new output, record, or error evidence carries a credential, token, prompt, transcript, diff, or repository content; the only new environment value is an absolute directory path | TC-DAEMON-123 | Covered |
-| AC-NFR-6 | A repeated install is idempotent, a stop against a released instance is a `noop` at exit `0`, and a start while an instance is live returns `daemon.already-running` at exit `2` appending nothing | TC-DAEMON-124 | Covered |
+| AC-NFR-5 | No new output, record, or error evidence carries a credential, token, prompt, transcript, diff, or repository content; the only environment value this change introduces into a contract is an absolute directory path, and the re-entry environment forwards only the composing process's own `PATH`, `HOME`/`USERPROFILE`, and working-name override | TC-DAEMON-123, TC-DAEMON-040 | Covered |
+| AC-NFR-6 | A repeated install is idempotent, a stop against a released instance is a `noop` at exit `0`, and a start while an instance is live returns `daemon.already-running` at exit `1` (the delivered `user-validation` projection class for that identity) appending nothing | TC-DAEMON-124 | Covered |
 
-**Capability coverage** (every F-# has at least one TC): F-1 → 010, 011, 012, 013, 014, 053, 104; F-2 → 030–039; F-3 → 030, 036, 050–053, 090; F-4 → 060–063, 070–077; F-5 → 060, 070–077, 090; F-6 → 033–038, 060, 090–092, 124; F-7 → 100–105, 124; F-8 → 010, 014, 032, 035, 052, 077, 110–114.
+**Capability coverage** (every F-# has at least one TC): F-1 → 010, 011, 012, 013, 014, 053, 104; F-2 → 030–041; F-3 → 030, 036, 039, 040, 041, 050–053, 090; F-4 → 060–063, 070–077; F-5 → 060, 070–078, 090; F-6 → 033–038, 060, 090–092, 124; F-7 → 100–105, 124; F-8 → 010, 014, 032, 035, 052, 077, 110–114.
 
-**Decision coverage**: DEC-1/DEC-12/DEC-13 → 010–014; DEC-2 → 030, 032, 039, 050, 051, 100; DEC-3 → 033–038, 121; DEC-4 → 033, 035; DEC-5 → 050–053; DEC-6 → 060–063; DEC-7 → 070–077, 120; DEC-8 → 090–092, 124; DEC-9 → 100–104; DEC-10 → 100; DEC-11 → 102, 105; DEC-14 → 060; DEC-15 → 060; DEC-16 → 051.
+**Decision coverage**: DEC-1/DEC-12/DEC-13 → 010–014; DEC-2 → 030, 032, 039, 040, 050, 100; DEC-3 → 033–038, 121; DEC-4 → 033, 035; DEC-5 → 050–053; DEC-6 → 060–063; DEC-7 → 070–078, 120; DEC-8 → 090–092, 124; DEC-9 → 100–104; DEC-10 → 100; DEC-11 → 102, 105; DEC-14 → 060; DEC-15 → 060; DEC-16 → 030, 039, 040, 041, 051, 123.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -146,19 +149,19 @@ The specification declares no REST/HTTP endpoint (API-#) and adds no listener, r
 
 | Element | TC ID(s) | Observable assertion |
 |---|---|---|
-| EVT-1 `daemon.instance` (unchanged) | TC-DAEMON-030, 031, 033, 034, 036, 038, 051, 070, 071, 090 | Acquisition carries the composing pid (a positive integer, never `0`), release carries `releaseReason=drain`/`immediate`, `immediate-stop` is its own operation, and the latest operation is the first half of the reachability predicate. No new field, kind, or schema. |
-| EVT-2 `daemon.heartbeat` (unchanged) | TC-DAEMON-033, 060, 061, 062, 070, 073, 075 | `instanceId` plus `beatAt` are the second half of the predicate; the age bound is the configured lock staleness, identical to the status fold's bound; ordinals advance one per interval while resident. |
+| EVT-1 `daemon.instance` (unchanged) | TC-DAEMON-030, 031, 033, 034, 036, 038, 040, 051, 070, 071, 090 | Acquisition carries the composing pid (a positive integer, never `0`), release carries `releaseReason=drain`/`immediate`, `immediate-stop` is its own operation, and the latest operation is the first half of the reachability predicate. No new field, kind, or schema. |
+| EVT-2 `daemon.heartbeat` (unchanged) | TC-DAEMON-033, 060, 061, 062, 070, 073, 075, 078 | `instanceId` plus `beatAt` are the second half of the predicate, and the `instanceId` must match the instance's identity before the freshness bound is consulted at all; the age bound is the configured lock staleness, identical to the status fold's bound, and the unowned family is where the two surfaces intentionally diverge. Ordinals advance one per interval while resident. |
 | EVT-3 `daemon.lane` (unchanged) | TC-DAEMON-036 | A drain appends `detached` for every previously `delivering` lane; this change reads that evidence and appends nothing of its own. |
-| DM-1 `DaemonComposition.pid?` / `signalHost?` | TC-DAEMON-030, 033–038, 090, 091, 092, 114 | Both inputs are optional; absent keeps the delivered behaviour (no signal lifetime, engine `0` fallback), present changes only the recorded pid and the lifetime owner. No existing field is renamed, retyped, or made required. |
+| DM-1 `DaemonComposition.pid?` / `signalHost?` / re-entry environment input | TC-DAEMON-030, 033–038, 040, 041, 090, 091, 092, 114 | All three inputs are optional; absent keeps the delivered behaviour (no signal lifetime, engine `0` fallback, the delivered spawn environment). The re-entry environment input carries `PATH`, `HOME`/`USERPROFILE`, and a set working-name override and is merged **beneath** the state-directory binding, which is written last and wins outright. No existing field is renamed, retyped, or made required. |
 | DM-2 Foreground lifetime contract | TC-DAEMON-033, 034, 035, 037, 038, 121 | Start → snapshot → listeners → loop → first signal selects the mode → stop → listeners removed in `finally` → loop awaited → captured snapshot (or the stop failure) returned. No listener outlives the invocation; cancellation precedes the release append. |
-| DM-3 `QueueComposition.degraded` union | TC-DAEMON-070–077, 112, 120 | Array or resolver; the array member and the absent fallback keep the delivered semantics; resolution happens at schedule, mutation outcome, lanes read, and every watch iteration. |
-| DM-4 Reachability predicate | TC-DAEMON-070–077 | Pure function of the latest operation, the latest heartbeat's instance identity and `beatAt`, the injected now, and the configured lock staleness: reachable iff operation ∈ {`acquired`,`taken-over`} **and** heartbeat belongs to that instance **and** `now − beatAt ≤ lockStalenessMs`. Otherwise exactly `["daemon-unreachable"]`. |
-| DM-5 `ProductionCompositionFacts` additive facts | TC-DAEMON-030, 032, 050, 051, 100, 104 | `daemonEntry?` supplies the entry path from `process.argv[1]`; `supervisor?` is a pass-through so install is provable without a live systemd; `processId`/`signalHost` are forwarded. No existing fact changes. |
-| DM-6 Install identity values | TC-DAEMON-050, 051, 060, 100, 101, 123 | `binary` = absolute entry path; `unit` = `${brand.binaryName}-daemon.service`; `supervisorConfigDirectory` = `XDG_CONFIG_HOME` (absolute, non-empty) else `<home>/.config`; `environmentName` = the exact `<PREFIX>_STATE_DIR`; `scope` = the delivered digest of the resolved directory. |
+| DM-3 `QueueComposition.degraded` union | TC-DAEMON-070–078, 112, 120 | Array or resolver; the array member and the absent fallback keep the delivered semantics; resolution happens at schedule, mutation outcome, lanes read, and every watch iteration. |
+| DM-4 Reachability predicate | TC-DAEMON-070–078 | Pure function of the latest operation, the latest heartbeat's instance identity and `beatAt`, the injected now, and the configured lock staleness: reachable **iff** operation ∈ {`acquired`,`taken-over`} **and** a heartbeat exists **and** its `instanceId` equals that instance's **and** `now − beatAt < lockStalenessMs` strictly. Otherwise exactly `["daemon-unreachable"]`. The ordering matters: ownership gates freshness, so an unowned heartbeat is unreachable at any age, and the delivered fold's `running` verdict for that family is the one declared divergence (AC-F5-8). |
+| DM-5 `ProductionCompositionFacts` additive facts | TC-DAEMON-030, 032, 040, 041, 050, 051, 100, 104 | `daemonEntry?` supplies the entry path from `process.argv[1]`; `supervisor?` is a pass-through so install is provable without a live systemd; `processId`/`signalHost` are forwarded; the re-entry environment is derived inside the composer from the injected environment record and `homeDirectory`, so no ambient read is added. No existing fact changes. |
+| DM-6 Install identity values | TC-DAEMON-050, 051, 060, 100, 101, 123 | `binary` = absolute entry path; `unit` = `${brand.binaryName}-daemon.service`; `supervisorConfigDirectory` = `XDG_CONFIG_HOME` (absolute, non-empty) else `<home>/.config`; `environmentName` = the exact `<PREFIX>_STATE_DIR`; `scope` = the delivered digest of the resolved directory. The unit's environment binding stays the single state-directory variable: the re-entry environment is a spawn concern and adds no `Environment=` line, because systemd supplies its own `PATH` and `HOME`. |
 | DM-7 No state-schema change | TC-DAEMON-111, 113 | `STATE_SCHEMA_VERSION` unchanged; no kind, payload, migration, or backfill added; no `daemon` configuration key added. |
-| Appendix D mount exit matrix | TC-DAEMON-031, 034, 036, 037, 053, 060, 062, 090, 091, 092, 102, 104, 110, 124 | Every listed outcome resolves to exactly one identity and one exit digit; a missing daemon is never an error on a state-derived surface; every non-zero outcome is a delivered identity. |
+| Appendix D mount exit matrix | TC-DAEMON-031, 034, 036, 037, 041, 053, 060, 062, 070, 073, 090, 091, 092, 102, 104, 110, 124 | Every listed outcome resolves to exactly one identity and one exit digit; a missing daemon is never an error on a state-derived surface; `daemon.already-running` and `daemon.takeover-refused` exit `1` (`user-validation`), not `2`; every non-zero outcome is a delivered identity. |
 | Appendix E identity matrix | TC-DAEMON-050, 051, 100, 101 | The composing process, the detached child, the installed unit, the store/lock/socket, and the read side observe one directory, one entry path, one variable name, one unit name, and one scope digest. |
-| Appendix F composition matrix | TC-DAEMON-050, 060, 063, 077, 100 | Every production value named in the matrix is the value the composition actually uses: resolved store/lock/settings/restart bound, resolved directory, unit, entry path, environment name, config root, pid, signal host, transport and socket path, no wake, no executor, `mergeCodePath: "absent"`, durable resolver. |
+| Appendix F composition matrix | TC-DAEMON-030, 040, 050, 060, 063, 077, 100 | Every production value named in the matrix is the value the composition actually uses: resolved store/lock/settings/restart bound, resolved directory, unit, entry path, environment name, re-entry environment derived from the injected facts, config root, pid, signal host, transport and socket path, no wake, no executor, `mergeCodePath: "absent"`, durable resolver. |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -166,30 +169,34 @@ The specification declares no REST/HTTP endpoint (API-#) and adds no listener, r
 |---|---|---|---|
 | NFR-1 | Help/version purity: 0 state, config, git, network, or filesystem reads; 0 writes; 0 composer invocations | TC-DAEMON-114, TC-DAEMON-011, TC-DAEMON-012 | Covered |
 | NFR-2 | Composition determinism: identical brand and facts yield an identical composed program and help inventory; no ambient environment read outside the injected facts | TC-DAEMON-010, TC-DAEMON-014, TC-DAEMON-063, TC-DAEMON-113 | Covered |
-| NFR-3 | Degradation read cost: ≤ 2 durable reads per projection, 0 socket connects, 0 process probes, 0 sleeps, p95 regression ≤ 10% | TC-DAEMON-076, TC-DAEMON-120 | Covered (GAP-T6) |
-| NFR-4 | Start readiness: a receipt or a fail-closed outcome within 20 × 50 ms; 0 exit-`0` results without a durable `acquired` instance | TC-DAEMON-030, TC-DAEMON-031 | Covered |
+| NFR-3 | Degradation read cost: ≤ 2 **additional** daemon-fact reads per projection, 0 socket connects, 0 process probes, 0 sleeps, p95 regression ≤ 10% | TC-DAEMON-076, TC-DAEMON-120 | Covered (GAP-T6) |
+| NFR-4 | Start readiness: a receipt or a fail-closed outcome within 20 × 50 ms; 0 exit-`0` results without a durable `acquired` instance | TC-DAEMON-030, TC-DAEMON-031, TC-DAEMON-040, TC-DAEMON-041 | Covered |
 | NFR-5 | Foreground stop latency: stop + release + exit ≤ 1 000 ms, loop cancellation ≤ 250 ms | TC-DAEMON-121 | Covered |
 | NFR-6 | Command latency: `status` p95 ≤ 1 000 ms, `status --live` p95 ≤ 2 000 ms, install/uninstall p95 ≤ 2 000 ms excluding the supervisor runner | TC-DAEMON-122, TC-DAEMON-100 | Covered (GAP-T6) |
-| NFR-7 | Exit taxonomy: every outcome exits only `0`/`1`/`2` and every non-zero resolves to a delivered identity | TC-DAEMON-031, 037, 053, 060, 062, 091, 092, 102, 104, 110, 124 | Covered |
+| NFR-7 | Exit taxonomy: every outcome exits only `0`/`1`/`2` and every non-zero resolves to a delivered identity | TC-DAEMON-031, 037, 041, 053, 060, 062, 091, 092, 102, 104, 110, 124 | Covered |
 | NFR-8 | Signal safety: 0 signals to a non-positive pid, 0 signals to a process group, 0 name- or pattern-based kills | TC-DAEMON-091, TC-DAEMON-092, TC-DAEMON-123 | Covered |
 | NFR-9 | Idempotence: repeated install idempotent; stop against released/absent is `noop` exit `0`; repeated start while live is `daemon.already-running` and appends nothing | TC-DAEMON-034, TC-DAEMON-103, TC-DAEMON-124 | Covered |
-| NFR-10 | Privacy: 0 credentials/tokens/prompts/transcripts/diffs/repo contents in new output; the only new environment value is an absolute directory path | TC-DAEMON-123, TC-DAEMON-100 | Covered |
+| NFR-10 | Privacy: 0 credentials/tokens/prompts/transcripts/diffs/repo contents in new output; the only environment value this change introduces into a contract is an absolute directory path, and the re-entry environment forwards only the composing process's own `PATH`, `HOME`/`USERPROFILE`, and working-name override | TC-DAEMON-123, TC-DAEMON-100, TC-DAEMON-040 | Covered |
 | NFR-11 | Bounded output: existing envelope and human-output bounds unchanged; root listing and each help page within the delivered help bounds | TC-DAEMON-011, TC-DAEMON-012, TC-DAEMON-122 | Covered |
 | NFR-12 | No new external dependency: 0 new package dependencies, 0 new listeners, 0 network egress | TC-DAEMON-110, TC-DAEMON-113 | Covered |
 
 ### 3.4 Coverage-Matrix Integrity
 
-- **Uncovered ACs**: none (47/47 in §3.1). **Orphan TCs**: none — every TC in §5.1 names at least one AC and appears in §5.2 and §7 (50/50/50).
+- **Uncovered ACs**: none (49/49 in §3.1). **Orphan TCs**: none — every TC in §5.1 names at least one AC and appears in §5.2 and §7 (53/53/53).
 - **Intentional duplicate coverage and why each duplicate fails independently:**
   - AC-F1-1 spans the prompt-required membership check, the production registration, and the full-suite containment check because the set, the composition, and the containment path regress separately (`TC-DAEMON-010`, `-014`, `-113`).
   - AC-F1-5 is a distinct criterion from AC-F1-1 because "registered with full facts" and "registered with every optional fact absent" fail independently; the second is the one that would turn a conditional mount into `fallback.internal` (`TC-DAEMON-014`).
   - AC-F2-1 and AC-F2-7 carry the same shapes in two places: the deterministic fake-port proof and one bounded real-spawn smoke. The real smoke exists because a fake port can agree with a spawn request that the real `node:child_process` adapter could never satisfy (RSK-2); it asserts only the envelope the fake also asserts (`TC-DAEMON-039`, GAP-T2).
+  - AC-F2-10 is split across three cases because its two directions fail independently and its executable direction needs a real interpreter: the composition of the environment set is observable without spawning (`-040`), the real `#!/usr/bin/env bun` resolution needs a real spawn (`-039`), and the stripped-caller residual is a distinct fail-closed outcome (`-041`). No two of them assert different verdicts for the same fixture.
+  - AC-F2-1, AC-F2-10 and AC-F3-2 overlap on `TC-DAEMON-040` by design: the environment set is simultaneously the re-entry contract, the interpreter-resolution input, and the reason the child lands on the parent's directory. The case asserts the key set, the ordering, and the derived-value fallback once, and each criterion reads a different part of that assertion.
   - AC-F4-1 and AC-F5-6 both read the status fold, but AC-F4-1 asserts the payload's completeness and AC-F5-6 asserts agreement of the staleness verdict between two surfaces; a complete payload can still disagree with the queue read (`TC-DAEMON-060`, `-075`).
   - AC-F5-1..AC-F5-3 and AC-F5-7 are re-asserted at the production wiring level because a correct pure resolver can be wired to a hardcoded constant; the wiring case would fail while every predicate case passes (`TC-DAEMON-077`).
+  - AC-F5-6 and AC-F5-8 partition the record-set cells instead of contradicting each other: `-075` asserts agreement only where the instance owns the heartbeat or no heartbeat exists, and `-078` asserts the unowned family where the predicate degrades and the fold says `running`. `TC-DAEMON-072` keeps the orphan-heartbeat fixture as a no-fabrication guard but makes no claim about the fold, so no case asserts an outcome another case denies.
   - AC-F7-1 is proven twice: through the injected supervisor port for content and command sequence (deterministic, GAP-T4) and once manually on a real user manager for loadability (`TC-DAEMON-105`).
   - AC-F8-4 repeats the mount cases (010/012/013) because it is the criterion that says the *whole* delivered suite passes with only those updates; it is verified both per-file and as a full-suite run (`TC-DAEMON-113`).
-- **Negative and refusal paths are first-class cases, not notes:** readiness timeout (`-031`), pid-`0` stop refusal with zero signal calls (`-091`), unsupported supervisor with no unit written (`-102`), install with no entry path (`-104`), invalid non-absolute state-directory override (`-053`), torn/unreadable state reads (`-076`), uncomposed containment must not fire (`-010`, `-014`, `-053`), and a failed release that still terminates (`-037`).
-- **Both directions of degradation are asserted, never one:** live ⇒ `[]` (`-070`), released/absent/stale/torn ⇒ `["daemon-unreachable"]` (`-071`..`-073`, `-076`), and the watch flip asserts both directions inside one iteration (`-074`).
+- **Negative and refusal paths are first-class cases, not notes:** readiness timeout (`-031`), the stripped-`PATH`/`HOME` caller (`-041`), pid-`0` stop refusal with zero signal calls (`-091`), unsupported supervisor with no unit written (`-102`), install with no entry path (`-104`), invalid non-absolute state-directory override (`-053`), torn/unreadable state reads (`-076`), uncomposed containment must not fire (`-010`, `-014`, `-053`), and a failed release that still terminates (`-037`).
+- **Both directions of degradation are asserted, never one:** live with an owning heartbeat strictly below the bound ⇒ `[]` (`-070`), released/absent/at-or-beyond-bound/torn ⇒ `["daemon-unreachable"]` (`-071`..`-073`, `-076`), the unowned family ⇒ degraded while the fold reports `running` (`-078`), and the watch flip asserts both directions inside one iteration (`-074`).
+- **The staleness bound is one comparison, applied twice:** `now − beatAt < lockStalenessMs` is asserted at the boundary from the degraded side (`-073` step 2) and from the non-degraded side just below it (`-070`), so a `<=` drift fails at least one case rather than sliding between them.
 - **Additive contract proofs:** byte-identical array-valued output (`-112`), unchanged error-table identities and counts (`-110`), unchanged `STATE_SCHEMA_VERSION` (`-111`), unchanged help/version purity (`-114`), and `--help` for all five subcommands (`-012`).
 
 ## 4. Test Types and Layers
@@ -199,23 +206,23 @@ All TypeScript tests use `bun:test` with `describe`/`test`; fixtures are never n
 | Layer | Runner / invocation | Location | Covers |
 |---|---|---|---|
 | Static / diff | `git diff --check`; changed-file naming and path review | change artifacts and touched docs | Gate precondition for every TC |
-| Unit (pure predicate and rendering) | `bun test tests/behaviour/daemon-degradation-*.test.ts` importing the predicate and the unit renderer directly | the durable reachability predicate in the composition tier, `renderSystemdUnit` | TC-DAEMON-070–076 (predicate cases), 100 (unit text) |
+| Unit (pure predicate and rendering) | `bun test tests/behaviour/daemon-degradation-*.test.ts` importing the predicate and the unit renderer directly | the durable reachability predicate in the composition tier, `renderSystemdUnit` | TC-DAEMON-070–076, 078 (predicate cases), 100 (unit text) |
 | Structure / invariant | `bun test tests/structure/daemon-production-composition.test.ts tests/structure/daemon-degradation-wiring.test.ts tests/structure/{content-inventory,error-table,state-contract,daemon-vocabulary}.test.ts` | `packages/cli/src/{production,daemon-compose,entrypoint,help}.ts`; source scans with temp-copy mutants | TC-DAEMON-010, 013, 014, 077, 110, 111, 113 |
-| Behaviour (CLI in-process) | `bun test tests/behaviour/daemon-*.test.ts tests/behaviour/queue-*.test.ts tests/behaviour/lanes*.test.ts tests/behaviour/entrypoint-*.test.ts` | `tests/fixtures/daemon/mount-harness.ts` (new), `tests/fixtures/state/harness.ts`, `tests/fixtures/entrypoint/programs.ts`, in-process `runEntrypoint` over temp state roots | TC-DAEMON-010–014, 030–038, 050–053, 060–063, 070–077, 090–092, 100–104, 110–114, 120, 124 |
+| Behaviour (CLI in-process) | `bun test tests/behaviour/daemon-*.test.ts tests/behaviour/queue-*.test.ts tests/behaviour/lanes*.test.ts tests/behaviour/entrypoint-*.test.ts` | `tests/fixtures/daemon/mount-harness.ts` (new), `tests/fixtures/state/harness.ts`, `tests/fixtures/entrypoint/programs.ts`, in-process `runEntrypoint` over temp state roots | TC-DAEMON-010–014, 030–041, 050–053, 060–063, 070–078, 090–092, 100–104, 110–114, 120, 124 |
 | Contract / additivity | `bun test tests/checks/{error-table-sync,doc-conformance,reference-page-parity,help-guide-coverage}.test.ts tests/golden/{queue-list,lanes-list,daemon-install}.test.ts` | committed fixtures and goldens | TC-DAEMON-013, 110, 111, 112, 113 |
 | Golden | `bun test tests/golden/daemon-*.test.ts tests/golden/{queue-list,lanes-list}.test.ts` | committed normalized fixtures | TC-DAEMON-060, 112 |
 | Type-level | `pnpm typecheck` (includes `tests/types/tsconfig.json`) | `tests/types/daemon-mount.type-test.ts` (new) | TC-DAEMON-111, 113 |
 | Checks / mutants / hermeticity | `bun test tests/checks/{daemon-mutants,daemon-hermetic,daemon-privacy,exit-code-literals}.test.ts` | temp-copy mutants, armed guards | TC-DAEMON-077, 110, 114, 123 |
 | Boundaries | `bun test tests/boundaries`; `pnpm check:boundaries` | production `.dependency-cruiser.cjs`, ambient-globals AST guard, workspace entrypoints, fixture-coverage meta-check | TC-DAEMON-113 |
 | Performance | `bun test tests/behaviour/daemon-{degradation-read-cost,status-performance,foreground-stop-latency}.test.ts` | synthetic reference store; injected clock; p95 over declared iterations with the environment recorded | TC-DAEMON-120, 121, 122 |
-| Integration (bounded, real child) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | temp-rooted real detached spawn; hard timeout; reaped in `finally` | TC-DAEMON-039 |
+| Integration (bounded, real child) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | temp-rooted real detached spawn of a `#!/usr/bin/env bun` fixture entry; hard timeout; reaped in `finally` | TC-DAEMON-039 |
 | Manual (host) | phase-9 operator verification on a Linux host with a live user manager | temp `XDG_CONFIG_HOME`; record in §10 | TC-DAEMON-105 |
 
 **Layer rules that bind every TC** (mirroring the delivered suite discipline):
 
 1. **Hermetic by construction.** Production modules are imported and fakes injected. No suite reads a real user state directory, an ambient `HOME`, `process.env`, or `Bun.env`; no suite opens a real socket, sends a real signal, or installs a real unit. A suite that cannot resolve an injection seam fails naming the missing contract.
 2. **One injected state seam.** Every durable read and write goes through the delivered `StateStorePort` over a `mkdtemp` root with a fixed clock and deterministic fence/identity tokens (`tests/fixtures/state/harness.ts`). Process-boundary durability is proven by closing the writer handle and reopening a fresh handle over the same root (GAP-T3), never by a second OS process.
-3. **One injected process seam.** The delivered `DaemonProcessPort` is the only process boundary: `spawnDetached`, `signal`, `isAlive`, and `startTimeMs` are recording fakes. The default suite asserts zero real `spawn`, zero real `kill`, and zero `process.kill` calls.
+3. **One injected process seam.** The delivered `DaemonProcessPort` is the only process boundary: `spawnDetached`, `signal`, `isAlive`, and `startTimeMs` are recording fakes. The default suite asserts zero real `spawn`, zero real `kill`, and zero `process.kill` calls. The re-entry environment is asserted from the recorded request, never read from the test process's own `process.env`: the harness injects an environment record and the case asserts the request is exactly the declared set derived from it.
 4. **One injected supervisor seam.** `SupervisorPort` (DM-5) is a recording fake that captures the unit path and content, the enable and linger commands, the disable and remove calls, and the injected failures (unknown platform, linger failure). No automated case calls `systemctl` (GAP-T4).
 5. **Fixed facts.** Brand, clock, composing pid, ids, config branches, environment records, and home directories are injected and constant per case. `Date.now`, `Math.random`, `performance.now`, and timers are forbidden in the resolver and the composition's decision path; timing cases use an injected clock for ordering and a bounded real stopwatch only for the wall-clock bound.
 6. **Temp roots only, under the repo tree.** Every filesystem-touching case creates its root with `mkdtemp` under `$REPO_ROOT/tmp/` (the shape the delivered suites already use) or `tmpdir()` where the existing suite does, sets `HOME`, `XDG_CONFIG_HOME`, and `<PREFIX>_STATE_DIR` inside it, and removes it in `afterEach` including on failure. A guard rejects any root equal to `process.cwd()`, the real user state directory, or the real `$HOME`.
@@ -225,7 +232,7 @@ All TypeScript tests use `bun:test` with `describe`/`test`; fixtures are never n
 
 ## 5. Test Scenarios
 
-TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and follow the capability order of the specification: `01x` mount, prompt-required membership, help, and reference coverage; `03x` detached start, readiness, foreground lifetime, cross-process stop, and the one integration-marked real spawn; `05x` the single state-directory scope; `06x` the composed control plane and status; `07x` degradation resolved from durable state; `09x` the composing pid and fail-closed stop; `10x` install and uninstall identity; `11x` the additive contract and non-regression; `12x` the measured NFRs. New sequences append at the end of their block; no ID is reused for a different scenario.
+TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and follow the capability order of the specification: `01x` mount, prompt-required membership, help, and reference coverage; `03x` detached start, readiness, foreground lifetime, and cross-process stop, with `040`/`041` appended to that block for the re-entry environment (composition and fail-closed residual) and `039` the one integration-marked real spawn; `05x` the single state-directory scope; `06x` the composed control plane and status; `07x` degradation resolved from durable state, with `078` appended for the unowned-heartbeat family; `09x` the composing pid and fail-closed stop; `10x` install and uninstall identity; `11x` the additive contract and non-regression; `12x` the measured NFRs. New sequences append at the end of their block; no ID is reused for a different scenario.
 
 ### 5.1 Scenario Index
 
@@ -236,7 +243,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TC-DAEMON-012 | Every daemon subcommand answers `--help` at exit `0` instead of an unknown-flag refusal | Happy Path | Critical | High | AC-F1-4, AC-F8-4; F-1; NFR-1 |
 | TC-DAEMON-013 | The help, parity, and conformance guards pass with the daemon page and its inventory rows | Happy Path | Critical | High | AC-F1-3, AC-F8-4; F-1; DM-6 |
 | TC-DAEMON-014 | A composition missing every optional input still registers and selects `daemon` | Edge Case | Critical | High | AC-F1-5, AC-F1-1; F-1, F-8; NFR-2 |
-| TC-DAEMON-030 | A bare start re-enters the entry path with one environment variable and reports a durable receipt | Happy Path | Critical | Critical | AC-F2-1, AC-F3-2; F-2, F-3; DM-1, DM-5; EVT-1; NFR-4 |
+| TC-DAEMON-030 | A bare start re-enters the entry path with the declared environment and reports a durable receipt | Happy Path | Critical | Critical | AC-F2-1, AC-F3-2; F-2, F-3; DM-1, DM-5; EVT-1; NFR-4 |
 | TC-DAEMON-031 | A readiness timeout is a classified failure that claims nothing and appends nothing | Negative | Critical | Critical | AC-F2-2; F-2; NFR-4, NFR-7 |
 | TC-DAEMON-032 | With no entry path the command stays mounted and the start returns at readiness in-process | Edge Case | Critical | High | AC-F2-3, AC-F1-5; F-2, F-8 |
 | TC-DAEMON-033 | `SIGTERM` drains a foreground daemon, records one release, removes both listeners, and returns the start snapshot | Happy Path | Critical | Critical | AC-F2-4, AC-NFR-3; F-2; DM-1, DM-2; EVT-1; NFR-5 |
@@ -245,23 +252,26 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TC-DAEMON-036 | A second process drains the resident daemon over the recorded positive pid and reports `draining` | Happy Path | Critical | Critical | AC-F2-7, AC-F6-3; F-2, F-6; EVT-1, EVT-3 |
 | TC-DAEMON-037 | A failed release still terminates the loop, removes the listeners, and exits `2` with the state-write identity | Negative | Critical | Critical | AC-F2-8; F-2; DM-2; NFR-5, NFR-7 |
 | TC-DAEMON-038 | A second signal produces exactly one stop and exactly one terminal record | Corner Case | Critical | High | AC-F2-9; F-2; DM-2; NFR-9 |
-| TC-DAEMON-039 | **Integration-marked**: a bounded real detached re-entry reaches a durable `acquired` instance and is reaped | Happy Path | Important | Medium | AC-F2-1, AC-F2-7; F-2, F-3; RSK-2 |
+| TC-DAEMON-039 | **Integration-marked**: a bounded real `#!/usr/bin/env bun` detached re-entry reaches a durable `acquired` instance and is reaped | Happy Path | Important | Medium | AC-F2-1, AC-F2-7, AC-F2-10; F-2, F-3; RSK-2 |
+| TC-DAEMON-040 | The re-entry environment is the authoritative state binding written last plus the composing `PATH`, home, and a set working-name override | Happy Path | Critical | High | AC-F2-10, AC-F2-1, AC-F3-2, AC-NFR-5; F-2, F-3; DM-1, DM-5; NFR-10 |
+| TC-DAEMON-041 | A caller that strips `PATH` and `HOME` fails closed with nothing acquired and no root-level state path | Negative | Critical | High | AC-F2-10; F-2, F-3; DM-5; NFR-4, NFR-7 |
 | TC-DAEMON-050 | One resolved directory serves the store, lock, settings, socket, supervisor scope, and composition | Happy Path | Critical | Critical | AC-F3-1; F-3; DM-5, DM-6; Appendix E |
-| TC-DAEMON-051 | The detached child resolves the identical directory from its single variable and records the same scope | Happy Path | Critical | Critical | AC-F3-2; F-3; DM-5, DM-6; EVT-1 |
+| TC-DAEMON-051 | The detached child resolves the identical directory from the authoritative binding whatever else it receives, and records the same scope | Happy Path | Critical | Critical | AC-F3-2; F-3; DM-5, DM-6; EVT-1 |
 | TC-DAEMON-052 | With no override the resolved directory is byte-identical to the previous home default | Regression | Critical | High | AC-F3-3; F-3, F-8 |
 | TC-DAEMON-053 | A non-absolute override keeps the command mounted, keeps the home value, and throws nowhere | Negative | Critical | Critical | AC-F3-4; F-1, F-3, F-8 |
-| TC-DAEMON-060 | A plain status in a new process reports the full durable projection with derived markers | Happy Path | Critical | Critical | AC-F4-1, AC-F5-6; F-4, F-5; EVT-1, EVT-2; DEC-14, DEC-15 |
+| TC-DAEMON-060 | A plain status in a new process probes the socket and reports the full durable projection with derived markers | Happy Path | Critical | Critical | AC-F4-1, AC-F5-6; F-4, F-5; EVT-1, EVT-2; DEC-14, DEC-15 |
 | TC-DAEMON-061 | `status --live` against a resident daemon returns the live envelope at exit `0` | Happy Path | Critical | High | AC-F4-2; F-4; NFR-6 |
 | TC-DAEMON-062 | `status --live` fails closed while a plain status stays a degraded success | Negative | Critical | Critical | AC-F4-3; F-4; NFR-7 |
 | TC-DAEMON-063 | The configured socket path and heartbeat interval reach the composed runtime, with an empty-branch fallback | Corner Case | Important | High | AC-F4-4; F-4; DM-6; NFR-2 |
-| TC-DAEMON-070 | A live acquired instance with a matching fresh heartbeat yields `degraded: []` on both reads | Happy Path | Critical | Critical | AC-F5-1; F-5; DM-3, DM-4 |
+| TC-DAEMON-070 | A live acquired instance with a matching fresh heartbeat yields `degraded: []` on both reads | Happy Path | Critical | Critical | AC-F5-1, AC-F5-6; F-5; DM-3, DM-4 |
 | TC-DAEMON-071 | A released or immediate-stopped instance yields `["daemon-unreachable"]` on both reads | Happy Path | Critical | Critical | AC-F5-2; F-5; DM-4; EVT-1 |
 | TC-DAEMON-072 | An absent instance yields `["daemon-unreachable"]` at exit `0` on both reads | Edge Case | Critical | High | AC-F5-3; F-5; DM-4 |
-| TC-DAEMON-073 | A heartbeat older than the lock staleness yields `["daemon-unreachable"]` on both reads | Edge Case | Critical | Critical | AC-F5-4; F-5; DM-4; EVT-2 |
+| TC-DAEMON-073 | A heartbeat at or beyond the lock staleness yields `["daemon-unreachable"]` on both reads | Edge Case | Critical | Critical | AC-F5-4, AC-F5-6; F-5; DM-4; EVT-2 |
 | TC-DAEMON-074 | A watch flips the marker in both directions within one iteration | Corner Case | Critical | High | AC-F5-5; F-5; DM-3 |
-| TC-DAEMON-075 | The degradation verdict and the status heartbeat fold share one staleness rule | Corner Case | Critical | High | AC-F5-6; F-5; DM-4 |
+| TC-DAEMON-075 | The degradation verdict and the status heartbeat fold share one strictly-below bound on every owned cell | Corner Case | Critical | High | AC-F5-6, AC-F4-1; F-4, F-5; DM-4 |
 | TC-DAEMON-076 | A torn or unreadable read degrades, opens no socket, and raises no error identity | Negative | Critical | Critical | AC-F5-7, AC-NFR-2; F-5; DM-3, DM-4; NFR-3 |
 | TC-DAEMON-077 | Production supplies the durable resolver; the hardcoded marker is gone and cannot return | Negative | Critical | Critical | AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-7; F-5; DEC-7 |
+| TC-DAEMON-078 | An unowned heartbeat degrades while the delivered fold reports `running`, and the divergence is named | Corner Case | Critical | Critical | AC-F5-8; F-5; DM-3, DM-4; EVT-2 |
 | TC-DAEMON-090 | A production start records the composing pid, and both surfaces report it | Happy Path | Critical | Critical | AC-F6-1; F-6; DM-1; EVT-1 |
 | TC-DAEMON-091 | A non-positive recorded pid refuses the stop and makes zero signal calls | Negative | Critical | Critical | AC-F6-2; F-6; NFR-8 |
 | TC-DAEMON-092 | A positive pid receives the correct signal, that pid only, and a failed call is classified | Negative | Critical | Critical | AC-F6-3; F-6; NFR-8, NFR-9 |
@@ -274,10 +284,10 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TC-DAEMON-110 | The error table is unchanged, every reached identity exists, and exits stay in `{0,1,2}` | Happy Path | Critical | Critical | AC-F8-1; F-8; NFR-7, NFR-12 |
 | TC-DAEMON-111 | The state schema, record kinds, and payload schemas are unchanged | Happy Path | Critical | High | AC-F8-2; F-8; DM-7 |
 | TC-DAEMON-112 | An array-valued `degraded` stays byte-identical and the absent fallback still applies | Regression | Critical | Critical | AC-F8-3; F-8; DM-3 |
-| TC-DAEMON-113 | The delivered suites pass with only the four declared mount updates | Regression | Critical | Critical | AC-F8-4, AC-F1-1, AC-F1-4; F-8; GAP-T1 |
+| TC-DAEMON-113 | The delivered suites pass with only the declared mount updates | Regression | Critical | Critical | AC-F8-4, AC-F1-1, AC-F1-4; F-8; GAP-T1 |
 | TC-DAEMON-114 | Help and version purity is unchanged for the mounted family | Regression | Critical | Critical | AC-NFR-1; NFR-1 |
 | TC-DAEMON-120 | The degradation path stays within its read, socket, probe, sleep, and latency budget | Happy Path | Important | High | AC-NFR-2; NFR-3 |
-| TC-DAEMON-121 | A foreground stop lands inside 1 000 ms with cancellation inside 250 ms | Happy Path | Important | High | AC-NFR-3; NFR-5 |
+| TC-DAEMON-121 | A foreground stop lands inside 1 000 ms with cancellation inside 250 ms | Happy Path | Important | High | AC-NFR-3, AC-F2-4; NFR-5 |
 | TC-DAEMON-122 | Status and live-status latency and output bounds hold | Happy Path | Important | High | AC-NFR-4; NFR-6, NFR-11 |
 | TC-DAEMON-123 | No new output carries sensitive content and the only new value is an absolute path | Negative | Critical | Critical | AC-NFR-5; NFR-8, NFR-10 |
 | TC-DAEMON-124 | Install is idempotent, stop is a `noop` when released, and a live start refuses | Regression | Critical | High | AC-NFR-6; NFR-9, NFR-7 |
@@ -433,7 +443,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - This is the criterion that makes "unconditional" testable; the mutant is the proof that the assertion is not vacuous.
 
-#### TC-DAEMON-030 - A bare start re-enters the entry path with one environment variable and reports a durable receipt
+#### TC-DAEMON-030 - A bare start re-enters the entry path with the declared environment and reports a durable receipt
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -446,23 +456,26 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Preconditions**:
 - A temp state root, a recording `DaemonProcessPort`, a fake `DaemonClockPort` whose `sleep` resolves immediately, and a composed runtime with `daemonEntry` set to an absolute fixture path.
+- An injected environment record carrying a non-empty `PATH`, a `HOME` inside the temp root, and a working-name override variable.
 - The store is empty (no instance, no heartbeat).
 
 **Steps**:
 1. Invoke `daemon start` without `--foreground`; capture the single `spawnDetached` request.
-2. Assert `entry` equals the composed `daemonEntry` exactly, `args` equals `["daemon","start","--foreground"]`, and `environment` has exactly one key — the composed `<PREFIX>_STATE_DIR` — bound to the resolved state directory.
-3. Before the store contains an `acquired` instance, assert no success is returned: the poll has not resolved yet and the command has not written a receipt.
-4. Append an `acquired` instance to the store from the fake child, advance one clock tick, and assert the command returns exit `0` with a receipt whose `instance.pid` equals the fake child pid, `socket.path` equals the resolved socket path, and `heartbeat.intervalMs` equals the resolved interval.
-5. Assert `heartbeat.ageMs` is computed from the durable `beatAt` and the injected now, not from a literal.
-6. Assert the poll used at most 20 `sleep(50)` calls and that the receipt carries `mode` from the delivered vocabulary.
+2. Assert `entry` equals the composed `daemonEntry` exactly and `args` equals `["daemon","start","--foreground"]`.
+3. Assert `environment` contains the composed `<PREFIX>_STATE_DIR` key bound to the resolved state directory, and that this key is the **last** own property of the object (insertion order is the ordering evidence).
+4. Assert the remaining keys are exactly the declared forwarded set derived from the injected facts — the composing `PATH`, `HOME` — with no other key present; the working-name override appears only when the injected value is set and non-empty (asserted in `TC-DAEMON-040`), and no ambient key is read from the test process.
+5. Before the store contains an `acquired` instance, assert no success is returned: the poll has not resolved yet and the command has not written a receipt.
+6. Append an `acquired` instance to the store from the fake child, advance one clock tick, and assert the command returns exit `0` with a receipt whose `instance.pid` equals the fake child pid, `socket.path` equals the resolved socket path, and `heartbeat.intervalMs` equals the resolved interval.
+7. Assert `heartbeat.ageMs` is computed from the durable `beatAt` and the injected now, not from a literal.
+8. Assert the poll used at most 20 `sleep(50)` calls and that the receipt carries `mode` from the delivered vocabulary.
 
 **Expected Outcome**:
-- The spawn request is exactly the declared shape: the running entry path, the declared argument vector, and one environment variable.
+- The spawn request is exactly the declared shape: the running entry path, the declared argument vector, and the declared environment set with the state binding authoritative and written last.
 - Success is reported only after a durable `acquired` instance exists, and every receipt value comes from durable state or the resolved settings.
 
 **Notes / Clarifications**:
 - The fake port records the request; the store is the readiness oracle. The child's streams are never consulted (GAP-T3).
-- The real-spawn counterpart is `TC-DAEMON-039`.
+- The environment set and its ordering are asserted in full by `TC-DAEMON-040`; the real-spawn counterpart that proves the interpreter resolves is `TC-DAEMON-039`.
 
 #### TC-DAEMON-031 - A readiness timeout is a classified failure that claims nothing and appends nothing
 
@@ -692,12 +705,12 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - The ordering of the two deliveries is fixed by the harness, so the case is deterministic.
 
-#### TC-DAEMON-039 - **Integration-marked**: a bounded real detached re-entry reaches a durable `acquired` instance and is reaped
+#### TC-DAEMON-039 - **Integration-marked**: a bounded real `#!/usr/bin/env bun` detached re-entry reaches a durable `acquired` instance and is reaped
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: AC-F2-1, AC-F2-7, F-2, F-3, RSK-2
+**Related IDs**: AC-F2-1, AC-F2-7, AC-F2-10, F-2, F-3, RSK-2
 **Test Type(s)**: Integration, E2E
 **Automation Level**: Automated (integration-marked)
 **Target Layer / Location**: `tests/conformance/daemon-mount/real-reentry.test.ts` **(new)**; executed explicitly as `bun test tests/conformance/daemon-mount/real-reentry.test.ts`
@@ -705,25 +718,94 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Preconditions**:
 - A temp root created with `mkdtemp` under `$REPO_ROOT/tmp/`, containing `home/`, `config/`, and `state/`.
-- The real `createNodeProcessPort()` (real `spawn`, real `kill`) and the real entry module usable as the child entry.
+- The real `createNodeProcessPort()` (real `spawn`, real `kill`).
+- A fixture entry script inside the temp root whose first line is exactly `#!/usr/bin/env bun` and which invokes the real `createDaemonMainEntry` against the temp state directory and exits on `SIGTERM`; the fixture is written with `chmod 0o755`.
+- A composing environment whose `PATH` contains the real `bun` directory (resolved from the running process) and whose `HOME` is the temp `home/`, injected as facts — the case never mutates the test process's own environment.
 - A declared hard timeout of 20 000 ms for the whole case.
 
 **Steps**:
-1. Compose the runtime with `daemonEntry` pointing at a fixture entry script inside the temp root that invokes the real `createDaemonMainEntry` against the temp state directory and exits on `SIGTERM`.
-2. Set `HOME`, `XDG_CONFIG_HOME`, and `<PREFIX>_STATE_DIR` to the temp subdirectories; assert the child's environment carries only the state variable by reading it back from the child's own recorded evidence (the fixture writes its `process.env` key set into a probe file inside the temp root).
-3. Invoke `daemon start` (non-foreground) with the real clock; assert the receipt reports a positive `instance.pid` and exit `0`.
-4. Invoke `daemon stop --mode drain` from the parent; assert `result=draining` at exit `0` and that the recorded pid matches the started pid.
-5. Poll the durable store (bounded: at most 40 × 50 ms) until a `released` record with `releaseReason=drain` appears; assert it appears exactly once.
-6. Assert the child process is no longer alive (`isAlive` false) and that the probe file contains no ambient variable (`PATH`, `HOME`) beyond the single state variable.
-7. In `finally`, send `SIGKILL` to the recorded pid if it is still alive, remove every listener, and delete the temp root; assert the repo `git status --porcelain` is unchanged.
+1. Compose the runtime with `daemonEntry` pointing at the `#!/usr/bin/env bun` fixture entry, the injected environment record described above, and the temp state directory.
+2. Record the spawn request; assert `environment` carries the state-directory binding **last**, plus `PATH` (non-empty, containing the bun directory) and `HOME` (the temp home), and that no key outside the declared set is present.
+3. Invoke `daemon start` (non-foreground) with the real clock; assert the receipt reports a positive `instance.pid` and exit `0`, proving the child resolved its interpreter from the forwarded `PATH` and reached a durable `acquired` instance (a child that could not resolve `bun` would exit without writing one and the start would time out).
+4. Read the child's own recorded evidence — the fixture writes its `process.env` key set and its resolved `process.execPath` basename into a probe file inside the temp root — and assert the key set equals the declared forwarded set (state binding, `PATH`, `HOME`, plus the working-name override only when the injected value was non-empty), that `PATH` is the forwarded value, and that the interpreter basename is `bun`.
+5. Invoke `daemon stop --mode drain` from the parent; assert `result=draining` at exit `0` and that the recorded pid matches the started pid.
+6. Poll the durable store (bounded: at most 40 × 50 ms) until a `released` record with `releaseReason=drain` appears; assert it appears exactly once.
+7. Assert the child process is no longer alive (`isAlive` false), and that the probe file contains no ambient value beyond the declared set — in particular no key the composing environment did not carry.
+8. In `finally`, send `SIGKILL` to the recorded pid if it is still alive, remove every listener, and delete the temp root; assert the repo `git status --porcelain` is unchanged.
 
 **Expected Outcome**:
-- The real spawn path is exercised end to end inside a temp root, with the entry path, the single-variable environment, the durable readiness, the drain, and the release all observable.
+- The real spawn path is exercised end to end inside a temp root, with the entry path, the declared environment set, the interpreter resolution, the durable readiness, the drain, and the release all observable.
 - Nothing is written outside the temp root; the case cannot hang (hard timeout) or leak (reaped in `finally`).
 
 **Notes / Clarifications**:
-- This case asserts only what `TC-DAEMON-030`/`TC-DAEMON-036` also assert with fakes; its purpose is to falsify a fake that agrees with an impossible real request (RSK-2).
+- This case asserts only what `TC-DAEMON-030`/`TC-DAEMON-036`/`TC-DAEMON-040` also assert with fakes; its purpose is to falsify a fake that agrees with an impossible real request (RSK-2) and to prove the shipped `#!/usr/bin/env bun` form is executable from the re-entry environment (AC-F2-10).
+- The fail-closed residual — a composing process that has already stripped `PATH`/`HOME` — is `TC-DAEMON-041`; this case never asserts a positive outcome for that environment.
 - It never touches systemd, the real user state directory, the network, or `process.env` of the test process.
+
+#### TC-DAEMON-040 - The re-entry environment is the authoritative state binding written last plus the composing `PATH`, home, and a set working-name override
+
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC-F2-10, AC-F2-1, AC-F3-2, AC-NFR-5, F-2, F-3, DM-1, DM-5, NFR-10
+**Test Type(s)**: Behaviour, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/daemon-start-detached.test.ts` **(new)**; `tests/behaviour/daemon-state-scope.test.ts` **(new)**; `tests/fixtures/daemon/mount-harness.ts` **(new)**
+**Tags**: @backend, @cli, @daemon, @contract
+
+**Preconditions**:
+- Four injected environment fixtures over one temp root: (a) `PATH` and `HOME` set, working-name override unset; (b) the same plus a non-empty override; (c) `HOME` empty but `USERPROFILE` set; (d) an absolute `<PREFIX>_STATE_DIR` override whose value differs from the home default.
+- A recording process port; no real spawn.
+
+**Steps**:
+1. For fixture (a), invoke `daemon start` and assert the captured `environment` key set is exactly `{ <PREFIX>_STATE_DIR, PATH, HOME }` — no `USERPROFILE`, no working-name variable, and no ambient key from the test process.
+2. Assert the `<PREFIX>_STATE_DIR` key is the last own property of the environment object and that its value equals the composition's resolved state directory.
+3. For fixture (b), assert the working-name variable appears exactly once with the injected value, and that the state binding is still last.
+4. For fixture (c), assert `HOME` is absent, `USERPROFILE` is present with the injected value, and the state binding is last.
+5. For fixture (d), assert the state binding equals the override directory, not the home default, and that the same value reaches the store the child would open (feed the captured environment through the delivered resolution, as `TC-DAEMON-051` does).
+6. Assert the derived environment is a pure function of the injected facts: compose twice with identical facts and assert the two captured environments are deeply equal, and that no key came from `process.env` (arm a read guard on the ambient environment for the duration).
+7. Assert the ordering is meaningful, not incidental: a mutant that writes the state binding **first** and lets a forwarded same-named value follow must fail a case naming the key order.
+8. Assert the environment carries no value beyond the four declared facts — no credential, token, brand payload, or repository content (NFR-10).
+
+**Expected Outcome**:
+- The child receives exactly the declared set, derived from injected facts, with the state-directory binding authoritative because it is written last.
+- The working-name override and the `HOME`/`USERPROFILE` fallback follow the declared rules rather than the caller's ambient environment.
+
+**Notes / Clarifications**:
+- This is the composition half of AC-F2-10: it proves the environment that makes the `#!/usr/bin/env bun` entry executable without spawning anything, so it stays hermetic. The real interpreter resolution is `TC-DAEMON-039`.
+- Step 7 is the guard that keeps "written last" a contract rather than an artefact of object-literal ordering.
+
+#### TC-DAEMON-041 - A caller that strips `PATH` and `HOME` fails closed with nothing acquired and no root-level state path
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC-F2-10, F-2, F-3, DM-5, NFR-4, NFR-7
+**Test Type(s)**: Behaviour, Negative
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/daemon-start-env-stripped.test.ts` **(new)**; `tests/fixtures/daemon/mount-harness.ts` **(new)**
+**Tags**: @backend, @cli, @negative, @daemon
+
+**Preconditions**:
+- Three composing-environment fixtures over a temp state root, chosen so each missing value is the one under test: (a) no `PATH`, a `HOME`, and no `<PREFIX>_STATE_DIR`; (b) a `PATH`, no `HOME`, no `USERPROFILE`, and no `<PREFIX>_STATE_DIR`; (c) no `PATH`, no `HOME`, and an absolute `<PREFIX>_STATE_DIR`.
+- A recording process port whose fake child never writes an instance record (mirroring a child that cannot resolve its interpreter), and a fake clock that counts `sleep` calls.
+
+**Steps**:
+1. For each fixture, compose and invoke `daemon start`; assert the captured `environment` carries no `PATH` (a and c) and no `HOME`/`USERPROFILE` (b and c), and that it carries the state binding **last** in fixture (c) — the spawn never invents a value the caller did not have.
+2. Assert the spawn is still attempted in (a) and (c) (the composition does not silently decide to run in-process) and that its request is well formed; for (b), assert the composition either refuses before spawning with a delivered identity or spawns without inventing a home — and that in both branches no home-derived directory is used.
+3. Let the poll exhaust; assert the result is `daemon.state-recovery-failed` at exit `2` with the readiness-timeout detail, no success `data`, and exactly 20 `sleep(50)` calls with no 21st.
+4. Assert nothing was acquired and nothing was appended: the instance-record and heartbeat-record counts are unchanged from before the invocation.
+5. Assert the state directory is never derived from an empty home: for fixtures (a) and (c) the resolved directory is the home-based value or the authoritative binding respectively (never a root-level path); for fixture (b), where neither a home nor a binding exists, assert the start fails closed **before** any store is opened, so no directory exists at the root-level candidate `/<brand.stateDirectoryName>` and the listings of the temp root and of the process working directory are unchanged.
+6. Assert no root-level path is ever used: the harness records every resolved directory and every store root, and the case asserts that no store handle was opened at a path whose parent is the filesystem root.
+7. Non-vacuity control: with `PATH` and `HOME` restored, the same fixture start succeeds at exit `0`, so the failure is caused by the stripped environment and not by the fixture.
+
+**Expected Outcome**:
+- An environment the caller has already destroyed produces the classified fail-closed outcome, never a claimed success and never a state directory derived from an empty home.
+- The residual is declared and bounded: the spawn does not guess a `PATH` and does not fall back to a root-level directory.
+
+**Notes / Clarifications**:
+- This is the fail-closed half of AC-F2-10 and the declared residual of DEC-16/RSK-2; the positive half is `TC-DAEMON-039`/`TC-DAEMON-040`, and the two never assert the same verdict for the same fixture.
+- Step 7 is the control that keeps the case from passing because of a broken harness.
 
 #### TC-DAEMON-050 - One resolved directory serves the store, lock, settings, socket, supervisor scope, and composition
 
@@ -755,7 +837,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - The observer set is the composition's own inputs, so the assertion is about wiring rather than about a re-derived literal.
 
-#### TC-DAEMON-051 - The detached child resolves the identical directory from its single variable and records the same scope
+#### TC-DAEMON-051 - The detached child resolves the identical directory from the authoritative binding whatever else it receives, and records the same scope
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -768,20 +850,22 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Preconditions**:
 - A recording process port that captures the spawn environment and can be programmed to run the composition's own resolution over that environment (the child's view) instead of spawning.
-- An absolute override directory.
+- An absolute override directory, an injected `PATH`, and an injected `HOME`.
 
 **Steps**:
 1. Invoke `daemon start` and capture the spawn environment.
-2. Assert the environment's key set is exactly one entry and that its key is the composed `<PREFIX>_STATE_DIR` — no `HOME`, no `PATH`, no `USERPROFILE`.
+2. Assert the environment carries the composed `<PREFIX>_STATE_DIR` key as its **last** own property, alongside the forwarded `PATH` and `HOME` and the working-name override when the injected value is non-empty; assert no key outside the declared set appears (the full set is asserted by `TC-DAEMON-040`).
 3. Feed that captured environment to the delivered `resolveStateDirectoryScope` with the same brand prefix and assert the resolved value equals the parent's resolved value byte for byte.
-4. Have the fake child write an `acquired` instance; assert its `scope` equals the parent's supervisor scope digest and that the receipt's instance scope matches.
-5. Assert the child's settings-derived socket path equals the parent's composed socket path.
+4. Prepend a competing value: build a second captured environment in which a **forwarded** key of the same name as the state binding appears before the authoritative one and carries a different directory; assert the resolution still returns the authoritative value, so "written last" is the rule and not a coincidence of key uniqueness.
+5. Have the fake child write an `acquired` instance; assert its `scope` equals the parent's supervisor scope digest and that the receipt's instance scope matches.
+6. Assert the child's settings-derived socket path equals the parent's composed socket path.
 
 **Expected Outcome**:
-- The child lands on the same ledger, lock, and socket as the parent, and the provenance is the single variable.
+- The child lands on the same ledger, lock, and socket as the parent, and the provenance is the authoritative binding rather than "the only value it got".
+- A forwarded look-alike value cannot displace the binding.
 
 **Notes / Clarifications**:
-- The brand-prefix agreement between parent and child is a declared assumption (DEC-16, RSK-6); the case asserts the shipped-default configuration only.
+- The brand-prefix agreement between parent and child now comes from the forwarded working-name override (DEC-16, RSK-6); the case asserts the shipped-default and one renamed-brand fixture, and the residual limitation is the caller's stripped environment (`TC-DAEMON-041`).
 
 #### TC-DAEMON-052 - With no override the resolved directory is byte-identical to the previous home default
 
@@ -840,7 +924,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - This is the exact case that would otherwise turn a user typo into `fallback.internal` on every command (RSK-5).
 
-#### TC-DAEMON-060 - A plain status in a new process reports the full durable projection with derived markers
+#### TC-DAEMON-060 - A plain status in a new process probes the socket and reports the full durable projection with derived markers
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -852,23 +936,26 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Tags**: @backend, @cli, @daemon
 
 **Preconditions**:
-- A store written by one handle and closed, then read by a fresh handle (GAP-T3), across three fixtures: live/fresh, released, and absent.
+- A store written by one handle and closed, then read by a fresh handle (GAP-T3), across four fixtures: live/fresh, released, absent, and live/fresh-with-unreachable-socket.
 - A resident fixture composed with no lane executor, so the mode is `supervise-only`.
+- An injected transport that answers the probe for the reachable fixtures and refuses it for the unreachable one.
 
 **Steps**:
 1. For the live/fresh fixture, run `daemon status` in a fresh composition; assert exit `0` and that `data.instance` reports `instanceId`, a positive `pid`, `scope`, `acquiredAt`, and `mode`.
 2. Assert `data.heartbeat.ageMs` is the injected-now minus the durable `beatAt`, `data.heartbeat.intervalMs` equals the resolved interval, and `data.socket.path` equals the resolved socket path with a declared reachability boolean.
 3. Assert `data.supervisor` carries kind, unit, scope, `installed: false` (DEC-14), linger, command form, service type, restart policy, and the environment binding.
 4. Assert the derived `degraded` list is empty for the live/fresh fixture and that it contains `lane-executor-unavailable` only (never `daemon-unreachable`) for the resident-but-supervise-only shape (DEC-15).
-5. For the released and absent fixtures, assert the report is still exit `0`, `instance` is null or the released record, and `daemon-unreachable` is present in `degraded`.
-6. Assert the plain read performs zero socket connects (the probe is only used for `--live`) and that the process-start count of the fixture store is unchanged (no writes).
-7. Assert the payload is byte-identical across two identical runs over the same store and instant.
+5. For the released and absent fixtures, assert the report is still exit `0`, `instance` is null or the released record, `daemon-unreachable` is present in `degraded`, and `data.live` is `false` (no claim of a live daemon).
+6. Assert the plain read **probes** the composed socket exactly once even without `--live`, and that the probed reachability is what the envelope reports (`true` for the live fixture, `false` for a fixture whose transport refuses the connection); assert the read appended no record and left the store byte-identical.
+7. Assert unreachability is reported, not thrown: with the transport refusing, the plain status still exits `0` with a degraded payload, while `--live` over the same fixture fails closed (`TC-DAEMON-062`).
+8. Assert the payload is byte-identical across two identical runs over the same store and instant.
 
 **Expected Outcome**:
-- The status payload answers "is a daemon running, which pid, which instance, how old is the heartbeat, which socket, which supervisor" from durable state, at exit `0`, with derived markers that distinguish absent from live.
+- The status payload answers "is a daemon running, which pid, which instance, how old is the heartbeat, which socket, is it answering, which supervisor" from durable state plus one probe, at exit `0`, with derived markers that distinguish absent from live.
 
 **Notes / Clarifications**:
 - `lane-executor-unavailable` and `daemon-unreachable` must stay distinct: this case is the guard against conflating the two markers (DEC-15).
+- Plain status is a probe-and-report surface, not a fail-closed one: only `--live` turns an unreachable socket into a failure identity. The "zero connects" claim belongs to the queue/lanes degradation path only (`TC-DAEMON-076`, `TC-DAEMON-120`).
 
 #### TC-DAEMON-061 - `status --live` against a resident daemon returns the live envelope at exit `0`
 
@@ -888,14 +975,15 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 1. Run `daemon status --live`; assert exactly one transport connect at the composed socket path and one status probe.
 2. Assert exit `0` and `data.live: true` with the socket reported reachable and the heartbeat state `running`.
 3. Assert the response timeout used is the resolved `daemon` branch value and that no second connect occurs.
-4. Assert the payload otherwise matches the plain-status projection for the same store (the live flag and reachability are the only additions).
-5. Assert the read performed no write and appended no record.
+4. Assert the same store read through plain `daemon status` produces the same projection with `live: false` and the same observed reachability — the flag and the fail-closed behaviour are the only differences between the two surfaces, not the probe.
+5. Assert the read performed no write and appended no record, and that `--live` never reports `live: true` without a probe having reached the socket.
 
 **Expected Outcome**:
 - The live surface works against a resident daemon and reports reachability truthfully.
 
 **Notes / Clarifications**:
 - The transport is injected; no real socket is opened.
+- `TC-DAEMON-060` pins the plain surface as probe-and-report at exit `0`; this case pins the live surface as the only fail-closed one.
 
 #### TC-DAEMON-062 - `status --live` fails closed while a plain status stays a degraded success
 
@@ -914,10 +1002,10 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Steps**:
 1. For the unreachable fixture, run `status --live`; assert the failure identity is `daemon.socket-unreachable`, the exit is `2`, and no success `data` is present.
 2. For the stale-heartbeat fixture, assert the failure identity is `daemon.heartbeat-stale` and the exit is `2`.
-3. For both, run plain `daemon status`; assert exit `0` with a degraded `data` payload and no error envelope.
+3. For both, run plain `daemon status`; assert exit `0` with a degraded `data` payload, `live: false`, the socket reported unreachable (the plain surface probes too), `daemon-unreachable` present in `degraded`, and no error envelope.
 4. For the fresh control, assert `--live` succeeds at exit `0` so the failure paths are not vacuous.
 5. Assert `--live` never reports `live: true` when the socket is unreachable or the beat is stale, and that the failure envelope names the socket path but never the lock token.
-6. Assert the three fixtures produce exactly the three declared outcomes (one `0`, two `2`), so no exit outside `{0,1,2}` appears.
+6. Assert the three fixtures produce exactly the three declared outcomes (one `0`, two `2`), so no exit outside `{0,1,2}` appears, and that doubling the probe count is not how the plain surface reaches its verdict — one connect per invocation on either surface.
 
 **Expected Outcome**:
 - Only the live surface fails; the plain surface remains a degraded success, and the two failure identities are distinguished by cause.
@@ -959,7 +1047,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F5-1, F-5, DM-3, DM-4
+**Related IDs**: AC-F5-1, AC-F5-6, F-5, DM-3, DM-4
 **Test Type(s)**: Unit, Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-degradation-derived.test.ts` **(new)**; `tests/behaviour/lanes-degradation-derived.test.ts` **(new)**
@@ -974,11 +1062,12 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 2. Run `queue list`; assert exit `0` and `degraded: []`.
 3. Run `lanes list`; assert exit `0` and `degraded: []`.
 4. Repeat with `operation: "taken-over"` as the latest record; assert the empty array again.
-5. Assert the same result holds at the exact staleness boundary (`now − beatAt == lockStalenessMs`), so `≤` is inclusive as specified.
+5. Assert the bound is exclusive from the non-degraded side: with an age one millisecond below the bound the result is still `[]`, and the at-bound cell itself is `TC-DAEMON-073`'s (asserted there as degraded), so the boundary is asserted once from each side of the same strict comparison rather than twice with two different expectations.
 6. Assert no socket connect, no `isAlive` call, and no `sleep` occurred during either read.
 
 **Expected Outcome**:
-- A live daemon removes the marker from both payloads, including at the inclusive staleness boundary.
+- A live daemon removes the marker from both payloads while its heartbeat is strictly inside the staleness bound.
+- The boundary is asserted from both sides with one comparison, so a `<=` drift fails a case rather than sliding through.
 
 **Notes / Clarifications**:
 - This is the direction that a hardcoded marker fails; it is asserted before the negative direction on purpose.
@@ -1027,7 +1116,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Steps**:
 1. Resolve the predicate for the empty store; assert `["daemon-unreachable"]`.
 2. Run `queue list` and `lanes list`; assert exit `0` and the exact marker array.
-3. Resolve for the heartbeat-without-instance fixture; assert `["daemon-unreachable"]` (an orphan heartbeat never fabricates reachability).
+3. Resolve for the heartbeat-without-instance fixture; assert `["daemon-unreachable"]` (an orphan heartbeat never fabricates reachability). This case asserts the marker only; the accompanying statement that the delivered fold still reports `running` for the same fixture is `TC-DAEMON-078`, which owns the divergence and is the only case that reads both surfaces for it.
 4. Assert a missing daemon is never an error on these surfaces: no `error` envelope, no exit outside `0`.
 5. Assert the read is a bounded store projection (two reads at most) and wrote nothing.
 
@@ -1037,12 +1126,12 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - The orphan-heartbeat fixture is the fabrication guard: a heartbeat alone must not imply a live instance.
 
-#### TC-DAEMON-073 - A heartbeat older than the lock staleness yields `["daemon-unreachable"]` on both reads
+#### TC-DAEMON-073 - A heartbeat at or beyond the lock staleness yields `["daemon-unreachable"]` on both reads
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F5-4, F-5, DM-4, EVT-2
+**Related IDs**: AC-F5-4, AC-F5-6, F-5, DM-4, EVT-2
 **Test Type(s)**: Unit, Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-degradation-derived.test.ts` **(new)**; `tests/behaviour/lanes-degradation-derived.test.ts` **(new)**
@@ -1053,16 +1142,17 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Steps**:
 1. Resolve the predicate at `now − beatAt == lockStalenessMs + 1`; assert `["daemon-unreachable"]`.
-2. Resolve at exactly the bound; assert `[]` (the inclusive control that keeps the boundary non-ambiguous).
-3. Run `queue list` and `lanes list` for the stale fixture; assert the exact marker array at exit `0`.
-4. Change only the configured staleness (double it) with the same timestamps; assert the verdict flips to `[]`, proving the bound is configuration-driven and not a literal.
-5. Assert no socket probe was used to decide, and that the heartbeat's `instanceId` match is still required (a stale beat from a different instance is also unreachable).
+2. Resolve at exactly the bound (`now − beatAt == lockStalenessMs`); assert `["daemon-unreachable"]` — the comparison is strictly-below, and the delivered status fold reports `stale` for the same cell, so the two surfaces agree at the bound instead of straddling it.
+3. Run `queue list` and `lanes list` for the at-bound and the beyond-bound fixtures; assert the exact marker array at exit `0` for both.
+4. Change only the configured staleness (double it) with the same timestamps and an age now strictly inside the new bound; assert the verdict flips to `[]`, proving the bound is configuration-driven and not a literal.
+5. Assert no socket probe was used to decide, and that freshness is consulted only after ownership: the at-bound cell is asserted with an owning heartbeat (the unowned family is `TC-DAEMON-078`, so no case here asserts an outcome that case denies).
 
 **Expected Outcome**:
-- Staleness is decided by the configured bound, one rule, and the marker follows it.
+- "Stale" means at or beyond the configured bound, decided by one strict comparison, and the marker follows it identically on both reads and in the status fold.
 
 **Notes / Clarifications**:
 - The double-staleness control is the guard against a hardcoded 30 000 ms.
+- The at-bound cell is owned by this case (degraded, and the fold `stale`); `TC-DAEMON-070` owns the just-below cell (`[]`), so the pair asserts one strict `<` from both sides instead of two contradictory boundary expectations.
 
 #### TC-DAEMON-074 - A watch flips the marker in both directions within one iteration
 
@@ -1093,32 +1183,37 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - This is the case that distinguishes "resolved per projection" from "resolved once and captured".
 
-#### TC-DAEMON-075 - The degradation verdict and the status heartbeat fold share one staleness rule
+#### TC-DAEMON-075 - The degradation verdict and the status heartbeat fold share one strictly-below bound on every owned cell
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F5-6, F-5, DM-4
+**Related IDs**: AC-F5-6, AC-F4-1, F-5, F-4, DM-4
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/daemon-degradation-agreement.test.ts` **(new)**
 **Tags**: @backend, @degradation, @state
 
 **Preconditions**:
-- A generated matrix of durable record sets: (operation ∈ {absent, acquired, taken-over, released, immediate-stop}) × (heartbeat ∈ {absent, other-instance, fresh, at-bound, stale}).
+- A generated matrix of durable record sets drawn from the domain AC-F5-6 states: (operation ∈ {acquired, taken-over, released, immediate-stop}) × (heartbeat ∈ {absent, fresh, at-bound, stale}), i.e. 16 cells in which the latest heartbeat is owned by the instance or absent, plus one cell with no instance record and no heartbeat at all.
+- The unowned cells — no instance plus a fresh heartbeat, and a heartbeat whose `instanceId` names another instance — are deliberately **excluded** from this matrix; they belong to `TC-DAEMON-078`, where the two surfaces are asserted to diverge.
+- The same store, injected now, and `lockStalenessMs` are shared by both surfaces.
 
 **Steps**:
 1. For every matrix cell, resolve the degradation predicate and the delivered `readDaemonStatus` fold with the same store, the same injected now, and the same `lockStalenessMs`.
-2. Assert the invariant: `degraded === []` implies the fold's `heartbeat.state === "running"`, and `degraded === ["daemon-unreachable"]` implies the fold's state is not `running`.
-3. Assert the invariant is not achieved by two different bounds: re-run the matrix with a doubled staleness; every cell that flipped in the predicate also flips in the fold.
-4. Assert the matrix covers all 25 cells and that at least one cell lands in each of the two outcomes (non-vacuity of both directions).
-5. Assert neither surface appends a record while reading.
+2. Assert the invariant on this domain: `degraded === []` implies the fold's `heartbeat.state === "running"`, and `degraded === ["daemon-unreachable"]` implies the fold's state is `stale` or `stopped` (never `running`).
+3. Assert the at-bound cell lands on the degraded side **and** the fold's `stale` side, so the model is one strict `<` applied identically rather than two adjacent bounds that agree only by luck.
+4. Assert the invariant is not achieved by two different bounds: re-run the matrix with a doubled staleness; every cell that flipped in the predicate also flips in the fold.
+5. Assert the matrix covers all 17 cells and that at least one cell lands in each of the two outcomes (non-vacuity of both directions), and assert the excluded unowned cells are not silently folded in (a cell-set assertion, so the exclusion is visible rather than an omission).
+6. Assert neither surface appends a record while reading.
 
 **Expected Outcome**:
-- The queue/lanes marker and `daemon status` cannot disagree about "stale", because they consume one bound.
+- On every store where the instance owns the heartbeat or no heartbeat exists, the queue/lanes marker and `daemon status` cannot disagree about "stale", because they consume one bound with one comparison.
+- The divergent unowned family is outside this case by construction and is asserted by `TC-DAEMON-078`, so no two cases claim different verdicts for the same cell.
 
 **Notes / Clarifications**:
 - The invariant is one-directional by construction: the fold exposes more states (`stopped`) than the marker's two outcomes, and that is expected.
+- Excluding the unowned cells is what makes AC-F5-6 satisfiable; the exclusion is the declared divergence in DM-4, not a hole in the matrix.
 
 #### TC-DAEMON-076 - A torn or unreadable read degrades, opens no socket, and raises no error identity
 
@@ -1176,6 +1271,40 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Notes / Clarifications**:
 - Step 1 is deliberately the live direction: with a constant, the live direction is the one that fails.
+
+#### TC-DAEMON-078 - An unowned heartbeat degrades while the delivered fold reports `running`, and the divergence is named
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: AC-F5-8, F-5, DM-3, DM-4, EVT-2
+**Test Type(s)**: Unit, Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/queue-degradation-derived.test.ts` **(new)**; `tests/behaviour/lanes-degradation-derived.test.ts` **(new)**; `tests/behaviour/daemon-degradation-agreement.test.ts` **(new)**
+**Tags**: @backend, @degradation, @state
+
+**Preconditions**:
+- Two fixtures, each with a heartbeat whose `beatAt` is strictly below the configured staleness bound (age well inside the window, so freshness cannot be the reason for the verdict):
+  - **orphan**: no instance record at all, plus one fresh heartbeat;
+  - **foreign owner**: an `acquired` instance whose id is `A`, plus a fresh heartbeat whose `instanceId` is `B`.
+- An injected now and the delivered `readDaemonStatus`, so both surfaces read the same store at the same instant.
+
+**Steps**:
+1. For each fixture, resolve the degradation predicate; assert exactly `["daemon-unreachable"]` — an unowned heartbeat is unreachable at any age, because ownership gates freshness.
+2. Run `queue list` and `lanes list` for each fixture; assert exit `0` and the exact marker array (one member, no duplicates) even though the beat is fresh.
+3. For each fixture, run the delivered status fold over the same store and instant; assert `heartbeat.state === "running"` — the full heartbeat interval is inside the bound, so the fold's liveness answer is genuine.
+4. Assert the divergence explicitly: the same store and instant yield `degraded: ["daemon-unreachable"]` from the queue/lanes reads and `running` from the status fold, and the case asserts both in one test body so neither can be "fixed" by changing the other's expectation silently.
+5. Assert the reason is ownership and not staleness: double the configured staleness and re-run; the marker stays `["daemon-unreachable"]` and the fold stays `running`, so the bound is not what produced the verdict.
+6. Assert the reason is not an unreadable read: both fixtures parse cleanly (no torn payload), so the degraded marker comes from the ownership rule rather than the fail-closed path of `TC-DAEMON-076`.
+7. Assert the operator-facing surfaces do not contradict each other silently: the queue and lanes payloads carry exactly the one marker and no claim that a daemon is running, while the status payload's `heartbeat.state` stays `running` — both are asserted in the same case so the divergence is visible in one place rather than hidden between two suites.
+
+**Expected Outcome**:
+- A heartbeat nobody owns degrades queue and lanes while the status fold honestly reports what it can see.
+- The divergence is asserted, named, and bounded to this family, so the two criteria (agreement, divergence) cannot be read as contradictory.
+
+**Notes / Clarifications**:
+- This is the AC-F5-8 family and the deliberate counterpart of AC-F5-6: queue and lanes degrade on ownership because a heartbeat with no owner can be neither drained, signalled, nor reconciled, while the fold answers a liveness question only (DM-4, DEC-7).
+- It is the case that would fail if a later change "harmonised" the predicate with the fold by dropping the owner requirement — a change that would make `daemon-unreachable` disappear for a daemon nobody can address.
 
 #### TC-DAEMON-090 - A production start records the composing pid, and both surfaces report it
 
@@ -1284,15 +1413,17 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 2. Parse the captured unit text; assert `ExecStart=<absolute entry path> daemon start --foreground` with the entry path byte-identical to the composed `daemonEntry`, and that the executable is not a bare binary name.
 3. Assert one `Environment=<PREFIX>_STATE_DIR=<resolved state directory>` line whose variable name is exactly the composed `environmentName` and whose value is exactly the resolved directory.
 4. Assert the delivered optional fields are unchanged (`Type=simple`, `WantedBy=default.target`, `Restart=on-failure`) and that the descriptor reports `kind`, `unit`, `scope`, `installed`, `linger`, `commandForm`, `serviceType`, `restartPolicy`, and the environment binding.
-5. Assert the recorded command sequence is: write unit, write ownership marker, enable unit, enable linger — in that order, with exactly one of each.
+5. Assert the recorded command and filesystem sequence is exactly the delivered one: write the unit file, `systemctl --user enable <unit>`, `loginctl enable-linger` (when linger is requested), then write the ownership marker — in that order, with exactly one of each and no marker before the enablement commands succeed.
 6. Assert the scope equals the delivered digest of the resolved state directory (not the brand name, not the cwd).
 7. Assert no file was written outside the temp configuration root and that the state directory was not used as the unit directory.
+8. Assert the unit text carries exactly one `Environment=` line — the state-directory binding — and no `PATH`/`HOME` line, so the re-entry environment of DM-1 stays a spawn concern and does not leak into the unit.
 
 **Expected Outcome**:
 - The installed unit is a unit systemd can read and start: absolute executable, correct identity, correct environment binding, enabled with linger.
 
 **Notes / Clarifications**:
 - The delivered golden for install stays a control; this case adds the production identity assertions around it.
+- The order asserted in step 5 is the delivered adapter order (`packages/adapters/src/daemon/supervisor.ts`): unit write, `systemctl --user enable`, `loginctl enable-linger`, ownership marker last. The marker is written only after enablement succeeds, which is what makes the rollback in `TC-DAEMON-102` meaningful — an earlier order would leave a marker for a unit that was never enabled.
 
 #### TC-DAEMON-101 - The configuration root is `XDG_CONFIG_HOME` when absolute, otherwise `<home>/.config`
 
@@ -1393,7 +1524,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Tags**: @backend, @negative, @install
 
 **Preconditions**:
-- A composition with no `daemonEntry` (and therefore no `binary`), an otherwise supported Linux platform fixture, and a temp configuration root.
+- A composition with no `daemonEntry`, an otherwise supported Linux platform fixture, and a temp configuration root. The refusal is keyed on entry-path absence only: `DaemonComposition.binary` is a required field that is always present, so the case never asserts a missing `binary`.
 
 **Steps**:
 1. Run `daemon install`; assert `daemon.state-recovery-failed` at exit `2`.
@@ -1401,7 +1532,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 3. Assert the supervisor port recorded zero write, zero enable, and zero linger calls.
 4. Assert `daemon` is still registered and `daemon status` still works in the same composition, proving the absent fact degraded only the install shape.
 5. Assert the failure summary explains that no executable path is composed, without printing a state payload.
-6. Assert the unit renderer is never called with an empty executable (a spy on `renderSystemdUnit` records zero calls).
+6. Assert the refusal happens before rendering: a spy on `renderSystemdUnit` records zero calls, so no `ExecStart` — empty or otherwise — is ever produced from the absent entry path.
 
 **Expected Outcome**:
 - A unit can never be rendered with an empty `ExecStart`; the refusal is classified and nothing is written.
@@ -1522,7 +1653,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Notes / Clarifications**:
 - Steps 4 and 5 are the pair that proves the union is dispatched, not silently normalized.
 
-#### TC-DAEMON-113 - The delivered suites pass with only the four declared mount updates
+#### TC-DAEMON-113 - The delivered suites pass with only the declared mount updates
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1530,16 +1661,16 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Related IDs**: AC-F8-4, AC-F1-1, AC-F1-4, F-8, GAP-T1
 **Test Type(s)**: Regression, Structure, Manual
 **Automation Level**: Automated (pass half) + Manual (diff half)
-**Target Layer / Location**: full delivered suite run; the four permitted update sites: `tests/behaviour/entrypoint-composition.test.ts`, `tests/behaviour/entrypoint-help.test.ts`, `tests/fixtures/help-guide/coverage.json`, `tests/checks/doc-conformance.test.ts`
+**Target Layer / Location**: full delivered suite run; the permitted update sites, derived from the tree rather than enumerated by count: `tests/behaviour/entrypoint-composition.test.ts` (expected-family list and the `daemon` absence assertions), `tests/behaviour/entrypoint-help.test.ts` (root family list), `tests/behaviour/entrypoint-help-coverage.test.ts` (the hard-coded command enumeration), `tests/fixtures/help-guide/coverage.json` (`commands` and `referencePages` rows), and `tests/checks/doc-conformance.test.ts` (`PROMPT_REQUIRED_PAGES` gains `daemon`)
 **Tags**: @regression, @structure
 
 **Preconditions**:
 - The delivered suites listed in §2 under "Delivered suites that must keep passing".
 
 **Steps**:
-1. Run the named delivered suites: daemon lifecycle, daemon degradation, daemon lock, daemon lock concurrency, daemon supervisor install, queue CLI, control transport, entrypoint help, reference-page parity, queue-scheduling contract, daemon vocabulary, and doc conformance.
-2. Assert each passes and that `git diff --name-only` reports changes in exactly the four permitted test/fixture files plus the new files enumerated in §7.
-3. Assert that in the two updated behaviour files the only changed assertions are the expected-family list entry, the `daemon` removal from the absence list, the root-help family list entry, the coverage inventory rows, and the conformance page list entry — verified by review of the diff, not by a permanent branch-diff assertion (GAP-T1).
+1. Run the named delivered suites: daemon lifecycle, daemon degradation, daemon lock, daemon lock concurrency, daemon supervisor install, queue CLI, control transport, entrypoint help, entrypoint help coverage, reference-page parity, queue-scheduling contract, daemon vocabulary, and doc conformance.
+2. Assert each passes and that `git diff --name-only` reports changes in exactly the declared permitted test/fixture files plus the new files enumerated in §7.
+3. Assert that in the updated behaviour files the only changed assertions are the expected-family list entry, the `daemon` removal from the absence list, the root-help family list entry, the coverage enumeration entry, the coverage inventory rows, and the conformance page list entry — verified by review of the diff, not by a permanent branch-diff assertion (GAP-T1).
 4. Assert no delivered golden other than a reviewed one changed: `git status --porcelain` over `tests/golden/**` and `tests/fixtures/**/golden/**` shows no unexpected modification.
 5. Assert the boundary suite and the fixture-coverage meta-check report no unenforced rule and no loosened rule.
 6. Record the run in §10.2 with the exact command and result.
@@ -1612,7 +1743,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-NFR-3, NFR-5
+**Related IDs**: AC-NFR-3, AC-F2-4, NFR-5
 **Test Type(s)**: Performance, Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/daemon-foreground-stop-latency.test.ts` **(new)**
@@ -1679,17 +1810,18 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Steps**:
 1. Run every mounted path (start receipt, stop result, status, live status, install, uninstall, all help pages) with the canaries present; assert no canary, token, prompt, transcript, diff, or repository content appears in machine or human output.
-2. Assert the spawn environment's only entry is the state-directory variable whose value is an absolute directory path inside the temp root — no credential, token, or content value.
-3. Assert the unit text contains only the absolute entry path and the resolved directory as external values, with no credential or content.
+2. Assert the spawn environment's keys are exactly the declared set: the state-directory variable (whose value is an absolute directory path inside the temp root), the composing `PATH`, `HOME`/`USERPROFILE`, and the working-name override when set — and that no key carries a credential, token, transcript, diff, or repository content. The forwarded values are compared byte-for-byte against the injected facts, so "forwarded unchanged" is asserted rather than assumed.
+3. Assert the unit text contains only the absolute entry path and the resolved directory as external values, with no credential, content, or forwarded `PATH`/`HOME` line (the unit's environment binding stays the single state-directory variable).
 4. Assert every daemon record written by the mount contains only identities, paths, counts, durations, pids, and closed-vocabulary values.
 5. Assert the lock token is never rendered by any mounted path.
 6. Run the delivered secret-read-boundary and privacy suites unmodified.
 
 **Expected Outcome**:
-- The mount adds no sensitive surface, and the single new environment value is a path.
+- The mount adds no sensitive surface: the only environment value it introduces into a contract is an absolute directory path, and the re-entry set is the composing process's own values forwarded unchanged.
 
 **Notes / Clarifications**:
-- The spawn environment assertion is the criterion's own wording ("the only new environment value is an absolute directory path").
+- The spawn-environment assertion is the criterion's own wording: the path value is the only new contract value, while `PATH`, `HOME`/`USERPROFILE`, and the override are the caller's own and are forwarded unchanged (AC-NFR-5, NFR-10).
+- `TC-DAEMON-040` asserts the same key set from the composition side with more fixtures; this case asserts it as a privacy property under canaries.
 
 #### TC-DAEMON-124 - Install is idempotent, stop is a `noop` when released, and a live start refuses
 
@@ -1709,15 +1841,16 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 1. Run `daemon install` twice; assert the second returns `result=installed` at exit `0` with byte-identical unit content and exactly one unit file and one marker (no duplicate, no rewrite churn beyond the idempotent write).
 2. Assert the second install did not enable linger twice in a way that changes state (the recorded command sequence is idempotent at the adapter boundary).
 3. Run `daemon stop --mode drain` against the released fixture; assert `result=noop` at exit `0` with zero signal calls.
-4. Start a daemon in-process over the live fixture; run a second `daemon start`; assert `daemon.already-running` at exit `2` and that the instance-record count is unchanged (nothing appended).
+4. Start a daemon in-process over the live fixture; run a second `daemon start`; assert `daemon.already-running` at exit `1` (the delivered `user-validation` projection class for that identity — not `2`) and that the instance-record count is unchanged (nothing appended).
 5. Assert the refusal names the holder evidence (the recorded pid or instance) and does not print a token.
-6. Assert `daemon.takeover-refused` is reachable for the live-lock case and that no takeover occurred (the original instance record is still the latest acquisition).
+6. Assert `daemon.takeover-refused` is reachable for the live-lock case at exit `1` (also `user-validation`) and that no takeover occurred (the original instance record is still the latest acquisition).
 
 **Expected Outcome**:
 - The three repeated operations are safe: install idempotent, stop noop, start refused with nothing appended.
 
 **Notes / Clarifications**:
 - The already-running identity is delivered; this case proves the mount reaches it through the shipped binary.
+- `daemon.already-running` and `daemon.takeover-refused` are both `user-validation` rows in the delivered error table, so both project to exit `1`; a case asserting `2` would be asserting an identity class the table does not declare.
 
 ## 6. Environments and Test Data
 
@@ -1733,15 +1866,16 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Test data.**
 
-- **State roots** live under `tests/fixtures/daemon/mount-states.ts` (new) as committed case definitions: verified-empty; live/fresh (`acquired` + matching heartbeat inside staleness); at-bound (age exactly `lockStalenessMs`); stale (age `lockStalenessMs + 1`); `taken-over`; `released` with `releaseReason=drain`; `immediate-stop`; orphan heartbeat without an instance; heartbeat from a different instance; torn instance payload; unknown instance operation; malformed heartbeat; missing `instanceId`; permission-denied root; and the four pid fixtures (`0`, `-1`, `1.5`, non-numeric). Each case declares the expected marker array and the expected status fold state.
-- **Mount harness** lives in `tests/fixtures/daemon/mount-harness.ts` (new): an in-process `runEntrypoint` harness that injects the brand, environment record, home directory, process id, signal host, process port, supervisor port, clock, transport, config branch, temp state root, and the store handle; it records spawn requests, signal calls (pid and signal), listener registrations and removals, transport connects, supervisor commands, store reads and appends, `isAlive` and `sleep` calls, and the composer invocation count.
+- **State roots** live under `tests/fixtures/daemon/mount-states.ts` (new) as committed case definitions: verified-empty; live/fresh (`acquired` + matching heartbeat strictly inside staleness); at-bound (age exactly `lockStalenessMs`, expected degraded and fold `stale`); stale (age `lockStalenessMs + 1`); `taken-over`; `released` with `releaseReason=drain`; `immediate-stop`; orphan heartbeat without an instance (expected degraded, fold `running`); heartbeat from a different instance (expected degraded, fold `running`); torn instance payload; unknown instance operation; malformed heartbeat; missing `instanceId`; permission-denied root; and the four pid fixtures (`0`, `-1`, `1.5`, non-numeric). Each case declares the expected marker array and the expected status fold state, so the owned/divergent partition is a data property rather than a comment.
+- **Re-entry environment fixtures** live in the same file: `env-forwarded` (`PATH` + `HOME` + no override), `env-forwarded-override` (`PATH` + `HOME` + non-empty working-name override), `env-userprofile` (`HOME` empty, `USERPROFILE` set), `env-stripped-path` (no `PATH`, `HOME` present, no state binding), `env-stripped-home` (`PATH` present, no `HOME`, no `USERPROFILE`, no state binding), and `env-stripped-both` (no `PATH`, no `HOME`, absolute state binding). Each declares the expected forwarded key set, the expected key order (state binding last where present), and the expected start verdict (`0` for the first three, `daemon.state-recovery-failed` for the last three).
+- **Mount harness** lives in `tests/fixtures/daemon/mount-harness.ts` (new): an in-process `runEntrypoint` harness that injects the brand, environment record, home directory, process id, signal host, process port, supervisor port, clock, transport, config branch, temp state root, and the store handle; it records spawn requests (including the exact environment object and its key insertion order), signal calls (pid and signal), listener registrations and removals, transport connects, supervisor commands, store reads and appends, `isAlive` and `sleep` calls, and the composer invocation count.
 - **Recording process port** (new, inside the harness) implements the delivered `DaemonProcessPort`: `spawnDetached` captures the request and returns a programmable pid (or a delivered failure code); `signal` records and can be told to fail; `isAlive` and `startTimeMs` return declared values. It never spawns, signals, or probes a real process.
 - **Recording supervisor port** (new, inside the harness) implements the delivered `SupervisorPort`: captures unit path and text, enable/disable/linger calls, and the remove calls, and can be told to report an unsupported platform or fail linger. It never invokes `systemctl`.
 - **Configuration fixtures** reuse `tests/fixtures/config/**`, with the `daemon` branch cases: absent branch, explicit socket path and heartbeat interval, unknown key, wrong type, wrong domain, and the state-directory override cases (absolute, absent, empty, relative).
 - **Help fixtures** reuse `tests/fixtures/help-guide/coverage.json` (updated) and `tests/fixtures/entrypoint/programs.ts` (unchanged; its `HELP_TUPLES` and `syntheticPromptProgram` derive from `allHelpEntries()` and `PROMPT_REQUIRED_COMMANDS`, so the daemon tuples appear automatically).
 - **Goldens** live under `tests/fixtures/daemon/mount-golden/` for the status matrices that this change introduces (new cases only). The delivered `tests/golden/daemon-{lifecycle,install,status-matrix}.test.ts`, `queue-list.test.ts`, and `lanes-list.test.ts` goldens are read-only controls; any diff is a defect unless it is a newly reviewed mount case.
 - **Privacy canaries** are fabricated strings planted in the brand working name, the repository path, a lane ref, a question text, and an evidence summary, plus a fabricated credential in the credential port; every suite asserts the canary never appears in a receipt, a record, a unit, or an error envelope.
-- **Mutants** live under `tests/fixtures/daemon/mount-mutants/**` and are applied to temp copies or in-memory strings; the live tree is never mutated. Each mutant declares the suite and assertion it must trip: `conditional-registration` (family registered only with an entry path), `hardcoded-degradation` (the constant marker reinstated), `captured-degradation` (resolver evaluated once at composition), `literal-socket` (a hardcoded socket name or interval), `signal-without-pid-check`, `signal-negative-pid` (group form), `spawn-with-full-env`, `fabricated-reachability` (orphan heartbeat treated as live), `stale-ignored`, `duplicate-terminal-record` (a second stop on a double signal), `release-skip-cancellation`, `holder-not-removed` (listener leak), `bare-execstart`, `unit-under-state-dir`, `xdg-relative-joined`, `install-empty-executable`, `uninstall-broad-delete`, and `help-composer-invoked`.
+- **Mutants** live under `tests/fixtures/daemon/mount-mutants/**` and are applied to temp copies or in-memory strings; the live tree is never mutated. Each mutant declares the suite and assertion it must trip: `conditional-registration` (family registered only with an entry path), `hardcoded-degradation` (the constant marker reinstated), `captured-degradation` (resolver evaluated once at composition), `literal-socket` (a hardcoded socket name or interval), `binding-not-last` (the state binding merged first so a forwarded look-alike wins), `spawn-without-forwarded-env` (the delivered single-variable spawn kept, so a `#!/usr/bin/env bun` entry cannot resolve), `signal-without-pid-check`, `signal-negative-pid` (group form), `spawn-with-full-env` (ambient keys beyond the declared set), `fabricated-reachability` (orphan heartbeat treated as live), `owner-ignored` (freshness consulted without the `instanceId` match), `stale-inclusive` (`<=` at the bound), `duplicate-terminal-record` (a second stop on a double signal), `release-skip-cancellation`, `holder-not-removed` (listener leak), `bare-execstart`, `unit-under-state-dir`, `xdg-relative-joined`, `install-empty-executable`, `uninstall-broad-delete`, and `help-composer-invoked`.
 
 **Isolation and cleanup.**
 
@@ -1753,6 +1887,8 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 ## 7. Automation Plan and Implementation Mapping
 
+**File-inventory authority.** The scenario-level file names in this table are the *intended grouping before consolidation*: each name is the file that would exist if one criterion produced one suite. The delivery plan's `TEST-SURFACE CONSOLIDATION` block is the authoritative file inventory — it groups these cases into the suites that actually ship (e.g. the `daemon-start-detached.test.ts` suite reusing its own name for `daemon-start-detached` and absorbing `daemon-start-readiness-timeout.test.ts`, `daemon-start-in-process.test.ts`, and `daemon-instance-pid.test.ts`; `daemon-degradation-projection.test.ts` absorbing the queue/lanes degradation, watch, agreement, torn, and additivity suites), keeps every TC name as its own `test(...)` title, and drops no assertion, counter, fixture, or negative control. Where the two disagree about a path, the plan's block wins and this table's name is the pre-consolidation grouping; where they disagree about an assertion, this table wins and the plan is defective.
+
 | TC ID | Test file to create or update | Execution command | Mocking / fixtures | Status |
 |---|---|---|---|---|
 | TC-DAEMON-010 | `tests/structure/daemon-production-composition.test.ts` (new); `tests/behaviour/entrypoint-composition.test.ts` (update) | `bun test tests/structure/daemon-production-composition.test.ts tests/behaviour/entrypoint-composition.test.ts` | Injected facts; temp `HOME`; `EXPECTED` list edit; absence-list edit; conditional-registration mutant | To Implement |
@@ -1760,7 +1896,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TC-DAEMON-012 | `tests/behaviour/daemon-help.test.ts` (new) | `bun test tests/behaviour/daemon-help.test.ts` | `HELP_TUPLES` derived from `allHelpEntries()`; parser program | To Implement |
 | TC-DAEMON-013 | `tests/fixtures/help-guide/coverage.json` (update); `tests/checks/doc-conformance.test.ts` (update); `doc/planning/oss-tooling/milestones/m1/commands/daemon.md` (update, phase 7) | `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/checks/doc-conformance.test.ts`; `bun run scripts/checks/help-guide-coverage.ts` | Temp-copy inventory and page mutants | Existing – Update |
 | TC-DAEMON-014 | `tests/structure/daemon-production-composition.test.ts` (new) | `bun test tests/structure/daemon-production-composition.test.ts` | Three fact sets; determinism comparison; conditional-registration mutant | To Implement |
-| TC-DAEMON-030 | `tests/behaviour/daemon-start-detached.test.ts` (new); `tests/fixtures/daemon/mount-harness.ts` (new) | `bun test tests/behaviour/daemon-start-detached.test.ts` | Recording process port; fake clock; fake child writes the instance; spawn-with-full-env mutant | To Implement |
+| TC-DAEMON-030 | `tests/behaviour/daemon-start-detached.test.ts` (new); `tests/fixtures/daemon/mount-harness.ts` (new) | `bun test tests/behaviour/daemon-start-detached.test.ts` | Recording process port; fake clock; fake child writes the instance; declared environment set with the state binding last; `spawn-with-full-env` mutant | To Implement |
 | TC-DAEMON-031 | `tests/behaviour/daemon-start-readiness-timeout.test.ts` (new) | `bun test tests/behaviour/daemon-start-readiness-timeout.test.ts` | Silent fake child; clock `sleep` counter; record-count oracle | To Implement |
 | TC-DAEMON-032 | `tests/behaviour/daemon-start-in-process.test.ts` (new) | `bun test tests/behaviour/daemon-start-in-process.test.ts` | Composition with no `daemonEntry`; spawn counter | To Implement |
 | TC-DAEMON-033 | `tests/behaviour/daemon-foreground-lifetime.test.ts` (new) | `bun test tests/behaviour/daemon-foreground-lifetime.test.ts` | Recording signal host; fake clock; delivering-lane fixture; listener counters | To Implement |
@@ -1769,49 +1905,52 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TC-DAEMON-036 | `tests/behaviour/daemon-stop-cross-process.test.ts` (new) | `bun test tests/behaviour/daemon-stop-cross-process.test.ts` | Two store handles over one root; recording process port; lane fixtures | To Implement |
 | TC-DAEMON-037 | `tests/behaviour/daemon-foreground-release-failure.test.ts` (new) | `bun test tests/behaviour/daemon-foreground-release-failure.test.ts` | Store fake failing the `released` append; cancellation-order recorder; listener counters | To Implement |
 | TC-DAEMON-038 | `tests/behaviour/daemon-foreground-double-signal.test.ts` (new) | `bun test tests/behaviour/daemon-foreground-double-signal.test.ts` | Double delivery; terminal-record counter | To Implement |
-| TC-DAEMON-039 | `tests/conformance/daemon-mount/real-reentry.test.ts` (new, integration-marked) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | Temp root; real `createNodeProcessPort`; fixture entry script; 20 s timeout; `finally` reap | To Implement |
+| TC-DAEMON-039 | `tests/conformance/daemon-mount/real-reentry.test.ts` (new, integration-marked) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | Temp root; real `createNodeProcessPort`; `#!/usr/bin/env bun` fixture entry (mode `0755`); injected `PATH`/`HOME`; env probe file; 20 s timeout; `finally` reap | To Implement |
+| TC-DAEMON-040 | `tests/behaviour/daemon-start-detached.test.ts` (new); `tests/behaviour/daemon-state-scope.test.ts` (new) | `bun test tests/behaviour/daemon-start-detached.test.ts tests/behaviour/daemon-state-scope.test.ts` | Four environment fixtures; key-order assertion; ambient-environment read guard; `binding-not-last` and `spawn-without-forwarded-env` mutants | To Implement |
+| TC-DAEMON-041 | `tests/behaviour/daemon-start-env-stripped.test.ts` (new) | `bun test tests/behaviour/daemon-start-env-stripped.test.ts` | Three stripped-environment fixtures; silent fake child; sleep counter; directory-listing oracle; restored-environment control | To Implement |
 | TC-DAEMON-050 | `tests/behaviour/daemon-state-scope.test.ts` (new) | `bun test tests/behaviour/daemon-state-scope.test.ts` | Observer recorder for store/lock/settings/socket/scope/composition; override and default fixtures | To Implement |
-| TC-DAEMON-051 | `tests/behaviour/daemon-state-scope.test.ts` (new) | `bun test tests/behaviour/daemon-state-scope.test.ts` | Captured spawn environment fed back through `resolveStateDirectoryScope`; scope digest oracle | To Implement |
+| TC-DAEMON-051 | `tests/behaviour/daemon-state-scope.test.ts` (new) | `bun test tests/behaviour/daemon-state-scope.test.ts` | Captured spawn environment fed back through `resolveStateDirectoryScope`; forwarded look-alike key; scope digest oracle | To Implement |
 | TC-DAEMON-052 | `tests/behaviour/daemon-state-scope.test.ts` (new); `tests/structure/state-scope.test.ts` (control) | `bun test tests/behaviour/daemon-state-scope.test.ts tests/structure/state-scope.test.ts` | Template equality; trailing-separator normalization | To Implement |
 | TC-DAEMON-053 | `tests/behaviour/daemon-state-scope.test.ts` (new) | `bun test tests/behaviour/daemon-state-scope.test.ts` | Relative override; containment counter; resolution-edge report; suppression mutant | To Implement |
-| TC-DAEMON-060 | `tests/behaviour/daemon-status-durable.test.ts` (new); `tests/golden/daemon-status-matrix.test.ts` (control) | `bun test tests/behaviour/daemon-status-durable.test.ts tests/golden/daemon-status-matrix.test.ts` | Three store fixtures via two handles; supervise-only composition; connect counter | To Implement |
+| TC-DAEMON-060 | `tests/behaviour/daemon-status-durable.test.ts` (new); `tests/golden/daemon-status-matrix.test.ts` (control) | `bun test tests/behaviour/daemon-status-durable.test.ts tests/golden/daemon-status-matrix.test.ts` | Four store fixtures via two handles; reachable and refusing injected transports; supervise-only composition; connect counter | To Implement |
 | TC-DAEMON-061 | `tests/behaviour/daemon-status-live.test.ts` (new) | `bun test tests/behaviour/daemon-status-live.test.ts` | Injected transport answering the probe; connect counter | To Implement |
 | TC-DAEMON-062 | `tests/behaviour/daemon-status-live.test.ts` (new) | `bun test tests/behaviour/daemon-status-live.test.ts` | Unreachable, stale, and fresh fixtures; identity/exit oracle | To Implement |
 | TC-DAEMON-063 | `tests/behaviour/daemon-control-plane-config.test.ts` (new); `tests/behaviour/config-*.test.ts` (control) | `bun test tests/behaviour/daemon-control-plane-config.test.ts tests/behaviour/config-*.test.ts` | Configured branch; unavailable-config branch; heartbeat ordinals; literal-socket mutant | To Implement |
-| TC-DAEMON-070 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Live/fresh and taken-over fixtures; boundary case; connect/probe/sleep counters | To Implement |
+| TC-DAEMON-070 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Live/fresh and taken-over fixtures; just-below cell; connect/probe/sleep counters | To Implement |
 | TC-DAEMON-071 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Released and immediate-stop fixtures with a fresh heartbeat | To Implement |
-| TC-DAEMON-072 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Verified-empty and orphan-heartbeat fixtures | To Implement |
-| TC-DAEMON-073 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Stale and at-bound fixtures; doubled-staleness control; foreign-instance beat | To Implement |
+| TC-DAEMON-072 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | Verified-empty and orphan-heartbeat fixtures (marker only; the fold claim is 078's) | To Implement |
+| TC-DAEMON-073 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts` | At-bound and beyond-bound fixtures; doubled-staleness control; `stale-inclusive` mutant | To Implement |
 | TC-DAEMON-074 | `tests/behaviour/daemon-degradation-watch.test.ts` (new); `tests/behaviour/{queue-watch,lanes-watch}.test.ts` (controls) | `bun test tests/behaviour/daemon-degradation-watch.test.ts tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts` | Injected iteration seam/clock; three-iteration sequence; resolver call counter | To Implement |
-| TC-DAEMON-075 | `tests/behaviour/daemon-degradation-agreement.test.ts` (new) | `bun test tests/behaviour/daemon-degradation-agreement.test.ts` | 5×5 record matrix; shared `readDaemonStatus`; doubled-staleness re-run | To Implement |
+| TC-DAEMON-075 | `tests/behaviour/daemon-degradation-agreement.test.ts` (new) | `bun test tests/behaviour/daemon-degradation-agreement.test.ts` | 4×4 owned-cell matrix plus the no-instance/no-heartbeat cell (unowned cells excluded by an assertion); shared `readDaemonStatus`; doubled-staleness re-run | To Implement |
 | TC-DAEMON-076 | `tests/behaviour/daemon-degradation-torn.test.ts` (new); `tests/checks/daemon-hermetic.test.ts` (update) | `bun test tests/behaviour/daemon-degradation-torn.test.ts tests/checks/daemon-hermetic.test.ts` | Torn/unknown/malformed/permission fixtures; per-read fault injection; fabrication mutant | To Implement |
 | TC-DAEMON-077 | `tests/structure/daemon-degradation-wiring.test.ts` (new); `tests/checks/daemon-mutants.test.ts` (update); `tests/types/daemon-mount.type-test.ts` (new) | `bun test tests/structure/daemon-degradation-wiring.test.ts tests/checks/daemon-mutants.test.ts`; `pnpm typecheck` | Production composition over live and released stores; source scan; hardcoded-degradation and captured-degradation mutants | To Implement |
+| TC-DAEMON-078 | `tests/behaviour/queue-degradation-derived.test.ts` (new); `tests/behaviour/lanes-degradation-derived.test.ts` (new); `tests/behaviour/daemon-degradation-agreement.test.ts` (new) | `bun test tests/behaviour/queue-degradation-derived.test.ts tests/behaviour/lanes-degradation-derived.test.ts tests/behaviour/daemon-degradation-agreement.test.ts` | Orphan-heartbeat and foreign-owner fixtures with a fresh beat; shared `readDaemonStatus` fold in the same test body; doubled-staleness control; `owner-ignored` mutant | To Implement |
 | TC-DAEMON-090 | `tests/behaviour/daemon-instance-pid.test.ts` (new) | `bun test tests/behaviour/daemon-instance-pid.test.ts` | `processId: 4242`; fresh reader handle; receipt/status agreement; fallback control | To Implement |
 | TC-DAEMON-091 | `tests/behaviour/daemon-stop-pid-refusal.test.ts` (new) | `bun test tests/behaviour/daemon-stop-pid-refusal.test.ts` | Four pid fixtures; signal counter; kill-path source scan; positive control | To Implement |
 | TC-DAEMON-092 | `tests/behaviour/daemon-stop-signal-target.test.ts` (new) | `bun test tests/behaviour/daemon-stop-signal-target.test.ts` | Recording port with failing mode; signal log; negative-pid mutant | To Implement |
-| TC-DAEMON-100 | `tests/behaviour/daemon-install-identity.test.ts` (new); `tests/golden/daemon-install.test.ts` (control) | `bun test tests/behaviour/daemon-install-identity.test.ts tests/golden/daemon-install.test.ts` | Recording supervisor port; unit parser; command sequence; bare-execstart and unit-under-state-dir mutants | To Implement |
+| TC-DAEMON-100 | `tests/behaviour/daemon-install-identity.test.ts` (new); `tests/golden/daemon-install.test.ts` (control) | `bun test tests/behaviour/daemon-install-identity.test.ts tests/golden/daemon-install.test.ts` | Recording supervisor port; unit parser; delivered command sequence (unit → enable → linger → marker); bare-execstart and unit-under-state-dir mutants | To Implement |
 | TC-DAEMON-101 | `tests/behaviour/daemon-install-config-root.test.ts` (new) | `bun test tests/behaviour/daemon-install-config-root.test.ts` | Four `XDG_CONFIG_HOME` fixtures; directory listings; xdg-relative-joined mutant | To Implement |
 | TC-DAEMON-102 | `tests/behaviour/daemon-install-unsupported.test.ts` (new) | `bun test tests/behaviour/daemon-install-unsupported.test.ts` | `darwin`/`win32` adapters; linger-failure port; directory equality; rollback sequence | To Implement |
 | TC-DAEMON-103 | `tests/behaviour/daemon-uninstall.test.ts` (new) | `bun test tests/behaviour/daemon-uninstall.test.ts` | Owned plus unrelated unit/marker fixtures; disable counter; broad-delete mutant | To Implement |
-| TC-DAEMON-104 | `tests/behaviour/daemon-install-no-entry.test.ts` (new) | `bun test tests/behaviour/daemon-install-no-entry.test.ts` | No `daemonEntry`; `renderSystemdUnit` spy; empty directory listing | To Implement |
+| TC-DAEMON-104 | `tests/behaviour/daemon-install-no-entry.test.ts` (new) | `bun test tests/behaviour/daemon-install-no-entry.test.ts` | No `daemonEntry` (the required `binary` field is present); `renderSystemdUnit` spy records zero calls; empty directory listing | To Implement |
 | TC-DAEMON-105 | Manual procedure; evidence in §10 | `TC-DAEMON-105` steps with `systemctl --user` under a temp `XDG_CONFIG_HOME` | Temp config root; no real `~/.config` write | Manual Only |
 | TC-DAEMON-110 | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/exit-code-literals.test.ts` (controls) | `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts`; `bun run scripts/checks/error-table-sync.ts` | Delivered table and documented rows, unmodified | Existing – Control |
 | TC-DAEMON-111 | `tests/structure/{state-contract,daemon-contract,daemon-vocabulary}.test.ts` (controls); `tests/types/daemon-mount.type-test.ts` (new) | `bun test tests/structure/state-contract.test.ts tests/structure/daemon-contract.test.ts tests/structure/daemon-vocabulary.test.ts`; `pnpm typecheck` | Delivered schema constants and record kinds; optional-property type asserts | Existing – Update (types file new) |
 | TC-DAEMON-112 | `tests/behaviour/daemon-degradation-additivity.test.ts` (new); `tests/behaviour/{queue-cli,lanes}.test.ts` and `tests/golden/{queue-list,lanes-list}.test.ts` (controls) | `bun test tests/behaviour/daemon-degradation-additivity.test.ts tests/behaviour/queue-cli.test.ts tests/behaviour/lanes.test.ts tests/golden/queue-list.test.ts tests/golden/lanes-list.test.ts` | Recorded baselines; array/omitted/resolver triple; union-dispatch pair | To Implement |
-| TC-DAEMON-113 | Full delivered suite list from §2; the four permitted update sites | `bun test tests/structure tests/behaviour tests/golden tests/checks tests/boundaries`; `git diff --name-only`; `git status --porcelain tests/golden tests/fixtures` | Unchanged controls; declared update set; review-attested diff (GAP-T1) | Existing – Control |
+| TC-DAEMON-113 | Full delivered suite list from §2; the declared permitted update sites | `bun test tests/structure tests/behaviour tests/golden tests/checks tests/boundaries`; `git diff --name-only`; `git status --porcelain tests/golden tests/fixtures` | Unchanged controls; declared update set; review-attested diff (GAP-T1) | Existing – Control |
 | TC-DAEMON-114 | `tests/behaviour/daemon-help.test.ts` (new, purity half); `tests/behaviour/{entrypoint-help-isolation,entrypoint-version}.test.ts` (controls) | `bun test tests/behaviour/daemon-help.test.ts tests/behaviour/entrypoint-help-isolation.test.ts tests/behaviour/entrypoint-version.test.ts` | Counting composer; armed read guard; empty temp directory listing | To Implement |
 | TC-DAEMON-120 | `tests/behaviour/daemon-degradation-read-cost.test.ts` (new); `tests/checks/daemon-hermetic.test.ts` (update) | `bun test tests/behaviour/daemon-degradation-read-cost.test.ts tests/checks/daemon-hermetic.test.ts` | Instrumented store/transport/port/clock counters; same-run p95 baseline; unrelated-record scaling | To Implement |
 | TC-DAEMON-121 | `tests/behaviour/daemon-foreground-stop-latency.test.ts` (new) | `bun test tests/behaviour/daemon-foreground-stop-latency.test.ts` | Injected clock for ordering; monotonic stopwatch for the bound; five samples; record count oracle | To Implement |
 | TC-DAEMON-122 | `tests/behaviour/daemon-status-performance.test.ts` (new); `tests/golden/daemon-status-matrix.test.ts` (control) | `bun test tests/behaviour/daemon-status-performance.test.ts tests/golden/daemon-status-matrix.test.ts` | Reference store; injected transport; bounded output oracle | To Implement |
 | TC-DAEMON-123 | `tests/checks/daemon-privacy.test.ts` (update); `tests/checks/fixture-privacy.test.ts` (control) | `bun test tests/checks/daemon-privacy.test.ts tests/checks/fixture-privacy.test.ts`; `bun run scripts/checks/secret-read-boundary.ts` | Privacy canaries in every content-bearing field; spawn-environment and unit-text assertions | Existing – Update |
-| TC-DAEMON-124 | `tests/behaviour/daemon-idempotence.test.ts` (new) | `bun test tests/behaviour/daemon-idempotence.test.ts` | Double install; released fixture; live fixture with a positive pid; record-count oracle | To Implement |
+| TC-DAEMON-124 | `tests/behaviour/daemon-idempotence.test.ts` (new) | `bun test tests/behaviour/daemon-idempotence.test.ts` | Double install; released fixture; live fixture with a positive pid; record-count oracle; exit-`1` assertion for `daemon.already-running`/`daemon.takeover-refused` | To Implement |
 
 **Fixture helper obligations:**
 
 - `tests/fixtures/daemon/mount-harness.ts` (new) — the single in-process mount harness: injected brand/environment/home/process identity/signal host/process port/supervisor port/clock/transport/config branch/state root/store handle, plus counters for spawn requests, signal calls (pid and signal recorded), listener registrations and removals, transport connects, supervisor commands, store reads, store appends, `isAlive`, `sleep`, and composer invocations. It also exposes a `failRelease()` switch and a `failSignal()` switch.
-- `tests/fixtures/daemon/mount-states.ts` (new) — the committed durable-state case set (empty, live, at-bound, stale, taken-over, released, immediate-stop, orphan heartbeat, foreign-instance beat, torn instance, unknown operation, malformed heartbeat, permission denied, and the four pid fixtures) with the expected marker array and fold state per case.
+- `tests/fixtures/daemon/mount-states.ts` (new) — the committed durable-state case set (empty, live, at-bound, stale, taken-over, released, immediate-stop, orphan heartbeat, foreign-instance beat, torn instance, unknown operation, malformed heartbeat, permission denied, and the four pid fixtures) with the expected marker array and fold state per case, plus the six re-entry environment fixtures and their expected key sets, key order, and start verdicts.
 - `tests/fixtures/daemon/mount-golden/` (new) — normalized status matrices introduced by this change; explicit regeneration only.
-- `tests/fixtures/daemon/mount-mutants/` (new) — the eighteen mutant modules and their expected tripping suite/message listed in §6.
+- `tests/fixtures/daemon/mount-mutants/` (new) — the twenty-one mutant modules and their expected tripping suite/message listed in §6.
 - `tests/fixtures/help-guide/coverage.json` (update) — the two daemon rows; sorted, duplicate-free; the only fixture change permitted for the mount.
 - **Reused unchanged**: `tests/fixtures/state/harness.ts` (`makeTempRoot`, `makeIdentity`, `openStore`, `removeRoot`, `createTestEdge`), `tests/fixtures/entrypoint/programs.ts`, `tests/fixtures/config/**`, `tests/golden/helpers.ts` (`bufferSink`, `SYNTHETIC_BRAND`), `tests/fixtures/queue/**`, `tests/fixtures/status/**`.
 - **Not touched**: `tests/structure/content-inventory.test.ts` and `tests/structure/inventory.json`. This change adds no module to `packages/**` and no new published export — every edit lands in existing modules (`production.ts`, `bin/delivery-os.ts`, `daemon-compose.ts`, `edge.ts`, `help.ts`, `help/prompt-required-commands.ts`) — so the inventory stays a byte-identical control. If delivery introduces a new module or export, the same phase must add the inventory row and `pnpm check:boundaries` must stay green; that is a delivery constraint, not an open question.
@@ -1832,13 +1971,13 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 
 **Exit criteria.**
 
-- All 47 ACs traced to at least one passing TC; no orphan TC; the Scenario Index, the Scenario Details, and this table name the same 50 IDs (50/50/50).
+- All 49 ACs traced to at least one passing TC; no orphan TC; the Scenario Index, the Scenario Details, and this table name the same 53 IDs (53/53/53).
 - Every TC green, except `TC-DAEMON-105` which is signed off in the §10 manual record with its commands and observed output.
 - `pnpm check` green (lint, format, typecheck, full `bun test`, boundaries, prompt conformance, help coverage, exports parity) under the repo-local `TMPDIR`; `git diff --check` clean.
 - `runHelpGuideCoverage()` returns `[]`; the reference-page parity suite passes; the doc-conformance page list includes `daemon`; root `--help` lists the family; all five subcommand `--help` tuples exit `0`.
-- The error table, `STATE_SCHEMA_VERSION`, the delivered goldens, and the delivered suite assertions are unchanged; the only test/fixture edits are the four declared sites.
-- The spawn environment contains exactly one variable; the durable instance pid is positive; the signal counter is zero for every non-positive pid fixture; no unit is written for an unsupported supervisor or an absent entry path.
-- The degradation marker is `[]` for a live fresh instance and `["daemon-unreachable"]` for released, immediate-stopped, absent, stale, torn, and unreadable states, on both `queue list` and `lanes list`, including inside a watch.
+- The error table, `STATE_SCHEMA_VERSION`, the delivered goldens, and the delivered suite assertions are unchanged; the only test/fixture edits are the declared permitted sites, derived from the tree.
+- The spawn environment carries exactly the declared set — the state-directory binding last, plus `PATH`, `HOME`/`USERPROFILE`, and the working-name override only when set; a `#!/usr/bin/env bun` entry starts from it, and a stripped caller fails closed with nothing acquired; the durable instance pid is positive; the signal counter is zero for every non-positive pid fixture; no unit is written for an unsupported supervisor or an absent entry path.
+- The degradation marker is `[]` only for a live instance whose heartbeat it owns and which is strictly inside the bound, and `["daemon-unreachable"]` for released, immediate-stopped, absent, at-bound, beyond-bound, torn, unreadable, and unowned states, on both `queue list` and `lanes list`, including inside a watch; the unowned family additionally asserts the status fold's `running`, with the divergence named.
 - Every integration-marked and manual case is bounded and recorded; no case writes outside a temp root.
 
 ## 8. Risks, Assumptions, and Open Questions
@@ -1852,7 +1991,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TR-3 | The readiness window is widened, removed, or made unbounded, so a failing start hangs instead of failing closed. | M | TC-DAEMON-031 asserts exactly 20 sleeps and a 21st attempt never happens; NFR-4 is stated in the same numbers in §3.3. |
 | TR-4 | A foreground daemon dies on a signal without releasing, leaving a held instance lock and undetached lanes. | H | TC-DAEMON-033/034 assert one release record and one detach per delivering lane; TC-DAEMON-037 asserts the release is attempted even when it fails; TC-DAEMON-038 asserts one terminal record under a double signal. |
 | TR-5 | A listener outlives the invocation, so a second signal, or a later command in the same process, re-enters `stop`. | H | TC-DAEMON-033/034/035/037/038 assert `removeListener` per event exactly once and that no registration remains; a `holder-not-removed` mutant must fail. |
-| TR-6 | The re-entry environment is not exactly one variable, or `HOME`/`PATH` leak into the child, so the child resolves a different directory. | H | TC-DAEMON-030 asserts the key set is exactly one; TC-DAEMON-051 feeds the captured environment back through the resolution; a `spawn-with-full-env` mutant must fail. The renamed-working-name limitation is declared (DEC-16, RSK-6), not assumed away. |
+| TR-6 | The re-entry environment is rebuilt wrongly — the state binding is merged first so a forwarded look-alike wins, an ambient key leaks in, or the interpreter cannot be resolved because `PATH` was not forwarded. | H | TC-DAEMON-040 asserts the exact key set, the key order (state binding last), the `HOME`/`USERPROFILE` fallback, and the override-only-when-set rule; TC-DAEMON-051 feeds the captured environment back through the resolution with a competing same-named value; TC-DAEMON-039 proves a `#!/usr/bin/env bun` entry starts from it; `binding-not-last` and `spawn-without-forwarded-env` mutants must fail. The residual — a caller that stripped `PATH`/`HOME` — is declared (DEC-16, RSK-2) and asserted fail-closed by TC-DAEMON-041, not assumed away. |
 | TR-7 | The production composition keeps two state-directory resolutions, so the ledger, lock, or socket land somewhere the read side does not look. | H | TC-DAEMON-050 asserts seven observers agree character for character and that the home template appears in none of them under an override; TC-DAEMON-052 pins byte-identity with no override. |
 | TR-8 | An invalid override is treated as a composition failure, removing a prompt-required command. | H | TC-DAEMON-053 asserts no throw, the command still selectable, the home value kept, and the report left to the resolution edge; a suppression mutant must fail. |
 | TR-9 | The degradation resolver is correct but the wiring keeps a constant, so the marker never changes. | H | TC-DAEMON-077 asserts both directions through the production composition and a source scan finds no literal; a `hardcoded-degradation` mutant must fail. |
@@ -1867,19 +2006,21 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | TR-18 | Install renders a unit with an empty executable when no entry path is composed. | H | TC-DAEMON-104 asserts the refusal precedes rendering (zero `renderSystemdUnit` calls) and nothing is written. |
 | TR-19 | Adding `daemon` to the prompt-required set without the help page and inventory rows turns three guards red, and the fix is a guard relaxation. | H | TC-DAEMON-013 updates the two inventory surfaces and the conformance page list in the same phase and asserts each guard fails by name when a row or literal is removed; no guard is loosened. |
 | TR-20 | The widening of `degraded` changes delivered bytes for an existing embedder. | H | TC-DAEMON-112 compares serialized payloads against recorded baselines for array-valued and omitted compositions, and asserts the union actually dispatches. |
-| TR-21 | The mount edits a delivered suite's assertion to make it pass, hiding a regression. | H | TC-DAEMON-113 enumerates the four permitted update sites and requires the rest to pass unmodified; the diff half is review-attested (GAP-T1) and any extra edit is a finding. |
+| TR-21 | The mount edits a delivered suite's assertion to make it pass, hiding a regression. | H | TC-DAEMON-113 enumerates the permitted update sites (derived from the delivered tree: the family lists, the `daemon` absence assertions, the command enumeration in the coverage suite, the coverage inventory rows, and the conformance page list) and requires the rest to pass unmodified; the diff half is review-attested (GAP-T1) and any extra edit is a finding. |
 | TR-22 | Help or version starts consulting state, configuration, or the daemon composition. | M | TC-DAEMON-114 asserts zero composer invocations, an unchanged directory listing, and an armed read guard for the daemon tuples. |
-| TR-23 | The derived marker adds a socket probe, a process probe, or a sleep to a synchronous read. | H | TC-DAEMON-120 asserts the counters are zero and the read budget is ≤ 2; TC-DAEMON-076 re-asserts the same on the failure path. |
+| TR-23 | The derived marker adds a socket probe, a process probe, or a sleep to a synchronous read. | H | TC-DAEMON-120 asserts the counters are zero and the budget is ≤ 2 additional daemon-fact reads; TC-DAEMON-076 re-asserts the same on the failure path. |
 | TR-24 | Performance cases flake and are softened to a meaningless floor. | M | GAP-T6 pins the method, the reference store, and the relative p95 baseline; a bound change requires an explicit reviewed edit, and TC-DAEMON-120/121/122 record every sample. |
-| TR-25 | The integration-marked real-child case leaks a process or writes outside its temp root in CI. | M | TC-DAEMON-039 uses a temp `HOME`/`XDG_CONFIG_HOME`/state dir, a 20 000 ms hard timeout, a `finally` `SIGKILL` reap, and a `git status --porcelain` assertion; it asserts no ambient environment variable reached the child. |
+| TR-25 | The integration-marked real-child case leaks a process or writes outside its temp root in CI. | M | TC-DAEMON-039 uses a temp `HOME`/`XDG_CONFIG_HOME`/state dir, an injected `PATH` for the child, a 20 000 ms hard timeout, a `finally` `SIGKILL` reap, and a `git status --porcelain` assertion; it asserts the child's environment is exactly the declared forwarded set and that no ambient key reached it. |
+| TR-26 | The degradation predicate and the status fold drift apart at the boundary or on ownership: a `<=` at the bound, or an owner requirement silently harmonised with the fold. | H | TC-DAEMON-073 asserts the at-bound cell as degraded and the fold as `stale`; TC-DAEMON-070 asserts the just-below cell as `[]`; TC-DAEMON-075 asserts agreement on every owned or heartbeat-less cell and refuses to fold the unowned cells in; TC-DAEMON-078 asserts the unowned family's divergence with both surfaces in one body; `stale-inclusive` and `owner-ignored` mutants must fail. |
 
 ### 8.2 Assumptions
 
 - The delivered daemon engine, control protocol, supervisor adapter, status projection, process port, and durable records are stable current contracts; the mount consumes them without editing their semantics (spec §12).
 - `process.argv[1]` is an absolute, executable path to the running entry, so the same value serves both detached re-entry and the unit's `ExecStart` (RSK-2, DEC-2).
+- The composing process's own environment carries a non-empty `PATH` and a home value; the spawn forwards them unchanged and cannot repair a caller that has already stripped them (DEC-16, RSK-2, AC-F2-10).
 - `resolveStateDirectoryScope` and `resolveDaemonSettings` are the single resolution edges for the directory and the `daemon` branch, and a resolution failure is reported by the edge that owns it (DEC-5, DEC-6).
-- The composing process, the detached child, and the unit process resolve the same brand prefix in the tested configuration (the shipped default); forwarding a working-name override is out of scope (DEC-16, RSK-6).
-- The lock-staleness bound is the correct freshness threshold for "reachable" and is the same bound the status fold uses (DEC-7, AC-F5-6).
+- The composing process, the detached child, and the unit process resolve the same brand prefix, because the working-name override is forwarded when set and non-empty; the residual is the caller's own stripped environment, not the brand (DEC-16, RSK-6).
+- The lock-staleness bound is the freshness threshold for "reachable", applied as strictly-below by the predicate and by the status fold, and requiring the heartbeat's owner; the two rules agree on every cell where the instance owns the latest heartbeat or no heartbeat exists, and diverge only on the unowned family (DEC-7, AC-F5-6, AC-F5-8).
 - The daemon writes its instance and heartbeat records to the same store the queue and lanes read, so a durable predicate is a sufficient observation.
 - Install is provable through the injected `SupervisorPort` (DEC-11) without a live systemd; a real user-manager load is a manual host verification (GAP-T4).
 - `daemon status` keeps reporting `installed: false` in its supervisor descriptor because the delivered status composition performs no supervisor inspection; the receipts are the installation truth (DEC-14).
@@ -1895,7 +2036,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | OQ-T2 | How is success of a bare start determined? | Resolved | From durable state: a durable `acquired` instance within the readiness window; the child's streams are never consulted (AC-F2-1, AC-F2-2). TC-DAEMON-030/031. |
 | OQ-T3 | What happens when both signals arrive? | Resolved | Exactly one stop, one terminal record, listeners removed; the first signal selects the mode (AC-F2-9). TC-DAEMON-038. |
 | OQ-T4 | Where does the state directory come from, and what happens on an invalid override? | Resolved | `resolveStateDirectoryScope` (override first, home default otherwise); an invalid override keeps the home value and the command, with the report left to the resolution edge (DEC-5, AC-F3-4). TC-DAEMON-050–053. |
-| OQ-T5 | Is the degradation source durable state or a socket probe? | Resolved | Durable state: latest operation plus a heartbeat belonging to that instance within the lock staleness; no socket, no probe, no sleep (DEC-7, AC-F5-1..AC-F5-7). TC-DAEMON-070–077. |
+| OQ-T5 | Is the degradation source durable state or a socket probe? | Resolved | Durable state: an instance whose latest operation is `acquired`/`taken-over`, a heartbeat whose `instanceId` matches it, and an age strictly below the lock staleness; no socket, no probe, no sleep, and an unowned heartbeat is never reachable (DEC-7, AC-F5-1..AC-F5-8). TC-DAEMON-070–078. |
 | OQ-T6 | Which pid is recorded, and what does `stop` do with a non-positive one? | Resolved | The composing pid is recorded only when positive; `stop` refuses any non-positive or torn pid with `daemon.state-recovery-failed` and sends no signal (DEC-8, AC-F6-1..AC-F6-3). TC-DAEMON-090–092. |
 | OQ-T7 | Which install identity values does production use? | Resolved | Absolute entry path as `ExecStart`; `${brand.binaryName}-daemon.service`; `XDG_CONFIG_HOME` when absolute and non-empty else `<home>/.config`; the exact `<PREFIX>_STATE_DIR` binding; the digest of the resolved directory as scope (DEC-9, DM-6). TC-DAEMON-100/101. |
 | OQ-T8 | What does install do without an entry path? | Resolved | Refuses with `daemon.state-recovery-failed` at exit `2` and writes nothing; no unit is rendered with an empty executable (AC-F7-5). TC-DAEMON-104. |
@@ -1903,8 +2044,10 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | OQ-T10 | Does the doc-conformance page list also gain the two pre-existing omissions? | Resolved | No: only `daemon` is added; `dispatch` and `coordinator` stay as they are (DEC-13, AC-F1-3). TC-DAEMON-013. |
 | OQ-T11 | Does `daemon status` start reporting install truth? | Resolved | No: the descriptor keeps `installed: false`; the receipts are the truth (DEC-14). TC-DAEMON-060. |
 | OQ-T12 | Which mode does a production start report? | Resolved | `supervise-only` with `lane-executor-unavailable`, distinct from `daemon-unreachable` (DEC-15). TC-DAEMON-032/060. |
-| OQ-T13 | Is the working-name override forwarded into the re-entry environment? | Resolved | No: the environment carries exactly the state-directory variable; brand-prefix agreement is a declared assumption and limitation (DEC-16, RSK-6). TC-DAEMON-030/051, TR-6. |
+| OQ-T13 | Is the working-name override forwarded into the re-entry environment? | Resolved | Yes, when it is set and non-empty: the environment carries the authoritative state binding last plus the composing `PATH`, `HOME`/`USERPROFILE`, and that override, through one optional composition input; a forwarding failure is a defect, not a declared limitation (DEC-16, AC-F2-1, AC-F3-2). TC-DAEMON-040/051, TR-6. |
 | OQ-T14 | Which rate is the daemon's lane restart bound? | Resolved | The resolved `lane.restart-budget`, with the shipped default when configuration cannot be acquired (DEC-10). TC-DAEMON-100. |
+| OQ-T15 | Is the shipped `#!/usr/bin/env bun` entry executable from the re-entry environment, and what happens when the caller has no `PATH`/`HOME`? | Resolved | Executable: the composing `PATH` and home are forwarded and the binding stays authoritative, so the child resolves the same interpreter the parent used (AC-F2-10, DEC-16). The residual is the caller's own environment: a stripped `PATH`/`HOME` cannot be repaired by the spawn, so the start fails closed as `daemon.state-recovery-failed` at exit `2` with nothing acquired and no root-level state path. TC-DAEMON-039/040 prove the first half, TC-DAEMON-041 the second. |
+| OQ-T16 | Do the queue/lanes marker and the status fold agree on an unowned heartbeat? | Resolved | No, deliberately: the predicate requires an owner, the fold answers a liveness question only, and the divergence is named and bounded to that family (DM-4, AC-F5-8). TC-DAEMON-075 asserts agreement on the owned cells, TC-DAEMON-078 the divergence. |
 
 **No specification question remains open.** Every AC in the specification is testable as written; no criterion had to be reopened, reinterpreted, or deferred, and no placeholder or TODO row exists in this plan. The only items carried forward are the declared test-method constraints GAP-T1..GAP-T6, which are verification-method statements, not specification ambiguities.
 
@@ -1913,6 +2056,7 @@ TC IDs use the `DAEMON` feature prefix. Sequence blocks are intentional and foll
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-11 | test-plan-writer | Initial test plan derived from `chg-GH-286-spec.md` v1.0, TDR-0022, the GH-286 clarify-scope record, the delivered GH-238 daemon surfaces, the GH-241 coordinator-production-composition precedent, and `.ai/rules/testing-strategy.md`. **50 scenarios; 47/47 ACs covered** (41 capability plus 6 NFR) with a forward and backward trace on every row; Scenario Index = Scenario Details = Automation Plan (50/50/50). Sequence blocks: `01x` mount/help/coverage, `03x` detached start/foreground lifetime/cross-process stop plus one integration-marked real spawn, `05x` one state-directory scope, `06x` control plane and status, `07x` durable degradation, `09x` composing pid and fail-closed stop, `10x` install and uninstall identity plus one manual host verification, `11x` additive contract and non-regression, `12x` measured NFRs. Every scenario declares its planned file path with new-versus-update status; the four permitted delivered-suite update sites are enumerated in §7 and are the only edits allowed to existing tests/fixtures; byte-identical array-valued `degraded`, an unchanged error table, an unchanged `STATE_SCHEMA_VERSION`, unchanged help/version purity, and `--help` for all five subcommands are asserted as first-class cases; the negative and refusal paths (readiness timeout, pid-0 refusal with zero signal calls, unsupported supervisor with no unit, install with no entry path, invalid non-absolute override, torn reads, and the containment that must not fire) each get their own case with an absence-proof counter; both directions of degradation and the watch flip are asserted. GAP-T1..GAP-T6 record the verification-method constraints (review-attested diff, sequential two-handle process proof, three-observation absences, no real systemd in automated cases, delivery-bound names, performance method). The gate battery is pinned to `pnpm check` (lint → format:check → typecheck → test → check:boundaries → check:prompt → check:help → exports-parity) plus `git diff --check`, the named invariant scripts, the integration case, the manual host verification, and the repo-local `TMPDIR` caveat. No open question, no TODO, and no AC reopened. |
+| 1.1 | 2026-11-11 | test-plan-writer | Revision closing DoR iteration 1 (`readiness-review/readiness-iter-1.md`, verdict `NOT_READY`) against `chg-GH-286-spec.md` v1.1. **RF-1/AC-F2-10** — `TC-DAEMON-030` and `TC-DAEMON-051` re-pinned from the withdrawn "one environment variable" contract to the amended TDR-0022 DC-1: `<PREFIX>_STATE_DIR` authoritative and written last, plus the composing `PATH`, `HOME`/`USERPROFILE`, and a working-name override only when set and non-empty, through one optional additive input; `TC-DAEMON-039` now spawns a real `#!/usr/bin/env bun` fixture entry and asserts the interpreter and the forwarded key set from the child's own evidence; new `TC-DAEMON-040` (hermetic composition and ordering) and `TC-DAEMON-041` (stripped `PATH`/`HOME` fails closed, nothing acquired, no root-level state path). **RF-2/AC-F5-8** — the reachability predicate is pinned to an owning instance plus `now − beatAt < lockStalenessMs`: `TC-DAEMON-070` step 5 no longer claims an inclusive boundary, `TC-DAEMON-073` moves the at-bound cell to the degraded side, `TC-DAEMON-075` restricts its agreement matrix to owned-or-heartbeat-less stores (17 cells, unowned cells excluded by assertion), and new `TC-DAEMON-078` asserts the unowned family's degradation alongside the delivered fold's `running`, with the divergence named. **RF-4** — plain `daemon status` is a probe-and-report surface at exit `0` (`TC-DAEMON-060` steps 6/7, `TC-DAEMON-061` step 4, `TC-DAEMON-062` step 3); the zero-connect claim is confined to the queue/lanes path. **RF-5** — `TC-DAEMON-100` step 5 asserts the delivered install order (unit write → `systemctl --user enable` → `loginctl enable-linger` → ownership marker). **RF-6** — `TC-DAEMON-124` asserts exit `1` for `daemon.already-running` and `daemon.takeover-refused` (`user-validation`). **A-4** — §7 now states that the delivery plan's consolidation block is the authoritative file inventory and that this plan's per-case paths are the pre-consolidation grouping. **A-8** — `TC-DAEMON-104` keys the refusal on entry-path absence only, since `DaemonComposition.binary` is required. Totals: **53 scenarios; 49/49 ACs covered** (43 capability plus 6 NFR); Scenario Index = Scenario Details = Automation Plan (53/53/53). Two mutants added (`binding-not-last`, `owner-ignored`) and one renamed (`stale-inclusive`); the re-entry environment fixtures are added to the committed state set. |
 
 ## 10. Test Execution Log
 
@@ -1944,10 +2088,12 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 ### 10.3 Deviations and observations (for the review gate)
 
 - The plan asserts the delivered grammar and envelopes unchanged: `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`, `daemon status [--live]`, `daemon install`, `daemon uninstall`; the mount makes them reachable, not different.
-- The degradation marker is asserted in both directions on both read surfaces, including the inclusive staleness boundary, the orphan-heartbeat fabrication guard, the foreign-instance beat, and the torn-read fail-closed path; the production wiring case exists because a correct predicate with a constant wire would otherwise pass.
-- The fail-closed stop is asserted by a **zero signal counter**, not by an exit code, and the negative-pid (group form) mutant guards against a later "helpful" refactor.
-- The install proofs use the injected supervisor port end to end (content, command order, rollback, ownership-scoped removal); exactly one manual case touches a real user manager, inside a temp `XDG_CONFIG_HOME`, and never enables login autostart for the operator's account.
+- The re-entry environment is asserted as the declared set — `<PREFIX>_STATE_DIR` last and authoritative, plus `PATH`, `HOME`/`USERPROFILE`, and the working-name override only when set — never as "one variable". The real `#!/usr/bin/env bun` proof is `TC-DAEMON-039`; the stripped-caller residual is `TC-DAEMON-041`, and the two assert different verdicts for different fixtures.
+- The degradation marker is asserted in both directions on both read surfaces, including the strictly-below boundary (at-bound is degraded and the fold says `stale`), the just-below control, the torn-read fail-closed path, and the unowned-heartbeat family where the marker degrades while the delivered fold reports `running` — the one declared divergence, asserted in a single body so neither surface can be "harmonised" silently. The production wiring case exists because a correct predicate with a constant wire would otherwise pass.
+- Plain `daemon status` probes the composed socket and reports reachability at exit `0`; only `--live` fails closed. The zero-socket-connect claim is asserted for the queue/lanes degradation path only (`TC-DAEMON-076`, `TC-DAEMON-120`), never for status.
+- The fail-closed stop is asserted by a **zero signal counter**, not by an exit code, and the negative-pid (group form) mutant guards against a later "helpful" refactor. `daemon.already-running` and `daemon.takeover-refused` are `user-validation` rows and therefore exit `1`, not `2`.
+- The install proofs use the injected supervisor port end to end (content, the delivered command order — unit write, `systemctl --user enable`, `loginctl enable-linger`, ownership marker — rollback, ownership-scoped removal); exactly one manual case touches a real user manager, inside a temp `XDG_CONFIG_HOME`, and never enables login autostart for the operator's account.
 - Exactly one case spawns a real child process (`TC-DAEMON-039`); it is integration-marked, temp-rooted, timeout-bounded, and reaped in `finally`. No automated case calls `systemctl` or opens a real socket.
-- The four permitted edits to delivered test/fixture files are: `tests/behaviour/entrypoint-composition.test.ts` (expected-family list and the `daemon` absence name), `tests/behaviour/entrypoint-help.test.ts` (root family list), `tests/fixtures/help-guide/coverage.json` (`commands` and `referencePages` rows), and `tests/checks/doc-conformance.test.ts` (`PROMPT_REQUIRED_PAGES` gains `daemon`). Any other change to a delivered suite's assertions is a defect against AC-F8-4; the diff-shape half is review-attested (GAP-T1), not asserted by a permanent branch-diff test.
+- The permitted edits to delivered test/fixture files are those that carry the prompt-required enumeration or the family list derived from it, and nothing else: `tests/behaviour/entrypoint-composition.test.ts` (expected-family list and the `daemon` absence assertions), `tests/behaviour/entrypoint-help.test.ts` (root family list), `tests/behaviour/entrypoint-help-coverage.test.ts` (the hard-coded command enumeration), `tests/fixtures/help-guide/coverage.json` (`commands` and `referencePages` rows), and `tests/checks/doc-conformance.test.ts` (`PROMPT_REQUIRED_PAGES` gains `daemon`). The set is derived from the tree, not from a count. Any other change to a delivered suite's assertions is a defect against AC-F8-4; the diff-shape half is review-attested (GAP-T1), not asserted by a permanent branch-diff test.
 - `tests/structure/content-inventory.test.ts` and `tests/structure/inventory.json` are expected to stay byte-identical because no module or published export is added; if delivery adds one, the same phase must add the inventory row and keep `pnpm check:boundaries` green.
 - The aggregate gate is run with the repo-local `TMPDIR`; a default-`TMPDIR` failure is environmental only when its sole failing test is `CI baseline parity (hermetic partial clone)`.
