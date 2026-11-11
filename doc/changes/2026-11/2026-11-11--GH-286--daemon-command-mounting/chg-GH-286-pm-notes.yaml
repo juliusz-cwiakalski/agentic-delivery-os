@@ -18,6 +18,23 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 6 commit: 30d44c90. Plan phase 7 complete (documentation and
+      spec reconciliation): `feature-cli-entrypoint.md` gains the mounted daemon
+      row and the unconditional-composition statement, the summary enumeration,
+      and the GH-286/TDR-0022/contract links; `feature-resident-daemon.md`
+      replaces the not-mounted sentence with the mounted reality (unconditional
+      runtime, entry-path re-entry, signal-owned lifetime, real pid, brand-derived
+      install identity, durable degradation) and gains both links;
+      `entrypoint-delta.md` records the closed registration gap with the
+      seventeen-family listing; `daemon.md` completes the reconciliation with the
+      shared scope and the mount-and-lifetime paragraph and keeps its `## HELP`
+      section; `entrypoint.md` lists the family and drops it from the absent set;
+      `doc/00-index.md` describes the mounted daemon. Gate: doc-conformance,
+      help-guide-coverage, reference-page-parity, daemon-vocabulary, and
+      prompt-conformance green, forbidden-literals clean, the distribution guard
+      reports no drift, and `git diff --check` clean."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 5 commit: aa3c5311. Plan phase 6 complete (mount and
       self-description in one commit): `daemon` joins `PROMPT_REQUIRED_COMMANDS`
       exactly once (17 families); the help inventory gains the family entry with

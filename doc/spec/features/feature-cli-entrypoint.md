@@ -3,18 +3,20 @@ ados_distribution: internal
 id: SPEC-CLI-ENTRYPOINT
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
-summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` and `coordinator` families, fail-closed `fallback.internal` containment for an uncomposed invocation, the declared credential references registered for serialization redaction from the injected environment, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
+summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch`, `coordinator`, and `daemon` families, fail-closed `fallback.internal` containment for an uncomposed invocation, the declared credential references registered for serialization redaction from the injected environment, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
-  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-277", "GH-279", "GH-280", "GH-284"]
-  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
+  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-277", "GH-279", "GH-280", "GH-284", "GH-286"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019", "TDR-0022"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
     - "packages/cli/src/entrypoint.ts"
     - "packages/cli/src/help.ts"
+    - "packages/cli/src/help/prompt-required-commands.ts"
     - "packages/cli/src/production.ts"
+    - "packages/cli/src/daemon-compose.ts"
 ---
 
 # Feature: CLI Entrypoint and Self-Description
@@ -62,7 +64,7 @@ Global flags on every surface are `--json`, `--verbose`, and `--pretty`. `--json
 | `dispatch` | `dual-run` (`summary`, `resolve`), `handover` (`--revert`) |
 | `coordinator` | `start`, `stop`, `status`, `tick` |
 
-`state` and `mcp` are not registered or claimed: the state layer ships no command surface and `mcp` is its own package surface. The resident daemon is not part of the prompt-required composition: its lifecycle family is composed only when a daemon runtime is supplied, and the production entrypoint supplies none, so `<binary> daemon ...` is refused rather than mounted ([Resident Dispatch Daemon](feature-resident-daemon.md)). The coordinator family is part of the prompt-required composition: the production composer supplies its `CoordinatorComposition` (store, clock, id/fence factories, resolved coordinator settings, node process port with start-time identity, the delivered harness session port selected per harness kind, harness-session facts/effects, and the foreground cycle driver), and the shipped `coordinator status`, `start --foreground`, `stop`, and `tick` reach the handler. Its help entry points at the coordinator reference page. Other registered commands (`config`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised. `doctor` is registered only when a `DoctorComposition` is supplied; the production composer supplies none today, so the production program contains no `doctor` command and it is not advertised (a pre-existing doctor residual, see [Doctor](feature-doctor.md)). `dispatch` is composed with its resolution, summary, and reversal forms, and its help entries point at the dispatch reference page.
+`state` and `mcp` are not registered or claimed: the state layer ships no command surface and `mcp` is its own package surface. The resident daemon is part of the prompt-required composition: the production composer supplies the daemon runtime unconditionally, so `daemon start`, `stop`, `status`, `install`, and `uninstall` reach their handlers and the family appears in root `--help` ([Resident Dispatch Daemon](feature-resident-daemon.md)). An absent optional daemon input — the entry path, the signal host, the supervisor seam, a re-entry environment — or an unresolvable state directory degrades one start, spawn, or install shape; it never removes the command, because a prompt-required command with no runtime is a composition gap the entrypoint contains as `fallback.internal`. The coordinator family is part of the prompt-required composition: the production composer supplies its `CoordinatorComposition` (store, clock, id/fence factories, resolved coordinator settings, node process port with start-time identity, the delivered harness session port selected per harness kind, harness-session facts/effects, and the foreground cycle driver), and the shipped `coordinator status`, `start --foreground`, `stop`, and `tick` reach the handler. Its help entry points at the coordinator reference page. Other registered commands (`config`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised. `doctor` is registered only when a `DoctorComposition` is supplied; the production composer supplies none today, so the production program contains no `doctor` command and it is not advertised (a pre-existing doctor residual, see [Doctor](feature-doctor.md)). `dispatch` is composed with its resolution, summary, and reversal forms, and its help entries point at the dispatch reference page.
 
 Program selection is strict. A missing prompt-required command is a composition gap and throws instead of shipping a partial surface; the entrypoint catches that throw and answers the invocation with the `fallback.internal` containment identity. Extra registrations are dropped. The production composer (`packages/cli/src/production.ts`) wires the delivered adapters — the state store, credential port, repository facts, git seams, GitHub client, and the command runtimes — and reuses the branding seam so the name has one source.
 
