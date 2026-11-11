@@ -4,21 +4,32 @@
  * with the DEC-16 naming rule, and the read-only posture.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { hostIndexDocumentPath } from "../../packages/adapters/src/file/host-index-store";
+import { parseHostIndexDocument } from "../../packages/core/src/app/host-index";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import {
   DAEMON_REACHABILITY_REASONS,
   HANDOVER_STATES,
   HOST_INDEX_SCHEMA,
+  PROJECT_IDENTITY_MARKER_NAME,
 } from "../../packages/core/src/contracts/projects";
 import {
   hostIndexEntriesOf,
   hostIndexRevisionOf,
   hostIndexTextOf,
 } from "../fixtures/projects/host-index";
-import { hostRootFingerprint } from "../fixtures/projects/host-root";
+import { hostRootFingerprint, snapshotTree } from "../fixtures/projects/host-root";
 import { writeRawMarker } from "../fixtures/projects/markers";
 import {
   createProductionProjectsHarness,
@@ -512,6 +523,197 @@ describe("TC-PROJ-042 cells 1 and 3 — first use and a present-but-unreadable r
       );
     } finally {
       for (const harness of harnesses) harness.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+});
+
+describe("F-1 a tampered index key is corruption, never a traversed path", () => {
+  test("dot, dot-dot, empty, colon, whitespace, and over-long keys are all refused", async () => {
+    const host = createHostFixture("list-tampered-keys");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const checkout = createRepository(base, "tampered-repo");
+      const harness = harnessFor(host, "tampered", checkout);
+      harnesses.push(harness);
+      await register(harness);
+      const hostEntriesBefore = readdirSync(host.hostRoot).sort();
+
+      const baseEntry = {
+        projectIdentifier: "0123abcd000000000000000000000000",
+        root: checkout,
+        lastWrittenAt: "2026-11-11T08:00:00.000Z",
+      };
+      const badKeys: readonly [string, string][] = [
+        ["dot", "."],
+        ["dot-dot", ".."],
+        ["empty", ""],
+        ["colon", "owner:repo-0123abcd"],
+        ["whitespace", "has space-0123abcd"],
+        ["over-long", `${"a".repeat(40)}-0123abcd`],
+        ["unbound-prefix", "unbound-0123abcd"],
+      ];
+      for (const [label, key] of badKeys) {
+        writeIndex(host.hostRoot, [
+          { ...baseEntry, projectKey: key, stateLocation: `${host.hostRoot}/projects/${key}` },
+        ]);
+        const run = await harness.run(["projects", "list", "--json"]);
+        expect(run.exitCode, label).toBe(2);
+        expect(envelopeOf(run)?.error?.code, label).toBe("projects.registry-corrupt");
+        expect(run.envelope?.data, label).toBeUndefined();
+        // No store was opened through a traversed path: the host root gains no
+        // store artifact, and the escaped `<host root>/projects/..` is the host
+        // root, which stays exactly as it was.
+        expect(readdirSync(host.hostRoot).sort(), label).toEqual(hostEntriesBefore);
+      }
+    } finally {
+      for (const record of harnesses) record.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+
+  test("a minted-shape key still parses, so the guard rejects only tampering", () => {
+    const parse = (key: string) =>
+      parseHostIndexDocument(
+        JSON.stringify({
+          schema: "delivery.projects.host-index.v1",
+          revision: 1,
+          projects: [
+            {
+              projectKey: key,
+              projectIdentifier: "0123abcd000000000000000000000000",
+              root: "/srv/checkout",
+              stateLocation: `/srv/state/projects/${key}`,
+              lastWrittenAt: "2026-11-11T08:00:00.000Z",
+            },
+          ],
+        }),
+      ) !== undefined;
+    expect(parse("delivery-a-0123abcd")).toBe(true);
+    expect(parse("project-0123abcd")).toBe(true);
+    // A basename that merely starts with `unbound` is a legitimate key; only the
+    // reserved basename itself is refused (and it sanitises to the fallback).
+    expect(parse("unbound-alpha-0123abcd")).toBe(true);
+    for (const bad of [
+      ".",
+      "..",
+      "",
+      "owner:repo-0123abcd",
+      "has space-0123abcd",
+      `${"a".repeat(40)}-0123abcd`,
+      "unbound-0123abcd",
+      "delivery-a-0123ABCDE",
+    ]) {
+      expect(parse(bad), bad).toBe(false);
+    }
+  });
+});
+
+describe("F-4 the narrowed write-free claim for projects list", () => {
+  test("a leftover store temp file is the only thing the read removes", async () => {
+    const host = createHostFixture("list-write-free-narrow");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const checkout = createRepository(base, "narrow-repo");
+      const harness = harnessFor(host, "narrow", checkout);
+      harnesses.push(harness);
+      await register(harness);
+      await seedState(harness, "4");
+
+      const documents = join(harness.stateLocation, "documents.default");
+      const stale = join(documents, "dispatch-authority.json.stale.tmp");
+      writeFileSync(stale, "stale temporary bytes\n", { mode: 0o600 });
+      const container = join(host.hostRoot, "projects");
+      const before = snapshotTree(container);
+      const indexBefore = hostIndexTextOf(host.hostRoot);
+
+      const run = await harness.run(["projects", "list", "--json"]);
+      expect(run.exitCode).toBe(0);
+
+      // The permitted write: the store's own cleanup of a leftover temp sibling.
+      expect(existsSync(stale)).toBe(false);
+      const after = snapshotTree(container);
+      const staleName = Object.keys(before.files).find((name) => name.endsWith(".tmp"));
+      expect(staleName).toBeDefined();
+      const beforeWithoutTemp = { ...before.files };
+      if (staleName !== undefined) delete beforeWithoutTemp[staleName];
+      expect(after.files).toEqual(beforeWithoutTemp);
+      // The host index is untouched: no maintenance, no revision advance.
+      expect(hostIndexTextOf(host.hostRoot)).toBe(indexBefore);
+    } finally {
+      for (const record of harnesses) record.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+
+  test("a fresh checkout mints its identity marker and nothing else", async () => {
+    const host = createHostFixture("list-write-free-marker");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const checkout = createRepository(base, "marker-fresh");
+      const harness = harnessFor(host, "marker-fresh", checkout);
+      harnesses.push(harness);
+      // Start marker-less: the harness construction resolved the scope once, so
+      // remove what it minted and let the list invocation mint it again.
+      rmSync(join(checkout, ".git", PROJECT_IDENTITY_MARKER_NAME), { force: true });
+      const hostBefore = readdirSync(host.hostRoot).sort();
+
+      const run = await harness.run(["projects", "list", "--json"]);
+      expect(run.exitCode).toBe(0);
+
+      // The permitted write: the create-once marker inside the checkout's git
+      // common directory, never a host-root artifact.
+      const marker = join(checkout, ".git", PROJECT_IDENTITY_MARKER_NAME);
+      expect(existsSync(marker)).toBe(true);
+      expect(statSync(marker).mode & 0o777).toBe(0o600);
+      expect(readdirSync(host.hostRoot).sort()).toEqual(hostBefore);
+      expect(existsSync(hostIndexDocumentPath(host.hostRoot))).toBe(false);
+      expect(existsSync(join(host.hostRoot, "projects"))).toBe(false);
+    } finally {
+      for (const record of harnesses) record.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+});
+
+describe("F-9 a present but unreadable directory is classified, not discovered later", () => {
+  test("an unreadable state root reaches projects.state-unavailable with key and location", async () => {
+    // A root-owned process can read any directory, so the permission cell is
+    // skipped there; the regular-file cell above is root-proof.
+    if (process.getuid?.() === 0) return;
+    const host = createHostFixture("list-unreadable-dir");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const checkout = createRepository(base, "unreadable-dir");
+      const harness = harnessFor(host, "unreadable", checkout);
+      harnesses.push(harness);
+      await register(harness);
+      const location = projectStateRoot(host.hostRoot, harness.projectKey);
+      mkdirSync(location, { recursive: true, mode: 0o700 });
+      chmodSync(location, 0o100);
+      try {
+        const run = await harness.run(["projects", "list", "--json"]);
+        expect(run.exitCode).toBe(2);
+        const error = run.envelope?.error as
+          | { readonly code?: string; readonly summary?: string }
+          | undefined;
+        expect(error?.code).toBe("projects.state-unavailable");
+        expect(error?.summary ?? "").toContain(harness.projectKey);
+        expect(error?.summary ?? "").toContain(location);
+        expect(run.envelope?.data).toBeUndefined();
+      } finally {
+        chmodSync(location, 0o700);
+      }
+    } finally {
+      for (const record of harnesses) record.dispose();
       removeDirectory(base);
       host.dispose();
     }

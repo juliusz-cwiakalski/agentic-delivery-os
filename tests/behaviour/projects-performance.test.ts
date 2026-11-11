@@ -8,7 +8,7 @@
  * repositories, which the revision/length assertions keep honest.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   hostIndexDocumentPath,
@@ -122,10 +122,14 @@ describe("TC-PROJ-037 bounded work", () => {
         const projectKey = `seeded-${String(index).padStart(3, "0")}-00000000`;
         const stateLocation = projectStateRoot(host.hostRoot, projectKey);
         mkdirSync(stateLocation, { recursive: true, mode: 0o700 });
+        // A recorded checkout root must exist or the row is not reported, so the
+        // seeded host mirrors real checkouts with the checkout directory present.
+        const checkoutRoot = join(base, `seeded-root-${String(index)}`);
+        mkdirSync(checkoutRoot, { recursive: true });
         return {
           projectKey,
           projectIdentifier: `${String(index).padStart(8, "0")}${"0".repeat(24)}`,
-          root: join(base, `seeded-root-${String(index)}`),
+          root: checkoutRoot,
           stateLocation,
           lastWrittenAt: "2026-11-11T08:00:00.000Z",
         };
@@ -188,7 +192,10 @@ describe("TC-PROJ-037 bounded work", () => {
               stateLocation: harness.stateLocation,
               recordedAt: "2026-11-11T09:00:00.000Z",
             },
-            probe: () => ({ state: "uncertain" }),
+            // The production probe does one bounded existence check per entry;
+            // measuring with it keeps the maintenance ceiling honest.
+            probe: (recordedRoot) =>
+              existsSync(recordedRoot) ? { state: "uncertain" } : { state: "absent" },
           });
         });
         expect(measured.value.next === undefined || measured.value.revision === 6).toBe(true);

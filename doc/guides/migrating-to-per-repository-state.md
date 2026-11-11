@@ -103,6 +103,20 @@ under the home default (`<home>/<state directory name>`), so that store's
 contents must be moved into the derived project root under the override, using
 the same procedure above with `<host root>` meaning the override path.
 
+The CLI-independent shell fallback reads its **own** pre-freeze state-root
+variable, with its unchanged precedence: that variable first, then the
+repository-local default (`<checkout>/.ai/local/state`), then the home default.
+Its exact name is declared — and documented — at the top of
+`scripts/lib/dispatch-authority.sh`: the product's pre-freeze prefix plus
+`DISPATCH_STATE_ROOT`. The typed commands read `<PREFIX>_STATE_DIR`. The two
+names are separate contracts, so on a host that sets the typed override you must
+also export the fallback's variable with the same absolute host root as its
+value, and keep it in the environment of the shell entry points. Without it the
+fallback looks under its old default, finds no project authority document, and
+reports `dual-run`, while the typed commands are authoritative — a split
+authority that looks like a missing handover. Setting both is the supported
+configuration.
+
 ## Reversing the migration
 
 Move the artifacts back from the project root to the host root, keeping their
@@ -118,14 +132,26 @@ marker is authoritative: deleting it mints a new key, and the moved state would
 no longer be found. Keep it, and keep it out of version control only if your
 tooling already ignores the git directory.
 
+## What `projects list` writes
+
+`projects list` is read-only with respect to delivery state: it never writes the
+host index, never prunes, never replaces a corrupt index, never creates a project
+state root, and never changes a phase document, a queue record, or any other
+store content. Two side effects are permitted and bounded: on a checkout without
+an identity marker, scope resolution mints that marker inside the checkout's git
+common directory (the same create-once file every command needs), and reading a
+project's handover evidence opens its store read-only, which lets the store
+remove a leftover `*.tmp` sibling. Neither can create or change state.
+
 ## Troubleshooting
 
 - **A migration warning keeps appearing.** The host root still holds at least one
   store artifact. Re-check the artifact list above; the host index and the owner
   hold never trigger it.
-- **`projects list` reports a project whose root vanished.** The checkout was
-  moved or deleted. The next state-opening invocation prunes the entry; the state
-  root it referenced is never deleted by pruning.
+- **A project disappeared from `projects list`.** Its recorded checkout root no
+  longer exists, so the row is not reported; the index entry stays until the next
+  state-opening invocation prunes it. The state root it referenced is never
+  deleted by pruning.
 - **Two checkouts show the same project key.** A marker was copied between
   checkouts. The host index keeps the first registration and the colliding
   checkout reports `projects.state-unavailable`; restore the correct marker from

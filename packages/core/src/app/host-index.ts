@@ -19,13 +19,15 @@ import {
   HOST_INDEX_INITIAL_REVISION,
   HOST_INDEX_MAX_ENTRIES,
   HOST_INDEX_SCHEMA,
+  PROJECT_KEY_MAX_BASENAME_LENGTH,
+  PROJECT_KEY_PATTERN,
   type HostIndexConflict,
   type HostIndexDocument,
   type HostIndexEntry,
   type HostIndexMaintenanceOutcome,
   type HostIndexRegistration,
 } from "../contracts/projects.js";
-import { projectStateRoot } from "./state-scope.js";
+import { projectStateRoot, sanitizeProjectBasename } from "./state-scope.js";
 
 /**
  * The bounded recorded-root probe supplied by the adapter composition.
@@ -69,6 +71,27 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
 /**
+ * A stored index key must already be a minted project key: one path segment
+ * matching the declared pattern, with a basename that survives sanitisation
+ * unchanged and within the mint bounds (which also enforces the `unbound`
+ * reservation, because a basename of `unbound` sanitises to the fallback).
+ * The index is untrusted input, and `projectStateRoot` builds a path from the
+ * key, so `.`, `..`, or any other segment-shaped value would escape the project
+ * container. An unparsable key makes the whole document corrupt.
+ */
+const isMintedProjectKey = (key: string): boolean => {
+  if (!PROJECT_KEY_PATTERN.test(key)) return false;
+  // The key is `<sanitised basename>-<eight hex>`; the basename part must obey
+  // the mint bounds exactly, so an over-long or unsanitised key is corrupt.
+  const basename = key.slice(0, key.length - 9);
+  return (
+    basename.length >= 1 &&
+    basename.length <= PROJECT_KEY_MAX_BASENAME_LENGTH &&
+    sanitizeProjectBasename(basename) === basename
+  );
+};
+
+/**
  * Parse and validate one index document. A payload is accepted only when the
  * schema matches, the revision is a non-negative integer, and every entry
  * carries the five declared string fields with a single-segment project key.
@@ -100,7 +123,7 @@ export const parseHostIndexDocument = (text: string): HostIndexDocument | undefi
     ) {
       return undefined;
     }
-    if (projectKey.includes("/") || projectKey.includes("\\")) return undefined;
+    if (!isMintedProjectKey(projectKey)) return undefined;
     entries.push({ projectKey, projectIdentifier, root, stateLocation, lastWrittenAt });
   }
   return { schema: HOST_INDEX_SCHEMA, revision, projects: entries };

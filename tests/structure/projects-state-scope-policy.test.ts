@@ -21,9 +21,14 @@ const SETTINGS_SITE = "packages/cli/src/daemon-compose.ts";
 const SHELL_FALLBACK = "scripts/lib/dispatch-authority.sh";
 
 /**
- * The declared consumer allowlist (GH-288 F-6): the seven structural consumers
- * plus the shell fallback. Adding a surface that derives a state path requires
- * editing this list, which is the anti-recurrence intent.
+ * The files that consume the state-scope policy (GH-288 F-6). Four files hold
+ * every consumer: the CLI production composition (which composes the store, the
+ * dispatch state root, the retro sidecar, the coordinator state directory and
+ * the owner-hold read), the MCP serve composition, the runtime-aware edge's
+ * audit store, and the daemon settings composing site. Adding a surface that
+ * derives a state path requires editing this list, which is the anti-recurrence
+ * intent; the whole-tree AST scan below is the guard that no re-derived path or
+ * duplicate override read appears anywhere in `packages/**`.
  */
 const STATE_CONSUMERS = [
   "packages/cli/src/production.ts",
@@ -203,6 +208,20 @@ describe("TC-PROJ-020 exactly one state-scope policy", () => {
       }
     }
     expect(failures).toEqual([]);
+  });
+
+  it("the in-file surfaces inside the composition select the declared roots", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    // The dispatch state root.
+    expect(production).toMatch(/stateRoot: stateDirectory,/u);
+    // The retro sidecar location.
+    expect(production).toMatch(/retro:\s*\{[\s\S]*?stateDirectory,/u);
+    // The owner-hold read, at the host root only.
+    expect(production).toMatch(/storeDirectory: hostRoot/u);
+    expect(production).not.toMatch(/storeDirectory: stateDirectory/u);
+    // The MCP equivalent.
+    const mcp = readFileSync(join(ROOT, "packages/mcp/src/serve.ts"), "utf8");
+    expect(mcp).toMatch(/storeDirectory: roots\.hostRoot/u);
   });
 
   it("the owner hold is read at the host root and every store path at the project root", () => {

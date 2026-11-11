@@ -100,8 +100,8 @@ export const preserveCorruptHostIndex = (
   content: string,
 ): boolean => {
   const path = join(hostRoot, siblingName);
-  mkdirSync(dirname(path), { recursive: true });
   try {
+    mkdirSync(dirname(path), { recursive: true });
     const descriptor = openSync(path, "wx", 0o600);
     try {
       writeFileSync(descriptor, content, "utf8");

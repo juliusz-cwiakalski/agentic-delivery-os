@@ -100,15 +100,31 @@ _run_cell() {
   local -r script="$1"
   local -r state_root="$2"
   local -r path_prefix="${3:-}"
+  # override_mode: dispatch (default), typed, or both. The fallback reads its
+  # own ADOS_DISPATCH_STATE_ROOT; the typed store reads <PREFIX>_STATE_DIR, so a
+  # host using the typed override must point the fallback at the same root.
+  local -r override_mode="${4:-dispatch}"
   local -r checkout="${_test_tmpdir}/checkout"
   local stdout_file="${_test_tmpdir}/stdout"
   local stderr_file="${_test_tmpdir}/stderr"
   local exit_code=0
+  local -a override_env=()
+  case "${override_mode}" in
+    dispatch) override_env=("ADOS_DISPATCH_STATE_ROOT=${state_root}") ;;
+    typed) override_env=("ADOS_STATE_DIR=${state_root}") ;;
+    both)
+      override_env=(
+        "ADOS_DISPATCH_STATE_ROOT=${state_root}"
+        "ADOS_STATE_DIR=${state_root}"
+      )
+      ;;
+    *) printf 'unknown override mode %s\n' "${override_mode}" >&2; return 1 ;;
+  esac
   (
     if [[ -n "${path_prefix}" ]]; then
       PATH="${path_prefix}:$(_fake_bin_dir):/usr/bin:/bin"
     fi
-    ADOS_DISPATCH_STATE_ROOT="${state_root}" DISPATCH_REPOSITORY="${REPOSITORY}" \
+    HOME="${_test_tmpdir}/home" env "${override_env[@]}" DISPATCH_REPOSITORY="${REPOSITORY}" \
       bash "${checkout}/${script}" --help >"${stdout_file}" 2>"${stderr_file}"
   ) || exit_code=$?
   local pointer=0
@@ -221,6 +237,33 @@ test_override_outranks_the_home_default() {
   }
 }
 
+# The documented two-variable requirement: the fallback's own override names the
+# host root, and a host that sets only the typed override keeps the fallback on
+# its unchanged default, so it reports dual-run instead of guessing.
+test_typed_override_alone_keeps_the_fallback_on_its_default() {
+  local -r host_root="${_test_tmpdir}/host-typed-only"
+  _seed_authority "${host_root}" "authoritative"
+  local cell=""
+  cell="$(_run_cell scripts/deliver-ticket.sh "${host_root}" "" "typed")"
+  [[ "${cell%%|*}" == "0" ]] || return 1
+  [[ "${cell##*|}" == "0" ]] || {
+    printf 'the fallback adopted the typed override without its own variable\n' >&2
+    return 1
+  }
+}
+
+test_both_overrides_agree_on_the_host_root() {
+  local -r host_root="${_test_tmpdir}/host-both"
+  _seed_authority "${host_root}" "authoritative"
+  local cell=""
+  cell="$(_run_cell scripts/deliver-ticket.sh "${host_root}" "" "both")"
+  [[ "${cell%%|*}" == "0" ]] || return 1
+  [[ "${cell##*|}" == "1" ]] || {
+    printf 'the fallback missed the authority document with both overrides set\n' >&2
+    return 1
+  }
+}
+
 test_matrix_is_deterministic_on_rerun() {
   local -r state_root="${_test_tmpdir}/state-rerun"
   _seed_authority "${state_root}" "authoritative"
@@ -236,6 +279,8 @@ run_test "TC-BASH-002 authoritative entry points print the deprecation pointer" 
 run_test "TC-BASH-004 typed CLI absent/broken never changes the decision" test_typed_cli_absent_never_changes_the_decision
 run_test "TC-BASH-006 the resolver reads the project root, never the host root" test_legacy_host_document_is_not_authoritative
 run_test "TC-BASH-007 the environment override keeps precedence over the home default" test_override_outranks_the_home_default
+run_test "TC-BASH-008 the fallback keeps its own override variable (typed-only stays dual-run)" test_typed_override_alone_keeps_the_fallback_on_its_default
+run_test "TC-BASH-009 both override variables agree on the host root" test_both_overrides_agree_on_the_host_root
 run_test "TC-BASH-004 the matrix is deterministic across a rerun" test_matrix_is_deterministic_on_rerun
 
 printf '\n%s: %d tests, %d passed, %d failed\n' "${TEST_TAG}" "${_test_count}" "${_test_passed}" "${_test_failed}"

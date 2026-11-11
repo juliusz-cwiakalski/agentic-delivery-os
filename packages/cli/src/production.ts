@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { existsSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -1842,6 +1842,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const warnings: string[] = [];
       let legacyChecked = false;
       for (const entry of document.projects) {
+        // A recorded checkout root that no longer exists is not reported: the
+        // entry stays in the index for the next maintenance prune (spec F-3).
+        if (!existsSync(entry.root)) continue;
         const stateLocation = projectStateRoot(hostRoot, entry.projectKey);
         let stat: ReturnType<typeof statSync> | undefined;
         try {
@@ -1849,10 +1852,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         } catch {
           stat = undefined;
         }
+        // A bounded directory listing proves readability, so a present but
+        // unreadable root reaches `projects.state-unavailable` here rather than
+        // only failing later inside the store open.
+        let readable = false;
+        if (stat?.isDirectory() === true) {
+          try {
+            readdirSync(stateLocation);
+            readable = true;
+          } catch {
+            readable = false;
+          }
+        }
         const classification = classifyProjectStateLocation({
           exists: stat !== undefined,
           directory: stat?.isDirectory() === true,
-          readable: stat !== undefined,
+          readable,
         });
         if (classification === "first-use" && !legacyChecked) {
           // AC-F3-5 cell 2: an absent root beside a host-root store is a

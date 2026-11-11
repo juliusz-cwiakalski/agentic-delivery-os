@@ -530,20 +530,32 @@ describe("TC-PROJ-010 revision, re-derived state location, and the recorded-valu
         harness.stateLocation,
       );
 
-      // Tampering with another field never changes the reported location.
+      // A recorded checkout root that vanished is not reported (spec F-3); the
+      // entry stays in the index for the next maintenance prune. Restoring the
+      // root brings the row back with the derived state location.
+      const restoredDocument = hostIndexTextOf(host.hostRoot);
       const current = hostIndexOf(host.hostRoot);
-      const changedRoot = (current?.projects ?? []).map((entry) =>
+      const vanishedRoot = (current?.projects ?? []).map((entry) =>
         entry.projectKey === harness.projectKey ? { ...entry, root: "/nowhere/at/all" } : entry,
       );
       writeFileSync(
         hostIndexDocumentPath(host.hostRoot),
-        `${JSON.stringify({ schema: current?.schema, revision: current?.revision, projects: changedRoot }, null, 2)}\n`,
+        `${JSON.stringify({ schema: current?.schema, revision: current?.revision, projects: vanishedRoot }, null, 2)}\n`,
       );
       const changed = await harness.run(["projects", "list", "--json"]);
+      expect(changed.exitCode).toBe(0);
       const changedRow = (dataOf(changed).projects as readonly Record<string, unknown>[]).find(
         (entry) => entry.projectKey === harness.projectKey,
       );
-      expect(changedRow?.stateLocation).toBe(harness.stateLocation);
+      expect(changedRow).toBeUndefined();
+      expect(hostIndexEntryOf(host.hostRoot, harness.projectKey)?.root).toBe("/nowhere/at/all");
+
+      writeFileSync(hostIndexDocumentPath(host.hostRoot), restoredDocument ?? "");
+      const restoredRun = await harness.run(["projects", "list", "--json"]);
+      const restoredRow = (dataOf(restoredRun).projects as readonly Record<string, unknown>[]).find(
+        (entry) => entry.projectKey === harness.projectKey,
+      );
+      expect(restoredRow?.stateLocation).toBe(harness.stateLocation);
     } finally {
       for (const harness of harnesses) harness.dispose();
       removeDirectory(base);
