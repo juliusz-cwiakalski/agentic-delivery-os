@@ -90,6 +90,10 @@ The group contract, owned by M2-S18.
 
 **From M2-S18, `projects list` enumerates groups and `repos list` enumerates the flat record set; the deprecation alias is the different token `projects list --flat`, owned by M2-S18, which returns the delivered `projects.v1` payload (`data.projects[]`) and retires at the M3 boundary.**
 
+Under that same rule, the board's repository list field becomes
+`repositories[]` (previously the delivered `projects[]`), so the board names
+repository keys throughout and never enumerates groups.
+
 Before M2-S18, the time-scoped disambiguation is the shipped `projects list`
 flat enumeration: the rename rule above is the planned end state, not current
 truth.

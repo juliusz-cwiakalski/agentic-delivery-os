@@ -1074,3 +1074,28 @@ notes:
       CI baseline parity failure and a recorded rerun)."
     type: "info"
     date: "2026-11-11"
+  - text: "N08 REMEDIATION (board re-verification iteration 2, one commit):
+      commands/board.md declares the repository list field as `repositories[]`
+      (previously the delivered `projects[]`), but the single rename rule in
+      contracts.md enumerated only `projectKey → repoKey` and
+      `data.projects[] → data.repos[]`. Fix: the one normative bold rule
+      sentence in contracts.md:91 is byte-intact (P25 counts it exactly once),
+      and the same rule is extended in its own paragraph at contracts.md:93-96
+      with 'Under that same rule, the board's repository list field becomes
+      `repositories[]` (previously the delivered `projects[]`), so the board
+      names repository keys throughout and never enumerates groups.' No second
+      `**From M2-S18...**` rule exists. board.md:54 keeps `repositories[]` and
+      :56-58 now points at the single rename rule in contracts.md without
+      restating it. test-scenarios.md and backlog.md were checked: no remaining
+      board `projects[]`/`data.projects` repository-meaning occurrence; the
+      delivered `projects.v1` payload `data.projects[]` remains only where it
+      means the flat envelope. Tokens: P25 PASS
+      (rename_rule_occurrences=1, two_shape_sentences=0,
+      alias_paired_with_group=0, alias_occurrences=18); P38 PASS
+      (board_anchors=7/7, stale_claims=0, group_claims=0); P40 PASS (8 seeds,
+      7/7 topics); P41 PASS (5 seeds, 5/5 topics); P54 PASS (0/21 survivors,
+      21 matrix rows, all self-tests detected); distribution guard exit 0;
+      forbidden-literals exit 0, 5/5 classes, 0 violations; lint GH-303 exit 0
+      conforms; plan validate valid."
+    type: "info"
+    date: "2026-11-11"

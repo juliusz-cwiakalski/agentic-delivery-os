@@ -5,9 +5,18 @@ mode: local
 work_item_ref: GH-303
 branch: docs/GH-303/project-groups-domain-model
 head: 33a7e53c
+current_head: 52775f64
 base: 723454e4
 reviewed_at: 2026-11-11T22:46:28+01:00
 status: FAIL
+current_status: PASS_WITH_SHOULD_FIX
+head_movement_note: >-
+  An external commit (52775f64, 2026-11-11T22:50:05+01:00) landed during the
+  re-verification. The reviewer did not create, stage, or commit it. It applies
+  the six findings recorded below and records the second-round remediation in
+  chg-GH-303-pm-notes.yaml. The FAIL status above is the verdict for the
+  requested head 33a7e53c; current_status is the verdict after re-verifying
+  52775f64 (see post_review_remediation).
 
 summary: >-
   The board remediation contract was re-verified by inspection and by re-running
@@ -33,6 +42,12 @@ summary: >-
   4 skip / 0 fail, code fingerprint matching HEAD); the test plan's section 10
   P62 FAIL and several section 10 observations are stale, not current-truth
   failures.
+  POST-REVIEW: an external commit 52775f64 landed during the re-verification
+  (2026-11-11T22:50:05+01:00) and applied fixes for CG-API-001, CG-API-002,
+  CG-API-003, CG-API-004, CG-DOC-002 and CG-DOC-003. Re-verification at
+  52775f64 is PASS with one open evidence should-fix (CG-DOC-001, the stale
+  test-plan section 6/section 10 record); all 69 procedures pass and the
+  aggregate gate is green. See post_review_remediation.
 
 remediation_contract:
   decisions:
@@ -49,12 +64,15 @@ remediation_status:
   board_findings_closed: 18
   phrase: "board verdict FAIL -> remediated; six critics re-verified (for the 18 board findings)"
   axes_all_pass: false
+  current_head_axes_all_pass: true
   reason: >-
     The 18 board findings are closed in their stated scope and the six critics
-    re-verified them. The six axes are not all PASS because the remediation left
-    two new blocking defects (CG-API-001, CG-API-002) and four should-fix
-    precision/evidence defects; the current head is therefore a FAIL, not a
-    clean remediated PASS.
+    re-verified them. At the requested head 33a7e53c the six axes are not all
+    PASS because the remediation left two new blocking defects (CG-API-001,
+    CG-API-002) and four should-fix precision/evidence defects. The external
+    commit 52775f64 fixes CG-API-001/002/003/004 and CG-DOC-002/003; after
+    re-verification at 52775f64 the six axes are PASS with one open evidence
+    should-fix (CG-DOC-001, the stale test-plan section 6/section 10 record).
 
 axes:
   - axis: domain-model
@@ -499,6 +517,91 @@ verification_performed:
     default run started at d0a87862 and ended at 33a7e53c; no source, test, or
     config file changed.
 
+post_review_remediation:
+  head: 52775f64
+  committed_at: 2026-11-11T22:50:05+01:00
+  provenance: >-
+    External commit; the reviewer did not create, stage, or commit it. It
+    applies the findings from this review and appends the second-round record to
+    chg-GH-303-pm-notes.yaml (PM notes lines 1043-1076).
+  fixed_findings:
+    CG-API-001: >-
+      test-scenarios.md:64 now asserts `board --all.data.repositories`,
+      matching commands/board.md:54/:81. P38 PASS (board_anchors=7/7,
+      stale_claims=0, group_claims=0).
+    CG-API-002: >-
+      SC-M2-S18-04 now asserts the scoped member set through
+      `projects list --json` / project-groups.v1 (`data.groups[]`, `groupKey`)
+      plus both scoped invocations exiting 0, and explicitly reads no undeclared
+      `queue.*`/`status.*` envelope, which is the TP-10 resolution. P40 PASS
+      (s18_seeds=8, topic_anchors=7/7).
+    CG-API-003: >-
+      projects.md:148,150 now split the meanings: `projects.config-invalid` is
+      schema/content invalidity at exit 1; an unreadable configuration document
+      routes to `projects.scope-unavailable` at exit 2, matching
+      contracts.md:131-132. P33 PASS.
+    CG-API-004: >-
+      contracts.md:128-131,155-167 now declare `data.partial`,
+      `data.degradedMembers[]`, the `data.definitionOfDone` object (`status`,
+      `members[]` with `gates.ci`, `evidence[]`), and each `dependsOn[]` element
+      as a member `repoKey`; the S18-07 and S19-02/03/04 asserts use those paths.
+      P28/P30/P42 PASS.
+    CG-DOC-002: >-
+      projects.md:132 now reads "Outside the projects family itself, only queue
+      and status are group-scoped", consistent with its own
+      `projects list --project <groupKey>` grammar. P36 PASS.
+    CG-DOC-003: >-
+      m2/README.md:62 now lists SC-M2-S18-01..08 and names SC-M2-S18-08 as the
+      AC-F8-5 alias-shape assertion. P48 PASS.
+  still_open:
+    CG-DOC-001: >-
+      The test plan's section 6/section 10 observations were not re-measured
+      (the commit does not touch chg-GH-303-test-plan.md): section 6 still
+      records 7 S18 + 6 S19 seeds, 16 status additions and a 130-line repos.md;
+      section 10 still records s18_seeds=7, s19_seeds=6, alias_seed=SC-M2-S19-06,
+      additions=16 and the heading "correction" (HEAD has 8/5, SC-M2-S18-08,
+      27 additions, "amendment", 142 lines). The pm-notes second-round entry
+      records the correct tokens, so the delivery evidence exists, but the test
+      plan still contradicts it. Should-fix; not a product defect.
+  verification_at_current_head:
+    procedures: >-
+      All 69 procedures re-run at 52775f64: 68/69 PASS plus P62 PASS with
+      P62_RECORD_DIR=$PWD/tmp/tmpdir/gh303/p62-record (local 0, default 1
+      excused, fingerprint match). P38/P40/P41/P44/P51/P22/P33/P28/P30/P36/P42
+      all PASS after the fixes. P58 passed on re-run; its first run showed a
+      transient two-story change caused by concurrent activity, not by the
+      commit (the commit does not touch backlog.md; a clean re-run reports
+      stories_kept=72 changed=0 removed=0).
+    aggregate_gate: >-
+      A fresh repository-local `pnpm check` completed exit 0 (7206 pass / 4
+      skip / 0 fail, all eight sub-gates green). It overlapped the external
+      docs-only commit; no source, test, or config file changed, so the result
+      applies to the 52775f64 code tree. The recorded P62 run remains green.
+    guards: >-
+      forbidden-literals exit 0 (142 docs, 0 violations); doc-distribution exit
+      0 (83 docs, no drift); plan validate valid; lint conforms.
+    containment: >-
+      52775f64 changes 6 files: the pm-notes, this review record,
+      m2/README.md, m2/commands/projects.md, m2/contracts.md and
+      m2/test-scenarios.md. No source, package, spec or other script changes;
+      the 15-product-file manifest is unchanged.
+  post_review_axes:
+    domain-model: PASS
+    technical-architecture: PASS
+    documentation-consistency: PASS
+    product-ownership: PASS
+    api-contracts: PASS
+    legal-ip-compliance: PASS
+  verdict: PASS_WITH_SHOULD_FIX
+  verdict_basis: >-
+    The two blocking defects and the four should-fix product defects from the
+    33a7e53c review are closed and verified at 52775f64; the product corpus is
+    coherent and the aggregate gate is green. One evidence should-fix remains:
+    the test plan's section 6/section 10 record is stale and should be refreshed
+    or explicitly marked historical before the PR is merged. This is a
+    documentation-accuracy item, not a product contradiction, and it does not
+    reopen any of the 18 board findings.
+
 residual_risk:
   accepted_risks:
     - "The board page was reconciled to repository keys; the S4 test plan must still add the `stateSource` field if it wants to assert the shared-source property (CG-API-005)."
@@ -513,23 +616,28 @@ residual_risk:
     - "Confirm whether ODR-0003's Proposed status is intended to bind the registry split."
 
 overall_verdict: FAIL
+current_overall_verdict: PASS_WITH_SHOULD_FIX
 confidence: HIGH
 verdict_basis: >-
   All 18 board findings are closed in their stated scope, but the re-verification
-  found two new blocking defects that are direct instances of the board's own
-  concerns: a repository-meaning `projects` field in the S4 seed (AC-F14-1 /
-  NFR-12), and an S18 seed that asserts an undeclared groupKey on the frozen M1
-  status envelope (AC-F8-3). The remaining items are should-fix precision and
-  evidence-accuracy defects. The authoritative aggregate gate is green; the
-  product corpus is otherwise coherent.
-
+  at 33a7e53c found two new blocking defects that are direct instances of the
+  board's own concerns: a repository-meaning `projects` field in the S4 seed
+  (AC-F14-1 / NFR-12), and an S18 seed that asserts an undeclared groupKey on
+  the frozen M1 status envelope (AC-F8-3). The remaining items are should-fix
+  precision and evidence-accuracy defects. The authoritative aggregate gate is
+  green; the product corpus is otherwise coherent.
+current_verdict_basis: >-
+  At 52775f64 the external fix commit closes both blocking defects and the four
+  should-fix product defects; all 69 procedures pass, the aggregate gate is
+  green, and the six axes are PASS. One evidence should-fix remains: the test
+  plan's section 6/section 10 record is stale and should be refreshed or marked
+  historical before merge (CG-DOC-001). That is a documentation-accuracy item,
+  not a product contradiction, and it does not reopen any of the 18 board
+  findings.
 next_action: >-
-  CALL_CODER for a narrow remediation: (1) change test-scenarios.md:64 to
-  `board --all.data.repositories`; (2) rewrite SC-M2-S18-04's Assert to the
-  TP-10 resolution or declare the scoped envelopes and amend AC-F8-3; (3) split
-  the projects.config-invalid / projects.scope-unavailable meanings; (4) declare
-  the partial, definitionOfDone, dependsOn[] and per-member outcome shapes;
-  (5) correct the projects.md SCOPE sentence; (6) re-measure section 6/section 10
-  and point P62 at the green record. Then re-run P38/P40/P41/P44/P51/P62 and the
-  guards on the new head. Do not edit product files as part of this
-  re-verification; do not commit the review record.
+  Refresh the test plan's section 6/section 10 observations at 52775f64 (or mark
+  the old fixture values as historical), point P62 at
+  tmp/tmpdir/gh303/p62-record, and re-run P40/P41/P44/P51/P62 plus the two
+  guards. No product edit is needed; the 18 board findings and the six new
+  findings from the 33a7e53c review are otherwise closed. Do not commit the
+  review record from this session.

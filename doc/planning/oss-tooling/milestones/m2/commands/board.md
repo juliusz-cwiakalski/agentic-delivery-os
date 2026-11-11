@@ -57,6 +57,10 @@ Envelope `data` carries:
 | `asks[]` | Owner asks with age and drawn default |
 | `parked[]` | Parked work with reason and until timestamp |
 
+The repository list field is `repositories[]`; its transition is defined by the
+single rename rule in [contracts](../contracts.md) and is not restated here.
+The board names repository keys throughout and never enumerates groups.
+
 ## EXIT STATUS
 
 | Code | Meaning |
