@@ -7,7 +7,7 @@ phases:
   specification: { started: null, completed: 2026-11-11T10:50:34.398Z }
   test_planning: { started: null, completed: 2026-11-11T10:50:44.416Z }
   delivery_planning: { started: null, completed: 2026-11-11T10:50:54.941Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-11T11:04:45.981Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -277,5 +277,28 @@ notes:
       INVOCATION-SHAPE RULE in the header, handler-level gates for Phases 2-5
       with selection claims removed, Phase 6 task 6.8 plus an entrypoint-level
       gate, and the Phase 8 counts updated."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR confirmation pass after the iteration-3 repair: RF3-1 verified closed
+      (invocation-shape rule in the plan header, handler-level gates for Phases
+      2-5, Phase 6 task 6.8 plus an entrypoint-level gate, TC-015 mapped once
+      and superseding the selection half), A3-1/A3-2/A3-3/A3-4/A3-5 closed, all
+      counts consistent and the validator green. One new mechanical
+      contradiction was found (RF4-1): two risk-table cells in test plan §8.1
+      still attributed selectability to the re-pinned Phase-2 cases. Fixed in
+      test plan v1.4 (TR-8/TR-27 now say 'stays registered', selection is
+      TC-015's; TC-015 hosts the selection proof in the new structure suite;
+      TC-053's wording aligned), and in plan v1.4 (AC-F7-5's
+      resolvable-state-dir qualifier on the Phase-3 refusal, and task 6.9 owning
+      the TC-105 real-binary re-run). A final targeted confirmation follows."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR gate READY. The final targeted confirmation closed RF4-1 and
+      confirmed A4-1/A4-2/A4-3/A4-4, with 50 ACs = 50 §3.1 rows = 55 TCs = 55
+      map entries and the validator green (verdict valid, readyForDevelopment
+      true, 0 errors). Three non-blocking nits are recorded in
+      readiness-review/readiness-confirmation.md. DoR iterations: 3 full passes
+      (NOT_READY at 1, 2 and 3) plus this scoped repair-and-confirm cycle, all
+      recorded under readiness-review/."
     type: "decision"
     date: "2026-11-11"

@@ -2,7 +2,7 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.3, 2026-11-11):
+# SOURCES (single source of truth; plan revision 1.4, 2026-11-11):
 #   - Spec:    ./chg-GH-286-spec.md (v1.3; 50 ACs — AC-F1-1..5, AC-F2-1..10,
 #              AC-F3-1..5, AC-F4-1..4, AC-F5-1..8, AC-F6-1..3, AC-F7-1..5,
 #              AC-F8-1..4, AC-NFR-1..6; F-1..F-8; DM-1..DM-7; EVT-1..EVT-3;
@@ -25,7 +25,13 @@
 #              plan-reopen finding RF3-1 is closed by plan revision 1.3 — the
 #              invocation-shape rule below partitions handler proofs from the
 #              single entrypoint-level selection proof — and advisory A3-2 by
-#              using `tests/behaviour/daemon-mount-help.test.ts` throughout)
+#              using `tests/behaviour/daemon-mount-help.test.ts` throughout);
+#              the confirmation pass on the changed sections closes its
+#              advisories A4-1 (the AC-F7-5 v1.3 "given a resolvable state
+#              directory" qualifier on the entry-path refusal, in task 3.2 and
+#              the Phase-3 exit) and A4-3 (the TC-DAEMON-105 real-binary re-run
+#              gets a named owner in task 6.9 and the Phase-6 exit) by plan
+#              revision 1.4
 #   - Decision: doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
 #              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
 #              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
@@ -82,7 +88,8 @@
 #             TC-DAEMON-053, TC-DAEMON-054, TC-DAEMON-060, TC-DAEMON-061,
 #             TC-DAEMON-062, TC-DAEMON-063, TC-DAEMON-090, TC-DAEMON-122
 #   Phase 3:  TC-DAEMON-100, TC-DAEMON-101, TC-DAEMON-102, TC-DAEMON-103,
-#             TC-DAEMON-104, TC-DAEMON-105 (manual), TC-DAEMON-124
+#             TC-DAEMON-104, TC-DAEMON-105 (manual; the real-binary form is
+#             re-run at the Phase-6 gate as task 6.9, not remapped), TC-DAEMON-124
 #   Phase 4:  TC-DAEMON-033, TC-DAEMON-034, TC-DAEMON-035, TC-DAEMON-036,
 #             TC-DAEMON-037, TC-DAEMON-038, TC-DAEMON-039, TC-DAEMON-091,
 #             TC-DAEMON-092, TC-DAEMON-121
@@ -748,12 +755,17 @@ phases:
   #      absent in the shape this task hands the runtime.
   #      The state directory is never used as the unit directory.
   #  3.2 packages/cli/src/daemon-compose.ts: the install handler refuses before
-  #      rendering. With no composed entry path it returns
-  #      `daemon.state-recovery-failed` at exit 2 BEFORE calling
+  #      rendering. Given a resolvable state directory and no composed entry
+  #      path it returns `daemon.state-recovery-failed` at exit 2 BEFORE calling
   #      `installSupervisor`/`renderSystemdUnit`, so no unit is ever written with
-  #      an empty `ExecStart` (AC-F7-5). The guard keys on entry-path absence
-  #      only — never on a missing `binary`, which is a required composition
-  #      field, and never on an absent supervisor, platform, or state
+  #      an empty `ExecStart` (AC-F7-5). The unresolvable state-directory outcome
+  #      composes the unavailable runtime first (task 2.1), so this entry-path
+  #      guard is UNREACHABLE when no state directory resolves: that invocation
+  #      is the unavailable runtime's `config.value.invalid` at exit 1
+  #      (AC-F3-5), never `daemon.state-recovery-failed`. The guard keys on
+  #      entry-path absence only — never on a missing `binary`, which is a
+  #      required composition field, and never on an absent supervisor, platform,
+  #      or state
   #      directory — so a refusal cannot be produced by an unrelated absent
   #      value. An unsupported platform or a linger failure keeps
   #      `daemon.supervisor-unsupported` at exit 2 with the unit and ownership
@@ -785,7 +797,8 @@ phases:
   #      `systemctl --user status <unit>`, uninstall, reload, and record the host,
   #      commands, and observed output in the test plan §10 log. The record is
   #      handler-level and makes no selection claim; the real-binary re-run after
-  #      membership belongs to the Phase-6 gate. No automated
+  #      membership is task 6.9 at the Phase-6 gate (it is a re-run of this
+  #      procedure through `runEntrypoint`, not a second TC mapping). No automated
   #      suite calls `systemctl` (GAP-T4); the procedure never enables login
   #      autostart for the operator's real account.
   #  3.5 Fixture mutants, with their consumer declared here: add `bare-execstart`
@@ -806,7 +819,7 @@ phases:
   # handlers too. No case here goes through `runEntrypoint`, and none asserts
   # `selectPromptRequiredProgram`, selection, or `fallback.internal`; the
   # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate, where the
-  # TC-DAEMON-105 real-binary re-run also happens.
+  # TC-DAEMON-105 real-binary re-run also happens as task 6.9.
   #
   # Verification:
   #   bun test tests/behaviour/daemon-install-mount.test.ts tests/golden/daemon-install.test.ts tests/behaviour/daemon-supervisor-install.test.ts
@@ -819,10 +832,14 @@ phases:
   # configuration root, exact
   # environment binding) and the supervisor calls happen in the delivered order;
   # unsupported and linger-failure paths leave nothing behind; uninstall is
-  # ownership-scoped and idempotent; with no composed entry path the install
+  # ownership-scoped and idempotent; given a resolvable state directory, with no
+  # composed entry path the install
   # handler refuses as `daemon.state-recovery-failed` at exit 2 before any
   # rendering and keys on entry-path absence only, while a required `binary` is
-  # always supplied; a
+  # always supplied, and the unresolvable state-directory outcome composes the
+  # unavailable runtime first, so that entry-path guard is unreachable when no
+  # state directory resolves (that invocation is the unavailable runtime's
+  # `config.value.invalid` at exit 1); a
   # repeated live start is `daemon.already-running` at exit 1; the delivered
   # install golden stays a control; each mutant created here is tripped in this
   # commit; the manual host verification is recorded.
@@ -1152,7 +1169,8 @@ phases:
   # composition fixture derives its program from the prompt-required set, so only
   # its hard-coded family list and the `daemon` absence name change.
   #
-  # Tasks (TC-DAEMON-010, 011, 012, 013, 014, 015, 114):
+  # Tasks (TC-DAEMON-010, 011, 012, 013, 014, 015, 114; task 6.9 re-runs
+  #        TC-DAEMON-105, which the map keeps at Phase 3):
   #  6.1 packages/cli/src/help/prompt-required-commands.ts: add `daemon` exactly
   #      once (17 families) with no reordering of the delivered members (AC-F1-1).
   #  6.2 packages/cli/src/help.ts: add the `daemon` family entry (usage naming
@@ -1273,6 +1291,24 @@ phases:
   #      it is the only case that asserts `selectPromptRequiredProgram`,
   #      selection, or `fallback.internal`, and it runs at this gate and again
   #      inside the Phase-8 full battery.
+  #  6.9 Execute the TC-DAEMON-105 real-binary re-run at this gate: the same
+  #      procedure task 3.4 records at handler level, now through the real
+  #      binary after membership. Export `XDG_CONFIG_HOME` to a temp root under
+  #      `$REPO_ROOT/tmp/` and `<PREFIX>_STATE_DIR` to a temp state directory, run
+  #      `<binary> daemon install`, assert the unit path is
+  #      `<temp root>/systemd/user/<binaryName>-daemon.service` and inspect the
+  #      rendered `ExecStart`/`Environment=` lines, run
+  #      `systemctl --user daemon-reload` and `systemctl --user status <unit>`
+  #      (unit known and enabled, not necessarily started), run
+  #      `<binary> daemon uninstall`, reload, and record the host, the commands,
+  #      and the observed output in the test plan §10 log. Invocation shape is
+  #      `entrypoint` — the TC-DAEMON-105 half that needs membership and the
+  #      reason task 3.4 defers it — and this is the run that satisfies AC-F7-1's
+  #      loadability half. It is a RE-RUN of the Phase-3 record, not a second TC
+  #      mapping: the TC→PHASE map stays at one phase per TC, exactly as the
+  #      Phase-8 re-run of TC-DAEMON-015 works. Still no automated `systemctl`
+  #      (GAP-T4), still no write outside the temp root, and still no login
+  #      autostart for the operator's real account.
   #
   # Gate shape (ENTRYPOINT-LEVEL, RF3-1): this is the only phase whose gate
   # asserts selection. `runEntrypoint` is invoked here and nowhere earlier; the
@@ -1293,6 +1329,9 @@ phases:
   # equals `PROMPT_REQUIRED_COMMANDS`), a `daemon status` invocation is never
   # `fallback.internal`, the nine unresolvable-outcome invocations refuse as
   # `config.value.invalid` at exit 1, and help/version stay pure;
+  # the TC-DAEMON-105 real-binary re-run is executed through `runEntrypoint` and
+  # recorded in the test plan §10 log with its host, commands, and observed
+  # output (task 6.9), and the temp config root is the only path written;
   # root `--help` lists the family and all five subcommands
   # answer help at exit 0; `runHelpGuideCoverage()` returns no failures; parity
   # holds and the conformance list covers the mounted family without rewriting
