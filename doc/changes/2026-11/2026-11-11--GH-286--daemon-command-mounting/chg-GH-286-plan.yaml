@@ -2,8 +2,8 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.7, 2026-11-11):
-#   - Spec:    ./chg-GH-286-spec.md (v1.4; 50 ACs — AC-F1-1..5, AC-F2-1..10,
+# SOURCES (single source of truth; plan revision 1.8, 2026-11-11):
+#   - Spec:    ./chg-GH-286-spec.md (v1.6; 52 ACs — AC-F1-1..5, AC-F2-1..12,
 #              AC-F3-1..5, AC-F4-1..4, AC-F5-1..8, AC-F6-1..3, AC-F7-1..5,
 #              AC-F8-1..4, AC-NFR-1..6; F-1..F-8; DM-1..DM-7; EVT-1..EVT-3;
 #              NFR-1..NFR-12; RSK-1..RSK-13; DEC-1..DEC-19, where DEC-19 is the
@@ -16,8 +16,8 @@
 #              completeness sentence becomes true; Appendix C closed
 #              vocabularies; Appendix D mount exit matrix; Appendix E identity
 #              matrix; Appendix F composition matrix)
-#   - Tests:   ./chg-GH-286-test-plan.md (v1.4; 55 TCs TC-DAEMON-010..124
-#              including TC-DAEMON-015; 50/50 AC coverage; GAP-T1..GAP-T6
+#   - Tests:   ./chg-GH-286-test-plan.md (v1.6; 55 TCs TC-DAEMON-010..124
+#              including TC-DAEMON-015; 52/52 AC coverage; GAP-T1..GAP-T6
 #              verification-method constraints; §7 is the file/command
 #              inventory and the per-case invocation shape (`handler` vs
 #              `entrypoint`) this plan maps onto phases; §10.3 carries the
@@ -64,7 +64,14 @@
 #              become the regression tasks 9.17 and 9.18, NF-6 the test-plan
 #              extension 9.19, NF-7 the uninstall-symmetry fix 9.20, NF-8 the
 #              out-of-scope declaration 9.21 and NF-5 the extended commit-subject
-#              note 9.22; the TC map stays 55/55 and Phase 9 still carries none)
+#              note 9.22; the TC map stays 55/55 and Phase 9 still carries none),
+#              ./review/review-confirmation.md (confirmation pass on the
+#              review-iteration-3 remediation; CF-1 and CF-2 are closed by plan
+#              revision 1.8 — CF-1 restates the foreground order in the contract
+#              summary and task 4.1 so both listeners are installed before the
+#              start and a signal racing the start is buffered until the loop
+#              runs, and CF-2 refreshes the spec and test-plan pins; no task
+#              scope and no TC mapping changes)
 #   - Decision: doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
 #              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
 #              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
@@ -338,13 +345,16 @@
 #     `daemon.state-recovery-failed` exit 2 and makes ZERO process-port `signal`
 #     calls. `drain` -> `SIGTERM`, `immediate` -> `SIGINT`, that pid only, never
 #     a group or a name/pattern.
-#   - Foreground lifetime. With a composed signal host and `--foreground`: start,
-#     capture the readiness snapshot, install `SIGINT`/`SIGTERM`, run the
-#     resident loop, stop with the mode the first signal selects, remove both
-#     listeners in a `finally`, await the loop, return the captured snapshot (or
-#     the stop failure). Cancellation precedes the release append. One stop and
-#     one terminal instance record per invocation. No signal host -> the
-#     delivered in-process readiness return, no resident loop.
+#   - Foreground lifetime. With a composed signal host and `--foreground`: install
+#     both `SIGINT`/`SIGTERM` listeners, start the daemon and capture the
+#     readiness snapshot, run the resident loop, stop with the mode the first
+#     signal selects, remove both listeners in a `finally`, await the loop,
+#     return the captured snapshot (or the stop failure). A signal that arrives
+#     while the start is still in flight is buffered — its mode is recorded and
+#     no stop is entered — and applied once the loop runs. Cancellation precedes
+#     the release append. One stop and one terminal instance record per
+#     invocation. No signal host -> the delivered in-process readiness return, no
+#     resident loop.
 #   - One state-directory scope with exactly three outcomes (AC-F3-4, AC-F3-5,
 #     AC-F2-10, DM-5, DEC-5, DEC-18). `resolveStateDirectoryScope` is the single
 #     resolution and the composer classifies its input once: (a) an absolute
@@ -976,12 +986,15 @@ phases:
   #
   # Tasks (TC-DAEMON-033, 034, 035, 036, 037, 038, 039, 091, 092, 121):
   #  4.1 Implement the foreground lifetime in packages/cli/src/daemon-compose.ts
-  #      (DM-2): when `signalHost` is composed and `foreground` is true, start the
-  #      runtime, capture the readiness snapshot, install exactly one `SIGINT`
-  #      and one `SIGTERM` listener, run the resident loop, let the first signal
-  #      select the stop mode (`SIGTERM` -> `drain`, `SIGINT` -> `immediate`),
-  #      remove both listeners in a `finally`, await the loop, and return the
-  #      captured snapshot at exit 0 or the stop failure at its delivered exit.
+  #      (DM-2): when `signalHost` is composed and `foreground` is true, install
+  #      exactly one `SIGINT` and one `SIGTERM` listener before starting, start
+  #      the runtime and capture the readiness snapshot, run the resident loop,
+  #      let the first signal select the stop mode (`SIGTERM` -> `drain`,
+  #      `SIGINT` -> `immediate`), remove both listeners in a `finally`, await
+  #      the loop, and return the captured snapshot at exit 0 or the stop failure
+  #      at its delivered exit. A signal that arrives while the start is still in
+  #      flight is buffered — its mode is recorded and no stop is entered — and
+  #      applied once the loop runs.
   #      A failed release still terminates the loop (cancellation precedes the
   #      append) and returns the delivered state-write identity at exit 2; a
   #      second signal cannot start a second stop; no handler outlives the

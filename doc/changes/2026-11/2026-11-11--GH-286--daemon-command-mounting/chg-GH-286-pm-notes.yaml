@@ -566,6 +566,24 @@ notes:
       spec note."
     type: "decision"
     date: "2026-11-11"
+  - text: "Review iteration 3 + confirmation pass: all five named findings closed.
+      NF3-1 (engine change declared in spec v1.5/v1.6 and TDR-0022's scoped
+      exception), NF3-2 (§16 now names twenty reconciled pages), NF3-3
+      (listeners registered before the readiness point with a buffered signal;
+      the createDaemonMainEntry seam got the same treatment and stays unused in
+      production), NF3-4 (cross-file real-child gate plus quiescent kill; the two
+      real-child cases ran 5/5 clean at default concurrency), NF3-5 (a
+      compare-and-delete failure surfaces its own identity via AC-F2-12). Spec
+      v1.6 has 52 ACs, the test plan 55 TCs with 52/52 coverage, and the plan is
+      at revision 1.8 with the foreground ordering corrected. Commits:
+      885d8dcc (remediation), 7b8e68b9 (scope + evidence), 46ff9428 (spec/test
+      plan/doc alignment), and the plan/pin commit that follows. Full battery at
+      --max-concurrency 4: 7286 pass / 4 skip / 0 fail. Also recorded: two
+      concurrent deliver-ticket runs targeted this worktree during the session,
+      and one of their commits (97a3f410) landed doc reconciliation into this
+      branch; all commits remain GH-286-scoped and the tree is clean."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 9 (review-iteration-2 continuation, tasks 9.15-9.22):
       complete. NF-1 (blocking) closed as CONTRACT CONFORMANCE, not capability:
       the engine now removes a lock whose staleness evaluation returned takeover
