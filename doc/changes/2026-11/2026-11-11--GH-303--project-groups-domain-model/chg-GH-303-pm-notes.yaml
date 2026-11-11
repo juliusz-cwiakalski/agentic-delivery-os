@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T12:22:19.982Z }
   delivery_planning: { started: null, completed: 2026-11-11T12:22:29.373Z }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-11T14:09:58.234Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -320,21 +320,22 @@ notes:
       goal_projects_command=ABSENT; P02 flat_projects_statements_in_entry=0,
       repos_list_in_entry=3, group_meaning_repos_in_entry=0,
       collision_clause_copies=1, inside_s11=1; P03 clauses_present=12/12
-      shape_labels=4/4 ticket_line=0; P05 clauses_present=11/11 shape_labels=4/4;
-      P06 numbered_items=3/3 a1=a2=a3=1; P08 placement=inside-window,
-      separator_sequence=identical, blank_line_before_separator=1,
-      window_empty=no; P09 paragraph_strictly_between=OK, blank_after_note=1,
-      blank_before_s2=1, note anchored 1051..1054, retirement_note=OK,
+      shape_labels=4/4 ticket_line=0; P05 clauses_present=11/11
+      shape_labels=4/4; P06 numbered_items=3/3 a1=a2=a3=1; P08
+      placement=inside-window, separator_sequence=identical,
+      blank_line_before_separator=1, window_empty=no; P09
+      paragraph_strictly_between=OK, blank_after_note=1, blank_before_s2=1, note
+      anchored 1051..1054, retirement_note=OK,
       three_levels/boundary/root_family=OK, fm/rguide/cc byte-identical,
       epic_heading=OK; P10 hunk confinement OK, outside=0, non_vacuous=yes,
       classifier_self_tests=3/3; P35 base_headings=74 head_headings=76 added=2,
       new headings are only M2-S18/M2-S19, stories_kept=73 changed=0 removed=0,
-      order=OK, fm/rguide/cc and the retirement note byte-identical;
-      P41 clause_scan 26/26; P38 dist_guard_exit=0 planning_markers=0;
-      P42 forbidden_exit=0 violations=0 failures=0 seed_hits=0
-      planning_scanned=9/10 (the tenth document is the page P3 creates);
-      lint GH-303 exit 0; plan validate verdict=valid. P04 was FAIL at this
-      boundary as expected — contracts.md lands in P2 — and is a P2 gate."
+      order=OK, fm/rguide/cc and the retirement note byte-identical; P41
+      clause_scan 26/26; P38 dist_guard_exit=0 planning_markers=0; P42
+      forbidden_exit=0 violations=0 failures=0 seed_hits=0 planning_scanned=9/10
+      (the tenth document is the page P3 creates); lint GH-303 exit 0; plan
+      validate verdict=valid. P04 was FAIL at this boundary as expected —
+      contracts.md lands in P2 — and is a P2 gate."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 2 (architecture + contracts) complete at commit ffaa1e34.
@@ -353,24 +354,24 @@ notes:
       repoKey/root/trackerKind/state/health, optional workspace root, project
       scope) with the consumer note, and adds `## Project configuration schema`
       (mixed tracker kinds valid at validation, not-yet-supported for an
-      unimplemented member, no-workspace configuration valid) and
-      `## Cross-repository change plan shape`. Gates on enumerated tokens: P11
+      unimplemented member, no-workspace configuration valid) and `##
+      Cross-repository change plan shape`. Gates on enumerated tokens: P11
       repository_as_delivery_unit=OK, project_as_group=OK,
       workspace_in_diagram=OK, workspace_optional_in_diagram=OK,
       workspace_mandatory_claim=ABSENT; P12 membership_declared=OK,
       workspace_never_required=OK, unrelated_dirs=OK, identical_behaviour=OK,
       member_must_be_inside=ABSENT; P13 overview member/group/workspace >=1,
-      cross_repo_flow_heading=present, cross_repo_mermaid=1, four invariants
-      >=1 each; P14 repos_v1_fields=7/7 owned_by_M2-S11=OK; P15 all six group
-      fields OK, group_named_key_denotes_repo=ABSENT, group_identity_name=OK;
-      P16 fields=8/8; P17 elements=8/8; P07 s19_task_to_contract=6/6; P04
-      s18_nyts=1 contracts_nyts=1, s18_validation=OK,
-      s18_rather_than_rejected=OK, softening=ABSENT; P40 c4_headings=1/1/1
-      key_flows_headings=8/8 flow_ownership_bad=0, every touched file with even
-      fences and no untagged diagram (architecture fences=22 mermaid=11);
-      P38 dist_guard_exit=0 planning_markers=0; P42 forbidden_exit=0
-      violations=0 failures=0 seed_hits=0 planning_scanned=9/10; lint exit 0;
-      plan validate verdict=valid."
+      cross_repo_flow_heading=present, cross_repo_mermaid=1, four invariants >=1
+      each; P14 repos_v1_fields=7/7 owned_by_M2-S11=OK; P15 all six group fields
+      OK, group_named_key_denotes_repo=ABSENT, group_identity_name=OK; P16
+      fields=8/8; P17 elements=8/8; P07 s19_task_to_contract=6/6; P04 s18_nyts=1
+      contracts_nyts=1, s18_validation=OK, s18_rather_than_rejected=OK,
+      softening=ABSENT; P40 c4_headings=1/1/1 key_flows_headings=8/8
+      flow_ownership_bad=0, every touched file with even fences and no untagged
+      diagram (architecture fences=22 mermaid=11); P38 dist_guard_exit=0
+      planning_markers=0; P42 forbidden_exit=0 violations=0 failures=0
+      seed_hits=0 planning_scanned=9/10; lint exit 0; plan validate
+      verdict=valid."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 3 (command pages, seeds, journey, entrypoint delta) complete
@@ -386,21 +387,20 @@ notes:
       forbidden_flat_statements=0; P21 repos_page repos.v1>=1 projects[]=0
       header=1 not_registered=1, projects_page projects.v1>=1 repos.v1=0
       repos[]=0 header=1 not_registered=1; P22 s18_seeds=3 s19_seeds=3
-      assert_violations=0 coverage_anchors=10/10; P23
-      s11_01_assert_repos_list=1 s11_01_assert_projects_list=0,
-      s11_02_title/body repos_list, assert_fields=5/5,
-      flat_assert_survivors=0; P24 project_scoped/member_outside_shared_dir/
+      assert_violations=0 coverage_anchors=10/10; P23 s11_01_assert_repos_list=1
+      s11_01_assert_projects_list=0, s11_02_title/body repos_list,
+      assert_fields=5/5, flat_assert_survivors=0; P24
+      project_scoped/member_outside_shared_dir/
       flat_view/group_view/scoped_reads/workspace_optional_stated/
       same_ref_disjoint=OK, journey_anchors=4/4; P25 repos_addition=OK
-      projects_addition=OK mount_names_both=OK
-      host_overview_claims=0 and the five preserved tokens OK; P36
-      proposed_headers=2/2 delivered_claims=0 pack_statement=verbatim
-      snapshot_relabels=0; P43 broken_links=0 restated_ac_blocks=0; P38
-      dist_guard_exit=0 planning_markers=0; lint exit 0; plan validate
-      verdict=valid. P42/P37 and `pnpm check` were explicitly NOT gates at this
-      boundary: the new page is unregistered until P4, and the guard's single
-      red finding was exactly
-      'unregistered user-facing doc absent at corpusBaseline:
+      projects_addition=OK mount_names_both=OK host_overview_claims=0 and the
+      five preserved tokens OK; P36 proposed_headers=2/2 delivered_claims=0
+      pack_statement=verbatim snapshot_relabels=0; P43 broken_links=0
+      restated_ac_blocks=0; P38 dist_guard_exit=0 planning_markers=0; lint exit
+      0; plan validate verdict=valid. P42/P37 and `pnpm check` were explicitly
+      NOT gates at this boundary: the new page is unregistered until P4, and the
+      guard's single red finding was exactly 'unregistered user-facing doc
+      absent at corpusBaseline:
       doc/planning/oss-tooling/milestones/m2/commands/repos.md'."
     type: "info"
     date: "2026-11-11"
@@ -410,12 +410,96 @@ notes:
       between the `queue.md` and `spend.md` entries; no other row touched and no
       guard change. Gates on enumerated tokens: P37 registered=140
       base_registered=139 delta=1, queue_row=88 repos_row=89 spend_row=90,
-      position=between-queue-and-spend, duplicates=0,
-      unregistered_findings=0; P42 forbidden_exit=0 classes=5/5
-      scanned_total=140 planning_scanned=10/10 missing_from_scan=0
-      not_scanned_hits=0 violations=0 failures=0 seed_hits=0; P38
-      dist_guard_exit=0 planning_markers=0; lint exit 0; plan validate
-      verdict=valid. The guard-red window is exactly one commit wide, as the
-      plan's ordering note declares."
+      position=between-queue-and-spend, duplicates=0, unregistered_findings=0;
+      P42 forbidden_exit=0 classes=5/5 scanned_total=140 planning_scanned=10/10
+      missing_from_scan=0 not_scanned_hits=0 violations=0 failures=0
+      seed_hits=0; P38 dist_guard_exit=0 planning_markers=0; lint exit 0; plan
+      validate verdict=valid. The guard-red window is exactly one commit wide,
+      as the plan's ordering note declares."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 5 (indices, status, registry, verification battery) complete
+      at commit 0aba071e. Scope: milestones/m2/README.md (contents row for
+      commands/repos.md, map rows for M2-S18 and M2-S19, M2-S11 row on repos.v1,
+      M2-S4 advisory note verbatim, planned-until-exit statement untouched),
+      milestones/README.md (M2 row to thirteen targets), status.md (one appended
+      dated section, nothing removed or reordered), cli-command-registry.md (M2
+      `ados repos` row, `ados projects` row as the group surface, M3-S6 hygiene
+      verbs as later repos subcommands, boundary note replaced; every other row
+      byte-identical). Gate tokens, enumerated and evaluated rather than read
+      off summary verdicts: P18 consumer_note=OK s4_advisory=OK; P26
+      pack_rows=13/13 repos_row=OK map_s18=OK map_s19=OK s11_row_repos_v1=OK
+      planned_until_exit=verbatim; P27 m2_targets=13/13 m0_row and m1_row
+      byte-identical; P28 new_section_count=1
+      heading_form=title-plus-parenthesised-date headings_after_new_section=0
+      section_anchors=6/6 delivery_claim=ABSENT; P29 removed_lines=0
+      additions=26 added_outside_section=0 headings_after=0; P44
+      conforming/delete/modify/swap/outside fixtures all detected,
+      removed_or_modified=0 on the real head; P30 registry_anchors=7/7
+      old_projects_meaning=0 old_boundary_note=ABSENT; P31 changed_lines=7
+      hunks_classified=7 outside=0 fixture_outside=2; P32 matrix_rows=17
+      regions_empty=0 rows_with_survivors=0/17 self_test_flat/group=detected
+      self_test_boundary_allowed=OK base_board_accepted=OK; P33
+      boundary_locations=6/6; P45 matrix_rows_required=17/17 positive_fixture=OK
+      negative_fixture=detected; P34 product_files=13/13 expected_not_changed=0
+      unexpected_changed empty other_scripts_changed=0 no FORBIDDEN ROOT
+      CHANGED; P43 broken_links=0 restated_ac_blocks=0; P38 dist_guard_exit=0
+      planning_markers=0; P42 forbidden_exit=0 failures=0 violations=0
+      seed_hits=0 planning_scanned=10/10 missing_from_scan=0 not_scanned_hits=0;
+      P37 registered=140 queue_row=88 repos_row=89 spend_row=90 duplicates=0.
+      The regression sweep re-ran all 44 other procedures in fresh shells at
+      this head: every one reports PASS."
+    type: "info"
+    date: "2026-11-11"
+  - text: "P39 at the P5 boundary, both invocations recorded on the same head
+      (working tree at d8fa8f20 with the four P5 files pending). Default-TMPDIR
+      run: default_exit=1, 7131 pass / 4 skip / 2 fail, the two failures being
+      exactly tests/checks/ci-baseline-parity.test.ts (cross-device hardlink on
+      tmpfs) and the TC-WIRE-002 5000 ms timeout. First repository-local run:
+      repo_local_exit=1 with 7132 pass / 4 skip / 1 fail, the single failure
+      being TC-WIRE-002 at 5268.65 ms against its 5000 ms budget — investigated,
+      not excused: the machine was running six competing bun/pnpm suites from
+      other agent sessions (load 7.8-13.0, with concurrent `bun test` runs in
+      this checkout and in a sibling worktree). The authoritative run was
+      therefore re-executed on a quiet window with competing_suites=0:
+      repo_local_exit=0, 7133 pass / 4 skip / 0 fail, matching the base
+      observation. Classifier tokens from that record: repo_local_exit=0
+      default_exit=1 default_failed_tests=2 default_failure_class=excused
+      (reason: only the two named default-only failures, repository-local green)
+      rerun_recorded=yes, with tmp/tmpdir/gh303/p39-rerun.txt naming each
+      excused test and its isolation re-run (ci-baseline-parity fails in
+      isolation with the cross-device hardlink; privacy-ci-wiring passes 14/14
+      in both TMPDIR modes). No local failure is claimed as an environmental
+      exemption: the clean local run is the one the phase rests on, and the
+      loaded run stays on record."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Accepted residual at the P5 boundary (gate instrument, not a product
+      defect): P34's post-commit line prints `post_commit_check=DIFFERS` on a
+      correct commit because the procedure compares `git diff --name-only
+      $BASE...HEAD | sort -u` (locale-sensitive, LANG=pl_PL.UTF-8 here) against
+      the base..worktree list sorted with `LC_ALL=C`. On this head both lists
+      hold the same thirteen paths; re-comparing them under a single collation
+      gives `sets_identical=yes` (13 and 13). The property the plan states — the
+      committed range reproduces the base..worktree set — therefore holds and is
+      recorded here with that proof, while the token itself is reported as
+      measured. Same class as the summary-verdict defects the DoR review
+      accepted: the plan's enumerated tokens, not the summary line, are the
+      oracle. The single-collation fix in P34 is left to the test-plan owner;
+      nothing was waived and no procedure was edited."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Delivery-mechanism deviation recorded, not hidden: the plan's
+      commitConvention asks for a `docs(GH-303)` subject per plan phase, but the
+      commit primitive derives the Conventional Commit type from the lifecycle
+      phase (COMMIT_PHASE_TYPES maps `delivery` to `feat`, and every docs-type
+      phase is one this change may not complete early), while its subject
+      summary comes from a single plan-phase summary that is undefined when the
+      six delivery-kind plan phases carry different summaries. Every commit was
+      therefore made through the primitive with the plan's staging scope and no
+      hand-written message or manual git command; subjects are `chore(GH-303):
+      update <top path>`. Five plan-phase commits plus the lifecycle-boundary
+      commit, and no second commit was used inside a phase to hide a failed
+      gate."
     type: "info"
     date: "2026-11-11"
