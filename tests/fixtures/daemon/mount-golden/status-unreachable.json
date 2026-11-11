@@ -1,0 +1,38 @@
+{
+  "degraded": ["daemon-unreachable"],
+  "heartbeat": {
+    "ageMs": 0,
+    "intervalMs": 5000,
+    "state": "running"
+  },
+  "instance": {
+    "acquiredAt": "2026-11-11T10:00:00Z",
+    "instanceId": "instance-live",
+    "mode": "supervise-only",
+    "pid": 4321,
+    "scope": "<scope>"
+  },
+  "lanes": [],
+  "live": false,
+  "mergeCodePath": "absent",
+  "queueDepth": 0,
+  "reconciliation": null,
+  "restarts": [],
+  "socket": {
+    "path": "<state-directory>/daemon.sock",
+    "reachable": false,
+    "transport": "unix"
+  },
+  "supervisor": {
+    "commandForm": "foreground",
+    "installed": false,
+    "kind": "systemd-user",
+    "linger": false,
+    "restartPolicy": "on-failure",
+    "scope": "<scope>",
+    "serviceType": "simple",
+    "unit": "example-product-daemon.service"
+  },
+  "truncated": false,
+  "uptimeMs": 0
+}

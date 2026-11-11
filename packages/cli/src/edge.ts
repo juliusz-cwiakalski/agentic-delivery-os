@@ -3897,9 +3897,7 @@ export type QueueComposition = {
    * array member keeps the delivered semantics; absence keeps the delivered
    * `["daemon-unreachable"]` fallback.
    */
-  readonly degraded?:
-    | readonly QueueDegradationReason[]
-    | (() => readonly QueueDegradationReason[]);
+  readonly degraded?: readonly QueueDegradationReason[] | (() => readonly QueueDegradationReason[]);
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
   readonly readyRuntime?: QueueReadyCommandRuntime;
   /** The per-pass owner-hold reader supplied by the production composition. */
@@ -4258,9 +4256,7 @@ const watchStreamFor = (
 };
 
 /** Resolve the degradation marker set; absence keeps the delivered fallback. */
-const resolveDegraded = (
-  value: QueueComposition["degraded"],
-): readonly QueueDegradationReason[] =>
+const resolveDegraded = (value: QueueComposition["degraded"]): readonly QueueDegradationReason[] =>
   value === undefined
     ? (["daemon-unreachable"] as const)
     : typeof value === "function"

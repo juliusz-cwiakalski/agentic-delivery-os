@@ -13,7 +13,7 @@ import {
   createProcessCredentialPort,
   resolveCredentialSourceKey,
 } from "@delivery-os/adapters/credentials";
-import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
+import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
   ensureDispatchIdentityMarkerText,
@@ -56,9 +56,9 @@ import {
   classifyVerifyDocument,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
-  type DispatchPrFact,
   type DispatchPreflightError,
   type DispatchPreflightResult,
+  type DispatchPrFact,
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
@@ -74,19 +74,24 @@ import {
   releaseQueueLease,
   resolveConfig,
   resolveCoordinatorSettings,
+  resolveDaemonSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
+  resolveStateDirectoryScope,
   serializeIdentityMarker,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type ConfigNodeOrigins,
+  type ConfigValue,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
+  type DaemonSettings,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -101,11 +106,11 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessSessionHandle,
-  type OwnerHoldFact,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
   LOCAL_CALLER_PRINCIPAL,
+  type OwnerHoldFact,
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -113,6 +118,7 @@ import {
   VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
+  createDaemonLockPort,
   createNodeStateEdge,
   createStateStore,
   ensureEconomicsExhaustionRecord,
@@ -122,6 +128,8 @@ import {
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
+import type { DaemonCommandRuntime } from "./commands/daemon.js";
+import { createDaemonCommandRuntime } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
   type CoordinatorComposition,
@@ -143,6 +151,7 @@ import {
   type DispatchLaneFacts,
 } from "./edge.js";
 import type { EntrypointComposer } from "./entrypoint.js";
+import { workingNameEnvironmentVariable } from "./entrypoint.js";
 
 const PROVIDER_FAILURE = "config.credential.missing";
 
@@ -156,6 +165,66 @@ const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKEN
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
 
 const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+/** The exact `<PREFIX>_STATE_DIR` variable the state-directory resolution reads. */
+const stateDirectoryEnvironmentName = (environmentPrefix: string): string =>
+  `${environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`;
+
+/** The user configuration root the supervisor adapter writes the unit under. */
+const supervisorConfigDirectoryFor = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly homeDirectory: string;
+}): string => {
+  const configured = input.environment.XDG_CONFIG_HOME;
+  return configured !== undefined && configured.length > 0 && configured.startsWith("/")
+    ? trimTrailingSeparators(configured)
+    : `${input.homeDirectory}/.config`;
+};
+
+/** The daemon family's one state-directory classification (DM-5, DEC-18). */
+type DaemonStateDirectory =
+  | { readonly kind: "resolved"; readonly directory: string }
+  | { readonly kind: "unresolvable" };
+
+const classifyDaemonStateDirectory = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+  readonly stateDirectoryName: string;
+  readonly homeDirectory: string;
+}): DaemonStateDirectory => {
+  const scope = resolveStateDirectoryScope({
+    environment: input.environment,
+    environmentPrefix: input.environmentPrefix,
+    stateDirectoryName: input.stateDirectoryName,
+    homeDirectory: input.homeDirectory,
+  });
+  if (scope.ok) return { kind: "resolved", directory: scope.value };
+  // A non-absolute override keeps the delivered home-based value; with no home
+  // the directory is unresolvable and no root-level path is ever derived.
+  return input.homeDirectory.length === 0
+    ? { kind: "unresolvable" }
+    : { kind: "resolved", directory: `${input.homeDirectory}/${input.stateDirectoryName}` };
+};
+
+/**
+ * The unavailable daemon runtime for the unresolvable state-directory outcome.
+ *
+ * It constructs no store, lock, settings, transport, socket path, supervisor
+ * scope, entry path, or pid, attempts no spawn, and answers every subcommand
+ * with the delivered `config.value.invalid` identity at exit `1`.
+ */
+const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
+  const refuse = (): { readonly error: { readonly kind: string; readonly code: string } } => ({
+    error: { kind: "config", code: "config.value.invalid" },
+  });
+  return {
+    start: async () => refuse(),
+    stop: async () => refuse(),
+    status: async () => refuse(),
+    install: async () => refuse(),
+    uninstall: async () => refuse(),
+  };
+};
 
 const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code: string }> => ({
   ok: false,
@@ -293,7 +362,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
-    const stateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
+    const homeBasedStateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
+    // The daemon family's one state-directory classification (DM-5, DEC-5,
+    // DEC-18): an absolute override wins; otherwise the home-based default
+    // applies only when a home exists; otherwise the directory is unresolvable.
+    const daemonStateDirectory = classifyDaemonStateDirectory({
+      environment,
+      environmentPrefix: brand.environmentPrefix,
+      stateDirectoryName: brand.stateDirectoryName,
+      homeDirectory,
+    });
+    // The resolved daemon directory is the one scope the daemon store, lock,
+    // settings, socket, and supervisor scope use; an unresolvable outcome keeps
+    // the delivered home-based template for the non-daemon families only.
+    const stateDirectory =
+      daemonStateDirectory.kind === "resolved"
+        ? daemonStateDirectory.directory
+        : homeBasedStateDirectory;
     const changesDirectory = `${cwd}/doc/changes`;
     // One per-pass owner-hold resolution over the injected environment and the
     // fixed production store directory (GH-280 F-1, D12). Never cached.
@@ -328,6 +413,114 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
+
+    /**
+     * Resolve the daemon settings and the lane restart bound over one
+     * configuration acquisition. A missing configuration resolves the same
+     * resolvers over an empty branch, so the shipped defaults apply; a resolved
+     * configuration whose daemon branch is invalid composes the unavailable
+     * runtime instead of a re-derived literal.
+     */
+    const readDaemonConfiguration = (
+      directory: string,
+    ): { readonly settings: DaemonSettings; readonly restartBound: number } | undefined => {
+      const resolveOver = (
+        values: Readonly<Record<string, ConfigValue>>,
+        origins: ConfigNodeOrigins,
+      ): { readonly settings: DaemonSettings; readonly restartBound: number } | undefined => {
+        const settings = resolveDaemonSettings(values, origins, { stateDirectory: directory });
+        if (!settings.ok) return undefined;
+        const lane = resolveLaneSettings(values, origins);
+        return {
+          settings: settings.value,
+          restartBound: lane.ok
+            ? lane.value.restartBudget
+            : PRODUCTION_DEFAULTS.lane["restart-budget"],
+        };
+      };
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: localFs,
+      });
+      if (!acquired.ok) return resolveOver({}, {});
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) return resolveOver({}, {});
+      return resolveOver(resolved.value.values, resolved.value.origins);
+    };
+
+    /**
+     * Compose the daemon family's runtime over the one resolved state-directory
+     * scope. The unresolvable outcome composes the unavailable runtime, so the
+     * family stays registered while no store, lock, settings, transport, socket
+     * path, supervisor scope, entry path, or pid is constructed.
+     */
+    const daemonRuntime = ((): DaemonCommandRuntime => {
+      if (daemonStateDirectory.kind !== "resolved") return unavailableDaemonRuntime();
+      const directory = daemonStateDirectory.directory;
+      const configuration = readDaemonConfiguration(directory);
+      if (configuration === undefined) return unavailableDaemonRuntime();
+      const lock = createDaemonLockPort(createNodeStateEdge(), directory);
+      const transport = createUnixTransport({
+        stateDirectory: directory,
+        socketPath: configuration.settings.socketPath,
+        lockOwned: () => lock.read().state === "held",
+      });
+      // The re-entry environment is derived from facts the composer already
+      // holds: the injected environment record and the composed home. No value
+      // is invented, so a stripped `PATH` or home stays stripped, and the home
+      // variable keeps the name it was read from (`HOME`, else `USERPROFILE`).
+      const path = environment.PATH;
+      const homeVariable =
+        environment.HOME !== undefined && environment.HOME.length > 0
+          ? "HOME"
+          : environment.USERPROFILE !== undefined && environment.USERPROFILE.length > 0
+            ? "USERPROFILE"
+            : undefined;
+      const workingNameVariable = workingNameEnvironmentVariable();
+      const workingName = environment[workingNameVariable];
+      const reentryEnvironment: Record<string, string> = {
+        ...(path === undefined ? {} : { PATH: path }),
+        ...(homeVariable === undefined
+          ? {}
+          : { [homeVariable]: environment[homeVariable] as string }),
+        ...(workingName === undefined || workingName.length === 0
+          ? {}
+          : { [workingNameVariable]: workingName }),
+      };
+      return createDaemonCommandRuntime({
+        store,
+        lock,
+        settings: configuration.settings,
+        restartBound: configuration.restartBound,
+        stateDirectory: directory,
+        unit: `${brand.binaryName}-daemon.service`,
+        binary: facts.daemonEntry ?? "",
+        environmentName: stateDirectoryEnvironmentName(brand.environmentPrefix),
+        supervisorConfigDirectory: supervisorConfigDirectoryFor({
+          environment,
+          homeDirectory,
+        }),
+        ...(facts.processId === undefined ? {} : { pid: facts.processId }),
+        ...(facts.signalHost === undefined ? {} : { signalHost: facts.signalHost }),
+        ...(facts.supervisor === undefined ? {} : { supervisor: facts.supervisor }),
+        ...(facts.daemonEntry === undefined ? {} : { daemonEntry: facts.daemonEntry }),
+        ...(Object.keys(reentryEnvironment).length === 0 ? {} : { reentryEnvironment }),
+        transport,
+        newFenceToken,
+        newLockToken: () => globalThis.crypto.randomUUID(),
+        newInstanceId: () => globalThis.crypto.randomUUID(),
+        nowIso,
+      });
+    })();
+
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
     const instance = facts.githubInstance ?? githubInstance();
@@ -1529,6 +1722,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       queueReady: statusComposition(),
       queue: queueComposition,
       lanes: queueComposition,
+      daemon: daemonRuntime,
       blockers: {
         store,
         clock: { nowMs, nowIso },

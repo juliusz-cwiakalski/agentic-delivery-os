@@ -15,6 +15,8 @@ import {
 import {
   createControlServer,
   createDaemonRuntime,
+  createLaneLaunchPlanner,
+  type DispatchTruthReads,
   daemonScopeDigest,
   decodeControlLine,
   detectDaemonEffects,
@@ -26,12 +28,10 @@ import {
   readDaemonLanes,
   readDaemonStatus,
   readQueueEntries,
+  recordDaemonDispatchResult,
   recordResumeIntent,
   runSupervisionCycle,
   uninstallSupervisor,
-  createLaneLaunchPlanner,
-  recordDaemonDispatchResult,
-  type DispatchTruthReads,
 } from "@delivery-os/core";
 import {
   CONTROL_PROTOCOL_CURRENT,
@@ -55,21 +55,21 @@ import {
   type DaemonSupervisorDescriptor,
   type DaemonSupervisorKind,
   type DaemonWakePort,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchEvidenceClass,
+  type DispatchHandoverState,
   ECONOMICS_EXHAUSTION_OPTIONS,
+  type HarnessEvidence,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessKind,
+  type HarnessSessionPort,
   type LaneExecutorPort,
+  type LaneHandle,
+  type LaneLaunchRequest,
   LOCAL_CALLER_PRINCIPAL,
   QUEUE_MAX_ENTRIES,
   type StateStorePort,
   type SupervisorPort,
-  type HarnessExecutionEnvironmentDescriptor,
-  type HarnessEvidence,
-  type HarnessKind,
-  type HarnessSessionPort,
-  type LaneHandle,
-  type LaneLaunchRequest,
-  type DispatchEvidenceClass,
-  type DispatchHandoverState,
-  DISPATCH_DEFAULT_EVIDENCE_CLASS,
 } from "@delivery-os/core/contracts";
 import {
   appendBlockerQuestion,
@@ -209,7 +209,6 @@ const byteLength = (text: string): number => new TextEncoder().encode(text).leng
 /** A composing pid is forwarded only when it is a positive integer. */
 const positivePid = (pid: number | undefined): number | undefined =>
   pid !== undefined && Number.isInteger(pid) && pid > 0 ? pid : undefined;
-
 
 /** Sort object keys recursively so equal content serializes identically. */
 const canonicalValue = (value: unknown): unknown => {
@@ -688,10 +687,20 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
   return {
     start: async ({ foreground }) => {
       if (!foreground && composition.daemonEntry !== undefined) {
+        // The state binding is written last and stays authoritative: a forwarded
+        // look-alike of the same variable can never win. An absent re-entry input
+        // keeps the delivered single-variable spawn byte-identical.
+        const spawnEnvironment =
+          composition.reentryEnvironment === undefined
+            ? { [composition.environmentName]: composition.stateDirectory }
+            : {
+                ...composition.reentryEnvironment,
+                [composition.environmentName]: composition.stateDirectory,
+              };
         const spawned = processPort.spawnDetached({
           entry: composition.daemonEntry,
           args: ["daemon", "start", "--foreground"],
-          environment: { [composition.environmentName]: composition.stateDirectory },
+          environment: spawnEnvironment,
         });
         if (spawned.pid === undefined) return failure("daemon.state-recovery-failed");
         for (let attempt = 0; attempt < 20; attempt += 1) {

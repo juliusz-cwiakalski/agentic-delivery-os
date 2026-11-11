@@ -18,6 +18,23 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test, and TDR-0022 tracked). Plan phase 2 complete (production
+      composition): one state-directory classification with its three outcomes,
+      resolved daemon settings through the delivered resolver with an
+      empty-branch fallback, the delivered unix transport at the resolved socket
+      path with a lock-held ownership predicate, the lane restart bound, the
+      composing pid (positive only), the entry path, the derived re-entry
+      environment (PATH, HOME or USERPROFILE by name, working-name override when
+      set), the supervisor pass-through, and an unconditional daemon runtime that
+      is the unavailable refusal runtime for the unresolvable outcome; the bin
+      supplies `daemonEntry: process.argv[1]`; the spawn merges the re-entry set
+      with the state binding written last. Gate: 47/47 tests across the four new
+      behaviour suites plus the mutant suite and the delivered status-matrix
+      golden, 44/44 across the delivered lifecycle/lock/supervisor-install/
+      state-scope/vocabulary/content-inventory controls, `pnpm typecheck`, lint,
+      format, ambient-globals, and `pnpm check:boundaries` all green."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 1 complete (additive daemon-mount composition inputs and
       TDR-0022 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
       `reentryEnvironment?` input; `pid` is forwarded to the runtime only when it

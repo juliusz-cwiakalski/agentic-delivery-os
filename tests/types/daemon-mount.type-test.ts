@@ -34,22 +34,20 @@ type DaemonNewOptionalKeys = Expect<
 >;
 
 /** A literal without the three members still satisfies the composition. */
-type DaemonWithoutNewInputs = Omit<
-  DaemonComposition,
-  "pid" | "signalHost" | "reentryEnvironment"
+type DaemonWithoutNewInputs = Omit<DaemonComposition, "pid" | "signalHost" | "reentryEnvironment">;
+type DaemonWithoutNewInputsAccepted = Expect<
+  DaemonWithoutNewInputs extends DaemonComposition ? true : false
 >;
-type DaemonWithoutNewInputsAccepted = Expect<DaemonWithoutNewInputs extends DaemonComposition ? true : false>;
 
 /** A literal with all three satisfies the composition with the declared shapes. */
-type DaemonWithNewInputs = Omit<
-  DaemonComposition,
-  "pid" | "signalHost" | "reentryEnvironment"
-> & {
+type DaemonWithNewInputs = Omit<DaemonComposition, "pid" | "signalHost" | "reentryEnvironment"> & {
   readonly pid: number;
   readonly signalHost: SignalHostShape;
   readonly reentryEnvironment: Readonly<Record<string, string>>;
 };
-type DaemonWithNewInputsAccepted = Expect<DaemonWithNewInputs extends DaemonComposition ? true : false>;
+type DaemonWithNewInputsAccepted = Expect<
+  DaemonWithNewInputs extends DaemonComposition ? true : false
+>;
 
 /** The declared member types are exactly the additive shapes. */
 type PidType = Expect<Equal<DaemonComposition["pid"], number | undefined>>;
@@ -61,24 +59,33 @@ type ReentryEnvironmentType = Expect<
 /* --------------------------- ProductionCompositionFacts ------------------- */
 
 type FactsNewOptionalKeys = Expect<
-  Equal<Extract<OptionalKeys<ProductionCompositionFacts>, "daemonEntry" | "supervisor">, "daemonEntry" | "supervisor">
+  Equal<
+    Extract<OptionalKeys<ProductionCompositionFacts>, "daemonEntry" | "supervisor">,
+    "daemonEntry" | "supervisor"
+  >
 >;
 
 type FactsWithoutNewInputs = Omit<ProductionCompositionFacts, "daemonEntry" | "supervisor">;
-type FactsWithoutNewInputsAccepted = Expect<FactsWithoutNewInputs extends ProductionCompositionFacts ? true : false>;
+type FactsWithoutNewInputsAccepted = Expect<
+  FactsWithoutNewInputs extends ProductionCompositionFacts ? true : false
+>;
 
 type FactsWithNewInputs = Omit<ProductionCompositionFacts, "daemonEntry" | "supervisor"> & {
   readonly daemonEntry: string;
   readonly supervisor: NonNullable<ProductionCompositionFacts["supervisor"]>;
 };
-type FactsWithNewInputsAccepted = Expect<FactsWithNewInputs extends ProductionCompositionFacts ? true : false>;
+type FactsWithNewInputsAccepted = Expect<
+  FactsWithNewInputs extends ProductionCompositionFacts ? true : false
+>;
 
 type DaemonEntryType = Expect<Equal<ProductionCompositionFacts["daemonEntry"], string | undefined>>;
 
 /* ----------------------------- QueueComposition.degraded ------------------ */
 
 type DegradedMember = NonNullable<QueueComposition["degraded"]>;
-type DegradedArrayAccepted = Expect<readonly QueueDegradationReason[] extends DegradedMember ? true : false>;
+type DegradedArrayAccepted = Expect<
+  readonly QueueDegradationReason[] extends DegradedMember ? true : false
+>;
 type DegradedResolverAccepted = Expect<
   (() => readonly QueueDegradationReason[]) extends DegradedMember ? true : false
 >;

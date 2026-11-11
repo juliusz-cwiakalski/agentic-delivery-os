@@ -4,19 +4,31 @@
  * subscriber stall, blind unknown retry, and fabricated heartbeat.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
+import type { createDaemonCommandRuntime as realRuntime } from "../../packages/cli/src/daemon-compose";
+import {
+  CONTROL_PROTOCOL_CURRENT,
+  type DaemonLaneRecord,
+  type DaemonLockRecord,
+  LOCAL_CALLER_PRINCIPAL,
+} from "../../packages/core/src/contracts/index";
+import { createControlSession } from "../../packages/core/src/domain/control-session";
+import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
 import { evaluateDaemonLock } from "../../packages/core/src/domain/daemon-lock";
 import { decideDaemonLane } from "../../packages/core/src/domain/daemon-reconcile";
 import { resolveCommitEffect } from "../../packages/core/src/domain/effect-protocol";
-import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
-import { createControlSession } from "../../packages/core/src/domain/control-session";
 import {
-  CONTROL_PROTOCOL_CURRENT,
-  LOCAL_CALLER_PRINCIPAL,
-  type DaemonLockRecord,
-  type DaemonLaneRecord,
-} from "../../packages/core/src/contracts/index";
+  createMountHarness,
+  mountComposition,
+  reentryEnvironmentFrom,
+  stateDirectoryName,
+} from "../fixtures/daemon/mount-harness";
+import * as bindingNotLast from "../fixtures/daemon/mount-mutants/binding-not-last";
+import * as literalSocket from "../fixtures/daemon/mount-mutants/literal-socket";
+import * as spawnWithFullEnv from "../fixtures/daemon/mount-mutants/spawn-with-full-env";
+import * as spawnWithoutForwardedEnv from "../fixtures/daemon/mount-mutants/spawn-without-forwarded-env";
 
 const NOW = Date.parse("2026-11-08T10:00:00Z");
 
@@ -124,5 +136,117 @@ describe("GH-238 mutation controls", () => {
       stalenessMs: 30_000,
     });
     expect(liveness).toEqual({ state: "stale", ageMs: null });
+  });
+});
+
+/**
+ * GH-286 mutation controls — the daemon-mount claims that carry a source-level
+ * mutant. Each case applies the mutant to a temp copy of the real module and
+ * asserts the named suite's assertion trips, so the claim is non-vacuous inside
+ * the commit that makes it. Only the temp copy is mutated; the shipped source
+ * is read-only here.
+ */
+describe("GH-286 daemon-mount mutation controls", () => {
+  const readRepoFile = (relative: string): string =>
+    readFileSync(join(process.cwd(), relative), "utf8");
+
+  const mutantDir = (name: string): string => {
+    const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", name);
+    mkdirSync(directory, { recursive: true });
+    return directory;
+  };
+
+  /** Load the mutated module from its temp copy so the real behaviour is run. */
+  const loadMutatedRuntime = async (mutant: {
+    readonly name: string;
+    readonly apply: (source: string) => string;
+  }) => {
+    const source = readRepoFile("packages/cli/src/daemon-compose.ts");
+    const directory = mutantDir(mutant.name);
+    const file = join(directory, "daemon-compose.ts");
+    writeFileSync(file, mutant.apply(source));
+    const module = (await import(`${file}?mutant=${Date.now()}`)) as {
+      createDaemonCommandRuntime: typeof realRuntime;
+    };
+    return module.createDaemonCommandRuntime;
+  };
+
+  const captureSpawnEnvironment = async (
+    createRuntime: typeof realRuntime,
+    options: { readonly forwardedBinding?: string },
+  ) => {
+    const harness = createMountHarness({ label: "mutant" });
+    try {
+      harness.processPort.setSpawn(undefined);
+      const binding = stateDirectoryName(harness.brand);
+      const reentry = {
+        ...reentryEnvironmentFrom(harness.environment),
+        ...(options.forwardedBinding === undefined ? {} : { [binding]: options.forwardedBinding }),
+      };
+      const runtime = createRuntime(
+        mountComposition(harness, {
+          daemonEntry: `${harness.root}/bin/entry.ts`,
+          reentryEnvironment: reentry,
+        }),
+      );
+      const definition = createDaemonCommandDefinition(runtime);
+      await definition.handler({
+        positionals: ["start"],
+        flags: {},
+        global: {},
+      } as never);
+      return {
+        environment: harness.processPort.spawns[0]?.environment ?? {},
+        binding,
+        stateDirectory: harness.stateDirectory,
+      };
+    } finally {
+      harness.dispose();
+    }
+  };
+
+  test("binding-not-last: writing the binding first lets the forwarded look-alike win", async () => {
+    const createRuntime = await loadMutatedRuntime(bindingNotLast);
+    const captured = await captureSpawnEnvironment(createRuntime, {
+      forwardedBinding: "/forwarded/other",
+    });
+    expect(bindingNotLast.violates(captured.environment, captured.binding)).toBe(true);
+    // The named assertion's own oracle: the binding is not the last own key.
+    const keys = Object.keys(captured.environment);
+    expect(keys[keys.length - 1]).not.toBe(captured.binding);
+  });
+
+  test("spawn-without-forwarded-env: PATH and the home are dropped from the spawn", async () => {
+    const createRuntime = await loadMutatedRuntime(spawnWithoutForwardedEnv);
+    const captured = await captureSpawnEnvironment(createRuntime, {});
+    expect(spawnWithoutForwardedEnv.violates(captured.environment)).toBe(true);
+    expect(Object.keys(captured.environment)).toEqual([captured.binding]);
+  });
+
+  test("spawn-with-full-env: an ambient key leaks into the captured environment", async () => {
+    const createRuntime = await loadMutatedRuntime(spawnWithFullEnv);
+    const captured = await captureSpawnEnvironment(createRuntime, {});
+    expect(spawnWithFullEnv.violates(captured.environment, captured.binding)).toBe(true);
+  });
+
+  test("literal-socket: a hardcoded socket name trips the named scan", () => {
+    const source = readRepoFile("packages/cli/src/production.ts");
+    expect(literalSocket.violates(source)).toBe(false);
+    const mutated = literalSocket.apply(source);
+    expect(mutated).not.toBe(source);
+    expect(literalSocket.violates(mutated)).toBe(true);
+  });
+
+  test("every Phase-2 mutant names a real suite and assertion", () => {
+    for (const mutant of [
+      bindingNotLast,
+      spawnWithoutForwardedEnv,
+      spawnWithFullEnv,
+      literalSocket,
+    ]) {
+      expect(mutant.suite.endsWith(".test.ts")).toBe(true);
+      expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
+      expect(mutant.assertion.length).toBeGreaterThan(0);
+    }
   });
 });
