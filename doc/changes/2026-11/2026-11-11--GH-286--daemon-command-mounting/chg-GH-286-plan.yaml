@@ -2137,6 +2137,7 @@ phases:
         - doc/spec/features/feature-scheduling-engine.md
         - doc/spec/features/feature-status-digest.md
         - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/daemon-main.ts
         - packages/cli/src/production.ts
         - packages/core/src/app/daemon-runtime.ts
         - packages/core/src/state/daemon-lock.ts

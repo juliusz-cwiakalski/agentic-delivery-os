@@ -682,3 +682,48 @@ notes:
       request opened."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 9 (review-iteration-3 closure): 885d8dcc carries the
+      remediation and this bookkeeping note follows it. NF3-3 (the blocking
+      foreground start-to-stop race): the foreground lifetime installs both
+      signal listeners BEFORE runtime.start, so the durable acquired record it
+      appends is never observable without a handler, and a signal that arrives
+      while start is still running is buffered (the mode is recorded, no stop is
+      entered) and applied once the loop is running, so an immediate stop always
+      lands as released/draining instead of the default terminate that left a
+      stale lock and no release record. The delivered createDaemonMainEntry seam
+      adopts the same order by opening signals.waitForStop() before start (it
+      remains unused by every production surface). The real-child re-entry case
+      pins the observable: a stop issued immediately after the start receipt
+      records exactly one drain release. NF3-4 (real-child determinism): the crash
+      and re-entry cases serialize their spawned children through the shared
+      gate tests/fixtures/daemon/real-child-gate.ts (bounded wait, stale-holder
+      takeover), and the crash case kills its victim in a quiescent window (the
+      start's initial heartbeat has landed and the store's write fence is
+      released) with a delivered recoverFence belt for a stale fence, so the
+      residue under test is the daemon lock and not a store fence or unhardened
+      ledger (state semantics stay out of scope, NG-1); the delivered 20 x 50 ms
+      readiness window is unchanged (AC-F2-2). Evidence: the two real-child
+      files at default concurrency 5/5 runs (6 tests, 0 fail, 2.45-2.57 s), the
+      nine-suite narrow battery 10/10 and 8/8 under six CPU load generators, and
+      the full battery below. NF3-5: a compare-and-delete that cannot write now
+      surfaces its own identity (state.write.failed) instead of a bare
+      daemon.already-running, while a genuine race loser's state.lock.busy still
+      maps to busy; a hermetic cell asserts the identity, no append, and the dead
+      lock left in place. Traceability: spec v1.5's AC-F2-11 is covered by
+      extending TC-DAEMON-030 (related IDs plus steps 10/12/13 and new step 16),
+      no TC was added, and the test plan now reports 51/51 ACs with the TC map
+      unchanged at 55/55. Gates at 885d8dcc: pnpm typecheck clean; pnpm lint exit
+      0 (72 pre-existing warnings, 25 infos, 0 errors); pnpm format:check clean;
+      plan validate verdict=valid readyForDevelopment=true; git diff --check
+      clean; full battery under TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4:
+      7286 pass, 4 skip, 0 fail, 61950 expect() calls across 897 files in
+      384.78 s. Scope: this bookkeeping commit also adds
+      packages/cli/src/daemon-main.ts to the Phase-9 scope, which the commit
+      primitive flagged as the only scope drift in 885d8dcc; the file is the
+      delivered seam the TC-DAEMON-039 fixture exercises, it adopts no lifetime
+      ownership in the product, and the Phase-4 disposition's 'unmodified'
+      sentence is superseded for that one seam by this declared extension. The
+      real-reentry suite was edited in Phase 9 but is already declared by Phase 4.
+      Not pushed and no pull request opened."
+    type: "info"
+    date: "2026-11-11"
