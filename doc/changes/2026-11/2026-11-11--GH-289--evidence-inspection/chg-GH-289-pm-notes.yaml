@@ -12,7 +12,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-11T21:24:17.505Z }
   quality_gates: { started: null, completed: 2026-11-11T21:49:00.928Z }
   dod_check: { started: null, completed: 2026-11-11T21:49:46.242Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-11T21:52:20.489Z }
 decisions: []
 open_questions: []
 blockers: []
@@ -448,5 +448,16 @@ notes:
       including the delivered five-field envelope and the permission-denied
       exit. Code-review artifacts for iterations 1 and 2 are committed in the
       change folder."
+    type: info
+    date: "2026-11-11"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/308 (state
+      OPEN, base main-tools, head feat/GH-289/evidence-inspection, 74 files,
+      +11711/-324, mergeable). Pushed as a0fee615. Not merged: merge authority
+      stays with the CEO (Mode A) or the human via batch-deliver.sh (Mode B).
+      Push hazard recorded: this checkout's branch config carried
+      merge=refs/heads/main-tools, so a bare git push would have written HEAD
+      onto main-tools; the push used an explicit refspec and -u repaired the
+      upstream to origin/feat/GH-289/evidence-inspection."
     type: info
     date: "2026-11-11"
