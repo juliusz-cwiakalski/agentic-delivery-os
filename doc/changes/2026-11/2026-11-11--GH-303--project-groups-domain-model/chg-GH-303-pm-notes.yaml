@@ -5,9 +5,9 @@ delivery_mode: autonomous
 milestone: M2
 phases:
   clarify_scope: { started: null, completed: 2026-11-11T10:03:49.191Z }
-  specification: { started: null, completed: 2026-11-11T10:09:57.996Z }
-  test_planning: { started: null, completed: 2026-11-11T10:40:55.347Z }
-  delivery_planning: { started: null, completed: 2026-11-11T10:47:01.075Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -166,4 +166,46 @@ notes:
       which topic) is treated as a seed-set property; UG-3 (NFR-3 beyond the P36
       claim vocabulary) is declared residual for @reviewer."
     type: "risk"
+    date: "2026-11-11"
+  - text: "DoR iteration 1: NOT_READY — 8/10 facets PASS; test_traceability and
+      cross_artifact_consistency FAIL. Record:
+      readiness-review/readiness-iter-1.md. Nine blocking findings: (1) P32's
+      BL-18 forbidden regex `repos.{0,40}group` matches the ticket-mandated S18
+      goal and its boundary clause, making TC-032 unsatisfiable without
+      rewording a ticket clause; (2) P09/P10 derive the context-paragraph window
+      as last non-empty line before M2-S2 plus one, which lands after the
+      inserted paragraph, so paragraph_lines=0 and P1 cannot pass; (3)
+      P19/P20/P21 reference undefined shell variables R and PJ; (4) five
+      undocumented cross-procedure dependencies (newsec_of, diffstat, A, RG) and
+      P32's STAT row then fails open; (5) the matrix region regex anchoring
+      M2-S11 with two hashes never matches the three-hash backlog heading, so
+      BL-S11 is vacuous at base and P45 is permanently unsatisfiable; (6) P34 is
+      a P5 gate but needs post-P5 branch-diff state; (7) plan and P39 disagree
+      with AC-NFR6-1 on a lone default-run TC-WIRE-002; (8) AC-F6-5/DEC-14 call
+      the S4 advisory note existing when m2/README.md carries none, and Appendix
+      C/F-11 never list that edit; (9) P1's gate tokens quote stale base values
+      (P35 67/69 vs 74/76, and P08/P09 base line numbers as post-change
+      expectations)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR iteration 1 routing: reopen specification (findings 7 and 8 —
+      AC-NFR6-1 must classify a repeat TC-WIRE-002 run, and AC-F6-5/DEC-14 plus
+      Appendix C/F-11 must own the m2/README.md advisory-note edit),
+      test_planning (findings 1-5, 9 plus the non-blocking 10-16),
+      delivery_planning (findings 6, 7, 9 as they land in gates and ordering).
+      Sequence: spec v1.1 -> test plan v1.1 -> plan v1.1 -> dor_check iteration
+      2. Delivery is never reopened from this loop."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "RETRO (DoR iteration 1): the readiness gate found nine executable defects
+      the author's own base-tree run could not — every procedure was run in one
+      shared shell, so cross-procedure dependencies stayed invisible and
+      undefined variables failed open, and no procedure was executed against a
+      conforming head where a last-line-before-next-heading window collapses.
+      Same root class as the GH-284 rounds: predicates authored as prose, then
+      run once. Improvement: the test-plan author must execute each procedure in
+      a fresh shell and against a conforming fixture in the same edit, and must
+      treat any expected post-change literal as a derived value with the
+      derivation shown."
+    type: "retro"
     date: "2026-11-11"
