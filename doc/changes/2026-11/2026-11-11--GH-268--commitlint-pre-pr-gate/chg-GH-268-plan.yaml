@@ -25,9 +25,11 @@
 # readiness-review/readiness-iter-2.md, test plan v0.4. Phase ids and declared
 # scope are unchanged; only verification lines, one fixture pin, one handoff note
 # and the source citations were amended:
-#   - Finding 4: the three unfalsifiable verification lines now assert
-#     (expected exit-literal set, empty working-tree/stash, empty porcelain), and
-#     the same anti-pattern was swept plan-wide — every listing command
+#   - Finding 4: the three unfalsifiable verification lines now assert concrete
+#     expected values (empty working-tree/stash, empty porcelain, and an
+#     exit-literal assertion that v1.3 later narrowed to the outcome-path subset
+#     plus the documented 130 interrupt carve-out), and the same anti-pattern was
+#     swept plan-wide — every listing command
 #     (ls-files mode, .ados-claude status, changed-path confinement, plugin
 #     idempotence, test-all output, install/uninstall registration) is now a
 #     comparison with a deterministic expected value, and every negative grep is
@@ -133,8 +135,15 @@
 # DELIVERY PINS (mechanics the spec/test plan leave to delivery planning; none
 # changes a requirement, and no AC/TC outcome depends on the choice):
 #   - Invocation contract: ./scripts/lint-commit-range.sh [--base REF], --help,
-#     --version. Exit 0 = PASS or SKIP, 1 = FAIL (offenders), 2 = ERROR or usage.
-#     No other exit code exists (TC-COMMITLINT-012 step 5 asserts the literal set).
+#     --version. Exactly three VERDICT codes exist: 0 = PASS or SKIP, 1 = FAIL
+#     (offenders), 2 = ERROR or usage. A signal-interrupted or pre-verdict aborted
+#     run follows the repository's bash interrupt convention (non-zero,
+#     conventionally 130), carries no verdict, and is documented in usage() as an
+#     interrupt code — never a fourth verdict code and never a gate outcome
+#     (spec NFR-7, .ai/rules/bash.md). The assertions are Phase 1's: every
+#     outcome-path literal is in {0, 1, 2, 130}, exactly one 130 sits inside
+#     `_on_interrupt` with an installed INT/TERM trap, and usage() documents only
+#     the three verdict codes as outcomes (TC-COMMITLINT-012 step 5).
 #   - Bash posture (.ai/rules/bash.md): #!/usr/bin/env bash, set -Eeuo pipefail
 #     plus errtrace/inherit_errexit/IFS, ERR/EXIT/INT/TERM traps, usage(), small
 #     named functions with one job each, and a PURE:/IMPURE: sectioning comment.
@@ -326,7 +335,7 @@ tier:
   phases: [1, 2, 3, 4, 5]
   escalationTriggers:
     - "a path under .github/workflows/, .husky/, packages/**, or a commitlint configuration file appears in the change diff"
-    - "the gate exits with a code outside {0, 1, 2}, or returns PASS without resolving a base commit and a merge-base"
+    - "the gate exits with a code outside {0, 1, 2} on a verdict-carrying run (the documented 130 interrupt path carries no verdict and is exempt), or returns PASS without resolving a base commit and a merge-base"
     - "the gate fetches, pushes, or mutates refs, the index, the working tree, the stash, or history"
     - "the gate adds, relaxes, or re-implements a commitlint rule instead of consuming the root configuration's verdict"
     - "a repository that configures commitlint and cannot verify reports SKIP or PASS instead of ERROR"
