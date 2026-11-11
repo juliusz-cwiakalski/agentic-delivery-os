@@ -72,25 +72,25 @@
 #              start and a signal racing the start is buffered until the loop
 #              runs, and CF-2 refreshes the spec and test-plan pins; no task
 #              scope and no TC mapping changes)
-#   - Decision: doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
+#   - Decision: doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md
 #              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
 #              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
 #              the binding composition decisions this plan implements)
 #   - Notes:   ./chg-GH-286-pm-notes.yaml (clarify-scope record; the four
-#              routed design choices; the commit-primitive finding that TDR-0022
+#              routed design choices; the commit-primitive finding that TDR-0023
 #              is untracked and must land inside a declared phase scope)
 #   - Schema:  doc/spec/features/feature-plan-schema.md and
 #              doc/templates/implementation-plan-template.md
 #
 # STAGING CONTRACT (why Phase 1 exists and what it must contain):
-#   `doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md`
-#   is UNTRACKED at plan time (git status: `?? doc/decisions/TDR-0022-...`).
+#   `doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md`
+#   is UNTRACKED at plan time (git status: `?? doc/decisions/TDR-0023-...`).
 #   The commit primitive stages only tracked-pending work plus untracked files
 #   inside the declared phase scope, and a standalone staging of the TDR fails
 #   commitlint as a fabricated tracker reference. The supported path is a
 #   phase-mode commit with a plan summary, so Phase 1 declares the TDR in
 #   `scope.files` and lands it together with the additive contract surface.
-#   `doc/decisions/00-index.md` already carries the TDR-0022 row (committed);
+#   `doc/decisions/00-index.md` already carries the TDR-0023 row (committed);
 #   it is declared on Phase 1 for completeness only and stages nothing.
 #
 # INVOCATION-SHAPE RULE (RF3-1; binding on every gate and exit criterion below):
@@ -308,7 +308,7 @@
 #     mutation; an omitted `degraded` keeps the `["daemon-unreachable"]` fallback;
 #     the resolver is consulted per projection (schedule, mutation outcome, lanes
 #     read, every watch iteration).
-#   - Re-entry environment (TDR-0022 DC-1, amended): the detached child's
+#   - Re-entry environment (TDR-0023 DC-1, amended): the detached child's
 #     environment is the resolved `<PREFIX>_STATE_DIR` binding (authoritative,
 #     written LAST) plus the composing `PATH`, its `HOME`/`USERPROFILE`, and the
 #     brand working-name override only when set and non-empty — merged through the
@@ -466,7 +466,7 @@ phases:
   # Phase 1 — Additive composition inputs and the binding decision record
   #
   # Goal: land the additive contract surface every later phase consumes, and
-  # land the untracked TDR-0022 in the first phase-mode commit. Nothing changes
+  # land the untracked TDR-0023 in the first phase-mode commit. Nothing changes
   # behaviour: no caller supplies the new inputs yet, so the delivered daemon
   # path is byte-identical and `daemon` is still not reachable from the shipped
   # program (production composes no runtime until Phase 2).
@@ -510,7 +510,7 @@ phases:
   #      and the array member stays assignable; every added property is optional
   #      (`undefined` assignable). Type-level only (TC-DAEMON-111 step 6, run at
   #      the Phase-2/Phase-8 gates through `pnpm typecheck`).
-  #  1.5 Land TDR-0022 unchanged in this commit (untracked artifact; see the
+  #  1.5 Land TDR-0023 unchanged in this commit (untracked artifact; see the
   #      staging contract above) and keep doc/decisions/00-index.md as the
   #      already-committed TDR row.
   #
@@ -524,15 +524,15 @@ phases:
   # members; no existing field or signature is narrowed; no module or export is
   # added (inventory.json and EXECUTABLE_ALLOWANCES stay unmodified controls);
   # the delivered daemon behaviour is unchanged because no caller supplies the
-  # new inputs; TDR-0022 is tracked and the decision index already points at it.
+  # new inputs; TDR-0023 is tracked and the decision index already points at it.
   # ---------------------------------------------------------------------------
   - id: 1
     title: "Additive daemon-mount composition inputs and the binding decision record"
     kind: delivery
-    summary: "feat(cli): declare the additive daemon mount composition inputs and land TDR-0022"
+    summary: "feat(cli): declare the additive daemon mount composition inputs and land TDR-0023"
     scope:
       files:
-        - doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
+        - doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md
         - doc/decisions/00-index.md
         - packages/cli/src/daemon-compose.ts
         - packages/cli/src/edge.ts
@@ -1501,7 +1501,7 @@ phases:
   #      entrypoint supplies none with the statement that the production composer
   #      supplies the runtime unconditionally and the family is mounted; add
   #      `daemon` to the summary's prompt-required enumeration; add `GH-286` to
-  #      `links.related_changes`, `TDR-0022` to `links.related_decisions`, and the
+  #      `links.related_changes`, `TDR-0023` to `links.related_decisions`, and the
   #      production composition, executable entry, daemon composition, and help
   #      modules to `links.contracts`.
   #  7.2 doc/spec/features/feature-resident-daemon.md: replace the "composed only
@@ -1512,7 +1512,7 @@ phases:
   #      host (`SIGTERM` drains, `SIGINT` stops immediately), the composing pid is
   #      recorded, install identity is the brand-derived unit under the user
   #      configuration root, and queue/lanes degradation is derived from durable
-  #      state; add `GH-286` and `TDR-0022` to the link blocks.
+  #      state; add `GH-286` and `TDR-0023` to the link blocks.
   #  7.3 doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md: replace the
   #      "The daemon registration gap" section and its `unknown flag "--help"` /
   #      `unexpected argument "status"` evidence with a closed-gap record (the

@@ -130,6 +130,19 @@ export {
   recordRedriveRequest,
   recoverCommitEffect,
 } from "./app/effects.js";
+/**
+ * The derived host-index fold (GH-288 F-2, DEC-4, DEC-14, DEC-18): the pure
+ * upsert/prune/revision rule over one read, with the DEC-18 key guard.
+ */
+export {
+  corruptHostIndexSiblingName,
+  type HostIndexMaintenanceInput,
+  type HostIndexMaintenanceResult,
+  type HostIndexRootProbe,
+  maintainHostIndex,
+  parseHostIndexDocument,
+  serializeHostIndexDocument,
+} from "./app/host-index.js";
 // The queue/scheduling use-case orchestration (GH-237): ledgers over the
 // injected state port, composed from the pure domain policy in the app tier.
 export {
@@ -189,15 +202,65 @@ export {
   recoverQueueParks,
   releaseQueueLease,
 } from "./app/index.js";
+/**
+ * The `projects list` projections (GH-288 F-3, F-4, F-5, DEC-6, DEC-7, DEC-8):
+ * the handover matrix, the daemon reason selector, the exact five-field row, and
+ * the key ordering.
+ */
+export {
+  type AuthorityEvidence,
+  classifyProjectStateLocation,
+  type DaemonComposition,
+  type DaemonMountCapability,
+  type DaemonMountFact,
+  type DaemonProbeFacts,
+  type DaemonSocketFact,
+  daemonReasonFor,
+  type HandoverEvidence,
+  orderProjectEntries,
+  projectHandoverState,
+  projectListEntry,
+  selectDaemonReachability,
+} from "./app/projects.js";
+/**
+ * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
+ * derived project root, the declared `unbound` scope, and the closed identity
+ * outcomes over injected facts and the marker seam. Exported from this existing
+ * root entry, so no subpath is added.
+ */
+export {
+  type CheckoutIdentityFacts,
+  checkoutDirectoryName,
+  type HostStateRootInput,
+  hostIndexPath,
+  type LegacyStoreFacts,
+  legacyStoreWarning,
+  type ProjectIdentityPorts,
+  type ProjectScopeInput,
+  type ProjectScopeOutcome,
+  type ProjectsScopeFailure,
+  parseProjectIdentityMarker,
+  projectDiscriminator,
+  projectKeyFor,
+  projectStateRoot,
+  projectsContainerPath,
+  resolveHostStateRoot,
+  resolveProjectScope,
+  type StateScopeRoots,
+  sanitizeProjectBasename,
+  serializeProjectIdentityMarker,
+  stateScopeRoots,
+  unboundStateRoot,
+} from "./app/state-scope.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";
 export {
   BOOTSTRAP_DESCRIPTOR,
   type CatalogField,
+  COORDINATOR_BRANCH,
   type ConfigCatalog,
+  type CoordinatorSettings,
   catalogPaths,
   compileTrustedSchema,
-  COORDINATOR_BRANCH,
-  type CoordinatorSettings,
   type DefaultPositionManifest,
   defaultsFor,
   generateConfigSchema,
@@ -220,7 +283,6 @@ export {
   resolveLaneSettings,
   resolvePollSettings,
   resolveQueueSettings,
-  resolveStateDirectoryScope,
   serializeProductionSchema,
 } from "./config/index.js";
 export {
@@ -385,8 +447,10 @@ export {
 // recovery, the stuck class, and the report-only finding.
 // The lane observation fold (GH-237 F-11): a pure projection over entries,
 // leases, parks, and economics with a closed state and bounded idle reason.
+/* ---------------------- coordinator supervision (GH-241) ----------------- */
 export {
   activeHeavyLease,
+  ageFallbackBoundMs,
   aggregateDoctorReport,
   aggregateStatus,
   artifactMatches,
@@ -402,6 +466,7 @@ export {
   type BlockerValidationFailure,
   batteryGateEntries,
   boundCloseoutData,
+  boundEvidence,
   boundQueuePlanData,
   boundQueueReadData,
   buildAdjacency,
@@ -438,6 +503,17 @@ export {
   type ControlSessionOptions,
   type ControlSessionReceive,
   type ControlSubscriptionView,
+  type CoordinatorClaimDecision,
+  type CoordinatorEvidenceFacts,
+  type CoordinatorLease,
+  type CoordinatorLifecycleDecision,
+  type CoordinatorLifecycleFacts,
+  type CoordinatorObservationFacts,
+  type CoordinatorQuestionSlice,
+  type CoordinatorRestartAdmission,
+  type CoordinatorStuckEvaluation,
+  type CoordinatorWakeEvaluation,
+  type CoordinatorWakeFacts,
   callerAudienceVariableName,
   candidateFileViolations,
   canonicalCloseoutJson,
@@ -476,6 +552,8 @@ export {
   createParkRecord,
   createSourcedWatchdogSignalSource,
   type DaemonStatusFoldInput,
+  decideCoordinatorClaim,
+  decideLifecycle,
   declaredGateSetOf,
   decodeControlLine,
   defaultFreshnessSeconds,
@@ -491,10 +569,12 @@ export {
   earliestTakeoverAtIso,
   encodeControlFrame,
   enforcedMergeGateEntries,
+  escalationOptions,
   evaluateBlockerGuard,
   evaluateBranchSafety,
   evaluateCandidates,
   evaluateClaimPreconditions,
+  evaluateCoordinatorRestartAdmission,
   evaluateDeclaredBattery,
   evaluateDependencyGate,
   evaluateDeploy,
@@ -508,13 +588,16 @@ export {
   evaluateQueueReady,
   evaluateRequiredJobGate,
   evaluateRestartBudget,
+  evaluateStuck,
   evaluateVerifyGates,
+  evaluateWake,
   evaluateWatchdogPreflight,
   evaluateWorktreeSafety,
   failedJobNames,
   findingClasses,
   foldActiveLeases,
   foldCloseoutOutcomes,
+  foldCoordinatorLease,
   foldDaemonStatus,
   foldLanes,
   foldLatestDependencies,
@@ -535,6 +618,7 @@ export {
   isBlockerQuestionType,
   isCloseRank,
   isCollectorUnavailableFamilyCode,
+  isCoordinatorEscalationRef,
   isCoordinatorPickup,
   isCredentialNameShaped,
   isDeclaredBlockingReason,
@@ -546,10 +630,13 @@ export {
   isLiveDbSession,
   isPreemptionAction,
   isProtectedRef,
+  isReservedEscalationQuestion,
   isStaleAge,
   latestParkRecords,
+  leaseAgeMs,
   leaseConflict,
   leaseHeartbeatAgeMs,
+  lifecycleEffect,
   lintPmNotes,
   type MergeCheckRunPage,
   type MergeEffectiveGateSet,
@@ -585,6 +672,7 @@ export {
   newestWaiverByGate,
   newRedJobs,
   nextPollDelayMs,
+  nextRestartOrdinal,
   normalizeEdges,
   normalizeRepoPath,
   normalizeRepositoryKey,
@@ -605,6 +693,7 @@ export {
   parkConditionForCause,
   parseCapsuleEvents,
   payloadFieldViolations,
+  persistedTickVerdict,
   planDocumentFromValidateData,
   planWatchdogRestoration,
   policyRowForClass,
@@ -616,10 +705,15 @@ export {
   preemptionBlock,
   preemptionParkCause,
   producerLanding,
+  progressingTickVerdict,
   projectBlockerLaneResume,
   projectBrief,
+  projectCoordinatorObservation,
+  projectCoordinatorRegime,
   projectDeployReport,
   projectEntry,
+  projectEscalationState,
+  projectReservedSlotQuestions,
   QUEUE_DEPLOY_READ_BUDGET,
   QUEUE_NEXT_DEFAULT,
   QUEUE_SCHEDULER_CONDITION_ORDER,
@@ -741,6 +835,7 @@ export {
   type WatchdogPreflightBuildInput,
   type WatchdogPreflightEvaluation,
   type WatchdogRestorationPlan,
+  wakeKeyFor,
   watchdogPreservedRefName,
   weightLoads,
 } from "./domain/index.js";
@@ -749,6 +844,12 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./domain/lane-launch-plan.js";
+// The pure owner-hold resolver (GH-280 F-1, DM-1, D12).
+export {
+  ownerHoldEnvironmentVariableName,
+  resolveOwnerHoldFact,
+  sanitizeOwnerHoldReason,
+} from "./domain/owner-hold.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
@@ -780,50 +881,9 @@ export {
   spendTruncationWarning,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
-// The pure owner-hold resolver (GH-280 F-1, DM-1, D12).
-export {
-  ownerHoldEnvironmentVariableName,
-  resolveOwnerHoldFact,
-  sanitizeOwnerHoldReason,
-} from "./domain/owner-hold.js";
 export {
   boundWatchLine,
   createWatchProjection,
   type WatchLine,
   type WatchProjection,
 } from "./domain/watch-stream.js";
-/* ---------------------- coordinator supervision (GH-241) ----------------- */
-export {
-  ageFallbackBoundMs,
-  boundEvidence,
-  type CoordinatorClaimDecision,
-  type CoordinatorEvidenceFacts,
-  type CoordinatorLease,
-  type CoordinatorLifecycleDecision,
-  type CoordinatorLifecycleFacts,
-  type CoordinatorObservationFacts,
-  type CoordinatorQuestionSlice,
-  type CoordinatorRestartAdmission,
-  type CoordinatorStuckEvaluation,
-  type CoordinatorWakeEvaluation,
-  type CoordinatorWakeFacts,
-  decideCoordinatorClaim,
-  decideLifecycle,
-  escalationOptions,
-  evaluateCoordinatorRestartAdmission,
-  evaluateStuck,
-  evaluateWake,
-  foldCoordinatorLease,
-  isCoordinatorEscalationRef,
-  isReservedEscalationQuestion,
-  leaseAgeMs,
-  lifecycleEffect,
-  nextRestartOrdinal,
-  persistedTickVerdict,
-  progressingTickVerdict,
-  projectCoordinatorObservation,
-  projectCoordinatorRegime,
-  projectEscalationState,
-  projectReservedSlotQuestions,
-  wakeKeyFor,
-} from "./domain/index.js";

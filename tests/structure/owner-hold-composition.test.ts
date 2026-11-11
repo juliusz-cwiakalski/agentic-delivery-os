@@ -117,7 +117,7 @@ describe("TC-HOLDEDGE-001 the queue composition supplies the fact to every CLI s
     const mcpServe = readFileSync(join(ROOT, "packages/mcp/src/serve.ts"), "utf8");
     expect(mcpServe).toContain("const readOwnerHold = (): OwnerHoldFact =>");
     expect(mcpServe).toContain("resolveOwnerHoldFact({");
-    expect(mcpServe).toContain("buildStatusRuntime(cwd, store, readOwnerHold)");
+    expect(mcpServe).toContain("buildStatusRuntime(facts.cwd, state.store, state.readOwnerHold)");
     const mcpStatus = readFileSync(join(ROOT, "packages/mcp/src/commands/status.ts"), "utf8");
     expect(mcpStatus).toContain("readOwnerHold?: () => OwnerHoldFact");
     expect(mcpStatus).toContain("runtime.readOwnerHold?.()");

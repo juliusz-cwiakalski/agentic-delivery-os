@@ -13,6 +13,7 @@ import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-req
 
 export const COVERAGE_PATH = "tests/fixtures/help-guide/coverage.json";
 const PAGE_ROOT = "doc/planning/oss-tooling/milestones/m1/commands";
+const M2_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m2/commands";
 
 export type CoverageInventory = {
   readonly schemaVersion: string;
@@ -25,8 +26,14 @@ export type CoverageFailure = {
   readonly detail: string;
 };
 
+/**
+ * The per-command reference-page root (GH-288 DEC-13): a family documents itself
+ * in its own milestone's page root, so an M2 page serves an M2 command while
+ * every M1 snapshot page stays byte-unchanged.
+ */
 const pageFor = (command: string): string => {
   if (command === "verify") return `${PAGE_ROOT}/verify-change.md`;
+  if (command === "projects") return `${M2_PAGE_ROOT}/projects.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 

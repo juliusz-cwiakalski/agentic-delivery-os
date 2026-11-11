@@ -15,6 +15,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { CLOSEOUT_STEP_IDS } from "../../packages/core/src/contracts/closeout.js";
 import {
   ERROR_TABLE_FAMILIES,
   type ErrorTableFamily,
@@ -25,7 +26,6 @@ import {
   MERGE_GATE_ERROR_SUFFIX,
   MERGE_GATE_ERROR_TEMPLATE,
 } from "../../packages/core/src/contracts/merge.js";
-import { CLOSEOUT_STEP_IDS } from "../../packages/core/src/contracts/closeout.js";
 import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
@@ -196,6 +196,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // and no generic two-segment widening.
   "coordinator.already-running",
   "coordinator.restart-budget-exhausted",
+  // GH-288 pins the three projects host-overview identities exactly; the
+  // kind-first codes are two-segment, so they join the exact allowlist.
+  "projects.identity-unreadable",
+  "projects.registry-corrupt",
+  "projects.state-unavailable",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

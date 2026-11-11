@@ -166,6 +166,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "dispatch",
         "coordinator",
         "daemon",
+        "projects",
       ].sort(),
     );
   });

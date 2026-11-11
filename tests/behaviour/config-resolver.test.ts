@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  resolveDaemonSettings,
-  resolvePollSettings,
-  resolveStateDirectoryScope,
-} from "../../packages/core/src/config/index";
+import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
+import { resolveDaemonSettings, resolvePollSettings } from "../../packages/core/src/config/index";
 import {
   type ConfigCatalog,
   renderSystemdUnit,
@@ -215,23 +212,23 @@ describe("GH-238 daemon and poll branches", () => {
   });
 
   test("state-directory scope precedence is exact and absolute-only", () => {
-    // The production brand prefix ends in one underscore ("ADOS_"); the resolver
+    // The production brand prefix ends in one underscore ("ADOS_"); the policy
     // must read exactly one separator, never ADOS__STATE_DIR.
-    const explicit = resolveStateDirectoryScope({
+    const explicit = resolveHostStateRoot({
       environment: { ADOS_STATE_DIR: "/srv/one" },
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",
       homeDirectory: "/srv/me",
     });
     expect(explicit).toEqual({ ok: true, value: "/srv/one" });
-    const fallback = resolveStateDirectoryScope({
+    const fallback = resolveHostStateRoot({
       environment: {},
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",
       homeDirectory: "/srv/me",
     });
     expect(fallback).toEqual({ ok: true, value: "/srv/me/ados" });
-    const invalid = resolveStateDirectoryScope({
+    const invalid = resolveHostStateRoot({
       environment: { ADOS_STATE_DIR: "relative/path" },
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",
@@ -240,7 +237,7 @@ describe("GH-238 daemon and poll branches", () => {
     expect(invalid.ok).toBe(false);
     if (!invalid.ok) expect(invalid.error.code).toBe("config.value.invalid");
     // A double separator is not a second scope: the wrong spelling is ignored.
-    const wrong = resolveStateDirectoryScope({
+    const wrong = resolveHostStateRoot({
       environment: { ADOS__STATE_DIR: "/srv/two" },
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",
@@ -263,7 +260,7 @@ describe("GH-238 daemon and poll branches", () => {
     expect(name).toBe("ADOS_STATE_DIR");
     // Round-trip: the exact name the unit writes is the name the resolver reads.
     expect(
-      resolveStateDirectoryScope({
+      resolveHostStateRoot({
         environment: { [name]: value },
         environmentPrefix: "ADOS_",
         stateDirectoryName: "ados",
@@ -271,13 +268,13 @@ describe("GH-238 daemon and poll branches", () => {
       }),
     ).toEqual({ ok: true, value: "/srv/one" });
     // Two scopes select two paths; a third spelling selects neither.
-    const one = resolveStateDirectoryScope({
+    const one = resolveHostStateRoot({
       environment: { ADOS_STATE_DIR: "/srv/one" },
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",
       homeDirectory: "/srv/me",
     });
-    const two = resolveStateDirectoryScope({
+    const two = resolveHostStateRoot({
       environment: { ADOS_STATE_DIR: "/srv/two" },
       environmentPrefix: "ADOS_",
       stateDirectoryName: "ados",

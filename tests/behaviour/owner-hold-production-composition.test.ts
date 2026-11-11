@@ -12,7 +12,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { GitChildRunner } from "../../packages/adapters/src/git/index";
 import type { CliStreams } from "../../packages/cli/src/index";
 import { runCli } from "../../packages/cli/src/index";
@@ -31,6 +31,7 @@ import {
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/state/index";
 import { streamStarterFromRunner } from "../fixtures/harness/stream";
+import { projectScopeFor } from "../fixtures/projects/state-scope";
 import { makeCheckout } from "../fixtures/queue/production/harness";
 
 const WORKING_NAME = "delivery-os";
@@ -104,7 +105,15 @@ const createHarness = (input: {
   const brand = brandOf();
   const home = mkdtempSync(join(BASE, `gh280-${input.label}-`));
   const checkout = makeCheckout(home, "checkout", ORIGIN);
-  const stateDirectory = join(home, brand.stateDirectoryName);
+  // The store opens at the checkout's derived project root (GH-288 F-1); the
+  // owner-hold marker stays at the host root and is read there.
+  const hostRoot = join(home, brand.stateDirectoryName);
+  const stateDirectory = projectScopeFor({
+    cwd: checkout.directory,
+    hostRoot,
+    home,
+    brand,
+  }).scope.stateLocation;
   const spawns: { readonly file: string; readonly args: readonly string[] }[] = [];
   const transportCalls: string[] = [];
   let credentialReads = 0;
@@ -201,7 +210,7 @@ const createHarness = (input: {
     home,
     checkout: checkout.directory,
     stateDirectory,
-    markerPath: join(stateDirectory, "owner-hold"),
+    markerPath: join(hostRoot, "owner-hold"),
     store,
     spawns,
     transportCalls,
@@ -226,6 +235,7 @@ const seedQueueEntry = (harness: Harness, checkoutRoot: string): void => {
 };
 
 const writeMarker = (harness: Harness, reason: string): void => {
+  mkdirSync(dirname(harness.markerPath), { recursive: true });
   writeFileSync(harness.markerPath, `${reason}\n`);
 };
 

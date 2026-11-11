@@ -6,23 +6,17 @@
  * supervisor, wake source, clock edge, lane executor, and platform supervisors.
  * It never owns a commit effect wrapper.
  */
-export { classifyTransportError } from "./errors.js";
-export { createStdioTransport, type StdioTransportOptions } from "./stdio.js";
-export {
-  createConnectionIdFactory,
-  createLineConnection,
-  type LineStreamPair,
-} from "./transport.js";
-export { createUnixTransport, type UnixTransportOptions } from "./unix.js";
+
 export { createNodeClock } from "./clock.js";
-export { createEventLogWake, type EventLogWake, type EventLogWakeOptions } from "./wake.js";
+export { classifyTransportError } from "./errors.js";
+export { createLaneExecutor, type LaneExecutorAdapterOptions } from "./lane-executor.js";
 export {
   createNodeProcessPort,
-  killCoordinatorProcess,
   type KillCoordinatorProcessInput,
+  killCoordinatorProcess,
   type NodeProcessPortOptions,
 } from "./process.js";
-export { createLaneExecutor, type LaneExecutorAdapterOptions } from "./lane-executor.js";
+export { createStdioTransport, type StdioTransportOptions } from "./stdio.js";
 export {
   absentSupervisorDescriptor,
   createSupervisorAdapter,
@@ -30,3 +24,15 @@ export {
   type SupervisorCommandRunner,
   type SupervisorFileSystem,
 } from "./supervisor.js";
+export {
+  createConnectionIdFactory,
+  createLineConnection,
+  type LineStreamPair,
+} from "./transport.js";
+export {
+  createUnixTransport,
+  type DaemonSocketProbeResult,
+  probeDaemonSocket,
+  type UnixTransportOptions,
+} from "./unix.js";
+export { createEventLogWake, type EventLogWake, type EventLogWakeOptions } from "./wake.js";

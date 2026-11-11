@@ -40,6 +40,7 @@ describe("TC-HOLDDOCS-001 the delivery-modes guide states both semantics and the
       "otherwise the home-based `<home>/<brand.stateDirectoryName>` applies",
       "accepts no marker-path setting",
       "existing state at the home default is never moved",
+      "There is no marker-path override, and no per-project marker narrows the hold",
       "fail closed",
       "default `300`, accepted range `1`–`3600`",
       "no fixed iteration cap",
@@ -139,7 +140,7 @@ describe("TC-HOLDDOCS-003 the feature specs and command pages are reconciled", (
       "owner-hold",
       "no ref",
       "`queue ready` is unchanged",
-      "new command, new flag",
+      "no new command, no new flag",
     ]);
     const status = read("doc/planning/oss-tooling/milestones/m1/commands/status.md");
     expectAll(status, [

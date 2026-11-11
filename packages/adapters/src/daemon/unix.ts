@@ -6,7 +6,7 @@
  * removes a stale socket file only when the caller owns the daemon lock.
  */
 import { chmodSync, existsSync, rmSync, statSync } from "node:fs";
-import { createServer, connect, type Server, type Socket } from "node:net";
+import { connect, createServer, type Server, type Socket } from "node:net";
 import type { ControlConnection, ControlTransport } from "@delivery-os/core/contracts";
 import { classifyTransportError } from "./errors.js";
 import { createConnectionIdFactory, createLineConnection } from "./transport.js";
@@ -35,6 +35,47 @@ const fromSocket = (socket: Socket, id: string): ControlConnection => {
   socket.setNoDelay(true);
   return createLineConnection(id, { readable: socket, writable: socket });
 };
+
+/** One bounded, read-only reachability probe result (GH-288 F-5, Appendix C). */
+export type DaemonSocketProbeResult =
+  | { readonly reachable: true }
+  | { readonly reachable: false; readonly reason: "socket-absent" | "socket-unreachable" };
+
+/**
+ * Probe one derived socket path with a bounded connect (GH-288 F-5).
+ *
+ * Read-only by construction: an absent path is reported without connecting, a
+ * present path is connected with no payload, no command, and no authentication
+ * attempt, and the socket is destroyed as soon as the connect resolves, fails,
+ * or the declared timeout expires. It never creates, chmods, or removes a file.
+ */
+export const probeDaemonSocket = (input: {
+  readonly socketPath: string;
+  readonly timeoutMs: number;
+}): Promise<DaemonSocketProbeResult> =>
+  new Promise<DaemonSocketProbeResult>((resolve) => {
+    if (!existsSync(input.socketPath)) {
+      resolve({ reachable: false, reason: "socket-absent" });
+      return;
+    }
+    let settled = false;
+    const socket = connect(input.socketPath);
+    const finish = (result: DaemonSocketProbeResult): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(result);
+    };
+    const timer = setTimeout(
+      () => finish({ reachable: false, reason: "socket-unreachable" }),
+      input.timeoutMs,
+    );
+    const unref = (timer as { readonly unref?: () => void }).unref;
+    if (typeof unref === "function") unref.call(timer);
+    socket.once("connect", () => finish({ reachable: true }));
+    socket.once("error", () => finish({ reachable: false, reason: "socket-unreachable" }));
+  });
 
 export const createUnixTransport = (options: UnixTransportOptions): ControlTransport => {
   if (!isInside(options.socketPath, options.stateDirectory)) {

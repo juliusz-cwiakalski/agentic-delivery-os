@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -68,7 +68,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 | `packageScope` | Fixed neutral constant `@delivery-os` until the naming freeze. | Neutral scope, not a product name. |
 | `environmentPrefix` | Uppercase; every run outside `[A-Z0-9]` collapses to one `_`; edges stripped; one trailing `_` appended. | The environment layer uses this prefix. |
 | `configDirectoryName` | The name when it already starts with `.`, otherwise `.` plus the name. | The committed config path is `<repo>/<configDirectoryName>/config.yaml`. |
-| `stateDirectoryName` | The config directory name plus `-state`. | Consumed by the implemented state layer. |
+| `stateDirectoryName` | The config directory name plus `-state`. | Names the **host root** from which every project root derives (`<host root>/projects/<project key>`); consumed by the one state-scope policy. |
 | `mcpToolPrefix` | The binary transformation plus `_`. | A tool name is this prefix plus a canonical primitive ID from `core ./contracts`. |
 | `telemetryNamespace` | Fixed neutral constant `delivery`. | Producer metadata, never part of a schema name. |
 | `docsBaseUrl` | `https://` plus the scope org plus `.github.io/` plus the binary transformation plus `/`. | The scope org is the package scope without `@`. |
@@ -186,7 +186,7 @@ The process-scoped default sink is the console. `resolveProcessLegacyFromEnviron
 ### Consumption by later layers
 
 - **M0-S4 (config layer)** is implemented and consumes `ResolverInput` and `resolveBrandIdentity` without reshaping them: the runtime-aware edge supplies the configured working name and injected environment facts, then uses `configDirectoryName` for the committed `<repo>/<configDirectoryName>/config.yaml` path and `environmentPrefix` for environment-layer names. The implemented behavior is documented in [Configuration Layer and Inspection](feature-config-layer.md).
-- **M0-S5 (state layer)** is implemented and consumes `stateDirectoryName` as an injected parameter without importing branding; the injected state directory is supplied by the runtime-aware edge. The implemented behavior is documented in [State Layer](feature-state-layer.md).
+- **M0-S5 (state layer)** is implemented and consumes `stateDirectoryName` as an injected parameter without importing branding; the injected state directory is supplied through the one state-scope policy by the CLI and MCP compositions. The implemented behavior is documented in [State Layer](feature-state-layer.md).
 - **M0-S10 (pm-notes lint and phase transitions)** is implemented behind the CLI surface, which owns the injected brand identity and renders failure diagnostics with the brand-prefixed binary name; the `lint` and `phase` handlers carry no product literal. The implemented behavior is documented in [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **MCP surface and telemetry** consume `mcpToolPrefix` and `telemetryNamespace`. Tool names are the prefix plus a canonical primitive ID; telemetry schema names remain brand-neutral.
 
@@ -245,7 +245,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 ## Dependencies & Risks
 
 - **Authoritative decision:** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) (C-3, DEC-4, DEC-8).
-- **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The implemented M0-S5 state layer consumes `stateDirectoryName` as an injected parameter; the CLI runtime-aware edge derives the production audit state directory from `stateDirectoryName` under the injected home. The implemented M0-S10 lint and phase commands run behind the CLI surface, which owns the injected brand identity; their handlers carry no product literal. The implemented command audit ledger derives the agent-identity environment-variable name from `environmentPrefix` plus the declared `AGENT_IDENTITY` suffix and reads it as injected edge data. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
+- **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The implemented state layer consumes `stateDirectoryName` as an injected parameter; the one state-scope policy (`packages/core/src/app/state-scope.ts`) composes it with the injected home to name the host root when no absolute `<PREFIX>_STATE_DIR` override is set, and every project root derives beneath that host root. The implemented M0-S10 lint and phase commands run behind the CLI surface, which owns the injected brand identity; their handlers carry no product literal. The implemented command audit ledger derives the agent-identity environment-variable name from `environmentPrefix` plus the declared `AGENT_IDENTITY` suffix and reads it as injected edge data. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
 - **Corpus scope:** The single-seam guarantee covers `packages/**` and new user-facing docs. The pre-existing installed corpus migrates separately and is not claimed by this seam.
 - **Registry coupling:** Every new user-facing doc under the scanned `doc/` scope must be registered in `forbidden-literals.registry.json` in the same change; otherwise the scan fails. Registered membership is permanent for docs added after the baseline.
 - **Adjacent registry boundary:** The privacy guard's hashed-literal registry is a separate authority. It does not replace or relax the branding scan, and neither registry may hold the other's data class: the branding registry holds already-public seed tokens, while the privacy registry holds only digests of protected literals.

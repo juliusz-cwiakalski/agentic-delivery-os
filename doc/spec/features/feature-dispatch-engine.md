@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288"]
   related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
@@ -223,7 +223,11 @@ A one-shot `dispatch <ref>` works from state alone with no daemon, no socket, an
 
 ## Bash fallback
 
-`scripts/lib/dispatch-authority.sh` reads the derived authority document as a plain file with ordinary shell tooling. It performs no typed CLI invocation, PATH lookup, network, or model call. `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` source it at startup:
+`scripts/lib/dispatch-authority.sh` reads the derived authority document as a plain file with ordinary shell tooling. It performs no typed CLI invocation, PATH lookup, network, or model call. `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` source it at startup.
+
+The resolver resolves the **project state root** before locating the document: the host root comes from the environment override first, then the repository-local default, then the home default, and the project root is `<host root>/projects/<project key>` with the key read from the checkout identity marker in the git common directory. The document therefore sits at `<project root>/documents.<workspace>/dispatch-authority.json` and the resolver's search bound stays `-maxdepth 2`; widening the search instead of resolving the root would make the fallback read the pre-migration host-root document and stay permanently `dual-run`. An absent marker, an absent project root, or a document placed at the old host-root location resolves to `dual-run` exactly as before.
+
+The typed side writes and reads the same derived view under the same project root: the production dispatch state root is the policy-derived project state root, so the engine and the fallback agree about where authority lives.
 
 - In `dual-run` the scripts behave as before: same arguments, outputs, exit behavior, and no deprecation pointer.
 - In `authoritative` they print a bounded deprecation pointer on stderr naming `dispatch <ref>` and `dispatch handover <repo> --revert`, and they remain executable as fallback.

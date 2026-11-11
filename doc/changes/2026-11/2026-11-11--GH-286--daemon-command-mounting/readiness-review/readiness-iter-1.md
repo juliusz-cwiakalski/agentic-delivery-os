@@ -3,7 +3,7 @@
 - **Verdict:** NOT_READY
 - **Date:** 2026-11-11
 - **Gate:** `@readiness-reviewer` (adversarial Definition of Ready)
-- **Artifacts reviewed:** `chg-GH-286-spec.md`, `chg-GH-286-test-plan.md`, `chg-GH-286-plan.yaml`, `chg-GH-286-pm-notes.yaml`, `doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md`, ticket #286, delivered tree.
+- **Artifacts reviewed:** `chg-GH-286-spec.md`, `chg-GH-286-test-plan.md`, `chg-GH-286-plan.yaml`, `chg-GH-286-pm-notes.yaml`, `doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md`, ticket #286, delivered tree.
 - **Pause required:** no — no human-input decision; every blocking finding is artifact-repairable.
 
 ## Facet summary
@@ -15,7 +15,7 @@
 | plan_coverage | FAIL (RF-3, RF-7) |
 | test_traceability | FAIL (RF-2, RF-5) |
 | cross_artifact_consistency | FAIL (RF-1, RF-3) |
-| decision_capture | FAIL (RF-1 amends TDR-0022 DC-1) |
+| decision_capture | FAIL (RF-1 amends TDR-0023 DC-1) |
 | system_spec_consistency | FAIL (RF-4, RF-6) |
 | plan_doc_update_coverage | PASS |
 | plan_code_area_coverage | FAIL (RF-3) |
@@ -38,7 +38,7 @@
 
 **Why it blocks:** the acceptance cannot be met; the sole integration proof is either red or vacuous (only a `#!/bin/sh` wrapper with an absolute interpreter satisfies both the case and the claimed env shape).
 
-**Remediation:** forward a minimum re-entry environment — `PATH`, `HOME`, and a non-empty working-name override — alongside `<PREFIX>_STATE_DIR`; amend TDR-0022 DC-1.
+**Remediation:** forward a minimum re-entry environment — `PATH`, `HOME`, and a non-empty working-name override — alongside `<PREFIX>_STATE_DIR`; amend TDR-0023 DC-1.
 
 **Reopen:** `specification` (plus TDR amendment), `test_planning`.
 
@@ -137,7 +137,7 @@
 
 | Phase | Findings |
 |---|---|
-| `specification` | RF-1, RF-2, RF-3, RF-4, RF-6 (+ TDR-0022 DC-1 amendment via `@decision-advisor`), A-1, A-2, A-6, A-7 |
+| `specification` | RF-1, RF-2, RF-3, RF-4, RF-6 (+ TDR-0023 DC-1 amendment via `@decision-advisor`), A-1, A-2, A-6, A-7 |
 | `test_planning` | RF-2, RF-4, RF-5, RF-6, A-4, A-8 |
 | `delivery_planning` | RF-2 (header pin), RF-3, RF-4 (task 2.6), RF-7, A-3, A-5, A-9 |
 

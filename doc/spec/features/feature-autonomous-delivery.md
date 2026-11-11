@@ -11,7 +11,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -72,20 +72,18 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   (`scripts/hooks/pre-opencode-iteration-owner-hold.sh`) keeps deferring every
   spawn/resume for as long as an owner hold exists. The hold has two equivalent
   sources — the brand-derived `DELIVERY_OS_OWNER_HOLD` value (the current
-  default brand's name for `<PREFIX>_OWNER_HOLD`) and an `owner-hold` marker
-  file — with environment precedence, a
+  default brand's name for `<PREFIX>_OWNER_HOLD`) and the host-wide marker at the
+  host root (the example reads the fixed default
+  `$HOME/.delivery-os-state/owner-hold`) — with environment precedence, a
   fail-closed unreadable marker, a bounded sanitized reason, and the example's
   two settings:
   `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (default
-  `300`, accepted `1`–`3600`, no fixed iteration cap). The production store
-  directory is the resolved state-directory scope: an absolute
-  `<PREFIX>_STATE_DIR` wins for the store and the marker, and otherwise
-  `<home>/<brand.stateDirectoryName>` applies; existing state is never migrated.
-  There is no marker-path override. The shipped hook example reads its own
-  default `$HOME/.delivery-os-state/owner-hold` and accepts no marker-path
-  setting, so when an override is set the environment source is the setting both
-  surfaces share, and an adopter who wants the example's marker to follow the
-  store edits that default. The typed engine enforces the same fact:
+  `300`, accepted `1`–`3600`, no fixed iteration cap). The typed engine and the
+  shell example read the same host-wide marker: the engine reads
+  `<host root>/owner-hold`, the example reads the fixed default path there, and
+  the environment source is the relocation-safe way to hold a host that sets the
+  override. There is no marker-path override, existing state is never migrated,
+  and the hold never narrows to one project. The typed engine enforces the same fact:
   a held pass emits no next action, `owner-hold` is the first blocking reason
   (`lanes` shows it for gated entries that are not active or stuck parks, which
   keep their park reason), claim (with or without a ref, before selection) and
@@ -191,7 +189,7 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | `scripts/pm-liveness.sh` | Script | Probe opencode session-message traffic across the recursive session tree (the current `message`/`part` store on opencode 1.19.3; `session_message` is legacy and empty); combine with git/worktree activity; degrade gracefully to the git/worktree signal if the session DB is unavailable. The delivered script still queries the legacy `session_message` table, so its session-tree signal is empty on the reference store until the script is reconciled; that is an owner follow-up. |
 | `scripts/opencode-session.sh` | Script | Ticket-scoped opencode session manager (entry point for autonomous sessions; sets `delivery_mode: autonomous`) |
 | `scripts/hooks/pre-opencode-iteration-zai.sh` | Installed inactive example | A generic sleep driver with pluggable condition functions, gated on a `zai-coding-plan/` CEO/PM model. v1 ships two conditions: `howLongToSleepDueToPeakHours` (pure-bash; waits out the 06:00–10:00 UTC peak + buffer) and `howLongToSleepDueToQuotaExhaustion` (opt-in via `ZAI_API_KEY` + `jq` + `curl`; pauses when a Z.AI Coding Plan `TOKENS_LIMIT` window reaches 100%, sleeping until the soonest `nextResetTime`; fails open with one WARN on any error). The driver takes the MAX across conditions and re-evaluates in a loop (capped by `ADOS_ZAI_MAX_SLEEP_LOOPS`, default 24); the condition-function pattern lets other providers build their own hook. Set `ADOS_ZAI_QUOTA_DISABLED=1` to opt out even with a key. Detail: [zai-peak-hours-hook.md](../../guides/zai-peak-hours-hook.md) |
-| `scripts/hooks/pre-opencode-iteration-owner-hold.sh` | Installed inactive example | Provider- and model-independent sleep driver whose only default condition, `howLongToSleepDueToOwnerHold`, sleeps while the owner hold is active. It recognises `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (the current default brand's names; default `300`, accepted `1`–`3600`), reads the marker at its own default `$HOME/.delivery-os-state/owner-hold` (no marker-path setting), takes the MAX across conditions, and applies no fixed iteration cap: the hold is the floor. Detail: [delivery-modes.md](../../guides/delivery-modes.md#owner-hold-versus-provider-window-deferral) |
+| `scripts/hooks/pre-opencode-iteration-owner-hold.sh` | Installed inactive example | Provider- and model-independent sleep driver whose only default condition, `howLongToSleepDueToOwnerHold`, sleeps while the owner hold is active. It recognises `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (the current default brand's names; default `300`, accepted `1`–`3600`), reads the host-wide owner-hold marker at the fixed default host-root path `$HOME/.delivery-os-state/owner-hold`, takes the MAX across conditions, and applies no fixed iteration cap: the hold is the floor. Detail: [delivery-modes.md](../../guides/delivery-modes.md#owner-hold-versus-provider-window-deferral) |
 | `tools/clean-merged-branches` | Tool (script) | Branch hygiene — delete squash-merged branches only |
 | `.opencode/agent/ceo.md` | AI agent | Pick next ticket; merge approved + finalized PRs (INV-DM-4); handle blockers; retrospectives |
 | `.ai/local/delivery/<REF>.pid` | Repo-local state | Single-flight PID tracking (git-ignored; keyed on the working tree) |
@@ -253,7 +251,7 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 | `ADOS_HOOK_ENV_ALLOWLIST` | empty | Comma-separated additional exact variable names authorized for hook return data; credential delegation is operator risk |
 | `ADOS_HOOK_RETRY_SECONDS` | `60` | CEO-only total wait between failed-hook attempts; the stop file is checked in chunks no longer than one second |
 | `ADOS_HOOK_MAX_FAILURES` | `5` | CEO-only consecutive hook-failure cap, separate from stuck-restart limits |
-| `DELIVERY_OS_OWNER_HOLD` | *(unset)* | Owner-hold environment source (the current default brand's name for the brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason and activates the hold. The durable alternative is the `owner-hold` marker in the production store directory — an absolute `<PREFIX>_STATE_DIR` when set, otherwise `<home>/<brand.stateDirectoryName>`, with the shell example reading its own `$HOME/.delivery-os-state/owner-hold` default; the environment source wins when both are active |
+| `DELIVERY_OS_OWNER_HOLD` | *(unset)* | Owner-hold environment source (the current default brand's name for the brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason and activates the hold. The host-wide marker at the host root (`<host root>/owner-hold`, default `$HOME/.delivery-os-state/owner-hold`) is the durable alternative; the environment source wins when both are active |
 | `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` | `300` | Owner-hold example poll interval in seconds, accepted `1`–`3600`; an unset, empty, or whitespace-only value defaults silently and any other invalid value uses `300` with one warning |
 | `ADOS_PLATFORM` | *(auto-detect)* | Platform override for `deliver-ticket.sh` / `batch-deliver.sh`: `github` \| `gitlab`. Empty = auto-detect via `ADOS_PLATFORM` env → git remote → `glab auth` → default `github` (F-9, GH-148) |
 | `ADOS_BLOCKED_LABEL` | `human-input-needed` | Label that `classify_result` treats as `blocked`, on either platform (F-9) |

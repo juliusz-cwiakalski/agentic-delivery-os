@@ -100,7 +100,7 @@ notes:
   - text: "Plan phase 6 commit: 30d44c90. Plan phase 7 complete (documentation and
       spec reconciliation): `feature-cli-entrypoint.md` gains the mounted daemon
       row and the unconditional-composition statement, the summary enumeration,
-      and the GH-286/TDR-0022/contract links; `feature-resident-daemon.md`
+      and the GH-286/TDR-0023/contract links; `feature-resident-daemon.md`
       replaces the not-mounted sentence with the mounted reality (unconditional
       runtime, entry-path re-entry, signal-owned lifetime, real pid,
       brand-derived install identity, durable degradation) and gains both links;
@@ -179,7 +179,7 @@ notes:
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test,
-      and TDR-0022 tracked). Plan phase 2 complete (production composition): one
+      and TDR-0023 tracked). Plan phase 2 complete (production composition): one
       state-directory classification with its three outcomes, resolved daemon
       settings through the delivered resolver with an empty-branch fallback, the
       delivered unix transport at the resolved socket path with a lock-held
@@ -197,7 +197,7 @@ notes:
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 1 complete (additive daemon-mount composition inputs and
-      TDR-0022 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
+      TDR-0023 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
       `reentryEnvironment?` input; `pid` is forwarded to the runtime only when
       it is a positive integer; `ProductionCompositionFacts` gains
       `daemonEntry?` and `supervisor?`; `QueueComposition.degraded` widens to
@@ -270,7 +270,7 @@ notes:
       composition inputs."
     type: "decision"
     date: "2026-11-11"
-  - text: "Decision record TDR-0022 (daemon lifecycle mount and degradation
+  - text: "Decision record TDR-0023 (daemon lifecycle mount and degradation
       composition) written and indexed under doc/decisions/. It settles D1
       (detached re-entry via the running entry path plus a signal-owned
       foreground lifetime), D2 (per-read degradation resolver over durable
@@ -284,7 +284,7 @@ notes:
     date: "2026-11-11"
   - text: "Specification complete: chg-GH-286-spec.md — 47 ACs (41 capability plus 6
       NFR), 16 DECs, 8 capabilities, 12 NFRs, 12 risks, 7 DM elements, 3
-      unchanged EVT entries, 0 open questions. DEC-1..DEC-9 map TDR-0022
+      unchanged EVT entries, 0 open questions. DEC-1..DEC-9 map TDR-0023
       one-to-one; DEC-10..DEC-16 close the values the record left open (lane
       restart bound, install test seam, help inventory shape, conformance page
       list, delivered status install truth, production start mode, re-entry
@@ -295,11 +295,11 @@ notes:
     type: "info"
     date: "2026-11-11"
   - text: "Commit-primitive constraint discovered after the specification commit:
-      TDR-0022 landed as an untracked stray because doc/decisions/ is not part
+      TDR-0023 landed as an untracked stray because doc/decisions/ is not part
       of any staging scope, and an untracked TDR staged alone fails commitlint
       as an invented tracker reference (the template summary echoes the path).
       The delivery plan MUST declare
-      doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition\
+      doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition\
       .md in one phase's scope.files so the phase-mode commit lands it with a
       plan summary, and must declare scope files for every touched path so no
       untracked artifact is stranded."
@@ -318,7 +318,7 @@ notes:
     date: "2026-11-11"
   - text: "delivery_planning complete: chg-GH-286-plan.yaml (delivery.plan.v1)
       validates — verdict=valid, tier=full, readyForDevelopment=true, 0 errors.
-      8 phases: (1) additive composition inputs + TDR-0022 landed; (2)
+      8 phases: (1) additive composition inputs + TDR-0023 landed; (2)
       production composition (one state-directory scope, resolved settings,
       transport, real pid, entry path, unconditional runtime); (3) install
       identity and install/ uninstall lifecycle; (4) foreground lifetime plus
@@ -326,7 +326,7 @@ notes:
       projection; (6) mount plus help plus reference-page HELP plus guard
       fixtures in one commit; (7) docs/spec reconciliation; (8) gate battery
       plus additive-contract proof plus release. TC mapping 50/50 with no
-      duplicates or orphans. Phase 1 declares the untracked TDR-0022 in scope so
+      duplicates or orphans. Phase 1 declares the untracked TDR-0023 in scope so
       its commit lands it."
     type: "info"
     date: "2026-11-11"
@@ -349,7 +349,7 @@ notes:
     type: "blocker"
     date: "2026-11-11"
   - text: "Retro (DoR iteration 1): the artifacts were internally consistent and
-      matched TDR-0022, but three classes of claim were never checked against
+      matched TDR-0023, but three classes of claim were never checked against
       the delivered code: the executable environment of a detached child, the
       exact staleness boundary and orphan-heartbeat behaviour of the delivered
       fold, and the projection class of two error rows. Two hard-coded help
@@ -360,7 +360,7 @@ notes:
       list must be derived by grepping the suites for the literal it changes."
     type: "retro"
     date: "2026-11-11"
-  - text: "DoR iteration 1 remediation complete. TDR-0022 DC-1 amended (re-entry
+  - text: "DoR iteration 1 remediation complete. TDR-0023 DC-1 amended (re-entry
       environment forwards PATH, HOME/USERPROFILE and a non-empty working-name
       override through one optional additive input; PREFIX_STATE_DIR stays
       authoritative and is written last; the old renamed-brand limitation is
@@ -379,7 +379,7 @@ notes:
     type: "decision"
     date: "2026-11-11"
   - text: "DoR iteration 2 verdict NOT_READY — 6 blocking (all major) and 9
-      advisory. RF2-1 TDR-0022 DC-2 still pins the inclusive staleness bound
+      advisory. RF2-1 TDR-0023 DC-2 still pins the inclusive staleness bound
       while every other artifact pins strict '<'. RF2-2 the re-entry spawn edit
       has no phase whose scope contains daemon-compose.ts. RF2-3 AC-F7-5's
       entry-path refusal has no Phase 3 implementation site. RF2-4 the home-less
@@ -404,7 +404,7 @@ notes:
       it to production surfaces: createDaemonMainEntry is never wired into the
       composition, composer, or bin, and a test fixture may still use it as a
       library seam. (3) RF2-1/DC-2 and the stale entryScriptPath reference are
-      corrected in TDR-0022 by @decision-advisor. (4) RF2-2/RF2-3 are plan-scope
+      corrected in TDR-0023 by @decision-advisor. (4) RF2-2/RF2-3 are plan-scope
       omissions: daemon-compose.ts joins Phases 2 and 3 with the spawn-merge and
       install- refusal tasks assigned to them."
     type: "decision"
@@ -417,7 +417,7 @@ notes:
       authored. The spec, plan and test plan carry exit 1."
     type: "info"
     date: "2026-11-11"
-  - text: "DoR iteration 2 remediation complete. TDR-0022 DC-2 amended to the strict
+  - text: "DoR iteration 2 remediation complete. TDR-0023 DC-2 amended to the strict
       '<' bound with the at-bound boundary stated, plus the daemonEntry
       field-name correction. Spec v1.2: 50 ACs (new AC-F3-5 unresolvable
       state-directory outcome; AC-F3-3/AC-F3-4 scoped to a home present;
@@ -571,7 +571,7 @@ notes:
     type: "decision"
     date: "2026-11-11"
   - text: "Review iteration 3 + confirmation pass: all five named findings closed.
-      NF3-1 (engine change declared in spec v1.5/v1.6 and TDR-0022's scoped
+      NF3-1 (engine change declared in spec v1.5/v1.6 and TDR-0023's scoped
       exception), NF3-2 (§16 now names twenty reconciled pages), NF3-3
       (listeners registered before the readiness point with a buffered signal;
       the createDaemonMainEntry seam got the same treatment and stays unused in

@@ -29,11 +29,13 @@ import {
   readQueueEntries,
   recordDaemonDispatchResult,
   recordResumeIntent,
+  resolveDaemonSettings,
   runSupervisionCycle,
   uninstallSupervisor,
 } from "@delivery-os/core";
 import {
   CONTROL_PROTOCOL_CURRENT,
+  type ConfigFailure,
   type ControlTopic,
   type ControlTransport,
   DAEMON_HEARTBEAT_STATES,
@@ -68,6 +70,7 @@ import {
   type LaneLaunchRequest,
   LOCAL_CALLER_PRINCIPAL,
   QUEUE_MAX_ENTRIES,
+  type Result,
   type StateStorePort,
   type SupervisorPort,
 } from "@delivery-os/core/contracts";
@@ -78,6 +81,21 @@ import {
   readBlockerLedger,
   readEconomicsRecords,
 } from "@delivery-os/core/state";
+/**
+ * The ONE place that supplies a state directory to the delivered daemon settings
+ * resolution (GH-288 F-6, AC-F6-4, DEC-12).
+ *
+ * The caller passes the policy-derived PROJECT state root, so the socket path
+ * derives from the repository's own state root and the delivered
+ * inside-the-state-directory rule keeps refusing an outside path. The settings
+ * resolution itself is unchanged and the daemon family stays unmounted (NG-4);
+ * reverting this argument to the host root is the mutation AC-F6-4 records.
+ */
+export const resolveProjectDaemonSettings = (
+  projectStateRoot: string,
+): Result<DaemonSettings, ConfigFailure> =>
+  resolveDaemonSettings({}, {}, { stateDirectory: projectStateRoot });
+
 import type { DaemonCommandRuntime as CommandRuntime } from "./commands/daemon.js";
 
 export type DaemonComposition = {
@@ -86,6 +104,19 @@ export type DaemonComposition = {
   readonly settings: DaemonSettings;
   readonly restartBound: number;
   readonly stateDirectory: string;
+  /**
+   * The value the `<environmentName>` binding names in the detached child's
+   * environment and in the installed unit. Absent keeps `stateDirectory`, the
+   * delivered one-directory shape; a repository-scoped policy passes the host
+   * root here so the child re-resolves the same project state root from it.
+   */
+  readonly stateDirectoryEnvironmentValue?: string;
+  /**
+   * The directory the installed unit runs in. Absent keeps the delivered unit
+   * shape; a project-scoped state root needs the checkout root so the unit
+   * process resolves the same project rather than the declared `unbound` scope.
+   */
+  readonly workingDirectory?: string;
   readonly unit: string;
   readonly binary: string;
   readonly environmentName: string;
@@ -426,6 +457,14 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     composition.supervisorKind ??
     (platform === "linux" ? "systemd-user" : platform === "darwin" ? "launchd" : "windows-service");
   const scope = daemonScopeDigest(composition.stateDirectory);
+  // The value the `<environmentName>` binding names. It is the composition's own
+  // state directory unless a repository-scoped policy passes the host root, so a
+  // re-entered child resolves the same project state root the parent did.
+  const stateDirectoryBinding =
+    composition.stateDirectoryEnvironmentValue ?? composition.stateDirectory;
+  // The unit's working directory: a project-scoped state root is derived from the
+  // checkout, so the unit must run where the checkout identity resolves.
+  const workingDirectory = composition.workingDirectory;
   /**
    * The composed platform supervisor. The user configuration root is resolved
    * ONCE by the composing layer (`production.ts`): an absolute non-empty
@@ -444,7 +483,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       unit: composition.unit,
       scope,
       environmentName: composition.environmentName,
-      stateDirectory: composition.stateDirectory,
+      stateDirectory: stateDirectoryBinding,
     });
   const runtimeHolder: { current?: ReturnType<typeof createDaemonRuntime> } = {};
   const recovery = createRecovery(composition);
@@ -737,10 +776,10 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         // keeps the delivered single-variable spawn byte-identical.
         const spawnEnvironment =
           composition.reentryEnvironment === undefined
-            ? { [composition.environmentName]: composition.stateDirectory }
+            ? { [composition.environmentName]: stateDirectoryBinding }
             : {
                 ...composition.reentryEnvironment,
-                [composition.environmentName]: composition.stateDirectory,
+                [composition.environmentName]: stateDirectoryBinding,
               };
         // Read the durable record set BEFORE spawning, so the readiness poll can
         // only accept an acquisition this spawn produced. A live pre-spawn
@@ -980,9 +1019,10 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       const installed = supervisor.install({
         unit: composition.unit,
         scope,
-        stateDirectory: composition.stateDirectory,
+        stateDirectory: stateDirectoryBinding,
         binary: composition.binary,
         environmentName: composition.environmentName,
+        ...(workingDirectory === undefined ? {} : { workingDirectory }),
         enableLinger: true,
       });
       if (installed.ok) {

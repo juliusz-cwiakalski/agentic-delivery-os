@@ -6,10 +6,10 @@
 export {
   BOOTSTRAP_DESCRIPTOR,
   type CatalogField,
-  type ConfigCatalog,
-  catalogPaths,
   COORDINATOR_BRANCH,
+  type ConfigCatalog,
   type CoordinatorSettings,
+  catalogPaths,
   DAEMON_BRANCH,
   LANE_BRANCH,
   type LaneSettings,
@@ -22,8 +22,6 @@ export {
   resolveLaneSettings,
   resolvePollSettings,
   resolveQueueSettings,
-  type StateDirectoryScopeInput,
-  resolveStateDirectoryScope,
 } from "./catalog.js";
 export { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
 export {

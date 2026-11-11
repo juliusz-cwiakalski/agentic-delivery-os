@@ -4,7 +4,7 @@
 - **Date:** 2026-11-11
 - **Iteration:** 2 of 3
 - **Pause required:** no — every blocking finding is artifact-repairable.
-- **Artifacts:** spec v1.1, test plan v1.1, plan v1.1 (`plan validate` valid), pm-notes, TDR-0022 (DC-1 amended), readiness-iter-1.md, ticket #286, delivered tree.
+- **Artifacts:** spec v1.1, test plan v1.1, plan v1.1 (`plan validate` valid), pm-notes, TDR-0023 (DC-1 amended), readiness-iter-1.md, ticket #286, delivered tree.
 
 ## Facet summary
 
@@ -26,7 +26,7 @@
 | ID | Status |
 |---|---|
 | RF-1 | Partially closed — triad consistent and the spawn proof real; the fail-closed half is not testable as written (RF2-4) |
-| RF-2 | Partially closed — TC-070/073/075/078 and the plan agree on strict `<`; TDR-0022 DC-2 still pins `<=` (RF2-1) |
+| RF-2 | Partially closed — TC-070/073/075/078 and the plan agree on strict `<`; TDR-0023 DC-2 still pins `<=` (RF2-1) |
 | RF-3 | Closed |
 | RF-4 | Closed |
 | RF-5 | Closed |
@@ -43,7 +43,7 @@
 
 ### RF2-1 [major] — the binding decision record still pins an inclusive staleness bound
 
-`doc/decisions/TDR-0022-…md:427` still reads `nowMs − Date.parse(beatAt) ≤ lockStalenessMs`, and the `Amendments` section covers DC-1 only. Spec DM-4/EVT-2/AC-F5-4/AC-F5-6, plan header and TC-073 all pin strict `<`. An implementer following the declared-binding record implements `<=` and fails AC-F5-4/TC-073.
+`doc/decisions/TDR-0023-…md:427` still reads `nowMs − Date.parse(beatAt) ≤ lockStalenessMs`, and the `Amendments` section covers DC-1 only. Spec DM-4/EVT-2/AC-F5-4/AC-F5-6, plan header and TC-073 all pin strict `<`. An implementer following the declared-binding record implements `<=` and fails AC-F5-4/TC-073.
 
 **Remediation:** amend DC-2 to `<` and add the amendment row.
 **Reopen:** `specification` (+ decision record).
@@ -95,7 +95,7 @@ Phase 4 says the entry "gains no test", while TC-039's precondition requires a f
 | A2-6 | nit | TC-039 step 4 proves the interpreter basename but not that it came from the forwarded `PATH`. | test_planning |
 | A2-7 | nit | PM notes keep historical "47 ACs"/"50 TCs"/"four suites" claims; the final entry supersedes them. Add a superseded marker or leave as history. | specification (hygiene) |
 | A2-8 | nit | Spec §2.1 says `readDaemonStatus` derives the marker "without a socket probe"; it merges `daemon-unreachable` from `socket.reachable`. Reword. | specification |
-| A2-9 | nit | TDR-0022:402 still names `ProductionCompositionFacts.entryScriptPath`; spec DEC-2 adopts `daemonEntry`. | specification (+ decision record) |
+| A2-9 | nit | TDR-0023:402 still names `ProductionCompositionFacts.entryScriptPath`; spec DEC-2 adopts `daemonEntry`. | specification (+ decision record) |
 
 ## Verified sound (do not re-litigate)
 
@@ -113,7 +113,7 @@ Phase 4 says the entry "gains no test", while TC-039's precondition requires a f
 
 | Phase | Findings |
 |---|---|
-| `specification` | RF2-4, A2-7, A2-8, A2-9 (+ TDR-0022 DC-2 amendment for RF2-1) |
+| `specification` | RF2-4, A2-7, A2-8, A2-9 (+ TDR-0023 DC-2 amendment for RF2-1) |
 | `test_planning` | RF2-4, RF2-5, A2-1, A2-4, A2-5, A2-6 |
 | `delivery_planning` | RF2-2, RF2-3, RF2-5, RF2-6, A2-2, A2-3 |
 

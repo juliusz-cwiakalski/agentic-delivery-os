@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, and the owner/coordinator audience seam."
 links:
-  related_changes: ["GH-229", "GH-225", "GH-230", "GH-237", "GH-240", "GH-277"]
+  related_changes: ["GH-229", "GH-225", "GH-230", "GH-237", "GH-240", "GH-277", "GH-288"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -240,6 +240,18 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 All suites inject facts through the shared board harness and matrix; nothing reads the live tree, the network, the ambient clock, or an environment variable. The fixed fixture clock is `2026-11-06T12:00:00Z`, and ages are expressed as deltas from it. The golden fixtures are never rewritten by the suite, and mutation controls prove that a changed age, waiver authorizer, or kind breaks the pinned bytes.
 
 ## Operational & Support
+
+### Owner hold and host scope
+
+The owner hold is a stop-all control and stays **host-wide**. The marker is read
+at the host root — an absolute `<PREFIX>_STATE_DIR` when set, otherwise
+`<home>/<brand.stateDirectoryName>` — and the brand-derived environment source
+keeps its precedence over the marker. No per-project marker exists and no code
+path reads `<project root>/owner-hold`, so one hold stops every project on the
+host and migration leaves it in place. The gating behaviour and the
+`queue.precondition.unmet`/`owner-hold` refusal are in [Scheduling
+Engine](feature-scheduling-engine.md); the state root it is read at is in
+[Projects Host Overview](feature-projects.md).
 
 ### Configuration
 

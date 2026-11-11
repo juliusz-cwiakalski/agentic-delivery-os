@@ -4,7 +4,7 @@
 - **Date:** 2026-11-11
 - **Iteration:** 3 of 3
 - **Pause required:** no human-only decision, but the iteration budget is exhausted; the gate recommends one targeted repair plus a confirmation pass on the changed sections.
-- **Artifacts:** spec v1.2 (50 ACs), test plan v1.2 (54 TCs), plan v1.2 (54/54, validator valid), pm-notes, TDR-0022 (DC-1/DC-2 amended), readiness-iter-1/2.md, ticket #286, delivered tree.
+- **Artifacts:** spec v1.2 (50 ACs), test plan v1.2 (54 TCs), plan v1.2 (54/54, validator valid), pm-notes, TDR-0023 (DC-1/DC-2 amended), readiness-iter-1/2.md, ticket #286, delivered tree.
 
 ## Facet summary
 

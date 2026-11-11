@@ -39,6 +39,7 @@ const renderSystemdUnit = (input: {
   readonly stateDirectory: string;
   readonly environmentName: string;
   readonly unit: string;
+  readonly workingDirectory?: string;
 }): string =>
   [
     "[Unit]",
@@ -48,6 +49,9 @@ const renderSystemdUnit = (input: {
     "[Service]",
     "Type=simple",
     `ExecStart=${input.binary} daemon start --foreground`,
+    ...(input.workingDirectory === undefined
+      ? []
+      : [`WorkingDirectory=${input.workingDirectory}`]),
     `Environment=${input.environmentName}=${input.stateDirectory}`,
     "Restart=on-failure",
     "",
@@ -198,6 +202,9 @@ export const createSupervisorAdapter = (options: SupervisorAdapterOptions): Supe
           stateDirectory: request.stateDirectory,
           environmentName: request.environmentName,
           unit: options.unit,
+          ...(request.workingDirectory === undefined
+            ? {}
+            : { workingDirectory: request.workingDirectory }),
         }),
       );
       const enabled = run("systemctl", ["--user", "enable", options.unit]);

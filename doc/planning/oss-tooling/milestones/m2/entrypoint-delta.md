@@ -34,6 +34,10 @@ exit 0
 ## M2-planned additions
 
 - `projects` becomes a root family: the host overview of managed checkouts.
+  **Mounted by GH-288 (M2-S11):** `projects list` is in the prompt-required set,
+  composed by the production entrypoint, advertised in root `--help`, and served
+  by the M2 command page as its reference page. The remaining additions below
+  stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
   read side.
 - `events` joins the subscribe surface as the taxonomy reference; the daemon
@@ -66,11 +70,12 @@ family is mounted.
 
 The entrypoint composes exactly the prompt-required command set and drops
 extras, so a command definition existing in the edge composition is not
-enough. Mounting `projects`, `events`, or `board` takes a prompt-set change
-plus a help reference page per command; only then does the family appear in
-root `--help`. That is why this note records the M2 additions as planned, not
-as registered: the mount is the story's work, and the help reference page is
-part of it.
+enough. Mounting a family takes a prompt-set change plus a help reference page
+per command; only then does the family appear in root `--help`. GH-288 mounted
+`projects` that way — prompt-set entry, edge composition, help entries, the M2
+reference page, the coverage-inventory row and the per-command page root. The
+remaining M2 additions (`events`, `board`, `dispatch attempts`, `spend` v2)
+stay planned until their own stories mount them.
 
 ## Where this note is read
 

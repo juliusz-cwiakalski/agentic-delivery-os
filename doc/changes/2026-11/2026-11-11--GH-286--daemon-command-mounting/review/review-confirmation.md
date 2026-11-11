@@ -3,14 +3,14 @@
 - **Status:** FAIL — one delivered-artifact contradiction (**CF-1**). Every named finding NF3-1..NF3-5 is verified closed in code, tests, spec, test plan and TDR, and every gate named for this pass is green.
 - **Date:** 2026-11-11
 - **HEAD reviewed:** `46ff9428` (`7b8e68b9` and `46ff9428` are change-artifact only; no source file changed after `885d8dcc`, so the recorded full battery at `885d8dcc` still describes the shipped code)
-- **Artifacts:** spec v1.6 (52 ACs), test plan v1.6 (55 TCs, 52/52), plan v1.7 (TC map 55/55), TDR-0022 (scoped engine exception + amendment row), `review/review-iter-3.md`
+- **Artifacts:** spec v1.6 (52 ACs), test plan v1.6 (55 TCs, 52/52), plan v1.7 (TC map 55/55), TDR-0023 (scoped engine exception + amendment row), `review/review-iter-3.md`
 - **Scope:** confirmation of the five named findings and of determinism, plus a fresh agreement check across spec / test plan / plan / TDR / docs / code. Not a fourth full iteration.
 
 ## Named findings
 
 | Finding | Verdict | Evidence |
 |---|---|---|
-| NF3-1 engine change no longer denied | CLOSED | §1, NG-1, §5.1 F-2, §7.1, §7.2, §8.5, §12, §13, §16 and TDR-0022 C-6 / scoped-exception note / amendment row all declare the stale-lock takeover reap as the one contract-conformance fix. The only surviving "Consumer only" cell (§16 control protocol, supervisor adapter, records, error table) is scoped to those components and is true. |
+| NF3-1 engine change no longer denied | CLOSED | §1, NG-1, §5.1 F-2, §7.1, §7.2, §8.5, §12, §13, §16 and TDR-0023 C-6 / scoped-exception note / amendment row all declare the stale-lock takeover reap as the one contract-conformance fix. The only surviving "Consumer only" cell (§16 control protocol, supervisor adapter, records, error table) is scoped to those components and is true. |
 | NF3-2 §16 names twenty reconciled pages | CLOSED | The list carries 21 reconciled bullets plus 2 "no change required" bullets and the index line; all twenty are present in the branch diff of `doc/**`, and the two "no change required" pages (`cli-command-registry.md`, `man-page.md`) are absent from it. The completeness sentence is now true. |
 | NF3-3 listeners before start; racing signal buffered | CLOSED | `packages/cli/src/daemon-compose.ts:878-905` installs both listeners before `runtime.start` (882) and buffers a signal while the start is in flight (`request`/`startSettled`, 870-875) before applying it at 900; `daemon-main.ts:31-40` opens `waitForStop()` before `start`. `TC-DAEMON-033/036` asserts two registered listeners at acquisition and `[acquired, released]` / `[acquired, immediate-stop]`. Seam parity declared in §5.1 F-2. |
 | NF3-4 real-child determinism | CLOSED | `tests/fixtures/daemon/real-child-gate.ts` (exclusive gate, bounded wait, stale takeover) is used by both real-child files; the crash case waits on the child's own durable record (15 s poll, not the 1 s product window) and kills only after the initial heartbeat and fence release (`daemon-crash-restart.test.ts:445-517`). Both files together at default concurrency: **5/5 runs, 6 pass, 0 fail** (2.59-2.64 s each). |
@@ -23,7 +23,7 @@
 - §7.2: "[OUT] Any daemon engine change other than the takeover reap named in §7.1 … The one in-scope exception removes a record the staleness evaluation has already proved dead; it adds no takeover rule, no lock-policy option, and no new identity (AC-F2-11)."
 - §12: "… with the single declared exception of the start path's stale-lock takeover reap (§7.1, AC-F2-11)." §13 (GH-238 row): "Consumed unchanged, with the single declared exception of the start path's takeover reap (§7.1, AC-F2-11)."
 - §16: "Daemon engine start path — One declared contract-conformance fix: on a `takeover` decision the stale lock record is removed — by a compare-and-delete keyed on the observed `lockToken` … while any other removal failure surfaces its own identity rather than that busy claim (AC-F2-12)."
-- TDR-0022: "### C-6: Additive composition only — no engine, contract, or schema change beyond stale-lock takeover conformance"; "**Scoped engine exception — stale-lock takeover conformance.** *(Added 2026-11-11 — review iteration 3, NF3-1.)*"; and the 2026-11-11 amendment row superseding the earlier "no daemon engine edit" statement.
+- TDR-0023: "### C-6: Additive composition only — no engine, contract, or schema change beyond stale-lock takeover conformance"; "**Scoped engine exception — stale-lock takeover conformance.** *(Added 2026-11-11 — review iteration 3, NF3-1.)*"; and the 2026-11-11 amendment row superseding the earlier "no daemon engine edit" statement.
 
 ## Counts and agreement
 

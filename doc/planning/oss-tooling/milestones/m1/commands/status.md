@@ -137,6 +137,7 @@ clamp.
 No section, state, evidence source, status reason, finding code, schema version,
 or exit changes. An inactive hold adds no member and the output is byte-identical
 to the delivered digest. The CLI and MCP status runtime compose the same reader.
-The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
-marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
-override or store relocation.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the host-wide marker
+`<host root>/owner-hold`, where the host root is an absolute `<PREFIX>_STATE_DIR`
+when set and otherwise `<home>/<stateDirectoryName>`; there is no marker-path
+override, and the hold never narrows to one project.

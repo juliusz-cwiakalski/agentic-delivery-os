@@ -5,7 +5,7 @@
 - **Reviewer:** `@reviewer` (local ADOS mode; re-review after the Phase-9 remediation)
 - **Branch:** `feat/GH-286/daemon-command-mounting` @ `72e2c1a7` vs `origin/main-tools`
 - **Delta reviewed:** `a66c9588..72e2c1a7` (`1df9e74e`, `97a3f410`, `72e2c1a7`) plus a full regression pass
-- **Artifacts:** spec v1.4 (50 ACs; DEC-19; extended AC-F7-2; §16 fourteen pages), test plan v1.4 (55 TCs), plan v1.6 (9 phases), pm-notes, review iter-1, readiness iter-1..3, TDR-0022
+- **Artifacts:** spec v1.4 (50 ACs; DEC-19; extended AC-F7-2; §16 fourteen pages), test plan v1.4 (55 TCs), plan v1.6 (9 phases), pm-notes, review iter-1, readiness iter-1..3, TDR-0023
 
 ## Summary
 

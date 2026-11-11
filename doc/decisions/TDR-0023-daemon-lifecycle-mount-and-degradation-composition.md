@@ -1,5 +1,5 @@
 ---
-id: TDR-0022
+id: TDR-0023
 decision_type: tdr
 status: Proposed
 created: 2026-11-11
@@ -82,7 +82,7 @@ links:
   roadmap_items: ["M1-S18"]
 ---
 
-# TDR-0022: Daemon Lifecycle Mount and Degradation Composition — Entry-Path Re-entry, Signal-Owned Foreground Lifetime, Real Instance Pid, Brand-Derived Install Identity, Durable-State Degradation
+# TDR-0023: Daemon Lifecycle Mount and Degradation Composition — Entry-Path Re-entry, Signal-Owned Foreground Lifetime, Real Instance Pid, Brand-Derived Install Identity, Durable-State Degradation
 
 ## Context
 

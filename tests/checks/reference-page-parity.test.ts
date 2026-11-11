@@ -10,6 +10,16 @@ import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/entrypoint";
 import { allHelpEntries } from "../../packages/cli/src/help";
 
 const ROOT = process.cwd();
+const PAGE_ROOT = "doc/planning/oss-tooling/milestones/m1/commands";
+const M2_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m2/commands";
+
+/** The per-command reference-page root (GH-288 DEC-13). */
+const pageFor = (command: string): string =>
+  command === "verify"
+    ? `${PAGE_ROOT}/verify-change.md`
+    : command === "projects"
+      ? `${M2_PAGE_ROOT}/projects.md`
+      : `${PAGE_ROOT}/${command}.md`;
 const coverage = JSON.parse(
   readFileSync(join(ROOT, "tests/fixtures/help-guide/coverage.json"), "utf8"),
 ) as { readonly commands: readonly string[]; readonly referencePages: readonly string[] };
@@ -29,7 +39,7 @@ describe("TC-HELP-003 reference-page parity", () => {
   test("each command page names its command and documents help", () => {
     const failures: string[] = [];
     for (const command of coverage.commands) {
-      const page = `doc/planning/oss-tooling/milestones/m1/commands/${command === "verify" ? "verify-change" : command}.md`;
+      const page = pageFor(command);
       const text = readFileSync(join(ROOT, page), "utf8");
       if (!text.toLowerCase().includes(command)) failures.push(`${page}: missing command name`);
       if (!text.includes("--help")) failures.push(`${page}: missing --help`);

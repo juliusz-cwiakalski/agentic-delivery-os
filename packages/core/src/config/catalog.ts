@@ -858,45 +858,9 @@ export const resolvePollSettings = (
 
 /* --------------------------- state-directory scope ----------------------- */
 
-export type StateDirectoryScopeInput = {
-  readonly environment: Readonly<Record<string, string | undefined>>;
-  /** The brand-derived uppercase prefix (the product name is never hardcoded). */
-  readonly environmentPrefix: string;
-  /** The brand-derived default directory name. */
-  readonly stateDirectoryName: string;
-  readonly homeDirectory?: string;
-};
-
 /**
- * Resolve the process-environment state-directory scope (DEC-18, Appendix E).
- *
- * `<PREFIX>_STATE_DIR` wins outright when set; the default is
- * `<home>/<brand.stateDirectoryName>`. `brand.environmentPrefix` already ends in
- * one `_`, so the variable is its exact uppercase form plus `STATE_DIR` (one
- * separator, never two). The two are never merged, no ambient working directory
- * participates, and a non-absolute value is `config.value.invalid`.
+ * The state-directory scope rule now lives in the app tier
+ * (`packages/core/src/app/state-scope.ts`) so exactly one home-plus-brand
+ * composition and one override precedence exist in the tree (GH-288 DEC-12).
+ * Configuration keeps the daemon branch and every other resolved setting.
  */
-export const resolveStateDirectoryScope = (
-  input: StateDirectoryScopeInput,
-): Result<string, ConfigFailure> => {
-  const prefix = input.environmentPrefix.toUpperCase().replace(/_+$/u, "");
-  const name = `${prefix}_STATE_DIR`;
-  const explicit = input.environment[name];
-  if (explicit !== undefined && explicit.length > 0) {
-    if (!isAbsolutePath(explicit)) {
-      return {
-        ok: false,
-        error: { kind: "config", code: "config.value.invalid", key: name },
-      };
-    }
-    return { ok: true, value: normalizePath(explicit).replace(/\/+$/u, "") };
-  }
-  const home = input.homeDirectory ?? input.environment.HOME ?? input.environment.USERPROFILE;
-  if (home === undefined || home.length === 0) {
-    return { ok: false, error: { kind: "config", code: "config.value.invalid", key: name } };
-  }
-  return {
-    ok: true,
-    value: `${normalizePath(home).replace(/\/+$/u, "")}/${input.stateDirectoryName}`,
-  };
-};

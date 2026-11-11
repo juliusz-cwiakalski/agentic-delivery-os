@@ -1,0 +1,305 @@
+change_id: GH-288
+title: "feat(projects): multi-repository workstations - per-repository state
+  scoping and projects list"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-11T01:55:00Z", completed: 2026-11-11T00:51:47.273Z }
+  specification: { started: null, completed: 2026-11-11T10:14:48.423Z }
+  test_planning: { started: null, completed: 2026-11-11T10:14:55.062Z }
+  delivery_planning: { started: null, completed: 2026-11-11T10:15:03.884Z }
+  dor_check: { started: null, completed: 2026-11-11T10:15:40.606Z }
+  delivery: { started: null, completed: 2026-11-11T13:45:00.757Z }
+  system_spec_update: { started: null, completed: 2026-11-11T14:03:13.006Z }
+  review_fix: { started: null, completed: 2026-11-11T15:48:20.905Z }
+  quality_gates: { started: null, completed: 2026-11-11T15:57:22.732Z }
+  dod_check: { started: null, completed: 2026-11-11T15:57:34.289Z }
+  pr_creation: { started: null, completed: 2026-11-11T16:01:11.421Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: GH-288 (M2-S11) is open, labelled change only, no comments,
+      assignee none. Scope source is the ticket body plus the canonical backlog
+      entry doc/planning/oss-tooling/backlog.md M2-S11 and the M2 milestone pack
+      (milestones/m2): architecture 'multi-repository overview', contracts.md
+      projects.v1, test-scenarios SC-M2-S11-01/02, commands/projects.md,
+      entrypoint-delta.md (mount requires prompt-set change plus a help
+      reference page)."
+    type: info
+    date: "2026-11-11"
+  - text: "State detection: branch feat/GH-288/multi-repo-workstations exists and is
+      checked out at origin/main-tools (5372dbac) with zero commits beyond it;
+      no open or merged PR; no doc/changes folder for GH-288. Treated as a fresh
+      start, not a resume, so the main-tools sync merge is a no-op."
+    type: info
+    date: "2026-11-11"
+  - text: "Current-truth cross-check (doc/spec/**): the state layer stores one store
+      per workspace inside an injected state directory, and production resolves
+      that directory once from the injected home plus brand.stateDirectoryName
+      with workspaceId 'default' (production.ts). Queue entries, lane leases,
+      phase documents, dispatch authority views and the owner-hold marker all
+      live under that single root, so two repositories on one host share one
+      store keyed only by ref - the collision M2-S11 removes. No existing spec
+      contradicts the ticket; the ticket extends the state and CLI surfaces
+      additively."
+    type: info
+    date: "2026-11-11"
+  - text: "Known doc-impact risks for phase 7: feature-state-layer.md (state root
+      resolution and the host index), feature-cli-entrypoint.md (new root family
+      plus prompt-required command set), feature-branding-seam.md
+      (stateDirectoryName consumer list), a new feature-projects.md (spec
+      coverage for the new surface), feature-capture-capsule/closeout if the
+      host index touches closeout, doc/planning/oss-tooling/backlog.md M2-S11
+      progress markers and status.md,
+      doc/planning/oss-tooling/cli-command-registry.md,
+      tests/fixtures/help-guide/coverage.json plus a reference page for the new
+      family, and the migration note owed to existing single-store users."
+    type: info
+    date: "2026-11-11"
+  - text: "Test planning found two spec gaps (an in-scope unbound behaviour with no
+      AC, and an unspecified identity-refusal subject) plus a source-probe
+      accuracy finding: production.ts composes the state directory inline and
+      ignores the delivered <PREFIX>_STATE_DIR override, and mcp/serve.ts
+      repeats it, so three derivation sites exist today and only the
+      runtime-aware edge honours the override. Specification reopened, revised
+      to v1.1 (AC-F1-5, AC-F3-3 naming, AC-F6-1 strengthened, DEC-16, §2.1
+      corrected), re-completed (commit 6f28f34b); test plan revised to v2 (39
+      TCs, 35/35 ACs) and completed (commit 754a7062); plan validated and
+      completed (commit 1c8f2f6f)."
+    type: info
+    date: "2026-11-11"
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md). 12
+      blocking: B1 project-key collision for two checkouts with the same
+      basename; B2 the F-3 read-only clause has no owning AC; B3 phase 4 needs
+      the prompt-required set change owned by phase 6 (both help gates verify
+      set equality, so it cannot be green early); B4 phase 1 asserts a host-root
+      listing that only exists after the phase-2 index; B5 the policy location
+      (core/domain consuming core/config) violates the
+      tier-domain-only-contracts boundary rule and plan/test-plan name different
+      policy files; B6 the AC-F3-3 identity-refusal provocation is unreachable
+      through the delivered git-directory resolution; B7 DEC-8 and DEC-16
+      disagree about whether projects.state-unavailable can name a project key
+      and state location that cannot exist, with no covering cell; B8 the M2
+      projects page contradicts AC-F1-5 and AC-F3-2 and nothing corrects it; B9
+      no phase owns the forbidden-literals registry entry the new guide
+      requires; B10 two ACs declare Suite evidence for assertions the pinned
+      release gate does not make and for a diff-against-moving-base half; B11
+      AC-F6-4 is already satisfied by unmodified resolveDaemonSettings while
+      plan 4.4 names a file that does not derive the socket; B12 four
+      precedent-setting DECs have no TDR. Advisories A1-A8. Reopened
+      specification, test_planning, delivery_planning; no delivery phase
+      entered."
+    type: blocker
+    date: "2026-11-11"
+  - text: "Retro: the spec set the contract surface correctly but two classes of
+      defect reached the gate. (i) Placement/sequencing was asserted instead of
+      probed: B5 (dependency-cruiser tier rule) and B3 (help gates verify set
+      equality, so the prompt-set change and the command definition must land in
+      one phase) would both have been caught by running the two gates and
+      reading .dependency-cruiser.cjs before writing the policy location and
+      phase order. (ii) Evidence classes were declared from intent rather than
+      from the pinned test sources: B10/B11 would have been caught by reading
+      privacy-release.test.ts and resolveDaemonSettings before labelling Suite.
+      Lesson: when a spec places a module or orders phases, run the boundary and
+      coverage gates against the plan's file list; when an AC declares Suite,
+      name the pinned test that makes it red."
+    type: retro
+    date: "2026-11-11"
+  - text: "DoR iteration 2 (final iteration) = NOT_READY
+      (readiness-review/readiness-iter-2.md), but B1-B12 were independently
+      verified genuinely closed and the only remaining findings were three
+      mechanical plan-scope omissions plus wording drift: B13 the new
+      feature-projects spec page needs the forbidden-literals registry (and
+      doc/00-index.md), B14 the mount unit omitted packages/cli/src/edge.ts and
+      the literal EXPECTED list in
+      tests/behaviour/entrypoint-composition.test.ts, B15 the host-index fold
+      was unreachable without packages/core/src/index.ts. Closed without a third
+      full gate run, per the owner's one-iteration instruction, because each fix
+      is a declared-file addition verifiable by machine: spec v1.3 alignment
+      (TDR-0022 scheduled as plan phase 1 work item 1.0, AC-F1-6 traceability,
+      AC-F3-5 daemon-reason precedence), test plan v4 alignment (X-1..X-3
+      closed, X-4 restated), plan revision 2.0 amended (phase 2
+      +packages/core/src/index.ts, phase 3 +edge.ts and
+      entrypoint-composition.test.ts, phase 6 +forbidden-literals.registry.json
+      and doc/00-index.md, doc-distribution guard run explicitly, registry diff
+      restated per boundary). plan validate = valid and lint plan = valid after
+      the edit; AC/TC ownership re-derived as 38/38 and 42/42 with no orphan.
+      Accepted residual risks (reviewer-endorsed, none blocking): a 32-bit key
+      discriminator whose collision is made visible by the index guard rather
+      than eliminated outright; review-verified diff halves; no live daemon
+      probe in the shipped build by design; the unbound-basename replacement
+      wording; and first-use daemon-reason wording."
+    type: info
+    date: "2026-11-11"
+  - text: "Retro: the second gate cycle reproduced the same defect class as the
+      first — scope completeness of a declared file list, not design.
+      B13/B14/B15 were each found by reading one pinned gate or one composition
+      file that the plan had not scoped. Lesson: derive a plan phase's scope
+      from the *gates that must be green at that boundary* (each check's file
+      inputs, each literal-inventory test, each export surface the importing
+      tier may use), not from the files the feature conceptually owns."
+    type: retro
+    date: "2026-11-11"
+  - text: "Plan phase 1 complete (commit 859e1b60). TDR-0022 authored via
+      @decision-advisor and indexed; checkout identity marker (create-once,
+      atomic sibling+link, 0600, in the git common directory, recording
+      basename, identifier and minted key); app-tier policy at
+      packages/core/src/app/state-scope.ts (override else home+brand,
+      <host>/projects/<key>, declared unbound scope) with the host-root rule
+      removed from config/catalog.ts; core entry exports; adapter git/filesystem
+      facts. Green: projects-scope-isolation 2/2, projects-identity 4/4,
+      projects-test-isolation 8/8; typecheck 0 errors; check:boundaries 378
+      modules 0 violations."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 2 complete (commit e581e4e2). Derived host index (<host
+      root>/host-index.json, delivery.projects.host-index.v1) with schema,
+      monotonic revision, bounded maintenance on store-opening invocations only,
+      provably-dead pruning, corrupt-file preservation, always re-derived
+      stateLocation and the DEC-18 key guard. Green: projects-host-index 2/2
+      (incl. one-read/at-most-one-write and zero-write-when-unchanged);
+      typecheck and boundaries green. Deviation: tests/fixtures/ports/
+      v1-contract-inventory.json regenerated (pinned contract inventory)."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 3 complete (commit ec361895). The projects list family and its
+      indivisible mount unit: command definition, envelope/text projection,
+      handover engine|shell|in-transition, daemon reachability with the closed
+      reason vocabulary and injected mount capability, DEC-16 refusal naming and
+      projection, prompt-required set entry, edge.ts composition, help entries,
+      M2 reference page carrying --help/--version, coverage inventory, the
+      per-command page root in both help gates, three error rows in the projects
+      kind, entrypoint-composition literal list, and the five-package minor
+      changeset moved forward so privacy-release TC-RELEASE-001 is satisfiable.
+      Green: projects-list-contract 5/5, handover 2/2, daemon 3/3, help 3/3,
+      performance 2/2, identity 6/6, host-index 6/6, isolation 8/8, entrypoint
+      11/11, contract/inventory suites 259 pass; typecheck, boundaries, help,
+      prompt, exports-parity, lint, format green. Aggregate 7172 pass/4 skip/1
+      fail (pre-existing 5s-timeout flake privacy-ci-wiring TC-WIRE-002, passes
+      alone 14/14)."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 4 complete (commit 3480e4b8). One policy on every remaining
+      surface: MCP serve store at the project root (hold at the host root), the
+      daemon settings site consolidated to one call with the project root,
+      dispatch state root, retro sidecar, owner-hold read, runtime-aware edge
+      audit store, and the CLI-independent bash authority read (project root,
+      -maxdepth 2 unchanged, override precedence kept). Green:
+      projects-state-scope-policy 11/11, state-placement 1/1, scope-mcp 2/2,
+      daemon-socket 2/2, owner-hold 1/1, dispatch-bash-authority 7/7, bash
+      fixture 7/7, mcp-node-smoke 3/3; typecheck, boundaries, prompt green."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 5 complete (commit cad45ee3). Legacy detection (one bounded
+      warning naming the migration note, move-nothing, exit unchanged), the four
+      state-location cells, and doc/guides/migrating-to-per-repository-state.md
+      (header via add-header-location.sh, ados_distribution redistributable,
+      forbidden-literals registry one addition). Green: projects-migration 6/6,
+      projects-list-contract 6/6, forbidden-literals 27/27, content-inventory
+      6/6, test-doc-distribution.sh clean (83 in-scope docs)."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 6 complete (commit 9f6a4a64). Reconciliation and release: new
+      doc/spec/features/feature-projects.md (internal), doc/00-index entry,
+      forbidden-literals registry second addition, M2 page refinements (a)-(e)
+      keeping Status: Proposed (M2), current-truth reconciliation of the
+      state-layer, CLI-entrypoint, branding-seam, dispatch-engine,
+      owner-gate-sla, config-layer, audit-ledger, resident-daemon and
+      scheduling-engine pages, planning-corpus updates (backlog markers, status
+      snapshot, command registry, M2 entrypoint delta), test-plan section 10
+      execution evidence with P1-P8. Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: 7200 pass / 4 skip / 0 fail across 895 files, exit 0 (519s); plan
+      validate valid/readyForDevelopment true; check:help,
+      reference-page-parity, error-table-sync, privacy-release, subpaths,
+      boundaries, prompt-conformance, exports-parity, forbidden/privacy
+      literals, doc-distribution and git diff --check all green."
+    type: info
+    date: "2026-11-11"
+  - text: "Phase 7 doc-sync complete (commit f5fa0813, 29 files). Reconciled real
+      contradictions found by verification rather than trust: owner-hold marker
+      path in glossary/doctor/status-digest/M1 queue+status+doctor pages/
+      delivery-modes/autonomous-delivery/test specs, audit-store derivation and
+      the 38->41 two-segment error allowlist in the result contract, daemon
+      field vocabulary in the M2 contracts, the MCP composition's project-root
+      store and marker write, the per-command page root in agents-and-commands,
+      the app-tier placeholder row, plus the host-index entry bound, the
+      00-index guide row and GH-288 traceability links. Residual gap fixed in
+      the same commit: the pre-iteration owner-hold hook comment. Checks:
+      test-doc-distribution 83 in-scope docs clean, forbidden-literals 141 docs
+      clean, doc-conformance + error-table-sync + reference-page-parity 111
+      pass."
+    type: info
+    date: "2026-11-11"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml). Two blocking:
+      F-1 the host index projectKey is validated only against / and \\, so an
+      index entry with key '..' escapes the project container through
+      stateLocation (reproduced); F-2 no per-plan-phase pm-notes evidence (this
+      entry set closes it; PM-owned, no code change). Ten advisories, of which
+      F-3 (list reports vanished-root rows against F-3/§8.1), F-4 (list path not
+      literally write-free: leftover *.tmp removal and first-use marker
+      minting), F-6 (bash fallback honours ADOS_DISPATCH_STATE_ROOT while the
+      typed store honours <PREFIX>_STATE_DIR; migration note silent), F-9
+      (readable flag makes the unreadable-root branch dead), F-12
+      (preserveCorruptHostIndex mkdir outside try), F-5 (M1 snapshot pages
+      edited) and F-10 (NFR-4 wording vs the delivered
+      non-projects-verbs-maintain rule) are being remediated; F-7 (maintenance
+      p95 probe), F-8 (consumer count wording) and F-11 (process deviations:
+      changeset in phase 3, template commit subjects, four justified
+      out-of-scope files) are recorded as accepted with rationale."
+    type: blocker
+    date: "2026-11-11"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml), one
+      documentation-only blocker: the narrowed write-free posture had not
+      propagated to six statements that still claimed an absolute guarantee,
+      plus a vacuous TC-BASH-007. Remediated in commit c7a12e09 (docs + bash
+      fixture seed/HOME fix, no product behaviour change) and followed by direct
+      PM alignment of the remaining statements (spec OQ-3, DEC-5, §16.1, §20;
+      test plan §3.2, §8.4, TC-PROJ-034) with spec v1.4 and test-plan revision
+      6."
+    type: info
+    date: "2026-11-11"
+  - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml), 0 blocking, 2
+      advisories (one stale 'without exception' phrase, now aligned; historical
+      revision rows kept as history). Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: exit 0, 7206 pass / 4 skip / 0 fail across 895 files in 572.54s;
+      the known privacy-ci-wiring TC-WIRE-002 5s-timeout flake did not recur. AC
+      traceability 38/38 with no AC added, removed, renumbered or weakened;
+      TC-BASH-007 independently proven non-vacuous by a precedence-reversal
+      mutation (8/1 red, 9/9 restored). Accepted residuals: code-review/*.yaml
+      were untracked until the review_fix completion commit; commit subjects are
+      primitive-computed; tests/checks/owner-hold-doc.test.ts was an
+      out-of-plan-scope repair of two stale doc assertions; the index-root stat
+      and the process-free identity read are scoped review-verified choices."
+    type: info
+    date: "2026-11-11"
+  - text: "PR created: #305
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/305
+      targeting main-tools from feat/GH-288/multi-repo-workstations (title
+      'feat(GH-288): per-repository state scoping and the projects overview',
+      body closes #288). Ticket labels moved to change+review+in-progress. Left
+      open for human review; not merged, no auto-merge. Merge authority stays
+      with the CEO."
+    type: info
+    date: "2026-11-11"
+  - text: "DoD check verified: all declared plan phases 1-6 have pm-notes evidence
+      naming the commit and verification; 38/38 ACs satisfied per review-iter-3
+      PASS; current-truth docs reconciled with no residual gaps after the
+      doc-sync pass; aggregate gate green (7206 pass / 4 skip / 0 fail, 895
+      files); lifecycle phases completed through quality_gates before
+      pr_creation. Delivery retrospective: two DoR cycles and three review
+      cycles, all rooted in declared-file/scope completeness and documentation
+      precision rather than design drift; the change also had to migrate its own
+      state store mid-delivery (done by non-destructive copy) because the
+      delivered policy took effect on this checkout."
+    type: retro
+    date: "2026-11-11"
+  - text: "Scope clarifications resolved without human input: the M2 pack fixes the
+      contract (projectKey from the git common dir marker, stateLocation per
+      repository, daemonReachable, handoverState engine|shell|in-transition,
+      hostIndexRevision) and requires the migration note; dependencies M0-S5
+      (state layer) and M1-S17 (queue/scheduling, GH-237) are delivered on
+      main-tools. No contradiction with the system spec and no missing
+      acceptance criterion requiring a tracker question, so clarify_scope closes
+      without a ticket comment."
+    type: info
+    date: "2026-11-11"

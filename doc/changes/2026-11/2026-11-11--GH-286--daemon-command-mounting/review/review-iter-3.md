@@ -20,7 +20,7 @@
 
 ## Remaining findings
 
-- **NF3-1 [high, blocking]** — the spec's non-goals (§7.2, NG-1), §16 engine row and TDR-0022 ("no daemon engine edit") denied the engine start-semantics change the branch ships.
+- **NF3-1 [high, blocking]** — the spec's non-goals (§7.2, NG-1), §16 engine row and TDR-0023 ("no daemon engine edit") denied the engine start-semantics change the branch ships.
 - **NF3-2 [medium]** — §16's "complete set the delivery reconciled" claim omitted six reconciled pages.
 - **NF3-3 [medium]** — foreground listeners installed after the durable readiness point; a stop racing start could terminate the child without a `released` record. Observed as a 2/6 real-reentry failure when the two real-child files ran together.
 - **NF3-4 [medium]** — the 1 s detached readiness window made the real-child crash-restart witness non-deterministic at default concurrency.
@@ -45,4 +45,4 @@
 
 ## Disposition
 
-NF3-1/NF3-2 were closed by amending the spec (v1.5: narrowed non-goal, §16 twenty pages, AC-F2-11), TDR-0022 (scoped engine exception) and the plan. NF3-3/NF3-4/NF3-5 were closed in code and tests: listeners registered before the readiness point with a buffered signal; a cross-file real-child gate plus a quiescent kill; the failed compare-and-delete now surfaces its recovery identity. A targeted confirmation pass follows.
+NF3-1/NF3-2 were closed by amending the spec (v1.5: narrowed non-goal, §16 twenty pages, AC-F2-11), TDR-0023 (scoped engine exception) and the plan. NF3-3/NF3-4/NF3-5 were closed in code and tests: listeners registered before the readiness point with a buffered signal; a cross-file real-child gate plus a quiescent kill; the failed compare-and-delete now surfaces its recovery identity. A targeted confirmation pass follows.

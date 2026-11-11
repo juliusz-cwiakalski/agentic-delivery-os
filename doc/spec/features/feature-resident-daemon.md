@@ -8,8 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286"]
-  related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015", "TDR-0022"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -70,21 +69,28 @@ cross-process `stop` refuses a non-positive pid instead of signalling a process
 group. Queue and lanes degradation is derived from durable state at each
 projection, not captured from a hardcoded marker.
 
-The state directory is selected process-wide by the brand-derived
-`<PREFIX>_STATE_DIR` environment variable when set and otherwise by
-`<home>/<brand.stateDirectoryName>` when a home exists; there is no `--state-dir`
-flag and no state-directory configuration key. The production composition
-resolves that one scope for the daemon store, the daemon lock, the daemon
-settings, the control socket, the supervisor scope, and the re-entry binding, so
-the ledger, the lock, and the socket never disagree. With no override and no
-home the directory is unresolvable: the family stays mounted and every
-subcommand returns the delivered `config.value.invalid` identity at exit `1`
-without opening a store, lock, socket, transport, or supervisor path. A
-configuration that is acquired but whose `daemon` branch does not resolve
-composes the same unavailable runtime rather than substituting the shipped
-defaults; in that cell `queue` and `lanes` keep reporting `daemon-unreachable`,
-because their marker is a durable-record read that consumes daemon configuration
-only for the staleness bound.
+The state directory is selected by the one state-scope policy
+([Configuration Layer](feature-config-layer.md)): an absolute
+`<PREFIX>_STATE_DIR` when set, otherwise the injected home plus
+`<brand.stateDirectoryName>`, which names the host root; there is no
+`--state-dir` flag and no state-directory configuration key. The daemon's own
+state is project-owned: the production composition supplies the policy-derived
+**project** state root as the one directory for the daemon store, the daemon
+lock, the daemon settings, the control socket, the supervisor scope, and the
+re-entry binding, so the ledger, the lock, and the socket never disagree. The
+`<PREFIX>_STATE_DIR` binding written into the detached child's environment and
+into the installed unit names the **host root**, and the installed unit carries
+`WorkingDirectory=<checkout root>`, so a re-entered or installed process
+re-resolves the same project state root instead of nesting a second `projects/`
+segment or resolving the declared `unbound` scope. With no override and no home
+the host root is unresolvable: the family stays mounted and every subcommand
+returns the delivered `config.value.invalid` identity at exit `1` without
+opening a store, lock, socket, transport, or supervisor path. A configuration
+that is acquired but whose `daemon` branch does not resolve composes the same
+unavailable runtime rather than substituting the shipped defaults; in that cell
+`queue` and `lanes` keep reporting `daemon-unreachable`, because their marker is
+a durable-record read that consumes daemon configuration only for the staleness
+bound.
 
 - `start` acquires the daemon lock, reconciles, appends one instance record,
   appends one reconciliation record, opens the transport, writes the first
@@ -305,8 +311,9 @@ configured rate. A one-shot read carries no resident backoff state.
 
 The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`
 with `<binary>` the absolute running entry path, `Type=simple`,
-`Restart=on-failure`, and
-`Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>`. The unit
+`Restart=on-failure`, `WorkingDirectory=<checkout root>` when the scope is
+project-owned, and
+`Environment=<PREFIX>_STATE_DIR=<canonical absolute host root>`. The unit
 name is the brand-derived `${brand.binaryName}-daemon.service`, and the unit and
 its secret-free ownership marker live under the user configuration root
 (`$XDG_CONFIG_HOME/systemd/user` when `XDG_CONFIG_HOME` is absolute and
