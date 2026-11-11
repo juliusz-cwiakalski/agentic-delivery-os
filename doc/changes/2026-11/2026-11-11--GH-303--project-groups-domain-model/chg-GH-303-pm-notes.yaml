@@ -902,3 +902,112 @@ notes:
       option."
     type: "info"
     date: "2026-11-11"
+  - text: "REVIEW-BOARD REMEDIATION (plan v1.4 re-delivery): the six-critic board
+      verdict on PR #306 (blocking 1-6, should-fix 7-16, cheap notes 17-18,
+      decisions A-D) was applied to the product corpus. Decision A keeps the
+      group contract at `project-groups.v1` with `data.groups[]` and `groupKey`,
+      and leaves the delivered `projects.v1` as the flat payload. Decision B
+      keeps `repos list --json` returning `repos.v1` with `data.repos[]` and
+      `repoKey`. Decision C states one rename rule with the different token
+      `projects list --flat` as the alias. Decision D fixes the group identity as
+      `groupKey`. No gate, guard, test plan, or spec was weakened."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Plan phase 1 (backlog) complete at commit f8930adf. Scope:
+      doc/planning/oss-tooling/backlog.md. The M2-S11 entry restores the
+      delivered GH-288 story (Ticket, Progress, shipped-surface AC, state
+      scoping, host index, migration note, collision criterion) and records the
+      transition by reference to the rename rule with M2-S18 as the single
+      owner; M2-S18 carries its 12 ticket clauses plus the six derived tasks and
+      the alias-payload AC; M2-S19 carries its 11 ticket clauses, the executable
+      one-review-flow definition, per-member CI corroboration, and the
+      dependency-ordering AC; M2-S4 depends on M2-S18; one Epic M2 context
+      paragraph sits between the retirement note and M2-S2. Gate tokens:
+      P01 PASS (retained_clauses=5/5), P02 PASS, P03 PASS (owned_items=7/7),
+      P04 PASS (clauses_present=12/12), P06 6/6, P07 5/5, P08 7/7, P10 11/11,
+      P11 3/3 + 2/2, P12 3/3, P14 PASS, P15 PASS (paragraph_anchors=7/7), P16
+      PASS (inside/outside confined), P17 PASS, P58 PASS (2 new headings,
+      preserved regions byte-identical)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 2 (architecture + contracts) complete at commit 24714d13.
+      Scope: milestones/m2/architecture.md and milestones/m2/contracts.md. The
+      architecture states the three levels, the declared-only scan, unrelated-
+      directory equivalence, the discovery-root versus fixed `default`
+      identifier distinction, the group-scoped overview, the cross-repository
+      flow with one queue entry per member and the release rule, and six
+      boundary invariants. The contracts define `repos.v1`, the retained
+      delivered `projects.v1` alias payload, `project-groups.v1`, the rename
+      rule exactly once, the four-token repository-vocabulary mapping clause,
+      the configuration document, the classified-partial aggregation, the
+      queue/lane representation, and the change plan shape with `verify gates`
+      and `closeout.data.members[]`. Gate tokens: P05 7/7, P13 16/16, P18 PASS,
+      P19 5/5, P20 6/6, P21 PASS, P22 11/11, P23 11/11, P24 5/5, P27 11/11 +
+      selector, P28 12/12, P29 9/9, P30 11/11; distribution guard exit 0."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 3 (command pages, seeds, journey, entrypoint delta)
+      complete at commit ac7a7027. Scope: commands/repos.md, commands/projects.md,
+      commands/queue.md, commands/board.md, test-scenarios.md, journeys.md, and
+      entrypoint-delta.md. `repos.md` is the flat record-set page with the
+      delivered `unbound` scope at exit 0, the delivered `projects.*` error
+      identities, the host-root STATE example with a PROJECT_KEY_PATTERN key,
+      `--help`/`--version` no-state-read rows, and the mapping clause;
+      `projects.md` is the group page with `members[].daemonReachable`, the
+      classified partial result, the scoped grammar, and no orphan reason
+      paragraph; `queue.md` carries `queue list --project <groupKey>`;
+      `board.md` is on the repository-key boundary with the corrected M2-S11
+      attribution; the scenario corpus opens with S2 through S19, carries eight
+      S18 and five S19 seeds with one Assert each and declared envelopes only,
+      the undeclared-clone seed, the CI-corroboration seed, the ordering seed,
+      and the alias-shape seed; the S11 seeds are reconciled. Gate tokens:
+      P26 6/6 + 5/5 + 5/5, P31 11/11, P32 11/11, P33 6/6, P34 PASS, P35 11/11,
+      P36 8/8, P37 PASS, P38 7/7, P40 7/7, P41 5/5, P42 13/13, P43 PASS,
+      P44 alias seed SC-M2-S18-08, P45 PASS, P46 8/8, P47 7/7, P63 control PASS."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 4 (forbidden-literals registration) at commit c1c3b8a5's
+      parent state: the registration row for
+      doc/planning/oss-tooling/milestones/m2/commands/repos.md was already
+      present at the run base and is unchanged by this re-delivery, so the phase
+      produced no new product edit and no separate commit. P60 PASS at the final
+      head: registered=142, base=141, delta=1, position between queue.md and
+      spend.md, duplicates=0, added_registration_lines=1, guard exit 0, zero
+      unregistered findings. No other scripts/** file changed."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 5 (indices, status, registry) complete at commit c1c3b8a5.
+      Scope: milestones/m2/README.md, status.md, cli-command-registry.md
+      (milestones/README.md already reached thirteen targets at the run base and
+      is byte-identical to that base). The pack README names `repos.md` as the
+      flat record set owned by M2-S18, names `repos.v1`/`project-groups.v1`/the
+      delivered `projects.v1`/the configuration document/the change plan shape,
+      maps S11 to the delivered payload, S18 to the group contract plus the
+      configuration document plus the `status --project <groupKey>` delta plus
+      the decision record, S19 to the plan shape, drops the S4 advisory phrase,
+      and reads S2 through S19. status.md gains one dated correction section
+      under the retention oracle with no delivery claim. The registry splits the
+      two names: one `projects` row (Delivery M2-S11 shipped in GH-288, Extended
+      M2-S18, `projects list --flat`) and one prospective `repos` row (Delivery
+      `-`, Extended M2-S18 and M3-S6, ODR-0003 lock, not delivered). Gate
+      tokens: P09 PASS, P25 rename_rule=1, P39 PASS, P48 13/13 + 12/12, P49
+      13/13, P50 14/14, P51 PASS, P52 PASS, P53 PASS, P54 0/21 survivors, P55
+      9/9 delivered facts, P56 PASS, P57 15/15, P58 PASS, P59 PASS, P61 PASS,
+      P63 PASS, P64 26/26 + 32/32, P65 12/12 scanned + 0 violations, P66 PASS,
+      P67 PASS, P68 21/21, P69 PASS."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 6 (review remediation closure): every board finding is
+      fixed in the product corpus and no finding remains silent. P6 opened with
+      the recorded verdict and re-ran the owning procedures; the only
+      non-product phase evidence is this pm-notes record. Residuals, none
+      blocking an AC: the commit primitive derives a top-path template subject
+      because six delivery phases carry distinct summaries and the primitive
+      exposes no plan-phase summary input, so the phase subjects name the top
+      path rather than the plan summary; the aggregate gate's default-TMPDIR run
+      is recorded and classified under AC-NFR6-1's carve-out behind the green
+      authoritative repository-local run; and the reference-page move in the
+      shipped CLI help remains pending M2-S18 code work, as the entrypoint delta
+      now states."
+    type: "info"
+    date: "2026-11-11"
