@@ -1,8 +1,8 @@
 ---
 id: chg-GH-289-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-11
-last_updated: 2026-11-11T18:40:00Z
+last_updated: 2026-11-11T20:10:00Z
 owners: [engineering]
 service: delivery-os dispatch engine
 labels: [feature, dispatch, evidence, attempts, read-side, m2-s12]
@@ -26,10 +26,10 @@ The headline isolation and read-only evidence is produced the way the delivered 
 
 ### 1.1 In Scope
 
-- The `dispatch attempts [--ref <ref>] [--limit <n>]` grammar: canonical ref shape, the two flag bounds, unknown flags and unexpected positionals, and the active-reference default through the delivered `.ai/local/pm-context.yaml` seam.
+- The `dispatch attempts [--ref <ref>] [--limit <n>]` grammar: canonical ref shape, the two flag bounds, the canonical decimal limit form (`[1-9][0-9]*`), unknown flags and unexpected positionals, and the active-reference default through the delivered `.ai/local/pm-context.yaml` seam.
 - The `attempts.v1` envelope: the nine declared scope/filter keys, the sixteen-field record projection with `divergenceRef` singular-or-explicit-`null`, the `endedAt` one-to-one mapping, the corroboration triple, the comparison object, the bounded evidence references, the count-only `excluded.foreignRepository`, and the single optional `truncation` object.
 - Total ordering (`startedAt` desc, `recordedAt` desc, `attemptId` asc), `matched` and `hasMore`, and the three independent bounds (ledger 5,000; page 100; machine `data` 65,536 bytes) with their declared omissions.
-- Repository-scoped isolation: two projects on one host root with the same ref, one project root holding two repositories' records, the count-only disclosure (independent of `--ref`), the persist-disabled identity resolution, and the refusal outside any checkout.
+- Repository-scoped isolation: two projects on one host root with the same ref, one project root holding two repositories' records, the count-only disclosure within the retained ledger read window (independent of `--ref`, and zero for a record that sits only in the omitted tail), the persist-disabled identity resolution, and the refusal outside any checkout.
 - Read-only posture with respect to delivery evidence: zero appends, zero fence acquisitions, store bytes/modes/mtimes unchanged, and the exact permitted side effects enumerated.
 - The four failure cells with no new identity: malformed request, unresolvable context or identity, unreadable store, and the empty-history success rule.
 - The resolve extension: unconditional `mode: "local-evidence"`, the divergence's own repository, the four-field divergence block plus `idsTruncated`, the 240-character clamp, the blank-note refusal, replay idempotency, and the one-line human digest.
@@ -44,7 +44,7 @@ The headline isolation and read-only evidence is produced the way the delivered 
 - **No cursor/offset/`--before` paging, no all-refs repository page, no streaming form** (spec NG-5, §7.3). `--limit` above 100 is refused, not clamped, so there is no "wide page" cell.
 - **No repository guard on divergence writes** (spec NG-7, OQ-1). A cross-repository resolve is asserted to be **disclosed, not prevented**; the deferred guard has no test because it does not exist.
 - **No performance harness.** The `p95 ≤ 5 s` bound at the 5,000-record ledger is measured in-process over 10 samples with the recorded value in §10, mirroring the GH-273/GH-288 precedent; there is no benchmark framework, no subprocess, and no CI-perf job.
-- **`AC-F4-1`'s side-effect enumeration is review-verified.** The suite asserts zero appends, zero fences, and byte/mode/mtime stability; *which* filesystem effects are permitted (host-index maintenance at most one write; the create-once project identity marker) is a diff inspection, because no permanent test can assert an exhaustive list of absent effects against a moving base.
+- **`AC-F4-1`'s side-effect enumeration is review-verified.** The suite asserts zero appends, zero fences, and byte/mode/mtime stability, that the dispatch repository binding marker is neither created nor repaired, and that a pre-existing project checkout identity marker is unchanged; *which* filesystem effects are permitted (host-index maintenance at most one write; the create-once project checkout identity marker) is a diff inspection, because no permanent test can assert an exhaustive list of absent effects against a moving base.
 - **`AC-F8-3` and `AC-F8-4` are review-verified.** The M2 `attempts(1)` page and the planning corpus are prose; the spec assigns them review evidence (§17), and this plan mirrors that class rather than inventing a text-matching suite that would pin prose.
 - **`AC-F9-1`'s additive-only half is review-verified.** The shapes are suite-asserted; "only these additions and no renames against the merge base" is a diff inspection (`.ai/rules/testing-strategy.md` §"Invariant-test authoring": no permanent assertion may compare against a moving base).
 - **`AC-F4-4`'s string-absence half over the M2 page and the planning corpus is review-verified** exactly as spec §17 splits it; the code/help/result-contract/feature-spec half is a suite scan (see §8.3 X-7).
@@ -53,7 +53,7 @@ The headline isolation and read-only evidence is produced the way the delivered 
 
 ## 2. References
 
-- Change specification: [chg-GH-289-spec.md](./chg-GH-289-spec.md) — F-1…F-9 (§5.1), DM-1…DM-6 (§8.3), §8.5 backward compatibility, NFR-1…NFR-11 (§9), §10 failure diagnosis, §11 risks, §15 DEC-1…DEC-16, §17 AC-F1-1…AC-F9-2 (35 criteria), Appendix B (scenario reconciliation), Appendix C (M2 page corrections), Appendix D (normative read-side field set).
+- Change specification: [chg-GH-289-spec.md](./chg-GH-289-spec.md) (v1.1) — F-1…F-9 (§5.1), DM-1…DM-6 (§8.3), §8.5 backward compatibility, NFR-1…NFR-11 (§9), §10 failure diagnosis, §11 risks, §15 DEC-1…DEC-16, §17 AC-F1-1…AC-F9-2 (**36** criteria, including `AC-F1-6` for the request-grammar refusals), Appendix B (scenario reconciliation), Appendix C (M2 page corrections), Appendix D (normative read-side field set), §25 document history. Spec v1.1 closes findings X-1…X-9 of the previous revision of this plan (§8.3).
 - Decision record: [TDR-0023](../../../decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md) (Proposed) — D-1…D-7, C-1…C-8, the verification column of each constraint, and the residual risks this plan must pin (the two-direction count move, the two-fold-site convergence, the disclosure-only cross-repository posture).
 - Implementation plan: [chg-GH-289-plan.yaml](./chg-GH-289-plan.yaml) — the phase-4 artefact this plan's §7 phase grouping feeds; authored after this file, so the link names the declared target path.
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, invariant-test authoring, gate battery (`pnpm check`).
@@ -76,18 +76,19 @@ Every acceptance criterion names an evidence class in spec §17. This plan mirro
 |-------|----------------------|----------|----------------|--------|
 | AC-F1-1 | `--ref --limit 3 --json` returns the three newest matching attempts with `data.ref`, `refSource: "flag"`, `limit: 3`; with an active change in the local context, no `--ref` resolves that reference with `refSource: "active-change"`. | TC-ATTEMPT-001 | Suite | Covered |
 | AC-F1-2 | No context, an unparsable context, and a context with no active change each exit `1` with `input.value.rejected` under `kind: "input"`, print a bounded summary naming the context file and `--ref`, read no store, append nothing, and never fall back to an empty success. | TC-ATTEMPT-002 | Suite | Covered |
-| AC-F1-3 | `--limit` 1 and 100 succeed; 0, 101, `-1`, `abc`, and a missing value each exit `1` with `input.value.rejected` and nothing is clamped; the default is 20 and the page carries at most 20 rows; a malformed request performs no store read. | TC-ATTEMPT-003 | Suite | Covered |
+| AC-F1-3 | `--limit` accepts canonical decimal only (`[1-9][0-9]*`): 1 and 100 succeed; 0, 101, `-1`, `abc`, `07`, `+7`, ` 7`, and a missing value each exit `1` with `input.value.rejected` and nothing is clamped or normalised; the default is 20 and the page carries at most 20 rows; a malformed request performs no store read. | TC-ATTEMPT-003 | Suite | Covered |
 | AC-F1-4 | Three attempts with identical `startedAt` order by `recordedAt` desc then `attemptId` asc, identically across two runs and across two ledger insertion orders. | TC-ATTEMPT-004 | Suite | Covered |
 | AC-F1-5 | Three matching attempts: `--limit 3` → `matched: 3`, `hasMore: false`; `--limit 2` → `hasMore: true`, two rows; `hasMore` is true exactly when more matching attempts exist beyond the returned array. | TC-ATTEMPT-005 | Suite | Covered |
+| AC-F1-6 | A non-canonical `--ref` (`241`), an unknown flag, and an unexpected positional each exit `1` with `input.value.rejected` under `kind: "input"`, perform no store read, append nothing, and emit no `attempts.*` identity. | TC-ATTEMPT-039 | Suite | Covered — the AC that owns the grammar refusals |
 | AC-F2-1 | Every row carries exactly the declared projection fields; the divergence-carrying row carries the stored identifier, the other explicit `null`; no undeclared key. | TC-ATTEMPT-006 | Suite | Covered |
 | AC-F2-2 | `endedAt` equals the stored finish timestamp, `startedAt`/`recordedAt` equal theirs, all printed unmodified in text; corroboration carries the stored tri-state triple. | TC-ATTEMPT-007 | Suite | Covered |
 | AC-F2-3 | A `not-applicable` comparison projects `token: null` and `outcome: "not-applicable"`; a comparing attempt projects the stored class, token, and outcome, consistent with the stored divergence reference. | TC-ATTEMPT-008 | Suite | Covered |
-| AC-F2-4 | 100 maximal records serialize to at most 65,536 UTF-8 bytes of `data`; when the page is shortened the envelope declares `truncation` scope `"page"` with a non-zero omitted count and `hasMore: true`; a small page carries no `truncation`. | TC-ATTEMPT-009 | Suite | Covered |
+| AC-F2-4 | 100 maximal records serialize to at most 65,536 UTF-8 bytes of `data`; when the page is shortened the envelope declares `truncation` scope `"page"`, `bound: 65536`, and a non-zero `omittedRecords` equal to the otherwise-eligible rows the byte budget dropped, with `hasMore: true`; a small page carries no `truncation`. | TC-ATTEMPT-009 | Suite | Covered |
 | AC-F2-5 | A ledger above 5,000 records considers at most 5,000, declares scope `"ledger"` with `bound: 5000` and the omitted count, keeps `matched ≤ 5000`, and returns the newest rows. | TC-ATTEMPT-010 | Suite | Covered |
 | AC-F3-1 | Two projects on one host root, same reference: each envelope carries only its own repository's attempts, `data.repository` names it, `excluded.foreignRepository` is 0 in both, and zero foreign identifiers or references appear. | TC-ATTEMPT-011 | Suite + mutation (P3) | Covered |
-| AC-F3-2 | One project root holding two repositories' records: only the reader's attempts return, `excluded.foreignRepository` equals the excluded count, and no foreign identifier, reference, divergence reference, harness, or timestamp appears anywhere in the envelope, warnings, or digest. | TC-ATTEMPT-012 | Suite + mutation (P3) | Covered |
-| AC-F3-3 | Outside a git work tree the read exits `1` with `input.value.rejected`, names the checkout, reports no attempts, and never presents the host-scoped `unbound` store as a repository's history. | TC-ATTEMPT-013 | Suite | Covered |
-| AC-F4-1 | Delivery-evidence bytes, modes, and mtimes are unchanged, no attempt/divergence/handover/authority record is appended, the fence is acquired zero times, and the only effects are the host-index maintenance write (zero when unchanged) and the create-once identity marker. | TC-ATTEMPT-014 | Suite + Review-verified (side-effect enumeration) | Covered — both halves labelled in TC-ATTEMPT-014 |
+| AC-F3-2 | One project root holding two repositories' records: only the reader's attempts return; `excluded.foreignRepository` equals the foreign-repository records within the retained ledger read window (newest 5,000) and is independent of `--ref`; a foreign record only in the omitted tail is not counted, so the count is 0 for that window; no foreign identifier, reference, divergence reference, harness, or timestamp appears anywhere in the envelope, warnings, or digest. | TC-ATTEMPT-012 (retained-window branch), TC-ATTEMPT-010 (omitted-tail branch) | Suite + mutation (P3) | Covered — both branches labelled |
+| AC-F3-3 | Outside a git work tree the read exits `1` with `input.value.rejected`, names the checkout, reports no attempts, never presents the host-scoped `unbound` store as a repository's history, and creates no dispatch repository binding marker. | TC-ATTEMPT-013 | Suite | Covered |
+| AC-F4-1 | Delivery-evidence bytes, modes, and mtimes are unchanged, no attempt/divergence/handover/authority record is appended, the fence is acquired zero times, and the only effects are the host-index maintenance write (zero when unchanged) and the create-once project checkout identity marker — while the dispatch repository binding marker is neither created, repaired, nor re-persisted. | TC-ATTEMPT-014 | Suite + Review-verified (side-effect enumeration) | Covered — both halves labelled in TC-ATTEMPT-014 |
 | AC-F4-2 | A repository with no attempt records exits `0` with `attempts: []`, `matched: 0`, `hasMore: false`, no error object, no `attempts.*` identity; text prints the summary line, no rows, the pointer. | TC-ATTEMPT-015 | Suite | Covered |
 | AC-F4-3 | Torn, unreadable, and permission-denied stores each exit `2` with the corresponding `state.*` identity under `kind: "state"` carrying that row's category, retryability, consequence, remediation, and summary; none is reported as an empty history. | TC-ATTEMPT-016 | Suite | Covered |
 | AC-F4-4 | `ERROR_TABLE` holds exactly 124 identities with exactly 4 `dispatch` rows; no `attempts.*` string exists in the table, the documented table, the specs, the help text, or any output; no token, projection, or code is added. | TC-ATTEMPT-017 | Suite (counts and code/help/spec scans) + Review-verified (M2 page and corpus) | Covered — the two halves are labelled in TC-ATTEMPT-017 |
@@ -95,13 +96,13 @@ Every acceptance criterion names an evidence class in spec §17. This plan mirro
 | AC-F5-2 | With no truth-read credential and an unreachable tracker, a resolve performs zero credential resolutions, zero network requests, zero harness spawns, and zero model calls, exits `0`, appends one resolution, and still declares the mode. | TC-ATTEMPT-019 | Suite | Covered |
 | AC-F5-3 | A replay appends nothing, reports `resolved: false`, the stored note and principal, `state: "resolved"`, unchanged counts, and leaves the original open record byte-identical. | TC-ATTEMPT-020 | Suite | Covered |
 | AC-F5-4 | A blank and a whitespace-only note each exit `1` with `input.value.rejected` and append nothing; a 400-character note succeeds with the stored and reported note at most 240 characters and no write failure. | TC-ATTEMPT-021 | Suite | Covered |
-| AC-F5-5 | With 25 folded open divergences for one repository, both the resolve result and the summary report `unresolved: 25`, at most 20 identifiers with `idsTruncated: true`, and neither derives the count from the list length. | TC-ATTEMPT-022 | Suite + revert (P2) | Covered — both count directions and the cross-surface identity of the block are asserted |
+| AC-F5-5 | With 25 folded open divergences for one repository, both the resolve result and the summary report `unresolved: 25`, both blocks carry the four delivered fields with their delivered names, types, meanings, and order plus the one declared additive key `idsTruncated`, both carry at most 20 identifiers with `idsTruncated: true`, and neither derives the count from the list length. | TC-ATTEMPT-022 | Suite + revert (P2) | Covered — both count directions and the cross-surface identity of the block are asserted |
 | AC-F6-1 | The digest's first line is the declared summary line, each row is the seven declared cells newest first, the last line is the pointer naming `dispatch dual-run summary --repo <repository>`, and no `result=`/`pr_url=`/`exit_code=`/`last_message=` key appears. | TC-ATTEMPT-023 | Suite | Covered |
 | AC-F6-2 | The three triples render `corroborated`, `uncorroborated`, and `vacuous`; no fourth value is producible. | TC-ATTEMPT-024 | Suite | Covered |
 | AC-F6-3 | A page larger than the human budget renders at most 40 lines and 8,192 bytes, drops rows from the oldest end, prints `truncation=human:bound:<kept>,omitted:<dropped>` before the pointer, prints at most 37 rows beside it, and leaves `has_more` unchanged by the cut. | TC-ATTEMPT-025 | Suite | Covered |
 | AC-F6-4 | Two text runs are byte-identical and two machine payloads structurally identical, with no dependence on clock, locale, width, filesystem iteration order, or map order. | TC-ATTEMPT-026 | Suite | Covered |
 | AC-F6-5 | A successful resolve prints exactly one line in the declared form; a replay prints the same line with `appended=false` and the unchanged count. | TC-ATTEMPT-027 | Suite | Covered |
-| AC-F7-1 | The attempts envelope carries none of `coverage`, `floor`, `verdict`, `eligibility`, `unmetConditions`; the summary keeps its delivered coverage, floor, verdict fields and text projection unchanged apart from the exact count. | TC-ATTEMPT-028 | Suite | Covered |
+| AC-F7-1 | The attempts envelope carries none of `coverage`, `floor`, `verdict`, `eligibility`, `unmetConditions`; the summary keeps its delivered coverage, floor, verdict fields and text projection unchanged apart from the exact divergence count and the declared additive `idsTruncated` key on its divergence block, whose four delivered fields keep their names, types, meanings, and order. | TC-ATTEMPT-028 | Suite | Covered |
 | AC-F7-2 | The text pointer, the help synopsis, and the reference page all name `dispatch dual-run summary --repo <repository>`, and no second surface computes the gate. | TC-ATTEMPT-029 | Suite (pointer, help) + Review-verified (reference page) | Covered — both halves labelled |
 | AC-F8-1 | `dispatch attempts --help` exits `0` and renders usage, both options, a global option block, an example, and the exit-code block with no state/network/git/configuration read; the root listing still names exactly seventeen families with no `attempts` row. | TC-ATTEMPT-030 | Suite | Covered |
 | AC-F8-2 | `pnpm check:help` and the reference-page parity gate are green, the dispatch help-entry pin is five, the M2 attempts page is registered, and the see-also target resolves. | TC-ATTEMPT-031 | Suite | Covered |
@@ -110,7 +111,7 @@ Every acceptance criterion names an evidence class in spec §17. This plan mirro
 | AC-F9-1 | The run envelope, summary envelope, handover result, and the five delivered resolve keys keep name, type, meaning, and order; the attempts payload is discriminated by its `attempts` array so no existing text selector mistakes it; the only additive changes are the declared ones. | TC-ATTEMPT-034 | Suite (shapes) + Review-verified (additive-only half) | Covered — both halves labelled; shapes proven by mutation P1 |
 | AC-F9-2 | No configuration key, external dependency, workspace package, delivery-result token, projection class, exit literal, error row, or product/binary literal is added, and `pnpm check` is green with a temporary state override. | TC-ATTEMPT-035 | Suite (scans) + Review-verified (lockfile and diff half) | Covered — both halves labelled |
 
-All **35** acceptance criteria (`AC-F1-1`…`AC-F9-2`) are mapped; none is unmapped, marked TODO, or AC-less. Every test case names the AC it proves, except **TC-ATTEMPT-039**, which proves a requirement stated by F-1 and F-4 that no acceptance criterion owns (§8.3 X-1) — it is labelled as such rather than silently attached to a criterion it does not assert.
+All **36** acceptance criteria (`AC-F1-1`…`AC-F9-2`) are mapped; none is unmapped, marked TODO, or AC-less. Every test case names the AC it proves or the NFR/structure identifier that justifies it (TC-ATTEMPT-036 → NFR-11, TC-ATTEMPT-037 → NFR-2, TC-ATTEMPT-038 → AC-F5-5 with NFR-8), and `AC-F1-6` is owned by **TC-ATTEMPT-039** (the request-grammar refusals), so no test case is AC-less and no criterion is owned only implicitly.
 
 Functional capabilities are covered transitively: F-1 → 001, 002, 003, 004, 005, **039**; F-2 → 005, 006, 007, 008, 009, 010; F-3 → 011, 012, 013, 014; F-4 → 002, 003, 013, **014**, 015, 016, 017, **039**; F-5 → 018, 019, 020, 021, 022, 027; F-6 → 023, 024, 025, 026, 027; F-7 → 022, 028, 029, **038**; F-8 → 029, 030, 031, 032, 033; F-9 → 034, 035.
 
@@ -121,18 +122,18 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 | Interface element | Observable contract | TC ID(s) |
 |-------------------|---------------------|----------|
 | `dispatch attempts [--ref] [--limit]` (text) | Newest-first digest, summary line, seven-cell rows, optional human truncation line, pointer; exit `0` produced (including a verified empty history), `1` refused, `2` state failure. | TC-ATTEMPT-001, 003, 023, 025, 026, 028, 030, 039 |
-| `dispatch attempts --json` (`DM-1` data) | `{ ok, command: "dispatch", data, error?, warnings? }` with `data` keys exactly `repository`, `ref`, `refSource`, `limit`, `matched`, `hasMore`, `attempts`, `excluded`, plus `truncation` only when a bound binds; no new top-level key. | TC-ATTEMPT-001, 005, 006, 009, 010, 028, 034 |
+| `dispatch attempts --json` (`DM-1` data) | `{ ok, command: "dispatch", data, error?, warnings? }` with `data` keys exactly `repository`, `ref`, `refSource`, `limit`, `matched`, `hasMore`, `attempts`, `excluded`, plus `truncation` only when a bound binds; `excluded.foreignRepository` is a count of records within the retained ledger read window and independent of `ref`; no new top-level key. | TC-ATTEMPT-001, 005, 006, 009, 010, 012, 028, 034 |
 | `DM-2` attempt projection | Sixteen declared fields per row, declared types, `divergenceRef` string-or-explicit-`null`, `endedAt` one-to-one with the stored `finishedAt`, corroboration triple, comparison `{class, token, outcome}`, `resumeMode` or `null`, ≤ 16 `evidenceRefs`; no `handoverState`, no `prefillCostAcknowledged`, no undeclared key. | TC-ATTEMPT-006, 007, 008, 023 |
 | `DM-3` resolve result | The five delivered keys unchanged, plus `mode: "local-evidence"`, `repository` (the divergence's), `divergences { reported, resolved, unresolved, unresolvedIds, idsTruncated }`. | TC-ATTEMPT-018, 020, 021, 022, 027, 034 |
 | `DM-4` read bounds | Ledger 5,000; page 20 default / 1 minimum / 100 maximum; machine `data` 65,536 bytes; human 40 lines and 8,192 bytes; ≤ 37 rows beside a truncation line; ≤ 16 evidence references per record; ≤ 20 identifiers per block; note 240 characters. | TC-ATTEMPT-003, 009, 010, 021, 022, 025 |
-| `DM-5` truncation declaration | One object `{ scope: "ledger" \| "page", bound, omittedRecords }`, present only when a bound binds, ledger scope taking precedence; the digest declares `truncation=human:bound:<kept>,omitted:<dropped>`. | TC-ATTEMPT-009, 010, 025 |
-| `DM-6` read-side error mapping | Malformed request, unresolvable active reference, and unresolvable repository identity → `input.value.rejected` (`kind: "input"`, exit `1`); an unreadable store keeps its own `state.*` identity (`kind: "state"`, exit `2`); an empty verified history → success at exit `0`. | TC-ATTEMPT-002, 003, 013, 015, 016, 017, 039 |
+| `DM-5` truncation declaration | One object `{ scope: "ledger" \| "page", bound, omittedRecords }`, present only when a bound binds, ledger scope taking precedence; `bound` is `5000` for `ledger` and `65536` for `page`, and `omittedRecords` counts what that bound left out; the digest declares `truncation=human:bound:<kept>,omitted:<dropped>`. | TC-ATTEMPT-009, 010, 025 |
+| `DM-6` read-side error mapping | Malformed request (including a non-canonical ref, an unknown flag, an unexpected positional, and a non-canonical limit), unresolvable active reference, and unresolvable repository identity → `input.value.rejected` (`kind: "input"`, exit `1`); an unreadable store keeps its own `state.*` identity (`kind: "state"`, exit `2`); an empty verified history → success at exit `0`. | TC-ATTEMPT-002, 003, 013, 015, 016, 017, 039 |
 | `dispatch dual-run resolve <id> --note <text>` | Unchanged grammar and exit projection, with the additive fields of `DM-3` and one additive human line; zero credential resolutions, zero network calls, zero spawns. | TC-ATTEMPT-018, 019, 020, 021, 027, 034 |
-| `dispatch dual-run summary --repo <repo>` | Contract unchanged apart from the divergence block sharing the exact-count rule; coverage, floor, verdict, and every unmet condition stay here. | TC-ATTEMPT-022, 028, 034 |
+| `dispatch dual-run summary --repo <repo>` | Contract unchanged apart from the divergence block sharing the exact-count rule and gaining the declared additive `idsTruncated` key; coverage, floor, verdict, and every unmet condition stay here. | TC-ATTEMPT-022, 028, 034 |
 | `dispatch --help`, `dispatch attempts --help`, `--version` | Served from the static help inventory with no state, network, git, configuration, or model read; five `dispatch` entries; root listing at seventeen families. | TC-ATTEMPT-029, 030, 031 |
 | Error table and result-contract documentation | Exactly 124 identities, exactly 4 `dispatch` rows, documented both ways, zero `attempts.*` strings. | TC-ATTEMPT-017, 035 |
 | Coverage inventory and parity pin | The M2 `attempts` page registered in `referencePages`; `commands` unchanged; the dispatch help-entry pin at five. | TC-ATTEMPT-031 |
-| Project state root and repository identity | The read opens exactly the checkout's project state root; identity resolves with persistence disabled; the dispatch identity marker is neither created nor repaired; a non-checkout invocation refuses. | TC-ATTEMPT-011, 012, 013, 014 |
+| Project state root and repository identity | The read opens exactly the checkout's project state root; identity resolves with persistence disabled; the dispatch repository binding marker (`<git-common-dir>/dispatch-identity.json`) is neither created nor repaired, while the project checkout identity marker (GH-288) may be minted once by any store-opening invocation; a non-checkout invocation refuses. | TC-ATTEMPT-011, 012, 013, 014 |
 | `active_change` context seam | `.ai/local/pm-context.yaml` `active_change.workItemRef` is the default reference; absent/unparsable/no-active-change refuses with the file and the `--ref` remedy named. | TC-ATTEMPT-001, 002 |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -141,8 +142,8 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 |--------|-------------------------|----------|-------|
 | NFR-1 | Two of two repeated runs byte-identical in text and structurally identical in machine data; zero dependence on clock, locale, terminal width, filesystem iteration order, or map order; total order. | TC-ATTEMPT-004, 023, 025, 026 | Determinism is asserted twice: once over repeated runs, once across two ledgers seeded in opposite insertion orders. |
 | NFR-2 | Exactly one verified store read per invocation and zero additional reads; ledger ≤ 5,000 with declared omission; page ≤ 100; `data` ≤ 65,536 bytes; digest ≤ 40 lines and 8,192 bytes; ≤ 37 rows beside a truncation line; every bound that binds is declared; p95 ≤ 5 s at the 5,000-record bound. | TC-ATTEMPT-005, 009, 010, 025, 037 | The read-count assertion uses a counting store wrapper, not a private seam. |
-| NFR-3 | Zero attempt/divergence/handover/authority appends; zero fence acquisitions; store bytes, modes, mtimes unchanged; only host-index maintenance (at most one write when content changed) and the create-once project identity marker. | TC-ATTEMPT-014 | "Which effects are permitted" is the review-verified half. |
-| NFR-4 | Zero returned attempts whose `repository` differs from `data.repository` across the two-project and migrated-root scenarios; zero foreign identifiers anywhere; `excluded.foreignRepository` a count only. | TC-ATTEMPT-011, 012 | The count's independence from `--ref` is its own labelled cell. |
+| NFR-3 | Zero attempt/divergence/handover/authority appends; zero fence acquisitions; store bytes, modes, mtimes unchanged; only host-index maintenance (at most one write when content changed) and the create-once project checkout identity marker; the dispatch repository binding marker 0 created, 0 repaired, 0 re-persisted. | TC-ATTEMPT-014 | "Which effects are permitted" is the review-verified half; the two markers are asserted through their own delivered helpers. |
+| NFR-4 | Zero returned attempts whose `repository` differs from `data.repository` across the two-project and migrated-root scenarios; zero foreign identifiers anywhere; `excluded.foreignRepository` is a count only, of foreign records within the retained ledger read window, independent of `--ref`. | TC-ATTEMPT-011, 012, 010 | The count's independence from `--ref` is its own labelled cell; the omitted-tail branch (count 0) is TC-ATTEMPT-010's cell. |
 | NFR-5 | Zero new error identities (124 / 4); zero `attempts.*` strings in code, docs, help, or output; every failure exits inside `{0,1,2}`; a store fault is never empty and an empty history is never a fault. | TC-ATTEMPT-015, 016, 017, 035, 039 | Both directions of the empty/unreadable pair are asserted in one file so neither can regress into the other. |
 | NFR-6 | Zero credential resolutions, network requests, harness spawns, model calls on either surface; zero secrets, prompts, transcripts, diffs, credentials, or provider payloads in envelope, text, help, or logs; no local absolute path in the attempts text. | TC-ATTEMPT-019, 023, 028 | The attempts read's purity is asserted with the same counted ports the resolve path uses, so both surfaces share one evidence shape. |
 | NFR-7 | 100% of resolutions clamp the note to 240 characters before the record is built; zero write failures from note length; zero duplicate records on replay; the original open record byte-identical; a blank note appends nothing. | TC-ATTEMPT-020, 021 | The clamp cell asserts the stored length is exactly 240 for a 400-character input. |
@@ -176,13 +177,13 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 |-------|-------|------|-------|----------|----------------|-------------|
 | TC-ATTEMPT-001 | Ref resolution: explicit flag and the active change default | Happy Path | Behaviour | High | Suite | AC-F1-1 |
 | TC-ATTEMPT-002 | Unresolvable active change: three cells, one refusal, no store read | Negative | Behaviour | High | Suite | AC-F1-2 |
-| TC-ATTEMPT-003 | Limit grammar and the default page bound | Edge Case | Behaviour | High | Suite | AC-F1-3 |
+| TC-ATTEMPT-003 | Limit grammar: canonical decimal, the refusals, and the default page bound | Edge Case | Behaviour | High | Suite | AC-F1-3 |
 | TC-ATTEMPT-004 | Total order across identical start instants and insertion orders | Corner Case | Behaviour | High | Suite | AC-F1-4 |
 | TC-ATTEMPT-005 | `matched` and `hasMore` state the page's relation to the match set | Happy Path | Behaviour | High | Suite | AC-F1-5 |
 | TC-ATTEMPT-006 | Sixteen-field projection, singular divergence reference, no undeclared key | Contract | Behaviour | High | Suite | AC-F2-1 |
 | TC-ATTEMPT-007 | `endedAt` mapping, stored instants, and the corroboration triple | Contract | Behaviour | High | Suite | AC-F2-2 |
 | TC-ATTEMPT-008 | Comparison projection and the `not-applicable` null token | Contract | Behaviour | High | Suite | AC-F2-3 |
-| TC-ATTEMPT-009 | Machine byte bound with a declared page omission | Edge Case | Behaviour | High | Suite | AC-F2-4 |
+| TC-ATTEMPT-009 | Machine byte bound: page-scope `bound: 65536` with a declared omission | Edge Case | Behaviour | High | Suite | AC-F2-4 |
 | TC-ATTEMPT-010 | Ledger bound: newest 5,000, declared omission, ledger scope wins | Edge Case | Behaviour | High | Suite | AC-F2-5 |
 | TC-ATTEMPT-011 | Two repositories on one host root, the same reference | Happy Path | Behaviour | High | Suite + mutation (P3) | AC-F3-1 |
 | TC-ATTEMPT-012 | A migrated project root holding two repositories: count-only disclosure | Corner Case | Behaviour | High | Suite + mutation (P3) | AC-F3-2 |
@@ -212,7 +213,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | TC-ATTEMPT-036 | Test isolation: no write reaches the real state directory | Regression | Checks | High | Suite | NFR-11 |
 | TC-ATTEMPT-037 | One verified store read; latency at the ledger bound | Performance | Behaviour | Medium | Suite | NFR-2 |
 | TC-ATTEMPT-038 | One divergence-count computation, no derivation from a list length | Regression | Structural | High | Suite + revert (P2) | AC-F5-5, NFR-8, F-7 |
-| TC-ATTEMPT-039 | Malformed request grammar: ref shape, unknown flag, unexpected positional | Negative | Behaviour | High | Suite | F-1, F-4 (no owning AC — §8.3 X-1) |
+| TC-ATTEMPT-039 | Request grammar: non-canonical ref, unknown flag, unexpected positional | Negative | Behaviour | High | Suite | AC-F1-6 |
 
 ### 5.2 Scenario Details
 
@@ -291,11 +292,11 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 **Notes / Clarifications**:
 
-- **The assertion is "no store read and no append", not "zero filesystem effects".** Composing the production program resolves the state scope before the handler runs, so an invocation can mint the create-once project identity marker or maintain the host index even when it refuses. Asserting a literal "opens no store" would contradict the spec's own inherited-effects rule (§8.5, NFR-3); see §8.3 X-2.
+- **The assertion is "no store read and no append", not "zero filesystem effects".** Composing the production program resolves the state scope before the handler runs, so an invocation can mint the create-once **project checkout identity marker** or maintain the host index even when it refuses. Asserting a literal "opens no store" would contradict the spec's own inherited-effects rule (§8.5, NFR-3); see §8.3 X-2. The **dispatch repository binding marker** is still forbidden here: none of the three cells may create or repair it.
 - The delivered spend refusal is `"no active change context; pass --ref <ref>"`, which names the remedy but not the file. AC-F1-2 requires the file as well, so the assertion is phrase-tolerant on the wording but strict on the two names (file and `--ref`).
 - The three cells are one `describe` block so a regression in one direction cannot be masked by the other two.
 
-#### TC-ATTEMPT-003 - Limit grammar and the default page bound
+#### TC-ATTEMPT-003 - Limit grammar: canonical decimal, the refusals, and the default page bound
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -315,22 +316,22 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Steps**:
 
 1. Run `--limit 1` and `--limit 100 --json`; assert exit `0`, `data.limit` echoing the value, and `data.attempts.length <= data.limit`.
-2. Run each of `--limit 0`, `--limit 101`, `--limit -1`, `--limit abc`, and `--limit` with no following value; capture exit, envelope, and store read count.
+2. Run each of `--limit 0`, `--limit 101`, `--limit -1`, `--limit abc`, `--limit 07`, `--limit +7`, `--limit " 7"`, `--limit 001`, and `--limit` with no following value; capture exit, envelope, and store read count.
 3. Run with `--limit` omitted; assert the default page.
-4. Assert that no refusal cell produced a clamped page.
+4. Assert that no refusal cell produced a clamped or normalised page.
 
 **Expected Outcome**:
 
 - Step 1: `--limit 1` → one row, `limit: 1`; `--limit 100` → 25 rows (all matches), `limit: 100`, `matched: 25`, `hasMore: false`.
-- Step 2: every cell exits `1`, `error.code === "input.value.rejected"`, `error.kind === "input"`, **zero store reads**, and the message names the supplied value and the accepted range `1..100`.
-- Step 2's `--limit 101` cell returns **no** `data` member and **no** 100-row page: nothing is clamped (DEC-10).
+- Step 2: every cell exits `1`, `error.code === "input.value.rejected"`, `error.kind === "input"`, **zero store reads**, and the message names the supplied value, the accepted range `1..100`, and the canonical decimal form (digits only, no sign, no leading zero, no surrounding whitespace — `[1-9][0-9]*`).
+- Step 2's `--limit 101` cell returns **no** `data` member and **no** 100-row page: nothing is clamped (DEC-10). The `07`, `+7`, ` 7`, and `001` cells return no page at all: nothing is normalised into acceptance.
 - Step 3: `data.limit === 20`; `data.attempts.length === 20`; `data.matched === 25`; `data.hasMore === true`.
 - No cell exits `0` while refusing, and no cell exits `2`.
 
 **Notes / Clarifications**:
 
 - This is the cell a clamping implementation fails: the refusal cells assert the *absence* of a page, so a "sanitise to 100" implementation cannot pass.
-- Leading-zero forms (`--limit 001`) are not pinned by the AC and are deliberately not asserted (§8.3 X-6).
+- The canonical-form cells (`07`, `+7`, ` 7`, `001`) are the v1.1 ruling: AC-F1-3 and DEC-10 pin the accepted form to `[1-9][0-9]*`, so a leading zero, an explicit sign, or surrounding whitespace is refused rather than read as the same integer (§8.3 X-6, closed).
 - `--limit` is declared as a value-taking flag; the missing-value cell exercises the parser branch before any state work.
 
 #### TC-ATTEMPT-004 - Total order across identical start instants and insertion orders
@@ -518,7 +519,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - The biconditional is asserted because the delivered comparison builder already guarantees it; the projection must preserve it rather than "helpfully" substituting a token.
 - Nothing here re-tests the comparison model (NG-2); the assertion is about the projection's fidelity.
 
-#### TC-ATTEMPT-009 - Machine byte bound with a declared page omission
+#### TC-ATTEMPT-009 - Machine byte bound: page-scope `bound: 65536` with a declared omission
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -546,7 +547,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 - Step 2: `<= 65_536`.
 - `data.attempts.length > 0` (the bound never starves the page) and `data.attempts.length <= 100`.
-- If `data.attempts.length < data.matched`, then: `data.truncation.scope === "page"`, `typeof data.truncation.bound === "number"` and the value equals one of the two declared page bounds (`limit` for a row bound, `65_536` for a byte bound — §8.3 X-9), `data.truncation.omittedRecords > 0`, `data.hasMore === true`, and `omittedRecords >= matched - attempts.length` with `>= 1`.
+- If `data.attempts.length < data.matched`, then: `data.truncation.scope === "page"`, `data.truncation.bound === 65_536` (the serialized `data` byte budget — DM-5, AC-F2-4), `data.truncation.omittedRecords > 0`, `data.hasMore === true`, and `omittedRecords` equals the number of otherwise-eligible rows the byte budget dropped — in this fixture `matched - attempts.length`, because no other bound is in play.
 - With the maximal builder, the shortening cell is reachable: the test asserts `data.attempts.length < 100` in the maximal cell (the arithmetic above makes that deterministic), so the declaration path is exercised, not merely tolerated.
 - Step 4: `truncation` is absent (`Object.hasOwn(data, "truncation") === false`) and the 3 rows round-trip unchanged.
 
@@ -555,14 +556,14 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - The 64-character reference length is a deliberate fixture constant, not an incidental value: with short references 100 rows would fit and the page-bound branch would never execute, producing a vacuous green (TR-5).
 - `truncation` is a single object; the ledger scope takes precedence, which is asserted in TC-ATTEMPT-010.
 - The byte bound is measured over `data`, as the criterion states, not over the whole stdout.
-- **`bound` for `scope: "page"` is not pinned by the AC.** It is either the requested row bound or the byte budget; the test asserts that it is one of the two declared values rather than inventing a choice (§8.3 X-9).
+- **`bound` is pinned per scope by spec v1.1** (F-2, DM-5, AC-F2-4): `5000` for `ledger` (TC-ATTEMPT-010) and `65536` for `page`, the serialized `data` byte budget. The page-scope cell asserts the literal `65_536`, so a row-bound reading fails (§8.3 X-9, closed).
 
 #### TC-ATTEMPT-010 - Ledger bound: newest 5,000, declared omission, ledger scope wins
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, F-4, AC-F2-5, DM-5, NFR-2, RSK-4
+**Related IDs**: F-2, F-3, F-4, AC-F2-5, AC-F3-2 (omitted-tail branch), DM-1, DM-5, NFR-2, NFR-4, RSK-4
 **Evidence Class**: Suite
 **Test Type(s)**: Integration
 **Automation Level**: Automated
@@ -586,12 +587,12 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - Step 2: `data.truncation.scope === "ledger"`, `data.truncation.bound === 5000`, `data.truncation.omittedRecords === 1`; `data.matched === 5000` (never above the bound); `data.hasMore === true`.
 - The returned page contains the newest rows: `attempt-0001` is **absent**, `attempt-5001` is present (default `limit` is 20, so the newest 20 are `attempt-4982`…`attempt-5001`).
 - Step 3: `data.truncation.scope === "ledger"` (precedence, DEC-11), `omittedRecords === 1`, `data.attempts.length === 1`; no second truncation object and no `page` scope in the payload.
-- Step 4: `excluded.foreignRepository === 0`, because the foreign record is not in the retained ledger read (DM-1's "in the ledger read" qualifier; §8.3 X-3).
+- Step 4: `excluded.foreignRepository === 0`, because the foreign record sits only in the ledger's omitted tail and the read never retained it — the count describes the newest 5,000 records that were read, never what is on disk (spec F-3, DM-1, AC-F3-2 second branch; §8.3 X-3, closed).
 
 **Notes / Clarifications**:
 
 - The fake-store cell is the honest way to reach 5,001 records: the bound under test lives in `readDispatchAttempts` over `store.readRecords()`, and the real jsonl store is already exercised by every other cell. The record validator still runs (a malformed payload would return `state.store.torn`).
-- The omitted-tail cell is deliberate: a "count every foreign record in the file" implementation would return 1 and fail step 4.
+- The omitted-tail cell is deliberate and now owns the second branch of AC-F3-2: a "count every foreign record in the file" implementation would return 1 and fail step 4.
 - The ledger bound and the page bound are independent; only one truncation object is ever emitted (DM-5).
 
 #### TC-ATTEMPT-011 - Two repositories on one host root, the same reference
@@ -662,7 +663,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 **Expected Outcome**:
 
-- Step 2: three rows, all with `repository === "github.com/owner/repo"`; `excluded.foreignRepository === 3`; `matched === 3`.
+- Step 2: three rows, all with `repository === "github.com/owner/repo"`; `excluded.foreignRepository === 3` — the foreign-repository records **within the retained ledger read window** (newest 5,000), which here is the whole store; `matched === 3`.
 - Step 3: `excluded.foreignRepository === 3` again — the count is independent of `--ref` (it describes the root, not the query); `matched === 0` and `attempts: []` in this cell (no A record for `GH-999`), which doubles as an empty-history success inside a non-empty store.
 - Step 4: zero occurrences of `github.com/owner/other`, the two foreign attempt identifiers, `GH-999`, the foreign divergence reference, the foreign harness value, and the foreign `recordedAt` string, in the envelope, any `warnings` member, and the text digest.
 - Step 5: the project-root snapshot is unchanged (the read appended nothing).
@@ -670,6 +671,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 **Notes / Clarifications**:
 
+- This TC owns the **retained-window branch** of AC-F3-2; the **omitted-tail branch** (a foreign record that exists only beyond the newest 5,000 yields `0`) is TC-ATTEMPT-010's step 4, where the 5,001-record store already exists. Splitting the branches keeps each fixture honest: a real-store count here, a fake-store window there.
 - The third foreign record (`GH-999`) is the cell that distinguishes "count foreign records that match the ref" from "count foreign records in the ledger read": the second record set returns 3, not 2.
 - A migrated-root fixture built by seeding is deliberately preferred over replaying GH-288's migration move: the migration's byte fidelity is GH-288's criterion (AC-F8-1 there), and asserting it again here would create a second owner of the same behaviour.
 - Mutation P3 (drop the `repository` filter) reds step 2 with six rows and `excluded 0`.
@@ -679,7 +681,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, F-4, AC-F3-3, DM-6, RSK-1
+**Related IDs**: F-3, F-4, AC-F3-3, DM-6, NFR-3, RSK-1
 **Evidence Class**: Suite
 **Test Type(s)**: Integration
 **Automation Level**: Automated
@@ -696,19 +698,21 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 1. Run `dispatch attempts --ref GH-241 --json` from the outside directory.
 2. Capture exit, error identity and kind, the summary, and any `data`.
-3. Assert the unbound record never appears.
+3. Assert the unbound-record absence and that no `dispatch-identity.json` exists anywhere under the outside directory, the host root, or the home.
 4. Run `status --json` from the same directory and assert exit `0` (the GH-288 declared scope is unchanged).
 
 **Expected Outcome**:
 
 - Step 2: exit `1`; `error.code === "input.value.rejected"`; `error.kind === "input"`; the summary names the checkout — that no git work tree was found at the invoking path — and does not name a repository.
 - No `data.attempts`; no row carrying `github.com/**`; the unbound store's record (identifier, ref, timestamps) appears nowhere in the envelope, warnings, or stderr.
+- Step 3: the **dispatch repository binding marker** (`<git-common-dir>/dispatch-identity.json`) was not created or repaired — identity resolution ran with persistence disabled and refused, so no binding exists after the refusal. This is the marker rule of spec F-3/§8.5; it is distinct from the project checkout identity marker, which a store-opening invocation may mint (§3.2, §8.3 X-5).
 - Step 4: exit `0`, confirming that the refusal belongs to the read side's repository rule and not to the delivered state-scope policy, which still declares `unbound` for every other command.
 
 **Notes / Clarifications**:
 
 - The populated unbound store is the whole point: an empty one would let a wrong implementation pass by returning nothing.
 - This is the only cell that distinguishes "no repository identity" from "unresolvable identity"; both are `input.value.rejected`, but only here is the remedy the checkout itself.
+- The marker assertion is a **filelist** check, not a read of the resolver's internals: it proves the read did not persist a binding on its way to refusing.
 
 #### TC-ATTEMPT-014 - Read-only by evidence: zero appends, zero fences, stable bytes, permitted effects
 
@@ -727,7 +731,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - A checkout with an existing project root holding: three attempts, one open divergence, one handover record, one authority document, and the audit/retro artifacts the composition writes.
 - A store wrapper that counts `append`, `acquireFence`, and `releaseFence` invocations and delegates to the real store.
 - A snapshot helper recording, for every file under the project root and the host root: name, sha256, mode bits, and `mtimeMs`.
-- A **marker-less** checkout as a second cell, and a checkout whose dispatch identity marker contains a torn value as a third.
+- A **binding-marker-less** checkout as a second cell, and a checkout whose **dispatch repository binding marker** contains a torn value as a third; the **project checkout identity marker** is a separate artefact with its own cell.
 
 **Steps**:
 
@@ -735,8 +739,9 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 2. Run `dispatch attempts --ref GH-241 --json`, then the text form.
 3. Re-snapshot; compare bytes, modes, and mtimes; assert the counters.
 4. Assert the delivery-evidence record counts are unchanged.
-5. Repeat in the marker-less checkout: assert `readDispatchIdentityMarkerText(commonDir)` is still `undefined` afterwards (the read neither created nor repaired the **repository binding** marker).
-6. Repeat in the torn-marker checkout: assert the marker text is byte-identical afterwards.
+5. Repeat in the binding-marker-less checkout: assert `readDispatchIdentityMarkerText(commonDir)` is still `undefined` afterwards (the read neither created nor repaired the **dispatch repository binding marker**).
+6. Repeat in the torn-binding checkout: assert the marker text is byte-identical afterwards.
+7. Read the **project checkout identity marker** through `readProjectIdentityMarker` before and after the run and assert it is unchanged when present.
 
 **Expected Outcome**:
 
@@ -744,13 +749,13 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - Every delivery-evidence artifact (ledger, header, documents, retro sidecar, audit chain, quarantine) is byte-, mode-, and mtime-identical.
 - Attempt, divergence, handover, and authority record counts are unchanged.
 - Host index: `0` writes on a run where the maintained content is unchanged (second invocation after registration); at most `1` write on a first invocation — asserted per cell, not as an aggregate.
-- The **project** identity marker (GH-288's create-once scope marker) may exist before the run and is byte/inode/mtime-identical afterwards; the test does not forbid its first-use creation, because scope resolution performs it for every store-opening invocation (§8.5).
-- Step 5: the **dispatch repository binding** marker is still absent — persistence is disabled. Step 6: the torn binding is not repaired.
+- The **project checkout identity marker** (GH-288's create-once scope marker) may exist before the run and is byte/inode/mtime-identical afterwards; the test does not forbid its first-use creation, because scope resolution performs it for every store-opening invocation (spec §8.5, NFR-3).
+- Step 5: the **dispatch repository binding marker** (`<git-common-dir>/dispatch-identity.json`) is still absent — persistence is disabled. Step 6: the torn binding is not repaired. Neither is re-persisted from any argument.
 - Text output contains no absolute path (host root, project root, or home), so no path is disclosed by the digest (NFR-6).
 
 **Notes / Clarifications**:
 
-- **Two markers, two rules.** The GH-288 project identity marker is a permitted inherited effect; the dispatch repository binding marker is forbidden to the read. Conflating them is the most likely way this criterion gets a false green (§8.3 X-5).
+- **Two markers, two rules.** The project checkout identity marker (GH-288) is a permitted inherited effect; the dispatch repository binding marker (`dispatch-identity.json` in the git common directory) is forbidden to the read — 0 created, 0 repaired, 0 re-persisted. Conflating them is the most likely way this criterion gets a false green; spec v1.1 names them distinctly in F-3, AC-F4-1, §8.5, NFR-3, and the §23 glossary, so the naming in this plan is normative, not the plan's coinage (§8.3 X-5, closed).
 - The review half enumerates which filesystem effects are permitted and why, in the change review; no permanent test can assert an exhaustive list of *absent* effects.
 - mtime is never the sole evidence of "no write" (filesystem granularity; TR-2): the sha256 comparison is primary, mtime is corroborating.
 
@@ -1047,6 +1052,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 5. Assert both directions of the correction: the upward direction (25, not 20) and the downward direction (foreign 5 excluded, so not 30 and `reported` not 33).
 6. Assert the post-resolution movement against `S0`.
 7. Run the below-cap control: a fixture with 3 open and 2 resolved; assert `unresolved: 3`, `idsTruncated: false`, and both surfaces equal.
+8. Assert each block's key list and key order: exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated`, on both surfaces.
 
 **Expected Outcome**:
 
@@ -1055,6 +1061,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - Step 5: the assertions are explicitly `28`/`3`/`25` — not `33`/`3`/`30` (which is what a store-wide fold would report) and not `28`/`8`/`20` (which is what the delivered list-derived rule reports: 20 identifiers capped, `resolved = folded − 20`). The numbers are labelled in the test titles so a reviewer can read the direction from the failure message.
 - Step 6: `R1.unresolved === 24`, `R1.reported === 28`, `R1.resolved === 4`, `DIV-1` absent from `unresolvedIds`; `S0.unresolved - R1.unresolved === 1`.
 - Step 7: `unresolved === 3`, `idsTruncated === false`, `unresolvedIds.length === 3`, both surfaces equal.
+- Step 8: `Object.keys(block)` is exactly `["reported","resolved","unresolved","unresolvedIds","idsTruncated"]` on the summary and on the resolve result; the four delivered fields keep their names, types, meanings, and order, and `idsTruncated` is the one declared additive key on both (spec §8.5, AC-F5-5; §8.3 X-4, closed).
 
 **Notes / Clarifications**:
 
@@ -1270,13 +1277,14 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 1. Run `dispatch attempts --ref GH-241 --json`; capture `data`.
 2. Assert the exact `data` key set and deep-scan for the five forbidden keys.
 3. Assert the gate summarizer counter is `0` for the attempts invocation.
-4. Run `dispatch dual-run summary --repo <repository> --json`; assert its delivered fields are present and its text projection unchanged apart from the divergence count.
+4. Run `dispatch dual-run summary --repo <repository> --json`; assert its delivered fields are present and its text projection unchanged apart from the divergence count and the declared additive `idsTruncated` key on the divergence block.
 
 **Expected Outcome**:
 
 - Step 1–2: `Object.keys(data).sort()` equals exactly `["attempts","excluded","hasMore","limit","matched","ref","refSource","repository"]` plus `"truncation"` only when a bound binds; a recursive key scan finds no `coverage`, `floor`, `verdict`, `eligibility`, or `unmetConditions` at any depth.
 - Step 3: `0` gate evaluations.
-- Step 4: the summary still carries `coveragePresent`, `coverageMissing`, `floor`, `verdict`, `unmetConditions`, `divergences`, `corroboration`, and the gate fields; its text output still contains `floor_only=true`; only the divergence numbers may differ from a pre-change run, and only in the two directions TC-ATTEMPT-022 pins.
+- Step 4: the summary still carries `coveragePresent`, `coverageMissing`, `floor`, `verdict`, `unmetConditions`, `divergences`, `corroboration`, and the gate fields; its text output still contains `floor_only=true`; its divergence block is exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, with the four delivered fields unchanged in name, type, meaning, and order; only the divergence numbers may differ from a pre-change run, and only in the two directions TC-ATTEMPT-022 pins.
+- No `coverage` or `floor` value appears on the attempts side at any depth, and the attempts surface never evaluates the gate.
 
 **Notes / Clarifications**:
 
@@ -1476,22 +1484,24 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 1. Run `dispatch GH-301 --json`, `dispatch dual-run summary --repo <repo> --json`, and `dispatch handover <repo> --json`; assert their exact `data` key sets and key order.
 2. Run the resolve and assert the five delivered keys keep their names, types, meanings, and appear first in order, followed by `mode`, `repository`, `divergences`.
-3. Run the attempts read and assert: no `result`, `verdict`, or `operation` key; `attempts` is an array; exit `0` with `ok: true`.
-4. Call each text selector directly with each payload shape and assert which renderer is chosen.
-5. Review the branch diff for renames, removals, or retyping of delivered keys.
+3. Assert both divergence blocks (summary and resolve) carry exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, with the four delivered fields unchanged.
+4. Run the attempts read and assert: no `result`, `verdict`, or `operation` key; `attempts` is an array; exit `0` with `ok: true`.
+5. Call each text selector directly with each payload shape and assert which renderer is chosen.
+6. Review the branch diff for renames, removals, or retyping of delivered keys.
 
 **Expected Outcome**:
 
 - Steps 1–2: the four delivered surfaces' key sets are exactly as delivered (no key removed, renamed, retyped, or reordered); the resolve payload is a superset of the five keys with the additions after them.
-- Step 3: the attempts payload carries `attempts` (array), `matched`, `hasMore`, `excluded`, `ref`, `refSource`, `repository`, `limit`; it carries no `result`, `verdict`, or `operation`, so the exit projection is a plain success at exit `0`.
-- Step 4: the attempts payload selects the attempts renderer and is **not** mistaken for the run form, the summary, or the handover result; each of the other three payloads selects its own renderer and never the attempts renderer.
-- Step 5 (review): the diff against the merge base contains no change to a delivered key's name, type, meaning, or order, and only the declared additive keys and the declared count correction.
+- Step 3: the summary block and the resolve block both carry the same five keys in the same order; `idsTruncated` is the only addition to either block, and the four delivered fields keep name, type, meaning, and order (§8.5, AC-F5-5, AC-F7-1).
+- Step 4: the attempts payload carries `attempts` (array), `matched`, `hasMore`, `excluded`, `ref`, `refSource`, `repository`, `limit`; it carries no `result`, `verdict`, or `operation`, so the exit projection is a plain success at exit `0`.
+- Step 5: the attempts payload selects the attempts renderer and is **not** mistaken for the run form, the summary, or the handover result; each of the other three payloads selects its own renderer and never the attempts renderer.
+- Step 6 (review): the diff against the merge base contains no change to a delivered key's name, type, meaning, or order, and only the declared additive keys (including `idsTruncated` on both divergence blocks) and the declared count correction.
 
 **Notes / Clarifications**:
 
 - Mutation P1 (rename `principal` to `actor` in the resolve payload) must red step 2; that proves the shape assertion has detection power over delivered behaviour, which predates the change.
-- Step 4 is the discriminator half: an implementation that keys the attempts renderer on "no `result` key" would also capture a handover payload, so the selector is called with all four shapes.
-- The additive-only half is review-verified because no permanent test may compare against a moving base (`.ai/rules/testing-strategy.md`).
+- Step 5 is the discriminator half: an implementation that keys the attempts renderer on "no `result` key" would also capture a handover payload, so the selector is called with all four shapes.
+- The additive-only half is review-verified because no permanent test may compare against a moving base (`.ai/rules/testing-strategy.md`). Step 3 is the suite half that makes the `idsTruncated` addition safe: it is declared on both blocks, so a consumer pinning the four delivered fields still sees them unchanged.
 
 #### TC-ATTEMPT-035 - No new configuration key, dependency, package, token, projection, exit literal, or literal
 
@@ -1639,12 +1649,12 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - Mutation P2 (restore `unresolved: unresolvedIds.length`) reds both TC-ATTEMPT-022 and this test; the mutation is the negative control for the scan, per the delivered scan discipline (assert with file, line, and literal).
 - No implementation filename is pinned beyond the delivered files that already carry these two derivations; the module for the shared helper is the delivery plan's decision (§8.3 X-8).
 
-#### TC-ATTEMPT-039 - Malformed request grammar: ref shape, unknown flag, unexpected positional
+#### TC-ATTEMPT-039 - Request grammar: non-canonical ref, unknown flag, unexpected positional
 
 **Scenario Type**: Negative
-**Impact Level**: Important
+**Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, F-4, DM-6, NFR-5
+**Related IDs**: F-1, F-4, AC-F1-6, DM-6, NFR-5, DEC-1
 **Evidence Class**: Suite
 **Test Type(s)**: Integration
 **Automation Level**: Automated
@@ -1655,24 +1665,28 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 - A store seam that fails the test if `readRecords()` is called.
 - The canonical work-item pattern `^[A-Z]+-\d+$` (asserted as the behaviour, not imported as the test oracle).
+- The attempts harness's store counters and byte snapshot (`readCount === 0`, `append === 0`, unchanged store bytes), so "nothing appended" is a byte comparison and not an absence of an error message.
 
 **Steps**:
 
-1. Run each of: `--ref gh-241`, `--ref GH-`, `--ref GH241`, `--ref GH-241-extra`, `--ref ""`.
+1. Run each of: `--ref 241`, `--ref gh-241`, `--ref GH-`, `--ref GH241`, `--ref GH-241-extra`, `--ref ""`.
 2. Run `dispatch attempts --ref GH-241 --unknown-flag`.
 3. Run `dispatch attempts --ref GH-241 EXTRA`.
-4. Assert exit, error, store reads, and the naming in the summary.
+4. Assert exit, error, store reads, the store bytes, and the naming in the summary.
+5. Scan the captured stdout, stderr, and envelope for any `attempts.*` identity.
 
 **Expected Outcome**:
 
-- Every cell exits `1` with `error.code === "input.value.rejected"` under `kind: "input"`; **zero store reads**; nothing appended.
+- Every cell exits `1` with `error.code === "input.value.rejected"` under `kind: "input"`; **zero store reads**; the store snapshot is byte-identical, so nothing was appended.
 - The summary for a ref cell names the supplied value and the expected uppercase canonical shape; the flag cell names the unknown flag; the positional cell names the unexpected positional.
 - No cell exits `0`, `2`, or with a partially successful page.
+- Step 5: zero `attempts.*` strings — the grammar refusal reuses the delivered `input.value.rejected` identity and invents no `attempts.ref-unknown`-style code (AC-F1-6, DEC-1, NFR-5).
 
 **Notes / Clarifications**:
 
-- **No acceptance criterion owns this behaviour** (finding X-1, §8.3). F-1 and F-4 state it, §8.1's exit table repeats it, and the M2 page's exit row depends on it, so it is tested; the traceability cell above says so rather than attaching it to `AC-F1-3`, which asserts only the limit grammar.
-- The proposed home is an extension of `AC-F1-3` or a new `AC-F1-6` in the next spec revision; the remedy assumed by this plan is recorded in §8.3 X-1.
+- **AC-F1-6 owns this behaviour** (spec v1.1). F-1, F-4, §8.1's exit table, and DM-6 all state it, and §17 now carries the criterion, so this TC is the AC's single owner rather than an AC-less addition; the previous revision's finding X-1 is closed (§8.3).
+- The limit-grammar refusals are TC-ATTEMPT-003's subject, not this one: AC-F1-3 and AC-F1-6 are separate criteria, and keeping the fixtures separate means a page-bound regression cannot hide a grammar regression.
+- The `attempts.*` absence scan duplicates nothing from TC-ATTEMPT-017: that test scans the registry, help, and docs, while this one scans the refusal output of the new grammar cells.
 
 ## 6. Environments and Test Data
 
@@ -1796,7 +1810,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | P1 | Rename a delivered resolve key (`principal` → `actor`) in the resolve payload; run the stability suite; restore. | TC-ATTEMPT-034 | The shape assertion guards delivered behaviour that predates this change. |
 | P2 | Restore the delivered derivations (`unresolved: unresolvedIds.length`, `resolved: folded.length - unresolvedIds.length`) in the divergence block; run the count suites; restore. | TC-ATTEMPT-022, TC-ATTEMPT-038 | The exact-count rule and its single implementation; this is the negative control for the structural scan. |
 | P3 | Drop the logical `repository` filter in the attempts read (return every matching record from the store); run the scope suite; restore. | TC-ATTEMPT-011, TC-ATTEMPT-012 | The twice-enforced scope: the physical root alone is not enough. |
-| P4 | Clamp a `--limit` above the maximum to 100 instead of refusing; run the ref suite; restore. | TC-ATTEMPT-003 | The "nothing is clamped" clause and `hasMore`'s honesty. |
+| P4 | Clamp a `--limit` above the maximum to 100 instead of refusing, **and** accept `07`/`001`/`+7` as the same integer; run the ref suite; restore. | TC-ATTEMPT-003 | The "nothing is clamped or normalised" clause (DEC-10, AC-F1-3) and `hasMore`'s honesty. |
 
 Each procedure is a temporary local edit, run, reverted, and re-run green; the outcome is recorded in §10. No procedure is committed.
 
@@ -1876,21 +1890,23 @@ pnpm check:help
 - Tests may create real temporary repositories and spawn `git`; `git` is already required by `tests/fixtures/watchdog` and `tests/fixtures/pilot`.
 - The M2 `attempts(1)` page is edited at story delivery under the pack's own "refined at story delivery" rule, so its pre-delivery text is not a test oracle.
 
-### 8.3 Findings: spec/plan inconsistencies and the remedy assumed
+### 8.3 Findings: spec/plan inconsistencies and their resolution
 
-Everything below is a genuine gap or imprecision in the upstream artefacts. Each is named so it cannot be papered over, with the remedy this plan assumes; none blocks delivery.
+The previous revision of this plan recorded nine findings (X-1…X-9). **All nine are closed at spec v1.1**: six by explicit ruling (X-1, X-3, X-4, X-5, X-6, X-9) and three by plan-side resolutions that v1.1 leaves intact — X-2's reading is now supported by §8.5/NFR-3, and X-7 and X-8 are ownership choices the spec does not need to arbitrate. The finding text below is preserved as recorded at v1.0 — it is the history of what was found — and each row carries the ruling that closed it. No finding is open, and nothing in this change is tested under a declared assumption that the spec contradicts.
 
-| ID | Finding | Evidence | Remedy assumed by this plan |
-|----|---------|----------|-----------------------------|
-| X-1 | **A requirement has no acceptance criterion.** F-1 and F-4 require a non-canonical `--ref`, an unknown flag, and an unexpected positional to refuse with `input.value.rejected` at exit `1` and no state read; §8.1's exit table repeats it. No AC in §17 asserts any of the three. | Spec §5.1 F-1, §5.1 F-4, §8.1 row 1 vs §17 (no criterion mentions ref shape, unknown flags, or positionals). | Tested anyway as **TC-ATTEMPT-039**, whose traceability row names F-1/F-4 and states that no AC owns it. Proposed home for the next spec revision: extend `AC-F1-3` to "request grammar and page bounds", or add `AC-F1-6`. This is a **spec-side** change and is handed to `@spec-writer`/`@pm`; it is not a test-plan defect. |
-| X-2 | **"Opens no store" collides with the inherited store-opening effects.** AC-F1-2 requires that an unresolvable context "opens no store", while NFR-3 and §8.5 permit the host-index maintenance write and the create-once identity marker for every store-opening invocation. | Spec AC-F1-2 vs §9 NFR-3, §8.5 "Read-only posture". | TC-ATTEMPT-002 asserts **no store read** (a failing/counting store seam) and **no append**, and explicitly does not assert zero filesystem effects. The inherited-effects enumeration belongs to AC-F4-1/TC-ATTEMPT-014. |
-| X-3 | **`excluded.foreignRepository`'s population is qualified but AC-F3-2 states it unqualified.** DM-1 and F-3 say the count is of records "in the ledger read"; AC-F3-2 says it "equals the number excluded", which a reader may take as every foreign record in the file. | Spec DM-1, F-3 vs AC-F3-2. | The count is asserted over the **retained** ledger window (≤ 5,000); TC-ATTEMPT-010 adds a foreign record in the omitted tail and asserts `0`, and TC-ATTEMPT-012 asserts the count is independent of `--ref`. The reconciliation note owed to `@doc-syncer` is recorded in §10. |
-| X-4 | **`idsTruncated` is a shape addition on the summary block while §8.5 says the summary's shape is unchanged.** AC-F5-5 requires both surfaces to carry `idsTruncated`; DM-3 names it on the resolve block; §8.5 says the summary's "shape is unchanged". | Spec AC-F5-5, DM-3 vs §8.5 "Backward Compatibility". | `idsTruncated` is treated as a **declared additive key on both blocks**: no delivered key changes name, type, meaning, or order, so NFR-9 and F-9 are satisfied; TC-ATTEMPT-034 asserts the delivered keys are unchanged and the addition is declared by AC-F5-5. §8.5's "shape is unchanged" sentence is read as "no delivered key changes", and the imprecision is recorded for the reconciliation. |
-| X-5 | **Two different markers are both called "the identity marker".** AC-F4-1 permits "the create-once identity marker"; F-3 forbids the read to "create or repair the first-use identity marker". These are different artefacts: GH-288's project identity marker (scope) and the dispatch repository binding marker. | Spec AC-F4-1, F-3, §8.5 vs GH-288 DM-1 and `packages/adapters/src/file/dispatch-identity.ts`. | TC-ATTEMPT-014 names them distinctly: the project marker is a permitted inherited effect; the repository binding marker must be absent/unrepaired after a read. The tests read each through its own delivered helper, so they cannot be confused. |
-| X-6 | **`AC-F1-3` does not pin leading-zero or whitespace limit forms.** F-1 says "a positive integer"; `001` and ` 1` are arguable. | Spec F-1, AC-F1-3. | Not asserted. The enumerated refusals (0, 101, `-1`, `abc`, missing) are the contract; anything else is implementation latitude and asserting it would over-constrain delivery. |
-| X-7 | **`AC-F4-4`'s evidence split leaves a suite-assertable half unasserted.** §17 assigns "Suite for the counts, review-verified for the absence of the strings"; the absence in code, help, and the feature spec is a tree invariant a suite can assert. | Spec AC-F4-4. | TC-ATTEMPT-017 asserts the code/help/spec/rendered-output half in a suite and keeps only the M2 page and corpus review-verified — a strengthening, not a relaxation, and recorded here so the split is deliberate. |
-| X-8 | **No requirement names the module that owns the shared count computation.** TDR-0023 D-5 requires one computation; neither the spec's component table nor the contract names where it lives. | Spec §16, TDR-0023 D-5. | TC-ATTEMPT-038 asserts the **export surface and the two consumers**, not a filename; the module is the delivery plan's decision. If the plan names one, the structural test's target list narrows to it. |
-| X-9 | **`truncation.bound` for `scope: "page"` is undefined.** DM-5 declares `bound` but does not say whether a page-scope bound reports the requested row bound (`limit`) or the byte budget (65,536). AC-F2-4 asserts the scope, the omission, and `hasMore`, not the value. | Spec DM-5 vs AC-F2-4, F-2. | TC-ATTEMPT-009 asserts `typeof bound === "number"` and that it equals one of the two declared page bounds, so either reading passes and neither is invented. The reconciliation should state which. |
+| ID | Finding (as recorded at spec v1.0) | Evidence at v1.0 | Resolution | Status |
+|----|-----------------------------------|------------------|------------|--------|
+| X-1 | **A requirement has no acceptance criterion.** F-1 and F-4 require a non-canonical `--ref`, an unknown flag, and an unexpected positional to refuse with `input.value.rejected` at exit `1` and no state read; §8.1's exit table repeats it. No AC in §17 asserts any of the three. | Spec §5.1 F-1, §5.1 F-4, §8.1 row 1 vs §17 (no criterion mentions ref shape, unknown flags, or positionals). | **Closed by spec v1.1.** §17 adds `AC-F1-6`: the three invocations each exit `1` with `input.value.rejected` under `kind: "input"`, perform no store read (proven by a store seam that fails if read), append nothing, and emit no `attempts.*` identity. **TC-ATTEMPT-039** now owns `AC-F1-6`; the "no owning AC" label is gone from §3.1, §5.1, and §7. The request-grammar family therefore has one criterion and one owner, and the limit grammar stays with `AC-F1-3`/TC-ATTEMPT-003. | Closed — spec v1.1 (`AC-F1-6`) |
+| X-2 | **"Opens no store" collides with the inherited store-opening effects.** AC-F1-2 requires that an unresolvable context "opens no store", while NFR-3 and §8.5 permit the host-index maintenance write and the create-once identity marker for every store-opening invocation. | Spec AC-F1-2 vs §9 NFR-3, §8.5 "Read-only posture". | **Closed by reading, now supported by spec v1.1.** §8.5 states that a read "does open a store" and inherits host-index maintenance plus the create-once **project checkout identity marker**, and names the **dispatch repository binding marker** as separately forbidden; NFR-3 enumerates the same pair. TC-ATTEMPT-002 continues to assert **no store read** (a failing/counting store seam) and **no append**, and explicitly does not assert zero filesystem effects; "opens no store" in AC-F1-2 is read as "performs no store read", and the inherited-effects enumeration remains AC-F4-1/TC-ATTEMPT-014's subject. | Closed — spec v1.1 §8.5/NFR-3 wording, plan reading retained |
+| X-3 | **`excluded.foreignRepository`'s population is qualified but AC-F3-2 states it unqualified.** DM-1 and F-3 say the count is of records "in the ledger read"; AC-F3-2 says it "equals the number excluded", which a reader may take as every foreign record in the file. | Spec DM-1, F-3 vs AC-F3-2. | **Closed by spec v1.1.** F-3, DM-1, and AC-F3-2 now say the count is of foreign-repository records **within the retained ledger read window** (the newest 5,000) and is **independent of `--ref`**, and AC-F3-2 adds the second branch: a foreign record only in the omitted tail yields `0` for that window. Both branches are owned: TC-ATTEMPT-012 asserts the retained-window count (3 of 6, unchanged under a second `--ref`), and TC-ATTEMPT-010 step 4 asserts the omitted-tail `0` on the 5,001-record store. | Closed — spec v1.1 (F-3, DM-1, AC-F3-2) |
+| X-4 | **`idsTruncated` is a shape addition on the summary block while §8.5 says the summary's shape is unchanged.** AC-F5-5 requires both surfaces to carry `idsTruncated`; DM-3 names it on the resolve block; §8.5 says the summary's "shape is unchanged". | Spec AC-F5-5, DM-3 vs §8.5 "Backward Compatibility". | **Closed by spec v1.1.** §8.5 now says both divergence blocks — the summary's and the resolve result's — gain the one declared additive key `idsTruncated`, and that the four delivered block fields keep their names, types, meanings, and order. TC-ATTEMPT-022 step 8 asserts the exact five-key list and order on both surfaces; TC-ATTEMPT-028 asserts the summary keeps its delivered gate fields; TC-ATTEMPT-034 asserts the addition is declared and nothing delivered is renamed, retyped, or reordered. | Closed — spec v1.1 (§8.5, AC-F5-5) |
+| X-5 | **Two different markers are both called "the identity marker".** AC-F4-1 permits "the create-once identity marker"; F-3 forbids the read to "create or repair the first-use identity marker". These are different artefacts: GH-288's project identity marker (scope) and the dispatch repository binding marker. | Spec AC-F4-1, F-3, §8.5 vs GH-288 DM-1 and `packages/adapters/src/file/dispatch-identity.ts`. | **Closed by spec v1.1.** The two artefacts are named distinctly across F-3, AC-F4-1, §2.1, §4.1, §8.4, §8.5, NFR-3, §21, and the §23 glossary: the **project checkout identity marker** (GH-288; minted once by any store-opening invocation; permitted) and the **dispatch repository binding marker** (`<git-common-dir>/dispatch-identity.json`; never created, repaired, or re-persisted by a read; forbidden). TC-ATTEMPT-014 steps 5–7 assert each through its own delivered helper; TC-ATTEMPT-013 step 3 asserts the binding marker is absent after an outside-checkout refusal. | Closed — spec v1.1 (F-3, AC-F4-1, §8.5, NFR-3, §23) |
+| X-6 | **`AC-F1-3` does not pin leading-zero or whitespace limit forms.** F-1 says "a positive integer"; `001` and ` 1` are arguable. | Spec F-1, AC-F1-3. | **Closed by spec v1.1.** F-1, AC-F1-3, and DEC-10 pin `--limit` to canonical decimal `[1-9][0-9]*` — no sign, no leading zero, no surrounding whitespace — and AC-F1-3 enumerates `07`, `+7`, and ` 7` among the refusals, each exiting `1` with `input.value.rejected` and nothing clamped or normalised. TC-ATTEMPT-003 asserts those three plus `001`, alongside the delivered `0`, `101`, `-1`, `abc`, and missing-value cells. | Closed — spec v1.1 (F-1, AC-F1-3, DEC-10) |
+| X-7 | **`AC-F4-4`'s evidence split leaves a suite-assertable half unasserted.** §17 assigns "Suite for the counts, review-verified for the absence of the strings"; the absence in code, help, and the feature spec is a tree invariant a suite can assert. | Spec AC-F4-4. | **Closed — plan-side strengthening, no spec change needed.** Spec v1.1 keeps the same evidence sentence, so this remains a deliberate over-assertion: TC-ATTEMPT-017 asserts the code/help/spec/rendered-output half in a suite and keeps only the M2 page and corpus review-verified. The split is recorded here so a reviewer sees it is a choice, not an omission. | Closed — plan resolution retained |
+| X-8 | **No requirement names the module that owns the shared count computation.** TDR-0023 D-5 requires one computation; neither the spec's component table nor the contract names where it lives. | Spec §16, TDR-0023 D-5. | **Closed — ownership assigned, deliberately not pinned to a filename here.** The module is the delivery plan's decision; TC-ATTEMPT-038 asserts the **export surface and the two consumers** (summary composition and resolve enrichment), not a path. If the delivery plan names a module, the structural test's target list narrows to it without changing the assertion. | Closed — plan resolution; filename owned by the delivery plan |
+| X-9 | **`truncation.bound` for `scope: "page"` is undefined.** DM-5 declares `bound` but does not say whether a page-scope bound reports the requested row bound (`limit`) or the byte budget (65,536). AC-F2-4 asserts the scope, the omission, and `hasMore`, not the value. | Spec DM-5 vs AC-F2-4, F-2. | **Closed by spec v1.1.** DM-5 defines `bound` per scope — `5000` for `"ledger"` (the retained-record bound) and `65536` for `"page"` (the serialized `data` byte budget) — and `omittedRecords` as what that bound left out. AC-F2-4 pins `bound: 65536` for the page scope. TC-ATTEMPT-009 asserts the literal `65_536` and the dropped-row count; TC-ATTEMPT-010 asserts `5000` and the ledger precedence. | Closed — spec v1.1 (F-2, DM-5, AC-F2-4) |
+
+**Reopening condition.** A finding reopens if a later spec revision removes `AC-F1-6`, re-qualifies `excluded.foreignRepository` away from the retained window, drops `idsTruncated` from one of the two divergence blocks, collapses the two marker names, widens the `--limit` grammar, or leaves `truncation.bound` undefined per scope. Each would red the owning TC listed above, which is the point of pinning them here.
 
 ### 8.4 Test-maintenance notes
 
@@ -1905,7 +1921,8 @@ Everything below is a genuine gap or imprecision in the upstream artefacts. Each
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1 | 2026-11-11 | @test-plan-writer | Initial test plan for GH-289 from spec v1.0 and TDR-0023 (Proposed): **39 test cases** covering all **35** acceptance criteria (`AC-F1-1`…`AC-F9-2`), the eleven NFRs with thresholds, and the delivered gate battery. New fixtures under `tests/fixtures/dispatch/**` (in-process attempts harness, real-production attempts wrapper, record builders, two digest goldens); four revert/mutation procedures (P1–P4) including the two halves of the TDR-0023 count risk; and four declared findings (X-1 an AC-less requirement for malformed-request grammar, X-2 "opens no store" vs inherited effects, X-4 the `idsTruncated` shape addition on the summary, X-5 the two-marker collision), plus five precision findings (X-3, X-6, X-7, X-8, X-9). |
+| 1.0 | 2026-11-11 | @test-plan-writer | Initial test plan for GH-289 from spec v1.0 and TDR-0023 (Proposed): **39 test cases** covering all **35** acceptance criteria (`AC-F1-1`…`AC-F9-2`), the eleven NFRs with thresholds, and the delivered gate battery. New fixtures under `tests/fixtures/dispatch/**` (in-process attempts harness, real-production attempts wrapper, record builders, two digest goldens); four revert/mutation procedures (P1–P4) including the two halves of the TDR-0023 count risk; and four declared findings (X-1 an AC-less requirement for malformed-request grammar, X-2 "opens no store" vs inherited effects, X-4 the `idsTruncated` shape addition on the summary, X-5 the two-marker collision), plus five precision findings (X-3, X-6, X-7, X-8, X-9). |
+| 1.1 | 2026-11-11 | @test-plan-writer | Aligned to **spec v1.1** (revision driven by the `dor_check` findings). Acceptance coverage **35 → 36**: `AC-F1-6` (request-grammar refusals) added to §3.1 and owned by **TC-ATTEMPT-039**, whose AC-less label is removed; the TC count stays **39** and every `TC-ATTEMPT-001…039` identifier is unchanged. Aligned the five closed imprecisions: `excluded.foreignRepository` now asserted within the retained ledger window with both AC-F3-2 branches split between TC-012 (window, `--ref`-independent) and TC-010 (omitted tail → 0); `idsTruncated` asserted as the one declared additive key on **both** divergence blocks with the four delivered fields' order preserved (TC-022 step 8, TC-028, TC-034); the two identity markers named and asserted separately (TC-013, TC-014); `truncation.bound` pinned to `5000`/`65536` per scope (TC-009, TC-010); `--limit` canonical-decimal refusals `07`, `+7`, ` 7`, `001` added (TC-003, mutation P4 extended). §8.3 now records each finding with its v1.1 ruling and marks X-1…X-9 closed without deleting the v1.0 finding text. Every fixture, negative assertion, gate command, and review-verified gap is preserved. |
 
 ## 10. Test Execution Log
 
@@ -1946,12 +1963,11 @@ Not yet executed: this plan is the phase-3 artefact and no test in it has run. R
 | TC-ATTEMPT-034 | AC-F9-1 additive-only half | — | Pending | |
 | TC-ATTEMPT-035 | AC-F9-2 lockfile and diff half | — | Pending | |
 
-**Reconciliation notes owed to `@doc-syncer`**
+**Reconciliation notes to `@doc-syncer`**
 
-- X-3: state the `excluded.foreignRepository` population as "records in the bounded ledger read" so the count and DM-1 agree in words.
-- X-4: state whether `idsTruncated` on the summary block is a declared additive key (the reading this plan asserts) and adjust §8.5's "shape is unchanged" if the spec is revised.
-- X-1: decide the AC home for the malformed-request grammar cells.
-- X-9: state whether `truncation.bound` for `scope: "page"` is the requested row bound or the byte budget, so the delivery's declared value is documented.
+- X-1, X-3, X-4, X-9: **satisfied by spec v1.1** (`AC-F1-6` added; the foreign count qualified to the retained window in F-3/DM-1/AC-F3-2; `idsTruncated` declared on both divergence blocks in §8.5; `truncation.bound` defined per scope in DM-5). No further spec change is owed; the reconciliation pass should carry the same wording into `feature-dispatch-engine.md` and `contracts.md`.
+- X-2: AC-F1-2 still says "opens no store". Spec v1.1 §8.5/NFR-3 enumerate the inherited store-opening effects, and this plan reads the phrase as "performs no store read"; the reconciliation pass should either adopt that wording in AC-F1-2's mirror in the feature spec or leave it, but should not describe the refusal as effect-free.
+- X-8: the shared count computation's module name is the delivery plan's decision; if the plan names one, this plan's structural target list narrows to it (TC-ATTEMPT-038), and the doc reconciliation should name the same module.
 
 **Measured values (informational only)**
 
