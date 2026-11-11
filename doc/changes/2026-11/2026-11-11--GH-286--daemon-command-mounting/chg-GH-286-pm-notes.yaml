@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T10:50:44.416Z }
   delivery_planning: { started: null, completed: 2026-11-11T10:50:54.941Z }
   dor_check: { started: null, completed: 2026-11-11T11:04:45.981Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-11T12:24:26.212Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -23,18 +23,19 @@ notes:
       daemon-privacy.test.ts` plants canaries in every mounted path's facts and
       asserts no credential, prompt, transcript, diff, or lock token appears in
       any envelope, human rendering, spawn environment, unit text, or record;
-      the delivered error-table, state-contract, daemon-contract, vocabulary, and
-      content-inventory suites run unmodified and green; the state schema and
-      `STATE_SCHEMA_VERSION` are unchanged; the diff is exactly the five
+      the delivered error-table, state-contract, daemon-contract, vocabulary,
+      and content-inventory suites run unmodified and green; the state schema
+      and `STATE_SCHEMA_VERSION` are unchanged; the diff is exactly the five
       permitted delivered-suite sites plus the declared new files; the changeset
       is one lockstep minor over the five publishables. Gate: `bun test
       --max-concurrency 4` under `TMPDIR=$PWD/tmp/tmpdir` reports 7256 pass, 0
-      fail across 895 files; error-table-sync, exports-parity, forbidden-literals,
-      privacy-literals, changesets-group, the distribution guard, and
-      `git diff --check` green. One pre-existing privacy-literal finding in this
-      change's own spec/plan/test-plan prose was reworded to satisfy the guard;
-      the default-concurrency `pnpm check` runs showed load-induced timeouts that
-      pass in isolation (recorded in test plan 10.3)."
+      fail across 895 files; error-table-sync, exports-parity,
+      forbidden-literals, privacy-literals, changesets-group, the distribution
+      guard, and `git diff --check` green. One pre-existing privacy-literal
+      finding in this change's own spec/plan/test-plan prose was reworded to
+      satisfy the guard; the default-concurrency `pnpm check` runs showed
+      load-induced timeouts that pass in isolation (recorded in test plan
+      10.3)."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 6 commit: 30d44c90. Plan phase 7 complete (documentation and
@@ -42,32 +43,33 @@ notes:
       row and the unconditional-composition statement, the summary enumeration,
       and the GH-286/TDR-0022/contract links; `feature-resident-daemon.md`
       replaces the not-mounted sentence with the mounted reality (unconditional
-      runtime, entry-path re-entry, signal-owned lifetime, real pid, brand-derived
-      install identity, durable degradation) and gains both links;
+      runtime, entry-path re-entry, signal-owned lifetime, real pid,
+      brand-derived install identity, durable degradation) and gains both links;
       `entrypoint-delta.md` records the closed registration gap with the
-      seventeen-family listing; `daemon.md` completes the reconciliation with the
-      shared scope and the mount-and-lifetime paragraph and keeps its `## HELP`
-      section; `entrypoint.md` lists the family and drops it from the absent set;
-      `doc/00-index.md` describes the mounted daemon. Gate: doc-conformance,
-      help-guide-coverage, reference-page-parity, daemon-vocabulary, and
-      prompt-conformance green, forbidden-literals clean, the distribution guard
-      reports no drift, and `git diff --check` clean."
+      seventeen-family listing; `daemon.md` completes the reconciliation with
+      the shared scope and the mount-and-lifetime paragraph and keeps its `##
+      HELP` section; `entrypoint.md` lists the family and drops it from the
+      absent set; `doc/00-index.md` describes the mounted daemon. Gate:
+      doc-conformance, help-guide-coverage, reference-page-parity,
+      daemon-vocabulary, and prompt-conformance green, forbidden-literals clean,
+      the distribution guard reports no drift, and `git diff --check` clean."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 5 commit: aa3c5311. Plan phase 6 complete (mount and
       self-description in one commit): `daemon` joins `PROMPT_REQUIRED_COMMANDS`
       exactly once (17 families); the help inventory gains the family entry with
       the daemon page and the man page in its see-also plus one entry per
-      subcommand; the reference page records the mounted status and its `## HELP`
-      section; the coverage inventory gains the command and the page row appended
-      at the end of each array; the doc-conformance page list gains `daemon`; the
-      only delivered-suite edits are the five permitted sites (the two absence
-      loops, the expected family list and the corrected doc comment in
-      entrypoint-composition, the root family list, the coverage enumeration, and
-      the conformance row). Gate: 95/95 tests across the composition, mount-help,
-      entrypoint, guard, and mutant suites; help-guide-coverage zero failures,
-      prompt-conformance clean, `pnpm check:help`, typecheck, lint, and format
-      green; TC-DAEMON-105 re-run through the real binary and recorded."
+      subcommand; the reference page records the mounted status and its `##
+      HELP` section; the coverage inventory gains the command and the page row
+      appended at the end of each array; the doc-conformance page list gains
+      `daemon`; the only delivered-suite edits are the five permitted sites (the
+      two absence loops, the expected family list and the corrected doc comment
+      in entrypoint-composition, the root family list, the coverage enumeration,
+      and the conformance row). Gate: 95/95 tests across the composition,
+      mount-help, entrypoint, guard, and mutant suites; help-guide-coverage zero
+      failures, prompt-conformance clean, `pnpm check:help`, typecheck, lint,
+      and format green; TC-DAEMON-105 re-run through the real binary and
+      recorded."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 4 commit: da51b183. Plan phase 5 complete (degradation per
@@ -76,56 +78,59 @@ notes:
       every watch iteration; the production composition supplies the durable
       reachability predicate (owned instance, acquisition operation, matching
       heartbeat owner, STRICT `age < lockStalenessMs`) and no longer wires a
-      literal marker array. Gate: 112/112 tests across the projection, read-cost,
-      wiring, mutant, delivered daemon-degradation and queue-scheduling suites and
-      the queue/lanes/watch/golden controls; `pnpm typecheck`, lint, format,
-      ambient-globals, and `pnpm check:boundaries` green."
+      literal marker array. Gate: 112/112 tests across the projection,
+      read-cost, wiring, mutant, delivered daemon-degradation and
+      queue-scheduling suites and the queue/lanes/watch/golden controls; `pnpm
+      typecheck`, lint, format, ambient-globals, and `pnpm check:boundaries`
+      green."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 3 commit: 59e7a360. Plan phase 4 complete (foreground
-      lifetime, drained detach, fail-closed stop): with a composed signal host and
-      `--foreground` the runtime captures the readiness snapshot, installs one
-      SIGINT and one SIGTERM listener, runs the resident loop, lets the first
-      signal select the mode, removes both listeners in a `finally`, awaits the
-      loop, and returns the snapshot or the classified stop failure; a second
-      signal cannot start a second stop; the cross-process stop refuses a
-      non-positive, fractional, or torn pid as `daemon.state-recovery-failed`
+      lifetime, drained detach, fail-closed stop): with a composed signal host
+      and `--foreground` the runtime captures the readiness snapshot, installs
+      one SIGINT and one SIGTERM listener, runs the resident loop, lets the
+      first signal select the mode, removes both listeners in a `finally`,
+      awaits the loop, and returns the snapshot or the classified stop failure;
+      a second signal cannot start a second stop; the cross-process stop refuses
+      a non-positive, fractional, or torn pid as `daemon.state-recovery-failed`
       before any signal call and addresses only the recorded positive pid.
       `createDaemonMainEntry` stays unused by every production surface and is
       imported only by the TC-039 fixture entry. Gate: 56/56 tests across the
-      three new behaviour suites, the mutant suite, the delivered control-transport,
-      lifecycle, lock-concurrency, and watch suites, and the bounded real-child
-      conformance case (0.6 s, temp-rooted, reaped); `pnpm typecheck`, lint, and
-      format green."
+      three new behaviour suites, the mutant suite, the delivered
+      control-transport, lifecycle, lock-concurrency, and watch suites, and the
+      bounded real-child conformance case (0.6 s, temp-rooted, reaped); `pnpm
+      typecheck`, lint, and format green."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 2 commit: 551c1ad4. Plan phase 3 complete (install identity
-      and lifecycle): the install handler classifies the supervisor support first
-      (so the delivered darwin/win32 control keeps `daemon.supervisor-unsupported`
-      and stays unmodified) and then refuses a resolvable state directory with no
-      composed entry path as `daemon.state-recovery-failed` before any rendering,
-      keying on entry-path absence only; the brand-derived unit, the exact
-      state-directory binding, the user configuration root, the delivered command
-      order (write, enable, linger, marker), the rollback, and the ownership-scoped
-      uninstall are proved over recording ports and an in-memory adapter. Gate:
-      40/40 tests across the install suite, the mutant suite, and the delivered
+      and lifecycle): the install handler classifies the supervisor support
+      first (so the delivered darwin/win32 control keeps
+      `daemon.supervisor-unsupported` and stays unmodified) and then refuses a
+      resolvable state directory with no composed entry path as
+      `daemon.state-recovery-failed` before any rendering, keying on entry-path
+      absence only; the brand-derived unit, the exact state-directory binding,
+      the user configuration root, the delivered command order (write, enable,
+      linger, marker), the rollback, and the ownership-scoped uninstall are
+      proved over recording ports and an in-memory adapter. Gate: 40/40 tests
+      across the install suite, the mutant suite, and the delivered
       install/supervisor-install goldens; `pnpm typecheck`, lint, format, and
-      ambient-globals green; no delivered suite edited. TC-DAEMON-105 manual host
-      verification executed on a live user manager and recorded in the test plan
-      §10.1."
+      ambient-globals green; no delivered suite edited. TC-DAEMON-105 manual
+      host verification executed on a live user manager and recorded in the test
+      plan §10.1."
     type: "info"
     date: "2026-11-11"
-  - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test, and TDR-0022 tracked). Plan phase 2 complete (production
-      composition): one state-directory classification with its three outcomes,
-      resolved daemon settings through the delivered resolver with an
-      empty-branch fallback, the delivered unix transport at the resolved socket
-      path with a lock-held ownership predicate, the lane restart bound, the
-      composing pid (positive only), the entry path, the derived re-entry
-      environment (PATH, HOME or USERPROFILE by name, working-name override when
-      set), the supervisor pass-through, and an unconditional daemon runtime that
-      is the unavailable refusal runtime for the unresolvable outcome; the bin
-      supplies `daemonEntry: process.argv[1]`; the spawn merges the re-entry set
-      with the state binding written last. Gate: 47/47 tests across the four new
+  - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test,
+      and TDR-0022 tracked). Plan phase 2 complete (production composition): one
+      state-directory classification with its three outcomes, resolved daemon
+      settings through the delivered resolver with an empty-branch fallback, the
+      delivered unix transport at the resolved socket path with a lock-held
+      ownership predicate, the lane restart bound, the composing pid (positive
+      only), the entry path, the derived re-entry environment (PATH, HOME or
+      USERPROFILE by name, working-name override when set), the supervisor
+      pass-through, and an unconditional daemon runtime that is the unavailable
+      refusal runtime for the unresolvable outcome; the bin supplies
+      `daemonEntry: process.argv[1]`; the spawn merges the re-entry set with the
+      state binding written last. Gate: 47/47 tests across the four new
       behaviour suites plus the mutant suite and the delivered status-matrix
       golden, 44/44 across the delivered lifecycle/lock/supervisor-install/
       state-scope/vocabulary/content-inventory controls, `pnpm typecheck`, lint,
@@ -134,14 +139,15 @@ notes:
     date: "2026-11-11"
   - text: "Plan phase 1 complete (additive daemon-mount composition inputs and
       TDR-0022 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
-      `reentryEnvironment?` input; `pid` is forwarded to the runtime only when it
-      is a positive integer; `ProductionCompositionFacts` gains `daemonEntry?` and
-      `supervisor?`; `QueueComposition.degraded` widens to the array-or-resolver
-      union with one additive resolution helper so the delivered array and
-      fallback bytes are unchanged; `tests/types/daemon-mount.type-test.ts` proves
-      every addition optional. Gate: `pnpm typecheck` green, 23/23 tests in the
-      daemon and state contract suites, ambient-globals clean, `git diff --check`
-      clean. No exported signature narrowed, no module or export added."
+      `reentryEnvironment?` input; `pid` is forwarded to the runtime only when
+      it is a positive integer; `ProductionCompositionFacts` gains
+      `daemonEntry?` and `supervisor?`; `QueueComposition.degraded` widens to
+      the array-or-resolver union with one additive resolution helper so the
+      delivered array and fallback bytes are unchanged;
+      `tests/types/daemon-mount.type-test.ts` proves every addition optional.
+      Gate: `pnpm typecheck` green, 23/23 tests in the daemon and state contract
+      suites, ambient-globals clean, `git diff --check` clean. No exported
+      signature narrowed, no module or export added."
     type: "info"
     date: "2026-11-11"
   - text: "State detection: ticket GH-286 open with label `change`, zero comments,
