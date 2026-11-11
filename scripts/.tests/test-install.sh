@@ -235,6 +235,11 @@ create_mock_ados_source() {
   printf '# Code Review Blueprint\n' > "${base}/doc/templates/blueprints/code-review-instructions--example.md"
   printf 'register_id: MOCK-REGISTER-001\nstatus: draft\n' > "${base}/doc/templates/register-template.yaml"
 
+  # Delivery scripts — installed unconditionally from ADOS_DELIVERY_SCRIPTS, not
+  # from a marker. The pre-PR range gate must travel with them (GH-268, AC-F7-1).
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/lint-commit-range.sh"
+  chmod +x "${base}/scripts/lint-commit-range.sh"
+
   printf '%s' "${base}"
 }
 
@@ -936,6 +941,54 @@ test_local_install_decision_making_blueprint_yaml_internal() {
   }
 }
 
+# TC-DIST-001 (GH-268, AC-F7-1): the range gate is a registered delivery script,
+# installed executable and byte-identical, and refreshed on re-install.
+test_local_install_delivery_gate_script() {
+  local -r source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
+  local project_dir
+  project_dir="$(create_mock_project "${_test_tmpdir}/project")"
+
+  # Static registration: the declared delivery set carries the gate.
+  local registered=false entry
+  for entry in "${ADOS_DELIVERY_SCRIPTS[@]}"; do
+    [[ "${entry}" == "scripts/lint-commit-range.sh" ]] && registered=true
+  done
+  assert_eq "true" "${registered}" "ADOS_DELIVERY_SCRIPTS must declare scripts/lint-commit-range.sh"
+
+  # Run 1: install.
+  (
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by the sourced install_local_files
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+
+  assert_file_exists "${project_dir}/scripts/lint-commit-range.sh" "gate must be installed"
+  [[ -x "${project_dir}/scripts/lint-commit-range.sh" ]] || {
+    printf '  Installed gate is not executable\n' >&2
+    return 1
+  }
+  cmp -s "${source_dir}/scripts/lint-commit-range.sh" "${project_dir}/scripts/lint-commit-range.sh" || {
+    printf '  Installed gate is not byte-identical to the source\n' >&2
+    return 1
+  }
+
+  # Run 2: a locally modified installed copy is refreshed (updatable semantics).
+  printf '# locally modified\n' > "${project_dir}/scripts/lint-commit-range.sh"
+  (
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # config env read by the sourced install_local_files
+    INSTALL_MODE="local" FORCE=false DRY_RUN=false VERBOSE=false
+    reset_counters
+    install_local_files "${source_dir}"
+  )
+  cmp -s "${source_dir}/scripts/lint-commit-range.sh" "${project_dir}/scripts/lint-commit-range.sh" || {
+    printf '  Re-install did not refresh the modified gate\n' >&2
+    return 1
+  }
+}
+
 test_local_install_idempotent_content_sync() {
   local source_dir project_dir snapshot
   source_dir="$(create_mock_ados_source "${_test_tmpdir}/ados-source")"
@@ -1298,6 +1351,7 @@ main() {
   run_test "local install updates guides (updatable)" test_local_install_updates_guides
   run_test "local install installs decision-making/blueprint/yaml; skips internal" test_local_install_decision_making_blueprint_yaml_internal
   run_test "local install is idempotent (content-sync re-run)" test_local_install_idempotent_content_sync
+  run_test "local install installs the delivery gate executable" test_local_install_delivery_gate_script
 
   # User-modifiable files (install once, preserve local edits on update)
   run_test "user-modifiable file installed on first run" test_local_install_user_modifiable_first_run

@@ -174,3 +174,34 @@ notes:
       phase summary the plan's pins describe."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 3 COMPLETE — the resume-sync instruction stops manufacturing
+      the forbidden subject. Commit 7c789e7d changes one line of
+      scripts/deliver-ticket.sh inside build_delivery_prompt: 'git merge
+      origin/${base_branch}' becomes 'git merge --no-ff origin/${base_branch} -m
+      \"chore(${ticket_ref}): sync with ${base_branch}\"'; the fetch line and every
+      other instruction are untouched. scripts/.tests/test-deliver-ticket.sh
+      replaces the old assertion with a shared assert_resume_sync_contract helper
+      (exactly one merge line, -m with a conventional chore/build/ci subject
+      naming the work item ref, zero bare 'git merge origin/<ref>' lines, fetch
+      preserved) and adds TC-DT-08g3, a counterexample probe that reverts the
+      instruction in a throwaway copy of the script under test and requires the
+      helper to reject it. Delivered criterion: AC-F5-1 (TC-PROMPT-004,
+      TC-PROMPT-005, TC-PROMPT-006). Verification observed: suite 136/136 PASS
+      including both resume-sync tests; test-deliver-ticket-result-tuples.sh and
+      test-deliver-ticket-result-tuples-modes.sh green; the diff since the
+      delivery base for deliver-ticket.sh contains zero changed content lines that
+      do not mention 'git merge' (confinement to build_delivery_prompt's merge
+      instruction); zero bare-merge matches in the script and zero in the
+      generated prompt; worktree clean at the phase boundary. One mechanism
+      deviation, recorded not weakened: TC-PROMPT-005 describes the probe as a
+      'cp -a' copy of the repository with the suite re-run from the copy. The
+      probe here copies only scripts/deliver-ticket.sh and evaluates the shared
+      assertion against the prompt it builds. Rationale: a full-repository copy
+      carries the 280 MB node_modules tree and a nested full-suite run (~60 s) that
+      would re-enter this same probe; copying the single script under test
+      exercises the identical assertions and isolates the reverted instruction as
+      the only cause of failure, which is stronger evidence than a nested run that
+      could fail for unrelated reasons. The probe also asserts the delivery tree
+      still carries the conventional-subject instruction after it runs."
+    type: info
+    date: "2026-11-11"

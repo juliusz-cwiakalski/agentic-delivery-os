@@ -194,6 +194,11 @@ create_mock_ados_project() {
   printf '#!/usr/bin/env bash\n' > "${base}/scripts/hooks/pre-opencode-iteration-zai.sh"
   printf '#!/usr/bin/env bash\n' > "${base}/scripts/hooks/pre-opencode-iteration-owner-hold.sh"
 
+  # Delivery script (installed unconditionally, removed unconditionally) plus an
+  # unrelated user file that must survive the removal (GH-268, AC-F7-1).
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${base}/scripts/lint-commit-range.sh"
+  printf '#!/usr/bin/env bash\necho mine\n' > "${base}/scripts/my-custom-tool.sh"
+
   # Helper: write an .md file carrying a frontmatter `ados_distribution` marker.
   # The marker-driven uninstall (PR #74 review C1) reads this to decide removal;
   # fixtures must therefore mirror the real repo's marker convention.
@@ -422,6 +427,43 @@ test_global_uninstall_removes_ados_home() {
 # ============================================================================
 # INTEGRATION TESTS — Local uninstall
 # ============================================================================
+
+# TC-DIST-002 (GH-268, AC-F7-1): the delivery gate is removed unconditionally, an
+# unrelated scripts/ file survives, and --dry-run reports without removing.
+test_local_uninstall_removes_delivery_gate() {
+  local -r project_dir="$(create_mock_ados_project "${_test_tmpdir}/project")"
+
+  # Static registration: the unconditional delivery removal list names the gate.
+  assert_contains "$(cat "${SCRIPT_DIR}/uninstall.sh")" '"scripts/lint-commit-range.sh"' \
+    "uninstall.sh must list the delivery gate for removal"
+
+  (
+    cd "${project_dir}"
+    FORCE=true
+    reset_counters
+    remove_local_files
+  )
+
+  assert_file_not_exists "${project_dir}/scripts/lint-commit-range.sh" "delivery gate should be removed"
+  assert_file_exists "${project_dir}/scripts/my-custom-tool.sh" "unrelated user script should survive"
+}
+
+test_local_uninstall_delivery_gate_dry_run() {
+  local -r project_dir="$(create_mock_ados_project "${_test_tmpdir}/project")"
+  local output
+
+  output="$(
+    cd "${project_dir}"
+    # shellcheck disable=SC2034  # read by the sourced remove_local_files
+    DRY_RUN=true
+    FORCE=true
+    reset_counters
+    remove_local_files
+  )"
+
+  assert_file_exists "${project_dir}/scripts/lint-commit-range.sh" "dry-run must not remove the gate"
+  assert_contains "${output}" "scripts/lint-commit-range.sh" "dry-run must report the gate it would remove"
+}
 
 test_local_uninstall_removes_files() {
   local project_dir
@@ -682,6 +724,8 @@ main() {
 
   # Local uninstall tests
   run_test "local uninstall removes ADOS files" test_local_uninstall_removes_files
+  run_test "local uninstall removes the delivery gate" test_local_uninstall_removes_delivery_gate
+  run_test "local uninstall dry-run reports the delivery gate" test_local_uninstall_delivery_gate_dry_run
   run_test "local uninstall removes empty directories" test_local_uninstall_removes_empty_dirs
   run_test "local uninstall keeps non-empty directories" test_local_uninstall_keeps_nonempty_dirs
   run_test "local uninstall respects dry-run" test_local_uninstall_dry_run
