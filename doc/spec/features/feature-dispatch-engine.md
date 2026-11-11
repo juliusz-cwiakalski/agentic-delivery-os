@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
 links:
   related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0023"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -180,7 +180,7 @@ reference-page parity pins assert that count. The read side's rulings — the
 closed-taxonomy reuse, the empty-history success, the record-bounded projection
 cardinality, the unconditional evidence mode, the one exact divergence count, and
 the twice-enforced repository scope — are recorded in
-[TDR-0023](../../decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md).
+[TDR-0024](../../decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md).
 
 - **Envelope.** The `attempts.v1` `data` carries eight always-present keys —
   `repository`, `ref`, `refSource` (`"flag"` or `"active-change"`), `limit`,

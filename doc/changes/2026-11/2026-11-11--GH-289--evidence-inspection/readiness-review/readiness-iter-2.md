@@ -10,8 +10,8 @@ Appendices A-D), `chg-GH-289-test-plan.md` v1.2 (39 TCs, §3.1, §5.2, §7.1,
 §7.3 incl. the new cell-ownership paragraph, §7.4, §8.3), `chg-GH-289-plan.yaml`
 revision 2.0 (5 delivery phases; `plan validate GH-289` re-run → `verdict=valid`,
 `readyForDevelopment=true`, `tier=full`), `chg-GH-289-pm-notes.yaml`, and
-`doc/decisions/TDR-0023-...md` (now tracked, `status: Proposed`, `## Revision`
-present, index row unchanged). Working tree is clean; TDR-0023 and
+`doc/decisions/TDR-0024-...md` (now tracked, `status: Proposed`, `## Revision`
+present, index row unchanged). Working tree is clean; TDR-0024 and
 `doc/decisions/00-index.md` are committed on the branch.
 
 Source evidence re-derived or re-read for this review (not taken from the
@@ -54,7 +54,7 @@ it (W1).
 - plan_coverage: FAIL (W2: phase 2's declared gate battery is red on a file outside phase 2's scope; W1: phase 2's TC-034 cell map is factually wrong)
 - test_traceability: FAIL (W1: the spec's evidence cell for the guard does not exist in TC-034 or TC-039)
 - cross_artifact_consistency: FAIL (W1, W2)
-- decision_capture: PASS (DEC-1..DEC-16 in-spec; five graduated rulings in TDR-0023; D-5 rationale and C-5/C-7 corrected; OQ-1 deferred with its precondition)
+- decision_capture: PASS (DEC-1..DEC-16 in-spec; five graduated rulings in TDR-0024; D-5 rationale and C-5/C-7 corrected; OQ-1 deferred with its precondition)
 - system_spec_consistency: PASS (B3 discharged — no artifact claims an upward movement or an unchanged summary shape; §8.5/RSK-6/DEC-15/F-7/NFR-9/AC-F7-1/DM-3/DM-5 and TDR D-5 all state the same three real movements)
 - plan_doc_update_coverage: PASS (A8 discharged: 5.3 advances `last_updated` and appends `GH-289` on every edited feature page; 5.4 states the test-spec list policy; both frontmatter facts verified)
 - plan_code_area_coverage: PASS (B1 discharged: the contract-surface fixture is declared in phase 1 and phase 3; per-phase scope vs comment-declared paths re-checked for all five phases with no other miss)
@@ -217,11 +217,11 @@ so tuning stays a one-line change". Target: specification.
 
 N3. **[minor] cross_artifact_consistency — plan work 1.1 (lines 481-487)**
 Gap: "it is authored and currently untracked in the working tree … is committed
-here" is no longer true: `git ls-files` shows TDR-0023 and
+here" is no longer true: `git ls-files` shows TDR-0024 and
 `doc/decisions/00-index.md` tracked, both committed on the branch, and the working
 tree is clean. A phase-1 deliverable that is already landed invites a needless
 commit or an amend.
-Fix: restate 1.1 as "verify TDR-0023 is committed and indexed (both already on this
+Fix: restate 1.1 as "verify TDR-0024 is committed and indexed (both already on this
 branch) and cited by the later phases' artifacts; make no content change".
 Target: delivery_planning.
 
@@ -275,7 +275,7 @@ rather than two deviations. Target: delivery_planning.
   paragraph (lines 327-346), rollback paragraph (lines 435-444) and pinned
   contracts (lines 271-275); in test plan §1 (line 23), §7.4 P2 (line 1820), §8.2
   (line 1897), TR-9 (line 1881), TC-022 (lines 1059-1073) and TC-038 (lines 1632-1657);
-  and in TDR-0023 D-5 (line 322), the two-folds row (line 211), C-5/C-7 (lines 347-349),
+  and in TDR-0024 D-5 (line 322), the two-folds row (line 211), C-5/C-7 (lines 347-349),
   Trade-offs (lines 365-371) and the new `## Revision` section (lines 423-432).
   Numbers cross-check: 25 open for the reported repository + 5 open foreign + 3
   resolved → delivered store-wide 33/3/30, scoped 28/3/25, post-resolve 28/4/24,

@@ -25,7 +25,7 @@
 #       against the merge base: review-verified at the review gate, never counted as a
 #       boundary-green cell. No statement in this plan pins the delivered refusal on
 #       cell 6, on a review, or on a diff.
-#   N3  work 1.1 no longer claims TDR-0023 is untracked. The record and its
+#   N3  work 1.1 no longer claims TDR-0024 is untracked. The record and its
 #       doc/decisions/00-index.md row are committed on this branch, so phase 1 verifies
 #       presence and index and changes no content; the record stays `Proposed` with
 #       `decision_date: null` and is accepted at the PR review.
@@ -89,7 +89,7 @@
 #                §8.3 the closed findings X-1..X-9 and their reconciliation notes to
 #                `@doc-syncer`, §9 revision log, §10 execution log (which this change
 #                fills).
-#   - Decision:  doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+#   - Decision:  doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md
 #                (Proposed, D-5 rationale corrected) — D-1..D-7 and C-1..C-8, the
 #                eight-step implementation order, the verification criteria, and the
 #                residual risks this plan must own: the repository-scoped count
@@ -126,7 +126,7 @@
 #     composition that opens exactly one store. The surface is the only observable
 #     of phase 1 and the only place where repository isolation, read-only posture,
 #     refusals, determinism, and additive stability can be asserted end to end.
-#   3 the resolve result extension and the one exact divergence-count rule. TDR-0023
+#   3 the resolve result extension and the one exact divergence-count rule. TDR-0024
 #     D-5 and D-7 bind the resolve block and the summary block to one computation,
 #     so both surfaces move in the same commit as their owning criteria (AC-F5-5,
 #     TC-ATTEMPT-022/038): the summary's already-exact count becomes
@@ -284,7 +284,7 @@
 # PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
 #   - No new error identity. `ERROR_TABLE` stays at 124 identities with exactly four
 #     `dispatch` rows, no `attempts.*` string exists anywhere, and no token,
-#     projection class, or exit literal is added (AC-F4-4, DM-6, DEC-1, TDR-0023
+#     projection class, or exit literal is added (AC-F4-4, DM-6, DEC-1, TDR-0024
 #     C-1). Malformed request, unresolvable active reference and unresolvable
 #     identity are `input.value.rejected` under `kind: "input"` at exit 1; an
 #     unreadable store keeps its own `state.*` code under `kind: "state"` at exit 2.
@@ -299,7 +299,7 @@
 #     `null` exactly when the class is not-applicable; `resumeMode` is the recorded
 #     mode or `null`; `evidenceRefs` is at most sixteen identifiers; no `schema`,
 #     `handoverState`, or `prefillCostAcknowledged` key is projected (DEC-4, DEC-6,
-#     TDR-0023 C-3).
+#     TDR-0024 C-3).
 #   - Read bounds: ledger read 5,000 records; page 20 by default, 1 minimum, 100
 #     maximum; machine `data` 65,536 UTF-8 bytes; human digest 40 lines and 8,192
 #     bytes with at most 37 rows beside a truncation line; 16 evidence references
@@ -309,7 +309,7 @@
 #   - `unresolved` is the exact folded open count for the reported repository on
 #     BOTH the resolve result and `dispatch dual-run summary`; `unresolvedIds` is
 #     bounded to 20 with `idsTruncated` true exactly when identifiers were omitted;
-#     no surface derives a count from an identifier list's length (DEC-15, TDR-0023
+#     no surface derives a count from an identifier list's length (DEC-15, TDR-0024
 #     C-5, D-5). The eligibility predicate tests for zero and no verdict moves.
 #   - Repository scope is enforced twice: the project state root from GH-288 plus a
 #     logical filter on each record's own `repository`; excluded records are counted
@@ -317,7 +317,7 @@
 #     retained ledger window) and never named; identity resolves with persistence
 #     disabled, so the dispatch repository binding marker is never created, repaired,
 #     or re-persisted; an invocation outside a checkout refuses at exit 1 (DEC-8,
-#     TDR-0023 C-6).
+#     TDR-0024 C-6).
 #   - The READ performs exactly one verified store read: the repository port supplied
 #     by the composition passes NO scheduler key (`resolveProductionRepository(
 #     undefined, { persist: false })`), because `schedulerKeyForRef` would read the
@@ -350,7 +350,7 @@
 #     that declares it, because `tests/structure/port-contract-inventory.test.ts`
 #     compares both directions and a missing or unexpected name reds it.
 #
-# TDR-0023 RESIDUAL RISKS AS OWNED WORK (phase 3; do not let either drift):
+# TDR-0024 RESIDUAL RISKS AS OWNED WORK (phase 3; do not let either drift):
 #   - One shared exact count computation consumed by BOTH the resolve result and the
 #     summary, with no list-length derivation anywhere. The computation lives in
 #     `packages/core/src/domain/dispatch-gate.ts` (the module that already owns the
@@ -384,7 +384,7 @@
 #     `@doc-syncer` and for the M2 page and claim no upward movement.
 #   - Disclosure-only cross-repository resolution stays disclosed, not prevented:
 #     the resolve result names the divergence's own repository and scopes its counts
-#     to it (DEC-9, TDR-0023 D-7). No guard is added (NG-7, deferred with OQ-1).
+#     to it (DEC-9, TDR-0024 D-7). No guard is added (NG-7, deferred with OQ-1).
 #   - The projection is a fixed allowlist that must move with the record: the
 #     sixteen-field exact-set assertion is the intended friction (TC-ATTEMPT-006).
 #
@@ -479,7 +479,7 @@
 # `summarizeDispatchDivergences` helper (which derived a count from a list it capped,
 # so a caller would have under-reported 25 open divergences as 20). No
 # record was written, rewritten, re-attributed, or migrated by this change, so no data
-# rollback exists; the read side wrote no delivery evidence. TDR-0023 stays valid as a
+# rollback exists; the read side wrote no delivery evidence. TDR-0024 stays valid as a
 # record of the design even if the change is reverted; a reversal is recorded in the
 # record's history.
 schemaVersion: delivery.plan.v1
@@ -518,7 +518,7 @@ phases:
   # surface change yet — so phase 2 has nothing left to decide about what the data is.
   #
   # Work:
-  #  1.1 doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+  #  1.1 doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md
   #      is already committed and indexed on this branch, together with its row at the
   #      next free identifier in doc/decisions/00-index.md. D-1..D-7 and C-1..C-8 govern
   #      every later phase, and they must not arrive after the code they bind, so this
@@ -652,14 +652,14 @@ phases:
       performs exactly one verified ledger read, filters each record on its own
       repository while disclosing foreign records as a count over the retained window,
       treats an empty verified read as success, and maps an unreadable store to its own
-      `state.*` identity with no new error row; TDR-0023 is verified committed and
+      `state.*` identity with no new error row; TDR-0024 is verified committed and
       indexed on the branch so its rulings bind the code that follows without a
       re-commit, and the two new modules are registered in the inventory and the
       executable allowlist while every added contract name lands in
       both entries of the contract-surface fixture.
     scope:
       files:
-        - doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+        - doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md
         - doc/decisions/00-index.md
         - packages/core/src/contracts/dispatch.ts
         - packages/core/src/contracts/index.ts
@@ -682,10 +682,10 @@ phases:
         target: packages/core/src/app/dispatch-attempts.ts
         role: producer
       - kind: contract-file
-        target: doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+        target: doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-289 in progress; TDR-0023 presence and index verified, no content change; phase 1 evidence recorded in pm-notes notes"
+      trackerTransition: "GH-289 in progress; TDR-0024 presence and index verified, no content change; phase 1 evidence recorded in pm-notes notes"
     weightClass: standard
 
   # ---------------------------------------------------------------------------
@@ -946,7 +946,7 @@ phases:
   #      `resolved` and `reported` from the same fold, `unresolvedIds` the first at most
   #      20 of them, `idsTruncated` true exactly when identifiers were omitted — and make
   #      `foldEvidenceWindow` consume it instead of its inline store-wide uncapped fold.
-  #      This is the single home of the count (TDR-0023 D-5, C-5; TC-ATTEMPT-038 pins it).
+  #      This is the single home of the count (TDR-0024 D-5, C-5; TC-ATTEMPT-038 pins it).
   #  3.3 packages/core/src/app/dispatch-gate.ts: `resolveDispatchDivergenceEvidence`
   #      returns `mode: "local-evidence"` unconditionally (first resolution and replay),
   #      `repository` from the resolved record, and `divergences` computed by the same
@@ -1262,7 +1262,7 @@ phases:
   #      (the `attempts` subfamily note gains GH-289 / M2-S12), and
   #      `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` (the observed
   #      composition note: `attempts` mounted as a subfamily, the root listing unchanged).
-  #  5.6 TDR-0023 stays `Proposed` with `decision_date: null`: the owner accepts at the PR
+  #  5.6 TDR-0024 stays `Proposed` with `decision_date: null`: the owner accepts at the PR
   #      review. This phase verifies the record is present, indexed, and cited by the
   #      changed specs rather than restated; it does not author or accept it.
   #  5.7 The release artifact: exactly one added changeset,
@@ -1320,7 +1320,7 @@ phases:
   #
   # Phase-7 handoff obligations (see the header block; nothing is silently dropped): the
   # five system-spec pages, the quality test-spec page, the M2 page refinements, the four
-  # planning-corpus documents, TDR-0023 and the current-truth facts listed there are the
+  # planning-corpus documents, TDR-0024 and the current-truth facts listed there are the
   # `@doc-syncer` inputs for lifecycle phase 7 (`system_spec_update`), which re-verifies
   # them before DoD. The PR is opened at lifecycle phase 11 by `@pr-manager` and recorded
   # as a pm-notes `notes:` entry; it is not a deliverable of this phase.
@@ -1338,7 +1338,7 @@ phases:
       local-evidence mode, repository-scoped counts and the read bounds, the dispatch
       engine, result-contract, CLI-entrypoint, state-layer and projects specs state the
       delivered grammar, read side, resolve fields, error reuse and store-opening effects
-      with TDR-0023 cited rather than restated and every edited page's `last_updated` and
+      with TDR-0024 cited rather than restated and every edited page's `last_updated` and
       `links.related_changes` advanced, the quality test-spec and the planning
       corpus record the delivery, one added changeset declares the five fixed-group
       packages at `minor` while pre-existing changesets stay byte-identical, the P1..P4

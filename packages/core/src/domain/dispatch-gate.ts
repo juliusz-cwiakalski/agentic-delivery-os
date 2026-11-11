@@ -60,7 +60,7 @@ export const longestConsecutiveRun = (dates: readonly string[]): number => {
 };
 
 /**
- * The one exact divergence-count computation (GH-289 DEC-15, TDR-0023 C-5).
+ * The one exact divergence-count computation (GH-289 DEC-15, TDR-0024 C-5).
  *
  * Folds latest-per-identifier over the records of ONE repository, reports the
  * exact open count, and returns the first at most 20 open identifiers with

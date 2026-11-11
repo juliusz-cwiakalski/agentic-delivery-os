@@ -9,7 +9,7 @@ Reviewed: `chg-GH-289-spec.md` **v1.4** (36 ACs, DEC-1..DEC-16, §15.1, §16.1, 
 A-D), `chg-GH-289-test-plan.md` **v1.3** (39 TCs, §1.2, §3.1-§3.3, §5.1, §5.2, §7.1,
 §7.3 cell-ownership paragraph, §7.4, §8.3, §9 log, §10 notes), `chg-GH-289-plan.yaml`
 **revision 2.1** (5 delivery phases), `chg-GH-289-pm-notes.yaml`, prior iterations 1 and 2,
-`doc/decisions/TDR-0023-...md` (tracked, `Proposed`, `decision_date: null`, `## Revision`
+`doc/decisions/TDR-0024-...md` (tracked, `Proposed`, `decision_date: null`, `## Revision`
 present), and the delivered sources the W1 claim depends on.
 
 Source evidence re-derived for this iteration (not taken from the artifacts):
@@ -49,7 +49,7 @@ green, and is recorded below as accepted residual risk with an exact remedy.
 - plan_coverage: PASS (39/39 TCs and 36/36 ACs owned exactly once; 3+20+10+3+3 = 39 and 2+22+6+3+3 = 36 re-derived; cell split identical in plan, test plan and §7.3)
 - test_traceability: PASS (36 §3.1 rows, 39 §5.1 rows, 39 §5.2 definitions, 39 §7.1 rows, sets identical; cell 7 exists with a real target file, a real seam and a stated expectation)
 - cross_artifact_consistency: PASS (ticket → spec → test plan → plan align on the refusal cell, the `unresolvedIds` split, the constant reuse and the ownership arithmetic; residuals are R1-R3)
-- decision_capture: PASS (DEC-1..DEC-16 in-spec, five graduated rulings in TDR-0023 with its revision section, OQ-1 deferred with its precondition; no new decision surfaced by the revisions)
+- decision_capture: PASS (DEC-1..DEC-16 in-spec, five graduated rulings in TDR-0024 with its revision section, OQ-1 deferred with its precondition; no new decision surfaced by the revisions)
 - system_spec_consistency: PASS (B3's corrected statement survives in every artifact; the one contradiction I found is the envelope-wrapper description in R2, which no AC depends on and which the same artifacts forbid acting on)
 - plan_doc_update_coverage: PASS (A8 discharged; §16.1's rows each owned by phase 4 or 5; 5.3's frontmatter rule and 5.4's test-spec list policy are consistent with the pages as they stand)
 - plan_code_area_coverage: PASS (B1 discharged and unchanged; per-phase `scope.files` re-checked against every path the phase's work names, including the new `tests/behaviour/dispatch-additive-stability.test.ts` in phase 2)
@@ -282,7 +282,7 @@ R5. **[nit] cross_artifact_consistency — `chg-GH-289-pm-notes.yaml:5-8, :130-1
   contract fixture and the isolation suite; phase 4: 6; phase 5: 15). Read-only references
   (the parser, the three fixtures A1 exempts, the regression batteries) are correctly excluded
   and the plan says why (plan:735-760).
-- **TDR alignment.** TDR-0023's summary, D-5 and the two-folds row state the same three real
+- **TDR alignment.** TDR-0024's summary, D-5 and the two-folds row state the same three real
   movements as spec §8.5, and its `## Revision` records the B3 correction with status unchanged.
   Nothing in v1.4's refusal clause contradicts the record: the delivered forms' refusal is a
   preserved pre-existing behaviour, not a new ruling, and DEC-1's "no new row" is untouched.

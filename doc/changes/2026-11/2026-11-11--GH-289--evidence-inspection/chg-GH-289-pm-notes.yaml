@@ -85,8 +85,8 @@ notes:
       DEC-1..DEC-16."
     type: decision
     date: "2026-11-11"
-  - text: "TDR-0023 recorded for the seven precedent-setting rulings
-      (doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-res\
+  - text: "TDR-0024 recorded for the seven precedent-setting rulings
+      (doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-res\
       olve.md) with the index row in doc/decisions/00-index.md. The TDR stays
       Proposed pending PR review. Its residual risks must reach the plan: (i)
       making divergence counts exact and repository-scoped can move a reported
@@ -99,11 +99,11 @@ notes:
       prevented (OQ-1, deferred with its guard precondition named)."
     type: risk
     date: "2026-11-11"
-  - text: "Commit-scope note: TDR-0023 and the decision index sit outside the change
+  - text: "Commit-scope note: TDR-0024 and the decision index sit outside the change
       folder, and a phase completion without a plan stages only the change
       folder, so those two files stay untracked until the plan declares them in
       a delivery-phase scope. The plan must declare
-      doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-reso\
+      doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-reso\
       lve.md and doc/decisions/00-index.md explicitly."
     type: info
     date: "2026-11-11"
@@ -215,7 +215,7 @@ notes:
       CommandResult."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 1 complete (commit 415395f8). TDR-0023 presence and its
+  - text: "Plan phase 1 complete (commit 415395f8). TDR-0024 presence and its
       doc/decisions/00-index.md row verified on the branch with no content
       change (still Proposed, decision_date null). attempts.v1 contracts
       declared beside the delivered dispatch constants: DispatchAttemptView
@@ -326,7 +326,7 @@ notes:
       sentence and no row change; cli-entrypoint subform; state-layer
       store-opening consumer; projects read-only sentence) with last_updated
       advanced and GH-289 appended to related_changes on every edited page and
-      TDR-0023 cited; the quality test-spec gains the new coverage rows and
+      TDR-0024 cited; the quality test-spec gains the new coverage rows and
       GH-289; backlog/status/registry/entrypoint-delta record the delivery; the
       taxonomy scan gained the two doc/spec targets; the changeset added in
       phase 2 is verified as the single added five-package minor; test-plan
@@ -459,5 +459,17 @@ notes:
       merge=refs/heads/main-tools, so a bare git push would have written HEAD
       onto main-tools; the push used an explicit refspec and -u repaired the
       upstream to origin/feat/GH-289/evidence-inspection."
+    type: info
+    date: "2026-11-11"
+  - text: "Decision-record renumber: the record drafted on this branch as
+      TDR-0023 (dispatch attempt read side and local-evidence resolve) is
+      renumbered TDR-0024, because GH-286's daemon-lifecycle record merged to
+      main-tools as TDR-0023 first (3c9f8a59) and decision identifiers are never
+      reused, so the unmerged GH-289 record takes the next free number. The
+      file, its id, its H1, the decision index row, the dispatch and entrypoint
+      feature specs, the glossary, the architecture overview, three source
+      comments, and every reference in this change folder cite TDR-0024; no
+      ruling, constraint, alternative, evidence, or status changed, and the
+      GH-286 record and its artifacts are untouched."
     type: info
     date: "2026-11-11"
