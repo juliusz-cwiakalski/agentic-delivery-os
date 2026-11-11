@@ -1211,10 +1211,11 @@ the project family separately.
   [--limit <n>]` read side with its `attempts.v1` envelope (sixteen-field
   projection, total order, ledger/page/human bounds, repository-scoped
   isolation with count-only foreign disclosure, empty history as success), the
-  local-evidence resolve result (unconditional `mode`, subject repository,
-  exact repository-scoped divergence counts), the bounded digest with its
-  coverage/floor pointer, and the summary's divergence block on the same count
-  rule.
+  local-evidence resolve result with `mode`, `repository`, and the divergence
+  block, the single shared exact repository-scoped divergence count with
+  `idsTruncated` behind the resolve and summary blocks, the bounded digest with
+  its coverage/floor pointer, and the fifth `dispatch attempts` help entry with
+  the M2 reference page registered.
 - Goal: The dual-run evidence ledger is inspectable and actionable from the
   CLI, so handover decisions and retros rest on readable evidence, not file
   spelunking.

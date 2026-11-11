@@ -38,13 +38,14 @@ Membership comes from configuration, not from a directory scan.
 A repository is close to handover; the owner wants evidence, not a claim.
 
 1. `<binary> dispatch attempts --ref` lists the recent attempts with their
-   tokens, corroboration triples, divergence refs, timestamps, and harness.
+   tokens, corroboration triples, divergence reference, timestamps, and harness.
 2. One attempt diverges: the artefact and the tracker disagree. The owner
-   runs `<binary> dispatch dual-run resolve <divergence-id> --note "..."`. Tracker truth is
-   reachable, so the resolution runs live and the unresolved count drops.
-3. A second divergence is on a day when tracker truth is unreachable. The
-   same command resolves from local evidence and declares `local-evidence`
-   mode, so the owner can see which truth the decision rests on.
+   runs `<binary> dispatch dual-run resolve <divergence-id> --note "..."`. The
+   resolution runs from local evidence and reports the unresolved counts it
+   leaves behind.
+3. Another divergence is recorded. The same command resolves it from local
+   evidence and declares `local-evidence` mode together with the divergence's
+   own repository, so the owner can see which truth the decision rests on.
 4. The handover gate still decides: inspection gives evidence, not a waiver.
 
 ## A retro grounded in telemetry
