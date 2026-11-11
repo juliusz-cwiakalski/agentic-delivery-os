@@ -55,6 +55,10 @@ const makeWorkspace = (): Workspace => {
   for (const directory of [home, xdg, cwd, stateDirectory]) {
     mkdirSync(directory, { recursive: true });
   }
+  // The workspace is its own checkout, so the serve composition resolves this
+  // temporary project and never this repository's own git common directory.
+  mkdirSync(join(cwd, ".git"), { recursive: true });
+  writeFileSync(join(cwd, ".git", "HEAD"), "ref: refs/heads/main\n");
   writeFileSync(configPath, "{}\n");
   return { root, home, xdg, cwd, configPath, stateDirectory };
 };

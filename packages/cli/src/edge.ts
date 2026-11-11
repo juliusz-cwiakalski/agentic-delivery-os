@@ -16,6 +16,7 @@ import {
   createCapsuleFileRuntime,
   createCommitlintProbe,
   createSecretScanner,
+  ensureProjectIdentityMarkerText,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
@@ -29,6 +30,7 @@ import {
   readMemoryFacts,
   readPlanArtifact,
   readPmNotesText,
+  readProjectIdentityMarker,
   runtimePlatform,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
@@ -63,6 +65,7 @@ import {
   parseGitHubRemote,
   type RepositoryIo,
   type RepositoryRootFacts,
+  readCheckoutIdentity,
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
@@ -152,6 +155,7 @@ import {
   resolveDispatchDivergenceEvidence,
   resolveHostStateRoot,
   resolveMergeGateSet,
+  resolveProjectScope,
   resolveQueueSettings,
   resolveQueueWeight,
   revertDispatchHandoverEvidence,
@@ -162,6 +166,7 @@ import {
   serializeCapsuleEvent,
   sha256Hex,
   spendDigestSection,
+  stateScopeRoots,
   summarizeDispatchEvidence,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -1388,8 +1393,14 @@ export type EdgeOptions = {
   readonly secretKeys?: readonly string[];
   /** Injected stream capability fact; omitted means non-interactive. */
   readonly isTTY?: boolean;
-  /** Injected state directory; defaults to `<home>/<stateDirectoryName>`. */
+  /** Injected state directory (an explicit project root); wins over the policy. */
   readonly stateDirectory?: string;
+  /**
+   * The invoking working directory. When supplied, the audit store opens at the
+   * policy-derived PROJECT root for that checkout (GH-288 AC-F6-1/AC-F6-2), so
+   * the audit ledger lives beside the delivery store it describes.
+   */
+  readonly cwd?: string;
   /** Injected home directory; defaults to the environment record's HOME. */
   readonly homeDirectory?: string;
   /** Injected workspace identity for the audit store. */
@@ -1401,13 +1412,29 @@ export type EdgeOptions = {
 const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
   if (options.stateDirectory !== undefined) return options.stateDirectory;
   const environment = options.environment ?? {};
-  const scope = resolveHostStateRoot({
+  const home = options.homeDirectory === undefined ? {} : { homeDirectory: options.homeDirectory };
+  if (options.cwd !== undefined) {
+    const scope = resolveProjectScope({
+      environment,
+      environmentPrefix: options.brand.environmentPrefix,
+      stateDirectoryName: options.brand.stateDirectoryName,
+      ...home,
+      checkout: readCheckoutIdentity({ cwd: options.cwd, io: nodeRepositoryIo() }),
+      ports: {
+        readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+        writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+        newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+      },
+    });
+    return scope.ok ? stateScopeRoots(scope.value).projectRoot : undefined;
+  }
+  const host = resolveHostStateRoot({
     environment,
     environmentPrefix: options.brand.environmentPrefix,
     stateDirectoryName: options.brand.stateDirectoryName,
-    ...(options.homeDirectory === undefined ? {} : { homeDirectory: options.homeDirectory }),
+    ...home,
   });
-  return scope.ok ? scope.value : undefined;
+  return host.ok ? host.value : undefined;
 };
 
 /**

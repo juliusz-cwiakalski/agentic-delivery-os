@@ -12,8 +12,10 @@
  * process entry the portability smoke resolves from the manifest.
  */
 import { createInterface } from "node:readline";
+import { pathToFileURL } from "node:url";
 import {
   acquireFileConfig,
+  ensureProjectIdentityMarkerText,
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
@@ -21,16 +23,23 @@ import {
   readLocalPmContext,
   readOwnerHoldMarker,
   readPmNotesText,
+  readProjectIdentityMarker,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
 import {
   nodeRepositoryIo,
   parseGitHubRemote,
+  readCheckoutIdentity,
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
+import {
+  resolveOwnerHoldFact,
+  resolveProjectScope,
+  type StateScopeRoots,
+  stateScopeRoots,
+} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
-import { resolveOwnerHoldFact } from "@delivery-os/core";
-import type { BrandIdentity, OwnerHoldFact } from "@delivery-os/core/contracts";
+import type { BrandIdentity, OwnerHoldFact, StateStorePort } from "@delivery-os/core/contracts";
 import { STATE_SCHEMA_VERSION } from "@delivery-os/core/contracts";
 import { readProviderParkViews } from "@delivery-os/core/provider";
 import {
@@ -41,7 +50,7 @@ import {
 } from "@delivery-os/core/state";
 import type { GateReportRegistryRead, GateReportToolRuntime } from "./commands/gate-report.js";
 import type { StatusToolRuntime } from "./commands/status.js";
-import { createToolset } from "./commands/toolset.js";
+import { createToolset, type Toolset } from "./commands/toolset.js";
 import type { VerifyArtifactToolRuntime, VerifyPmNotesRead } from "./commands/verify-artifact.js";
 import { type LifecycleDiagnostics, type LifecycleOutcome, runLifecycle } from "./lifecycle.js";
 import { runProtocol } from "./output/protocol.js";
@@ -56,8 +65,6 @@ const diagnostics: LifecycleDiagnostics = {
     process.stderr.write(line);
   },
 };
-
-const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
 
 const configurationOutcome = (detail: string): LifecycleOutcome => ({
   kind: "configuration",
@@ -81,14 +88,6 @@ const resolveBrand = (
     ? { ok: true, brand: branded.value }
     : { ok: false, outcome: configurationOutcome(`${branded.error.field}:${branded.error.code}`) };
 };
-
-const stateIdentity = (brand: BrandIdentity, homeDirectory: string) => ({
-  level: "local" as const,
-  workspaceId: "default",
-  fenceNamespace: "mcp",
-  schemaVersion: STATE_SCHEMA_VERSION,
-  stateDirectory: `${trimTrailingSeparators(homeDirectory)}/${brand.stateDirectoryName}`,
-});
 
 const buildStatusRuntime = (
   cwd: string,
@@ -223,6 +222,94 @@ const buildGateRuntime = (
   }),
 });
 
+/** The injected facts the serve state composition resolves from. */
+export type ServeStateFacts = {
+  readonly brand: BrandIdentity;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly cwd: string;
+  readonly homeDirectory: string;
+};
+
+/** The composed state seam: the store at the project root, the hold at the host root. */
+export type ServeState =
+  | {
+      readonly ok: true;
+      readonly store: StateStorePort;
+      readonly roots: StateScopeRoots;
+      readonly readOwnerHold: () => OwnerHoldFact;
+    }
+  | { readonly ok: false; readonly code: string };
+
+/**
+ * Compose the MCP store and its owner-hold read over the one policy (GH-288 F-6).
+ *
+ * This is the seam the parity suite drives in process: the same checkout, the
+ * same environment, and the same policy call the CLI composition makes, so the
+ * two surfaces cannot disagree about where a repository's state lives.
+ */
+export const composeServeState = (facts: ServeStateFacts): ServeState => {
+  const scope = resolveProjectScope({
+    environment: facts.environment,
+    environmentPrefix: facts.brand.environmentPrefix,
+    stateDirectoryName: facts.brand.stateDirectoryName,
+    homeDirectory: facts.homeDirectory,
+    checkout: readCheckoutIdentity({ cwd: facts.cwd, io: nodeRepositoryIo() }),
+    ports: {
+      readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+      writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+      newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+    },
+  });
+  if (!scope.ok) return { ok: false, code: scope.error.code };
+  const roots = stateScopeRoots(scope.value);
+  const store = createStateStore(
+    {
+      level: "local",
+      workspaceId: "default",
+      fenceNamespace: "mcp",
+      schemaVersion: STATE_SCHEMA_VERSION,
+      stateDirectory: roots.projectRoot,
+    },
+    { driver: "jsonl", edge: createNodeStateEdge() },
+  );
+  const readOwnerHold = (): OwnerHoldFact => {
+    const marker = readOwnerHoldMarker(
+      { storeDirectory: roots.hostRoot },
+      nodeOwnerHoldMarkerFileSystem(),
+    );
+    return resolveOwnerHoldFact({
+      environment: facts.environment,
+      environmentPrefix: facts.brand.environmentPrefix,
+      storeDirectory: roots.hostRoot,
+      marker,
+    });
+  };
+  return { ok: true, store, roots, readOwnerHold };
+};
+
+/** The composed serve surface: the state seam plus the callable toolset. */
+export type ServeSurface =
+  | { readonly ok: true; readonly toolset: Toolset; readonly state: ServeState & { ok: true } }
+  | { readonly ok: false; readonly code: string };
+
+/**
+ * Compose the MCP toolset over the same policy-resolved state (GH-288 F-6).
+ *
+ * The parity suite drives this in process, so the MCP surface's store root and
+ * its status payload are compared with the CLI's for the same checkout.
+ */
+export const composeServeSurface = (facts: ServeStateFacts): ServeSurface => {
+  const state = composeServeState(facts);
+  if (!state.ok) return { ok: false, code: state.code };
+  const toolset = createToolset({
+    brand: facts.brand,
+    status: buildStatusRuntime(facts.cwd, state.store, state.readOwnerHold),
+    verify: buildVerifyRuntime(state.store, facts.cwd),
+    gates: buildGateRuntime(state.store, facts.cwd),
+  });
+  return { ok: true, toolset, state };
+};
+
 const run = async (): Promise<void> => {
   const environment: Readonly<Record<string, string | undefined>> = { ...process.env };
   const cwd = process.cwd();
@@ -255,29 +342,12 @@ const run = async (): Promise<void> => {
     runLifecycle(configurationOutcome(acquired.error.code), diagnostics);
   }
 
-  const store = createStateStore(stateIdentity(brand, homeDirectory), {
-    driver: "jsonl",
-    edge: createNodeStateEdge(),
-  });
-  const stateDirectory = stateIdentity(brand, homeDirectory).stateDirectory;
-  const readOwnerHold = (): OwnerHoldFact => {
-    const marker = readOwnerHoldMarker(
-      { storeDirectory: stateDirectory },
-      nodeOwnerHoldMarkerFileSystem(),
-    );
-    return resolveOwnerHoldFact({
-      environment,
-      environmentPrefix: brand.environmentPrefix,
-      storeDirectory: stateDirectory,
-      marker,
-    });
-  };
-  const toolset = createToolset({
-    brand,
-    status: buildStatusRuntime(cwd, store, readOwnerHold),
-    verify: buildVerifyRuntime(store, cwd),
-    gates: buildGateRuntime(store, cwd),
-  });
+  const surface = (() => {
+    const composed = composeServeSurface({ brand, environment, cwd, homeDirectory });
+    if (composed.ok) return composed;
+    return runLifecycle(configurationOutcome(composed.code), diagnostics);
+  })();
+  const { toolset } = surface;
 
   const lines = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
   try {
@@ -296,5 +366,20 @@ const run = async (): Promise<void> => {
   }
 };
 
-/** The declared process entry: starts the protocol loop at module load. */
-export const serve: Promise<void> = run();
+/**
+ * Whether this module is the process entry. Importing the composition seam for
+ * in-process parity must never start the stdio loop, so the declared `serve`
+ * promise resolves without side effects when the module is merely imported.
+ */
+const isProcessEntry = (): boolean => {
+  const entry = process.argv[1];
+  if (entry === undefined) return false;
+  try {
+    return import.meta.url === pathToFileURL(entry).href;
+  } catch {
+    return false;
+  }
+};
+
+/** The declared process entry: starts the protocol loop when executed directly. */
+export const serve: Promise<void> = isProcessEntry() ? run() : Promise.resolve();

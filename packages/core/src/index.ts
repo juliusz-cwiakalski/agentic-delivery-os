@@ -244,8 +244,10 @@ export {
   projectsContainerPath,
   resolveHostStateRoot,
   resolveProjectScope,
+  type StateScopeRoots,
   sanitizeProjectBasename,
   serializeProjectIdentityMarker,
+  stateScopeRoots,
   unboundStateRoot,
 } from "./app/state-scope.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";

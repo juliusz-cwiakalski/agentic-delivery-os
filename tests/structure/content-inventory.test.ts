@@ -190,7 +190,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderCoordinatorStopHuman",
     "renderCoordinatorTick",
   ],
-  "cli/src/daemon-compose.ts": ["createBlockerAnswerConsumer", "createDaemonCommandRuntime"],
+  "cli/src/daemon-compose.ts": [
+    "createBlockerAnswerConsumer",
+    "createDaemonCommandRuntime",
+    "resolveProjectDaemonSettings",
+  ],
   "cli/src/daemon-main.ts": ["createDaemonMainEntry"],
   "core/src/app/daemon-runtime.ts": [
     "createDaemonRuntime",
@@ -2141,6 +2145,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveProjectScope",
     "sanitizeProjectBasename",
     "serializeProjectIdentityMarker",
+    "stateScopeRoots",
     "unboundStateRoot",
   ],
   "adapters/src/file/project-identity.ts": [
@@ -2272,7 +2277,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "mcp/src/output/payload.ts": ["failureFromValue", "inputRejection"],
   "mcp/src/output/protocol.ts": ["runProtocol"],
   "mcp/src/lifecycle.ts": ["exitCodeFor", "runLifecycle"],
-  "mcp/src/serve.ts": ["serve"],
+  "mcp/src/serve.ts": ["composeServeState", "composeServeSurface", "serve"],
   "adapters/src/github/client.ts": ["createGitHubClient"],
   "adapters/src/github/index.ts": ["createGitHubClient", "GITHUB_ADAPTER_CONTRACT"],
   "adapters/src/github/normalize.ts": [

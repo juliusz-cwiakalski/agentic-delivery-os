@@ -99,7 +99,6 @@ import {
   releaseQueueLease,
   resolveConfig,
   resolveCoordinatorSettings,
-  resolveDaemonSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
@@ -108,6 +107,7 @@ import {
   selectDaemonReachability,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
@@ -155,6 +155,7 @@ import {
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import type { ProjectsRuntimeRead } from "./commands/projects.js";
+import { resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
   type CoordinatorComposition,
@@ -419,8 +420,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
     });
     if (!scope.ok) return scopeRefusalProgram(scope.error);
-    const hostRoot = scope.value.scope.hostRoot;
-    const stateDirectory = scope.value.scope.stateLocation;
+    const roots = stateScopeRoots(scope.value);
+    const hostRoot = roots.hostRoot;
+    const stateDirectory = roots.projectRoot;
     const changesDirectory = `${cwd}/doc/changes`;
     // One per-pass owner-hold resolution over the injected environment and the
     // host root (GH-280 F-1, D12; GH-288 F-7 keeps the hold host-wide). Never
@@ -1778,7 +1780,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           }),
         };
       }
-      const settings = resolveDaemonSettings({}, {}, { stateDirectory: stateLocation });
+      const settings = resolveProjectDaemonSettings(stateLocation);
       if (!settings.ok) {
         return {
           ok: false,

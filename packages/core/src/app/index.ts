@@ -239,8 +239,10 @@ export {
   projectsContainerPath,
   resolveHostStateRoot,
   resolveProjectScope,
+  type StateScopeRoots,
   sanitizeProjectBasename,
   serializeProjectIdentityMarker,
+  stateScopeRoots,
   unboundStateRoot,
 } from "./state-scope.js";
 export {

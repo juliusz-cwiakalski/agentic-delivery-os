@@ -209,6 +209,25 @@ const markerNaming = (text: string): string => {
   return ` (${[key, identifier].filter((part) => part.length > 0).join(", ")})`;
 };
 
+/**
+ * The two declared outputs every consumer selects from (GH-288 F-6, AC-F6-1):
+ * the host root for host-wide controls (the owner-hold read) and the project
+ * root for everything a repository owns (the store, the socket, the audit
+ * ledger, the dispatch state, the retro sidecar). An `unbound` scope has no
+ * project, so `projectRoot` is its declared host-scoped root; a consumer that
+ * needs a project must read `scope.kind` first.
+ */
+export type StateScopeRoots = {
+  readonly hostRoot: string;
+  readonly projectRoot: string;
+};
+
+/** Select the host root and the project root from one resolved scope. */
+export const stateScopeRoots = (outcome: ProjectScopeOutcome): StateScopeRoots => ({
+  hostRoot: outcome.scope.hostRoot,
+  projectRoot: outcome.scope.stateLocation,
+});
+
 /** The closed-outcome checkout facts supplied by the adapter seam (DEC-17). */
 export type CheckoutIdentityFacts =
   | { readonly kind: "unbound" }

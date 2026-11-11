@@ -27,6 +27,7 @@ fi
 
 _test_setup() {
   _test_tmpdir="$(mktemp -d)"
+  _make_checkout >/dev/null
 }
 _test_teardown() {
   [[ -n "${_test_tmpdir}" && -d "${_test_tmpdir}" ]] && rm -rf "${_test_tmpdir}"
@@ -52,6 +53,7 @@ run_test() {
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd -P)"
 readonly ROOT_DIR
 readonly REPOSITORY="github.com/owner/repo"
+readonly PROJECT_KEY="fixture-repo-0123abcd"
 _fake_bin_dir() { printf '%s/bin\n' "${_test_tmpdir}"; }
 _marker_path() { printf '%s/typed-cli-invoked\n' "${_test_tmpdir}"; }
 
@@ -65,13 +67,31 @@ FAKE
   chmod +x "$(_fake_bin_dir)/delivery-os"
 }
 
+# One hermetic checkout: the scripts are copied so their ROOT_DIR is the temp
+# checkout, and its git common directory carries the identity marker the
+# resolver reads. Nothing touches this repository's own checkout.
+_make_checkout() {
+  local -r checkout="${_test_tmpdir}/checkout"
+  [[ -d "${checkout}/scripts" ]] && {
+    printf '%s\n' "${checkout}"
+    return 0
+  }
+  mkdir -p "${checkout}/.git"
+  cp -R "${ROOT_DIR}/scripts" "${checkout}/scripts"
+  printf '{"schema":"delivery.projects.identity.v1","projectKey":"%s","projectIdentifier":"0123abcd000000000000000000000000","basename":"fixture-repo"}\n' \
+    "${PROJECT_KEY}" >"${checkout}/.git/project-identity.json"
+  printf '%s\n' "${checkout}"
+}
+
+# The per-repository state root the derived document lives under.
 _seed_authority() {
-  local -r state_root="$1"
+  local -r host_root="$1"
   local -r fixture="$2"
-  mkdir -p "${state_root}/documents.workspace-a"
+  local -r project_root="${host_root}/projects/${PROJECT_KEY}"
+  mkdir -p "${project_root}/documents.workspace-a"
   if [[ "${fixture}" != "absent" ]]; then
     cp "${ROOT_DIR}/tests/fixtures/dispatch/bash/${fixture}.json" \
-      "${state_root}/documents.workspace-a/dispatch-authority.json"
+      "${project_root}/documents.workspace-a/dispatch-authority.json"
   fi
 }
 
@@ -80,6 +100,7 @@ _run_cell() {
   local -r script="$1"
   local -r state_root="$2"
   local -r path_prefix="${3:-}"
+  local -r checkout="${_test_tmpdir}/checkout"
   local stdout_file="${_test_tmpdir}/stdout"
   local stderr_file="${_test_tmpdir}/stderr"
   local exit_code=0
@@ -88,7 +109,7 @@ _run_cell() {
       PATH="${path_prefix}:$(_fake_bin_dir):/usr/bin:/bin"
     fi
     ADOS_DISPATCH_STATE_ROOT="${state_root}" DISPATCH_REPOSITORY="${REPOSITORY}" \
-      bash "${ROOT_DIR}/${script}" --help >"${stdout_file}" 2>"${stderr_file}"
+      bash "${checkout}/${script}" --help >"${stdout_file}" 2>"${stderr_file}"
   ) || exit_code=$?
   local pointer=0
   if grep -q 'engine-authoritative' "${stderr_file}" 2>/dev/null; then
@@ -167,6 +188,39 @@ test_typed_cli_absent_never_changes_the_decision() {
   }
 }
 
+# The pre-migration layout is not authoritative: the resolver reads the project
+# root, never the host root directly, so a legacy host document is dual-run.
+test_legacy_host_document_is_not_authoritative() {
+  local -r host_root="${_test_tmpdir}/host-legacy"
+  mkdir -p "${host_root}/documents.workspace-a"
+  cp "${ROOT_DIR}/tests/fixtures/dispatch/bash/authoritative.json" \
+    "${host_root}/documents.workspace-a/dispatch-authority.json"
+  for script in scripts/deliver-ticket.sh scripts/batch-deliver.sh scripts/pm-liveness.sh scripts/ceo-loop.sh; do
+    local cell
+    cell="$(_run_cell "${script}" "${host_root}")"
+    [[ "${cell%%|*}" == "0" ]] || return 1
+    [[ "${cell##*|}" == "0" ]] || {
+      printf 'script %s read a host-root document as authoritative\n' "${script}" >&2
+      return 1
+    }
+  done
+}
+
+# The environment override keeps precedence over the home default.
+test_override_outranks_the_home_default() {
+  local -r host_root="${_test_tmpdir}/host-override"
+  local -r home_root="${_test_tmpdir}/home-authoritative"
+  _seed_authority "${host_root}" "dual-run"
+  _seed_authority "${home_root}" "authoritative"
+  local cell=""
+  cell="$(HOME="${home_root}" _run_cell scripts/deliver-ticket.sh "${host_root}")"
+  [[ "${cell%%|*}" == "0" ]] || return 1
+  [[ "${cell##*|}" == "0" ]] || {
+    printf 'the home default outranked the environment override\n' >&2
+    return 1
+  }
+}
+
 test_matrix_is_deterministic_on_rerun() {
   local -r state_root="${_test_tmpdir}/state-rerun"
   _seed_authority "${state_root}" "authoritative"
@@ -180,6 +234,8 @@ run_test "TC-BASH-001 dual-run entry points are unchanged (no pointer, exit 0)" 
 run_test "TC-BASH-003 absent or malformed authority view means dual-run" test_absent_or_malformed_means_dual_run
 run_test "TC-BASH-002 authoritative entry points print the deprecation pointer" test_authoritative_prints_pointer_and_still_runs
 run_test "TC-BASH-004 typed CLI absent/broken never changes the decision" test_typed_cli_absent_never_changes_the_decision
+run_test "TC-BASH-006 the resolver reads the project root, never the host root" test_legacy_host_document_is_not_authoritative
+run_test "TC-BASH-007 the environment override keeps precedence over the home default" test_override_outranks_the_home_default
 run_test "TC-BASH-004 the matrix is deterministic across a rerun" test_matrix_is_deterministic_on_rerun
 
 printf '\n%s: %d tests, %d passed, %d failed\n' "${TEST_TAG}" "${_test_count}" "${_test_passed}" "${_test_failed}"
