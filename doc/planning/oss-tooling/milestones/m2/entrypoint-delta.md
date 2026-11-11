@@ -33,16 +33,16 @@ exit 0
 
 ## M2-planned additions
 
-- `repos` becomes a root family: the flat enumeration of managed checkouts,
-  owned by the amended M2-S11.
+- `repos` becomes a root family: the flat record set of managed checkouts,
+  owned by M2-S18.
 - `projects` becomes a root family: the group surface with members, their
   health, and their state, owned by M2-S18.
-- **Mounted by GH-288 (M2-S11):** the flat enumeration shipped as
-  `projects list` — in the prompt-required set, composed by the production
+- **Mounted by GH-288 (M2-S11):** the shipped `projects list` is the delivered
+  flat surface — in the prompt-required set, composed by the production
   entrypoint, advertised in root `--help`, and served by the M2 command page
-  as its reference page. This change renames that shipped surface to
-  `repos list`; the rename is planned, and the remaining additions below stay
-  planned.
+  as its reference page. The rename of that shipped surface to `repos list`,
+  with the `projects list --flat` alias, is pending M2-S18 code work; the
+  remaining additions below stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
   read side.
 - `events` joins the subscribe surface as the taxonomy reference; the daemon
@@ -80,10 +80,10 @@ change plus a help reference page per command; only then does the family
 appear in root `--help`. GH-288 mounted the flat enumeration that way under its
 shipped name `projects`: prompt-set entry, edge composition, help entries, the
 M2 reference page, the coverage-inventory row and the per-command page root.
-This change's `repos` rename carries that reference page to
-[commands/repos.md](commands/repos.md). The remaining M2 additions (`events`,
-`board`, `dispatch attempts`, `spend` v2) stay planned until their own stories
-mount them.
+Carrying that reference page to [commands/repos.md](commands/repos.md) is
+pending M2-S18 code work, not an effect of this change. The remaining M2
+additions (`events`, `board`, `dispatch attempts`, `spend` v2) stay planned
+until their own stories mount them.
 
 ## Where this note is read
 

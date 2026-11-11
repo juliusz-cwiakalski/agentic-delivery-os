@@ -1,6 +1,6 @@
 # M2 test scenarios: the seed each story's test plan inherits (planned)
 
-Planned scenario seeds for stories M2-S2 through M2-S17, at least two per
+Planned scenario seeds for stories M2-S2 through M2-S19, at least two per
 story. Each scenario names an invocation and an observable result so the
 owning story's test plan starts from a concrete draft instead of a blank page.
 Scope and acceptance stay in [../../backlog.md](../../backlog.md); the
@@ -179,16 +179,16 @@ ref, when each records phase state and a queue entry, then the phase state and
 queue entries are disjoint, and neither checkout observes the other's
 documents.
 
-Assert: the two checkouts' phase-state and queue files are disjoint and neither `repos list` row references the other ref.
+Assert: the two checkouts' phase-state and queue files are disjoint, and the flat record set from `repos list` has one row per checkout with no cross-reference.
 
-### SC-M2-S11-02 `repos list` enumerates both checkouts without manual configuration
+### SC-M2-S11-02 `repos list` takes the flat enumeration after the S18 rename
 
-Given two managed checkouts with no hand-written registry, when
-`<binary> repos list --json` runs, then the machine envelope returns both
-checkouts with repo key, root, state location, daemon reachability, and
-handover state.
+Given the delivered flat surface still answers as `projects list` today, when
+M2-S18 lands the rename, then `repos list --json` returns `repos.v1` with
+`data.repos[]`, `projects list --flat --json` keeps returning the delivered
+`projects.v1` payload, and `projects list --json` returns `project-groups.v1`.
 
-Assert: `repos list --json.data.repos[]` carries both checkouts with `repoKey`, `root`, `stateLocation`, `daemonReachable`, and `handoverState`.
+Assert: `repos list --json.data.repos[]` is the flat record set and `projects list --flat --json.data.projects[]` keeps `projectKey` and `hostIndexRevision` after the S18 rename.
 
 ## M2-S12 Evidence inspection and divergence resolution
 
@@ -355,44 +355,83 @@ Assert: `status` and `brief` each show `parkedCount`, `reason`, and `until`, and
 
 ## M2-S18 Project groups
 
-The shipped `projects list` surface is the flat enumeration this change
-renames to `repos list`; the seeds below read it as the future `projects`
-group view.
+The shipped `projects list` surface is the delivered flat record set; the
+rename rule records the split, and the seeds below read the future group
+surface as `project-groups.v1`.
 
-### SC-M2-S18-01 Project members are discoverable through a registered workspace directory
+### SC-M2-S18-01 Members are discoverable through a registered workspace directory
 
-Given a project whose configuration names two member repositories cloned
-inside one directory, when that directory is registered as the workspace
-discovery root and `<binary> projects list --json` runs, then both members
-appear under the project with their health and state.
+Given a group whose configuration names two member repositories cloned inside
+one directory, when that directory is registered as the `workspaceRoot` and
+`<binary> projects list --json` runs, then both declared members appear under
+the group.
 
-Assert: `projects list --json.data.projects[].members[]` holds both declared member repo keys.
+Assert: `project-groups.v1` returns `data.groups[]` whose single group carries both declared member `repoKey` values.
 
-### SC-M2-S18-02 The same project without a workspace root reads identically
+### SC-M2-S18-02 The same group without a workspace root reads identically
 
-Given the same two-member project configured with no workspace root, with its
+Given the same two-member group configured with no `workspaceRoot`, with its
 member checkouts in unrelated directories, when
-`<binary> projects list --project <key> --json` runs, then the envelope
-carries the same members, health, and state as the registered-workspace case.
+`<binary> projects list --project <groupKey> --json` runs, then the same
+members, health, and state appear, and only `workspaceRoot` is absent.
 
-Assert: the two envelopes differ in no member field, and only `workspaceRoot` is absent.
+Assert: `data.groups[]` carries the same members and health as the registered case, with `workspaceRoot` absent and `groupKey` unchanged.
 
-### SC-M2-S18-03 Project-scoped queue and status reads accept a mixed tracker-kind configuration
+### SC-M2-S18-03 Group listing carries member health and daemon reachability
+
+Given a group whose member checkouts differ in daemon reachability, when
+`<binary> projects list --json` runs, then each member row carries its health
+and its daemon reachability with a closed reason when unreachable.
+
+Assert: every `data.groups[].members[]` entry carries `health` and `members[].daemonReachable` with a closed reason when false.
+
+### SC-M2-S18-04 Group-scoped queue and status reads accept the group key
+
+Given a configured group with running, waiting, and parked work, when
+`<binary> queue list --project <groupKey>` and
+`<binary> status --project <groupKey>` run, then both reads return only that
+group's work.
+
+Assert: both envelopes name the same `groupKey` and omit other groups' entries.
+
+### SC-M2-S18-05 Mixed tracker kinds are classified, not rejected
 
 Given a configuration mixing tracker kinds where one member's tracker kind has
-no implemented adapter, when `<binary> projects list` and the project-scoped
-queue and status reads run, then the mixed configuration is accepted at
-validation time, the unimplemented member is classified `not-yet-supported`
-rather than rejected, and the queue and status reads return only that
-project's entries.
+no implemented adapter, when the configuration is validated and
+`<binary> projects list --json` runs, then the configuration is accepted and
+the unimplemented member is classified `not-yet-supported`.
 
-Assert: the project-scoped `queue` and `status` envelopes carry that project's key, and the unimplemented member carries `health == "not-yet-supported"`.
+Assert: `data.groups[].members[]` keeps the member with `health == "not-yet-supported"` and the read does not fail.
+
+### SC-M2-S18-06 An undeclared clone inside the workspace root is not a member
+
+Given a group whose `workspaceRoot` contains a managed clone that its
+configuration does not declare, when `<binary> projects list --json` runs,
+then the undeclared clone is not a member of the group.
+
+Assert: `data.groups[].members[]` lists only declared members and the undeclared clone is not a member.
+
+### SC-M2-S18-07 One degraded member yields a classified partial result
+
+Given one member whose per-repository state is `state-unavailable` and one
+readable member, when `<binary> projects list --json` runs, then the read
+returns the readable member with a classified partial result at exit `0`.
+
+Assert: `project-groups.v1` returns `data.groups[]` with `partial` true and the degraded `state-unavailable` member named.
+
+### SC-M2-S18-08 The alias payload and the group payload are both asserted
+
+Given the S18 rename has landed, when `<binary> projects list --flat --json`
+and `<binary> projects list --json` run, then the alias returns the delivered
+`projects.v1` payload and the default returns the group payload.
+
+Assert: `projects list --flat --json` returns `projects.v1` with `data.projects[]`, `projectKey`, and `hostIndexRevision`, while `projects list --json` returns `project-groups.v1` with `data.groups[]` and `groupKey`.
 
 ## M2-S19 Cross-repository changes
 
 ### SC-M2-S19-01 One lifecycle drives two member branches and two pull requests
 
-Given a change spanning two member repositories of one project, when the
+Given a change spanning two member repositories of one group, when the
 lifecycle runs, then one spec and plan are produced, each member receives its
 own branch and pull request, one review flow covers both, and the closeout
 lands both.
@@ -405,16 +444,32 @@ Given a two-repository change where one member's gates fail, when the change
 is evaluated, then the failing member blocks the shared definition of done and
 is named in the envelope.
 
-Assert: `change.data.definitionOfDone == "blocked"` and `change.data.blockingMember` equals the failing member's repo key.
+Assert: `verify gates` `data.definitionOfDone` is blocked and `data.blockingMembers[]` equals the failing member's `repoKey`.
 
-### SC-M2-S19-03 Member dependency edges order the slices
+### SC-M2-S19-03 Per-member CI truth is corroborated
+
+Given a two-repository change, when the shared verdict is evaluated, then CI
+truth on each member's pushed head is read and recorded per member before the
+change counts done.
+
+Assert: `verify gates` `data.definitionOfDone` cites `gates.ci` corroborated per member for both `plan.data.members[]` entries.
+
+### SC-M2-S19-04 An unavailable CI reading does not count as green
+
+Given a member whose CI reading is unavailable, when the shared definition of
+done is evaluated, then the unavailable reading blocks it as a classified
+outcome rather than counting as green.
+
+Assert: `verify gates` `data.blockingMembers[]` names that member and `data.definitionOfDone` is not green.
+
+### SC-M2-S19-05 Member dependency edges order the slices
 
 Given a two-repository change where the second member's slice needs the first
-member's branch, when the plan is executed, then the dependency edge holds the
-second member's step until the first member's pull request lands, and the
-evidence enumerates every member pull request in landing order.
+member's branch, when the plan executes, then the dependency edge holds the
+second step until the first member's pull request lands, and the evidence
+lists every pull request in landing order.
 
-Assert: `plan.data.members[1].dependsOn` equals the first member's repo key and the evidence lists one pull request per member.
+Assert: `plan.data.members[1].dependsOn[]` names the first member's `repoKey` and the evidence lists the pull requests in landing order.
 
 ## Cross-story scenarios
 
