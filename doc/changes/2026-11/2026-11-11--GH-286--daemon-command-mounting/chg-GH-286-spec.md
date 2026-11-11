@@ -1,0 +1,731 @@
+---
+change:
+  ref: GH-286
+  type: feat
+  status: Proposed
+  slug: daemon-command-mounting
+  title: "Mount the daemon lifecycle command in the entrypoint (start/stop/status/install)"
+  owners: ["engineering"]
+  service: delivery-os
+  labels:
+    - cli
+    - daemon
+    - entrypoint
+    - degradation
+    - help
+    - process-lifecycle
+    - install
+    - m1
+  version_impact: minor
+  audience: internal
+  security_impact: medium
+  risk_level: medium
+  dependencies:
+    internal:
+      - "delivered resident daemon engine, control protocol, supervisor adapter, and status projection (M1-S18, GH-238)"
+      - "prompt-required composition and self-description surface (GH-242)"
+      - "production composition and state-directory scope resolution"
+      - "coordinator supervision foreground-lifetime and signal-host precedent (M1-S23, GH-241)"
+      - "state artifact boundary and durable instance/heartbeat records"
+    external:
+      - "POSIX process signals (SIGTERM, SIGINT) and detached process spawning"
+      - "systemd user manager (unit file, enable, linger) on Linux"
+      - "XDG user configuration root"
+links:
+  issue: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/286
+  related_changes: ["GH-286", "GH-238", "GH-241", "GH-242", "GH-284"]
+  related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005", "TDR-0017", "TDR-0022"]
+  contracts:
+    - "packages/cli/src/production.ts"
+    - "packages/cli/bin/delivery-os.ts"
+    - "packages/cli/src/daemon-compose.ts"
+    - "packages/cli/src/edge.ts"
+    - "packages/cli/src/help.ts"
+    - "packages/cli/src/help/prompt-required-commands.ts"
+    - "tests/fixtures/help-guide/coverage.json"
+---
+
+# CHANGE SPECIFICATION
+
+> **PURPOSE**: Make the delivered resident daemon reachable from the shipped binary — one production composition that starts a resident process, stops and drains it, reports its state, installs its user unit, and derives queue/lanes degradation from durable daemon state instead of a hardcoded marker.
+
+## 1. SUMMARY
+
+Mount the delivered `daemon` lifecycle family in the production entrypoint. The production composer supplies an unconditional daemon runtime built over the resolved state-directory scope, the composing process identity, the injected signal host, and the running entry path; the prompt-required command set gains `daemon`; and a help entry plus reference-page coverage ships with it. A bare `daemon start` leaves a resident, self-releasing process that records its own pid, and `daemon start --foreground` owns its lifetime through the injected signal host (`SIGTERM` → drain, `SIGINT` → immediate stop). `daemon install` writes the brand-derived user unit under the user configuration root. `queue list` and `lanes` resolve `daemon-unreachable` from durable instance and heartbeat records at each projection, so the marker becomes a fact in both directions.
+
+The change is additive: no daemon engine, control-protocol, error-identity, or state-schema change. Every new surface is an optional composition input, one internal union widening, or one command-registry and help addition.
+
+## 2. CONTEXT
+
+### 2.1 Current State Snapshot
+
+The resident daemon is delivered and its command family is defined, but the shipped binary cannot reach it:
+
+- **The composition seam exists and is unused.** `ConfigProgramOptions.daemon?: DaemonCommandRuntime` is declared on the CLI program options and the program registers the definition only when the runtime is supplied (`packages/cli/src/edge.ts`). `createDaemonCommandRuntime` composes the delivered lifecycle from a `DaemonComposition` (`packages/cli/src/daemon-compose.ts`), whose required inputs are the state store, the daemon lock port, resolved daemon settings, the lane restart bound, the state directory, the unit name, the binary path, the environment variable name, and three identity factories; its optional inputs include the transport, socket path, entry path, wake source, supervisor adapter, platform, supervisor config directory, and lane composition.
+- **Production supplies no daemon runtime.** `packages/cli/src/production.ts` declares no daemon composition and passes no `daemon` option, so `selectPromptRequiredProgram` composes the prompt-required set without it. `daemon` is absent from `PROMPT_REQUIRED_COMMANDS` (`packages/cli/src/help/prompt-required-commands.ts`), and the help inventory (`packages/cli/src/help.ts`) carries no `daemon` entry. The delivered `createDaemonMainEntry` (`packages/cli/src/daemon-main.ts`) has no caller.
+- **Production derives its state directory from home only.** It builds `<home>/<brand.stateDirectoryName>` inline, while the CLI edge resolves the same value through `resolveStateDirectoryScope`, which gives `<PREFIX>_STATE_DIR` outright precedence and rejects a non-absolute override as `config.value.invalid` (`packages/core/src/config/catalog.ts`). The installed unit's only environment binding is `<PREFIX>_STATE_DIR=<state dir>` (`packages/adapters/src/daemon/supervisor.ts`), and a detached child is spawned with a replaced environment carrying exactly that variable (`packages/adapters/src/daemon/process.ts`).
+- **A foreground start installs no lifetime.** `runtime.start` auto-runs the resident loop only when a wake source is composed; nothing installs signal handling, so a foreground daemon dies on `SIGTERM` without releasing the instance lock or marking delivering lanes `detached`. A cross-process `stop` signals the recorded pid from a different process.
+- **No pid reaches the engine.** `DaemonRuntimePorts.pid` exists, but `DaemonComposition` exposes no `pid`, so the engine's `pid: 0` fallback is recorded. A later `stop` would call the delivered signal path with `0`, which on POSIX addresses the **caller's own process group**.
+- **Degradation is hardcoded.** `QueueComposition.degraded?: readonly QueueDegradationReason[]` is captured once per runtime and consumed by the queue schedule, the mutation outcome, and the lanes read. Production hardcodes `degraded: ["daemon-unreachable"]` (`packages/cli/src/production.ts`), so every queue and lanes read reports a daemon that can never be reachable. `readDaemonStatus` already derives the same marker from durable records without a socket probe (`packages/core/src/app/daemon-status.ts`).
+- **The delivered install seam is unused by production.** The systemd user adapter writes `<configDirectory>/systemd/user/<unit>` plus an ownership marker beside it and enables linger; `renderSystemdUnit` emits `ExecStart=<binary> daemon start --foreground` and `Environment=<PREFIX>_STATE_DIR=<state dir>`. The command runtime defaults the config directory to the state directory, which is not a root systemd reads.
+- **Current-truth documentation states the opposite of the target.** `doc/spec/features/feature-cli-entrypoint.md` records that the daemon is not prompt-required and that the production entrypoint supplies no daemon runtime; `doc/spec/features/feature-resident-daemon.md` records that the family is composed only when a runtime is supplied and that the production entrypoint supplies none; `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` records the registration gap as open product work with observed `unknown flag "--help"` and `unexpected argument "status"` evidence; `doc/planning/oss-tooling/milestones/m1/commands/daemon.md` records the command as not mounted.
+
+**Users and current impact.** The operator (private-fleet operator and the owner) has no supported way to start, inspect, or stop the resident daemon from the installed binary; every queue and lanes read on a default install reports `daemon-unreachable` permanently, which makes the marker meaningless; and the M2 stories that presume a resident daemon cannot be exercised end to end.
+
+### 2.2 Pain Points / Gaps
+
+- **Unreachable lifecycle surface.** The family exists in the composition and in the planning docs but not in the shipped program; the ticket's whole acceptance is stated in terms of invocations that currently fail as unknown flags or arguments.
+- **No resident start shape.** Nothing in the production path re-enters the CLI as a detached resident process, and nothing owns a foreground process's lifetime. A daemon that returns at readiness is not resident; one that is killed leaves a held instance lock behind.
+- **No real instance pid.** The engine's `0` fallback is written to durable state, which turns `daemon stop` into a process-group signal hazard rather than a no-op.
+- **Two state-directory resolutions.** The production store and its own edge can disagree about the state directory, and the installed unit and the detached child would agree with neither.
+- **Permanent degradation marker.** The queue and lanes read side asserts a daemon fact it never observes, so the marker cannot distinguish a live daemon from an absent one.
+- **Install identity undefined.** No caller supplies the absolute binary path, the legible unit name, or a configuration root systemd reads, so `daemon install` from the shipped binary could only write a unit that cannot start.
+- **Help and reference coverage would withhold the command.** Even with a runtime composed, an absent `daemon` entry in the prompt-required set drops the command; adding it without a reference page and coverage inventory entries fails the help guards.
+
+## 3. PROBLEM STATEMENT
+
+Because the production composition supplies no daemon runtime, `daemon` is absent from the prompt-required set, no process owns a resident daemon's lifetime, no pid is recorded, and queue/lanes degradation is a constant, the operator cannot start, inspect, stop, or install the delivered resident daemon from the shipped binary; a foreground daemon cannot shut down cleanly, a stop could signal an unrelated process group, and every read surface reports a permanently unreachable daemon — which blocks the resident-daemon stories that depend on one.
+
+**Who is affected.** The operator loses the only supported lifecycle surface; the owner loses an inspectable resident process and a user-level unit; the M2 subscribe and peak-pausing stories have no resident daemon to build on; and every agent reading `queue list` or `lanes` receives a degradation marker that carries no information.
+
+## 4. GOALS
+
+- **G-1** Mount the delivered `daemon` family in the production entrypoint so `start`, `stop`, `status`, `install`, and `uninstall` reach their handlers from the shipped binary.
+- **G-2** Make a bare `daemon start` produce a resident, self-releasing daemon whose readiness evidence is durable state, not the child's output.
+- **G-3** Make a foreground start own its process lifetime: `SIGTERM` drains, `SIGINT` stops immediately, and the instance lock is released on every exit.
+- **G-4** Record the composing process's own pid and fail closed on any durable record whose pid is not a positive integer.
+- **G-5** Resolve one canonical state directory for the composing process, the detached child, the installed unit, the store, the lock, the socket, and the queue read side.
+- **G-6** Derive `daemon-unreachable` from durable daemon state at each queue and lanes projection, in both directions, and keep it consistent with `daemon status`.
+- **G-7** Give `daemon install` a legible, brand-derived identity: an absolute `ExecStart`, one unit name per user, the user configuration root, and the state-directory environment binding the runtime actually reads.
+- **G-8** Ship the command's help entry and reference coverage so the help, parity, and conformance guards pass and root `--help` lists the family.
+
+### 4.1 Success Metrics / KPIs
+
+| Metric | Target |
+|---|---|
+| Lifecycle subcommands reachable from the shipped binary | 5 of 5 (`start`, `stop`, `status`, `install`, `uninstall`) |
+| Queue and lanes reads reporting `daemon-unreachable` with a live, fresh daemon | 0 |
+| Queue and lanes reads reporting `daemon-unreachable` with a released, absent, or stale daemon | 100% |
+| Instance records carrying the composing pid (never `0`) from a production start | 100% |
+| Signals sent to a non-positive recorded pid | 0 |
+| State directories observed by parent, detached child, unit, store, lock, socket, and read side | 1 canonical directory |
+| Prompt-required composition failures (the `fallback.internal` containment) on a production invocation | 0 |
+| Help / reference coverage and parity guard failures | 0 |
+| New error-table identities, record kinds, or schema versions | 0 |
+| Existing tests that must change semantics to pass | 0 |
+
+### 4.2 Non-Goals
+
+- **NG-1** No change to daemon engine semantics, control-protocol frames, heartbeat or reconciliation records, or the daemon's own single-instance lock.
+- **NG-2** No lane executor, dispatch lane composition, or supervision cadence added to the daemon; production keeps the delivered declared `supervise-only` mode.
+- **NG-3** No `projects`, `events`, `attempts`, `board`, or any other M2 command.
+- **NG-4** No change to the meaning of any existing envelope field or error-table row; every identity this change reaches is already in the table.
+- **NG-5** No `--state-dir` flag and no daemon state-directory configuration key.
+- **NG-6** No coordinator, dispatch, queue, merge, closeout, or status-digest behaviour change.
+- **NG-7** No multi-state-directory install support, no coordinator unit, and no second OS supervisor adapter.
+- **NG-8** No new dependency, no network listener beyond the delivered local unix socket, and no remote transport.
+
+## 5. FUNCTIONAL CAPABILITIES
+
+| ID | Capability | Rationale |
+|---|---|---|
+| F-1 | Daemon lifecycle family mounted in the production entrypoint, with help and reference coverage | Turns a delivered-but-unreachable family into a shipped surface; registration implies the prompt-required set, the help inventory, and the coverage inventory together. |
+| F-2 | Detached re-entry and signal-owned foreground lifetime | Makes `start` produce a resident daemon and makes `stop` observable: without re-entry a start returns and exits; without a lifetime owner a foreground daemon dies without releasing. |
+| F-3 | One state-directory scope across parent, child, unit, store, lock, socket, and read side | Every value that must agree is currently undefined or resolved twice; one resolution removes a class of "works in tests, writes to the wrong ledger" failures. |
+| F-4 | Composed control plane: resolved daemon settings and the delivered unix transport | `status --live` and `queue --watch` are only truthful against a socket the daemon actually binds at a path the client actually probes. |
+| F-5 | Degradation resolved per projection from durable daemon state | Replaces a permanent lie with a derived fact, without turning synchronous reads into socket round-trips. |
+| F-6 | Real instance pid and fail-closed stop | Removes the process-group signalling hazard and makes torn or legacy records safe instead of dangerous. |
+| F-7 | Brand-derived install identity and classified unsupported supervisors | A unit that systemd does not read, or that names a bare binary, reports success and does nothing. |
+| F-8 | Additive contract surface with preserved existing behaviour | Every new input is optional and every widening is internal, so embedders, fixtures, and delivered tests keep their contracts. |
+
+### 5.1 Capability Details
+
+**F-1 — Mounted family and its help surface.**
+`PROMPT_REQUIRED_COMMANDS` gains `daemon`, and the production composer supplies a `daemon` runtime unconditionally. Unconditional is not a preference: `selectPromptRequiredProgram` throws when a prompt-required command is missing, so a conditionally registered family would turn every CLI invocation into the `fallback.internal` containment. The mount therefore never depends on the entry path, the signal host, or a supervisor adapter being present; an absent optional input degrades one start or install shape and never removes the command. The help inventory gains a `daemon` family entry and one entry per subcommand, so `daemon start --help` resolves instead of failing as an unknown flag, and the family appears in root `--help` through the delivered family derivation. The coverage inventory gains `daemon` in `commands` and the daemon reference page in `referencePages`, and the reference page carries the `--help`/`--version` help section the coverage check requires.
+
+**F-2 — Detached re-entry and foreground lifetime.**
+A non-foreground `start` spawns the running entry path as `<entry> daemon start --foreground` in a detached process whose environment is exactly the state-directory variable, waits for a durable `acquired` instance within the delivered readiness window, and reports the start receipt from durable state (instance identity, the child's pid, socket, heartbeat, supervisor, degraded list). A readiness timeout is a classified failure, never a success claim. A foreground `start`, when a signal host is composed, performs: start the daemon and capture the readiness snapshot; install `SIGINT`/`SIGTERM` listeners; run the resident loop; wait for the first signal (`SIGTERM` → drain, `SIGINT` → immediate); stop with that mode; remove both listeners in a `finally`; await the loop; return the snapshot captured at start, or the stop failure when the release does not land. When no signal host is composed, `start` returns at readiness exactly as delivered, so embedders and tests keep the in-process shape.
+
+**F-3 — One state-directory scope.**
+The production composition resolves its state directory through the delivered scope resolution (environment override first, home default otherwise) and uses that single value for the store, the daemon lock, the daemon settings, the control socket, the supervisor scope, and the re-entry environment binding. The detached child, whose environment is replaced, resolves the same directory from the same variable; the installed unit binds the same variable to the same directory; the queue and lanes read side reads the same store. A resolution failure does not suppress the mount: the composition keeps the home-based value it used before this change, and the invalid override keeps failing where the resolution edge already reports it.
+
+**F-4 — Composed control plane.**
+Daemon settings resolve from the `daemon` configuration branch through the delivered resolver with the resolved state directory, falling back to the same resolver over an empty branch when configuration cannot be acquired, so defaults are never re-derived as literals and a configured socket path or heartbeat interval is honoured. The delivered unix transport is composed at the resolved socket path with an ownership predicate that reports the lock as held by this process, so a leftover socket file from a crashed daemon is replaced by the next start rather than wedging restarts. A plain `status` reads durable state and reports the declared stopped or stale shape; `status --live` additionally probes the transport and fails closed when the socket is unreachable or the heartbeat is stale.
+
+**F-5 — Degradation resolved per read.**
+`QueueComposition.degraded` accepts either the delivered marker array or a resolver function, and the queue and lanes runtimes resolve it at every projection — the schedule read, the mutation outcome, the lanes read, and each watch iteration — instead of capturing it at composition time. Production supplies a resolver that is a pure predicate over injected facts: reachable **iff** the latest instance record's operation is `acquired` or `taken-over`, the latest heartbeat record belongs to that instance, and the heartbeat age is within the configured lock-staleness bound; otherwise `daemon-unreachable`. Durable state is the source because the daemon writes both facts itself and because the queue and lanes reads are synchronous store projections that must not gain a socket dependency. The bound is the same one `daemon status` uses, so the two surfaces cannot disagree about what "stale" means. An unreadable or torn instance or heartbeat read degrades to `daemon-unreachable`; it never fabricates reachability and never throws into a queue read.
+
+**F-6 — Real pid and fail-closed stop.**
+The daemon composition accepts an optional composing pid and forwards it to the runtime, so an instance record carries the process that actually acquired the lock. Because the engine's fallback is `0` and a zero pid addresses the caller's own process group, a cross-process `stop` refuses a durable record whose pid is not a positive integer: it returns the delivered recovery identity and sends no signal. Recording the real pid is the fix; the refusal is the guard that makes an absent or torn record safe.
+
+**F-7 — Install identity and classification.**
+`install` uses the same absolute entry path as `daemonEntry` for the unit's `ExecStart`, one legible unit name derived from the brand's binary name, the user configuration root (`XDG_CONFIG_HOME` when absolute and non-empty, otherwise `<home>/.config`) as the directory systemd reads, and the exact state-directory environment variable name the runtime resolves, bound to the resolved directory. Linger stays enabled on a successful install, and the receipt reports the descriptor. A platform without a delivered supervisor adapter, or a linger failure, returns the classified unsupported identity and writes no unit. `uninstall` removes only what this installation created and reports `noop` when nothing is installed. With no entry path composed, `install` refuses rather than rendering a unit with an empty executable.
+
+**F-8 — Additive contract.**
+No existing exported signature narrows. `DaemonComposition` gains only optional inputs; `ProductionCompositionFacts` gains only optional facts; `QueueComposition.degraded` widens to a union whose array member is unchanged; the command definition, its grammar, and its envelope shapes are unchanged. No error identity, record kind, payload schema, or state schema version changes, and every identity this change reaches is a delivered row.
+
+## 6. USER & SYSTEM FLOWS
+
+**Flow 1 — Bare start, detached residency.**
+```
+operator -> <binary> daemon start
+  -> resolve state directory (override or home default), settings, transport, supervisor identity
+  -> spawn <entry path> daemon start --foreground  (env: <PREFIX>_STATE_DIR=<dir>)
+  -> poll durable instance for an acquired record within the readiness window
+  -> acquired -> report instance (child pid), socket, heartbeat, degraded, exit 0
+  -> not acquired -> daemon.state-recovery-failed (resident-readiness-timeout), exit 2
+```
+
+**Flow 2 — Foreground lifetime and drain from another process.**
+```
+operator -> <binary> daemon start --foreground
+  -> runtime.start, capture readiness snapshot, install SIGINT/SIGTERM listeners, run loop
+operator (second shell) -> <binary> daemon stop --mode drain
+  -> read latest instance record; pid is a positive integer
+  -> SIGTERM to that pid; report result=draining (request accepted)
+resident process -> handler: stop({mode:"drain"})
+  -> delivering lanes appended as detached; instance appended as released (releaseReason=drain)
+  -> loop cancels, listeners removed in a finally, process exits 0
+operator -> <binary> daemon status  -> stopped/stale report, degraded derived from durable state
+```
+
+**Flow 3 — Queue and lanes degradation follows the daemon.**
+```
+daemon start -> instance acquired + heartbeat beatAt
+queue list / lanes   -> resolver: acquired/taken-over + matching heartbeat + within staleness -> degraded []
+daemon stop --mode drain -> instance released
+queue list / lanes   -> resolver: latest operation released -> degraded ["daemon-unreachable"]
+```
+
+**Flow 4 — Install and unsupported classifier.**
+```
+<binary> daemon install   (linux, entry path composed)
+  -> <config root>/systemd/user/<binaryName>-daemon.service
+       ExecStart=<entry path> daemon start --foreground
+       Environment=<PREFIX>_STATE_DIR=<resolved dir>
+  -> enable unit, enable linger; receipt installed=true
+<binary> daemon install   (no delivered supervisor adapter, or linger failure)
+  -> daemon.supervisor-unsupported, exit 2, no unit left behind
+```
+
+**Flow 5 — Live status against a resident daemon.**
+```
+<binary> daemon status --live
+  -> transport connect at the resolved socket path -> status probe
+  -> reachable + heartbeat running -> live envelope, exit 0
+  -> unreachable -> daemon.socket-unreachable, exit 2
+  -> stale heartbeat -> daemon.heartbeat-stale, exit 2
+```
+
+**Flow 6 — Help and version.**
+```
+<binary> --help            -> root listing includes the daemon family
+<binary> daemon --help     -> family usage, options, examples, exit codes, see-also
+<binary> daemon status --help -> subcommand usage
+<binary> --version         -> identity only; no state, config, or network read
+```
+
+## 7. SCOPE & BOUNDARIES
+
+### 7.1 In Scope
+
+- `daemon` added to the prompt-required command set and composed unconditionally by the production composer.
+- A production daemon composition: state store, daemon lock, resolved daemon settings, lane restart bound, resolved state directory, unit identity, entry path, environment variable name, supervisor config root, composing pid, signal host, control transport, and socket path.
+- A new optional production fact carrying the running entry path from the executable entry, and forwarding of the existing process-id and signal-host facts.
+- A new optional signal-host input on the daemon composition and the foreground lifetime path (`SIGTERM` drain, `SIGINT` immediate, listener cleanup in a `finally`, readiness snapshot returned at exit).
+- A new optional pid input on the daemon composition and the fail-closed refusal in cross-process `stop`.
+- State-directory scope resolution in the production composition, and the re-entry environment binding.
+- `QueueComposition.degraded` widened to accept a resolver, resolved at every queue and lanes projection, with the durable-state predicate supplied by production.
+- The help inventory entry for the family and its subcommands; the reference page's help section; the coverage inventory entries.
+- Tests for every listed acceptance criterion, and the guard updates named in §8.5.
+
+### 7.2 Out of Scope
+
+- [OUT] Any daemon engine change: start/stop/tick semantics, reconciliation, heartbeat cadence, control frames, lane records, or the daemon's own lock semantics.
+- [OUT] A lane executor, dispatch lane composition, supervision cadence, or any production value for the daemon's lane seam. `start` keeps the delivered declared `supervise-only` mode.
+- [OUT] `projects`, `events`, `attempts`, `board`, `supervise`, or any other M2 command.
+- [OUT] Changing the meaning of any existing envelope field, degraded marker, or error-table row, and adding any new error identity.
+- [OUT] A `--state-dir` flag, a daemon state-directory configuration key, or a second state-directory resolution.
+- [OUT] `daemon status` reporting install state by inspecting the supervisor; the install and uninstall receipts remain the truth for installation (DEC-14).
+- [OUT] Multi-state-directory installs, a coordinator unit, a macOS or Windows supervisor adapter, or remote/container transports.
+- [OUT] Moving existing state when `<PREFIX>_STATE_DIR` is set; the override changes which directory is used, and no migration is performed.
+- [OUT] Automatic startup of the daemon at login independent of `daemon install` (the unit's own enable and linger stay the delivered behaviour).
+- [OUT] Any prompt, agent, or lifecycle-instruction change.
+
+### 7.3 Deferred / Maybe-Later
+
+- An event-log wake source for the resident loop; v1 relies on the delivered clock fallback at the heartbeat interval.
+- A scope digest in the unit name once a second state directory must install its own unit.
+- Refusing a non-executable or vanished entry path at composition time instead of surfacing a readiness timeout at start.
+- Reporting supervisor installation truth from `daemon status` through the delivered supervisor inspection seam.
+- Forwarding the effective working-name override into the re-entry environment so a renamed product's child and unit resolve the same brand.
+- A coordinator unit under the delivered install seam once the unit renderer gains an explicit command vector.
+
+## 8. INTERFACES & INTEGRATION CONTRACTS
+
+### 8.1 REST / HTTP Endpoints
+
+N/A. This change adds no HTTP or REST endpoint and no network listener beyond the delivered local unix control socket.
+
+### 8.2 Events / Messages
+
+No new record kind, payload schema, or event is introduced. The change reads and relies on three delivered records whose meaning is unchanged:
+
+| ID | Record / message | Contract |
+|---|---|---|
+| EVT-1 | `daemon.instance` (unchanged) | The daemon's own claim about itself. The composition makes its `pid` the composing process id instead of `0`, and its `operation` (`acquired`, `taken-over`, `released`, `immediate-stop`) is the first half of the reachability predicate. No field, vocabulary, or schema changes. |
+| EVT-2 | `daemon.heartbeat` (unchanged) | `instanceId` plus `beatAt` are the second half of the reachability predicate; the age bound is the configured lock staleness, the same value the status projection uses. No cadence or field change. |
+| EVT-3 | `daemon.lane` (unchanged) | A drain appends `detached` for every delivering lane, as delivered; this change reads that evidence and adds no state. |
+
+No capsule event, command receipt, outbox effect, or telemetry record is added or redefined.
+
+### 8.3 Data Model Impact
+
+| ID | Element | Description |
+|---|---|---|
+| DM-1 | `DaemonComposition` additive inputs | `pid?: number` (forwarded to the runtime so the instance record carries the composing process), `signalHost?` (`once(SIGINT\|SIGTERM, listener)` and `removeListener` for the foreground lifetime). Both optional; every existing field keeps its name, type, and meaning. |
+| DM-2 | Foreground lifetime contract | When a signal host is composed and `foreground` is true: start, capture the readiness snapshot, install listeners, run the resident loop, stop with the mode the first signal selects (`SIGTERM` → `drain`, `SIGINT` → `immediate`), remove listeners in a `finally`, await the loop, return the captured snapshot or the stop failure. When no signal host is composed, return at readiness as delivered. |
+| DM-3 | `QueueComposition.degraded` union | `readonly QueueDegradationReason[] \| (() => readonly QueueDegradationReason[])`. The array member keeps the delivered semantics and the absent case keeps the delivered fallback. Resolution happens per projection: schedule, mutation outcome, lanes read, and every watch iteration. |
+| DM-4 | Reachability predicate | Pure function of the latest instance operation, the latest heartbeat's instance identity and `beatAt`, the injected now, and the configured lock staleness. Reachable iff the operation is `acquired` or `taken-over`, the heartbeat belongs to that instance, and `now − beatAt ≤ lockStalenessMs`; otherwise `["daemon-unreachable"]`. |
+| DM-5 | `ProductionCompositionFacts` additive facts | `daemonEntry?: string` (the running entry path supplied by the executable entry), `supervisor?: SupervisorPort` (a pass-through seam so install is provable without a live systemd), and the existing `processId`/`signalHost` facts forwarded to the daemon composition. |
+| DM-6 | Install identity values | `binary` = the absolute entry path; `unit` = `${brand.binaryName}-daemon.service`; `supervisorConfigDirectory` = `XDG_CONFIG_HOME` when absolute and non-empty, otherwise `${homeDirectory}/.config`; `environmentName` = the exact `<PREFIX>_STATE_DIR` variable read by the state-directory resolution; `scope` = the delivered digest of the resolved state directory. |
+| DM-7 | No state-schema change | `STATE_SCHEMA_VERSION` is unchanged, no record kind, payload schema, migration, or backfill is added, and no `daemon` configuration key is added. |
+
+### 8.4 External Integrations
+
+- **POSIX process lifecycle.** A detached spawn of the running entry path with a replaced environment of exactly the state-directory variable; `SIGTERM` for drain and `SIGINT` for immediate stop, delivered through the process port. No signal is ever sent to a non-positive pid, and no name- or pattern-based signalling exists.
+- **systemd user manager (Linux).** Unit file under `<config root>/systemd/user/`, ownership marker beside it, unit enable, and linger enable with rollback on linger failure. macOS and Windows return the classified unsupported outcome and write no unit.
+- **User configuration root.** `XDG_CONFIG_HOME` when it is absolute and non-empty, otherwise `<home>/.config` — the root systemd reads for user units and the root the CLI already uses for user configuration.
+- **No other integration.** No tracker, provider, network, or credential surface is touched; the change adds no external call.
+
+### 8.5 Backward Compatibility
+
+- **Additive composition only.** `DaemonComposition` gains two optional fields; `ProductionCompositionFacts` gains two optional facts; `QueueComposition.degraded` widens to a union whose array member is unchanged. No exported signature narrows, no required field appears, and no existing caller changes.
+- **Unchanged command surface.** The `daemon` command definition, its flag set (`--foreground`, `--live`, `--mode`), its grammar, and its envelope shapes are unchanged; the change makes them reachable, not different.
+- **Unchanged identities and schema.** No error-table row is added, removed, or reworded; `daemon.supervisor-unsupported`, `daemon.state-recovery-failed`, `daemon.socket-unreachable`, `daemon.heartbeat-stale`, `daemon.already-running`, and `daemon.takeover-refused` are the delivered rows this change reaches. `STATE_SCHEMA_VERSION` and the closed degraded-marker sets are unchanged.
+- **Delivered behaviours that must not regress.** A composition that supplies an array-valued `degraded` keeps its exact output; a composition that omits `degraded` keeps the `["daemon-unreachable"]` fallback; a daemon composition without a pid, signal host, entry path, transport, or supervisor keeps its delivered behaviour; a foreground start without a signal host still returns at readiness. The delivered suites that must keep passing without semantic change include the daemon lifecycle, daemon degradation, daemon lock, daemon lock concurrency, daemon supervisor install, queue CLI, control transport, entrypoint help, reference-page parity, queue-scheduling contract, daemon vocabulary, and doc-conformance suites.
+- **Guards that must be updated as part of the mount.** The entrypoint composition test's expected-family list and its absence assertions (the fixture derives its program from the prompt-required set, so only the hard-coded list and the `daemon` absence names change); the help coverage fixture (both `commands` and `referencePages`); and the doc-conformance page list, which gains `daemon` so the "every prompt-required reference page documents `--help`" assertion covers the newly mounted family.
+- **One behaviour intentionally changes for existing users.** A process that sets `<PREFIX>_STATE_DIR` previously saw the CLI composition ignore the override for its own store while the edge honoured it; the override now drives the whole production composition. Existing state at the home default is not moved (DEC-5, §19).
+- **The detached child and the installed unit agree with the parent only when the effective brand prefix agrees.** The re-entry environment carries exactly the state-directory variable; a working-name override in the composing shell is not forwarded, so a renamed product's child or unit resolves the neutral default brand and fails closed at start. This is a declared limitation (RSK-6), not a silent assumption.
+
+## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
+
+| ID | Requirement | Threshold |
+|---|---|---|
+| NFR-1 | Help and version purity | 0 state, configuration, git, network, or filesystem reads and 0 writes on `--help` and `--version`; 0 command-composer invocations |
+| NFR-2 | Composition determinism | 100% identical composed program and help inventory for identical brand and facts; no ambient environment read outside the injected facts |
+| NFR-3 | Degradation read cost | ≤ 2 durable state reads per queue or lanes projection; 0 socket connects, 0 process probes, and 0 sleeps on the read path; queue and lanes read p95 latency regression ≤ 10% against the reference store |
+| NFR-4 | Start readiness | A bare `start` reports a start receipt or fails closed within the delivered readiness window (20 polls × 50 ms); 0 exit-`0` results without a durable `acquired` instance |
+| NFR-5 | Foreground stop latency | After the signal, the resident process stops, appends its release, and exits within 1 000 ms, of which loop cancellation is ≤ 250 ms |
+| NFR-6 | Command latency | `daemon status` p95 ≤ 1 000 ms; `daemon status --live` p95 ≤ 2 000 ms (the delivered response timeout); `daemon install`/`uninstall` p95 ≤ 2 000 ms excluding the supervisor command runner |
+| NFR-7 | Exit taxonomy | Every outcome exits only `0`, `1`, or `2`, and every non-zero outcome resolves to a delivered error-table identity |
+| NFR-8 | Signal safety | 0 signals to a pid that is not a positive integer; 0 signals to a process group; 0 name- or pattern-based kills |
+| NFR-9 | Idempotence | A repeated `install` is idempotent; `stop` against a released or absent instance is a `noop` at exit `0`; a repeated start while an instance is live is `daemon.already-running` and appends nothing |
+| NFR-10 | Privacy and secret safety | 0 credentials, tokens, prompts, transcripts, diffs, or repository contents in any new output; the only new environment value is an absolute directory path |
+| NFR-11 | Bounded output | Existing envelope and human-output bounds are unchanged; the root listing and each help page stay within the delivered help bounds |
+| NFR-12 | No new external dependency | 0 new package dependencies, 0 new listeners, 0 network egress added by the mount |
+
+## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
+
+- **Durable evidence is the telemetry.** The lifecycle is observable from `daemon.instance` (acquisition, takeover, release, immediate stop, with pid and scope), `daemon.heartbeat` (beats and age), and `daemon.lane` (detach on drain). No metric, trace, or event store is added.
+- **One operational query.** `daemon status` answers "is a daemon running, which pid, which instance, how old is its heartbeat, which socket, is it reachable, and which supervisor identity is configured?"; `daemon status --live` adds the socket probe. The plain report is a degraded success at exit `0` when the daemon is absent or stale, and `--live` is the only failing surface.
+- **Derived, not asserted, degradation.** `queue` and `lanes` payloads carry the marker resolved at that projection, so a consumer can distinguish "no daemon" from "a daemon is running". No new log line, alert, or dashboard is added.
+- **Install receipts.** `daemon install` and `daemon uninstall` return the descriptor (kind, installed, linger, unit, scope, command form, service type, restart policy, environment binding), which is the truth for installation state.
+- **No sensitive content.** Every reported value is an identity, a path, a count, a duration, or a closed vocabulary value.
+
+## 11. RISKS & MITIGATIONS
+
+| ID | Risk | Impact | Probability | Mitigation | Residual Risk |
+|---|---|---|---|---|---|
+| RSK-1 | A `stop` signals the caller's own process group because the recorded pid is `0` | H | M | The composing pid is recorded, and `stop` refuses any durable pid that is not a positive integer with the delivered recovery identity before any signal call. | L |
+| RSK-2 | The running entry path is not executable at spawn time (wrapper, shim, ephemeral path) | H | M | The entry path is the only value guaranteed to be the running product; a spawn or readiness failure is a classified `daemon.state-recovery-failed`, never a PATH guess. Declared revisit trigger. | M |
+| RSK-3 | A slow first start (reconciliation over a large store) exceeds the readiness window and reports a timeout while the daemon is live | M | M | The failure is classified and appends nothing; `daemon status` and the durable instance remain the truth. The window is unchanged in this change. | M |
+| RSK-4 | Durable reachability disagrees with the live socket probe for up to the staleness window after a crash | M | M | Both surfaces share one bound (the configured lock staleness), so they cannot disagree about staleness; the direction is bounded and disclosed. | M |
+| RSK-5 | The mount throws at composition because a prompt-required command is missing | H | L | The runtime is composed unconditionally and proven by the entrypoint composition suite; an absent optional input degrades one shape, never the command. | L |
+| RSK-6 | A renamed working name makes the detached child or the unit resolve a different state variable | M | L | Declared limitation and assumption: the tested configuration is the shipped default brand; the state variable and the unit binding derive from one brand. Forwarding the override is a named follow-up. | M |
+| RSK-7 | The override-aware state directory relocates a user's CLI state unexpectedly | M | L | Disclosed in rollout and operations: no automatic move, the override is the documented selection, and the previous home default stays readable on disk. | L |
+| RSK-8 | `install` writes into the user configuration root with insufficient care | M | L | The adapter writes only its own unit and ownership marker, rolls back on linger failure, and `uninstall` removes only what this installation created; unsupported platforms write nothing. | L |
+| RSK-9 | A foreground start shows no receipt until it stops, so an operator believes it failed | L | H | Declared: the receipt renders at exit like the delivered coordinator foreground loop; `daemon status` is the live read side, and the unit's own state plus `systemctl status` cover the unit case. | L |
+| RSK-10 | The degradation widening regresses a delivered queue or lanes payload | M | L | The array member and the absent fallback are unchanged; the delivered queue, lanes, and watch suites keep their exact expectations, and four fixtures prove both directions. | L |
+| RSK-11 | A stale socket file from a crashed daemon wedges a restart | M | L | The transport is composed with the ownership predicate the engine only consults after acquiring the lock in the same process, so a leftover socket is replaced by the next start. | L |
+| RSK-12 | Two state directories overwrite each other's unit | M | L | Declared out of scope: one legible unit name per user; a scope digest in the name is a recorded follow-up. | L |
+
+## 12. ASSUMPTIONS
+
+- The delivered daemon engine, control protocol, supervisor adapter, status projection, process port, and state records are stable current contracts; this change consumes them without editing their semantics.
+- `process.argv[1]` is an absolute path to the running entry script or compiled binary and is executable; the delivered bin carries a shebang and executable mode.
+- `brand.binaryName` is a sanitized product name, not a path; systemd resolves a bare `ExecStart` against its own search path, which is why the unit uses the absolute entry path.
+- The composing process, the detached child, and the unit process resolve the same brand prefix in the tested configuration (the shipped default), so one environment-variable name and one directory are shared.
+- The lock-staleness bound is the correct freshness threshold for "reachable", and it is the same bound the status projection uses.
+- The daemon writes its instance and heartbeat records on the same store the queue and lanes read, so a durable predicate is a sufficient observation.
+- The delivered transport opens the control plane only after acquiring the instance lock in the same process, so an ownership predicate that reports held is safe.
+- A Linux host has a user systemd manager; install is provable in tests through the injected supervisor seam without invoking `systemctl`.
+- No `daemon` configuration key and no `--state-dir` flag is required: the environment override and the home default cover the documented selection.
+- The delivered `supervise-only` mode is the correct production mode in v1 because no lane executor is composed, and lane execution is out of scope.
+
+## 13. DEPENDENCIES
+
+| Direction | Item | Notes |
+|---|---|---|
+| Depends on | Resident dispatch daemon (M1-S18, GH-238) | The command family, `createDaemonCommandRuntime`, the runtime start/stop/loop, the process port, the unix transport, the supervisor adapter and installer, the status projection, and the instance/heartbeat/lane records. Consumed unchanged. |
+| Depends on | Prompt-required composition and self-description (GH-242) | `PROMPT_REQUIRED_COMMANDS`, the strict program selection that throws on a missing prompt-required command, the help inventory, the help coverage check, and the reference-page parity check. |
+| Depends on | Production composition and state-directory scope | The production composer, the injected environment/home/process facts, `resolveStateDirectoryScope`, and `resolveDaemonSettings`. |
+| Depends on | Coordinator supervision precedent (M1-S23, GH-241) | The injected signal host and foreground loop shape this change reuses; no coordinator behaviour changes. |
+| Depends on | M2 planning (GH-284) | Names the daemon mount as the prerequisite for the resident-daemon stories and records the finding this ticket closes. |
+| Blocks | M2-S13 public event taxonomy | The subscribe surface presumes a resident daemon. |
+| Blocks | M2-S17 provider-aware peak pausing | Peak parking and resume presume a resident daemon. |
+| Interfaces with | Delivered error table and envelope conventions | Every reached identity is an existing row; no row changes. |
+| External | POSIX signals and detached process spawning | `SIGTERM`/`SIGINT` to a recorded positive pid only. |
+| External | systemd user manager and the XDG configuration root | Optional user-level unit installation; classified unsupported elsewhere. |
+
+## 14. OPEN QUESTIONS
+
+None. The four composition choices the clarify-scope phase routed to specification are recorded as DEC-1 through DEC-9 with tested outcomes; the composition values the decision record leaves open (the lane restart bound, the install test seam, the help inventory shape, the conformance page list, the delivered status install truth, the production start mode, and the re-entry environment limit) are resolved as DEC-10 through DEC-16. No product-scope ambiguity remains, and no decision is deferred to `@decision-advisor`.
+
+| ID | Question | Context | Status |
+|---|---|---|---|
+| — | None | All choices inside the ticket and its cited decision record are resolved as DEC-1 through DEC-16 | Resolved |
+
+## 15. DECISION LOG
+
+| ID | Decision | Rationale | Date |
+|---|---|---|---|
+| DEC-1 **(TDR-0022)** | Mount the delivered family by composing the runtime in the production entrypoint and adding `daemon` to the prompt-required set, with a help entry and reference-page coverage; do not add a second entry seam in the executable entry. | A second seam would bypass the prompt-required selection, the envelope, the error projection, the help surface, and the flag parser for one command, permanently. | 2026-11-11 |
+| DEC-2 **(TDR-0022 DC-1)** | Production supplies the running entry path as an optional fact named `daemonEntry`, sourced from the executable entry's `process.argv[1]`, and forwards it as the daemon composition's entry path. The decision record's provisional name for the same fact is `entryScriptPath`; the specification adopts `daemonEntry` so the fact and the composition input it feeds carry one name. | One fact serves re-entry and the unit's executable, so the child and the unit can never disagree about which executable this product is; naming it once removes a translation layer that no behaviour needs. | 2026-11-11 |
+| DEC-3 **(TDR-0022 DC-1)** | A foreground start owns the process lifetime through the injected signal host: `SIGTERM` drains, `SIGINT` stops immediately, listeners are removed in a `finally`, and the readiness snapshot captured at start is returned at exit. | A foreground daemon that returns at readiness is not resident, and one that dies on a signal leaves a held lock and undetached lanes. The injected host keeps the path deterministic in tests. | 2026-11-11 |
+| DEC-4 **(TDR-0022 DC-1e)** | Supply no wake source in v1; residency comes from the explicit loop, which falls back to the injected clock at the heartbeat interval. | The delivered fallback already bounds latency acceptably, and an event-log tail would force production to re-derive a private ledger path for an optimization no acceptance criterion needs. | 2026-11-11 |
+| DEC-5 **(TDR-0022 DC-1c)** | The production composition resolves its state directory through the delivered scope resolution (override first, home default otherwise) and uses that value for the store, lock, settings, socket, supervisor scope, and re-entry binding; a resolution failure keeps the previous home-based value instead of suppressing the mount. | The child's only surviving variable is the one this resolution reads and the unit binds the same one; two resolutions would put the ledger, lock, and socket in different places. A failure must not remove a prompt-required command. | 2026-11-11 |
+| DEC-6 **(TDR-0022 DC-1d)** | Compose daemon settings through the delivered resolver over the resolved state directory, falling back to the same resolver over an empty branch, and compose the delivered unix transport at the resolved socket path with an ownership predicate that reports the lock held by this process. | Defaults stay one definition instead of literals, and the engine opens the control plane only after acquiring the lock in the same process, so stale-socket replacement is safe and a crash does not wedge restarts. | 2026-11-11 |
+| DEC-7 **(TDR-0022 DC-2)** | `QueueComposition.degraded` accepts an array or a resolver and is resolved at every queue and lanes projection; production derives it from durable instance and heartbeat records (acquired/taken-over + matching heartbeat + within lock staleness), and an unreadable read degrades rather than throws. | A hardcoded marker is the defect; a socket probe would make synchronous reads async, add a response timeout to every queue read, and give the same answer durable state already holds. Sharing the staleness bound keeps `queue list` and `daemon status` in agreement. | 2026-11-11 |
+| DEC-8 **(TDR-0022 DC-3)** | Add an optional composing pid to the daemon composition and forward it; refuse a durable record whose pid is not a positive integer in cross-process `stop` with the delivered recovery identity and no signal. | The engine's `0` fallback addresses the caller's own process group; recording the real pid is the fix and failing closed is the guard that covers torn and legacy records. | 2026-11-11 |
+| DEC-9 **(TDR-0022 DC-4)** | Install identity is the absolute entry path as the executable, `${brand.binaryName}-daemon.service` as the unit, the user configuration root as the unit directory, the exact state-directory variable as the environment binding, and the delivered digest of the resolved directory as the scope. | One legible name per user, a unit systemd reads, and an `ExecStart` that exists; a bare binary name would not resolve for a user-local install. | 2026-11-11 |
+| DEC-10 | The daemon composition's restart bound is the resolved `lane.restart-budget` value, using the shipped default when configuration cannot be acquired. | The bound applies to the daemon's lane reconciliation, so it is the delivered per-delivery restart policy; inventing a second bound would let reconciliation and lanes disagree. | 2026-11-11 |
+| DEC-11 | `ProductionCompositionFacts` gains an optional supervisor adapter pass-through so a test can prove the install request without a live systemd. Production omits it and the delivered real adapter composes. | The install contract is otherwise unprovable in CI without environment-dependent `systemctl` calls; the existing facts already carry comparable test seams. | 2026-11-11 |
+| DEC-12 | The help inventory gains a `daemon` family entry plus one entry per subcommand, and the reference page gains a help section naming `--help` and `--version`. | The delivered convention is mixed (`queue` and `verify` document subcommands; `coordinator` documents the family only), and an operator typing `daemon status --help` should receive help rather than an unknown-flag refusal. | 2026-11-11 |
+| DEC-13 | The doc-conformance prompt-required page list gains `daemon`; the two pre-existing omissions from that hand list (`dispatch`, `coordinator`) stay as they are. | The mounted family must be covered by the assertion it claims to satisfy; rewriting unrelated omissions would expand the change beyond its ticket. | 2026-11-11 |
+| DEC-14 | `daemon status` keeps reporting `installed: false` in its supervisor descriptor because the delivered status composition performs no supervisor inspection; the install and uninstall receipts remain the truth for installation. | Changing status would add a filesystem probe to a read path the ticket does not ask to change; the residual is declared instead of silently contradicted. | 2026-11-11 |
+| DEC-15 | Production composes no lane executor, so a production start reports the delivered `supervise-only` mode with `lane-executor-unavailable` degraded, while queue and lanes degradation covers daemon reachability only. | The ticket mounts the lifecycle and says nothing about lane execution; claiming `resident` mode without an executor would be a lie, and conflating the two markers would make `daemon-unreachable` mean two things. | 2026-11-11 |
+| DEC-16 | The re-entry environment carries exactly the state-directory variable; the effective working-name override is not forwarded, so brand-prefix agreement between the composing process and the re-entered process is an assumption and a declared limitation rather than an enforced invariant. | Forwarding it would add a second environment entry to the spawn and a second `Environment=` line to the unit renderer, both beyond this ticket's additive inputs; the shipped default brand is the tested configuration and the gap is named for a follow-up. | 2026-11-11 |
+
+**Precedent-setting decisions:** `TDR-0022` captures DEC-1 through DEC-9 (mount path, entry-path re-entry, signal-owned lifetime, no wake source, one state-directory scope, composed control plane, durable degradation, real pid with fail-closed stop, brand-derived install identity). It is `Proposed`, pending owner acceptance at the pull-request review. DEC-10 through DEC-16 are composition and documentation policy inside the ticket; this specification edits no TDR.
+
+## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
+
+| Component | Impact |
+|---|---|
+| CLI production composition | Supplies the daemon composition unconditionally: store, lock, resolved settings, restart bound, resolved state directory, unit identity, entry path, environment variable name, supervisor config root, composing pid, signal host, transport, socket path. |
+| CLI executable entry | Supplies the running entry path fact beside the existing process id and signal host. |
+| CLI daemon composition | Forwards the composing pid; adds the signal-owned foreground lifetime path; refuses a non-positive recorded pid in cross-stop. Command definition and envelope shapes unchanged. |
+| CLI queue and lanes composition | Widens `degraded` to a resolver, resolves it per projection, and keeps the array member and absent fallback behaviour. |
+| CLI prompt-required set | Adds `daemon`; the production composer must therefore supply the runtime unconditionally. |
+| CLI help inventory | Adds the family entry and one entry per subcommand. |
+| Help coverage fixture | Adds `daemon` to `commands` and the daemon reference page to `referencePages`. |
+| Daemon engine, control protocol, supervisor adapter, state records | Consumer only; no engine, protocol, adapter, error-table, or schema change. |
+| Tests | New lifecycle, mount, degradation, identity, install, and lifetime suites; the guard updates named in §8.5. |
+| Documentation | Reconciled current-truth pages listed below. |
+
+**Documentation impact.** The following pages assert the opposite of the delivered behaviour after this change and must be reconciled in the system-specification phase. Each entry names the claim being reversed.
+
+- `doc/spec/features/feature-cli-entrypoint.md` — the composition table gains the `daemon` row with its subcommands; the sentence "The resident daemon is not part of the prompt-required composition: its lifecycle family is composed only when a daemon runtime is supplied, and the production entrypoint supplies none, so `<binary> daemon ...` is refused rather than mounted" is reversed to state that the production composer supplies the daemon runtime unconditionally and the family is mounted; the summary's prompt-required enumeration gains `daemon`; `links.related_changes` gains `GH-286`, `links.related_decisions` gains `TDR-0022`, and `links.contracts` gains the production composition, executable entry, daemon composition, and help modules.
+- `doc/spec/features/feature-resident-daemon.md` — the sentence "The family is composed only when a daemon runtime is supplied to the CLI composition; the production entrypoint supplies none, so `<binary> daemon ...` reaches no lifecycle handler and the invocation is refused at the entrypoint. Mounting the family is product work tracked in the M2 entrypoint delta" is reversed to state that the production composition composes the runtime unconditionally, that a bare start re-enters the entry path and a foreground start owns its lifetime through the injected signal host, that the composing pid is recorded, that install identity is the brand-derived unit under the user configuration root, and that queue and lanes degradation is derived from durable state. The summary's "composed only when a daemon runtime is supplied and not mounted at the production entrypoint" phrase is replaced; `links.related_changes` gains `GH-286` and `links.related_decisions` gains `TDR-0022`.
+- `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` — the "The daemon registration gap" section and its observed-invocation evidence (the `unknown flag "--help"` and `unexpected argument "status"` transcripts, and the statement that `daemon` is absent from the listing) are replaced with a closed-gap record: the listing now carries seventeen families including `daemon`, and the prerequisite sentence for S13 and S17 changes from "neither can ship a resident path before #286 lands" to naming the mount as delivered. The "Observed composition" section's family list and count are corrected.
+- `doc/planning/oss-tooling/milestones/m1/commands/daemon.md` — the status block ("the lifecycle command is not mounted at the production entrypoint, and its registration is tracked in the M2 entrypoint delta note and issue #286") becomes a mounted status; the page gains a `## HELP` section documenting `<binary> daemon --help`, the per-subcommand help, root `--help`, and `--version` (the coverage check requires both literals on the page); the state-directory paragraph gains the statement that the production composition resolves the same scope; the page gains a short mount-and-lifetime paragraph (bare start re-enters the entry path; foreground owns its lifetime; `SIGTERM` drains, `SIGINT` stops immediately).
+- `doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md` — the composed command list gains `daemon`, and the sentence "`state`, `mcp`, and the resident daemon are not registered" becomes "`state` and `mcp` are not registered" with the daemon named among the composed families.
+- `doc/planning/oss-tooling/cli-command-registry.md` — no change required: the `daemon` row already names the family as delivered with its full grammar, and the mount changes reachability rather than the row's contract.
+- `doc/planning/oss-tooling/milestones/m1/man-page.md` — no change required: the `daemon start` row already shows the full grammar, and the page is a milestone snapshot of the intended surface.
+- The documentation index is updated by the system-specification phase for the reconciled pages.
+
+## 17. ACCEPTANCE CRITERIA
+
+### 17.1 Mount, help, and reference coverage
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F1-1 | **Given** the production composition, **when** the prompt-required program is selected, **then** `daemon` is a member of `PROMPT_REQUIRED_COMMANDS`, the production composer supplies a daemon runtime unconditionally, program selection completes without the containment throw, and `<binary> daemon status` reaches the lifecycle handler instead of failing as an unknown argument. | F-1, NFR-2 |
+| AC-F1-2 | **Given** the shipped help surface, **when** root `--help` is rendered, **then** the listing contains the `daemon` family with a one-line summary, and `<binary> daemon --help` exits `0` with usage, options, examples, exit codes, and a see-also pointer naming the daemon reference page. | F-1, NFR-1, NFR-11 |
+| AC-F1-3 | **Given** the help and reference guards, **when** they run, **then** `help-guide-coverage` reports zero failures (the daemon reference page exists, contains `--help` and `--version`, and is listed in both `commands` and `referencePages` of the coverage inventory), reference-page parity holds (the inventory's command list equals the prompt-required set and every see-also target exists and is registered), and the doc-conformance page list includes `daemon`. | F-1, DM-6 |
+| AC-F1-4 | **Given** any daemon subcommand, **when** `<binary> daemon <start\|stop\|status\|install\|uninstall> --help` runs, **then** it exits `0` with the subcommand's usage and options rather than an unknown-flag refusal. | F-1, NFR-1 |
+| AC-F1-5 | **Given** a production composer with no entry path, no signal host, and no injected supervisor, **when** the program is composed, **then** the `daemon` command is still registered and selectable, so an absent optional input degrades one start or install shape and never removes the command. | F-1, F-2, F-8 |
+
+### 17.2 Detached start and foreground lifetime
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F2-1 | **Given** a production composition with a composed entry path and no live instance, **when** `daemon start` runs without `--foreground`, **then** it spawns the entry path with arguments `daemon start --foreground` and an environment containing exactly the state-directory variable bound to the resolved directory, waits for a durable `acquired` instance, and reports a start receipt whose instance pid is the spawned process's pid, whose socket path is the resolved socket, and whose heartbeat age is reported from durable state. | F-2, F-3, DM-1, EVT-1 |
+| AC-F2-2 | **Given** a spawned child that never records an `acquired` instance within the delivered readiness window (20 polls × 50 ms), **when** `daemon start` runs, **then** it returns `daemon.state-recovery-failed` with the readiness-timeout detail at exit `2`, claims no success, and appends nothing; `daemon status` still reports whatever durable state exists. | F-2, NFR-4, NFR-7 |
+| AC-F2-3 | **Given** a production composition with no composed entry path, **when** `daemon start` runs without `--foreground`, **then** it starts in the invoking process and returns at readiness exactly as delivered, the command remains mounted, and no spawn is attempted. | F-2, F-8 |
+| AC-F2-4 | **Given** a composed signal host and no live instance, **when** `daemon start --foreground` runs, **then** it captures the readiness snapshot, installs `SIGINT` and `SIGTERM` listeners, runs the resident loop so heartbeats advance at the configured interval, and on the first `SIGTERM` stops with mode `drain`, appends one `released` instance record with `releaseReason=drain`, removes both listeners, and returns the snapshot captured at start at exit `0`. | F-2, DM-1, DM-2, EVT-1 |
+| AC-F2-5 | **Given** a foreground daemon, **when** it receives `SIGINT`, **then** it stops with mode `immediate`, appends one `immediate-stop` instance record, removes both listeners, and exits `0`; a subsequent `daemon stop` against that instance is a `noop` at exit `0`. | F-2, F-6, DM-2 |
+| AC-F2-6 | **Given** a daemon composition with no composed signal host, **when** `daemon start --foreground` runs, **then** it returns the readiness receipt at readiness exactly as delivered and the command path starts no resident loop, preserving the in-process embedder shape. | F-2, F-8 |
+| AC-F2-7 | **Given** a resident daemon started by a bare `start` in one process, **when** `daemon stop --mode drain` runs in a second process, **then** it reads the latest instance record, sends `SIGTERM` to the recorded positive pid, and reports `result=draining` at exit `0` without claiming that the drain already completed; once the resident process handles the signal, durable state shows one `released` instance with `releaseReason=drain` and every previously `delivering` lane recorded as `detached`. | F-2, F-6, EVT-1, EVT-3 |
+| AC-F2-8 | **Given** a foreground daemon whose release append fails, **when** the signal arrives, **then** the resident loop still terminates (cancellation precedes the append), both listeners are removed in the `finally`, and the command returns the delivered state-write identity at exit `2` instead of hanging or claiming a release. | F-2, NFR-5, NFR-7 |
+| AC-F2-9 | **Given** a foreground daemon and a second signal, **when** both signals arrive, **then** exactly one stop runs, exactly one terminal instance record is appended, and the listener registrations are removed so no handler outlives the invocation. | F-2, DM-2, NFR-9 |
+
+### 17.3 One state-directory scope
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F3-1 | **Given** an absolute `<PREFIX>_STATE_DIR` override, **when** any production command runs, **then** the state store, the daemon lock, the daemon settings, the control socket, the supervisor scope, and the daemon composition all use that one resolved directory, and the directory the edge reports equals the directory the daemon composition uses. | F-3, DM-6 |
+| AC-F3-2 | **Given** the same override, **when** a bare `daemon start` spawns its child, **then** the child resolves the identical directory from the single environment variable it receives (no `HOME`, no `PATH`), and its `acquired` instance record carries the same scope digest the parent expects. | F-3, DM-5, EVT-1 |
+| AC-F3-3 | **Given** no override, **when** the composition resolves the state directory, **then** the value is byte-identical to the previous `<home>/<brand.stateDirectoryName>` template, so an existing installation continues to read its existing state. | F-3, F-8 |
+| AC-F3-4 | **Given** a non-absolute override, **when** the production composition resolves the state directory, **then** the `daemon` command is still composed and mounted, the composition keeps the home-based value, and no composition-time throw or containment failure occurs; the invalid value is reported by the delivered resolution edge exactly as before. | F-1, F-3, F-8 |
+
+### 17.4 Control plane and live status
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F4-1 | **Given** a resident daemon and the composed transport, **when** `daemon status` runs in a new process, **then** it reports the instance (identity, pid, scope, acquisition time, mode), heartbeat age and interval, socket path and reachability, supervisor descriptor, and a `degraded` list derived from durable state, at exit `0`; with a live fresh instance the derived markers are empty. | F-4, F-5, EVT-1, EVT-2 |
+| AC-F4-2 | **Given** a resident daemon, **when** `daemon status --live` runs, **then** it probes the composed transport and returns a live envelope (`live: true`, socket reachable, heartbeat `running`) at exit `0`. | F-4, NFR-6 |
+| AC-F4-3 | **Given** no reachable daemon, **when** `daemon status --live` runs, **then** it fails closed with `daemon.socket-unreachable` (or `daemon.heartbeat-stale` when the socket answers but the heartbeat is stale) at exit `2`, while a plain `daemon status` remains a degraded success at exit `0`. | F-4, NFR-7 |
+| AC-F4-4 | **Given** a configuration that sets the daemon socket path or heartbeat interval, **when** the daemon is composed, **then** the resolved values are used for the bound socket and the heartbeat cadence (observable in the status payload and in advancing heartbeat ordinals), and no default is re-derived as a literal; when configuration cannot be acquired the same resolver runs over an empty branch and the shipped defaults apply. | F-4, DM-6, NFR-2 |
+
+### 17.5 Degradation resolved from durable state
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F5-1 | **Given** a live instance whose latest operation is `acquired` or `taken-over` with a heartbeat belonging to it and an age within the lock-staleness bound, **when** `queue list` and `lanes list` run, **then** both payloads carry `degraded: []`. | F-5, DM-3, DM-4 |
+| AC-F5-2 | **Given** a latest instance operation of `released` or `immediate-stop`, **when** `queue list` and `lanes list` run, **then** both payloads carry `degraded: ["daemon-unreachable"]`. | F-5, DM-4, EVT-1 |
+| AC-F5-3 | **Given** no instance record at all, **when** `queue list` and `lanes list` run, **then** both payloads carry `degraded: ["daemon-unreachable"]` at exit `0`. | F-5, DM-4 |
+| AC-F5-4 | **Given** an acquired instance whose latest heartbeat is older than the configured lock-staleness bound, **when** `queue list` and `lanes list` run, **then** both payloads carry `degraded: ["daemon-unreachable"]`. | F-5, DM-4, EVT-2 |
+| AC-F5-5 | **Given** a queue or lanes watch, **when** the daemon's durable state changes between iterations (a start, then a release), **then** the next emitted snapshot carries the newly resolved degradation in both directions within one iteration. | F-5, DM-3 |
+| AC-F5-6 | **Given** any durable record set, **when** `queue list` reports no degradation, **then** the delivered status fold reports heartbeat state `running` for the same store and instant, and when it reports degradation, the fold does not report `running` — one shared staleness bound, no second rule. | F-5, DM-4 |
+| AC-F5-7 | **Given** an unreadable or torn instance or heartbeat read, **when** the degradation resolver runs, **then** it returns `["daemon-unreachable"]`, performs no socket connect, raises no error identity, and does not fabricate reachability; an unreadable queue store still fails the queue read through its own delivered state identity. | F-5, DM-3, NFR-3 |
+
+### 17.6 Instance pid and stop safety
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F6-1 | **Given** a production start, **when** the instance record is written, **then** its `pid` is the composing process id and is a positive integer, never `0`; `daemon status` and the start receipt report that pid. | F-6, DM-1, EVT-1 |
+| AC-F6-2 | **Given** a durable instance record whose pid is `0`, negative, or not an integer, **when** a cross-process `daemon stop` runs, **then** it returns `daemon.state-recovery-failed` at exit `2` and calls the process port's signal zero times, so no process group can be addressed. | F-6, NFR-8 |
+| AC-F6-3 | **Given** a durable instance record with a positive pid, **when** `daemon stop --mode drain` and `daemon stop --mode immediate` run, **then** the first sends `SIGTERM` and the second `SIGINT` to that pid only, no signal targets a group, and a failed signal call returns the delivered recovery identity at exit `2`. | F-6, NFR-8, NFR-9 |
+
+### 17.7 Install identity and supervisor classification
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F7-1 | **Given** a Linux platform and a composed entry path, **when** `daemon install` runs, **then** the unit is written at `<config root>/systemd/user/<brand.binaryName>-daemon.service` containing `ExecStart=<absolute entry path> daemon start --foreground` and `Environment=<PREFIX>_STATE_DIR=<resolved state directory>`, the unit is enabled, linger is enabled, and the receipt reports `result=installed` with the descriptor (kind, unit, scope, installed, linger, command form, service type, restart policy, environment binding) at exit `0`. | F-7, DM-6 |
+| AC-F7-2 | **Given** `XDG_CONFIG_HOME` is absolute and non-empty, **when** `daemon install` runs, **then** the unit is written under `$XDG_CONFIG_HOME/systemd/user/`; **given** it is unset, empty, or relative, **then** the unit is written under `<home>/.config/systemd/user/`. | F-7, DM-6 |
+| AC-F7-3 | **Given** a platform with no delivered supervisor adapter, or a linger enablement failure, **when** `daemon install` runs, **then** it returns `daemon.supervisor-unsupported` at exit `2`, writes no unit into the configuration root, reports the platform evidence, and leaves no partially installed unit behind. | F-7, NFR-7 |
+| AC-F7-4 | **Given** an installed unit, **when** `daemon uninstall` runs, **then** it removes only the unit and ownership marker this installation created, disables linger only when it enabled it, and reports `result=uninstalled`; **given** no installed unit, **then** it reports `result=noop` at exit `0`. | F-7, NFR-9 |
+| AC-F7-5 | **Given** no composed entry path, **when** `daemon install` runs, **then** it refuses with `daemon.state-recovery-failed` at exit `2` and writes no unit, so no unit is ever rendered with an empty executable. | F-7, NFR-8 |
+
+### 17.8 Additive contract and preserved behaviour
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F8-1 | **Given** the internal error table, **when** it is validated, **then** no row is added, removed, or reworded, every identity this change reaches (`daemon.already-running`, `daemon.takeover-refused`, `daemon.heartbeat-stale`, `daemon.state-recovery-failed`, `daemon.socket-unreachable`, `daemon.supervisor-unsupported`, and the delivered `state.*` family) is an existing row, and every path exits only `0`, `1`, or `2`. | F-8, NFR-7 |
+| AC-F8-2 | **Given** the state schema, **when** it is validated, **then** `STATE_SCHEMA_VERSION` is unchanged, no record kind or payload schema is added, no migration exists, and the only record-shape change is the value of `daemon.instance.pid` (now a real process id). | F-8, DM-7 |
+| AC-F8-3 | **Given** a composition that supplies an array-valued `degraded`, **when** `queue list`, `lanes list`, and their mutations run, **then** the payloads are byte-identical to the delivered output; **given** a composition that omits `degraded`, the delivered `["daemon-unreachable"]` fallback still applies. | F-8, DM-3 |
+| AC-F8-4 | **Given** the delivered suites for daemon lifecycle, daemon degradation, daemon lock, daemon lock concurrency, daemon supervisor install, queue CLI, control transport, entrypoint help, reference-page parity, queue-scheduling contract, daemon vocabulary, and doc conformance, **when** the full gate runs, **then** each passes with only the mount-specific updates named in §8.5 (the expected-family list, the `daemon` absence assertions, the coverage inventory, and the conformance page list) and no semantic change to its assertions. | F-8, NFR-2 |
+
+### 17.9 Non-functional acceptance
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-NFR-1 | **Given** any `--help` or `--version` invocation, **then** it performs zero state, configuration, git, network, or filesystem reads, writes nothing, and invokes no command composer. | NFR-1 |
+| AC-NFR-2 | **Given** a `queue list` or `lanes list` invocation, **when** the degradation resolves, **then** it performs at most two durable state reads, opens no socket, probes no process, sleeps zero times, and keeps the read's p95 latency within 10% of the delivered baseline on the reference store. | NFR-3 |
+| AC-NFR-3 | **Given** a foreground daemon and a delivered `SIGTERM`, **when** the signal is handled, **then** the process stops, appends its release, and exits within 1 000 ms, with loop cancellation observed within 250 ms. | NFR-5 |
+| AC-NFR-4 | **Given** the reference store, **when** `daemon status` and `daemon status --live` run, **then** their p95 latencies are within 1 000 ms and 2 000 ms respectively, and every output stays within the delivered bounds. | NFR-6, NFR-11 |
+| AC-NFR-5 | **Given** any new output, record, or error evidence, **when** it is inspected, **then** it carries no credential, token, prompt, transcript, diff, or repository content, and the only new environment value is an absolute directory path. | NFR-10 |
+| AC-NFR-6 | **Given** a repeated `daemon install`, `daemon stop` against a released instance, and a `daemon start` while an instance is live, **then** install is idempotent, stop is a `noop` at exit `0`, and start returns `daemon.already-running` at exit `2` appending nothing. | NFR-9, NFR-7 |
+
+Each criterion names an observable — an envelope field, a degraded array, a durable record, a file under the configuration root, an exit code, or a help listing — so the test plan and delivery plan can place the corresponding proof. This specification prescribes no plan phase, test file location, or implementation step.
+
+## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
+
+- **Delivery shape.** One change on `feat/GH-286/daemon-command-mounting`, one pull request targeting `main-tools`. Runtime-neutral composition and help changes only.
+- **No migration and no schema change.** Nothing is transformed, backfilled, or seeded.
+- **Ordering inside the change.** The degradation seam and the composition inputs are independent of the mount; the mount, the prompt-required set, and the help/coverage inventory must land together because the strict program selection makes a partially mounted family a composition failure.
+- **Adoption path.** An operator runs `daemon start` once and then reads `daemon status`, `queue list`, and `lanes`; `daemon install` is optional and only adds a user-level unit. Nothing changes for an operator who never starts a daemon except that the degradation marker becomes informational.
+- **Disclosed behaviour change.** A process that sets `<PREFIX>_STATE_DIR` now sees the whole production composition honour the override. Existing state at the home default is not moved; the operator either keeps the variable set or moves the directory deliberately.
+- **Rollback.** Stop the daemon, uninstall the unit if one was installed, and revert the change. Records are additive under the same schema and remain readable; no data loss and no migration reversal is required.
+- **Communication.** The mount, the foreground lifetime, the install identity, and the derived degradation are recorded in the reconciled feature pages, the daemon command page, and the M2 entrypoint delta.
+
+## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
+
+N/A. No record kind, payload schema, or schema version changes, and no record is transformed. Two operational notes stand in place of a migration:
+
+- An installation that has never run a daemon has no instance or heartbeat record; that is a valid state and resolves to `daemon-unreachable`, which is now the truth rather than a constant.
+- A process that sets `<PREFIX>_STATE_DIR` moves where the production composition reads and writes. Existing state under the home default stays on disk and is not copied; the operator either keeps the variable or relocates the directory. No automated move is performed and none is implied.
+
+## 20. PRIVACY / COMPLIANCE REVIEW
+
+- **No personal data or content.** The change reports identities, paths, counts, durations, pids, and closed vocabulary values only. No prompt, message, transcript, diff, diff hunk, repository content, or model output is stored or printed.
+- **No secret material.** The only new environment value is an absolute directory path; no credential, token, or provider payload is read, written, or rendered. The daemon lock token is never exposed by any command.
+- **New write location is user-owned.** The unit and its ownership marker land under the user configuration root and are removed by `uninstall`; nothing is written outside the user's own configuration and the resolved state directory.
+- **Trust model unchanged.** Same-user local process boundary; the control socket is inside the state directory; no privilege escalation, no remote transport, no new network destination.
+- **Privacy guard impact.** None; the change adds no committed private literal and no cloud dependency.
+
+## 21. SECURITY REVIEW HIGHLIGHTS
+
+- **Signalling is now bounded to a recorded positive pid.** The composing pid is recorded, and any record whose pid is not a positive integer is refused before a signal call, which removes the process-group hazard that a `0` fallback created. The target is always a pid read from durable state, never a name, pattern, or user-supplied string.
+- **Foreground lifetime is an availability control.** A foreground daemon that owns its lifetime through the signal host releases its instance lock and detaches delivering lanes on `SIGTERM`, so a stop cannot leave a permanent lock holder.
+- **Fail-closed on unreadable state.** A torn instance or heartbeat read degrades rather than asserting reachability; `status --live` is the only surface that fails on an unreachable transport; `install` refuses without an executable path.
+- **Writes are scoped and reversible.** The installer writes one unit and one ownership marker under the user configuration root, enables linger explicitly, rolls back on a linger failure, and removes only what this installation created.
+- **No new attack surface.** No new listener, network egress, credential read, elevation, or execution path except the delivered lifecycle commands; the detached child is the same executable this process is running.
+- **Residual risk.** A same-user process can interfere with durable state, as in the delivered trust model; a wrapper that makes the entry path non-executable turns a start into a classified failure. This change does not widen the boundary.
+
+## 22. MAINTENANCE & OPERATIONS IMPACT
+
+- **New operator surface.** `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`, `daemon status [--live]`, `daemon install`, `daemon uninstall` — reachable from the shipped binary, with help for the family and each subcommand.
+- **Runbook.** Start with `daemon start` (returns a receipt) or `daemon start --foreground` in a terminal or under the installed unit (the receipt renders at stop). Inspect with `daemon status`; probe with `daemon status --live`. Stop with `daemon stop --mode drain` for an orderly detach or `--mode immediate`. Install the optional user unit with `daemon install` and remove it with `daemon uninstall`.
+- **Operational interpretation.** `queue list` and `lanes` now report `daemon-unreachable` only when the durable record set says so; a live instance removes it, and a released, absent, or stale one restores it within one projection. `supervise-only` mode with `lane-executor-unavailable` is expected in production v1 and means "daemon running, no lane executor composed", which is distinct from "daemon unreachable".
+- **Configuration.** No new key. The `daemon` branch's delivered keys (socket path, heartbeat interval/cycle, lock staleness, transports, bounds) now actually reach the composed runtime; the state directory remains the environment override or the home default.
+- **State growth.** One instance record per start, takeover, release, or immediate stop; one heartbeat per interval while resident; one lane record per detach. A queue or lanes read appends nothing.
+- **Failure handling.** A readiness timeout is retried after inspecting `daemon status`; a refused stop for a non-positive pid means the durable record is torn and should be inspected rather than forced; an unsupported supervisor means the platform has no delivered adapter and the daemon runs in the foreground or not at all.
+- **Maintenance cost.** The composition values that must be kept in agreement (unit name, entry path, environment variable, config root, scope) are derived from the brand and one resolution, so the recurring cost is low; the main ongoing attention is the re-entry environment limit for a renamed product.
+
+## 23. GLOSSARY
+
+| Term | Definition |
+|---|---|
+| Resident daemon | The delivered single-instance supervisor process: acquires the instance lock, writes heartbeats, serves the control socket, reconciles on start, drains or stops on request. |
+| Lifecycle family | `daemon start`, `stop`, `status`, `install`, `uninstall` with the delivered grammar. |
+| Entry path (`daemonEntry`) | The absolute path of the running executable entry, supplied by the executable as a production fact; used both to re-enter as a detached child and as the unit's executable. |
+| Detached re-entry | A bare start spawning the entry path as `daemon start --foreground` in a detached process whose environment carries exactly the state-directory variable. |
+| Foreground lifetime | A foreground start owning its process lifetime through the injected signal host until the first signal, then stopping with that mode and returning the readiness snapshot. |
+| Readiness snapshot | The start receipt captured after the runtime reports readiness; returned at exit by the foreground lifetime path. |
+| Readiness window | The delivered bounded poll (20 attempts × 50 ms) for a durable `acquired` instance before a start reports a timeout. |
+| Composing pid | The process id of the process that acquires the instance lock; recorded on the instance record instead of the `0` fallback. |
+| Fail-closed stop | Refusing to signal a durable record whose pid is not a positive integer, returning the delivered recovery identity and sending nothing. |
+| Reachability predicate | The durable rule: latest instance operation `acquired`/`taken-over`, heartbeat belonging to that instance, age within the lock-staleness bound; otherwise `daemon-unreachable`. |
+| Degradation resolver | The per-projection function that produces the queue or lanes `degraded` list from durable state instead of a captured constant. |
+| State-directory scope | The canonical directory selected by `<PREFIX>_STATE_DIR` when set and otherwise `<home>/<brand.stateDirectoryName>`, shared by store, lock, socket, unit, child, and read side. |
+| Unit identity | `${brand.binaryName}-daemon.service` under the user configuration root, with the resolved state directory as its environment binding. |
+| Configuration root | `XDG_CONFIG_HOME` when absolute and non-empty, otherwise `<home>/.config`. |
+| Supervise-only mode | The delivered daemon mode when no lane executor is composed: it reconciles, serves status and control, and reports `lane-executor-unavailable`. |
+| Lock-staleness bound | The configured heartbeat age after which a daemon is considered stale; the single freshness bound for both `daemon status` and the queue/lanes degradation predicate. |
+| Prompt-required command | A command in the exact set the entrypoint composes; a missing member is a composition gap that throws and is contained as `fallback.internal`. |
+| Help coverage inventory | The machine-readable list of prompt-required commands and reference pages the coverage and parity guards compare against the shipped help and the reference pages. |
+
+## 24. APPENDICES
+
+### Appendix A — Ticket-to-spec traceability
+
+| Ticket acceptance criterion / pinned decision | Spec coverage |
+|---|---|
+| `daemon status` reports daemon state (running pid/url or a classified not-running outcome) with no degradation workaround | AC-F4-1..4, AC-F5-1..7, DEC-7 |
+| `daemon start` brings the resident daemon up; `queue list` and `lanes` stop reporting `daemon-unreachable`; `daemon stop --mode drain` drains lanes per contract | AC-F2-1..9, AC-F5-1..7, AC-F6-1..3, DEC-2, DEC-3, DEC-7 |
+| `daemon install`/`uninstall` manage the systemd unit on Linux; unsupported platforms classify cleanly | AC-F7-1..5, DEC-9, DEC-11 |
+| Help/reference coverage guards pass; entrypoint listing shows the command | AC-F1-1..5, AC-F8-4, DEC-12, DEC-13 |
+| Ticket scope: compose the runtime and mount the family per the daemon contract | F-1, AC-F1-1..5, DEC-1 |
+| Ticket scope: prompt-required set, help reference page, man-page/entrypoint delta updates | AC-F1-2..4, §16 documentation impact |
+| Ticket scope: install registers the optional user-level systemd unit with linger on Linux; unsupported supervisors return the classified outcome | AC-F7-1..5 |
+| Provenance: GH-284 review board finding CG-DAEMON-001 | §2.1 current state, §16 entrypoint-delta reconciliation |
+
+### Appendix B — TDR-0022 decision-to-AC map
+
+| TDR position | Spec decision | Acceptance criteria |
+|---|---|---|
+| DC-1 entry path from the running executable, forwarded as a production fact | DEC-2 | AC-F2-1..3 |
+| DC-1 signal-owned foreground lifetime (`SIGTERM` drain, `SIGINT` immediate, cleanup in `finally`, snapshot at exit) | DEC-3 | AC-F2-4..9 |
+| DC-1c one state-directory scope through the delivered resolution | DEC-5 | AC-F3-1..4 |
+| DC-1d/1e resolved settings, delivered unix transport, ownership predicate, no wake | DEC-4, DEC-6 | AC-F4-1..4 |
+| DC-2 per-read degradation from durable state | DEC-7 | AC-F5-1..7 |
+| DC-3 real pid plus fail-closed stop | DEC-8 | AC-F6-1..3 |
+| DC-4 brand-derived install identity | DEC-9 | AC-F7-1..5 |
+| C-5 prompt-required surface always composes | DEC-1 | AC-F1-1, AC-F1-5 |
+| C-6 additive composition only | DEC-1, DEC-7, DEC-8, DEC-11 | AC-F8-1..4, AC-F8-2 |
+
+### Appendix C — Closed vocabularies relied on (all unchanged)
+
+| Vocabulary | Values used by this change |
+|---|---|
+| Instance operations | `acquired`, `taken-over`, `released`, `immediate-stop` |
+| Release reasons | `drain`, `immediate`, `shutdown` |
+| Heartbeat states | `running`, `stale`, `stopped` |
+| Start modes | `resident`, `foreground`, `supervise-only` |
+| Stop results | `stopped`, `draining`, `noop` |
+| Stop modes | `drain`, `immediate` |
+| Queue degradation reasons | `daemon-unreachable` (the only member) |
+| Daemon degradation markers | `daemon-unreachable`, `daemon-heartbeat-stale`, `daemon-socket-unreachable`, `lane-executor-unavailable`, `subscriber-overflow` |
+| Supervisor kinds | `systemd-user`, `launchd`, `windows-service` |
+| Install/uninstall results | `installed`, `noop`, `uninstalled` |
+
+No vocabulary is extended, narrowed, or reordered.
+
+### Appendix D — Mount exit matrix
+
+| Outcome | Identity | Exit | Consequence |
+|---|---|---|---|
+| Start reached readiness with a durable acquired instance | — (success `data`) | 0 | — |
+| Foreground lifetime ended on a signal with the release landed | — (success `data`, snapshot captured at start) | 0 | — |
+| Stop accepted for a live instance (`draining` or `stopped`) | — (success `data`) | 0 | — |
+| Stop against a released or absent instance | — (success `data`, `result=noop`) | 0 | — |
+| Plain status with no daemon, a stale heartbeat, or an unreachable socket | — (degraded success `data`) | 0 | — |
+| Install installed, uninstall removed, or uninstall noop | — (success `data`) | 0 | — |
+| Invalid invocation grammar | `fallback.invocation` | 1 | `not_landed` |
+| State permission denied | the delivered `state.permission.denied` | 1 | `not_landed` |
+| Instance already held | `daemon.already-running` | 2 | `not_landed` |
+| Takeover refused against a live lock | `daemon.takeover-refused` | 2 | `not_landed` |
+| Readiness timeout, unreadable or torn instance state, failed signal call, refused stop for a non-positive pid, install without an executable path | `daemon.state-recovery-failed` | 2 | `not_landed` |
+| Live status with an unreachable transport | `daemon.socket-unreachable` | 2 | `not_landed` |
+| Live status with a stale heartbeat | `daemon.heartbeat-stale` | 2 | `not_landed` |
+| No delivered supervisor adapter, or a linger failure | `daemon.supervisor-unsupported` | 2 | `not_landed` |
+| Failed state append | the delivered `state.write.failed` | 2 | `not_landed` |
+| Unreadable queue store on a queue or lanes read | the delivered `state.*` identity for that read | 2 | `not_landed` |
+
+A missing daemon is never an error on a state-derived surface: `queue`, `lanes`, and plain `daemon status` report it as degradation at exit `0`. Every non-zero outcome resolves to one delivered identity.
+
+### Appendix E — Identity matrix (the values that must agree)
+
+| Observer | State directory | Entry path | Environment name | Unit | Scope |
+|---|---|---|---|---|---|
+| Composing process | resolved (override or home default) | `process.argv[1]` | `<PREFIX>_STATE_DIR` | `${binaryName}-daemon.service` | digest of the resolved directory |
+| Detached child | same variable, same value | same path (it is the executable) | same name | — | same digest |
+| Installed unit | `Environment=` binding | `ExecStart` | same name | same unit name | same digest |
+| Store / lock / socket | same directory | — | — | — | — |
+| Queue / lanes read side | reads the same store | — | — | — | compares instance scope implicitly through the record set |
+
+### Appendix F — Composition matrix (production values)
+
+| Composition input | Production value | Basis |
+|---|---|---|
+| `store` | the production state store over the resolved directory | DEC-5 |
+| `lock` | the delivered daemon lock port over the resolved directory | DEC-5 |
+| `settings` | resolved `daemon` branch with the resolved directory, defaults over an empty branch | DEC-6 |
+| `restartBound` | resolved `lane.restart-budget`, shipped default on failure | DEC-10 |
+| `stateDirectory` | resolved scope value | DEC-5 |
+| `unit` | `${brand.binaryName}-daemon.service` | DEC-9 |
+| `binary` | the entry path | DEC-2, DEC-9 |
+| `environmentName` | the exact `<PREFIX>_STATE_DIR` name | DEC-9 |
+| `supervisorConfigDirectory` | `XDG_CONFIG_HOME` or `<home>/.config` | DEC-9 |
+| `daemonEntry` | the entry path when non-empty | DEC-2 |
+| `pid` | the composing process id when positive | DEC-8 |
+| `signalHost` | the injected signal host | DEC-3 |
+| `transport`, `socketPath` | the delivered unix transport at the resolved socket path | DEC-6 |
+| `supervisor` | omitted in production; injectable for tests | DEC-11 |
+| `wake` | not supplied | DEC-4 |
+| `executor`, `lane`, `supervision` | not supplied (supervise-only) | DEC-15 |
+| `mergeCodePath` | `"absent"` | delivered |
+| Degradation resolver | the durable-state predicate | DEC-7 |
+
+## 25. DOCUMENT HISTORY
+
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | 2026-11-11 | `@spec-writer` | Initial specification for GH-286 / M1-S18 mount: 47 acceptance criteria (41 capability criteria across eight capabilities plus six non-functional criteria), 16 decisions, the additive contract deltas (`DaemonComposition.pid?`, `DaemonComposition.signalHost?`, `ProductionCompositionFacts.daemonEntry?`, `ProductionCompositionFacts.supervisor?`, the `QueueComposition.degraded` union, the foreground-lifetime contract), the reconciled documentation set with each reversed claim, and the composition gap the decision record leaves open (restart bound, install test seam, help inventory shape, conformance page list, status install truth, production start mode, re-entry environment limit) resolved as DEC-10 through DEC-16. |
+
+---
+
+## AUTHORING GUIDELINES
+
+- **Sources.** Authored from the GH-286 issue body (read live), the clarify-scope record in `chg-GH-286-pm-notes.yaml`, and the binding decision record `TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md`. The delivered surfaces named as facts — the composition seam, `createDaemonCommandRuntime` and `DaemonComposition`, the runtime's start/stop/loop and failure paths, the process port's detached spawn and environment replacement, the state-directory scope resolution and the daemon settings resolver, the unix transport preconditions, the supervisor adapter and unit renderer, the status fold, the queue and lanes runtimes and their degradation consumers, the prompt-required set, the help inventory, and the help/parity/conformance guards — were read from the tree so the specification describes current behaviour rather than assumptions.
+- **Approach.** The ticket's four acceptance themes are turned into eight capabilities and 46 criteria, each with an observable (an envelope field, a degraded array, a durable record, a file under the configuration root, an exit code, or a help listing). The decision record's DC-1 through DC-4 are adopted as DEC-1 through DEC-9 and mapped one-to-one in Appendix B. The composition values the record leaves open are resolved rather than deferred: the lane restart bound, the install test seam, the help inventory shape, the conformance page list, the delivered status install truth, the production start mode, and the re-entry environment limit.
+- **Contradictions resolved in this specification.** (1) The decision record names the production entry-path fact `entryScriptPath` while the change delegation names it `daemonEntry`; the specification adopts `daemonEntry` so the fact and the composition input share one name, and records the naming reconciliation in DEC-2. (2) The decision record asserts that the child's only surviving environment variable is the one the state-directory resolution reads; that holds only while the composing process and the re-entrant process resolve the same brand prefix, so the specification states the assumption, the limitation, and the follow-up instead of presenting it as unconditional (DEC-16, RSK-6). (3) The decision record does not name the daemon's lane restart bound, the install test seam, or the delivered status install truth; each is resolved as a decision with an explicit residual rather than left implicit (DEC-10, DEC-11, DEC-14).
+- **Constraints observed.** The specification is contract-level: it names capabilities, composition inputs, durable records, identities, and observable outcomes, and it prescribes no plan phase, task sequence, or code structure. It preserves the delivered error taxonomy, the `{0,1,2}` exit projection, the additive state discipline, the no-new-dependency rule, and the purity boundary that keeps the reachability predicate free of I/O.
+- **Open questions.** None. All choices inside the ticket are recorded as decisions; the decision record's own residual questions are either resolved here or named as deferred work in §7.3.
+
+## VALIDATION CHECKLIST
+
+- [x] `change.ref` matches provided `workItemRef` (GH-286)
+- [x] `owners` has at least one entry
+- [x] `status` is "Proposed"
+- [x] All sections present in order (1–25 + authoring guidelines + validation checklist)
+- [x] ID prefixes consistent and unique (F-, AC-, NFR-, RSK-, DEC-, OQ-, DM-, EVT-)
+- [x] Acceptance criteria reference at least one F-/NFR-/DM-/EVT- ID and use Given/When/Then
+- [x] NFRs include measurable values
+- [x] Risks include Impact & Probability
+- [x] No implementation details beyond the named composition contracts and reference pages
+- [x] No content duplicated from linked docs beyond the necessary contract summary
+- [x] Front matter validates per the authoring rules
