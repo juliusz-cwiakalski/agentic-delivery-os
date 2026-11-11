@@ -215,3 +215,29 @@ notes:
       CommandResult."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 1 complete (commit 415395f8). TDR-0023 presence and its
+      doc/decisions/00-index.md row verified on the branch with no content
+      change (still Proposed, decision_date null). attempts.v1 contracts
+      declared beside the delivered dispatch constants: DispatchAttemptView
+      (sixteen fields, divergenceRef string|null, no optional members),
+      DispatchAttemptsTruncation, DispatchAttemptsData (eight always-present
+      keys plus truncation), AttemptsRefSource, and five new bound constants
+      reusing DISPATCH_MAX_MACHINE_BYTES / DISPATCH_MAX_HUMAN_LINES /
+      DISPATCH_MAX_HUMAN_BYTES; all nine names entered in BOTH entries of
+      tests/fixtures/ports/v1-contract-inventory.json in this commit. Pure
+      domain helper packages/core/src/domain/dispatch-attempts.ts
+      (projectAttempt / orderAttempts / selectAttemptsPage, runtime-neutral
+      UTF-8 byte length) and app read use case
+      packages/core/src/app/dispatch-attempts.ts (one readDispatchAttempts
+      call, ref and identity resolved before the store, state.* mapped with
+      kind state). Green: dispatch-attempts-contract 10/10,
+      dispatch-attempts-bounds 8/8, subpaths+content-inventory+
+      port-contract-inventory 21/21, pnpm check aggregate 7224 pass / 4 skip /
+      0 fail (exit 0, TMPDIR=$PWD/tmp/tmpdir). Deviation: the commit primitive
+      derives the subject and type deterministically from the latest completed
+      lifecycle phase (dor_check -> chore) and accepts only canonical lifecycle
+      phases in --phase, so the plan's declared feat(dispatch) subjects cannot
+      be produced without hand-composing a message; the actual subject is
+      recorded here instead."
+    type: info
+    date: "2026-11-11"

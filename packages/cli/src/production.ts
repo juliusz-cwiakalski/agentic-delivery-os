@@ -28,6 +28,7 @@ import {
   readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
   readHostIndexFile,
+  readLocalPmContext,
   readOwnerHoldMarker,
   readPmNotesText,
   readProjectIdentityMarker,
@@ -1662,6 +1663,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           principal: DISPATCH_PRINCIPAL,
           resolveRepository: (repo) =>
             resolveProductionRepository(schedulerKeyOf(repo), { persist: false }),
+        },
+        // The read side resolves identity with persistence disabled and passes no
+        // scheduler key, so `dispatch attempts` performs exactly one store read
+        // and never creates, repairs, or re-persists the binding marker.
+        attempts: {
+          resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),
+          resolveActiveRef: () => {
+            const context = readLocalPmContext({ path: pmContextPath, fs: localFs });
+            return context.ok ? (context.context.activeChange?.workItemRef ?? null) : null;
+          },
+          contextPath: pmContextPath,
         },
       }),
       run: {

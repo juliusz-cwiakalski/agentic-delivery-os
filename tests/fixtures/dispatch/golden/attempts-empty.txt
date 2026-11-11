@@ -1,0 +1,2 @@
+attempts=0; repository=github.com/owner/repo; ref=GH-289; has_more=false
+next: dispatch dual-run summary --repo github.com/owner/repo (coverage and floor)

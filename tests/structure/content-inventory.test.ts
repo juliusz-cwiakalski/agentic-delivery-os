@@ -173,6 +173,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/daemon/wake.ts": ["createEventLogWake"],
   "cli/src/commands/dispatch.ts": ["createDispatchCommandDefinition"],
   "cli/src/output/dispatch-text.ts": [
+    "renderDispatchAttemptsText",
     "renderDispatchHandoverText",
     "renderDispatchSummaryText",
     "renderDispatchText",

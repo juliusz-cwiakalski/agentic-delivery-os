@@ -6,8 +6,13 @@
  * comes only from the delivered projection module.
  */
 import {
+  ATTEMPTS_HUMAN_ROW_BUDGET,
   DELIVERY_RESULT_TAXONOMY,
+  DISPATCH_MAX_HUMAN_BYTES,
+  DISPATCH_MAX_HUMAN_LINES,
   type DeliveryResultToken,
+  type DispatchAttemptsData,
+  type DispatchCorroborationRecord,
   type DispatchEnvelopeData,
   type DispatchSummaryData,
 } from "@delivery-os/core/contracts";
@@ -79,6 +84,67 @@ export const renderDispatchSummaryText = (data: DispatchSummaryData): string => 
       : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omittedRecords}`]),
   ];
   return `${lines.join("\n")}\n`;
+};
+
+/** The closed three-value corroboration derivation (GH-289 F-6). */
+const corroborationCell = (corroboration: DispatchCorroborationRecord): string => {
+  const states = [corroboration.pmNotes, corroboration.tracker, corroboration.ci];
+  if (states.includes("unsatisfied")) return "uncorroborated";
+  if (states.every((state) => state === "not-applicable")) return "vacuous";
+  return "corroborated";
+};
+
+/** The UTF-8 byte length of a rendered digest, without any runtime buffer. */
+const utf8Bytes = (text: string): number => {
+  let bytes = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code <= 0x7f) bytes += 1;
+    else if (code <= 0x7ff) bytes += 2;
+    else if (code <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
+
+/** The section budgets the digest is bounded to (the delivered dispatch set). */
+const DIGEST_LINE_BUDGET = DISPATCH_MAX_HUMAN_LINES;
+const DIGEST_BYTE_BUDGET = DISPATCH_MAX_HUMAN_BYTES;
+
+/**
+ * The bounded deterministic attempts digest (GH-289 F-6, AC-F6-1..AC-F6-4):
+ * one summary line, one row per attempt newest first, an optional human
+ * truncation line with at most 37 rows beside it, and the coverage/floor
+ * pointer. Rows are dropped from the oldest end; `has_more` is untouched.
+ */
+export const renderDispatchAttemptsText = (data: DispatchAttemptsData): string => {
+  const summary = `attempts=${data.attempts.length}; repository=${data.repository}; ref=${data.ref}; has_more=${data.hasMore ? "true" : "false"}`;
+  const rows = data.attempts.map(
+    (row) =>
+      `${row.startedAt} ${row.ref} ${row.token} ${corroborationCell(row.corroboration)} ${row.divergenceRef ?? "none"} ${row.harness} ${row.evidenceClass}`,
+  );
+  const pointer = `next: dispatch dual-run summary --repo ${data.repository} (coverage and floor)`;
+  const render = (kept: number): string => {
+    const dropped = rows.length - kept;
+    const body = rows.slice(0, kept);
+    const lines = [
+      summary,
+      ...body,
+      ...(dropped === 0 ? [] : [`truncation=human:bound:${body.length},omitted:${dropped}`]),
+      pointer,
+    ];
+    return `${lines.join("\n")}\n`;
+  };
+  let kept = Math.min(rows.length, ATTEMPTS_HUMAN_ROW_BUDGET + 1);
+  while (kept > 0) {
+    const text = render(kept);
+    const lineCount = text.trimEnd().split("\n").length;
+    if (lineCount <= DIGEST_LINE_BUDGET && utf8Bytes(text) <= DIGEST_BYTE_BUDGET) {
+      return text;
+    }
+    kept -= 1;
+  }
+  return render(0);
 };
 
 /** The handover/reversal text. */

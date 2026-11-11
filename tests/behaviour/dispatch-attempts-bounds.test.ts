@@ -233,3 +233,61 @@ describe("TC-ATTEMPT-037 one verified store read and latency at the bound", () =
     }
   });
 });
+
+describe("TC-ATTEMPT-009/010/037 command-level re-run", () => {
+  test("the machine page stays inside the byte budget through the command", async () => {
+    const harness = createAttemptsHarness({
+      label: "bounds-command-bytes",
+      records: recordsFor(100, { evidenceRefs: maximalEvidenceRefs() }),
+    });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--limit",
+        "100",
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      expect(utf8Bytes(JSON.stringify(result.data))).toBeLessThanOrEqual(
+        DISPATCH_MAX_MACHINE_BYTES,
+      );
+      const data = result.data as { readonly truncation?: { readonly scope: string } };
+      expect(data.truncation?.scope).toBe("page");
+      expect(result.readCount).toBe(1);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("the ledger bound declares its scope through the command", async () => {
+    const records = ledgerOfCount(5001);
+    const harness = createAttemptsHarness({
+      label: "bounds-command-ledger",
+      records: [],
+      wrap: (store) =>
+        storeWithRecords(
+          store,
+          records.map((record, index) => attemptLedgerRecord(record, index + 1)),
+        ),
+    });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      const data = result.data as {
+        readonly truncation?: { readonly scope: string; readonly bound: number };
+      };
+      expect(data.truncation).toEqual({ scope: "ledger", bound: 5000, omittedRecords: 1 });
+    } finally {
+      harness.dispose();
+    }
+  });
+});
