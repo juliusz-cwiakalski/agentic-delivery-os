@@ -1,0 +1,154 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-268
+branch: chore/GH-268/commitlint-pre-pr-gate
+status: FAIL
+summary: >-
+  Iteration-1 findings F-1..F-8 are fixed and the fixes are non-vacuous: I
+  reverted the rule-id parser and the diagnostic renderer on throwaway copies and
+  reproduced the old failure (`rule=docs` phantom and 50/51 offender blocks),
+  while the committed tests assert the corrected behaviour. The worker-pool
+  performance fix preserves the main contracted properties: per-commit rule
+  attribution, oldest-to-newest ordering, byte-identical serial-vs-parallel
+  output (ADOS_LINT_JOBS=1 vs 8 over a 3-offender range), the two-pass 200-line
+  budget (51 offenders -> 51 blocks, no TRUNCATED), SURGICAL REWORD /
+  CONDENSE-TO-ONE thresholds, read-only (temp dir under TMPDIR removed on exit;
+  repo digests unchanged), no network, PASS/FAIL/SKIP/ERROR with 130 confined to
+  `_on_interrupt`, branch range PASS at 26 commits, 20-commit case 2.1-2.3 s
+  (serial 8.8 s). Fail-closed is real: a missing worker record (git log forced to
+  fail) and a SIGKILLed worker both exit 2 with ERROR and never PASS. One
+  reproducible regression blocks a pass: the worker-pool refactor broke the
+  DM-1.h execution-error diagnostic. `_collect_lint_results` reads
+  `<index>.status` with `read -r status_token detail` under the global
+  `IFS=$'\n\t'`, so the line `error <exit>` becomes one token; the `error` case
+  never matches and the fallback prints the *worker's* exit (0) instead of
+  commitlint's, so both the invalid-config and execution-failure paths report
+  "(exit 0)" for a non-zero commitlint failure. Outcome stays ERROR/exit 2, but
+  the cause detail is wrong and the `error` branch is dead. The pool also has no
+  committed regression tests, and spec section 10's "creates no files" is now
+  literally inaccurate (transient TMPDIR dir). Plan Phase 6 is complete with
+  pm-notes evidence; a further remediation phase (Phase 7) is appended. I also
+  corrected two plan-artifact defects in the change folder (see F-4/F-5).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 3
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:735
+    message: >-
+      Worker-pool regression in the DM-1.h path. `_collect_lint_results` parses
+      `<index>.status` with `read -r status_token detail < file` while the shell's
+      global `IFS` is `$'\n\t'` (space is not a separator), so a line `error 3`
+      yields `status_token="error 3"`, `detail=""`. The `case ... error)` branch
+      never matches; the `*)` fallback reports `WORKER_STATUS[index]` (the worker's
+      own exit, 0) instead of commitlint's exit, so the message prints
+      "commitlint could not render a verdict ... (exit 0)". Reproduced for both
+      DM-1.h sub-cases: the execution-failure shim (exit 3 -> "(exit 0)") and an
+      invalid configuration (commitlint exit 1 -> "(exit 0)"). The outcome is
+      still ERROR/exit 2 (fail-closed holds) and no committed test asserts the
+      exit detail, so this is a diagnostic/cause regression, not a verdict change.
+    suggestion: >-
+      Read the status file with a local field separator that includes a space
+      (`IFS=' ' read -r status_token detail <"${prefix}.status" || status_token=""`),
+      keep the `error` branch (it then carries `detail`), and assert in the
+      execution-failure test that the Cause line prints the shim's real exit (3),
+      which fails against the current parse.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-lint-commit-range.sh:1488
+    message: >-
+      The new worker pool has no committed regression coverage for its safety
+      properties: missing/partial worker record, SIGKILLed worker, `ADOS_LINT_JOBS`
+      validation, and serial-vs-parallel byte identity over an offender range. I
+      verified each manually (both missing-record and SIGKILL paths exit 2, no
+      PASS; invalid override warns and still renders; serial vs 8 jobs byte-
+      identical), but nothing in the suite would fail if a future edit broke them.
+    suggestion: >-
+      Add the four cases to the suite (a `git log` shim for the missing record, an
+      external SIGKILL of one worker for the kill path, an invalid `ADOS_LINT_JOBS`
+      assertion, and an `ADOS_LINT_JOBS=1` vs default output comparison over an
+      offender range).
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-spec.md:270
+    message: >-
+      Spec section 10 states "the gate creates no files and leaves no state
+      behind". The worker pool creates a transient `mktemp -d` directory under
+      `TMPDIR` and removes it on EXIT; NFR-5's enumerated surfaces (working tree,
+      index, refs, stash) stay untouched and the suite's read-only digest passes,
+      but the literal "creates no files" clause is no longer true.
+    suggestion: >-
+      Record the transient temp directory in the quality-gates pm-notes evidence
+      (created under TMPDIR, removed on EXIT, no persistent state, NFR-5 surfaces
+      unchanged) or amend the owning spec/doc sentence; do not weaken NFR-5.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-plan.yaml:551
+    message: >-
+      Plan artifact structure: the iteration-1 remediation append inserted Phase 6
+      between Phase 5's verification entries, so Phase 5's `pnpm check` and
+      `git diff --check` verification lines had slipped into Phase 6's list. The
+      reviewer restored them to Phase 5 and left Phase 6 with its own verification
+      list (`plan validate GH-268` -> valid). PM to commit with the review.
+    suggestion: >-
+      No further action beyond committing the corrected plan; keep the Phase 5
+      whole-battery and whitespace checks in Phase 5.
+    suppressed: false
+  - id: F-5
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-plan.yaml:165
+    message: >-
+      The plan's DELIVERY PINS still described "the same eight root candidates",
+      while the F-3 fix ships 14 root config-file candidates plus a root
+      package.json `commitlint` object property. The reviewer updated that pin to
+      the shipped detection so the plan is truthful; `plan validate` stays valid.
+    suggestion: >-
+      None beyond committing the corrected plan.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml:279
+    message: >-
+      Iteration-1 fixes verified (not taken on trust): F-1 phantom rule ids gone
+      (reverted parser reproduced `rule=docs` / 2 distinct; current gives
+      `rule=body-max-line-length line=3` / 1 distinct); F-2 budget names all 51
+      offenders (reverted renderer gave 50); F-3 `.commitlintrc.cjs` and root
+      package.json config now lint instead of SKIP (tests assert exit 1 and a
+      non-vacuous authority precondition); F-4 subject excerpt emitted; F-5
+      ESC/C0 controls sanitized (suite asserts absence and printable retention);
+      F-6 placeholder example + plugin regenerated (build leaves the tree
+      unchanged); F-7 header prints `ref=refs/remotes/origin/main-tools`; F-8 a
+      failing `git rev-list` is ERROR exit 2. pm-notes records Phase 6 COMPLETE.
+      The two remediation commits use template-derived subjects
+      (`docs(GH-268): update <path>`) that under-describe code changes; because
+      the branch is squash-merged, the PR/squash message is the authoritative
+      history and the subjects are conventional and gate-clean, so this is
+      acceptable for delivery, not a blocker.
+    suggestion: >-
+      No action; ensure the squash-merge title/body summarizes the gate,
+      remediation and worker-pool work.
+    suppressed: false
+reviewed_at: 2026-11-11T14:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

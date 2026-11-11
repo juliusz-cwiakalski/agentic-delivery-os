@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MONOREPO-SCAFFOLD-TOOLCHAIN
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-08
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, the dedicated git seam covering branch/checkout and commit operations, the declared inference network edge behind the commit primitive, the read-only owner-gate SLA board, the read-only doctor pre-flight diagnostic, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225", "GH-251", "GH-233", "GH-235", "GH-242"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225", "GH-251", "GH-233", "GH-235", "GH-242", "GH-268"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006", "TDR-0007"]
 ---
 
@@ -149,10 +149,12 @@ Fixture resolution mirrors production: fixture manifests point every `exports` t
 | Modules | ESM everywhere (`"type": "module"`, bundler module resolution); relative source imports use explicit `.js` specifiers so emitted declarations resolve under `node16` ESM in the packed artifact |
 | Type checking | One `tsconfig.base.json` with the full ADR strict flag set; per-package composite configs; root solution `tsconfig.json` referencing all six packages; a `tests/types/tsconfig.json` type-probe project chained into the root `typecheck` |
 | Lint/format | One root `biome.json` (recommended preset, 2-space, 100-column) |
-| Commit messages | One root `commitlint.config.js` (Conventional Commits); CI commitlint is the authority |
+| Commit messages | One root `commitlint.config.js` (Conventional Commits); CI commitlint is the authority, and the local pre-PR range gate `scripts/lint-commit-range.sh` mirrors it for the change branch's own range |
 | Local hook | `.husky/commit-msg` is offline, warn-only, non-mutating, and always exits 0 |
 | Build | `tsc` emits declarations, maps, and JavaScript to each package's `dist/` |
 | Boundaries | `dependency-cruiser`, the ambient-globals AST guard, the workspace-entrypoints check, and the secret-read boundary check, chained in `check:boundaries` |
+
+The local pre-PR range gate **mirrors** the CI authority rather than replacing it. `scripts/lint-commit-range.sh` lints the change branch's own range — the commits between the merge-base of the delivery base branch and `HEAD` — with the same single root configuration, adding no rule of its own. It resolves the lint binary repository-locally first (`node_modules/.bin/commitlint`) and then on `PATH`, and names the resolved binary and its origin in the verdict header so a tool resolved from outside the repository is visible rather than silent. It reports `PASS` (exit `0`), `FAIL` (exit `1`), `SKIP` (exit `0`, the project configures no commitlint) or `ERROR` (exit `2`, cannot verify), is read-only and offline, and is wired into the lifecycle `quality_gates` phase; it is not part of `pnpm check`, `/check`, or `/check-fix`.
 
 ### Quality entry points
 

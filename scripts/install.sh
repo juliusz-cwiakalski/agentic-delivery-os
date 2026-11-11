@@ -127,6 +127,7 @@ readonly ADOS_DELIVERY_SCRIPTS=(
   "scripts/batch-deliver.sh"
   "scripts/ceo-loop.sh"
   "scripts/pm-liveness.sh"
+  "scripts/lint-commit-range.sh"
 )
 
 # Installed examples remain inactive until an adopter explicitly selects one.
