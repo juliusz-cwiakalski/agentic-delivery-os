@@ -12,8 +12,10 @@ M1 contracts remain valid: the machine envelope shape, the error taxonomy, the
 exit-code meaning, the state-layer validation rules, and the audit ledger are
 unchanged. M2 surfaces extend them additively:
 
-- The machine envelope stays `{ ok, command, data, error?, warnings? }`; new
-  commands add keys under `data`, never new top-level keys.
+- The machine envelope stays the standard five-field `CommandResult`
+  (`schemaVersion`, `runId`, `exitCode`, `timing`, and `data`, plus `error` on a
+  failure); new commands add keys under `data`, never new top-level keys, and no
+  `ok` or `command` field exists on the envelope.
 - Exit codes keep their meaning: `0` declared verdict, `1` refused or negative
   verdict, `2` platform, state, or provider failure.
 - Every surface that reads or mutates state validates at the boundary and
@@ -57,9 +59,9 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
   `.ai/local/pm-context.yaml`. `--limit` is canonical decimal, 1..100, default
   20, refused rather than clamped; the envelope reports `matched`, `hasMore`,
   the bounded `truncation`, and the count-only `excluded.foreignRepository`. A
-  repository's history is the union over its refs; the read is scoped to the
-  invoking checkout's repository both physically (project state root) and
-  logically (record filter).
+  repository's history is the union over its refs, reached by successive
+  `--ref` calls; the read is scoped to the invoking checkout's repository both
+  physically (project state root) and logically (record filter).
 - **Divergence resolution.** `<binary> dispatch dual-run resolve <divergence-id> --note <text>`
   resolves a recorded divergence (no `--ref` on resolve: the divergence id
   carries the ref). The result keeps the five delivered keys and adds
@@ -70,8 +72,9 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
   stored.
 - **Error identities.** The read side adds no error row: a malformed request and
   an unresolvable context or identity are `input.value.rejected` (exit 1), an
-  unreadable store keeps its delivered `state.*` identity as that row projects,
-  and a verified empty history is success. No `attempts.*` identity exists.
+  unreadable store keeps its delivered `state.*` identity and that row's exit
+  (`state.permission.denied` is exit 1; the platform state rows are exit 2), and
+  a verified empty history is success. No `attempts.*` identity exists.
 - **Coverage and floor.** The summary keeps reporting evidence coverage and
   the exposure floor; the contract does not replace the handover gate. Its
   divergence block joins the same repository-scoped computation, so `unresolved`

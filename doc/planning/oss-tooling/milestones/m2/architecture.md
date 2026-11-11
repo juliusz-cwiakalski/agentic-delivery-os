@@ -89,8 +89,8 @@ flowchart LR
         LIST[projects list projector]
     end
     subgraph evidence [evidence components]
-        ATTEMPT[attempt reader<br/>token, corroboration triple,<br/>divergence refs]
-        RESOLVE[divergence resolver<br/>live truth or local evidence]
+        ATTEMPT[attempt reader<br/>token, corroboration triple,<br/>divergence reference]
+        RESOLVE[divergence resolver<br/>local evidence only,<br/>mode declared]
         FLOOR[coverage and floor reporter]
     end
     subgraph events [event components]
@@ -148,13 +148,11 @@ flowchart LR
 flowchart LR
     A[dispatch attempts --ref] --> B[read attempt ledger]
     B --> C[token and corroboration triple]
-    C --> D[divergence refs and timestamps]
-    D --> E{machine envelope}
+    C --> D[divergence reference and timestamps]
+    D --> E[machine envelope]
     E --> F[dual-run resolve]
-    F -->|tracker truth reachable| G[resolve against live truth]
-    F -->|unreachable| H[resolve from local evidence,<br/>mode declared]
+    F --> G[resolve from local evidence,<br/>mode declared]
     G --> I[note plus unresolved counts]
-    H --> I
 ```
 
 ### Telemetry attribution

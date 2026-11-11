@@ -22,7 +22,10 @@ engine already records and never starts, stops, or mutates a dispatch. It is
 mounted with the delivered dispatch family and does not change the root family
 listing or the prompt-required command set; see
 [../entrypoint-delta.md](../entrypoint-delta.md). The contract is
-`attempts.v1` in [../contracts.md](../contracts.md).
+`attempts.v1` in [../contracts.md](../contracts.md). The companion
+`dispatch dual-run resolve` result declares `mode: "local-evidence"`
+unconditionally, names the divergence's own repository, and reports the shared
+repository-scoped divergence block.
 
 `--help` and `--version` are served from the static help inventory: they perform
 no state, network, git, configuration, or model read.
@@ -128,7 +131,10 @@ and the ledger scope takes precedence.
 |---|---|
 | `0` | History was produced, including a verified empty history |
 | `1` | The request was refused: a non-canonical ref, an invalid limit, an unknown flag, an unexpected positional, an unresolvable active reference, or an unresolvable repository identity (all `input.value.rejected`) |
-| `2` | A state failure prevented reading the ledger honestly; the delivered `state.*` identity is reported and never an empty history |
+| `2` | A platform state failure prevented reading the ledger honestly; the delivered `state.*` identity is reported and never an empty history |
+
+The exit always follows the delivered row: `state.permission.denied` projects
+`user-validation` at exit `1`, while the platform state rows project exit `2`.
 
 ## EXAMPLES
 
@@ -163,20 +169,20 @@ $ <binary> dispatch attempts --ref GH-241 --json
 
 The delivered envelope is the five-field `CommandResult`
 (`schemaVersion`, `runId`, `exitCode`, `timing`, and `data`, plus `error` on a
-failure). The invocation's family token is `dispatch`; no subform name is added
-to the envelope.
+failure). It carries no `ok` and no `command` field; the invocation is recorded
+in the command audit ledger under the family token `dispatch`, and no subform
+name is added to the envelope.
 
 ## ERRORS
 
 | Error | Meaning | Exit |
 |---|---|---|
 | `input.value.rejected` | A malformed request or an unresolvable context/identity; nothing was read, nothing was appended | 1 |
-| `state.*` (for example `state.store.torn`) | The attempt ledger cannot be read honestly; that row's own identity, category, retryability, consequence, and remediation apply, never an empty history | The delivered projection of that row (a platform fault exits `2`) |
+| `state.*` (for example `state.store.torn`) | The attempt ledger cannot be read honestly; that row's own identity, category, retryability, consequence, and remediation apply, never an empty history | The delivered projection of that row: `state.permission.denied` is `1`; the platform state rows are `2` |
 
-There is no `attempts.*` error identity: the proposed `attempts.ref-unknown`,
-`attempts.limit-invalid`, and `attempts.ledger-unavailable` rows were resolved
-into the delivered `input` and `state` identities, and a document that still
-names them is stale.
+There is no `attempts.*` error identity. The read side's refusals are the
+delivered `input` and `state` identities above, and a document that names an
+`attempts.*` code is stale.
 
 ## SEE ALSO
 
