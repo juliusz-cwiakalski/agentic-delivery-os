@@ -737,6 +737,18 @@ phases:
   # its single whole-store read and the restructure moves the read, it does not
   # widen it.
   #
+  # Phase-transition read — two legal shapes, both in scope (A-22): the
+  # view-taking read can be expressed inside `state/registry.ts` (the fold takes
+  # the view and derives the phase transitions from it, deleting the
+  # `store.read({ requiredKeys: [] })` probe at `:292`), or as a view-taking read
+  # on the boundary in `state/artifact-boundary.ts` (`:108-112`, whose `read()`
+  # currently calls `store.readRecords()` at `:111`). Both files are declared in
+  # this phase's `scope.files` so either implementation is staged; the cheaper
+  # shape edits only `registry.ts`. The bound is identical either way and is what
+  # the phase must preserve: one whole-store `readRecords()` per publish tick, no
+  # per-change probe, no per-topic or per-subscriber read, and no new port
+  # method.
+  #
   # Dependency reasoning: the projection (Phase 3) already consumes a view as an
   # argument, and the subscribe carriage (Phase 4) is what makes TC-EVT-081's
   # 1-vs-N subscriber and 2-vs-4 subscribed-topic matrices observable, so this
@@ -788,6 +800,7 @@ phases:
         - packages/core/src/app/daemon.ts
         - packages/core/src/app/queue.ts
         - packages/core/src/domain/event-projection.ts
+        - packages/core/src/state/artifact-boundary.ts
         - packages/core/src/state/registry.ts
         - tests/behaviour/events-tick-cost.test.ts
     interactions:
@@ -819,6 +832,15 @@ phases:
   # stays `Proposed` and the owner's acceptance rides the pull-request review.
   # This phase changes no production code and adds no test assertion; it is
   # proven by the doc, coverage, parity, distribution, and changeset guards.
+  #
+  # Test-spec ownership (A-21): `doc/quality/test-specs/test-spec-resident-daemon.md`
+  #   is written HERE, inside this delivery phase, so the taxonomy coverage
+  #   (per-topic contract suites, envelope, ordering, overflow parity, and mount
+  #   proofs) lands in the same commit as the pages it describes and is staged by
+  #   the same phase-mode commit. Lifecycle phase 7 (`system_spec_update`) then
+  #   VERIFIES that file against the delivered suites; it does not add it. That
+  #   ownership split is why `doc/quality/test-specs` is declared in this phase's
+  #   `scope.folders` and why no later lifecycle step needs a scope declaration.
   #
   # Note on doc/00-index.md: spec §16 marks it unchanged (no spec page is
   # created), so it is not declared and no `undeclared-missing` is intended; the
