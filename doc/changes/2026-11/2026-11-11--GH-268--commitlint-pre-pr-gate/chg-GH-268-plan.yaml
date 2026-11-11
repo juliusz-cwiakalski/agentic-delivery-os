@@ -1,0 +1,365 @@
+# GH-268 implementation plan — pre-PR branch-range commit-message gate plus the
+# stated commit-message contract, the corrected resume-sync instruction, and
+# distribution/documentation truth.
+#
+# SOURCES (single source of truth, read before delivery):
+#   - Spec: ./chg-GH-268-spec.md (v1.1; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
+#     DM-1.a..DM-1.i terminal-condition contract, DM-2 diagnostics, DM-3
+#     remediation-mode rule; NFR-1..NFR-10; RSK-1..RSK-8; DEC-1..DEC-9;
+#     NG-1..NG-7; §7.2 out-of-scope; §10 telemetry; §18 rollout/self-application;
+#     Appendix C documentation impact register)
+#   - Test plan: ./chg-GH-268-test-plan.md (v0.2; 40 TCs: TC-COMMITLINT-001..021,
+#     TC-PROMPT-001..006, TC-DOC-001..007, TC-DIST-001..003, TC-CONFINE-001..002,
+#     TC-DOGFOOD-001; §6.2 fixture matrix and per-case binary resolution; §6.4
+#     read-only/no-network instrumentation; §7 file mapping; §8.3 OQ-1..OQ-6)
+#   - PM record: ./chg-GH-268-pm-notes.yaml (three binding decisions: warn-only
+#     hook, resume-sync instruction in scope, repository automation not a CLI
+#     command)
+#   - System spec reconciled in lifecycle phase 7 (@doc-syncer), not here:
+#     doc/spec/features/feature-quality-gates-and-pr.md,
+#     doc/spec/features/feature-autonomous-delivery.md,
+#     doc/spec/features/feature-monorepo-scaffold-toolchain.md (Appendix C
+#     rows 1-3; TC-DOC-002/003/005 are that phase's obligation)
+#
+# ORDERING (every phase independently committable; the tree is green at every
+# phase boundary):
+#   1 range gate + its suite -> 2 stated contract + phase wiring -> 3 corrected
+#   resume-sync instruction + assertion -> 4 distribution registration ->
+#   5 documentation truth + dogfood verdict + conformance battery + release.
+#   - Phase 1 lands first so the gate EXISTS before any prompt claims it does
+#     (TC-DOGFOOD-001 precondition). Nothing else in the change can be verified
+#     against a gate that is not in the tree, and the suite is the only proof
+#     that the verdict, the exit contract, and the diagnostics are real.
+#   - Phase 2 states the contract in the two prompts that own it. It depends on
+#     Phase 1 only for the wiring sentence's truthfulness, not for compilation.
+#   - Phase 3 changes the prompt builder and its assertion in one commit: spec §22
+#     makes changing either without its assertion a review-blocking gap, and
+#     TC-PROMPT-005 proves the assertion has teeth against a throwaway copy.
+#   - Phase 4 distributes a script that already exists and is tested; registering
+#     it earlier would ship an installer entry pointing at nothing.
+#   - Phase 5 carries the two delivery-owned docs, the self-application run over
+#     this branch's own range, the aggregate/conformance battery, and the release
+#     obligations as scope — not as prose.
+#
+# DELIVERY PINS (mechanics the spec/test plan leave to delivery planning; none
+# changes a requirement, and no AC/TC outcome depends on the choice):
+#   - Invocation contract: ./scripts/lint-commit-range.sh [--base REF], --help,
+#     --version. Exit 0 = PASS or SKIP, 1 = FAIL (offenders), 2 = ERROR or usage.
+#     No other exit code exists (TC-COMMITLINT-012 step 5 asserts the literal set).
+#   - Bash posture (.ai/rules/bash.md): #!/usr/bin/env bash, set -Eeuo pipefail
+#     plus errtrace/inherit_errexit/IFS, ERR/EXIT/INT/TERM traps, usage(), small
+#     named functions with one job each, and a PURE:/IMPURE: sectioning comment.
+#   - Base precedence (DEC-7, TC-COMMITLINT-010): --base REF, then
+#     ADOS_BASE_BRANCH, then `- **Default base branch**: `<ref>`` in
+#     ADOS_PR_INSTRUCTIONS_FILE (default .ai/agent/pr-instructions.md), then
+#     main. The resolved ref is refs/remotes/origin/REF when that resolves,
+#     otherwise REF; it is then pinned to a commit with rev-parse. Every
+#     unresolvable base is DM-1.e: exit 2, cause, and a `fetch` hint. The gate
+#     never fetches, never guesses, and never treats an empty range as an error.
+#   - Terminal resolution order: usage validation (DM-1.i, no history consulted)
+#     -> commitlint configuration presence (DM-1.d SKIP, exit 0) -> base
+#     resolution (DM-1.e) -> merge-base (DM-1.f) -> binary availability
+#     (DM-1.g) -> per-commit lint (DM-1.a/b/c/h). Exactly one outcome per run.
+#   - Configuration discovery uses the same eight root candidates as
+#     scripts/checks/commitlint-authority.ts (commitlint.config.{js,cjs,mjs,ts},
+#     .commitlintrc{,.json,.yaml,.yml}) checked at the repository top level; the
+#     gate adds no config source and passes no --config, so the authority's
+#     discovery is mirrored rather than re-implemented (DEC-1, RSK-1).
+#   - Binary resolution is PATH-only: `command -v commitlint` (test plan OQ-2,
+#     §8.2). No node_modules inference, so PATH scrubbing simulates absence
+#     (TC-COMMITLINT-008) and PATH injection selects the pinned binary. A caller
+#     that needs the workspace binary supplies it on PATH (the dogfood evidence
+#     command does).
+#   - Lint invocation and parse contract (test plan OQ-1): one
+#     `commitlint --color=false` invocation per commit in
+#     `git rev-list --reverse <merge-base>..HEAD`, message read with
+#     `git log -1 --format=%B <sha>`. A commit is an offender iff the invocation
+#     exits 1 AND at least one `[rule-id]` problem line parses. Exit >=2, or exit
+#     1 with no parsed problem, is DM-1.h (exit 2, cause plus hint) — never a
+#     FAIL with no diagnostics and never a PASS. The per-commit union is the
+#     authority's `--from <merge-base> --to HEAD` verdict for the same range and
+#     configuration; the suite cross-checks that parity against the CLI directly
+#     (TC-COMMITLINT-004) and pins zero false positives on merge subjects.
+#   - Attribution (DM-2, test plan OQ-3): line number and bounded excerpt are
+#     computed locally as diagnostics only — line 1 for header rules,
+#     type-empty/subject-empty/type-enum/header rules, and the first over-length
+#     body/footer line for body-/footer-max-line-length. Rule ids are the
+#     configuration's ids verbatim; the verdict is never recomputed locally.
+#     Block template: `FAIL <short-sha> (<full-sha>) · rule=<id> line=<n> · <excerpt>`,
+#     bounded to 160 characters per excerpt, 20 rule lines per commit, 200
+#     diagnostic lines per run, oldest to newest, no timestamps or durations on
+#     the default channel (NFR-1, NFR-6).
+#   - Remediation aggregation (DM-3, DEC-9): offender count is per commit;
+#     1-2 offenders -> `MODE: SURGICAL REWORD`, >=3 -> `MODE: CONDENSE-TO-ONE`.
+#     Advisory text only; the gate rewrites nothing (NFR-5).
+#   - Committed fixtures live in scripts/.tests/fixtures/lint-commit-range/ with
+#     the exact file names of test plan §6.2; the invalid-JS fixture ships as
+#     .txt so biome lint/format never parses it (TR-9), and the execution-failure
+#     shim is reached only through PATH.
+#   - Prompt contract (AC-F4-1, TC-PROMPT-001/003): the committer and PM prompts
+#     state the subject rule, the body/footer 100-character rule, the
+#     no-plain-merge-subject rule, and both remediation modes as constraints on
+#     the artifact. They teach no raw git write recipe: `git add|commit|reset|
+#     stash|rebase` in .opencode/** fails pnpm check:prompt, so the modes are
+#     named, never scripted.
+#   - Generated plugin (AGENTS.md "Generated plugin rule"): editing
+#     .opencode/agent/{committer,pm}.md makes .ados-claude/agents/{committer,pm}.md
+#     stale, and CI fails on a stale plugin. Phase 2 regenerates with
+#     scripts/build-claude-plugin.sh and commits the two generated files with
+#     their sources. This is the only path outside the test plan's PR-time
+#     allowlist, and it is mandated by the repository's own generation contract.
+#   - Resume-sync instruction (AC-F5-1, TC-PROMPT-004/005): the Resume Sync block
+#     keeps `git fetch origin <base>` and emits exactly one merge line of the
+#     form `git merge --no-ff origin/<base> -m "chore(<workItemRef>): sync with <base>"`,
+#     so no bare `git merge origin/<base>` survives and the counterexample probe
+#     in TC-PROMPT-005 step 3 matches. Only that block changes; orchestration,
+#     single-flight, liveness, and result classification are untouched.
+#   - Distribution (AC-F7-1): the gate joins ADOS_DELIVERY_SCRIPTS in
+#     scripts/install.sh and the unconditional delivery list in
+#     scripts/uninstall.sh; the installer/uninstaller fixture helpers seed the
+#     file so install, re-install, dry-run, and removal are all asserted. No
+#     marker-driven path and no doc-distribution change is involved.
+#   - Documentation (AC-F6-2, AC-F8-1): AGENTS.md states the gate as a
+#     supplementary lifecycle pre-PR gate in the delivery-process and
+#     delivery-infrastructure notes (never in the /check or /check-fix rows, and
+#     never as a repository-wide quality-gates command); the change-lifecycle
+#     guide's §9 actions and exit criteria name the range lint and the never-waive
+#     rule. doc/guides/change-lifecycle.md keeps `ados_distribution:
+#     redistributable`; AGENTS.md carries no marker today and gains none.
+#   - Release obligations: no changeset is authored, because no package surface
+#     moves (NG-5, DEC-8) — the change is scripts, prompts, and docs only. The
+#     release artifact is the pull request to main-tools with the dogfood verdict
+#     and the gate verdict recorded in the change's pm-notes.
+#   - Every commit lands through the `commit` primitive with the phase `summary`
+#     as its subject (conventional, work item referenced), body/footer lines
+#     <= 100 characters, and no manual staging.
+#
+# DECLARATION-ONLY KEYS: `acCoverage`, `tcCoverage`, and `verification` are
+# evidence declarations consumed by the delivery loop; `plan validate` ignores
+# them. They record no progress and no task list — progress lives in pm-notes
+# `notes:`.
+#
+# COVERAGE INVARIANT: all 19 acceptance criteria appear exactly once in
+# `acCoverage`, in the phase that can satisfy each in full (AC-F6-1 lands with
+# Phase 5 because its recorded-evidence half needs the dogfood run over a range
+# that contains every delivered commit). All 40 test cases have a declared home:
+# TC-DOC-002/003/005 and TC-CONFINE-001 are declared here as handoffs (system_spec
+# update phase and PR-time review respectively), never silently dropped.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-268
+
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - "a path under .github/workflows/, .husky/, packages/**, or a commitlint configuration file appears in the change diff"
+    - "the gate exits with a code outside {0, 1, 2}, or returns PASS without resolving a base commit and a merge-base"
+    - "the gate fetches, pushes, or mutates refs, the index, the working tree, the stash, or history"
+    - "the gate adds, relaxes, or re-implements a commitlint rule instead of consuming the root configuration's verdict"
+    - "a repository that configures commitlint and cannot verify reports SKIP or PASS instead of ERROR"
+    - "a prompt states a raw git write recipe (git add/commit/reset/stash/rebase in command position) and pnpm check:prompt fails"
+    - "the range lint is referenced by AGENTS.md, the change-lifecycle guide, or a lifecycle prompt before the script exists in the tree"
+    - "the resume-sync instruction still emits a bare merge, or its assertion passes against the reverted instruction"
+    - "pnpm check, /check, /check-fix, the CLI/MCP surface, or scripts/quality-gates.sh changes"
+    - "a touched doc loses its ados_distribution marker, gains a marker where none existed, or a new doc area is created"
+    - "an existing suite protecting replaced behaviour is deleted instead of updated (installer, uninstaller, deliver-ticket prompt)"
+    - "a commit in this change's range fails the repository's commitlint configuration"
+
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+
+phases:
+  # ---------------------------------------------------------------------------
+  # PHASE 1 — the gate and its proof
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Branch-range commit-message gate with per-commit diagnostics, the four-outcome exit contract, and the 21-case self-test suite"
+    kind: delivery
+    summary: "chore(GH-268): add the branch-range commit-message lint gate"
+    leases:
+      - repo:main-tools
+    weightClass: heavy
+    scope:
+      files:
+        - scripts/lint-commit-range.sh
+        - scripts/.tests/test-lint-commit-range.sh
+      folders:
+        - scripts/.tests/fixtures/lint-commit-range
+    interactions:
+      - kind: contract-file
+        target: scripts/lint-commit-range.sh
+        role: producer
+    acCoverage:
+      - "AC-F1-1"
+      - "AC-F1-2"
+      - "AC-F2-1"
+      - "AC-F2-2"
+      - "AC-F3-1"
+      - "AC-F3-2"
+      - "AC-F3-3"
+      - "AC-F3-4"
+      - "AC-F3-5"
+      - "AC-F3-6"
+      - "AC-NFR4-1"
+      - "AC-NFR6-1"
+    tcCoverage:
+      - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip, missing binary, invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
+    verification:
+      - "bash -n scripts/lint-commit-range.sh || syntax clean; set -Eeuo pipefail plus traps, usage(), --help, --version, and one-job-per-function sectioning per .ai/rules/bash.md"
+      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary from node_modules/.bin; the suite fails loudly with an install hint when the binary is absent (never a silent skip)"
+      - "./scripts/lint-commit-range.sh --help >/dev/null && ./scripts/lint-commit-range.sh --version | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+' || help and version exit 0 and the version is semver-shaped"
+      - "./scripts/lint-commit-range.sh --nonsense; test $? -eq 2 || usage error names the accepted invocation and the offending argument, and GIT_TRACE shows no rev-list/merge-base/rev-parse/for-each-ref call"
+      - "grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | sort -u || the exit literals are exactly {0, 1, 2}"
+      - "grep -nE 'curl|wget|scp|ssh|nc ' scripts/lint-commit-range.sh || no network helper in command position; any hint text sits inside a quoted string"
+      - "PATH=\"$PWD/node_modules/.bin:$PATH\" ./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, and the commit count in range (early smoke; the formal dogfood evidence is Phase 5)"
+      - "git status --porcelain && git stash list || unchanged after every outcome: the suite asserts working-tree, index, ref, file-list, and fsck digests across PASS, FAIL, SKIP, and ERROR"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 2 — the stated contract and the phase wiring (prompts as product)
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Committer message contract and PM quality_gates wiring: subject, 100-character body/footer, no plain merge subject, both remediation modes, remediation loop, never-waive rule, recorded verdict"
+    kind: delivery
+    summary: "chore(GH-268): state the commit-message contract and gate wiring"
+    leases:
+      - repo:main-tools
+    weightClass: standard
+    scope:
+      files:
+        - .opencode/agent/committer.md
+        - .opencode/agent/pm.md
+        - .ados-claude/agents/committer.md
+        - .ados-claude/agents/pm.md
+    interactions:
+      - kind: contract-file
+        target: .opencode/agent/committer.md
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents/committer.md
+        role: consumer
+    acCoverage:
+      - "AC-F4-1"
+    tcCoverage:
+      - "TC-PROMPT-001 (committer states subject, body/footer <=100, no plain merge subject, and both modes)"
+      - "TC-PROMPT-002 (PM quality_gates names the gate, requires it before phase completion, states the remediation loop, the never-waive rule, and the pm-notes verdict evidence, while keeping the @runner/@fixer routing)"
+      - "TC-PROMPT-003 (constraints, not recipes; pnpm check:prompt and the raw-write greps stay green)"
+    verification:
+      - "pnpm check:prompt || prompt conformance green: no raw git write, no plan progress, no hand-edited phase state in the two edited prompts"
+      - "grep -niE 'SURGICAL REWORD' .opencode/agent/committer.md && grep -n 'CONDENSE-TO-ONE' .opencode/agent/committer.md || both remediation modes are stated as artifact constraints"
+      - "grep -n 'Merge remote-tracking branch' .opencode/agent/committer.md && grep -n '100' .opencode/agent/committer.md || the plain merge subject is named in a prohibiting sentence and body/footer lines are bounded at 100 characters"
+      - "grep -nE 'type\\(scope\\)|conventional' .opencode/agent/committer.md || the conventional subject carrying the work item reference is stated"
+      - "grep -n 'lint-commit-range' .opencode/agent/pm.md && grep -n 'phase complete' .opencode/agent/pm.md && grep -nE 'unable to verify|ERROR' .opencode/agent/pm.md || the quality_gates step names the gate, couples it to phase completion, and forbids waiving an unresolved verification"
+      - "grep -nE '\\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md || no line (grep exits 1 when nothing matches), so no raw rewrite recipe is taught"
+      - "grep -n 'pm-notes' .opencode/agent/pm.md || the verdict (outcome, commit count, offender count, mode) is recorded as a notes entry"
+      - "scripts/build-claude-plugin.sh --verbose || the Claude Code plugin is regenerated, and a second run produces byte-identical output, so .ados-claude/agents/{committer,pm}.md are current and CI's stale-plugin guard passes"
+      - "git status --porcelain .ados-claude || exactly the two generated agent files are modified; no command, skill, or manifest change"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 3 — stop manufacturing the forbidden subject
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Conventional-subject resume-sync merge instruction and its updated, strength-probed assertion"
+    kind: delivery
+    summary: "chore(GH-268): emit a conventional-subject resume-sync merge"
+    leases:
+      - repo:main-tools
+    weightClass: standard
+    scope:
+      files:
+        - scripts/deliver-ticket.sh
+        - scripts/.tests/test-deliver-ticket.sh
+    acCoverage:
+      - "AC-F5-1"
+    tcCoverage:
+      - "TC-PROMPT-004 (one merge line, -m with a conventional subject referencing the work item, zero bare merges, fetch preserved)"
+      - "TC-PROMPT-005 (the assertion is updated and non-vacuous: reverting the instruction in a throwaway copy turns the suite red)"
+      - "TC-PROMPT-006 (no other prompt section changes meaning; the diffstat touches only build_delivery_prompt)"
+    verification:
+      - "bash scripts/.tests/test-deliver-ticket.sh || suite green, including the new merge-line assertion, the zero-bare-merge assertion, and the counterexample probe run inside a cp -a copy"
+      - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh && bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh || result classification suites unchanged and green"
+      - "git diff --stat -- scripts/deliver-ticket.sh || the change is confined to build_delivery_prompt's Resume Sync block; no orchestration, single-flight, liveness, or classification hunk"
+      - "git status --porcelain || empty: the strength probe mutated only a throwaway copy, never the delivery tree"
+      - "grep -nE 'git merge[[:space:]]+origin/[^[:space:]-]+[[:space:]]*$' scripts/deliver-ticket.sh || no bare merge instruction remains (grep exits 1 when nothing matches)"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 4 — adopters receive the gate
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Delivery-script distribution registration with installer and uninstaller coverage for the new gate"
+    kind: delivery
+    summary: "chore(GH-268): distribute the commit-range gate with delivery scripts"
+    leases:
+      - repo:main-tools
+    weightClass: standard
+    scope:
+      files:
+        - scripts/install.sh
+        - scripts/uninstall.sh
+        - scripts/.tests/test-install.sh
+        - scripts/.tests/test-uninstall.sh
+    acCoverage:
+      - "AC-F7-1"
+    tcCoverage:
+      - "TC-DIST-001 (registered in ADOS_DELIVERY_SCRIPTS; installed executable, byte-identical, and updated on re-install)"
+      - "TC-DIST-002 (removed by the unconditional delivery list; sibling user files survive; empty-dir cleanup intact; --dry-run reports without removing)"
+      - "TC-DIST-003 (both suites green and the marker-derived install-set guard still matches)"
+    verification:
+      - "grep -n 'scripts/lint-commit-range.sh' scripts/install.sh scripts/uninstall.sh || registered in ADOS_DELIVERY_SCRIPTS and in the unconditional local removal list"
+      - "bash scripts/.tests/test-install.sh || the sandbox install places the gate, marks it executable, keeps it byte-identical, and updates a modified installed copy on re-install"
+      - "bash scripts/.tests/test-uninstall.sh || the gate is removed, an unrelated scripts/ file survives, and --dry-run reports it without removal"
+      - "bash scripts/.tests/test-doc-distribution.sh || the derived install set still matches the sandbox install (no marker or manifest drift)"
+      - "bash scripts/test-all.sh || the suite aggregator stays green with the new delivery entry"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 5 — documentation truth, self-application, conformance, release
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Supplementary pre-PR gate statement, lifecycle phase truth, dogfood verdict over this branch's own range, conformance battery, and release obligations"
+    kind: delivery
+    summary: "chore(GH-268): document the pre-PR range gate and record its verdict"
+    leases:
+      - repo:main-tools
+    weightClass: heavy
+    doneArtifacts:
+      mergeRequestUrl: "GH-268 pull request to main-tools (URL recorded as a pm-notes notes entry)"
+      trackerTransition: "GH-268 stays In Progress through delivery phases and moves to review at the pull request"
+    scope:
+      files:
+        - AGENTS.md
+        - doc/guides/change-lifecycle.md
+        - doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-plan.yaml
+        - doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate
+    acCoverage:
+      - "AC-F6-1"
+      - "AC-F6-2"
+      - "AC-F8-1"
+      - "AC-NFR8-1"
+    tcCoverage:
+      - "TC-DOGFOOD-001 (self-application: this branch's own range passes the gate, the verdict is recorded as pm-notes evidence, and only then may quality_gates complete)"
+      - "TC-DOC-001 (AGENTS.md states a supplementary lifecycle pre-PR gate; /check and /check-fix rows unchanged; no run-all-gates instruction; the registration note covers the gate)"
+      - "TC-DOC-004 (change-lifecycle section 9 actions and exit criteria name the range lint and the never-waive rule; owner and diagram unchanged; marker retained)"
+      - "TC-DOC-006 (touched docs keep their markers; no new doc area; doc-distribution guard green; AGENTS.md gains no marker)"
+      - "TC-DOC-007 (doc-conformance, prompt conformance, help coverage, doc-distribution, pnpm check, and git diff --check all green)"
+      - "TC-CONFINE-002 (automated tree invariants: commitlint authority, warn-only hook, aggregate gate scope, exports parity, tests/checks green)"
+      - "TC-CONFINE-001 (handoff: PR-time diff review by @reviewer; the allowlist plus the mandated .ados-claude/agents/{committer,pm}.md generation, doc/spec/features/** system-spec reconciliation, and this change folder)"
+      - "TC-DOC-002, TC-DOC-003, TC-DOC-005 (handoffs: owed by the system_spec_update phase @doc-syncer per Appendix C rows 1-3; not a delivery phase and not claimed here)"
+    verification:
+      - "PATH=\"$PWD/node_modules/.bin:$PATH\" ./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, and commit count with zero offenders; the verdict line (outcome, commit count, offender count, mode) is recorded verbatim in a pm-notes notes entry before quality_gates completes"
+      - "grep -n 'lint-commit-range' AGENTS.md || the gate is named in the delivery-process and delivery-infrastructure context as a supplementary pre-PR gate"
+      - "grep -nE '^\\| /check \\| Run quality gates \\(no fixes\\) \\|$' AGENTS.md && grep -nE '^\\| /check-fix \\| Run quality gates and fix failures \\|$' AGENTS.md || both command rows are byte-unchanged"
+      - "grep -n 'scripts/quality-gates.sh' AGENTS.md || no match (grep exits 1), and no new run-all-quality-gates instruction is introduced"
+      - "grep -n 'lint-commit-range' doc/guides/change-lifecycle.md && grep -n 'ados_distribution: redistributable' doc/guides/change-lifecycle.md || section 9 actions and exit criteria name the gate and the guide keeps its marker"
+      - "bun test tests/checks/doc-conformance.test.ts || current-truth phrase table green"
+      - "pnpm check:prompt && pnpm check:help || conformance green and the help inventory gains no entry (the gate is not a prompt-required CLI command)"
+      - "bash scripts/.tests/test-doc-distribution.sh || doc-distribution guard green with no ::error:: lines"
+      - "bun run scripts/checks/commitlint-authority.ts || exactly one root config extending @commitlint/config-conventional, no package override, and the CI ts-commitlint job unchanged"
+      - "bun run scripts/checks/exports-parity.ts && bun test tests/checks || no product-surface drift and no invariant regression"
+      - "test ! -e scripts/quality-gates.sh && ! grep -n 'lint-commit-range' package.json || the aggregate gate is untouched (NG-5, DEC-8)"
+      - "bash scripts/.tests/test-lint-commit-range.sh && bash scripts/.tests/test-deliver-ticket.sh && bash scripts/.tests/test-install.sh && bash scripts/.tests/test-uninstall.sh || every touched surface's suite is green at the final phase HEAD"
+      - "git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD || every changed path is inside a declared phase scope, plus .ados-claude/agents/{committer,pm}.md (mandatory generated plugin), doc/spec/features/** (system_spec_update), and this change folder; no .github/workflows/**, .husky/**, commitlint.config.js, packages/**, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh"
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
+      - "git diff --check || zero whitespace errors and zero conflict markers"
