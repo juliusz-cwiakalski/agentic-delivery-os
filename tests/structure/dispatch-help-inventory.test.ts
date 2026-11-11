@@ -45,7 +45,23 @@ describe("TC-HELP-001 dispatch is registered and documented", () => {
     }
     const help = renderRootHelp(brand);
     expect(help.length).toBeGreaterThan(0);
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(4);
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(5);
+  });
+
+  test("the attempts entry carries its own usage, options, example and M2 page", () => {
+    const entry = helpEntryFor(["dispatch", "attempts"]);
+    const attemptsPage = "doc/planning/oss-tooling/milestones/m2/commands/attempts.md";
+    expect(entry).toBeDefined();
+    expect(entry?.seeAlso).toEqual([attemptsPage]);
+    expect(entry?.usage.join("\n")).toContain("dispatch attempts [--ref <ref>] [--limit <n>]");
+    expect(entry?.options.some(([flag]) => flag === "--ref <ref>")).toBe(true);
+    expect(entry?.options.some(([flag]) => flag === "--limit <n>")).toBe(true);
+    expect(entry?.examples.length).toBeGreaterThan(0);
+    // The family entry advertises the subfamily and both options.
+    const family = helpEntryFor(["dispatch"]);
+    expect(family?.usage.join("\n")).toContain("dispatch attempts");
+    expect(family?.options.some(([flag]) => flag === "--ref <ref>")).toBe(true);
+    expect(family?.options.some(([flag]) => flag === "--limit <n>")).toBe(true);
   });
 
   test("the primary dispatch help names the execution forms, resolution, and reversal", () => {
