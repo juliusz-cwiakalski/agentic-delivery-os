@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242, GH-275, GH-241, GH-284]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0022]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242, GH-275, GH-241, GH-284, GH-286]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -87,8 +87,10 @@ services. The six workspace packages are libraries/build units, not six running
 containers. The core-to-state arrow is an injected call, not an import permission.
 The resident daemon ships as typed contracts, domain folds, and a
 composition-supplied lifecycle family in `packages/`; the production entrypoint
-supplies no daemon runtime, so the shipped CLI starts no resident service.
-Scheduling is one-shot, and no background scheduler exists.
+composes that daemon runtime unconditionally, so the shipped CLI can start,
+inspect, stop, and install a resident daemon. Scheduling stays one-shot:
+production composes no lane executor, so a resident daemon runs the declared
+`supervise-only` mode and starts no lane.
 
 ## Component and feature map
 
@@ -101,7 +103,7 @@ Scheduling is one-shot, and no background scheduler exists.
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the coordinator record consumer and folds, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
 | `cli/bin/`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts` | Executable surface: the non-installed Bun bin, working-name resolution, root/command help and version, the prompt-required composition, and fail-closed containment for an uncomposed invocation. Help and version read no state, network, git, or configuration. |
-| `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, and bounded status collectors. |
+| `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, the mounted daemon lifecycle family, and bounded status collectors. |
 | `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
 | `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded squash landing. |
 | `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping, the append-only capsule runtime and confined memory-home writes. |
@@ -445,7 +447,7 @@ Phase 6 report; no fresh runtime/pilot result is claimed by this reconstruction.
 
 ## Resident dispatch daemon (GH-238)
 
-The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path; the production daemon entry that supplies that lane composition remains resident-daemon production scope (GH-238).
+The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The production composition mounts the daemon family without a lane composition, so a production daemon runs the declared `supervise-only` mode; the lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path, and supplying that lane composition remains resident-daemon production scope (GH-238).
 
 ## Typed dispatch engine (GH-239)
 

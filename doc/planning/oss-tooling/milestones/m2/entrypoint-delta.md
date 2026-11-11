@@ -17,12 +17,12 @@ description on its own row.
 ```
 $ <binary> --help
 Commands: status brief queue lanes blockers phase commit lint plan
-          verify merge closeout dispatch spend retro coordinator daemon
+          verify merge closeout dispatch spend retro daemon coordinator
 ```
 
 Seventeen families are registered: `status`, `brief`, `queue`, `lanes`,
 `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`,
-`dispatch`, `spend`, `retro`, `coordinator`, and `daemon`. `state` and `mcp`
+`dispatch`, `spend`, `retro`, `daemon`, and `coordinator`. `state` and `mcp`
 are absent from the listing.
 
 ```
@@ -49,10 +49,10 @@ story delivers.
 
 ## The daemon registration gap (closed)
 
-The daemon command definition exists in the CLI composition and is registered on
-every composition. The production entrypoint now composes the daemon runtime
-unconditionally, so the lifecycle command is reachable at the root listing: the
-observed invocation above answers its help page at exit `0`, and
+The daemon command definition exists in the CLI composition and is registered
+whenever a daemon runtime is supplied. The production entrypoint composes that
+runtime unconditionally, so the lifecycle command is reachable at the root
+listing: the observed invocation above answers its help page at exit `0`, and
 `daemon start`, `stop`, `status`, `install`, and `uninstall` reach their
 handlers. Issue #286 delivered the mount, and the gap is recorded here as
 closed so the blueprint reader sees the current state rather than a stale

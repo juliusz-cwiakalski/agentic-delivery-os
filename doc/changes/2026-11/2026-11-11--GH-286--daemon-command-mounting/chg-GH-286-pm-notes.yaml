@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-11T10:50:54.941Z }
   dor_check: { started: null, completed: 2026-11-11T11:04:45.981Z }
   delivery: { started: null, completed: 2026-11-11T12:24:26.212Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-11T12:46:44.491Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -440,4 +440,22 @@ notes:
       (NOT_READY at 1, 2 and 3) plus this scoped repair-and-confirm cycle, all
       recorded under readiness-review/."
     type: "decision"
+    date: "2026-11-11"
+  - text: "system_spec_update complete: @doc-syncer reconciled the current-truth set
+      with the shipped mount. Changed: feature-resident-daemon.md (mount,
+      re-entry and signal-owned lifetime, pid safety, three state-directory
+      outcomes, install identity), feature-cli-entrypoint.md (composition row +
+      daemon-mount quality-evidence row), feature-agents-and-commands.md,
+      feature-config-layer.md (home-present default), feature-dispatch-engine.md
+      and feature-harness-adapters.md (lane-seam sentence),
+      quality/test-specs/test-spec-resident-daemon.md (mount suites + scenarios)
+      and test-spec-dispatch-engine.md, overview/glossary.md,
+      overview/architecture-overview.md, m2/entrypoint-delta.md (gap closed,
+      listing order) and m2/README.md. Verified unchanged with reasons: m1
+      daemon and entrypoint pages, man-page, cli-command-registry, doc/00-index,
+      feature-scheduling-engine, feature-coordinator-supervision, nonfunctional.
+      No spec-coverage gap; doc-distribution guard PASS (82 docs, no drift);
+      doc-conformance + help-coverage + reference parity 17/17; forbidden
+      literals 0; prompt conformance clean."
+    type: "info"
     date: "2026-11-11"
