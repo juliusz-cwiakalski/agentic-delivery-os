@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-11T01:59:53.423Z }
   delivery: { started: null, completed: 2026-11-11T10:48:32.852Z }
   system_spec_update: { started: null, completed: 2026-11-11T10:59:10.002Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-11T12:47:40.000Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -280,28 +280,29 @@ notes:
   - text: "Plan phase 6 COMPLETE — code-review remediation. Commit 8deecedf (plus
       the runtime fix committed next). Reviewer findings closed: rule ids now
       parse only from commitlint problem lines, so a message containing `[docs]`
-      no longer reports a phantom rule; the diagnostic budget is two-pass, so
-      55 offenders yield 55 headline blocks under the 200-line cap; config
+      no longer reports a phantom rule; the diagnostic budget is two-pass, so 55
+      offenders yield 55 headline blocks under the 200-line cap; config
       detection matches commitlint's own resolution (added
       `.commitlintrc.js/.cjs/.mjs` and the root `package.json` `commitlint`
       field), removing the false SKIP for adopters; a bounded subject excerpt is
-      emitted; excerpts sanitize control/ANSI bytes; the committer prompt example
-      uses a placeholder instead of this ticket id (plugin regenerated); the
-      header prints the ref actually used; and `git rev-list` status is checked
-      so a failure cannot become a zero-commit PASS. Suite grew 39 → 45 cases."
+      emitted; excerpts sanitize control/ANSI bytes; the committer prompt
+      example uses a placeholder instead of this ticket id (plugin regenerated);
+      the header prints the ref actually used; and `git rev-list` status is
+      checked so a failure cannot become a zero-commit PASS. Suite grew 39 → 45
+      cases."
     type: info
     date: "2026-11-11"
   - text: "Runtime defect found and fixed during phase-9 preparation: the gate
       spawned one commitlint process per commit serially (~0.44 s each), so a
       20-commit range measured 10.6–11.4 s against the AC-NFR4-1 10 s budget and
-      a 25-commit branch range took 13.6 s. `@fixer` moved the per-commit lint to
-      a bounded worker pool (default min(nproc,8), `ADOS_LINT_JOBS` override,
+      a 25-commit branch range took 13.6 s. `@fixer` moved the per-commit lint
+      to a bounded worker pool (default min(nproc,8), `ADOS_LINT_JOBS` override,
       serial fallback when neither nproc nor getconf exists) that still runs one
       invocation per commit and folds results in rev-list order, preserving
       per-commit attribution, byte-identical output, the two-pass budget and
-      fail-closed handling (a killed worker is ERROR/exit 2, never PASS). Measured
-      after: 20-commit case 2.0–2.5 s over three runs (45/45 each), real branch
-      range 2.5 s. The budget assertion was not weakened."
+      fail-closed handling (a killed worker is ERROR/exit 2, never PASS).
+      Measured after: 20-commit case 2.0–2.5 s over three runs (45/45 each),
+      real branch range 2.5 s. The budget assertion was not weakened."
     type: info
     date: "2026-11-11"
   - text: "Plan phase 7 COMPLETE — code-review remediation (iteration 2). Commit
@@ -320,14 +321,14 @@ notes:
       other 47 green. F-2 (low): worker-pool regression coverage added — a
       missing record (`git log` forced to fail inside a worker through a PATH
       wrapper) is ERROR/exit 2; an externally SIGKILLed worker is ERROR/exit 2
-      and never PASS; `ADOS_LINT_JOBS` validation asserts the detected default is
-      bounded by the cap of 8, a valid override is honoured, 999 is clamped, and
-      abc, 0, -2 and '2 3' each warn and fall back (asserted both by sourcing the
-      gate behind its main guard and end-to-end, where a junk value still
-      renders PASS); and serial (`ADOS_LINT_JOBS=1`) versus parallel (8) output
-      is byte-identical on the three-offender fixture. Suite grew 45 to 50
-      cases, all green. F-3 (low): the transient `mktemp -d` result directory is
-      now stated where behaviour is described —
+      and never PASS; `ADOS_LINT_JOBS` validation asserts the detected default
+      is bounded by the cap of 8, a valid override is honoured, 999 is clamped,
+      and abc, 0, -2 and '2 3' each warn and fall back (asserted both by
+      sourcing the gate behind its main guard and end-to-end, where a junk value
+      still renders PASS); and serial (`ADOS_LINT_JOBS=1`) versus parallel (8)
+      output is byte-identical on the three-offender fixture. Suite grew 45 to
+      50 cases, all green. F-3 (low): the transient `mktemp -d` result directory
+      is now stated where behaviour is described —
       doc/spec/features/feature-quality-gates-and-pr.md says the gate creates no
       repository files and uses a temporary directory under `TMPDIR` that it
       removes on exit, so no state survives a run, while the
@@ -335,14 +336,14 @@ notes:
       header comment states the same posture. The change spec's section 10
       clause is reconciled by this recorded evidence (created under TMPDIR,
       removed on EXIT, no persistent state, NFR-5's enumerated surfaces
-      unchanged) and no requirement or assertion was weakened. The doc page keeps
-      its `ados_distribution: internal` marker and no other part of it changed.
-      The commit primitive reported the doc page as scope drift against phase
-      7's two declared script paths; it is the owning-doc amendment the plan's
-      phase-7 verification entry and review F-3 authorise, and the delivery
-      allowlist already names `doc/spec/features/`. Verification: bash
-      scripts/.tests/test-lint-commit-range.sh 50/50 passed; the dogfood run over
-      this branch's own range passed with 'RANGE LINT: base=main-tools
+      unchanged) and no requirement or assertion was weakened. The doc page
+      keeps its `ados_distribution: internal` marker and no other part of it
+      changed. The commit primitive reported the doc page as scope drift against
+      phase 7's two declared script paths; it is the owning-doc amendment the
+      plan's phase-7 verification entry and review F-3 authorise, and the
+      delivery allowlist already names `doc/spec/features/`. Verification: bash
+      scripts/.tests/test-lint-commit-range.sh 50/50 passed; the dogfood run
+      over this branch's own range passed with 'RANGE LINT: base=main-tools
       source=explicit merge-base=5372dbacb9c36e1d79d1e55873264155a53f44ff
       head=704cadbafca566b6fb929bf9226dd7f510fc6e47 commits=27
       binary=node_modules/.bin/commitlint origin=repository-local

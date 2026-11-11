@@ -1,0 +1,155 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-268
+branch: chore/GH-268/commitlint-pre-pr-gate
+status: PASS
+summary: >-
+  Iteration-2 items are closed and independently verified. F-1: the DM-1.h cause
+  now reports commitlint's real exit — current gate prints "(exit 1)" for an
+  invalid configuration and "(exit 3)" for the execution-failure shim, while a
+  throwaway copy restored to the old `read -r` prints "(exit 0)" (revert-to-fail
+  proves the fix is not vacuous and the new assertions have teeth). F-2: the four
+  worker-pool cases (missing record, SIGKILLed worker, ADOS_LINT_JOBS validation,
+  serial-vs-parallel byte identity) exist and the suite is 50/50, reproduced twice
+  (~53 s). F-3: the quality-gates/PR feature page now states the gate creates no
+  repository files and uses a transient TMPDIR directory removed on exit (marker
+  intact; doc-distribution green), with the spec section-10 reconciliation
+  recorded in pm-notes. The gate contract is unchanged from the already-verified
+  implementation: the whole code diff since the prior review is a header comment
+  plus one `IFS=' ' read` line. Re-verified: one commitlint invocation per commit
+  (5 commits -> 5 invocations via a counting shim), rev-list ordering, byte-
+  identical serial/parallel output, two-pass 200-line budget, SURGICAL
+  REWORD/CONDENSE-TO-ONE thresholds, read-only repo surfaces with temp dir removed
+  (no leftovers), no network helpers, PASS/FAIL/SKIP/ERROR with 130 only in
+  `_on_interrupt`, fail-closed on missing/killed worker, branch range PASS at 28
+  commits, `pnpm check:prompt` green, plan valid, confinement clean. Nothing
+  blocks PR creation from the review's perspective; the remaining follow-ups are
+  non-blocking and recorded below.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:738
+    message: >-
+      Iteration-2 F-1 closed. `_collect_lint_results` reads `<index>.status` with
+      `IFS=' ' read -r status_token detail`, so the `error <exit>` record yields
+      token=error and detail=<exit>; the `error` branch is reachable and the
+      DM-1.h Cause names commitlint's exit. Verified non-vacuously: the current
+      gate prints "(exit 1)" (invalid config) and "(exit 3)" (execution shim),
+      while a copy reverted to plain `read -r` prints "(exit 0)" for both. Suite
+      assertions `(exit [1-9]...)`, `(exit 3)` and `not (exit 0)` would fail on
+      the old parse.
+    suggestion: No action.
+    suppressed: false
+  - id: F-2
+    severity: info
+    confidence: high
+    category: testing
+    location: scripts/.tests/test-lint-commit-range.sh:1738
+    message: >-
+      Iteration-2 F-2 closed. Four worker-pool cases were added and pass: a
+      missing record (git log forced to fail in each worker) is ERROR/exit 2;
+      an externally SIGKILLed worker is ERROR/exit 2 and never PASS; a direct
+      `_collect_lint_results` probe with `error 5` reports "(exit 5)" and a
+      partial offender record is ERROR; ADOS_LINT_JOBS validation (bounded
+      default, honoured override, 999 clamped to 8, abc/0/-2/"2 3" warn and fall
+      back end-to-end); serial (1) vs parallel (8) output byte-identical over a
+      three-offender range. Suite 45 -> 50, 50/50 reproduced twice.
+    suggestion: No action.
+    suppressed: false
+  - id: F-3
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-quality-gates-and-pr.md:56
+    message: >-
+      Iteration-2 F-3 closed. The quality-gates/PR page now states the gate
+      creates no repository files and keeps per-commit results in a transient
+      temporary directory under TMPDIR removed on exit, so no state survives a
+      run; it keeps `ados_distribution: internal` and doc-distribution reports no
+      drift. The change spec section 10's literal "creates no files" is
+      reconciled by the recorded pm-notes evidence (created under TMPDIR, removed
+      on EXIT, NFR-5 enumerated surfaces untouched) rather than by editing the
+      point-in-time spec artifact.
+    suggestion: >-
+      Optional: if the spec is ever revised, update section 10's sentence to
+      match; no action required for delivery.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: maintainability
+    location: scripts/.tests/test-lint-commit-range.sh:1832
+    message: >-
+      The killed-worker test discovers the victim with GNU `ps -o pid= --ppid`
+      and uses fractional `sleep 0.1`. That matches the suite's existing
+      Linux/GNU assumptions (mapfile, sha256sum) and CI (ubuntu-latest), so it is
+      not a defect here; it would need a portable fallback only if the suite is
+      ever run on macOS/BSD.
+    suggestion: >-
+      Non-blocking: if portability is ever required, fall back to `pgrep -P` or
+      skip the kill case with an explicit message when `ps --ppid` is
+      unsupported.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:774
+    message: >-
+      `_report_lint_execution_error` words every unrenderable outcome as
+      "commitlint could not render a verdict". For a missing record caused by a
+      failing `git log` or a signal-killed worker the cause is not commitlint
+      itself. The verdict (ERROR/exit 2) and fail-closed behaviour are correct;
+      only the cause wording is slightly imprecise.
+    suggestion: >-
+      Non-blocking: name the cause generically (e.g. "the worker did not record a
+      verdict for commit X (status Y)") for the missing/killed paths.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:552
+    message: >-
+      For a range with >= MAX_DIAGNOSTIC_LINES offenders the renderer emits 199
+      headline blocks plus a TRUNCATED line naming the remaining SHAs (bounded to
+      20 names). Those dropped offenders are named by SHA only, not by rule/line.
+      This is beyond NFR-4's 100-commit scope (a 100-offender range is fully named
+      within the 200-line budget), so it is an accepted out-of-scope degradation.
+    suggestion: No action.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml:306
+    message: >-
+      PR-readiness: nothing blocks PR creation from review. The remaining
+      lifecycle obligations (quality_gates dogfood verdict, dod_check, pr_creation)
+      are the PM's, and the PR must target main-tools and be squash-merged. The two
+      remediation/fix commits use template-derived `docs(GH-268): update <path>`
+      subjects; with squash-merge the PR message is authoritative, so ensure it
+      summarizes the gate, remediation and worker-pool work. pm-notes also records
+      that the commit primitive flagged the feature-page edit as scope drift
+      against Phase 7's two declared script paths; it is the owning-doc amendment
+      the plan's Phase 7 verification and review F-3 authorise and the delivery
+      allowlist names `doc/spec/features/`, so reviewers should see that
+      explanation in the PR description.
+    suggestion: >-
+      Non-blocking follow-ups to record/mention in the PR: the authorized
+      doc/spec page edit, the pre-existing readiness-iter-4 wording residues in
+      plan/test-plan, and the squash title/body summary.
+    suppressed: false
+reviewed_at: 2026-11-11T16:00:00Z
+next_step: PROCEED
