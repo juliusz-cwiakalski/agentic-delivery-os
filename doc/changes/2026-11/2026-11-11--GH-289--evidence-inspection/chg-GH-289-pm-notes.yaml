@@ -272,3 +272,26 @@ notes:
       spec-vs-code gap for @doc-syncer rather than fixed by adding a row."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 3 complete (commit b95695dc). The resolve result carries
+      mode: \"local-evidence\" unconditionally, the divergence's own repository,
+      and the shared block; DispatchDivergenceBlock (reported, resolved,
+      unresolved, unresolvedIds, idsTruncated) is one domain computation
+      (summarizeRepositoryDivergences in domain/dispatch-gate.ts) consumed by
+      foldEvidenceWindow and by resolveDispatchDivergenceEvidence, and the
+      uncalled list-length helper plus its type are deleted from the app ledger,
+      both barrels and the allowance. A blank/whitespace note is refused before
+      any read or write; the 240-character clamp is preserved; replay stays an
+      idempotent noop with unchanged counts; the summary's counts become
+      repository-scoped and its identifier list narrows to 20 with
+      idsTruncated; the one-line resolve digest is registered. Contract
+      fixture gains DispatchDivergenceBlock and DispatchResolveData in both
+      entries. Green: resolve-result 6/6, divergence-count 3/3, count-rule
+      6/6, resolve-composition 1/1, test-isolation 5/5, additive-stability 12/12,
+      the divergence regression suites 36/36, content-inventory and
+      port-contract 18/18, error-table sync 124/124, boundaries, and the
+      aggregate pnpm check 7306 pass / 4 skip / 0 fail (exit 0). Deviation:
+      none from the plan; the resolve performs one additional verified ledger
+      read to compute the block, which the one-read bound does not cover
+      (NFR-2 bounds `attempts`)."
+    type: info
+    date: "2026-11-11"

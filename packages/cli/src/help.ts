@@ -407,6 +407,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     "Run one typed dispatch, read dual-run evidence, or move authority",
     [
       "<binary> dispatch <ref> [--harness <name>] [--resume-prompt <text>]",
+      "<binary> dispatch attempts [--ref <ref>] [--limit <n>]",
       "<binary> dispatch dual-run summary --repo <repo>",
       "<binary> dispatch dual-run resolve <divergence-id> --note <text>",
       "<binary> dispatch handover <repo> [--revert]",
@@ -414,6 +415,8 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     [
       ["--harness <name>", "Harness adapter (opencode, claude-code); default from config"],
       ["--resume-prompt <text>", "Resume the existing lane with guidance"],
+      ["--ref <ref>", "Work item reference to inspect; default is the active change"],
+      ["--limit <n>", "Page size, 1..100 (default 20)"],
       ["--repo <repo>", "Repository identity for summary and handover"],
       ["--note <text>", "Bounded divergence-resolution note"],
       ["--revert", "Revert a recorded handover to dual-run"],
@@ -421,12 +424,28 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     [
       "<binary> dispatch GH-242",
       "<binary> dispatch GH-242 --harness claude-code",
+      "<binary> dispatch attempts --ref GH-242 --limit 5",
       "<binary> dispatch dual-run summary --repo github.com/owner/repo",
       '<binary> dispatch dual-run resolve DIV-1 --note "tracker was stale"',
       "<binary> dispatch handover github.com/owner/repo --revert",
     ],
     "dispatch",
   ),
+  {
+    path: ["dispatch", "attempts"],
+    summary: "Read one work item's recorded attempts, newest first",
+    usage: ["<binary> dispatch attempts [--ref <ref>] [--limit <n>]"],
+    options: [
+      ["--ref <ref>", "Work item reference to inspect; default is the active change"],
+      ["--limit <n>", "Page size, 1..100 (default 20)"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: [
+      "<binary> dispatch attempts --ref GH-242 --limit 5",
+      "<binary> dispatch attempts --json",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "attempts")],
+  },
   entry(
     ["dispatch", "dual-run", "summary"],
     "Report the dual-run evidence window and the four-condition verdict",
