@@ -393,7 +393,7 @@ No capsule event, command receipt, outbox effect, or telemetry record is added o
 |---|---|---|
 | Depends on | Resident dispatch daemon (M1-S18, GH-238) | The command family, `createDaemonCommandRuntime`, the runtime start/stop/loop, the process port, the unix transport, the supervisor adapter and installer, the status projection, and the instance/heartbeat/lane records. Consumed unchanged. |
 | Depends on | Prompt-required composition and self-description (GH-242) | `PROMPT_REQUIRED_COMMANDS`, the strict program selection that throws on a missing prompt-required command, the help inventory, the help coverage check, and the reference-page parity check. |
-| Depends on | Production composition and state-directory scope | The production composer, the injected environment/home/process facts, `resolveStateDirectoryScope`, and `resolveDaemonSettings`. |
+| Depends on | Production composition and state-directory scope | The production composer, the injected environment, home, and process facts, `resolveStateDirectoryScope`, and `resolveDaemonSettings`. |
 | Depends on | Coordinator supervision precedent (M1-S23, GH-241) | The injected signal host and foreground loop shape this change reuses; no coordinator behaviour changes. |
 | Depends on | M2 planning (GH-284) | Names the daemon mount as the prerequisite for the resident-daemon stories and records the finding this ticket closes. |
 | Blocks | M2-S13 public event taxonomy | The subscribe surface presumes a resident daemon. |

@@ -630,7 +630,7 @@ phases:
   #      delivered `tests/golden/daemon-status-matrix.test.ts` kept as a
   #      read-only control). Fixtures:
   #      tests/fixtures/daemon/mount-harness.ts (injected
-  #      brand/environment/home/process identity/signal host/process port/
+  #      brand, environment, home, and process identity/signal host/process port/
   #      supervisor port/clock/transport/config branch/state root plus the
   #      spawn/signal/listener/connect/supervisor/read/append/isAlive/sleep/
   #      composer counters and the `failRelease()`/`failSignal()` switches) and

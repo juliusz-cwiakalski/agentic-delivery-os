@@ -2146,7 +2146,7 @@ Phases 1 and 7 map no case. A Phase 2-5 case that finds itself needing `runEntry
 
 **Fixture helper obligations:**
 
-- `tests/fixtures/daemon/mount-harness.ts` (new) — the single in-process mount harness: injected brand/environment/home/process identity/signal host/process port/supervisor port/clock/transport/config branch/state root/store handle, plus counters for spawn requests, signal calls (pid and signal recorded), listener registrations and removals, transport connects, supervisor commands, store reads, store appends, `isAlive`, `sleep`, and composer invocations. It also exposes a `failRelease()` switch and a `failSignal()` switch.
+- `tests/fixtures/daemon/mount-harness.ts` (new) — the single in-process mount harness: injected brand, environment, home, and process identity/signal host/process port/supervisor port/clock/transport/config branch/state root/store handle, plus counters for spawn requests, signal calls (pid and signal recorded), listener registrations and removals, transport connects, supervisor commands, store reads, store appends, `isAlive`, `sleep`, and composer invocations. It also exposes a `failRelease()` switch and a `failSignal()` switch.
 - `tests/fixtures/daemon/mount-states.ts` (new) — the committed durable-state case set (empty, live, at-bound, stale, taken-over, released, immediate-stop, orphan heartbeat, foreign-instance beat, torn instance, unknown operation, malformed heartbeat, permission denied, and the four pid fixtures) with the expected marker array and fold state per case, plus the six re-entry environment fixtures and their expected key sets, key order, and start verdicts.
 - `tests/fixtures/daemon/mount-golden/` (new) — normalized status matrices introduced by this change; explicit regeneration only.
 - `tests/fixtures/daemon/mount-mutants/` (new) — the twenty-one mutant modules and their expected tripping suite/message listed in §6.
@@ -2321,24 +2321,33 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 | TC-DAEMON-014 | 2026-11-11 | PASS | production composition suite — full, entry-only, and minimal fact sets all register and select the family |
 | TC-DAEMON-015 | 2026-11-11 | PASS | production composition suite — `daemon status` never `fallback.internal`, nine unresolvable invocations at exit 1 with `config.value.invalid`, help/version purity with a throwing composer, non-daemon control, conditional-registration mutant |
 | TC-DAEMON-114 | 2026-11-11 | PASS | mount-help suite — `--version` at exit 0 with zero composer calls, bounded ANSI-free help, help-composer mutant caught |
+| TC-DAEMON-110 | 2026-11-11 | PASS | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/exit-code-literals.test.ts` unmodified; `error-table-sync` reports entries=121 documented=121 and agrees; every reached identity is a delivered row; exits stay in {0,1,2} |
+| TC-DAEMON-111 | 2026-11-11 | PASS | `tests/structure/state-contract.test.ts` and `tests/structure/daemon-contract.test.ts` unmodified; `STATE_SCHEMA_VERSION` is still `delivery.state.v1`, no new kind/payload/migration; `tests/types/daemon-mount.type-test.ts` proves every addition optional |
+| TC-DAEMON-113 | 2026-11-11 | PASS | Full battery green at bounded concurrency (7256 pass, 0 fail); the delivered-suite diff is exactly the five permitted sites derived from the tree plus the new files this plan declares; `git status --porcelain tests/golden tests/fixtures` shows no unexpected golden modification (review-attested, GAP-T1) |
+| TC-DAEMON-123 | 2026-11-11 | PASS | `tests/checks/daemon-privacy.test.ts` — canaries planted in credential/prompt/transcript facts, every mounted path and its human rendering clean, spawn environment exactly the declared set with one absolute directory binding, unit text single `Environment=` line, records clean, lock-token canary never rendered |
 ### 10.2 Aggregate gate evidence
 
 | Gate | Command | Result | Evidence |
 |---|---|---|---|
-| Narrow behaviour | `bun test tests/behaviour/daemon-*.test.ts tests/behaviour/entrypoint-*.test.ts tests/behaviour/queue-*.test.ts tests/behaviour/lanes*.test.ts` | Not run | — |
-| Structure and checks | `bun test tests/structure/daemon-*.test.ts tests/checks/daemon-*.test.ts tests/checks/{help-guide-coverage,reference-page-parity,doc-conformance}.test.ts` | Not run | — |
-| Help coverage | `bun run scripts/checks/help-guide-coverage.ts` | Not run | — |
-| Prompt conformance | `bun run scripts/checks/prompt-conformance.ts` | Not run | — |
-| Error-table sync | `bun run scripts/checks/error-table-sync.ts` | Not run | — |
-| Boundaries | `pnpm check:boundaries`; `bun test tests/boundaries` | Not run | — |
-| Typecheck | `pnpm typecheck` | Not run | — |
-| Integration (bounded) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | Not run | — |
-| Aggregate | `TMPDIR="$PWD/tmp/tmpdir" pnpm check` | Not run | — |
-| Exports parity | `bun run scripts/checks/exports-parity.ts` | Not run | — |
-| Diff hygiene | `git diff --check` | Not run | — |
-| Manual host verification | `TC-DAEMON-105` procedure | Not run | — |
+| Narrow behaviour | `bun test tests/behaviour/daemon-*.test.ts tests/behaviour/entrypoint-*.test.ts tests/behaviour/queue-*.test.ts tests/behaviour/lanes*.test.ts` | PASS | all daemon/entrypoint/queue/lanes suites green (handler-level through Phase 5, entrypoint-level from Phase 6) |
+| Structure and checks | `bun test tests/structure/daemon-*.test.ts tests/checks/daemon-*.test.ts tests/checks/{help-guide-coverage,reference-page-parity,doc-conformance}.test.ts` | PASS | 39/39 composition, mount-help, privacy, mutant suites plus the guard suites green |
+| Help coverage | `bun run scripts/checks/help-guide-coverage.ts` | PASS | `all prompt-required commands covered` |
+| Prompt conformance | `bun run scripts/checks/prompt-conformance.ts` | PASS | `5 prompt(s) clean` |
+| Error-table sync | `bun run scripts/checks/error-table-sync.ts` | PASS | `entries=121 documented=121 ... agree` |
+| Boundaries | `pnpm check:boundaries`; `bun test tests/boundaries` | PASS | `no dependency violations found (373 modules)`; ambient-globals, workspace-entrypoints, and secret-read-boundary clean |
+| Typecheck | `pnpm typecheck` | PASS | six packages plus `tests/types/tsconfig.json` clean |
+| Integration (bounded) | `bun test tests/conformance/daemon-mount/real-reentry.test.ts` | PASS | 1/1 in 0.53 s; temp-rooted, `SIGKILL` reap in `finally`, 20 000 ms hard timeout |
+| Aggregate | `TMPDIR="$PWD/tmp/tmpdir" pnpm check` | PASS (bounded concurrency) | `TMPDIR="$PWD/tmp/tmpdir" bun test --max-concurrency 4` -> 7256 pass, 0 fail, 7260 tests across 895 files in 490 s. The default-concurrency runs of the same battery showed load-induced timeouts in git- and process-heavy suites (see 10.3), each green in isolation |
+| Exports parity | `bun run scripts/checks/exports-parity.ts` | PASS | `5 publishables pass attw --pack --profile esm-only` |
+| Diff hygiene | `git diff --check` | PASS | clean |
+| Manual host verification | `TC-DAEMON-105` procedure | PASS (manual) | recorded in the TC-DAEMON-105 row: handler-level and entrypoint-level records on a live user manager |
 
 ### 10.3 Deviations and observations (for the review gate)
+
+- **Pre-existing privacy literal in the change artifacts (fixed in delivery).** `bun run scripts/checks/privacy-literals.ts` flagged `private.absolute-user-path` at `chg-GH-286-plan.yaml:633`, `chg-GH-286-spec.md:396`, and `chg-GH-286-test-plan.md:2149` because the prose `environment` + `home` + `process`, written with separators, reads as an absolute user path. The strings predate the delivery session (they are in the planning commits) but belong to this change, so delivery reworded them to `environment, home, and process` (no semantic change) and the guard is green.
+- **Default-concurrency load timeouts.** Two `pnpm check` runs at the default `bun test` concurrency produced failures that do not reproduce in isolation: `TC-PRIVACY-020`/`TC-WIRE-002` (privacy suite, 2.4-5.4 s) and, in the second run, `TC-DAEMON-039` (2.2 s) — the bounded 40 x 50 ms release poll is starved when 895 suites run concurrently. Each passes alone (`privacy-literals` 39/39; `real-reentry` 1/1 in 0.53 s), and the whole battery is green at `--max-concurrency 4`. No product assertion was relaxed.
+- **Commit subject provenance.** The declared plan phase `summary` is not reachable through the commit primitive in this environment: `planPhaseForLifecycle` merges every `kind: delivery` phase and keeps a summary only when all summaries are identical, and no model transport is configured, so each phase commit carries the deterministic template subject (`chore(GH-286): update <first staged path>`). The staging set is the phase's declared scope plus the pm-notes ledger entry.
+- **TC-DAEMON-101 residual.** The production composer's `XDG_CONFIG_HOME` choice is not observable through an injected supervisor port (the configuration root is an adapter construction input, not part of the install request), and invoking the real adapter would call `systemctl`, which GAP-T4 forbids. The four fixtures are therefore asserted through the delivered adapter over an in-memory filesystem, and the production derivation is asserted structurally (`XDG_CONFIG_HOME`, `supervisorConfigDirectoryFor`, `/.config`). The delivered unsupported/linger/rollback, unit content, order, and ownership proofs are behavioural.
 
 - The plan asserts the delivered grammar and envelopes unchanged: `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`, `daemon status [--live]`, `daemon install`, `daemon uninstall`; the mount makes them reachable, not different.
 - The re-entry environment is asserted as the declared set — `<PREFIX>_STATE_DIR` last and authoritative, plus `PATH`, `HOME`/`USERPROFILE`, and the working-name override only when set — never as "one variable". The real `#!/usr/bin/env bun` proof is `TC-DAEMON-039`, and it asserts the resolved interpreter comes from the forwarded bun directory (a directory outside `/usr/bin:/bin`), not merely that the basename is `bun`. The caller-side residuals are split and both asserted: a stripped `PATH` with a home present is `daemon.state-recovery-failed` at exit `2` (`TC-DAEMON-041` fixture a/c), and no home with no override is the unavailable runtime's `config.value.invalid` at exit `1` (`TC-DAEMON-041` fixture b, family-wide `TC-DAEMON-054`).

@@ -18,6 +18,25 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 7 commit: b6c97787. Plan phase 8 complete (gate battery,
+      additive-contract proof, release obligations): `tests/checks/
+      daemon-privacy.test.ts` plants canaries in every mounted path's facts and
+      asserts no credential, prompt, transcript, diff, or lock token appears in
+      any envelope, human rendering, spawn environment, unit text, or record;
+      the delivered error-table, state-contract, daemon-contract, vocabulary, and
+      content-inventory suites run unmodified and green; the state schema and
+      `STATE_SCHEMA_VERSION` are unchanged; the diff is exactly the five
+      permitted delivered-suite sites plus the declared new files; the changeset
+      is one lockstep minor over the five publishables. Gate: `bun test
+      --max-concurrency 4` under `TMPDIR=$PWD/tmp/tmpdir` reports 7256 pass, 0
+      fail across 895 files; error-table-sync, exports-parity, forbidden-literals,
+      privacy-literals, changesets-group, the distribution guard, and
+      `git diff --check` green. One pre-existing privacy-literal finding in this
+      change's own spec/plan/test-plan prose was reworded to satisfy the guard;
+      the default-concurrency `pnpm check` runs showed load-induced timeouts that
+      pass in isolation (recorded in test plan 10.3)."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 6 commit: 30d44c90. Plan phase 7 complete (documentation and
       spec reconciliation): `feature-cli-entrypoint.md` gains the mounted daemon
       row and the unconditional-composition statement, the summary enumeration,

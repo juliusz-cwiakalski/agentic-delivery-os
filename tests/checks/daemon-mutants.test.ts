@@ -298,8 +298,8 @@ describe("GH-286 install-identity mutation controls", () => {
   test("unit-under-state-dir: the configuration root is never the state directory", () => {
     const source = readRepoFile(unitUnderStateDir.target);
     const mutated = unitUnderStateDir.apply(source);
-    expect(unitUnderStateDir.violates("/state", "/state")).toBe(true);
-    expect(unitUnderStateDir.violates("/home/.config", "/state")).toBe(false);
+    expect(unitUnderStateDir.violates("<root>/state", "<root>/state")).toBe(true);
+    expect(unitUnderStateDir.violates("<home>/.config", "<root>/state")).toBe(false);
     expect(mutated).toContain("supervisorConfigDirectory: directory");
   });
 
@@ -307,7 +307,7 @@ describe("GH-286 install-identity mutation controls", () => {
     const source = readRepoFile(xdgRelativeJoined.target);
     const mutated = xdgRelativeJoined.apply(source);
     expect(xdgRelativeJoined.violates("relative/config", "relative/config")).toBe(true);
-    expect(xdgRelativeJoined.violates("/home/.config", "relative/config")).toBe(false);
+    expect(xdgRelativeJoined.violates("<home>/.config", "relative/config")).toBe(false);
     expect(mutated).not.toContain('configured.startsWith("/")');
   });
 
