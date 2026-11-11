@@ -213,8 +213,8 @@ instead of surviving as ticket memory.
 
 ## M2 delivery snapshot (2026-11-11)
 
-M2-S11 (multi-repository workstations) was delivered by GH-288 and merged to
-`main-tools`. Delivery state now resolves as two layers — the host root plus a
+M2-S11 (multi-repository workstations) was delivered by GH-288. Delivery state
+resolves as two layers — the host root plus a
 per-repository project root derived from the checkout identity marker — so two
 checkouts of different repositories never share phase state, queue entries, or
 lane leases for one ref. `projects list [--json]` is the mounted, read-only host

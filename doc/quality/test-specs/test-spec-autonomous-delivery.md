@@ -54,7 +54,7 @@ The shared security fixture exercises GNU and BSD/macOS `stat` metadata formats.
 that both examples are executable but inactive after local install, removed with
 any empty directory on local uninstall, and that each waits only for its own
 configured inputs: the Z.AI example inside its UTC window, and the owner-hold
-example while the environment value or the fixed production-store marker is
+example while the environment value or the fixed default host-root marker is
 active.
 
 ### End-to-End Tests
@@ -99,7 +99,7 @@ remain rejected.
 
 Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty, when its condition
 is evaluated, then it asks for the poll interval and the sleep line names the
-`env` source and the sanitized reason. Given only the fixed production-store
+`env` source and the sanitized reason. Given only the fixed default host-root
 marker `$HOME/.delivery-os-state/owner-hold`, then the marker source and its first line
 are named. Given neither, then the condition asks for `0` and the driver returns
 without sleeping. The driver takes the MAX across conditions, applies no fixed

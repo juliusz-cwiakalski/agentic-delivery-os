@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -186,7 +186,7 @@ The process-scoped default sink is the console. `resolveProcessLegacyFromEnviron
 ### Consumption by later layers
 
 - **M0-S4 (config layer)** is implemented and consumes `ResolverInput` and `resolveBrandIdentity` without reshaping them: the runtime-aware edge supplies the configured working name and injected environment facts, then uses `configDirectoryName` for the committed `<repo>/<configDirectoryName>/config.yaml` path and `environmentPrefix` for environment-layer names. The implemented behavior is documented in [Configuration Layer and Inspection](feature-config-layer.md).
-- **M0-S5 (state layer)** is implemented and consumes `stateDirectoryName` as an injected parameter without importing branding; the injected state directory is supplied by the runtime-aware edge. The implemented behavior is documented in [State Layer](feature-state-layer.md).
+- **M0-S5 (state layer)** is implemented and consumes `stateDirectoryName` as an injected parameter without importing branding; the injected state directory is supplied through the one state-scope policy by the CLI and MCP compositions. The implemented behavior is documented in [State Layer](feature-state-layer.md).
 - **M0-S10 (pm-notes lint and phase transitions)** is implemented behind the CLI surface, which owns the injected brand identity and renders failure diagnostics with the brand-prefixed binary name; the `lint` and `phase` handlers carry no product literal. The implemented behavior is documented in [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **MCP surface and telemetry** consume `mcpToolPrefix` and `telemetryNamespace`. Tool names are the prefix plus a canonical primitive ID; telemetry schema names remain brand-neutral.
 

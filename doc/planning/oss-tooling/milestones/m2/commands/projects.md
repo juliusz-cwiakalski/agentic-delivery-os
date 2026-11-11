@@ -26,9 +26,10 @@ phase state, queue entries, or lane leases - even when both use the same ref.
 the state location, daemon reachability, and the handover state. No manual
 registry is required; the host index is discovered from the checkouts.
 
-This surface is proposed for M2-S11 and is not yet registered at the root
-listing. See [../entrypoint-delta.md](../entrypoint-delta.md) for the root
-listing delta and [../contracts.md](../contracts.md) for `projects.v1`.
+This page is the M2-S11 contract and records the planned end state until M2
+exits; the observed root-listing composition is recorded in
+[../entrypoint-delta.md](../entrypoint-delta.md) rather than here. See
+[../contracts.md](../contracts.md) for `projects.v1`.
 
 ## OPTIONS
 
@@ -95,9 +96,11 @@ $ <binary> projects list --json
 
 ## SCOPE
 
-`projects list` is read-only without exception: it performs no index
+`projects list` is read-only with respect to delivery state: it performs no index
 maintenance, prunes nothing, replaces no corrupt file, creates no project state
-root, and writes nothing.
+root, and writes nothing under the host root. The invoking checkout's identity
+marker is created once inside its git common directory when it is absent, as it
+is for every composed command.
 
 An invocation outside any git work tree uses the declared host-scoped `unbound`
 state root beside the project container, emits one bounded warning that its

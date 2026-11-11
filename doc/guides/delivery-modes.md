@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-288"]
   decisions: ["TDR-0002"]
 ---
 
@@ -207,22 +207,26 @@ The hold has two equivalent sources. The environment source is
 `DELIVERY_OS_OWNER_HOLD` (the current default brand's name for the
 brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
 and an empty value is inactive. The marker source is the regular file
-`$HOME/.delivery-os-state/owner-hold` inside the production store directory; its
-first line is the reason and an empty file is an active hold without a reason.
+`<host root>/owner-hold`, which is `$HOME/.delivery-os-state/owner-hold` at the
+default host root; its first line is the reason and an empty file is an active
+hold without a reason.
 The environment source wins when both are active. Presence is the hold and
 content is only the reason: an unreadable, non-regular, or stat-failing marker is
 active without a reason (fail closed). Removing the environment value and the
 marker clears the hold; nothing else is repaired or migrated.
 
-The marker path is fixed to the production store directory. There is no
-marker-path override and no store relocation for the hold: a shell-only path
-would leave the typed engine unheld. The shipped example defaults to
-`$HOME/.delivery-os-state/owner-hold` for this product; adopters who set a
+The marker is host-wide: the typed engine reads it at the host root, which is an
+absolute `<PREFIX>_STATE_DIR` when set and otherwise
+`<home>/<brand.stateDirectoryName>`. There is no marker-path override, and no
+per-project marker narrows the hold. The shipped shell example reads the fixed
+default path `$HOME/.delivery-os-state/owner-hold` for this product, so a host
+that sets the override keeps the typed engine reading the marker at the override
+and uses the environment source there (it is relocation-safe); adopters who set a
 different working name edit the example's two setting names and that marker
-default (or use the environment source, which is relocation-safe). Create the
-store directory privately (`mkdir -m 700`): the state store rejects a
-non-private directory with `state.permission.denied` at exit `1` before the hold
-gate is consulted, so a directory created at `0775` never reports the hold.
+default. A missing project state root is created with mode `0700` on first use;
+a project state root created by hand must be private, because the store rejects a
+non-private state directory with `state.permission.denied` at exit `1` before the
+hold gate is consulted.
 
 `install.sh --local` installs both inactive examples:
 `scripts/hooks/pre-opencode-iteration-zai.sh` and

@@ -21,8 +21,8 @@ Delivery state is scoped per repository. Two layers resolve it: the **host root*
 injected home plus `brand.stateDirectoryName` — and a **project state root**
 `<host root>/projects/<project key>` minted once from the checkout's identity
 marker. The host root keeps only host-wide documents: the derived host index
-`host-index.json` and the host-wide owner-hold marker; `unmigrated` store
-artifacts are detected, never read from there.
+`host-index.json` and the host-wide owner-hold marker; a pre-migration store left
+at the host root is detected there, never read from it.
 
 `projects list [--json]` is the host overview and the only verb of the family.
 It reads the host index, derives every state location from its key, projects each
@@ -88,8 +88,10 @@ project's root.
 `<host root>/host-index.json` (schema `delivery.projects.host-index.v1`) is a
 derived, revisioned cache: not a state record, never authoritative, rebuildable
 from checkouts. Each entry records `projectKey`, `projectIdentifier`, `root`, the
-derived `stateLocation`, and `lastWrittenAt`. The index is discovered from use,
-never by a filesystem crawl.
+derived `stateLocation`, and `lastWrittenAt`. The index holds at most 2 000
+entries and keeps them in project-key order; entries beyond the bound are dropped
+from the document, never merged into another entry. The index is discovered from
+use, never by a filesystem crawl.
 
 Maintenance runs at most once per store-opening invocation whose scope resolves
 inside a checkout: exactly one index read and at most one write. The fold upserts
@@ -100,9 +102,9 @@ and reports a disagreement as a warning that never redirects a read. Content tha
 did not change produces zero writes and no revision advance.
 
 Absent is not corrupt: no index means no registered project, an empty list,
-revision `0`, and exit success. A present but unparsable index is corruption for
-a read and is replaced by maintenance, which preserves the corrupt bytes once as
-a timestamped sibling.
+revision `0`, and exit success. A present but unreadable or unparsable index is
+corruption for a read and is replaced by maintenance, which preserves the corrupt
+bytes once as a timestamped sibling.
 
 **Collision guard.** If registration finds the minted key already held under a
 different project identifier, the index keeps the existing entry unchanged and
@@ -122,12 +124,15 @@ and the conflicting identifier. It never adopts that state root.
   `daemon`, `handover`, sorted by key. The `daemon` cell carries the reason token
   when unreachable, never a bare negative. Two runs over unchanged state are
   byte-identical.
-- **Exit projection.** `0` produced; `1` refused (unknown verb, or the invoking
-  checkout's identity cannot be read); `2` the host index or a project state
-  location prevents an honest answer. No other code is produced by the family.
+- **Exit projection.** `0` produced; `1` refused (unknown verb, an unusable
+  state-directory override, or the invoking checkout's identity cannot be read);
+  `2` the host index or a project state location prevents an honest answer. No
+  other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
-  project-root creation, no migration, and no write of any kind. Host-root and
-  `projects/` bytes, modes, and mtimes are unchanged across a listing.
+  project-root creation, no migration, and no write under the host root.
+  Host-root and `projects/` bytes, modes, and mtimes are unchanged across a
+  listing. The invoking checkout's identity marker is created once inside its git
+  common directory when it is absent, exactly as for every composed command.
 
 ## Handover projection
 
@@ -136,7 +141,7 @@ and the conflicting identifier. It never adopts that state root.
 | Folded latest handover operation | Derived authority document | Reported |
 |---|---|---|
 | `authoritative` | `authoritative` | `engine` |
-| `dual-run` | `dual-run` or absent | `shell` |
+| `dual-run` | `dual-run`, absent, or malformed | `shell` |
 | no record | any | `shell` (the documented safe default) |
 | `authoritative` | absent, `dual-run`, or malformed | `in-transition` |
 | `dual-run` | `authoritative` | `in-transition` |
@@ -192,7 +197,7 @@ No automatic migration, migration command, or re-attribution exists.
 - [Branding Seam](feature-branding-seam.md) — `stateDirectoryName` naming the host
   root.
 - [Audit Ledger](feature-audit-ledger.md) — the runtime-aware edge's audit store,
-  now opened at the project root.
+  opened at the project root.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — the socket path derived
   from the project state root by the composing site.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The command audit ledger: two additive state record kinds (a reservation append followed by the invocation record) written under one shared fence with a durable per-store ordinal, a keyed tamper-evident chain over both kinds backed by the store-managed chain-key.<workspace>.json artifact, a bounded filtered library read surface that reports skipped-ordinal findings in-band, the claimed agent-identity convention named through the branding seam, and audit-write failure semantics that never change a command outcome."
 links:
-  related_changes: ["GH-223", "GH-232"]
+  related_changes: ["GH-223", "GH-232", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/audit.ts"
@@ -173,7 +173,7 @@ The audit ledger is the durable home of the context fields that scripted machine
 | `packages/core/src/state/index.ts` | Store facade | Implements `readStoreArtifact`/`ensureStoreArtifact`; exports the audit consumer functions. |
 | `packages/core/src/state/driver/runtime-edge.ts` | Runtime edge | The only runtime-API location; supplies `randomHex` (cryptographic random bytes) and the store filesystem/permission primitives. |
 | `packages/cli/src/index.ts` | Command surface | Samples `startedAt`, assembles the invocation facts after computing the outcome, writes the audit record best-effort, and emits the classified audit diagnostic. |
-| `packages/cli/src/edge.ts` | Runtime-aware edge | `resolveAgentIdentity` (injected environment + derived prefix), `resolveCliMode`, `createCliAudit` (scope, repo, identity, store-backed writer), and `createProductionDependencies` (epoch clock, mode fact, and the state-backed audit seam over the home-derived state directory). |
+| `packages/cli/src/edge.ts` | Runtime-aware edge | `resolveAgentIdentity` (injected environment + derived prefix), `resolveCliMode`, `createCliAudit` (scope, repo, identity, store-backed writer), and `createProductionDependencies` (epoch clock, mode fact, and the state-backed audit seam over the state directory the one state-scope policy resolves: the project state root for a supplied `cwd`, otherwise the host root). |
 | `packages/cli/src/output/serialize.ts` | Serialization | Single redaction chokepoint and the scripted/envelope rendering path used by the audit-redaction guarantee. |
 | `packages/testkit/src/result-conformance.ts` | Conformance validator | Envelope and scripted-projection rules used by the both-mode golden suites. |
 
@@ -260,7 +260,7 @@ Fixtures live in `tests/fixtures/audit/**` (cases, mutation matrix, reservation 
 
 The ledger has no configuration keys. The runtime-aware edge supplies the store, scope, injected environment record, and environment prefix; a caller may also compose an audit seam with a repository target. `createProductionDependencies` composes the shipped default: it resolves the mode from the injected stream-capability fact (`isTTY`; an omitted fact resolves to `scripted`), injects the epoch-millisecond UTC clock (`Date.now()`), the run-id factory, the registered secrets, and the state-backed audit seam. The state directory comes from an injected `stateDirectory`, or — when the invoking `cwd` is supplied — from the one state-scope policy, which resolves the **project** state root `<host root>/projects/<project key>` for that checkout, so the audit ledger lives beside the delivery store it describes. Without a `cwd` the edge falls back to the resolved host root for compatibility with existing callers. The store identity uses the injected `workspaceId` or `default`, and the injected `fenceNamespace` or `cli-audit`. Every one of those facts remains injectable and overridable.
 
-The production seam records `scope` as the workspace identity and leaves `repo` absent; the read surface matches both exactly. Per-project store identity is not derived by this composition; it is the responsibility of the queue and daemon compositions. When neither a state directory nor a resolvable home exists, the composition omits the audit seam: the command runs unaudited with its outcome and exit code unchanged, and no audit record or audit diagnostic is produced. That is the composition-time form of the DEC-8 degradation posture; a present state path whose write fails still produces the classified state diagnostic.
+The production seam records `scope` as the workspace identity and leaves `repo` absent; the read surface matches both exactly. The audit records therefore carry no repository attribution; the queue and daemon compositions own their own project-scoped stores. When neither a state directory nor a resolvable home exists, the composition omits the audit seam: the command runs unaudited with its outcome and exit code unchanged, and no audit record or audit diagnostic is produced. That is the composition-time form of the DEC-8 degradation posture; a present state path whose write fails still produces the classified state diagnostic.
 
 The chaining key has no configuration surface: it is generated and persisted as store-managed material. The identity variable is the only operator-facing input, and its absence is valid.
 

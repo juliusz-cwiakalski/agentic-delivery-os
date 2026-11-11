@@ -26,8 +26,10 @@ The project overview contract, owned by M2-S11.
 - **Record fields.** `projectKey` (stable repository identity derived from the
   checkout identity: the git common dir marker), `root` (absolute checkout
   root), `stateLocation` (the per-repository state root), `daemonReachable`
-  (boolean with a degradation reason when false), `handoverState` (engine,
-  shell, or in transition).
+  (`{ reachable }` or `{ reachable: false, reason }` with the closed reason
+  vocabulary `daemon-not-mounted`, `state-absent`, `socket-absent`,
+  `socket-unreachable`), `handoverState` (`engine`, `shell`, or
+  `in-transition`).
 - **Envelope.** `<binary> projects list --json` returns
   `data.projects[]` with exactly those fields plus a host index revision.
 - **Isolation.** Two checkouts of different repositories, both on the same
