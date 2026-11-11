@@ -297,10 +297,15 @@ export const createDaemonRuntime = (ports: DaemonRuntimePorts): DaemonRuntime =>
         // removed before the exclusive re-acquire. The removal is a
         // compare-and-delete keyed on that observed `lockToken`: a lock a
         // concurrent starter replaced in the meantime answers
-        // `state.lock.busy` and is left in place, and a refused removal falls
-        // through to the delivered busy mapping below rather than inventing a
-        // refusal. `evaluateDaemonLock` stays the only staleness decision.
-        ports.lock.remove(decision.previous.lockToken);
+        // `state.lock.busy` and is left in place, so that one outcome falls
+        // through to the delivered busy mapping below. Any other refusal — a
+        // write failure, a permission denial, or an unreadable record — is that
+        // failure's own identity and is surfaced instead of being reported as a
+        // bare `daemon.already-running` (NF3-5).
+        const reaped = ports.lock.remove(decision.previous.lockToken);
+        if (!reaped.ok && reaped.code !== "state.lock.busy") {
+          return { ok: false, code: reaped.code, detail: reaped.path };
+        }
       }
       const at = nowIso();
       const newToken = ports.newLockToken();

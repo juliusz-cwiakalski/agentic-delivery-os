@@ -113,7 +113,7 @@ links:
 
 Root cause versus symptom: the hardcoded degradation marker and the missing composition are **symptoms** of one gap — production has no daemon composition at all, so every value that must agree between the parent process, the detached child, the installed unit, and the queue read side is currently undefined. The desired outcome is one composition whose resolved state directory, entry path, and identity are the same strings everywhere they are observed.
 
-Out of scope: lane executor/dispatch composition in the daemon, `projects`/`events`/`attempts`/`board`, daemon engine or control-protocol semantics beyond additive composition inputs, multi-state-directory installs, and any new state schema.
+Out of scope: lane executor/dispatch composition in the daemon, `projects`/`events`/`attempts`/`board`, daemon engine or control-protocol semantics beyond additive composition inputs and the one contract-conformance stale-lock takeover fix described under DC-4's scoped engine exception, multi-state-directory installs, and any new state schema.
 
 ## Constraints (Hard Requirements)
 
@@ -152,11 +152,11 @@ Out of scope: lane executor/dispatch composition in the daemon, `projects`/`even
 - **Verification:** test (entrypoint composition test; help-guide-coverage check) + code review
 - **Negotiable:** no
 
-### C-6: Additive composition only — no engine, contract, or schema change
+### C-6: Additive composition only — no engine, contract, or schema change beyond stale-lock takeover conformance
 
-- **Statement:** No daemon engine behaviour, control-protocol frame, error identity, or state schema changes; new inputs are optional composition fields and an additive read seam. `STATE_SCHEMA_VERSION` is unchanged and no migration is implied.
-- **Source:** internal standard (GH-286 clarify_scope scope boundary; ADR-0003 tier rules)
-- **Verification:** code review + test (schema version and error-table identity set unchanged)
+- **Statement:** No daemon engine behaviour, control-protocol frame, error identity, or state schema changes, with **one scoped exception**: when `evaluateDaemonLock` has already proved a stale lock takeover-eligible, the engine removes exactly the lock record it observed — a `lockToken`-keyed compare-and-delete — before the exclusive re-acquire, so the delivered `taken-over` branch is reachable and a crashed daemon can restart. The loser of a concurrent race still receives `state.lock.busy` → `daemon.already-running` because the removal re-reads the token and leaves a replaced lock in place. No other engine semantics, durable record, protocol frame, or error row changes. New inputs are optional composition fields and an additive read seam. `STATE_SCHEMA_VERSION` is unchanged and no migration is implied.
+- **Source:** internal standard (GH-286 clarify_scope scope boundary; ADR-0003 tier rules) + contract conformance (the delivered daemon contract claims crash-safety and takeover; `taken-over` is already appended)
+- **Verification:** code review + test (schema version and error-table identity set unchanged; post-crash takeover restart test that starts with the stale lock file present)
 - **Negotiable:** no
 
 ### C-7: One state-directory scope across parent, child, unit, and read side
@@ -183,7 +183,7 @@ Ranked; the ordered list is authoritative.
 2. **One composition path.** A second entry seam for the daemon (argv sniffing ahead of the entrypoint) would bypass the prompt-required selection, the envelope, the error projection, and the help surface — permanently.
 3. **Honest failure.** No "started" claim without durable evidence; degradation markers must be derived, never asserted; a non-positive pid must fail closed rather than signal a process group.
 4. **Testability without real processes.** Signal hosts, clocks, process ports, and stores are injected so the lifetime, refusal, and degradation paths are deterministic in CI.
-5. **Minimal additive surface.** Reuse the delivered runtime, projections, supervisor adapter, and transport; add optional composition inputs only.
+5. **Minimal additive surface.** Reuse the delivered runtime, projections, supervisor adapter, and transport; add optional composition inputs only, plus the one scoped conformance fix that makes the delivered takeover branch reachable.
 6. **Legible identity.** The unit name, executable path, config root, and environment variable that land on the user's machine must be explainable in one line each and must agree with what `status` reports.
 7. **Solo-maintainer reversibility.** Every choice here is an additive input that can be changed or removed without a migration.
 
@@ -380,20 +380,20 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only via an accepted-risk excep
 ## Decision
 
 - **Decision:** **Mount the delivered daemon family through the production entrypoint with four composition decisions:** (DC-1) the bin supplies the running entry path as a production fact, production resolves its state directory through `resolveStateDirectoryScope`, composes the delivered unix transport at the resolved socket path, and a foreground `start` owns the process lifetime through the injected signal host — SIGTERM drains, SIGINT stops immediately — returning the readiness snapshot captured at start; (DC-2) `QueueComposition.degraded` accepts a per-read resolver and production derives it from durable daemon state; (DC-3) the composing process id is recorded, and `stop` refuses a non-positive recorded pid; (DC-4) install identity is the brand-derived unit name under the user config root with the entry path as `ExecStart` binary and the resolved state variable as `Environment`.
-- **Rationale (tied to drivers):** Driver 1 forces the lifetime and identity decisions to be observable behaviours rather than wiring: a start that returns is not resident, and a unit under the state directory is not a unit. Driver 2 is why the lifetime lives in the command runtime instead of a second bin path — the prompt-required selection and the envelope stay single-sourced. Driver 3 forces the degradation to be derived (the hardcoded marker is the defect) and the pid to fail closed (a `0` pid is a live hazard). Driver 4 is why the signal host and clock are injected: the refusal, drain, and staleness paths are otherwise untestable without real processes. Driver 5 keeps the change additive: optional composition fields, one union widening, no schema or error-table change. Driver 6 makes the unit name, config root, and variable name explainable in one line each, and driver 7 keeps every choice removable.
+- **Rationale (tied to drivers):** Driver 1 forces the lifetime and identity decisions to be observable behaviours rather than wiring: a start that returns is not resident, and a unit under the state directory is not a unit. Driver 2 is why the lifetime lives in the command runtime instead of a second bin path — the prompt-required selection and the envelope stay single-sourced. Driver 3 forces the degradation to be derived (the hardcoded marker is the defect) and the pid to fail closed (a `0` pid is a live hazard). Driver 4 is why the signal host and clock are injected: the refusal, drain, and staleness paths are otherwise untestable without real processes. Driver 5 keeps the change additive: optional composition fields, one union widening, no schema or error-table change, plus the one scoped takeover conformance fix. Driver 6 makes the unit name, config root, and variable name explainable in one line each, and driver 7 keeps every choice removable.
 - **Decider:** Juliusz Ćwiąkalski — acceptance pending at the GH-286 PR review; not claimed by this record.
 - **Conditions for revisit:** See `revisit_triggers`; the load-bearing ones are a non-executable entry path, a second state directory, and any case where the durable reachability rule disagrees with the live socket probe beyond the staleness window.
 
 ### Constraint Compliance Attestation
 
-The chosen alternatives satisfy C-1…C-8 with no exception:
+The chosen alternatives satisfy C-1…C-8 as amended — C-6's scoped stale-lock takeover exception is written into the constraint itself, not taken as a waiver:
 
 - **C-1** — the foreground lifetime path runs the delivered resident loop and releases only on stop; the parent proves readiness from the durable instance record.
 - **C-2** — stop is the delivered release path (`drain` detaches lanes, `immediate` appends `immediate-stop`), and a non-positive recorded pid is refused before any signal.
 - **C-3** — the composed unix transport binds the resolved socket path, and the state directory is created 0700 by the state edge, so `status --live` reaches a live daemon.
 - **C-4** — the per-read resolver derives both directions from durable state in every projection, including watch iterations.
 - **C-5** — the runtime is composed unconditionally; an absent entry path degrades one start shape.
-- **C-6** — optional composition fields, one internal union widening, and no engine, protocol, error-table, or schema change.
+- **C-6** — optional composition fields, one internal union widening, and one scoped engine exception (the `lockToken`-keyed compare-and-delete before the exclusive re-acquire, on an `evaluateDaemonLock` takeover decision only); no engine semantics beyond stale-lock takeover, and no protocol, error-table, or schema change.
 - **C-7** — one resolution, one authoritative variable, one canonical directory across parent, child, unit, store, lock, socket, and read side; the re-entry environment carries additional path/home facts, but the state-directory variable is written last and wins outright (*amended 2026-11-11, RF-1*).
 - **C-8** — the reachability rule is a pure predicate; I/O stays in the composition tier.
 
@@ -446,6 +446,8 @@ The authoritative source is **durable state**, not the control socket: the queue
 
 The unit's optional fields keep their delivered forms (`Type=simple`, `WantedBy=default.target`, `Restart=on-failure`, linger enabled at install). One unit name per user means two state directories overwrite each other's unit; that limitation is declared, out of scope, and recorded as a revisit trigger.
 
+**Scoped engine exception — stale-lock takeover conformance.** *(Added 2026-11-11 — review iteration 3, NF3-1.)* The delivered daemon contract already claims crash-safety and takeover, and the engine already appends `taken-over` when `evaluateDaemonLock` classifies the observed lock as stale. Without a reap, though, that branch was dead: the subsequent exclusive create hit the still-present `daemon.lock`, returned `state.lock.busy`, and mapped to `daemon.already-running`, so a crashed (SIGKILL/OOM/reboot) daemon could never restart. The mount therefore includes exactly one engine conformance fix: on a `takeover` decision, remove the record the staleness evaluation proved dead, keyed on the observed `lockToken` (`removeIfTokenMatches`, `packages/core/src/state/daemon-lock.ts:69-93`), before the exclusive re-acquire (`packages/core/src/app/daemon-runtime.ts:294-304`). The compare-and-delete keeps the race honest — a concurrent starter that replaced the lock in the meantime gets `state.lock.busy` → `daemon.already-running`, and the lock is left in place — and `evaluateDaemonLock` remains the only staleness decision. No other engine semantics, durable record, protocol frame, or error row changes.
+
 ## Trade-offs & Consequences
 
 ### Positive Outcomes
@@ -454,7 +456,7 @@ The unit's optional fields keep their delivered forms (`Type=simple`, `WantedBy=
 - One state-directory resolution removes a latent inconsistency between the production store and its own edge; the installed unit and the detached child now agree with the parent by construction.
 - A recorded pid removes the process-group signalling hazard, and the fail-closed guard covers records the composition did not write.
 - Queue and lanes degradation becomes derived truth, in both directions, and stays consistent with `daemon status` by construction.
-- Every new input is optional and additive: no migration, no schema, no error identity, and no engine branch.
+- Every new input is optional and additive: no migration, no schema, and no error identity. The one engine change is the scoped takeover conformance fix — the stale-lock compare-and-delete that makes the delivered `taken-over` branch reachable — so a crashed daemon can restart; no other engine semantics, record, protocol frame, or error row changes.
 
 ### Negative Outcomes
 
@@ -464,6 +466,7 @@ The unit's optional fields keep their delivered forms (`Type=simple`, `WantedBy=
 - `process.argv[1]` is an assumption about the host: a wrapper or ephemeral script path makes re-entry and `ExecStart` fail, and the failure is a declared readiness timeout rather than a PATH guess.
 - The re-entry environment is rebuilt from the composing process's environment, so a caller that strips `PATH` or `HOME`/`USERPROFILE` from its own environment cannot be repaired by the spawn: the child fails closed at spawn or readiness with the classified `daemon.state-recovery-failed`. *(Added 2026-11-11, RF-1; this replaces the earlier working-name limitation — forwarding the override means a renamed product's child now resolves the same brand prefix as its parent.)*
 - DC-1c changes where state lives for anyone who sets `<PREFIX>_STATE_DIR` today: the production composition starts honouring the documented override it previously ignored.
+- The mount is no longer purely additive: it carries one engine change (the stale-lock compare-and-delete), so the takeover race is part of the review and regression surface, even though the exclusive create still arbitrates concurrent starters and no other lock semantics move.
 
 ### Unresolved Questions
 
@@ -478,7 +481,7 @@ The unit's optional fields keep their delivered forms (`Type=simple`, `WantedBy=
 2. **Composition inputs.** Add `pid` to `DaemonComposition` and forward it; add the foreground lifetime path to `start` (loop + signal host + stop) with listener cleanup in a `finally`; refuse a non-positive recorded pid in `stop`.
 3. **Degradation seam.** Widen `QueueComposition.degraded` to accept a resolver, resolve it per projection in the queue and lanes runtimes, and supply a durable-state resolver (pure predicate) from production.
 4. **Mount and documentation surface.** Add `daemon` to `PROMPT_REQUIRED_COMMANDS`; update the help reference page for `daemon` with the `--help`/`--version` coverage the help check requires; keep the entrypoint's help inventory consistent.
-5. **Guardrails.** No new error identity, no schema change, no daemon engine edit; every new composition field optional; tests inject the signal host, clock, process port, and store so no test depends on a real signal or wall clock.
+5. **Guardrails.** No new error identity and no schema change; one scoped engine fix only — the `lockToken`-keyed stale-lock removal before the exclusive re-acquire on an `evaluateDaemonLock` takeover decision (see the scoped engine exception) — with no other engine semantics, record, protocol frame, or error row touched; every new composition field optional; tests inject the signal host, clock, process port, and store so no test depends on a real signal or wall clock.
 
 ## Verification Criteria
 
@@ -502,6 +505,7 @@ The unit's optional fields keep their delivered forms (`Type=simple`, `WantedBy=
 | 2026-11-11 | DC-1: the detached child's re-entry environment is no longer "exactly one variable". It carries `<PREFIX>_STATE_DIR` (the authoritative state directory, written last) **plus** the composing process's `PATH`, its `HOME` (or `USERPROFILE`), and a non-empty working-name override, delivered through one optional additive composition input. The Context FACT, sub-decisions 1b/1c, the C-7 attestation, the Negative Outcomes limitation, the Implementation Plan, the Verification Criteria, and the revisit triggers are aligned with it. | DoR finding RF-1 (readiness iteration 1, change GH-286): `spawnDetached` replaces the child environment and the shipped entry is `#!/usr/bin/env bun`, so with no `PATH` the interpreter is unresolvable and a bare `daemon start` cannot bring the daemon up. Forwarding the minimum set is the executable form of the pinned re-entry contract; it also removes the earlier working-name limitation, leaving a caller that strips `PATH`/`HOME` as the declared residual. |
 | 2026-11-11 | DC-2: the reachability predicate pins a **strict** staleness bound — `nowMs − Date.parse(beatAt) < lockStalenessMs` — and states the boundary explicitly: a heartbeat whose age is exactly `lockStalenessMs` is stale, so `queue list` and `lanes` report `["daemon-unreachable"]` at that boundary, matching the delivered fold (`ageMs >= stalenessMs` → `stale`, `packages/core/src/domain/daemon-heartbeat.ts:63`). C-4 and the decision-2 chosen-alternative summary are aligned with the exclusive bound. | DoR finding RF2-1 (readiness iteration 2, change GH-286): the record pinned the inclusive `≤` while spec DM-4/EVT-2/AC-F5-1/AC-F5-4/AC-F5-6, the plan header with tasks 5.2–5.3, and test-plan TC-073 all pin strict `<`. An implementer following the declared-binding record would implement an off-by-one boundary and fail AC-F5-4/TC-073. |
 | 2026-11-11 | DC-1: the production fact is named `daemonEntry` (not `entryScriptPath`), so the fact and the `DaemonComposition.daemonEntry` input it feeds carry one name; the Implementation Plan names the same field. | DoR advisory A2-9 (readiness iteration 2, change GH-286): the specification's DEC-2 adopts `daemonEntry` for both the fact and the composition input, and the record still named `ProductionCompositionFacts.entryScriptPath`, which would have sent an implementer looking for a field that does not exist. |
+| 2026-11-11 | **Scope amendment (NF3-1, review iteration 3): the earlier "no daemon engine edit" scope statement is superseded by a scoped exception.** The Problem Framing out-of-scope note, C-6, the C-6 attestation, the Positive Outcomes line, the Negative Outcomes list, and the Implementation Plan guardrail now state that the mount includes **one contract-conformance engine fix**, limited to stale-lock takeover: on an `evaluateDaemonLock` `takeover` decision, remove the lock record that evaluation proved dead — a `lockToken`-keyed compare-and-delete (`removeIfTokenMatches`, `packages/core/src/state/daemon-lock.ts:69-93`) — before the exclusive re-acquire (`packages/core/src/app/daemon-runtime.ts:294-304`). The loser of a concurrent race still gets `state.lock.busy` → `daemon.already-running`; no other engine semantics, durable record, protocol frame, or error row changes. | Review finding NF3-1 (review iteration 3, change GH-286): the delivered daemon contract already claims crash-safety and takeover and the engine already appends `taken-over`, but without the reap that branch was dead — the exclusive create hit the still-present `daemon.lock` and returned `daemon.already-running`, so a crashed daemon could never restart. The record (and the change spec's non-goals) claimed no engine edit, which contradicted the shipped code. |
 
 ## References
 

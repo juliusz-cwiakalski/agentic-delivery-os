@@ -829,25 +829,34 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         }
         return failure("daemon.state-recovery-failed", "resident-readiness-timeout");
       }
-      const started = await runtime.start({ foreground });
-      if (!started.ok) return failure(started.code, started.detail);
-      const snapshot = startData(started.state);
       const host = composition.signalHost;
-      if (foreground !== true || host === undefined) return { data: snapshot };
-      // The signal-owned foreground lifetime (DM-2, AC-F2-4..AC-F2-9): the
-      // readiness snapshot is captured at start and returned at exit; the first
-      // signal selects the stop mode; both listeners are removed in a `finally`;
-      // cancellation precedes the release append because `runtime.stop` cancels
-      // the loop before it appends.
+      if (foreground !== true || host === undefined) {
+        const started = await runtime.start({ foreground });
+        if (!started.ok) return failure(started.code, started.detail);
+        return { data: startData(started.state) };
+      }
+      // The signal-owned foreground lifetime (DM-2, AC-F2-4..AC-F2-9, NF3-3):
+      // the readiness snapshot is captured at start and returned at exit; the
+      // first signal selects the stop mode; both listeners are removed in a
+      // `finally`; cancellation precedes the release append because
+      // `runtime.stop` cancels the loop before it appends.
+      //
+      // Both listeners are installed BEFORE `runtime.start` because the durable
+      // `acquired` record it appends is the readiness point a cross-process
+      // `daemon stop` observes: installing them after start left a window in
+      // which an immediate stop hit the default terminate, leaving a stale lock
+      // and no release record. A signal delivered while start is still running
+      // is buffered here (the mode is recorded, no stop is entered) and applied
+      // as soon as the loop is running, so an immediate stop always lands as a
+      // `released`/`draining` outcome.
       let stopMode: DaemonStopMode | undefined;
       let stopFailure: { readonly code: string; readonly detail?: string } | undefined;
       let settle: (() => void) | undefined;
       const settled = new Promise<void>((resolve) => {
         settle = resolve;
       });
-      const request = (mode: DaemonStopMode): void => {
-        if (stopMode !== undefined) return;
-        stopMode = mode;
+      let startSettled = false;
+      const beginStop = (mode: DaemonStopMode): void => {
         void runtime.stop(mode).then((outcome) => {
           if (!outcome.ok) {
             stopFailure =
@@ -858,12 +867,37 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
           settle?.();
         });
       };
+      const request = (mode: DaemonStopMode): void => {
+        if (stopMode !== undefined) return;
+        stopMode = mode;
+        if (!startSettled) return;
+        beginStop(mode);
+      };
       const onInterrupt = (): void => request("immediate");
       const onTerminate = (): void => request("drain");
       host.once("SIGINT", onInterrupt);
       host.once("SIGTERM", onTerminate);
+      let started: Awaited<ReturnType<typeof runtime.start>>;
       try {
+        started = await runtime.start({ foreground });
+      } catch (error) {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+        throw error;
+      }
+      if (!started.ok) {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+        return failure(started.code, started.detail);
+      }
+      const snapshot = startData(started.state);
+      try {
+        // The loop starts before a buffered stop is applied: `runtime.stop`
+        // clears the cancellation flag synchronously, so cancelling first and
+        // starting the loop afterwards would leave the loop uncancelled.
         const loop = runtime.loop();
+        startSettled = true;
+        if (stopMode !== undefined) beginStop(stopMode);
         await Promise.race([loop, settled]);
         await loop;
       } finally {

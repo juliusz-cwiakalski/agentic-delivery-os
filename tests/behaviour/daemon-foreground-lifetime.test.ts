@@ -14,6 +14,7 @@ import {
   readDaemonInstance,
   readDaemonLanes,
 } from "../../packages/core/src/app/index";
+import type { DaemonLockPort } from "../../packages/core/src/contracts/index";
 import { appendLane } from "../fixtures/daemon/mount-states";
 import {
   createMountClock,
@@ -226,6 +227,60 @@ describe("TC-DAEMON-035 no signal host", () => {
       expect(isFailure(await command)).toBe(false);
     } finally {
       harness.dispose();
+    }
+  });
+});
+
+describe("TC-DAEMON-033/036 a stop delivered at the readiness point is buffered, never a silent terminate", () => {
+  test("both listeners exist before the lock acquisition, and a signal delivered inside it still drains or stops", async () => {
+    for (const [signal, operation, reason] of [
+      ["SIGTERM", "released", "drain"],
+      ["SIGINT", "immediate-stop", "immediate"],
+    ] as const) {
+      const harness = createMountHarness({ label: "fg-race" });
+      try {
+        const clock = createMountClock({ manual: true, sleepAdvances: true });
+        const signals = createSignalHost();
+        // Deliver the stop at the exact instant the readiness point is being
+        // made durable: the acquisition is the last step before the `acquired`
+        // record exists, so a cross-process `daemon stop` can arrive here. With
+        // the listeners installed after `runtime.start`, this delivery would hit
+        // the default terminate and leave a stale lock with no release record.
+        const listenerCountsAtAcquire: number[] = [];
+        const lock: DaemonLockPort = {
+          read: harness.lock.read,
+          acquire: (record) => {
+            listenerCountsAtAcquire.push(signals.registered());
+            signals.deliver(signal);
+            return harness.lock.acquire(record);
+          },
+          heartbeat: harness.lock.heartbeat,
+          remove: harness.lock.remove,
+        };
+        const runtime = createDaemonCommandRuntime(
+          mountComposition(harness, { clock, signalHost: signals.host, lock }),
+        );
+        const command = startForeground(runtime);
+        await settle();
+        clock.releaseAll();
+        const result = await command;
+
+        // The signal was buffered, not dropped and not fatal: the command ends
+        // through the delivered stop path and returns its start snapshot.
+        expect(isFailure(result)).toBe(false);
+        expect(listenerCountsAtAcquire).toEqual([2]);
+        const instances = readDaemonInstance(harness.store);
+        expect(instances.ok).toBe(true);
+        if (!instances.ok) continue;
+        expect(instances.records.map((record) => record.operation)).toEqual([
+          "acquired",
+          operation,
+        ]);
+        expect(instances.latest?.releaseReason).toBe(reason);
+        expect(signals.registered()).toBe(0);
+      } finally {
+        harness.dispose();
+      }
     }
   });
 });

@@ -24,6 +24,7 @@ import {
   reentryEnvironmentFrom,
   stateDirectoryName,
 } from "../../fixtures/daemon/mount-harness";
+import { acquireRealChildGate } from "../../fixtures/daemon/real-child-gate";
 
 const HARD_TIMEOUT_MS = 20_000;
 
@@ -116,6 +117,11 @@ describe("TC-DAEMON-039 real detached re-entry", () => {
     "a bounded `#!/usr/bin/env bun` child reaches a durable acquired instance and is reaped",
     async () => {
       const repoRoot = process.cwd();
+      // Serialize the real-child work across files: the post-crash takeover
+      // suite spawns its own real child, and the two must not compete for the
+      // delivered 20 x 50 ms readiness window (AC-F2-2 pins that window, so the
+      // tests are ordered instead of the product being widened; NF3-4).
+      const gate = await acquireRealChildGate("daemon-real-reentry");
       const harness = createMountHarness({ label: "real-039" });
       const processPort = createNodeProcessPort();
       let pid: number | undefined;
@@ -209,6 +215,7 @@ describe("TC-DAEMON-039 real detached re-entry", () => {
           processPort.signal(pid, "SIGKILL");
         }
         harness.dispose();
+        gate.release();
       }
     },
     HARD_TIMEOUT_MS,

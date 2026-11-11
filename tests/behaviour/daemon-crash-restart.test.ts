@@ -16,17 +16,20 @@
 import { describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createNodeClock, createNodeProcessPort } from "../../packages/adapters/src/daemon/index";
+import { createNodeProcessPort } from "../../packages/adapters/src/daemon/index";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
-import { readDaemonInstance } from "../../packages/core/src/app/index";
-import type { DaemonLockPort } from "../../packages/core/src/contracts/index";
+import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
+import type { DaemonInstanceRecord, DaemonLockPort } from "../../packages/core/src/contracts/index";
+import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
+import { createNodeStateEdge, createStateStore } from "../../packages/core/src/state/index";
 import {
   createMountHarness,
   mountComposition,
   reentryEnvironmentFrom,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
+import { acquireRealChildGate } from "../fixtures/daemon/real-child-gate";
 
 const invoke = async (
   runtime: ReturnType<typeof createDaemonCommandRuntime>,
@@ -282,6 +285,57 @@ describe("TC-DAEMON-030 a crashed daemon is restartable once the lock is proved 
       harness.dispose();
     }
   });
+
+  test("a compare-and-delete that cannot write surfaces its own identity, not a bare busy", async () => {
+    const harness = createMountHarness({ label: "crash-030-remove" });
+    try {
+      const victim = await startInProcess(harness, 111);
+      expect(isSuccess(victim)).toBe(true);
+      const before = readDaemonInstance(harness.store);
+      expect(before.ok).toBe(true);
+      if (!before.ok || before.latest === undefined) return;
+      const deadLock = harness.lock.read();
+      expect(deadLock.state).toBe("held");
+      if (deadLock.state !== "held") return;
+      harness.clock.advance(harness.settings.lockStalenessMs + 1);
+
+      // The proved-dead record is observed, but the removal cannot be written.
+      // The failure must keep its own identity: mapping it to
+      // `daemon.already-running` would report a live holder that does not exist.
+      const unwritable: DaemonLockPort = {
+        read: harness.lock.read,
+        acquire: harness.lock.acquire,
+        heartbeat: harness.lock.heartbeat,
+        remove: () => ({
+          ok: false as const,
+          code: "state.write.failed",
+          path: `${harness.stateDirectory}/daemon.lock`,
+        }),
+      };
+      const restarted = await invoke(
+        createDaemonCommandRuntime(
+          mountComposition(harness, { lock: unwritable, pid: 222, ...freshTokens() }),
+        ),
+        ["start"],
+      );
+      expect(isFailure(restarted)).toBe(true);
+      if (!isFailure(restarted)) return;
+      expect(restarted.error.code).toBe("state.write.failed");
+      expect(restarted.error.summary ?? "").toContain("daemon.lock");
+      expect(restarted.error.code).not.toBe("daemon.already-running");
+
+      // Nothing was acquired: one record, the victim's lock in place.
+      const after = readDaemonInstance(harness.store);
+      if (after.ok) expect(after.records).toHaveLength(before.records.length);
+      const stillHeld = harness.lock.read();
+      expect(stillHeld.state).toBe("held");
+      if (stillHeld.state === "held") {
+        expect(stillHeld.record.lockToken).toBe(deadLock.record.lockToken);
+      }
+    } finally {
+      harness.dispose();
+    }
+  });
 });
 
 /**
@@ -345,8 +399,12 @@ process.exit(0);
 `;
 
 describe("TC-DAEMON-030 post-crash takeover with one real killed child", () => {
-  test("a SIGKILLed foreground daemon is restarted by the next start as taken-over", async () => {
+  test("a SIGKILLed foreground daemon is restarted by the next real child as taken-over", async () => {
     const repoRoot = process.cwd();
+    // Serialize the real-child work across files: the sibling re-entry suite
+    // spawns its own real child, and the two must not compete for the short
+    // configured bound (NF3-4). The product readiness window is never widened.
+    const gate = await acquireRealChildGate("daemon-crash-restart");
     const harness = createMountHarness({
       label: "crash-real",
       // The short configured bound keeps the real wait at 1.5 s, not 30 s.
@@ -366,58 +424,112 @@ describe("TC-DAEMON-030 post-crash takeover with one real killed child", () => {
         PATH: `${bunDirectory}:/usr/bin:/bin`,
         HOME: harness.home,
       };
-      const runtimeFor = () =>
-        createDaemonCommandRuntime(
-          mountComposition(harness, {
-            daemonEntry: entry,
-            processPort,
-            clock: createNodeClock(),
-            settings: harness.settings,
-            reentryEnvironment: reentryEnvironmentFrom(environment),
-          }),
-        );
 
-      const first = await invoke(runtimeFor(), ["start"]);
-      expect(isFailure(first)).toBe(false);
-      if (!isSuccess(first)) return;
-      const victimPid = (first.data as { instance: { pid: number } }).instance.pid;
+      // The real child is spawned through the real process port over the
+      // declared re-entry environment, and every wait below is bounded on the
+      // child's OWN durable record — never on the delivered detached readiness
+      // window, so a loaded machine cannot turn this into a flake.
+      const spawnChild = (): number => {
+        const spawned = processPort.spawnDetached({
+          entry,
+          args: ["daemon", "start", "--foreground"],
+          environment: {
+            ...reentryEnvironmentFrom(environment),
+            [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+          },
+        });
+        if (spawned.pid === undefined) throw new Error("the fixture child did not spawn");
+        live.push(spawned.pid);
+        return spawned.pid;
+      };
+      const awaitInstance = async (
+        predicate: (latest: DaemonInstanceRecord) => boolean,
+      ): Promise<DaemonInstanceRecord> => {
+        // A bounded durable poll of the child's OWN record (15 s at 50 ms), not
+        // the delivered detached readiness window: a machine under load may take
+        // longer than 1 s to boot a bun child, and the assertion is about the
+        // record the child eventually writes, not about product latency.
+        for (let attempt = 0; attempt < 300; attempt += 1) {
+          const read = readDaemonInstance(harness.store);
+          if (read.ok && read.latest !== undefined && predicate(read.latest)) return read.latest;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        throw new Error("the fixture child never recorded the expected instance");
+      };
+
+      const victimPid = spawnChild();
       expect(Number.isInteger(victimPid) && victimPid > 0).toBe(true);
-      live.push(victimPid);
-      const victim = readDaemonInstance(harness.store);
-      expect(victim.ok).toBe(true);
-      if (!victim.ok || victim.latest === undefined) return;
+      const victim = await awaitInstance(
+        (latest) => latest.pid === victimPid && latest.operation === "acquired",
+      );
+      // The acquisition record is appended before the start's initial heartbeat,
+      // so observing it does not yet mean the store is quiet. Wait for that
+      // heartbeat to land and for the store's write fence to be released: a
+      // SIGKILL in the middle of that append leaves a held fence or an
+      // unhardened ledger — delivered store artifacts outside this change (NG-1)
+      // — and the next child then fails for a reason AC-F2-11 does not claim.
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        const beat = readDaemonHeartbeat(harness.store);
+        if (beat.ok && beat.latest !== undefined) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      for (let attempt = 0; attempt < 200 && harness.store.fenceStatus().held; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(harness.store.fenceStatus().held).toBe(false);
       const victimLock = harness.lock.read();
       expect(victimLock.state).toBe("held");
       if (victimLock.state !== "held") return;
+      expect(victimLock.record.instanceId).toBe(victim.instanceId);
 
       // The real crash: SIGKILL leaves the lock and the acquisition in place.
       expect(processPort.signal(victimPid, "SIGKILL").ok).toBe(true);
-      for (let attempt = 0; attempt < 40 && processPort.isAlive(victimPid); attempt += 1) {
+      for (let attempt = 0; attempt < 100 && processPort.isAlive(victimPid); attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
       expect(processPort.isAlive(victimPid)).toBe(false);
       // Bounded wait past the configured bound, so the leftover lock is stale.
       await new Promise((resolve) => setTimeout(resolve, 1700));
 
-      const second = await invoke(runtimeFor(), ["start"]);
-      expect(isFailure(second)).toBe(false);
-      if (!isSuccess(second)) return;
-      const successor = (second.data as { instance: { pid: number; instanceId: string } }).instance;
-      expect(successor.pid).not.toBe(victimPid);
-      live.push(successor.pid);
+      // A SIGKILL can still land while a writer holds the store's write fence
+      // (`fence.default.lock`). That is a delivered state-store artifact whose
+      // semantics are out of scope here (NG-1); its stale bound is 30 s, so a
+      // fence left mid-append would fail the next child's instance append for up
+      // to that bound. The wait above for the start's initial heartbeat and its
+      // fence release makes the kill quiescent; this recovery is the belt to
+      // that brace and goes through the delivered `recoverFence` path — the same
+      // one the coordinator uses — with the store's staleness bound shortened for
+      // the fixture, so the takeover under test stays the daemon lock's
+      // (AC-F2-11).
+      const fenceStore = createStateStore(
+        {
+          level: "local",
+          workspaceId: "default",
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: harness.stateDirectory,
+        },
+        { driver: "jsonl", edge: createNodeStateEdge(), staleFenceMs: 1000 },
+      );
+      if (fenceStore.fenceStatus().held) {
+        const recovered = fenceStore.recoverFence("fixture-crash-recovery");
+        expect(recovered.ok).toBe(true);
+      }
 
-      const reaped = readDaemonInstance(harness.store);
-      expect(reaped.ok).toBe(true);
-      if (!reaped.ok || reaped.latest === undefined) return;
-      expect(reaped.latest.operation).toBe("taken-over");
-      expect(reaped.latest.instanceId).toBe(successor.instanceId);
-      expect(reaped.latest.takeover?.previousInstanceId).toBe(victim.latest.instanceId);
-      expect(reaped.latest.takeover?.previousLockToken).toBe(victimLock.record.lockToken);
-      expect(reaped.latest.takeover?.heartbeatAgeMs).toBeGreaterThanOrEqual(1500);
+      const successorPid = spawnChild();
+      expect(successorPid).not.toBe(victimPid);
+      const successor = await awaitInstance(
+        (latest) => latest.pid === successorPid && latest.operation === "taken-over",
+      );
+      expect(successor.instanceId).not.toBe(victim.instanceId);
+      expect(successor.takeover?.previousInstanceId).toBe(victim.instanceId);
+      expect(successor.takeover?.previousLockToken).toBe(victimLock.record.lockToken);
+      expect(successor.takeover?.lastHeartbeatAt).toBe(victimLock.record.heartbeatAt);
+      expect(successor.takeover?.heartbeatAgeMs).toBeGreaterThanOrEqual(1500);
       expect(lockFiles(harness.stateDirectory)).toEqual(["daemon.lock"]);
       const held = harness.lock.read();
       expect(held.state).toBe("held");
-      if (held.state === "held") expect(held.record.lockToken).toBe(reaped.latest.lockToken);
+      if (held.state === "held") expect(held.record.lockToken).toBe(successor.lockToken);
     } finally {
       // Only a positive pid is ever signalled; every root is reaped.
       for (const pid of live) {
@@ -426,6 +538,7 @@ describe("TC-DAEMON-030 post-crash takeover with one real killed child", () => {
         }
       }
       harness.dispose();
+      gate.release();
     }
-  }, 30_000);
+  }, 60_000);
 });

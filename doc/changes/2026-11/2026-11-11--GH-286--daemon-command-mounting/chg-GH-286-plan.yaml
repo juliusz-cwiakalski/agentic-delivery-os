@@ -2155,6 +2155,7 @@ phases:
         - tests/checks/daemon-hermetic.test.ts
         - tests/checks/daemon-mutants.test.ts
         - tests/checks/owner-hold-doc.test.ts
+        - tests/fixtures/daemon/real-child-gate.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/daemon-production-composition.test.ts
       folders:
