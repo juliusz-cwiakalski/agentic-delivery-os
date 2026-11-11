@@ -18,7 +18,8 @@ links:
 The resident-daemon suite protects one property: a resident supervisor is safe
 only when it is optional, single-instance, and reconstructible from state alone.
 The suite fails if two daemons can drive one state directory; if a live lock is
-taken over or a stale takeover lacks evidence; if any command needs the socket to
+taken over or a stale takeover lacks evidence; if a lock proved dead wedges every
+later start; if any command needs the socket to
 complete; if a frame carries a fact that cannot be re-derived from state or a
 secret that should never transit; if a slow subscriber stalls the dispatcher or
 receives another connection's response; if a kill/restart guesses a lane's fate,
@@ -111,6 +112,14 @@ derived from durable state at every projection.
 - `tests/behaviour/daemon-lock.test.ts`, `daemon-lock-concurrency.test.ts` — live
   lock refusal with holder evidence, stale takeover with full evidence, two-scope
   isolation, 100-contender single acquisition, and the lock/fence separation.
+- `tests/behaviour/daemon-crash-restart.test.ts` — the takeover reap: past the
+  staleness bound a start reaps the proved-dead record and acquires
+  `taken-over` with the dead holder's evidence, inside the bound the same
+  sequence still refuses `daemon.already-running` and appends nothing, two
+  concurrent starters against one proved-dead lock admit exactly one winner
+  without deleting a freshly acquired record, a refused compare-and-delete
+  surfaces its own identity instead of a bare busy, and one real `SIGKILL`ed
+  child is restarted by the next real child.
 - `tests/behaviour/daemon-state-mediation.test.ts` — daemon-down queue and
   blocker intents, the `daemon-unreachable` marker, reconciliation making
   intents effective, and the blocker-answer resume intent recorded only when a
@@ -176,7 +185,9 @@ derived from durable state at every projection.
 - `tests/behaviour/daemon-foreground-lifetime.test.ts`,
   `daemon-foreground-stop-latency.test.ts` — readiness snapshot, `SIGTERM` drain,
   `SIGINT` immediate stop, listener removal, exactly one stop and one terminal
-  record for a double signal, and the bounded stop latency.
+  record for a double signal, a stop delivered at the readiness point buffered
+  and applied once the loop is running (both listeners registered before the
+  acquisition), and the bounded stop latency.
 - `tests/behaviour/daemon-stop-safety.test.ts` — zero signals for a non-positive
   recorded pid with the classified refusal, and exactly one signal for an
   addressable record.
@@ -264,8 +275,12 @@ derived from durable state at every projection.
 - **Then** it refuses `daemon.already-running` at exit `1`, names the holder's
   instance, process, acquisition time, and heartbeat age, and appends nothing,
 - **And** a lock whose heartbeat age is at or beyond `daemon.lock-staleness` is
-  taken over with previous-instance, previous-token, last-heartbeat, heartbeat-age,
-  and takeover-time evidence.
+  reaped by a token-keyed compare-and-delete before the re-acquire and taken over
+  with previous-instance, previous-token, last-heartbeat, heartbeat-age, and
+  takeover-time evidence, so a crashed holder never wedges a restart,
+- **And** two concurrent starters against one proved-dead record admit exactly one
+  winner, the loser refusing `daemon.already-running` without deleting the
+  winner's freshly acquired record.
 
 ### Scenario: Daemon-down one-shot continuity
 
@@ -355,7 +370,11 @@ derived from durable state at every projection.
   exits `0` with the snapshot captured at start,
 - **And** `SIGINT` records one `immediate-stop` instead, a second signal runs no
   second stop, and a release-append failure still terminates with the classified
-  state-write identity.
+  state-write identity,
+- **And** both listeners are registered before the durable readiness point, so a
+  stop delivered while the start is still running is buffered and applied once
+  the loop runs — the command ends through the stop path with one `released` or
+  `immediate-stop` record rather than terminating with a stale lock.
 
 ### Scenario: Degradation follows durable state per projection
 
@@ -398,7 +417,7 @@ derived from durable state at every projection.
 | Brand-derived install identity | `daemon-install-mount`, `daemon-supervisor-install`, `daemon-install` golden |
 | Mount privacy and additivity | `daemon-privacy`, `daemon-mount.type-test` |
 | F-1 lifecycle and envelopes | `daemon-lifecycle`, `daemon-status-matrix`, `daemon-install` goldens, `config-resolver` |
-| F-2 single-instance lock | `daemon-lock`, `daemon-lock-concurrency` |
+| F-2 single-instance lock | `daemon-lock`, `daemon-lock-concurrency`, `daemon-crash-restart` |
 | F-3 state-mediated truth | `daemon-state-mediation`, `daemon-degradation` |
 | F-4 protocol v1 | `control-codec`, `control-session`, `control-conformance` |
 | F-5 layered transport | `control-transport`, `daemon-hermetic` |

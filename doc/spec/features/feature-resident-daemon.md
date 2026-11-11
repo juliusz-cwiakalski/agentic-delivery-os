@@ -61,12 +61,14 @@ removes the command. A bare `start` re-enters the running entry path as
 state-directory binding written last as the authority, plus the composing
 `PATH`, its `HOME` (or `USERPROFILE` when `HOME` is empty), and a non-empty
 working-name override. A `--foreground` start owns its lifetime through the
-injected signal host: `SIGTERM` drains, `SIGINT` stops immediately, both
-listeners are removed before the invocation returns, and the composing pid is
-recorded on the instance record so a cross-process `stop` refuses a non-positive
-pid instead of signalling a process group. Queue and lanes degradation is
-derived from durable state at each projection, not captured from a hardcoded
-marker.
+injected signal host: both listeners are registered before the durable readiness
+point the start appends, `SIGTERM` drains, `SIGINT` stops immediately, a signal
+delivered while the start is still running is buffered and applied once the
+resident loop is running, both listeners are removed before the invocation
+returns, and the composing pid is recorded on the instance record so a
+cross-process `stop` refuses a non-positive pid instead of signalling a process
+group. Queue and lanes degradation is derived from durable state at each
+projection, not captured from a hardcoded marker.
 
 The state directory is selected process-wide by the brand-derived
 `<PREFIX>_STATE_DIR` environment variable when set and otherwise by
@@ -118,8 +120,14 @@ not the state writer fence: the fence is acquired only for each short append.
 A heartbeat age at or beyond `daemon.lock-staleness` is stale and
 takeover-eligible; a live holder refuses `daemon.already-running` with the
 holder's identity, process, acquisition time, and heartbeat age and appends
-nothing. Takeover appends `taken-over` with the previous instance, token, last
-heartbeat, heartbeat age, and takeover time.
+nothing. A takeover decision reaps the record the staleness evaluation proved
+dead — a compare-and-delete keyed on the observed token, immediately before the
+exclusive re-acquire — so a crashed holder never wedges a later start. A lock a
+concurrent starter replaced in the meantime is left in place and the start
+refuses `daemon.already-running`; any other refusal, such as a write failure
+removing the record, fails the start with that identity and the lock path
+instead of a busy-lock report. Takeover appends `taken-over` with the previous
+instance, token, last heartbeat, heartbeat age, and takeover time.
 
 The heartbeat record carries instance identity, a monotone ordinal, beat time,
 uptime, queue depth, lane counts, the current spawn when one exists, and the
