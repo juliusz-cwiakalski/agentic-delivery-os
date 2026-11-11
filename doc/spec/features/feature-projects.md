@@ -25,8 +25,9 @@ marker. The host root keeps only host-wide documents: the derived host index
 at the host root is detected there, never read from it.
 
 `projects list [--json]` is the host overview and the only verb of the family.
-It reads the host index, derives every state location from its key, projects each
-project's handover state and daemon reachability, and writes nothing.
+It reads the host index, derives every state location from its key, and projects
+each project's handover state and daemon reachability. It writes no index or
+store content; the two permitted side effects are named under Read-only below.
 
 The durable architecture record is
 [TDR-0022](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md);
@@ -129,10 +130,14 @@ and the conflicting identifier. It never adopts that state root.
   `2` the host index or a project state location prevents an honest answer. No
   other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
-  project-root creation, no migration, and no write under the host root.
-  Host-root and `projects/` bytes, modes, and mtimes are unchanged across a
-  listing. The invoking checkout's identity marker is created once inside its git
-  common directory when it is absent, exactly as for every composed command.
+  project-root creation, no migration, and no index or store-content write.
+  Exactly two side effects are permitted: the create-once identity marker minted
+  inside the invoking checkout's git common directory when it is absent (the same
+  write every composed command performs), and the removal of a leftover `*.tmp`
+  store sibling by the store handle opened read-only to read handover evidence.
+  Neither can create, change, or prune an index entry, a phase document, a queue
+  record, or any other store content, so the host index and every `projects/`
+  entry keep their bytes, modes, and mtimes apart from that removed temp file.
 
 ## Handover projection
 

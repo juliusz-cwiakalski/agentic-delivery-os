@@ -95,15 +95,26 @@ _seed_authority() {
   fi
 }
 
+# The home-default host root is `<home>/.delivery-os`, one level below HOME, so a
+# home fixture must seed at that depth or the fallback never sees the document.
+_seed_home_authority() {
+  local -r home_dir="$1"
+  local -r fixture="$2"
+  _seed_authority "${home_dir}/.delivery-os" "${fixture}"
+}
+
 # Run one script cell; echoes "exit|pointer" where pointer is 1 when present.
 _run_cell() {
   local -r script="$1"
   local -r state_root="$2"
   local -r path_prefix="${3:-}"
-  # override_mode: dispatch (default), typed, or both. The fallback reads its
-  # own ADOS_DISPATCH_STATE_ROOT; the typed store reads <PREFIX>_STATE_DIR, so a
-  # host using the typed override must point the fallback at the same root.
+  # override_mode: dispatch (default), typed, both, or none. The fallback reads
+  # its own ADOS_DISPATCH_STATE_ROOT; the typed store reads <PREFIX>_STATE_DIR,
+  # so a host using the typed override must point the fallback at the same root.
   local -r override_mode="${4:-dispatch}"
+  # The home directory the cell runs with: the isolated default, or a caller's
+  # own home so the home-default precedence cell can seed and exercise it.
+  local -r home="${5:-${_test_tmpdir}/home}"
   local -r checkout="${_test_tmpdir}/checkout"
   local stdout_file="${_test_tmpdir}/stdout"
   local stderr_file="${_test_tmpdir}/stderr"
@@ -118,13 +129,15 @@ _run_cell() {
         "ADOS_STATE_DIR=${state_root}"
       )
       ;;
+    none) override_env=() ;;
     *) printf 'unknown override mode %s\n' "${override_mode}" >&2; return 1 ;;
   esac
   (
     if [[ -n "${path_prefix}" ]]; then
       PATH="${path_prefix}:$(_fake_bin_dir):/usr/bin:/bin"
     fi
-    HOME="${_test_tmpdir}/home" env "${override_env[@]}" DISPATCH_REPOSITORY="${REPOSITORY}" \
+    mkdir -p "${home}"
+    HOME="${home}" env "${override_env[@]}" DISPATCH_REPOSITORY="${REPOSITORY}" \
       bash "${checkout}/${script}" --help >"${stdout_file}" 2>"${stderr_file}"
   ) || exit_code=$?
   local pointer=0
@@ -222,14 +235,28 @@ test_legacy_host_document_is_not_authoritative() {
   done
 }
 
-# The environment override keeps precedence over the home default.
+# The environment override keeps precedence over the home default: the override
+# host is dual-run and the home default is authoritative, so a pointer here means
+# the home default won. The control cell below proves the home default is
+# actually reachable, so this cell cannot pass because the home seed is inert.
 test_override_outranks_the_home_default() {
   local -r host_root="${_test_tmpdir}/host-override"
   local -r home_root="${_test_tmpdir}/home-authoritative"
   _seed_authority "${host_root}" "dual-run"
-  _seed_authority "${home_root}" "authoritative"
+  _seed_home_authority "${home_root}" "authoritative"
+
+  # Control: with no override at all, the seeded home default is read.
+  local control=""
+  control="$(_run_cell scripts/deliver-ticket.sh "" "" "none" "${home_root}")"
+  [[ "${control%%|*}" == "0" ]] || return 1
+  [[ "${control##*|}" == "1" ]] || {
+    printf 'the home-default control did not read its seeded document\n' >&2
+    return 1
+  }
+
+  # Precedence: the override host is dual-run, so no pointer may appear.
   local cell=""
-  cell="$(HOME="${home_root}" _run_cell scripts/deliver-ticket.sh "${host_root}")"
+  cell="$(_run_cell scripts/deliver-ticket.sh "${host_root}" "" "dispatch" "${home_root}")"
   [[ "${cell%%|*}" == "0" ]] || return 1
   [[ "${cell##*|}" == "0" ]] || {
     printf 'the home default outranked the environment override\n' >&2

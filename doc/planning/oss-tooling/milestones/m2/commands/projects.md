@@ -96,11 +96,14 @@ $ <binary> projects list --json
 
 ## SCOPE
 
-`projects list` is read-only with respect to delivery state: it performs no index
-maintenance, prunes nothing, replaces no corrupt file, creates no project state
-root, and writes nothing under the host root. The invoking checkout's identity
-marker is created once inside its git common directory when it is absent, as it
-is for every composed command.
+`projects list` performs no index maintenance, prunes nothing, replaces no
+corrupt file, creates no project state root, and writes no index or store
+content. Two side effects are permitted: the invoking checkout's identity marker
+is created once inside its git common directory when it is absent, as it is for
+every composed command, and opening a project's store read-only to read its
+handover evidence removes a leftover `*.tmp` sibling. Neither can create, change,
+or prune an index entry, a phase document, a queue record, or any other store
+content.
 
 An invocation outside any git work tree uses the declared host-scoped `unbound`
 state root beside the project container, emits one bounded warning that its
