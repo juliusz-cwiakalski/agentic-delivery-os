@@ -69,6 +69,8 @@ import {
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
   PRODUCTION_DEFAULTS,
+  readDaemonHeartbeat,
+  readDaemonInstance,
   readDaemonLanes,
   readQueueEntries,
   releaseQueueLease,
@@ -88,6 +90,7 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
   type ConfigValue,
+  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
@@ -462,11 +465,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * family stays registered while no store, lock, settings, transport, socket
      * path, supervisor scope, entry path, or pid is constructed.
      */
+    const daemonDirectory =
+      daemonStateDirectory.kind === "resolved" ? daemonStateDirectory.directory : undefined;
+    const daemonConfiguration =
+      daemonDirectory === undefined ? undefined : readDaemonConfiguration(daemonDirectory);
     const daemonRuntime = ((): DaemonCommandRuntime => {
-      if (daemonStateDirectory.kind !== "resolved") return unavailableDaemonRuntime();
-      const directory = daemonStateDirectory.directory;
-      const configuration = readDaemonConfiguration(directory);
-      if (configuration === undefined) return unavailableDaemonRuntime();
+      if (daemonDirectory === undefined || daemonConfiguration === undefined) {
+        return unavailableDaemonRuntime();
+      }
+      const directory = daemonDirectory;
+      const configuration = daemonConfiguration;
       const lock = createDaemonLockPort(createNodeStateEdge(), directory);
       const transport = createUnixTransport({
         stateDirectory: directory,
@@ -663,6 +671,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       close: {},
       deploy: { expectations: {}, verdicts: {} },
     };
+    /**
+     * The durable reachability predicate (DM-4, AC-F5-1..AC-F5-8): reachable iff
+     * an instance record exists, its latest operation is an acquisition, the
+     * latest heartbeat belongs to that instance, and its age is STRICTLY below
+     * the configured lock-staleness bound. Everything else — including an
+     * unreadable or torn read — is exactly `["daemon-unreachable"]`. It performs
+     * no socket connect, no process probe, and no sleep.
+     */
+    const daemonReachability = (): readonly QueueDegradationReason[] => {
+      if (daemonConfiguration === undefined) return ["daemon-unreachable"];
+      try {
+        const instance = readDaemonInstance(store);
+        if (!instance.ok || instance.latest === undefined) return ["daemon-unreachable"];
+        const latest = instance.latest;
+        if (latest.operation !== "acquired" && latest.operation !== "taken-over") {
+          return ["daemon-unreachable"];
+        }
+        const heartbeat = readDaemonHeartbeat(store);
+        if (!heartbeat.ok || heartbeat.latest === undefined) return ["daemon-unreachable"];
+        if (heartbeat.latest.instanceId !== latest.instanceId) return ["daemon-unreachable"];
+        const ageMs = nowMs() - Date.parse(heartbeat.latest.beatAt);
+        return ageMs < daemonConfiguration.settings.lockStalenessMs ? [] : ["daemon-unreachable"];
+      } catch {
+        return ["daemon-unreachable"];
+      }
+    };
+
     const queueComposition = {
       store,
       facts: queueFacts,
@@ -670,7 +705,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowIso,
       nowMs,
       newFenceToken,
-      degraded: ["daemon-unreachable" as const],
+      degraded: daemonReachability,
       readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
       readOwnerHold,
     };

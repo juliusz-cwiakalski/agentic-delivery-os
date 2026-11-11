@@ -37,6 +37,9 @@ import * as signalNegativePid from "../fixtures/daemon/mount-mutants/signal-nega
 import * as duplicateTerminalRecord from "../fixtures/daemon/mount-mutants/duplicate-terminal-record";
 import * as releaseSkipCancellation from "../fixtures/daemon/mount-mutants/release-skip-cancellation";
 import * as holderNotRemoved from "../fixtures/daemon/mount-mutants/holder-not-removed";
+import * as fabricatedReachability from "../fixtures/daemon/mount-mutants/fabricated-reachability";
+import * as staleInclusive from "../fixtures/daemon/mount-mutants/stale-inclusive";
+import * as ownerIgnored from "../fixtures/daemon/mount-mutants/owner-ignored";
 import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import { createMemorySupervisor, createMountClock } from "../fixtures/daemon/mount-harness";
 import { appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
@@ -562,6 +565,67 @@ describe("GH-286 lifetime and stop-safety mutation controls", () => {
       releaseSkipCancellation,
       holderNotRemoved,
     ]) {
+      expect(mutant.suite.endsWith(".test.ts")).toBe(true);
+      expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
+      expect(mutant.assertion.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("GH-286 degradation mutation controls", () => {
+  const readRepoFile = (relative: string): string =>
+    readFileSync(join(process.cwd(), relative), "utf8");
+
+  test("fabricated-reachability: a missing heartbeat is claimed reachable", () => {
+    const source = readRepoFile(fabricatedReachability.target);
+    expect(
+      fabricatedReachability.violates(
+        fabricatedReachability.evaluate({
+          instance: { operation: "released", instanceId: "a" },
+          heartbeat: undefined,
+          nowMs: 0,
+          stalenessMs: 30_000,
+        }),
+      ),
+    ).toBe(false);
+    const markers = fabricatedReachability.evaluate({
+      instance: { operation: "acquired", instanceId: "a" },
+      heartbeat: undefined,
+      nowMs: 0,
+      stalenessMs: 30_000,
+    });
+    expect(fabricatedReachability.violates(markers)).toBe(true);
+    expect(fabricatedReachability.apply(source)).not.toBe(source);
+  });
+
+  test("stale-inclusive: the at-bound age becomes reachable", () => {
+    const source = readRepoFile(staleInclusive.target);
+    // The mutant treats the at-bound cell as reachable (the delivered rule and
+    // the fold both call it stale).
+    expect(staleInclusive.evaluate(30_000, 30_000)).toEqual([]);
+    expect(staleInclusive.violates(staleInclusive.evaluate(30_000, 30_000))).toBe(true);
+    // The just-below control is reachable under both rules, so the mutation is
+    // about the boundary and not about freshness in general.
+    expect(staleInclusive.evaluate(29_999, 30_000)).toEqual([]);
+    const mutated = staleInclusive.apply(source);
+    expect(mutated).toContain("ageMs <= daemonConfiguration.settings.lockStalenessMs");
+  });
+
+  test("owner-ignored: an unowned beat is claimed reachable", () => {
+    const source = readRepoFile(ownerIgnored.target);
+    const markers = ownerIgnored.evaluate({
+      instance: { operation: "acquired", instanceId: "instance-a" },
+      heartbeat: { beatAt: new Date(0).toISOString() },
+      nowMs: 1_000,
+      stalenessMs: 30_000,
+    });
+    expect(ownerIgnored.violates(markers)).toBe(true);
+    const mutated = ownerIgnored.apply(source);
+    expect(mutated).not.toContain("heartbeat.latest.instanceId !== latest.instanceId");
+  });
+
+  test("every Phase-5 mutant names a real suite and assertion", () => {
+    for (const mutant of [fabricatedReachability, staleInclusive, ownerIgnored]) {
       expect(mutant.suite.endsWith(".test.ts")).toBe(true);
       expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
       expect(mutant.assertion.length).toBeGreaterThan(0);

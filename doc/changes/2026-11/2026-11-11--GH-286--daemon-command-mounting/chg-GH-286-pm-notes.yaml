@@ -18,6 +18,18 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 4 commit: da51b183. Plan phase 5 complete (degradation per
+      projection): `QueueComposition.degraded` is resolved at the schedule read,
+      the mutation outcome, the lanes read, the claim and release results, and
+      every watch iteration; the production composition supplies the durable
+      reachability predicate (owned instance, acquisition operation, matching
+      heartbeat owner, STRICT `age < lockStalenessMs`) and no longer wires a
+      literal marker array. Gate: 112/112 tests across the projection, read-cost,
+      wiring, mutant, delivered daemon-degradation and queue-scheduling suites and
+      the queue/lanes/watch/golden controls; `pnpm typecheck`, lint, format,
+      ambient-globals, and `pnpm check:boundaries` green."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 3 commit: 59e7a360. Plan phase 4 complete (foreground
       lifetime, drained detach, fail-closed stop): with a composed signal host and
       `--foreground` the runtime captures the readiness snapshot, installs one

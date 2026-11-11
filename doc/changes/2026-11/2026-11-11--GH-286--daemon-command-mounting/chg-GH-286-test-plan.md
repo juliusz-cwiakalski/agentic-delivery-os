@@ -2303,6 +2303,17 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 | TC-DAEMON-091 | 2026-11-11 | PASS | `daemon-stop-safety.test.ts` — zero signal calls over eight invocations for `0`/`-1`/`-4321`/`12.5`, no `isAlive` substitute, source scan, positive control |
 | TC-DAEMON-092 | 2026-11-11 | PASS | same suite — `SIGTERM`/`SIGINT` to the recorded positive pid only, one call per invocation, failed call classified |
 | TC-DAEMON-121 | 2026-11-11 | PASS | `tests/behaviour/daemon-foreground-stop-latency.test.ts` — five samples, cancellation and stop inside 250 ms, release present at return, one terminal record per sample |
+| TC-DAEMON-070 | 2026-11-11 | PASS | `tests/behaviour/daemon-degradation-projection.test.ts` — `degraded: []` on `queue list` and `lanes list` for an owned fresh instance |
+| TC-DAEMON-071 | 2026-11-11 | PASS | same suite — released store yields exactly `[daemon-unreachable]` on both reads |
+| TC-DAEMON-072 | 2026-11-11 | PASS | same suite — absent instance yields `[daemon-unreachable]` at exit 0 |
+| TC-DAEMON-073 | 2026-11-11 | PASS | same suite — just-below reachable, stale by 1 ms degraded, at-bound degraded with the fold `stale`, doubled bound flips |
+| TC-DAEMON-074 | 2026-11-11 | PASS | same suite — three successive projections flip the marker in both directions with one resolver call each |
+| TC-DAEMON-075 | 2026-11-11 | PASS | same suite — 16 owned cells agree with the fold, the empty cell degrades, the unowned family is excluded rather than omitted |
+| TC-DAEMON-076 | 2026-11-11 | PASS | same suite — a torn ledger degrades with no throw and no repair |
+| TC-DAEMON-077 | 2026-11-11 | PASS | `tests/structure/daemon-degradation-wiring.test.ts` — live store `[]`, released store marker, no literal array, resolver is a function, hardcoded/captured mutants caught |
+| TC-DAEMON-078 | 2026-11-11 | PASS | same suite (projection) — orphan and foreign-owner beats degrade while the fold reports `running`, under both bounds |
+| TC-DAEMON-112 | 2026-11-11 | PASS | projection suite — array, omitted, and resolver payloads agree; an array is used verbatim; omission keeps the fallback |
+| TC-DAEMON-120 | 2026-11-11 | PASS | `tests/behaviour/daemon-degradation-read-cost.test.ts` — at most two additional daemon-fact reads per projection, zero connects, probes, or sleeps |
 ### 10.2 Aggregate gate evidence
 
 | Gate | Command | Result | Evidence |

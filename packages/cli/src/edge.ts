@@ -4265,14 +4265,16 @@ const resolveDegraded = (value: QueueComposition["degraded"]): readonly QueueDeg
 
 /** Compose the full queue command runtime from the injected state and facts. */
 export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
-  const degraded = resolveDegraded(composition.degraded);
+  // The markers are resolved per projection (schedule read, mutation outcome,
+  // lanes read, and every watch iteration), never captured once: a captured
+  // value would report a stale verdict for the whole process lifetime.
   const readSchedule = (next: number): QueueRuntimeSchedule => {
     const built = buildQueueFacts(composition, parkContextFor(composition));
     if (!built.ok) return built;
     return {
       ok: true,
       schedule: computeQueueSchedule(built.facts, { next }),
-      degraded,
+      degraded: resolveDegraded(composition.degraded),
     };
   };
   const mutate = (operation: () => QueueIntentResult): QueueRuntimeMutation => {
@@ -4280,7 +4282,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
     if (recovered !== undefined) return recovered;
     const result = operation();
     if (!result.ok) return mapQueueFailure(result);
-    return mutationOutcome(result.value, degraded, composition);
+    return mutationOutcome(result.value, resolveDegraded(composition.degraded), composition);
   };
   return {
     readSchedule,
@@ -4402,7 +4404,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         selectedRef: selected,
         lease: claimLeaseProjection(claimed.value.lease),
         action,
-        degraded,
+        degraded: resolveDegraded(composition.degraded),
       };
     },
     release: (input) => {
@@ -4473,7 +4475,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
                 ...(parkRecord.clearedAt === undefined ? {} : { clearedAt: parkRecord.clearedAt }),
               },
             }),
-        degraded,
+        degraded: resolveDegraded(composition.degraded),
       };
     },
     ...(composition.readyRuntime === undefined
