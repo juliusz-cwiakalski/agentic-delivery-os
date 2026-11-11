@@ -43,30 +43,60 @@
 #     pre-existing scripts/lib/dispatch-authority.sh omission) or marking it
 #     illustrative with install.sh named as authoritative.
 #
+# Plan revision: v1.3 (2026-11-11), DoR iteration 3 remediation against
+# readiness-review/readiness-iter-3.md, spec v1.5 and test plan v0.5. Phase ids
+# and declared scope are unchanged; only pins, verification, coverage notes and
+# the source citations were amended:
+#   - Iter-3 finding 1 mirror (blocking): fixture-local binaries are installed as
+#     an exec wrapper, never a symlink or copy, because this repository's pnpm
+#     shim resolves its CLI relative to its own invoked path (MODULE_NOT_FOUND
+#     under a link or copy would be classified DM-1.h and turn every local-binary
+#     fixture into ERROR); FX-PATH-FOREIGN uses the same wrapper outside the
+#     fixture repository so the origin still reports PATH.
+#   - Iter-3 finding 2 mirror: the Phase 1 exit assertion no longer demands set
+#     equality with {0, 1, 2}. It asserts the outcome-path subset plus exactly one
+#     130 site inside `_on_interrupt`, an installed INT/TERM trap, and a usage()
+#     that documents only the three outcome codes — the NFR-7 verdict-carrying
+#     scope and the .ai/rules/bash.md interrupt convention both hold.
+#   - Iter-3 findings 3 and 5 are test-plan owned (added precedence assertions;
+#     the marker assertion relaxed to "ran at least once"); iter-3 findings 2 and
+#     6 landed in spec v1.5 and test plan v0.5. The plan only re-pins the spec
+#     version, notes the now-normative DM-1 order, and records the 130 carve-out.
+#
 # SOURCES (single source of truth, read before delivery):
-#   - Spec: ./chg-GH-268-spec.md (v1.3; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
-#     DM-1.a..DM-1.i terminal-condition contract, DM-2 diagnostics, DM-3
-#     remediation-mode rule; NFR-1..NFR-10; RSK-1..RSK-8; DEC-1..DEC-10, with
-#     DEC-10 fixing the lint-binary precedence and disclosure; amended AC-F3-3
-#     (repository-local binary first, origin disclosure, DM-1.g unchanged) and
-#     AC-F4-1 (remediation-ownership split); NG-1..NG-7; §7.2 out-of-scope;
-#     §10 telemetry; §12 assumptions; §18 rollout/self-application; Appendix C
-#     rows 1-10)
-#   - Test plan: ./chg-GH-268-test-plan.md (v0.4, which declares
+#   - Spec: ./chg-GH-268-spec.md (v1.5; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
+#     DM-1.a..DM-1.i terminal-condition contract with the v1.4 evaluation order
+#     (usage -> configuration SKIP -> base -> merge-base -> binary -> lint,
+#     first match decides), DM-2 diagnostics, DM-3 remediation-mode rule;
+#     NFR-1..NFR-10, with NFR-7 scoped to verdict-carrying runs and the
+#     signal-interrupt carve-out (non-zero, conventionally 130, no verdict,
+#     documented in usage output and confined to the interrupt trap); RSK-1..RSK-8;
+#     DEC-1..DEC-10, with DEC-10 fixing the lint-binary precedence and disclosure;
+#     amended AC-F3-3 (repository-local binary first, origin disclosure, DM-1.g
+#     unchanged), AC-F3-4 (verdict-carrying outcomes plus the interrupt
+#     convention) and AC-F4-1 (remediation-ownership split); NG-1..NG-7;
+#     §7.2 out-of-scope; §10 telemetry; §12 assumptions; §18
+#     rollout/self-application; Appendix C rows 1-10, row 9 covering all three
+#     delivered-set enumerations)
+#   - Test plan: ./chg-GH-268-test-plan.md (v0.5, which declares
 #     `implementation_plan: ./chg-GH-268-plan.yaml`; 40 TCs:
 #     TC-COMMITLINT-001..021, TC-PROMPT-001..006, TC-DOC-001..007,
 #     TC-DIST-001..003, TC-CONFINE-001..002, TC-DOGFOOD-001; §6.2 fixture matrix
 #     with the amended binary-resolution rows FX-CLEAN-NO-DEPS/FX-LOCAL-BIN/
-#     FX-DECOY-PATH/FX-PATH-FOREIGN/FX-NO-CONFIG-LOCAL-BIN and the split DM-1.h
+#     FX-DECOY-PATH/FX-PATH-FOREIGN/FX-NO-CONFIG-LOCAL-BIN, the split DM-1.h
 #     fixtures FX-BAD-CONFIG (fixture-local binary) / FX-BAD-CONFIG-NO-LOCAL
-#     (no local tree, self-evidencing PATH shim); §6.4 read-only/no-network
+#     (no local tree, single-commit range, self-evidencing PATH shim), and the
+#     exec-wrapper helper `_install_local_commitlint`; §6.4 read-only/no-network
 #     instrumentation; §7 file mapping; §8.3 OQ-1 resolved against this plan's
 #     pinned invocation/parse contract)
 #   - Readiness reviews: ./readiness-review/readiness-iter-1.md (findings 1, 2, 3,
-#     4 and 6 closed in plan v1.1) and ./readiness-review/readiness-iter-2.md
-#     (findings 4 and 6 and the execution-failure shim mirror closed here;
-#     findings 1, 2, 3 and 5 are spec/test-plan owned and landed in spec v1.3 and
-#     test plan v0.4)
+#     4 and 6 closed in plan v1.1), ./readiness-review/readiness-iter-2.md
+#     (findings 4 and 6 and the execution-failure shim mirror closed in plan v1.2;
+#     findings 1, 2, 3 and 5 are spec/test-plan owned and landed in spec v1.3-v1.4
+#     and test plan v0.4), and ./readiness-review/readiness-iter-3.md (its blocking
+#     fixture-mechanism finding and the exit-literal carve-out are mirrored here in
+#     plan v1.3; the remaining findings are spec/test-plan owned and landed in spec
+#     v1.5 and test plan v0.5)
 #   - PM record: ./chg-GH-268-pm-notes.yaml (three binding decisions: warn-only
 #     hook, resume-sync instruction in scope, repository automation not a CLI
 #     command)
@@ -119,6 +149,10 @@
 #     -> commitlint configuration presence (DM-1.d SKIP, exit 0) -> base
 #     resolution (DM-1.e) -> merge-base (DM-1.f) -> binary availability
 #     (DM-1.g) -> per-commit lint (DM-1.a/b/c/h). Exactly one outcome per run.
+#     This order is normative in spec §5.1 (v1.4): a repository with no
+#     commitlint configuration reports SKIP regardless of base or binary state,
+#     and an unresolvable base is reported before a missing binary (e before g) or
+#     an unrenderable verdict (e before h).
 #   - Configuration discovery uses the same eight root candidates as
 #     scripts/checks/commitlint-authority.ts (commitlint.config.{js,cjs,mjs,ts},
 #     .commitlintrc{,.json,.yaml,.yml}) checked at the repository top level; the
@@ -139,12 +173,27 @@
 #     `./scripts/lint-commit-range.sh --base <ref>` therefore works on this
 #     repository with no `PATH` modification — the workspace install places the
 #     CLI in `node_modules/.bin` and does not put it on `PATH` (spec §12, RSK-1).
-#   - Suite fixtures that need a local binary create their own
-#     `node_modules/.bin/commitlint` (a helper symlink to the repository's pinned
-#     binary) and fixtures that test absence never contain a `node_modules` tree,
-#     so the host dependency tree can never make an absence case vacuous
-#     (TC-COMMITLINT-008 notes). A decoy earlier on `PATH` must never execute
-#     (DECOY_MARKER absent) and the local binary must decide the verdict.
+#   - Suite fixtures that need a local binary install one through the test plan's
+#     helper `_install_local_commitlint`, which writes an **exec wrapper** — never
+#     a symlink and never a copy:
+#       printf '#!/bin/sh\nexec "%s" "$@"\n' "${REPO_ROOT}/node_modules/.bin/commitlint" \
+#         > "${repo}/node_modules/.bin/commitlint"; chmod +x ...
+#     Mechanism: this repository's `node_modules/.bin/commitlint` is a `/bin/sh`
+#     shim that resolves its CLI relative to its own invoked path
+#     (`$basedir/../@commitlint/cli/cli.js`, with an absolute `NODE_PATH`), so a
+#     link or copy placed under a fixture fails with MODULE_NOT_FOUND, exits 1
+#     with no `[rule-id]` line, and the pinned parse contract classifies that as
+#     DM-1.h — turning every local-binary fixture into ERROR instead of the
+#     outcome it exists to prove (iter-3 finding 1). The wrapper therefore invokes
+#     the repository's real binary by absolute path; it must never be simplified
+#     back to a link or copy. Fixtures that test absence contain no `node_modules`
+#     tree at all, so the host dependency tree can never make an absence case
+#     vacuous (TC-COMMITLINT-008 notes). `FX-PATH-FOREIGN` uses the **same
+#     wrapper** written into a directory outside the fixture repository
+#     (`${_test_tmpdir}/bin/commitlint`) so the resolved origin is still `PATH`
+#     and the parity-risk disclosure path is exercised. A decoy earlier on `PATH`
+#     must never execute (DECOY_MARKER absent) and the local binary must decide
+#     the verdict.
 #   - Lint invocation and parse contract (test plan OQ-1): one
 #     `commitlint --color=false` invocation per commit in
 #     `git rev-list --reverse <merge-base>..HEAD`, message read with
@@ -170,19 +219,22 @@
 #   - Committed fixtures live in scripts/.tests/fixtures/lint-commit-range/ with
 #     the exact file names of test plan §6.2; the invalid-JS fixture ships as
 #     .txt so biome lint/format never parses it (TR-9).
-#   - DM-1.h has two declared binary origins (test plan v0.4, iter-2 finding 1):
+#   - DM-1.h has two declared binary origins (test plan v0.5, iter-2 finding 1):
 #     `FX-BAD-CONFIG` carries the fixture-local `node_modules/.bin/commitlint`
-#     (helper symlink) and is the invalid-configuration half, decided locally with
-#     header origin `repository-local`; `FX-BAD-CONFIG-NO-LOCAL` has no
-#     `node_modules` tree at all and is the execution-failure half, where the
-#     self-evidencing `fake-commitlint-exec-failure.sh` shim is reached only
+#     written by the `_install_local_commitlint` exec wrapper and is the
+#     invalid-configuration half, decided locally with header origin
+#     `repository-local`; `FX-BAD-CONFIG-NO-LOCAL` has no `node_modules` tree at
+#     all, declares a single-commit range, and is the execution-failure half, where
+#     the self-evidencing `fake-commitlint-exec-failure.sh` shim is reached only
 #     through `PATH` — the absence of a local `node_modules/.bin` is asserted
-#     before the run, the shim writes `SHIM_MARKER` (exactly one line naming its
-#     own invocation path) and prints the distinct `SHIM-EXEC-FAILURE` token, and
-#     the marker is the load-bearing evidence that the shim ran. A single fixture
-#     would let DEC-10's local-first resolution decide both halves, reporting green
-#     while proving nothing; the shim is never installed into any
-#     `node_modules/.bin`.
+#     before the run, the shim appends one line per invocation to `SHIM_MARKER`
+#     naming its own path and prints the distinct `SHIM-EXEC-FAILURE` token, and
+#     the marker (non-empty, every line the shim path, count at least the declared
+#     commit count) is the load-bearing evidence that the shim ran — never an exact
+#     invocation total, so a gate that legitimately probes `--version` or lints
+#     before reporting is not penalised. A single fixture would let DEC-10's
+#     local-first resolution decide both halves, reporting green while proving
+#     nothing; the shim is never installed into any `node_modules/.bin`.
 #   - Prompt contract (AC-F4-1, TC-PROMPT-001/003): the committer and PM prompts
 #     state the subject rule, the body/footer 100-character rule, the
 #     no-plain-merge-subject rule, both remediation modes, and the ownership split
@@ -328,13 +380,16 @@ phases:
       - "AC-NFR4-1"
       - "AC-NFR6-1"
     tcCoverage:
-      - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip with and without a local binary, binary resolution and disclosure — local-first preference, decoy never executed, foreign origin disclosed not failed, absence loud — invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
+      - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip with and without a local binary and an unresolvable base in a no-configuration repo, binary resolution and disclosure — local-first preference, decoy never executed, foreign origin disclosed not failed, absence loud — invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version with the outcome-path exit literals and the documented 130 interrupt carve-out, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
     verification:
       - "bash -n scripts/lint-commit-range.sh || syntax clean; set -Eeuo pipefail plus traps, usage(), --help, --version, and one-job-per-function sectioning per .ai/rules/bash.md"
-      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary; fixture-local node_modules/.bin/commitlint symlinks exercise the local-first path, absence fixtures carry no node_modules tree, the DM-1.h halves are split (FX-BAD-CONFIG decides invalid configuration with its local binary; FX-BAD-CONFIG-NO-LOCAL proves the execution-failure shim ran via SHIM_MARKER after asserting no local node_modules/.bin), and the suite fails loudly with an install hint when the host binary is missing (never a silent skip)"
+      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary; every fixture-local node_modules/.bin/commitlint is an exec wrapper written by _install_local_commitlint (printf '#!/bin/sh\\nexec \"%s\" \"$@\"\\n' \"${REPO_ROOT}/node_modules/.bin/commitlint\"), never a symlink or a copy — the repository's pnpm shim resolves its CLI relative to its invoked path, so a link or copy would fail with MODULE_NOT_FOUND, exit 1 with no parsed rule, and be classified DM-1.h; FX-PATH-FOREIGN uses the same wrapper outside the fixture repository so the origin still reports PATH; absence fixtures carry no node_modules tree, the DM-1.h halves are split (FX-BAD-CONFIG decides invalid configuration with its wrapper-installed local binary; FX-BAD-CONFIG-NO-LOCAL proves the execution-failure shim ran via SHIM_MARKER after asserting no local node_modules/.bin), and the suite fails loudly with an install hint when the host binary is missing (never a silent skip)"
       - "./scripts/lint-commit-range.sh --help >/dev/null && ./scripts/lint-commit-range.sh --version | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+' || help and version exit 0 and the version is semver-shaped"
       - "./scripts/lint-commit-range.sh --nonsense; test $? -eq 2 || usage error names the accepted invocation and the offending argument, and GIT_TRACE shows no rev-list/merge-base/rev-parse/for-each-ref call"
-      - "test \"$(grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | awk '{print $2}' | sort -u | tr '\\n' ' ')\" = \"0 1 2 \" || the exit literals are exactly 0, 1 and 2; a fourth or substituted digit fails the comparison"
+      - "test -z \"$(grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | awk '{print $2}' | sort -u | grep -vE '^(0|1|2|130)$')\" || empty output is required: every exit literal is an outcome code (0 pass/skip, 1 violations, 2 unable-to-verify/usage) or the documented interrupt code 130; any other digit prints and fails"
+      - "test \"$(grep -cE '^[[:space:]]*exit 130[[:space:]]*$' scripts/lint-commit-range.sh)\" = \"1\" && test \"$(awk '/_on_interrupt\\(\\)[[:space:]]*\\{/{inb=1} inb&&/exit 130/{hit=1} inb&&/^\\}/{inb=0} END{print hit+0}' scripts/lint-commit-range.sh)\" = \"1\" && test -n \"$(grep -nE 'trap .*_on_interrupt.* (INT|TERM)' scripts/lint-commit-range.sh)\" || exactly one 130 site exists, it lies inside the `_on_interrupt` handler, and the handler is installed by a trap: 130 is an interrupt code (spec NFR-7 carve-out, .ai/rules/bash.md canonical trap block), never a fourth verdict outcome; a 130 anywhere else fails the handler-body probe"
+      - "help=\"$(./scripts/lint-commit-range.sh --help)\" && printf '%s' \"${help}\" | grep -qiE '^[[:space:]]*0[[:space:]]*[-:]?[[:space:]]*(pass|skip)' && printf '%s' \"${help}\" | grep -qiE '^[[:space:]]*1[[:space:]]*[-:]?[[:space:]]*(fail|violation)' && printf '%s' \"${help}\" | grep -qiE '^[[:space:]]*2[[:space:]]*[-:]?[[:space:]]*(error|unable|usage)' || usage() documents the three outcome codes each on its own line with its meaning; a missing or renamed outcome line fails the corresponding grep"
+      - "test -z \"$(./scripts/lint-commit-range.sh --help | grep -oE '^[[:space:]]*[0-9]+[[:space:]]*[-:]' | grep -oE '[0-9]+' | sort -u | grep -vE '^(0|1|2|130)$')\" || empty output is required: every code documented as an outcome is one of 0, 1, 2 (130 may appear separately as the interrupt code); any other documented outcome code prints and fails"
       - "test \"$(grep -cE '^[[:space:]]*(curl|wget|scp|ssh|nc)[[:space:]]' scripts/lint-commit-range.sh)\" = \"0\" && test \"$(grep -cE '^[[:space:]]*git[[:space:]]+(fetch|pull|push|clone|ls-remote)' scripts/lint-commit-range.sh)\" = \"0\" || no network helper and no network git subcommand appears in command position; distribution hints live inside quoted strings and therefore cannot match these line-anchored patterns"
       - "./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, commit count, and a verdict header whose binary field is node_modules/.bin/commitlint with origin repository-local; no PATH prefix is used, so this also proves the published invocation works on this repository (early smoke; formal dogfood evidence is Phase 5)"
       - "test \"$(git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh | awk '{print $1}' | sort -u | tr '\\n' ' ')\" = \"100755 \" || both entries are mode 100755, matching the existing gate/suite convention, so scripts/test-all.sh discovery (-perm -u+x) cannot silently skip the suite; a 100644 entry changes the observed set and fails"
