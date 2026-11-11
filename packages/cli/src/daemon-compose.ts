@@ -52,6 +52,7 @@ import {
   type DaemonSettings,
   type DaemonStartData,
   type DaemonStartMode,
+  type DaemonStopMode,
   type DaemonSupervisorDescriptor,
   type DaemonSupervisorKind,
   type DaemonWakePort,
@@ -760,7 +761,47 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       }
       const started = await runtime.start({ foreground });
       if (!started.ok) return failure(started.code, started.detail);
-      return { data: startData(started.state) };
+      const snapshot = startData(started.state);
+      const host = composition.signalHost;
+      if (foreground !== true || host === undefined) return { data: snapshot };
+      // The signal-owned foreground lifetime (DM-2, AC-F2-4..AC-F2-9): the
+      // readiness snapshot is captured at start and returned at exit; the first
+      // signal selects the stop mode; both listeners are removed in a `finally`;
+      // cancellation precedes the release append because `runtime.stop` cancels
+      // the loop before it appends.
+      let stopMode: DaemonStopMode | undefined;
+      let stopFailure: { readonly code: string; readonly detail?: string } | undefined;
+      let settle: (() => void) | undefined;
+      const settled = new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+      const request = (mode: DaemonStopMode): void => {
+        if (stopMode !== undefined) return;
+        stopMode = mode;
+        void runtime.stop(mode).then((outcome) => {
+          if (!outcome.ok) {
+            stopFailure =
+              outcome.detail === undefined
+                ? { code: outcome.code }
+                : { code: outcome.code, detail: outcome.detail };
+          }
+          settle?.();
+        });
+      };
+      const onInterrupt = (): void => request("immediate");
+      const onTerminate = (): void => request("drain");
+      host.once("SIGINT", onInterrupt);
+      host.once("SIGTERM", onTerminate);
+      try {
+        const loop = runtime.loop();
+        await Promise.race([loop, settled]);
+        await loop;
+      } finally {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+      }
+      if (stopFailure !== undefined) return failure(stopFailure.code, stopFailure.detail);
+      return { data: snapshot };
     },
     stop: async ({ mode }) => {
       const active = runtime.state();
@@ -787,6 +828,12 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         latest.operation === "immediate-stop"
       ) {
         return { data: { result: "noop", instance: null, detachedLanes: [], degraded: [] } };
+      }
+      // Fail closed on a record that cannot name a process: only a positive
+      // integer pid is addressed, and a non-integer, zero, or negative value
+      // refuses before any signal call (AC-F6-2, AC-F6-3, NFR-8).
+      if (!Number.isInteger(latest.pid) || latest.pid <= 0) {
+        return failure("daemon.state-recovery-failed", "recorded-pid-invalid");
       }
       const signalled = processPort.signal(latest.pid, mode === "drain" ? "SIGTERM" : "SIGINT");
       if (!signalled.ok) return failure("daemon.state-recovery-failed", signalled.detail);

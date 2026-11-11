@@ -39,28 +39,58 @@ export type MountClock = DaemonClockPort & {
   readonly advance: (ms: number) => void;
   /** Every recorded sleep interval, in call order. */
   readonly sleeps: () => readonly number[];
+  /** Release one queued manual sleep (no-op in auto mode). */
+  readonly tick: () => void;
+  /** Release every queued manual sleep (no-op in auto mode). */
+  readonly releaseAll: () => void;
 };
 
 /**
- * A counting clock whose `sleep` resolves immediately and advances the injected
- * now, so a readiness poll is observable without wall-clock time.
+ * A counting clock. In auto mode `sleep` resolves immediately and advances the
+ * injected now, so a readiness poll is observable without wall-clock time. In
+ * manual mode `sleep` stays pending until the case releases it, so a resident
+ * loop can be driven one iteration at a time.
  */
 export const createMountClock = (
-  options: { readonly startIso?: string; readonly sleepAdvances?: boolean } = {},
+  options: {
+    readonly startIso?: string;
+    readonly sleepAdvances?: boolean;
+    readonly manual?: boolean;
+  } = {},
 ): MountClock => {
   let now = Date.parse(options.startIso ?? "2026-11-11T10:00:00Z");
   const sleeps: number[] = [];
+  const queued: { readonly ms: number; readonly resolve: () => void }[] = [];
   return {
     nowMs: () => now,
     nowIso: () => new Date(now).toISOString(),
     sleep: async (ms: number) => {
       sleeps.push(ms);
+      if (options.manual === true) {
+        await new Promise<void>((resolve) => {
+          queued.push({ ms, resolve });
+        });
+      }
       if (options.sleepAdvances === true) now += ms;
     },
     advance: (ms: number) => {
       now += ms;
     },
     sleeps: () => [...sleeps],
+    tick: () => {
+      const next = queued.shift();
+      if (next === undefined) return;
+      if (options.sleepAdvances === true) now += next.ms;
+      next.resolve();
+    },
+    releaseAll: () => {
+      while (queued.length > 0) {
+        const next = queued.shift();
+        if (next === undefined) break;
+        if (options.sleepAdvances === true) now += next.ms;
+        next.resolve();
+      }
+    },
   };
 };
 

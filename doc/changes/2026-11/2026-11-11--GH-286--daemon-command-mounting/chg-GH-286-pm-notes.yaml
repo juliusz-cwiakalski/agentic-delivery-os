@@ -18,6 +18,23 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 3 commit: 59e7a360. Plan phase 4 complete (foreground
+      lifetime, drained detach, fail-closed stop): with a composed signal host and
+      `--foreground` the runtime captures the readiness snapshot, installs one
+      SIGINT and one SIGTERM listener, runs the resident loop, lets the first
+      signal select the mode, removes both listeners in a `finally`, awaits the
+      loop, and returns the snapshot or the classified stop failure; a second
+      signal cannot start a second stop; the cross-process stop refuses a
+      non-positive, fractional, or torn pid as `daemon.state-recovery-failed`
+      before any signal call and addresses only the recorded positive pid.
+      `createDaemonMainEntry` stays unused by every production surface and is
+      imported only by the TC-039 fixture entry. Gate: 56/56 tests across the
+      three new behaviour suites, the mutant suite, the delivered control-transport,
+      lifecycle, lock-concurrency, and watch suites, and the bounded real-child
+      conformance case (0.6 s, temp-rooted, reaped); `pnpm typecheck`, lint, and
+      format green."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 2 commit: 551c1ad4. Plan phase 3 complete (install identity
       and lifecycle): the install handler classifies the supervisor support first
       (so the delivered darwin/win32 control keeps `daemon.supervisor-unsupported`

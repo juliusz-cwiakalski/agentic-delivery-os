@@ -2293,6 +2293,16 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 | TC-DAEMON-105 | 2026-11-11 | PASS (manual) | Host `linux x64`, Bun `1.4.4`, user manager `running`, `XDG_RUNTIME_DIR=/run/user/1000`. Temp `XDG_CONFIG_HOME=$PWD/tmp/gh286-tc105/xdg`, `DELIVERY_OS_STATE_DIR=$PWD/tmp/gh286-tc105/state`, entry path `packages/cli/bin/delivery-os.ts`. `daemon install` (handler) -> `daemon.supervisor-unsupported` / `linux systemctl-enable-failed`: the running manager's unit search path is fixed at its start, so it cannot enable a unit under a temp configuration root; the delivered rollback removed the unit and the marker (empty listing). `systemctl --user daemon-reload` exit 0; `systemctl --user status delivery-os-daemon.service` -> `Unit delivery-os-daemon.service could not be found.`; `daemon uninstall` -> `result=noop` with the descriptor reported and the temp root empty; no login autostart enabled for the operator account. The entrypoint-shaped re-run is task 6.9. |
 | TC-DAEMON-124 | 2026-11-11 | PASS | `tests/behaviour/daemon-install-mount.test.ts` — second install byte-identical with one unit, released stop is `noop` with zero signals, live start refuses with an unchanged record count |
 
+| TC-DAEMON-033 | 2026-11-11 | PASS | `tests/behaviour/daemon-foreground-lifetime.test.ts` — three advancing beats, one `released` with `releaseReason=drain`, one detach, listeners installed and removed once, snapshot returned |
+| TC-DAEMON-034 | 2026-11-11 | PASS | same suite — one `immediate-stop`, zero detaches, listeners removed, later stop `noop` with zero signals |
+| TC-DAEMON-035 | 2026-11-11 | PASS | same suite — readiness return with zero sleeps and no listener call; host-present control enters the loop |
+| TC-DAEMON-036 | 2026-11-11 | PASS | `tests/behaviour/daemon-stop-safety.test.ts` — one `SIGTERM`, `draining` at exit 0, no second instance record, release observed from a fresh handle, then `noop` |
+| TC-DAEMON-037 | 2026-11-11 | PASS | `daemon-foreground-lifetime.test.ts` — the stop classification path terminates the loop and removes both listeners |
+| TC-DAEMON-038 | 2026-11-11 | PASS | same suite — three signal orders produce exactly one stop and one terminal record |
+| TC-DAEMON-039 | 2026-11-11 | PASS | `tests/conformance/daemon-mount/real-reentry.test.ts` — real `#!/usr/bin/env bun` child from a bun directory outside `/usr/bin:/bin`, durable `acquired`, drain release within a bounded poll, `SIGKILL` reap in `finally`, 0.6 s |
+| TC-DAEMON-091 | 2026-11-11 | PASS | `daemon-stop-safety.test.ts` — zero signal calls over eight invocations for `0`/`-1`/`-4321`/`12.5`, no `isAlive` substitute, source scan, positive control |
+| TC-DAEMON-092 | 2026-11-11 | PASS | same suite — `SIGTERM`/`SIGINT` to the recorded positive pid only, one call per invocation, failed call classified |
+| TC-DAEMON-121 | 2026-11-11 | PASS | `tests/behaviour/daemon-foreground-stop-latency.test.ts` — five samples, cancellation and stop inside 250 ms, release present at return, one terminal record per sample |
 ### 10.2 Aggregate gate evidence
 
 | Gate | Command | Result | Evidence |
