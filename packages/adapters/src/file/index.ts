@@ -85,6 +85,16 @@ export {
   readProjectIdentityMarker,
 } from "./project-identity.js";
 export {
+  createHostIndexAccess,
+  type HostIndexAccess,
+  type HostIndexRead,
+  hostIndexDocumentPath,
+  hostIndexExists,
+  preserveCorruptHostIndex,
+  readHostIndexFile,
+  replaceHostIndexFile,
+} from "./host-index-store.js";
+export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,
   SECRET_FILENAME_PATTERNS,

@@ -30,6 +30,15 @@ export const writeRawMarker = (gitCommonDirectory: string, bytes: string): void 
   writeFileSync(path, bytes);
 };
 
+/**
+ * Replace one checkout's marker with a freshly minted payload (the re-keyed
+ * cell). A marker is untrusted input by contract, so the raw write is the
+ * provocation and the delivered read seam still governs the outcome.
+ */
+export const rotateProjectIdentityMarker = (gitCommonDirectory: string, bytes: string): void => {
+  writeRawMarker(gitCommonDirectory, bytes);
+};
+
 /** Copy one checkout's marker bytes into another checkout's common directory. */
 export const copyMarker = (fromCommonDirectory: string, toCommonDirectory: string): string => {
   const bytes = readFileSync(markerPathOf(fromCommonDirectory), "utf8");

@@ -210,6 +210,19 @@ export {
   serializeProjectIdentityMarker,
   unboundStateRoot,
 } from "./state-scope.js";
+/**
+ * The derived host-index fold (GH-288 F-2, DEC-4, DEC-14, DEC-18): the pure
+ * upsert/prune/revision rule over one read, with the DEC-18 key guard.
+ */
+export {
+  corruptHostIndexSiblingName,
+  type HostIndexMaintenanceInput,
+  type HostIndexMaintenanceResult,
+  type HostIndexRootProbe,
+  maintainHostIndex,
+  parseHostIndexDocument,
+  serializeHostIndexDocument,
+} from "./host-index.js";
 export {
   type WatchInput,
   type WatchRead,

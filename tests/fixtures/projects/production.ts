@@ -19,6 +19,10 @@ import {
   statSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  createHostIndexAccess,
+  type HostIndexAccess,
+} from "../../../packages/adapters/src/file/host-index-store";
 import type {
   GitChildRunner,
   GitChildRunnerResult,
@@ -68,6 +72,8 @@ export type ProductionProjectsHarness = {
   readonly projectKey: string;
   readonly stateLocation: string;
   readonly store: StateStorePort;
+  /** The observability-only index counters (reads, writes, lists). */
+  readonly hostIndexAccess: HostIndexAccess;
   readonly spawns: readonly RecordedSpawn[];
   readonly transportCalls: readonly string[];
   readonly gitCalls: readonly RecordedSpawn[];
@@ -158,39 +164,47 @@ export const createProductionProjectsHarness = (
     if (args[0] === "rev-list") return { stdout: "0", stderr: "", status: 0, timedOut: false };
     return { stdout: "", stderr: "git is not available in this suite", status: 1, timedOut: false };
   };
-  const program = createProductionComposer({
-    environment: {
-      HOME: host.home,
-      [stateOverrideVariable(brand)]: host.hostRoot,
-      PATH: "/synthetic/bin:/synthetic/usr/bin",
-      HARNESS_MODEL: "synthetic/model-large",
-      HARNESS_SMALL_MODEL: "synthetic/model-small",
-      ...options.environmentExtra,
-    },
-    cwd: options.workingDirectory,
-    homeDirectory: host.home,
-    workingName: "delivery-os",
-    repositoryFacts: {
-      ...(options.originUrl === undefined ? {} : { originUrl: options.originUrl }),
-    },
-    harnessSpawnRunner: spawnRunner,
-    harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
-    credentials: options.credential === "missing" ? refusingCredentials : resolvingCredentials,
-    githubTransport: {
-      send: async (request) => {
-        transportCalls.push(request.url);
-        if (request.url.includes("/issues/")) {
-          return {
-            status: 200,
-            body: { number: 241, title: "Projects fixture", state: "open", labels: [] },
-          };
-        }
-        if (request.url.includes("/pulls?")) return { status: 200, body: [] };
-        return { status: 404, body: {} };
+  const hostIndexAccess = createHostIndexAccess();
+  // One composition per invocation, exactly like the delivered entrypoint: the
+  // harness never reuses a composed program, so per-invocation work (index
+  // maintenance, counters) is observable.
+  const composeProgram = () => {
+    const composer = createProductionComposer({
+      environment: {
+        HOME: host.home,
+        [stateOverrideVariable(brand)]: host.hostRoot,
+        PATH: "/synthetic/bin:/synthetic/usr/bin",
+        HARNESS_MODEL: "synthetic/model-large",
+        HARNESS_SMALL_MODEL: "synthetic/model-small",
+        ...options.environmentExtra,
       },
-    },
-    gitChildRunner: gitRunner,
-  })(brand);
+      cwd: options.workingDirectory,
+      homeDirectory: host.home,
+      workingName: "delivery-os",
+      repositoryFacts: {
+        ...(options.originUrl === undefined ? {} : { originUrl: options.originUrl }),
+      },
+      harnessSpawnRunner: spawnRunner,
+      harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
+      credentials: options.credential === "missing" ? refusingCredentials : resolvingCredentials,
+      githubTransport: {
+        send: async (request) => {
+          transportCalls.push(request.url);
+          if (request.url.includes("/issues/")) {
+            return {
+              status: 200,
+              body: { number: 241, title: "Projects fixture", state: "open", labels: [] },
+            };
+          }
+          if (request.url.includes("/pulls?")) return { status: 200, body: [] };
+          return { status: 404, body: {} };
+        },
+      },
+      gitChildRunner: gitRunner,
+      hostIndexAccess,
+    });
+    return composer(brand);
+  };
   const resolved = projectScopeFor({
     cwd: options.workingDirectory,
     hostRoot: host.hostRoot,
@@ -221,7 +235,7 @@ export const createProductionProjectsHarness = (
       clock: { now: () => Date.parse("2026-11-11T10:00:00.000Z") },
       newRunId: () => `run-gh288-${String(runOrdinal)}`,
       secrets: [],
-      program,
+      program: composeProgram(),
     });
     const stdout = out.join("");
     const stderr = err.join("");
@@ -254,6 +268,7 @@ export const createProductionProjectsHarness = (
       resolved.scope.kind === "project" ? resolved.scope.projectKey : resolved.scope.stateLocation,
     stateLocation: resolved.scope.stateLocation,
     store,
+    hostIndexAccess,
     spawns,
     transportCalls,
     gitCalls,

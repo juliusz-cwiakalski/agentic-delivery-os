@@ -45,6 +45,43 @@ export const PROJECT_KEY_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}
 /** The inclusive host-index entry bound (F-2, NFR-4 bounded work). */
 export const HOST_INDEX_MAX_ENTRIES = 2_000 as const;
 
+/** The revision an absent index starts from; absent is not corrupt (F-2). */
+export const HOST_INDEX_INITIAL_REVISION = 0 as const;
+
+/** The corrupt document's preserved sibling suffix (DEC-14). */
+export const HOST_INDEX_CORRUPT_SUFFIX = ".corrupt" as const;
+
+/** The closed maintenance outcome vocabulary (F-2, DEC-4, DEC-14, DEC-18). */
+export const HOST_INDEX_MAINTENANCE_OUTCOMES = [
+  "unchanged",
+  "written",
+  "conflict",
+  "corrupt-replaced",
+] as const;
+export type HostIndexMaintenanceOutcome = (typeof HOST_INDEX_MAINTENANCE_OUTCOMES)[number];
+
+/** One registration fact the maintenance fold upserts (F-2, DM-2). */
+export type HostIndexRegistration = {
+  readonly projectKey: string;
+  readonly projectIdentifier: string;
+  readonly root: string;
+  readonly stateLocation: string;
+  readonly recordedAt: string;
+};
+
+/**
+ * The DEC-18 key guard's report: a key the index already holds under another
+ * project identifier. The existing entry stays unchanged and no revision
+ * advances; the colliding checkout does not adopt that state root.
+ */
+export type HostIndexConflict = {
+  readonly projectKey: string;
+  readonly existingIdentifier: string;
+  readonly existingRoot: string;
+  readonly candidateIdentifier: string;
+  readonly candidateRoot: string;
+};
+
 /** One maintained index entry's declared field set, in order (F-2, DM-2). */
 export const HOST_INDEX_ENTRY_FIELDS = [
   "projectKey",

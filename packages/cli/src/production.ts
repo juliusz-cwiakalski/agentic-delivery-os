@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -16,17 +16,22 @@ import {
 import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
+  createHostIndexAccess,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
+  type HostIndexAccess,
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
+  preserveCorruptHostIndex,
   readDispatchIdentityMarkerText,
+  readHostIndexFile,
   readOwnerHoldMarker,
   readPmNotesText,
   readProjectIdentityMarker,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
+  replaceHostIndexFile,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
 import {
@@ -67,12 +72,16 @@ import {
   type DispatchTruthReads,
   EvaluateVerifyChange,
   type HarnessSettings,
+  type HostIndexRootProbe,
   type LaneSettings,
+  maintainHostIndex,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
   PRODUCTION_DEFAULTS,
   type ProjectsScopeFailure,
+  parseHostIndexDocument,
+  parseProjectIdentityMarker,
   readDaemonLanes,
   readQueueEntries,
   releaseQueueLease,
@@ -83,6 +92,7 @@ import {
   resolveLaneSettings,
   resolveOwnerHoldFact,
   resolveProjectScope,
+  serializeHostIndexDocument,
   serializeIdentityMarker,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -273,6 +283,12 @@ export type ProductionCompositionFacts = {
   readonly coordinatorSessionFacts?: () => CoordinatorSessionFacts;
   /** The foreground loop wait override; production uses the resolved interval. */
   readonly coordinatorCollectionIntervalMs?: number;
+  /**
+   * The observability-only host-index access counters. They accept no root, no
+   * key, and no path, so a composition test reads the bound without injecting
+   * state (GH-288 F-2, TR-1).
+   */
+  readonly hostIndexAccess?: HostIndexAccess;
 };
 
 /**
@@ -310,17 +326,20 @@ const withWarning = (result: unknown, warning: string): unknown => {
   return { ...result, warnings: [...existing, warning] };
 };
 
-/** Append exactly one bounded warning to every composed handler's outcome. */
-const withScopeWarning = (program: CommandProgram, warning: string): CommandProgram => {
+/** Append the bounded scope warnings to every composed handler's outcome. */
+const withScopeWarnings = (
+  program: CommandProgram,
+  warnings: readonly string[],
+): CommandProgram => {
   const commands: Record<string, CommandDefinition> = {};
   for (const [name, definition] of Object.entries(program.commands)) {
     commands[name] = {
       ...definition,
       handler: (invocation) => {
         const outcome = definition.handler(invocation);
-        return outcome instanceof Promise
-          ? outcome.then((value) => withWarning(value, warning))
-          : withWarning(outcome, warning);
+        const merged = (value: unknown): unknown =>
+          warnings.reduce<unknown>((current, warning) => withWarning(current, warning), value);
+        return outcome instanceof Promise ? outcome.then(merged) : merged(outcome);
       },
     };
   }
@@ -384,6 +403,65 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const nowMs = (): number => Date.now();
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
+
+    // The derived host index: exactly one read and at most one write per
+    // store-opening invocation whose scope resolves inside a checkout, no
+    // filesystem crawl, and no maintenance on a read-only list path (F-2,
+    // DEC-4, DEC-5, DEC-14, DEC-18). A key held under another identifier is
+    // never adopted: the invocation refuses before opening the store.
+    const hostIndexAccess = facts.hostIndexAccess ?? createHostIndexAccess();
+    const maintenanceWarnings: string[] = [];
+    const probeRecordedRoot = (root: string): HostIndexRootProbe => {
+      if (!existsSync(root)) return { state: "absent" };
+      const identity = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      if (identity.kind !== "resolved") return { state: "uncertain" };
+      const markerRead = readProjectIdentityMarker(identity.commonDir);
+      if (markerRead.state !== "present") return { state: "uncertain" };
+      const marker = parseProjectIdentityMarker(markerRead.text);
+      return marker === undefined
+        ? { state: "uncertain" }
+        : { state: "resolved", projectIdentifier: marker.projectIdentifier };
+    };
+    if (scope.value.scope.kind === "project") {
+      const current = scope.value.scope;
+      hostIndexAccess.countRead();
+      const read = readHostIndexFile(hostRoot);
+      if (read.state !== "unreadable") {
+        const document = read.state === "present" ? parseHostIndexDocument(read.text) : undefined;
+        const corrupt = read.state === "present" && document === undefined;
+        const maintained = maintainHostIndex({
+          hostRoot,
+          document,
+          corrupt,
+          registration: {
+            projectKey: current.projectKey,
+            projectIdentifier: current.projectIdentifier,
+            root: current.checkoutRoot,
+            stateLocation: current.stateLocation,
+            recordedAt: nowIso(),
+          },
+          probe: probeRecordedRoot,
+        });
+        maintenanceWarnings.push(...maintained.warnings);
+        if (maintained.next !== undefined) {
+          if (maintained.preserveCorruptAs !== undefined && read.state === "present") {
+            preserveCorruptHostIndex(hostRoot, maintained.preserveCorruptAs, read.text);
+          }
+          hostIndexAccess.countWrite();
+          replaceHostIndexFile(hostRoot, serializeHostIndexDocument(maintained.next));
+        }
+        if (maintained.conflict !== undefined) {
+          throw projectsScopeFailure({
+            kind: "state",
+            code: "projects.state-unavailable",
+            summary:
+              `project key ${maintained.conflict.projectKey} is registered to another project ` +
+              `identifier (${maintained.conflict.existingIdentifier}); this checkout ` +
+              `(${maintained.conflict.candidateRoot}) cannot establish its state location`,
+          });
+        }
+      }
+    }
 
     const store = createStateStore(
       {
@@ -1641,8 +1719,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     }
     // An invocation outside every checkout keeps the declared `unbound` scope,
     // its exit code, and nothing registered: only one bounded warning changes.
-    return scope.value.outcome === "unbound"
-      ? withScopeWarning(program.program, UNBOUND_SCOPE_WARNING)
-      : program.program;
+    // Maintenance warnings (a repaired state location, a preserved corrupt
+    // index) travel the same channel and never change an outcome.
+    const warnings =
+      scope.value.outcome === "unbound"
+        ? [UNBOUND_SCOPE_WARNING, ...maintenanceWarnings]
+        : maintenanceWarnings;
+    return warnings.length === 0 ? program.program : withScopeWarnings(program.program, warnings);
   };
 };
