@@ -1241,7 +1241,7 @@ the gap is deliberate. M2 stories keep their codes.
   against a ref with an active lane is
   refused with a classified error naming the holder; stale entries are
   reconcilable without editing state files.
-- Depends on: M1-S9, M1-S17, M1-S18.
+- Depends on: M1-S9, M1-S17, M1-S18, M2-S13.
 
 ### M2-S16 Engine-first delivery operations
 - Goal: Day-to-day delivery of this repository runs primarily through the
@@ -1257,7 +1257,7 @@ the gap is deliberate. M2 stories keep their codes.
   summary; handover evaluation reports per-condition status;
   the shell path remains usable and documented throughout; any flip is
   per-repository and reversible.
-- Depends on: M1-S9, M1-S18, M1-S21, and the owner-hold hook change (#280).
+- Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
 
 ### M2-S17 Provider-aware peak pausing
 - Goal: Peak-hour cost control is enforced per provider profile: in-flight

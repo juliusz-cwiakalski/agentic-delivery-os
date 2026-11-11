@@ -42,15 +42,15 @@ deliberate and the generic table is left unchanged until milestone exit.
 
 | Story | Architecture flow | Contract surface | Scenario seeds |
 |---|---|---|---|
-| M2-S2 Supervise | multi-repository overview | queue lifecycle and lanes | SC-M2-S2-01, SC-M2-S2-02 |
-| M2-S3 Ceremony runner | handover-gate evaluation | `phase.state` topic | SC-M2-S3-01, SC-M2-S3-02 |
+| M2-S2 Supervise | none in this pack | none in this pack | SC-M2-S2-01, SC-M2-S2-02 |
+| M2-S3 Ceremony runner | none in this pack | `phase.state` topic (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S3-01, SC-M2-S3-02 |
 | M2-S4 Board | multi-repository overview | `projects.v1` | SC-M2-S4-01, SC-M2-S4-02 |
-| M2-S5 Steer | handover-gate evaluation | `phase.state` topic | SC-M2-S5-01, SC-M2-S5-02 |
+| M2-S5 Steer | none in this pack | `phase.state` topic (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S5-01, SC-M2-S5-02 |
 | M2-S6 Metrics and spend | telemetry attribution | `telemetry.v1`, `spend` v2 | SC-M2-S6-01, SC-M2-S6-02 |
 | M2-S7 Suite-to-job mapping in gates | none in this pack | none in this pack | SC-M2-S7-01, SC-M2-S7-02 |
 | M2-S8 Memory records | none in this pack | none in this pack | SC-M2-S8-01, SC-M2-S8-02 |
 | M2-S9 Memory conventions in bootstrap | none in this pack | none in this pack | SC-M2-S9-01, SC-M2-S9-02 |
-| M2-S10 Retro action registry | telemetry attribution | `telemetry.v1` | SC-M2-S10-01, SC-M2-S10-02 |
+| M2-S10 Retro action registry | telemetry attribution | `telemetry.v1` (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S10-01, SC-M2-S10-02 |
 | M2-S11 Multi-repository workstations | multi-repository overview | `projects.v1` | SC-M2-S11-01, SC-M2-S11-02 |
 | M2-S12 Evidence inspection and divergence resolution | attempt-history inspection and divergence resolution | `attempts.v1` | SC-M2-S12-01, SC-M2-S12-02 |
 | M2-S13 Public event taxonomy | C4 Level 3 event components | event taxonomy v1 | SC-M2-S13-01, SC-M2-S13-02 |
