@@ -9,7 +9,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-11T18:02:22.552Z }
   delivery: { started: null, completed: 2026-11-11T19:49:54.370Z }
   system_spec_update: { started: null, completed: 2026-11-11T19:58:51.110Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-11T21:24:17.505Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -348,8 +348,8 @@ notes:
       chore(GH-268): pre-PR commitlint gate). Merged cleanly (39 files, no
       conflicts); aggregate pnpm check on the merged tree: 7312 pass / 4 skip /
       0 fail. The merge adds the phase-9 supplementary gate
-      ./scripts/lint-commit-range.sh --base <base> (PASS/FAIL/SKIP/ERROR) and its
-      registration in install.sh; AGENTS.md and the committer/pm prompts now
+      ./scripts/lint-commit-range.sh --base <base> (PASS/FAIL/SKIP/ERROR) and
+      its registration in install.sh; AGENTS.md and the committer/pm prompts now
       carry it. No PR exists for the branch (gh pr list --state all -> [])."
     type: info
     date: "2026-11-11"
@@ -357,21 +357,46 @@ notes:
       review-iter-1.yaml). No product defect: the two ACs not satisfied as
       written (AC-F2-2's 'all three instants printed in text'; AC-F4-3's
       permission-denied exit 2) are spec-wording defects where the delivered
-      behaviour is correct. Four medium evidence findings - narrower-than-declared
-      assertions inside genuinely present suites: F-1 attempts envelope key set
-      unasserted (only forbidden gate keys scanned); F-2 TC-022's unmigrated-root
-      baseline and the narrowed human unresolved_divergences= line unasserted;
-      F-3 TC-014 counters/sha256/torn-binding/project-marker/second-invocation/
-      host-index cells missing; F-4 TC-029 step 3 not implemented and the
-      attempts help entry never names the summary. Six low: F-5 AC-F2-2 wording,
-      F-6 TC-039 ref-shape breadth, F-7 TC-038 AST scan reduced to substrings,
-      F-8 TC-036 list omits one new suite, F-9 DELIVERED_FLAGS duplicates the
-      definition, F-10 phase-3 scope omits dispatch-additive-stability.test.ts.
-      Info I-1 AC-F4-3 wording, I-2 positional overflow boundary, I-3 generic
-      checkout message, I-4 utf8Bytes duplicate, I-5 reviewer's aggregate run
-      flaked on host load (24 timeouts, 7288+24=7312 corroborates delivery).
-      Remediation is in-scope: tests, one help line, one flag-set derivation,
-      two spec ACs, one plan scope row. Reopened review_fix remediation in
-      progress; plan phase artefacts stay closed (no new plan phase)."
+      behaviour is correct. Four medium evidence findings -
+      narrower-than-declared assertions inside genuinely present suites: F-1
+      attempts envelope key set unasserted (only forbidden gate keys scanned);
+      F-2 TC-022's unmigrated-root baseline and the narrowed human
+      unresolved_divergences= line unasserted; F-3 TC-014
+      counters/sha256/torn-binding/project-marker/second-invocation/ host-index
+      cells missing; F-4 TC-029 step 3 not implemented and the attempts help
+      entry never names the summary. Six low: F-5 AC-F2-2 wording, F-6 TC-039
+      ref-shape breadth, F-7 TC-038 AST scan reduced to substrings, F-8 TC-036
+      list omits one new suite, F-9 DELIVERED_FLAGS duplicates the definition,
+      F-10 phase-3 scope omits dispatch-additive-stability.test.ts. Info I-1
+      AC-F4-3 wording, I-2 positional overflow boundary, I-3 generic checkout
+      message, I-4 utf8Bytes duplicate, I-5 reviewer's aggregate run flaked on
+      host load (24 timeouts, 7288+24=7312 corroborates delivery). Remediation
+      is in-scope: tests, one help line, one flag-set derivation, two spec ACs,
+      one plan scope row. Reopened review_fix remediation in progress; plan
+      phase artefacts stay closed (no new plan phase)."
     type: blocker
+    date: "2026-11-11"
+  - text: "Review remediation committed as f9fab824 (14 files: spec v1.5
+      AC-F2-2/AC-F4-3 wording, plan revision 2.2 phase-3 scope row,
+      packages/cli/src/help.ts one pointer line,
+      packages/cli/src/commands/dispatch.ts flag-set derivation, and nine
+      test/fixture files). F-3 wired real counters including a new releaseFence
+      counter, sha256 whole-store equality, host-index write counts, both
+      invocations, the project identity marker and a torn binding marker cell;
+      F-7 became a TypeScript-AST plus import-graph check with file:line
+      reporting and a proven-detectable mutation."
+    type: info
+    date: "2026-11-11"
+  - text: "Review iteration 2 = PASS (code-review/review-iter-2.md). F-1..F-10 and
+      I-1 verified genuinely closed by reading the changed code and assertions
+      and re-running the suites; the reviewer proved F-7's detection power with
+      a standalone probe and confirmed the F-9 derivation cannot drift. No
+      regression: the only source diff is a behaviour-preserving dispatch.ts
+      refactor plus one help.ts line; error table 124/124 with 4 dispatch rows;
+      no new token, projection, exit literal or dependency. GH-268 merge clean
+      (its gate suite 50/50, prompt conformance green). Two non-blocking info
+      observations (O-1 doc-comment nit, O-2 counter scope) need no action.
+      Host-load suites exit-code-literals and privacy-ci-wiring pass in
+      isolation and are untouched by the diff. Proceeding to quality gates."
+    type: info
     date: "2026-11-11"

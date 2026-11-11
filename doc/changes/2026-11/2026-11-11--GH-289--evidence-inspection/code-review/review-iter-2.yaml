@@ -1,0 +1,57 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-289
+branch: feat/GH-289/evidence-inspection
+status: PASS
+summary: >-
+  Second local review of GH-289 (M2-S12) after review_fix remediation (commit f9fab824)
+  on top of the clean origin/main-tools merge d36d75c0 (GH-268 pre-PR commitlint gate).
+  Every iteration-1 finding (F-1..F-10, I-1) is genuinely closed by reading the changed
+  code and assertions, not by trusting the report: F-1 adds exact sorted envelope key-set
+  cells (8 keys, and 8 + truncation scope page); F-2 adds the 25-open+3-resolved no-foreign
+  28/3/25 baseline and asserts the human unresolved_divergences= line equals the returned 20
+  ids; F-3 wires the real releaseFence counter, a successful-read counter cell, sha256 via
+  harness.snapshot, host-index write counts, both invocations, a torn-binding cell and a
+  project-marker before/after cell, all executing; F-4 makes the attempts help entry name the
+  summary and asserts it; F-5/I-1 correct AC-F2-2 and AC-F4-3 (spec v1.5) to the delivered
+  truth; F-6 covers all six declared ref shapes and asserts the refusal summary names the
+  supplied value; F-7 is a real TypeScript-AST + import-graph check whose mutation
+  unresolved: unresolvedIds.length is proven to red with file:line
+  (packages/core/src/domain/dispatch-gate.ts:10); F-8 adds the composition suite to
+  NEW_SUITES; F-9 derives the delivered-flag guard from the definition so it cannot drift
+  while the four delivered forms still refuse an undeclared flag; F-10 declares
+  dispatch-additive-stability.test.ts in phase 3 (plan revision 2.2, plan validate valid).
+  No product behaviour changed: the only source diff against the merge base is a
+  behaviour-preserving dispatch.ts refactor and one help.ts summary line; the closed error
+  table (124/124, dispatch 4), bounds, ordering and isolation are unchanged; no new error
+  row, config key, dependency, token, projection, or exit literal. All change-relevant
+  suites and structural/registry gates are green (72 + 74 + 461 dispatch + 160 + 171, plus
+  typecheck, boundaries, help/prompt/exports/forbidden/privacy-literal, doc-distribution,
+  plan validate, and GH-268's contractlint suite 50/50). The two known host-load-flaky
+  suites are untouched by the diff and pass in isolation with a raised budget
+  (exit-code-literals 15/15 at 2.87s; privacy-ci-wiring 14/14 at 7.68s, 30s budget).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings: []
+reviewed_at: 2026-11-11T23:30:00Z
+next_step: >-
+  PROCEED to dod_check. All prior findings F-1..F-10 and I-1 are closed with verified
+  evidence; no new finding was raised. No remediation phase is required. Two non-blocking
+  observations are recorded in review-iter-2.md: O-1 (dispatch.ts:211 doc comment says the
+  flag vocabulary is "and of attempts" though attempts uses its own grammar) and O-2 (TC-014
+  counters wrap one successful JSON invocation while the text invocation's effects are
+  covered by the production sha256/marker/host-index cell). Neither requires action.
