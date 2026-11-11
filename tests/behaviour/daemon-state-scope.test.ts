@@ -351,6 +351,9 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
   test("all nine invocations refuse as config.value.invalid at exit 1 and open nothing", async () => {
     const brand = mountBrand();
     const root = createMountRoot("scope-054");
+    // The fixture root is a real checkout, so "wrote nothing" is the fixture's
+    // own baseline rather than an empty directory.
+    const fixtureEntries = listDirectory(root);
     const rootLevel = `/${brand.stateDirectoryName}`;
     const existedBefore = existsSync(rootLevel);
     try {
@@ -411,7 +414,7 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
       // Filesystem and socket absence.
       expect(existsSync(rootLevel)).toBe(existedBefore);
       expect(existsSync(`${rootLevel}/daemon.sock`)).toBe(false);
-      expect(listDirectory(root)).toEqual([]);
+      expect(listDirectory(root)).toEqual(fixtureEntries);
     } finally {
       removeMountRoot(root);
     }

@@ -7,9 +7,12 @@
  * delivered daemon lock and state store, and the resolved daemon settings. No
  * case writes outside its temp root and no case opens a real socket or spawns a
  * real child unless it declares itself the one integration witness.
+ *
+ * The temp root is a real repository (see `createMountRoot`), so the delivered
+ * checkout identity and the derived `<hostRoot>/projects/<key>` scope resolve
+ * identically wherever the gate points `TMPDIR`.
  */
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { DaemonComposition } from "../../../packages/cli/src/daemon-compose";
 import {
@@ -39,6 +42,8 @@ import {
   createStateStore,
 } from "../../../packages/core/src/state/index";
 import { SYNTHETIC_BRAND } from "../../golden/helpers";
+import { APPROVED_BASE } from "../projects/state-scope";
+import { createRepository } from "../projects/temp-repos";
 
 export type MountClock = DaemonClockPort & {
   /** Advance the injected now without recording a sleep. */
@@ -248,7 +253,17 @@ export const stateDirectoryName = (brand: BrandIdentity): string =>
 
 /** Create a private temp root for one fixture. */
 export const createMountRoot = (label = "gh286"): string => {
-  const root = mkdtempSync(join(tmpdir(), `gh286-${label}-`));
+  // A fixture root must be a resolvable checkout under any `TMPDIR`. The
+  // delivered project-scope policy (GH-288 F-1) derives `<hostRoot>/projects/<key>`
+  // only from a checkout identity and answers the declared `unbound` scope for a
+  // directory outside a git work tree, which is what a bare `TMPDIR` directory is
+  // whenever the gate points `TMPDIR` away from the checkout (TC-DAEMON-050/052/100).
+  // The root is therefore a real repository built with the same mechanism the
+  // GH-288 project-scope fixtures use, under the approved repository-local base,
+  // so the identity resolves identically under every `TMPDIR` and the fixture
+  // writes only inside the root it later removes.
+  mkdirSync(APPROVED_BASE, { recursive: true, mode: 0o700 });
+  const root = createRepository(APPROVED_BASE, `gh286-${label}-${mountSuffix()}`);
   chmodSync(root, 0o700);
   return root;
 };
