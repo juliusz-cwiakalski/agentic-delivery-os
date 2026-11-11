@@ -112,3 +112,32 @@ notes:
       a further new blocking finding escalates to the human."
     type: retro
     date: "2026-11-11"
+  - text: "Plan phase 1 COMPLETE — branch-range commit-message gate and its proof.
+      Commit 5c5ebb7e: scripts/lint-commit-range.sh (gate, 645 lines),
+      scripts/.tests/test-lint-commit-range.sh (suite), and 9 committed fixtures;
+      both files committed mode 100755 (verified via git ls-files -s and test -x).
+      Delivered criteria: AC-F1-1, AC-F1-2, AC-F2-1, AC-F2-2, AC-F3-1..AC-F3-6,
+      AC-NFR4-1, AC-NFR6-1. Verification observed: bash -n clean; suite 39/39
+      PASS (TC-COMMITLINT-001..021); --help and --version exit 0 with a
+      semver-shaped 1.0.0; usage documents 0/1/2 with meanings plus the 130
+      interrupt carve-out; --nonsense exits 2 naming the accepted invocation with
+      GIT_TRACE showing zero rev-list/merge-base/rev-parse/for-each-ref calls;
+      exit literals limited to 2 plus exactly one 130 inside _on_interrupt,
+      installed by trap (INT/TERM); zero network helpers and zero network git
+      subcommands; worktree empty and index/ref/stash digests identical across a
+      PASS run and a usage-error run. Dogfood: ./scripts/lint-commit-range.sh
+      --base main-tools -> 'VERDICT: PASS — 18 commits in range; 0 offending
+      commit(s); 0 distinct rule(s) hit', binary=node_modules/.bin/commitlint
+      origin=repository-local, no PATH prefix. Two notes on the phase: (a) the
+      gate gained PURE:/IMPURE: section markers so the plan's declared bash
+      posture (per .ai/rules/bash.md section 10.2) holds — comment-only, suite
+      re-run green; (b) one declared verification literal is not literally
+      satisfiable and is recorded rather than weakened: plan line 13 also asserts
+      'test -z \"$(git stash list)\"', but two user-owned stashes predate this
+      change (stash@{0} feat/GH-112 and stash@{1} feat/GH-37, both 2026-07-04).
+      The property the line exists to protect — the stash is unchanged by the
+      gate — is proven directly: identical stash-list digest before/after PASS
+      and usage-error runs, plus TC-COMMITLINT-018's index/ref/file-list/fsck
+      digests across PASS, FAIL, SKIP and ERROR. No stash was touched or dropped."
+    type: info
+    date: "2026-11-11"
