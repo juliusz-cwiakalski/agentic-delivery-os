@@ -277,3 +277,78 @@ at `c2594adb`.
 | F-15 | test plan frontmatter `last_updated` now follows `created` | `created=2026-11-10T19:30:00Z`, `last_updated=2026-11-10T23:55:00Z` |
 | F-5 | Not acted on in the diff: the readiness closure record that supersedes the two NOT_READY verdicts is produced by `@readiness-reviewer` (readiness-iter-6 or an equivalent record). It is not in the tree yet, so this row records the outstanding gate; no file in this plan's scope is involved | close-out note; record owned by `@readiness-reviewer` |
 | F-17 | Not acted on in the diff: squashing the 40 branch commits to the phase commits plus artifact commits is a PR-time action | close-out note |
+
+## P8 external review-board remediation
+
+PR #285 review-board findings map one-to-one to plan tasks 8.1-8.15. Product
+commits: `c74bac02` (state/daemon/doctor), `14b4e892` (S15/S16 edges and the
+M2 map), `e9997108` (contracts, journeys, events), `6aa6f1a0` (scenario
+Assert contract), `c2e8bfb9` (delta note, registry, status pointers), plus
+`a7194c96` for the spec v2.1 / plan v2.0 / test plan v2.4 artifacts.
+
+Observed at the P8 head:
+
+- P28: `product_files=32`; `planning_files=31`; `registry_files=1`;
+  `outside_planning_outside_registry=0`; `forbidden_root_files=0`;
+  `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`;
+  `phase7_unknown_paths=0`; `total_product_files=35`; **but**
+  `unexpected_planning_paths=1` — the DEC-37 `cli-command-registry.md` path is
+  outside P28's planning allowlist, which still names only backlog, status,
+  the milestones index, the m1 pages, and `milestones/m2/`.
+- P11: `pages=28`; `header_attribution=14/14`; `reachability_missing=0`
+  (doctor included); `doctor_reachability=required (DEC-24)`;
+  `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`;
+  `tail_violations=0`; `current_violations=0`; `real_headers=PASS`; **but**
+  `fixture_conforming=FAIL` because the `/tmp/sb` fixture predates the new
+  doctor/state/daemon checks and the procedure only patches board/watchdog.
+- P14: `changed_pages=14/14`; `state.md` contributes two OUTSIDE hunks
+  (the removed `state check`/`state describe` synopsis and the DESCRIPTION
+  sentence) because the page guard confines every hunk to the header region.
+- P30: `body_identical=13/14`; `entrypoint_bound=OK`; **verdict FAIL** for the
+  same reason — CG-REC-001 requires a body edit that P30 requires to be
+  byte-identical.
+- P36: `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned,
+  0 violations`; `unregistered_findings=0`; **but** `seed_hits=2` — the two
+  DEC-37 registry rows (`ados projects`, `ados events`) that P37 requires are
+  new lines carrying the working-name literal, and P36's added-line scan
+  counts them even though the guard itself does not scan that file.
+- P17/P18: `m1_table_blank_before=OK`; `m1_table_separator=OK`;
+  `removed_lines=0 added_lines=31`; `pointer_runs=4 pointer_windows=4
+  bad_runs=0`; `retention_oracle=OK`; PASS.
+- P19: `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=3/3`;
+  `deviation_statement=OK`; `pack_contents_table=byte-identical`.
+- P20: all C4/flow/delta headings OK, ticket-named queue flow retained.
+- P21: `contract_markers_missing=0`; `resolve_grammar=OK`;
+  `attempts_per_ref=OK`; `topic_parents=OK`; `tolerance_2pct=OK`;
+  `s17_grace=OK`; `s17_stop_event=OK`; `s17_park_fields=OK`.
+- P22/P38: `scenario_count=40`; `assert_count=40`;
+  `assert_shape_violations=0`; `assert_count_matches=OK`; `s2_one_repo=OK`;
+  `s17_06=OK`; `s17_07=OK`; `stories_below_two=0`.
+- P25/P26/P27/P37/P39: every page complete; `mount_mechanism=OK`;
+  `issue_286=OK`; `m2_targets=12/12`; `broken_links=0`;
+  `restated_ac_blocks=0`; `registry_projects/events/attempts=OK`;
+  `projects_repos_boundary=OK`; `grace_seconds=OK`; `zero_spend_form=OK`;
+  `zero_vs_absent=OK`; `stop_event=OK`; `status_brief_fields=OK`;
+  `ac5_scope=OK`.
+- P32 (two-run protocol): default exit 1 with the lone
+  `ci-baseline-parity` failure (environmental); repo-local `TMPDIR` exit 0;
+  `gate_verdict=PASS`. P31: `guard_exit=0`, `planning_markers=0`.
+
+Four gate expectations remain unmet, all in the gate predicates rather than
+the artifacts:
+
+1. P28 `unexpected_planning_paths=0`: allowlist needs
+   `cli-command-registry\.md` added to the planning alternation (DEC-37).
+2. P36 `seed_hits=0`: the added-line seed scan needs the DEC-37 registry file
+   excluded, as the forbidden-literals guard already does (it scans registered
+   docs only).
+3. P14/P30 header-only containment for `state.md`: CG-REC-001 requires the
+   synopsis removal, so `state.md` needs the same body exception the
+   entrypoint page has, or the state page must be dropped from the
+   header-only page set.
+4. P11 `fixture_conforming`: the `/tmp/sb` fixture must be refreshed (or the
+   fixture setup extended) for the new doctor/state/daemon checks.
+
+No product wiring, daemon mount, or tracker action was performed; the
+registry edit is bounded by DEC-37 and changes no naming rule; the readiness
+closure record remains owned by `@readiness-reviewer`.
