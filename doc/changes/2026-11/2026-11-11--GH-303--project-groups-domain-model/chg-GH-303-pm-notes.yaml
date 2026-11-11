@@ -9,12 +9,12 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T18:57:22.822Z }
   delivery_planning: { started: null, completed: 2026-11-11T18:57:30.498Z }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
-  delivery: { started: null, completed: 2026-11-11T14:09:58.234Z }
+  delivery: { started: null, completed: 2026-11-11T18:58:21.419Z }
   system_spec_update: { started: null, completed: 2026-11-11T14:13:22.813Z }
   review_fix: { started: null, completed: 2026-11-11T16:03:09.236Z }
   quality_gates: { started: null, completed: 2026-11-11T16:19:45.945Z }
   dod_check: { started: null, completed: 2026-11-11T16:20:38.536Z }
-  pr_creation: { started: null, completed: 2026-11-11T18:57:38.448Z }
+  pr_creation: { started: null, completed: null }
 decisions:
   - text: "Delivery mode: autonomous. The session asked for end-to-end delivery of
       exactly GH-303 with PR creation, leaving merge authority to the CEO (Mode
