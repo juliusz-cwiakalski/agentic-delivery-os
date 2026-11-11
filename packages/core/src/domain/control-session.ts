@@ -12,7 +12,7 @@ import {
   CONTROL_PROTOCOL_CURRENT,
   CONTROL_PROTOCOL_FLOOR,
   CONTROL_PROTOCOL_OFFERED,
-  LOCAL_CALLER_PRINCIPAL,
+  type ControlEnvelopeEventData,
   type ControlErrorData,
   type ControlErrorFrame,
   type ControlEventFrame,
@@ -21,8 +21,11 @@ import {
   type ControlResponseFrame,
   type ControlTopic,
   type DaemonClockPort,
+  ERROR_TABLE,
+  LOCAL_CALLER_PRINCIPAL,
+  TAXONOMY_OVERFLOW,
+  TAXONOMY_VERSION,
 } from "#contracts";
-import { ERROR_TABLE } from "#contracts";
 
 const errorData = (code: string): ControlErrorData => {
   const entry = ERROR_TABLE.find((candidate) => candidate.code === code);
@@ -83,6 +86,11 @@ export type ControlSessionApi = {
     topic: ControlTopic,
     snapshot: unknown,
     cursor: number,
+  ) => readonly ControlFrame[];
+  /** Publish one event-topic frame (no cursor, no snapshot revision). */
+  readonly publishEvent: (
+    topic: ControlTopic,
+    data: ControlEnvelopeEventData,
   ) => readonly ControlFrame[];
   readonly flush: (subscriptionId: string) => readonly ControlEventFrame[];
   readonly subscriptions: () => readonly ControlSubscriptionView[];
@@ -211,7 +219,42 @@ export const createControlSession = (options: ControlSessionOptions): ControlSes
               v: version ?? CONTROL_PROTOCOL_CURRENT,
               kind: "event" as const,
               type: "degraded" as const,
-              data: { degraded: "subscriber-overflow" as const, topic },
+              data: {
+                degraded: "subscriber-overflow" as const,
+                topic,
+                overflow: TAXONOMY_OVERFLOW,
+                taxonomyVersion: TAXONOMY_VERSION,
+              },
+            }),
+          );
+        }
+      }
+      return emitted;
+    },
+    publishEvent: (topic, data) => {
+      const emitted: ControlFrame[] = [];
+      for (const subscription of subscriptions.values()) {
+        if (subscription.topic !== topic) continue;
+        const frame: ControlEventFrame = withPrincipal({
+          v: version ?? CONTROL_PROTOCOL_CURRENT,
+          kind: "event" as const,
+          type: "frame" as const,
+          data,
+        });
+        subscription.buffer.push(frame);
+        if (subscription.buffer.length > options.subscriptionBuffer) {
+          subscriptions.delete(subscription.id);
+          emitted.push(
+            withPrincipal({
+              v: version ?? CONTROL_PROTOCOL_CURRENT,
+              kind: "event" as const,
+              type: "degraded" as const,
+              data: {
+                degraded: "subscriber-overflow" as const,
+                topic,
+                overflow: TAXONOMY_OVERFLOW,
+                taxonomyVersion: TAXONOMY_VERSION,
+              },
             }),
           );
         }

@@ -165,3 +165,26 @@ notes:
       this phase's declared scope.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 3 complete (commit deb3155f): the pure event projection
+      `packages/core/src/domain/event-projection.ts` derives the four event
+      topics from one `StateRecord` view it is handed — per-kind source mapping,
+      the eight-field envelope with `occurredAt` from the source record, the
+      non-empty `lane` and per-topic `ref` rules, the delta-only
+      `dependency-edge`, the derived `began` emitted together with the first
+      `completed` (two frames, ascending sequence), the per-`(topic, lane)`
+      process-scoped sequence allocator, the 64-per-topic per-tick cap with the
+      remainder pending, and the per-`(topic, lane, source family)` DM-9
+      watermark whose `phase.state` entry is a position inside the change's
+      cumulative artifact. No read, write, clock, or I/O: `project(view)` is the
+      only input. The module is registered in the file-set inventory and the
+      executable allowance, and re-exported from `domain/index.ts`.
+      `tests/structure/event-projection-bounds.test.ts` (TC-EVT-082's structural
+      half) proves the cap, the pending remainder, the contiguous 1..100
+      sequence series, the one-entry-per-pair watermark, and the cumulative
+      artifact's single position. Gate: `pnpm typecheck` green; the bounds suite
+      reports 7 pass / 0 fail; content-inventory green. Deviations: none in the
+      declared scope; TC ids owned by this phase remain zero, as the plan's map
+      states, and the behaviour cases stay with Phase 4/6.
+    type: "info"
+    date: "2026-11-12"

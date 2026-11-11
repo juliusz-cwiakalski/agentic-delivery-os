@@ -15,6 +15,7 @@ import {
 import {
   createControlServer,
   createDaemonRuntime,
+  createEventProjector,
   createLaneLaunchPlanner,
   type DispatchTruthReads,
   daemonScopeDigest,
@@ -35,9 +36,11 @@ import {
 } from "@delivery-os/core";
 import {
   CONTROL_PROTOCOL_CURRENT,
+  CONTROL_TOPICS,
   type ConfigFailure,
   type ConfigNodeOrigins,
   type ConfigValue,
+  type ControlEnvelopeEventData,
   type ControlTopic,
   type ControlTransport,
   DAEMON_HEARTBEAT_STATES,
@@ -251,7 +254,9 @@ const failure = (code: string, summary?: string) => ({
 });
 
 /** One bounded watch snapshot: the closed topic plus its projected content. */
-type WatchSnapshot = { readonly topic: ControlTopic; readonly snapshot: unknown };
+type WatchSnapshot =
+  | { readonly topic: ControlTopic; readonly snapshot: unknown }
+  | { readonly topic: ControlTopic; readonly event: ControlEnvelopeEventData };
 
 const byteLength = (text: string): number => new TextEncoder().encode(text).length;
 
@@ -380,8 +385,16 @@ const lanesWatchSnapshot = (store: StateStorePort): unknown | undefined => {
 const createWatchState = (store: StateStorePort) => {
   const last = new Map<ControlTopic, string>();
   const baselined = new Set<ControlTopic>();
-  const snapshotOf = (topic: ControlTopic): unknown | undefined =>
-    topic === "queue" ? queueWatchSnapshot(store) : lanesWatchSnapshot(store);
+  const projector = createEventProjector();
+  /**
+   * A snapshot topic's bounded projection. The four event topics have none: an
+   * event subscription carries no synthetic baseline (DEC-H).
+   */
+  const snapshotOf = (topic: ControlTopic): unknown | undefined => {
+    if (topic === "queue") return queueWatchSnapshot(store);
+    if (topic === "lanes") return lanesWatchSnapshot(store);
+    return undefined;
+  };
   return {
     snapshot: snapshotOf,
     prime: (topic: ControlTopic): void => {
@@ -404,6 +417,14 @@ const createWatchState = (store: StateStorePort) => {
         if (last.get(topic) === serialized) continue;
         last.set(topic, serialized);
         changes.push({ topic, snapshot });
+      }
+      // The four event topics project observed deltas from the durable ledgers.
+      // This phase may read once per fold; the one-shared-read restructure is a
+      // later declared phase.
+      const view = store.readRecords();
+      if (!view.ok) return changes;
+      for (const event of projector.project(view.value.records)) {
+        changes.push({ topic: event.topic, event });
       }
       return changes;
     },
@@ -1162,9 +1183,16 @@ const controlHandlers = (
       : { ok: true as const, data: { live: true as const, lane } };
   },
   subscribe: (payload: { readonly topic: ControlTopic }) => {
+    // An unknown topic is refused from the declaration before any store read:
+    // the delivered handler accepted it and served the `lanes` snapshot under
+    // the requested name (DEC-L, AC-F8-1).
+    if (!(CONTROL_TOPICS as readonly string[]).includes(payload.topic)) {
+      return { ok: false as const, code: "events.topic-unknown" };
+    }
     const snapshot = watchState.snapshot(payload.topic);
     if (snapshot === undefined) {
-      return { ok: false as const, code: "daemon.state-recovery-failed" };
+      // An event topic: accepted, with no synthetic baseline and no read.
+      return { ok: true as const, data: { topic: payload.topic } };
     }
     watchState.prime(payload.topic);
     return { ok: true as const, data: { topic: payload.topic, snapshot, cursor: 0 } };
