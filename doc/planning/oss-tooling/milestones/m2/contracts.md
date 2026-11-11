@@ -44,13 +44,16 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
   (pm-notes phase evidence, tracker state, CI on the pushed head), divergence
   refs, start and end timestamps, and the harness identity recorded per
   attempt.
-- **Read side.** `<binary> dispatch attempts [--ref <ref>] [--limit <n>]`
-  returns history as a machine envelope; `--limit` bounds the page and the
-  envelope reports whether more attempts remain.
-- **Divergence resolution.** `<binary> dual-run resolve <ref> --note <text>`
-  resolves a recorded divergence; the result reports unresolved counts. When
-  live tracker truth is unreachable, resolution runs from local evidence and
-  declares `local-evidence` mode in the envelope.
+- **Read side.** `attempts.v1` is the per-ref read side:
+  `<binary> dispatch attempts --ref <ref> [--limit <n>]` returns that ref's
+  history as a machine envelope; `--limit` bounds the page and the envelope
+  reports whether more attempts remain. A repository's history is the union over its refs,
+  while the backlog keeps the ticket's per-repository wording.
+- **Divergence resolution.** `<binary> dispatch dual-run resolve <divergence-id> --note <text>`
+  resolves a recorded divergence (no `--ref` on resolve: the divergence id
+  carries the ref); the result reports unresolved counts. When live tracker
+  truth is unreachable, resolution runs from local evidence and declares
+  `local-evidence` mode in the envelope.
 - **Coverage and floor.** The summary keeps reporting evidence coverage and
   the exposure floor; the contract does not replace the handover gate.
 
@@ -59,7 +62,9 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
 The subscribe contract, owned by M2-S13 and published by the resident daemon.
 
 - **Topics.** `queue.graph`, `dispatch.attempt`, `phase.state`, and
-  `blockers.state`, extending the existing status and lanes topics.
+  `blockers.state` extend the delivered `queue` and `lanes` topics
+  (`CONTROL_TOPICS = [queue, lanes]`); `queue.graph` extends `queue`, and
+  `status` is a wire type, not a topic.
 - **Event kinds.** Each topic declares its kinds: `queue.graph` publishes
   entry, dependency-edge, release, and remove kinds; `dispatch.attempt`
   publishes started, refused, and completed kinds; `phase.state` publishes
@@ -91,8 +96,10 @@ The attribution contract, owned by M2-S14 and consumed by M2-S6 and M2-S10.
   cache-write tokens; calls; and cost per model, in the units the harness
   reports.
 - **Reconciliation.** Spend reconciles against harness-reported session
-  totals within a **declared tolerance**; the tolerance is stated in the
-  contract and reported with every summary, not applied silently.
+  totals within a **declared tolerance** whose default is ≤2% of the session
+  totals; the tolerance is stated in the contract and reported with every
+  summary, not applied silently. S14's own plan and test plan adopt that
+  default or declare a different tolerance with its justification.
 - **Absence.** Telemetry absence is a classified outcome, never a zero
   report: a delivery with no telemetry says so.
 - **Storage.** Schema-versioned local event storage; a version bump
@@ -144,7 +151,9 @@ Owned by M2-S17.
   admission rule ahead of it.
 - **Peak-window rule schema.** Rules are data per profile: a window list
   (start, end, and time zone), a multiplier per window, and a buffer before
-  and after each window. The schema is versioned with the profile.
+  and after each window. The park bound `graceSeconds` carries a default and a maximum bounded by the window buffer,
+  so the bounded grace can never outlast the buffer that protects the window.
+  The schema is versioned with the profile.
 - **Park reason vocabulary.** `peak-window` and `owner-hold`, each with an
   `until` timestamp. `peak-window` names the profile and the window end;
   `owner-hold` outranks provider windows and names the hold's expiry.
@@ -159,10 +168,15 @@ Owned by M2-S17.
   becomes a park cause alongside today's idle reason. Consequence for `lanes`:
   the `parked:<cause>` projection gains the `peak-window` and `owner-hold`
   causes and keeps printing the delivered three unchanged.
-- **Resume event shapes.** `dispatch.attempt` gains a parked kind and a
-  resumed kind; `queue.graph` gains a park-edge kind. The resume event
-  records the preserved session state reference, the same branch, and that
-  no re-dispatch occurred.
-- **Zero-spend evidence.** Telemetry proves zero billable model calls on the
-  parked profile during its window; the assertion is part of the contract,
-  not an inference from absence.
+- **Stop, park, and resume event shapes.** `dispatch.attempt` gains a stop
+  event kind, a parked kind, and a resumed kind; `queue.graph` gains a
+  park-edge kind. The stop event records the bounded-grace deadline, and the
+  resume event records the preserved session state reference, the same
+  branch, and that no re-dispatch occurred. `status` and `brief` carry the
+  park fields - parked count, reason, and until - so AC6 is auditable from
+  the same surfaces as the ledger events.
+- **Zero-spend evidence.** The zero-spend evidence form is a per-call ledger
+  entry or a provider-usage read, so zero billable calls is distinguishable
+  from telemetry absent: absence is a classified outcome, while zero is a
+  positive reading. AC5 is scoped from the park timestamp through the window
+  end, so a boundary call before the park is not counted against it.

@@ -19,11 +19,15 @@ The subscribe-taxonomy reference. It documents and lists the versioned topics
 the resident daemon publishes, so any client - a watch command, a script, a
 board - consumes one contract instead of scraping state files.
 
-The topics are `queue.graph`, `dispatch.attempt`, `phase.state`, and
-`blockers.state`, extending the delivered status and lanes topics. Each topic
-declares its event kinds, payload shape, and ordering guarantee. Events are
-ordered per lane by a monotonic sequence; a slow consumer overflows to a
-repoll that is defined per topic, so overflow never becomes silent loss.
+The delivered topic set is `queue` and `lanes` (`CONTROL_TOPICS =
+[queue, lanes]`); `status` is a wire type, not a topic. The four new topics
+extend them: `queue.graph` extends `queue`, and `dispatch.attempt`,
+`phase.state`, and `blockers.state` are new child topics. Each topic declares
+its event kinds, payload shape, and ordering guarantee - `dispatch.attempt`
+carries the stop, parked, and resumed kinds, and `queue.graph` carries the
+park-edge and dependency-edge kinds. Events are ordered per lane by a
+monotonic sequence; a slow consumer overflows to a repoll that is defined per
+topic, so overflow never becomes silent loss.
 
 This surface is proposed for M2-S13 and is not yet registered at the root
 listing; see [../entrypoint-delta.md](../entrypoint-delta.md). The contract is
@@ -63,8 +67,10 @@ Envelope `data` carries:
 
 ```
 $ <binary> events list
-queue.graph       v1  kinds=4  ordered per lane  overflow=repoll
-dispatch.attempt  v1  kinds=3  ordered per lane  overflow=repoll
+queue             v1  kinds=4  ordered per lane  overflow=repoll
+lanes             v1  kinds=3  ordered per lane  overflow=repoll
+queue.graph       v1  kinds=6  parent=queue      ordered per lane  overflow=repoll
+dispatch.attempt  v1  kinds=4  ordered per lane  overflow=repoll
 phase.state       v1  kinds=3  ordered per lane  overflow=repoll
 blockers.state    v1  kinds=3  ordered per lane  overflow=repoll
 ```

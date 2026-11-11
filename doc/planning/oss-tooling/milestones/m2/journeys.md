@@ -28,7 +28,7 @@ A repository is close to handover; the owner wants evidence, not a claim.
 1. `<binary> dispatch attempts --ref` lists the recent attempts with their
    tokens, corroboration triples, divergence refs, timestamps, and harness.
 2. One attempt diverges: the artefact and the tracker disagree. The owner
-   runs `<binary> dual-run resolve --ref --note "..."`. Tracker truth is
+   runs `<binary> dispatch dual-run resolve <divergence-id> --note "..."`. Tracker truth is
    reachable, so the resolution runs live and the unresolved count drops.
 3. A second divergence is on a day when tracker truth is unreachable. The
    same command resolves from local evidence and declares `local-evidence`
