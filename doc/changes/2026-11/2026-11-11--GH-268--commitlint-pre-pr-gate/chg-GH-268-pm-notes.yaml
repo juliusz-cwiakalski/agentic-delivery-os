@@ -304,3 +304,52 @@ notes:
       range 2.5 s. The budget assertion was not weakened."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 7 COMPLETE — code-review remediation (iteration 2). Commit
+      704cadbafca566b6fb929bf9226dd7f510fc6e47. F-1 (medium): the DM-1.h cause
+      regression is fixed. `_collect_lint_results` folded `<index>.status` with
+      `read -r status_token detail` under the script's global IFS of newline and
+      tab only, where a space is not a separator, so `error <exit>` stayed one
+      token, the `error` branch was unreachable, and the fallback printed the
+      worker's 0. The parse now reads the two fields with `IFS=' ' read -r
+      status_token detail`, so the `error` branch is reachable and the cause
+      names commitlint's own exit: invalid configuration prints (exit 1) and the
+      execution-failure shim prints (exit 3), never (exit 0). The outcome and
+      exit 2 are unchanged; fail-closed was never at risk. Non-vacuity proven:
+      reverting only the parse line turns exactly three cases red (invalid
+      configuration, execution failure, status-record parse) and leaves the
+      other 47 green. F-2 (low): worker-pool regression coverage added — a
+      missing record (`git log` forced to fail inside a worker through a PATH
+      wrapper) is ERROR/exit 2; an externally SIGKILLed worker is ERROR/exit 2
+      and never PASS; `ADOS_LINT_JOBS` validation asserts the detected default is
+      bounded by the cap of 8, a valid override is honoured, 999 is clamped, and
+      abc, 0, -2 and '2 3' each warn and fall back (asserted both by sourcing the
+      gate behind its main guard and end-to-end, where a junk value still
+      renders PASS); and serial (`ADOS_LINT_JOBS=1`) versus parallel (8) output
+      is byte-identical on the three-offender fixture. Suite grew 45 to 50
+      cases, all green. F-3 (low): the transient `mktemp -d` result directory is
+      now stated where behaviour is described —
+      doc/spec/features/feature-quality-gates-and-pr.md says the gate creates no
+      repository files and uses a temporary directory under `TMPDIR` that it
+      removes on exit, so no state survives a run, while the
+      ref/index/working-tree/stash surface stays untouched; the gate's own
+      header comment states the same posture. The change spec's section 10
+      clause is reconciled by this recorded evidence (created under TMPDIR,
+      removed on EXIT, no persistent state, NFR-5's enumerated surfaces
+      unchanged) and no requirement or assertion was weakened. The doc page keeps
+      its `ados_distribution: internal` marker and no other part of it changed.
+      The commit primitive reported the doc page as scope drift against phase
+      7's two declared script paths; it is the owning-doc amendment the plan's
+      phase-7 verification entry and review F-3 authorise, and the delivery
+      allowlist already names `doc/spec/features/`. Verification: bash
+      scripts/.tests/test-lint-commit-range.sh 50/50 passed; the dogfood run over
+      this branch's own range passed with 'RANGE LINT: base=main-tools
+      source=explicit merge-base=5372dbacb9c36e1d79d1e55873264155a53f44ff
+      head=704cadbafca566b6fb929bf9226dd7f510fc6e47 commits=27
+      binary=node_modules/.bin/commitlint origin=repository-local
+      ref=refs/remotes/origin/main-tools' and 'VERDICT: PASS — 27 commits in
+      range; all satisfy the configuration' (exit 0, 0 offenders, mode none);
+      bash scripts/.tests/test-doc-distribution.sh no drift across 82 in-scope
+      docs; plan validate GH-268 verdict=valid; delivery-os lint GH-268
+      conforms; git diff --check clean."
+    type: info
+    date: "2026-11-11"
