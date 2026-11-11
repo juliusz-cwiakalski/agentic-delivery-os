@@ -1,0 +1,805 @@
+---
+change:
+  ref: GH-290
+  type: feat
+  status: Proposed
+  slug: event-taxonomy
+  title: "Publish event taxonomy v1 on the daemon subscribe surface"
+  owners: ["engineering"]
+  service: delivery-os
+  labels:
+    - daemon
+    - control-protocol
+    - events
+    - taxonomy
+    - contracts
+    - cli
+    - help
+    - m2
+  version_impact: minor
+  audience: mixed
+  security_impact: low
+  risk_level: medium
+  dependencies:
+    internal:
+      - "delivered resident daemon, control protocol v1 codec/session/server, and watch projection (M1-S18, GH-238)"
+      - "delivered snapshot publish path for the `queue` and `lanes` topics"
+      - "delivered queue, dispatch-attempt, phase-transition, daemon-lane, and blocker ledgers (read sides only)"
+      - "prompt-required composition, help inventory, help-guide coverage and reference-page parity guards (GH-242, GH-288)"
+      - "delivered machine envelope, error table, and {0,1,2} exit projection (TDR-0005)"
+    external:
+      - "none (no network, provider, tracker, or credential surface is touched)"
+links:
+  issue: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/290
+  related_changes: ["GH-290", "GH-238", "GH-242", "GH-284", "GH-288"]
+  related_decisions: ["TDR-0024", "TDR-0023", "TDR-0005"]
+  contracts:
+    - "packages/core/src/contracts/control.ts"
+    - "packages/core/src/contracts/error-table.ts"
+    - "packages/core/src/contracts/daemon.ts"
+    - "packages/core/src/domain/control-codec.ts"
+    - "packages/core/src/domain/control-session.ts"
+    - "packages/core/src/domain/watch-stream.ts"
+    - "packages/core/src/app/control-server.ts"
+    - "packages/core/src/app/daemon-runtime.ts"
+    - "packages/core/src/app/watch.ts"
+    - "packages/cli/src/daemon-compose.ts"
+    - "packages/cli/src/help.ts"
+    - "packages/cli/src/help/prompt-required-commands.ts"
+    - "packages/cli/src/edge.ts"
+    - "scripts/checks/help-guide-coverage.ts"
+    - "tests/fixtures/help-guide/coverage.json"
+---
+
+# CHANGE SPECIFICATION
+
+> **PURPOSE**: Turn the daemon's delivered two-topic snapshot stream into a published, versioned event taxonomy — six topics, four of them carrying a seven-field change envelope — with a machine-readable reference surface whose version, kind sets, payload fields, ordering rule, and overflow policy are pinned per topic by contract tests, so a watch command, a script, and a board consume one declared contract instead of each reading state files.
+
+## 1. SUMMARY
+
+Publish **event taxonomy v1** on the resident daemon's subscribe surface and mount its reference command. The taxonomy declares six topics: the delivered `queue` and `lanes` snapshot topics, plus four event topics — `queue.graph` (extends `queue`), `dispatch.attempt`, `phase.state`, and `blockers.state` — each with a declared kind set, per-kind payload field list, one ordering rule, and one overflow policy. Every event on an event topic carries `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, a topic-specific `payload`, and the taxonomy version, inside the delivered open event `data` body; the two snapshot topics keep their delivered `{topic, cursor, snapshot}` frames byte-for-byte. A consumer that overflows keeps the delivered outcome — exactly one `degraded` event carrying `subscriber-overflow`, only that subscription dropped, then a repoll — now additively stamped `overflow: "repoll"` so the same value a client reads from the reference surface is the value it reads on the wire.
+
+`<binary> events list` and `<binary> events describe <topic>` mount as one unit: prompt-set entry, edge composition, help entries, an M2 reference page, a coverage-inventory row, and the page root the help gates resolve. The taxonomy declaration is the single authored source: the reference surface is generated from it, and per-topic contract tests compare both the surface and the daemon-emitted frames against it, so a version, kind, payload-field, ordering, or overflow drift fails a named test.
+
+The change is additive on every delivered axis. It adds no wire type, no state record kind, no payload schema version, no migration, no package dependency, and no new capability in any engine; it widens one internal topic union, adds one command family, one contract module, one event projection, and exactly three error-table rows in a new `events` domain kind.
+
+## 2. CONTEXT
+
+### 2.1 Current State Snapshot
+
+The resident daemon, its control protocol, and its snapshot publish path are delivered. The taxonomy does not exist:
+
+- **Two topics, closed.** `CONTROL_TOPICS = ["queue", "lanes"]`; `status` is a member of `CONTROL_WIRE_TYPES`, not a topic (`packages/core/src/contracts/control.ts:25-40`). Subscriptions are accepted only for those two topics, and the daemon's subscribe handler is typed over the same literal pair (`packages/cli/src/daemon-compose.ts:1164-1171`).
+- **Events carry a snapshot revision and nothing else.** One event body is `{ topic, cursor, snapshot? }` or `{ degraded, topic? }` (`control.ts:100-103`); the session's publish builds exactly `{ topic, cursor, snapshot }` (`packages/core/src/domain/control-session.ts:195-220`). There is no `kind`, `lane`, `ref`, `sequence`, `occurredAt`, or `payload` on the wire, and therefore no change semantics a client can branch on.
+- **The cursor is a per-topic snapshot revision.** `lastPublished` is keyed by topic; the cursor increments when that topic's stable-serialized snapshot changes, and an unchanged snapshot publishes nothing (`packages/core/src/app/control-server.ts:317-337`). It says "which revision of this topic's snapshot", never "which change, in which lane order".
+- **The publish source is snapshot-diff and covers exactly two topics.** `createWatchState` projects the bounded `queue` and `lanes` snapshots, primes a baseline, and yields only changed topics (`packages/cli/src/daemon-compose.ts:375-411`); the resident loop calls `publishState` once per tick (`packages/core/src/app/daemon-runtime.ts:240-244`). The first observation of a topic is a baseline, not an event.
+- **Overflow is delivered and uniform.** Each subscription has a bounded buffer; overflowing deletes only that subscription and emits exactly one `degraded` event carrying `subscriber-overflow` for that topic (`control-session.ts:195-220`); the same capacity bound also caps the per-connection subscription count, refusing with `daemon.subscriber-degraded` (`control-session.ts:186-194`); the value is `daemon.subscription-buffer` with default `256` (`packages/core/src/contracts/daemon.ts:22`, `control-server.ts:284`). The CLI watch degrades to a repoll on that marker (`packages/core/src/app/watch.ts:153-158`) and its projection renders `degraded: "subscriber-overflow"` (`packages/core/src/domain/watch-stream.ts:71-79`).
+- **The event `data` body is open on the wire.** The codec validates the protocol version, frame kind, wire type, principal, exactly-one-of `payload`/`data`/`error`, and the absence of `id` on events; it does not whitelist fields inside `data`, and it does not validate a topic value at all (`packages/core/src/domain/control-codec.ts:79-120`). Additive fields inside `data` are therefore wire-compatible with v0 and v1 peers.
+- **The four source planes exist as durable ledgers, not as events.** `queue.entry` (`delivery.queue.entry.v1`: `ref`, `repository?`, `repositoryRoot?`, `priority`, `recordedAt`), `queue.dependency` (`delivery.queue.dependency.v1`: `ref`, `edges[]`, `recordedAt`), `queue.lease` (`delivery.queue.lease.v1` with the closed `operation` set `acquired|renewed|released|taken-over`), and `queue.park` are declared together with the five queue record kinds and their key prefixes (`packages/core/src/contracts/queue.ts:293-342`), and each has a fold read side (`readQueueEntries`, `readQueueDependencies`, `readQueueLeases`, `readQueueParks`). One attempt record per classified dispatch carries `attemptId`, `repository`, `ref`, `harness`, `evidenceClass`, `startedAt`, `finishedAt`, `handoverState`, `outcome`, `token`, `comparison`, `falseSuccess`, `corroboration`, `evidenceRefs` (`packages/core/src/contracts/dispatch.ts:189-211`), and `HARNESS_OUTCOMES` includes `refused` (`packages/core/src/contracts/harness.ts:159-167`). Phase landings are `phase.transition` records with `changeRef`, `phaseId`, `operation` (`complete|reopen`), `timestamp`, `outcome`, reopen-only `reason`, and completion-only commit intent (`packages/core/src/contracts/registry.ts:39-49`), folded per change by `foldPhaseState`. Blockers are `blocker.question` (`id`, `type`, `audience`, `lane`, `ref`, `question`, `options[]`, `askedAt`) and `blocker.answer` (`questionId`, `answeringAudience`, `choice?`, `text?`, `answeredAt`, `applied: false`, `laneResume`) records (`packages/core/src/contracts/blockers.ts:200-239`), and the daemon records `resumeIntent` on the matching delivering lane when it consumes an answer (`packages/core/src/app/daemon-runtime.ts:219-225`; `packages/cli/src/daemon-compose.ts:426-464`). Lanes are `daemon.lane` records with `ref`, `state`, `harnessKind?`, `sessionId?`, `spawnOrdinal`, `liveness?` (`packages/core/src/contracts/daemon.ts:163-177`).
+- **Two delivered gaps between the source planes and the contract's kind sets.** No delivered path removes a queue entry — the queue verbs are `ready`, `list`, `plan`, `add`, `prioritize`, `dep`, `claim`, `release` (`packages/cli/src/commands/queue.ts:359-432`) — and no delivered path records a phase *begin*: `phase.transition` records landings only, and the fold records `started` at the first completion (`packages/core/src/state/registry.ts:377-397`). Both gaps are handled explicitly in this specification (§5.1 F-3, DM-8, DEC-J).
+- **Nothing describes the subscribe contract.** There is no `events` command, no taxonomy declaration, no reference page for the subscribe surface, and no `events` member in `PROMPT_REQUIRED_COMMANDS`, which today holds eighteen commands ending in `daemon` and `projects` (`packages/cli/src/help/prompt-required-commands.ts:11-30`).
+- **The planning pack contradicts itself on the kind sets.** `m2/contracts.md` §Event taxonomy v1 enumerates four `queue.graph` kinds and three `dispatch.attempt` kinds and assigns the stop, parked, resumed, and park-edge shapes to M2-S17 (`doc/planning/oss-tooling/milestones/m2/contracts.md:62-88,170-179`), while `m2/commands/events.md` prints `queue.graph` with 6 kinds and `dispatch.attempt` with 4 and gives `dispatch.attempt` the stop/parked/resumed kinds (`doc/planning/oss-tooling/milestones/m2/commands/events.md:26-30,69-76`). `TDR-0024` records the contract section as the authority and the page as pre-contract text (`doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md`).
+- **The test scenarios assert the observable.** SC-M2-S13-01 asserts a monotonic `sequence` on `queue.graph` events and a pinned `data.taxonomyVersion`; SC-M2-S13-02 asserts `data.overflow == "repoll"` for each of the four new topics (`doc/planning/oss-tooling/milestones/m2/test-scenarios.md:215-230`).
+
+**Users and current impact.** A watch command, a script, or a board that wants delivery-state changes has exactly one option: poll `queue list`, `lanes`, `blockers list`, `phase list`, and the attempt ledger on its own cadence and diff the results itself. Each consumer therefore invents its own reading of the same state files, the daemon's own subscribe surface answers "a snapshot changed" rather than "an entry was added", and no client can state which contract version it speaks.
+
+### 2.2 Pain Points / Gaps
+
+- **No change semantics on the wire.** The subscribe surface answers delivery (a bounded, deduplicated snapshot) and not change (what happened, about what, in what order). A client cannot branch on an event kind because there is no kind.
+- **Four delivery-state planes are unobservable.** Queue graph changes, dispatch attempts, phase transitions, and blocker state changes exist durably and have no published projection, so every consumer re-derives them.
+- **The contract cannot be cited.** No client can name a taxonomy version, and no test can pin one, because nothing publishes the topic set, the kind sets, the payload fields, the ordering rule, or the overflow policy.
+- **One mistake has no identity.** A `subscribe` for a topic outside the closed set is decoded successfully (the codec does not validate topics) and then refused as `daemon.state-recovery-failed`, a state-recovery failure class, for what is a client-side mistake.
+- **Two planning pages disagree, and neither is executable.** The kind counts and the stop/park/resume prose in the reference page contradict the contract section, and neither page can fail a test.
+- **The overflow instruction is implicit.** The delivered degraded frame names `subscriber-overflow`; the remedy a client must take — repoll — is stated in prose in the system spec and asserted by the test scenario, never declared per topic on a surface a client reads.
+
+## 3. PROBLEM STATEMENT
+
+Because the daemon's subscribe surface carries a per-topic snapshot revision and no event kind, publishes only `queue` and `lanes`, and declares nothing about topics, payloads, ordering, or the overflow remedy, a watch command, a script, or a board cannot consume delivery-state changes from one contract: it must poll and diff five command surfaces on its own cadence, cannot state the contract version it speaks, cannot tell a slow-consumer drop from a quiet period without reading prose, and cannot name the topic it asked for wrongly — which blocks every M2 consumer that presumes one published subscribe contract.
+
+**Who is affected.** The operator and the owner lose a single integration surface for scripts and dashboards; the M2 board, attempts read side, and engine-first operations stories have no declared contract to consume; agents that stream delivery state keep re-implementing snapshot diffing; and S17 has no declared landing place for the kinds it owns, so its delivery would silently edit a shipped kind set.
+
+## 4. GOALS
+
+- **G-1** Declare event taxonomy v1 as one authored source: six topics, each topic's shape, kind set, per-kind payload fields, lane selection, ordering rule, and overflow policy, plus the taxonomy version.
+- **G-2** Publish the four event topics from durable records, so a subscriber to `queue.graph` observes entry and dependency changes it can act on (ticket AC1).
+- **G-3** Put a change envelope on every event of an event topic — `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload` — and the taxonomy version, without changing the delivered snapshot topics' frames.
+- **G-4** Guarantee per-`(topic, lane)` monotonic `sequence` and nothing else; state that a gap requires a repoll and that the delivered `cursor` is not an ordering signal.
+- **G-5** Preserve the delivered overflow behaviour for every topic and carry `overflow: "repoll"` on the degraded frame and on the reference surface, so the declared remedy and the wire remedy are the same value.
+- **G-6** Mount `events list` / `events describe <topic>` as one unit — prompt-required entry, edge composition, help family and verb entries, M2 reference page, coverage-inventory row, page root — so the family is reachable from root `--help` only when it is complete.
+- **G-7** Pin the taxonomy version with per-topic contract tests over both the reference surface and the daemon-emitted frames, generated from the declaration so a second copy cannot drift.
+- **G-8** Keep the change additive: no new wire type, state record kind, payload schema version, migration, engine capability, or package dependency, and exactly three named error rows.
+
+### 4.1 Success Metrics / KPIs
+
+| Metric | Target |
+|---|---|
+| Declared topics equal the served topic set | 6 of 6, exact set equality, `status` absent |
+| Declared kinds equal the contract section's enumeration | 4 / 3 / 3 / 3 for `queue.graph` / `dispatch.attempt` / `phase.state` / `blockers.state`, exact set equality |
+| Emitted events carrying all eight envelope fields | 100% on all four event topics |
+| Per-`(topic, lane)` sequence monotonicity violations | 0 |
+| Gap-detection outcomes that repoll instead of inferring order | 100% |
+| Per-topic overflow parity (one degraded event, that subscription only, repoll declared) | 6 of 6 topics identical |
+| Topics whose declared overflow value equals the wire value | 6 of 6 (`repoll`) |
+| Delivered `queue` / `lanes` frame bytes changed | 0 |
+| Declared kinds with no v1 emitter, visibly marked on the surface | 1 of 15 (`queue.graph.remove`), marked `emitted: false` |
+| New wire types / state record kinds / schema versions / migrations / dependencies | 0 / 0 / 0 / 0 / 0 |
+| New error-table rows | 3, all in a new `events` domain kind; 0 existing rows changed |
+| Exit digits used by the mounted surface | `{0, 1, 2}` only |
+| Prompt-required commands / root families after the mount | 19 / 19 |
+| Taxonomy drift classes that fail a named test (version, kind, payload field, ordering, overflow) | 5 of 5 |
+
+### 4.2 Non-Goals
+
+- **NG-1** No change to the delivered control frame shape, wire type set, protocol version or floor, codec validation, at-most-once control actions, or subscription buffer bound. The event `data` body stays open; the envelope rides inside it.
+- **NG-2** No S17 shapes: no stop, parked, resumed, or park-edge kind is declared by this change. They are the recorded v2 extension path.
+- **NG-3** No new state record kind, payload schema version, key prefix, migration, backfill, or seeding; no engine behaviour change in the queue, dispatch, phase, blocker, lane, or daemon runtime.
+- **NG-4** No queue or lane mutation is added. The taxonomy observes; it never writes.
+- **NG-5** No board, spend v2, telemetry, attempts read side, projects, or cross-repository group scoping.
+- **NG-6** No new `--watch` topic on the CLI: `queue --watch` and `lanes --watch` keep their delivered grammar and behaviour, and the four event topics are consumed through the daemon's subscribe surface by clients.
+- **NG-7** No second taxonomy version served concurrently, no per-client version negotiation, and no version field on any frame that does not already carry one.
+- **NG-8** No dashboard, metric, trace, log line, alert, or telemetry record is added.
+
+## 5. FUNCTIONAL CAPABILITIES
+
+| ID | Capability | Rationale |
+|---|---|---|
+| F-1 | One authored taxonomy declaration: six topics with shape, kind sets, payload fields, lane rule, ordering, overflow, and version | A version that prose asserts is a version that drifts; one declaration is what makes the pin a comparison instead of a claim. |
+| F-2 | Machine-readable reference surface (`events list`, `events describe <topic>`) generated from the declaration | A client and a test must read the same facts; a hand-written surface is the second source of truth this change exists to remove. |
+| F-3 | Event envelope and per-kind emission on the four event topics from durable records | The delivered plane answers "a snapshot changed"; four delivery-state planes need "what happened, about what". |
+| F-4 | Per-`(topic, lane)` monotonic `sequence` as the only ordering guarantee, with gap-to-repoll | A guarantee the publish path can actually keep is worth more than one it cannot; the delivered cursor cannot express lane order. |
+| F-5 | Overflow-to-repoll preserved for every topic and carried as one declared value | The delivered behaviour already works and is proven; the missing half is that a client cannot read the remedy. |
+| F-6 | Snapshot topics preserved exactly, with the shape split declared per topic | Two delivered topics have live subscribers; a taxonomy that re-keys them is a breaking change for no gain. |
+| F-7 | The reference command mounted as one unit with help, coverage, and a page root | A command that is absent from the prompt set, the help inventory, or the coverage fixture fails the guards in both directions. |
+| F-8 | Additive compatibility: error rows, envelope conventions, and no new persistence | Every new axis (kind, sequence, overflow value) is cheap only if it is additive inside the delivered open body. |
+
+### 5.1 Capability Details
+
+**F-1 — One authored taxonomy declaration.**
+The declaration is runtime-neutral data: the taxonomy version `v1`, and one record per topic carrying `name`, `version`, `shape` (`snapshot` | `event`), `parent` (only `queue.graph` has one: `queue`), `frame` (the ordered field list of the frames that topic emits), `lane` (the lane-selection rule), `ordering`, `overflow`, `kinds[]`, and `payloadFields[]`. The topic set is closed at six: `queue`, `lanes`, `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`. `status` stays a wire type and is not a topic.
+
+| Topic | Shape | Parent | Lane rule | Declared kinds (order) | Ordering | Overflow |
+|---|---|---|---|---|---|---|
+| `queue` | snapshot | — | none (`lane` never appears) | `snapshot` | `snapshot-revision` | `repoll` |
+| `lanes` | snapshot | — | none (`lane` never appears) | `snapshot` | `snapshot-revision` | `repoll` |
+| `queue.graph` | event | `queue` | the entry `ref` | `entry`, `dependency-edge`, `release`, `remove` | `sequence-per-lane` | `repoll` |
+| `dispatch.attempt` | event | — | the delivery `ref` | `started`, `refused`, `completed` | `sequence-per-lane` | `repoll` |
+| `phase.state` | event | — | the `changeRef` | `began`, `completed`, `reopened` | `sequence-per-lane` | `repoll` |
+| `blockers.state` | event | — | the blocker's recorded `lane`, `null` when it holds none | `published`, `updated`, `cleared` | `sequence-per-lane` | `repoll` |
+
+`ordering` and `overflow` are closed values, not prose: `ORDERING_VALUES = ["sequence-per-lane", "snapshot-revision"]` and `OVERFLOW_VALUES = ["repoll"]`. A snapshot topic's `snapshot-revision` value states what the delivered `cursor` is and is explicitly *not* an ordering guarantee (DEC-D). A kind's identity is the pair `(topic, kind)`; `kind` is scoped to its topic and is not globally unique — `completed` exists on both `dispatch.attempt` and `phase.state`, and `published`/`updated`/`cleared` are not shared with any other topic.
+
+**F-2 — Reference surface.**
+`<binary> events list [--json]` and `<binary> events describe <topic> [--json]` are pure data rendering: no store, configuration, git, network, or filesystem read, and no write.
+
+```
+<binary> events list
+queue             v1  shape=snapshot  kinds=1  ordered by snapshot revision  overflow=repoll
+lanes             v1  shape=snapshot  kinds=1  ordered by snapshot revision  overflow=repoll
+queue.graph       v1  shape=event     kinds=4  parent=queue  ordered per lane  overflow=repoll
+dispatch.attempt  v1  shape=event     kinds=3  ordered per lane  overflow=repoll
+phase.state       v1  shape=event     kinds=3  ordered per lane  overflow=repoll
+blockers.state    v1  shape=event     kinds=3  ordered per lane  overflow=repoll
+```
+
+The machine envelope keeps the delivered `{ ok, command, data, error?, warnings? }` shape with `command` = `events list` or `events describe`. `data` carries `taxonomyVersion` (`"v1"`), `envelope[]` (the eight event-frame fields, in order), and `topics[]` (one record per topic for `list`, exactly one for `describe`). A topic record carries:
+
+| Key | Contract |
+|---|---|
+| `name` | the topic name, a member of the closed topic set |
+| `version` | `"v1"` |
+| `shape` | `snapshot` or `event` |
+| `parent` | present only on `queue.graph`, value `queue` |
+| `frame` | the ordered frame field list: `["topic","cursor","snapshot"]` for a snapshot topic, `["topic","kind","lane","ref","sequence","occurredAt","payload","taxonomyVersion"]` for an event topic |
+| `lane` | the lane-selection rule: `none`, `ref`, `change-ref`, or `blocker-lane` |
+| `kinds` | one record per declared kind: `name`, `emitted` (boolean), `payloadFields[]`; ordered as declared |
+| `payloadFields` | the derived union of the topic's per-kind payload fields, never authored separately |
+| `ordering` | `sequence-per-lane` or `snapshot-revision` |
+| `overflow` | `repoll` |
+
+`events describe <topic>` adds nothing to the machine shape (it returns the same `data` with one topic record) and renders, in text, the kinds with their `emitted` state, the per-kind payload fields, the lane rule, the ordering sentence, the overflow sentence, and the frame field list — within the delivered human bounds (≤ 40 lines, ≤ 8 192 bytes). `emitted: false` appears exactly once in v1: `queue.graph` kind `remove` (§5.1 F-3, DEC-J).
+
+Exit codes follow the delivered projection: `0` the reference was produced; `1` the request was refused (`events.topic-unknown` for a topic outside the set, including `status`; `events.verb-unknown` for an absent or unknown verb); `2` `events.taxonomy-unavailable` when the declaration fails its own integrity check (DEC-M).
+
+**F-3 — Event envelope and per-kind emission.**
+An event-topic frame carries `data` with eight fields, in this order: `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion`. `lane` is present and `null` when no lane holds the subject — never absent. `ref` is the subject identity; `occurredAt` is the source record's own ISO-8601 UTC timestamp, so a re-observation of the same record yields the same value; `payload` is the topic-specific object. An event frame carries no `cursor`.
+
+| Topic | Kind | Source (durable, unchanged) | Payload fields |
+|---|---|---|---|
+| `queue.graph` | `entry` | `queue.entry` record | `ref`, `repository?`, `priority`, `recordedAt` |
+| `queue.graph` | `dependency-edge` | `queue.dependency` record folded against the previous record for the same `ref` | `ref`, `edges[]`, `added[]`, `removed[]`, `recordedAt` |
+| `queue.graph` | `release` | `queue.lease` record with `operation: released` | `leaseId`, `repository`, `ref`, `holder`, `runner`, `weightClass`, `parkCause?`, `recordedAt` |
+| `queue.graph` | `remove` | **none in v1** — no delivered path removes an entry (`queue` verbs are `ready`, `list`, `plan`, `add`, `prioritize`, `dep`, `claim`, `release`); entry removal is M2-S15 | `ref`, `reason`, `recordedAt` (declared; `reason` from the S15 vocabulary `landed\|abandoned\|superseded\|reconciled`) |
+| `dispatch.attempt` | `started` | `daemon.lane` record appended in state `delivering` for a `spawnOrdinal` | `ref`, `spawnOrdinal`, `sessionId?`, `harnessKind?`, `recordedAt` |
+| `dispatch.attempt` | `refused` | `dispatch.attempt` record with `outcome: refused` | `attemptId`, `ref`, `repository`, `harness`, `evidenceClass`, `token`, `startedAt`, `finishedAt`, `evidenceRefs[]` |
+| `dispatch.attempt` | `completed` | `dispatch.attempt` record with any other outcome | `attemptId`, `ref`, `token`, `outcome`, `handoverState`, `comparisonClass`, `falseSuccess`, `divergenceRef?`, `finishedAt` |
+| `phase.state` | `began` | `phase.transition` with `operation: complete`, observed for a phase whose projection had no prior `started` | `changeRef`, `phaseId`, `timestamp` |
+| `phase.state` | `completed` | `phase.transition` with `operation: complete`, observed for a phase whose projection already had a `started` | `changeRef`, `phaseId`, `commitIntent?`, `commitIntentBasis?`, `commitSha?`, `timestamp` |
+| `phase.state` | `reopened` | `phase.transition` with `operation: reopen` | `changeRef`, `phaseId`, `reason`, `timestamp` |
+| `blockers.state` | `published` | `blocker.question` record | `id`, `type`, `audience`, `question`, `options[]`, `askedAt` |
+| `blockers.state` | `updated` | `blocker.answer` record | `id`, `answeringAudience`, `choice?`, `text?`, `answeredAt`, `resumeMode` |
+| `blockers.state` | `cleared` | the matching delivering lane's `resumeIntent` recorded after an answer is consumed | `id`, `lane`, `resumeMode`, `clearedAt` |
+
+Three declarations make the mapping honest rather than aspirational:
+
+1. **`completed` is not a success claim.** The attempt record's `outcome` may be `completed`, `premature-end`, `failed`, or `timed-out`; the kind names "the attempt ended and was recorded", and the payload's `outcome` names what happened. A refusal is the one outcome that gets its own kind, because a refused attempt never ran.
+2. **`began` is derived, not recorded.** No delivered path writes a begin record: `phase.transition` records landings only and the fold records `started` at the first completion. `began` is therefore emitted when a completion is first observed for a phase with no prior `started`, in the same observation as that phase's first `completed`, and the two carry ascending `sequence` values on the same lane. The alternative — claiming a begin time the record set does not hold — is rejected; adding a begin record is new persistence and is out of scope (NG-3).
+3. **`remove` is declared and not emitted.** The contract section enumerates it and this change declares it, so a client can write the `switch` case once and be ready for S15; `emitted: false` on the reference surface says truthfully that v1 never produces it, and no `remove` event is emitted by any v1 path. Declaring it silently as emitted would be a lie a contract test cannot catch.
+
+A `queue.graph` event is emitted one per observed durable change, so a subscriber that adds an entry and then a dependency receives an `entry` event followed by a `dependency-edge` event carrying `added`/`removed` deltas it can act on (ticket AC1). A `dependency-edge` event is emitted only when a dependency record's folded edge set differs from the previous record for the same `ref`, so a re-written identical record publishes nothing.
+
+**F-4 — Ordering.**
+`sequence` is a positive integer allocated once per emitted event, per `(topic, lane)`, increasing by exactly 1 per emitted event for that pair; every subscriber of the topic receives the same value for the same event. The guarantee is scoped: within one `(topic, lane)` pair, `sequence` is monotonic; there is no cross-topic and no cross-lane ordering promise, because subscriptions are per topic and the daemon holds no cross-topic sequencer.
+
+A client's rule: its baseline is the first value it observes for a lane; a non-contiguous successor (a jump forward or any value at or below the last observed) means the stream is discontinuous, and the client repolls instead of inferring order. The counters are process-scoped, so a daemon restart is a declared discontinuity that a client detects the same way — the sequence is a wire ordering value, not a durable revision (DEC-I). The delivered `cursor` keeps its per-topic snapshot-revision meaning on snapshot topics, is absent from event frames, and is never an ordering signal (DEC-D).
+
+**F-5 — Overflow.**
+The delivered mechanism is unchanged for all six topics: a subscription's bounded buffer overflows, that subscription receives exactly one `degraded` event carrying `degraded: "subscriber-overflow"`, only that subscription is dropped, every other subscription keeps receiving, and the client repolls. The single capacity bound `daemon.subscription-buffer` (default `256`) still caps both the per-subscription buffer and the per-connection subscription count, which still refuses with `daemon.subscriber-degraded`.
+
+Additively, that degraded frame's `data` also carries `overflow: "repoll"` and `taxonomyVersion: "v1"`, for every topic including the two snapshot topics; the delivered `degraded` field, its reason vocabulary, and the dropped-subscription behaviour are untouched. The reference surface declares `overflow: "repoll"` on every topic, generated from the same declaration constant the frame is rendered from, so the two values cannot disagree (DEC-C).
+
+**F-6 — Snapshot topics preserved.**
+`queue` and `lanes` keep their delivered frames exactly: `{ topic, cursor, snapshot }` on publish, `{ degraded, topic }` plus the additive overflow stamp on a degraded frame, and the delivered initial-subscribe baseline whose frame carries `cursor: 0`. No `kind`, `lane`, `ref`, `sequence`, `occurredAt`, or `payload` is added to them, and their `data` field set is unchanged. The taxonomy declares them as snapshot topics carrying the single implicit kind `snapshot` rather than inventing a kind set from the planning page's example counts (DEC-B); their `ordering` is declared as the snapshot revision they actually carry.
+
+**F-7 — Mounted reference command.**
+`events` joins `PROMPT_REQUIRED_COMMANDS` (18 → 19) and is composed by the production entrypoint unconditionally, because program selection is strict: a missing prompt-required command throws and is contained as `fallback.internal`. The mount cannot degrade, because the runtime is the taxonomy declaration itself — no store, no configuration, no transport, no entry path — so `daemon`-style unavailable-runtime handling is unnecessary.
+
+The help inventory gains one family entry (`events`) and one entry per verb (`events list`, `events describe`), each pointing at the M2 reference page `doc/planning/oss-tooling/milestones/m2/commands/events.md` through the per-command page-root mapping; the coverage inventory gains `events` in `commands` and the M2 page in `referencePages`; the page-root mapping gains the `events` row beside the `projects` row; and the reference page carries the `--help`/`--version` section the coverage guard requires. Root `--help` lists nineteen families.
+
+**F-8 — Additive contracts and the error table.**
+`CONTROL_TOPICS` widens from two to six members; `ControlEventData` gains an additive member for the event envelope; the server's subscribe accept shape accepts a topic with no snapshot; the daemon's subscribe handler widens its topic literal pair; and the publish projection learns four event topics. No wire type, no frame field outside `data`, no codec rule, no protocol version, and no subscription bound changes.
+
+The error table gains a new `events` domain kind and exactly three rows: `events.topic-unknown` (`user`, non-retryable, `not_landed`, `user-validation` → exit `1`), `events.verb-unknown` (same class), `events.taxonomy-unavailable` (`platform`, non-retryable, `not_landed`, `platform-provider` → exit `2`). No existing row is added, removed, or reworded. The daemon's subscribe refusal for an unknown topic reuses `events.topic-unknown` rather than inventing a second identity for the same client mistake (DEC-L), which also replaces the delivered mis-classification of that mistake as `daemon.state-recovery-failed`.
+
+## 6. USER & SYSTEM FLOWS
+
+**Flow 1 — A client reads the contract and subscribes to `queue.graph`.**
+```
+client  -> <binary> events describe queue.graph --json
+        <- data.taxonomyVersion=v1, one topic record: shape=event, kinds[4], payloadFields, ordering, overflow
+client  -> daemon socket: subscribe { topic: "queue.graph" }
+        <- response { ok: true, subscriptionId }
+        <- (no synthetic baseline; the first frame is the next observed change)
+operator-> <binary> queue add GH-999
+        <- event { topic:"queue.graph", kind:"entry", lane:"GH-999", ref:"GH-999",
+                   sequence:1, occurredAt, payload:{ref,priority,recordedAt}, taxonomyVersion:"v1" }
+operator-> <binary> queue dep GH-999 GH-777
+        <- event { kind:"dependency-edge", lane:"GH-999", sequence:2, payload:{edges,added,removed} }
+client  -> acts on the entry and on the new edge (ticket AC1)
+```
+
+**Flow 2 — A slow consumer overflows on any topic.**
+```
+subscriber stops reading -> its bounded buffer fills
+daemon -> exactly one event { type:"degraded", topic:<t>,
+                              data:{ degraded:"subscriber-overflow", overflow:"repoll", taxonomyVersion:"v1" } }
+       -> that subscription is removed; every other subscription keeps its stream
+subscriber -> repolls current state (the declared remedy, same value the reference surface declares)
+```
+
+**Flow 3 — Snapshot topics are untouched.**
+```
+client -> subscribe { topic: "lanes" }
+       <- response { ok:true, subscriptionId }
+       <- { topic:"lanes", cursor:0, snapshot:{...} }        (delivered baseline frame)
+       <- { topic:"lanes", cursor:4, snapshot:{...} }        (delivered change frame, byte-identical shape)
+```
+
+**Flow 4 — Phase and blocker planes.**
+```
+operator -> <binary> phase complete GH-290 specification
+         -> phase.transition { operation: complete } appended
+         <- events: kind:"began" (first completion of that phase), then kind:"completed", same lane GH-290
+operator -> <binary> blockers publish ...
+         <- kind:"published"   (question record)
+operator -> <binary> blockers answer ...
+         <- kind:"updated"     (answer record)
+daemon consumes the answer, records resumeIntent on the delivering lane
+         <- kind:"cleared"     (the lane is no longer blocked)
+```
+
+**Flow 5 — A wrong topic, a wrong verb, and a broken declaration.**
+```
+<binary> events describe status   -> events.topic-unknown, exit 1   ("status is a wire type, not a topic")
+<binary> events subscribe x       -> events.verb-unknown,  exit 1
+<binary> events                   -> events.verb-unknown,  exit 1
+daemon socket: subscribe { topic: "status" } -> error frame events.topic-unknown (no state read)
+declaration fails its integrity check at load -> events.taxonomy-unavailable, exit 2
+```
+
+**Flow 6 — Mount and self-description.**
+```
+<binary> --help                  -> nineteen families including events
+<binary> events --help           -> usage, options, examples, exit codes, see-also -> M2 events page
+<binary> events describe --help  -> verb usage; no state read
+<binary> --version               -> identity only
+```
+
+**Flow 7 — Daemon restart mid-stream.**
+```
+subscriber holds last sequence 41 for lane GH-999
+daemon restarts (counters are process-scoped)
+subscriber receives sequence 1 for lane GH-999 -> discontinuity detected -> repoll; no order inferred
+```
+
+## 7. SCOPE & BOUNDARIES
+
+### 7.1 In Scope
+
+- The taxonomy declaration: version, six topics, per-topic shape, parent, frame fields, lane rule, kind records with `emitted`, derived payload-field unions, ordering, and overflow — as runtime-neutral data in the contracts tier, re-exported from the contract index.
+- The four event topics' emission from existing durable ledgers, with the per-kind source mapping in §5.1 F-3, a per-`(topic, lane)` sequence, the eight-field envelope inside the delivered open `data` body, `occurredAt` from the source record, and bounded payloads.
+- The delivered publish tick extended to project the four event topics; the watermark-per-`(topic, lane)` pending rule that keeps an unemitted delta pending rather than dropped or buffered.
+- `CONTROL_TOPICS` widened to six; the additive `ControlEventData` member; the internal subscribe-accept shape; the daemon subscribe handler's topic widening; the unknown-topic refusal mapped to `events.topic-unknown`.
+- The additive `overflow: "repoll"` and `taxonomyVersion` on every degraded frame, for all six topics, with the delivered marker and drop behaviour unchanged.
+- The `events list` / `events describe <topic>` command family: grammar, machine envelope, text rendering within the delivered human bounds, the three error identities, and the exit projection.
+- The mount as one unit: prompt-required set (18 → 19), edge composition and production wiring, help family and verb entries, coverage-inventory `commands` and `referencePages` rows, the `events` page-root mapping, and the M2 reference page's `--help`/`--version` section.
+- The three new error-table rows and the `events` domain kind, and their rows in the documented result-contract table.
+- The per-topic contract tests over the reference surface and over daemon-emitted frames, plus the guard updates named in §8.5.
+
+### 7.2 Out of Scope
+
+- [OUT] Any S17 shape: the stop, parked, resumed, and park-edge kinds, their payloads, their bounded-grace deadlines, and the park fields on `status` and `brief`. They are the recorded v2 extension path (DEC-A).
+- [OUT] Queue or lane mutation of any kind: entry removal with a reason, the `dep add`/`dep remove` grammar, automatic removal on merge and closeout, and stale reconciliation. M2-S15 owns them; this change only observes what those paths will append.
+- [OUT] A `remove` event from any v1 path. The kind is declared, marked `emitted: false`, and emitted by no production path.
+- [OUT] A phase *begin* record, or any new record kind, payload schema, key prefix, or state schema version. `began` stays a derived projection (§5.1 F-3).
+- [OUT] Changing the control protocol: no new wire type, no protocol version or floor change, no frame field outside `data`, no codec rule, no subscription-buffer semantics, no at-most-once semantics, no `subscriber-overflow` vocabulary change.
+- [OUT] Re-keying, re-wrapping, or enriching the delivered `queue` and `lanes` frames (DEC-B).
+- [OUT] New `--watch` topic flags on `queue` or `lanes`, and any new watch command.
+- [OUT] `board`, `spend` v2, telemetry attribution, `attempts` read side, `projects` changes, and cross-repository group scoping.
+- [OUT] A second served taxonomy version, per-client version negotiation, or a version field on frames that do not carry the envelope.
+- [OUT] Any prompt, agent, or lifecycle-instruction change; any `.opencode/**` edit.
+- [OUT] Any new package dependency, network listener, provider call, credential read, or filesystem location.
+
+### 7.3 Deferred / Maybe-Later
+
+- A `remove` emitter once M2-S15 delivers reason-bearing entry removal and automatic landed removal.
+- A served v2 carrying S17's stop/park/resume and park-edge kinds, with their payload requirements.
+- A durable sequence (seeded from the ledger) so a sequence survives a daemon restart, if a client demonstrates a need beyond the repoll remedy.
+- Per-lane `since` resumption for event topics, once a durable sequence exists (`since` has no meaning for an event topic in v1, DEC-H).
+- A `queue.graph` park-edge projection once S17 declares the kind and its payload.
+- Batching several deltas of one lane into one frame, if a burst-heavy store shows per-event overhead that matters.
+
+## 8. INTERFACES & INTEGRATION CONTRACTS
+
+### 8.1 REST / HTTP Endpoints
+
+N/A. This change adds no HTTP or REST endpoint and no network listener beyond the delivered local unix control socket.
+
+### 8.2 Events / Messages
+
+| ID | Frame / message | Contract |
+|---|---|---|
+| EVT-1 | Event-topic frame (`type: frame`, `kind: event`) | `data` carries exactly `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion`. `kind` is a member of its topic's declared set; `lane` is present and `null` when no lane holds the subject; `sequence` is a positive integer monotonic per `(topic, lane)`; `occurredAt` is the source record's ISO-8601 UTC timestamp; `payload` carries only its kind's declared fields; no `cursor`. Emitted on `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`. |
+| EVT-2 | Degraded frame (`type: degraded`) | Unchanged delivered behaviour: one frame per overflowing subscription, `degraded: "subscriber-overflow"`, only that subscription dropped. `data` additionally carries `overflow: "repoll"` and `taxonomyVersion: "v1"`, for all six topics. The closed `subscriber-overflow` vocabulary is unchanged. |
+| EVT-3 | Snapshot frame (`type: frame`) on `queue` / `lanes` | Byte-identical to the delivered `{ topic, cursor, snapshot }`; the initial subscribe baseline still carries `cursor: 0`; the per-topic cursor keeps its snapshot-revision meaning. No envelope field is added. |
+| EVT-4 | Consumed durable records (unchanged) | `queue.entry`, `queue.dependency`, `queue.lease`, `queue.park`, `dispatch.attempt`, `daemon.lane`, `phase.transition`, `blocker.question`, `blocker.answer`, and the delivering lane's `resumeIntent`. Read-only; no field, vocabulary, schema, or key prefix changes. |
+| EVT-5 | No new record, capsule event, outbox effect, or telemetry record | The taxonomy projects; it persists nothing. No `events.jsonl` event, command receipt, or metric is added. |
+
+### 8.3 Data Model Impact
+
+| ID | Element | Description |
+|---|---|---|
+| DM-1 | Taxonomy declaration | Runtime-neutral data: the version constant (`v1`), the closed six-topic set, and one record per topic with `name`, `version`, `shape`, `parent?`, `frame[]`, `lane`, `kinds[]` (`name`, `emitted`, `payloadFields[]`), `payloadFields[]` (derived union), `ordering`, `overflow`. Types and `as const` data only — no clock, I/O, environment, or call expression. One authored source for the surface, the frames, and the tests. |
+| DM-2 | Event frame data | Eight fields in declared order. `taxonomyVersion` is the frame's version stamp and sits outside `payload`; the seven contract fields carry the change. Additive inside the delivered open `data` body. |
+| DM-3 | Snapshot frame data (unchanged) | `{ topic, cursor, snapshot? }` exactly as delivered, for `queue` and `lanes` only. |
+| DM-4 | Degraded frame data | Delivered `{ degraded, topic? }` plus `overflow: "repoll"` and `taxonomyVersion: "v1"`. Additive; the marker and the drop behaviour are unchanged. |
+| DM-5 | Sequence semantics | Per-event, per-`(topic, lane)`, positive integer, shared across subscribers of the topic, allocated once per emitted event, process-scoped (a restart is a declared discontinuity), incremented by exactly 1. Not durable, not persisted, not seeded from a ledger. |
+| DM-6 | Topic-set widening | `CONTROL_TOPICS` = `["queue","lanes","queue.graph","dispatch.attempt","phase.state","blockers.state"]`; the event body union gains the envelope member; the server's subscribe accept accepts a topic whose snapshot is absent; the daemon's subscribe handler widens its literal pair. No wire type, codec rule, or protocol version changes. |
+| DM-7 | Events envelope and topic record | `{ ok, command, data: { taxonomyVersion, envelope[], topics[] }, error?, warnings? }`; per-topic record keys as in §5.1 F-2; `kinds[]` elements are records with `name`, `emitted`, `payloadFields[]`; closed values `shape ∈ {snapshot,event}`, `lane ∈ {none,ref,change-ref,blocker-lane}`, `ordering ∈ {sequence-per-lane,snapshot-revision}`, `overflow = repoll`. |
+| DM-8 | No state-schema change | `STATE_SCHEMA_VERSION` unchanged; no record kind, payload schema, key prefix, migration, backfill, or seed. The one contract addition outside the taxonomy is three error rows in a new `events` domain kind (§8.5). |
+
+### 8.4 External Integrations
+
+- **Local unix control socket (delivered).** The taxonomy is served over the existing subscribe surface at the existing socket path with the existing principal model. No new transport, no remote transport, no authentication change.
+- **No tracker, provider, credential, or network surface is touched.** The reference surface performs no I/O at all, and the event projection reads only the local durable store the daemon already reads.
+- **No consumer outside the repository is required to change.** A v0 or v1 peer that ignores the added `data` fields keeps interoperating; a peer that subscribes to `queue` or `lanes` receives byte-identical frames.
+
+### 8.5 Backward Compatibility
+
+- **Wire compatibility.** The event `data` body is open in the delivered codec, so additive fields inside `data` are wire-compatible with v0 and v1 peers. No new wire type, no new frame kind, no field moved outside `data`, no `id` on events, no protocol version change. The closed `CONTROL_TOPICS` union widens additively: an existing subscriber's topics are unchanged, and a subscription for a previously refused topic now succeeds.
+- **Delivered snapshot topics are byte-stable.** `queue` and `lanes` publish, baseline, dedupe, and degrade exactly as delivered, with the one additive degraded-frame stamp named in EVT-2. No delivered consumer of those frames must change.
+- **One delivered refusal changes class.** A `subscribe` for a topic outside the closed set was decoded and then refused as `daemon.state-recovery-failed` (a recovery/platform class). It is now refused as `events.topic-unknown` (a user-validation identity), because a wrong topic name is a client mistake, not a state failure. The frame shape is unchanged; only the identity in the error object differs. This is the single intentional behaviour change on the delivered control plane.
+- **Unchanged identities and schema.** No existing error-table row is added, removed, or reworded; `STATE_SCHEMA_VERSION` and every closed vocabulary this change reads are unchanged; `{0,1,2}` remains the only exit set.
+- **Guards that must be updated as part of the mount.** The prompt-required command enumeration in the help-coverage suite (18 → 19); the help coverage fixture (`commands` gains `events`, `referencePages` gains the M2 events page); the `events` row in the page-root mapping the help-guide coverage check applies; the two contract-surface inventories (the file set gains the new contract module and the new command/projection modules; the v1 contract inventory gains the new exports); and the executable-export allowances for the new files. The root-family membership assertion in the entrypoint help suite is a hand list that already omits `coordinator` and `projects`, so it needs no edit to stay green; `events` may be added to it as documentation of the mount, and the equality that matters (inventory versus prompt-required set) is carried by the coverage suite. The permitted-edit set is **derived, not enumerated**: every suite that contains the prompt-required enumeration or the family list derived from it is in the set, found by searching the suites for those literals and comparing the hits with the coverage inventory.
+- **Delivered suites that must keep passing without semantic change**: the control codec, control conformance, control session, control connection, control transport, daemon lifecycle, daemon degradation (both), daemon heartbeat, daemon lane supervision, daemon crash/restart, daemon effects, daemon foreground lifetime, queue CLI, queue scheduling contract, blockers, error classification and error-table sync, port contract inventory, content inventory, entrypoint help and help coverage, and reference-page parity suites.
+- **The doc-conformance page list is not extended.** That hand list already omits `dispatch`, `coordinator`, and `projects`; adding `events` alone would leave the omission set incoherent, and the assertion it protects (every listed reference page documents `--help`) is already covered for `events` by the help-coverage guard. This follows the precedent set when `daemon` and `projects` were mounted (GH-286 DEC-13, GH-288).
+
+## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
+
+| ID | Requirement | Threshold |
+|---|---|---|
+| NFR-1 | Reference-surface purity and latency | `events list` / `events describe` perform 0 state, configuration, git, network, or filesystem reads, 0 writes, and 0 command-composer invocations; p95 ≤ 100 ms; output ≤ 40 lines and ≤ 8 192 bytes on the human page |
+| NFR-2 | Publish-tick cost | At most one bounded read per source ledger per tick (≤ 4 ledgers for the event topics), 0 socket connects, 0 process probes, 0 sleeps on the publish path; added p95 tick latency ≤ 25 ms over the delivered tick on the reference store |
+| NFR-3 | Burst handling, no silent loss | ≤ 64 events per topic per tick; an unemitted delta stays pending through a per-`(topic, lane)` watermark and is emitted on a later tick; 0 dropped events; 0 unbounded in-memory event queues (watermark state only) |
+| NFR-4 | Envelope conformance | 100% of emitted events on all four event topics carry all eight fields; `lane` is never absent; `kind` is always a member of its topic's declared set |
+| NFR-5 | Frame bound | Every event frame ≤ `DAEMON_MAX_FRAME_BYTES` (65 536); a payload cut by the bound sets `truncated: true` with `truncationReason: "frame-max-bytes"`; no frame is silently shortened |
+| NFR-6 | Ordering determinism | 0 non-monotonic `sequence` values per `(topic, lane)` within a daemon incarnation; 100% of discontinuities (gap, decrease, restart) route the client to a repoll; 0 orderings inferred from `occurredAt` or `cursor` |
+| NFR-7 | Overflow parity | For each of the six topics: exactly one `degraded` event per overflowing subscription, that subscription gone, every other subscription still receiving, `overflow == "repoll"` on the frame and on the reference record — identical for all six |
+| NFR-8 | Additivity | 0 new wire types, 0 new state record kinds, 0 payload schema versions, 0 migrations, 0 new package dependencies, 3 new error rows and 0 changed existing rows |
+| NFR-9 | Non-blocking publication | No publish path awaits a subscriber write; a subscriber that stops reading cannot delay the tick or another subscription beyond its own buffer |
+| NFR-10 | Privacy and content safety | No credential, token, prompt, transcript, diff, or repository content in any payload; evidence is bounded to identifiers, counts, closed vocabulary values, and declared caps; a queue entry's `repositoryRoot` is never projected |
+
+## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
+
+- **Durable evidence is the telemetry.** Every emitted event maps to exactly one existing durable record (§5.1 F-3), so "what did clients see" is answerable from the store plus the published contract. No new metric, trace, log line, or event store is added (NG-8).
+- **One operational query.** `<binary> events list --json` answers "which topics does this binary speak, at which version, with which kinds, payload fields, ordering, and overflow policy, and which kinds are declared but not emitted?"
+- **A client can prove its own health.** A subscriber compares its last observed `sequence` per lane against the next value; a gap or a decrease is its own observable and its declared action is a repoll. No server-side counter, gauge, or log is required for that proof.
+- **Overflow is already observable and stays so.** Each overflow yields exactly one degraded frame on the affected subscription, carrying the same `overflow: "repoll"` value the reference surface declares — the frame and the contract agree by construction.
+- **No sensitive content.** Every reported value is an identity, a path-free identifier, a count, a duration, a closed vocabulary value, or bounded question/answer text the blocker plane already publishes at exit `0`.
+
+## 11. RISKS & MITIGATIONS
+
+| ID | Risk | Impact | Probability | Mitigation | Residual Risk |
+|---|---|---|---|---|---|
+| RSK-1 | A kind set is taken from the planning page's example counts (6/4) instead of the contract section, publishing S17's shapes inside v1 | H | M | DEC-A pins the contract section as the sole authority, the contract tests assert exact set equality per topic, `emitted` marks the one kind without a v1 producer, and the phase-7 doc sync reconciles the page's example and its stop/park/resume prose to the section. | L |
+| RSK-2 | The event projection makes the publish tick expensive on a large store | M | M | One bounded ledger read per tick, a watermark instead of a scan, a per-topic per-tick cap of 64 with the remainder pending, and an added-latency budget (NFR-2) measured against the delivered tick. | M |
+| RSK-3 | A client treats `sequence` as durable and mis-reads a restart as data loss | M | M | The process-scoped scope is declared on the reference surface's ordering value and in the docs, a restart is a declared discontinuity that routes to the same repoll remedy, and AC-F4-3 pins it. A durable sequence is a recorded follow-up. | L |
+| RSK-4 | A declared-but-never-emitted kind (`remove`) misleads a client into waiting for it | M | M | `emitted: false` on the reference surface, the `remove` payload declared with its S15 reason vocabulary, the docs state the S15 ownership, and the contract test asserts no v1 path emits it. | L |
+| RSK-5 | Widening the closed topic union breaks a delivered consumer | H | L | The widening is additive for every existing subscriber; `queue`/`lanes` frames are byte-stable (AC-F6-1), and the delivered control suites keep their exact expectations. | L |
+| RSK-6 | The new `events` domain kind perturbs the classification chain or the MCP payload projection | M | L | Existing rows are untouched, kind-only lookup resolves to the kind's rows, the sync check is bidirectional, and the error-classification, MCP-payload, and error-table-sync suites gate it. | L |
+| RSK-7 | S17's shapes land early because a `dispatch.attempt` kind set looks incomplete | M | M | The reference surface declares three kinds for the topic, the extension path is recorded in DEC-A and §7.3, and a revisit trigger names a taxonomy version bump for any kind addition. | L |
+| RSK-8 | A payload field leaks content a surface must not publish (repository root, credential-looking text) | M | L | The payload field lists are closed per kind, `repositoryRoot` is excluded by NFR-10, blocker text is bounded by the delivered caps and already published at exit `0`, and a test asserts the projected field set equals the declared list. | L |
+| RSK-9 | Two authored copies of the kind sets (declaration and surface) drift anyway | M | L | The reference surface is generated from the declaration, the payload-field union is derived rather than authored, and the per-topic tests compare surface output *and* emitted frames against the same declaration (DEC-E). | L |
+
+## 12. ASSUMPTIONS
+
+- The delivered control protocol — codec, session, server, transports, bounded buffer, at-most-once control actions, and the open event `data` body — is a stable current contract this change consumes additively.
+- The event `data` body stays open to additive fields in v0 and v1, so a peer that ignores the new fields keeps interoperating; no external consumer decodes `data` strictly enough to reject them (§14 OQ-1).
+- The daemon is the only publisher: every topic is served by the resident process over one local socket, and a client's subscription lives within one daemon incarnation, which is what makes the process-scoped sequence sufficient.
+- Every event kind maps to an existing durable record the daemon already reads on its own cadence, with the two declared exceptions (`began` derived from the first completion, `remove` declared and not emitted).
+- A phase's first `complete` transition is the only available evidence of its begin, because no begin record exists and none is added.
+- An answer record plus the consuming daemon's `resumeIntent` on the delivering lane is sufficient evidence that a blocker cleared, because the lane is the thing that was blocked.
+- The taxonomy declaration is a compiled constant, so "the taxonomy cannot be read" can only mean a broken declaration, not an unreadable file (DEC-M).
+- Mounting the family is trivially safe in production because the runtime is the declaration: no store, configuration, transport, entry path, or supervisor input is involved.
+- A client that wants current state reads a command surface (`queue list`, `blockers list`, `phase list`, `lanes`); the event topics promise changes, not a baseline.
+- The delivered human-output bounds (40 lines, 8 192 bytes) are the right bounds for a reference page.
+
+## 13. DEPENDENCIES
+
+| Direction | Item | Notes |
+|---|---|---|
+| Depends on | Resident dispatch daemon and control protocol v1 (M1-S18, GH-238) | The session, server, codec, transports, bounded buffer, overflow behaviour, publish tick, and the watch repoll path. Consumed unchanged except the declared additive envelope and the one refusal identity. |
+| Depends on | Delivered snapshot publish path | `queue` and `lanes` projections and their per-topic cursor dedupe; consumed unchanged and preserved byte-for-byte. |
+| Depends on | Queue, dispatch, phase, blocker, and daemon-lane ledgers | Their record shapes, closed vocabularies, and read folds; consumed read-only, with no schema change. |
+| Depends on | Prompt-required composition and self-description (GH-242, GH-288) | `PROMPT_REQUIRED_COMMANDS`, strict program selection, the help inventory, the help coverage fixture and check, the per-command page-root mapping, and reference-page parity. |
+| Depends on | Machine envelope, error table, exit projection (TDR-0005) | The three new rows, the `events` domain kind, and the `{0,1,2}` projection. |
+| Depends on | `TDR-0024` (Proposed) | The recorded contract decision this specification implements: DC-1 kinds, DC-2 envelope and ordering, DC-3 overflow, DC-4 versioned reference surface, DC-5 version boundary. |
+| Blocks | M2-S15 queue lifecycle completion | Removal events need the declared `remove` kind this change publishes. |
+| Blocks | M2-S16 engine-first operations and M2-S4 board | Both consume the declared taxonomy instead of diffing state files. |
+| Blocks | M2-S17 provider-aware peak pausing | Its stop, parked, resumed, and park-edge kinds land as a taxonomy version bump on this declaration. |
+| External | None | No network, provider, tracker, credential, or supervisor surface is touched. |
+
+## 14. OPEN QUESTIONS
+
+None blocking. The two questions `TDR-0024` routes to this specification are answered here: the delivered `queue` and `lanes` topics are declared snapshot topics carrying the single implicit kind `snapshot` (DEC-B), and the overflow value is carried on both the degraded frame and the reference record (DEC-C). The record's remaining questions are answered or explicitly deferred: the four new topics' production exists for every declared kind except `queue.graph.remove`, which is marked `emitted: false` and owned by M2-S15 (DEC-J, §7.3); and the strict-decoder question is carried as an assumption with the open body as its mitigation.
+
+| ID | Question | Context | Status |
+|---|---|---|---|
+| OQ-1 | Does any consumer outside this repository decode an event `data` body strictly enough to reject added fields? | TDR-0024 unresolved question; the codec and the additive-payload rule are the mitigation | Monitored at review (owner `@reviewer`); not blocking |
+| OQ-2 | Does a client need a sequence that survives a daemon restart? | A durable sequence needs ledger seeding; v1 declares a restart as a discontinuity with the same repoll remedy (DEC-I) | Deferred (§7.3); revisit on a client need |
+
+## 15. DECISION LOG
+
+| ID | Decision | Rationale | Date |
+|---|---|---|---|
+| DEC-A **(TDR-0024 DC-1)** | The M2 contract section is the sole kind-set authority. S13 declares exactly `queue.graph` = `entry`, `dependency-edge`, `release`, `remove`; `dispatch.attempt` = `started`, `refused`, `completed`; `phase.state` = `began`, `completed`, `reopened`; `blockers.state` = `published`, `updated`, `cleared`. The `m2/commands/events.md` example counts (6 and 4) and its stop/parked/resumed prose are pre-contract planning text, and the stop, parked, resumed, and park-edge shapes are M2-S17's (a future taxonomy version). No factual contradiction with the delivered code was found: `CONTROL_TOPICS` carries two topics, no kind exists on the wire, and no delivered record family emits S17's shapes. | A count in an example cannot define a payload, and publishing another story's shapes makes its delivery a silent edit to a shipped kind set. | 2026-11-11 |
+| DEC-B **(TDR-0024 DC-2, shape split)** | The taxonomy distinguishes `snapshot` topics from `event` topics. `queue` and `lanes` are delivered snapshot topics: their frames stay exactly `{topic, cursor, snapshot}`, they declare the single implicit kind `snapshot`, and their `ordering` value is `snapshot-revision` (the delivered cursor, explicitly not an ordering guarantee). The four new topics are event topics with the full frame. The reference surface reports `shape` per topic. No delivered consumer would survive a re-keyed `queue`/`lanes` frame, so the richer-kind alternative is not proposed. | A published taxonomy that rewrites two live consumers' frames buys nothing and breaks them; declaring the shape is what lets a client tell the two apart. | 2026-11-11 |
+| DEC-C **(TDR-0024 DC-3, overflow carriage)** | Overflow keeps the delivered behaviour byte-for-byte: one `degraded` event per overflowing subscription, `subscriber-overflow`, only that subscription dropped, the same single capacity bound. Additively, that frame's `data` carries `overflow: "repoll"` for every topic, and every topic's reference record declares `overflow: "repoll"`, generated from the same constant. | SC-M2-S13-02 asserts `data.overflow` and the delivered frame carries no such field; carrying the value in both places makes the test pass without removing the delivered marker, and one generated constant means the frame and the contract cannot disagree. | 2026-11-11 |
+| DEC-D **(TDR-0024 DC-2, ordering scope)** | `sequence` is monotonic per `(topic, lane)`; there is no cross-topic and no cross-lane ordering; a gap requires a repoll. `lane` is present and `null` (never absent) when no lane holds the subject. The delivered `cursor` keeps its per-topic snapshot-revision meaning, is absent from event frames, and is never an ordering signal. | The delivered publish path keys only by topic, so a per-lane guarantee is the strongest it can honestly keep; the cursor cannot express lane order, and an unverifiable promise is worse than a declared scope. | 2026-11-11 |
+| DEC-E **(TDR-0024 DC-4/DC-5, version pinning)** | `taxonomyVersion: "v1"` is pinned by per-topic contract tests over the `events` surface *and* over the daemon-emitted frames; the taxonomy declaration is the single source both consume, so double-entry drift is impossible. A kind, ordering, overflow, envelope, or parentage change is a version change; payload fields are additive inside v1. | A version prose asserts drifts; a comparison a test runs does not, and generating both surfaces from one declaration removes the second copy. | 2026-11-11 |
+| DEC-F **(mount as one unit)** | `events` joins the prompt-required set (18 → 19) and is composed unconditionally by the production entrypoint; the help inventory gains the family and both verb entries; the coverage inventory gains `commands` and `referencePages` rows; the page-root mapping gains the `events` row; root `--help` lists 19 families; the reference page is the M2 page. The mount cannot degrade because the runtime is the declaration. | Program selection is strict, so a partially mounted family is a composition failure; GH-288 established the one-unit rule and the per-command page root. | 2026-11-11 |
+| DEC-G **(event-frame version stamp)** | Every event-topic frame and every degraded frame carries `taxonomyVersion: "v1"` inside `data`, outside `payload`. Snapshot frames do not. | SC-M2-S13-01 asserts a pinned `data.taxonomyVersion`; stamping the frame lets a client state the version it reads from the wire alone instead of inferring it from a reference call, and it stays additive inside the delivered open body. | 2026-11-11 |
+| DEC-H **(event-topic subscription semantics)** | Subscribing to an event topic produces no synthetic baseline event; the first frame is the next observed change. `since` keeps its delivered snapshot-cursor meaning, is reserved (accepted and ignored) for event topics, and is refused nowhere. A client that needs current state reads a command surface. | A synthetic baseline would have to be a snapshot frame on an event topic, which contradicts the shape split; and there is no cross-lane sequence to resume from, so `since` cannot mean anything there. | 2026-11-11 |
+| DEC-I **(sequence allocation)** | `sequence` is allocated once per emitted event per `(topic, lane)`, shared by every subscriber of the topic, incremented by exactly 1, and process-scoped: a daemon restart restarts the counters and is a declared discontinuity that a client detects (any value at or below the last observed) and answers with a repoll. No durable counter, no ledger seeding, no new persistence. | A durable sequence needs seeding and a schema decision this ticket must not make; a process-scoped value plus the repoll remedy keeps the guarantee true, verifiable, and free. | 2026-11-11 |
+| DEC-J **(per-kind source mapping and the two declared gaps)** | Each kind maps to one existing durable record family (§5.1 F-3). Two mappings are declared rather than assumed: `phase.state.began` is derived from the first `complete` transition for a phase (no begin record exists and none is added), and `queue.graph.remove` is declared with `emitted: false` because no delivered path removes an entry. `kinds[].emitted` is part of the reference record so the gap is visible to a client. | The alternative to declaring the gaps is a surface that claims emitters it does not have — exactly the failure mode TDR-0024's third unresolved question names. Adding a begin record or an unowned removal path would breach the no-new-persistence rule. | 2026-11-11 |
+| DEC-K **(reference-record key set)** | Each topic record carries `name`, `version`, `shape`, `parent?`, `frame`, `lane`, `kinds[]` (`name`, `emitted`, `payloadFields[]`), `payloadFields[]` (derived union), `ordering`, `overflow`; `data` carries `taxonomyVersion` and `envelope[]`. Closed values: `shape`, `lane`, `ordering`, `overflow`. | The planning page's key list cannot express the shape split, the per-kind payloads, the lane rule, or the emission gap; a closed value is what a test can compare, and the union being derived keeps one authored source. | 2026-11-11 |
+| DEC-L **(one unknown-topic identity)** | `events.topic-unknown` is the single identity for "the topic is not in the taxonomy", returned at exit `1` by `events describe`, and used as the daemon's subscribe error frame for a topic outside the closed set. | Two identities for one client mistake would force every client to handle both; the delivered `daemon.state-recovery-failed` mis-classified a user error as a state failure. | 2026-11-11 |
+| DEC-M **(taxonomy integrity and `events.taxonomy-unavailable`)** | The declaration is checked for integrity at load — unique topic names, non-empty kind lists, unique kinds per topic, a declared payload field list per kind, a known `shape`/`ordering`/`overflow` value, and every frame field present. A declaration that fails the check yields `events.taxonomy-unavailable` at exit `2` and no page. | The declaration is a compiled constant, so an unreadable-file reading of that row would be unreachable and untestable; an integrity check makes the fail-closed path real, testable, and useful, because a malformed declaration is the only way this surface can be broken. | 2026-11-11 |
+
+**Precedent-setting decisions:** `TDR-0024` (status `Proposed`) captures DEC-A through DEC-E and is consumed unchanged by this specification; its two carriage questions are answered here and its status stays `Proposed` pending owner acceptance at the GH-290 pull-request review. DEC-F through DEC-M are in-ticket implementation and documentation policy. This specification edits no decision record.
+
+## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
+
+| Component | Impact |
+|---|---|
+| Contracts: control vocabulary | `CONTROL_TOPICS` 2 → 6; an additive event-envelope member in the event body union; no wire type, frame kind, or protocol version change. |
+| Contracts: new taxonomy module | The single authored declaration (DM-1), re-exported from the contract index; data-only, no executable export. |
+| Contracts: error table | New `events` domain kind and three rows; no existing row changed. |
+| Domain: event projection | Kind derivation, per-record mapping, `occurredAt`, per-`(topic, lane)` sequence, bounded payloads, and the `(topic, lane)` watermark; pure over injected facts plus the store reads it is given. |
+| Domain: control session | Subscription publication accepts an event-topic frame (no `cursor`); the bounded buffer, one-degraded-event overflow, and the dropped-subscription behaviour are unchanged apart from the additive `overflow`/`taxonomyVersion` stamp on that degraded frame. |
+| App: control server | The publish projection becomes shape-aware: snapshot topics keep the per-topic cursor dedupe; event topics publish observed deltas. The subscribe accept tolerates a topic with no snapshot. |
+| App: daemon runtime | The publish tick calls the same `publishState` hook; no cadence, heartbeat, reconciliation, or lifecycle change. |
+| CLI: daemon composition | The snapshot projection gains four event topics; the subscribe handler widens its topic set and refuses an unknown topic with `events.topic-unknown`; the watch repoll path is unchanged. |
+| CLI: events command | New command definition (grammar, envelope, text rendering) over the declaration; no store, configuration, or transport input. |
+| CLI: edge and production composition | A new optional `events` runtime on the program options, registered when supplied; production supplies it unconditionally because it needs nothing. |
+| CLI: help inventory and prompt set | `events` in `PROMPT_REQUIRED_COMMANDS` (19 members); family entry plus `list` and `describe` entries pointing at the M2 page. |
+| Help-coverage check and fixtures | The `events` page-root mapping, the `commands` and `referencePages` inventory rows. |
+| Reference page | `doc/planning/oss-tooling/milestones/m2/commands/events.md` becomes the delivered contract page, with the `--help`/`--version` section. |
+| Tests | Per-topic contract suites (declaration, surface, envelope, ordering, overflow, emission), the mount/help/coverage proofs, and the guard updates in §8.5. |
+| Untouched consumers | Every engine (queue, dispatch, blocker, phase registry, lane supervision) and every delivered record schema. |
+
+**Documentation impact.** Each entry names the page and the claim it gains or reverses. No page below is left to inference, and pages that need no change are marked so a reviewer sees they were considered.
+
+- `doc/spec/features/feature-resident-daemon.md` — §Control protocol v1 states two topics and no event kind; it gains the six-topic taxonomy, the shape split, the eight-field event envelope, the per-`(topic, lane)` sequence with gap-to-repoll, the `snapshot-revision` cursor exclusion, the additive `overflow: "repoll"` and `taxonomyVersion` stamps on degraded frames, the `events.taxonomy-unavailable` integrity rule, and the unknown-topic refusal identity. The "Watch and degradation" section states that the two snapshot topics are unchanged and that a client repolls on overflow; it keeps that and gains the per-topic declaration pointer. `links.related_changes` gains `GH-290`, `links.related_decisions` gains `TDR-0024`, `links.contracts` gains the taxonomy module and the event projection.
+- `doc/spec/features/feature-cli-entrypoint.md` — the composition table gains the `events` row with `list` and `describe`; the prose gains the `events` family beside `projects` with its M2 reference page resolved through the per-command page-root mapping.
+- `doc/spec/features/feature-agents-and-commands.md` — the "Allowed command set" enumeration gains `events`, and the pre-existing omission of `projects` from that same sentence is corrected in the same edit so the enumeration matches the composed set (19).
+- `doc/overview/glossary.md` — the "Prompt-required command set" term gains `events` and the similarly omitted `projects`, and gains a taxonomy entry (topic, event envelope, per-lane sequence, overflow-to-repoll, taxonomy version).
+- `doc/overview/architecture-overview.md` — the subscribe-surface description gains the taxonomy and names the four event topics as the published change planes; `links` gains `GH-290` and `TDR-0024`.
+- `doc/spec/features/feature-result-contract.md` — the prose enumeration of kinds gains the `events` rows (three identities, with their exit projections and the taxonomy-integrity rule), the machine-readable table gains three rows, the front-matter summary gains the `events` clause, and `links.related_changes` gains `GH-290`. The bidirectional sync check gates this.
+- `doc/planning/oss-tooling/milestones/m2/commands/events.md` — reconciled to the contract section: `queue.graph` 4 kinds, `dispatch.attempt` 3 kinds, the stop/parked/resumed prose moved to the S17 extension path, `queue`/`lanes` declared as snapshot topics with the single `snapshot` kind, the reference-record key set (`shape`, `frame`, `kinds[]` records, `lane`, `ordering`, `overflow`), the `overflow: "repoll"` carriage on the degraded frame, the `emitted` flag, the corrected text example, and a `Delivered (M2-S13)` status line.
+- `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` — `events` moves out of "M2-planned additions" into a mounted record; the observed composition becomes nineteen families; the remaining-addition list no longer names `events`.
+- `doc/planning/oss-tooling/milestones/m2/README.md` — the `commands/events.md` row describes a delivered contract page rather than a planned one.
+- `doc/planning/oss-tooling/cli-command-registry.md` — the `events` row's status gains the delivered marker and its grammar reads `list` / `describe <topic>`.
+- `doc/planning/oss-tooling/milestones/m2/contracts.md` — no content change required: §Event taxonomy v1 is the authority this change implements verbatim, and §S17 mapping already assigns the extension shapes.
+- `doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` — consumed unchanged; status stays `Proposed`. Its two carriage questions are answered by DEC-B and DEC-C in this specification; the record's own text is edited only by its owner at the pull-request review.
+- `doc/quality/test-specs/test-spec-resident-daemon.md` — the taxonomy coverage (per-topic contract suites, the envelope, ordering, overflow parity, and mount proofs) is added in the system-specification phase.
+- `doc/spec/features/feature-blockers.md`, `feature-dispatch-engine.md`, `feature-scheduling-engine.md`, `feature-daemon-*.md` — no change required: this change consumes their records read-only and changes no record field, vocabulary, or fold.
+- `doc/spec/00-index.md`, `doc/00-index.md` — no change required: no new spec page is created; the taxonomy lives in the resident-daemon page and the public contract page is the M2 reference page.
+
+## 17. ACCEPTANCE CRITERIA
+
+### 17.1 Taxonomy declaration and version pinning
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F1-1 | **Given** the taxonomy declaration, **when** the topic set is read, **then** it is exactly `queue`, `lanes`, `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`, `status` is absent, `queue.graph` is the only topic with a parent (`queue`), and each topic declares a `shape`, a `frame` field list, a `lane` rule, an `ordering` value, an `overflow` value, and its kind records. | F-1, DM-1, NFR-8 |
+| AC-F1-2 | **Given** the four S13 topics, **when** their declared kind sets are read, **then** `queue.graph` is exactly {`entry`,`dependency-edge`,`release`,`remove`}, `dispatch.attempt` is exactly {`started`,`refused`,`completed`}, `phase.state` is exactly {`began`,`completed`,`reopened`}, and `blockers.state` is exactly {`published`,`updated`,`cleared`} — no S17 kind (`stop`, `parked`, `resumed`, `park-edge`) and no kind taken from the planning page's example counts is present. | F-1, DM-1, NFR-8 |
+| AC-F1-3 | **Given** a drift in any single pinned item — the taxonomy version, one kind name, one payload field, the ordering value, or the overflow value — **when** the per-topic contract tests run, **then** at least one named test fails for that topic and names the drifted item; with no drift, every per-topic test passes. | F-1, NFR-6, NFR-7 |
+| AC-F1-4 | **Given** the declaration, **when** its integrity is checked, **then** duplicate topic names, an empty kind list, a duplicated kind within a topic, a kind without a payload field list, an unknown `shape`/`ordering`/`overflow` value, or a missing frame field each fail the check, and a declaration that fails yields `events.taxonomy-unavailable` at exit `2` and renders no page. | F-1, F-2, NFR-8 |
+| AC-F1-5 | **Given** any payload field added to a kind inside v1, **when** a v1 consumer decodes the event and the reference surface is read, **then** the decode succeeds, an unknown payload field is tolerated, and the declared `payloadFields` list is unchanged unless the taxonomy version changed. | F-1, F-8, NFR-8 |
+
+### 17.2 Reference surface
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F2-1 | **Given** the shipped binary, **when** `events list --json` runs, **then** it exits `0` and `data` carries `taxonomyVersion: "v1"`, `envelope[]` with the eight event-frame fields in order, and six topic records whose `name`, `version`, `shape`, `frame`, `lane`, `kinds[]`, `payloadFields[]`, `ordering`, and `overflow` equal the declaration exactly. | F-2, DM-7, NFR-1 |
+| AC-F2-2 | **Given** a topic, **when** `events describe <topic>` runs in text and with `--json`, **then** the text page names the shape, the kinds with their `emitted` state, each kind's payload fields, the lane rule, the ordering rule, the overflow policy, and the frame field list within 40 lines and 8 192 bytes, and the machine envelope returns the same `data` with exactly that one topic record. | F-2, DM-7, NFR-1, NFR-5 |
+| AC-F2-3 | **Given** an unknown topic (including `status`), **when** `events describe <it>` runs, **then** it returns `events.topic-unknown` at exit `1`, names the requested topic, lists the six declared names, and reads no state; **given** an absent or unknown verb, **then** `events` and `events <verb>` return `events.verb-unknown` at exit `1` naming `list` and `describe`. | F-2, F-8, NFR-1 |
+| AC-F2-4 | **Given** the reference surface, **when** any invocation runs, **then** it performs zero state, configuration, git, network, or filesystem reads and zero writes, invokes no command composer, and its machine envelope matches the delivered `{ ok, command, data, error?, warnings? }` shape with `command` = `events list` or `events describe`. | F-2, NFR-1, NFR-8 |
+| AC-F2-5 | **Given** `queue.graph` on the surface, **when** its kind records are read, **then** every kind carries a non-empty `payloadFields` list and `remove` alone carries `emitted: false`, while the topic's `payloadFields` equals the derived union of its kinds' lists and is not authored separately. | F-2, F-3, DM-7 |
+
+### 17.3 Event envelope and per-topic emission
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F3-1 | **Given** a subscriber on any of the four event topics, **when** a change is observed, **then** the frame's `data` carries exactly `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion`, in that order; `lane` is present and `null` where no lane holds the subject; `kind` is a member of that topic's declared set; `occurredAt` equals the source record's own timestamp; and no `cursor` appears. | F-3, DM-2, NFR-4 |
+| AC-F3-2 | **Given** a connected subscriber to `queue.graph`, **when** an entry is added and then a dependency edge is added for it, **then** the client receives an `entry` event whose payload carries `ref`, `priority`, and `recordedAt`, followed by a `dependency-edge` event whose payload carries `edges`, `added`, and `removed` for that ref, so the client can act on both changes without reading state files. | F-3, DM-2, NFR-4 |
+| AC-F3-3 | **Given** a re-written dependency record with an identical folded edge set, **when** the next tick observes it, **then** no `dependency-edge` event is emitted, so a no-change observation publishes nothing on an event topic. | F-3, DM-2, NFR-3 |
+| AC-F3-4 | **Given** the dispatch plane, **when** a lane reaches `delivering` and its attempt later records `outcome: refused`, **then** the topic emits `started` with `ref`, `spawnOrdinal`, and `recordedAt`, then `refused` with `attemptId`, `token`, `startedAt`, `finishedAt`, and `evidenceRefs`; **given** instead an attempt recorded with any other outcome, **then** it is emitted as `completed` and the payload's `outcome` names that outcome, so `completed` never implies success. | F-3, DM-2, NFR-4 |
+| AC-F3-5 | **Given** the phase plane, **when** a phase's first `complete` transition is observed, **then** the topic emits `began` then `completed` on the same lane with ascending `sequence` values; **when** a later `complete` for the same phase is observed, **then** only `completed` is emitted; **when** a `reopen` transition is observed, **then** `reopened` is emitted with its `reason`. | F-3, DM-2, DM-5, NFR-4 |
+| AC-F3-6 | **Given** the blocker plane, **when** a question is published, an answer recorded, and the daemon records `resumeIntent` for the answering lane, **then** the topic emits `published` with the question identity and text, `updated` with the answer fields and its resume mode, and `cleared` naming the question, the lane, and the resume mode — each exactly once per source record. | F-3, DM-2, NFR-4 |
+| AC-F3-7 | **Given** a v1 store with no removed entry, **when** the event topics are observed over a full delivery, **then** no `remove` event is emitted by any path, the surface reports `emitted: false` for it, and a contract test asserts that the emitted kind set per topic equals the declared set minus the declared non-emitted kinds. | F-3, DM-7, NFR-8 |
+
+### 17.4 Ordering
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F4-1 | **Given** a subscriber on an event topic and several changes for one lane, **then** the received `sequence` values for that lane are strictly increasing with no gap, and two subscribers of the same topic receive the same `sequence` for the same event. | F-4, DM-5, NFR-6 |
+| AC-F4-2 | **Given** changes for two different lanes of one topic, **when** they are observed, **then** each lane's sequence is independent and no cross-lane or cross-topic ordering is asserted; **given** a subscriber that sees a gap or any value at or below its last observed value for a lane, **then** the client's declared action is a repoll and no order is inferred from `occurredAt` or a cursor. | F-4, DM-5, NFR-6 |
+| AC-F4-3 | **Given** a daemon restart while a subscriber is connected, **when** the subscriber receives a sequence at or below its last observed value for a lane, **then** the discontinuity is detected and answered with a repoll, and the reference surface's ordering value documents both the per-lane scope and the restart discontinuity. | F-4, DM-5, NFR-6, OQ-2 |
+
+### 17.5 Overflow
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F5-1 | **Given** a subscriber per topic that stops reading, **when** its buffer overflows, **then** for each of the six topics that subscription receives exactly one `degraded` event carrying `degraded: "subscriber-overflow"`, `overflow: "repoll"`, and `taxonomyVersion: "v1"`, that subscription is removed, every other subscription of the same topic keeps receiving, and the client's next action is a repoll. | F-5, DM-4, NFR-7 |
+| AC-F5-2 | **Given** the reference surface, **when** each topic's `overflow` value is read, **then** it is `repoll` for all six topics and equals the value carried on that topic's degraded frame, both rendered from one declaration constant. | F-5, DM-4, DM-7, NFR-7 |
+| AC-F5-3 | **Given** a connection that exceeds the subscription capacity bound, **when** it requests another subscription, **then** it is still refused with `daemon.subscriber-degraded` under the same single `daemon.subscription-buffer` bound, and no new capacity key, marker, or vocabulary value exists. | F-5, DM-4, NFR-7 |
+
+### 17.6 Snapshot topics preserved
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F6-1 | **Given** a subscriber on `queue` or `lanes`, **when** the initial baseline and subsequent changes are received, **then** each frame's `data` is exactly `{ topic, cursor, snapshot }` with no added field, the baseline carries `cursor: 0`, the cursor still advances only when that topic's snapshot changes, and a delivered snapshot-topic expectation set passes unchanged. | F-6, DM-3, NFR-8 |
+| AC-F6-2 | **Given** the reference surface, **when** a snapshot topic's record is read, **then** it declares `shape: snapshot`, exactly one kind (`snapshot`), the frame `["topic","cursor","snapshot"]`, and `ordering: snapshot-revision`, and it states no per-lane sequence guarantee. | F-6, DM-7, NFR-6 |
+
+### 17.7 Mount and self-description
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F7-1 | **Given** the production composition, **when** the prompt-required program is selected, **then** `events` is a member of `PROMPT_REQUIRED_COMMANDS` (19 members), the production composer supplies the runtime, selection completes without the containment throw, and `<binary> events list` reaches its handler with no store, configuration, transport, or supervisor input composed. | F-7, NFR-1, NFR-8 |
+| AC-F7-2 | **Given** the shipped help surface, **when** root `--help` renders, **then** it lists nineteen families including `events`; `<binary> events --help` exits `0` with usage, options, examples, exit codes, and a see-also pointer to the M2 events page; and `<binary> events list --help` and `<binary> events describe --help` each exit `0` rather than failing as an unknown flag. | F-7, NFR-1 |
+| AC-F7-3 | **Given** the help and reference guards, **when** they run, **then** the coverage check reports zero failures (the M2 events page exists, contains `--help` and `--version`, is listed in both `commands` and `referencePages`, and resolves through the `events` page-root mapping), and reference-page parity holds (the inventory's command list equals the prompt-required set and every see-also target exists and is registered). | F-7, DM-7 |
+| AC-F7-4 | **Given** the conformance and inventory guards, **when** the gate battery runs, **then** the prompt conformance and help checks pass, the file-set inventory and the v1 contract inventory equal the tree in both directions with the new modules and exports registered, and the executable-export allowances name the new files. | F-7, F-8, NFR-8 |
+
+### 17.8 Additive contracts and error table
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F8-1 | **Given** the control vocabulary, **when** it is inspected, **then** `CONTROL_WIRE_TYPES`, `CONTROL_FRAME_KINDS`, `CONTROL_DEGRADED_REASONS`, `CONTROL_STOP_MODES`, the protocol version and floor, and the subscription-buffer bound are unchanged; `CONTROL_TOPICS` has six members; and no frame carries a field outside `data` that the delivered frames did not carry. | F-8, NFR-8 |
+| AC-F8-2 | **Given** a v1 peer that ignores unknown `data` fields, **when** it decodes an event-topic frame and a degraded frame carrying the additive fields, **then** decoding succeeds under the delivered codec, the frame is routed as an event, and the peer's existing handling is unaffected. | F-8, NFR-8 |
+| AC-F8-3 | **Given** the error table, **when** it is validated, **then** a new `events` domain kind carries exactly three rows (`events.topic-unknown` and `events.verb-unknown` at `user-validation`/exit `1`, `events.taxonomy-unavailable` at `platform-provider`/exit `2`), no existing row is added, removed, or reworded, the documented result-contract table matches the code in both directions, and every path of the mounted surface exits only `0`, `1`, or `2`. | F-8, NFR-8 |
+| AC-F8-4 | **Given** the state layer, **when** it is validated, **then** `STATE_SCHEMA_VERSION` is unchanged, no record kind, payload schema, key prefix, migration, or seed is added, and the only new persistence is none — the taxonomy projects existing records. | F-8, DM-8, NFR-8 |
+
+### 17.9 Non-functional acceptance
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-NFR-1 | **Given** any `events` invocation, **when** it runs, **then** it performs no state, configuration, git, network, or filesystem read, writes nothing, invokes no command composer, and returns within the declared reference-surface latency budget on the reference machine. | NFR-1 |
+| AC-NFR-2 | **Given** a publish tick on the reference store, **when** the four event topics are projected, **then** at most one bounded read per source ledger occurs, no socket is opened, no process is probed, no sleep is taken, and the tick's added p95 latency stays within the declared budget over the delivered tick. | NFR-2 |
+| AC-NFR-3 | **Given** a burst of changes on one topic, **when** the tick publishes, **then** at most the declared per-topic per-tick cap is emitted, the remainder stays pending and is emitted on later ticks, no event is dropped, and no unbounded in-memory event queue is created. | NFR-3 |
+| AC-NFR-4 | **Given** any emitted event frame, **when** its size is measured, **then** it is at or below the delivered frame bound, and a payload cut by the bound sets `truncated: true` with `truncationReason: "frame-max-bytes"` rather than being silently shortened. | NFR-5, DM-2 |
+| AC-NFR-5 | **Given** any new output, frame, or payload, **when** it is inspected, **then** it carries no credential, token, prompt, transcript, diff, or repository content, a queue entry's `repositoryRoot` never appears, and every evidence field is an identifier, count, closed vocabulary value, or bounded question/answer text. | NFR-10, NFR-4 |
+
+Each criterion names an observable — a frame field, a reference-surface key, a declared value, an exit code, an identity, or a guard result — so the test plan and delivery plan can place the corresponding proof. This specification prescribes no plan phase, test file location, or implementation step.
+
+## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
+
+- **Delivery shape.** One change on `feat/GH-290/event-taxonomy`, one pull request targeting `main-tools`, delivered through the full eleven-phase lifecycle with its plan phases declared in the plan artifact and commits routed through the `commit` primitive.
+- **No migration and no schema change.** Nothing is transformed, backfilled, or seeded; no existing record is rewritten.
+- **Ordering inside the change.** The declaration and the error rows are independent of the mount; the mount, the prompt-set entry, the help inventory, the coverage inventory, and the page-root mapping must land together because the strict program selection and the two help gates fail in both directions otherwise. The `queue`/`lanes` preservation proof and the overflow parity proof land with the envelope, because a regression there is only visible once the publish path is touched.
+- **Adoption path.** A client calls `events list` once, pins `taxonomyVersion: v1`, subscribes to the topics it needs, switches on `(topic, kind)`, and repolls on a sequence discontinuity or on `overflow: "repoll"`. Nothing changes for a client that keeps polling command surfaces, and nothing changes for an existing `queue` or `lanes` subscriber.
+- **Disclosed behaviour change.** A `subscribe` for a topic outside the closed set returns `events.topic-unknown` instead of `daemon.state-recovery-failed`; a degraded frame carries two additive fields. Both are named in §8.5 and must be stated in the reconciled pages.
+- **Rollback.** Revert the change. The taxonomy adds no persisted state, so no record is invalidated and no reversal migration exists; a client that spoke v1 returns to snapshot-diffing or polling.
+- **Communication.** The taxonomy, the shape split, the ordering scope, and the overflow carriage are recorded in the resident-daemon page, the result-contract page, the M2 reference page, the entrypoint delta, and the glossary.
+
+## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
+
+N/A. No record kind, payload schema, or schema version changes, and no record is transformed, backfilled, or seeded. The event projection reads existing ledgers from a per-`(topic, lane)` watermark that starts empty, so a daemon that starts against a fully populated store baselines on its first observation and publishes only subsequent changes; nothing is replayed and no historical event is synthesized.
+
+## 20. PRIVACY / COMPLIANCE REVIEW
+
+- **No personal data or content.** Payloads carry identifiers, counts, closed vocabulary values, timestamps, and the bounded question/answer text the blocker plane already publishes at exit `0` under its own caps. No prompt, transcript, diff, diff hunk, or model output is projected.
+- **Internal-only fields stay internal.** A queue entry's `repositoryRoot` exists for producer deploy-expectation discovery and is never serialized; the taxonomy's `entry` payload declares `ref`, `repository?`, `priority`, and `recordedAt` and excludes it (NFR-10).
+- **No secret material.** The provenance surface reads no configuration and no credentials; the daemon's payloads carry no lock token, credential, or provider payload. The event projection adds no new read of a secret-bearing store.
+- **Trust model unchanged.** Same-user local socket, the delivered principal model, no privilege escalation, no remote transport, no new write location.
+- **Privacy guard impact.** None; the change adds no committed private literal and no cloud dependency.
+
+## 21. SECURITY REVIEW HIGHLIGHTS
+
+- **The attack surface is a read-only projection.** The taxonomy is compiled data plus reads of ledgers the daemon already reads; no new listener, path, credential read, or execution path is added.
+- **An unknown topic is refused before any read.** The subscribe refusal for a topic outside the closed set is decided from the declaration, so a hostile or mistaken topic string never reaches a ledger read.
+- **Bounded output is a safety property.** Every event payload is bounded by its declared field list, every frame by the delivered frame bound, and the reference page by the delivered human bounds; unbounded or free-form prose is not projected.
+- **No injection into a client's decision.** `kind` is scoped to its topic and always a member of the declared set, so a client that switches on `(topic, kind)` cannot be fed an undeclared kind, and a payload field outside the declared list is additive by rule and ignorable by a v1 client.
+- **Fail closed on a broken contract.** A malformed declaration yields `events.taxonomy-unavailable` at exit `2` rather than a partial taxonomy, so a client never receives a page that under-describes the served topics.
+- **Residual risk.** A same-user process can interfere with durable state, as in the delivered trust model; and a client that never repolls on a discontinuity builds on an ordering it was not promised — a client defect the contract names explicitly.
+
+## 22. MAINTENANCE & OPERATIONS IMPACT
+
+- **New operator and integrator surface.** `<binary> events list [--json]` and `<binary> events describe <topic> [--json]`, with help for the family and both verbs.
+- **Runbook.** Read `events list` once per integration to pin the version and the topic set; read `events describe <topic>` to write the handler for one topic; treat a sequence discontinuity or `overflow: "repoll"` as "repoll and continue from a fresh baseline".
+- **Operational interpretation.** A quiet event topic means no durable change was observed, not that the daemon is down; a degraded frame means this subscription overflowed and this client must repoll; `emitted: false` means the kind is declared for a later producer and will not appear in v1.
+- **Maintenance cost.** One authored declaration plus one generated surface and one test suite per topic. Adding, renaming, or removing a kind, changing an ordering rule, an overflow policy, or a parentage is a taxonomy version change with its own tests; adding a payload field is additive inside v1. That friction is the point of the pin.
+- **State growth.** None. The classification projects; it persists nothing, and the per-`(topic, lane)` watermark lives in the daemon's memory, not in the store.
+- **Failure handling.** A broken declaration fails closed at exit `2` and renders nothing; an unreadable source ledger degrades that topic's projection for the tick (no event, retried next tick) rather than failing the daemon loop or publishing a partial event.
+
+## 23. GLOSSARY
+
+| Term | Definition |
+|---|---|
+| Event taxonomy | The published contract this change delivers: the six-topic set, each topic's shape, kinds, payload fields, lane rule, ordering, overflow policy, and the taxonomy version. |
+| Snapshot topic | A delivered topic whose frame is `{topic, cursor, snapshot}` and whose publish rule is snapshot-diff: `queue` and `lanes`. Declares the single kind `snapshot` and the ordering value `snapshot-revision`. |
+| Event topic | A topic whose frame carries the change envelope: `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`. Declares its kinds, payload fields, and `sequence-per-lane`. |
+| Event envelope | The eight fields on every event-topic frame: `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion`. |
+| Kind | The change class within a topic. Its identity is `(topic, kind)`; `kind` is not globally unique. |
+| Emitted kind | A declared kind a v1 path can produce. `queue.graph.remove` is declared and not emitted in v1. |
+| Sequence | A positive integer, allocated once per emitted event per `(topic, lane)`, shared by every subscriber, increasing by one per event, process-scoped. The only ordering guarantee. |
+| Lane | The ordering group of a subject: the entry ref, the delivery ref, the change ref, or a blocker's recorded lane; `null` when no lane holds the subject. |
+| Gap | A non-contiguous successor sequence for a lane (a jump, a decrease, or a restart). The only correct response is a repoll. |
+| Overflow-to-repoll | The delivered slow-consumer outcome: one `degraded` event carrying `subscriber-overflow` and `overflow: "repoll"`, that subscription dropped, the client repolls. |
+| Snapshot revision (`cursor`) | The delivered per-topic counter that advances when a snapshot topic's content changes. Not an ordering signal and absent from event frames. |
+| Taxonomy version | `v1`. Pinned by per-topic contract tests over both the reference surface and the emitted frames. A kind, ordering, overflow, envelope, or parentage change is a new version. |
+| Reference surface | `events list` / `events describe <topic>`, generated from the declaration, readable as text or as the machine envelope. |
+| Extension path | S17's stop, parked, resumed, and park-edge shapes, which arrive as a taxonomy version change, not as an in-place edit. |
+
+## 24. APPENDICES
+
+### Appendix A — Ticket-to-spec traceability
+
+| Ticket acceptance criterion / task | Spec coverage |
+|---|---|
+| AC: a client subscribed to `queue.graph` observes entry and dependency changes it can act on | F-3, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-7, DEC-J |
+| AC: the taxonomy document version is pinned by tests | F-1, AC-F1-3, AC-F1-5, AC-F2-1, DEC-E, DEC-G |
+| AC: overflow degrade behavior is preserved for every topic | F-5, AC-F5-1..3, AC-F6-1, DEC-C |
+| Task: extend topics beyond the delivered pair to `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state` | F-1, F-3, AC-F1-1, AC-F3-4..6 |
+| Task: document event kinds, payloads, ordering guarantees, and the overflow-to-repoll rule as a public versioned contract | F-1, F-2, F-4, F-5, AC-F2-1..5, §23 |
+| Task: contract tests per topic | AC-F1-3, AC-F3-7, AC-F5-1, AC-F7-3 |
+| Delivery convention: full lifecycle, plan phases, `commit` primitive, `TMPDIR=$PWD/tmp/tmpdir pnpm check` green, PR to `main-tools`, keep the M2 planning markers | §18, §16 documentation impact |
+
+### Appendix B — TDR-0024 decision-to-AC map
+
+| TDR position | Spec decision | Acceptance criteria |
+|---|---|---|
+| DC-1 contract section is the kind authority; S17 shapes out of S13 | DEC-A | AC-F1-2, AC-F3-7 |
+| DC-2 seven-field envelope, per-lane `sequence`, cursor excluded | DEC-B, DEC-D, DEC-G | AC-F1-1, AC-F3-1, AC-F4-1..3 |
+| DC-3 delivered overflow preserved, `repoll` declared per topic | DEC-C | AC-F5-1..3 |
+| DC-4 versioned machine-readable reference surface, pinned per topic | DEC-E, DEC-F, DEC-K | AC-F2-1..5, AC-F1-3, AC-F7-1..3 |
+| DC-5 what v1 pins, may grow, and what forces v2 | DEC-E, DEC-J | AC-F1-5, AC-F3-7, §7.3 |
+| Unresolved: `queue`/`lanes` kind treatment | DEC-B | AC-F6-1, AC-F6-2 |
+| Unresolved: `overflow` carriage | DEC-C | AC-F5-1, AC-F5-2 |
+| Unresolved: full kind-set production vs the exercised subset | DEC-J | AC-F3-4..7, AC-F2-5 |
+| Unresolved: strict external `data` decoders | assumption, OQ-1 | AC-F8-2 |
+
+### Appendix C — Closed vocabularies relied on (all unchanged)
+
+| Vocabulary | Values used by this change |
+|---|---|
+| Control wire types | `poke`, `status`, `lane`, `subscribe`, `drain`, `stop`, `takeover`, `frame`, `degraded` (unchanged) |
+| Control frame kinds | `request`, `response`, `event`, `error` (unchanged) |
+| Degraded reasons | `subscriber-overflow`, `daemon-unreachable`, `daemon-heartbeat-stale` (unchanged) |
+| Stop modes | `drain`, `immediate` (unchanged) |
+| Queue lease operations | `acquired`, `renewed`, `released`, `taken-over` |
+| Queue weight classes | `standard`, `heavy` |
+| Queue park causes | `provider-window`, `provider-quota`, `preempted-for-close-item` |
+| Harness outcomes | `completed`, `premature-end`, `failed`, `refused`, `timed-out` |
+| Phase transition operations | `complete`, `reopen` |
+| Phase commit-intent bases | `opt-out-flag`, `config-disabled`, `skipped-no-pending-work` |
+| Blocker question types | `decision-needed`, `spec-ambiguity`, `credential-missing`, `external-wait` |
+| Blocker resume modes | `boundary-note`, `attach-continue`, `resume-prompt-reentry` |
+| Daemon lane states | `delivering`, `detached`, `completed`, `failed`, `preempted` |
+
+No vocabulary is extended, narrowed, or reordered. The two vocabularies this change declares are new and closed: `ORDERING_VALUES = ["sequence-per-lane","snapshot-revision"]` and `OVERFLOW_VALUES = ["repoll"]`.
+
+### Appendix D — Exit matrix
+
+| Outcome | Identity | Exit | Consequence |
+|---|---|---|---|
+| Reference produced (`list` or `describe`) | — (success `data`) | 0 | — |
+| Topic outside the declared set (including `status`) | `events.topic-unknown` | 1 | `not_landed` |
+| Absent or unknown verb | `events.verb-unknown` | 1 | `not_landed` |
+| Declaration fails its integrity check | `events.taxonomy-unavailable` | 2 | `not_landed` |
+
+The daemon's subscribe refusal uses the same `events.topic-unknown` identity inside an error frame; a control frame carries no exit digit, and the client's outcome is a classified refusal it can act on. Every non-zero CLI outcome resolves to one `events` row, and no delivered row gains or loses a meaning.
+
+### Appendix E — Source map (declared kind → durable record)
+
+| Topic / kind | Durable record (unchanged) | Emitted in v1 |
+|---|---|---|
+| `queue.graph` / `entry` | `queue.entry` (`delivery.queue.entry.v1`) | yes |
+| `queue.graph` / `dependency-edge` | `queue.dependency` (`delivery.queue.dependency.v1`), delta against the previous record for the same ref | yes |
+| `queue.graph` / `release` | `queue.lease` (`delivery.queue.lease.v1`) with `operation: released` | yes |
+| `queue.graph` / `remove` | none — M2-S15 owns entry removal | no (`emitted: false`) |
+| `dispatch.attempt` / `started` | `daemon.lane` (`delivery.daemon.lane.v1`) in state `delivering` | yes |
+| `dispatch.attempt` / `refused` | `dispatch.attempt` (`delivery.dispatch.attempt.v1`) with `outcome: refused` | yes |
+| `dispatch.attempt` / `completed` | `dispatch.attempt` with any other outcome | yes |
+| `phase.state` / `began` | `phase.transition` with `operation: complete`, first observation for that phase | yes (derived) |
+| `phase.state` / `completed` | `phase.transition` with `operation: complete`, subsequent observation | yes |
+| `phase.state` / `reopened` | `phase.transition` with `operation: reopen` | yes |
+| `blockers.state` / `published` | `blocker.question` (`delivery.blocker.question.v1`) | yes |
+| `blockers.state` / `updated` | `blocker.answer` (`delivery.blocker.answer.v1`) | yes |
+| `blockers.state` / `cleared` | the delivering lane's `resumeIntent` recorded after the answer is consumed | yes |
+
+### Appendix F — Frame matrix
+
+| Topic | Shape | Frame `data` fields | Ordering | Overflow |
+|---|---|---|---|---|
+| `queue` | snapshot | `topic`, `cursor`, `snapshot` | `snapshot-revision` | `repoll` |
+| `lanes` | snapshot | `topic`, `cursor`, `snapshot` | `snapshot-revision` | `repoll` |
+| `queue.graph` | event | `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion` | `sequence-per-lane` | `repoll` |
+| `dispatch.attempt` | event | same eight fields | `sequence-per-lane` | `repoll` |
+| `phase.state` | event | same eight fields | `sequence-per-lane` | `repoll` |
+| `blockers.state` | event | same eight fields | `sequence-per-lane` | `repoll` |
+| any topic, degraded frame | — | delivered `degraded`, `topic?` plus `overflow: "repoll"` and `taxonomyVersion: "v1"` | — | — |
+
+## 25. DOCUMENT HISTORY
+
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | 2026-11-11 | `@spec-writer` | Initial specification for GH-290 / M2-S13: event taxonomy v1 over six topics, the `events list` / `events describe <topic>` reference surface, the eight-field event envelope with the additive version stamp, per-`(topic, lane)` sequence ordering with gap-to-repoll, the preserved overflow with additive `overflow: "repoll"` on the frame and the surface, the shape split that leaves the delivered snapshot topics byte-stable, the mount as one unit (prompt set 18 → 19, root families 18 → 19), and three error rows in a new `events` domain kind. 8 capabilities, 38 acceptance criteria (33 capability criteria plus 5 non-functional), 13 decisions (DEC-A..DEC-M), 9 risks, 10 NFRs, 8 data-model elements, 5 event contracts. |
+
+---
+
+## AUTHORING GUIDELINES
+
+- **Sources.** Authored from the GH-290 issue body (GitHub issue 290), the clarify-scope record in `chg-GH-290-pm-notes.yaml`, the M2 planning pack (`m2/contracts.md` §Event taxonomy v1 and §S17 mapping, `m2/commands/events.md`, `m2/test-scenarios.md` SC-M2-S13-01/02, `m2/entrypoint-delta.md`), and the binding decision record `TDR-0024`. The delivered surfaces named as facts — the control vocabulary, codec, session, server, watch projection, daemon runtime, the CLI daemon composition, the help inventory, the prompt-required set, the two contract inventories, and the queue, dispatch, phase, blocker, and lane record shapes with their folds — were read from the tree so the specification describes current behaviour rather than assumptions.
+- **Approach.** The ticket's three acceptance criteria are turned into capabilities and 38 acceptance criteria, each with an observable (a frame field, a reference-surface key, a declared value, an identity, an exit code, or a guard result). `TDR-0024`'s DC-1..DC-5 are adopted as DEC-A..DEC-E and mapped one-to-one in Appendix B. The decisions the record leaves open are resolved rather than deferred: the snapshot-topic kind treatment (DEC-B), the overflow carriage (DEC-C), the sequence scope and restart behaviour (DEC-D, DEC-I), the version-stamp carriage (DEC-G), event-topic subscription semantics (DEC-H), the per-kind source mapping with its two declared gaps (DEC-J), the reference-record key set (DEC-K), the unknown-topic identity (DEC-L), and the taxonomy-integrity rule (DEC-M).
+- **Contradictions resolved in this specification.** (1) The planning reference page prints `queue.graph` with 6 kinds and `dispatch.attempt` with 4 and gives `dispatch.attempt` the stop/parked/resumed kinds, while the contract section enumerates 4 and 3 and assigns those shapes to S17; DEC-A names the contract section the authority, the page's example counts are recorded as non-governing, and the reconciliation is scheduled in §16. (2) The same page shows `queue` with 4 kinds and `lanes` with 3, which would require inventing kind sets for two delivered snapshot topics; DEC-B declares them snapshot topics with the single `snapshot` kind and records the page's counts as pre-contract text. (3) SC-M2-S13-02 asserts `data.overflow == "repoll"` while the delivered degraded frame carries only `degraded: "subscriber-overflow"`; DEC-C keeps the delivered marker and adds the value, so both assertions hold. (4) SC-M2-S13-01 asserts a pinned `data.taxonomyVersion` on received events while the contract's envelope names seven fields and no version; DEC-G stamps the version on the frame outside `payload`, so the scenario's literal reading holds without changing the seven contract fields. (5) The contract enumerates a `remove` kind while no delivered path removes a queue entry; DEC-J declares the kind and marks it `emitted: false` rather than silently claiming a producer. (6) The contract enumerates a `began` kind while no delivered path records a phase begin; DEC-J derives it from the first completion and states the derivation, rather than adding a record kind. (7) The delivered subscribe refusal for an unknown topic is `daemon.state-recovery-failed`, a state class, for a client mistake; DEC-L gives that mistake one identity across both surfaces and §8.5 declares the one intentional behaviour change.
+- **Constraints observed.** The specification is contract-level: it names capabilities, declarations, frames, records, identities, and observable outcomes, and it prescribes no plan phase, task sequence, or code structure. It preserves the delivered error taxonomy, the `{0,1,2}` exit projection, the additive state discipline, the no-new-dependency rule, and the open event `data` body that makes the envelope wire-compatible.
+- **Open questions.** Nothing blocking. Two non-blocking questions are carried: the strict-decoder question inherited from `TDR-0024` (OQ-1) and whether a durable sequence is ever needed (OQ-2, deferred).
+- **Counts.** 8 capabilities, 38 acceptance criteria (33 capability criteria across eight capability groups plus 5 non-functional), 13 decisions, 9 risks, 10 NFRs, 8 data-model elements, 5 event contracts, 6 topics, 15 declared kinds (14 emitted in v1, 1 declared and not emitted).
+
+## VALIDATION CHECKLIST
+
+- [x] `change.ref` matches provided `workItemRef` (GH-290)
+- [x] `owners` has at least one entry
+- [x] `status` is "Proposed"
+- [x] All sections present in order (1–25 + authoring guidelines + validation checklist)
+- [x] ID prefixes consistent and unique (F-, AC-, NFR-, RSK-, DEC-, OQ-, DM-, EVT-)
+- [x] Acceptance criteria reference at least one F-/NFR-/DM-/EVT- ID and use Given/When/Then
+- [x] NFRs include measurable values
+- [x] Risks include Impact & Probability
+- [x] No implementation details beyond the named contracts, guard files, and reference page
+- [x] Every criterion remains observable, and no criterion claims a universal over cells its own predicate excludes (the snapshot topics are excluded from the envelope criteria; `remove` is excluded from the emitted-kind criterion by `emitted: false`)
+- [x] Counts are internally consistent (38 acceptance criteria = 33 capability criteria + 5 non-functional; 8 capabilities; 13 decisions; 9 risks; 10 NFRs; 8 data-model elements; 5 event contracts; 6 topics; 15 kinds with 14 emitted)
+- [x] Topic/kind/payload/ordering/overflow tables and the appendices agree with one another
+- [x] No content duplicated from linked docs beyond the necessary contract summary
+- [x] Front matter validates per the authoring rules
