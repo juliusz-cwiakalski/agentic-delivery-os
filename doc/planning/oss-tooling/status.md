@@ -1,4 +1,5 @@
 # OSS tooling status: M0 stories delivered, milestone exit pending
+> History pointer: the 2026-11-10 M2 planning snapshot below records the M1 delivery and M2 planning state; this title and the sections below are history, not a live claim.
 
 Date: 2026-11-01. Owner-of-record: CEO agent under user-delegated autonomous
 authority. Source of truth for scope and order: [backlog.md](backlog.md) and
@@ -52,6 +53,8 @@ requires its per-repository two-clean-weeks evidence. The dual-run pilot
 remains the critical path for M0 exit. The M1-S9 half is superseded by the
 2026-11-07 M1-S9 handover amendment below.
 
+History pointer: the 2026-11-10 M2 planning snapshot below records the M1 delivery state; the paragraph above is a 2026-11-03 statement kept as history.
+
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
 | S1 scaffold | PR #191 | S11 session-admin port | PR #212 |
@@ -98,6 +101,7 @@ invariants, never moving-base diffs.
    respecting the per-repo two-clean-weeks rule. M1-S9 handover is now
    governed by the evidence-based clean bar recorded in the 2026-11-07
    amendment below, which supersedes the per-repo rule named here.
+   History pointer: see the 2026-11-10 M2 planning snapshot below for the recorded M1 delivery state.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.
@@ -145,6 +149,7 @@ degradation marker. The resident daemon and its control protocol (M1-S18),
 story. See [feature-scheduling-engine.md](../../spec/features/feature-scheduling-engine.md)
 and the M1 command pages [queue.md](milestones/m1/commands/queue.md) and
 [lanes.md](milestones/m1/commands/lanes.md).
+History pointer: see the 2026-11-10 M2 planning snapshot below for the recorded M1 delivery state.
 
 ## M1-S9 handover amendment: evidence-based clean bar (2026-11-07, CEO-D-073)
 
@@ -179,3 +184,29 @@ user-journeys.md, and milestones/m1/test-scenarios.md, which still carry
 the superseded calendar phrasing; operator-requirements-2026-11.md is a
 dated historical record and stays as written. A follow-up change refreshes
 them.
+## M2 planning snapshot (2026-11-10)
+
+M1 story delivery is complete at 23 of 23 through the eleven-phase lifecycle
+and squash-merged to `main-tools`; that is story delivery, not milestone exit,
+and the M0 exit section above and the M1 exit criteria stay as recorded.
+
+M2 enters planning with its story set complete in [backlog.md](backlog.md),
+which stays canonical for M2 scope and order: S2–S10 are carried over from the
+earlier outline, S11–S17 are added by GH-284 (M2-S11 multi-repository
+workstations, M2-S12 evidence inspection and divergence resolution, M2-S13
+public event taxonomy, M2-S14 harness telemetry v2, M2-S15 queue lifecycle
+completion, M2-S16 engine-first delivery operations, M2-S17 provider-aware peak
+pausing), and S1 stays retired into M1 with the gap deliberate. The same change
+amends M2-S4 to depend on M2-S11 and M2-S6 to consume M2-S14 telemetry for
+per-agent and per-model facts. No M2 ticket has been created yet: the stories
+are repository truth first, and ticket creation follows from them.
+
+Two early inputs already carry sequencing context: #268 (commit-message lint
+before pull-request creation) slots as an early M2 chore and is scoped in its
+own issue, and #280 (the owner hold that outranks provider windows) is the
+delivered baseline M2-S16 and M2-S17 build on.
+
+Maintenance convention: each future M2 story delivery updates its backlog entry
+(progress markers) and, at meaningful boundaries, this status snapshot and the
+milestone pack, so the planning corpus keeps stating the current M2 state
+instead of surviving as ticket memory.

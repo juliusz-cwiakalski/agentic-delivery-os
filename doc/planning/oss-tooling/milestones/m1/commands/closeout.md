@@ -1,7 +1,7 @@
 # closeout(1)
 
-Status: M0 shipped (M0-S14); M1-S12 expands to the full mechanical sweep
-with judgment residue. Proposed examples.
+Status: Delivered M0-S14; M1-S12 (GH-240) delivered and expands to the
+full mechanical sweep with judgment residue. Implemented contract.
 
 ## NAME
 

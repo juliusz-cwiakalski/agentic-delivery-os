@@ -1,6 +1,9 @@
 # doctor(1)
 
-Status: M1 planned (M1-S3). Proposed contract.
+Status: Delivered M1-S3 (GH-224). Implemented contract.
+The doctor command is not mounted at the production entrypoint; its
+registration is tracked with the M2 command-surface work (see #286 for the
+daemon mount).
 
 ## NAME
 

@@ -6,9 +6,9 @@ created: 2026-11-08
 last_updated: 2026-11-10
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed only when a daemon runtime is supplied and not mounted at the production entrypoint, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284"]
   related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -49,8 +49,13 @@ record, and the state ledger never carries capsule records.
 ## Command family
 
 `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`,
-`daemon status [--live]`, `daemon install`, `daemon uninstall`. The state
-directory is selected process-wide by the brand-derived `<PREFIX>_STATE_DIR`
+`daemon status [--live]`, `daemon install`, `daemon uninstall`. The family is
+composed only when a daemon runtime is supplied to the CLI composition; the
+production entrypoint supplies none, so `<binary> daemon ...` reaches no
+lifecycle handler and the invocation is refused at the entrypoint. Mounting the
+family is product work tracked in the
+[M2 entrypoint delta](../../planning/oss-tooling/milestones/m2/entrypoint-delta.md).
+The state directory is selected process-wide by the brand-derived `<PREFIX>_STATE_DIR`
 environment variable when set and otherwise by
 `<home>/<brand.stateDirectoryName>`; there is no `--state-dir` flag and no
 state-directory configuration key.

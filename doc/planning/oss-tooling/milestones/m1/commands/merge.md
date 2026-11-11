@@ -1,6 +1,7 @@
 # merge(1)
 
-Status: M1 planned (M1-S4). Proposed contract; scenarios SC-M1-01..04.
+Status: Delivered M1-S4 (GH-225). Implemented contract; scenarios
+SC-M1-01..04.
 
 ## NAME
 

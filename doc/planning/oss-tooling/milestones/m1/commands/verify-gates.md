@@ -1,7 +1,7 @@
 # verify gates(1)
 
-Status: M0 shipped (M0-S9); M1-S4 extends the set to config-declared
-gates. Proposed examples.
+Status: Delivered M0-S9; M1-S4 (GH-225) delivered and extends the gate
+set to config-declared gates. Implemented contract.
 
 ## NAME
 

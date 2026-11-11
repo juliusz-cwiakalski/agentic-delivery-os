@@ -1,6 +1,7 @@
 # mcp(1)
 
-Status: M1 planned (M1-S7). Proposed contract.
+Status: Delivered M1-S7 (GH-231); full MCP is planned in M3-S2.
+Proposed contract scoped to the M3-S2 remainder.
 
 ## NAME
 

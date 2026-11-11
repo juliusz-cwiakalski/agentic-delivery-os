@@ -1,0 +1,862 @@
+change_id: GH-284
+title: "docs: plan M2 - engine-first operations, multi-repo workstations,
+  evidence inspection, telemetry"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-10T18:55:00Z", completed: 2026-11-10T17:50:30.662Z }
+  specification: { started: null, completed: 2026-11-11T00:38:39.717Z }
+  test_planning: { started: null, completed: 2026-11-11T00:38:44.349Z }
+  delivery_planning: { started: null, completed: 2026-11-11T00:38:49.608Z }
+  dor_check: { started: null, completed: 2026-11-10T20:00:11.202Z }
+  delivery: { started: null, completed: 2026-11-10T21:56:41.400Z }
+  system_spec_update: { started: null, completed: 2026-11-10T22:11:52.242Z }
+  review_fix: { started: null, completed: 2026-11-10T23:14:45.991Z }
+  quality_gates: { started: null, completed: 2026-11-10T23:29:00.468Z }
+  dod_check: { started: null, completed: 2026-11-10T23:30:01.411Z }
+  pr_creation: { started: null, completed: 2026-11-11T00:39:40.747Z }
+decisions:
+  - text: "Intake state: GH-284 open with label `change` only, zero comments; branch
+      docs/GH-284/m2-planning exists locally with zero unique commits (HEAD ==
+      origin/main-tools fab46636), worktree clean; no PR open or closed for the
+      branch and none matching GH-284. Fresh start: no resume merge, no review
+      threads."
+    date: "2026-11-10"
+  - text: "Delivery mode: autonomous. The session entry point asked for end-to-end
+      delivery of exactly GH-284, PR creation included, with merge left to the
+      owner."
+    date: "2026-11-10"
+  - text: "PM decision (M2-S17 in backlog): the Acceptance section names
+      'M2-S11..S16', but the ticket also carries a normative 'M2-S17
+      Provider-aware peak pausing (owner-hard requirement)' section with story
+      text, ACs, dependencies, and blueprint additions. The explicit story
+      section governs; backlog.md gains M2-S11 through M2-S17, and the
+      Acceptance line is read as shorthand for the add-stories set, not as an
+      exclusion."
+    date: "2026-11-10"
+  - text: "PM decision (daemon command wiring): verification shows
+      `createDaemonCommandDefinition` is composed into the CLI edge
+      (packages/cli/src/edge.ts:3574-3576) only when `options.daemon` is
+      supplied, and the production entrypoint does not supply it — root `--help`
+      omits `daemon`, `daemon --help` fails with `unknown flag \"--help\"`,
+      `daemon status` fails with `unexpected argument \"status\"`. The ticket's
+      claim is accurate. Chosen resolution: correct the page (docs-only change);
+      wiring the command is product work outside this ticket's scope and gets
+      attributed to the M2 man-page/entrypoint delta note rather than to an
+      invented story."
+    date: "2026-11-10"
+  - text: "PM decision (header reconciliation breadth): the ticket names four stale
+      pages (doctor M1-S3, board M1-S5, mcp M1-S7, state M1-S2). A read of all
+      25 m1 command pages shows the same 'M1 planned' drift on merge.md (M1-S4),
+      verify-deploy.md (M1-S4), watchdog.md (M1-S1), blockers.md (M1-S16), and
+      retro.md (M1-S8). Acceptance says 'Contract doc headers reconciled with
+      delivered reality', so reconciliation covers every page whose Status
+      contradicts a delivered M1 story, not only the four examples. Pages that
+      stay planned are re-pointed at their M2/M3 story."
+    date: "2026-11-10"
+  - text: "PM decision (status.md history handling): follow the GH-266 precedent —
+      the existing dated sections are historical records and are not rewritten;
+      a new dated section records M1 delivery (23/23) and the M2 planning state,
+      and the superseded forward-looking statements get explicit pointers."
+    date: "2026-11-10"
+  - text: "PM decision (doc distribution marker): doc/planning/** is outside the
+      closed scan set of scripts/.tests/test-doc-distribution.sh and no existing
+      M1 pack document carries an `ados_distribution` marker, so the new M2 pack
+      documents follow the pack convention and add no marker. The AGENTS.md
+      required-marker list (doc/guides, doc/templates, standalone docs) is the
+      operative rule; pm-instructions.md's broader 'any doc under doc/' wording
+      is narrowed by it."
+    date: "2026-11-10"
+  - text: "PM decision (blueprint index registration): the ticket asks for a new
+      milestones/m2/ pack including its own README.md, and milestones/README.md
+      is the pack index ('Index' table listing M0 and M1). Registering the M2
+      pack there is required for the pack to be discoverable, so the change
+      touches that index as well as the files the ticket enumerates."
+    date: "2026-11-10"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope read against current system truth: doc/spec/features/ already
+      carries delivered specs for the surfaces this planning touches
+      (feature-doctor.md, feature-state-layer.md, feature-mcp-surface.md,
+      feature-resident-daemon.md, feature-dispatch-engine.md, feature-spend.md,
+      feature-scheduling-engine.md, feature-provider-profiles.md,
+      feature-session-lifecycle-economics.md, feature-audit-ledger.md). Planning
+      docs that call those surfaces 'M1 planned' therefore contradict
+      current-truth specs — the drift the ticket asks to reconcile. No product
+      behavior changes in this change, so system_spec_update is expected to be a
+      verified no-op; if the doc-syncer finds the specs themselves incomplete it
+      owns the fix under its always-resolve rule."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Repository facts recorded for the artifact authors: milestones/README.md
+      defines the pack contents table (architecture, journeys, man-page,
+      commands/, contracts, interactions, test-scenarios) and the conventions
+      (bare command names with `<binary>` prefix, planned-until-exit status
+      semantics, mermaid C4 levels, no private content); the M2 pack in the
+      ticket deviates deliberately (README.md added, no
+      man-page.md/interactions.md named) and the ticket's explicit list governs.
+      milestones/m2/ does not exist yet. m1/ has no README.md."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Repo gate facts: `pnpm check` is the aggregate gate (lint, format:check,
+      typecheck, test, boundaries, prompt-conformance, help-guide-coverage,
+      exports-parity); `scripts/.tests/test-doc-distribution.sh` is a separate
+      CI guard; a mermaid-validation gate exists from GH-110, so new diagrams in
+      milestones/m2/architecture.md must parse. `packages/*/dist` was absent in
+      this fresh checkout and `pnpm build` is required before any `delivery-os`
+      command works — recorded so later phases do not mistake the import error
+      for a product defect."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Clarify-scope verdict: no ticket comment and no human hold required. The
+      ticket is unusually complete — it supplies story text, ACs, dependencies,
+      amendments, file targets, and a fallback instruction for its one open
+      verification ('either wire it or correct the page') — and every ambiguity
+      found resolves to a PM decision recorded above rather than a requirement
+      gap."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "Specification complete: chg-GH-284-spec.md v1.0 (status Proposed, type
+      docs, risk medium) — 11 functional capabilities, 10 NFRs, 4 data-model
+      elements, 14 decisions, 10 risks, 37 ACs (27 functional, 10 NFR), 0 open
+      questions, plus a Definition of Done section. Acceptance shape: story
+      fidelity (NFR-8), append-only backlog placement with hunk containment
+      (AC-F1-3/AC-F4-1), status-header-only diffs on the reconciled command
+      pages (NFR-3), byte-identical status.md history (NFR-7), and 0 product
+      files changed outside doc/planning (NFR-1)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Spec-side fact corrections against my clarify-scope brief (recorded
+      because they change the delivery surface): the M1 command pack holds 28
+      pages, not 25, and the status-contradiction set is 15 pages — 9 say `M1
+      planned` for a delivered story, 2 say `M1 milestone planned` (plan.md,
+      commit.md), 2 attribute a delivered extension as proposed
+      (verify-gates.md, closeout.md), plus daemon.md and entrypoint.md. Fourteen
+      pages get a status-header-only edit and entrypoint.md one sentence, which
+      is why the containment AC splits (AC-F5-4)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Spec-side scope call I accept: the entrypoint.md composition drift (it
+      claims `dispatch` is not registered while root help lists it, and
+      `coordinator` is not mentioned at all) is corrected in this change rather
+      than deferred, on the reasoning that it is the same delivered-reality
+      class as the status headers. Risk accepted: it turns a header-only
+      containment story into a 14+1 shape; the mitigation is a one-sentence
+      bound with byte identity everywhere else (NFR-3)."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "RETRO (specification): I briefed the spec-writer that 'a mermaid
+      validation gate exists from GH-110'. That was wrong — it came from a
+      leftover local branch name (feat/GH-110/doc-mermaid-validation-ci-gate),
+      not from repository truth. A branch name is not evidence of a delivered
+      gate. The spec turned it into NFR-6 plus AC-NFR6-1, which no command in
+      this repo can execute. Caught by checking .github/workflows and
+      scripts/checks before test planning, and fixed by reopening specification
+      (DEC-15 in spec v1.1): mermaid validity is now a self-contained grep/awk
+      structural check. Improvement: never assert the existence of a gate,
+      script, or workflow from a branch name or a memory of a ticket — grep the
+      workflows and checks directories first, and mark the claim as unverified
+      if not checked."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "Specification re-completed at v1.1 (reopen_count 1): DEC-15 replaces the
+      non-existent mermaid validator with a five-condition structural diagram
+      check (fence count >= 10, diagram-keyword opening line, balanced fences
+      per file, C4 L1/L2/L3 plus named flow headings, 3+6+1 inventory) and adds
+      Appendix E with an executable bash/awk procedure. AC count stays 37; no
+      other requirement changed."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Test planning complete: chg-GH-284-test-plan.md v1.0 — 37 TCs
+      (TC-M2PLAN-001..037) covering 37/37 ACs exactly once, with 38 executable
+      procedures (P00 setup + P01-P37 in AC order). Every procedure was executed
+      against the pre-change tree and the observed verdicts are recorded: 21
+      fail by detecting the absent change, 4 fail through their non-vacuity
+      guards, 4 pair a failing half with a passing control, 6 are pure
+      preservation controls that pass, 2 are mixed. Mutation self-tests prove
+      the classifiers bite (a goal edit, a heading mutation, and a one-sentence
+      entrypoint edit are each detected)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "QUALITY-GATE FACT for phase 9: `pnpm check` fails in this environment by
+      default — ci-baseline-parity.test.ts uses `git clone --local`, whose
+      hardlink path crosses into tmpfs /tmp, giving 7132 pass / 1 fail. With
+      TMPDIR pointed at the repository filesystem it exits 0 (7133 pass). The
+      failure is environmental, not a change regression; phase 9 must run the
+      gate with a repo-local TMPDIR and record both runs. `bash
+      scripts/.tests/test-doc-distribution.sh` exits 0 on the base (82 in-scope
+      docs, planning_markers=0)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Cross-artifact defect found by the plan-writer and fixed upstream rather
+      than absorbed: spec v1.1 required 'exactly one sentence' to differ in
+      entrypoint.md, but the page's drift spans two adjacent sentences (the
+      enumeration omits dispatch/coordinator; the not-registered sentence
+      wrongly lists dispatch) — and spec v1.1 simultaneously demanded
+      byte-identical dated status.md sections while requiring pointer text
+      appended inside three of them. Both were unsatisfiable. Reopened
+      specification (v1.2, DEC-16): the entrypoint bound is one contiguous hunk
+      over at most two adjacent sentences with the two statements kept separate,
+      and status.md acceptance is a line-retention oracle (zero
+      removed/reordered/modified lines plus an addition whitelist) with
+      whole-section cmp explicitly forbidden."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "RETRO (delivery planning): the plan-writer caught four defects the two
+      upstream authors and I all missed — an empty insertion window (P03), an
+      unusable ERE alternation with a literal pipe (P16), and the two mechanism
+      contradictions above. Pattern: each artifact was internally coherent, and
+      the defects only surfaced when a consumer had to execute the prose as a
+      procedure against the real tree. Improvement: for docs changes whose ACs
+      are diff predicates, have the test-plan author derive every window and
+      offset from an executed command on the base tree (P03's window was
+      arithmetic, not observation), and have the plan-writer cross-check the
+      previous artifacts' oracles by running them before writing gates — which
+      is exactly what worked here."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "Test plan re-completed at v1.1 (reopen_count 1): P03 derives the
+      insertion window from the base snapshot's M2-S9 end to the head's Epic M3
+      line minus one; P16 uses a real alternation and forbids a literal pipe;
+      P15/P30 implement the two-sentence entrypoint bound with 16-family
+      enumeration and separation assertions; P18/P34 implement the retention
+      oracle with a four-window addition whitelist. Coverage unchanged at 37 TCs
+      / 37 procedures / 37/37 ACs; TC-014 and TC-017 reworded to match v1.2 and
+      gaps G-6/G-8 adjusted."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Round 3 cross-check (plan-writer, verified against the artifacts) found
+      three more procedure defects and one specification gap. Fixed as spec v1.3
+      (DEC-17) plus test plan v1.2: (a) the backlog insertion position was
+      ambiguous — the Epic M2 block closes with a `---` separator, so inserting
+      'before the Epic M3 heading' would strand the separator between M2-S9 and
+      M2-S11; the spec now pins insertion inside the block before the separator
+      and the test plan asserts the separator sequence is identical and fails a
+      below-separator insertion; (b) P18's pointer windows were head-anchored,
+      so an appended pointer became the anchor and moved its own window past
+      itself (2/4 reachable, bad_runs=2) — now base-anchored and verified
+      against a reference-shaped head fixture at 4/4/0; (c) P34 computed `sed`
+      line address 0 for the title group, which GNU sed rejects, capping the
+      count at 3/4 — now clamped and stderr-checked."
+    type: "info"
+    date: "2026-11-10"
+  - text: "RETRO (second occurrence of the same class): three rounds of artifact
+      churn, all from executing predicates that were written as prose first. The
+      spec is now v1.3, the test plan v1.2, and the plan v1.1 — each round cost
+      a reopen plus a re-delegation. The single highest-leverage change would
+      have been to have the test-plan author *derive every offset and window
+      from an executed command on the base tree in round 1* (the P03 window was
+      arithmetic; the P18 anchor was assumed rather than built and run).
+      Recorded so the readiness review sees the process cost, not just the fixed
+      defects."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "DoR iteration 1: NOT_READY — 8/10 facets PASS; spec_completeness and
+      cross_artifact_consistency FAIL. Record:
+      readiness-review/readiness-iter-1.md. Four major findings: (1) S17's seven
+      acceptance criteria were never enumerated, so ticket criteria 3, 4 and 6
+      (other-provider isolation, resume without state loss, auditable ledger
+      events) could be dropped while every gate stayed green; (2) the clause
+      fidelity oracle was overstated — G-1 claimed every ticket clause had an
+      anchor while at least seven AC clauses had none, and P35 only summed
+      existing anchors; (3) AC-NFR5-1 was unachievable because plain `pnpm
+      check` fails here (cross-device ci-baseline-parity clone), a condition
+      only the test plan and plan carried; (4) the `Proposed contract` tail was
+      undecided for delivered pages, and Appendix B omitted watchdog.md's real
+      M1-S15 and SC-M1-14 clauses, licensing their deletion."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DoR iteration 1 remediation routing: reopened specification (findings 1,
+      3, 4 plus the pack-table, index-row-shape and DEC-6 minors), test_planning
+      (finding 2 plus the P34 self-containment, TMPDIR mkdir, and AC-NFR6-1(d)
+      association minors), delivery_planning (gate alignment). Sequence: spec
+      v1.4 -> test plan v1.3 -> plan v1.3 -> dor_check iteration 2."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "DoR iteration 1 remediation complete. Spec v1.4: F-2 enumerates S17's
+      seven criteria; AC-F2-1 checks content not counts; NFR-5/AC-NFR5-1/KPI/
+      RSK-9/DoD carry the two-run gate with a lone default-run
+      ci-baseline-parity failure classified environmental (DEC-19); F-5/DM-2/
+      AC-F5-1 add the proposal-tail rule with preserved delivered-extension
+      clauses and scenario references (DEC-18); F-8/AC-F8-1/DEC-20 handle the
+      pack-contents deviation; AC-F11-1 pins the twelve-target index row;
+      AC-F1-1 adds the blank-line separation; DEC-6 now cites the AGENTS.md
+      marker list and the guard's path set explicitly. Test plan v1.3: the
+      clause table is rebuilt from the ticket's own 79 clauses (observed
+      missing_clauses=79 pre-change, so the oracle bites), P06 checks the seven
+      S17 criteria by content, P11 adds the tail and preservation checks, P19
+      the deviation statement, P27 twelve targets, P32 both real gate runs
+      (default exit 1 with a lone parity failure, repo-local TMPDIR exit 0), P33
+      heading association, P34 self-contained. Plan v1.3 re-validated: valid,
+      readyForDevelopment."
+    type: "info"
+    date: "2026-11-10"
+  - text: "RETRO (third round, and the one that paid): the readiness gate found the
+      class the authors could not see — the owner-hard story's ACs were
+      referenced by count, never enumerated, so three requirements were absent
+      from every artifact while all 37 ACs were 'covered'. Same root as the
+      earlier rounds: a count or a summary standing in for the enumerated
+      content. Improvement for future planning changes: when a ticket marks a
+      story 'owner-hard', transcribe its acceptance criteria verbatim into the
+      spec and give each one its own anchor before any procedure is written."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "DoR iteration 2: NOT_READY — 9/10 facets PASS; only
+      cross_artifact_consistency FAILs, on a defect the iteration-1 fix
+      introduced. All four iteration-1 blockers verified genuinely closed (the
+      reviewer re-ran the clause table against the ticket body: 61/61 S11-S16
+      rows and 15/15 S17 rows present) and XF-9's acceptance was confirmed
+      sound. New blocking finding F1: P33's C4 association predicate ended with
+      `[^0-9]`, which cannot match end-of-line, so a heading written exactly as
+      the plan prescribes reported `c4_headings_with_diagrams=0/3` and the P4/P6
+      gates could never go green — the coder would have been stuck on an
+      uncommitted procedure. Five minors also raised (stale `ac_items` naming,
+      an eight-criterion blind spot, a vacuous duplicate-number check, TC-011's
+      circular precondition, P19's parent-link escape)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DoR iteration 2 remediation: spec v1.5 (Appendix E now carries the
+      heading-association procedure with a committed `## C4 Level <n>:
+      <subject>` form and an EOL-tolerant predicate; Appendix B's watchdog row
+      now agrees with AC-F5-1 that the proposal tail is permission scoped to the
+      M2-S2 remainder, never an obligation; AC-F1-2 names the 79-row ticket
+      table as the oracle and labels the inline clause list illustrative). Test
+      plan v1.4 (P33 predicate fixed and proven on good/negative fixtures at
+      3/3, 7/7, OK and MISSING; widened item counter and real duplicate-number
+      check with self-tests; TC-011 precondition narrowed; P19 rejects
+      parent-directory links). Plan v1.4 re-validated: valid,
+      readyForDevelopment."
+    type: "info"
+    date: "2026-11-10"
+  - text: "RETRO (fourth round): the iteration-1 fix introduced the iteration-2
+      blocker — a regex written into a procedure but never executed against a
+      fixture shaped like the artifact the plan prescribes. Cost: one extra
+      reopen cycle. Improvement: any predicate embedded in a procedure gets run
+      against both a compliant fixture and a deliberately non-compliant one in
+      the same edit, which is exactly how the fix was validated this round."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "DoR iteration 3: READY — 10/10 facets PASS, blocking set empty. Record:
+      readiness-review/readiness-iter-3.md. The reviewer proved the iteration-2
+      blocker closed by execution, not by reading: the fixed P33 predicate
+      returns 3/3 and 7/7 with heading_association=OK on a compliant document
+      built to the plan's heading form, still passes with extra narrative ##
+      sections and with a diagram under a ### subheading (no over-strictness),
+      fails on a duplicate C4 heading, and reports MISSING on the negative
+      fixture; Appendix E has predicate parity. It re-ran 24 of the 38 procedure
+      blocks plus gate-capability fixtures, confirmed every control value, and
+      confirmed the gates can go green (a realistic twelve-file pack passes P33
+      at 10 fences; a twelve-target index row scores 12/12 with the M0/M1 rows
+      identical)."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Non-blocking residue accepted and routed to the phase-8 reviewer:
+      flow-token association is section-scoped rather than adjacency-proven; the
+      KPI still says '3+6+1' while P33 reports 3 C4 + 7 flows; task 4.2's
+      'directly under' is stricter than its gate (never false-fails);
+      story_map_entries>=16 is line-based; P35's total=79 line is loosely
+      attributed to P02; P33's orphan seen-set is not reset per file;
+      milestones/README.md whole-file identity beyond the table and rows is
+      ungated; the DoD does not spell out association. None changes a verdict or
+      a requirement."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DELIVERY HALT 1 (P1): the coder stopped before writing anything and
+      reported that P03's blank-separation check and P08's task-line gate are
+      mutually unsatisfiable — P03 read head lines from a base-derived anchor,
+      so the change's own M2-S6 one-line insertion shifted M2-S9 and the check
+      compared the depends line against a blank expectation; the own-line clause
+      shape then failed P03, and the net-zero shape failed P08's
+      base_task_lines_missing=0. This is exactly the right behaviour from the
+      coder: it restored the tree and reported instead of compensating by
+      reflowing a neighbouring blank line."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "Reopen round 5 (post-DoR): test plan v1.5 head-anchored P03's blank check
+      (hunk window stays base-anchored) and made P08 compare the - AC: line
+      alone. A focused readiness confirmation then found a THIRD unsatisfiable
+      gate — P29 extracted each story body to the next ### heading, so the last
+      story in the Epic M2 block (M2-S9) ran through the --- separator into ##
+      Epic M3 and reported body CHANGED on every conforming head, blocking
+      P1/P6's 65/65/0 target. Fixed in test plan v1.6 by bounding entries at ---
+      and ## headings, verified on base control plus minimal and full heads,
+      with negative controls still detected. Plan v1.5 aligned (P08
+      own-line-only with the exact depends line, P03 parenthetical, P29 bound)
+      and re-validated valid/readyForDevelopment."
+    type: "info"
+    date: "2026-11-10"
+  - text: "DELIVERY HALT 2 (P6): P1-P5 delivered green and committed (1842e181,
+      57120f4e, 5e00d4f2, 39bb4afb, 13171be1, 110fb160), then P6 blocked on a
+      guard contradiction. The forbidden-literals check scans doc/** as a
+      userFacingDocs scope (excluding only doc/changes/** and doc/decisions/**),
+      and fails closed on any user-facing doc absent from the corpus baseline
+      unless it is listed in scripts/checks/forbidden-literals.registry.json.
+      The twelve new pack documents therefore need one registry edit, which
+      NFR-1's 'zero files under scripts/' forbade — P28 and P36 were jointly
+      unsatisfiable, the third contradiction of this class. The spec's §12
+      assumption was simply wrong: it conflated the distribution-marker guard
+      (which genuinely skips doc/planning) with the forbidden-literals guard
+      (which does not)."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "Reopen round 6: spec v1.6 (DEC-21) permits exactly one scripts/ file, the
+      forbidden-literals registry, with twelve sorted registrations; the
+      product-file budget becomes 31 (30 planning + 1 registry); AC-NFR9-1 now
+      requires the registration, not just zero violations; the §12 assumption
+      and DEC-6 were corrected to distinguish the two guards. Test plan v1.8:
+      P28 expects product_files=31 with registry_files=1, P36 asserts
+      registry_m2=12/12 plus baseline absence and the guard green, P32 expects
+      the repo-local run at 0 and the default run reduced to the lone
+      ci-baseline-parity failure. Plan v1.6: P6 scope gains the single registry
+      path with a task that appends twelve entries without reordering the base
+      list, and the three gates updated. Plan re-validated:
+      valid/readyForDevelopment."
+    type: "info"
+    date: "2026-11-10"
+  - text: "RETRO (fifth round, and the most expensive): every halt has been the same
+      root — a guard's real contract asserted from memory on a planning brief
+      instead of read from its code. I told the spec-writer mermaid validation
+      existed (it did not) and that doc/planning was outside the guard scan sets
+      (true for one guard, false for the other). Improvement: before briefing
+      any artifact author on a repo gate, read the gate's source and quote its
+      scope predicate — or label the claim unverified. This single rule would
+      have prevented three of the six reopen rounds."
+    type: "retro"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P1 complete: commits 1842e181 (seven stories M2-S11..S17
+      inserted inside the Epic M2 block after M2-S9's last content line, plus
+      the M2-S4 and M2-S6 amendments) and remediation 110fb160 (one S17 task
+      clause re-wrapped during the P6 regression so the 'preserved session
+      state' and 'no model calls bill' anchors stay contiguous). Gates at HEAD:
+      P01 m2_story_headings=7 new_found=7/7 order=OK shape_ok=7/7 PASS; P02
+      clause_scan total=61 present=61 missing=0 (9/8/11/12/10/11 per story); P03
+      window=1167:1278 blank_separation=OK fixture_blank_separation=OK
+      separator_sequence=identical backlog_hunks=4 inside=4 outside=0
+      classifier_self_tests=4/4 PASS; P04 ac_numbered_items=7/7 all six S17
+      dependencies incl. #280; P05 clauses_present=6/6 may=ABSENT; P06
+      criteria_present=7/7 extra_criteria=0 duplicate_numbers=0 both self-tests
+      detected; P07 changed_lines=2 unexpected_lines=0 depends=expected; P08
+      changed_lines=3 base_task_lines_missing=0 Goal/AC identical
+      fixture_p08=OK; P09 67->74 added=7 removed=0 unexpected=0 order=OK; P10
+      fm/rg/cc byte-identical; P29 stories_compared=65 identical=65 changed=0
+      order=OK with four head runs PASS and three negatives detected."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P2 complete: commit 57120f4e (fourteen M1 command-page status
+      headers plus entrypoint.md's two-sentence DESCRIPTION region; 15 files).
+      Gates at HEAD: P11 pages=28 M1_planned_hits=0 M1_milestone_planned_hits=0
+      header_attribution=14/14 tail_violations=0 current_violations=0
+      watchdog_m1s15=OK watchdog_sc=OK verify_gates_extension=OK
+      closeout_extension=OK real_headers=PASS; P12 board->M2-S4 watchdog->M2-S2
+      mcp->M3-S2; P13 header M1-S18/GH-238/not mounted/entrypoint delta OK
+      Current=ABSENT daemon_body=byte-identical; P14 changed_pages=14/14
+      total_hunks=14 zero OUTSIDE entrypoint_hunks=1; P15 observed=16
+      enumerated=16 both differences empty exactly state/mcp/resident daemon
+      absent desc_hunks=1 sentences_removed=2 sentences_added=2 PASS; P30
+      body_identical=14/14 entrypoint_bound=OK PASS."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P3 complete: commit 5e00d4f2 (status.md: one dated 2026-11-10
+      M2 planning section appended at EOF plus four pointer insertions). Gates
+      at HEAD: P16 new_sections=1 all eleven markers OK literal_pipe=ABSENT
+      exit_overclaim=ABSENT alternating self-test OK; P17 all four groups bytes
+      retained and pointer present g4_pointer=1/1; P18 windows newsec=186..211
+      title=2..4 paragraph=55..57 scheduling=151..153 items=103..105
+      removed_lines=0 added_lines=30 section_lines=26 pointer_runs=4
+      pointer_windows=4 bad_runs=0 retention_oracle=OK reference_head_fixture=OK
+      PASS; P34 pointer_groups=4/4 sed_line_address_0_errors=0 PASS."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P4 complete: commit 39bb4afb (twelve documents under
+      milestones/m2/: README, architecture, contracts, test-scenarios with 38
+      SC-M2 scenarios, journeys with five journeys, entrypoint-delta, and six
+      command contracts). Gates at HEAD: P19 pack_files=12/12 actual_files=12
+      readme_lists=12/12 story_map_entries=16 deviation_statement=OK
+      readme_self_link_self_test=detected pack_contents_table=byte-identical;
+      P20 all C4, flow, and delta headings OK; P21 contract_markers_missing=0;
+      P22 scenario_headings=38 stories_below_two=0 twelve mandatory anchors OK;
+      P23 journey_headings=5 with resume and other-provider isolation; P24
+      command_headers=6/6; P25 every page complete plus the dispatch-subfamily
+      and subscribe-taxonomy relationships; P26 all ten delta markers OK
+      including entrypoint.md; P33 mermaid_fences=10 keyword_and_fence_exit=0 C4
+      3/3 flows 7/7 heading_association=OK fixtures OK/3/3,7/7,OK/detected."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P5 complete: commit 13171be1 (one planned M2 row in
+      milestones/README.md linking twelve m2/ targets on a single physical
+      line). Gates at HEAD: P27 m2_targets=12/12 m2_row_marked_planned=yes M0
+      and M1 rows identical."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P6 complete: commit 166df7ff registers the twelve
+      milestones/m2 documents in scripts/checks/forbidden-literals.registry.json
+      (sorted among themselves, duplicate-free, no existing entry reordered,
+      corpusBaseline untouched, the only scripts/** edit DEC-21 permits), and
+      the accompanying evidence commit records this file plus
+      delivery-evidence/verification.md. Gates at HEAD: P28 product_files=31
+      planning_files=30 registry_files=1 outside_planning_outside_registry=0
+      forbidden_root_files=0 unexpected_planning_paths=0 non_vacuous=yes; P31
+      guard_exit=0 no drift 82 in-scope docs planning_markers=0; P36
+      registered_total=139 m2_registry_sorted=yes m2_registry_duplicates=0
+      registry_m2=12/12 baseline_absent=12/12 forbidden_exit=0 'OK
+      forbidden-literals: 5/5 scope classes scanned, 0 violations'
+      unregistered_findings=0 seed_hits=0; P32 default_exit=1
+      default_failed_tests=1 default_failure_class=environmental
+      (ci-baseline-parity only) repo_tmpdir_exit=0 gate_verdict=PASS; P35
+      clause_scan total=79 present=79 missing=0 missing_clauses=0
+      s17_missing_criteria=0 added_criteria=0; P37 changed_planning_files=30
+      broken_links=0 restated_ac_blocks=0; full regression sweep (P01..P27, P29,
+      P30, P33..P35, P37) green at the final HEAD."
+    type: "info"
+    date: "2026-11-10"
+  - text: "system_spec_update (phase 7) complete by @doc-syncer: three current-truth
+      corrections, all caused by the daemon-reachability finding.
+      feature-resident-daemon.md's Command family section now states the family
+      is composed only when a daemon runtime is supplied, that the production
+      entrypoint supplies none, and points the registration gap at the M2 delta
+      note; feature-cli-entrypoint.md's 'ships its own control surface' sentence
+      was replaced with the same truth (its composition table already matched
+      observation); architecture-overview.md's stale 'no typed daemon or
+      background scheduler is established by packages/' claim was corrected.
+      Verified no-ops: the entrypoint composed set already listed all sixteen
+      families and already excluded state/mcp/daemon; no doc/spec file promotes
+      M2 planned scope to delivered; no current-truth doc enumerates
+      doc/planning files or registry entries; no index needs a pointer; no
+      milestone-pack convention spec exists to contradict M2's deliberate
+      deviation. Guards: test-doc-distribution exit 0 (82 docs, no drift),
+      forbidden-literals 0 violations with 139 docs, privacy 0, help-guide
+      coverage green, doc-conformance 17/17, and the only failing test in
+      tests/checks is the known cross-device ci-baseline-parity."
+    type: "info"
+    date: "2026-11-10"
+  - text: "Phase-7 containment carve-out (DEC-22): the reconciliation legitimately
+      edited three files NFR-1 forbade, so the containment rule was split into a
+      delivery budget (31 files: 30 planning + 1 registry) and a phase-7 budget
+      (3 current-truth docs), 34 total. Spec v1.7, test plan v1.9 (P28 measures
+      both budgets and observed 31 + 3 = 34), plan v1.7 (P6 statement now says
+      P6 edits no spec/overview file; phase 7 owns those three). All three
+      re-completed. The @doc-syncer was right to flag the conflict rather than
+      silently exceeding the budget."
+    type: "decision"
+    date: "2026-11-10"
+  - text: "Residual documentation gaps reported by @doc-syncer and accepted as out
+      of scope, recorded so the phase-8 reviewer sees them rather than
+      discovering them: (1) doc/planning/oss-tooling/cli-command-registry.md's
+      `ados daemon` row still reads 'Delivered (GH-238)' with start/stop/
+      status/install/uninstall and no reachability caveat, while a later section
+      on the same page says no resident daemon ships with that registration — a
+      planning-truth overclaim in the same class as the one fixed in daemon.md,
+      deliberately not edited because the spec's NG-5 keeps that file out of
+      scope and the ticket names only the four command pages plus daemon.md;
+      propose it for the M2-S16 planning touch. (2) feature-cli-entrypoint.md
+      still says an unknown `--help` path 'falls through to the classified
+      composition failure', while observation gives `unknown flag \"--help\"` at
+      exit 1 for `bogus --help` and fallback.internal exit 2 for `bogus` — a
+      pre-existing GH-242 defect whose resolution is a product decision (fix the
+      parser or restate the contract), so it is not documented around. (3)
+      doc/overview/glossary.md's declared-gap row presents lanes-or-queue →
+      M2-S1 without the qualifier feature-status-digest.md already carries."
+    type: "risk"
+    date: "2026-11-10"
+  - text: "Guard-environment nuance worth keeping: test-doc-distribution.sh must run
+      with the default TMPDIR — with TMPDIR pointed inside the repo its own
+      marker self-test aborts because a mktemp path is built relative to a
+      relative TMPDIR. That is the mirror image of the repo-local-TMPDIR rule
+      for pnpm check (DEC-19), so the two gates need opposite TMPDIR settings."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW F-12 (process evidence): phase state is command-owned. The
+      `phases:` mirror at the top of this file is written by the phase command
+      and is never hand-edited; `delivery-os phase list GH-284` is the
+      authoritative registry. Where the mirror shows a null `started` field or a
+      `clarify_scope` start later than its completion, the registry is correct
+      and the mirror is stale; no timestamp in this file is edited by hand, here
+      or later."
+    type: "info"
+    date: "2026-11-10"
+  - text: "PLAN PHASE P7 (review remediation) complete: product commit c2594adb and
+      the P7 evidence commit apply review-iter-1 findings F-1, F-2, F-3, F-4,
+      F-6..F-11, F-13, F-15, F-16 and F-18; F-5 is owned outside this plan (a
+      readiness closure record supersedes the NOT_READY verdicts) and F-17 is a
+      PR-time action (squash the branch to the phase plus artifact commits,
+      docs: for docs-only commits) - neither is acted on in the diff. Gates at
+      the P7 HEAD: P11 pages=28 header_attribution=14/14 reachability_missing=0
+      tail_violations=0 current_violations=0 doctor_reachability=exempt
+      watchdog_m1s15=OK watchdog_sc=OK verify_gates_extension=OK
+      closeout_extension=OK real_headers=PASS; P17 and P18 four pointers
+      retained and present, m1_table_blank_before=OK m1_table_separator=OK,
+      removed_lines=0 added_lines=31, pointer_runs=4 pointer_windows=4
+      bad_runs=0 retention_oracle=OK reference_head_fixture=OK; P34
+      pointer_groups=4/4 sed_line_address_0_errors=0; P26
+      back_pointer_claim=ABSENT m1_snapshot=OK description_bound=OK
+      forward_m1_link=OK m2_command_links=6/6 readme_reachable=OK and all ten
+      tokens OK; P28 product_files=31 planning_files=30 registry_files=1
+      outside_planning_outside_registry=0 forbidden_root_files=0
+      unexpected_planning_paths=0 spec_files=2 overview_files=1 phase7_files=3
+      phase7_extra=0 phase7_unknown_paths=0 total_product_files=34; P31
+      guard_exit=0 planning_markers=0; P36 registered_total=139
+      registry_m2=12/12 forbidden_exit=0 '5/5 scope classes scanned, 0
+      violations' unregistered_findings=0 seed_hits=0; P37
+      changed_planning_files=30 broken_links=0 restated_ac_blocks=0;
+      P19/P20/P21/P24/P25/P33 green; full sweep P01-P06, P10, P12-P15, P22, P23,
+      P27, P29, P30, P35 green with clause_scan 61/61 and 79/79,
+      stories_compared=65 identical=65 changed=0, P03 window=1167:1286
+      blank_separation=OK classifier_self_tests=4/4; P07 changed_lines=2
+      unexpected_lines=0 depends=expected at the P7 continuation head, where the
+      refreshed predicate compares the terminal-period form AC-F3-1 requires.
+      P32 was not re-run: P7 changes only doc/** and change artifacts, no
+      code-adjacent file, so the P6 two-run PASS stands."
+    type: "info"
+    date: "2026-11-10"
+  - text: "P7 CONTINUATION (review iteration 2, task 7.13): this commit propagates
+      the DEC-25 release/removal split through the four remaining pages -
+      architecture.md's lifecycle component label becomes 'lease release /
+      remove with reason' and its queue flow step becomes 'remove the ref's
+      queue entry (reason: landed)' while the ticket-named flow heading 'Queue
+      auto-release after merge and closeout' stays as a label because AC-F8-2
+      requires the ticket's six flow names; entrypoint-delta.md says 'automatic
+      removal on merge and closeout'; SC-M2-S15-01 is titled 'Auto-removal after
+      closeout' with the landed reason and the gone assertion unchanged;
+      queue.md's reconcile sentence removes with the 'reconciled' reason and its
+      --park row points at contracts.md for the S17 additions (peak-window,
+      owner-hold) - and applies the iteration-2 evidence corrections in
+      verification.md (the stale 'Known gate discrepancy' section is deleted,
+      the F-12 row records the phase-command refresh of test_planning completed,
+      and the F-5 row names @readiness-reviewer as the owner of the readiness
+      closure record without asserting it exists). The four pages were already
+      inside P7's product scope, so no product path was added. Gates observed at
+      this HEAD: P20 all C4/flow/delta headings OK with the retained
+      ticket-named flow heading; P22 scenario_headings=38 stories_below_two=0
+      and the auto.release|auto.removal anchor OK; P33 mermaid_fences=10
+      keyword_and_fence_exit=0 c4_headings_with_diagrams=3/3
+      flow_headings_with_diagrams=7/7 heading_association=OK fixtures
+      OK/3/3,7/7,OK/detected; P26 back_pointer_claim=ABSENT m1_snapshot=OK
+      description_bound=OK forward_m1_link=OK m2_command_links=6/6
+      readme_reachable=OK all ten tokens OK; P11 pages=28
+      header_attribution=14/14 reachability_missing=0 tail_violations=0
+      current_violations=0 real_headers=PASS; P37 changed_planning_files=30
+      broken_links=0 restated_ac_blocks=0; P28 product_files=31
+      planning_files=30 registry_files=1 spec_files=2 overview_files=1
+      phase7_files=3 total_product_files=34. P07 now prints depends=expected, so
+      the iteration-1 evidence no longer reports a failing gate. The landed hash
+      is reported in the phase close-out and PR body: a single continuation
+      commit cannot name itself inside its own tree."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 1 (phase 8): FAIL — 1 blocking, 4 major, 5 minor, 4 nit.
+      Record: code-review/review-iter-1.yaml. The blocking finding was real and
+      self-inflicted: AC-F10-1 required entrypoint-delta.md to record a pointer
+      from the M1 entrypoint page while NFR-3's two-sentence DESCRIPTION bound
+      forbade adding one, and the delivered note claimed the pointer existed
+      anyway. Remediation went upstream (spec v1.8 DEC-23 turned the requirement
+      around: the M1 page is a snapshot, the note links forward, discoverability
+      runs through the pack index) plus DEC-24 extending the reachability note
+      to board and watchdog, and a P7 remediation phase executed through
+      @coder."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 2 (phase 8): FAIL — 2 blocking (evidence rows still
+      reporting v2.0-era failures that now pass; the release/removal split not
+      propagated to architecture.md, entrypoint-delta.md, the S15 scenario title
+      and queue.md), 5 major (regressed test-plan last_updated, stale plan
+      version pins, task 7.6 prescribing the review's straw man, spec not
+      aligned to its own new contract, absent readiness closure record), 3
+      minor. Remediation: spec v2.0 (DEC-25 records the lease-release vs
+      reason-bearing-removal split), test plan v2.2 (rows re-executed at HEAD
+      with the old FAIL values kept as labelled pre-remediation controls), plan
+      v1.9 (version pins, task 7.6, P7 scope accounting, propagation task 7.13),
+      coder continuation d57ba77f, and readiness-iter-6.md as the closure
+      record."
+    type: "info"
+    date: "2026-11-10"
+  - text: "REVIEW ITERATION 3 (phase 8): PASS — no blocking findings. Record:
+      code-review/review-iter-3.yaml. The reviewer extracted all 38 procedures
+      and ran the full sweep at HEAD: P02 61/61, P35 79/79, P29 65/65 on four
+      heads, P28 31+3=34, P26 all checks with back_pointer ABSENT and 6/6
+      command links, P11 reachability_missing=0, P17/P18 table block OK with
+      retention 4/4, P07 depends=expected, P20/P22/P33 green with the
+      ticket-named flow heading retained, and the aggregate gate at a repo-local
+      TMPDIR exiting 0 (7133 pass, 0 fail). It also confirmed the backlog was
+      not touched after c2594adb and that the S15 story text still matches the
+      ticket byte-for-byte in substance, so the spec's interpretation did not
+      license a backlog change. Residue for the human gate (10 items, all
+      non-blocking): a stale F-5 row in verification.md that still says the
+      closure record is absent; a missing definition of the queue.graph
+      release-vs-remove event kinds; an off-by-one AC-coverage comment in the
+      plan; a long line in queue.md; two stale working-tree phrasings; the
+      documented mirror field; a resolved residue in the readiness record; P26's
+      missing aggregate verdict line; the aggregate gate not being re-run in the
+      change's own evidence (the reviewer ran it); and the PR-time squash."
+    type: "info"
+    date: "2026-11-10"
+  - text: "QUALITY GATES (phase 9) at HEAD 68111bf2: PASS. `bash
+      scripts/.tests/test-doc-distribution.sh` exit 0 with the default TMPDIR
+      (marker self-tests pass, 82 in-scope docs, no drift). Default `pnpm check`
+      exit 1 after 365s: lint, format and typecheck clean, then 7132 pass / 4
+      skip / 1 fail — the single failure is
+      tests/checks/ci-baseline-parity.test.ts, whose `git clone --local` cannot
+      hardlink across devices into tmpfs /tmp (Invalid cross-device link), the
+      documented environmental condition. Repo-local TMPDIR `pnpm check` exit 0
+      in 403s: 7133 pass / 4 skip / 0 fail across 7137 tests and 880 files, plus
+      boundaries (373 modules, 1101 dependencies, no violations),
+      ambient-globals, workspace-entrypoints, secret-read-boundary (342 files
+      clean), prompt-conformance (5 prompts clean), help-guide-coverage and
+      exports-parity all green. The delta between the two runs is exactly the
+      one environmental test. These supersede the P6-era results for phase-9
+      evidence."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DOD CHECK (phase 10): PASS. Phases: nine recorded complete before this
+      check (clarify_scope, specification, test_planning, delivery_planning,
+      dor_check, delivery, system_spec_update, review_fix, quality_gates) with
+      this check closing the tenth. Plan phases: all seven declared phases carry
+      a pm-notes entry naming the phase id, its commit(s) and its gate results
+      (P1 1842e181+110fb160, P2 57120f4e, P3 5e00d4f2, P4 39bb4afb, P5 13171be1,
+      P6 166df7ff+93117da5+ae62e63e, P7 c2594adb+b75f0c30+d57ba77f). Plan
+      validates valid/readyForDevelopment with 37 TCs mapped exactly once across
+      P1-P7. Acceptance criteria: 37/37 evidenced — the reviewer's iteration-3
+      PASS executed all 38 procedures at HEAD (including P02 61/61, P35 79/79,
+      P28 31+3=34, P26 all checks, P11 reachability 0, P17/P18 table and
+      retention) and the phase-9 battery is green. Current-truth docs:
+      @doc-syncer reconciled three files and verified the no-ops;
+      readiness-iter-6 re-affirmed all ten facets with the closure READY.
+      Deliverables present: the M2 pack's seven top-level documents plus six
+      command pages, the backlog's seven stories and two amendments, the status
+      snapshot, the fourteen reconciled M1 headers plus the entrypoint
+      correction, and the M2 index row. Known non-blocking residue is recorded
+      in the review-iter-3 residue list and carried to the human gate; nothing
+      on that list blocks an AC. Change capsule note: this change predates the
+      events.jsonl/candidates capsule wiring in this checkout, so the phase
+      registry plus pm-notes carry the event trail."
+    type: "info"
+    date: "2026-11-11"
+  - text: "PR CREATION (phase 11): PR #285 opened against main-tools —
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/285 — from
+      docs/GH-284/m2-planning, head 4827b7478ecfc5ddae93410e2b665901181b9fc6,
+      label `documentation`, linked as `Refs #284` so it cross-references
+      without closing the ticket. The branch was unpublished and is now pushed
+      with tracking. Merge authority stays with the owner/CEO: the PR body
+      records the squash-merge instruction and the docs: subject, and the
+      non-blocking residue from review-iter-3 for the human reviewer."
+    type: "info"
+    date: "2026-11-11"
+  - text: "PLAN PHASE P8 (external review-board remediation) - work landed, gate
+      list blocked by four stale predicates. Commits: a7194c96 (spec v2.1 / plan
+      v2.0 / test plan v2.4 artifacts), c74bac02 (state.md, daemon.md,
+      doctor.md), 14b4e892 (backlog S15/S16 edges and the M2 story map),
+      e9997108 (contracts, journeys, events), 6aa6f1a0 (40 scenarios with 40
+      Assert lines, S17-06/07, one-repo S2, resolve grammar), c2e8bfb9
+      (entrypoint delta mount mechanism and #286, bounded registry rows, status
+      pointer retitle), plus this evidence commit. Observed at the P8 head: P28
+      product_files=32 planning_files=31 registry_files=1
+      outside_planning_outside_registry=0 forbidden_root_files=0 spec_files=2
+      overview_files=1 phase7_files=3 phase7_extra=0 phase7_unknown_paths=0
+      total_product_files=35 but unexpected_planning_paths=1; P11
+      header_attribution=14/14 reachability_missing=0
+      doctor_reachability=required state_layer=OK state_no_surface=OK
+      daemon_286=OK real_headers=PASS but fixture_conforming=FAIL; P17/P18 PASS
+      with the table blank line and retention 0/31/0; P19 advisory_rows=3/3 and
+      the table byte-identical; P20 all headings; P21 contract_markers_missing=0
+      resolve_grammar=OK attempts_per_ref=OK topic_parents=OK tolerance_2pct=OK
+      s17_grace=OK s17_stop_event=OK s17_park_fields=OK; P22/P38
+      scenario_count=40 assert_count=40 assert_shape_violations=0 s2_one_repo=OK
+      s17_06=OK s17_07=OK; P25/P26/P27/P35/P37/P39 green (clause_scan 79/79,
+      broken_links 0, registry rows and boundary OK); P31 guard_exit=0
+      planning_markers=0; P32 default exit 1 with the lone ci-baseline-parity
+      failure and repo_tmpdir_exit=0, gate_verdict=PASS. Four expectations
+      cannot be met as written, all in the procedures rather than the artifacts:
+      (1) P28 unexpected_planning_paths=1 because its planning allowlist lacks
+      the DEC-37 cli-command-registry.md path; (2) P36 seed_hits=2 because the
+      two registry rows P37 requires carry the working-name literal and P36
+      scans every added line, while the forbidden-literals guard itself scans
+      only registered docs; (3) P14/P30 state.md OUTSIDE/body_identical=13/14
+      because CG-REC-001 requires removing the body synopsis while the page set
+      is header-only; (4) P11 fixture_conforming=FAIL because the /tmp/sb
+      fixture predates the new doctor/state/daemon checks. Minimal fixes: add
+      cli-command-registry to P28's allowlist, exclude that file from P36's
+      added-line scan, give state.md a body exception (or drop it from the
+      header-only set), and refresh the P11 fixture. No push, no ticket, no
+      daemon mount; readiness closure remains owned by @readiness-reviewer."
+    type: "info"
+    date: "2026-11-11"
+  - text: "PLAN PHASE P8 CLOSE-OUT: the four blocked predicates were repaired
+      upstream (spec v2.2 DEC-39 gives state.md a bounded body exception; test
+      plan v2.5 adds cli-command-registry.md to P28's allowlist, excludes it
+      from P36's added-line seed scan, classifies state.md's three permitted
+      body regions in P14/P30, and refreshes P11's conforming fixture) and every
+      P8 gate is now green at this close-out commit. Observed: P11
+      reachability_missing=0 fixture_conforming=PASS real_headers=PASS; P14
+      changed_pages=13/13 state_hunks=3 classified=3 state_body_regions_ok=OK;
+      P30 body_identical=13/13 state_body_regions_ok=OK PASS; P28
+      product_files=32 planning_files=31 registry_files=1
+      unexpected_planning_paths=0 total_product_files=35; P36 forbidden_exit=0
+      '5/5 scope classes scanned, 0 violations' seed_hits=0; full sweep P01-P10,
+      P12, P13, P15-P27, P29, P31-P35, P37-P39 green (clause_scan 79/79,
+      scenario_count=40 assert_count=40, retention 0/31/0, m2_targets=12/12,
+      registry rows and boundary OK); P31 guard_exit=0 planning_markers=0; P32
+      default exit 1 with the lone ci-baseline-parity failure and
+      repo_tmpdir_exit=0, gate_verdict=PASS. The landed hash is reported in the
+      phase close-out and PR body: this evidence plus spec v2.2 and test plan
+      v2.5 are one close-out commit."
+    type: "info"
+    date: "2026-11-11"
+  - text: "RETRO (P8): the P8 product work was committed with `git commit -F` and
+      explicit path sets instead of the commit primitive. Reason: the primitive
+      exposes no outcome/why/verification or message input (its help lists only
+      <ref>, --phase, --dry-run, --json/--verbose/--pretty) and falls back to a
+      path-derived template whose subject is truncated with an ellipsis, which
+      the external review board rejects; it also cannot split a phase into the
+      logical units the board requires. Specific subjects and body/footer lines
+      at or under 100 characters were chosen as the stronger constraint.
+      Deviation recorded here so it is not mistaken for a staged or
+      hand-composed lifecycle commit by default; no earlier commit was amended
+      or rewritten."
+    type: "retro"
+    date: "2026-11-11"
+  - text: "REVIEW BOARD 2 (external, on PR 285): FAIL with 11 blocking/should-fix
+      findings plus cheap notes, all addressed. CG-REC-001 state.md now names
+      the delivered state layer and attests no command surface (SYNOPSIS and the
+      command-surfacing DESCRIPTION sentence removed under DEC-39's bounded body
+      exception); CG-DEP-001 S15 gains M2-S13 and S16 gains M2-S12 and M2-S13
+      (sanctioned by DEC-27, every other token byte-identical and the clause
+      table records them as sanctioned so NFR-8 does not read them as drift);
+      CG-MAP-001 S3/S5 and S10 rows are advisory and SC-M2-S2-01 uses one
+      repository (DEC-28, rejecting the alternative of widening S2's dependency
+      set); CG-CON-001 the pack uses the delivered `dispatch dual-run resolve
+      <divergence-id> --note <text>` grammar with no --ref and documents per-ref
+      attempts.v1 whose repository history is the union over refs (DEC-29);
+      CG-EVT-001/002 the four new topics extend the delivered queue and lanes
+      topics, status is a wire type, queue.graph extends queue (DEC-30);
+      CG-S17-001 the park rule schema carries graceSeconds bounded by the
+      buffer, the zero-spend evidence form is declared (per-call ledger or
+      provider-usage read), a stop event kind plus status/brief park fields make
+      AC6 checkable, AC5 is scoped from the park timestamp, and SC-M2-S17-06/07
+      cover AC1 and AC6 (DEC-31, AC-F8-7 added); CG-DEPTH-001 all 40 seeds carry
+      one machine-checkable Assert line with the assertion count equal to the
+      scenario count (DEC-32, AC-F8-6 added); CG-EP-001 the delta note states
+      the prompt-required composition and drops-extras mount mechanism, so
+      mounting projects/events/board needs a prompt-set change plus a help
+      reference page per command, and names #286 (DEC-33); CG-DAEMON-001 #286 is
+      referenced from daemon.md, the delta note and the S13/S17 prerequisite
+      prose (DEC-34); CG-DOCTOR-001 doctor.md joins the reachability set with
+      its follow-up status (DEC-35); CG-TOL-001 the reconciliation tolerance
+      default is at most 2 percent of session totals with S14 required to adopt
+      or justify it (DEC-36); CG-REG-001 a bounded cli-command-registry.md edit
+      registers projects (M2-S11) and events (M2-S13), notes attempts as a
+      dispatch subfamily, and states the projects versus M3 repos boundary
+      (DEC-37); and CG-STATUS-001/CG-MAP-002/003/CG-EVT-002 are accepted as
+      small product edits (DEC-38). CG-SCEN-001 and CG-GUARD-001 are accepted
+      as-is; the PR body now carries the compensating-control sentence that the
+      guard registers brand literals only and content review is the control."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Containment after the review-board remediation: 32 delivery product files
+      (31 planning, including the bounded cli-command-registry.md edit, plus the
+      forbidden-literals registry) and 3 system_spec_update files, 35 total.
+      Acceptance criteria: 39 — the two new ones are AC-F8-6 (scenario assertion
+      contract) and AC-F8-7 (S17 evidence surfaces). Plan phases: eight, with P8
+      owning the board remediation; 39 TCs mapped exactly once across P1-P8.
+      This supersedes the 37-AC and 34-file counts recorded in the earlier DoD
+      note."
+    type: "info"
+    date: "2026-11-11"

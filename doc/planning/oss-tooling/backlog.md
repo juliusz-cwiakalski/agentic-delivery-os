@@ -1106,7 +1106,7 @@ the gap is deliberate. M2 stories keep their codes.
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen
   sharing the brief and status state source.
 - AC: board, brief, and status share one state source.
-- Depends on: M1-S5, M1-S17.
+- Depends on: M1-S5, M1-S17, M2-S11.
 
 ### M2-S5 Steer
 - Goal: The owner can change the course of a running delivery without killing the session: steering notes queue up, land at the next phase boundary, and carry receipts, so course corrections are safe and auditable.
@@ -1127,8 +1127,9 @@ the gap is deliberate. M2 stories keep their codes.
   failure rate, escaped defects; burn-rate alarms. Builds on the `ados
   spend` read side delivered in M1-S19; this story adds the alarm and
   metric layers.
+  Consumes M2-S14 telemetry for per-agent and per-model facts.
 - AC: exit criteria measurable with committed numbers.
-- Depends on: M1-S19, M2-S3.
+- Depends on: M1-S19, M2-S3, M2-S14.
 
 ### M2-S7 Suite-to-job mapping in gates
 - Goal: Local gates must cite the same suite breadth as CI, so a narrow local suite cannot masquerade as full green.
@@ -1164,6 +1165,124 @@ the gap is deliberate. M2 stories keep their codes.
   ceremonies; the doctor runs as a manual checklist until tooling
   lands.
 - Depends on: M2-S8.
+
+### M2-S11 Multi-repository workstations
+- Goal: Multiple delivery-managed repositories on one workstation are
+  first-class: state is scoped per repository so same-ref collisions are
+  impossible, and a projects command gives one CLI overview of every managed
+  checkout.
+- Tasks: per-repository state scoping derived from the checkout identity
+  (git common dir marker) with a host-level index; `projects list` reporting
+  repo key, root, state location, daemon reachability, handover state;
+  migration note for existing single-store users; tests proving two checkouts
+  using the same ref cannot observe each other's documents.
+- AC: two checkouts of different repositories on one host, both using ref
+  GH-241, hold disjoint phase state and queue entries; `projects list`
+  enumerates them without manual configuration.
+- Depends on: M0-S5, M1-S17.
+
+### M2-S12 Evidence inspection and divergence resolution
+- Goal: The dual-run evidence ledger is inspectable and actionable from the
+  CLI, so handover decisions and retros rest on readable evidence, not file
+  spelunking.
+- Tasks: `dispatch attempts [--ref] [--limit]` read side (token, corroboration
+  triple, divergence refs, timestamps, harness); operational divergence
+  resolution flow (`dual-run resolve`) including resolution from
+  local evidence when live truth reads are unavailable; coverage and floor
+  reporting remains as exposed by the summary.
+- AC: attempt history for a repository is retrievable as a machine envelope; a
+  recorded divergence can be resolved with a note and leaves unresolved
+  counts; resolve works when tracker truth is unreachable
+  (local-evidence mode) with the mode declared.
+- Depends on: M1-S9.
+
+### M2-S13 Public event taxonomy
+- Goal: The daemon subscribe surface carries a versioned, documented event
+  taxonomy covering delivery state changes, so any client (watch commands,
+  scripts) consumes one contract.
+- Tasks: extend topics beyond status/lanes to queue.graph, dispatch.attempt,
+  phase.state, blockers.state; document event kinds, payloads,
+  ordering guarantees, and the slow-consumer overflow-to-repoll rule as a
+  public versioned contract; contract tests per topic.
+- AC: a client subscribed to queue.graph
+  observes entry and dependency changes it can act on; the taxonomy document
+  version is pinned by tests;
+  overflow degrade behavior is preserved for every topic.
+- Depends on: M1-S18.
+
+### M2-S14 Harness telemetry v2
+- Goal: Token, cost, and timing telemetry captured per ticket, repository,
+  lane, agent role, and model from the opencode v2.x.y stream, so spend,
+  metrics, and retro state facts instead of estimates.
+- Tasks: ingest per-step cost/tokens from the harness JSONL stream (opencode
+  v2.x.y step frames), attributed through session economics and
+  command-audit identity (M1-S15, M1-S22); phase-transition, stall, and
+  restart timing; schema-versioned local event storage; extend the spend read
+  side with breakdowns per ticket/repo/lane/agent/model plus timing summaries;
+  expose the summaries to the retro evidence pass and the morning brief.
+- AC: for a completed delivery, spend reports
+  tokens and cost per agent role and model with phase timings, reconciling
+  with harness-reported session totals within a declared tolerance;
+  the retro evidence pass and brief cite these numbers; telemetry absence
+  remains a classified outcome.
+- Depends on: M1-S11, M1-S15, M1-S19, M1-S22.
+
+### M2-S15 Queue lifecycle completion
+- Goal: Queue hygiene is complete: entries leave the queue when their
+  work lands or is abandoned, dependencies are manageable, and one ref
+  cannot run twice at once regardless of entry path.
+- Tasks: entry removal/release with reasons;
+  automatic release on merge and closeout; dependency edge add/remove;
+  single-flight per ref enforced across dispatch paths (evidence: during
+  dual-running a lane observed a second concurrent session on one ref);
+  reconciliation of stale entries against tracker truth.
+- AC: after a squash merge and closeout,
+  the ref's queue entry is gone without manual action; a second dispatch
+  against a ref with an active lane is
+  refused with a classified error naming the holder; stale entries are
+  reconcilable without editing state files.
+- Depends on: M1-S9, M1-S17, M1-S18, M2-S13.
+
+### M2-S16 Engine-first delivery operations
+- Goal: Day-to-day delivery of this repository runs primarily through the
+  typed engine with the shell stack as documented fallback, accumulating the
+  evidence the handover gate requires.
+- Tasks: operate dispatch through the engine for regular delivery;
+  provider windows and holds as engine-visible data (building on the
+  pre-iteration hold hook and lane economics);
+  periodic handover-gate evaluation on accrued evidence per repository with
+  the shell path kept green; deprecation pointers from shell entry points
+  toward the engine once a repository flips.
+- AC: consecutive engine dispatches with corroborated outcomes accrue in the
+  summary; handover evaluation reports per-condition status;
+  the shell path remains usable and documented throughout; any flip is
+  per-repository and reversible.
+- Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
+
+### M2-S17 Provider-aware peak pausing
+- Goal: Peak-hour cost control is enforced per provider profile: in-flight
+  sessions whose nominated provider enters a peak window are stopped and later
+  resumed, while deliveries on other providers continue untouched.
+- Tasks: every delivery nominates its provider profile at dispatch admission
+  (recorded on the lane and attempt records, building on M1-S21 profiles and
+  M1-S22 identity); peak-window rules as data per provider profile (windows,
+  multipliers, buffers); the resident daemon watches profile windows and parks
+  in-flight lanes whose profile enters peak (bounded-grace stop, session state
+  preserved, park reason recorded);
+  automatic resume from preserved session state when the window ends
+  (same branch, session resume path, never re-dispatch from scratch);
+  zero-spend assertion through telemetry (M2-S14): no model calls bill
+  on a parked profile during its window; daemon-absent degrades to the
+  existing iteration-start gating, documented.
+- AC:
+  1. A dispatch records its nominated provider profile; the nomination is visible on lane and attempt records.
+  2. When a peak window starts for profile P, every in-flight lane using P is stopped with bounded grace, marked parked with reason `peak-window` and the window end, and stays parked until it ends.
+  3. Lanes using other providers are unaffected during a P peak window and keep running.
+  4. When the window ends, parked lanes resume automatically from preserved session state; no branch, artifact, or queue state is lost or duplicated.
+  5. Telemetry proves zero billable model calls on profile P during its peak window for parked lanes.
+  6. Stop, park, and resume are auditable ledger events surfaced in status and brief.
+  7. Works with the daemon resident; without it, behavior degrades to iteration-start gating with the difference declared.
+- Depends on: M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, and the owner-hold semantics (#280).
 
 ---
 

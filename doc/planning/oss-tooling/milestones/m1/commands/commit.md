@@ -1,7 +1,6 @@
 # commit(1)
 
-Status: M1-S14 shipped (GH-227); M1 milestone planned. Delivered
-contract.
+Status: Delivered M1-S14 (GH-227). Implemented contract.
 
 ## NAME
 

@@ -1,0 +1,2346 @@
+# GH-284 implementation plan — plan M2: engine-first operations, multi-repo
+# workstations, evidence inspection, and telemetry
+#
+# Plan revision: v2.0 (2026-11-11). Aligned to spec v2.1 (DEC-26..DEC-38) and
+# test plan v2.4 (39 ACs, 39 TCs, procedures P00..P39). P1-P7 are DELIVERED AND
+# COMMITTED (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1, 110fb160, plus
+# the P6 delivery commit and the P7 remediation commits); code review iterations
+# 1-2 returned FAIL and were remediated by P7, and the external review board on
+# PR #285 then raised eleven blocking/should-fix findings. This revision adds
+# P8, the external review-board remediation phase (now current), over thirteen
+# product files — the twelve named files plus `queue.md` only if the board's
+# CG-EVT-002/CG-MAP notes require it — and the change artifacts it declares.
+# Containment is now 32 delivery product files (31 under
+# `doc/planning/oss-tooling/**` plus the forbidden-literals registry) and 35
+# across the change once `system_spec_update`'s three current-truth docs are
+# counted (DEC-22, DEC-37).
+# Revision history:
+#   v1.0  2026-11-10  initial plan (spec v1.1 / test plan v1.0); recorded the
+#                     three mechanism defects XF-1, XF-2, XF-3 and the two
+#                     derivation defects XF-4 (sequencing) and XF-6 (P03 window)
+#   v1.1  2026-11-10  alignment to spec v1.2 (DEC-16) and test plan v1.1.
+#                     XF-1, XF-2, XF-3 and XF-6 closed upstream; the plan gated
+#                     on the normative retention oracle plus addition whitelist
+#                     (NFR-7, AC-F7-2, AC-F7-3, AC-NFR7-1), the
+#                     at-most-two-adjacent-sentence entrypoint bound (NFR-3,
+#                     AC-F5-4, AC-F6-1), P16's real alternation with its
+#                     literal_pipe prohibition, and P03's base-anchored window.
+#                     It recorded two residual defects, XF-7 and XF-8.
+#   v1.2  2026-11-10  alignment to spec v1.3 (DEC-17) and test plan v1.2. XF-7
+#                     and XF-8 closed: P18 derives all four pointer windows from
+#                     BASE statement ends mapped through the insertion offset and
+#                     ships a reference-head fixture; P34 clamps the title-group
+#                     start and captures stderr; DEC-17 pins the backlog
+#                     insertion inside the Epic M2 block.
+#   v1.3  2026-11-10  DoR iteration-1 alignment to spec v1.4 and test plan v1.3,
+#                     absorbing readiness-review/readiness-iter-1.md as
+#                     DR-1..DR-11 (S17's seven criteria by content, the 79-clause
+#                     table, the two-run DEC-19 aggregate gate, the DEC-18
+#                     proposal-tail rule, the DEC-20 pack deviation and
+#                     twelve-target row, blank separation, P33 association,
+#                     P34 self-containment, §18 commit-split wording).
+#   v1.4  2026-11-10  DoR iteration-2 alignment to spec v1.5 and test plan v1.4,
+#                     absorbing readiness-iter-2.md as DR-12..DR-16 (the
+#                     `## C4 Level <n>: <subject>` form with the
+#                     `([^0-9]|$)` association predicate and seven `###` flow
+#                     headings, the `ac_numbered_items`/`extra_criteria`/
+#                     `duplicate_numbers` tokens with their self-tests, the
+#                     pack-relative README target rule, the widened
+#                     added-criteria guard, and Appendix E parity).
+#   v1.5  2026-11-10  Post-DoR confirmation alignment to test plan v1.6,
+#                     absorbing readiness-review/readiness-iter-4.md as
+#                     DR-17..DR-19, all in expected-string and task wording:
+#                     P08's appended-clause alternative is removed because
+#                     appending into an existing base task line is
+#                     non-conforming (DR-17); P03's `blank_separation`
+#                     parenthetical is restated in the procedure's head-anchored
+#                     form with `fixture_blank_separation=OK` (DR-18); and P29's
+#                     gate now reflects the block-close bound at `^---$`/`^## `
+#                     with its four head runs and three negative controls
+#                     (DR-19). No phase, scope, mapping, or other pin changes.
+#   v1.6  2026-11-10  P6 halt fix after spec v1.6 (DEC-21) and test plan v1.8.
+#                     The forbidden-literals guard's `userFacingDocs` scope
+#                     covers `doc/**` except `doc/changes/**` and
+#                     `doc/decisions/**` and fails closed on an unregistered
+#                     user-facing doc, so the twelve `milestones/m2/**` docs
+#                     must be registered in
+#                     `scripts/checks/forbidden-literals.registry.json`. P6's
+#                     scope gains that one file as the sole non-planning product
+#                     file (DR-20); P28 now expects 31 product files (30 planning
+#                     + 1 registry); P36 expects the registration assertions
+#                     (`registered_total=139`, `registry_m2=12/12`,
+#                     `m2_registry_sorted=yes`, `m2_registry_duplicates=0`,
+#                     `baseline_absent=12/12`, `unregistered_findings=0`); and
+#                     P32's environmental exemption narrows to the lone
+#                     `ci-baseline-parity` failure once the three
+#                     forbidden-literals failures are gone. P1-P5 stay exactly as
+#                     delivered.
+#   v1.7  2026-11-10  Phase-boundary alignment after `system_spec_update`
+#                     reconciled three current-truth docs (spec v1.7 / DEC-22,
+#                     test plan v1.9). Containment splits into budgets: 31
+#                     product files for the delivery phases (30 planning + the
+#                     registry) and exactly 3 for phase 7
+#                     (`doc/spec/features/feature-resident-daemon.md`,
+#                     `doc/spec/features/feature-cli-entrypoint.md`,
+#                     `doc/overview/architecture-overview.md`), 34 across the
+#                     change. P28 now asserts both budgets (DR-21); P6's
+#                     close-out no longer claims `doc/spec/**` is unchanged and
+#                     instead names phase 7's three-file reconciliation as
+#                     owned by `system_spec_update`; and the change-shape
+#                     header and NFR-1 invariant state the 31 + 3 = 34 budget.
+#   v1.8  2026-11-10  Code-review iteration-1 remediation (spec v1.8 / DEC-23,
+#                     DEC-24; test plan v2.0). Adds P7, one delivery phase whose
+#                     scope is eleven product files already inside the 31-file
+#                     delivery budget plus three change artifacts, covering
+#                     F-2 (status table block), F-8 (uniform reachability note
+#                     on board/watchdog), F-1/F-13 (delta-note snapshot
+#                     statement and abridged help block), F-3/F-4/F-9/F-18
+#                     (queue release/removal split, park-vocabulary mapping,
+#                     softened no-nomination wording, corrected example), F-10
+#                     (four story-map rows), F-11 (daemon-absent branch), F-7
+#                     (per-page registration truth), F-6 (evidence budgets),
+#                     F-12 (pm-notes note only), F-15 (`last_updated`) and F-16
+#                     (backlog period plus wrap). F-5 (readiness closure) and
+#                     F-17 (PR-time squash) are recorded as out of scope; F-14
+#                     is fixed here by moving the upstream-version trigger to
+#                     v1.8 / v2.0. TCs whose deliverables P7 re-delivers move to
+#                     P7 (13 TCs), so the 37/37 mapping stays exact across
+#                     P1-P7 (DR-22, D-16).
+#   v1.9  2026-11-10  Review iteration-2 plan-side remediation (spec v2.0 /
+#                     DEC-25, test plan v2.2, DR-23). F-4: every artifact pin
+#                     moves to spec v2.0 / test plan v2.2 and the upstream-drift
+#                     trigger becomes version-agnostic so it cannot go stale
+#                     again. F-5: task 7.6 now describes the DELIVERED
+#                     story-to-artifact correction (S7/S8/S9 "none in this
+#                     pack" with the explanatory sentence, S13 "C4 Level 3 event
+#                     components" plus event taxonomy v1) instead of the review's
+#                     straw-man mapping. F-10: P7's scope now declares every
+#                     change artifact it revises (spec, test plan, plan,
+#                     pm-notes, evidence) alongside its twelve product files, and
+#                     the header and change-shape block agree on that count.
+#                     New task 7.13 propagates the DEC-25 removal wording across
+#                     architecture, the delta note, test-scenarios and queue.md
+#                     (keeping the ticket-named flow heading as a label), and the
+#                     close-out now references the readiness closure record that
+#                     `@readiness-reviewer` owns. TC-M2PLAN-022 moves to P7 with
+#                     the scenario it re-delivers, so the mapping stays 37/37.
+#   v2.0  2026-11-11  External review-board remediation (spec v2.1 / DEC-26..DEC-38,
+#                     test plan v2.4, DR-24). Adds P8 over the twelve named
+#                     product files (plus `queue.md` conditionally) and the
+#                     change artifacts it revises: state-layer header, sanctioned
+#                     S15/S16 dependency additions, advisory map rows and the S2
+#                     one-repo seed, the delivered resolve grammar plus per-ref
+#                     `attempts.v1`, the `queue`/`lanes` topic parents, S17
+#                     evidence verifiability (grace bounds, zero-spend form, stop
+#                     event, park fields, AC5 scope), one `Assert:` line per
+#                     scenario seed, the delta-note mount mechanism and #286,
+#                     daemon/doctor reachability, the 2% reconciliation
+#                     tolerance, the bounded `cli-command-registry.md`
+#                     registration, and the `status.md` pointer retitle.
+#                     Containment becomes 32 delivery / 35 total; the TCs whose
+#                     deliverables P8 re-delivers move to P8 (twelve, including
+#                     the two new TC-038/TC-039), so the mapping is 39/39 exactly
+#                     once across P1-P8.
+#                     Finding ids use the `XF-` prefix (plan-authored) and the
+#                     `DR-` prefix (review-derived) so they never collide with
+#                     the spec's `F-` capability ids cited in the task trailers.
+#
+# Sources (single source of truth):
+#   - Spec: ./chg-GH-284-spec.md v2.1 — F-1..F-11, NFR-1..NFR-10, DM-1..DM-4,
+#     DEC-1..DEC-38, RSK-1..RSK-10, 39 ACs (§17.1 + §17.2, including
+#     AC-F8-6 and AC-F8-7), §17.3 DoD,
+#     Appendix B (14 reconciled pages + entrypoint), Appendix C (observed
+#     entrypoint), Appendix D (12-document pack manifest), Appendix E
+#     (structural diagram procedure, asserting heading association with the same
+#     predicates as P33). DEC-16 (status retention oracle, two-sentence
+#     entrypoint bound), DEC-17 (insertion inside the Epic M2 block), DEC-18
+#     (proposal-tail rule), DEC-19 (two-run aggregate gate), DEC-20
+#     (pack-contents deviation plus the twelve-target index row), DEC-21 (the
+#     forbidden-literals guard scans `doc/planning/**` and needs the twelve pack
+#     documents registered, so the delivery phases change 31 product files: 30
+#     planning plus the one registry), DEC-22 (phase 7 is a separate budget
+#     of exactly three current-truth docs, for 34 product files across the
+#     change), DEC-23 (the M1 entrypoint page stays a snapshot; the delta note
+#     claims no back pointer and links forward) and DEC-24 (a uniform
+#     reachability note on every reconciled page whose family is absent from
+#     root `--help`: daemon, board, watchdog), and DEC-25 (S15's
+#     "removal/release with reasons" is two mechanisms: lease release keeps the
+#     entry, reason-bearing removal makes it leave; automatic post-merge and
+#     post-closeout behaviour is removal, and ticket-named flow headings stay as
+#     labels) govern this plan.
+#   - Test plan: ./chg-GH-284-test-plan.md v2.4 — 39 TCs TC-M2PLAN-001..039,
+#     procedures P00..P37 in §7.1, §7.2 TC->procedure map, §7.3 failure
+#     triage, §1.2 declared gaps G-1..G-9, §6 base revision and environment.
+#     v1.1-v1.3 reopened P03/P15/P16/P18/P19/P27/P30/P32/P33/P34 and the
+#     P02/P06/P11/P35 fidelity procedures; v1.4 fixed P33's C4 predicate,
+#     renamed P06's counters and widened P35's guard; v1.5 head-anchored P03's
+#     blank-separation check, narrowed P08's AC identity control and proved the
+#     P03/P08 pair jointly satisfiable; v1.6 bounds P29's story extraction at
+#     `^---$` and `^## ` so M2-S9 also ends at the block close. v1.8 carries the
+#     P6 halt fix: P28 counts the registry file separately
+#     (`planning_files`/`registry_files`/
+#     `outside_planning_outside_registry`), P36 asserts the pack registration
+#     (`registered_total`, `m2_registry_sorted`, `m2_registry_duplicates`,
+#     `registry_m2`, `baseline_absent`, `unregistered_findings`) with sorted and
+#     duplicate self-tests, and P32 keeps the lone-parity classification for the
+#     default run. v1.9 restates P28 as two budgets (delivery 31 and phase 7's
+#     exactly three current-truth docs, 34 total), derives the delivery range
+#     as the whole change minus the three phase-7 paths (equivalently
+#     base..the last delivery commit before phase 7), and fails on any fourth
+#     `doc/spec`/`doc/overview` path. v2.0 carries the review-iteration-1
+#     alignment: P26 asserts the delta note's snapshot statement, bounded
+#     DESCRIPTION correction, absent back-pointer claim, forward links to the M1
+#     page and all six M2 command pages, and pack-index reachability; P11
+#     requires the reachability note on daemon/board/watchdog and keeps
+#     `doctor_reachability=exempt`; P17/P18 require a blank line before the M1
+#     delivery table header (`m1_table_blank_before`, `m1_table_separator`).
+#     v2.1 requires P07's exact terminated depends line (spec v1.9 AC-F3-1).
+#     v2.2 re-ran P11/P17/P18/P26/P07 at HEAD a2f45be7 (PASS rows now recorded,
+#     with the pre-c2594adb values kept as labelled falsifiability controls),
+#     restored `last_updated` after `created`, and absorbed DEC-25: the clause
+#     descriptions split lease release from reason-bearing removal, the archive
+#     flow label stays `Queue auto-release...`, and the mandatory scenario anchor
+#     accepts `auto-release|auto-removal`.
+#     v2.3/v2.4 absorb the external review board on PR #285 (DEC-26..DEC-38):
+#     P11 requires doctor's reachability note (`doctor_reachability=required`),
+#     P19 counts three advisory map rows, P21 adds the delivered resolve grammar,
+#     per-ref `attempts.v1`, `queue`/`lanes` topic parents, the 2% tolerance and
+#     the S17 evidence markers, P22 adds the `Assert:`-line contract plus
+#     SC-M2-S17-06/07 and the one-repository S2 seed, P26 adds the mount
+#     mechanism and #286, P28 moves to 32 delivery / 35 total, P35 counts the two
+#     sanctioned dependency rows, P37 checks the bounded registry registration,
+#     and P38/P39 are the new Assert-line and S17-evidence procedures.
+#   - External review board on PR #285: recorded in the spec as DEC-26..DEC-38
+#     and in P8's tasks as CG-* findings (DR-24).
+#   - Code review: ./code-review/review-iter-1.yaml and review-iter-2.yaml —
+#     both verdicts FAIL. Iteration 1 (18 findings: 1 critical, 4 high, 8
+#     medium, 5 low) is P7's original scope (DR-22). Iteration 2 (10 findings:
+#     1 critical, 1 high, 5 medium, 3 low) found stale verification rows and the
+#     unpropagated release/removal split; the plan-side items are DR-23, and the
+#     evidence-side items belong to the test plan, `verification.md` and the
+#     pm-notes whose owners refresh them. F-5 (readiness closure) and F-17
+#     (PR-time squash) remain out of scope.
+#   - Readiness reviews: ./readiness-review/readiness-iter-1.md (F1-F15,
+#     DR-1..DR-11), readiness-iter-2.md (F1-F8, DR-12..DR-16),
+#     readiness-iter-3.md (confirmation), readiness-iter-4.md (F1 plus
+#     minors 2-4, DR-17..DR-19), and the P6 halt analysis recorded in
+#     readiness-iter-4.md's P29 follow-up plus the delivery halt itself
+#     (DR-20).
+#   - PM notes: ./chg-GH-284-pm-notes.yaml — binding decisions, the
+#     specification reopens that produced v1.1 (DEC-15) and v1.3 (DEC-17), and
+#     the phase-9 quality-gate environment fact.
+#   - Ticket: juliusz-cwiakalski/agentic-delivery-os#284 — normative story
+#     text for S11..S17, the two amendments, and the pack brief.
+#   - Base revision: fab46636cc0b5abfbd22257711f594adc0af4660
+#     (= origin/main-tools). Every preservation check compares against it.
+#
+# Change shape: docs-only plus two bounded registry edits and the phase-7 spec
+# reconciliation, no runtime surface, no schema, no changeset. Containment is
+# split by phase (DEC-22, DEC-37): the DELIVERY phases change exactly 32 product
+# files — thirty-one under doc/planning/oss-tooling/** (P7 and P8 re-edit files
+# already delivered in P1-P5 and add only cli-command-registry.md, DEC-37) plus
+# scripts/checks/forbidden-literals.registry.json — and system_spec_update
+# (lifecycle phase 7) changes exactly three current-truth docs:
+# doc/spec/features/feature-resident-daemon.md,
+# doc/spec/features/feature-cli-entrypoint.md, and
+# doc/overview/architecture-overview.md, for 35 product files across the change.
+# Change artifacts are NOT plan-phase scope: the spec, the test plan and this
+# plan are revised by their reopened lifecycle phases (specification,
+# test_planning, delivery_planning) and committed with the change artifacts;
+# P7 lists them in its scope only so the diff a phase produces is fully declared,
+# and they never count toward the 35-file budget (doc/changes/** is excluded).
+# Any other diff outside doc/planning/oss-tooling/** (excluding doc/changes/**)
+# FAILS the change: zero files under packages/, tests/, .opencode/, .ai/, zero
+# scripts/** paths other than the registry, zero doc/spec/** or doc/overview/**
+# paths other than those three, and no root build/config file. doc/changes/**
+# artifacts and review records are change evidence, not product change.
+#
+# Eight delivery phases, one Conventional Commit each: spec §18's four-step
+# sequence, split finer (DEC-17 / §18 as relaxed in v1.3) plus a dedicated
+# verification phase, the review-remediation phase and the external
+# review-board remediation phase:
+#   P1 backlog.md (7 stories + 2 amendments)      P5 milestones/README.md row
+#   P2 m1 command headers (14) + entrypoint (1)   P6 verification evidence
+#   P3 status.md (1 section + 4 pointer groups)   P7 code-review 1/2 remediation
+#   P4 milestones/m2/ (12 docs)                   P8 review-board remediation (current)
+#
+# Naming: the plan's phase ids are P1..P8. When this header says "lifecycle
+# phase 7" or `system_spec_update` it means the workflow phase that reconciles
+# current-truth docs, NOT plan phase P7 (code-review remediation) or P8 (the
+# external review board). They are different budgets and different owners: plan
+# P7/P8 edit planning documents, while `system_spec_update` edits the three docs
+# under doc/spec and doc/overview.
+#
+# This plan declares phases, scope, authoring instructions, gates, and
+# invariants only; it records no progress. Phase state and completion markers
+# live in chg-GH-284-pm-notes.yaml, never here.
+#
+# TC mapping (all 39, each exactly once). P1-P7 completed their TCs at their own
+# HEADs; each review round then found defects in the deliveries, so P7 (code
+# review 1/2) and P8 (external review board) re-deliver those artifacts and OWN
+# their TCs again, keeping every TC claimed exactly once across P1-P8:
+#   P1: TC-M2PLAN-001, 002, 003, 004, 005, 006, 010, 029          (8)
+#   P2: TC-M2PLAN-012, 013, 014, 015, 030                        (5)
+#   P3: TC-M2PLAN-016, 034                                       (2)
+#   P4: TC-M2PLAN-023, 033                                       (2)
+#   P5: TC-M2PLAN-027                                            (1)
+#   P6: TC-M2PLAN-031, 032                                       (2)
+#   P7: TC-M2PLAN-007, 008, 009, 017, 018, 020, 024              (7)
+#   P8: TC-M2PLAN-011, 019, 021, 022, 025, 026, 028, 035, 036,
+#       037, 038, 039                                            (12)
+# (8+5+2+2+1+2+7+12 = 39; set difference against 001..039 is empty.) P8 owns the
+# set whose deliverables the board's findings touch, including the two new TCs
+# (038 Assert-line contract, 039 S17 evidence surfaces); the full sweep at P8
+# re-proves the rest without re-claiming their TCs. TC-027 stays in P5 because
+# P8 does not touch milestones/README.md.
+#
+# AC coverage (39/39, each exactly once — TC<->AC is 1:1 in test plan §3.1):
+#   P1 (8):  AC-F1-1, AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-2, AC-F2-3, AC-F4-2,
+#            AC-NFR2-1
+#   P2 (5):  AC-F5-2, AC-F5-3, AC-F5-4, AC-F6-1, AC-NFR3-1
+#   P3 (2):  AC-F7-1, AC-NFR7-1
+#   P4 (2):  AC-F8-5, AC-NFR6-1
+#   P5 (1):  AC-F11-1
+#   P6 (2):  AC-NFR4-1, AC-NFR5-1
+#   P7 (7):  AC-F3-1, AC-F3-2, AC-F4-1, AC-F7-2, AC-F7-3, AC-F8-2, AC-F9-1
+#   P8 (12): AC-F5-1, AC-F8-1, AC-F8-3, AC-F8-4, AC-F8-6, AC-F8-7, AC-F9-2,
+#            AC-F10-1, AC-NFR1-1, AC-NFR8-1, AC-NFR9-1, AC-NFR10-1
+# (8+5+2+2+1+2+7+12 = 39; set difference against the 27 functional plus 10
+# non-functional plus the 2 board-added criteria of spec §17.1/§17.2 is empty.)
+# This block is the authoritative mapping; AC ids also appear in the findings and
+# decisions below, where they are cross-references rather than phase mappings.
+#
+# Spec/test-plan cross-check (findings recorded, none silently smoothed):
+#   XF-1 [CLOSED UPSTREAM — spec v1.2 / test plan v1.1]. The v1.0 plan reported
+#       the contradiction between P18/P34 whole-section `cmp` and the pointers
+#       P17 requires. It is now resolved normatively: NFR-7, AC-F7-2, AC-F7-3,
+#       AC-NFR7-1 and DEC-16 define a whole-file line-retention oracle (every
+#       base line present in head, same order, byte-identical; zero removed,
+#       reordered, or modified) with additions confined to the new dated
+#       2026-11-10 section plus one pointer per affected statement group; a
+#       whole-section `cmp` is explicitly forbidden as the oracle. P18/P34 now
+#       implement retention plus an added-line whitelist. The plan gates on
+#       that oracle (D-8, D-13) and asserts no cmp-equality anywhere.
+#   XF-2 [CLOSED UPSTREAM — test plan v1.1]. P16 now uses a real ERE
+#       alternation `23 of 23|23/23`, adds `literal_pipe=ABSENT` and an
+#       `alternation_self_test`. The plan keeps one prose constraint: the
+#       snapshot must never contain the literal phrase "23 of 23|23/23", and it
+#       states M1 delivery as "23 of 23".
+#   XF-3 [CLOSED UPSTREAM — spec v1.2, DEC-16]. The entrypoint bound is now one
+#       contiguous hunk over at most two adjacent DESCRIPTION sentences, with
+#       the enumeration and the not-registered statement kept as separate
+#       sentences and every other byte identical (spec F-6, NFR-3, AC-F5-4,
+#       AC-F6-1, AC-NFR3-1). P15/P30 implement `entrypoint_oracle` and print
+#       `desc_hunks`, `outside_desc_hunks`, `sentences_removed`,
+#       `sentences_added` and `entrypoint_bound`. The plan keeps the
+#       prohibition on merging the two sentences, because the enumeration
+#       extraction stops at the first period.
+#   XF-4 [SEQUENCING]. P2 lands the entrypoint/daemon pointer to
+#       ../../m2/entrypoint-delta.md, which P4 creates. P37 (broken links) is
+#       therefore a P6 gate, not a P2 gate; no broken link exists at the
+#       change head. P2 must not add any other link.
+#   XF-5 [HYGIENE]. The ticket's S17 journey example names two commercial
+#       providers. NFR-9 forbids hosted/proprietary names, so the pack uses
+#       neutral profile labels (`profile-a`, `profile-b`) and no commercial
+#       provider name appears anywhere in the pack.
+#   XF-6 [CLOSED UPSTREAM — test plan v1.1, refined in v1.2]. P03 derives the
+#       insertion window from two sources: start = the line after M2-S9's last
+#       content line in the BASE snapshot, end = one line before the head
+#       revision's `---` separator that precedes `## Epic M3` (v1.2 moved the
+#       end anchor inside the block; v1.1 anchored it on the Epic M3 heading),
+#       with 4/4 classifier self-tests, a below-separator negative fixture and a
+#       separator-deletion probe. The plan gates on that derivation (P1) and
+#       pins the resulting insertion position as XF-8.
+#   XF-7 [CLOSED UPSTREAM — test plan v1.2]. The v1.1 plan reported two mechanical
+#       faults in the retention oracle; both are fixed and re-verified here
+#       against a reference-shaped head built from fab46636:
+#       (a) `retention_oracle` now derives the paragraph, scheduling and items
+#           windows from BASE statement ends mapped through the insertion
+#           offset (`head_line_for_base`), so an appended pointer can no longer
+#           become its own anchor. Post-change values are reachable and are the
+#           P3 gate: `removed_lines=0`, `added_lines>0`, `pointer_runs=4`,
+#           `pointer_windows=4`, `bad_runs=0`, `retention_oracle=OK`, plus
+#           `reference_head_fixture=OK` from the shipped fixture
+#           (`section_lines=3 pointer_runs=4 pointer_windows=4 bad_runs=0`).
+#           Re-verified: `white-list: section_lines=4 pointer_runs=4
+#           pointer_windows=4 bad_runs=0`, `retention_oracle=OK`, `P18 verdict:
+#           PASS`.
+#       (b) P34 clamps the title-group start (`e > 1 ? e-1 : 1`) and captures
+#           stderr, so no `sed: invalid usage of line address 0` is expected and
+#           `pointer_groups=4/4` is reachable. Re-verified on the same head:
+#           `pointer_groups=4/4`, `sed_line_address_0_errors=0`, `P34 verdict:
+#           PASS`.
+#       The v1.1 compensating pointer-window check is therefore removed: P18 is
+#       the single retention-and-whitelist oracle again.
+#   XF-8 [CLOSED UPSTREAM — spec v1.3 / DEC-17]. The v1.1 plan observed that P03's
+#       window start admitted exactly one insertion position and that AC-F1-1
+#       was silent about which. DEC-17 decides it: the seven stories belong
+#       INSIDE the Epic M2 block, immediately after M2-S9's last content line
+#       (base 1166) and before the block-closing blank line (1167) and the `---`
+#       separator (1168); the separator line, the blank line after it, and the
+#       `## Epic M3` heading stay byte-identical and follow the inserted block,
+#       and an insertion below the separator is non-conforming (AC-F1-3,
+#       AC-F4-1). P03 v1.2 derives `base M2-S9 last content + 1 ..
+#       head separator - 1` (base `1167:1167`), prints
+#       `separator_sequence=identical`, and ships 4/4 classifier self-tests
+#       including a below-separator negative fixture and a separator-deletion
+#       probe. Re-verified: an insertion after base line 1166
+#       (`@@ -1166,0 +1167,N @@`) classifies INSIDE `1167:<head separator-1>`.
+#       v1.3 adds the blank-line separator requirement (DR-9) without moving the
+#       window.
+#   XF-9 [ACCEPTED RESIDUAL — review F14]. `head_line_for_base` still sums every
+#       hunk's new-side line count as if it were an insertion, so a replacement
+#       hunk above a pointer window over-shifts the paragraph/scheduling/items
+#       windows and reports the pointers as OUTSIDE instead of naming the
+#       replaced line. Re-verified on a fixture with one edited base line plus
+#       four compliant pointers: `paragraph=56..58` (true `55..57`),
+#       `pointer_runs=2`, `bad_runs=3`. Not a false-PASS risk: the same oracle
+#       prints `removed_lines=1` and fails, and this change's compliant head
+#       contains only pure insertion hunks. The review accepted it as
+#       plan-acceptable with a one-line hardening (`d>0` for a replacement hunk
+#       reports the hunk instead of shifting the offsets). Recorded, not fixed
+#       upstream.
+#
+# DoR iteration-1 review findings absorbed here (readiness-iter-1.md; ids are
+# review finding numbers, kept so the trail survives):
+#   DR-1  [F1, major] S17's seven acceptance criteria are enumerated in spec F-2
+#         and AC-F2-1 asserts their content. The plan carries all seven in the
+#         backlog entry (P1 task 1.3), in the pack scenario coverage (P4 task
+#         4.4), and gates them with P04/P06 `criteria_present=7/7`, including
+#         the three that were previously unanchored: other providers keep
+#         running; resume with no branch, artifact, or queue state lost or
+#         duplicated; and stop/park/resume as auditable ledger events surfaced
+#         in status and brief.
+#   DR-2  [F2, major] P02/P35 now run a 79-clause table (61 for S11-S16 plus
+#         S17's 15 and the two amendments' 3), each clause with a named MISSING
+#         record. The plan's P1 gates require `clause_scan: total=61 present=61
+#         missing=0` at P1 and `total=79 present=79 missing=0` at P6, so a
+#         green matrix can no longer mask an unanchored clause.
+#   DR-3  [F3, major] The aggregate gate is normative as DEC-19 / NFR-5 /
+#         AC-NFR5-1: two runs, the second with a created repository-filesystem
+#         TMPDIR, lone `ci-baseline-parity` default failure classified
+#         environmental. The plan's P6 task 6.3 points at P32 instead of
+#         restating a command (which also closes DR-5).
+#   DR-4  [F4, major] DEC-18 adds the proposal-tail rule. The plan's P2 task 2.1
+#         applies it and P11 gates `tail_violations=0`, so a delivered page
+#         cannot keep reading "Delivered M1-Sx (GH-nnn). Proposed contract."
+#   DR-5  [F6, minor] P6 task 6.3 no longer quotes a bare `TMPDIR=... pnpm
+#         check`; it cites P32, whose `mkdir -p` guard is the executable form.
+#   DR-6  [F8/F10, minor] DEC-20 records the pack-contents deviation and the
+#         twelve-target row. The plan's P4 task 4.1 states the deviation in the
+#         pack README, P5 task 5.1 links twelve targets, and P19/P27 gate
+#         `deviation_statement=OK`, `pack_contents_table=byte-identical` and
+#         `m2_targets=12/12`.
+#   DR-7  [F7, minor] P33 proves heading association. The plan's P4 task 4.2
+#         requires each mermaid block to sit directly under its own heading and
+#         gates `heading_association=OK`, `C4 Level 1/2/3 has diagram=OK`, the
+#         seven `###` flow headings, and `c4_headings_with_diagrams=3/3`
+#         (refined by DR-12).
+#   DR-8  [F5, minor] P34 defines `ptr()` locally. The plan no longer instructs
+#         "run P16/P17 first"; P34 runs after P18 alone.
+#   DR-9  [F13, nit] AC-F1-1 requires the inserted block to begin with a blank
+#         line. The plan's P1 task 1.1 states it and P03 gates
+#         `blank_separation=OK`.
+#   DR-10 [F15, nit] Appendix B now lists the header text that must survive.
+#         The plan's P2 task 2.1 preserves `watchdog.md`'s `M1-S15 adds progress
+#         signals` and `SC-M1-14`, and the delivered-extension attributions on
+#         `verify-gates.md` and `closeout.md`; P11 gates all four checks.
+#   DR-11 [F12, nit] §18 now allows splitting the recommended commit sequence
+#         finer. The plan keeps six phases and one commit each, including a
+#         separate evidence commit (D-1).
+#   (F9, F11 and F14 need no plan change: F9 and F11 are spec/test-plan wording,
+#   and F14 is recorded as XF-9 above.)
+#
+# DoR iteration-2 review findings absorbed here (readiness-iter-2.md; the four
+# iteration-1 blockers were verified closed, and these are the new items):
+#   DR-12 [F1, major, blocking] P33's C4 association predicate could not match a
+#         heading ending at the level digit, while the plan prescribed exactly
+#         `## C4 Level 1` and the coder may not retype the procedure. Fixed
+#         upstream: the predicate is `^## C4 Level $lvl([^0-9]|$)`, the pack
+#         heading form is committed as `## C4 Level <n>: <subject>`, and the
+#         seven flows are `###` headings under `## Key flows`, each owning one
+#         diagram. The plan's P4 task 4.2 and P33 gate now match, and the gate
+#         cites the fixtures (`fixture_good=OK`,
+#         `fixture_good_metrics=3/3,7/7,OK`, `fixture_negative=detected`).
+#   DR-13 [F2, minor] The plan's P04/P06 gate strings said `ac_items`, which P06
+#         never prints. Replaced with `ac_numbered_items`, `extra_criteria=0`
+#         and `duplicate_numbers=0`, and the evidence expectations in P6 follow.
+#   DR-14 [F7, nit] P19's README self-entry was satisfiable by the required
+#         `../README.md` parent link. Fixed upstream with the pack-relative rule
+#         `(./)?<artifact>`, a row-shaped self entry, and
+#         `readme_self_link_self_test=detected`. The plan's P4 task 4.1 and P19
+#         gate now require a `| \`README.md\` |` row (a parent-escape link does
+#         not satisfy it), and P5's row stays one physical line.
+#   DR-15 [F3, nit] The eighth-criterion and duplicate-number guards now count
+#         with `[0-9]+` and derive duplicates from the matched number. The plan's
+#         P06 gate cites `extra_self_test=detected` and
+#         `duplicate_self_test=detected`, and P35's `added_criteria` uses the
+#         widened guard; the 79-row table and `missing_clauses=79 -> 0`
+#         expectation are unchanged.
+#   DR-16 [F4, nit] Appendix E in spec v1.5 now carries the same association
+#         procedure as P33. The plan quotes no counted-heading check anywhere: it
+#         cites P33 only and states the committed heading form.
+#   (F5, F6 and F8 are spec/test-plan wording only: the watchdog tail is settled
+#   by AC-F5-1 plus P11's remainder token, the TC-011 precondition duplicate is
+#   removed, and AC-F1-2 now points at the 79-row table.)
+#
+# Post-DoR readiness confirmation absorbed here (readiness-iter-4.md):
+#   DR-17 [F2, minor] P08's expected `changed_lines` parenthetical offered an
+#         "appended to an existing task line" alternative that is
+#         non-conforming: it modifies a base task line, so the same gate prints
+#         `base_task_lines_missing=1` (and `changed_lines=4`) and fails. The
+#         plan now states that the clause must be inserted as its OWN task line
+#         (3 -> 4 task lines, `changed_lines=3`) and cites
+#         `fixture_task_lines_missing=0`, `fixture_s6_task_lines=3->4`,
+#         `fixture_ac_identity=identical` and `fixture_p08=OK`.
+#   DR-18 [F3, nit] P03's `blank_separation` parenthetical is now quoted in the
+#         procedure's own head-anchored form (`head M2-S9 last non-blank=<n>,
+#         blank=<n+1>, M2-S11=<n+2>`), with the pre-change control
+#         `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then
+#         [---])` and the additive `fixture_blank_separation=OK` line listed.
+#         The hunk window stays base-anchored; only the blank check is
+#         head-anchored.
+#   DR-19 [F1, blocking] P29's `entry()` now bounds each story entry at `^---$`
+#         and `^## ` as well as `^### `, because M2-S9 is the last story of the
+#         Epic M2 block and otherwise ran through the separator into
+#         `## Epic M3`, so any conforming head reported `body CHANGED: ###
+#         M2-S9`. The plan's P29 line now expects
+#         `stories_compared=65 identical=65 changed=0 order=OK` on the real
+#         head plus the base control, minimal head and full head, with
+#         `negative_body`, `negative_removed` and `negative_reordered` all
+#         detected. No "next `###` only" phrasing remains anywhere in the plan.
+#
+# P6 halt fix absorbed here (spec v1.6 / DEC-21, test plan v1.8):
+#   DR-20 [P6 halt, blocking at delivery] P6 could not go green: the
+#         forbidden-literals guard's `userFacingDocs` scope covers `doc/**`
+#         except `doc/changes/**` and `doc/decisions/**`, and it fails closed on
+#         a user-facing doc absent from `corpusBaseline` unless it is listed in
+#         `scripts/checks/forbidden-literals.registry.json#registered`. The
+#         twelve new `milestones/m2/**` documents are therefore unregistered
+#         findings, so P36 failed and, through the aggregate gate, P32 failed
+#         with four failures (parity plus three forbidden-literals tests) --
+#         while the plan's P6 scope and P28 gate forbade touching `scripts/**`.
+#         P28 and P36 were jointly unsatisfiable. Resolution (D-14): P6 is the
+#         only phase whose scope gains `scripts/checks/forbidden-literals.registry.json`,
+#         as the sole non-planning product file; the change appends the twelve
+#         pack paths to `registered`, sorted among themselves, duplicate-free,
+#         leaving the base registry's existing (not globally sorted) order
+#         untouched and changing no guard behaviour. P1-P5 are already delivered
+#         and committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1,
+#         110fb160) and are not re-scoped; P6 continues from that HEAD.
+#   DR-21 [phase boundary, blocking at close-out] The containment rule as written
+#         covered only the delivery phases, but `system_spec_update` reconciles
+#         current-truth docs by mandate, so after that phase reconciled
+#         `feature-resident-daemon.md`, `feature-cli-entrypoint.md` and
+#         `architecture-overview.md` the single-budget P28 would have failed on
+#         three legitimate files (or, inverted, the phase would have been
+#         forbidden its own job). Resolved normatively by DEC-22: the containment
+#         rule splits into a 31-file delivery budget and a 3-file phase-7
+#         budget, 34 across the change. P28 now asserts both budgets and fails on
+#         any fourth `doc/spec`/`doc/overview` path; P6's close-out no longer
+#         claims `doc/spec/**` is unchanged and instead names the phase-7
+#         reconciliation as owned by `system_spec_update`. Verified against the
+#         current tree: delivery 31 (planning 30 + registry 1), phase 7
+#         `spec_files=2 overview_files=1`, `phase7_files=3 phase7_extra=0
+#         phase7_unknown_paths=0`, `total_product_files=34`.
+#   DR-22 [review iteration 1, FAIL; 18 findings] The reviewer returned six
+#         substantive defects: AC-F10-1's pointer from the M1 entrypoint page did
+#         not exist while the delta note claimed it (F-1, critical); the status
+#         pointer broke the M1 delivery table's rendering (F-2); the M2 queue
+#         verbs collided with the delivered `queue release`/`queue dep` grammar
+#         (F-3); the S17 park-reason vocabulary conflicted with the delivered
+#         park-cause enums (F-4); board/watchdog overclaimed reachability (F-8);
+#         and smaller documentation, metadata and style defects (F-6, F-7,
+#         F-9..F-16, F-18). Normative resolution upstream: spec v1.8 DEC-23 (the
+#         M1 page is a snapshot; no back pointer; forward links plus pack-index
+#         discoverability) and DEC-24 (a uniform reachability note on daemon,
+#         board and watchdog); test plan v2.0 tightens P26, P11, P17 and P18 to
+#         match. P7 (D-16) remediates every file-level finding; F-5 (readiness
+#         closure record) and F-17 (branch squash before the PR) are out of
+#         scope and recorded in P7's close-out; F-14 is fixed by v1.8's
+#         upstream-version trigger, which v1.9 makes version-agnostic.
+#   DR-23 [review iteration 2, FAIL; 10 findings] Two clusters. (a) The change's
+#         own verification record still reported failing gates for criteria that
+#         pass at HEAD (F-1), because the v2.0 "current tree" rows were carried
+#         into v2.1 without a re-run; the owners refreshed the test plan (v2.2),
+#         `verification.md` and the pm-notes, and the plan only has to state
+#         that those artifacts are theirs. (b) The DEC-25 release/removal split
+#         was not propagated past the contract and command page: architecture's
+#         lifecycle component and flow, the delta note, the S15 scenario title
+#         and queue.md's reconcile sentence still said release removes the entry
+#         (F-2, blocking). Plan-side items closed here: F-4 (stale version pins,
+#         now spec v2.0 / test plan v2.2 with a version-agnostic drift trigger),
+#         F-5 (task 7.6 prescribed the review's straw-man story map instead of
+#         the delivered one), F-10 (P7's scope undercounted the change artifacts
+#         it revises) and F-2 (new propagation task 7.13). F-7's readiness
+#         closure record is referenced from the close-out and is asserted to
+#         exist only once `@readiness-reviewer` commits it.
+#   DR-24 [external review board on PR #285; eleven blocking/should-fix
+#         findings] The board found the plan's spec coverage short of what the
+#         delivered pack now has to assert: a state-layer header that still
+#         implies a command surface (CG-REC-001), missing M2 dependency edges
+#         for S15/S16 (CG-DEP-001), a story map that points stories at surfaces
+#         owned by undelivered stories without an edge (CG-MAP-001/002/003), a
+#         resolve grammar and a per-ref attempts read side that disagree with
+#         the delivered engine (CG-CON-001), event topics that name `status` as
+#         a topic (CG-EVT-001/002), S17 criteria that are not machine-checkable
+#         (CG-S17-001, AC-F8-7), scenario seeds with no assertion (CG-DEPTH-001,
+#         AC-F8-6), a delta note that does not say how a command becomes
+#         reachable (CG-EP-001), daemon and doctor pages that overclaim
+#         reachability (CG-DAEMON-001, CG-DOCTOR-001), an undeclared telemetry
+#         tolerance (CG-TOL-001), an unregistered naming surface (CG-REG-001)
+#         and a superseded status block that still reads as current
+#         (CG-STATUS-001). Normative cover is spec v2.1 DEC-26..DEC-38 plus
+#         AC-F8-6/AC-F8-7; P8 (D-17) remediates every one of them.
+#
+# Delivery-planning decisions (placement, wording, sequencing; no behavioural
+# deviation):
+#   D-1 Ceremony: tier `lite`, eight delivery phases, standard weight,
+#       repo:main-tools lease. Docs-only work needs no planning phase; the eight
+#       phases are the review unit and each is independently committable.
+#   D-2 No test code. Every verification is one of the test plan's
+#       uncommitted procedures, materialised by copy under
+#       /tmp/gh284/procedures/, never retyped and never committed: NFR-1
+#       forbids tests/** and scripts/**, and a branch-diff check belongs to
+#       review gates, not the permanent suite.
+#   D-3 TC/AC ownership as tabulated above; each phase gate list proves only
+#       its own phases' TCs, and P6 re-runs the content procedures as
+#       regression proof without re-claiming their TCs.
+#   D-4 Backlog insertion point (XF-8, DR-9, DEC-17): insert the seven entries
+#       INSIDE the Epic M2 block, immediately after M2-S9's last content line
+#       (`- Depends on: M2-S8.`, base 1166) and before the block-closing blank
+#       line (base 1167) and the `---` separator (base 1168), so the first
+#       inserted line carries base line 1167 and P03's window admits it. The
+#       inserted block BEGINS with a blank line, so `### M2-S11` is separated
+#       from M2-S9's last line exactly as every other entry is (AC-F1-1, P03
+#       `blank_separation=OK`); one blank line between entries thereafter. The
+#       `---` line, the blank line after it, and the `## Epic M3` heading stay
+#       byte-identical and follow the inserted block. Never insert below the
+#       separator: AC-F1-3 and AC-F4-1 make that non-conforming and P03 reports
+#       `separator_sequence=CHANGED` or an OUTSIDE hunk. The file's two-space
+#       continuation indent; no `- Ticket:` line; no reflow of a neighbouring
+#       entry.
+#   D-5 M2-S6 wording. The story's existing task text already contains the
+#       seed token inside "`ados spend`"; those bytes are frozen. The new task
+#       clause must describe consuming M2-S14 telemetry for per-agent and
+#       per-model facts WITHOUT adding a seed literal, because P36 scans added
+#       lines.
+#   D-6 Entrypoint composition statement (XF-3, DEC-16): the enumeration
+#       sentence and the not-registered sentence are replaced in place as one
+#       contiguous hunk over at most two adjacent DESCRIPTION sentences, with
+#       their period boundary preserved, every other byte identical, and no
+#       third sentence touched.
+#   D-7 Command-page edits (DR-4, DR-10, DEC-18): status header only (lines
+#       1..first `## `); title line byte-identical; no page may contain
+#       `M1 planned` or `M1 milestone planned` anywhere; no header may contain
+#       `Current`. Proposal-tail rule: drop `Proposed contract` /
+#       `Proposed examples` from any header whose planned remainder is empty,
+#       and keep the tail only when it is scoped to a remaining planned
+#       surface (board -> M2-S4, watchdog -> M2-S2, mcp -> M3-S2). Preserve
+#       clauses that are already true: `watchdog.md` keeps
+#       `M1-S15 adds progress signals` and `SC-M1-14`; `verify-gates.md` keeps
+#       its M1-S4 extension attribution; `closeout.md` keeps its M1-S12
+#       expansion attribution.
+#   D-8 Status pointers and retention (XF-1, NFR-7, DEC-16): exactly one pointer
+#       per statement group, four groups, each a new line of at most three
+#       non-blank lines that names the 2026-11-10 section; no original line
+#       removed, reordered, or modified. Placements, pinned because the oracles
+#       are positional: (G1) a new line 2, inside P18's fixed 2..4 title
+#       window; (G2) a new line after the blank line that closes the
+#       "Per backlog-ranking.md" paragraph, so that paragraph's last line stays
+#       the base anchor P18 maps into the head; (G3) a new line after the
+#       scheduling section's last line, before the next `##` heading; (G4)
+#       exactly ONE pointer at the end of item 3 of "Proposed next steps" (no
+#       pointers on items 1 and 2), inside P34's items block and P18's items
+#       window. The new dated section is appended at EOF with its heading on the
+#       line immediately after the file's current last line: a leading blank
+#       line would start the added run before the section anchor and P18 reports
+#       `bad_runs=1` with `section_lines=0` (verified).
+#   D-9 P16 prose constraint (XF-2): state M1 delivery as "23 of 23" and never
+#       write the literal phrase "23 of 23|23/23", which P16 now checks with
+#       `literal_pipe=ABSENT`.
+#   D-10 Pack conventions (DR-6, DR-7, DR-12, DR-14, DEC-20): exactly twelve
+#       files (no extras), line 1 `# <name>(1)` in commands/, line 3 exactly
+#       `Status: Proposed (M2)`, `<binary>` invocation prefix, bare command
+#       names, no `ados_distribution` marker, no line matching `^- AC:` and no
+#       `**Given**` in pack prose (P37), no commercial provider names (XF-5), and
+#       every relative link resolved from that file's own directory depth. The
+#       pack README states the deliberate contents deviation: no `man-page.md`,
+#       no `interactions.md`, and `entrypoint-delta.md` instead, while the
+#       `milestones/README.md` pack-contents table stays byte-identical. C4
+#       headings use the committed form `## C4 Level <n>: <subject>` (e.g.
+#       `## C4 Level 1: system context`) so P33's `([^0-9]|$)` predicate matches;
+#       the six key flows and the S17 park/resume are `###` headings under
+#       `## Key flows`, seven in total; every mermaid block sits directly under
+#       its own heading with nothing between, and each heading owns exactly one
+#       diagram. README pack references are pack-relative `(./)?<artifact>`
+#       links, and the README's self entry is a table row beginning
+#       `| `README.md` |` (a `../README.md` parent link does not satisfy it). The
+#       M2 index row links twelve targets on one physical line: `m2/README.md`,
+#       the five other pack-level documents, and the six command pages.
+#   D-11 Gate order: P28 -> P31 -> P32 -> P36 first (cheap containment and
+#       guards), then the content procedures, per test plan §7.1. A phase
+#       commits only when its own gate list is green at that phase's HEAD.
+#   D-12 Aggregate gate (DR-3, NFR-5, AC-NFR5-1, DEC-19): the normative
+#       invocation is TWO runs -- plain `pnpm check`, then
+#       `mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check` --
+#       and both results are recorded. The repo-local-`TMPDIR` run must exit 0;
+#       a default-run failure is environmental only when
+#       `tests/checks/ci-baseline-parity.test.ts` is its only failing test
+#       (`git clone --local` hardlinks crossing into tmpfs; one failing test,
+#       roughly 7132 passing). Any other default-run failure, or any repo-local
+#       failure, is a delivery failure. Do not "fix" the environment condition:
+#       `tests/**` and guard behaviour are out of scope (the sole permitted
+#       `scripts/**` edit is the registration in D-14). P32 is the executable
+#       form; this plan does not restate the command.
+#   D-13 Retention gate (XF-7, NFR-7, DEC-16). P18 is the single
+#       retention-and-whitelist oracle: whole-file line retention plus the
+#       addition whitelist (the new dated section and the four pointer
+#       insertions), with its reference-head fixture as the built-in
+#       positive control. P34 re-runs the same oracle and adds the four-group
+#       pointer count. The plan adds no compensating check of its own; a
+#       `pointer_runs<4`, `bad_runs>0`, `removed_lines>0`, or
+#       `reference_head_fixture=FAILED` line fails the phase.
+#   D-14 Registry registration (DR-20, NFR-1, NFR-9, DEC-21). The twelve
+#       `doc/planning/oss-tooling/milestones/m2/**` documents are registered in
+#       `scripts/checks/forbidden-literals.registry.json#registered` in P6, as
+#       the only permitted `scripts/**` change and the only non-planning
+#       product file of the delivery phases. The edit appends the twelve paths
+#       sorted among themselves and duplicate-free, preserves every existing
+#       entry in its current order (the base registry is not globally sorted),
+#       and changes no guard behaviour, allowlist rule, or test. The delivery
+#       budget is therefore 31: 30 under `doc/planning/oss-tooling/**` plus the
+#       registry.
+#   D-15 Phase-7 budget (DR-21, NFR-1, DEC-22). `system_spec_update` owns
+#       current-truth reconciliation and is not planned here: it changes at
+#       most the three docs this change made false —
+#       `doc/spec/features/feature-resident-daemon.md`,
+#       `doc/spec/features/feature-cli-entrypoint.md` and
+#       `doc/overview/architecture-overview.md` — under its own 3-file budget,
+#       for 34 product files across the change. P6 itself edits no
+#       `doc/spec/**` or `doc/overview/**` file, and P28 checks the whole
+#       change against both budgets so the phase boundary cannot be used to
+#       smuggle a fourth spec path.
+#   D-16 Review remediation phase (DR-22). P7 is one delivery phase that closes
+#       the file-level review-iteration-1 findings across eleven product files
+#       and three change artifacts. It adds no product path — every edited
+#       product file is already inside the 31-file delivery budget, so P28's
+#       two budgets are unchanged (31 + 3 = 34) — and it re-owns the TCs whose
+#       deliverables it re-delivers (007, 008, 009, 011, 017, 018, 019, 020,
+#       021, 024, 025, 026, 028), keeping the 37/37 mapping exact. Everything
+#       else is re-proved by the sweep without re-claiming its TC. F-5 and F-17
+#       are not file changes: the readiness closure record supersedes the
+#       NOT_READY verdicts, and the branch squash happens at PR time; both are
+#       recorded in P7's close-out instead of acted on.
+#   D-17 Review-board remediation phase (DR-24, DEC-26..DEC-38). P8 is one
+#       delivery phase closing the external board's findings over thirteen
+#       product files — the twelve named files plus `queue.md`, which is edited
+#       only if CG-EVT-002/CG-MAP require it — and the change artifacts it
+#       declares (spec, test plan, plan, pm-notes, verification, review
+#       records). It adds exactly one product path, `cli-command-registry.md`
+#       (DEC-37), which raises the delivery budget to 32 and the change total to
+#       35. It re-owns the TCs whose deliverables it re-delivers — 011, 019,
+#       021, 022, 025, 026, 028, 035, 036, 037 plus the new 038 and 039 — so the
+#       mapping is 39/39 exactly once; TC-027 stays in P5 because P8 does not
+#       touch milestones/README.md. The mount mechanism is recorded rather than
+#       acted on: neither the daemon (#286) nor the board/projects/events
+#       surfaces are wired here.
+#
+# Verification conventions (binding for every phase):
+#   - Run from the repository root on branch docs/GH-284/m2-planning.
+#   - Materialise P00..P37 ONCE, verbatim by copy from
+#     chg-GH-284-test-plan.md §7.1, as /tmp/gh284/procedures/pNN.sh and source
+#     them in one shell: P00 defines BASE, the file variables, `entry()`,
+#     `section()` and `desc()`, and writes the base snapshots to
+#     /tmp/gh284/base-*.md. Do not retype the literals: they are the oracle.
+#   - Gates run at the phase HEAD, after the phase commit. A failing gate
+#     blocks the next phase: fix inside the same phase's scope, re-commit,
+#     re-run.
+#   - P6 declares the change artifacts in its scope on purpose: the branch
+#     diff against fab46636 includes them, so declaring them keeps
+#     `plan diff` "within". P28 excludes doc/changes/** from the product-file
+#     set, so they never count as product change.
+#   - Record the observed line for every gate in the P6 evidence file and in
+#     the PR body (test plan §6; spec §17.3 DoD).
+#   - `pnpm exec delivery-os --help` needs the built workspace; packages/*/dist
+#     is present in this checkout and P15 reads the live listing.
+#   - P18 defines `retention_oracle` and `head_line_for_base` for P34: run P18
+#     first in the same shell. P34 defines `ptr()` locally (DR-8), so it does
+#     not need P16/P17 to have run.
+#   - Retention evidence (XF-7, XF-9): every P3/P6 run records P18's
+#     `windows(base-anchored)`, `retention`, `whitelist`, `retention_oracle`,
+#     `reference_head_fixture` and verdict lines, and P34's `pointer_groups` and
+#     `sed_line_address_0_errors` lines. No compensating check is added.
+#   - Aggregate-gate evidence (DR-3): record both P32 runs verbatim -- the
+#     default `default_exit` / `default_failed_tests` /
+#     `default_failure_class` lines and the `repo_tmpdir_exit` /
+#     `gate_verdict` lines. P32 creates the repo-local tmpdir itself.
+#   - Table identity (DR-6): P19 compares the "Pack contents" table against the
+#     base snapshot, so the table must not be touched even though the pack
+#     deviates from it.
+#
+# Validation record (2026-11-11, plan revision v2.0):
+#   verdict=valid, readyForDevelopment=true, totalErrors=0,
+#   artifact=chg-GH-284-plan.yaml (kind=yaml),
+#   schemaVersion=delivery.plan.v1, tier=lite, phases=1..8.
+#   Method: `pnpm exec delivery-os plan validate GH-284`.
+#   39/39 TCs mapped exactly once (P1=8, P2=5, P3=2, P4=2, P5=1, P6=2, P7=7,
+#   P8=12); 39/39 ACs covered exactly once.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-284
+tier:
+  name: lite
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  escalationTriggers:
+    - "A product path other than doc/planning/oss-tooling/**, scripts/checks/forbidden-literals.registry.json, or phase 7's three current-truth docs (doc/spec/features/feature-resident-daemon.md, doc/spec/features/feature-cli-entrypoint.md, doc/overview/architecture-overview.md) appears in the diff with doc/changes/** excluded; the delivery range is not 32, the phase-7 range is not 3, the total is not 35, or the registry diff is anything but the twelve sorted pack entries (P28, P36)"
+    - "The delivery budget gains a path other than cli-command-registry.md (DEC-37), or that file changes a row beyond the projects/events registrations, the attempts subfamily note and the projects/M3 repos boundary (P28, P37)"
+    - "doctor.md still lacks the reachability note (DEC-35 supersedes its exemption), or state.md still implies a delivered command surface (P11)"
+    - "The M2 README loses its three advisory rows, or SC-M2-S2-01 regains a two-repository framing (P19, P22)"
+    - "A scenario seed lacks its single Assert line, has more than one, or the assertion count differs from the scenario count (P22, P38)"
+    - "The S17 evidence surfaces lose graceSeconds with bounds, the zero-spend evidence form, the stop event, the status/brief park fields, or the AC5 scope from the park timestamp; or SC-M2-S17-06/SC-M2-S17-07 are absent (P21, P39)"
+    - "The delta note stops stating the mount mechanism (prompt-set change plus a help reference page per command) or drops the #286 reference, or a page claims a surface is mounted without that mechanism (P26)"
+    - "The telemetry reconciliation default is no longer <=2% of session totals, or contracts.md loses the queue/lanes topic parents and per-ref attempts reading (P21)"
+    - "A backlog hunk falls outside the insertion window (immediately after M2-S9's last content line) or the two amended entries, the inserted block does not begin with a blank line, the head `---` separator sequence changes, or a non-amended story body changes (P03, P29)"
+    - "The M2-S17 acceptance block does not carry all seven criteria by content, or the anchor scan leaves any of the 79 clauses missing (P04, P06, P02, P35)"
+    - "M2-S4 changes anything but its - Depends on: line, or M2-S6 loses a base task line or changes its heading, goal, or acceptance criterion (P07, P08)"
+    - "An M1 command page changes outside its status header, a header with no planned remainder keeps the proposal tail, watchdog drops M1-S15 or SC-M1-14, verify-gates/closeout lose their delivered-extension attribution, daemon/board/watchdog lose the reachability note, or entrypoint.md changes beyond one contiguous hunk over at most two adjacent DESCRIPTION sentences (P11, P14, P15, P30)"
+    - "The M1 delivery table loses its own block (no blank line before the header, or a broken separator row), or a pointer is inserted between the paragraph and the table header (P17, P18)"
+    - "The M2 delta note claims a back pointer from the M1 entrypoint page, omits the snapshot statement or the bounded-DESCRIPTION correction, loses its forward links to the M1 page or any of the six M2 command pages, or stops being reachable from the pack indexes (P26)"
+    - "The M2 queue contract conflates lease release with entry removal, drops the reason-bearing removal verb, leaves `dep add|remove` unexplained against the delivered `queue dep` grammar, or omits the delivered park-vocabulary mapping and the `lanes parked:<cause>` consequence (P21, P24, P25)"
+    - "A base status.md line is removed, reordered, or modified, an added line falls outside the new dated section and the four pointer insertions, or a pointer group is missing (P17, P18, P34)"
+    - "The M2 pack does not hold exactly twelve documents, the README omits the contents-deviation statement, the pack-contents table changes, a required heading or heading-to-diagram association is absent, or fewer than 32 SC-M2 scenarios exist with two per story S2-S17 (P19, P20, P22, P33)"
+    - "The M2 index row links fewer than twelve targets (P27)"
+    - "A command page lacks Status: Proposed (M2) on line 3, the <binary> prefix, or a required man-page section (P24, P25)"
+    - "A commercial, hosted, or proprietary provider name appears in the pack (NFR-9, XF-5)"
+    - "The repo-local-TMPDIR pnpm check is non-zero, the default run fails on anything but the lone tests/checks/ci-baseline-parity.test.ts failure, or either run is left unrecorded (P32); or the doc-distribution guard, the forbidden-literal guard (including its registration assertions), or the structural diagram check is non-zero (P31, P33, P36)"
+    - "An upstream artifact has been revised past the versions this plan cites in its Sources block (spec or test plan): re-read the reopened procedures, re-run the affected gate, refresh the pins in this plan, and revise it rather than mixing revisions"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "P1 — Land M2-S11..M2-S17 in the backlog and apply the two amendments"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-001, 002, 003, 004, 005, 006, 010, 029 complete (007, 008, 009 re-delivered and owned in P7)"
+    summary: "docs(GH-284): add M2-S11..S17 stories and amend M2-S4/M2-S6 in the backlog"
+    tasks:
+      - |-
+        1.1 Insert the seven new entries INSIDE the Epic M2 block, immediately
+        after M2-S9's last content line (`- Depends on: M2-S8.`, base 1166) and
+        before the block-closing blank line (base 1167) and the `---` separator
+        (base 1168) (D-4, XF-8, DR-9, DEC-17), in code order, in the existing
+        story shape. The inserted block begins with a BLANK LINE, so
+        `### M2-S11` is separated from M2-S9's last line exactly as every other
+        entry is (AC-F1-1, P03 `blank_separation=OK`); one blank line separates
+        the entries thereafter. The `---` line, the blank line after it, and the
+        `## Epic M3` heading stay byte-identical and follow the inserted block;
+        an insertion anywhere below that separator is non-conforming (AC-F1-3,
+        AC-F4-1) and P03 reports an OUTSIDE hunk or
+        `separator_sequence=CHANGED`. Headings exactly: `### M2-S11
+        Multi-repository workstations`, `### M2-S12 Evidence inspection and
+        divergence resolution`, `### M2-S13 Public event taxonomy`,
+        `### M2-S14 Harness telemetry v2`, `### M2-S15 Queue lifecycle
+        completion`, `### M2-S16 Engine-first delivery operations`,
+        `### M2-S17 Provider-aware peak pausing`. Each entry carries
+        `- Goal:`, `- Tasks:`, `- AC:`, `- Depends on:` and NO `- Ticket:`
+        line. [F-1, DM-1, DEC-9, DEC-17; AC-F1-1, AC-F1-3, AC-F4-1;
+        TC-M2PLAN-001]
+      - |-
+        1.2 Transcribe each story verbatim in substance from the ticket body
+        (`gh issue view 284 --repo juliusz-cwiakalski/agentic-delivery-os
+        --json body --jq .body`, or the MCP issue read): every normative
+        clause present, none added, dropped, weakened, or merged; only
+        whitespace, line wrapping, and typographic normalisation may differ.
+        Dependency lines exactly: S11 `M0-S5, M1-S17`; S12 `M1-S9`;
+        S13 `M1-S18`; S14 `M1-S11, M1-S15, M1-S19, M1-S22`;
+        S15 `M1-S9, M1-S17, M1-S18`; S16 `M1-S9, M1-S18, M1-S21` plus the
+        owner-hold semantics `(#280)`. P02's 61-row table for S11-S16 is the
+        checklist and every row must be present, including the
+        acceptance-criterion clauses the v1.2 matrix missed (`S11-AC1`
+        disjoint phase state and queue entries; `S12-AC2` resolved with a note
+        and unresolved counts; `S13-AC1` changes a client can act on;
+        `S15-AC1` classified error naming the holder; `S15-AC2` reconcilable
+        without editing state files; `S16-AC1` consecutive corroborated engine
+        dispatches accrue). The clause-by-clause read is recorded by the
+        reviewer (test plan G-1). [F-1, NFR-8; AC-F1-2; TC-M2PLAN-002]
+      - |-
+        1.3 S17 entry (F-2, DR-1). `- AC:` is followed by an indented numbered
+        list of exactly seven items, one per ticket criterion, each independently
+        identifiable AND carrying its criterion's content, because P06 checks
+        the seven by content rather than by count: (1) profile nomination
+        recorded at dispatch admission and visible on lane and attempt records;
+        (2) peak start stops every in-flight lane on the profile with bounded
+        grace, parked with reason `peak-window` and the window end, until the
+        window ends; (3) lanes on other providers are unaffected and keep
+        running; (4) window end resumes parked lanes automatically from
+        preserved session state with no branch, artifact, or queue state lost or
+        duplicated; (5) telemetry proves zero billable model calls on the
+        profile during the window for parked lanes; (6) stop, park, and resume
+        are auditable ledger events surfaced in status and brief; (7)
+        daemon-resident operation with the daemon-absent iteration-start
+        degradation declared. The `- Tasks:` block carries the six task clauses
+        (provider-profile nomination at admission recorded on lane and attempt
+        records; peak-window rules as data per profile including windows,
+        multipliers and buffers; daemon watch-and-park with bounded-grace stop,
+        preserved session state and recorded park reason; automatic resume from
+        preserved session state on the same branch through the session resume
+        path without re-dispatch; zero-spend assertion through telemetry; and
+        daemon-absent degradation to iteration-start gating, documented). No
+        clause may be softened with `may`. `- Depends on:` contains `M1-S15`,
+        `M1-S18`, `M1-S21`, `M1-S22`, `M2-S14`, and `(#280)`.
+        [F-2, NFR-8; AC-F2-1, AC-F2-2, AC-F2-3; TC-M2PLAN-004, 005, 006]
+      - |-
+        1.4 Amendments (F-3, DR-17). In M2-S4 change ONLY the dependency line to
+        exactly `- Depends on: M1-S5, M1-S17, M2-S11`; heading, goal, tasks and
+        acceptance criterion stay byte-identical (P07 expects exactly two
+        changed lines: the old and the new line). In M2-S6 add ONE clause to
+        the `- Tasks:` block AS ITS OWN task line stating that the story
+        consumes M2-S14 telemetry for per-agent and per-model facts, and add
+        `M2-S14` to its `- Depends on:` line, keeping the base line's trailing
+        period: `- Depends on: M1-S19, M2-S3, M2-S14.`; the heading, goal,
+        acceptance criterion, and every existing task line stay byte-identical
+        (P08 requires `base_task_lines_missing=0` with `changed_lines=3`).
+        Appending the clause to an existing base task line is non-conforming: it
+        modifies that line and the same gate reports
+        `base_task_lines_missing=1`.
+        Wording constraint D-5: the new clause must not add a seed literal. No
+        other story is amended.
+        [F-3, NFR-2; AC-F3-1, AC-F3-2; TC-M2PLAN-007, 008]
+      - |-
+        1.5 Preservation. Do not touch the frontmatter block, `## Reading
+        guide`, `## Cross-cutting principles`, the Epic headings, the Epic M2
+        retirement note, or any other story heading or body. Do not renumber,
+        reorder, or reflow an existing entry; do not add an `ados_distribution`
+        marker; do not introduce the seed literals `ados`, `ADOS_`, or
+        `~/.ados` in added lines. Every diff hunk must lie inside P03's
+        insertion window (the end of the Epic M2 block, after M2-S9 and before
+        the block-closing blank line and `---`), the M2-S4 entry, or the M2-S6
+        entry (P03 with `outside=0`), and no hunk may touch the separator, the
+        blank line after it, or the Epic M3 heading.
+        [F-4, NFR-2, NFR-9; AC-F4-1, AC-F4-2, AC-NFR2-1; TC-M2PLAN-003, 009,
+        010, 029]
+    coverage:
+      - "TC-M2PLAN-001 (complete: m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7, no Ticket line; block opens with a blank line after M2-S9)"
+      - "TC-M2PLAN-002 (complete: clause_scan: total=61 present=61 missing=0 across S11-S16; every per-story count full at 9/8/11/12/10/11)"
+      - "TC-M2PLAN-003 (complete: backlog_hunks>=1, hunks inside=M outside=0, hunk confinement OK, separator_sequence=identical, blank_separation=OK, classifier_self_tests=4/4, window_empty=no, insertion_below_separator=never)"
+      - "TC-M2PLAN-004 (complete: four labels present, six dependencies OK, ac_numbered_items=7/7, criteria_present=7/7)"
+      - "TC-M2PLAN-005 (complete: clauses_present=6/6, softening may=ABSENT)"
+      - "TC-M2PLAN-006 (complete: criteria_present=7/7, ac_numbered_items=7/7, extra_criteria=0, duplicate_numbers=0, extra_self_test=detected, duplicate_self_test=detected)"
+      - "TC-M2PLAN-010 (complete: fm/rg/cc byte-identical)"
+      - "TC-M2PLAN-029 (complete: stories_compared=65 identical=65 changed=0 order=OK on the real head; base_control, minimal_head and full_head PASS; negative_body, negative_removed and negative_reordered detected)"
+    testGate:
+      - "P00 — materialise base snapshots from fab46636 and define helpers; expected: base snapshots ready with the base backlog, status, and milestones-index line counts"
+      - >-
+        P01 -> m2_story_headings=7 new_found=7/7 order=OK; shape_ok=7/7
+        (Goal+Tasks+AC+Depends-on, no Ticket line); P01 verdict: PASS
+      - >-
+        P02 -> `clause_scan: total=61 present=61 missing=0` for S11-S16, with
+        every per-story count full (`M2-S11 clauses=9/9`, `M2-S12 8/8`,
+        `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 10/10`, `M2-S16 11/11`) and no
+        `MISSING` record; P02 verdict: PASS
+      - >-
+        P03 -> backlog_hunks=M with M>=1; amended ranges printed for M2-S4 and
+        M2-S6; `insertion window: start=base M2-S9 last content+1=1167
+        end=head separator-1=<nee> window=1167:<nee>`; window_empty=no;
+        separator_sequence=identical; blank_separation=OK (the check is
+        head-anchored: it locates `### M2-S9` in the head, walks to that entry's
+        last non-blank line before the next `##`/`###`/`---`, then requires a
+        blank line followed by `### M2-S11`, printing `head M2-S9 last
+        non-blank=<n>, blank=<n+1>, M2-S11=<n+2>`); fixture_blank_separation=OK;
+        hunks: inside=M outside=0; hunk confinement OK;
+        classifier_self_tests=4/4; insertion_below_separator=never;
+        non_vacuous=yes; P03 verdict: PASS. The hunk window stays base-anchored
+        inside the Epic M2 block (XF-6, XF-8 and DR-9 closed upstream); the
+        pre-change base reads `window=1167:1167` with `blank_separation=FAIL
+        (head M2-S9 last non-blank=1166; got [] then [---])` as expected. A hunk
+        below the separator, a block opening directly on `### M2-S11`, or any
+        change to the `---` line, the blank line after it, or the Epic M3
+        heading fails.
+      - >-
+        P04 -> all four labels present; depends M1-S15/M1-S18/M1-S21/M1-S22/
+        M2-S14/#280 OK; ac_numbered_items=7/7; criteria_present=7/7
+      - >-
+        P05 -> six clauses OK (profile-nomination, peak-rules-as-data,
+        park-bounded-grace, resume-without-redispatch, zero-spend,
+        daemon-absent); softening may=ABSENT; clauses_present=6/6; missing=0
+      - >-
+        P06 -> criteria_present=7/7 with each `S17-AC1..AC7` line printed OK
+        (content, not count), including `S17-AC3` other providers keep running,
+        `S17-AC4` no branch/artifact/queue state lost or duplicated, and
+        `S17-AC6` auditable stop/park/resume events surfaced in status and
+        brief; ac_numbered_items=7/7; extra_criteria=0; duplicate_numbers=0;
+        extra_self_test=detected; duplicate_self_test=detected
+      - >-
+        P07 -> changed_lines=2 unexpected_lines=0; depends=expected
+        (- Depends on: M1-S5, M1-S17, M2-S11); self-test goal mutated ->
+        changed_lines=2 unexpected_lines=2, so the oracle bites
+      - >-
+        P08 -> changed_lines=3; tasks_clause=OK; depends=M2-S14 OK;
+        heading=identical; base_task_lines_missing=0; - Goal: identical;
+        - AC: identical; fixture_task_lines_missing=0;
+        fixture_s6_task_lines=3->4; fixture_ac_identity=identical;
+        fixture_p08=OK. The clause must be inserted as its OWN task line: only
+        that shape conforms, because appending it to an existing base task line
+        modifies that line, gives `base_task_lines_missing=1` (and
+        `changed_lines=4`), and fails this gate. [DR-17]
+      - >-
+        P09 -> base_headings=67 head_headings=74 added=7 removed=0
+        unexpected=0; retirement_note=identical; order=OK;
+        negative_control=detected
+      - "P10 -> fm=byte-identical; rg=byte-identical; cc=byte-identical"
+      - >-
+        P29 -> `stories_compared=65 identical=65 changed=0 order=OK`, with the
+        four head runs the procedure builds: `real_head=PASS`,
+        `base_control=PASS`, `minimal_head=PASS` (stories only) and
+        `full_head=PASS` (stories plus the M2-S4/M2-S6 amendments); and the
+        three negative controls `negative_body=detected`,
+        `negative_removed=detected`, `negative_reordered=detected`. The
+        extraction bounds each story entry at `^---$` and `^## ` as well as
+        `^### `, so the base and head M2-S9 entries both end at the blank before
+        the block separator instead of running into `## Epic M3`; a
+        `body CHANGED: ### M2-S9` line means a conforming block close is
+        missing. [DR-19]
+    invariants:
+      - "F-1/DEC-9: append-only after M2-S9, code order S11..S17, no entry moved, no Ticket line"
+      - "F-2/NFR-8: S17 keeps six task clauses and seven numbered criteria, no `may` softening"
+      - "F-3/NFR-2/DR-17: M2-S4 differs only on its dependency line; M2-S6 only gains the telemetry clause as its own task line and M2-S14 on the dependency line, with every base task line byte-identical"
+      - "F-4/NFR-2: frontmatter, reading guide, cross-cutting principles, retirement note, and every other entry byte-identical"
+      - "NFR-9/D-5: no seed literal in added lines; the existing `ados spend` bytes stay untouched"
+      - "D-4/XF-8/DR-9/DEC-17: the insertion sits inside the Epic M2 block, immediately after M2-S9's last content line and before the block-closing blank line and `---` separator; the inserted block begins with a blank line; the separator, the blank line after it, and the Epic M3 heading stay byte-identical and follow the block"
+      - "DR-1/NFR-8: S17's seven criteria are present with their content, including the three previously unanchored ones, and no criterion is added"
+
+  - id: 2
+    title: "P2 — Reconcile the M1 command-page status headers and the entrypoint composition statement"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m1/commands/board.md
+        - doc/planning/oss-tooling/milestones/m1/commands/blockers.md
+        - doc/planning/oss-tooling/milestones/m1/commands/closeout.md
+        - doc/planning/oss-tooling/milestones/m1/commands/commit.md
+        - doc/planning/oss-tooling/milestones/m1/commands/daemon.md
+        - doc/planning/oss-tooling/milestones/m1/commands/doctor.md
+        - doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md
+        - doc/planning/oss-tooling/milestones/m1/commands/mcp.md
+        - doc/planning/oss-tooling/milestones/m1/commands/merge.md
+        - doc/planning/oss-tooling/milestones/m1/commands/plan.md
+        - doc/planning/oss-tooling/milestones/m1/commands/retro.md
+        - doc/planning/oss-tooling/milestones/m1/commands/state.md
+        - doc/planning/oss-tooling/milestones/m1/commands/verify-deploy.md
+        - doc/planning/oss-tooling/milestones/m1/commands/verify-gates.md
+        - doc/planning/oss-tooling/milestones/m1/commands/watchdog.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-012, 013, 014, 015, 030 complete (011 re-delivered and owned in P7)"
+    summary: "docs(GH-284): reconcile M1 command-page status headers with delivered reality"
+    tasks:
+      - |-
+        2.1 Rewrite the status header of the fourteen pages in Appendix B so it
+        names the delivered story and its GH reference. Apply the proposal-tail
+        rule (D-7, DR-4, DEC-18): DELETE the `Proposed contract` /
+        `Proposed examples` tail from every reconciled header whose planned
+        remainder is empty, and keep it only where the header names a planned
+        remainder for it to scope to. Keep each page's other true clauses:
+        `watchdog.md` retains `M1-S15 adds progress signals` and `SC-M1-14`;
+        `verify-gates.md` keeps its delivered M1-S4 extension attribution;
+        `closeout.md` keeps its delivered M1-S12 expansion attribution. Required
+        token pairs, all inside the header region (lines 1..first `## `):
+        board `M1-S5` `GH-229`; doctor `M1-S3` `GH-224`; mcp `M1-S7`
+        `GH-231`; state `M1-S2` `GH-222`; merge `M1-S4` `GH-225`;
+        verify-deploy `M1-S4` `GH-225`; watchdog `M1-S1` `GH-221`;
+        blockers `M1-S16` `GH-230`; retro `M1-S8` `GH-232`; commit `M1-S14`
+        `GH-227`; plan `M1-S13` `GH-226`; verify-gates `M1-S4` `GH-225`
+        (M0-S9 stays shipped); closeout `M1-S12` `GH-240` (M0-S14 stays
+        shipped); daemon `M1-S18` `GH-238`. plan.md and commit.md drop the
+        `M1 milestone planned` phrase and keep the shipped attribution.
+        [F-5, DM-2, DEC-3, DEC-18; AC-F5-1; TC-M2PLAN-011]
+      - |-
+        2.2 Remainder pointers in the same headers: board points at M2-S4
+        (full board), watchdog at M2-S2 (supervision battery), mcp at M3-S2
+        (full MCP). Every page with no planned remainder says so by naming no
+        future story. [F-5; AC-F5-2; TC-M2PLAN-012]
+      - |-
+        2.3 daemon.md header only: state that the daemon engine and control
+        protocol were delivered by M1-S18 (GH-238), that the lifecycle command
+        is NOT mounted at the production entrypoint, and that registration is
+        tracked in the M2 entrypoint delta note. The header must not contain
+        `Current`. The body from the first `## ` line to EOF stays
+        byte-identical, so the delivered engine contract (protocol,
+        persistence, degradation) survives as written. [F-5, F-10, DEC-2;
+        AC-F5-3; TC-M2PLAN-013]
+      - |-
+        2.4 entrypoint.md composition statement (D-6, XF-3, DEC-16): replace the
+        two adjacent DESCRIPTION sentences that state the composition, and
+        nothing else, as ONE contiguous hunk. Sentence one keeps the literal
+        prefix `command set: ` and lists exactly the sixteen observed
+        families, backticked, in the observed order, ending with a period:
+        `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`,
+        `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`,
+        `dispatch`, `coordinator` (no period may appear inside the list).
+        Sentence two states that `state`, `mcp`, and the resident daemon are
+        not registered and does not contain the token `dispatch`. Keep the two
+        statements as SEPARATE sentences: merging them would fold the absent
+        families into the enumeration capture and P15 would print
+        `dispatch=claimed-not-registered (FAIL)`. The preceding sentence ("The
+        entrypoint is a non-installed Bun bin ...") and every following
+        paragraph keep their bytes, so `sentences_removed=2` and
+        `sentences_added=2`. Derive the list from live root help, not from a
+        hardcoded memory; the observation is recorded in the P4 delta note.
+        [F-6, NFR-3, DEC-8, DEC-16; AC-F6-1, AC-F5-4; TC-M2PLAN-015]
+      - |-
+        2.5 Containment. Change nothing at or after the first `## ` line of any
+        page: the page title line stays byte-identical and every body hunk is a
+        failure (P14 with `outside=0`, P30 `body_identical=14/14`). On
+        entrypoint.md the single hunk must lie inside DESCRIPTION and cover at
+        most two adjacent sentences (`desc_hunks=1`, `outside_desc_hunks=0`,
+        `sentences_removed<=2`, `sentences_added=sentences_removed`). No page
+        may contain `M1 planned` or `M1 milestone planned` anywhere in the
+        file, and no header may contain `Current`. Do not add an
+        `ados_distribution` marker. [F-5, F-6, NFR-3, NFR-4, DEC-13, DEC-16;
+        AC-F5-4, AC-F6-1, AC-NFR3-1; TC-M2PLAN-014, TC-M2PLAN-030]
+      - |-
+        2.6 Sequencing (XF-4): the only link introduced is the pointer to
+        `../../m2/entrypoint-delta.md`, which resolves when P4 lands. Do not add
+        any other link, and do not run P37 in this phase.
+    coverage:
+      - "TC-M2PLAN-012 (complete: board -> M2-S4, watchdog -> M2-S2, mcp -> M3-S2)"
+      - "TC-M2PLAN-013 (complete: header M1-S18/GH-238/not mounted/entrypoint delta OK; Current=ABSENT; daemon_body=byte-identical)"
+      - "TC-M2PLAN-014 (complete: changed_pages=14/14, every hunk inside the header region, entrypoint_hunks=1, classifier self-tests OK)"
+      - "TC-M2PLAN-015 (complete: observed_families=16, enumerated_families=16, no family in either set difference, exactly state/mcp/resident daemon absent, dispatch not claimed absent, entrypoint_bound=OK, positive and merged-sentence fixtures behave)"
+      - "TC-M2PLAN-030 (complete: body_identical=14/14; entrypoint_bound=OK with desc_hunks=1, outside_desc_hunks=0, sentences_removed=2, sentences_added=2)"
+    testGate:
+      - "P00 — re-materialise the base snapshots inside P2"
+      - >-
+        P11 -> pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0;
+        forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0
+        (no header keeps `Proposed contract`/`Proposed examples` without a
+        named planned remainder); watchdog_m1s15=OK; watchdog_sc=OK;
+        verify_gates_extension=OK; closeout_extension=OK
+      - "P12 -> board.md -> M2-S4 OK; watchdog.md -> M2-S2 OK; mcp.md -> M3-S2 OK"
+      - >-
+        P13 -> header M1-S18 OK; header GH-238 OK; header not mounted OK;
+        header entrypoint delta OK; header Current=ABSENT;
+        daemon_body=byte-identical
+      - >-
+        P14 -> changed_pages=14/14; total_hunks=M; no OUTSIDE lines;
+        entrypoint_hunks=1; classifier_inside=OK; classifier_outside=OK;
+        non_vacuous=yes
+      - >-
+        P15 -> observed_families=16; enumerated_families=16;
+        families_not_enumerated empty; enumerated_not_observed empty;
+        not_registered: state OK, mcp OK, resident daemon OK;
+        dispatch=not-claimed-absent OK; enumeration_contains_registration=OK;
+        registration_contains_enumeration=OK;
+        not_registered_extra_families=none;
+        entrypoint_bound=OK (one contiguous hunk, <=2 adjacent sentences,
+        every other byte identical); positive_two_sentence=OK;
+        negative_merged=detected; P15 verdict: PASS
+      - >-
+        P30 -> body_identical=14/14; entrypoint_bound=OK (desc_hunks=1,
+        outside_desc_hunks=0, sentences_removed=2, sentences_added=2);
+        P30 verdict: PASS
+    invariants:
+      - "F-5/DM-2/D-7/DEC-18: header-region-only diffs on the fourteen pages; title lines byte-identical; zero `M1 planned` / `M1 milestone planned` across the 28 command pages; no header containing `Current`; no proposal tail without a named planned remainder; watchdog's M1-S15 clause and SC-M1-14 preserved alongside the verify-gates/closeout extension attributions"
+      - "F-6/DEC-8/DEC-16: the sixteen observed families, backticked, no period inside the list, absent families in a separate sentence without `dispatch`, one contiguous DESCRIPTION hunk over at most two adjacent sentences"
+      - "AC-F5-3: daemon body byte-identical, reachability corrected in the header only"
+      - "NFR-4/DEC-6: no `ados_distribution` marker added anywhere"
+
+  - id: 3
+    title: "P3 — Record the 2026-11-10 M2 planning snapshot and the four supersession pointer groups"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/status.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-016, 034 complete (017, 018 re-delivered and owned in P7)"
+    summary: "docs(GH-284): record the 2026-11-10 M2 planning snapshot in status"
+    tasks:
+      - |-
+        3.1 Append ONE new `##` section at EOF, after the 2026-11-07 handover
+        amendment section, with its `##` heading on the line immediately after
+        the file's current last line (no leading blank line: P18 classifies an
+        added run that starts before the heading as OUTSIDE). The heading
+        carries the date `2026-11-10` and names the M2 planning snapshot. The
+        body states: M1 story delivery complete at "23 of 23" through the
+        eleven-phase lifecycle; the M2 planning state entered by this change
+        (S2-S10 carried, S11-S17 added, S1 retired into M1 with the gap
+        deliberate, the M2-S4 and M2-S6 amendments, and no tickets created
+        yet); the early inputs #268 and #280; and the maintenance convention
+        that future M2 story deliveries keep the planning corpus current. It
+        states that story delivery is not milestone exit, claims no M0 or M1
+        exit, and contains no phrase of the form "milestone exit
+        met|complete|achieved". It names the backlog as canonical for M2 scope.
+        [F-7, DEC-5, RSK-8; AC-F7-1; TC-M2PLAN-016]
+      - |-
+        3.2 Pointer group G1 (title framing). Insert ONE pointer line as line 2,
+        inside P18's fixed 2..4 title window, of at most three non-blank lines,
+        naming the 2026-11-10 snapshot and marking the "milestone exit pending"
+        framing superseded for M2 planning. The title line itself stays
+        byte-identical and line 1. [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
+      - |-
+        3.3 Pointer group G2. Insert ONE pointer line AFTER the blank line that
+        closes the paragraph beginning "Per backlog-ranking.md reading notes
+        ..." (the paragraph carrying "M1 delivery starts now and runs beside
+        the pilot"), so that paragraph's own last line stays the anchor for
+        P17's eight-line window and P18's paragraph window; placing the pointer
+        inside the paragraph moves the anchor and classifies it OUTSIDE. Keep
+        every original sentence verbatim; the pointer must not restate or
+        rewrite the per-repository rule. [F-7, DEC-5; AC-F7-2; TC-M2PLAN-017]
+      - |-
+        3.4 Pointer group G3. Insert ONE pointer line after the last line of the
+        "## M1 delivery: scheduling engine delivered (2026-11-07)" section and
+        before the next `##` heading, naming the 2026-11-10 snapshot as the
+        current M1 delivery state. Every original line of that section stays
+        byte-identical and in place. [F-7, NFR-7; AC-F7-2; TC-M2PLAN-017]
+      - |-
+        3.5 Pointer group G4. Insert exactly ONE pointer line at the end of item
+        3 of "## Proposed next steps", as a continuation-indented line inside
+        the item's block so the list numbering and item 4 stay intact. Do not
+        add pointers to items 1 or 2: NFR-7 and AC-F7-2 allow one pointer per
+        statement group, and the group is "items 1-3". Items 4-7 and every
+        other line stay untouched. [F-7, DEC-5; AC-F7-2; TC-M2PLAN-017]
+      - |-
+        3.6 Retention and hygiene (D-8, D-13). No original line of any base
+        section is removed, reordered, or modified: `removed_lines=0` over the
+        whole file. Every added line either lies inside the new dated section
+        or is one of the four pointer insertions above, each naming the
+        2026-11-10 section. Do not use a whole-section comparison as evidence.
+        Add no frontmatter, no `ados_distribution` marker, and no seed literal
+        in added lines. Do not write `M1 planned`, and never write the literal
+        phrase "23 of 23|23/23". Pointers never substitute for original text.
+        [F-7, NFR-7, NFR-9, DEC-16; AC-F7-2, AC-F7-3, AC-NFR7-1;
+        TC-M2PLAN-018, TC-M2PLAN-034]
+    coverage:
+      - "TC-M2PLAN-016 (complete: new_sections=1; all eleven markers present; literal_pipe=ABSENT; exit_overclaim=ABSENT; alternation_self_test=OK)"
+      - "TC-M2PLAN-034 (complete: same retention result plus the four pointer insertions; pointer_groups=4/4 with sed_line_address_0_errors=0)"
+    testGate:
+      - "P00 — re-materialise the base snapshots inside P3"
+      - >-
+        P16 -> new_sections=1; the 2026-11-10 section found; markers
+        `23 of 23|23/23`, `S2.S10|S2–S10`, `S11.S17|S11–S17`, S1, retired,
+        M2-S4, M2-S6, #268, #280, maintenance, not milestone exit all OK;
+        literal_pipe=ABSENT; exit_overclaim=ABSENT;
+        alternation_self_test=OK; P16 verdict: PASS. XF-2 is closed: P16 now
+        carries the real alternation and the literal-pipe prohibition itself.
+      - >-
+        P17 -> title_base_retained=yes title_pointer=yes;
+        g2_bytes_retained=yes g2_pointer=yes; g3_bytes_retained=yes
+        g3_pointer=yes; g4_bytes_retained=yes; g4_pointer=1/1
+      - >-
+        P18 (the single retention-and-whitelist oracle) ->
+        `windows(base-anchored): newsec=<a>..<b> title=2..4
+        paragraph=<p>..<p+2> scheduling=<s>..<s+2> items=<i>..<i+2>`;
+        `retention: removed_lines=0 added_lines=<N>` with N>0;
+        `whitelist: section_lines=<k> pointer_runs=4 pointer_windows=4
+        bad_runs=0`; `retention_oracle=OK`;
+        `oracle=whole-file-line-retention (whole-section cmp not used)`;
+        `negative_modified=detected`, `negative_outside=detected`,
+        `positive_pointer=permitted`; `reference_whitelist: section_lines=3
+        pointer_runs=4 pointer_windows=4 bad_runs=0`;
+        `reference_head_fixture=OK`; `P18 verdict: PASS`. Any `OUTSIDE` line,
+        `bad_runs>0`, `pointer_runs<4`, `removed_lines>0`, or
+        `section_lines=0` fails P3.
+      - >-
+        P34 -> run AFTER P18 in the same shell (it reuses `retention_oracle`
+        and `head_line_for_base`) and it defines `ptr()` locally, so P16/P17
+        need not have run (DR-8). Expected: `retention_oracle=OK`;
+        `pointer_groups=4/4`; `sed_line_address_0_errors=0`; `P34 verdict:
+        PASS`. No `sed: invalid usage of line address 0` line and no `ptr:
+        command not found` line is expected: XF-7 and DR-8 are closed.
+      - >-
+        Hygiene: `head -1 doc/planning/oss-tooling/status.md` is not `---`;
+        `git diff fab46636...HEAD -- doc/planning/oss-tooling/ | grep -c
+        '^+ados_distribution'` is 0; added lines contain no `ados`, `ADOS_`,
+        or `~/.ados` token (P36 re-checks this at P6).
+    invariants:
+      - "F-7/D-8/DEC-16: one new dated section and exactly four pointer insertions (one per group, one for items 1-3); original lines retained verbatim and in order, zero removals"
+      - "AC-F7-1/RSK-8: the snapshot claims story delivery only and never a milestone exit"
+      - "NFR-7/XF-1: retention over the whole file plus the addition whitelist is the oracle; a whole-section cmp is never used"
+      - "NFR-9/D-9: no seed literal, no frontmatter, no distribution marker, no literal pipe in the 23-of-23 phrase"
+
+  - id: 4
+    title: "P4 — Author the twelve-document M2 blueprint pack under milestones/m2/"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/architecture.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - doc/planning/oss-tooling/milestones/m2/journeys.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/planning/oss-tooling/milestones/m2/commands/attempts.md
+        - doc/planning/oss-tooling/milestones/m2/commands/events.md
+        - doc/planning/oss-tooling/milestones/m2/commands/spend.md
+        - doc/planning/oss-tooling/milestones/m2/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/commands/board.md
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/contracts.md
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-023, 033 complete (019, 020, 021, 022, 024, 025, 026 re-delivered and owned in P7)"
+    summary: "docs(GH-284): add the M2 milestone blueprint pack"
+    tasks:
+      - |-
+        4.1 README.md: the pack index and how to read. List all eleven sibling
+        documents with a one-line purpose each (matching Appendix D), including a
+        table row for this file itself that begins `| `README.md` |`, so the
+        manifest lists twelve entries and the self entry is row-shaped rather
+        than a parent link (DR-14). State the planned-until-exit status
+        semantics and the `Status: Proposed (M2)` convention, and carry a
+        story-to-artifact map covering M2-S2 through M2-S17 that points each
+        story at its architecture flow, contract surface, and scenario ids.
+        State the deliberate contents DEVIATION explicitly (DR-6, DEC-20): the
+        pack ships no `man-page.md` and no `interactions.md`, and ships
+        `entrypoint-delta.md` instead, with one line of rationale. Link the pack
+        artifacts pack-relative, i.e. `./<artifact>` or `<artifact>`; the
+        twelve-target checks read `(./)?<artifact>` links, and a
+        `../README.md` parent link neither counts as the self entry nor replaces
+        a pack reference. `../README.md` and `../../backlog.md` stay the
+        cross-pack navigation links only. Reference story codes; never restate
+        an acceptance block. [F-8, DM-3, DEC-7, DEC-20; AC-F8-1; TC-M2PLAN-019]
+      - |-
+        4.2 architecture.md: the M2 end state. Exactly three C4 headings in the
+        committed form `## C4 Level <n>: <subject>` — `## C4 Level 1: system
+        context`, `## C4 Level 2: containers`, `## C4 Level 3: components` (the
+        M1 form; a bare `## C4 Level 1` is tolerated by the predicate but is not
+        the target) — each immediately followed by one mermaid `flowchart`.
+        Exactly seven `###` headings under a `## Key flows` section, one each for
+        multi-repository overview, attempt-history inspection and divergence
+        resolution, telemetry attribution, queue auto-release after merge and
+        closeout, single-flight refusal across dispatch paths, handover-gate
+        evaluation, and the S17 park/resume flow; each owns exactly one mermaid
+        diagram. Then one persistence-and-concurrency-deltas section and a
+        closing boundary-invariants section at M2 exit. Ten mermaid fences in
+        this file (3 C4 + 7 flows), each with the diagram keyword (`flowchart`,
+        `graph`, `sequenceDiagram`, `classDiagram`, or `stateDiagram-v2`) as its
+        first body line, every fence closed. Each mermaid block must sit
+        DIRECTLY under its own heading, with no prose or other heading in
+        between, and no heading owns more than one diagram, so P33 can prove
+        association and not only counts (DR-7, DR-12):
+        `heading_association=OK`, `C4 Level 1/2/3 has diagram=OK (heads=1
+        own=1)`, `c4_headings_with_diagrams=3/3`, `flow_headings=7`,
+        `flow_headings_with_diagrams=7/7`, `flow_section=OK`. Use the exact flow
+        vocabulary P20 matches (case-insensitive): `Multi-repository`,
+        `divergence`, `Telemetry attribution`, `auto-release`, `single-flight`,
+        `handover-gate`, `park`. No heading outside this structure may repeat a
+        flow token or the word `park`, because P20 counts exactly 3 C4, 6 flows,
+        and 1 park heading. [F-8, NFR-6; AC-F8-2, AC-NFR6-1;
+        TC-M2PLAN-020, TC-M2PLAN-033]
+      - |-
+        4.3 contracts.md: shared contract continuity plus `projects.v1`,
+        `attempts.v1`, event taxonomy v1 (topics `queue.graph`,
+        `dispatch.attempt`, `phase.state`, `blockers.state`; event kinds;
+        payload shapes; ordering guarantees; the slow-consumer
+        overflow-to-repoll rule), `telemetry.v1` (ticket, repository, lane,
+        agent role, model, phase timing; reconciliation tolerance), queue
+        lifecycle mutations (release and remove reasons, dependency edges,
+        single-flight per ref), and `spend` v2 breakdown fields. Add the S17
+        surfaces: the provider profile field on admission, lane, and attempt
+        records; the peak-window rule schema per profile (windows,
+        multipliers, buffers); the park-reason vocabulary containing
+        `peak-window` and `owner-hold` with until timestamps; and the resume
+        event shapes. [F-8, DEC-10; AC-F8-3; TC-M2PLAN-021]
+      - |-
+        4.4 test-scenarios.md: at least 32 scenarios, at least two per story for
+        every story M2-S2 through M2-S17, as `### SC-M2-S11-01 <title>`-shaped
+        headings where the second segment is the owning story code and the
+        third is a two-digit ordinal (the story code in the heading so each
+        scenario is attributable without reading the body), each with a
+        Given/When/Then body that names invocations and observable results. Cover the seven
+        mandatory scenarios (same-ref two-repo collision safety, divergence
+        resolution in local-evidence mode, subscribe topic contract compliance,
+        telemetry reconciliation within tolerance, auto-release after closeout,
+        single-flight refusal naming the holder, handover evaluation reporting
+        per condition) and the five S17 scenarios (park at peak start per
+        profile, other-provider isolation, resume at window end without state
+        loss, zero-spend assertion, daemon-absent degradation). Because S17's
+        seven criteria are now normative (DR-1), the S17 scenarios must also
+        make criteria 3, 4 and 6 observable: another provider's lane keeps
+        running through the peak; no branch, artifact, or queue state is lost
+        or duplicated across park and resume; and stop, park, and resume appear
+        as ledger events surfaced in status and brief. Use those phrasings, not
+        synonyms. Do not use `**Given**` markers and do not open a line with
+        `- AC:`; reference story codes instead of restating them.
+        [F-8, DEC-10, NFR-8, NFR-10; AC-F8-4, AC-F2-1; TC-M2PLAN-022]
+      - |-
+        4.5 journeys.md: five `##` journeys with headings that name
+        multi-repo morning overview, inspecting evidence before a handover
+        decision, a retro grounded in telemetry, steering a running delivery,
+        and the S17 cost-control journey. The cost-control journey shows a peak
+        window parking one profile's lane while another provider's lane keeps
+        running, both visible, with automatic resume, and mentions `resume` and
+        `other provider`. Use neutral profile labels (D-10, XF-5): no
+        commercial, hosted, or proprietary provider name appears. [F-8, NFR-9;
+        AC-F8-5; TC-M2PLAN-023]
+      - |-
+        4.6 entrypoint-delta.md: the root-entry delta, not a restated man page.
+        Record the observed composition (the sixteen families including
+        `dispatch` and `coordinator`; `state`, `mcp`, and `daemon` absent), the
+        three observed invocations with their outputs and `exit 1`
+        (`unknown flag "--help"`, `unexpected argument "status"`), the
+        M2-planned additions (`projects`, `attempts` under `dispatch`, `events`
+        under the subscribe surface, `spend` v2, queue lifecycle verbs, the full
+        `board`), the daemon registration gap with the statement that wiring is
+        product work outside this change, and a pointer sentence to
+        `../m1/commands/entrypoint.md`. [F-10, DEC-2, DEC-12; AC-F10-1;
+        TC-M2PLAN-026]
+      - |-
+        4.7 commands/{projects,attempts,events,spend,queue,board}.md: one
+        man-page-style contract each. Line 1 is `# <name>(1)`, line 3 is
+        exactly `Status: Proposed (M2)`, and the page uses `<binary>` as the
+        invocation prefix with a bare command name and no working name. Each
+        page carries SYNOPSIS, OPTIONS, OUTPUT (text digest plus the machine
+        `envelope`), EXIT STATUS, EXAMPLES, ERRORS (an error table), and SEE
+        ALSO sections, plus at least one invocation example. `attempts` is
+        presented as a `dispatch` subfamily and `events` as the subscribe
+        taxonomy reference. Resolve every relative link from
+        `milestones/m2/commands/` (three levels up to `oss-tooling/`).
+        [F-9, DEC-14, NFR-10; AC-F9-1, AC-F9-2; TC-M2PLAN-024, 025]
+      - |-
+        4.8 Pack invariants. Exactly twelve files under `milestones/m2/` and no
+        extra file. No `ados_distribution` marker in any pack document. No line
+        matching `^- AC:` and no `**Given**` token anywhere in the pack. No
+        seed literal (`ados`, `ADOS_`, `~/.ados`) and no private, fleet,
+        repository, or product name. Every relative link resolves; every
+        `](target)` has no parenthesis in the target. [NFR-9, NFR-10, NFR-6;
+        AC-NFR6-1, AC-F8-1; TC-M2PLAN-019, 033]
+    coverage:
+      - "TC-M2PLAN-023 (complete: five journeys with the required headings, cost-control resume and isolation present)"
+      - "TC-M2PLAN-033 (complete: mermaid_fences>=10, keyword_and_fence_exit=0, heading_association=OK, C4 Level 1/2/3 has diagram=OK (heads=1 own=1), c4_headings_with_diagrams=3/3, flow_headings=7, flow_headings_with_diagrams=7/7, flow_section=OK, fixture_good=OK, fixture_good_metrics=3/3,7/7,OK, fixture_negative=detected)"
+    testGate:
+      - "P00 — re-materialise the base snapshots inside P4"
+      - >-
+        P19 -> pack_files=12/12 actual_files=12; readme_lists=12/12 (each of the
+        twelve pack references is a `(./)?<artifact>` link and the self entry is
+        a `| `README.md` |` row, so the parent-escape form does not count);
+        story_map_entries>=16; deviation_statement=OK (the README names
+        `man-page.md`, `interactions.md`, `entrypoint-delta.md` and the
+        deliberate deviation); readme_self_link_self_test=detected;
+        pack_contents_table=byte-identical against the base
+        `milestones/README.md`
+      - >-
+        P20 -> C4 Level 1/2/3 headings in the subject form OK; flow headings
+        multi-repo, divergence, telemetry attribution, auto-release,
+        single-flight, handover-gate OK; park/resume OK; deltas persistence,
+        concurrency, boundary invariants OK
+      - "P21 -> contract_markers_missing=0"
+      - "P22 -> scenario_headings>=32; S2..S17 each >=2; stories_below_two=0; twelve mandatory anchors OK"
+      - "P23 -> five journey patterns OK; cost-control resume OK; cost-control isolation OK"
+      - "P24 -> command_headers=6/6"
+      - >-
+        P25 -> every page reports an empty missing list; attempts=dispatch
+        subfamily OK; events=subscribe taxonomy OK
+      - >-
+        P26 -> dispatch, coordinator, state, mcp, daemon, unknown flag,
+        unexpected argument, exit 1, outside this, entrypoint.md all OK
+      - >-
+        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
+        `C4 Level 1 has diagram=OK (heads=1 own=1)`, `C4 Level 2 has
+        diagram=OK (heads=1 own=1)`, `C4 Level 3 has diagram=OK (heads=1
+        own=1)`; `c4_headings_with_diagrams=3/3`; `flow_headings=7`;
+        `flow_headings_with_diagrams=7/7`; `flow_section=OK`;
+        `heading_association=OK`; and the procedure's own fixtures
+        `fixture_good=OK`, `fixture_good_metrics=3/3,7/7,OK`,
+        `fixture_negative=detected`. A `MISSING` C4 line, a
+        `flow_headings_with_diagrams` shortfall, an `orphan=FAIL`, or a fixture
+        that does not detect fails P4.
+    invariants:
+      - "AC-F8-1/DM-3/DEC-20: exactly twelve documents, README maps every one and the story set, and the README states the man-page/interactions deviation while the index contents table stays byte-identical"
+      - "AC-F8-2/NFR-6: three `## C4 Level <n>: <subject>` headings and seven `###` flow headings under `## Key flows`, each owning exactly one diagram placed directly beneath it (association, not counts)"
+      - "AC-F8-3/DEC-10: every named contract surface including the S17 additions is present"
+      - "AC-F8-4/AC-F2-1/DR-1: >=32 scenarios, >=2 per story S2..S17, twelve mandatory anchors verbatim, and S17 coverage for criteria 3, 4 and 6 (other providers keep running, no state lost or duplicated, auditable stop/park/resume events)"
+      - "AC-F9-1/AC-F9-2/DEC-14: Proposed (M2) header, `<binary>` prefix, seven man-page sections, family relationships"
+      - "NFR-9/NFR-10/D-10: no commercial provider name, no seed literal, no distribution marker, no restated AC block, no broken link"
+
+  - id: 5
+    title: "P5 — Register the M2 pack in the milestone index"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/README.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-027 complete"
+    summary: "docs(GH-284): register the M2 pack in the milestone index"
+    tasks:
+      - |-
+        5.1 Add exactly one row to the `## Index` table after the M1 row,
+        following the table's formatting, with the milestone label marked
+        planned, and linking TWELVE targets (DR-6, DEC-20): `m2/README.md`,
+        the five other pack-level documents (`m2/architecture.md`,
+        `m2/contracts.md`, `m2/test-scenarios.md`, `m2/journeys.md`,
+        `m2/entrypoint-delta.md`), and the six command pages
+        (`m2/commands/projects.md`, `m2/commands/attempts.md`,
+        `m2/commands/events.md`, `m2/commands/spend.md`,
+        `m2/commands/queue.md`, `m2/commands/board.md`). Every link must resolve
+        from `milestones/`, all twelve must appear on the row line itself (P27
+        reads only that physical line), and no other `m2/*.md` path may appear
+        on it, because P27 counts distinct targets and expects exactly twelve.
+        [F-11, DM-3, DEC-7, DEC-20; AC-F11-1; TC-M2PLAN-027]
+      - |-
+        5.2 Leave the M0 and M1 rows byte-identical (P27 compares the full
+        lines containing `M0 (trust substrate` and `M1 (delivery engine`), and
+        leave the `## Pack contents` table, the conventions section, and every
+        other byte of the file untouched: P19 compares that table against the
+        base snapshot and the pack states its deviation in its own README
+        instead (DEC-20). Do not add an `ados_distribution` marker.
+        [F-11, NFR-2, DEC-20; AC-F11-1]
+    coverage:
+      - "TC-M2PLAN-027 (complete: M2 row present with m2_targets=12/12 on the row line, m2_row_marked_planned=yes, no row-missing line, M0 and M1 rows identical)"
+    testGate:
+      - "P00 — re-materialise the base snapshot of milestones/README.md inside P5"
+      - >-
+        P27 -> M2 row=present; m2_targets=12/12 (README, five pack-level
+        documents, six command pages), every target a `m2/<artifact>` link on
+        the single physical row line, with no `../` escape and no other
+        `m2/*.md` path on that line; no `target missing m2/...` lines;
+        m2_row_marked_planned=yes; `M0 (trust substrate` row=identical;
+        `M1 (delivery engine` row=identical
+    invariants:
+      - "AC-F11-1/DEC-7/DEC-20: one planned M2 row linking twelve targets"
+      - "NFR-2/DEC-20: M0 and M1 rows, the pack-contents table, and every other byte of the index file byte-identical"
+
+  - id: 6
+    title: "P6 — Verification sweep, registry registration, guard evidence, and delivery record (continuation: P1-P5 delivered)"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-spec.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md
+        - scripts/checks/forbidden-literals.registry.json
+      folders:
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/readiness-review
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/code-review
+    doneArtifacts:
+      pipelineId: "GitHub Actions CI on the GH-284 PR targeting main-tools is green"
+      trackerTransition: "GH-284 stays In Progress through merge; the PR body carries the evidence table, the retention and insertion adjudications, the closed XF-7/XF-8 provenance, the DEC-21 registry registration, and the environment note"
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the final HEAD"
+      - "TC-M2PLAN-031, 032 complete (035, 036, 037 re-delivered and owned in P8)"
+      - "delivery-evidence/verification.md records every procedure id, command, expected line, and observed line"
+    summary: "docs(GH-284): record verification evidence for the M2 planning change"
+    tasks:
+      - |-
+        6.1 Continuation and containment. P1-P5 are already delivered and
+        committed (1842e181, 57120f4e, 5e00d4f2, 39bb4afb, 13171be1, 110fb160);
+        P6 continues from that HEAD and does not re-scope them. Re-run P00 and
+        P28 with `LC_ALL=C` exported so its `comm` inputs are ordered the same
+        way. The DELIVERY budget (P28's delivery range, derived as the whole
+        change minus the three phase-7 paths, equivalently base..the last
+        delivery commit before phase 7) must be exactly 31 product files:
+        `backlog.md`, `status.md`, `milestones/README.md`, the fifteen
+        `milestones/m1/commands/*.md` pages, the twelve `milestones/m2/**`
+        documents, and `scripts/checks/forbidden-literals.registry.json`.
+        Expect `product_files=31`, `planning_files=30`, `registry_files=1`,
+        `outside_planning_outside_registry=0`, `forbidden_root_files=0`,
+        `unexpected_planning_paths=0`, `non_vacuous=yes`. The registry file is
+        the only permitted non-planning product file (D-14, DEC-21); any other
+        path outside `doc/planning/oss-tooling/**` (excluding `doc/changes/**`),
+        and anything under `tests/`, `packages/`, `.opencode/`, `.ai/`, or under
+        `scripts/` other than that one file, fails the change: revert it, do not
+        rationalise it as incidental. [NFR-1, DEC-13, DEC-21; AC-NFR1-1;
+        TC-M2PLAN-028]
+      - |-
+        6.2 Register the twelve pack documents (D-14, DR-20, DEC-21). In
+        `scripts/checks/forbidden-literals.registry.json`, append the twelve
+        `doc/planning/oss-tooling/milestones/m2/**` paths to the `registered`
+        array — `README.md`, `architecture.md`, `contracts.md`,
+        `test-scenarios.md`, `journeys.md`, `entrypoint-delta.md`, and
+        `commands/{projects,attempts,events,spend,queue,board}.md`, each
+        prefixed with `doc/planning/oss-tooling/milestones/m2/`. Insert them
+        SORTED among themselves and duplicate-free; do NOT reorder or rewrite
+        any existing entry (the base registry is not globally sorted), and do
+        not touch `corpusBaseline`, any other key, the guard implementation, or
+        its tests. This is the only `scripts/**` edit the change allows, and it
+        changes no guard behaviour: the guard already scans `doc/planning/**`
+        and simply requires registration. [NFR-1, NFR-9, DEC-21; AC-NFR1-1,
+        AC-NFR9-1; TC-M2PLAN-028, TC-M2PLAN-036]
+      - |-
+        6.3 Guards. P31 (doc-distribution, expect exit 0 and the in-scope doc
+        count line, `planning_markers=0`), P36 (forbidden literals plus pack
+        registration: expect `registered_total=139`, `m2_registry_sorted=yes`,
+        `m2_registry_duplicates=0`, `registry_m2=12/12`,
+        `baseline_absent=12/12`, then `forbidden_exit=0`, the
+        `OK forbidden-literals` line with 5/5 scope classes and 0 violations,
+        `unregistered_findings=0`, `seed_hits=0`), P37 (links
+        `broken_links=0`, `restated_ac_blocks=0`, `non_vacuous=yes`), P33
+        (structural diagram and association, expect `keyword_and_fence_exit=0`,
+        `C4 Level 1/2/3 has diagram=OK (heads=1 own=1)`,
+        `c4_headings_with_diagrams=3/3`, `flow_headings=7`,
+        `flow_headings_with_diagrams=7/7`, `heading_association=OK`, plus
+        `fixture_good_metrics=3/3,7/7,OK` and `fixture_negative=detected`).
+        A guard hit is fixed by rewording inside the owning phase's scope; the
+        registration in 6.2 is already complete, so no further registry entry,
+        allowlist rule, or guard change may be added, and no other
+        `scripts/**` file may be edited. [NFR-4, NFR-6, NFR-9, NFR-10;
+        AC-NFR4-1, AC-NFR6-1, AC-NFR9-1, AC-NFR10-1; TC-M2PLAN-031, 033, 036,
+        037]
+      - |-
+        6.4 Aggregate gate (D-12, DR-3, DR-5, NFR-5, AC-NFR5-1, DEC-19). Run P32
+        exactly as written and record both invocations verbatim; P32 itself
+        creates the repo-local tmpdir, so do not hand-roll the command. After
+        the 6.2 registration the repo-local-`TMPDIR` run must exit 0, and the
+        default run must reduce to the LONE `ci-baseline-parity` failure
+        (`default_failed_tests=1`; before registration it reported four
+        failures -- parity plus three forbidden-literals tests). Only that
+        single failure is the environmental exemption (`git clone --local`
+        hardlinks crossing into tmpfs); any other default-run failure, any
+        `default_failed_tests` above 1, or any repo-local-TMPDIR failure is a
+        delivery failure. Do not "fix" the environment condition: `tests/**`
+        and guard behaviour are out of scope. [NFR-5; AC-NFR5-1; TC-M2PLAN-032]
+      - |-
+        6.5 Fidelity and preservation aggregate. Re-run P02, P05, P06 and then
+        P35: expect `clause_scan: total=79 present=79 missing=0`,
+        `missing_clauses=0`, `s17_missing_criteria=0`, `added_criteria=0`,
+        `criteria_present=7/7` (no eighth criterion, no merged criterion), and
+        the clause-by-clause read against the ticket recorded as the
+        `changed_meaning` evidence (test plan G-1). Re-run the content
+        procedures at the final HEAD as regression proof, in the test plan's
+        recommended order: P28, P31, P32, P36, then P11, P14, P15, P30,
+        P01..P10, P16..P18 (P18 first, then P34 which reuses
+        `retention_oracle` and `head_line_for_base`), P19..P27, P29,
+        P33..P35, P37. Expected entrypoint lines are `entrypoint_bound=OK`
+        with `sentences_removed=2` and `sentences_added=2`; expected page lines
+        are `tail_violations=0` with all four preservation checks OK; expected
+        pack lines are `readme_self_link_self_test=detected`,
+        `deviation_statement=OK`, `pack_contents_table=byte-identical`,
+        `m2_targets=12/12`, `heading_association=OK`,
+        `c4_headings_with_diagrams=3/3`, `flow_headings_with_diagrams=7/7`;
+        expected status lines are `removed_lines=0`,
+        `added_lines>0`, `pointer_runs=4`, `pointer_windows=4`, `bad_runs=0`,
+        `retention_oracle=OK`, `reference_head_fixture=OK`,
+        `pointer_groups=4/4`, and `sed_line_address_0_errors=0`; expected
+        backlog lines are `window=1167:<nee>`, `window_empty=no`,
+        `separator_sequence=identical`, `blank_separation=OK`,
+        `fixture_blank_separation=OK`, `classifier_self_tests=4/4`,
+        `changed_lines=3` with `base_task_lines_missing=0` and
+        `fixture_p08=OK`, and `stories_compared=65 identical=65 changed=0
+        order=OK`. No delivery phase other than this registry step may have
+        changed a file since P5; the phase-7 reconciliation of the three
+        current-truth docs is separate and owned by `system_spec_update`
+        (DEC-22), so it is neither a delivery drift nor part of P6's scope.
+        [NFR-2, NFR-3, NFR-7, NFR-8;
+        AC-NFR2-1, AC-NFR3-1, AC-NFR7-1, AC-NFR8-1; TC-M2PLAN-029, 035]
+      - |-
+        6.6 Write `delivery-evidence/verification.md` (a change artifact, not a
+        product file): one row per TC (TC id, AC id, procedure ids, command,
+        expected line, observed line), the plan-validation verdict, the P28
+        product-file list (31 paths, with `planning_files=30` and
+        `registry_files=1`), the P36 registration evidence
+        (`registered_total`, `m2_registry_sorted`, `m2_registry_duplicates`,
+        `registry_m2`, `baseline_absent`, `unregistered_findings`), the
+        P31/P32/P33/P36/P37 outputs, both aggregate-gate runs with their
+        classification (DEC-19: `default_exit`, `default_failed_tests`,
+        `default_failure_class`, `repo_tmpdir_exit`, `gate_verdict`), the
+        fidelity evidence (P02's 61-clause scan, P35's 79-clause aggregate,
+        `s17_missing_criteria=0`, P04/P06 `criteria_present=7/7`), the page
+        evidence (`tail_violations=0` and the four preservation checks), the
+        pack evidence (P19's `deviation_statement=OK` and
+        `pack_contents_table=byte-identical`, P27's `m2_targets=12/12`, P33's
+        `heading_association=OK`), the retention evidence (P18's
+        `windows(base-anchored)`, `retention`, `whitelist`, `retention_oracle`,
+        `reference_head_fixture` and verdict lines plus P34's `pointer_groups`
+        and `sed_line_address_0_errors`), the backlog insertion evidence (P03's
+        window, `window_empty`, `blank_separation`, `separator_sequence` and
+        classifier self-tests), the entrypoint evidence (`entrypoint_bound=OK`,
+        `sentences_removed=2`, `sentences_added=2`), the registry diff summary
+        (twelve added registrations, sorted among themselves, no reordering),
+        the XF-9 note with its accepted-residual rationale, and the manual-read
+        verdicts owed by review (G-1, G-3, G-4, G-5, G-6). Then re-run P28 after
+        the commit and confirm the same 31-path list; record that confirmation
+        in the PR body, not in a second commit.
+        [§17.3 DoD; AC-NFR1-1, AC-NFR5-1, AC-NFR9-1]
+      - |-
+        6.7 Close-out statement in the PR body: no tracker ticket was created
+        for M2-S11..S17, no M2 story was delivered, and no product behaviour
+        changed (DEC-1, NG-1, NG-2, NG-4); the M2 pack is proposed until
+        milestone exit (DEC-4); P6 itself edits no `doc/spec/**` or
+        `doc/overview/**` file, because current-truth reconciliation is
+        `system_spec_update`'s mandate and DEC-22 gives phase 7 its own 3-file
+        budget — `doc/spec/features/feature-resident-daemon.md`,
+        `doc/spec/features/feature-cli-entrypoint.md` and
+        `doc/overview/architecture-overview.md` — for 34 product files across
+        the change; the only `scripts/**` change is the twelve-entry
+        registration, and guard behaviour is untouched (DEC-21). [§17.3 DoD]
+    coverage:
+      - "TC-M2PLAN-031 (complete: guard_exit=0, no drift, 82 in-scope docs; planning_markers=0)"
+      - "TC-M2PLAN-032 (complete: both runs recorded; after registration default_exit=1 with default_failed_tests=1, the lone ci-baseline-parity failure, classified environmental; repo_tmpdir_exit=0; gate_verdict=PASS)"
+      - "Procedure P33 re-proof inside the final sweep (TC ownership stays P4): mermaid_fences>=10, keyword_and_fence_exit=0, heading_association=OK, c4_headings_with_diagrams=3/3, flow_headings_with_diagrams=7/7"
+    testGate:
+      - "P00 — re-materialise the base and helpers at the final HEAD"
+      - >-
+        P28 -> two budgets, run with `LC_ALL=C` so the `comm` inputs share one
+        ordering. DELIVERY range (`delivery_range=whole change minus the three
+        phase-7 paths (equals base..the last delivery commit before phase 7)`,
+        or `BASE...DELIVERY_HEAD` when supplied):
+        `product_files=31`; `planning_files=30`; `registry_files=1`;
+        `outside_planning_outside_registry=0`; `forbidden_root_files=0`;
+        `unexpected_planning_paths=0`. PHASE-7 budget: `spec_files=2`;
+        `overview_files=1`; `phase7_files=3`; `phase7_extra=0`;
+        `phase7_unknown_paths=0`. Whole change: `total_product_files=34`;
+        `matcher_self_test=OK`; `non_vacuous=yes`. The single registry path is
+        `scripts/checks/forbidden-literals.registry.json`; the three phase-7
+        paths are `doc/spec/features/feature-resident-daemon.md`,
+        `doc/spec/features/feature-cli-entrypoint.md` and
+        `doc/overview/architecture-overview.md`. Any other `scripts/**` path,
+        any fourth `doc/spec`/`doc/overview` path (`phase7_extra>0` or
+        `phase7_unknown_paths>0`), anything under `tests/`, `packages/`,
+        `.opencode/`, `.ai/`, or a different `total_product_files` fails P6.
+        These values are observed with the phase-7 reconciliation present in
+        the tree, which it is now (the three files are edited and uncommitted).
+        If P28 is instead run before phase 7's edits exist, the phase-7 lines
+        read `spec_files=0 overview_files=0 phase7_files=0 phase7_extra=-3
+        phase7_unknown_paths=0 total_product_files=31`: the delivery budget is
+        then the whole gate and the phase-7 counts become the phase-7/DoD
+        check, not a P6 failure.
+      - >-
+        P31 -> guard_exit=0; (guard-doc-distribution)[OK] no drift, 82 in-scope
+        docs; planning_markers=0
+      - >-
+        P32 -> both runs executed and classified, post-registration:
+        `default_exit=1 default_failed_tests=1 default_failure_class=environmental
+        (ci-baseline-parity only)` -- the lone parity failure, down from four
+        failures before the 6.2 registration; `repo_tmpdir_exit=0`;
+        `gate_verdict=PASS`. A `default_failed_tests` above 1, a different
+        failing test, or a non-zero `repo_tmpdir_exit` fails P6.
+      - >-
+        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
+        `C4 Level 1/2/3 has diagram=OK (heads=1 own=1)`;
+        `c4_headings_with_diagrams=3/3`; `flow_headings=7`;
+        `flow_headings_with_diagrams=7/7`; `flow_section=OK`;
+        `heading_association=OK`; `fixture_good_metrics=3/3,7/7,OK`;
+        `fixture_negative=detected`
+      - >-
+        P36 -> `registered_total=139`; `m2_registry_sorted=yes`;
+        `m2_registry_duplicates=0`; `registry_m2=12/12 baseline_absent=12/12`
+        (the procedure prints those two counts on one line);
+        `registry_sorted_self_test=detected`;
+        `registry_duplicate_self_test=detected`; `forbidden_exit=0`;
+        `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`;
+        `unregistered_findings=0`; `added_lines>=1`; `seed_hits=0`. A
+        `present at baseline` or `unregistered:` line, a `sorted=no`, a
+        duplicate, or any non-zero guard exit fails P6.
+      - >-
+        P37 -> changed_planning_files=30; broken_links=0;
+        restated_ac_blocks=0; non_vacuous=yes
+      - >-
+        P35 -> P02 `clause_scan: total=79 present=79 missing=0`; P05 missing=0;
+        P06 criteria_present=7/7 ac_numbered_items=7/7 extra_criteria=0;
+        `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`
+        (`[0-9]+` guard, DR-15); `changed_meaning=0` (read recorded);
+        P35 verdict: PASS
+      - >-
+        Regression re-run at the final HEAD: P11/P14/P15/P30 (pages, expect
+        `entrypoint_bound=OK`), P16/P17/P18 then P34 (status, expect
+        `removed_lines=0`, `pointer_runs=4`, `bad_runs=0`,
+        `retention_oracle=OK`, `reference_head_fixture=OK`,
+        `pointer_groups=4/4`), P19/P27/P33 (pack and index, expect
+        `readme_self_link_self_test=detected`, `deviation_statement=OK`,
+        `pack_contents_table=byte-identical`, `m2_targets=12/12`,
+        `heading_association=OK`, `flow_headings_with_diagrams=7/7`),
+        P01..P10 and P29 (backlog, expect `window=1167:<nee>`,
+        `blank_separation=OK`, `fixture_blank_separation=OK`,
+        `separator_sequence=identical`, `classifier_self_tests=4/4`,
+        `stories_compared=65 identical=65 changed=0 order=OK`). Expected lines
+        are those recorded in P1-P5; a new CHANGED/OUTSIDE/missing line,
+        `bad_runs>0`, a `MISSING S17-AC*` line, a C4/flow `MISSING` line, or a
+        non-zero `s17_missing_criteria` fails P6.
+    invariants:
+      - "NFR-1/DEC-21/DEC-22: the delivery phases change 31 product files — 30 under doc/planning/oss-tooling/** plus scripts/checks/forbidden-literals.registry.json — and system_spec_update's separate budget is the 3 current-truth docs (feature-resident-daemon.md, feature-cli-entrypoint.md, architecture-overview.md), 34 across the change; doc/changes/** evidence is excluded by P28, and no other scripts/**, tests/**, packages/**, .opencode/**, .ai/**, doc/spec/** or doc/overview/** path changes"
+      - "DEC-21/D-14: the registry gains exactly the twelve pack paths, sorted among themselves and duplicate-free, with every pre-existing entry left in place and no guard behaviour changed"
+      - "NFR-5/D-12/DEC-19: both aggregate-gate runs are recorded; only a lone default-run ci-baseline-parity failure is environmental, and the repo-local-TMPDIR run must exit 0"
+      - "NFR-6/DR-7: the structural diagram procedure is the only diagram oracle (no validator exists, DEC-15), and it proves heading association as well as fence counts"
+      - "NFR-7/DEC-16/D-13: retention over the whole file plus the addition whitelist is the acceptance oracle; a whole-section cmp is never asserted, and P18's reference-head fixture is the positive control"
+      - "DEC-17/AC-F1-1: the seven stories sit inside the Epic M2 block behind a blank separator, and the separator sequence that closes the block is byte-identical"
+      - "DEC-18/AC-F5-1: no header keeps the proposal tail without a named planned remainder, and the preserved delivered clauses survive"
+      - "DEC-20/AC-F8-1/AC-F11-1: the pack states its contents deviation, the index contents table is byte-identical, and the M2 row links twelve targets"
+      - "NFR-8/DR-1/DR-2: all 79 clauses present and all seven S17 criteria present by content, with no added criterion"
+      - "NFR-9/NFR-10/DEC-21: both doc guards are green with attribution; the twelve pack documents are registered so the guard reports zero unregistered findings; the manual reads (G-1, G-3, G-4, G-5) are recorded, not claimed"
+      - "§17.3 DoD: no ticket created, no story delivered, no behaviour changed, no doc/spec rewrite"
+
+  - id: 7
+    title: "P7 — Remediate code-review iterations 1-2: status table, reachability, delta note, queue contract and DEC-25 propagation, pack mapping, evidence"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/milestones/m1/commands/board.md
+        - doc/planning/oss-tooling/milestones/m1/commands/watchdog.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/architecture.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - doc/planning/oss-tooling/milestones/m2/commands/board.md
+        - doc/planning/oss-tooling/milestones/m2/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/commands/spend.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-spec.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md
+      folders:
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-007, 008, 009, 017, 018, 020, 024 complete (the rest of P7's original set re-delivered and owned in P8)"
+    summary: "docs(GH-284): remediate review iteration 1 and 2 findings"
+    tasks:
+      - |-
+        7.1 F-2 (AC-F7-2, AC-F7-3): `status.md`. Move the "M1 delivery starts
+        now" pointer so it does NOT sit between the blank line and the
+        `| Story | Delivery |` header row. Keep every original line in order and
+        keep all four pointers (D-8): the pointer belongs inside or after the
+        paragraph text, with a blank line remaining immediately before the table
+        header so GFM starts a fresh table block. The table's separator row and
+        all twenty rows stay byte-identical. [DEC-16, DR-22; AC-F7-2, AC-F7-3;
+        TC-M2PLAN-017, TC-M2PLAN-018]
+      - |-
+        7.2 F-8 (AC-F5-1, DEC-24): `milestones/m1/commands/board.md` and
+        `watchdog.md`, header region only. Add the one-clause reachability note
+        (delivered engine or domain; NOT mounted at the production entrypoint;
+        registration tracked where applicable), matching the daemon.md shape, so
+        a bare "Delivered" header no longer overclaims reachability. Keep
+        `watchdog.md`'s `M1-S15 adds progress signals`, its `SC-M1-14` scenario
+        reference and its M2-S2 remainder pointer; keep board's M2-S4 remainder
+        pointer. Do not touch `doctor.md` (exempt as the recorded residual) or
+        any other page. [F-5, DEC-18, DEC-24; AC-F5-1; TC-M2PLAN-011]
+      - |-
+        7.3 F-1 and F-13 (AC-F10-1, DEC-23): `milestones/m2/entrypoint-delta.md`.
+        Remove the false back-pointer claim: state that the M1 `entrypoint.md`
+        page is a milestone snapshot whose ONLY amendment is its bounded
+        DESCRIPTION composition correction, so no pointer was added there and
+        none may be claimed. Add forward links to `../m1/commands/entrypoint.md`
+        and to all six M2 command pages, and state that the note is reachable
+        through `milestones/README.md` and this pack's README. Label the
+        `--help` block as abridged (or paste the real block: title, Usage,
+        Options, Examples, Exit codes, See also, then the two-column `Commands:`
+        list), keeping the ten composition and evidence tokens intact.
+        [F-10, DEC-2, DEC-12, DEC-23; AC-F10-1; TC-M2PLAN-026]
+      - |-
+        7.4 F-3 and F-9 (AC-F9-1, AC-F9-2): `milestones/m2/commands/queue.md`.
+        Separate the two operations: `queue release <ref> [--holder] [--park
+        <cause>] [--until]` is the delivered LEASE release and the entry STAYS
+        (optionally parked); taking an entry OUT of the queue is a distinct verb
+        carrying `--reason` (landed, abandoned, superseded, or reconciled), and
+        an unqualified removal is refused with `queue.reason-missing` at exit 1.
+        Define `queue dep add|remove` as an explicit grammar extension of the
+        delivered two-positional `queue dep <ref> <on-ref>` form. Align the
+        wording with `contracts.md` and SC-M2-S15-01 (after merge and closeout the
+        entry is gone with reason `landed`). Fix the example that currently
+        succeeds without `--reason`, either by adding `--reason abandoned` or by
+        showing the refusal envelope at exit 1. [F-9, DEC-10, DEC-20; AC-F9-1,
+        AC-F9-2; TC-M2PLAN-024, TC-M2PLAN-025]
+      - |-
+        7.5 F-3, F-4 and F-18 (AC-F8-3): `milestones/m2/contracts.md`. Align the
+        queue lifecycle paragraph with the corrected command page (lease release
+        versus entry removal with a reason). Add ONE mapping paragraph naming the
+        delivered enums: `provider-window | provider-quota |
+        preempted-for-close-item` are the provider conditions/causes projected as
+        `parked:<cause>`; `owner-hold` is the lane idle reason plus the
+        owner-hold marker; `peak-window` is the S17 park reason and becomes a
+        queue park cause whose condition type is the existing `provider-window`
+        (no duplicate cause, no silent rename). Record the `lanes`
+        `parked:<cause>` consequence. Soften "a dispatch without a nominated
+        profile is refused at admission" to what S17 requires: nomination is
+        recorded on lane and attempt records, and the no-nomination case is a
+        decision at S17 delivery (a classified refusal or the profile's declared
+        default). [F-8, DEC-10, DEC-21; AC-F8-3; TC-M2PLAN-021]
+      - |-
+        7.6 F-10/F-5 (AC-F8-1): `milestones/m2/README.md`. The delivered
+        correction is the target, not a re-mapping: M2-S7 (suite-to-job mapping
+        in gates), M2-S8 (memory records) and M2-S9 (memory conventions in
+        bootstrap) each carry `none in this pack` for both the architecture flow
+        and the contract surface, because those stories own an M1 or M3 surface
+        rather than an M2 one, and the README explains that convention in a
+        sentence after the table; M2-S13 points at `C4 Level 3 event components`
+        and `event taxonomy v1`. Leave S11, S12 and S14-S17 unchanged. Never
+        write the straw-man mapping (S7 to attempts, S8 to queue lifecycle, S9
+        to `projects.v1`, S13 to the telemetry flow): those rows belong to other
+        stories. Keep the deviation statement, the twelve-entry table and the
+        row-shaped self entry intact so P19 stays green. [F-8, DM-3, DEC-20;
+        AC-F8-1; TC-M2PLAN-019]
+      - |-
+        7.7 F-11 (AC-F8-2): `milestones/m2/architecture.md`. Add the
+        daemon-absent branch to the S17 park/resume flow (or one boundary
+        invariant stating it), mirroring journeys step 5: with no resident
+        daemon the behaviour degrades to the existing iteration-start gating and
+        the difference is declared. Keep the diagram inventory unchanged (three
+        C4 headings in `## C4 Level <n>: <subject>` form, seven `###` headings
+        under `## Key flows`, one diagram each) so P20/P33 stay green.
+        [F-8, NFR-6, DEC-15; AC-F8-2, AC-NFR6-1; TC-M2PLAN-020]
+      - |-
+        7.8 F-7 (AC-F9-1, AC-F9-2): registration truth per page.
+        `commands/spend.md` and `commands/queue.md`: the family IS registered in
+        the root listing today; only the v2 breakdown fields and the lifecycle
+        verbs are planned. `commands/board.md`: the command is defined in the
+        edge composition but NOT composed by the production entrypoint, and
+        M2-S4 must mount it. Keep every page's `Status: Proposed (M2)` header,
+        the `<binary>` prefix and the nine man-page sections.
+        [F-9, DEC-14, DEC-24; AC-F9-1, AC-F9-2; TC-M2PLAN-024, TC-M2PLAN-025]
+      - |-
+        7.9 F-16 (AC-F3-1, AC-F4-1): `backlog.md`. Restore the terminal period
+        on M2-S4's depends line (`- Depends on: M1-S5, M1-S17, M2-S11.`) and
+        re-wrap the long inserted lines to the file's ~75-column convention,
+        keeping each S17 criterion on its own line for P06. Do NOT change any
+        clause text, heading, dependency token or entry order; the diff must stay
+        inside the insertion window and the two amended entries, and P07, P08 and
+        P09 must stay green. [F-3, F-4, DR-17; AC-F3-1, AC-F4-1, AC-NFR2-1;
+        TC-M2PLAN-007, TC-M2PLAN-008, TC-M2PLAN-009]
+      - |-
+        7.10 F-6 (AC-NFR1-1): `delivery-evidence/verification.md`. Refresh the
+        close-out so it records the two-budget containment (31 delivery product
+        files = 30 planning + the registry, plus phase 7's 3 current-truth docs =
+        34 across the change) and stop claiming `doc/spec/**` is unchanged;
+        add this remediation's own evidence rows (P11/P17/P18/P26/P28 and the
+        sweep). [DEC-21, DEC-22; AC-NFR1-1; TC-M2PLAN-028]
+      - |-
+        7.11 F-12 (process evidence): `chg-GH-284-pm-notes.yaml`. Do NOT hand-edit
+        the `phases:` mirror or any timestamp — the mirror is command-owned. Add
+        one note recording that the mirror's `clarify_scope`/`started` fields are
+        registry-owned and that `delivery-os phase list GH-284` is authoritative;
+        leave the existing decisions/notes untouched. [F-12]
+      - |-
+        7.12 F-15 (metadata): `chg-GH-284-test-plan.md` frontmatter. Set
+        `last_updated` so it no longer precedes `created`. Change no procedure,
+        TC, AC or evidence row in that file. [F-15]
+      - |-
+        7.13 F-2 (AC-F8-2, AC-F8-3, AC-F8-4, DEC-25) — terminology propagation.
+        `@coder` executes this as a P7 continuation commit. Propagate the
+        release/removal split through the four remaining places that still say
+        release removes the entry: (a) `milestones/m2/architecture.md` — the
+        lifecycle component label becomes "lease release / remove with reason",
+        and the queue flow's step becomes "remove the ref's queue entry (reason
+        landed)" while the flow HEADING keeps the ticket-named label
+        `Queue auto-release after merge and closeout` because AC-F8-2 requires
+        the ticket's six flow names; (b)
+        `milestones/m2/entrypoint-delta.md` — "automatic release on merge and
+        closeout" becomes "automatic removal on merge and closeout"; (c)
+        `milestones/m2/test-scenarios.md` — the SC-M2-S15-01 title becomes
+        "Auto-removal after closeout" (its body keeps the `landed` reason and
+        the 0-remaining count); (d) `milestones/m2/commands/queue.md` — the
+        reconcile sentence becomes "removes them with the `reconciled` reason".
+        Keep `contracts.md` and the command page's normative release/removal
+        split as the authority; change no other sentence. Then re-run P20 and
+        P22 so the heading and scenario inventories are unchanged.
+        [F-8, DEC-25; AC-F8-2, AC-F8-3, AC-F8-4; TC-M2PLAN-020, TC-M2PLAN-022]
+      - |-
+        7.14 Close-out notes. Record in the PR body and the phase evidence that
+        (a) F-5's readiness closure record is produced OUTSIDE this plan by
+        `@readiness-reviewer` and committed with the change artifacts: P7 must
+        not assert that it exists, and the close-out names it as pending until
+        that record lands; (b) iteration 2's evidence-side findings (stale
+        test-plan rows, `verification.md`'s known-discrepancy block and the
+        pm-notes note) are refreshed by their owning artifacts, not by a plan
+        file edit; and (c) F-17 is a PR-time action, not a file change — squash
+        the branch to the phase commits plus the artifact commits and use
+        `docs:` for every docs-only commit. Do not act on any of these inside
+        P7's diff. [F-5, F-7, F-17]
+    coverage:
+      - "TC-M2PLAN-007 (complete: changed_lines=2 unexpected_lines=0 depends=expected with the restored terminal period; goal-mutation self-test flagged)"
+      - "TC-M2PLAN-008 (complete: tasks_clause=OK, depends=M2-S14 OK, heading/Goal/AC identical, base_task_lines_missing=0, changed_lines=3; re-wrap changed no clause text)"
+      - "TC-M2PLAN-009 (complete: base_headings=67 head_headings=74 added=7 removed=0 unexpected=0; retirement_note=identical; order=OK; negative_control=detected)"
+      - "TC-M2PLAN-017 (complete: title/g2/g3/g4 bytes retained and each pointer present, with the M1 delivery table separated from the paragraph by a blank line)"
+      - "TC-M2PLAN-018 (complete: removed_lines=0, added_lines>0, pointer_runs=4, pointer_windows=4, bad_runs=0, retention_oracle=OK, reference_head_fixture=OK, m1_table_blank_before=OK, m1_table_separator=OK, P18 verdict: PASS)"
+      - "TC-M2PLAN-020 (complete: C4 Level 1/2/3 in subject form OK; the seven flow headings OK including the S17 park/resume heading with its daemon-absent branch; persistence/concurrency/boundary-invariants headings present)"
+      - "TC-M2PLAN-024 (complete: command_headers=6/6, line 3 exactly `Status: Proposed (M2)`, `<binary>` present, no `ados`)"
+    testGate:
+      - "P00 — re-materialise the base snapshots and helpers at the P7 HEAD"
+      - >-
+        P28 -> two budgets at the P7 HEAD, run with `LC_ALL=C`:
+        `product_files=31`; `planning_files=30`; `registry_files=1`;
+        `outside_planning_outside_registry=0`; `forbidden_root_files=0`;
+        `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`;
+        `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`;
+        `total_product_files=34`; `matcher_self_test=OK`; `non_vacuous=yes`.
+        Historical values: P7 proved 31 + 3 = 34, and DEC-37 raised the delivery
+        budget to 32 with cli-command-registry.md in P8, so a run at the FINAL
+        head shows 32 / 35 (see P8's gate). P7 adds no product path: every file it edits is already inside the 31
+        delivery files (or under doc/changes/**).
+      - >-
+        P11 -> pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0;
+        forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0;
+        current_violations=0; reachability_missing=0;
+        `doctor_reachability=exempt (recorded residual)`; watchdog_m1s15=OK;
+        watchdog_sc=OK; verify_gates_extension=OK; closeout_extension=OK;
+        real_headers=PASS; fixture_conforming=PASS (when /tmp/sb exists);
+        fixture_current_negative=detected
+      - >-
+        P17 -> title_base_retained=yes title_pointer=yes;
+        g2_bytes_retained=yes g2_pointer=yes; g3_bytes_retained=yes
+        g3_pointer=yes; g4_bytes_retained=yes g4_pointer=1/1;
+        m1_table_blank_before=OK; m1_table_separator=OK
+      - >-
+        P18 -> `retention: removed_lines=0 added_lines=<N>` with N>0;
+        `whitelist: section_lines=<k> pointer_runs=4 pointer_windows=4
+        bad_runs=0`; `retention_oracle=OK`;
+        `reference_head_fixture=OK`; `m1_table_blank_before=OK`;
+        `m1_table_separator=OK`; `P18 verdict: PASS`.
+      - >-
+        P26 -> delta=present; back_pointer_claim=ABSENT; m1_snapshot=OK;
+        description_bound=OK; forward_m1_link=OK; m2_command_links=6/6;
+        readme_reachable=OK; all ten tokens OK (`sixteen|16 families`,
+        dispatch, coordinator, state, mcp, daemon, `unknown flag`,
+        `unexpected argument`, `exit 1`, `outside this`)
+      - >-
+        P07 -> changed_lines=2 unexpected_lines=0; depends=expected
+        (`- Depends on: M1-S5, M1-S17, M2-S11.`); goal-mutation self-test
+        detected
+      - >-
+        P08 -> changed_lines=3; tasks_clause=OK; depends=M2-S14 OK;
+        heading=identical; base_task_lines_missing=0; - Goal: identical;
+        - AC: identical; fixture_p08=OK
+      - >-
+        P09 -> base_headings=67 head_headings=74 added=7 removed=0
+        unexpected=0; retirement_note=identical; order=OK;
+        negative_control=detected
+      - >-
+        P19 -> pack_files=12/12; actual_files=12; readme_lists=12/12;
+        deviation_statement=OK; readme_self_link_self_test=detected;
+        pack_contents_table=byte-identical
+      - >-
+        P20 -> C4 Level 1/2/3 headings OK; the seven flow headings OK — the
+        ticket-named `Queue auto-release after merge and closeout` heading is
+        retained as a label while the flow's content says removal per DEC-25;
+        persistence, concurrency and boundary-invariants headings OK
+      - "P21 -> contract_markers_missing=0"
+      - >-
+        P22 -> scenario_headings>=32; S2..S17 each >=2; stories_below_two=0;
+        twelve mandatory anchors OK, with `auto.release|auto.removal` satisfied
+        by the retitled SC-M2-S15-01
+      - "P24 -> command_headers=6/6"
+      - >-
+        P25 -> every page reports an empty missing list; attempts=dispatch
+        subfamily OK; events=subscribe taxonomy OK
+      - >-
+        P33 -> mermaid_fences>=10; keyword_and_fence_exit=0;
+        `C4 Level 1/2/3 has diagram=OK (heads=1 own=1)`;
+        `c4_headings_with_diagrams=3/3`; `flow_headings=7`;
+        `flow_headings_with_diagrams=7/7`; `heading_association=OK`;
+        `fixture_negative=detected`
+      - >-
+        Full sweep re-run at the P7 HEAD (regression only; TC ownership stays
+        with the phase that completed it): P01, P02, P03, P04, P05, P06, P10,
+        P12, P13, P14, P15, P30, P22, P23, P27, P29, P31, P32, P34, P35, P36,
+        P37, with the expected lines recorded in P1-P6. `P32` must still print
+        `gate_verdict=PASS` (lone default `ci-baseline-parity` failure
+        environmental, `repo_tmpdir_exit=0`), `P36` must still print
+        `unregistered_findings=0` and `registered_total=139`, and `P29` must
+        still print `stories_compared=65 identical=65 changed=0 order=OK`.
+        A new CHANGED/OUTSIDE/MISSING line fails P7.
+    invariants:
+      - "DR-22/F-2: the M1 delivery table starts its own block — blank line before the header, separator row intact, all twenty rows unchanged — while every base status.md line is still present in order"
+      - "DR-22/F-8/DEC-24: board.md and watchdog.md carry the one-clause reachability note (not mounted at the production entrypoint); watchdog keeps M1-S15, SC-M1-14 and its M2-S2 remainder; doctor.md stays exempt and untouched"
+      - "DR-22/F-1/F-13/DEC-23: the delta note claims no back pointer, states the M1 page is a snapshot with only its bounded DESCRIPTION correction, links forward to the M1 page and all six M2 command pages, and labels the help block as abridged"
+      - "DR-22/F-3/F-4/F-9/F-18: lease release (entry stays, may park) is distinct from entry removal (a reason-bearing verb) on both queue.md and contracts.md, `dep add|remove` extends the delivered `queue dep <ref> <on-ref>` grammar, the three delivered park vocabularies are mapped with the `lanes parked:<cause>` consequence, and the no-nomination case is a recorded S17 decision"
+      - "DR-22/F-10/F-11: the four story-map rows state the delivered correction (S7/S8/S9 `none in this pack` with the explanatory sentence, S13 `C4 Level 3 event components` plus event taxonomy v1) and the architecture's S17 flow declares the daemon-absent degradation"
+      - "DR-22/F-7: spend/queue state the family is registered and only the new fields/verbs are planned; board states the command is defined but not composed by the production entrypoint"
+      - "DR-22/F-6/F-12/F-15/F-16: the evidence records the 31 + 3 = 34 budgets without a doc/spec claim; pm-notes gains a note only (no timestamp edit); the test plan's last_updated no longer precedes created; the backlog keeps every clause while gaining the terminal period and the ~75-column wrap"
+      - "DR-23/F-2/DEC-25: the release/removal split is propagated to architecture (component label and flow step, ticket-named flow heading retained as a label), the delta note (`automatic removal on merge and closeout`), the SC-M2-S15-01 title and queue.md's reconcile sentence; P20/P22 re-run and the inventories are unchanged"
+      - "DR-23/F-4: every artifact pin names spec v2.0 / test plan v2.2, and the upstream-drift trigger is version-agnostic so it cannot go stale again"
+      - "Containment: P7 edits twelve product files, all already inside the delivery budget, plus the change artifacts it declares (spec, test plan, plan, pm-notes, evidence); those artifacts ride their reopened lifecycle phases and never count toward the budget. P7 proved 31 + 3 = 34 at its HEAD; DEC-37 raised the delivery budget to 32 (cli-command-registry.md) in P8, so the final-head expectation is 32 + 3 = 35"
+
+  - id: 8
+    title: "P8 — External review-board remediation: state header, sanctioned dependencies, map and contract corrections, S17 evidence, Assert lines, mount mechanism, registry"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m1/commands/state.md
+        - doc/planning/oss-tooling/milestones/m1/commands/daemon.md
+        - doc/planning/oss-tooling/milestones/m1/commands/doctor.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - doc/planning/oss-tooling/milestones/m2/journeys.md
+        - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - doc/planning/oss-tooling/milestones/m2/commands/events.md
+        - doc/planning/oss-tooling/milestones/m2/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-spec.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md
+      folders:
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence
+        - doc/changes/2026-11/2026-11-10--GH-284--m2-planning/code-review
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-M2PLAN-011, 019, 021, 022, 025, 026, 028, 035, 036, 037, 038, 039 complete"
+      - "pnpm check re-run at the P8 head with the two-run protocol, default failing only on ci-baseline-parity"
+    summary: "docs(GH-284): remediate the external review-board findings"
+    tasks:
+      - |-
+        8.1 CG-REC-001 (AC-F5-1, DEC-26): `milestones/m1/commands/state.md`.
+        Rewrite the reconciled header so it names the delivered STATE LAYER
+        (schema validation at every boundary) and states that NO command surface
+        is registered — the `state` family is not composed at the production
+        entrypoint. Drop the synopsis-flavoured claim that a delivered `state`
+        command exists; header region only. [F-5, DEC-24, DEC-26; AC-F5-1;
+        TC-M2PLAN-011]
+      - |-
+        8.2 CG-DEP-001 (AC-F1-2, NFR-8, DEC-27): `backlog.md`. Add the two
+        sanctioned dependency edges and nothing else: M2-S15 gains `M2-S13` (it
+        emits `queue.graph`, owned by S13) and M2-S16 gains `M2-S12` and
+        `M2-S13` (it consumes `attempts.v1` and the taxonomy). Every other
+        dependency token, heading, goal, task and acceptance line stays
+        byte-identical; the additions are the only allowed clause-table change
+        (P02/P35 report them as sanctioned rather than drift).
+        [F-1, NFR-8, DEC-27; AC-F1-2; TC-M2PLAN-002, TC-M2PLAN-035]
+      - |-
+        8.3 CG-MAP-001 (AC-F8-1, DEC-28): `milestones/m2/README.md`. Mark the
+        story-to-artifact rows that point a story at a surface owned by an
+        undelivered story WITHOUT a dependency edge as advisory — "consumed at
+        delivery; the owning story declares the edge" — covering S3 and S5 to
+        `phase.state` (owned by S13) and S10 to `telemetry.v1` (owned by S14).
+        Do not add an M2-S11 edge to S2; the advisory marker is the sanctioned
+        mechanism. [F-8, DM-3, DEC-28; AC-F8-1; TC-M2PLAN-019]
+      - |-
+        8.4 CG-MAP-002/003 (AC-F8-1, AC-F8-4, DEC-28, DEC-38): README and
+        `test-scenarios.md`. Apply the board's map-row corrections in the README
+        (wording-level, inside the rows already in scope; follow the board record,
+        which the spec does not restate), and change SC-M2-S2-01 so it describes
+        ONE managed repository — no two-repository framing — so the seed stays
+        inside S2's dependency set. [F-8, DEC-28, DEC-38; AC-F8-1, AC-F8-4;
+        TC-M2PLAN-019, TC-M2PLAN-022]
+      - |-
+        8.5 CG-CON-001 (AC-F8-3, DEC-29): `contracts.md` and `journeys.md`.
+        Document the delivered resolve grammar
+        `dispatch dual-run resolve <divergence-id> --note <text>` and drop any
+        `--ref` from `resolve`; state that `attempts.v1` is the PER-REF read side
+        (`dispatch attempts --ref <ref>`) and that S12's "attempt history for a
+        repository" is satisfied as the union over the repository's refs, while
+        the backlog keeps the ticket wording. Align `journeys.md` with the same
+        grammar. [F-8, DEC-10, DEC-29; AC-F8-3; TC-M2PLAN-021]
+      - |-
+        8.6 CG-EVT-001 (AC-F8-3, DEC-30): `contracts.md`. State that the four
+        new topics extend the delivered `queue` and `lanes` topics
+        (`CONTROL_TOPICS = [queue, lanes]`), that `status` is a wire type and NOT
+        a topic, and that `queue.graph` extends `queue`. Remove the "status and
+        lanes" topic claim. [F-8, DEC-30; AC-F8-3; TC-M2PLAN-021]
+      - |-
+        8.7 CG-EVT-002 (AC-F9-2, DEC-38): `milestones/m2/commands/events.md`
+        (and `commands/queue.md` only if the board's CG-EVT-002/CG-MAP notes
+        require it). Apply the board's events-page detail so the page matches the
+        corrected taxonomy: the topic parents above, per-topic kinds, payload
+        shape and the overflow-to-repoll rule, keeping the nine man-page sections
+        and the `Status: Proposed (M2)` header. [F-9, DEC-30, DEC-38; AC-F9-2;
+        TC-M2PLAN-025]
+      - |-
+        8.8 CG-S17-001 (AC-F8-3, AC-F8-7, DEC-31): `contracts.md`. Make each of
+        S17's seven criteria checkable: the park rule schema carries
+        `graceSeconds` with a default and a maximum bounded by the buffer; the
+        zero-spend evidence form is declared as either a per-call ledger entry or
+        a provider-usage read, so zero billable calls is distinguishable from
+        telemetry absent; a stop event kind plus the `status`/`brief` park fields
+        (parked count, reason, until) make AC6 auditable; and AC5 is scoped from
+        the park timestamp to the window end. [F-8, DEC-31; AC-F8-3, AC-F8-7;
+        TC-M2PLAN-021, TC-M2PLAN-039]
+      - |-
+        8.9 CG-DEPTH-001 (AC-F8-4, AC-F8-6, DEC-32): `test-scenarios.md`. Give
+        EVERY `SC-M2-*` seed exactly one machine-checkable line of the form
+        `Assert: <predicate over an envelope field, exit code, or file/ledger
+        fact>`, so the assertion count equals the scenario count and no seed
+        relies on Given/When/Then prose alone; add `SC-M2-S17-06` and
+        `SC-M2-S17-07` for the two new S17 evidence criteria. Keep each scenario
+        attributed to its story code. [F-8, DEC-32; AC-F8-4, AC-F8-6;
+        TC-M2PLAN-022, TC-M2PLAN-038]
+      - |-
+        8.10 CG-EP-001 (AC-F10-1, DEC-33): `milestones/m2/entrypoint-delta.md`.
+        State the mount mechanism: the entrypoint composes exactly the
+        prompt-required command set and drops extras, so mounting `projects`,
+        `events`, or `board` requires a prompt-set change PLUS a help reference
+        page per command. Name issue #286 as the daemon-mount follow-up and keep
+        the snapshot statement, the absent back-pointer claim, the forward links
+        and the ten composition/evidence tokens intact.
+        [F-10, DEC-2, DEC-23, DEC-33; AC-F10-1; TC-M2PLAN-026]
+      - |-
+        8.11 CG-DAEMON-001 (AC-F5-3, DEC-34): `milestones/m1/commands/daemon.md`
+        and `entrypoint-delta.md`. The daemon header's registration reference
+        names issue #286 alongside the M2 delta note; the delta note references
+        #286; the S13/S17 daemon-mount prerequisite is stated where dependencies
+        are described (spec and pack), while the backlog dependency tokens stay
+        exactly as the ticket states them. Header region only on the page.
+        [F-5, DEC-24, DEC-34; AC-F5-3; TC-M2PLAN-013, TC-M2PLAN-026]
+      - |-
+        8.12 CG-DOCTOR-001 (AC-F5-1, DEC-35): `milestones/m1/commands/doctor.md`.
+        Add the one-clause reachability note to the doctor header — the family is
+        likewise not composed at the production entrypoint — and state that its
+        registration is tracked with the M2 command-surface work (no dedicated
+        issue). DEC-35 supersedes DEC-24's doctor exclusion, so P11's
+        `doctor_reachability` flips from `exempt` to `required`.
+        [F-5, DEC-24, DEC-35; AC-F5-1; TC-M2PLAN-011]
+      - |-
+        8.13 CG-TOL-001 (AC-F8-3, DEC-36): `contracts.md`. Declare the telemetry
+        reconciliation default as <=2% of the session totals, and note that S14's
+        own plan and test plan must either adopt it or declare a different
+        tolerance with justification. [F-8, DEC-36; AC-F8-3; TC-M2PLAN-021]
+      - |-
+        8.14 CG-REG-001 (AC-NFR10-1, DEC-37): `cli-command-registry.md`. Bounded
+        registration only: add the `projects` row (M2-S11, workstation overview)
+        and the `events` row (M2-S13), note `attempts` as a `dispatch` subfamily
+        (M2-S12), and state the `projects` versus future M3 `repos` boundary so
+        the names do not collide. Every other row stays byte-identical; this one
+        file is what raises the delivery budget to 32 and the change total to 35.
+        [F-11, DEC-37; AC-NFR10-1; TC-M2PLAN-037]
+      - |-
+        8.15 CG-STATUS-001 (AC-F7-2, DEC-38): `status.md`. Retitle the inserted
+        2026-11-10 pointer text that still reads as a superseded live claim, per
+        the board's wording, WITHOUT touching any base line: the four pointer
+        insertions, the whitelist containment, the blank line before the M1
+        delivery table and the `2026-11-10` mention all stay, so P17/P18 remain
+        green. [F-7, DEC-16, DEC-38; AC-F7-2, AC-F7-3; TC-M2PLAN-017,
+        TC-M2PLAN-018]
+      - |-
+        8.16 Close-out. Record in the PR body and the phase evidence: the board's
+        findings map one-to-one to tasks 8.1-8.15; the mount mechanism and #286
+        are recorded, not acted on (no product wiring, no daemon mount); the
+        registry edit is bounded by DEC-37 and changes no naming rule; and the
+        readiness closure record remains owned outside this plan
+        (`@readiness-reviewer`). [DR-24, DEC-33, DEC-34, DEC-37]
+    coverage:
+      - "TC-M2PLAN-011 (complete: pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0; forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0; current_violations=0; reachability_missing=0 with doctor included; doctor_reachability=required (DEC-35); watchdog_m1s15=OK; watchdog_sc=OK; verify_gates_extension=OK; closeout_extension=OK)"
+      - "TC-M2PLAN-019 (complete: pack_files=12/12; actual_files=12; readme_lists=12/12; advisory_rows=3/3 (S3/S5 to phase.state, S10 to telemetry.v1); deviation_statement=OK; readme_self_link_self_test=detected; pack_contents_table=byte-identical)"
+      - "TC-M2PLAN-021 (complete: contract_markers_missing=0; resolve_grammar=OK; attempts_per_ref=OK; topic_parents=OK; tolerance_2pct=OK; s17_grace=OK; s17_stop_event=OK; s17_park_fields=OK)"
+      - "TC-M2PLAN-022 (complete: scenario_count=40; assert_count=40; assert_shape_violations=0; s2_one_repo=OK; s17_06=OK; s17_07=OK; stories_below_two=0)"
+      - "TC-M2PLAN-025 (complete: all six command pages complete with the nine man-page sections; events page carries the corrected taxonomy detail; attempts=dispatch subfamily; spend/queue/board registration truth stated)"
+      - "TC-M2PLAN-026 (complete: back_pointer_claim=ABSENT; m1_snapshot=OK; description_bound=OK; mount_mechanism=OK; issue_286=OK; forward_m1_link=OK; m2_command_links=6/6; readme_reachable=OK; all ten tokens OK)"
+      - "TC-M2PLAN-028 (complete: 32 delivery product files = planning_files=31 + registry_files=1 with outside_planning_outside_registry=0, forbidden_root_files=0, unexpected_planning_paths=0; phase 7 spec_files=2 overview_files=1 phase7_files=3 phase7_extra=0 phase7_unknown_paths=0; total_product_files=35; non_vacuous=yes)"
+      - "TC-M2PLAN-035 (complete: clause_scan total=79 present=79 missing=0 with S15-D1 and S16-D1 present as sanctioned additions (DEC-27); missing_clauses=0; s17_missing_criteria=0; added_criteria=0)"
+      - "TC-M2PLAN-036 (complete: forbidden_exit=0 with 5/5 scope classes and 0 violations; unregistered_findings=0; added_lines>=1; seed_hits=0; no new registry entry needed beyond the twelve pack documents)"
+      - "TC-M2PLAN-037 (complete: broken_links=0; restated_ac_blocks=0; registry_projects=OK; registry_events=OK; registry_attempts=OK; projects_repos_boundary=OK; non_vacuous=yes)"
+      - "TC-M2PLAN-038 (complete: scenario_count=40; assert_count=40; assert_shape_violations=0; assert_count_matches=OK; s17_06=OK; s17_07=OK)"
+      - "TC-M2PLAN-039 (complete: grace_seconds=OK; grace_bounds=OK; zero_spend_form=OK; zero_vs_absent=OK; stop_event=OK; status_brief_fields=OK; ac5_scope=OK; s17_06=OK; s17_07=OK)"
+    testGate:
+      - "P00 — re-materialise the base snapshots and helpers at the P8 HEAD"
+      - >-
+        P28 -> the two-budget containment at the P8 HEAD, run with `LC_ALL=C`:
+        `product_files=32`; `planning_files=31`; `registry_files=1`;
+        `outside_planning_outside_registry=0`; `forbidden_root_files=0`;
+        `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`;
+        `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`;
+        `total_product_files=35`; `matcher_self_test=OK`; `non_vacuous=yes`.
+        The one added path versus P7 is
+        `doc/planning/oss-tooling/cli-command-registry.md` (DEC-37); any other
+        new path, or any path outside the two budgets, fails P8.
+      - >-
+        P11 -> pages=28; M1_planned_hits=0; M1_milestone_planned_hits=0;
+        forbidden_phrase_pages=0; header_attribution=14/14; tail_violations=0;
+        current_violations=0; reachability_missing=0;
+        `doctor_reachability=required (DEC-24)`; watchdog_m1s15=OK;
+        watchdog_sc=OK; verify_gates_extension=OK; closeout_extension=OK;
+        real_headers=PASS; fixture_conforming=PASS; fixture_current_negative=detected
+      - >-
+        P17 -> title_base_retained=yes title_pointer=yes;
+        g2_bytes_retained=yes g2_pointer=yes; g3_bytes_retained=yes
+        g3_pointer=yes; g4_bytes_retained=yes g4_pointer=1/1;
+        m1_table_blank_before=OK; m1_table_separator=OK
+      - >-
+        P18 -> `retention: removed_lines=0 added_lines=<N>` with N>0;
+        `whitelist: section_lines=<k> pointer_runs=4 pointer_windows=4
+        bad_runs=0`; `retention_oracle=OK`; `reference_head_fixture=OK`;
+        `m1_table_blank_before=OK`; `m1_table_separator=OK`; `P18 verdict: PASS`
+      - >-
+        P19 -> pack_files=12/12; actual_files=12; readme_lists=12/12;
+        advisory_rows=3/3; deviation_statement=OK;
+        readme_self_link_self_test=detected; pack_contents_table=byte-identical
+      - >-
+        P20 -> C4 Level 1/2/3 headings OK; the seven flow headings OK (the
+        ticket-named `Queue auto-release after merge and closeout` label
+        retained); persistence, concurrency and boundary-invariants headings OK
+      - >-
+        P21 -> contract_markers_missing=0; resolve_grammar=OK;
+        attempts_per_ref=OK; topic_parents=OK; tolerance_2pct=OK;
+        s17_grace=OK; s17_stop_event=OK; s17_park_fields=OK
+      - >-
+        P22 -> scenario_count=40; assert_count=40;
+        assert_shape_violations=0; s2_one_repo=OK; s17_06=OK; s17_07=OK;
+        S2..S17 each >=2; stories_below_two=0; twelve mandatory anchors OK
+      - >-
+        P25 -> every page reports an empty missing list; attempts=dispatch
+        subfamily OK; events=subscribe taxonomy OK with the corrected parents
+      - >-
+        P26 -> back_pointer_claim=ABSENT; m1_snapshot=OK; description_bound=OK;
+        mount_mechanism=OK; issue_286=OK; forward_m1_link=OK;
+        m2_command_links=6/6; readme_reachable=OK; all ten tokens OK
+      - "P27 -> M2 row=present; m2_targets=12/12; M0 and M1 rows identical (regression only; the index is not edited)"
+      - >-
+        P35 -> P02 `clause_scan: total=61 present=61 missing=0` with S15 10/10
+        and S16 11/11 (the sanctioned additions recorded as such); P35
+        `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`;
+        `s17_missing_criteria=0`; `added_criteria=0`; P35 verdict: PASS
+      - >-
+        P36 -> forbidden_exit=0; OK forbidden-literals 5/5 scope classes
+        scanned, 0 violations; unregistered_findings=0; added_lines>=1;
+        seed_hits=0
+      - >-
+        P37 -> broken_links=0; restated_ac_blocks=0; registry_projects=OK;
+        registry_events=OK; registry_attempts=OK; projects_repos_boundary=OK;
+        non_vacuous=yes
+      - >-
+        P38 -> scenario_count=40; assert_count=40;
+        assert_shape_violations=0; assert_count_matches=OK; s17_06=OK;
+        s17_07=OK
+      - >-
+        P39 -> grace_seconds=OK; grace_bounds=OK; zero_spend_form=OK;
+        zero_vs_absent=OK; stop_event=OK; status_brief_fields=OK;
+        ac5_scope=OK; s17_06=OK; s17_07=OK
+      - >-
+        Aggregate gate at the P8 head (two-run protocol, D-12/DEC-19): run P32
+        exactly as written. `repo_tmpdir_exit=0`; the default run fails ONLY on
+        `tests/checks/ci-baseline-parity.test.ts`
+        (`default_failed_tests=1`, `default_failure_class=environmental
+        (ci-baseline-parity only)`); `gate_verdict=PASS`. Any other default
+        failure, `default_failed_tests>1`, or a non-zero repo-local run fails P8.
+      - >-
+        Full sweep re-run at the P8 HEAD (regression only; TC ownership stays
+        with the phase that completed it): P01, P02, P03, P04, P05, P06, P07,
+        P08, P09, P10, P12, P13, P14, P15, P16, P30, P23, P24, P29, P31, P33,
+        P34, with the expected lines recorded in P1-P7. `P29` must still print
+        `stories_compared=65 identical=65 changed=0 order=OK`, `P33`
+        `heading_association=OK`, and `P31` `no drift, 82 in-scope docs`.
+        A new CHANGED/OUTSIDE/MISSING line fails P8.
+    invariants:
+      - "DR-24/CG-REC-001/DEC-26: `state.md` names the delivered state layer and states that no command surface is registered"
+      - "DR-24/CG-DEP-001/DEC-27: only the two sanctioned dependency additions land (S15 gains M2-S13; S16 gains M2-S12 and M2-S13) and every other backlog byte is preserved"
+      - "DR-24/CG-MAP-001/002/003/DEC-28: three advisory rows (S3/S5 to phase.state, S10 to telemetry.v1) and SC-M2-S2-01 describes one managed repository"
+      - "DR-24/CG-CON-001/CG-EVT-001/CG-TOL-001/DEC-29/DEC-30/DEC-36: the resolve grammar is `<divergence-id> --note`, `attempts.v1` is per-ref with the union reading, topics extend `queue` and `lanes` (status is a wire type), and the reconciliation default is <=2%"
+      - "DR-24/CG-S17-001/CG-DEPTH-001/DEC-31/DEC-32: grace bounds, the zero-spend evidence form, the stop event and the park fields are declared, AC5 is scoped from the park timestamp, and every seed carries exactly one Assert line (40 scenarios / 40 asserts)"
+      - "DR-24/CG-EP-001/CG-DAEMON-001/DEC-33/DEC-34: the mount mechanism (prompt-set change plus a help reference page per command) and issue #286 are recorded, not acted on"
+      - "DR-24/CG-DOCTOR-001/DEC-35: doctor joins the reachability set, so `reachability_missing=0` and `doctor_reachability=required`"
+      - "DR-24/CG-REG-001/DEC-37: `cli-command-registry.md` gains only the `projects`/`events` rows, the `attempts` subfamily note and the `projects`/M3 `repos` boundary; every other row is byte-identical, and the delivery budget is 32 with a 35 change total"
+      - "DR-24/CG-STATUS-001/DEC-38: the 2026-11-10 pointer text is retitled without touching a base line, so the retention oracle, the four pointer insertions and the table block stay green"
+      - "Containment: P8 edits thirteen product files, of which twelve are already inside the delivery budget and one (`cli-command-registry.md`, DEC-37) is the only addition; the change totals 32 + 3 = 35 product files"

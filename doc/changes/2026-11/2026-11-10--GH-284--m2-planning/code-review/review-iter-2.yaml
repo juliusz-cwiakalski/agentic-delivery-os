@@ -1,0 +1,376 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-284
+branch: docs/GH-284/m2-planning
+status: FAIL
+summary: >-
+  Iteration-2 re-review of HEAD a2f45be7, executing every procedure rather than
+  reading the claims. The product documentation is now sound: P11
+  reachability_missing=0, P17/P18 m1_table_blank_before=OK, P26
+  back_pointer_claim=ABSENT / m2_command_links=6/6 / description_bound=OK, P07
+  depends=expected, P02 61/61, P35 79/79, P29 65/65 unchanged bodies, P28
+  31+3=34, P19/P20/P21/P24/P25/P33/P36/P37 green, both doc guards exit 0, the
+  plan validates, status.md renders both tables again, and an independent
+  whitespace-normalised comparison of all seven stories and both amendments
+  against the ticket still matches clause for clause after the re-wrap. Two
+  defect clusters remain. First, the change's own verification record still
+  reports failing gates for criteria that pass at HEAD: the test plan's current
+  -state rows and Test Execution Log, verification.md's "Known gate
+  discrepancy", and the pm-notes P7 note all assert FAIL for TC-011/017/018/026
+  and for P07, and verification claims a test-plan timestamp that the last commit
+  reverted. Second, the F-3 release/removal split was not propagated: the
+  architecture component and flow, the delta note and the S15 scenario title
+  still say release removes the entry, which is exactly what the corrected
+  contract forbids. Severity mapping is blocking=critical, major=high,
+  minor=medium, nit=low.
+severity_breakdown:
+  critical: 1
+  high: 1
+  medium: 5
+  low: 3
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: critical
+    severity_label: blocking
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md:2747
+    message: >-
+      The change's verification record reports gates failing that pass at HEAD,
+      because the v2.0 "current tree" observations were carried into v2.1
+      without a re-run after c2594adb. I executed the procedures against
+      a2f45be7: P11 gives reachability_missing=0, P17 and P18 give
+      m1_table_blank_before=OK / m1_table_separator=OK (P18 verdict PASS), P26
+      gives back_pointer_claim=ABSENT, description_bound=OK, m2_command_links=6/6
+      and all ten tokens OK, and P07 prints depends=expected. Yet §10's log
+      records "FAIL (board/watchdog reachability note missing)" for TC-011,
+      "FAIL (M1 delivery table block collapsed)" for TC-017/018 and "FAIL
+      (back-pointer claim present; 0/6 command links)" for TC-026 (lines
+      2763-2778), the TC notes at 575/757/787/1028 call those "Observed on the
+      current tree", the §7.2 recorded-evidence column repeats them
+      (2618/2624/2625/2633), verification.md:279-300 keeps a "Known gate
+      discrepancy at the P7 HEAD" that says P07 prints depends=NOT expected, and
+      the pm-notes P7 completion note repeats it. Phase 9/10 reading this
+      evidence would conclude four acceptance criteria are unmet.
+    suggestion: >-
+      Re-run P11/P17/P18/P26/P07 at a2f45be7 and refresh the four §7.2 and §10
+      rows with the observed PASS lines; relabel the old observations
+      "observed before the P7 product commit c2594adb" if they are worth
+      keeping; delete verification.md's "Known gate discrepancy" section and the
+      matching sentence in the pm-notes P7 note; record one post-fix sweep line
+      so the log states the tree it describes.
+    suppressed: false
+  - id: F-2
+    severity: high
+    severity_label: blocking
+    confidence: high
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/architecture.md:179
+    message: >-
+      The F-3 fix defines `release` as the delivered lease release ("Release
+      never removes an entry") and makes entry removal the reason-bearing
+      `queue remove`, but the split was not propagated. architecture.md:108
+      labels the lifecycle component `REL[release and remove with reasons]`;
+      architecture.md:179 draws the queue flow as "release the ref's queue entry
+      reason landed"; entrypoint-delta.md:46-47 says "automatic
+      release on merge and closeout"; test-scenarios.md:202 titles SC-M2-S15-01
+      "Auto-release after closeout"; queue.md:44 says reconcile "removes or
+      releases them". The README tells a delivery agent to read the
+      architecture flow first, so the first description of S15 it meets uses the
+      semantics the contract now forbids.
+    suggestion: >-
+      Propagate the split: component label "lease release / remove with
+      reason"; flow box "remove the ref's queue entry (reason landed)"; the
+      delta note "automatic removal on merge and closeout"; the SC title
+      "Auto-removal after closeout" (keep the ticket-named flow heading, which
+      AC-F8-2 requires); queue.md:44 "removes them with the `reconciled`
+      reason". Then re-run P20/P22 for the heading/scenario inventory.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    severity_label: major
+    confidence: high
+    category: metadata
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md:6
+    message: >-
+      F-15 regressed in the final commit: c2594adb set `last_updated` to
+      2026-11-10T23:55:00Z (after `created` 19:30:00Z), and a2f45be7 reverted it
+      to 10:20:00Z, so the update again precedes creation. verification.md:275
+      still records 23:55 as the delivered value and the plan's P7 invariant
+      (plan.yaml:1908) says the value no longer precedes created, so three
+      artifacts assert a fix the file no longer contains.
+    suggestion: >-
+      Set `last_updated` to a time at or after `created` (the v2.1 write time)
+      and keep the evidence row in step; no other frontmatter change is needed.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    severity_label: major
+    confidence: high
+    category: plan-quality
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml:4
+    message: >-
+      The plan still pins the pre-bump artifact versions: header line 4 reads
+      "Aligned to spec v1.8 ... and test plan v2.0", line 111 pins "Spec:
+      ./chg-GH-284-spec.md v1.8", and the last escalation trigger (line 689)
+      says "moves past v1.8 / v2.0". The spec is v1.9 and the test plan v2.1, so
+      the plan's own trigger has fired and its header misstates what it is
+      aligned to — the same defect class as the iteration-1 F-14, moved one
+      version. The iteration-2 handoff says the trigger now reads v1.9 / v2.1;
+      the tree says otherwise.
+    suggestion: >-
+      Bump to plan v1.9 with the header, the reference block and the trigger all
+      naming spec v1.9 / test plan v2.1, or make the trigger version-agnostic
+      ("moves past the versions named in the header") so the pin cannot drift
+      again.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    severity_label: major
+    confidence: high
+    category: plan-quality
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml:1754
+    message: >-
+      P7 task 7.6 prescribes the wrong F-10 correction: "story-to-artifact
+      rows: M2-S7 to the attempts surface, M2-S8 to queue lifecycle, M2-S9 to
+      `projects.v1` ... M2-S13 to the telemetry flow" — that is the original
+      wrong mapping. The delivered README sets S7/S8/S9 to "none in this pack"
+      and S13 to "C4 Level 3 event components", which is the correct fix. Plan
+      and artifact therefore disagree, and a plan-conformance read flags the
+      artifact for departing from its task.
+    suggestion: >-
+      Rewrite task 7.6 to describe the delivered correction (S7/S8/S9 "none in
+      this pack" with the explanatory sentence, S13 "C4 Level 3 event
+      components" plus event taxonomy v1) so the plan and the artifact state the
+      same target.
+    suppressed: false
+  - id: F-6
+    severity: medium
+    severity_label: major
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-spec.md:353
+    message: >-
+      The pack now splits lease release (no reason) from entry removal (reason),
+      but the spec was not aligned and no decision records the deviation from the
+      ticket's briefing phrase: F-8 (line 118) and AC-F8-3 (line 353) still
+      require "queue lifecycle mutations with release/remove reasons", which
+      reads as release carrying a reason. AC-F8-3 as written is not literally
+      satisfied by contracts.md, and the ticket-brief deviation is unrecorded
+      even though the spec was revised twice in this round.
+    suggestion: >-
+      Reword F-8/AC-F8-3 to "lease release and reason-bearing entry removal" and
+      add a DEC (or a §12 assumption) stating that the ticket's "release/remove
+      reasons" is read as the removal verb carrying the reason, because the
+      delivered `queue release` is a lease release.
+    suppressed: false
+  - id: F-7
+    severity: medium
+    severity_label: major
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md:276
+    message: >-
+      verification.md's F-5 row asserts that "a readiness closure record
+      supersedes the two NOT_READY verdicts", but no such record is in the tree:
+      readiness-review/ holds iter-1..5 only, and the last two verdicts are
+      NOT_READY. The underlying defects are genuinely closed — I executed every
+      gate and they pass — so this is a missing record, not a content gap, and
+      the change should not ship with evidence referring to a document that does
+      not exist.
+    suggestion: >-
+      Commit the closure record before the human gate (readiness-iter-6 with a
+      READY verdict naming the two closed findings, or an equivalent pm-notes
+      note), then keep the verification row; otherwise delete the row and record
+      the outstanding gate.
+    suppressed: false
+  - id: F-8
+    severity: low
+    severity_label: minor
+    confidence: medium
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/commands/queue.md:13
+    message: >-
+      queue.md's release synopsis, DESCRIPTION and OPTIONS table enumerate the
+      delivered three park causes (`provider-window`, `provider-quota`,
+      `preempted-for-close-item`) as the closed set, while contracts.md's new S17
+      mapping adds `peak-window` and `owner-hold` to that set in M2. A reader of
+      the command page alone sees an end-state set of three.
+    suggestion: >-
+      Add one clause to the page ("S17 adds `peak-window` and `owner-hold` to the
+      cause set; see contracts.md") or point the closed set at the contract.
+    suppressed: false
+  - id: F-9
+    severity: low
+    severity_label: minor
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml:8
+    message: >-
+      F-12's documented residual is closed as a statement, not as data: the
+      `clarify_scope` mirror still shows `started: 18:55:00Z` against the
+      registry's 17:50:30.662Z, and the new note says the registry wins. That is
+      an acceptable residual, but verification.md's F-12 row claims "no
+      timestamp change" while a2f45be7 changed `test_planning` completed from
+      22:32:41.180Z to 22:40:51.729Z through the phase command.
+    suggestion: >-
+      Correct the evidence row to "no hand edit; `test_planning` completed
+      refreshed by the phase command", and name the stale `clarify_scope` start
+      explicitly in the note as a known mirror field the registry overrides.
+    suppressed: false
+  - id: F-10
+    severity: low
+    severity_label: minor
+    confidence: high
+    category: plan-quality
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml:1665
+    message: >-
+      P7's scope lists 14 files (11 product + pm-notes + test-plan +
+      verification) and the plan header describes P7 as "eleven product files
+      and three change artifacts", but P7 also revised chg-GH-284-spec.md (v1.8
+      and v1.9) and the plan file itself; the spec is declared only in P6. The
+      scope accounting therefore undercounts what the phase changed.
+    suggestion: >-
+      Add chg-GH-284-spec.md to P7's `scope.files` (and state whether a plan
+      revision is implicit) or adjust the header sentence to name the spec
+      revision.
+    suppressed: false
+iteration_1_status:
+  - id: F-1
+    status: closed
+    evidence: >-
+      Spec v1.8 DEC-23 + AC-F10-1 now require the snapshot statement and forward
+      links and forbid the back-link claim; entrypoint-delta.md:69-84 states the
+      snapshot, claims no pointer and links the M1 page plus all six command
+      pages; M1 entrypoint.md unchanged beyond the two-sentence DESCRIPTION
+      region (P15/P30 pass); P26 back_pointer_claim=ABSENT, m1_snapshot=OK,
+      description_bound=OK, forward_m1_link=OK, m2_command_links=6/6,
+      readme_reachable=OK.
+  - id: F-2
+    status: closed
+    evidence: >-
+      status.md now reads paragraph, blank, pointer, blank, table; pandoc -f gfm
+      renders two tables on HEAD (one on the pre-fix head) with 24 rows; P17
+      m1_table_blank_before=OK, P18 m1_table_separator=OK and P18 verdict PASS;
+      retention removed_lines=0, added_lines=31, bad_runs=0.
+  - id: F-3
+    status: closed
+    evidence: >-
+      queue.md separates lease release (entry stays, may park) from
+      `queue remove --reason`, keeps the two-positional `dep` form and adds
+      `dep add|remove`, and contracts.md matches; SC-M2-S15-01/03 agree (gone
+      with `landed`; leaves with `reconciled`). Residual terminology in other
+      pages is iteration-2 F-2.
+  - id: F-4
+    status: closed
+    evidence: >-
+      contracts.md:145-160 adds the delivered-vocabulary mapping (queue cause
+      set, `peak-window` as provider condition/cause mapped to the existing
+      `provider-window` condition type, `owner-hold` as park cause alongside the
+      idle reason, `lanes parked:<cause>` consequence); P21
+      contract_markers_missing=0.
+  - id: F-5
+    status: partially-closed
+    evidence: >-
+      All fixes that the two NOT_READY records blocked are verifiable: every
+      gate passes at HEAD. The gate's own closure record is still absent
+      (readiness-iter-6 does not exist) — tracked as iteration-2 F-7.
+  - id: F-6
+    status: closed
+    evidence: >-
+      verification.md now records the two budgets (31 delivery = 30 planning +
+      registry; 3 phase-7; 34 total) and no longer claims doc/spec unchanged;
+      P28 prints product_files=31, phase7_files=3, total_product_files=34. The
+      file's stale P07 paragraph and the false F-15 row are tracked as
+      iteration-2 F-1 and F-3.
+  - id: F-7
+    status: closed
+    evidence: >-
+      spend.md and queue.md state the family is registered and only the new
+      fields/verbs are planned; board.md states the command is defined in the
+      edge composition, not composed by the production entrypoint, and that
+      M2-S4 must mount it.
+  - id: F-8
+    status: closed
+    evidence: >-
+      Spec DEC-24 makes the reachability rule general; board.md and watchdog.md
+      carry the note header-only (P14 changed_pages=14/14, 1 hunk each, 0
+      outside); P11 reachability_missing=0, doctor_reachability=exempt,
+      tail_violations=0, current_violations=0.
+  - id: F-9
+    status: closed
+    evidence: >-
+      queue.md's remove example now carries `--reason abandoned`, and a second
+      example shows the `queue.reason-missing` refusal with exit 1; the error
+      table scopes the error to `remove`.
+  - id: F-10
+    status: closed
+    evidence: >-
+      README rows S7/S8/S9 read "none in this pack" and S13 reads "C4 Level 3
+      event components"; the how-to-read note explains the marker;
+      P19 readme_lists=12/12, story_map_entries=16. The plan's task 7.6 still
+      describes the old target — iteration-2 F-5.
+  - id: F-11
+    status: closed
+    evidence: >-
+      architecture.md:230-235 and the final boundary invariant state the
+      daemon-absent degradation; P20 flow headings all OK,
+      flow_headings_with_diagrams=7/7, mermaid_fences=10.
+  - id: F-12
+    status: partially-closed
+    evidence: >-
+      The completed timestamps in the mirror now match the registry exactly and
+      a pm-notes note names the registry as authoritative; the anomalous
+      `clarify_scope` start remains (documented) and the evidence row overstates
+      "no timestamp change" — iteration-2 F-9.
+  - id: F-13
+    status: closed
+    evidence: >-
+      entrypoint-delta.md:11-16 labels the `Commands:` block as abridged and
+      names what the real output adds; the family list stays accurate
+      (P26 tokens OK).
+  - id: F-14
+    status: open
+    evidence: >-
+      Plan header/reference/trigger still pin spec v1.8 / test plan v2.0 while
+      the artifacts are v1.9 / v2.1 — iteration-2 F-4.
+  - id: F-15
+    status: open
+    evidence: >-
+      Fixed in c2594adb (23:55) and reverted in a2f45be7 (10:20), so
+      `last_updated` again precedes `created` — iteration-2 F-3.
+  - id: F-16
+    status: closed
+    evidence: >-
+      M2-S4 depends line now ends with the terminal period and P07/modern AC-F3-1
+      require it (P07 depends=expected); inserted lines re-wrapped to 110-197
+      columns for the seven S17 criteria only; P02 61/61, P35 79/79, P29 65/65
+      identical, P09 order OK; my own whitespace-normalised comparison of all
+      seven stories and both amendments against GH-284 matches with zero
+      differences.
+  - id: F-17
+    status: deferred-accepted
+    evidence: >-
+      Recorded as a PR-time squash; no file change expected. The branch still
+      carries the placeholder "update <path>" subjects and one `feat(GH-284)`
+      docs-only commit; acceptable only if the PR body states the squash plan.
+  - id: F-18
+    status: closed
+    evidence: >-
+      contracts.md:133-136 now says the no-nomination case is a decision at S17
+      delivery, so the pack no longer adds an admission rule ahead of the story.
+verification_evidence:
+  - "Procedures executed at HEAD a2f45be7 (extracted from test plan v2.1, run in one bash session after P00): P01-P31 and P33-P37 report their expected PASS lines; P07 exits 1 only because its final command is the deliberate goal-mutation self-test (it prints changed_lines=2 unexpected_lines=0, depends=expected, shape OK). P32 (two pnpm check runs) was not re-run: the remediation delta touches no file any pnpm check stage reads apart from doc/planning, which the two doc guards cover and which I re-ran green."
+  - "Gates: P11 pages=28 reachability_missing=0; P17/P18 m1_table_blank_before=OK, retention removed_lines=0 added_lines=31 bad_runs=0, P18 PASS; P26 back_pointer_claim=ABSENT, m2_command_links=6/6, ten tokens OK; P02 61/61; P35 79/79; P29 65/65 identical on four heads; P28 31 + 3 = 34; P19/P20/P21/P22/P23/P24/P25/P27/P33/P34/P36/P37 green."
+  - "Rendering: pandoc -f gfm -t html on status.md yields 2 tables (24 rows) at HEAD, matching fab46636, so the M1 delivery table is intact."
+  - "Regression on the re-wrapped backlog: independent whitespace-normalised field comparison of all seven stories and both amendments against the GH-284 body — zero differences; the 65 untouched story bodies are byte-identical to fab46636 (P29 real_head/base/minimal/full all PASS)."
+  - "Guards: `bash scripts/.tests/test-doc-distribution.sh` exit 0 (82 docs, planning_markers=0); `bun run scripts/checks/forbidden-literals.ts` exit 0 (5/5 scopes, 0 violations, 139 registered, 12 m2 entries sorted and absent at baseline)."
+  - "Plan: `pnpm exec delivery-os plan validate GH-284` -> verdict=valid, readyForDevelopment=true, tier lite phases 1..7; diff since fab46636 = 34 product files, all inside the declared areas (P28 confirms the two budgets)."
+  - "Pack: 12 files, 38 SC-M2 scenarios with two per story S2-S17, 10 mermaid blocks (3 C4 + 7 flows, subgraph/end balanced), six command pages with all nine sections, delta note's 11 relative links resolve."
+  - "Ticket fidelity: GH-284 read via gh; the six M2-S11..S16 stories, owner-hard S17 with all seven ACs, and both amendments present with the ticket's dependency sets (#280 included)."
+reviewed_at: 2026-11-11T00:20:00Z
+next_step: CALL_CODER

@@ -1,0 +1,395 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-284
+branch: docs/GH-284/m2-planning
+status: FAIL
+summary: >-
+  First review of the docs-only M2 planning change against GH-284, spec v1.7
+  and plan v1.7. Ticket fidelity is genuinely high: an independent
+  whitespace-normalised comparison of all seven story entries and both
+  amendments against the issue body matched clause for clause (Goal, Tasks, AC,
+  Depends on), so NFR-8 is satisfied by content and not only by the 79-row
+  anchor table; containment is exact (34 product files = 30 planning + 1
+  registry + 3 phase-7 docs), the twelve registry entries are sorted, unique and
+  absent at fab46636, both doc guards pass on the head, the plan validates
+  (valid / readyForDevelopment=true), and the pack's ten diagrams are
+  structurally balanced with no vendor or working-name literal. The change is
+  nevertheless returned for six substantive defects: AC-F10-1's pointer from
+  the M1 entrypoint page does not exist while the delta note asserts it does;
+  the status.md pointer breaks the rendering of the M1 delivery table; the M2
+  queue verbs collide with the delivered queue grammar and release semantics;
+  the S17 park-reason vocabulary conflicts with the delivered park-cause enums;
+  and the readiness gate's last two recorded verdicts are NOT_READY with no
+  later READY on record. Severity mapping for this record is
+  blocking=critical, major=high, minor=medium, nit=low.
+severity_breakdown:
+  critical: 1
+  high: 4
+  medium: 8
+  low: 5
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: critical
+    severity_label: blocking
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md:64
+    message: >-
+      The Pointer section states that the M1 page
+      milestones/m1/commands/entrypoint.md "now points here for the registration
+      gap and for the composition correction", but that page contains no link
+      and no mention of the delta note (grep for "entrypoint-delta" under
+      milestones/m1 returns nothing; the page's SEE ALSO is man-page, commit,
+      phase). Spec F-10 and AC-F10-1 both require "the pointer from the M1
+      entrypoint.md page", so the requirement is unmet and the delivered prose
+      asserts a false fact. The spec pair is also jointly unsatisfiable: NFR-3
+      and AC-F5-4 confine the entrypoint.md edit to one contiguous hunk over at
+      most two adjacent DESCRIPTION sentences, so the pointer could not be added
+      without a containment exception. P26 only greps the delta note itself, so
+      no gate could catch this.
+    suggestion: >-
+      Pick one and record it: (a) amend NFR-3/AC-F5-4 to allow one extra
+      DESCRIPTION sentence naming the M2 delta note, add that sentence to
+      milestones/m1/commands/entrypoint.md, and re-run P15/P30; or (b) correct
+      entrypoint-delta.md's Pointer section to say the M1 page is deliberately
+      not amended for the pointer because of the containment bound, and restate
+      AC-F10-1 as satisfied by the daemon.md header reference plus the delta note
+      itself. Leave nothing that claims a link that is not there.
+    suppressed: false
+  - id: F-2
+    severity: high
+    severity_label: major
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/status.md:56
+    message: >-
+      The "M1 delivery starts now" pointer was inserted between the blank line
+      that used to close the paragraph and the "| Story | Delivery |" header
+      row. GFM cannot start a table mid-paragraph, so the pointer line swallows
+      the whole 20-row M1 delivery table into one paragraph: `pandoc -f gfm -t
+      html` renders two tables on fab46636:status.md and one on HEAD. The
+      retention oracle checked line presence only, so P17/P18/P34 stayed green
+      while the page's table disappeared.
+    suggestion: >-
+      Move the pointer above the existing blank line (or insert a blank line
+      after it) so the table starts its own block, and add a "blank line before
+      the table" assertion to P17/P18 so an insertion can never collapse a block
+      again.
+    suppressed: false
+  - id: F-3
+    severity: high
+    severity_label: major
+    confidence: high
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/commands/queue.md:12
+    message: >-
+      The page introduces `queue release <ref> --reason <...>` and `queue dep
+      add|remove`, but the delivered M1 grammar is `queue release <ref>
+      [--holder <id>] [--park <cause>] [--until <iso>]` (a lease release; the
+      entry stays, optionally parked) and `queue dep <ref> <on-ref>` (add only).
+      Semantics also disagree inside the pack: queue.md:25 says release "returns
+      an entry to the queue's hold set", contracts.md:105 says "A queue entry
+      leaves with a reason: landed, abandoned, superseded, or reconciled", and
+      SC-M2-S15-01 requires that after closeout "the ref's queue entry is gone
+      without manual action" with the `landed` reason. A delivery agent cannot
+      implement S15 from that without choosing one reading, and `dep add|remove`
+      makes the delivered two-positional `queue dep` form ambiguous.
+    suggestion: >-
+      State that M2 keeps `queue release` as the delivered lease-release verb
+      and adds `--reason`, introduce a distinct verb (or a named removal mode)
+      for taking an entry out of the queue, and define `queue dep add|remove` as
+      an explicit grammar extension of `queue dep <ref> <on-ref>`; then align
+      contracts.md's release/removal paragraph and SC-M2-S15-01 with the chosen
+      split.
+    suppressed: false
+  - id: F-4
+    severity: high
+    severity_label: major
+    confidence: high
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/contracts.md:139
+    message: >-
+      contracts.md fixes the S17 park-reason vocabulary as `peak-window` and
+      `owner-hold`, but the delivered code already carries three vocabularies:
+      the closed queue park-cause set `provider-window | provider-quota |
+      preempted-for-close-item` projected as `parked:<cause>`
+      (packages/core/src/contracts/queue.ts:113-119), `peak-window` as a
+      provider condition kind and provider park cause
+      (packages/core/src/contracts/provider.ts:15-50), and `owner-hold` as a
+      queue lane idle reason plus the owner-hold marker (queue.ts:252,
+      contracts/owner-hold.ts). S17 AC2 (owner-hard) requires the lane to be
+      "marked parked with reason `peak-window`", so the pack has to reconcile
+      the three; as written an implementer will either add a duplicate cause or
+      silently rename `provider-window`, and `lanes` projects reasons from the
+      closed cause set.
+    suggestion: >-
+      Add one mapping paragraph that names the delivered enums and states which
+      set gains which value (for example: `peak-window` becomes a queue park
+      cause whose condition type is the existing `provider-window`; `owner-hold`
+      becomes a park cause alongside today's idle reason), and record the
+      consequence for `lanes`' `parked:<cause>` projection.
+    suppressed: false
+  - id: F-5
+    severity: high
+    severity_label: major
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/readiness-review/readiness-iter-5.md:3
+    message: >-
+      The last two readiness records both verdict NOT_READY and open with
+      "Delivery may not proceed" (iter-4 on P29, iter-5 on P26's literal
+      `entrypoint\.md` token). Both blocking findings are fixed and proven in the
+      test-plan revision log (v1.6, v1.7) and in the P2-P6 evidence, but no later
+      readiness record and no pm-notes entry records the gate being re-issued;
+      every other 2026-11 change folder ends with READY or READY_WITH_RISKS. The
+      Definition of Ready gate therefore stands closed by inference, not by
+      record, and a phase-10 reader will see the folder's latest verdict as
+      NOT_READY.
+    suggestion: >-
+      Run one focused readiness confirmation on the final head and record it as
+      readiness-iter-6 (READY), or add a pm-notes note that names the closing
+      fixes (test plan v1.7 for P26, v1.6 for P29) and the re-issued verdict.
+    suppressed: false
+  - id: F-6
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/delivery-evidence/verification.md:225
+    message: >-
+      The close-out statement says "doc/spec/** is unchanged because this change
+      delivers no behaviour to reconcile (NG-3)", but phase 7 changes
+      feature-resident-daemon.md, feature-cli-entrypoint.md and
+      doc/overview/architecture-overview.md under DEC-22. The containment
+      evidence (verification.md:53, :75) records only `product_files=31` and never
+      the phase-7 budget or the 34 total that AC-NFR1-1 asserts; the file was
+      written before phase 7 and not refreshed, while the plan and pm-notes both
+      claim P28 measured 31 + 3 = 34.
+    suggestion: >-
+      Refresh verification.md — record the phase-7 measurement (3 current-truth
+      files, 34 product files total on HEAD), replace the NG-3 sentence with the
+      DEC-22 split, and cite the doc-syncer's three corrections as the phase-7
+      artifact.
+    suppressed: false
+  - id: F-7
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/commands/spend.md:29
+    message: >-
+      spend.md and queue.md (queue.md:36) say the surface "is not yet registered
+      at the root listing", but `spend` and `queue` are two of the sixteen
+      families in today's root `--help`; only the v2 fields and the lifecycle
+      verbs are planned. board.md:27 says "its remainder beyond the M1 view is
+      not yet registered", implying the M1 view is, while `board` is dropped from
+      the composed program entirely (`delivery-os board` answers
+      fallback.internal "not part of the composed prompt-required set").
+    suggestion: >-
+      spend/queue: say the family is registered and only the new fields/verbs are
+      planned. board: say the command is defined in the edge composition but not
+      composed by the production entrypoint, and that M2-S4 has to mount it.
+    suppressed: false
+  - id: F-8
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m1/commands/board.md:3
+    message: >-
+      board.md and watchdog.md (watchdog.md:3) now read "Delivered ..." with no
+      reachability caveat, while `delivery-os board` and `delivery-os watchdog`
+      both answer fallback.internal and feature-cli-entrypoint.md states that
+      board/watchdog/config/provider/db "are dropped from the composed program
+      rather than advertised". That is the same false present the change fixed on
+      daemon.md, and it contradicts this change's own delta note, which lists
+      `board` as an M2-planned addition. doctor.md is the same shape but is
+      already covered by the spec's recorded doctor residual; config/provider/db
+      keep the same overclaim untouched.
+    suggestion: >-
+      Apply the daemon.md reachability clause to board.md and watchdog.md, and
+      either extend or record in pm-notes an accepted residual for
+      config/provider/db, so that "delivered" is not read as "mounted".
+    suppressed: false
+  - id: F-9
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/commands/queue.md:78
+    message: >-
+      The second example runs `queue remove GH-241 --json` with no `--reason` and
+      prints `ok: true` with `"reason": "abandoned"`, while the page's
+      DESCRIPTION, OPTIONS table and error table all say an unqualified removal
+      is refused with `queue.reason-missing` at exit 1. The example teaches the
+      opposite of the contract.
+    suggestion: >-
+      Change the example to `queue remove GH-241 --reason abandoned --json`, or
+      show the refusal envelope and exit 1 as a negative example.
+    suppressed: false
+  - id: F-10
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/README.md:50
+    message: >-
+      The story-to-artifact map assigns contract surfaces unrelated to the story:
+      M2-S7 (suite-to-job mapping in gates) -> `attempts.v1`, M2-S8 (memory
+      records and lint) -> queue lifecycle mutations, M2-S9 (memory in bootstrap)
+      -> `projects.v1`, and M2-S13 (event taxonomy) -> the telemetry-attribution
+      flow. The README tells a reader to "read the architecture flow this story
+      changes, then the contract surface it implements", so these four rows send
+      a delivery agent to the wrong documents.
+    suggestion: >-
+      Correct the four rows — S7/S8/S9 to the surface they actually touch or an
+      explicit "none in this pack", S13 to the C4-L3 event components and the
+      event-taxonomy contract — and leave S11/S12/S14-S17 as they are.
+    suppressed: false
+  - id: F-11
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/architecture.md:210
+    message: >-
+      The S17 park/resume flow begins from "resident daemon" and the persistence
+      section covers park state across a daemon restart, but neither the flow nor
+      the boundary invariants state what happens with no daemon, although S17
+      AC7 and task 6 require "behavior degrades to iteration-start gating with
+      the difference declared". Only journeys.md:82 and SC-M2-S17-05 carry it.
+    suggestion: >-
+      Add the daemon-absent branch to the S17 flow (or one boundary invariant),
+      mirroring journeys step 5, so the architecture page is executable for S17
+      without cross-reading the journey.
+    suppressed: false
+  - id: F-12
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: process-evidence
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-pm-notes.yaml:8
+    message: >-
+      The committed `phases:` block records `clarify_scope: {started:
+      2026-11-10T18:55:00Z, completed: 2026-11-10T17:50:30.662Z}` — a completion
+      before its own start — and nulls `started` for the six later phases, while
+      the command-owned registry (`delivery-os phase list GH-284`) reports
+      clarify_scope started = completed = 17:50:30.662Z and real start times for
+      specification (17:58:07), test_planning (18:19:53), delivery_planning
+      (19:01:12) and dor_check (20:00:11). AGENTS.md says phase state is written
+      only through the `phase` family and timestamps are never hand-edited, so
+      the artifact contradicts the state layer.
+    suggestion: >-
+      Regenerate the block from the registry (or replace it with a pointer to
+      `phase list` and keep only the completed timestamps), so the committed
+      notes cannot disagree with the state layer.
+    suppressed: false
+  - id: F-13
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md:13
+    message: >-
+      The root-help block is presented as "Observed from the built workspace at
+      authoring time", but the real output prints a title, Usage, Options,
+      Examples, Exit codes and See also before a two-column `Commands:` list with
+      a description per command; the note compresses it to one `Commands:` line
+      of space-separated names. The three daemon invocations underneath are
+      verbatim, so the mismatch is easy to miss and a reader re-running the
+      command cannot reproduce the quoted block. Spec Appendix C paraphrases the
+      same output the same way.
+    suggestion: >-
+      Paste the observed `Commands:` block verbatim (or label the block
+      "abridged:"), keeping the family list unchanged so P26 still passes.
+    suppressed: false
+  - id: F-14
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: plan-quality
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-plan.yaml:607
+    message: >-
+      After the DEC-22 alignment the plan is v1.7 against spec v1.7 and test plan
+      v1.9, but its last escalation trigger still reads "The spec or test plan
+      moves past v1.6 / v1.8 while this plan still points at them".
+    suggestion: Update the trigger to "past v1.7 / v1.9".
+    suppressed: false
+  - id: F-15
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: metadata
+    location: doc/changes/2026-11/2026-11-10--GH-284--m2-planning/chg-GH-284-test-plan.md:5
+    message: >-
+      The frontmatter declares `created: 2026-11-10T19:30:00Z` but
+      `last_updated: 2026-11-10T08:05:00Z`, so the last update predates creation
+      (v1.9 was written late in the session). Sibling test plans have
+      created < last_updated.
+    suggestion: Set last_updated to the v1.9 write time.
+    suppressed: false
+  - id: F-16
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: style
+    location: doc/planning/oss-tooling/backlog.md:1109
+    message: >-
+      The amended M2-S4 line drops the terminal period that all 78 other
+      `- Depends on:` lines carry, and several inserted lines run 93-197 columns
+      against the file's ~75-column wrap (S13, S15, S16, S17). AC-F3-1 and plan
+      task 1.4 pin the period-less form, so the drift is deliberate but
+      unnecessary.
+    suggestion: >-
+      Restore the period on M2-S4 and update AC-F3-1/P07 to match, and re-wrap
+      the long inserted lines while keeping each S17 criterion on its own line
+      for P06.
+    suppressed: false
+  - id: F-17
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: commit-hygiene
+    location: fab46636..HEAD (40 commits)
+    message: >-
+      Most of the 40 branch commits repeat the placeholder subject
+      "docs(GH-284): update doc/changes/.../chg-GH-284-pm-notes.yaml", and
+      f6eab161 is typed `feat(GH-284)` although it only writes change artifacts
+      for a docs-only change. The PR is squash-merged, so this is cosmetic, but
+      the history is not reviewable on its own.
+    suggestion: >-
+      Squash to the plan's phase commits plus the artifact commits before the PR,
+      and use `docs:` for every docs-only commit.
+    suppressed: false
+  - id: F-18
+    severity: low
+    severity_label: nit
+    confidence: medium
+    category: contracts
+    location: doc/planning/oss-tooling/milestones/m2/contracts.md:133
+    message: >-
+      "a dispatch without a nominated profile is refused at admission" is
+      stricter than the story, which says every delivery nominates its profile
+      but never defines the no-nomination case; an implementer could turn this
+      into a breaking admission rule for existing dispatches.
+    suggestion: >-
+      Soften it to "a dispatch with no nominated profile resolves to a classified
+      refusal (or the profile's declared default), decided at S17 delivery".
+    suppressed: false
+verification_evidence:
+  - "Ticket fidelity: all seven story entries compared with GH-284's body by whitespace-normalised field comparison (Goal, Tasks, AC, Depends on) — zero differences; both amendments verified by hunk (M2-S4 depends line only; M2-S6 one added task line plus M2-S14 in depends)."
+  - "Containment: `git diff --name-only fab46636..HEAD | grep -v '^doc/changes/'` = 34 paths (30 doc/planning + registry + 3 phase-7 docs), matching AC-NFR1-1."
+  - "Backlog preservation: 68 base blocks vs 75 head blocks; only M2-S4 and M2-S6 changed; the seven additions are S11-S17; the block-closing `---`, blank line and `## Epic M3` follow S17 byte-identically."
+  - "status.md retention: all 182 base lines appear in the 212-line head in order (ordered-subsequence check passes); 30 added lines."
+  - "Registry: 139 registered entries, 12 m2 entries, sorted among themselves, 0 duplicates, 0 m2 entries at fab46636; `bun run scripts/checks/forbidden-literals.ts` exit 0 with 5/5 scope classes and 0 violations."
+  - "Doc distribution: `bash scripts/.tests/test-doc-distribution.sh` exit 0, 82 in-scope docs, planning_markers=0."
+  - "Plan: `pnpm exec delivery-os plan validate GH-284` -> verdict=valid, readyForDevelopment=true, tier=lite, phases 1..6; phase scopes (1+15+1+12+1+6 files) cover the 31 delivery product files and match the diff; 37 TCs mapped exactly once (P1 11, P2 6, P3 4, P4 9, P5 1, P6 6)."
+  - "Pack shape: 12 files, 38 SC-M2 scenarios (min two per story S2-S17), 5 journeys, 10 mermaid blocks with balanced subgraph/end and 3 C4 + 7 flow headings, all six command pages carrying the nine man-page sections, zero broken relative links in the pack."
+  - "Current truth: root `--help` lists exactly the sixteen families named in entrypoint-delta.md; `daemon --help`/`daemon status` reproduce the quoted errors at exit 1; `daemon`, `board`, `watchdog`, `doctor`, `config`, `provider`, `db` all answer fallback.internal; production.ts supplies no daemon/board/doctor composition."
+  - "Hygiene: no vendor/hosted/proprietary name and no working-name literal in the pack; `ados_distribution` marker absent from every planning doc; only doc/**, the registry and three spec/overview files changed."
+reviewed_at: 2026-11-10T23:40:00Z
+next_step: CALL_CODER
