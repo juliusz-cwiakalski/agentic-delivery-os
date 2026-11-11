@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-11T14:13:22.813Z }
   review_fix: { started: null, completed: 2026-11-11T16:03:09.236Z }
   quality_gates: { started: null, completed: 2026-11-11T16:19:45.945Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-11T16:20:38.536Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Delivery mode: autonomous. The session asked for end-to-end delivery of
@@ -751,5 +751,32 @@ notes:
       exact AC-NFR6-1(c) carve-out excused because the authoritative run is
       green on the same head; no TC-WIRE-002 occurrence in either run; plan
       validate verdict=valid and lint GH-303 conforms."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DOD CHECK (phase 10): PASS. Phases: the nine preceding phases are
+      recorded complete in the registry (clarify_scope, specification,
+      test_planning, delivery_planning, dor_check, delivery, system_spec_update,
+      review_fix, quality_gates) with this check closing the tenth. Plan
+      completion: every declared plan phase carries a pm-notes entry naming the
+      phase, its commit and its gate result — P1 15d2f2aa, P2 ffaa1e34, P3
+      7ee9ec1f, P4 d8fa8f20, P5 0aba071e (scope disclosed in the P5 disclosure
+      entry), P6 d647f47b with evidence ad0101d4; plan validate reports valid
+      and readyForDevelopment. Acceptance criteria: 45/45 evidenced — spec
+      compliance PASS and plan compliance PASS in review iteration 2, where the
+      reviewer re-extracted and re-ran all 46 procedures at HEAD (P01-P45 all
+      PASS, including 26/26 clause anchors, 13/13 containment, 17/17 matrix rows
+      with 0 survivors, 140 registered entries with the new row between queue
+      and spend, 10/10 literal-scanned docs with 0 seed hits, status retention 0
+      removed and 26 added confined, and board.md at zero diff). Current-truth
+      documentation: @doc-syncer ran phase 7 twice (the initial no-op at
+      44889cf4 and the post-P6 re-check at ad0101d4) and reports no
+      documentation gaps remain, with no doc/spec coverage gap because neither
+      family is delivered. Containment: exactly 13 product files against base
+      5372dbac; no code, test, prompt or spec file changed. Residuals carried to
+      the human gate, none blocking an AC: the board-page deferral with M2-S4 as
+      owner, the preserved M1-era 'projects'-for-checkouts lines in backlog.md
+      (847, 863, 1082) and the frozen M1 pack, the accepted gate-instrument
+      artifacts (P09/P10/P11 summary verdict lines, P34 collation), and the
+      primitive-generated commit subjects."
     type: "info"
     date: "2026-11-11"
