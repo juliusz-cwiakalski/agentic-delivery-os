@@ -1,5 +1,14 @@
-# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.1
+# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.2
 # (2026-11-11). Authored against spec v1.4 and test plan v1.3.
+#
+# REVISION 2.2 — discharges code-review iteration-1 finding F-10 (review-iter-1.md):
+#   F-10 phase 3's commit modified one file only phase 2 declared, while this plan
+#       already assigns TC-ATTEMPT-034 cells 2-3 to phase 3, so the declaration was the
+#       omission. Phase 3 gained exactly one `scope.files` row,
+#       tests/behaviour/dispatch-additive-stability.test.ts, plus a comment stating the
+#       suite is intentionally co-owned: phase 2 owns TC-ATTEMPT-034 cells 1, 4, 5 and 7
+#       in it and phase 3 owns cells 2-3 in the same file. Nothing else changed from
+#       revision 2.1.
 #
 # REVISION 2.1 — discharges the DoR iteration-2 findings (readiness-iter-2.md):
 #   W1  the delivered forms' refusal cell. TC-ATTEMPT-034 gains cell 7: with
@@ -1005,6 +1014,10 @@ phases:
   #                   `unresolvedIds`, `idsTruncated` in that order, with at most 20
   #                   identifiers and `idsTruncated` true exactly when identifiers were
   #                   dropped (P1's rename must red this cell).
+  #  CO-OWNED SUITE: tests/behaviour/dispatch-additive-stability.test.ts is intentionally
+  #      declared by phase 2 and phase 3 — phase 2 owns TC-ATTEMPT-034 cells 1, 4, 5 and 7
+  #      there and phase 3 owns cells 2-3 in the same file, so each phase declares the
+  #      file it edits.
   #   TC-ATTEMPT-036  test isolation across every new suite: the approved base, the
   #                   pre-write guard, the real-state fingerprint, and no direct `tmpdir()`
   #                   use (cross-cutting; owned here because this is the last phase that
@@ -1067,6 +1080,7 @@ phases:
         - tests/behaviour/dispatch-resolve-result.test.ts
         - tests/behaviour/dispatch-divergence-count.test.ts
         - tests/behaviour/dispatch-bounds.test.ts
+        - tests/behaviour/dispatch-additive-stability.test.ts
         - tests/structure/dispatch-resolve-composition.test.ts
         - tests/structure/dispatch-attempts-count-rule.test.ts
         - tests/checks/dispatch-attempts-test-isolation.test.ts

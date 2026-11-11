@@ -40,6 +40,12 @@ const foreignOpen = (count: number): readonly DispatchDivergenceRecord[] =>
     divergenceId: `DIV-BETA-${String(index + 1).padStart(3, "0")}`,
   }));
 
+/** The human `unresolved_divergences=` line, which must print the returned list. */
+const unresolvedLineOf = (stdout: string): string | undefined =>
+  stdout.split("\n").find((line) => line.startsWith("unresolved_divergences="));
+
+const BLOCK_KEYS = ["reported", "resolved", "unresolved", "unresolvedIds", "idsTruncated"];
+
 describe("TC-ATTEMPT-022 one exact repository-scoped count", () => {
   test("both surfaces report 25 open with 20 identifiers and idsTruncated", async () => {
     const harness = createAttemptsHarness({ label: "divergence-count", records: [] });
@@ -97,6 +103,53 @@ describe("TC-ATTEMPT-022 one exact repository-scoped count", () => {
         expect(block.unresolvedIds).not.toContain("DIV-OPEN-001");
         expect(block.unresolvedIds.some((id) => id.startsWith("DIV-DONE"))).toBe(false);
       }
+
+      // The human line prints exactly the returned 20 identifiers and nothing else.
+      const text = await harness.invoke(["dispatch", "dual-run", "summary", "--repo", REPOSITORY]);
+      expect(text.exit).toBe(0);
+      const line = unresolvedLineOf(text.stdout);
+      expect(line).toBe(
+        `unresolved_divergences=${summaryAfter.divergences.unresolvedIds.join(",")}`,
+      );
+      expect(line?.split("=")[1]?.split(",")).toHaveLength(20);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("an unmigrated root moves nothing: 28/3/25 with the identifier narrowing", async () => {
+    const harness = createAttemptsHarness({ label: "divergence-unmigrated", records: [] });
+    try {
+      seed(harness, [...openDivergences(25), ...resolvedDivergences(3)]);
+      const summary = await harness.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        REPOSITORY,
+        "--json",
+      ]);
+      expect(summary.exit).toBe(0);
+      const block = (summary.data as DispatchSummaryData).divergences;
+      expect(Object.keys(block)).toEqual([...BLOCK_KEYS]);
+      // The pre-change store-wide counts: nothing foreign exists here, so the
+      // repository scope moves nothing but the declared identifier narrowing.
+      expect(block.reported).toBe(28);
+      expect(block.resolved).toBe(3);
+      expect(block.unresolved).toBe(25);
+      expect(block.unresolvedIds).toHaveLength(20);
+      expect(block.idsTruncated).toBe(true);
+      expect(block.unresolvedIds).toEqual(
+        openDivergences(25)
+          .slice(0, 20)
+          .map((record) => record.divergenceId),
+      );
+
+      const text = await harness.invoke(["dispatch", "dual-run", "summary", "--repo", REPOSITORY]);
+      expect(text.exit).toBe(0);
+      expect(unresolvedLineOf(text.stdout)).toBe(
+        `unresolved_divergences=${block.unresolvedIds.join(",")}`,
+      );
     } finally {
       harness.dispose();
     }

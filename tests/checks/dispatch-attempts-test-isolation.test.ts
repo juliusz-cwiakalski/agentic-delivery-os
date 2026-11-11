@@ -32,6 +32,7 @@ const NEW_SUITES = [
   "tests/behaviour/dispatch-additive-stability.test.ts",
   "tests/structure/dispatch-attempts-taxonomy.test.ts",
   "tests/structure/dispatch-attempts-count-rule.test.ts",
+  "tests/structure/dispatch-attempts-composition.test.ts",
 ] as const;
 
 const NEW_FIXTURES = [

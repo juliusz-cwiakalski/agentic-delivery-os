@@ -113,9 +113,6 @@ export type DispatchCommandRuntime = {
 const REF_PATTERN = /^[A-Z]+-\d+$/;
 const LIMIT_PATTERN = new RegExp(`^${ATTEMPTS_LIMIT_PATTERN}$`);
 
-/** The declared flags of the four delivered forms; anything else is unknown. */
-const DELIVERED_FLAGS = new Set(["--revert", "--harness", "--resume-prompt", "--repo", "--note"]);
-
 const failure = (code: string, summary?: string) => ({
   ok: false as const,
   error: { kind: "input", code, ...(summary === undefined ? {} : { summary }) },
@@ -211,119 +208,135 @@ const parseAttemptsRequest = (tokens: readonly string[]): AttemptsRequest => {
   };
 };
 
+/** The declared flag vocabulary of the four delivered forms, and of `attempts`. */
+const DELIVERED_FLAGS = ["--revert"] as const;
+const DELIVERED_VALUE_FLAGS = ["--harness", "--resume-prompt", "--repo", "--note"] as const;
+
 /** Build the one dispatch command definition over the injected runtime. */
 export const createDispatchCommandDefinition = (
   runtime: DispatchCommandRuntime,
-): CommandDefinition => ({
-  flags: ["--revert"],
-  requiresValue: ["--harness", "--resume-prompt", "--repo", "--note"],
-  positionals: { max: 3 },
-  acceptsAnyFlag: true,
-  humanSuccess: true,
-  exitProjection: (data) => {
-    if (isSummaryData(data)) return "success";
-    const handover = data as {
-      readonly verdict?: unknown;
-      readonly recorded?: unknown;
-    };
-    if (
-      handover.verdict !== undefined &&
-      handover.verdict !== "eligible" &&
-      handover.recorded !== true
-    ) {
-      return "user-validation";
-    }
-    const result = (data as { readonly result?: DeliveryResultToken }).result;
-    return result === undefined ? "success" : projectionOf(result);
-  },
-  humanText: (data, _brand, context) => {
-    if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
-    if (isSummaryData(data)) return renderDispatchSummaryText(data);
-    if (isResolveData(data)) return renderDispatchResolveText(data);
-    const envelope = data as Partial<DispatchEnvelopeData>;
-    if (envelope.result !== undefined && envelope.lastMessage !== undefined) {
-      return context?.verbose === true
-        ? renderDispatchVerboseText(envelope as DispatchEnvelopeData)
-        : renderDispatchText(envelope as DispatchEnvelopeData);
-    }
-    const handover = data as { readonly operation?: unknown; readonly recorded?: unknown };
-    if (handover.operation === "authoritative" || handover.operation === "dual-run") {
-      return renderDispatchHandoverText({
-        repository: String((data as { readonly repository?: unknown }).repository ?? ""),
-        operation: handover.operation,
-        recorded: handover.recorded === true,
-        noop: (data as { readonly noop?: unknown }).noop === true,
-      });
-    }
-    return undefined;
-  },
-  handler: async ({ positionals, flags, argv }: CommandInvocation) => {
-    const [first, second, third] = positionals;
-    const isAttempts = first === "attempts";
-
-    // The definition accepts any flag so the attempts grammar (not the parser)
-    // answers its refusals. Every other form therefore needs this guard to keep
-    // the delivered `fallback.invocation` identity for an undeclared flag.
-    if (!isAttempts) {
-      const undeclared = argv.find(
-        (token) => token.startsWith("--") && !DELIVERED_FLAGS.has(token),
-      );
-      if (undeclared !== undefined) {
-        return fallbackInvocation(`unknown flag "${undeclared}"`);
+): CommandDefinition => {
+  const definition: CommandDefinition = {
+    flags: [...DELIVERED_FLAGS],
+    requiresValue: [...DELIVERED_VALUE_FLAGS],
+    positionals: { max: 3 },
+    acceptsAnyFlag: true,
+    humanSuccess: true,
+    exitProjection: (data) => {
+      if (isSummaryData(data)) return "success";
+      const handover = data as {
+        readonly verdict?: unknown;
+        readonly recorded?: unknown;
+      };
+      if (
+        handover.verdict !== undefined &&
+        handover.verdict !== "eligible" &&
+        handover.recorded !== true
+      ) {
+        return "user-validation";
       }
-    }
-
-    if (isAttempts) {
-      if (runtime.attempts === undefined) return failure("input.value.rejected");
-      const request = parseAttemptsRequest(argv);
-      if (!request.ok) return failure("input.value.rejected", request.summary);
-      const result = await runtime.attempts.read({
-        ...(request.ref === undefined ? {} : { ref: request.ref }),
-        ...(request.limit === undefined ? {} : { limit: request.limit }),
-      });
-      return result.ok ? { data: result.data } : { error: result.error };
-    }
-
-    const repoFlag = typeof flags["--repo"] === "string" ? flags["--repo"] : undefined;
-    const noteFlag = typeof flags["--note"] === "string" ? flags["--note"] : undefined;
-
-    if (first === "dual-run") {
-      if (second === "summary") {
-        if (runtime.summary === undefined) return failure("input.value.rejected");
-        if (repoFlag === undefined || repoFlag.length === 0) return failure("input.value.rejected");
-        const result = await runtime.summary.summarize(repoFlag);
-        return result.ok ? { data: result.data } : { error: result.error };
+      const result = (data as { readonly result?: DeliveryResultToken }).result;
+      return result === undefined ? "success" : projectionOf(result);
+    },
+    humanText: (data, _brand, context) => {
+      if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
+      if (isSummaryData(data)) return renderDispatchSummaryText(data);
+      if (isResolveData(data)) return renderDispatchResolveText(data);
+      const envelope = data as Partial<DispatchEnvelopeData>;
+      if (envelope.result !== undefined && envelope.lastMessage !== undefined) {
+        return context?.verbose === true
+          ? renderDispatchVerboseText(envelope as DispatchEnvelopeData)
+          : renderDispatchText(envelope as DispatchEnvelopeData);
       }
-      if (second === "resolve") {
-        if (runtime.resolve === undefined) return failure("input.value.rejected");
-        if (third === undefined || third.length === 0 || noteFlag === undefined) {
-          return failure("input.value.rejected");
+      const handover = data as { readonly operation?: unknown; readonly recorded?: unknown };
+      if (handover.operation === "authoritative" || handover.operation === "dual-run") {
+        return renderDispatchHandoverText({
+          repository: String((data as { readonly repository?: unknown }).repository ?? ""),
+          operation: handover.operation,
+          recorded: handover.recorded === true,
+          noop: (data as { readonly noop?: unknown }).noop === true,
+        });
+      }
+      return undefined;
+    },
+    handler: async ({ positionals, flags, argv }: CommandInvocation) => {
+      const [first, second, third] = positionals;
+      const isAttempts = first === "attempts";
+
+      // The definition accepts any flag so the attempts grammar (not the parser)
+      // answers its refusals. Every other form therefore needs this guard to keep
+      // the delivered `fallback.invocation` identity for an undeclared flag. The
+      // allowed set derives from this definition, so a flag added to the
+      // vocabulary can never be refused here by drift.
+      if (!isAttempts) {
+        const delivered = new Set([
+          ...(definition.flags ?? []),
+          ...(definition.requiresValue ?? []),
+        ]);
+        const undeclared = argv.find((token) => token.startsWith("--") && !delivered.has(token));
+        if (undeclared !== undefined) {
+          return fallbackInvocation(`unknown flag "${undeclared}"`);
         }
-        const result = await runtime.resolve.resolve({ divergenceId: third, note: noteFlag });
+      }
+
+      if (isAttempts) {
+        if (runtime.attempts === undefined) return failure("input.value.rejected");
+        const request = parseAttemptsRequest(argv);
+        if (!request.ok) return failure("input.value.rejected", request.summary);
+        const result = await runtime.attempts.read({
+          ...(request.ref === undefined ? {} : { ref: request.ref }),
+          ...(request.limit === undefined ? {} : { limit: request.limit }),
+        });
         return result.ok ? { data: result.data } : { error: result.error };
       }
-      return failure("input.value.rejected");
-    }
 
-    if (first === "handover") {
-      if (runtime.handover === undefined) return failure("input.value.rejected");
-      const repo = second ?? repoFlag;
-      if (repo === undefined || repo.length === 0) return failure("input.value.rejected");
-      const result = await runtime.handover.handover({ repo, revert: flags["--revert"] === true });
+      const repoFlag = typeof flags["--repo"] === "string" ? flags["--repo"] : undefined;
+      const noteFlag = typeof flags["--note"] === "string" ? flags["--note"] : undefined;
+
+      if (first === "dual-run") {
+        if (second === "summary") {
+          if (runtime.summary === undefined) return failure("input.value.rejected");
+          if (repoFlag === undefined || repoFlag.length === 0) {
+            return failure("input.value.rejected");
+          }
+          const result = await runtime.summary.summarize(repoFlag);
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+        if (second === "resolve") {
+          if (runtime.resolve === undefined) return failure("input.value.rejected");
+          if (third === undefined || third.length === 0 || noteFlag === undefined) {
+            return failure("input.value.rejected");
+          }
+          const result = await runtime.resolve.resolve({ divergenceId: third, note: noteFlag });
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+        return failure("input.value.rejected");
+      }
+
+      if (first === "handover") {
+        if (runtime.handover === undefined) return failure("input.value.rejected");
+        const repo = second ?? repoFlag;
+        if (repo === undefined || repo.length === 0) return failure("input.value.rejected");
+        const result = await runtime.handover.handover({
+          repo,
+          revert: flags["--revert"] === true,
+        });
+        return result.ok ? { data: result.data } : { error: result.error };
+      }
+
+      if (first === undefined || second !== undefined || !REF_PATTERN.test(first)) {
+        return failure("input.value.rejected");
+      }
+      const harness = typeof flags["--harness"] === "string" ? flags["--harness"] : undefined;
+      const resumePrompt =
+        typeof flags["--resume-prompt"] === "string" ? flags["--resume-prompt"] : undefined;
+      const result = await runtime.run.run({
+        ref: first,
+        ...(harness === undefined ? {} : { harness }),
+        ...(resumePrompt === undefined ? {} : { resumePrompt }),
+      });
       return result.ok ? { data: result.data } : { error: result.error };
-    }
-
-    if (first === undefined || second !== undefined || !REF_PATTERN.test(first)) {
-      return failure("input.value.rejected");
-    }
-    const harness = typeof flags["--harness"] === "string" ? flags["--harness"] : undefined;
-    const resumePrompt =
-      typeof flags["--resume-prompt"] === "string" ? flags["--resume-prompt"] : undefined;
-    const result = await runtime.run.run({
-      ref: first,
-      ...(harness === undefined ? {} : { harness }),
-      ...(resumePrompt === undefined ? {} : { resumePrompt }),
-    });
-    return result.ok ? { data: result.data } : { error: result.error };
-  },
-});
+    },
+  };
+  return definition;
+};

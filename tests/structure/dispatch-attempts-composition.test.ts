@@ -9,9 +9,9 @@
  * The reference-page half stays review-verified.
  */
 import { describe, expect, test } from "bun:test";
+import { allHelpEntries, helpEntryFor } from "../../packages/cli/src/help";
 import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
-import { allHelpEntries, helpEntryFor } from "../../packages/cli/src/help";
 
 const POINTER = (repository: string): string =>
   `next: dispatch dual-run summary --repo ${repository} (coverage and floor)`;
@@ -36,6 +36,9 @@ describe("TC-ATTEMPT-029 the pointer is the only route to the gate", () => {
     expect(attempts).toBeDefined();
     expect(family?.usage.join("\n")).toContain("dispatch dual-run summary --repo");
     expect(attempts?.summary.toLowerCase()).toContain("attempt");
+    // The attempts entry itself names the summary form as the coverage/floor surface.
+    expect(attempts?.summary).toContain("dispatch dual-run summary --repo");
+    expect(attempts?.summary).toContain("coverage and floor");
     // The attempts entry points at the M2 page, which carries the same pointer.
     expect(attempts?.seeAlso).toEqual([
       "doc/planning/oss-tooling/milestones/m2/commands/attempts.md",

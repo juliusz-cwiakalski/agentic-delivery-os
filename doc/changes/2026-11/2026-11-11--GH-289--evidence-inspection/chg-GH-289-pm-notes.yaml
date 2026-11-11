@@ -344,3 +344,34 @@ notes:
       state.permission.denied exits 1."
     type: info
     date: "2026-11-11"
+  - text: "Resume sync: origin/main-tools advanced by one commit (eb3c947b,
+      chore(GH-268): pre-PR commitlint gate). Merged cleanly (39 files, no
+      conflicts); aggregate pnpm check on the merged tree: 7312 pass / 4 skip /
+      0 fail. The merge adds the phase-9 supplementary gate
+      ./scripts/lint-commit-range.sh --base <base> (PASS/FAIL/SKIP/ERROR) and its
+      registration in install.sh; AGENTS.md and the committer/pm prompts now
+      carry it. No PR exists for the branch (gh pr list --state all -> [])."
+    type: info
+    date: "2026-11-11"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.md +
+      review-iter-1.yaml). No product defect: the two ACs not satisfied as
+      written (AC-F2-2's 'all three instants printed in text'; AC-F4-3's
+      permission-denied exit 2) are spec-wording defects where the delivered
+      behaviour is correct. Four medium evidence findings - narrower-than-declared
+      assertions inside genuinely present suites: F-1 attempts envelope key set
+      unasserted (only forbidden gate keys scanned); F-2 TC-022's unmigrated-root
+      baseline and the narrowed human unresolved_divergences= line unasserted;
+      F-3 TC-014 counters/sha256/torn-binding/project-marker/second-invocation/
+      host-index cells missing; F-4 TC-029 step 3 not implemented and the
+      attempts help entry never names the summary. Six low: F-5 AC-F2-2 wording,
+      F-6 TC-039 ref-shape breadth, F-7 TC-038 AST scan reduced to substrings,
+      F-8 TC-036 list omits one new suite, F-9 DELIVERED_FLAGS duplicates the
+      definition, F-10 phase-3 scope omits dispatch-additive-stability.test.ts.
+      Info I-1 AC-F4-3 wording, I-2 positional overflow boundary, I-3 generic
+      checkout message, I-4 utf8Bytes duplicate, I-5 reviewer's aggregate run
+      flaked on host load (24 timeouts, 7288+24=7312 corroborates delivery).
+      Remediation is in-scope: tests, one help line, one flag-set derivation,
+      two spec ACs, one plan scope row. Reopened review_fix remediation in
+      progress; plan phase artefacts stay closed (no new plan phase)."
+    type: blocker
+    date: "2026-11-11"

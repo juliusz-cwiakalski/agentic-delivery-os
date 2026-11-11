@@ -433,7 +433,8 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   {
     path: ["dispatch", "attempts"],
-    summary: "Read one work item's recorded attempts, newest first",
+    summary:
+      "Read one work item's recorded attempts, newest first; coverage and floor come from dispatch dual-run summary --repo <repo>",
     usage: ["<binary> dispatch attempts [--ref <ref>] [--limit <n>]"],
     options: [
       ["--ref <ref>", "Work item reference to inspect; default is the active change"],
