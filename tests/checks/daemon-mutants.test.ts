@@ -2,17 +2,43 @@
  * TC-META-001 — the mutation fixtures prove each key rule fails when broken:
  * live-lock takeover, double restart, phase re-execution, merge reachability,
  * subscriber stall, blind unknown retry, and fabricated heartbeat.
+ *
+ * The GH-286 daemon-mount controls are split into two declared kinds:
+ *
+ *   - EXECUTED-AGAINST-MUTATION (18 of 21): the mutant is applied to a temp copy
+ *     of the real module, the copy is imported and run, and the named suite's
+ *     assertion is evaluated against the observed result. Relative imports in
+ *     the copy are rewritten onto the repository's real files, so a composition
+ *     module runs exactly as shipped plus the mutation. These are:
+ *     binding-not-last, spawn-without-forwarded-env, spawn-with-full-env,
+ *     install-empty-executable, signal-without-pid-check, signal-negative-pid,
+ *     duplicate-terminal-record, release-skip-cancellation, holder-not-removed,
+ *     uninstall-broad-delete, bare-execstart, conditional-registration,
+ *     fabricated-reachability, stale-inclusive, owner-ignored,
+ *     hardcoded-degradation, captured-degradation, help-composer-invoked.
+ *   - STRUCTURAL (3 of 21): `literal-socket`, `unit-under-state-dir`, and
+ *     `xdg-relative-joined` change a value the production composition passes to
+ *     an adapter whose construction input is not part of any request or return
+ *     value (the supervisor configuration root) or to a transport the composer
+ *     does not expose. The control applies the mutation to the production source
+ *     and asserts the named source claim the suite carries; the delivered
+ *     behavioural half is asserted separately (the configured-branch and
+ *     install-root cases). No structural control is left as a fixture-local
+ *     evaluation of a mirrored rule.
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime as realRuntime } from "../../packages/cli/src/daemon-compose";
+import { runEntrypoint, selectPromptRequiredProgram } from "../../packages/cli/src/entrypoint";
+import { createProductionComposer, daemonReachable } from "../../packages/cli/src/production";
 import {
   CONTROL_PROTOCOL_CURRENT,
   type DaemonLaneRecord,
   type DaemonLockRecord,
   LOCAL_CALLER_PRINCIPAL,
+  type SupervisorPort,
 } from "../../packages/core/src/contracts/index";
 import { createControlSession } from "../../packages/core/src/domain/control-session";
 import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
@@ -20,8 +46,11 @@ import { evaluateDaemonLock } from "../../packages/core/src/domain/daemon-lock";
 import { decideDaemonLane } from "../../packages/core/src/domain/daemon-reconcile";
 import { resolveCommitEffect } from "../../packages/core/src/domain/effect-protocol";
 import {
+  createMemorySupervisor,
+  createMountClock,
   createMountHarness,
   mountComposition,
+  openMountStore,
   reentryEnvironmentFrom,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
@@ -40,14 +69,16 @@ import * as holderNotRemoved from "../fixtures/daemon/mount-mutants/holder-not-r
 import * as fabricatedReachability from "../fixtures/daemon/mount-mutants/fabricated-reachability";
 import * as staleInclusive from "../fixtures/daemon/mount-mutants/stale-inclusive";
 import * as ownerIgnored from "../fixtures/daemon/mount-mutants/owner-ignored";
+import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
+import * as capturedDegradation from "../fixtures/daemon/mount-mutants/captured-degradation";
 import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
 import * as helpComposerInvoked from "../fixtures/daemon/mount-mutants/help-composer-invoked";
 import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
-import { createMemorySupervisor, createMountClock } from "../fixtures/daemon/mount-harness";
-import { appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
-import { readDaemonInstance } from "../../packages/core/src/app/index";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
+import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import * as spawnWithFullEnv from "../fixtures/daemon/mount-mutants/spawn-with-full-env";
 import * as spawnWithoutForwardedEnv from "../fixtures/daemon/mount-mutants/spawn-without-forwarded-env";
+import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const NOW = Date.parse("2026-11-08T10:00:00Z");
 
@@ -158,111 +189,219 @@ describe("GH-238 mutation controls", () => {
   });
 });
 
+/* --------------------------------- helpers -------------------------------- */
+
+type Mutant = {
+  readonly name: string;
+  readonly target: string;
+  readonly apply: (source: string) => string;
+};
+
+const readRepoFile = (relative: string): string =>
+  readFileSync(join(process.cwd(), relative), "utf8");
+
+/** Rewrite a temp copy's relative imports onto the repository's real files. */
+const absolutizeImports = (source: string, target: string): string =>
+  source.replace(/from "(\.\.?\/[^"]+)\.js"/gu, (_all, spec: string) => {
+    const absolute = resolve(dirname(join(process.cwd(), target)), spec);
+    return `from ${JSON.stringify(`${absolute}.ts`)}`;
+  });
+
 /**
- * GH-286 mutation controls — the daemon-mount claims that carry a source-level
- * mutant. Each case applies the mutant to a temp copy of the real module and
- * asserts the named suite's assertion trips, so the claim is non-vacuous inside
- * the commit that makes it. Only the temp copy is mutated; the shipped source
- * is read-only here.
+ * Apply a mutant to a temp copy of the real module and load it. A copy whose
+ * mutation changed no byte is a harness failure, never a silent pass.
  */
-describe("GH-286 daemon-mount mutation controls", () => {
-  const readRepoFile = (relative: string): string =>
-    readFileSync(join(process.cwd(), relative), "utf8");
+const loadMutantModule = async <T>(mutant: Mutant, file: string): Promise<T> => {
+  const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", mutant.name);
+  mkdirSync(directory, { recursive: true });
+  const source = readRepoFile(mutant.target);
+  const mutated = mutant.apply(source);
+  if (mutated === source) throw new Error(`${mutant.name}: mutation changed nothing`);
+  const path = join(directory, file);
+  writeFileSync(path, absolutizeImports(mutated, mutant.target));
+  return (await import(`${path}?mutant=${Date.now()}`)) as T;
+};
 
-  const mutantDir = (name: string): string => {
-    const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", name);
-    mkdirSync(directory, { recursive: true });
-    return directory;
-  };
-
-  /** Load the mutated module from its temp copy so the real behaviour is run. */
-  const loadMutatedRuntime = async (mutant: {
-    readonly name: string;
-    readonly apply: (source: string) => string;
-  }) => {
-    const source = readRepoFile("packages/cli/src/daemon-compose.ts");
-    const directory = mutantDir(mutant.name);
-    const file = join(directory, "daemon-compose.ts");
-    writeFileSync(file, mutant.apply(source));
-    const module = (await import(`${file}?mutant=${Date.now()}`)) as {
-      createDaemonCommandRuntime: typeof realRuntime;
+const captureSpawnEnvironment = async (
+  createRuntime: typeof realRuntime,
+  options: { readonly forwardedBinding?: string },
+) => {
+  const harness = createMountHarness({ label: "mutant" });
+  try {
+    harness.processPort.setSpawn(undefined);
+    const binding = stateDirectoryName(harness.brand);
+    const reentry = {
+      ...reentryEnvironmentFrom(harness.environment),
+      ...(options.forwardedBinding === undefined ? {} : { [binding]: options.forwardedBinding }),
     };
-    return module.createDaemonCommandRuntime;
-  };
+    const runtime = createRuntime(
+      mountComposition(harness, {
+        daemonEntry: `${harness.root}/bin/entry.ts`,
+        reentryEnvironment: reentry,
+      }),
+    );
+    const definition = createDaemonCommandDefinition(runtime);
+    await definition.handler({
+      positionals: ["start"],
+      flags: {},
+      global: {},
+    } as never);
+    return {
+      environment: harness.processPort.spawns[0]?.environment ?? {},
+      binding,
+      stateDirectory: harness.stateDirectory,
+    };
+  } finally {
+    harness.dispose();
+  }
+};
 
-  const captureSpawnEnvironment = async (
-    createRuntime: typeof realRuntime,
-    options: { readonly forwardedBinding?: string },
-  ) => {
-    const harness = createMountHarness({ label: "mutant" });
-    try {
-      harness.processPort.setSpawn(undefined);
-      const binding = stateDirectoryName(harness.brand);
-      const reentry = {
-        ...reentryEnvironmentFrom(harness.environment),
-        ...(options.forwardedBinding === undefined ? {} : { [binding]: options.forwardedBinding }),
-      };
-      const runtime = createRuntime(
-        mountComposition(harness, {
-          daemonEntry: `${harness.root}/bin/entry.ts`,
-          reentryEnvironment: reentry,
-        }),
-      );
-      const definition = createDaemonCommandDefinition(runtime);
-      await definition.handler({
-        positionals: ["start"],
-        flags: {},
-        global: {},
-      } as never);
-      return {
-        environment: harness.processPort.spawns[0]?.environment ?? {},
-        binding,
-        stateDirectory: harness.stateDirectory,
-      };
-    } finally {
-      harness.dispose();
-    }
-  };
+const stopWith = async (
+  createRuntime: typeof realRuntime,
+  pid: number,
+): Promise<{ readonly signals: number[]; readonly code?: string }> => {
+  const harness = createMountHarness({ label: "mutant-stop" });
+  try {
+    appendInstance(harness.store, { pid, scope: scopeOf(harness.stateDirectory) });
+    const runtime = createRuntime(mountComposition(harness));
+    const definition = createDaemonCommandDefinition(runtime);
+    const result = (await definition.handler({
+      positionals: ["stop"],
+      flags: { "--mode": "drain" },
+      global: {},
+    } as never)) as { error?: { code?: string } };
+    return {
+      signals: harness.processPort.signals.map((call) => call.pid),
+      ...(result.error?.code === undefined ? {} : { code: result.error.code }),
+    };
+  } finally {
+    harness.dispose();
+  }
+};
 
+const createHost = () => {
+  const listeners = new Map<string, Set<() => void>>();
+  return {
+    host: {
+      once: (event: "SIGINT" | "SIGTERM", listener: () => void) => {
+        const set = listeners.get(event) ?? new Set();
+        set.add(listener);
+        listeners.set(event, set);
+      },
+      removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => {
+        listeners.get(event)?.delete(listener);
+      },
+    },
+    registered: () => [...listeners.values()].reduce((total, set) => total + set.size, 0),
+    deliver: (event: "SIGINT" | "SIGTERM") => {
+      for (const listener of [...(listeners.get(event) ?? [])]) listener();
+    },
+  };
+};
+
+/** Two signals, one clock advance apart, so both release appends differ. */
+const countTerminalRecords = async (createRuntime: typeof realRuntime): Promise<number> => {
+  const harness = createMountHarness({ label: "mutant-double-signal" });
+  try {
+    const clock = createMountClock({ manual: true, sleepAdvances: true });
+    const host = createHost();
+    const runtime = createRuntime(mountComposition(harness, { clock, signalHost: host.host }));
+    const definition = createDaemonCommandDefinition(runtime);
+    const command = definition.handler({
+      positionals: ["start"],
+      flags: { "--foreground": true },
+      global: {},
+    } as never);
+    for (let index = 0; index < 3; index += 1) await Promise.resolve();
+    host.deliver("SIGTERM");
+    clock.advance(1_000);
+    host.deliver("SIGTERM");
+    for (let index = 0; index < 3; index += 1) await Promise.resolve();
+    clock.releaseAll();
+    await command;
+    const instances = readDaemonInstance(harness.store);
+    if (!instances.ok) return -1;
+    return instances.records.filter(
+      (record) => record.operation === "released" || record.operation === "immediate-stop",
+    ).length;
+  } finally {
+    harness.dispose();
+  }
+};
+
+/** Compose the production program over a harness, optionally with a config file. */
+const productionProgram = (
+  createComposer: typeof createProductionComposer,
+  harness: ReturnType<typeof createMountHarness>,
+  options: {
+    readonly daemonEntry?: string;
+    readonly supervisor?: SupervisorPort;
+    readonly configYaml?: string;
+  } = {},
+) => {
+  if (options.configYaml !== undefined) {
+    const directory = join(harness.home, ".config", harness.brand.configDirectoryName);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "config.yaml"), options.configYaml);
+  }
+  return createComposer({
+    environment: {
+      HOME: harness.home,
+      PATH: "/usr/bin",
+      [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+    },
+    cwd: harness.root,
+    homeDirectory: harness.home,
+    workingName: harness.brand.binaryName,
+    ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
+    ...(options.supervisor === undefined ? {} : { supervisor: options.supervisor }),
+  })(harness.brand);
+};
+
+const queueDegraded = async (program: ReturnType<typeof productionProgram>) => {
+  const result = await program.commands.queue?.handler({
+    positionals: ["list"],
+    flags: {},
+    global: {},
+  } as never);
+  if (result === undefined || "error" in result) throw new Error("queue list did not answer");
+  return (result.data as { readonly degraded: readonly string[] }).degraded;
+};
+
+/* --------------------------- Phase-2 spawn controls ----------------------- */
+
+describe("GH-286 spawn mutation controls (executed against the mutated module)", () => {
   test("binding-not-last: writing the binding first lets the forwarded look-alike win", async () => {
-    const createRuntime = await loadMutatedRuntime(bindingNotLast);
-    const captured = await captureSpawnEnvironment(createRuntime, {
+    const createRuntime = await loadMutantModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(bindingNotLast, "daemon-compose.ts");
+    const captured = await captureSpawnEnvironment(createRuntime.createDaemonCommandRuntime, {
       forwardedBinding: "/forwarded/other",
     });
     expect(bindingNotLast.violates(captured.environment, captured.binding)).toBe(true);
-    // The named assertion's own oracle: the binding is not the last own key.
     const keys = Object.keys(captured.environment);
     expect(keys[keys.length - 1]).not.toBe(captured.binding);
   });
 
   test("spawn-without-forwarded-env: PATH and the home are dropped from the spawn", async () => {
-    const createRuntime = await loadMutatedRuntime(spawnWithoutForwardedEnv);
-    const captured = await captureSpawnEnvironment(createRuntime, {});
+    const createRuntime = await loadMutantModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(spawnWithoutForwardedEnv, "daemon-compose.ts");
+    const captured = await captureSpawnEnvironment(createRuntime.createDaemonCommandRuntime, {});
     expect(spawnWithoutForwardedEnv.violates(captured.environment)).toBe(true);
     expect(Object.keys(captured.environment)).toEqual([captured.binding]);
   });
 
   test("spawn-with-full-env: an ambient key leaks into the captured environment", async () => {
-    const createRuntime = await loadMutatedRuntime(spawnWithFullEnv);
-    const captured = await captureSpawnEnvironment(createRuntime, {});
+    const createRuntime = await loadMutantModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(spawnWithFullEnv, "daemon-compose.ts");
+    const captured = await captureSpawnEnvironment(createRuntime.createDaemonCommandRuntime, {});
     expect(spawnWithFullEnv.violates(captured.environment, captured.binding)).toBe(true);
   });
 
-  test("literal-socket: a hardcoded socket name trips the named scan", () => {
-    const source = readRepoFile("packages/cli/src/production.ts");
-    expect(literalSocket.violates(source)).toBe(false);
-    const mutated = literalSocket.apply(source);
-    expect(mutated).not.toBe(source);
-    expect(literalSocket.violates(mutated)).toBe(true);
-  });
-
   test("every Phase-2 mutant names a real suite and assertion", () => {
-    for (const mutant of [
-      bindingNotLast,
-      spawnWithoutForwardedEnv,
-      spawnWithFullEnv,
-      literalSocket,
-    ]) {
+    for (const mutant of [bindingNotLast, spawnWithoutForwardedEnv, spawnWithFullEnv]) {
       expect(mutant.suite.endsWith(".test.ts")).toBe(true);
       expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
       expect(mutant.assertion.length).toBeGreaterThan(0);
@@ -270,51 +409,87 @@ describe("GH-286 daemon-mount mutation controls", () => {
   });
 });
 
+/* ----------------------- Phase-3 install-identity controls ---------------- */
+
 describe("GH-286 install-identity mutation controls", () => {
-  const readRepoFile = (relative: string): string =>
-    readFileSync(join(process.cwd(), relative), "utf8");
-
-  const loadMutatedModule = async <T>(
-    mutant: { readonly name: string; readonly apply: (source: string) => string },
-    target: string,
-    file: string,
-  ): Promise<T> => {
-    const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", mutant.name);
-    mkdirSync(directory, { recursive: true });
-    const path = join(directory, file);
-    writeFileSync(path, mutant.apply(readRepoFile(target)));
-    return (await import(`${path}?mutant=${Date.now()}`)) as T;
-  };
-
-  test("bare-execstart: a bare binary name is not an absolute executable", () => {
-    const source = readRepoFile(bareExecstart.target);
-    expect(bareExecstart.violates("example-product")).toBe(true);
-    expect(bareExecstart.violates("/usr/local/bin/example-product")).toBe(false);
-    const mutated = bareExecstart.apply(source);
-    expect(mutated).toContain("binary: brand.binaryName");
-    expect(mutated).not.toBe(source);
+  test("bare-execstart: the mutated composition installs a bare binary name", async () => {
+    const module = await loadMutantModule<{
+      createProductionComposer: typeof createProductionComposer;
+    }>(bareExecstart, "production.ts");
+    const recordingSupervisor = () => {
+      const requests: { readonly binary: string }[] = [];
+      const descriptor = {
+        kind: "systemd-user" as const,
+        installed: true,
+        unit: "example-product-daemon.service",
+        scope: "scope",
+        linger: true,
+        commandForm: "foreground" as const,
+        serviceType: "simple" as const,
+        restartPolicy: "on-failure" as const,
+      };
+      const port: SupervisorPort = {
+        kind: "systemd-user",
+        platform: "linux",
+        inspect: () => ({
+          supported: true,
+          descriptor: { ...descriptor, installed: false },
+        }),
+        install: (request) => {
+          requests.push({ binary: request.binary });
+          return { ok: true, descriptor };
+        },
+        uninstall: () => ({ removed: false }),
+      };
+      return { port, requests };
+    };
+    const installedBinary = async (createComposer: typeof createProductionComposer) => {
+      const harness = createMountHarness({ label: "mutant-bare-execstart" });
+      try {
+        const recorder = recordingSupervisor();
+        const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+        const program = productionProgram(createComposer, harness, {
+          daemonEntry: entry,
+          supervisor: recorder.port,
+        });
+        const result = await program.commands.daemon?.handler({
+          positionals: ["install"],
+          flags: {},
+          global: {},
+        } as never);
+        expect(result !== undefined && "data" in result).toBe(true);
+        return recorder.requests[0]?.binary;
+      } finally {
+        harness.dispose();
+      }
+    };
+    const deliveredBinary = await installedBinary(createProductionComposer);
+    expect(deliveredBinary?.startsWith("/")).toBe(true);
+    const mutatedBinary = await installedBinary(module.createProductionComposer);
+    expect(mutatedBinary?.startsWith("/")).toBe(false);
+    expect(mutatedBinary).toBe("example-product");
   });
 
-  test("unit-under-state-dir: the configuration root is never the state directory", () => {
+  test("unit-under-state-dir: the mutated source uses the state directory as the root", () => {
     const source = readRepoFile(unitUnderStateDir.target);
+    expect(unitUnderStateDir.violates(source)).toBe(false);
     const mutated = unitUnderStateDir.apply(source);
-    expect(unitUnderStateDir.violates("<root>/state", "<root>/state")).toBe(true);
-    expect(unitUnderStateDir.violates("<home>/.config", "<root>/state")).toBe(false);
-    expect(mutated).toContain("supervisorConfigDirectory: directory");
+    expect(mutated).toContain("supervisorConfigDirectory: directory,");
+    expect(unitUnderStateDir.violates(mutated)).toBe(true);
   });
 
-  test("xdg-relative-joined: a relative value must not become the root", () => {
+  test("xdg-relative-joined: the mutated source accepts a relative root", () => {
     const source = readRepoFile(xdgRelativeJoined.target);
+    expect(xdgRelativeJoined.violates(source)).toBe(false);
     const mutated = xdgRelativeJoined.apply(source);
-    expect(xdgRelativeJoined.violates("relative/config", "relative/config")).toBe(true);
-    expect(xdgRelativeJoined.violates("<home>/.config", "relative/config")).toBe(false);
     expect(mutated).not.toContain('configured.startsWith("/")');
+    expect(xdgRelativeJoined.violates(mutated)).toBe(true);
   });
 
   test("install-empty-executable: the mutated handler renders a unit with no executable", async () => {
-    const module = await loadMutatedModule<{
+    const module = await loadMutantModule<{
       createDaemonCommandRuntime: typeof realRuntime;
-    }>(installEmptyExecutable, installEmptyExecutable.target, "daemon-compose.ts");
+    }>(installEmptyExecutable, "daemon-compose.ts");
     const harness = createMountHarness({ label: "mutant-empty-exec" });
     try {
       const requests: { binary: string }[] = [];
@@ -372,9 +547,9 @@ describe("GH-286 install-identity mutation controls", () => {
   });
 
   test("uninstall-broad-delete: the mutated adapter removes an unowned installation", async () => {
-    const module = await loadMutatedModule<{
+    const module = await loadMutantModule<{
       createSupervisorAdapter: typeof createSupervisorAdapter;
-    }>(uninstallBroadDelete, uninstallBroadDelete.target, "supervisor.ts");
+    }>(uninstallBroadDelete, "supervisor.ts");
     const memory = createMemorySupervisor();
     const adapter = module.createSupervisorAdapter({
       platform: "linux",
@@ -434,49 +609,13 @@ describe("GH-286 install-identity mutation controls", () => {
   });
 });
 
+/* --------------------- Phase-4 lifetime and stop-safety ------------------- */
+
 describe("GH-286 lifetime and stop-safety mutation controls", () => {
-  const readRepoFile = (relative: string): string =>
-    readFileSync(join(process.cwd(), relative), "utf8");
-
-  const loadMutatedModule = async <T>(
-    mutant: { readonly name: string; readonly apply: (source: string) => string },
-    target: string,
-    file: string,
-  ): Promise<T> => {
-    const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", mutant.name);
-    mkdirSync(directory, { recursive: true });
-    const path = join(directory, file);
-    writeFileSync(path, mutant.apply(readRepoFile(target)));
-    return (await import(`${path}?mutant=${Date.now()}`)) as T;
-  };
-
-  const stopWith = async (
-    createRuntime: typeof realRuntime,
-    pid: number,
-  ): Promise<{ readonly signals: number[]; readonly code?: string }> => {
-    const harness = createMountHarness({ label: "mutant-stop" });
-    try {
-      appendInstance(harness.store, { pid, scope: scopeOf(harness.stateDirectory) });
-      const runtime = createRuntime(mountComposition(harness));
-      const definition = createDaemonCommandDefinition(runtime);
-      const result = (await definition.handler({
-        positionals: ["stop"],
-        flags: { "--mode": "drain" },
-        global: {},
-      } as never)) as { error?: { code?: string } };
-      return {
-        signals: harness.processPort.signals.map((call) => call.pid),
-        ...(result.error?.code === undefined ? {} : { code: result.error.code }),
-      };
-    } finally {
-      harness.dispose();
-    }
-  };
-
   test("signal-without-pid-check: a zero pid is signalled", async () => {
-    const module = await loadMutatedModule<{
+    const module = await loadMutantModule<{
       createDaemonCommandRuntime: typeof realRuntime;
-    }>(signalWithoutPidCheck, signalWithoutPidCheck.target, "daemon-compose.ts");
+    }>(signalWithoutPidCheck, "daemon-compose.ts");
     const delivered = await stopWith(realRuntime, 0);
     expect(delivered.signals).toHaveLength(0);
     expect(delivered.code).toBe("daemon.state-recovery-failed");
@@ -486,77 +625,93 @@ describe("GH-286 lifetime and stop-safety mutation controls", () => {
   });
 
   test("signal-negative-pid: the negated group pid is addressed", async () => {
-    const module = await loadMutatedModule<{
+    const module = await loadMutantModule<{
       createDaemonCommandRuntime: typeof realRuntime;
-    }>(signalNegativePid, signalNegativePid.target, "daemon-compose.ts");
+    }>(signalNegativePid, "daemon-compose.ts");
     const mutated = await stopWith(module.createDaemonCommandRuntime, 4321);
     expect(signalNegativePid.violates(mutated.signals)).toBe(true);
     expect(mutated.signals).toEqual([-4321]);
   });
 
-  test("duplicate-terminal-record: a second signal starts a second stop", async () => {
-    const module = await loadMutatedModule<{
+  test("duplicate-terminal-record: a second signal appends a second executed record", async () => {
+    const module = await loadMutantModule<{
       createDaemonCommandRuntime: typeof realRuntime;
-    }>(duplicateTerminalRecord, duplicateTerminalRecord.target, "daemon-compose.ts");
-    const harness = createMountHarness({ label: "mutant-double-signal" });
-    try {
-      const clock = createMountClock({ manual: true, sleepAdvances: true });
-      const listeners = new Map<string, Set<() => void>>();
-      const host = {
-        once: (event: "SIGINT" | "SIGTERM", listener: () => void) => {
-          const set = listeners.get(event) ?? new Set();
-          set.add(listener);
-          listeners.set(event, set);
-        },
-        removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => {
-          listeners.get(event)?.delete(listener);
-        },
-      };
-      const runtime = module.createDaemonCommandRuntime(
-        mountComposition(harness, { clock, signalHost: host }),
-      );
-      const definition = createDaemonCommandDefinition(runtime);
-      const command = definition.handler({
-        positionals: ["start"],
-        flags: { "--foreground": true },
-        global: {},
-      } as never);
-      for (let index = 0; index < 3; index += 1) await Promise.resolve();
-      for (const listener of [...(listeners.get("SIGTERM") ?? [])]) listener();
-      for (const listener of [...(listeners.get("SIGTERM") ?? [])]) listener();
-      for (let index = 0; index < 3; index += 1) await Promise.resolve();
-      clock.releaseAll();
-      await command;
-      const instances = readDaemonInstance(harness.store);
-      const terminal =
-        instances.ok && instances.latest !== undefined
-          ? harness.store.readRecords().ok
-            ? 1
-            : 1
-          : 0;
-      // The mutant starts a second stop; the delivered path guarantees one, so
-      // the assertion is the stop-call count the named suite also asserts.
-      expect(duplicateTerminalRecord.violates(2)).toBe(true);
-      expect(duplicateTerminalRecord.violates(1)).toBe(false);
-      expect(terminal).toBe(1);
-    } finally {
-      harness.dispose();
-    }
+    }>(duplicateTerminalRecord, "daemon-compose.ts");
+    const delivered = await countTerminalRecords(realRuntime);
+    const mutated = await countTerminalRecords(module.createDaemonCommandRuntime);
+    // The named suite's count: exactly one terminal record per invocation.
+    expect(delivered).toBe(1);
+    expect(mutated).toBe(2);
+    expect(duplicateTerminalRecord.violates(mutated)).toBe(true);
+    expect(duplicateTerminalRecord.violates(delivered)).toBe(false);
   });
 
-  test("release-skip-cancellation: the loop is not awaited", () => {
-    const source = readRepoFile(releaseSkipCancellation.target);
-    expect(releaseSkipCancellation.violates(source)).toBe(false);
-    const mutated = releaseSkipCancellation.apply(source);
-    expect(releaseSkipCancellation.violates(mutated)).toBe(true);
+  test("release-skip-cancellation: the command returns without awaiting the loop", async () => {
+    const module = await loadMutantModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(releaseSkipCancellation, "daemon-compose.ts");
+    const returnsBeforeTheLoopSettles = async (createRuntime: typeof realRuntime) => {
+      const harness = createMountHarness({ label: "mutant-no-wait" });
+      try {
+        const clock = createMountClock({ manual: true, sleepAdvances: true });
+        const host = createHost();
+        const runtime = createRuntime(mountComposition(harness, { clock, signalHost: host.host }));
+        const definition = createDaemonCommandDefinition(runtime);
+        const command = definition.handler({
+          positionals: ["start"],
+          flags: { "--foreground": true },
+          global: {},
+        } as never);
+        for (let index = 0; index < 3; index += 1) await Promise.resolve();
+        host.deliver("SIGTERM");
+        for (let index = 0; index < 3; index += 1) await Promise.resolve();
+        // The loop's own sleep is still pending: a delivered command must not
+        // return before it is released.
+        const outcome = await Promise.race([
+          command.then(() => "returned" as const),
+          new Promise<"pending">((resolve) => setTimeout(() => resolve("pending"), 5)),
+        ]);
+        clock.releaseAll();
+        await command;
+        return outcome;
+      } finally {
+        harness.dispose();
+      }
+    };
+    expect(await returnsBeforeTheLoopSettles(realRuntime)).toBe("pending");
+    expect(await returnsBeforeTheLoopSettles(module.createDaemonCommandRuntime)).toBe("returned");
   });
 
-  test("holder-not-removed: a listener outlives the invocation", () => {
-    const source = readRepoFile(holderNotRemoved.target);
-    expect(holderNotRemoved.violates(0)).toBe(false);
-    const mutated = holderNotRemoved.apply(source);
-    expect(mutated).not.toContain('host.removeListener("SIGTERM"');
+  test("holder-not-removed: a listener outlives the invocation", async () => {
+    const module = await loadMutantModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(holderNotRemoved, "daemon-compose.ts");
+    const registeredAfter = async (createRuntime: typeof realRuntime) => {
+      const harness = createMountHarness({ label: "mutant-holder" });
+      try {
+        const clock = createMountClock({ manual: true, sleepAdvances: true });
+        const host = createHost();
+        const runtime = createRuntime(mountComposition(harness, { clock, signalHost: host.host }));
+        const definition = createDaemonCommandDefinition(runtime);
+        const command = definition.handler({
+          positionals: ["start"],
+          flags: { "--foreground": true },
+          global: {},
+        } as never);
+        for (let index = 0; index < 3; index += 1) await Promise.resolve();
+        host.deliver("SIGINT");
+        for (let index = 0; index < 3; index += 1) await Promise.resolve();
+        clock.releaseAll();
+        await command;
+        return host.registered();
+      } finally {
+        harness.dispose();
+      }
+    };
+    expect(await registeredAfter(realRuntime)).toBe(0);
+    expect(await registeredAfter(module.createDaemonCommandRuntime)).toBe(1);
     expect(holderNotRemoved.violates(1)).toBe(true);
+    expect(holderNotRemoved.violates(0)).toBe(false);
   });
 
   test("every Phase-4 mutant names a real suite and assertion", () => {
@@ -574,56 +729,114 @@ describe("GH-286 lifetime and stop-safety mutation controls", () => {
   });
 });
 
+/* ------------------------- Phase-5 degradation controls ------------------- */
+
 describe("GH-286 degradation mutation controls", () => {
-  const readRepoFile = (relative: string): string =>
-    readFileSync(join(process.cwd(), relative), "utf8");
+  const seededStore = (
+    harness: ReturnType<typeof createMountHarness>,
+    shape: "absent-heartbeat" | "foreign-heartbeat" | "fresh",
+  ) => {
+    appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
+    if (shape === "fresh") {
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: new Date(Date.now()).toISOString(),
+      });
+    }
+    if (shape === "foreign-heartbeat") {
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-other",
+        beatAt: new Date(Date.now()).toISOString(),
+      });
+    }
+    return openMountStore(harness.stateDirectory);
+  };
 
-  test("fabricated-reachability: a missing heartbeat is claimed reachable", () => {
-    const source = readRepoFile(fabricatedReachability.target);
-    expect(
-      fabricatedReachability.violates(
-        fabricatedReachability.evaluate({
-          instance: { operation: "released", instanceId: "a" },
-          heartbeat: undefined,
-          nowMs: 0,
-          stalenessMs: 30_000,
-        }),
-      ),
-    ).toBe(false);
-    const markers = fabricatedReachability.evaluate({
-      instance: { operation: "acquired", instanceId: "a" },
-      heartbeat: undefined,
-      nowMs: 0,
-      stalenessMs: 30_000,
-    });
-    expect(fabricatedReachability.violates(markers)).toBe(true);
-    expect(fabricatedReachability.apply(source)).not.toBe(source);
+  const reachableFor = (
+    predicate: typeof daemonReachable,
+    store: ReturnType<typeof openMountStore>,
+    nowMs: number,
+    lockStalenessMs: number,
+  ): boolean => predicate({ store, nowMs, lockStalenessMs });
+
+  test("fabricated-reachability: an absent heartbeat becomes reachable", async () => {
+    const module = await loadMutantModule<{ daemonReachable: typeof daemonReachable }>(
+      fabricatedReachability,
+      "production.ts",
+    );
+    const harness = createMountHarness({ label: "mutant-fabricated" });
+    try {
+      const store = seededStore(harness, "absent-heartbeat");
+      expect(reachableFor(daemonReachable, store, Date.now(), 30_000)).toBe(false);
+      expect(reachableFor(module.daemonReachable, store, Date.now(), 30_000)).toBe(true);
+      expect(fabricatedReachability.violates(readRepoFile(fabricatedReachability.target))).toBe(
+        false,
+      );
+      expect(
+        fabricatedReachability.violates(
+          fabricatedReachability.apply(readRepoFile(fabricatedReachability.target)),
+        ),
+      ).toBe(true);
+    } finally {
+      harness.dispose();
+    }
   });
 
-  test("stale-inclusive: the at-bound age becomes reachable", () => {
-    const source = readRepoFile(staleInclusive.target);
-    // The mutant treats the at-bound cell as reachable (the delivered rule and
-    // the fold both call it stale).
-    expect(staleInclusive.evaluate(30_000, 30_000)).toEqual([]);
-    expect(staleInclusive.violates(staleInclusive.evaluate(30_000, 30_000))).toBe(true);
-    // The just-below control is reachable under both rules, so the mutation is
-    // about the boundary and not about freshness in general.
-    expect(staleInclusive.evaluate(29_999, 30_000)).toEqual([]);
-    const mutated = staleInclusive.apply(source);
-    expect(mutated).toContain("ageMs <= daemonConfiguration.settings.lockStalenessMs");
+  test("stale-inclusive: the at-bound age becomes reachable", async () => {
+    const module = await loadMutantModule<{ daemonReachable: typeof daemonReachable }>(
+      staleInclusive,
+      "production.ts",
+    );
+    const harness = createMountHarness({ label: "mutant-stale" });
+    try {
+      const store = seededStore(harness, "fresh");
+      const heartbeat = readDaemonHeartbeat(store);
+      const beatMs = heartbeat.ok ? Date.parse(heartbeat.latest?.beatAt as string) : 0;
+      const nowMs = beatMs + 30_000;
+      // Exactly at the bound: the delivered rule is strictly below.
+      expect(reachableFor(daemonReachable, store, nowMs, 30_000)).toBe(false);
+      expect(reachableFor(module.daemonReachable, store, nowMs, 30_000)).toBe(true);
+      // Just below the bound both rules agree, so the mutation is the boundary.
+      expect(reachableFor(daemonReachable, store, beatMs + 29_999, 30_000)).toBe(true);
+      expect(reachableFor(module.daemonReachable, store, beatMs + 29_999, 30_000)).toBe(true);
+    } finally {
+      harness.dispose();
+    }
   });
 
-  test("owner-ignored: an unowned beat is claimed reachable", () => {
-    const source = readRepoFile(ownerIgnored.target);
-    const markers = ownerIgnored.evaluate({
-      instance: { operation: "acquired", instanceId: "instance-a" },
-      heartbeat: { beatAt: new Date(0).toISOString() },
-      nowMs: 1_000,
-      stalenessMs: 30_000,
-    });
-    expect(ownerIgnored.violates(markers)).toBe(true);
-    const mutated = ownerIgnored.apply(source);
-    expect(mutated).not.toContain("heartbeat.latest.instanceId !== latest.instanceId");
+  test("owner-ignored: an unowned beat is claimed reachable", async () => {
+    const module = await loadMutantModule<{ daemonReachable: typeof daemonReachable }>(
+      ownerIgnored,
+      "production.ts",
+    );
+    const harness = createMountHarness({ label: "mutant-owner" });
+    try {
+      const store = seededStore(harness, "foreign-heartbeat");
+      expect(reachableFor(daemonReachable, store, Date.now(), 30_000)).toBe(false);
+      expect(reachableFor(module.daemonReachable, store, Date.now(), 30_000)).toBe(true);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("hardcoded-degradation: a constant marker replaces the durable resolver", async () => {
+    const module = await loadMutantModule<{
+      createProductionComposer: typeof createProductionComposer;
+    }>(hardcodedDegradation, "production.ts");
+    const harness = createMountHarness({ label: "mutant-hardcoded" });
+    try {
+      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: new Date(Date.now()).toISOString(),
+      });
+      expect(await queueDegraded(productionProgram(createProductionComposer, harness))).toEqual([]);
+      expect(
+        await queueDegraded(productionProgram(module.createProductionComposer, harness)),
+      ).toEqual(["daemon-unreachable"]);
+    } finally {
+      harness.dispose();
+    }
   });
 
   test("every Phase-5 mutant names a real suite and assertion", () => {
@@ -635,26 +848,125 @@ describe("GH-286 degradation mutation controls", () => {
   });
 });
 
-describe("GH-286 mount mutation controls", () => {
-  const readRepoFile = (relative: string): string =>
-    readFileSync(join(process.cwd(), relative), "utf8");
+/* --------------------------- Phase-6 mount controls ----------------------- */
 
-  test("conditional-registration: the family becomes optional and the mount claim fails", () => {
-    const source = readRepoFile(conditionalRegistration.target);
-    expect(conditionalRegistration.violates(source)).toBe(false);
-    const mutated = conditionalRegistration.apply(source);
-    expect(mutated).not.toBe(source);
-    expect(conditionalRegistration.violates(mutated)).toBe(true);
-    expect(mutated).toContain("facts.daemonEntry === undefined ? {} : { daemon: daemonRuntime }");
+describe("GH-286 mount mutation controls", () => {
+  test("conditional-registration: the family becomes optional and selection is contained", async () => {
+    const module = await loadMutantModule<{
+      createProductionComposer: typeof createProductionComposer;
+    }>(conditionalRegistration, "production.ts");
+    const harness = createMountHarness({ label: "mutant-conditional" });
+    try {
+      const delivered = productionProgram(createProductionComposer, harness);
+      expect(delivered.commands.daemon).toBeDefined();
+      const mutated = productionProgram(module.createProductionComposer, harness);
+      expect(mutated.commands.daemon).toBeUndefined();
+      expect(() => selectPromptRequiredProgram(mutated)).toThrow();
+      expect(conditionalRegistration.violates(readRepoFile(conditionalRegistration.target))).toBe(
+        false,
+      );
+      expect(
+        conditionalRegistration.violates(
+          conditionalRegistration.apply(readRepoFile(conditionalRegistration.target)),
+        ),
+      ).toBe(true);
+    } finally {
+      harness.dispose();
+    }
   });
 
-  test("help-composer-invoked: a composing help/version surface is caught", () => {
-    const source = readRepoFile(helpComposerInvoked.target);
-    expect(helpComposerInvoked.violates(0)).toBe(false);
-    expect(helpComposerInvoked.violates(1)).toBe(true);
-    const mutated = helpComposerInvoked.apply(source);
+  test("literal-socket: the mutated source re-derives a literal socket name", () => {
+    const source = readRepoFile(literalSocket.target);
+    // The delivered composition carries no literal socket name or interval.
+    expect(source).not.toContain("daemon.sock");
+    expect(source).not.toContain("5_000");
+    const mutated = literalSocket.apply(source);
     expect(mutated).not.toBe(source);
-    expect(mutated).toContain("unreachableVersionText");
+    expect(mutated).toContain("daemon.sock");
+    expect(literalSocket.violates(mutated)).toBe(true);
+  });
+
+  test("captured-degradation: a marker captured at composition never flips", async () => {
+    const module = await loadMutantModule<{
+      createQueueCommandRuntime: typeof import("../../packages/cli/src/edge").createQueueCommandRuntime;
+    }>(capturedDegradation, "edge.ts");
+    const { createQueueCommandRuntime: realQueueRuntime } = await import(
+      "../../packages/cli/src/edge"
+    );
+    const harness = createMountHarness({ label: "mutant-captured" });
+    try {
+      const resolver = () =>
+        daemonReachable({
+          store: harness.store,
+          nowMs: Date.now(),
+          lockStalenessMs: 30_000,
+        })
+          ? []
+          : (["daemon-unreachable"] as const);
+      const composition = () => ({
+        store: harness.store,
+        facts: {
+          plans: {},
+          workItems: {},
+          ci: {},
+          provider: { state: "unavailable" as const, reason: "not-configured" as const },
+          close: {},
+          deploy: { expectations: {}, verdicts: {} },
+        },
+        nowIso: () => new Date().toISOString(),
+        nowMs: Date.now,
+        newFenceToken: () => "fence",
+        degraded: resolver,
+      });
+      const delivered = realQueueRuntime(composition() as never);
+      const mutated = module.createQueueCommandRuntime(composition() as never);
+      expect(delivered.readSchedule(20).ok && delivered.readSchedule(20).degraded).toEqual([
+        "daemon-unreachable",
+      ]);
+      expect(mutated.readSchedule(20).ok && mutated.readSchedule(20).degraded).toEqual([
+        "daemon-unreachable",
+      ]);
+      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: new Date(Date.now()).toISOString(),
+      });
+      const afterDelivered = delivered.readSchedule(20);
+      const afterMutated = mutated.readSchedule(20);
+      expect(afterDelivered.ok && afterDelivered.degraded).toEqual([]);
+      // The mutant captured the composition-time verdict and never flips.
+      expect(afterMutated.ok && afterMutated.degraded).toEqual(["daemon-unreachable"]);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("help-composer-invoked: the mutated version path consults the composer", async () => {
+    const module = await loadMutantModule<{ runEntrypoint: typeof runEntrypoint }>(
+      helpComposerInvoked,
+      "entrypoint.ts",
+    );
+    const versionCalls = async (run: typeof runEntrypoint): Promise<number> => {
+      const stdout = bufferSink();
+      const stderr = bufferSink();
+      let calls = 0;
+      const exitCode = await run(["--version"], {
+        streams: { stdout, stderr },
+        environment: {},
+        configuredWorkingName: SYNTHETIC_BRAND.binaryName,
+        composeProgram: () => {
+          calls += 1;
+          return { commands: {}, flags: [], requiresValue: [] } as never;
+        },
+      });
+      expect(exitCode).toBe(0);
+      return calls;
+    };
+    expect(await versionCalls(runEntrypoint)).toBe(0);
+    const mutatedCalls = await versionCalls(module.runEntrypoint);
+    expect(mutatedCalls).toBe(1);
+    expect(helpComposerInvoked.violates(mutatedCalls)).toBe(true);
+    expect(helpComposerInvoked.violates(0)).toBe(false);
   });
 
   test("the mutant inventory is exactly the twenty-one declared modules", () => {

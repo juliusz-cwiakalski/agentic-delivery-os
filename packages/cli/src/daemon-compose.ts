@@ -22,7 +22,6 @@ import {
   detectDaemonEffects,
   encodeControlFrame,
   evaluateRestartBudget,
-  installSupervisor,
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
@@ -210,6 +209,39 @@ const byteLength = (text: string): number => new TextEncoder().encode(text).leng
 /** A composing pid is forwarded only when it is a positive integer. */
 const positivePid = (pid: number | undefined): number | undefined =>
   pid !== undefined && Number.isInteger(pid) && pid > 0 ? pid : undefined;
+
+/** The two instance operations that acquire the single-instance lock. */
+const isAcquisition = (record: DaemonInstanceRecord): boolean =>
+  record.operation === "acquired" || record.operation === "taken-over";
+
+/**
+ * Is the latest instance record a live acquisition? The record's own operation
+ * must be an acquisition, its heartbeat must belong to it, and the age must be
+ * strictly below the composed lock-staleness bound — the same rule `status`,
+ * `queue`, and `lanes` apply. An absent, unreadable, foreign-owned, or stale
+ * heartbeat is not live.
+ */
+const liveAcquisition = (
+  instance: DaemonInstanceRecord,
+  heartbeat: ReturnType<typeof readDaemonHeartbeat>,
+  nowMs: number,
+  lockStalenessMs: number,
+): boolean => {
+  if (!isAcquisition(instance)) return false;
+  if (!heartbeat.ok || heartbeat.latest === undefined) return false;
+  if (heartbeat.latest.instanceId !== instance.instanceId) return false;
+  return nowMs - Date.parse(heartbeat.latest.beatAt) < lockStalenessMs;
+};
+
+/** A record accepted as this spawn's readiness: a new acquisition at or after the spawn. */
+const isOwnAcquisition = (
+  record: DaemonInstanceRecord | undefined,
+  previousInstanceId: string | undefined,
+  spawnMs: number,
+): boolean => {
+  if (record === undefined || !isAcquisition(record)) return false;
+  return record.instanceId !== previousInstanceId || Date.parse(record.recordedAt) >= spawnMs;
+};
 
 /** Sort object keys recursively so equal content serializes identically. */
 const canonicalValue = (value: unknown): unknown => {
@@ -698,22 +730,47 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
                 ...composition.reentryEnvironment,
                 [composition.environmentName]: composition.stateDirectory,
               };
+        // Read the durable record set BEFORE spawning, so the readiness poll can
+        // only accept an acquisition this spawn produced. A live pre-spawn
+        // acquisition is refused as `daemon.already-running` with nothing
+        // spawned; a stale one is left for the child's takeover to replace.
+        const beforeSpawn = readDaemonInstance(composition.store);
+        const previous = beforeSpawn.ok ? beforeSpawn.latest : undefined;
+        if (
+          previous !== undefined &&
+          liveAcquisition(
+            previous,
+            readDaemonHeartbeat(composition.store),
+            clock.nowMs(),
+            composition.settings.lockStalenessMs,
+          )
+        ) {
+          return failure(
+            "daemon.already-running",
+            `instance=${previous.instanceId} pid=${previous.pid} acquired_at=${previous.acquiredAt}`,
+          );
+        }
+        const spawnMs = clock.nowMs();
         const spawned = processPort.spawnDetached({
           entry: composition.daemonEntry,
           args: ["daemon", "start", "--foreground"],
           environment: spawnEnvironment,
         });
         if (spawned.pid === undefined) return failure("daemon.state-recovery-failed");
+        const previousInstanceId = previous?.instanceId;
         for (let attempt = 0; attempt < 20; attempt += 1) {
           await clock.sleep(50, { cancelled: () => false });
           const instance = readDaemonInstance(composition.store);
-          if (instance.ok && instance.latest?.operation === "acquired") {
+          const accepted = instance.ok ? instance.latest : undefined;
+          if (accepted !== undefined && isOwnAcquisition(accepted, previousInstanceId, spawnMs)) {
             const state = runtime.state();
             if (state !== undefined) return { data: startData(state) };
             const heartbeat = readDaemonHeartbeat(composition.store);
             const reports = readDaemonStatus({
               store: composition.store,
               nowMs: clock.nowMs(),
+              heartbeatIntervalMs: composition.settings.heartbeatIntervalMs,
+              lockStalenessMs: composition.settings.lockStalenessMs,
               socket: socket(true),
               supervisor: supervisorDescriptor({
                 kind: supervisorKind,
@@ -732,7 +789,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
                   instance: { ...reports.data.instance, mode },
                   reconciliation: reports.data.reconciliation ?? {
                     schema: "delivery.daemon.reconciliation.v1",
-                    instanceId: instance.latest.instanceId,
+                    instanceId: accepted.instanceId,
                     queue: { entries: 0, edges: 0, parks: 0 },
                     lanes: [],
                     duplicates: 0,
@@ -856,8 +913,9 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     loop: () => runtime.loop(),
     install: async () => {
       const supervisor = composedSupervisor();
-      // The delivered unsupported classification wins first: a platform with no
-      // adapter never reaches the entry-path guard.
+      // One inspection per install: the delivered unsupported classification
+      // wins first, and the same inspection is carried into the install call, so
+      // a platform with no adapter never reaches the entry-path guard.
       const inspection = supervisor.inspect();
       if (!inspection.supported) {
         return failure(
@@ -872,7 +930,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       if (composition.daemonEntry === undefined || composition.daemonEntry.length === 0) {
         return failure("daemon.state-recovery-failed", "entry-path-absent");
       }
-      const installed = installSupervisor(supervisor, {
+      const installed = supervisor.install({
         unit: composition.unit,
         scope,
         stateDirectory: composition.stateDirectory,
@@ -880,7 +938,11 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         environmentName: composition.environmentName,
         enableLinger: true,
       });
-      if (installed.ok) return { data: installed.data };
+      if (installed.ok) {
+        return {
+          data: { result: "installed", supervisor: installed.descriptor, degraded: [] },
+        };
+      }
       const summary = [installed.platform, installed.detail]
         .filter((part) => part !== undefined)
         .join(" ");

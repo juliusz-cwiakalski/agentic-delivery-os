@@ -107,8 +107,10 @@ describe("GH-286 composition and resolver hermeticity", () => {
 
   test("the degradation resolver connects nothing, probes nothing, and never sleeps", () => {
     const source = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
-    const start = source.indexOf("const daemonReachability");
-    const end = source.indexOf("const queueComposition");
+    // The rule's one home is the production predicate; the composer's marker
+    // folds that predicate without adding a read of its own.
+    const start = source.indexOf("export const daemonReachable");
+    const end = source.indexOf("const unavailableDaemonRuntime");
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const resolver = source.slice(start, end);
@@ -118,5 +120,7 @@ describe("GH-286 composition and resolver hermeticity", () => {
     // It reads exactly the two durable facts the rule names.
     expect(resolver.includes("readDaemonInstance")).toBe(true);
     expect(resolver.includes("readDaemonHeartbeat")).toBe(true);
+    // The composed marker is that same predicate, never a second rule.
+    expect(source).toMatch(/return daemonReachable\(\{/u);
   });
 });

@@ -1794,7 +1794,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderRootHelp",
   ],
   "cli/src/help/prompt-required-commands.ts": ["PROMPT_REQUIRED_COMMANDS"],
-  "cli/src/production.ts": ["createProductionComposer", "DECLARED_CREDENTIAL_REFERENCES"],
+  "cli/src/production.ts": [
+    "createProductionComposer",
+    "daemonReachable",
+    "DECLARED_CREDENTIAL_REFERENCES",
+  ],
   "cli/src/output/commit-text.ts": ["renderCommitHuman"],
   "cli/src/output/plan-text.ts": [
     "serializePlanDiffText",

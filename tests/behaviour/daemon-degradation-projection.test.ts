@@ -10,82 +10,26 @@
  */
 import { describe, expect, test } from "bun:test";
 import { appendFileSync } from "node:fs";
-import { createLanesCommandRuntime, createQueueCommandRuntime } from "../../packages/cli/src/edge";
-import { createProductionComposer } from "../../packages/cli/src/production";
+import { createQueueCommandRuntime } from "../../packages/cli/src/edge";
+import { createProductionComposer, daemonReachable } from "../../packages/cli/src/production";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
 import type { QueueDegradationReason } from "../../packages/core/src/contracts/index";
-import {
-  createMountHarness,
-  createMountRoot,
-  mountBrand,
-  mountSettings,
-  openMountStore,
-  removeMountRoot,
-} from "../fixtures/daemon/mount-harness";
-import {
-  appendHeartbeat,
-  appendInstance,
-  appendLane,
-  scopeOf,
-} from "../fixtures/daemon/mount-states";
+import { createMountHarness, openMountStore } from "../fixtures/daemon/mount-harness";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 
 const isFailure = (value: unknown): value is { error: { code: string } } =>
   typeof value === "object" && value !== null && "error" in value;
 
-/** The DM-4 rule, mirrored for the boundary cells a fixed bound cannot reach. */
+/**
+ * The DM-4 rule under an injected instant and bound: the production predicate,
+ * not a test-local mirror.
+ */
 const durableReachability = (input: {
   readonly store: ReturnType<typeof openMountStore>;
   readonly nowMs: number;
   readonly lockStalenessMs: number;
-}): readonly QueueDegradationReason[] => {
-  const instance = readDaemonInstance(input.store);
-  if (!instance.ok || instance.latest === undefined) return ["daemon-unreachable"];
-  const latest = instance.latest;
-  if (latest.operation !== "acquired" && latest.operation !== "taken-over") {
-    return ["daemon-unreachable"];
-  }
-  const heartbeat = readDaemonHeartbeat(input.store);
-  if (!heartbeat.ok || heartbeat.latest === undefined) return ["daemon-unreachable"];
-  if (heartbeat.latest.instanceId !== latest.instanceId) return ["daemon-unreachable"];
-  return input.nowMs - Date.parse(heartbeat.latest.beatAt) < input.lockStalenessMs
-    ? []
-    : ["daemon-unreachable"];
-};
-
-const productionRead = async (
-  harness: Parameters<typeof createMountHarness>[0],
-  arrange: (store: ReturnType<typeof openMountStore>) => void,
-  command: "queue" | "lanes",
-) => {
-  const fixture = createMountHarness(harness);
-  try {
-    arrange(fixture.store);
-    const brand = fixture.brand;
-    const program = createProductionComposer({
-      environment: {
-        HOME: fixture.home,
-        PATH: "/usr/bin",
-        // The daemon family reads the same store the queue reads.
-        [`${brand.environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`]:
-          fixture.stateDirectory,
-      },
-      cwd: fixture.root,
-      homeDirectory: fixture.home,
-      workingName: brand.binaryName,
-    })(brand);
-    const definition = program.commands[command];
-    if (definition === undefined) throw new Error(`${command} is not registered`);
-    const result = await definition.handler({
-      positionals: ["list"],
-      flags: {},
-      global: {},
-    } as never);
-    return { result, fixture };
-  } finally {
-    // Disposal happens by the caller when the fixture is returned.
-  }
-};
+}): readonly QueueDegradationReason[] => (daemonReachable(input) ? [] : ["daemon-unreachable"]);
 
 const NOW = (): number => Date.now();
 
@@ -240,9 +184,11 @@ describe("TC-DAEMON-073 stale, at-bound, and configuration-driven bounds", () =>
       expect(
         durableReachability({ store: harness.store, nowMs, lockStalenessMs: defaultBound }),
       ).toEqual(["daemon-unreachable"]);
+      const instanceRead = readDaemonInstance(harness.store);
+      const heartbeatRead = readDaemonHeartbeat(harness.store);
       const folded = foldDaemonLiveness({
-        instance: { ...(readDaemonInstance(harness.store) as never as { latest: never }).latest },
-        heartbeat: (readDaemonHeartbeat(harness.store) as { latest?: never }).latest,
+        instance: instanceRead.ok ? instanceRead.latest : undefined,
+        heartbeat: heartbeatRead.ok ? heartbeatRead.latest : undefined,
         nowMs,
         stalenessMs: defaultBound,
       });
@@ -505,12 +451,3 @@ describe("TC-DAEMON-112 an array-valued degraded stays byte-identical", () => {
     }
   });
 });
-
-// Keep the imported helpers referenced by the fixtures above.
-void createLanesCommandRuntime;
-void appendLane;
-void mountBrand;
-void mountSettings;
-void createMountRoot;
-void removeMountRoot;
-void productionRead;

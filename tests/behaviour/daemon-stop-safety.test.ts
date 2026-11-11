@@ -65,10 +65,6 @@ describe("TC-DAEMON-036 a second process drains the resident daemon", () => {
       expect(after).toEqual(before);
 
       // The resident's own release and lane detach, observed from a fresh handle.
-      const reader = createDaemonCommandRuntime(
-        mountComposition(harness, { store: openMountStore(harness.stateDirectory) }),
-      );
-      void reader;
       appendInstance(harness.store, {
         operation: "released",
         releaseReason: "drain",
@@ -108,8 +104,6 @@ describe("TC-DAEMON-091 a non-positive recorded pid refuses the stop", () => {
       for (const pid of invalidPids) {
         appendInstance(harness.store, { pid, scope: scopeOf(harness.stateDirectory) });
       }
-      const invocations = 0;
-      void invocations;
       const runtime = createDaemonCommandRuntime(mountComposition(harness));
       let calls = 0;
       for (const pid of invalidPids) {

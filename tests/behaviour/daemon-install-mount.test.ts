@@ -10,9 +10,12 @@
 import { describe, expect, test } from "bun:test";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
+import { projectExitCode } from "../../packages/cli/src/projection";
+import { createProductionComposer } from "../../packages/cli/src/production";
 import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import {
   DAEMON_SUPERVISOR_COMMAND_FORMS,
+  ERROR_TABLE,
   DAEMON_SUPERVISOR_RESTART_POLICIES,
   DAEMON_SUPERVISOR_SERVICE_TYPES,
   type DaemonSupervisorDescriptor,
@@ -25,6 +28,8 @@ import { readDaemonInstance } from "../../packages/core/src/app/index";
 import {
   createMemorySupervisor,
   createMountHarness,
+  createRecordingSupervisor,
+  listDirectory,
   mountComposition,
   mountSettings,
   stateDirectoryName,
@@ -74,7 +79,6 @@ const createInstallRecorder = (): InstallRecorder => {
     install: (request) => {
       requests.push(request);
       installed = true;
-      void describe(request.scope, request.unit, request.enableLinger);
       return {
         ok: true,
         descriptor: {
@@ -276,8 +280,11 @@ describe("TC-DAEMON-101 the configuration root", () => {
     const { join } = await import("node:path");
     const source = readFileSync(join(process.cwd(), "packages/cli/src/production.ts"), "utf8");
     expect(source).toContain("XDG_CONFIG_HOME");
-    expect(source).toContain("supervisorConfigDirectory: supervisorConfigDirectoryFor");
-    expect(source).toContain("/.config`");
+    expect(source).toContain("const supervisorConfigDirectory = supervisorConfigDirectoryFor(");
+    expect(source).toContain("`${input.homeDirectory}/.config`");
+    expect(source).toContain("supervisorConfigDirectory === undefined");
+    // Never the state directory and never a root-level fallback.
+    expect(source).not.toContain("supervisorConfigDirectory: directory");
   });
 });
 
@@ -538,5 +545,109 @@ describe("TC-DAEMON-124 idempotence and refusal", () => {
   });
 });
 
-// Keep the imported settings helper referenced for the identity assertions.
-void mountSettings;
+describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () => {
+  const exitFor = (code: string): number => {
+    const row = ERROR_TABLE.find((entry) => entry.code === code);
+    return row === undefined ? -1 : projectExitCode(row.projectionClass);
+  };
+
+  const installOver = async (options: {
+    readonly home: string;
+    readonly daemonEntry?: string;
+    readonly supervisor: SupervisorPort;
+  }) => {
+    const harness = createMountHarness({ label: "install-no-home" });
+    try {
+      const stateBinding = stateDirectoryName(harness.brand);
+      const program = createProductionComposer({
+        // No home: an absolute state-directory override is the only scope.
+        environment: {
+          PATH: "/usr/bin",
+          [stateBinding]: harness.stateDirectory,
+        },
+        cwd: harness.root,
+        homeDirectory: options.home,
+        workingName: harness.brand.binaryName,
+        supervisor: options.supervisor,
+        ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
+      })(harness.brand);
+      const before = listDirectory(harness.root);
+      const result = await program.commands.daemon?.handler({
+        positionals: ["install"],
+        flags: {},
+        global: {},
+      } as never);
+      const after = listDirectory(harness.root);
+      return { result, before, after, root: harness.root };
+    } finally {
+      harness.dispose();
+    }
+  };
+
+  test("install refuses config.value.invalid at exit 1, writes no unit or marker, and calls no supervisor", async () => {
+    const recorder = createRecordingSupervisor();
+    const run = await installOver({
+      home: "",
+      daemonEntry: "/abs/example-product",
+      supervisor: recorder.port,
+    });
+    expect(run.result !== undefined && "error" in run.result).toBe(true);
+    if (run.result !== undefined && "error" in run.result) {
+      expect(run.result.error.code).toBe("config.value.invalid");
+      expect(exitFor("config.value.invalid")).toBe(1);
+    }
+    expect(run.result !== undefined && "data" in run.result).toBe(false);
+    // No supervisor command at all: not even an inspection.
+    expect(recorder.counters.inspects).toBe(0);
+    expect(recorder.counters.writes).toBe(0);
+    expect(recorder.counters.enables).toBe(0);
+    expect(recorder.counters.lingers).toBe(0);
+    expect(recorder.counters.uninstalls).toBe(0);
+    // No configuration-root directory was created anywhere under the fixture.
+    expect(run.after).toEqual(run.before);
+  });
+
+  test("the configuration-root refusal precedes the missing-entry-path refusal", async () => {
+    const recorder = createRecordingSupervisor();
+    const run = await installOver({ home: "", supervisor: recorder.port });
+    expect(run.result !== undefined && "error" in run.result).toBe(true);
+    if (run.result !== undefined && "error" in run.result) {
+      // Not the entry-path refusal, which would be daemon.state-recovery-failed.
+      expect(run.result.error.code).toBe("config.value.invalid");
+      expect(run.result.error.code).not.toBe("daemon.state-recovery-failed");
+    }
+    expect(recorder.counters.inspects).toBe(0);
+  });
+
+  test("the control: with a home present the same composition reaches the entry-path guard", async () => {
+    const harness = createMountHarness({ label: "install-home-control" });
+    try {
+      const recorder = createRecordingSupervisor();
+      const program = createProductionComposer({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        workingName: harness.brand.binaryName,
+        supervisor: recorder.port,
+      })(harness.brand);
+      const result = await program.commands.daemon?.handler({
+        positionals: ["install"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(result !== undefined && "error" in result).toBe(true);
+      if (result !== undefined && "error" in result) {
+        expect(result.error.code).toBe("daemon.state-recovery-failed");
+      }
+      // The inspection happened, so the root was resolved; nothing was written.
+      expect(recorder.counters.inspects).toBe(1);
+      expect(recorder.counters.writes).toBe(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+});

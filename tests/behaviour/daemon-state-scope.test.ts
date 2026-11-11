@@ -173,13 +173,6 @@ describe("TC-DAEMON-051 the child resolves the same directory", () => {
         }),
       );
       const definition = createDaemonCommandDefinition(runtime);
-      harness.processPort.onSpawn(() => {
-        const instance = {
-          instanceId: "child-instance",
-          operation: "acquired" as const,
-        };
-        void instance;
-      });
       await call(definition, ["start"]);
       const spawn = harness.processPort.spawns[0];
       const environment = spawn?.environment ?? {};

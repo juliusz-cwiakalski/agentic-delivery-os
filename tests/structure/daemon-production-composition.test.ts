@@ -8,7 +8,7 @@
  * supersedes the selection half the handler-level gates deliberately omit.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PROMPT_REQUIRED_COMMANDS,
@@ -17,7 +17,12 @@ import {
 } from "../../packages/cli/src/entrypoint";
 import { createProductionComposer } from "../../packages/cli/src/production";
 import type { CommandProgram } from "../../packages/cli/src/index";
-import { createMountHarness, createRecordingSupervisor } from "../fixtures/daemon/mount-harness";
+import {
+  createMountHarness,
+  createRecordingSupervisor,
+  openMountStore,
+} from "../fixtures/daemon/mount-harness";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
 import { bufferSink } from "../golden/helpers";
 
@@ -285,14 +290,160 @@ describe("TC-DAEMON-015 selection and containment through the entrypoint", () =>
   });
 
   test("the conditional-registration mutant is caught by the composition claim", () => {
-    const source = Bun.file(join(process.cwd(), "packages/cli/src/production.ts"));
-    void source;
-    const text = require("node:fs").readFileSync(
-      join(process.cwd(), "packages/cli/src/production.ts"),
-      "utf8",
-    ) as string;
+    const text = readFileSync(join(process.cwd(), "packages/cli/src/production.ts"), "utf8");
     expect(conditionalRegistration.violates(text)).toBe(false);
     const mutated = conditionalRegistration.apply(text);
     expect(conditionalRegistration.violates(mutated)).toBe(true);
+  });
+});
+
+describe("TC-DAEMON-063/070 the production configuration-acquisition path", () => {
+  const writeUserConfig = (
+    harness: ReturnType<typeof createMountHarness>,
+    body: string,
+  ): string => {
+    const directory = join(harness.home, ".config", harness.brand.configDirectoryName);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "config.yaml"), body);
+    return directory;
+  };
+
+  const compose = (harness: ReturnType<typeof createMountHarness>) =>
+    createProductionComposer({
+      environment: {
+        HOME: harness.home,
+        PATH: "/usr/bin",
+        [`${harness.brand.environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`]:
+          harness.stateDirectory,
+      },
+      cwd: harness.root,
+      homeDirectory: harness.home,
+      workingName: harness.brand.binaryName,
+      daemonEntry: `${harness.root}/bin/${harness.brand.binaryName}`,
+    })(harness.brand);
+
+  const queueDegraded = async (program: ReturnType<typeof compose>) => {
+    const result = await program.commands.queue?.handler({
+      positionals: ["list"],
+      flags: {},
+      global: {},
+    } as never);
+    if (result === undefined || "error" in result) throw new Error("queue list did not answer");
+    return (result.data as { readonly degraded: readonly string[] }).degraded;
+  };
+
+  test("(a) a configured socket path, heartbeat interval, and lock staleness reach the runtime", async () => {
+    const harness = createMountHarness({ label: "prod-config-a" });
+    try {
+      const configuredSocket = `${harness.stateDirectory}/configured.sock`;
+      writeUserConfig(
+        harness,
+        [
+          "daemon:",
+          `  socket-path: ${configuredSocket}`,
+          "  heartbeat-interval: 1234",
+          "  lock-staleness: 60000",
+          "",
+        ].join("\n"),
+      );
+      // A 40 s old beat is inside the configured bound and outside the default.
+      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: new Date(Date.now() - 40_000).toISOString(),
+      });
+      const program = compose(harness);
+      const status = await program.commands.daemon?.handler({
+        positionals: ["status"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(status !== undefined && "data" in status).toBe(true);
+      if (status !== undefined && "data" in status) {
+        const data = status.data as {
+          socket: { path: string };
+          heartbeat: { intervalMs: number };
+        };
+        expect(data.socket.path).toBe(configuredSocket);
+        expect(data.heartbeat.intervalMs).toBe(1234);
+      }
+      // The configured staleness reaches the queue projection: the same 40 s
+      // beat would be `daemon-unreachable` under the shipped 30 s default.
+      expect(await queueDegraded(program)).toEqual([]);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("(b) an absent configuration resolves the shipped defaults, never a re-derived literal", async () => {
+    const harness = createMountHarness({ label: "prod-config-b" });
+    try {
+      const program = compose(harness);
+      const status = await program.commands.daemon?.handler({
+        positionals: ["status"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(status !== undefined && "data" in status).toBe(true);
+      if (status !== undefined && "data" in status) {
+        const data = status.data as {
+          socket: { path: string };
+          heartbeat: { intervalMs: number };
+        };
+        expect(data.socket.path).toBe(`${harness.stateDirectory}/daemon.sock`);
+        expect(data.heartbeat.intervalMs).toBe(5_000);
+      }
+      const source = readFileSync(join(process.cwd(), "packages/cli/src/production.ts"), "utf8");
+      expect(source).toContain("resolveDaemonSettings");
+      expect(source).not.toContain("daemon.sock");
+      expect(source).not.toContain("5_000");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("(c) an acquired invalid daemon branch composes the refusing runtime while queue and lanes degrade", async () => {
+    const harness = createMountHarness({ label: "prod-config-c" });
+    try {
+      writeUserConfig(harness, ["daemon:", "  heartbeat-interval: 1.5", ""].join("\n"));
+      const program = compose(harness);
+      for (const invocation of [
+        { positionals: ["start"], flags: {} },
+        { positionals: ["start"], flags: { "--foreground": true } },
+        { positionals: ["stop"], flags: {} },
+        { positionals: ["status"], flags: {} },
+        { positionals: ["install"], flags: {} },
+        { positionals: ["uninstall"], flags: {} },
+      ] as const) {
+        const result = await program.commands.daemon?.handler({
+          positionals: [...invocation.positionals],
+          flags: { ...invocation.flags },
+          global: {},
+        } as never);
+        expect(result !== undefined && "error" in result).toBe(true);
+        if (result !== undefined && "error" in result) {
+          expect(result.error.code).toBe("config.value.invalid");
+          expect(result.error.kind).toBe("config");
+        }
+      }
+      // No lock, transport, socket, entry path, or supervisor scope is composed.
+      expect(existsSync(`${harness.stateDirectory}/daemon.sock`)).toBe(false);
+      expect(existsSync(`${harness.stateDirectory}/daemon.lock`)).toBe(false);
+      // In that same cell the read side keeps reporting `daemon-unreachable`.
+      expect(await queueDegraded(program)).toEqual(["daemon-unreachable"]);
+      const lanes = await program.commands.lanes?.handler({
+        positionals: ["list"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(lanes !== undefined && "data" in lanes).toBe(true);
+      if (lanes !== undefined && "data" in lanes) {
+        expect((lanes.data as { degraded: readonly string[] }).degraded).toEqual([
+          "daemon-unreachable",
+        ]);
+      }
+    } finally {
+      harness.dispose();
+    }
   });
 });

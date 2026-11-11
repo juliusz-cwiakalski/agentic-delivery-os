@@ -9,7 +9,9 @@
 import { describe, expect, test } from "bun:test";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { resolveStateDirectoryScope } from "../../packages/core/src/config/index";
 import {
   createMountHarness,
@@ -138,6 +140,125 @@ describe("TC-DAEMON-031 readiness timeout", () => {
         expect((status.data as { live: boolean }).live).toBe(false);
         expect((status.data as { instance: unknown }).instance).toBeNull();
       }
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("TC-DAEMON-030 detached readiness is tied to this spawn", () => {
+  const exitFor = (code: string): number => {
+    const row = ERROR_TABLE.find((entry) => entry.code === code);
+    return row === undefined ? -1 : projectExitCode(row.projectionClass);
+  };
+
+  test("(a) a live pre-spawn acquisition refuses daemon.already-running with zero spawns", async () => {
+    const harness = createMountHarness({ label: "start-030-live" });
+    try {
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      appendInstance(harness.store, { pid: 111, scope: scopeOf(harness.stateDirectory) });
+      appendHeartbeat(harness.store, { instanceId: "instance-live" });
+      const before = readDaemonInstance(harness.store);
+      expect(before.ok).toBe(true);
+      if (!before.ok) return;
+
+      const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
+      const result = await invoke(runtime, ["start"]);
+      expect(isSuccess(result)).toBe(false);
+      if (isSuccess(result)) return;
+      const failure = result as { error: { code: string } };
+      expect(failure.error.code).toBe("daemon.already-running");
+      expect(exitFor("daemon.already-running")).toBe(1);
+      expect(harness.processPort.spawns).toHaveLength(0);
+      // The refusal precedes the poll: no sleep was taken.
+      expect(harness.clock.sleeps()).toHaveLength(0);
+      const after = readDaemonInstance(harness.store);
+      expect(after.ok).toBe(true);
+      if (after.ok) {
+        expect(after.records).toHaveLength(before.records.length);
+        expect(after.latest?.pid).toBe(111);
+      }
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("(b) a legitimate taken-over acquisition of a new instance is accepted", async () => {
+    const harness = createMountHarness({ label: "start-030-takeover" });
+    try {
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      // A crashed daemon left a stale acquisition behind; the child takes over.
+      appendInstance(harness.store, {
+        pid: 111,
+        scope: scopeOf(harness.stateDirectory),
+        recordedAt: "2026-11-11T09:59:00Z",
+        heartbeatAt: "2026-11-11T09:59:00Z",
+      });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: "2000-01-01T00:00:00Z",
+      });
+      harness.processPort.onSpawn(() => {
+        appendInstance(harness.store, {
+          instanceId: "instance-taken-over",
+          pid: 222,
+          scope: scopeOf(harness.stateDirectory),
+          operation: "taken-over",
+          takeover: {
+            previousInstanceId: "instance-live",
+            previousLockToken: "lock-token-fixture",
+            lastHeartbeatAt: "2000-01-01T00:00:00Z",
+            heartbeatAgeMs: 999,
+            takenOverAt: harness.clock.nowIso(),
+          },
+          recordedAt: harness.clock.nowIso(),
+          heartbeatAt: harness.clock.nowIso(),
+        });
+      });
+      const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
+      const result = await invoke(runtime, ["start"]);
+      expect(isSuccess(result)).toBe(true);
+      if (!isSuccess(result)) return;
+      const data = result.data as { instance: { instanceId: string; pid: number } };
+      expect(data.instance.pid).toBe(222);
+      expect(data.instance.instanceId).toBe("instance-taken-over");
+      // A takeover is accepted on the first readiness poll, never a timeout.
+      expect(harness.clock.sleeps().length).toBeLessThanOrEqual(1);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("(c) a stale pre-spawn record no new instance replaces is the readiness timeout at exit 2", async () => {
+    const harness = createMountHarness({ label: "start-030-stale" });
+    try {
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      appendInstance(harness.store, {
+        pid: 111,
+        scope: scopeOf(harness.stateDirectory),
+        recordedAt: "2026-11-11T09:59:00Z",
+        heartbeatAt: "2026-11-11T09:59:00Z",
+      });
+      appendHeartbeat(harness.store, {
+        instanceId: "instance-live",
+        beatAt: "2000-01-01T00:00:00Z",
+      });
+      // The child was spawned but recorded nothing: the stale record is not ours.
+      const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
+      const result = await invoke(runtime, ["start"]);
+      expect(isSuccess(result)).toBe(false);
+      if (isSuccess(result)) return;
+      const failure = result as { error: { code: string; summary?: string } };
+      expect(failure.error.code).toBe("daemon.state-recovery-failed");
+      expect(failure.error.summary ?? "").toContain("readiness");
+      expect(exitFor("daemon.state-recovery-failed")).toBe(2);
+      expect(harness.processPort.spawns).toHaveLength(1);
+      expect(harness.clock.sleeps()).toHaveLength(20);
+      // The crash victim is never reported as this start's pid.
+      expect(JSON.stringify(result)).not.toContain("pid=111");
+      const after = readDaemonInstance(harness.store);
+      expect(after.ok && after.latest?.pid).toBe(111);
+      expect(after.ok && after.latest?.operation).toBe("acquired");
     } finally {
       harness.dispose();
     }
@@ -396,7 +517,6 @@ const bindingFirst = (
   binding: string,
   value: string,
 ): Record<string, string> => {
-  const { [binding]: _dropped, ...rest } = forwarded;
-  void _dropped;
+  const rest = Object.fromEntries(Object.entries(forwarded).filter(([key]) => key !== binding));
   return { [binding]: value, ...rest };
 };

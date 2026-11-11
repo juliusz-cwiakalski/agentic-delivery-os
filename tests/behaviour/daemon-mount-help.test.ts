@@ -7,7 +7,7 @@
  * nothing and write nothing.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   allHelpEntries,
@@ -188,10 +188,7 @@ describe("TC-DAEMON-114 help and version purity", () => {
   });
 
   test("the help-composer mutant is caught by the purity claim", () => {
-    const source = require("node:fs").readFileSync(
-      join(process.cwd(), "packages/cli/src/entrypoint.ts"),
-      "utf8",
-    ) as string;
+    const source = readFileSync(join(process.cwd(), "packages/cli/src/entrypoint.ts"), "utf8");
     expect(helpComposerInvoked.violates(0)).toBe(false);
     expect(helpComposerInvoked.violates(1)).toBe(true);
     expect(helpComposerInvoked.apply(source)).not.toBe(source);

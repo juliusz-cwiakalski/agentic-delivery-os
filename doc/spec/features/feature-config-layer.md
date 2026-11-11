@@ -380,10 +380,14 @@ honoured and leaves the default in effect. An explicitly set absolute value wins
 outright and is never merged with the default; a non-absolute value is
 `config.value.invalid`. The default when the variable is unset is
 `<home>/<brand.stateDirectoryName>` and applies only when a home exists; with no
-override and no home the resolution fails as `config.value.invalid`. No
-`--state-dir` flag and no state-directory configuration key exist. The
-supervisor unit writes its `Environment=` binding under the same name, so the
-installed unit and the resolver agree on the scope. See [Resident Dispatch
-Daemon](feature-resident-daemon.md). The owner-hold marker is resolved from
-`<home>/<brand.stateDirectoryName>` and is not relocated by this scope; its
-contract is in [Scheduling Engine](feature-scheduling-engine.md).
+override and no home the daemon family's resolution fails closed as
+`config.value.invalid` over an unavailable runtime, while commands that keep the
+delivered home-based template are unaffected by that refusal. No `--state-dir`
+flag and no state-directory configuration key exist. The supervisor unit writes
+its `Environment=` binding under the same name, so the installed unit and the
+resolver agree on the scope. See [Resident Dispatch Daemon](feature-resident-daemon.md).
+The one-scope resolution is the single directory every daemon artifact uses, so
+the owner-hold marker is resolved from that same directory — an absolute
+override relocates it together with the store, and the home-based default keeps
+it at `<home>/<brand.stateDirectoryName>`; its contract is in
+[Scheduling Engine](feature-scheduling-engine.md).

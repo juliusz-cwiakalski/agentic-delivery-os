@@ -459,3 +459,33 @@ notes:
       literals 0; prompt conformance clean."
     type: "info"
     date: "2026-11-11"
+  - text: "Review iteration 1: FAIL. 47/50 ACs PASS, 3 PARTIAL, 1 FAIL. Blocking
+      F-1: the detached-start readiness poll accepts any existing 'acquired'
+      instance record, so a start after a crash reports success with the dead pid
+      (AC-F2-2 FAIL), a legitimate 'taken-over' acquisition times out, and a bare
+      start against a live daemon reports success instead of
+      daemon.already-running (AC-NFR-6/NFR-9). Blocking F-2: TC-037's failing
+      store delegates straight through and the verdict accepts success or failure.
+      Blocking F-3: TC-038 never counts terminal instance records and its mutant
+      contains a dead guard. Medium: F-4 mutant non-vacuity, F-5 predicate
+      re-implemented in tests, F-6 unmeasured latency clauses, F-7 untested
+      production config path plus an undeclared invalid-branch divergence, F-8
+      config-layer doc inaccuracy, F-11 double supervisor inspect, F-12 receipt
+      folded with default staleness, F-13 root-level config root with no home,
+      F-14 dead fixtures, F-15 test hygiene. F-9 (commit subjects from the
+      primitive template) accepted and recorded as a tooling limitation: the
+      primitive is the only permitted write path and rewriting its commits by
+      hand is not authorised. F-10 (nine reconciled docs beyond phase-7 scope) to
+      be declared in the spec/plan rather than reverted. Verdict persisted at
+      review/review-iter-1.md."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "Retro (review iteration 1): the readiness poll defect is a case where
+      the plan's AC text was right, the code was wrong, and every new test
+      asserted the happy path plus one injected-store variant — so the defect sat
+      in a cell no suite exercised. The next pass must assert the three
+      pre-spawn/post-spawn outcomes (live refusal, takeover acceptance, stale
+      record rejection) against the real runtime rather than fixtures that write
+      'acquired' directly."
+    type: "retro"
+    date: "2026-11-11"

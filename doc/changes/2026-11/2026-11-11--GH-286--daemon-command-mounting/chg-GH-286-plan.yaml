@@ -2,19 +2,23 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.4, 2026-11-11):
-#   - Spec:    ./chg-GH-286-spec.md (v1.3; 50 ACs — AC-F1-1..5, AC-F2-1..10,
+# SOURCES (single source of truth; plan revision 1.6, 2026-11-11):
+#   - Spec:    ./chg-GH-286-spec.md (v1.4; 50 ACs — AC-F1-1..5, AC-F2-1..10,
 #              AC-F3-1..5, AC-F4-1..4, AC-F5-1..8, AC-F6-1..3, AC-F7-1..5,
 #              AC-F8-1..4, AC-NFR-1..6; F-1..F-8; DM-1..DM-7; EVT-1..EVT-3;
-#              NFR-1..NFR-12; RSK-1..RSK-13; DEC-1..DEC-18; §16 documentation
-#              impact; Appendix C closed vocabularies; Appendix D mount exit
-#              matrix; Appendix E identity matrix; Appendix F composition
-#              matrix)
-#   - Tests:   ./chg-GH-286-test-plan.md (v1.3; 55 TCs TC-DAEMON-010..124
+#              NFR-1..NFR-12; RSK-1..RSK-13; DEC-1..DEC-19, where DEC-19 is the
+#              invalid-`daemon`-branch divergence and AC-F7-2 carries the
+#              extended no-home user-configuration-root cell; §16 documentation
+#              impact lists the complete reconciled set — fourteen pages plus the
+#              documentation index; Appendix C closed vocabularies; Appendix D
+#              mount exit matrix; Appendix E identity matrix; Appendix F
+#              composition matrix)
+#   - Tests:   ./chg-GH-286-test-plan.md (v1.4; 55 TCs TC-DAEMON-010..124
 #              including TC-DAEMON-015; 50/50 AC coverage; GAP-T1..GAP-T6
 #              verification-method constraints; §7 is the file/command
 #              inventory and the per-case invocation shape (`handler` vs
-#              `entrypoint`) this plan maps onto phases)
+#              `entrypoint`) this plan maps onto phases; §10.3 carries the
+#              delivery-populated deviation record)
 #   - Review:  ./readiness-review/readiness-iter-1.md (DoR iteration 1; the
 #              plan-reopen findings RF-2, RF-3, RF-4, RF-7 and advisories A-3,
 #              A-5, A-9 are closed by plan revision 1.1),
@@ -31,7 +35,23 @@
 #              directory" qualifier on the entry-path refusal, in task 3.2 and
 #              the Phase-3 exit) and A4-3 (the TC-DAEMON-105 real-binary re-run
 #              gets a named owner in task 6.9 and the Phase-6 exit) by plan
-#              revision 1.4
+#              revision 1.4, and
+#              ./review/review-iter-1.md (local delivery review of the delivered
+#              branch, iteration 1, verdict FAIL; the plan-relevant findings are
+#              closed by plan revisions 1.5 and 1.6 — F-10 extends the Phase-7
+#              scope to
+#              the fourteen pages spec §16 v1.4 lists, F-7 and F-13 declare the
+#              configuration-acquisition and user-configuration-root
+#              remediation, F-1..F-6, F-8 and F-11..F-15 become the Phase-9
+#              remediation tasks, and F-9 — phase-mode commit subjects come from
+#              the commit primitive — is ACCEPTED, not remediated: the branch is
+#              unpushed and the change semantics are carried by the pull-request
+#              description; revision 1.6 declares in the Phase-9 scope the two
+#              structural guard sites the remediation's refactor anchors —
+#              `tests/structure/content-inventory.test.ts` (the executable-export
+#              allowance row the F-5 predicate export requires) and
+#              `tests/checks/daemon-hermetic.test.ts` (the resolver-span anchor
+#              moved to the predicate's one home) — with no assertion weakened)
 #   - Decision: doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
 #              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
 #              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
@@ -102,6 +122,14 @@
 #             conformance guards at the Phase-7 gate and re-run at the Phase-8
 #             gate)
 #   Phase 8:  TC-DAEMON-110, TC-DAEMON-111, TC-DAEMON-113, TC-DAEMON-123
+#   Phase 9:  (none; review-remediation of delivered suites and production code.
+#             Phase 9 repairs existing proofs: it adds no scenario and no TC, and
+#             no TC moves to it, so the map stays 55/55 with each TC mapped
+#             exactly once. The readiness cells task 9.1 adds belong to the
+#             Phase-2 start suite, and the two critical lifetime bodies that tasks
+#             9.2 and 9.3 harden are the Phase-4 cases TC-DAEMON-037 and
+#             TC-DAEMON-038, read in the place that already owns them; neither
+#             finding is a new scenario and nothing is remapped.)
 #
 #   TC-DAEMON-015 is the only entrypoint-shape case: it asserts selection
 #   (`selectPromptRequiredProgram` selects `daemon`, the selected set equals
@@ -335,12 +363,28 @@
 # commands, exit criteria) is carried in YAML comments so the parsed document
 # stays schema-strict: the
 # plan declares phases and scope only and records no progress.
+#
+# PHASE 9 (review remediation) is a delivery phase on the same branch: it lands
+# one commit after Phase 8 and repairs the delivered proofs and production code
+# against ./review/review-iter-1.md. It adds no scenario, remaps no TC, and
+# changes no pinned contract in this header; F-9 is accepted rather than fixed.
+#
+# COMMIT-SUBJECT NOTE (F-9, accepted, not remediated): in phase mode the commit
+# subject comes from the commit primitive's deterministic template, not from a
+# plan `summary` — `planPhaseForLifecycle` merges every `kind: delivery` phase
+# and keeps a summary only when all summaries are identical, and no model
+# transport is configured in this environment. The primitive is the only
+# permitted write path, the template fallback is its documented behaviour, and
+# the branch is unpushed, so the 25 phase-mode subjects are not rewritten by
+# hand. The change semantics are carried by the pull-request description, and
+# the limitation is recorded in the test plan §10.3. This is a known property of
+# phase-mode commits in this repository, not a code defect.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-286
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - "The mount requires a new module, a new exported symbol, a new package subpath, or a new dependency (inventory.json, EXECUTABLE_ALLOWANCES, or exports parity would have to change)"
     - "The command grammar, an envelope shape, an error-table row, a record kind, a payload schema, or STATE_SCHEMA_VERSION would have to change to satisfy an AC"
@@ -1426,6 +1470,23 @@ phases:
   #      (both planning pages are already registered), and introduce none of the
   #      literals `state command`, `mcp command`, `dispatch command`, or
   #      `daemon command` into a phrase-table page.
+  #  7.8 The nine further pages spec §16 v1.4 lists as reconciled belong to this
+  #      phase's scope so the declaration matches the delivered work (review F-10):
+  #      doc/overview/architecture-overview.md (the topology paragraph and the
+  #      CLI module row), doc/overview/glossary.md (the prompt-required term),
+  #      doc/planning/oss-tooling/milestones/m2/README.md (the index row for the
+  #      delta note), doc/quality/test-specs/test-spec-dispatch-engine.md and
+  #      doc/quality/test-specs/test-spec-resident-daemon.md (the daemon-lane
+  #      deferral and the production-mount coverage), and
+  #      doc/spec/features/feature-agents-and-commands.md,
+  #      doc/spec/features/feature-config-layer.md, feature-dispatch-engine.md,
+  #      and feature-harness-adapters.md (the allowed-command enumeration, the
+  #      state-directory default paragraph, and the two daemon-entry deferrals).
+  #      The claims are the ones spec §16 v1.4 names; the pages are reconciled
+  #      once, in this phase, and Phase 9 records that they landed here.
+  #      `doc/spec/features/feature-config-layer.md`'s owner-hold marker
+  #      sentence and its no-home failure qualification are task 9.8, not this
+  #      task, because they are review-iteration-1 corrections.
   #
   # Verification:
   #   bun test tests/checks/doc-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
@@ -1449,10 +1510,19 @@ phases:
     scope:
       files:
         - doc/00-index.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
         - doc/planning/oss-tooling/milestones/m1/commands/daemon.md
         - doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+        - doc/quality/test-specs/test-spec-resident-daemon.md
+        - doc/spec/features/feature-agents-and-commands.md
         - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-harness-adapters.md
         - doc/spec/features/feature-resident-daemon.md
 
   # ---------------------------------------------------------------------------
@@ -1579,3 +1649,236 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-286/daemon-command-mounting targeting main-tools"
       pipelineId: "CI pipeline for the GH-286 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Review-iteration-1 remediation
+  #
+  # Goal: close the delivery-review findings recorded in
+  # ./review/review-iter-1.md against an otherwise delivered branch. This phase
+  # repairs production code and existing proofs; it introduces no capability, no
+  # module, no export, no dependency, no record kind, and no error-table row, and
+  # it changes no pinned contract in this plan's header.
+  #
+  # Dependency reasoning: every finding is a claim about delivered behaviour or
+  # about the strength of a delivered proof, so it can only be repaired after the
+  # phases that delivered them. F-1 changes the readiness accept/refuse rule in
+  # the detached start path, F-11 and F-12 change the install inspection and the
+  # start receipt's status fold in the same module, and F-5/F-7/F-13 change the
+  # production composer's reachability, configuration, and configuration-root
+  # behaviour — so the three blocking suites, the degradation suites, the mutant
+  # suite, and the production-composition suite are re-run together at one gate.
+  # F-10 is satisfied by the Phase-7 scope extension in this same revision; the
+  # nine pages it now declares were delivered in Phase 7 and are not re-edited
+  # here.
+  #
+  # TC MAP: NO TC IS REMAPPED. The map stays 55/55 with each TC mapped exactly
+  # once, and this phase carries none. The findings are repairs to delivered
+  # proofs and production code, not new scenarios: task 9.1 adds cells to the
+  # suite that already carries TC-DAEMON-030/031/090 (the readiness cells), and
+  # tasks 9.2/9.3 harden the bodies of TC-DAEMON-037/038 in the suite that owns
+  # them. A finding that could only be closed by a new scenario is a test-plan
+  # change and an escalation, not a Phase-9 edit.
+  #
+  # Finding -> task map (every finding from ./review/review-iter-1.md):
+  #   F-1  blocking  -> 9.1  daemon-compose.ts + daemon-start-detached.test.ts
+  #   F-2  blocking  -> 9.2  daemon-foreground-lifetime.test.ts
+  #   F-3  blocking  -> 9.3  daemon-foreground-lifetime.test.ts + mutant suite
+  #   F-4  medium    -> 9.4  tests/checks/daemon-mutants.test.ts
+  #   F-5  medium    -> 9.5  production.ts + the degradation boundary/cost cells
+  #   F-6  medium    -> 9.6  read-cost and stop-latency suites
+  #   F-7  medium    -> 9.7  production.ts + the production-composition suite
+  #   F-8  medium    -> 9.8  doc/spec/features/feature-config-layer.md
+  #   F-9  accepted  -> none (see the commit-subject note in the header; the
+  #                    semantics are carried by the pull-request description)
+  #   F-10 declaration -> 9.9 (Phase-7 scope extension in this revision; the nine
+  #                    pages landed in Phase 7)
+  #   F-11 medium    -> 9.10 daemon-compose.ts
+  #   F-12 medium    -> 9.11 daemon-compose.ts
+  #   F-13 medium    -> 9.12 production.ts + the AC-F7-2 case in the install suite
+  #   F-14 medium    -> 9.13 tests/fixtures/daemon/mount-golden/ + the status suite
+  #   F-15 medium    -> 9.14 the hygiene sites named in that task
+  #
+  # Tasks (no TC; repairs the suites and code that carry the mapped TCs):
+  #  9.1 F-1 [packages/cli/src/daemon-compose.ts + the start suite]: tie the
+  #      detached readiness poll to its own spawn. Read the latest instance
+  #      record BEFORE `spawnDetached`; when that record is a live acquisition —
+  #      operation `acquired` or `taken-over` and not stale under the composed
+  #      heartbeat interval and lock staleness — refuse `daemon.already-running`
+  #      and spawn nothing; after spawning, accept only a record whose
+  #      `instanceId` differs from the pre-spawn one (or whose `recordedAt` is at
+  #      or after the spawn time) AND whose operation is `acquired` or
+  #      `taken-over`; everything else stays the classified readiness timeout.
+  #      The delivered 20 x 50 ms window is unchanged. Add the three cells to
+  #      tests/behaviour/daemon-start-detached.test.ts: (a) a live pre-spawn
+  #      record refuses `daemon.already-running` with zero spawns and zero
+  #      appends, (b) a legitimate `taken-over` acquisition of a NEW instance is
+  #      accepted as success rather than timing out, and (c) a stale pre-spawn
+  #      `acquired` record that no new instance replaces is rejected as the
+  #      readiness timeout at exit 2, never reported as the crash victim's pid.
+  #      AC-F2-2 and AC-NFR-6 become true in the production shape.
+  #  9.2 F-2 [tests/behaviour/daemon-foreground-lifetime.test.ts]: implement
+  #      TC-DAEMON-037 as written — refuse only the terminal instance append (the
+  #      release append), leave every other store edge delegating, and assert the
+  #      delivered state-write identity at exit 2 with no success `data`, both
+  #      listeners removed, the latest durable record still `acquired`, and
+  #      exactly one append attempt. Delete the accept-success-or-failure
+  #      verdict.
+  #  9.3 F-3 [tests/behaviour/daemon-foreground-lifetime.test.ts +
+  #      tests/checks/daemon-mutants.test.ts]: count terminal instance records
+  #      and assert exactly one in TC-DAEMON-038's body, and make
+  #      tests/fixtures/daemon/mount-mutants/duplicate-terminal-record.ts produce
+  #      two EXECUTED terminal records (no dead `? 1 : 1` guard) so the mutant
+  #      actually fails that count when applied.
+  #  9.4 F-4 [tests/checks/daemon-mutants.test.ts]: make every control
+  #      non-vacuous. For each declared mutant, either execute the named
+  #      suite/module against the mutated copy and assert it trips the named
+  #      assertion, or replace the tautological fixture-local scan with a
+  #      production-level assertion over the delivered module. The suite header
+  #      claim is rewritten to state exactly which controls are executed-against-
+  #      mutation and which are structural, and to name any control that could not
+  #      be made real — downgrading the claim, never overstating it.
+  #  9.5 F-5 [packages/cli/src/production.ts + the degradation cells]: extract the
+  #      DM-4 reachability predicate into one module-local function with explicit
+  #      `nowMs` and `lockStalenessMs` parameters, and have the
+  #      boundary/cost/watch cells in
+  #      tests/behaviour/daemon-degradation-projection.test.ts and
+  #      tests/behaviour/daemon-degradation-read-cost.test.ts exercise the
+  #      production function instead of a test-local mirror. The predicate keeps
+  #      its rule, its STRICT bound, and its owned-heartbeat divergence. If the
+  #      only reachable seam requires an export, `bun run
+  #      scripts/checks/exports-parity.ts` runs in the same commit and the
+  #      header's no-new-export trigger is escalated rather than relaxed.
+  #  9.6 F-6 [tests/behaviour/daemon-degradation-read-cost.test.ts,
+  #      tests/behaviour/daemon-foreground-stop-latency.test.ts]: await the watch
+  #      iteration (no floating promise), measure and assert the p95 read clause
+  #      against the reference store with the recorded environment, and state the
+  #      signal-to-cancellation measurement explicitly in the stop-latency case.
+  #      A clause that cannot be measured deterministically is recorded as an
+  #      explicit deferral in chg-GH-286-test-plan.md §10.3 with its reason and
+  #      its substitute assertion; it is never left as an unmeasured claim.
+  #  9.7 F-7 [packages/cli/src/production.ts + the production-composition suite]:
+  #      prove the configuration-acquisition path with three fixture cells over
+  #      an injected home (and the git-root source where the suite's root makes
+  #      one reachable): (a) a configured socket path, heartbeat interval, and
+  #      lock staleness reach the composed runtime; (b) an absent configuration
+  #      resolves the empty branch, so the shipped defaults apply and no default
+  #      is re-derived as a literal; (c) an acquired configuration whose `daemon`
+  #      branch does not resolve composes the unavailable runtime — every
+  #      subcommand returns `config.value.invalid` at exit 1 with no lock,
+  #      transport, socket path, entry path, or supervisor scope — while `queue`
+  #      and `lanes` still report `daemon-unreachable` in that same cell, exactly
+  #      as DEC-19 declares.
+  #  9.8 F-8 [doc/spec/features/feature-config-layer.md]: correct the owner-hold
+  #      marker relocation claim (the one-scope resolution does relocate it) and
+  #      qualify the no-home failure sentence so it is scoped to the
+  #      resolver/daemon family that fails closed, not to every command.
+  #  9.9 F-10 [spec/plan declarations]: the Phase-7 `scope.files` in this
+  #      revision now declares the nine reconciled pages spec §16 v1.4 lists, so
+  #      the declaration matches the delivered work. Record here that those nine
+  #      pages were delivered in Phase 7 and are not re-edited by this phase; the
+  #      plan and spec are not phase-scope artifacts and nothing is re-committed
+  #      for this finding.
+  #  9.10 F-11 [packages/cli/src/daemon-compose.ts]: inspect the supervisor ONCE
+  #      per install and call `port.install` directly with that inspection, while
+  #      keeping the unsupported-before-entry-path precedence (no supported
+  #      supervisor refuses as `daemon.supervisor-unsupported` before the
+  #      entry-path guard; an unresolvable configuration root still precedes
+  #      both, per AC-F7-2/AC-F7-5).
+  #  9.11 F-12 [packages/cli/src/daemon-compose.ts]: pass the composed
+  #      `heartbeatIntervalMs` and `lockStalenessMs` into the detached start
+  #      receipt's `readDaemonStatus`, so a non-default
+  #      `daemon.lock-staleness` cannot make the receipt disagree with `status`,
+  #      `queue`, and `lanes`.
+  #  9.12 F-13 [packages/cli/src/production.ts + the AC-F7-2 case in
+  #      tests/behaviour/daemon-install-mount.test.ts]: implement the
+  #      unresolvable user-configuration-root refusal the spec pins — an absolute
+  #      non-empty `XDG_CONFIG_HOME` wins, otherwise `<home>/.config` applies only
+  #      when a home exists, otherwise `daemon install` refuses with the delivered
+  #      `config.value.invalid` at exit 1, writing no unit and no ownership
+  #      marker, invoking no supervisor command, creating no configuration-root
+  #      directory, and taking precedence over the missing-entry-path refusal.
+  #      Never a root-level configuration path.
+  #  9.13 F-14 [tests/fixtures/daemon/mount-golden/]: WIRE the recorded matrix in,
+  #      do not delete it. tests/behaviour/daemon-status.test.ts normalizes its
+  #      unreachable/not-running status payload with `normalizeStatus` and
+  #      `canonicalJson` from the fixture's `normalize.ts` and asserts it equals
+  #      `status-unreachable.json`, so both fixture files have a live consumer and
+  #      the recorded oracle cannot drift silently.
+  #  9.14 F-15 [test hygiene]: remove the empty `finally` block in
+  #      tests/behaviour/daemon-degradation-projection.test.ts, replace the
+  #      `require()` calls in tests/behaviour/daemon-mount-help.test.ts and
+  #      tests/structure/daemon-production-composition.test.ts with ESM imports,
+  #      drop the unused `Bun.file` binding and the `void x` unused-import
+  #      silencers, and remove the `as never as` casts — by deleting the
+  #      unused imports and moving the value to a typed local, never by adding a
+  #      new silencer.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-start-detached.test.ts tests/behaviour/daemon-foreground-lifetime.test.ts tests/checks/daemon-mutants.test.ts
+  #   bun test tests/behaviour/daemon-degradation-projection.test.ts tests/behaviour/daemon-degradation-read-cost.test.ts tests/behaviour/daemon-foreground-stop-latency.test.ts
+  #   bun test tests/behaviour/daemon-install-mount.test.ts tests/behaviour/daemon-status.test.ts tests/structure/daemon-production-composition.test.ts
+  #   bun test tests/behaviour/daemon-mount-help.test.ts tests/behaviour/daemon-state-scope.test.ts tests/behaviour/daemon-stop-safety.test.ts
+  #   pnpm typecheck
+  #   pnpm lint
+  #   pnpm format:check
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun test tests/checks/doc-conformance.test.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #   mkdir -p "$PWD/tmp/tmpdir" && TMPDIR="$PWD/tmp/tmpdir" bun test --max-concurrency 4
+  #
+  # Exit: the three blocking cells are real — a live pre-spawn instance refuses
+  # `daemon.already-running` with zero spawns, a takeover is accepted, a stale
+  # record is rejected as the readiness timeout, TC-037 asserts the state-write
+  # identity with one append attempt, and TC-038 counts exactly one terminal
+  # record; every mutant control is either executed against the mutated copy or
+  # restated as a structural claim, with the header naming which; the DM-4
+  # predicate is exercised as production code with injected `nowMs` and
+  # `lockStalenessMs`; the read-cost watch iteration is awaited and the p95 and
+  # signal-to-cancellation clauses are measured or explicitly deferred in the
+  # test plan §10.3; the configuration fixtures prove the configured, empty-branch,
+  # and DEC-19 invalid-branch cells; the install refusal for an unresolvable
+  # configuration root is asserted with no unit, no marker, no supervisor call,
+  # and no created directory; the golden matrix has a consumer; the hygiene sites
+  # are clean; `feature-config-layer.md` no longer asserts the stale owner-hold
+  # relocation; the header's pinned contracts are unbroken (no new module,
+  # export, dependency, record kind, error row, or schema version) and the TC map
+  # is still 55/55 with Phase 9 carrying none; the full battery is green under the
+  # repo-local TMPDIR. Phase 8's `doneArtifacts` are unchanged — this phase
+  # declares none.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Review-iteration-1 remediation: spawn-tied detached readiness, non-vacuous negative proofs, testable reachability, and declaration closures"
+    kind: delivery
+    summary: "fix(daemon): tie detached readiness to the spawn and close review findings"
+    scope:
+      files:
+        - doc/spec/features/feature-config-layer.md
+        - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/daemon-degradation-projection.test.ts
+        - tests/behaviour/daemon-degradation-read-cost.test.ts
+        - tests/behaviour/daemon-foreground-lifetime.test.ts
+        - tests/behaviour/daemon-foreground-stop-latency.test.ts
+        - tests/behaviour/daemon-install-mount.test.ts
+        - tests/behaviour/daemon-mount-help.test.ts
+        - tests/behaviour/daemon-start-detached.test.ts
+        - tests/behaviour/daemon-state-scope.test.ts
+        - tests/behaviour/daemon-status.test.ts
+        - tests/behaviour/daemon-stop-safety.test.ts
+        - tests/checks/daemon-hermetic.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-286--daemon-command-mounting
+        - tests/fixtures/daemon/mount-golden
+        - tests/fixtures/daemon/mount-mutants
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/daemon-compose.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer

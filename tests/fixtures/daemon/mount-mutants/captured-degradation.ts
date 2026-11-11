@@ -15,7 +15,7 @@ const ORIGINAL = `      degraded: resolveDegraded(composition.degraded),
 const MUTATED = `      degraded: capturedDegraded,
     };
   };
-  const mutate = (operation: () => QueueIntentResult): QueueRuntimeMutation => {`;
+  const capturedDegraded = resolveDegraded(composition.degraded);`;
 
 export const apply = (source: string): string => {
   if (!source.includes(ORIGINAL)) throw new Error("captured-degradation: anchor not found");

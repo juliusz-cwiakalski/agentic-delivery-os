@@ -14,16 +14,12 @@ import {
   readDaemonInstance,
   readDaemonLanes,
 } from "../../packages/core/src/app/index";
-import {
-  appendHeartbeat,
-  appendInstance,
-  appendLane,
-  scopeOf,
-} from "../fixtures/daemon/mount-states";
+import { appendLane } from "../fixtures/daemon/mount-states";
 import {
   createMountClock,
   createMountHarness,
   mountComposition,
+  openMountStore,
 } from "../fixtures/daemon/mount-harness";
 
 /** A recording signal host: it never touches the test process's signals. */
@@ -81,9 +77,8 @@ const startForeground = (
 ): Promise<unknown> => invoke(runtime, ["start", "--foreground"]);
 
 /** Let the loop reach its pending sleep. */
-const settle = async (clock: ReturnType<typeof createMountClock>, times = 3): Promise<void> => {
+const settle = async (times = 3): Promise<void> => {
   for (let index = 0; index < times; index += 1) await Promise.resolve();
-  void clock;
 };
 
 describe("TC-DAEMON-033 SIGTERM drains a foreground daemon", () => {
@@ -97,12 +92,12 @@ describe("TC-DAEMON-033 SIGTERM drains a foreground daemon", () => {
         mountComposition(harness, { clock, signalHost: signals.host }),
       );
       const command = startForeground(runtime);
-      await settle(clock);
+      await settle();
 
       // Three heartbeat intervals advance three beats with contiguous ordinals.
       for (let index = 0; index < 3; index += 1) {
         clock.tick();
-        await settle(clock);
+        await settle();
       }
       const heartbeats = readDaemonHeartbeat(harness.store);
       expect(heartbeats.ok).toBe(true);
@@ -112,7 +107,7 @@ describe("TC-DAEMON-033 SIGTERM drains a foreground daemon", () => {
 
       expect(signals.onceCalls).toEqual(["SIGINT", "SIGTERM"]);
       signals.deliver("SIGTERM");
-      await settle(clock);
+      await settle();
       clock.releaseAll();
       const result = await command;
 
@@ -165,9 +160,9 @@ describe("TC-DAEMON-034 SIGINT stops immediately", () => {
         mountComposition(harness, { clock, signalHost: signals.host }),
       );
       const command = startForeground(runtime);
-      await settle(clock);
+      await settle();
       signals.deliver("SIGINT");
-      await settle(clock);
+      await settle();
       clock.releaseAll();
       const result = await command;
       expect(isFailure(result)).toBe(false);
@@ -223,10 +218,10 @@ describe("TC-DAEMON-035 no signal host", () => {
         mountComposition(harness, { clock, signalHost: signals.host }),
       );
       const command = startForeground(runtime);
-      await settle(clock);
+      await settle();
       expect(clock.sleeps().length).toBeGreaterThan(0);
       signals.deliver("SIGINT");
-      await settle(clock);
+      await settle();
       clock.releaseAll();
       expect(isFailure(await command)).toBe(false);
     } finally {
@@ -240,37 +235,83 @@ describe("TC-DAEMON-037 a failed release still terminates and reports the state 
     const harness = createMountHarness({ label: "fg-037" });
     try {
       const clock = createMountClock({ manual: true, sleepAdvances: true });
+      // Observe the loop's own cancellation predicate: the release append must
+      // see the loop already cancelled (cancellation-first ordering).
+      let loopSignal: { readonly cancelled: () => boolean } | undefined;
+      const wrappingClock = {
+        ...clock,
+        sleep: (ms: number, signal?: { readonly cancelled: () => boolean }) => {
+          if (signal !== undefined) loopSignal = signal;
+          return clock.sleep(ms);
+        },
+      };
       const signals = createSignalHost();
-      // A store edge that refuses the release append.
+      const attempts: { readonly cancelledBeforeAppend: boolean }[] = [];
+      // A store edge that refuses the terminal (release) append only; every
+      // other edge delegates, so the acquisition still lands.
       const failingStore = {
         ...harness.store,
         append: (handle: never, request: never) => {
-          const record = request as { readonly record?: { readonly kind?: string } };
-          void record;
+          const append = request as { readonly payload?: { readonly operation?: string } };
+          if (append.payload?.operation === "released") {
+            attempts.push({ cancelledBeforeAppend: loopSignal?.cancelled() === true });
+            return {
+              ok: false as const,
+              error: {
+                kind: "state" as const,
+                code: "state.write.failed" as const,
+                consequence: "not_landed" as const,
+                location: { path: "daemon.instance" },
+              },
+            };
+          }
           return harness.store.append(handle, request);
         },
       };
       const runtime = createDaemonCommandRuntime(
         mountComposition(harness, {
-          clock,
+          clock: wrappingClock,
           signalHost: signals.host,
           store: failingStore,
         }),
       );
       const command = startForeground(runtime);
-      await settle(clock);
+      await settle();
+      const acquired = readDaemonInstance(harness.store);
+      expect(acquired.ok && acquired.latest?.operation).toBe("acquired");
+
       signals.deliver("SIGTERM");
-      await settle(clock);
+      await settle();
       clock.releaseAll();
       const result = await command;
-      // The snapshot is returned when the release succeeds on this fixture; the
-      // classification path is asserted by the listeners-outlive check below.
-      expect(isFailure(result) ? result.error.code : "0").toBeOneOf([
-        "0",
-        "daemon.state-recovery-failed",
-      ]);
-      expect(signals.registered()).toBe(0);
+
+      // The delivered state-write identity at exit 2, and no success `data`
+      // claiming a release that never landed.
+      expect(isFailure(result)).toBe(true);
+      if (isFailure(result)) expect(result.error.code).toBe("state.write.failed");
+      expect(result !== null && typeof result === "object" && "data" in result).toBe(false);
+      // Exactly one release attempt, and cancellation was observed first.
+      expect(attempts).toHaveLength(1);
+      expect(attempts[0]?.cancelledBeforeAppend).toBe(true);
+      // Both listeners were removed in the `finally` on the failure path.
       expect(signals.removeCalls).toEqual(["SIGINT", "SIGTERM"]);
+      expect(signals.registered()).toBe(0);
+      // The durable truth is unchanged: the one acquisition, no fabricated release.
+      const instances = readDaemonInstance(harness.store);
+      expect(instances.ok).toBe(true);
+      if (!instances.ok) return;
+      expect(instances.records).toHaveLength(1);
+      expect(instances.latest?.operation).toBe("acquired");
+      // A subsequent status reports that truth at exit 0.
+      const reader = createDaemonCommandRuntime(
+        mountComposition(harness, { store: openMountStore(harness.stateDirectory) }),
+      );
+      const status = await invoke(reader, ["status"]);
+      expect(isFailure(status)).toBe(false);
+      if (!isFailure(status)) {
+        const instance = (status.data as { instance: { instanceId: string } | null }).instance;
+        expect(instance?.instanceId).toBe(instances.latest?.instanceId);
+      }
     } finally {
       harness.dispose();
     }
@@ -293,26 +334,34 @@ describe("TC-DAEMON-038 a second signal produces exactly one stop", () => {
           mountComposition(harness, { clock, signalHost: signals.host }),
         );
         const command = startForeground(runtime);
-        await settle(clock);
+        await settle();
         signals.deliver(order[0]);
         signals.deliver(order[1]);
-        await settle(clock);
+        await settle();
         clock.releaseAll();
         expect(isFailure(await command)).toBe(false);
 
         const instances = readDaemonInstance(harness.store);
-        if (instances.ok) {
-          // Exactly one terminal record and no second one.
-          expect(instances.latest?.operation).toBe(
-            order[0] === "SIGTERM" ? "released" : "immediate-stop",
-          );
-        }
+        expect(instances.ok).toBe(true);
+        if (!instances.ok) continue;
+        const terminal = instances.records.filter(
+          (record) => record.operation === "released" || record.operation === "immediate-stop",
+        );
+        // Exactly one terminal record, carrying the first signal's mode.
+        expect(terminal).toHaveLength(1);
+        expect(terminal[0]?.operation).toBe(order[0] === "SIGTERM" ? "released" : "immediate-stop");
+        expect(
+          instances.records.filter((record) => record.operation === "immediate-stop"),
+        ).toHaveLength(order[0] === "SIGTERM" ? 0 : 1);
         const lanes = readDaemonLanes(harness.store);
         if (lanes.ok) {
           const detached = lanes.records.filter((lane) => lane.state === "detached");
           expect(detached.length).toBe(order[0] === "SIGTERM" ? 1 : 0);
         }
-        // A lane record is never duplicated by a second stop.
+        // A third delivery after removal is not observed by the command.
+        expect(signals.registered()).toBe(0);
+        signals.deliver(order[0]);
+        expect(signals.registered()).toBe(0);
         expect(harness.processPort.signals).toHaveLength(0);
       } finally {
         harness.dispose();
@@ -320,8 +369,3 @@ describe("TC-DAEMON-038 a second signal produces exactly one stop", () => {
     }
   });
 });
-
-// Keep the imported helpers referenced for the record builders other cases use.
-void appendInstance;
-void appendHeartbeat;
-void scopeOf;

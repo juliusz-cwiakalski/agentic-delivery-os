@@ -177,12 +177,21 @@ const stateDirectoryEnvironmentName = (environmentPrefix: string): string =>
 const supervisorConfigDirectoryFor = (input: {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly homeDirectory: string;
-}): string => {
+}): string | undefined => {
   const configured = input.environment.XDG_CONFIG_HOME;
-  return configured !== undefined && configured.length > 0 && configured.startsWith("/")
-    ? trimTrailingSeparators(configured)
-    : `${input.homeDirectory}/.config`;
+  if (configured !== undefined && configured.length > 0 && configured.startsWith("/")) {
+    return trimTrailingSeparators(configured);
+  }
+  // The home-based root applies only when a home exists; with neither an
+  // absolute override nor a home the root is unresolvable, and `daemon install`
+  // refuses rather than deriving a root-level path (AC-F7-2, DM-6).
+  return input.homeDirectory.length === 0 ? undefined : `${input.homeDirectory}/.config`;
 };
+
+/** The daemon family's delivered `config.value.invalid` refusal identity. */
+const daemonConfigurationRefusal = (): {
+  readonly error: { readonly kind: string; readonly code: string };
+} => ({ error: { kind: "config", code: "config.value.invalid" } });
 
 /** The daemon family's one state-directory classification (DM-5, DEC-18). */
 type DaemonStateDirectory =
@@ -210,6 +219,34 @@ const classifyDaemonStateDirectory = (input: {
 };
 
 /**
+ * The durable DM-4 reachability predicate (AC-F5-1..AC-F5-8): reachable iff an
+ * instance record exists, its latest operation is an acquisition, the latest
+ * heartbeat belongs to that instance, and its age is STRICTLY below the
+ * configured lock-staleness bound. Everything else — including an unreadable or
+ * torn read — is unreachable. It performs no socket connect, no process probe,
+ * and no sleep.
+ */
+export const daemonReachable = (input: {
+  readonly store: ReturnType<typeof createStateStore>;
+  readonly nowMs: number;
+  readonly lockStalenessMs: number;
+}): boolean => {
+  try {
+    const instance = readDaemonInstance(input.store);
+    if (!instance.ok || instance.latest === undefined) return false;
+    const latest = instance.latest;
+    if (latest.operation !== "acquired" && latest.operation !== "taken-over") return false;
+    const heartbeat = readDaemonHeartbeat(input.store);
+    if (!heartbeat.ok || heartbeat.latest === undefined) return false;
+    if (heartbeat.latest.instanceId !== latest.instanceId) return false;
+    const ageMs = input.nowMs - Date.parse(heartbeat.latest.beatAt);
+    return ageMs < input.lockStalenessMs;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * The unavailable daemon runtime for the unresolvable state-directory outcome.
  *
  * It constructs no store, lock, settings, transport, socket path, supervisor
@@ -217,9 +254,7 @@ const classifyDaemonStateDirectory = (input: {
  * with the delivered `config.value.invalid` identity at exit `1`.
  */
 const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
-  const refuse = (): { readonly error: { readonly kind: string; readonly code: string } } => ({
-    error: { kind: "config", code: "config.value.invalid" },
-  });
+  const refuse = daemonConfigurationRefusal;
   return {
     start: async () => refuse(),
     stop: async () => refuse(),
@@ -503,7 +538,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ? {}
           : { [workingNameVariable]: workingName }),
       };
-      return createDaemonCommandRuntime({
+      const supervisorConfigDirectory = supervisorConfigDirectoryFor({
+        environment,
+        homeDirectory,
+      });
+      const composed = createDaemonCommandRuntime({
         store,
         lock,
         settings: configuration.settings,
@@ -512,10 +551,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         unit: `${brand.binaryName}-daemon.service`,
         binary: facts.daemonEntry ?? "",
         environmentName: stateDirectoryEnvironmentName(brand.environmentPrefix),
-        supervisorConfigDirectory: supervisorConfigDirectoryFor({
-          environment,
-          homeDirectory,
-        }),
+        ...(supervisorConfigDirectory === undefined ? {} : { supervisorConfigDirectory }),
         ...(facts.processId === undefined ? {} : { pid: facts.processId }),
         ...(facts.signalHost === undefined ? {} : { signalHost: facts.signalHost }),
         ...(facts.supervisor === undefined ? {} : { supervisor: facts.supervisor }),
@@ -527,6 +563,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newInstanceId: () => globalThis.crypto.randomUUID(),
         nowIso,
       });
+      // With no absolute `XDG_CONFIG_HOME` and no home the user configuration
+      // root is unresolvable: `install` refuses with `config.value.invalid`
+      // before the unsupported and missing-entry-path refusals, writes no unit
+      // and no ownership marker, invokes no supervisor command, and creates no
+      // configuration-root directory (AC-F7-2, DM-6). Every other subcommand
+      // keeps the resolved runtime.
+      if (supervisorConfigDirectory !== undefined) return composed;
+      return { ...composed, install: async () => daemonConfigurationRefusal() };
     })();
 
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);
@@ -672,30 +716,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       deploy: { expectations: {}, verdicts: {} },
     };
     /**
-     * The durable reachability predicate (DM-4, AC-F5-1..AC-F5-8): reachable iff
-     * an instance record exists, its latest operation is an acquisition, the
-     * latest heartbeat belongs to that instance, and its age is STRICTLY below
-     * the configured lock-staleness bound. Everything else — including an
-     * unreadable or torn read — is exactly `["daemon-unreachable"]`. It performs
-     * no socket connect, no process probe, and no sleep.
+     * The durable reachability marker (DM-4, AC-F5-1..AC-F5-8), folded from the
+     * one production predicate over the composed staleness bound. It performs no
+     * socket connect, no process probe, and no sleep.
      */
     const daemonReachability = (): readonly QueueDegradationReason[] => {
       if (daemonConfiguration === undefined) return ["daemon-unreachable"];
-      try {
-        const instance = readDaemonInstance(store);
-        if (!instance.ok || instance.latest === undefined) return ["daemon-unreachable"];
-        const latest = instance.latest;
-        if (latest.operation !== "acquired" && latest.operation !== "taken-over") {
-          return ["daemon-unreachable"];
-        }
-        const heartbeat = readDaemonHeartbeat(store);
-        if (!heartbeat.ok || heartbeat.latest === undefined) return ["daemon-unreachable"];
-        if (heartbeat.latest.instanceId !== latest.instanceId) return ["daemon-unreachable"];
-        const ageMs = nowMs() - Date.parse(heartbeat.latest.beatAt);
-        return ageMs < daemonConfiguration.settings.lockStalenessMs ? [] : ["daemon-unreachable"];
-      } catch {
-        return ["daemon-unreachable"];
-      }
+      return daemonReachable({
+        store,
+        nowMs: nowMs(),
+        lockStalenessMs: daemonConfiguration.settings.lockStalenessMs,
+      })
+        ? []
+        : ["daemon-unreachable"];
     };
 
     const queueComposition = {

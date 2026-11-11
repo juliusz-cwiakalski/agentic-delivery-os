@@ -1,6 +1,10 @@
 /**
  * Mutant: a second signal starts a second stop, so the invocation can append a
  * duplicate terminal instance record.
+ *
+ * The control delivers two signals with a clock advance between them, so both
+ * release appends are distinct executed records rather than one deduplicated
+ * payload. The delivered guard keeps the count at one in both drivings.
  */
 export const name = "duplicate-terminal-record";
 export const target = "packages/cli/src/daemon-compose.ts";
@@ -18,4 +22,4 @@ export const apply = (source: string): string => {
 };
 
 /** The invariant the named suite asserts: one terminal record per invocation. */
-export const violates = (stopCalls: number): boolean => stopCalls > 1;
+export const violates = (terminalRecords: number): boolean => terminalRecords > 1;
