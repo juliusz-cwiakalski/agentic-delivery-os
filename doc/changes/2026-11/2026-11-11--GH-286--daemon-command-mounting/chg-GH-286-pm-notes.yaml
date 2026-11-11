@@ -18,6 +18,55 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 9 commit: 1df9e74e. Phase 9 (review-iteration-1 remediation)
+      complete. F-1: the detached start reads the latest instance BEFORE spawning;
+      a live acquisition (acquired|taken-over, owned heartbeat strictly under the
+      composed lock staleness) refuses daemon.already-running with zero spawns and
+      zero appends; after the spawn only a record whose instanceId differs or
+      whose recordedAt is at/after the spawn time is accepted, and its operation
+      must be acquired or taken-over, so a crash victim's stale acquired record is
+      the classified readiness timeout at exit 2 and a legitimate takeover is
+      accepted on the first poll; the 20 x 50 ms window is unchanged. The three
+      cells run through the real createDaemonCommandRuntime with the recording
+      process port. F-2: TC-037 refuses only the release append and asserts
+      state.write.failed at exit 2, no data, both listeners removed, one attempt,
+      and the durable record still acquired. F-3: TC-038 counts terminal records
+      (exactly one) and the duplicate-terminal mutant now appends two executed
+      records (clock advanced between signals). F-4: 18 of 21 controls load and
+      run the mutated module (relative imports rewritten); literal-socket,
+      unit-under-state-dir and xdg-relative-joined are declared structural with
+      reasons in the suite header. F-5: daemonReachable is one exported predicate
+      with injected nowMs/lockStalenessMs; the projection, boundary and read-cost
+      cells use it; the export required one content-inventory allowance row and
+      exports-parity is green. F-6: the watch iteration is awaited, p95 is measured
+      and recorded per run, and the signal-to-cancellation split is measured
+      (~232-235 ms) on the delivered real clock; the relative-p95 10% clause is
+      recorded as UNMET in test plan 10.3 with its reason and substitute
+      assertion. F-7: configured, empty-branch and invalid-branch
+      configuration-acquisition cells added. F-8: feature-config-layer.md corrects
+      the owner-hold relocation and scopes the no-home failure to the daemon
+      family. F-10: already declared by the phase-7 scope in plan v1.5. F-11: one
+      supervisor inspection per install, then port.install directly. F-12: the
+      receipt folds readDaemonStatus with the composed heartbeat interval and lock
+      staleness. F-13: an unresolvable user configuration root refuses install with
+      config.value.invalid at exit 1 (no unit, marker, supervisor call, or created
+      directory, and before the entry-path guard). F-14: the status suite already
+      consumes normalizeStatus and status-unreachable.json; verified green, no edit.
+      F-15: empty finally, require() calls, dead Bun.file binding, void silencers
+      and as-never casts removed. Plan v1.6 declares the two structural guard sites
+      the refactor anchors (content-inventory allowance row and the hermetic
+      resolver-span anchor) with no assertion weakened. Gate: 129 tests across the
+      four Phase-9 groups, 0 fail; full battery under TMPDIR=$PWD/tmp/tmpdir at
+      --max-concurrency 4 is 7272 pass, 0 fail, 895 files in 510.8 s, and at default
+      concurrency 7268 pass, 4 skip, 0 fail in 508.0 s; pnpm typecheck, pnpm lint,
+      pnpm format:check, help-guide-coverage, doc-conformance, exports-parity, the
+      doc-distribution guard and git diff --check are green. AC-NFR-2's relative
+      p95 clause is the one unmet criterion and is recorded, not relaxed. The
+      commit was landed by the concurrent orchestration in this worktree with the
+      primitive template subject (F-9 recurs); the two trailing doc-sync pages are
+      pending in the worktree. Not pushed and no pull request opened."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 8 commit: 05860165. Delivery lifecycle boundary: `phase
       complete GH-286 delivery` landed eb7f0dce. All eight plan phases are
       complete with the per-phase gate evidence recorded above; plan validate

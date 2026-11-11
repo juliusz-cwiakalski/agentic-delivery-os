@@ -77,7 +77,12 @@ settings, the control socket, the supervisor scope, and the re-entry binding, so
 the ledger, the lock, and the socket never disagree. With no override and no
 home the directory is unresolvable: the family stays mounted and every
 subcommand returns the delivered `config.value.invalid` identity at exit `1`
-without opening a store, lock, socket, transport, or supervisor path.
+without opening a store, lock, socket, transport, or supervisor path. A
+configuration that is acquired but whose `daemon` branch does not resolve
+composes the same unavailable runtime rather than substituting the shipped
+defaults; in that cell `queue` and `lanes` keep reporting `daemon-unreachable`,
+because their marker is a durable-record read that consumes daemon configuration
+only for the staleness bound.
 
 - `start` acquires the daemon lock, reconciles, appends one instance record,
   appends one reconciliation record, opens the transport, writes the first
@@ -297,14 +302,18 @@ with `<binary>` the absolute running entry path, `Type=simple`,
 name is the brand-derived `${brand.binaryName}-daemon.service`, and the unit and
 its secret-free ownership marker live under the user configuration root
 (`$XDG_CONFIG_HOME/systemd/user` when `XDG_CONFIG_HOME` is absolute and
-non-empty, otherwise `<home>/.config/systemd/user`), the root the user systemd
-manager reads. The unit and the ownership marker are written by the composed
-platform supervisor adapter; on Linux the real systemd user adapter is composed
-by default. With no composed entry path, `install` refuses rather than rendering
-a unit with an empty executable. Linger is enabled and reported. A linger
-failure removes the unit and returns `daemon.supervisor-unsupported` with
-platform evidence. Uninstall removes only what this installation created and
-disables linger only when it enabled it.
+non-empty, otherwise `<home>/.config/systemd/user` when a home exists), the root
+the user systemd manager reads. With neither an absolute `XDG_CONFIG_HOME` nor a
+home the root is unresolvable, and `install` refuses with the delivered
+`config.value.invalid` identity at exit `1` before the unsupported and
+missing-entry-path guards, writing no unit or ownership marker and invoking no
+supervisor command. The unit and the ownership marker are written by the
+composed platform supervisor adapter; on Linux the real systemd user adapter is
+composed by default. With a resolvable configuration root and no composed entry
+path, `install` refuses rather than rendering a unit with an empty executable.
+Linger is enabled and reported. A linger failure removes the unit and returns
+`daemon.supervisor-unsupported` with platform evidence. Uninstall removes only
+what this installation created and disables linger only when it enabled it.
 macOS and Windows return the classified unsupported outcome and write no unit.
 Installation is optional; with no unit every one-shot is identical.
 
