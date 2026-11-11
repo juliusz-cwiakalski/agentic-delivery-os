@@ -4,7 +4,7 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-290-spec.md (v1.1, 38 ACs — AC-F1-1..5, AC-F2-1..5,
+#   - Spec:     ./chg-GH-290-spec.md (v1.2, 38 ACs — AC-F1-1..5, AC-F2-1..5,
 #               AC-F3-1..7, AC-F4-1..3, AC-F5-1..3, AC-F6-1..2, AC-F7-1..4,
 #               AC-F8-1..4, AC-NFR-1..5; F-1..F-8; DM-1..DM-9 (nine data-model
 #               elements); EVT-1..EVT-5; NFR-1..NFR-10; DEC-A..DEC-O (fifteen
@@ -14,19 +14,32 @@
 #               count-assertion edit set; §9 NFR-2 and its counting seam; §16
 #               documentation impact; §18 rollout ordering; Appendix D exit
 #               matrix; Appendix E kind-to-record source map; Appendix F frame
-#               matrix). Spec v1.1 fixes `lane` as a non-empty string on every
+#               matrix). Spec v1.1 fixed `lane` as a non-empty string on every
 #               event topic, `ref` nullable only on `blockers.state`, snapshot
-#               topics with `kinds: []`, one shared whole-store read per tick
-#               (DEC-N), `occurredAt` from the source record, a process-scoped
-#               `sequence` (DEC-I), no truncation marker (DEC-O), the
-#               acceptance-to-refusal unknown-topic change (DEC-L), DM-9 as the
-#               emission watermark, and the amended-decision-record obligation.
-#   - Tests:    ./chg-GH-290-test-plan.md (v1.1, 45 TCs TC-EVT-001..084;
+#               topics with `kinds: []`, one shared whole-store read per publish
+#               tick (DEC-N), `occurredAt` from the source record, a
+#               process-scoped `sequence` (DEC-I), no truncation marker (DEC-O),
+#               the acceptance-to-refusal unknown-topic change (DEC-L), DM-9 as
+#               the emission watermark, and the amended-decision-record
+#               obligation.
+#               Spec v1.2 (DoR iteration 2) counts NFR-2 per PUBLISH tick — one
+#               `publishState`/`stateChanges()` invocation, with the loop's
+#               heartbeat fold excluded from the count and a negative control
+#               proving the exclusion — states DM-9 as one watermark entry per
+#               `(topic, lane, source family)` position, including the
+#               cumulative `phase.state` artifact's transition ordinal, and pins
+#               the M2 page's scan boundary at the `EXTENSION PATH (S17 — not
+#               v1)` heading. None of the three changes the phase set.
+#   - Tests:    ./chg-GH-290-test-plan.md (v1.2, 45 TCs TC-EVT-001..084;
 #               38/38 AC coverage; §5.2 scenarios; §6 determinism rules; §7
 #               file/command inventory with one role per mount-touched suite;
-#               §6.3 deliberate non-goals). TC ids are unchanged from v1.0;
-#               several cases were rewritten (022, 026, 051, 002, 027, 081,
-#               082, 083, 075). §7 assigns the M2 reference page to Phase 5 and
+#               §6.3 deliberate non-goals). TC ids are unchanged from v1.0
+#               through v1.2 (45); several cases were rewritten (022, 026, 051,
+#               002, 027, 081, 082, 083, 075), and v1.2 reclassifies
+#               `tests/behaviour/entrypoint-help-coverage.test.ts`'s inline
+#               prompt-required name list as a mount edit (18 -> 19) and scopes
+#               the page token scan to the v1 sections.
+#               §7 assigns the M2 reference page to Phase 5 and
 #               the TC-EVT-016 single-source half to the contract phase; this
 #               plan keeps the mount at Phase 5 and owns that half in Phase 6.
 #   - Decision: doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md
@@ -62,7 +75,9 @@
 #
 # SHARED-READ PHASE (DEC-N, spec §7.1, §9, §18; plan Phase 7):
 #   Spec §9 states the bound over the delivered port: exactly one whole-store
-#   `readRecords()` per daemon tick serves all six topics and all subscribers;
+#   `readRecords()` per publish tick — one `publishState`/`stateChanges()`
+#   invocation, with the loop's heartbeat fold explicitly outside the count —
+#   serves all six topics and all subscribers;
 #   `stateChanges()` today calls `readQueueEntries` and `readDaemonLanes`, each
 #   of which reads the whole store on its own, and `readChangeTransitions` is
 #   keyed by `changeRef`, so a per-change loop would be one whole-store read per
@@ -131,14 +146,21 @@
 #   path in this change is known. A file edited in two phases is declared in
 #   both phases; `plan diff` reports the first covering phase.
 #
-# MOUNT EDIT SET (spec §8.5; RF-1): the mount turns the prompt-required set from
-#   18 to 19, so every literal count of that set is in the edit set, not only
-#   the command-name lists:
+# MOUNT EDIT SET (spec §8.5; RF-1, RF-12): the mount turns the prompt-required
+#   set from 18 to 19, so every literal count of that set is in the edit set, not
+#   only the command-name lists:
 #     - tests/structure/daemon-production-composition.test.ts asserts the
 #       prompt-required length three times — `:71` (full set) 18 -> 19,
 #       `:138` (composition with every optional input absent) 18 -> 19, and
 #       `:121` (the daemon-omission mutant) 17 -> 18. The suite is declared in
 #       Phase 5 and its post-mount values are named in the Phase-5 gate.
+#     - tests/behaviour/entrypoint-help-coverage.test.ts hard-codes the delivered
+#       18 prompt-required names in an inline array (`:150-171`) and compares it
+#       to the coverage fixture's `commands`, so the same commit adds `events`
+#       (18 -> 19) and its `syntheticPromptProgram` key equality (`:174-176`)
+#       follows. This is a mount row, not a semantic assertion change: the
+#       assertion (the fixture equals the prompt-required set) is unchanged and
+#       only the literal membership list follows the mount.
 #     - tests/behaviour/entrypoint-composition.test.ts gains `events` in its
 #       `EXPECTED` hand list (Phase 5).
 #     - tests/checks/reference-page-parity.test.ts resolves each coverage
@@ -151,10 +173,27 @@
 #       `referencePages` rows; tests/structure/error-table.test.ts keeps its
 #       row counts; tests/structure/inventory.json and
 #       tests/fixtures/ports/v1-contract-inventory.json gain the new modules and
-#       exports. `tests/behaviour/entrypoint-help.test.ts` and
-#       `tests/checks/doc-conformance.test.ts` need no edit (their hand lists
-#       already omit `coordinator`/`projects`; `events`' `--help`/`--version`
-#       coverage is carried by the help-coverage guard) and run as controls.
+#       exports.
+#
+# DECLARED CONTROLS, NOT EDITS (A-16): three delivered suites run in Phase 5's
+#   gate and are NOT edited, so none of them is declared in a phase scope and no
+#   diff is staged for them; the test plan's §7 role table says "No edit" for
+#   each:
+#     - tests/behaviour/entrypoint-help.test.ts — its family loop (`:29-47`)
+#       asserts containment of 15 names (it omits `dispatch`, `coordinator`, and
+#       `projects` by the same precedent) and asserts no count, so the mount
+#       leaves every assertion true.
+#     - tests/checks/help-guide-coverage-mutants.test.ts — its three mutants
+#       rewrite M1 pages and its temp root copies both `m1/commands` and
+#       `m2/commands` (`:19-25`), so the new M2 page and the fixture row change
+#       none of its outcomes; the `events` mount mutants live in the new
+#       `tests/checks/event-mount-guards.test.ts`.
+#     - tests/checks/doc-conformance.test.ts — its page hand list already omits
+#       `dispatch`, `coordinator`, and `projects`, and `events`' `--help`/
+#       `--version` coverage is carried by the help-coverage guard.
+#   Scope and gate therefore agree: a control that needs no edit is run, not
+#   declared, exactly as `tests/checks/help-guide-coverage.test.ts` (delivered,
+#   no edit) is already run without being declared.
 #
 # TC -> PHASE MAP (45/45: every TC is owned by exactly one phase — the phase
 #   which first makes its complete suite set green. A suite proven in an
@@ -179,9 +218,11 @@
 #   Phase 8 docs/release (0): none (docs, amended decision, changeset; proven by
 #            the doc, coverage, parity, distribution, and changeset guards)
 #   Suite halves proven before their owner: TC-EVT-002's declaration suite runs
-#   in Phase 1, TC-EVT-016's surface suite in Phase 2, and TC-EVT-031's/032's
-#   behaviour suites in Phase 4; each TC is owned once, in the phase that makes
-#   its whole set green.
+#   in Phase 1, TC-EVT-004's declaration-integrity half runs in the Phase-1 gate
+#   (`event-taxonomy-integrity`) while its surface half is owned by Phase 2,
+#   TC-EVT-016's surface suite in Phase 2, and TC-EVT-031's/032's behaviour
+#   suites in Phase 4; each TC is owned once, in the phase that makes its whole
+#   set green.
 #
 # DECLARATION-ONLY PHASE-1 SCANS: the Phase-1 suites scan the declaration and
 #   the code's closed vocabularies only. They must NOT token-scan
@@ -207,10 +248,10 @@ tier:
     - "An S17 shape (`stop`, `parked`, `resumed`, `park-edge`) or any kind outside the contract section's 4/3/3/3 enumeration is added to v1"
     - "Any `queue` or `lanes` frame byte changes, or an envelope field is added to a snapshot topic"
     - "A prompt-required, help, coverage, parity, inventory, or export guard can only be made green by relaxing an expectation instead of adding the declared `events` row (including any literal count of the prompt-required set)"
-    - "A delivered suite needs a semantic assertion change outside the mount rows, the three prompt-required count assertions, and the inventory registrations this plan declares"
-    - "The publish tick would need more than one whole-store `readRecords()` per tick, a per-topic or per-subscriber read, an unbounded in-memory event queue, a socket connect, a process probe, or a sleep on the publish path"
+    - "A delivered suite needs a semantic assertion change outside the mount rows this plan declares — the inline prompt-required name list in `tests/behaviour/entrypoint-help-coverage.test.ts` (`:150-171`), `tests/behaviour/entrypoint-composition.test.ts`'s `EXPECTED` list, and `tests/checks/reference-page-parity.test.ts`'s page-root map — the three prompt-required count assertions in `tests/structure/daemon-production-composition.test.ts`, and the inventory registrations; a membership literal or page-root row that only follows the mount is a mount row and does not fire this trigger"
+    - "The publish tick would need more than one whole-store `readRecords()` per publish tick, a per-topic or per-subscriber read, an unbounded in-memory event queue, a socket connect, a process probe, or a sleep on the publish path"
     - "A durable sequence, ledger seeding, or per-client version negotiation is required to satisfy an AC"
-    - "The amended TDR-0024 cannot be staged by the final phase, or its amended text (DC-2 `lane`/`ref`/`occurredAt`/`sequence`, DC-4 acceptance-to-refusal) contradicts spec v1.1 DEC-B/DEC-D/DEC-I/DEC-L"
+    - "The amended TDR-0024 cannot be staged by the final phase, or its amended text (DC-2 `lane`/`ref`/`occurredAt`/`sequence`, DC-4 acceptance-to-refusal) contradicts the spec's DEC-B/DEC-D/DEC-I/DEC-L"
     - "The evidence, spec, or test plan contradicts a pinned contract in this header and the contradiction cannot be resolved inside the phase scope"
 defaultLeases:
   - repo:main-tools
@@ -372,6 +413,26 @@ phases:
   # drive the real server/session, not the pure function), so this phase owns
   # the structural bound proof and adds no behaviour case of its own.
   #
+  # Consumer and root export (RF-11): the projection is consumed by the CLI
+  # composition, `packages/cli/src/daemon-compose.ts`, and the CLI reaches core
+  # through the package root only — `@delivery-os/core` exposes no `./domain`
+  # subpath (`packages/core/package.json` `exports`: `.`, `./contracts`,
+  # `./state`, `./branding`, `./provider`) and the CLI's allowance is exactly
+  # those (`scripts/checks/workspace-entrypoints.ts:28-34`). The root entry
+  # `packages/core/src/index.ts` closes a HAND-LISTED
+  # `export { ... } from "./domain/index.js"` (no `export *`, `:842`), so a name
+  # added to `domain/index.ts` alone changes nothing public. No new subpath is
+  # declared (that would require a `package.json` `exports` edit, an
+  # `exports-discipline`-visible surface, and a new entrypoint allowance), so the
+  # projection's row in the root's hand list lands in Phase 4 with its first
+  # consumer and that file is declared there. The inventory consequences are
+  # already declared here: `tests/structure/inventory.json` gains the new
+  # module's file row (the root entry's row exists and is unchanged) and
+  # `tests/structure/content-inventory.test.ts` gains the executable-allowance
+  # row naming the module's exported projection functions; the root entry needs
+  # no allowance row because its only executable declaration is the body-less
+  # `createRuntime` (`:22-27`) and re-export statements are permitted.
+  #
   # Gate:
   #   pnpm typecheck
   #   bun test tests/structure/event-projection-bounds.test.ts
@@ -414,6 +475,22 @@ phases:
   # per fold; the one-shared-read restructure is Phase 7 and no gate here
   # asserts the read count.
   #
+  # Package-root export (RF-11; the phase that first CONSUMES the projection):
+  # this phase makes `packages/cli/src/daemon-compose.ts` import the Phase-3
+  # projection from `@delivery-os/core`, and the CLI may import only the root and
+  # `./contracts`/`./state`/`./branding`/`./provider`
+  # (`scripts/checks/workspace-entrypoints.ts:28-34`; no `./domain` subpath exists
+  # in `packages/core/package.json` `exports`). So this commit also adds the
+  # projection's row to `packages/core/src/index.ts`'s hand-listed
+  # `export { ... } from "./domain/index.js"` block (`:842`, no `export *`), and
+  # that file is declared here as the package-root contract surface. No other
+  # registration is needed: the root entry is already in
+  # `tests/structure/inventory.json`, already permitted for the CLI, and needs no
+  # `content-inventory` executable-allowance row (it declares no executable
+  # function beyond the body-less `createRuntime`). No `package.json` `exports`
+  # row, no `workspace-entrypoints.ts` allowance row, and no `exports-discipline`
+  # surface changes: the subpath set is untouched.
+  #
   # Dependency reasoning: TC-EVT-040/041 depend on the same constant the
   # reference surface renders, so the overflow proof can only be green after
   # Phases 1-3. TC-EVT-050 proves the two delivered snapshot topics' frames and
@@ -429,13 +506,14 @@ phases:
   #   bun test tests/behaviour/events-{overflow-parity,sequence-per-lane,sequence-restart,snapshot-preserved,subscribe-refusal}.test.ts
   #   bun test tests/behaviour/events-{dependency-delta,frame-bound,burst}.test.ts
   #   bun test tests/structure/event-overflow-carriage.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
   #   bun test tests/behaviour/control-{codec,conformance,session,connection,transport}.test.ts
   #   bun run scripts/checks/ambient-globals.ts
   #
   # Suites left green: events-overflow-parity, events-sequence-per-lane,
   #   events-sequence-restart, events-snapshot-preserved,
   #   events-subscribe-refusal, events-dependency-delta, events-frame-bound,
-  #   events-burst, event-overflow-carriage, control-codec,
+  #   events-burst, event-overflow-carriage, content-inventory, control-codec,
   #   control-conformance, control-session, control-connection,
   #   control-transport.
   # ---------------------------------------------------------------------------
@@ -448,6 +526,7 @@ phases:
         - packages/cli/src/daemon-compose.ts
         - packages/core/src/app/control-server.ts
         - packages/core/src/domain/control-session.ts
+        - packages/core/src/index.ts
         - tests/behaviour/events-burst.test.ts
         - tests/behaviour/events-dependency-delta.test.ts
         - tests/behaviour/events-frame-bound.test.ts
@@ -466,6 +545,9 @@ phases:
       - kind: contract-file
         target: packages/core/src/app/control-server.ts
         role: consumer
+      - kind: contract-file
+        target: packages/core/src/index.ts
+        role: producer
 
   # ---------------------------------------------------------------------------
   # Phase 5 — The mount as one unit.
@@ -484,8 +566,50 @@ phases:
   # the delivered page rather than the pre-contract planning text. Every literal
   # count the mount changes is corrected here, including
   # `tests/structure/daemon-production-composition.test.ts`'s three
-  # prompt-required length assertions (18/18/17 -> 19/19/18). The guard-negative
+  # prompt-required length assertions (18/18/17 -> 19/19/18), the inline
+  # prompt-required name array in
+  # `tests/behaviour/entrypoint-help-coverage.test.ts` (`:150-171`, 18 -> 19),
+  # and the `EXPECTED` hand list in
+  # `tests/behaviour/entrypoint-composition.test.ts`. The guard-negative
   # mutants remove each piece and require a named failure.
+  #
+  # Page content obligations (RF-13; spec §16). The reconciled page must carry,
+  # and this phase owns, four statements beyond the counts:
+  #   1. the reference-record key set the machine record declares — `name`,
+  #      `version`, `shape`, `parent` (`queue.graph` only), `frame`, `lane`,
+  #      `kinds[]` with each kind's `emitted` and `payloadFields[]`, the derived
+  #      top-level `payloadFields[]`, `ordering`, and `overflow` — replacing the
+  #      page's current `topics[]`-era key table;
+  #   2. the `snapshot`/`event` shape split and the empty `kinds: []` /
+  #      `payloadFields: []` on the two snapshot topics (already in the count
+  #      enumeration above);
+  #   3. a `Delivered (M2-S13)` status line replacing today's `Status: Proposed
+  #      (M2)` / not-yet-registered-at-the-root-listing claim;
+  #   4. the S17 prose confined to one heading named exactly
+  #      `EXTENSION PATH (S17 — not v1)`, placed after `ERRORS` and before
+  #      `SEE ALSO`, stating that those shapes are a future taxonomy version —
+  #      spec §16's pinned scan boundary, so the required extension prose cannot
+  #      trip the v1-section scan.
+  #   Guard binding for those statements, named rather than implied:
+  #   `tests/checks/event-taxonomy-conformance.test.ts` (Phase 6, TC-EVT-002
+  #   steps 5-6 and TC-EVT-032 step 6) reads the page's taxonomy tables
+  #   (`0/0/4/3/3/3`), asserts the four S17 kind names absent there, asserts the
+  #   `EXTENSION PATH (S17 — not v1)` subsection present and non-empty, and reads
+  #   the ordering section's `restart`/`repoll` tokens; `tests/checks/help-guide-coverage.ts`
+  #   and `tests/checks/reference-page-parity.test.ts` (this phase, TC-EVT-062)
+  #   read the page's existence and its `--help`/`--version` section. The
+  #   reference-record key set and the `Delivered (M2-S13)` status line have no
+  #   token scan anywhere: the test plan records that prose truth as
+  #   review-attested (TC-EVT-002 Notes, GAP-T6), so they are page obligations of
+  #   this phase and a review item, declared here instead of left implicit.
+  #
+  # Declared controls, not edits (A-16): `tests/behaviour/entrypoint-help.test.ts`
+  # (containment of 15 family names at `:29-47`, no count) and
+  # `tests/checks/help-guide-coverage-mutants.test.ts` (three M1-page mutants over
+  # a temp root that copies both `m1/commands` and `m2/commands`, `:19-25`) need
+  # no edit, so neither is declared in this phase's scope; the gate runs both as
+  # delivered controls. Correcting one of them would be the semantic assertion
+  # change the escalation trigger reserves.
   #
   # Note on doc/00-index.md: spec §16 marks it (and doc/spec/00-index.md) as
   # needing no change, so it is NOT declared in any phase; this phase and the
@@ -523,10 +647,8 @@ phases:
         - scripts/checks/help-guide-coverage.ts
         - tests/behaviour/entrypoint-composition.test.ts
         - tests/behaviour/entrypoint-help-coverage.test.ts
-        - tests/behaviour/entrypoint-help.test.ts
         - tests/behaviour/events-mount-help.test.ts
         - tests/checks/event-mount-guards.test.ts
-        - tests/checks/help-guide-coverage-mutants.test.ts
         - tests/checks/reference-page-parity.test.ts
         - tests/fixtures/events/mount-mutants.ts
         - tests/fixtures/help-guide/coverage.json
@@ -598,27 +720,46 @@ phases:
   # Phase 7 — The shared tick read (spec DEC-N, §7.1, §9, §18).
   #
   # Goal: restructure the delivered publish tick from one whole-store read per
-  # fold to exactly one whole-store `readRecords()` per tick. The composition
-  # takes the view once and hands the same view to the snapshot projection
-  # (`queue`, `lanes`) and to the event projection (the four event topics); the
+  # fold to exactly one whole-store `readRecords()` per publish tick — one
+  # `publishState`/`stateChanges()` invocation, the interval NFR-2 counts
+  # (spec v1.2); the loop's heartbeat fold is outside that interval and is
+  # neither moved nor bounded here. The composition takes the view once and hands
+  # the same view to the snapshot projection (`queue`, `lanes`) and to the event
+  # projection (the four event topics); the
   # folds that today read on their own (`readQueueEntries`, `readDaemonLanes`,
   # and the `changeRef`-keyed phase-transition read) accept the shared view
   # instead of performing their own read; the snapshot dedupe and the event
-  # watermark stay per topic; and the tick exposes the counting seam the test
-  # asserts — an injected `StateStorePort` whose `readRecords()` is wrapped by a
-  # counter, so one tick counts exactly one call whatever the subscriber count or
-  # the number of subscribed event topics. No port shape, wire type, record
-  # kind, schema version, or dependency changes: the port keeps its single
-  # whole-store read and the restructure moves the read, it does not widen it.
+  # watermark stay per topic; and the publish path exposes the counting seam the
+  # test asserts — an injected `StateStorePort` whose `readRecords()` is wrapped
+  # by a counter, so one publish tick counts exactly one call whatever the
+  # subscriber count or the number of subscribed event topics. No port shape,
+  # wire type, record kind, schema version, or dependency changes: the port keeps
+  # its single whole-store read and the restructure moves the read, it does not
+  # widen it.
   #
   # Dependency reasoning: the projection (Phase 3) already consumes a view as an
   # argument, and the subscribe carriage (Phase 4) is what makes TC-EVT-081's
   # 1-vs-N subscriber and 2-vs-4 subscribed-topic matrices observable, so this
-  # phase follows both. It precedes the documentation phase so the
+  # phase follows both. The projection already reached the CLI through the
+  # package root in Phase 4 (`packages/core/src/index.ts`), so this phase adds no
+  # export row and no entrypoint allowance; its gate re-runs
+  # `workspace-entrypoints` to prove the CLI still imports only the declared
+  # subpaths. It precedes the documentation phase so the
   # resident-daemon page records the delivered read model and its cost bound. The
-  # tick is the highest-traffic seam in the change, so this phase's gate re-runs
-  # the snapshot-preservation, overflow-parity, sequence, burst, and end-to-end
-  # subscribe suites that the tick serves, not only the cost suite.
+  # publish path is the highest-traffic seam in the change, so this phase's gate
+  # re-runs the snapshot-preservation, overflow-parity, sequence, burst, and
+  # end-to-end subscribe suites that the publish path serves, not only the cost
+  # suite.
+  #
+  # Regression controls (not edits): every suite in this gate except
+  # `tests/behaviour/events-tick-cost.test.ts` is a delivered or earlier-phase
+  # suite re-run to prove the restructure moved the read rather than the
+  # behaviour — `events-snapshot-preserved`, `events-overflow-parity`,
+  # `events-sequence-per-lane`, and `events-burst` (Phase 4),
+  # `events-subscribe-queue-graph` (Phase 6), `control-session`/`-connection`/
+  # `-conformance` (Phase 4), and `daemon-watch-state-changes` (delivered,
+  # unchanged and therefore undeclared in any scope). Only the tick-cost suite is
+  # authored here.
   #
   # Gate:
   #   pnpm typecheck
@@ -629,7 +770,7 @@ phases:
   #   bun run scripts/checks/ambient-globals.ts
   #   bun run scripts/checks/workspace-entrypoints.ts
   #
-  # Suites left green: events-tick-cost (one `readRecords()` per tick),
+  # Suites left green: events-tick-cost (one `readRecords()` per publish tick),
   #   events-snapshot-preserved, events-overflow-parity,
   #   events-sequence-per-lane, events-burst,
   #   events-subscribe-queue-graph, control-session, control-connection,
@@ -637,7 +778,7 @@ phases:
   #   workspace-entrypoints.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Shared tick read: one whole-store read per tick folded for the snapshot and event projections, with the tick-cost proof"
+    title: "Shared tick read: one whole-store read per publish tick folded for the snapshot and event projections, with the tick-cost proof"
     kind: delivery
     summary: "refactor(daemon): take one store read per publish tick and share it across both projections"
     scope:
