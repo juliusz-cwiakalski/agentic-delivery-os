@@ -1053,6 +1053,14 @@ former M2-S1) into M1; its content is delivered by M1-S17 (scheduling
 engine) and M1-S18 (resident dispatch daemon). The M2-S1 code is retired;
 the gap is deliberate. M2 stories keep their codes.
 
+The M2 stories below now read on three levels. A repository is one git
+checkout and stays the delivery unit; a project is a named group of
+repositories whose membership is declared in configuration; a workspace is an
+optional persisted directory usable as a discovery root, and it is never
+required. The naming boundary follows from that: `repos` is the flat enumeration of managed checkouts and `projects` is the group surface, owned by the amended M2-S11 and by M2-S18 respectively.
+Entrypoint consequence: both become root families, so the root listing meets
+the repository family and the project family separately.
+
 ### M2-S2 Supervise
 - Goal: A supervisor battery with artifact-evidence liveness so stuck or lying deliveries are detected and acted on, not just observed, running over the M1 daemon's lanes.
 - Tasks: supervisor battery: tri-state status, progress watchdogs,
@@ -1175,15 +1183,17 @@ the gap is deliberate. M2 stories keep their codes.
   one-step migration guide, and the host-wide owner hold preserved.
 - Goal: Multiple delivery-managed repositories on one workstation are
   first-class: state is scoped per repository so same-ref collisions are
-  impossible, and a projects command gives one CLI overview of every managed
+  impossible, and `repos list` is the flat enumeration of every managed
   checkout.
 - Tasks: per-repository state scoping derived from the checkout identity
-  (git common dir marker) with a host-level index; `projects list` reporting
+  (git common dir marker) with a host-level index; `repos list` reporting
   repo key, root, state location, daemon reachability, handover state;
   migration note for existing single-store users; tests proving two checkouts
-  using the same ref cannot observe each other's documents.
+  using the same ref cannot observe each other's documents; transition note:
+  if a flat `projects list` had shipped before the group story (M2-S18), the
+  group story renames it with a deprecation alias.
 - AC: two checkouts of different repositories on one host, both using ref
-  GH-241, hold disjoint phase state and queue entries; `projects list`
+  GH-241, hold disjoint phase state and queue entries; `repos list`
   enumerates them without manual configuration.
 - Depends on: M0-S5, M1-S17.
 
@@ -1289,6 +1299,41 @@ the gap is deliberate. M2 stories keep their codes.
   6. Stop, park, and resume are auditable ledger events surfaced in status and brief.
   7. Works with the daemon resident; without it, behavior degrades to iteration-start gating with the difference declared.
 - Depends on: M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, and the owner-hold semantics (#280).
+
+### M2-S18 Project groups
+- Goal: A project is a configured group of repositories that belong together,
+  so the tooling can enumerate groups with their members and scope delivery
+  views per project, with a workspace directory usable as an optional
+  discovery root.
+- Tasks: project configuration declaring member repositories, with any
+  tracker adapter and mixed trackers remaining valid configuration even if
+  only GitHub is exercised initially; an optional workspace-directory
+  discovery root: register a directory, scan for managed clones inside, and
+  never require it; `projects list` rendering groups with member repositories,
+  their health, and their state; project scoping for queue and status reads;
+  the naming boundary documented, where `repos` is the flat enumeration and
+  `projects` describes groups.
+- AC:
+  1. A project with two member repositories in one workspace directory is discoverable by registering that directory.
+  2. The same project configured with repositories in unrelated directories behaves identically, because a workspace is optional.
+  3. `projects list` shows the group with both members and their state, and queue and status accept a project scope.
+  4. A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently.
+- Depends on: M2-S11.
+
+### M2-S19 Cross-repository changes
+- Goal: One change may span multiple repositories of one project: one
+  lifecycle, one spec and plan, one definition of done, with a branch and
+  pull request per member repository.
+- Tasks: the plan declares member repositories and their slices; one
+  lifecycle drives per-repo branches and PRs; per-repo gates and one shared
+  DoD; closeout across member repositories, with branch cleanup and issue
+  closure per tracker; dependency edges between member repositories' steps
+  where order matters; evidence records enumerate all member PRs.
+- AC:
+  1. A two-repository change produces one spec, two branches, two PRs, one review flow, and a closeout that lands both.
+  2. Per-repo CI truth is corroborated per member before the change counts done.
+  3. A member failing its gates blocks the shared DoD with the failing member named.
+- Depends on: M2-S11, M2-S18, M1-S17.
 
 ---
 
