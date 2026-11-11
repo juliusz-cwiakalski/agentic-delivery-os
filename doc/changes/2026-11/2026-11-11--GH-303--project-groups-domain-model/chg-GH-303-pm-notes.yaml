@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
   delivery: { started: null, completed: 2026-11-11T14:09:58.234Z }
   system_spec_update: { started: null, completed: 2026-11-11T14:13:22.813Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-11T16:03:09.236Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -524,38 +524,39 @@ notes:
     date: "2026-11-11"
   - text: "Scope disclosure for plan phase 5 (commit 0aba071e): besides the four
       declared P5 files (m2/README.md, milestones/README.md, status.md,
-      cli-command-registry.md), that commit also carried three cosmetic touch-ups
-      inside the manifest — backlog.md, m2/architecture.md, m2/journeys.md. The
-      coder's P5 note listed only the four declared files; this entry records the
-      full commit scope so the per-phase evidence matches the commit, as review
-      iteration 1 finding 5 requires. No path outside the 13-file manifest was
-      touched."
+      cli-command-registry.md), that commit also carried three cosmetic
+      touch-ups inside the manifest — backlog.md, m2/architecture.md,
+      m2/journeys.md. The coder's P5 note listed only the four declared files;
+      this entry records the full commit scope so the per-phase evidence matches
+      the commit, as review iteration 1 finding 5 requires. No path outside the
+      13-file manifest was touched."
     type: "info"
     date: "2026-11-11"
   - text: "REVIEW ITERATION 1 (phase 8): FAIL — 1 high, 1 medium, 3 low, 1 info.
       Record: code-review/review-iter-1.yaml. The reviewer re-extracted all 46
-      procedure blocks and re-ran them at HEAD (all PASS), plus both guards, plan
-      validate, lint, a link sweep and a board.md byte check, and reviewed the
-      ticket against Appendix A itself. Findings: (1) HIGH —
+      procedure blocks and re-ran them at HEAD (all PASS), plus both guards,
+      plan validate, lint, a link sweep and a board.md byte check, and reviewed
+      the ticket against Appendix A itself. Findings: (1) HIGH —
       m2/architecture.md:3 still says one workstation manages repositories 'as
       first-class projects', and its C4 L1 engine node at :31 still lists
       'projects' as a capability while C4 L2 renamed that plane to repository
-      plane; a surviving projects-denoting-checkouts statement P32/P45 cannot see
-      because it carries no enumeration predicate; (2) MEDIUM — test-scenarios.md
-      SC-M2-S4-02 asserts 'project key'/'data.projects' for repositories, the
-      residue test-plan gap G-4 delegates to the reviewer; (3) LOW — the S18
-      acceptance clauses A3 and A4 share numbered item 3 in backlog.md, so the
-      block has four items for five criteria against NFR-8 and AC-F2-1; (4) LOW —
-      m2/README.md says 'seven key flows' plus two named flows, summing to nine
-      against the eight headings NFR-7 pins; (5) LOW — the P5 commit scope
-      disclosure (recorded above); (6) INFO — commands/board.md still uses
-      'project' to mean repository and links to the redefined projects.v1, an
-      accepted deferral (TP-7) that needs an owner checkpoint at M2-S4."
+      plane; a surviving projects-denoting-checkouts statement P32/P45 cannot
+      see because it carries no enumeration predicate; (2) MEDIUM —
+      test-scenarios.md SC-M2-S4-02 asserts 'project key'/'data.projects' for
+      repositories, the residue test-plan gap G-4 delegates to the reviewer; (3)
+      LOW — the S18 acceptance clauses A3 and A4 share numbered item 3 in
+      backlog.md, so the block has four items for five criteria against NFR-8
+      and AC-F2-1; (4) LOW — m2/README.md says 'seven key flows' plus two named
+      flows, summing to nine against the eight headings NFR-7 pins; (5) LOW —
+      the P5 commit scope disclosure (recorded above); (6) INFO —
+      commands/board.md still uses 'project' to mean repository and links to the
+      redefined projects.v1, an accepted deferral (TP-7) that needs an owner
+      checkpoint at M2-S4."
     type: "info"
     date: "2026-11-11"
   - text: "Review iteration 1 routing: remediation goes to the plan's conditional
-      phase P6 (@coder), which already owns all 13 product files. Findings 1-4 are
-      product edits; finding 5 is recorded above; finding 6 stays a declared
+      phase P6 (@coder), which already owns all 13 product files. Findings 1-4
+      are product edits; finding 5 is recorded above; finding 6 stays a declared
       deferral with the M2-S4 owner named in the P6 evidence. After P6, re-run
       @doc-syncer (product docs changed) and re-run @reviewer as iteration 2."
     type: "decision"
@@ -563,49 +564,48 @@ notes:
   - text: "RETRO (review iteration 1): five of six findings are the same class — a
       rename applied to the artifacts the test plan's matrix watches, but not to
       prose the matrix has no predicate for (an unanchored sentence in the
-      model-owning page, a scenario seed's field name, an entry's item boundaries,
-      an index's flow count). The procedures were green because they measured what
-      they were told to measure. Improvement: for a naming-boundary change, the
-      spec should require a corpus-wide free-text sweep of both names with a
-      human-read sampler, not only matrix-region predicates — the matrix is a
-      floor, not a proof."
+      model-owning page, a scenario seed's field name, an entry's item
+      boundaries, an index's flow count). The procedures were green because they
+      measured what they were told to measure. Improvement: for a
+      naming-boundary change, the spec should require a corpus-wide free-text
+      sweep of both names with a human-read sampler, not only matrix-region
+      predicates — the matrix is a floor, not a proof."
     type: "retro"
     date: "2026-11-11"
-  - text: "Review finding 6 deferral ownership (recorded so the deferral has a
-      named owner). `m2/commands/board.md` stays byte-identical and still means
-      a repository by 'project': `projects[]` is 'Project keys included in the
-      board' with the example ['delivery-a'], `--project <key>` takes a repo
-      key (lines 24, 39, 77, 85), and the page now links to the redefined
+  - text: "Review finding 6 deferral ownership (recorded so the deferral has a named
+      owner). `m2/commands/board.md` stays byte-identical and still means a
+      repository by 'project': `projects[]` is 'Project keys included in the
+      board' with the example ['delivery-a'], `--project <key>` takes a repo key
+      (lines 24, 39, 77, 85), and the page now links to the redefined
       `projects.v1`. Deferred by test plan §8.4 TP-7 and plan P5's constraint.
       Owner checkpoint: M2-S4 — the board story must reconcile the page to
-      `repos[]` for the flat list and a group-scoped `projects list` read
-      before it delivers against the group envelope, so the `--project` option
-      stops carrying a repository key in board.md while journeys.md:24 asserts
-      the group scope. SC-M2-S4-02 now asserts repository keys against the
-      current `data.projects` envelope and inherits the same checkpoint. The
-      deferral is therefore tracked here, not only in the readiness record."
+      `repos[]` for the flat list and a group-scoped `projects list` read before
+      it delivers against the group envelope, so the `--project` option stops
+      carrying a repository key in board.md while journeys.md:24 asserts the
+      group scope. SC-M2-S4-02 now asserts repository keys against the current
+      `data.projects` envelope and inherits the same checkpoint. The deferral is
+      therefore tracked here, not only in the readiness record."
     type: "info"
     date: "2026-11-11"
-  - text: "Corpus-wide free-text sweep at the P6 head (both names, every .md
-      under doc/planning/oss-tooling, 148 matching lines read). Verdicts:
-      (a) inside the thirteen-file manifest every `projects`/`projects list`
-      mention carries the group meaning and every `repos`/`repos list` mention
-      carries the flat enumeration, except the declared board deferral above;
-      (b) pre-existing base text outside this change's editable ranges still
-      uses M1-era 'projects' for managed checkouts — backlog.md:847
-      ('multiple projects on one host are isolated') and backlog.md:863
-      ('isolates projects from each other'); both are unchanged base lines in
-      M1 stories, protected by P10's hunk confinement and P35's story
-      preservation, so they are recorded as residual semantic staleness rather
-      than edited; (c) outside the manifest, m1/architecture.md:225/426 and
-      m1/contracts.md:361 carry the same legacy sense, and m1/man-page.md:109
-      still says `repos` is 'not delivered until M3-S6' (the hygiene family,
-      not the flat enumeration); not touched by GH-303; (d) generic-English
-      uses (a response 'projects' to exit 2, tracker 'projects', adopting
-      'projects') and VCS 'repos' references are not the domain entities. No
-      `projects` statement in the twelve documents denotes the flat
-      enumeration and no `repos` statement denotes a group after the four P6
-      fixes."
+  - text: "Corpus-wide free-text sweep at the P6 head (both names, every .md under
+      doc/planning/oss-tooling, 148 matching lines read). Verdicts: (a) inside
+      the thirteen-file manifest every `projects`/`projects list` mention
+      carries the group meaning and every `repos`/`repos list` mention carries
+      the flat enumeration, except the declared board deferral above; (b)
+      pre-existing base text outside this change's editable ranges still uses
+      M1-era 'projects' for managed checkouts — backlog.md:847 ('multiple
+      projects on one host are isolated') and backlog.md:863 ('isolates projects
+      from each other'); both are unchanged base lines in M1 stories, protected
+      by P10's hunk confinement and P35's story preservation, so they are
+      recorded as residual semantic staleness rather than edited; (c) outside
+      the manifest, m1/architecture.md:225/426 and m1/contracts.md:361 carry the
+      same legacy sense, and m1/man-page.md:109 still says `repos` is 'not
+      delivered until M3-S6' (the hygiene family, not the flat enumeration); not
+      touched by GH-303; (d) generic-English uses (a response 'projects' to exit
+      2, tracker 'projects', adopting 'projects') and VCS 'repos' references are
+      not the domain entities. No `projects` statement in the twelve documents
+      denotes the flat enumeration and no `repos` statement denotes a group
+      after the four P6 fixes."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 6 (review remediation) complete at commit d647f47b. One
@@ -614,81 +614,121 @@ notes:
       byte-identical. Findings and resolutions: F-1 (HIGH) —
       m2/architecture.md:3-6 now opens on the three-level model ('one
       workstation manages several delivery repositories, grouped as configured
-      projects'), and the C4 Level 1 engine node at :31 reads 'repository
-      plane, queue, dispatch, events, telemetry, handover gate' instead of
-      listing 'projects'; fences stay even with the mermaid tag and all eleven
-      diagram keywords, C4 headings stay 1/1/1, Key flows stays 8/8. F-2
-      (MEDIUM) — m2/test-scenarios.md:61-64 SC-M2-S4-02 now says 'every lane
-      appears under its repository key' and asserts both repository keys with
-      the per-repository boards; the `data.projects` envelope name stays as the
+      projects'), and the C4 Level 1 engine node at :31 reads 'repository plane,
+      queue, dispatch, events, telemetry, handover gate' instead of listing
+      'projects'; fences stay even with the mermaid tag and all eleven diagram
+      keywords, C4 headings stay 1/1/1, Key flows stays 8/8. F-2 (MEDIUM) —
+      m2/test-scenarios.md:61-64 SC-M2-S4-02 now says 'every lane appears under
+      its repository key' and asserts both repository keys with the
+      per-repository boards; the `data.projects` envelope name stays as the
       current board contract and the seed has exactly one Assert line (the fix
       is preferred over the TP-7 deferral). F-3 (LOW) — backlog.md:1314-1315
       splits S18-A3 and S18-A4 into items 3 and 4, so the five S18 acceptance
       clauses are five numbered items with unchanged wording and the four-label
-      shape intact. F-4 (LOW) — m2/README.md:29 now reads 'the eight key
-      flows, including the S17 park/resume flow and the cross-repository change
-      flow'. F-5 (LOW) — the P5 scope disclosure is recorded at pm-notes:525.
-      F-6 (INFO) — deferral ownership is recorded in the preceding note:
-      board.md still means a repository by 'project', deferred by TP-7 with
-      M2-S4 as the owning checkpoint. Outcome: the reviewer's two
-      statement-level spec-compliance defects and its two conformance defects
-      are closed in the files the verdict names. Why: AC-F14-1 and NFR-12
-      require zero `projects` occurrences denoting the flat enumeration in the
-      twelve documents, and the page that owns the model must not contradict
-      it. Verification, fresh shells at HEAD d647f47b: P01 PASS (retained 5/5,
-      depends exact, fields OK, transition OK, old goal ABSENT); P02 PASS
-      (flat=0 raw=1 repos_list=3 group=0 copies=1); P03 PASS (12/12 shape 4/4
-      ticket 0); P05 PASS (11/11); P11 PASS (four OK, claim ABSENT); P12 PASS
-      (four OK, violation ABSENT); P13 PASS (1/1/1, cross-repo mermaid=1,
-      invariants 1/1/1/1); P19 PASS (9/9 5/5); P20 PASS (7/7 3/3 0); P21 PASS
-      (repos.v1=2 projects[]=0; projects.v1=2 repos=0); P22 PASS (s18=3 s19=3
-      assert_violations=0 coverage 10/10); P23 PASS; P24 PASS; P25 PASS; P26
-      PASS (pack rows 13/13); P27 PASS (13/13, m0/m1 byte-identical); P32 PASS
-      (17 rows, 0 empty, 0/17 survivors, self-tests detected/OK, base board
-      OK); P33 PASS (6/6); P36 PASS (2/2 headers, 0 delivered claims, pack
-      verbatim, snapshot 0); P37 PASS (140 vs 139, repos row between queue and
-      spend, 0 duplicates); P40 PASS (C4 1/1/1, key flows 8/8,
-      flow_ownership_bad=0); P41 PASS (26/26); P42 PASS (exit 0, 5/5 classes,
-      140 scanned, planning 10/10, violations=0, failures=0, seed_hits=0); P43
-      PASS (broken=0, restated=0); P45 PASS (17/17, 0 empty, fixtures
-      OK/detected); P34 PASS (13/13, expected_not_changed=0, unexpected empty,
-      other_scripts=0; post_commit_check=identical when the comparison runs
-      under a single collation, the same LANG=pl_PL.UTF-8 instrument artifact
-      recorded at P5); P38 PASS (dist_guard_exit=0, planning_markers=0; the
-      distribution guard also exits 0 run directly with the default TMPDIR);
+      shape intact. F-4 (LOW) — m2/README.md:29 now reads 'the eight key flows,
+      including the S17 park/resume flow and the cross-repository change flow'.
+      F-5 (LOW) — the P5 scope disclosure is recorded at pm-notes:525. F-6
+      (INFO) — deferral ownership is recorded in the preceding note: board.md
+      still means a repository by 'project', deferred by TP-7 with M2-S4 as the
+      owning checkpoint. Outcome: the reviewer's two statement-level
+      spec-compliance defects and its two conformance defects are closed in the
+      files the verdict names. Why: AC-F14-1 and NFR-12 require zero `projects`
+      occurrences denoting the flat enumeration in the twelve documents, and the
+      page that owns the model must not contradict it. Verification, fresh
+      shells at HEAD d647f47b: P01 PASS (retained 5/5, depends exact, fields OK,
+      transition OK, old goal ABSENT); P02 PASS (flat=0 raw=1 repos_list=3
+      group=0 copies=1); P03 PASS (12/12 shape 4/4 ticket 0); P05 PASS (11/11);
+      P11 PASS (four OK, claim ABSENT); P12 PASS (four OK, violation ABSENT);
+      P13 PASS (1/1/1, cross-repo mermaid=1, invariants 1/1/1/1); P19 PASS (9/9
+      5/5); P20 PASS (7/7 3/3 0); P21 PASS (repos.v1=2 projects[]=0;
+      projects.v1=2 repos=0); P22 PASS (s18=3 s19=3 assert_violations=0 coverage
+      10/10); P23 PASS; P24 PASS; P25 PASS; P26 PASS (pack rows 13/13); P27 PASS
+      (13/13, m0/m1 byte-identical); P32 PASS (17 rows, 0 empty, 0/17 survivors,
+      self-tests detected/OK, base board OK); P33 PASS (6/6); P36 PASS (2/2
+      headers, 0 delivered claims, pack verbatim, snapshot 0); P37 PASS (140 vs
+      139, repos row between queue and spend, 0 duplicates); P40 PASS (C4 1/1/1,
+      key flows 8/8, flow_ownership_bad=0); P41 PASS (26/26); P42 PASS (exit 0,
+      5/5 classes, 140 scanned, planning 10/10, violations=0, failures=0,
+      seed_hits=0); P43 PASS (broken=0, restated=0); P45 PASS (17/17, 0 empty,
+      fixtures OK/detected); P34 PASS (13/13, expected_not_changed=0, unexpected
+      empty, other_scripts=0; post_commit_check=identical when the comparison
+      runs under a single collation, the same LANG=pl_PL.UTF-8 instrument
+      artifact recorded at P5); P38 PASS (dist_guard_exit=0, planning_markers=0;
+      the distribution guard also exits 0 run directly with the default TMPDIR);
       plan validate verdict=valid; lint GH-303 conforms. Gate runs:
       repository-local TMPDIR pnpm check at HEAD d647f47b -> local_run1_rc=0,
       7133 pass / 4 skip / 0 fail, load 6.04 before and 8.38 after with 20
       competing processes (green on the first run; no excuse used). The
-      default-TMPDIR companion -> default_rc=1, 7132 pass / 4 skip / 1 fail,
-      the single failure CI baseline parity (cross-device hardlink); P39
-      default_failure_class=excused, rerun_recorded=yes (parity fails
-      standalone under the default TMPDIR in 11.30ms and passes standalone
-      under the repository-local TMPDIR in 3.76s; TC-WIRE-002 was absent from
-      this default run, passes 5/5 standalone in 19.00ms, and the full local
-      suite has 0 failures), P39 verdict PASS (excused). An earlier local run
-      at the same head failed only TC-WIRE-002 at 5245.64ms under load 7.7
-      with competing suites; the fresh run above is the authoritative one and
-      is green. Free-text sweep (both names, every .md under
-      doc/planning/oss-tooling, 148 matching lines read): after the fix, no
-      `projects`/`projects list` statement in the twelve documents denotes the
-      flat enumeration and no `repos`/`repos list` statement denotes a group,
-      except the declared board deferral (board.md `projects[]`/`--project`,
-      test-scenarios.md:64 `data.projects`, owner M2-S4). Pre-existing M1-era
-      'projects' for managed checkouts survives only in backlog.md:847/863
-      (unchanged base lines in M1 stories, protected by P10 hunk confinement
-      and P35 story preservation) and outside the manifest in
-      m1/architecture.md:225/426 and m1/contracts.md:361; m1/man-page.md:109
-      still says `repos` is not delivered until M3-S6 (the hygiene family,
-      not the flat enumeration). Generic-English uses (a response 'projects'
-      to exit 2, tracker projects, adopting projects) and VCS repos are not
-      the domain entities. Residual: the board deferral and the recorded
-      M1-era wording above; no gate, procedure, or scan was weakened, no TC
-      ownership moved, and both command pages stay Status: Proposed (M2) with
-      no delivery claim (P36 delivered_claims=0, snapshot_relabels=0). Message
-      mechanism: the primitive's transport is none, so the subject is a
-      template and the finding ids plus outcome/why/verification live in this
-      ledger entry rather than the commit body, the same recorded deviation as
-      P1-P5."
+      default-TMPDIR companion -> default_rc=1, 7132 pass / 4 skip / 1 fail, the
+      single failure CI baseline parity (cross-device hardlink); P39
+      default_failure_class=excused, rerun_recorded=yes (parity fails standalone
+      under the default TMPDIR in 11.30ms and passes standalone under the
+      repository-local TMPDIR in 3.76s; TC-WIRE-002 was absent from this default
+      run, passes 5/5 standalone in 19.00ms, and the full local suite has 0
+      failures), P39 verdict PASS (excused). An earlier local run at the same
+      head failed only TC-WIRE-002 at 5245.64ms under load 7.7 with competing
+      suites; the fresh run above is the authoritative one and is green.
+      Free-text sweep (both names, every .md under doc/planning/oss-tooling, 148
+      matching lines read): after the fix, no `projects`/`projects list`
+      statement in the twelve documents denotes the flat enumeration and no
+      `repos`/`repos list` statement denotes a group, except the declared board
+      deferral (board.md `projects[]`/`--project`, test-scenarios.md:64
+      `data.projects`, owner M2-S4). Pre-existing M1-era 'projects' for managed
+      checkouts survives only in backlog.md:847/863 (unchanged base lines in M1
+      stories, protected by P10 hunk confinement and P35 story preservation) and
+      outside the manifest in m1/architecture.md:225/426 and
+      m1/contracts.md:361; m1/man-page.md:109 still says `repos` is not
+      delivered until M3-S6 (the hygiene family, not the flat enumeration).
+      Generic-English uses (a response 'projects' to exit 2, tracker projects,
+      adopting projects) and VCS repos are not the domain entities. Residual:
+      the board deferral and the recorded M1-era wording above; no gate,
+      procedure, or scan was weakened, no TC ownership moved, and both command
+      pages stay Status: Proposed (M2) with no delivery claim (P36
+      delivered_claims=0, snapshot_relabels=0). Message mechanism: the
+      primitive's transport is none, so the subject is a template and the
+      finding ids plus outcome/why/verification live in this ledger entry rather
+      than the commit body, the same recorded deviation as P1-P5."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Correction to the P6 sweep record (review iteration 2 finding 1): the
+      free-text verdict is scoped to EDITED statements, not to every line in the
+      twelve documents. The accurate statement is: no edited statement in the
+      thirteen-file manifest denotes the other entity; the surviving M1-era
+      checkout-sense 'projects' lines inside the manifest are preserved base
+      text and are enumerated here — backlog.md:847 ('multiple projects on one
+      host are isolated'), backlog.md:863 ('isolates projects from each other')
+      and backlog.md:1082 ('Projects declare their own ceremonies', M2-S3). They
+      are unchanged base lines protected by P10 hunk confinement and P35 story
+      preservation, so they are recorded as residual semantic staleness rather
+      than edited. Outside the manifest the same legacy sense survives in
+      m1/architecture.md:225/426, m1/contracts.md:361, and m1/man-page.md:109
+      ('repos not delivered until M3-S6', the hygiene family)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Post-P6 documentation re-check recorded (review iteration 2 finding 2):
+      @doc-syncer re-ran phase 7 at HEAD ad0101d4 after the remediation diff
+      d647f47b. Verdict: no documentation gaps remain — zero current-truth
+      statements equate `projects` with a flat enumeration or confine `repos` to
+      M3 hygiene; no doc/spec coverage gap was created because neither family is
+      delivered or composed; guards green (test-doc-distribution exit 0 with 82
+      in-scope docs and no drift; forbidden-literals exit 0 with 140 docs and 0
+      violations; lint GH-303 conforms). This supersedes the phase-7 note's HEAD
+      pointer (44889cf4) without changing its substance."
+    type: "info"
+    date: "2026-11-11"
+  - text: "REVIEW ITERATION 2 (phase 8): PASS — spec compliance PASS, plan
+      compliance PASS, 0 critical / 0 high / 0 medium / 1 low / 1 info. Record:
+      code-review/review-iter-2.yaml. All six iteration-1 findings verified
+      closed by inspection and re-execution: the architecture opening and C4 L1
+      label now match the repository plane, SC-M2-S4-02 uses repository keys
+      with the board deferral owned by M2-S4, M2-S18 carries five acceptance
+      items, the README flow count matches eight headings, the P5 scope is
+      disclosed, and the deferral owner is named. The reviewer re-extracted and
+      re-ran all 46 procedures at HEAD (all PASS, including P34
+      post_commit_check=identical under a single collation), both guards, plan
+      validate and lint; containment is exactly 13 product files with board.md
+      at zero diff; and the P6 edits introduced no new contradiction. The two
+      non-blocking findings are the pm-notes evidence corrections recorded in
+      the two entries above."
     type: "info"
     date: "2026-11-11"
