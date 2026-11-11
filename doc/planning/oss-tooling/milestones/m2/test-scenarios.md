@@ -58,10 +58,10 @@ Assert: `board.data` has `lanes`, `gates`, `asks`, and `parked`, and `board.data
 ### SC-M2-S4-02 Board lists work across two repositories on one host
 
 Given two managed repositories on one host, when `<binary> board --all`
-runs, then every lane appears under its project key, and the total equals the
-sum of the per-repository boards with no row duplicated.
+runs, then every lane appears under its repository key, and the total equals
+the sum of the per-repository boards with no row duplicated.
 
-Assert: `board --all.data.projects` holds both project keys and the row count equals the sum of the per-project boards.
+Assert: `board --all.data.projects` holds both repository keys and the row count equals the sum of the per-repository boards.
 
 ## M2-S5 Steer
 

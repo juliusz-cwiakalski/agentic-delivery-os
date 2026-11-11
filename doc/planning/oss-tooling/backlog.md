@@ -1317,8 +1317,9 @@ the repository family and the project family separately.
 - AC:
   1. A project with two member repositories in one workspace directory is discoverable by registering that directory.
   2. The same project configured with repositories in unrelated directories behaves identically, because a workspace is optional.
-  3. `projects list` shows the group with both members and their state, and queue and status accept a project scope.
-  4. A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently.
+  3. `projects list` shows the group with both members and their state.
+  4. Queue and status accept a project scope.
+  5. A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently.
 - Depends on: M2-S11.
 
 ### M2-S19 Cross-repository changes

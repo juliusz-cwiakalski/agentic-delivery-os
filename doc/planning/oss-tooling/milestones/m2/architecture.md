@@ -1,9 +1,9 @@
 # M2 outcome architecture: engine-first operations and multi-repository workstations (planned)
 
-The system at M2 exit: one workstation manages several delivery repositories
-as first-class projects, the typed engine carries day-to-day delivery, the
-queue lifecycle closes itself, the daemon publishes a versioned event
-taxonomy, and telemetry turns spend, metrics, and retro into stated facts.
+The system at M2 exit: one workstation manages several delivery repositories,
+grouped as configured projects, while the typed engine carries day-to-day
+delivery, the queue lifecycle closes itself, the daemon publishes a versioned
+event taxonomy, and telemetry turns spend, metrics, and retro into stated facts.
 Planned state; story numbers reference [../../backlog.md](../../backlog.md).
 Pack conventions are in [README.md](README.md); contract detail is in
 [contracts.md](contracts.md).
@@ -28,7 +28,7 @@ flowchart TB
         MEMBER[member repositories<br/>one checkout each and the delivery unit]
         WS[workspace (optional)<br/>persisted discovery root]
     end
-    ENGINE[delivery engine<br/>projects, queue, dispatch,<br/>events, telemetry, handover gate]
+    ENGINE[delivery engine<br/>repository plane, queue,<br/>dispatch, events, telemetry,<br/>handover gate]
     HOST[(Host-level repository index<br/>one entry per managed checkout)]
     PROJECT -->|membership declared in configuration| MEMBER
     WS -.->|discovery root only, never required| PROJECT

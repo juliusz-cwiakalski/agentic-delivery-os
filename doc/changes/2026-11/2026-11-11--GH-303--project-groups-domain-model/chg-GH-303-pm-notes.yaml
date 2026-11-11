@@ -522,3 +522,89 @@ notes:
       Residual gaps: none."
     type: "info"
     date: "2026-11-11"
+  - text: "Scope disclosure for plan phase 5 (commit 0aba071e): besides the four
+      declared P5 files (m2/README.md, milestones/README.md, status.md,
+      cli-command-registry.md), that commit also carried three cosmetic touch-ups
+      inside the manifest — backlog.md, m2/architecture.md, m2/journeys.md. The
+      coder's P5 note listed only the four declared files; this entry records the
+      full commit scope so the per-phase evidence matches the commit, as review
+      iteration 1 finding 5 requires. No path outside the 13-file manifest was
+      touched."
+    type: "info"
+    date: "2026-11-11"
+  - text: "REVIEW ITERATION 1 (phase 8): FAIL — 1 high, 1 medium, 3 low, 1 info.
+      Record: code-review/review-iter-1.yaml. The reviewer re-extracted all 46
+      procedure blocks and re-ran them at HEAD (all PASS), plus both guards, plan
+      validate, lint, a link sweep and a board.md byte check, and reviewed the
+      ticket against Appendix A itself. Findings: (1) HIGH —
+      m2/architecture.md:3 still says one workstation manages repositories 'as
+      first-class projects', and its C4 L1 engine node at :31 still lists
+      'projects' as a capability while C4 L2 renamed that plane to repository
+      plane; a surviving projects-denoting-checkouts statement P32/P45 cannot see
+      because it carries no enumeration predicate; (2) MEDIUM — test-scenarios.md
+      SC-M2-S4-02 asserts 'project key'/'data.projects' for repositories, the
+      residue test-plan gap G-4 delegates to the reviewer; (3) LOW — the S18
+      acceptance clauses A3 and A4 share numbered item 3 in backlog.md, so the
+      block has four items for five criteria against NFR-8 and AC-F2-1; (4) LOW —
+      m2/README.md says 'seven key flows' plus two named flows, summing to nine
+      against the eight headings NFR-7 pins; (5) LOW — the P5 commit scope
+      disclosure (recorded above); (6) INFO — commands/board.md still uses
+      'project' to mean repository and links to the redefined projects.v1, an
+      accepted deferral (TP-7) that needs an owner checkpoint at M2-S4."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Review iteration 1 routing: remediation goes to the plan's conditional
+      phase P6 (@coder), which already owns all 13 product files. Findings 1-4 are
+      product edits; finding 5 is recorded above; finding 6 stays a declared
+      deferral with the M2-S4 owner named in the P6 evidence. After P6, re-run
+      @doc-syncer (product docs changed) and re-run @reviewer as iteration 2."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "RETRO (review iteration 1): five of six findings are the same class — a
+      rename applied to the artifacts the test plan's matrix watches, but not to
+      prose the matrix has no predicate for (an unanchored sentence in the
+      model-owning page, a scenario seed's field name, an entry's item boundaries,
+      an index's flow count). The procedures were green because they measured what
+      they were told to measure. Improvement: for a naming-boundary change, the
+      spec should require a corpus-wide free-text sweep of both names with a
+      human-read sampler, not only matrix-region predicates — the matrix is a
+      floor, not a proof."
+    type: "retro"
+    date: "2026-11-11"
+  - text: "Review finding 6 deferral ownership (recorded so the deferral has a
+      named owner). `m2/commands/board.md` stays byte-identical and still means
+      a repository by 'project': `projects[]` is 'Project keys included in the
+      board' with the example ['delivery-a'], `--project <key>` takes a repo
+      key (lines 24, 39, 77, 85), and the page now links to the redefined
+      `projects.v1`. Deferred by test plan §8.4 TP-7 and plan P5's constraint.
+      Owner checkpoint: M2-S4 — the board story must reconcile the page to
+      `repos[]` for the flat list and a group-scoped `projects list` read
+      before it delivers against the group envelope, so the `--project` option
+      stops carrying a repository key in board.md while journeys.md:24 asserts
+      the group scope. SC-M2-S4-02 now asserts repository keys against the
+      current `data.projects` envelope and inherits the same checkpoint. The
+      deferral is therefore tracked here, not only in the readiness record."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Corpus-wide free-text sweep at the P6 head (both names, every .md
+      under doc/planning/oss-tooling, 148 matching lines read). Verdicts:
+      (a) inside the thirteen-file manifest every `projects`/`projects list`
+      mention carries the group meaning and every `repos`/`repos list` mention
+      carries the flat enumeration, except the declared board deferral above;
+      (b) pre-existing base text outside this change's editable ranges still
+      uses M1-era 'projects' for managed checkouts — backlog.md:847
+      ('multiple projects on one host are isolated') and backlog.md:863
+      ('isolates projects from each other'); both are unchanged base lines in
+      M1 stories, protected by P10's hunk confinement and P35's story
+      preservation, so they are recorded as residual semantic staleness rather
+      than edited; (c) outside the manifest, m1/architecture.md:225/426 and
+      m1/contracts.md:361 carry the same legacy sense, and m1/man-page.md:109
+      still says `repos` is 'not delivered until M3-S6' (the hygiene family,
+      not the flat enumeration); not touched by GH-303; (d) generic-English
+      uses (a response 'projects' to exit 2, tracker 'projects', adopting
+      'projects') and VCS 'repos' references are not the domain entities. No
+      `projects` statement in the twelve documents denotes the flat
+      enumeration and no `repos` statement denotes a group after the four P6
+      fixes."
+    type: "info"
+    date: "2026-11-11"

@@ -26,7 +26,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | Artifact | Purpose |
 |---|---|
 | `README.md` | Pack index: how to read, story-to-artifact map, deviation note |
-| [architecture.md](architecture.md) | C4 context, containers, and components for the M2 end state, the three-level domain model, the seven key flows, the S17 park/resume flow, the cross-repository change flow, persistence and concurrency deltas, boundary invariants |
+| [architecture.md](architecture.md) | C4 context, containers, and components for the M2 end state, the three-level domain model, the eight key flows, including the S17 park/resume flow and the cross-repository change flow, persistence and concurrency deltas, boundary invariants |
 | [contracts.md](contracts.md) | Shared contract continuity plus `repos.v1`, the `projects.v1` group envelope, the project configuration schema, the cross-repository change plan shape, `attempts.v1`, event taxonomy v1, `telemetry.v1`, queue lifecycle mutations, `spend` v2, and the provider-profile and peak-window additions |
 | [test-scenarios.md](test-scenarios.md) | `SC-M2-*` scenario seeds for stories S2 through S19, the inherited starting point for each story's test plan |
 | [journeys.md](journeys.md) | Operator journeys: multi-repository morning overview, evidence before handover, retro on telemetry, steering a running delivery, the S17 cost-control journey |
