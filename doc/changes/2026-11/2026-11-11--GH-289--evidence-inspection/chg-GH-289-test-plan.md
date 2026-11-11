@@ -2,7 +2,7 @@
 id: chg-GH-289-test-plan
 status: Updated
 created: 2026-11-11
-last_updated: 2026-11-11T20:10:00Z
+last_updated: 2026-11-11T21:35:00Z
 owners: [engineering]
 service: delivery-os dispatch engine
 labels: [feature, dispatch, evidence, attempts, read-side, m2-s12]
@@ -20,20 +20,20 @@ links:
 
 This plan protects one property with several faces: **a consumer surface may declare only what the durable evidence can supply, and where it cannot know it discloses rather than refusing or inventing** (TDR-0023). The read side must return exactly the sixteen fields the attempt record carries, must never present a foreign repository's attempt as the operator's own, must never invent a failure identity for a cell the closed registry already owns, and must never report an unreadable store as an empty history. The resolve extension must state that it ran from local evidence, name the repository whose truth condition it moved, and report the exact unresolved count that the handover gate turns on — the same number the summary reports.
 
-Two failure modes motivate the discipline. First, **a store is not a repository**: after the per-repository state split and the wholesale migration, one project state root can hold another repository's attempt and divergence history, so a read that opens the right root and returns everything would leak foreign evidence silently (RSK-1). Second, **two count rules already disagree in the delivered tree**: `foldEvidenceWindow` folds every divergence in the store with an uncapped identifier list, while `summarizeDispatchDivergences` caps the list at 20 and derives `unresolved` and `resolved` from the capped length (`packages/core/src/domain/dispatch-gate.ts`, `packages/core/src/app/dispatch-ledger.ts`, read 2026-11-11). This change replaces both with one repository-scoped exact computation, so a test that only asserts "the two surfaces agree" would pass on a shared wrong rule; this plan therefore pins the exact numbers (`25`, not `20`, not `30`) **and** pins the single derivation structurally (TC-ATTEMPT-022, TC-ATTEMPT-038).
+Two failure modes motivate the discipline. First, **a store is not a repository**: after the per-repository state split and the wholesale migration, one project state root can hold another repository's attempt and divergence history, so a read that opens the right root and returns everything would leak foreign evidence silently (RSK-1). Second, **the delivered count is exact but not repository-scoped**: `foldEvidenceWindow` folds every divergence in the store and takes `unresolved` and `resolved` from that complete fold, so the delivered summary's counts are already exact — store-wide, with `unresolvedIds` returning every open identifier — while `summarizeDispatchDivergences` caps identifiers at 20 and derives its counts from the capped length without a single caller on any delivered surface (`packages/core/src/domain/dispatch-gate.ts`, `packages/core/src/app/dispatch-ledger.ts`, read 2026-11-11). This change makes one repository-scoped computation the only rule, so a test that only asserts "the two surfaces agree" would pass on a shared wrong rule; this plan therefore pins the exact numbers (`25`, not `30`, not `20`) and the declared narrowing (`20` identifiers plus `idsTruncated: true` for 25 open) **and** pins the single derivation structurally (TC-ATTEMPT-022, TC-ATTEMPT-038).
 
 The headline isolation and read-only evidence is produced the way the delivered suites produce it: through the **real production composition** (`createProductionComposer` → `runCli` in `packages/cli/src/production.ts`) over **real temporary checkouts** and one temporary host root, with a home that is always a distinct directory. Contract-level assertions (envelope keys, projection, ordering, bounds, digest) run through an in-process composition that injects only the store, the state root, the repository resolver, and the ref source — never a repository identity string that production would have derived.
 
 ### 1.1 In Scope
 
 - The `dispatch attempts [--ref <ref>] [--limit <n>]` grammar: canonical ref shape, the two flag bounds, the canonical decimal limit form (`[1-9][0-9]*`), unknown flags and unexpected positionals, and the active-reference default through the delivered `.ai/local/pm-context.yaml` seam.
-- The `attempts.v1` envelope: the nine declared scope/filter keys, the sixteen-field record projection with `divergenceRef` singular-or-explicit-`null`, the `endedAt` one-to-one mapping, the corroboration triple, the comparison object, the bounded evidence references, the count-only `excluded.foreignRepository`, and the single optional `truncation` object.
+- The `attempts.v1` envelope: the eight always-present scope/filter keys plus `truncation` only when a bound binds, the sixteen-field record projection with `divergenceRef` singular-or-explicit-`null`, the `endedAt` one-to-one mapping, the corroboration triple, the comparison object, the bounded evidence references, the count-only `excluded.foreignRepository`, and the single optional `truncation` object.
 - Total ordering (`startedAt` desc, `recordedAt` desc, `attemptId` asc), `matched` and `hasMore`, and the three independent bounds (ledger 5,000; page 100; machine `data` 65,536 bytes) with their declared omissions.
 - Repository-scoped isolation: two projects on one host root with the same ref, one project root holding two repositories' records, the count-only disclosure within the retained ledger read window (independent of `--ref`, and zero for a record that sits only in the omitted tail), the persist-disabled identity resolution, and the refusal outside any checkout.
 - Read-only posture with respect to delivery evidence: zero appends, zero fence acquisitions, store bytes/modes/mtimes unchanged, and the exact permitted side effects enumerated.
 - The four failure cells with no new identity: malformed request, unresolvable context or identity, unreadable store, and the empty-history success rule.
-- The resolve extension: unconditional `mode: "local-evidence"`, the divergence's own repository, the four-field divergence block plus `idsTruncated`, the 240-character clamp, the blank-note refusal, replay idempotency, and the one-line human digest.
-- The shared divergence-count rule across the resolve result and `dispatch dual-run summary`, in both directions (a count above 20 becomes exact; foreign open divergences stop counting).
+- The resolve extension: unconditional `mode: "local-evidence"`, the divergence's own repository, the four-field divergence block plus `idsTruncated` (its `unresolvedIds` the at-most-20 list with the omission declared), the 240-character clamp, the blank-note refusal, replay idempotency, and the one-line human digest.
+- The shared divergence-count rule across the resolve result and `dispatch dual-run summary`: one repository-scoped computation whose exact counts are unchanged on an unmigrated root and lower on a migrated one (foreign open divergences stop counting), whose `unresolvedIds` — and the human `unresolved_divergences=` line — narrows to the documented at-most-20 list with `idsTruncated`, and which the resolve result reports as a block it did not carry before.
 - The bounded deterministic attempts digest: summary line, seven-cell rows, corroboration derivation, human truncation line, coverage/floor pointer, and the absence of the run form's keys.
 - Help reachability, the fifth help entry, the `dispatch` parity pin moving from four to five, the coverage-inventory registration, and the gate battery.
 - Test isolation itself: every new suite runs under a per-test host root inside the repository-local `tmp/tmpdir`, and no assertion may reach the real state directory.
@@ -53,8 +53,8 @@ The headline isolation and read-only evidence is produced the way the delivered 
 
 ## 2. References
 
-- Change specification: [chg-GH-289-spec.md](./chg-GH-289-spec.md) (v1.1) — F-1…F-9 (§5.1), DM-1…DM-6 (§8.3), §8.5 backward compatibility, NFR-1…NFR-11 (§9), §10 failure diagnosis, §11 risks, §15 DEC-1…DEC-16, §17 AC-F1-1…AC-F9-2 (**36** criteria, including `AC-F1-6` for the request-grammar refusals), Appendix B (scenario reconciliation), Appendix C (M2 page corrections), Appendix D (normative read-side field set), §25 document history. Spec v1.1 closes findings X-1…X-9 of the previous revision of this plan (§8.3).
-- Decision record: [TDR-0023](../../../decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md) (Proposed) — D-1…D-7, C-1…C-8, the verification column of each constraint, and the residual risks this plan must pin (the two-direction count move, the two-fold-site convergence, the disclosure-only cross-repository posture).
+- Change specification: [chg-GH-289-spec.md](./chg-GH-289-spec.md) (v1.3) — F-1…F-9 (§5.1), DM-1…DM-6 (§8.3), §8.5 backward compatibility, NFR-1…NFR-11 (§9), §10 failure diagnosis, §11 risks, §15 DEC-1…DEC-16, §17 AC-F1-1…AC-F9-2 (**36** criteria, including `AC-F1-6` for the request-grammar refusals), Appendix B (scenario reconciliation), Appendix C (M2 page corrections), Appendix D (normative read-side field set), §25 document history. Spec v1.1 closed findings X-1…X-9 of the previous revision of this plan (§8.3). Spec v1.3 states the delivered summary's history correctly — its `unresolved` and `resolved` were already exact, so §8.5, RSK-6, DEC-15, F-7, DM-3, NFR-9, F-9, and AC-F7-1 declare a lower count on a migrated root, a new block on the resolve result, and an `unresolvedIds` narrowing to the documented 20 with `idsTruncated` — and gives `AC-F9-2` the split evidence class this plan already asserted.
+- Decision record: [TDR-0023](../../../decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md) (Proposed, amended for spec v1.3) — D-1…D-7, C-1…C-8, the verification column of each constraint, and the residual risks this plan must pin (the repository-scope count movement, the two-fold-site convergence, the declared identifier narrowing, the disclosure-only cross-repository posture).
 - Implementation plan: [chg-GH-289-plan.yaml](./chg-GH-289-plan.yaml) — the phase-4 artefact this plan's §7 phase grouping feeds; authored after this file, so the link names the declared target path.
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, invariant-test authoring, gate battery (`pnpm check`).
 - TypeScript workspace rules: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict TypeScript, purity, ports/adapters, `bun:test` authoring.
@@ -96,20 +96,20 @@ Every acceptance criterion names an evidence class in spec §17. This plan mirro
 | AC-F5-2 | With no truth-read credential and an unreachable tracker, a resolve performs zero credential resolutions, zero network requests, zero harness spawns, and zero model calls, exits `0`, appends one resolution, and still declares the mode. | TC-ATTEMPT-019 | Suite | Covered |
 | AC-F5-3 | A replay appends nothing, reports `resolved: false`, the stored note and principal, `state: "resolved"`, unchanged counts, and leaves the original open record byte-identical. | TC-ATTEMPT-020 | Suite | Covered |
 | AC-F5-4 | A blank and a whitespace-only note each exit `1` with `input.value.rejected` and append nothing; a 400-character note succeeds with the stored and reported note at most 240 characters and no write failure. | TC-ATTEMPT-021 | Suite | Covered |
-| AC-F5-5 | With 25 folded open divergences for one repository, both the resolve result and the summary report `unresolved: 25`, both blocks carry the four delivered fields with their delivered names, types, meanings, and order plus the one declared additive key `idsTruncated`, both carry at most 20 identifiers with `idsTruncated: true`, and neither derives the count from the list length. | TC-ATTEMPT-022 | Suite + revert (P2) | Covered — both count directions and the cross-surface identity of the block are asserted |
+| AC-F5-5 | With 25 folded open divergences for one repository, both the resolve result and the summary report `unresolved: 25`, both blocks carry the four delivered fields with their delivered names, types, meanings, and order plus the one declared additive key `idsTruncated`, both carry at most 20 identifiers with `idsTruncated: true`, and neither derives the count from the identifier list length. | TC-ATTEMPT-022 | Suite + mutation (P2) | Covered — the migrated-root movement (down), the unmigrated-root non-movement, the identifier narrowing, and the cross-surface identity of the block are asserted |
 | AC-F6-1 | The digest's first line is the declared summary line, each row is the seven declared cells newest first, the last line is the pointer naming `dispatch dual-run summary --repo <repository>`, and no `result=`/`pr_url=`/`exit_code=`/`last_message=` key appears. | TC-ATTEMPT-023 | Suite | Covered |
 | AC-F6-2 | The three triples render `corroborated`, `uncorroborated`, and `vacuous`; no fourth value is producible. | TC-ATTEMPT-024 | Suite | Covered |
 | AC-F6-3 | A page larger than the human budget renders at most 40 lines and 8,192 bytes, drops rows from the oldest end, prints `truncation=human:bound:<kept>,omitted:<dropped>` before the pointer, prints at most 37 rows beside it, and leaves `has_more` unchanged by the cut. | TC-ATTEMPT-025 | Suite | Covered |
 | AC-F6-4 | Two text runs are byte-identical and two machine payloads structurally identical, with no dependence on clock, locale, width, filesystem iteration order, or map order. | TC-ATTEMPT-026 | Suite | Covered |
 | AC-F6-5 | A successful resolve prints exactly one line in the declared form; a replay prints the same line with `appended=false` and the unchanged count. | TC-ATTEMPT-027 | Suite | Covered |
-| AC-F7-1 | The attempts envelope carries none of `coverage`, `floor`, `verdict`, `eligibility`, `unmetConditions`; the summary keeps its delivered coverage, floor, verdict fields and text projection unchanged apart from the exact divergence count and the declared additive `idsTruncated` key on its divergence block, whose four delivered fields keep their names, types, meanings, and order. | TC-ATTEMPT-028 | Suite | Covered |
+| AC-F7-1 | The attempts envelope carries none of `coverage`, `floor`, `verdict`, `eligibility`, `unmetConditions`; the summary keeps its delivered coverage, floor, and verdict fields and its text projection apart from the three declared changes on its divergence block — its counts become the exact repository-scoped counts of AC-F5-5 (unchanged on an unmigrated root, lower on a migrated root), its `unresolvedIds` narrows to the at-most-20 list with the additive `idsTruncated` key when identifiers are dropped, and the human `unresolved_divergences=` line prints that same list — while `reported`, `resolved`, and `unresolved` keep their delivered names, types, and meanings as exact counts and no other field, key order, or text changes. | TC-ATTEMPT-028 | Suite | Covered — the preserved gate fields and the three declared changes are each asserted |
 | AC-F7-2 | The text pointer, the help synopsis, and the reference page all name `dispatch dual-run summary --repo <repository>`, and no second surface computes the gate. | TC-ATTEMPT-029 | Suite (pointer, help) + Review-verified (reference page) | Covered — both halves labelled |
 | AC-F8-1 | `dispatch attempts --help` exits `0` and renders usage, both options, a global option block, an example, and the exit-code block with no state/network/git/configuration read; the root listing still names exactly seventeen families with no `attempts` row. | TC-ATTEMPT-030 | Suite | Covered |
 | AC-F8-2 | `pnpm check:help` and the reference-page parity gate are green, the dispatch help-entry pin is five, the M2 attempts page is registered, and the see-also target resolves. | TC-ATTEMPT-031 | Suite | Covered |
 | AC-F8-3 | The M2 attempts page documents `--help`/`--version`, states the resolved exit table (no `attempts.*` rows, empty history at exit `0`), prints `command: "dispatch"`, uses `divergenceRef`, shows the declared digest and pointer, and states the bounds; the M1 page is byte-unchanged. | TC-ATTEMPT-032 | Review-verified | Covered |
 | AC-F8-4 | The backlog marker, status entry, entrypoint-delta note, command-registry note, `attempts.v1` refinement, and the dispatch feature spec's grammar/read-side/resolve/error/bounds text all state the delivered behaviour. | TC-ATTEMPT-033 | Review-verified | Covered |
 | AC-F9-1 | The run envelope, summary envelope, handover result, and the five delivered resolve keys keep name, type, meaning, and order; the attempts payload is discriminated by its `attempts` array so no existing text selector mistakes it; the only additive changes are the declared ones. | TC-ATTEMPT-034 | Suite (shapes) + Review-verified (additive-only half) | Covered — both halves labelled; shapes proven by mutation P1 |
-| AC-F9-2 | No configuration key, external dependency, workspace package, delivery-result token, projection class, exit literal, error row, or product/binary literal is added, and `pnpm check` is green with a temporary state override. | TC-ATTEMPT-035 | Suite (scans) + Review-verified (lockfile and diff half) | Covered — both halves labelled |
+| AC-F9-2 | No configuration key, external dependency, workspace package, delivery-result token, projection class, exit literal, error row, or product/binary literal is added, and `pnpm check` is green with a temporary state override. | TC-ATTEMPT-035 | Suite (scans and gates) + Review-verified (lockfile and manifest diff) | Covered — both halves labelled |
 
 All **36** acceptance criteria (`AC-F1-1`…`AC-F9-2`) are mapped; none is unmapped, marked TODO, or AC-less. Every test case names the AC it proves or the NFR/structure identifier that justifies it (TC-ATTEMPT-036 → NFR-11, TC-ATTEMPT-037 → NFR-2, TC-ATTEMPT-038 → AC-F5-5 with NFR-8), and `AC-F1-6` is owned by **TC-ATTEMPT-039** (the request-grammar refusals), so no test case is AC-less and no criterion is owned only implicitly.
 
@@ -124,12 +124,12 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 | `dispatch attempts [--ref] [--limit]` (text) | Newest-first digest, summary line, seven-cell rows, optional human truncation line, pointer; exit `0` produced (including a verified empty history), `1` refused, `2` state failure. | TC-ATTEMPT-001, 003, 023, 025, 026, 028, 030, 039 |
 | `dispatch attempts --json` (`DM-1` data) | `{ ok, command: "dispatch", data, error?, warnings? }` with `data` keys exactly `repository`, `ref`, `refSource`, `limit`, `matched`, `hasMore`, `attempts`, `excluded`, plus `truncation` only when a bound binds; `excluded.foreignRepository` is a count of records within the retained ledger read window and independent of `ref`; no new top-level key. | TC-ATTEMPT-001, 005, 006, 009, 010, 012, 028, 034 |
 | `DM-2` attempt projection | Sixteen declared fields per row, declared types, `divergenceRef` string-or-explicit-`null`, `endedAt` one-to-one with the stored `finishedAt`, corroboration triple, comparison `{class, token, outcome}`, `resumeMode` or `null`, ≤ 16 `evidenceRefs`; no `handoverState`, no `prefillCostAcknowledged`, no undeclared key. | TC-ATTEMPT-006, 007, 008, 023 |
-| `DM-3` resolve result | The five delivered keys unchanged, plus `mode: "local-evidence"`, `repository` (the divergence's), `divergences { reported, resolved, unresolved, unresolvedIds, idsTruncated }`. | TC-ATTEMPT-018, 020, 021, 022, 027, 034 |
+| `DM-3` resolve result | The five delivered keys unchanged, plus `mode: "local-evidence"`, `repository` (the divergence's), and `divergences { reported, resolved, unresolved, unresolvedIds, idsTruncated }` with `unresolved` the exact repository-scoped open count and `unresolvedIds` the at-most-20 list. | TC-ATTEMPT-018, 020, 021, 022, 027, 034 |
 | `DM-4` read bounds | Ledger 5,000; page 20 default / 1 minimum / 100 maximum; machine `data` 65,536 bytes; human 40 lines and 8,192 bytes; ≤ 37 rows beside a truncation line; ≤ 16 evidence references per record; ≤ 20 identifiers per block; note 240 characters. | TC-ATTEMPT-003, 009, 010, 021, 022, 025 |
 | `DM-5` truncation declaration | One object `{ scope: "ledger" \| "page", bound, omittedRecords }`, present only when a bound binds, ledger scope taking precedence; `bound` is `5000` for `ledger` and `65536` for `page`, and `omittedRecords` counts what that bound left out; the digest declares `truncation=human:bound:<kept>,omitted:<dropped>`. | TC-ATTEMPT-009, 010, 025 |
 | `DM-6` read-side error mapping | Malformed request (including a non-canonical ref, an unknown flag, an unexpected positional, and a non-canonical limit), unresolvable active reference, and unresolvable repository identity → `input.value.rejected` (`kind: "input"`, exit `1`); an unreadable store keeps its own `state.*` identity (`kind: "state"`, exit `2`); an empty verified history → success at exit `0`. | TC-ATTEMPT-002, 003, 013, 015, 016, 017, 039 |
 | `dispatch dual-run resolve <id> --note <text>` | Unchanged grammar and exit projection, with the additive fields of `DM-3` and one additive human line; zero credential resolutions, zero network calls, zero spawns. | TC-ATTEMPT-018, 019, 020, 021, 027, 034 |
-| `dispatch dual-run summary --repo <repo>` | Contract unchanged apart from the divergence block sharing the exact-count rule and gaining the declared additive `idsTruncated` key; coverage, floor, verdict, and every unmet condition stay here. | TC-ATTEMPT-022, 028, 034 |
+| `dispatch dual-run summary --repo <repo>` | Contract unchanged apart from the divergence block, which becomes the same repository-scoped computation as the resolve result (counts exact, unchanged on an unmigrated root and lower on a migrated one) and whose `unresolvedIds` narrows to the declared at-most-20 list with the additive `idsTruncated` key and the matching human `unresolved_divergences=` line; coverage, floor, verdict, and every unmet condition stay here. | TC-ATTEMPT-022, 028, 034 |
 | `dispatch --help`, `dispatch attempts --help`, `--version` | Served from the static help inventory with no state, network, git, configuration, or model read; five `dispatch` entries; root listing at seventeen families. | TC-ATTEMPT-029, 030, 031 |
 | Error table and result-contract documentation | Exactly 124 identities, exactly 4 `dispatch` rows, documented both ways, zero `attempts.*` strings. | TC-ATTEMPT-017, 035 |
 | Coverage inventory and parity pin | The M2 `attempts` page registered in `referencePages`; `commands` unchanged; the dispatch help-entry pin at five. | TC-ATTEMPT-031 |
@@ -147,8 +147,8 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 | NFR-5 | Zero new error identities (124 / 4); zero `attempts.*` strings in code, docs, help, or output; every failure exits inside `{0,1,2}`; a store fault is never empty and an empty history is never a fault. | TC-ATTEMPT-015, 016, 017, 035, 039 | Both directions of the empty/unreadable pair are asserted in one file so neither can regress into the other. |
 | NFR-6 | Zero credential resolutions, network requests, harness spawns, model calls on either surface; zero secrets, prompts, transcripts, diffs, credentials, or provider payloads in envelope, text, help, or logs; no local absolute path in the attempts text. | TC-ATTEMPT-019, 023, 028 | The attempts read's purity is asserted with the same counted ports the resolve path uses, so both surfaces share one evidence shape. |
 | NFR-7 | 100% of resolutions clamp the note to 240 characters before the record is built; zero write failures from note length; zero duplicate records on replay; the original open record byte-identical; a blank note appends nothing. | TC-ATTEMPT-020, 021 | The clamp cell asserts the stored length is exactly 240 for a 400-character input. |
-| NFR-8 | `unresolved` equals the exact folded open count for the reported repository on both the resolve result and the summary; `unresolvedIds` ≤ 20 with an omission declared; `idsTruncated` true exactly when identifiers were omitted. | TC-ATTEMPT-022, 038 | The structural cell proves the derivation is single; the behavioural cell proves the numbers are exact in both directions. |
-| NFR-9 | 100% of delivered keys keep name, type, meaning, and order; zero new configuration keys, dependencies, packages, tokens, projection classes, exit literals, or product/binary literals. | TC-ATTEMPT-034, 035 | The additive-only half is review-verified against the merge base. |
+| NFR-8 | `unresolved` equals the exact folded open count for the reported repository on both the resolve result and the summary; `unresolvedIds` ≤ 20 with an omission declared; `idsTruncated` true exactly when identifiers were omitted. | TC-ATTEMPT-022, 038 | The structural cell proves the derivation is single; the behavioural cell proves the count is exact under the repository scope, unchanged where no foreign records exist, and that the identifier list narrows to 20 with the omission declared. |
+| NFR-9 | 100% of delivered keys keep name, type, meaning, and order — with the summary divergence block's `unresolvedIds` narrowing to its documented 20-identifier bound as the only declared exception — and zero new configuration keys, dependencies, packages, tokens, projection classes, exit literals, or product/binary literals. | TC-ATTEMPT-034, 035 | The additive-only and declared-narrowing half is review-verified against the merge base. |
 | NFR-10 | `pnpm check` green, including help coverage, reference-page parity with `dispatch` pinned at five, error-table sync, and the aggregate suite. | TC-ATTEMPT-031, 035 | Reported per gate in §10, never as one aggregate verdict. |
 | NFR-11 | Zero writes to the real user state directory; every new suite points the state-scope override at a per-test temporary root and asserts no leak. | TC-ATTEMPT-036 | Pre-write guard plus a post-suite fingerprint of the real state directory. |
 
@@ -163,9 +163,9 @@ All new tests are `bun:test` suites under `tests/**`, discovered by `pnpm test`.
 - **Structural extension (existing files)** — `tests/structure/dispatch-help-inventory.test.ts` (fifth entry, option lines) and `tests/structure/dispatch-resolve-composition.test.ts` (resolve purity over the production composition) are extended rather than duplicated, because they already own their subject.
 - **Checks (`tests/checks/**`)** — the gate suites this change must keep green (`error-table-sync.test.ts`, `help-guide-coverage.test.ts`, `reference-page-parity.test.ts`, `exit-code-literals.test.ts`, `forbidden-literals.test.ts`, `privacy-literals.test.ts`, `privacy-release.test.ts`, `config-default-positions.test.ts`) and one new meta-check for test isolation (TC-ATTEMPT-036).
 - **Golden** — one new golden digest (`tests/fixtures/dispatch/golden/attempts.txt`) pins the canonical text shape; it is regenerated only by an explicit reviewed command (`.ai/rules/testing-strategy.md` §"Invariant-test authoring").
-- **Manual / review (evidence class: review-verified)** — TC-ATTEMPT-032, 033, the side-effect enumeration half of TC-ATTEMPT-014, the string-absence half of TC-ATTEMPT-017 over the M2 page and corpus, the reference-page half of TC-ATTEMPT-029, the additive-only half of TC-ATTEMPT-034, and the lockfile/diff half of TC-ATTEMPT-035.
+- **Manual / review (evidence class: review-verified)** — TC-ATTEMPT-032, 033, the side-effect enumeration half of TC-ATTEMPT-014, the string-absence half of TC-ATTEMPT-017 over the M2 page and corpus, the reference-page half of TC-ATTEMPT-029, the additive-only and declared-narrowing half of TC-ATTEMPT-034, and the lockfile and manifest diff half of TC-ATTEMPT-035.
 - **Performance** — one cell inside TC-ATTEMPT-037. No new framework; `p95` over 10 in-process samples with the measured value recorded in §10.
-- **Regression (must stay green unmodified)** — `tests/conformance/dispatch/**` (the controlled fixture's cross-scope counting is unchanged), `tests/behaviour/dispatch-{truth-derivation,evidence-record,gate-evidence,gate-window,handover,resume,identity,delivered-evidence-divergence,resolve-diagnostics,envelope,error-envelope,exit-projection,determinism,token-closure,privacy,bounds}.test.ts`, `tests/structure/dispatch-{error-identity,composition,imports,envelope-detail,resolve-composition}.test.ts`. The two declared shape changes (the summary's count and `idsTruncated`; the resolve's three additive keys) are the only cells these files may need adjusted, and each adjustment is listed in §7.3.
+- **Regression (must stay green unmodified)** — `tests/conformance/dispatch/**` (the controlled fixture's cross-scope counting is unchanged), `tests/behaviour/dispatch-{truth-derivation,evidence-record,gate-evidence,gate-window,handover,resume,identity,delivered-evidence-divergence,resolve-diagnostics,envelope,error-envelope,exit-projection,determinism,token-closure,privacy,bounds}.test.ts`, `tests/structure/dispatch-{error-identity,composition,imports,envelope-detail,resolve-composition}.test.ts`. The two declared surface changes (the summary's repository-scoped counts and narrowed `unresolvedIds` with `idsTruncated`; the resolve's three additive keys) are the only cells these files may need adjusted, and each adjustment is listed in §7.3.
 
 Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bounded number of times (one `git init` per fixture checkout) and should stay under ~6 s per file on a warm cache; the structural and checks files are file-read-only and stay under ~1 s; the 5,000-record latency cell dominates the new runtime at ~5–15 s and is the one file allowed to exceed the others; the digest and contract suites are sub-second.
 
@@ -196,7 +196,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | TC-ATTEMPT-019 | Resolve purity: zero credentials, network, spawns, model calls | Regression | Behaviour + Structural | High | Suite | AC-F5-2 |
 | TC-ATTEMPT-020 | Replay is an idempotent noop with unchanged counts | Regression | Behaviour | High | Suite | AC-F5-3 |
 | TC-ATTEMPT-021 | Blank note refused, long note clamped before the record is built | Edge Case | Behaviour | High | Suite | AC-F5-4 |
-| TC-ATTEMPT-022 | Twenty-five open divergences: one exact count on both surfaces, both directions | Corner Case | Behaviour | High | Suite + revert (P2) | AC-F5-5 |
+| TC-ATTEMPT-022 | Twenty-five open divergences: one exact repository-scoped count and the declared identifier narrowing | Corner Case | Behaviour | High | Suite + mutation (P2) | AC-F5-5 |
 | TC-ATTEMPT-023 | Digest shape: summary line, seven cells, pointer, no run-form keys | Contract | Behaviour | High | Suite | AC-F6-1 |
 | TC-ATTEMPT-024 | Corroboration derivation is a closed three-value derivation | Contract | Behaviour + Unit | High | Suite | AC-F6-2 |
 | TC-ATTEMPT-025 | Human budget: 40 lines, 8,192 bytes, oldest dropped, declared cut | Edge Case | Behaviour | High | Suite | AC-F6-3 |
@@ -209,10 +209,10 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | TC-ATTEMPT-032 | The M2 attempts page is the delivered reference page | Documentation | Manual | High | Review-verified | AC-F8-3 |
 | TC-ATTEMPT-033 | Feature spec and planning corpus state the delivered behaviour | Documentation | Manual | High | Review-verified | AC-F8-4 |
 | TC-ATTEMPT-034 | Delivered shapes stable and the attempts payload unambiguously discriminated | Regression | Behaviour | High | Suite + mutation (P1) + Review-verified | AC-F9-1 |
-| TC-ATTEMPT-035 | No new configuration key, dependency, package, token, projection, exit literal, or literal | Regression | Checks | High | Suite + Review-verified | AC-F9-2 |
+| TC-ATTEMPT-035 | No new configuration key, dependency, package, token, projection, exit literal, or literal | Regression | Checks | High | Suite (scans and gates) + Review-verified (lockfile and manifest diff) | AC-F9-2 |
 | TC-ATTEMPT-036 | Test isolation: no write reaches the real state directory | Regression | Checks | High | Suite | NFR-11 |
 | TC-ATTEMPT-037 | One verified store read; latency at the ledger bound | Performance | Behaviour | Medium | Suite | NFR-2 |
-| TC-ATTEMPT-038 | One divergence-count computation, no derivation from a list length | Regression | Structural | High | Suite + revert (P2) | AC-F5-5, NFR-8, F-7 |
+| TC-ATTEMPT-038 | One divergence-count computation, no derivation from a list length | Regression | Structural | High | Suite + mutation (P2) | AC-F5-5, NFR-8, F-7 |
 | TC-ATTEMPT-039 | Request grammar: non-canonical ref, unknown flag, unexpected positional | Negative | Behaviour | High | Suite | AC-F1-6 |
 
 ### 5.2 Scenario Details
@@ -323,7 +323,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Expected Outcome**:
 
 - Step 1: `--limit 1` → one row, `limit: 1`; `--limit 100` → 25 rows (all matches), `limit: 100`, `matched: 25`, `hasMore: false`.
-- Step 2: every cell exits `1`, `error.code === "input.value.rejected"`, `error.kind === "input"`, **zero store reads**, and the message names the supplied value, the accepted range `1..100`, and the canonical decimal form (digits only, no sign, no leading zero, no surrounding whitespace — `[1-9][0-9]*`).
+- Step 2: every cell exits `1`, `error.code === "input.value.rejected"`, `error.kind === "input"`, **zero store reads**, and the message names the offending token (the supplied value, or `--limit` for the missing-value cell), the accepted range `1..100`, and the canonical decimal form (digits only, no sign, no leading zero, no surrounding whitespace — `[1-9][0-9]*`).
 - Step 2's `--limit 101` cell returns **no** `data` member and **no** 100-row page: nothing is clamped (DEC-10). The `07`, `+7`, ` 7`, and `001` cells return no page at all: nothing is normalised into acceptance.
 - Step 3: `data.limit === 20`; `data.attempts.length === 20`; `data.matched === 25`; `data.hasMore === true`.
 - No cell exits `0` while refusing, and no cell exits `2`.
@@ -332,7 +332,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 - This is the cell a clamping implementation fails: the refusal cells assert the *absence* of a page, so a "sanitise to 100" implementation cannot pass.
 - The canonical-form cells (`07`, `+7`, ` 7`, `001`) are the v1.1 ruling: AC-F1-3 and DEC-10 pin the accepted form to `[1-9][0-9]*`, so a leading zero, an explicit sign, or surrounding whitespace is refused rather than read as the same integer (§8.3 X-6, closed).
-- `--limit` is declared as a value-taking flag; the missing-value cell exercises the parser branch before any state work.
+- `--limit` is deliberately **not** a `requiresValue` flag: the missing-value cell is refused by the command module's `attempts` grammar before any runtime call, because the shared parser would answer `fallback.invocation` (which satisfies neither the required code nor the message).
 
 #### TC-ATTEMPT-004 - Total order across identical start instants and insertion orders
 
@@ -1025,13 +1025,13 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 - The 240-character boundary cell is included because a `>`/`>=` slip would otherwise go unnoticed.
 - The refusal is limited to blank notes; every non-blank note behaves as delivered (RSK-7), which the 240-character cell demonstrates.
 
-#### TC-ATTEMPT-022 - Twenty-five open divergences: one exact count on both surfaces, both directions
+#### TC-ATTEMPT-022 - Twenty-five open divergences: one exact repository-scoped count and the declared identifier narrowing
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, F-7, AC-F5-5, NFR-8, DEC-15, C-5, RSK-6
-**Evidence Class**: Suite + revert (P2: restoring the list-derived count reds it)
+**Evidence Class**: Suite + mutation (P2: a list-length implementation reports 20 instead of 25 and reds it)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-divergence-count.test.ts` over `createAdmissionHarness`
@@ -1039,35 +1039,38 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 **Preconditions**:
 
-- One project root holding, for `github.com/owner/repo`: 25 divergences whose latest folded state is `open` (`DIV-1`…`DIV-25`), and 3 whose latest folded state is `resolved`; two of the open identifiers also carry an earlier `resolved` record so the fold matters.
+- One **migrated** project root holding, for `github.com/owner/repo`: 25 divergences whose latest folded state is `open` (`DIV-1`…`DIV-25`), and 3 whose latest folded state is `resolved`; two of the open identifiers also carry an earlier `resolved` record so the fold matters.
 - The same root holds, for `github.com/owner/other`: 5 divergences whose latest state is `open`.
-- A second baseline fixture with the 25 open and **no** foreign records.
+- A second **unmigrated** baseline fixture holding the same 25 open and 3 resolved records for `github.com/owner/repo` and **no** foreign records.
+- A record of the delivered summary's block on each fixture (read at the same ledger state before the change), so the movement is asserted as a direction, not asserted from memory.
 
 **Steps**:
 
-1. Run `dispatch dual-run summary --repo github.com/owner/repo --json`; capture the divergence block (`S0`).
-2. Assert `S0` against the exact expected numbers and the identifier bound.
-3. Run `dispatch dual-run resolve DIV-1 --note "cleared" --json`; capture its block (`R1`).
-4. Re-run the summary and capture its block (`S1`); assert `R1` deep-equals `S1` — both describe the post-resolution ledger, so this is the same-state agreement assertion.
-5. Assert both directions of the correction: the upward direction (25, not 20) and the downward direction (foreign 5 excluded, so not 30 and `reported` not 33).
-6. Assert the post-resolution movement against `S0`.
-7. Run the below-cap control: a fixture with 3 open and 2 resolved; assert `unresolved: 3`, `idsTruncated: false`, and both surfaces equal.
-8. Assert each block's key list and key order: exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated`, on both surfaces.
+1. Run `dispatch dual-run summary --repo github.com/owner/repo --json` on the migrated fixture; capture the divergence block (`S0`) and the text projection.
+2. Assert `S0` against the exact expected numbers, the identifier bound, and the human `unresolved_divergences=` line.
+3. Run the same summary on the unmigrated baseline fixture; capture its block (`S0u`) and assert its counts equal the recorded pre-change summary's counts for that root (`28`/`3`/`25`), so no movement is claimed where none occurs.
+4. Run `dispatch dual-run resolve DIV-1 --note "cleared" --json`; capture its block (`R1`).
+5. Re-run the summary and capture its block (`S1`); assert `R1` deep-equals `S1` — both describe the post-resolution ledger, so this is the same-state agreement assertion.
+6. Assert the three declared movements together: the count is unchanged on the unmigrated fixture, lower on the migrated one because the foreign repository's 5 open divergences stop counting, and the resolve result carries a block it did not report before; `unresolved` stays the exact count while `unresolvedIds` narrows to at most 20 with `idsTruncated: true`.
+7. Assert the post-resolution movement against `S0`.
+8. Run the below-cap control: a fixture with 3 open and 2 resolved; assert `unresolved: 3`, `idsTruncated: false`, and both surfaces equal.
+9. Assert each block's key list and key order: exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated`, on both surfaces.
 
 **Expected Outcome**:
 
-- Step 2 (`S0`): `reported === 28`, `resolved === 3`, `unresolved === 25`; `unresolvedIds.length === 20`; `idsTruncated === true`; `unresolvedIds` are exactly the first 20 open identifiers in fold order and contain no `resolved` identifier.
-- Step 4: `R1` deep-equals `S1` — same keys, same order, same values (asserted with `toEqual` on the whole block), which is only meaningful because both are read at the same ledger state.
-- Step 5: the assertions are explicitly `28`/`3`/`25` — not `33`/`3`/`30` (which is what a store-wide fold would report) and not `28`/`8`/`20` (which is what the delivered list-derived rule reports: 20 identifiers capped, `resolved = folded − 20`). The numbers are labelled in the test titles so a reviewer can read the direction from the failure message.
-- Step 6: `R1.unresolved === 24`, `R1.reported === 28`, `R1.resolved === 4`, `DIV-1` absent from `unresolvedIds`; `S0.unresolved - R1.unresolved === 1`.
-- Step 7: `unresolved === 3`, `idsTruncated === false`, `unresolvedIds.length === 3`, both surfaces equal.
-- Step 8: `Object.keys(block)` is exactly `["reported","resolved","unresolved","unresolvedIds","idsTruncated"]` on the summary and on the resolve result; the four delivered fields keep their names, types, meanings, and order, and `idsTruncated` is the one declared additive key on both (spec §8.5, AC-F5-5; §8.3 X-4, closed).
+- Step 2 (`S0`, migrated root): `reported === 28`, `resolved === 3`, `unresolved === 25`; `unresolvedIds.length === 20`; `idsTruncated === true`; `unresolvedIds` are exactly the first 20 open identifiers in fold order and contain no `resolved` identifier; the text projection prints `unresolved_divergences=` with exactly those 20 identifiers and nothing else.
+- Step 3 (`S0u`, unmigrated root): `reported === 28`, `resolved === 3`, `unresolved === 25` — identical to the delivered summary's counts for that root, because the repository scope excludes nothing there; `unresolvedIds.length === 20` with `idsTruncated === true` remains the only declared difference. The count does **not** move where no foreign records exist.
+- Step 5: `R1` deep-equals `S1` — same keys, same order, same values (asserted with `toEqual` on the whole block), which is only meaningful because both are read at the same ledger state.
+- Step 6: the migrated-root block is explicitly `28`/`3`/`25` — not `33`/`3`/`30`, which is what the delivered store-wide fold reports for a root holding two repositories' records — so the count moves **down** by the 5 foreign open divergences and `reported` down by the same 5; the resolve result reports the block although it reported none before; and on both blocks `unresolved` is the exact `25` while `unresolvedIds` is the at-most-20 list with `idsTruncated: true`. Not `28`/`8`/`20`: that is the P2 list-length implementation (`unresolved = unresolvedIds.length`, `resolved = folded − 20`), which under-reports the count and must red this cell.
+- Step 7: `R1.unresolved === 24`, `R1.reported === 28`, `R1.resolved === 4`, `DIV-1` absent from `unresolvedIds`; `S0.unresolved - R1.unresolved === 1`.
+- Step 8: `unresolved === 3`, `idsTruncated === false`, `unresolvedIds.length === 3`, both surfaces equal.
+- Step 9: `Object.keys(block)` is exactly `["reported","resolved","unresolved","unresolvedIds","idsTruncated"]` on the summary and on the resolve result; `reported`, `resolved`, and `unresolved` keep their names, types, and meanings as exact counts, `unresolvedIds` is the declared narrowing, and `idsTruncated` is the one declared additive key on both (spec §8.5, AC-F5-5; §8.3 X-4, closed).
 
 **Notes / Clarifications**:
 
-- **This is the TDR-0023 residual-risk pin.** Its Negative Outcomes name two directions of movement: upward (past 20 open, the old number under-reported) and downward (foreign open divergences excluded from the repository's count). Both are asserted, in labelled cells, so neither can be discovered in production.
+- **This is the TDR-0023 residual-risk pin.** The delivered summary's `unresolved` and `resolved` are already exact but store-wide, so the declared movements are: a lower count on a migrated root (foreign open divergences stop counting), a block that did not exist on the resolve result, and an `unresolvedIds` list — and its human `unresolved_divergences=` line — that narrows to the documented 20 with the omission declared. An unmigrated root moves nothing but the list. All three are asserted in labelled cells, so none can be discovered in production, and the plan claims no upward movement it cannot produce.
 - A test that only asserted "the two surfaces agree" would pass on a shared wrong rule (TR-9); the exact numbers plus TC-ATTEMPT-038's structural scan are the two halves of the guarantee.
-- The gate is unaffected because the eligibility predicate tests for zero; the test asserts the verdict does **not** change at 25 (`blocked` before and after) while the number does.
+- The gate is unaffected because the eligibility predicate tests for zero; the test asserts the verdict does **not** change at 25 (`blocked` before and after) while the count is reported and the identifier list is bounded.
 
 #### TC-ATTEMPT-023 - Digest shape: summary line, seven cells, pointer, no run-form keys
 
@@ -1277,19 +1280,20 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 1. Run `dispatch attempts --ref GH-241 --json`; capture `data`.
 2. Assert the exact `data` key set and deep-scan for the five forbidden keys.
 3. Assert the gate summarizer counter is `0` for the attempts invocation.
-4. Run `dispatch dual-run summary --repo <repository> --json`; assert its delivered fields are present and its text projection unchanged apart from the divergence count and the declared additive `idsTruncated` key on the divergence block.
+4. Run `dispatch dual-run summary --repo <repository> --json`; assert its delivered fields are present and its text projection unchanged apart from the three declared changes on its divergence block: the counts become the exact repository-scoped counts (unchanged on an unmigrated root, lower on a migrated one), `unresolvedIds` narrows to the at-most-20 list with the declared additive `idsTruncated` key, and the human `unresolved_divergences=` line prints only the returned identifiers.
 
 **Expected Outcome**:
 
 - Step 1–2: `Object.keys(data).sort()` equals exactly `["attempts","excluded","hasMore","limit","matched","ref","refSource","repository"]` plus `"truncation"` only when a bound binds; a recursive key scan finds no `coverage`, `floor`, `verdict`, `eligibility`, or `unmetConditions` at any depth.
 - Step 3: `0` gate evaluations.
-- Step 4: the summary still carries `coveragePresent`, `coverageMissing`, `floor`, `verdict`, `unmetConditions`, `divergences`, `corroboration`, and the gate fields; its text output still contains `floor_only=true`; its divergence block is exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, with the four delivered fields unchanged in name, type, meaning, and order; only the divergence numbers may differ from a pre-change run, and only in the two directions TC-ATTEMPT-022 pins.
+- Step 4: the summary still carries `coveragePresent`, `coverageMissing`, `floor`, `verdict`, `unmetConditions`, `divergences`, `corroboration`, and the gate fields; its text output still contains `floor_only=true`; its divergence block is exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, with `reported`, `resolved`, and `unresolved` unchanged in name, type, meaning, and order as exact counts; when more than 20 identifiers are open, `unresolvedIds.length` is 20 with `idsTruncated: true`, `unresolved` stays the exact count, and the `unresolved_divergences=` line prints exactly the returned 20 identifiers; below the bound, `idsTruncated` is `false`, every identifier is returned, and the line matches. The counts may differ from a pre-change run only by moving **down** on a migrated root, which TC-ATTEMPT-022 pins.
 - No `coverage` or `floor` value appears on the attempts side at any depth, and the attempts surface never evaluates the gate.
 
 **Notes / Clarifications**:
 
 - The recursive scan matters: a nested `verdict` inside an attempt row would pass a top-level key check while duplicating the gate.
 - The gate counter proves the read never evaluates the gate, which a key-set assertion alone cannot.
+- **Ownership splits by cell**: cells 1–3 are green at the command phase (delivery plan phase 2); cell 4 — the summary's block key order including `idsTruncated`, its narrowed `unresolvedIds`, and the matching human line — completes only with the count rule (delivery plan phase 3), so the command phase's green set is satisfiable without the count rule.
 
 #### TC-ATTEMPT-029 - The pointer is the only route from evidence to gate
 
@@ -1484,24 +1488,25 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 1. Run `dispatch GH-301 --json`, `dispatch dual-run summary --repo <repo> --json`, and `dispatch handover <repo> --json`; assert their exact `data` key sets and key order.
 2. Run the resolve and assert the five delivered keys keep their names, types, meanings, and appear first in order, followed by `mode`, `repository`, `divergences`.
-3. Assert both divergence blocks (summary and resolve) carry exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, with the four delivered fields unchanged.
+3. Assert both divergence blocks (summary and resolve) carry exactly `reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that order, that `reported`, `resolved`, and `unresolved` keep their delivered names, types, and meanings as exact counts, that a block with more than 20 open identifiers returns exactly 20 with `idsTruncated: true` while `unresolved` stays the exact count, and that the summary's human `unresolved_divergences=` line prints exactly the returned identifiers.
 4. Run the attempts read and assert: no `result`, `verdict`, or `operation` key; `attempts` is an array; exit `0` with `ok: true`.
 5. Call each text selector directly with each payload shape and assert which renderer is chosen.
-6. Review the branch diff for renames, removals, or retyping of delivered keys.
+6. Review the branch diff for renames, removals, or retyping of delivered keys, for a second count rule, and for any change beyond the declared additions and the declared `unresolvedIds` narrowing.
 
 **Expected Outcome**:
 
 - Steps 1–2: the four delivered surfaces' key sets are exactly as delivered (no key removed, renamed, retyped, or reordered); the resolve payload is a superset of the five keys with the additions after them.
-- Step 3: the summary block and the resolve block both carry the same five keys in the same order; `idsTruncated` is the only addition to either block, and the four delivered fields keep name, type, meaning, and order (§8.5, AC-F5-5, AC-F7-1).
+- Step 3: the summary block and the resolve block both carry the same five keys in the same order; `idsTruncated` is the only addition to either block; `reported`, `resolved`, and `unresolved` keep name, type, meaning, and order as exact counts, and only `unresolvedIds` narrows — to at most 20 with `idsTruncated: true` when identifiers are dropped, and the human line prints that same list (§8.5, AC-F5-5, AC-F7-1, NFR-9).
 - Step 4: the attempts payload carries `attempts` (array), `matched`, `hasMore`, `excluded`, `ref`, `refSource`, `repository`, `limit`; it carries no `result`, `verdict`, or `operation`, so the exit projection is a plain success at exit `0`.
 - Step 5: the attempts payload selects the attempts renderer and is **not** mistaken for the run form, the summary, or the handover result; each of the other three payloads selects its own renderer and never the attempts renderer.
-- Step 6 (review): the diff against the merge base contains no change to a delivered key's name, type, meaning, or order, and only the declared additive keys (including `idsTruncated` on both divergence blocks) and the declared count correction.
+- Step 6 (review): the diff against the merge base contains no change to a delivered key's name, type, meaning, or order, and only the declared additive keys (including `idsTruncated` on both divergence blocks), the declared repository-scoping of the summary's counts, and the declared `unresolvedIds` narrowing to its documented 20-identifier bound.
 
 **Notes / Clarifications**:
 
 - Mutation P1 (rename `principal` to `actor` in the resolve payload) must red step 2; that proves the shape assertion has detection power over delivered behaviour, which predates the change.
 - Step 5 is the discriminator half: an implementation that keys the attempts renderer on "no `result` key" would also capture a handover payload, so the selector is called with all four shapes.
 - The additive-only half is review-verified because no permanent test may compare against a moving base (`.ai/rules/testing-strategy.md`). Step 3 is the suite half that makes the `idsTruncated` addition safe: it is declared on both blocks, so a consumer pinning the four delivered fields still sees them unchanged.
+- **Ownership splits by cell**: cells 1, 4, 5, and 6 are green at the command phase (delivery plan phase 2); cells 2–3 — the resolve payload's added keys (`mode`, `repository`, `divergences`) and both blocks' `idsTruncated` with the narrowed identifier list — complete with the count rule (delivery plan phase 3), so the command phase's green set is satisfiable without the count rule.
 
 #### TC-ATTEMPT-035 - No new configuration key, dependency, package, token, projection, exit literal, or literal
 
@@ -1509,7 +1514,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-9, AC-F9-2, NFR-9, NFR-10
-**Evidence Class**: Suite (scans) + Review-verified (lockfile and diff half)
+**Evidence Class**: Suite (scans and gates) + Review-verified (lockfile and manifest diff)
 **Test Type(s)**: Checks + Manual
 **Automation Level**: Automated (scans) + Manual (review half)
 **Target Layer / Location**: existing suites, unchanged: `tests/checks/exit-code-literals.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/behaviour/dispatch-token-closure.test.ts`, `tests/checks/config-default-positions.test.ts`, `tests/checks/forbidden-literals.test.ts`, `tests/checks/privacy-literals.test.ts`, `tests/checks/privacy-release.test.ts`
@@ -1536,7 +1541,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Notes / Clarifications**:
 
 - This TC adds no new file: the delivered scans already own each invariant, and a second owner would be a maintenance liability. Its contribution is the assertion that this change added nothing they would have to allow.
-- The lockfile half is review-verified; a permanent test asserting "the lockfile did not change" would fail on any later legitimate dependency bump.
+- The lockfile and manifest diff half is review-verified; a permanent test asserting "the manifest and lockfile did not change" would fail on any later legitimate dependency bump.
 
 #### TC-ATTEMPT-036 - Test isolation: no write reaches the real state directory
 
@@ -1618,7 +1623,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: AC-F5-5, NFR-8, F-5, F-7, DEC-15, C-5, TDR-0023 D-5
-**Evidence Class**: Suite + revert (P2)
+**Evidence Class**: Suite + mutation (P2)
 **Test Type(s)**: Structural
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/dispatch-attempts-count-rule.test.ts`
@@ -1626,8 +1631,8 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 
 **Preconditions**:
 
-- The delivered sources of both fold sites: `packages/core/src/domain/dispatch-gate.ts` (`foldEvidenceWindow`) and `packages/core/src/app/dispatch-ledger.ts` (`summarizeDispatchDivergences`), plus the resolve enrichment in `packages/core/src/app/dispatch-gate.ts` and the summary composition.
-- A TypeScript AST parse of `packages/**/src` with no allowlist.
+- The delivered sources of both fold sites: `packages/core/src/domain/dispatch-gate.ts` (`foldEvidenceWindow`) and `packages/core/src/app/dispatch-ledger.ts` (`summarizeDispatchDivergences` — the capped-list helper that has no caller on any delivered surface and is retired by this change), plus the resolve enrichment in `packages/core/src/app/dispatch-gate.ts` and the summary composition.
+- A TypeScript AST parse of `packages/**/src` with no allowlist, plus an import-graph scan over `packages/**` and `tests/**`.
 
 **Steps**:
 
@@ -1636,17 +1641,19 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 3. Assert the summary's divergence block and the resolve enrichment both reference the same exported symbol (import graph), and that neither contains a local fold.
 4. Assert exactly one latest-per-identifier fold over divergence records exists on these paths.
 5. Assert the shared computation takes the repository (or a pre-filtered record set keyed by repository) as an input, so it cannot silently count the store.
+6. Assert the retired `summarizeDispatchDivergences` has no surviving caller and no second derivation exists: the symbol is gone from `packages/core/src/app/dispatch-ledger.ts` and from both barrels (`packages/core/src/app/index.ts`, `packages/core/src/index.ts`), and no module under `packages/**` or `tests/**` references it — the delivered tree's only references were those two re-exports and one allowance row, and none survives.
 
 **Expected Outcome**:
 
 - Steps 1–4: one exported computation returns `{ reported, resolved, unresolved, unresolvedIds, idsTruncated }`; two consumers reference it; zero list-length derivations remain; one fold on these paths.
 - Step 5: the computation's signature admits a repository scope, and the two call sites pass one.
+- Step 6: zero references to `summarizeDispatchDivergences` remain anywhere in `packages/**` or `tests/**`, and the source scan finds no second place that derives `unresolved` or `resolved`.
 - A failing assertion names the file, line, and the offending expression.
 
 **Notes / Clarifications**:
 
-- **This is the second half of the TDR-0023 residual-risk pin.** TC-ATTEMPT-022 proves the numbers are right; this test proves there is only one rule producing them, so a third fold cannot re-introduce a second definition (D-5).
-- Mutation P2 (restore `unresolved: unresolvedIds.length`) reds both TC-ATTEMPT-022 and this test; the mutation is the negative control for the scan, per the delivered scan discipline (assert with file, line, and literal).
+- **This is the second half of the TDR-0023 residual-risk pin.** TC-ATTEMPT-022 proves the numbers are right; this test proves there is only one rule producing them, so a third fold cannot re-introduce a second definition (D-5). Step 6 is the reason the capped-list helper is deleted rather than left in place: an uncalled second derivation is still a second definition waiting for a caller.
+- Mutation P2 (reintroduce `unresolved: unresolvedIds.length` with `resolved: folded.length - unresolvedIds.length`) reds both TC-ATTEMPT-022 (which reports `20` instead of `25`) and this test; the mutation is the negative control for the scan, per the delivered scan discipline (assert with file, line, and literal). Nothing delivered is reverted, because the delivered block does not carry that derivation.
 - No implementation filename is pinned beyond the delivered files that already carry these two derivations; the module for the shared helper is the delivery plan's decision (§8.3 X-8).
 
 #### TC-ATTEMPT-039 - Request grammar: non-canonical ref, unknown flag, unexpected positional
@@ -1720,7 +1727,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | 5,000+ record ledger | Counting store returning 5,001 (and 5,002-with-foreign-tail) attempt ledger records in append order | TC-ATTEMPT-010, 037 |
 | 100 maximal records for the 65,536-byte page bound | `maximalAttempt()` × 100 (16 × 64-character references) | TC-ATTEMPT-009 |
 | 400-character note | `"x".repeat(400)` plus a 240-character boundary case | TC-ATTEMPT-021 |
-| 25 folded open divergences | 25 open + 3 resolved for `REPOSITORY`, 5 open for `REPOSITORY_BETA`, two open ids with prior resolved history | TC-ATTEMPT-022, 038 |
+| 25 folded open divergences | A migrated root: 25 open + 3 resolved for `REPOSITORY`, 5 open for `REPOSITORY_BETA`, two open ids with prior resolved history; plus an unmigrated baseline with the same 25 open + 3 resolved and no foreign records | TC-ATTEMPT-022, 038 |
 | Replay resolve | The same resolve invoked twice on one open divergence, plus a third differing-note invocation | TC-ATTEMPT-020, 027 |
 
 **State data discipline.**
@@ -1764,7 +1771,7 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | TC-ATTEMPT-021 | same | To Implement | Suite | same |
 | TC-ATTEMPT-027 | same | To Implement | Suite | same |
 | TC-ATTEMPT-019 | `tests/structure/dispatch-resolve-composition.test.ts` | Existing – Update | Suite | `bun test tests/structure/dispatch-resolve-composition.test.ts` |
-| TC-ATTEMPT-022 | `tests/behaviour/dispatch-divergence-count.test.ts` | To Implement | Suite + revert (P2) | `bun test tests/behaviour/dispatch-divergence-count.test.ts` |
+| TC-ATTEMPT-022 | `tests/behaviour/dispatch-divergence-count.test.ts` | To Implement | Suite + mutation (P2) | `bun test tests/behaviour/dispatch-divergence-count.test.ts` |
 | TC-ATTEMPT-023 | `tests/behaviour/dispatch-attempts-digest.test.ts` | To Implement | Suite + Golden | `bun test tests/behaviour/dispatch-attempts-digest.test.ts` |
 | TC-ATTEMPT-024 | same | To Implement | Suite | same |
 | TC-ATTEMPT-025 | same | To Implement | Suite | same |
@@ -1775,9 +1782,9 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | TC-ATTEMPT-032 | none (manual) | Manual Only | Review-verified | — (review verdict + §10) |
 | TC-ATTEMPT-033 | none (manual) | Manual Only | Review-verified | — (review verdict + §10) |
 | TC-ATTEMPT-034 | `tests/behaviour/dispatch-additive-stability.test.ts` | To Implement | Suite + mutation (P1) + Review-verified | `bun test tests/behaviour/dispatch-additive-stability.test.ts` |
-| TC-ATTEMPT-035 | existing scans, unchanged | Existing – No Change | Suite + Review-verified | `bun test tests/checks/exit-code-literals.test.ts tests/checks/error-table-sync.test.ts tests/checks/config-default-positions.test.ts tests/checks/forbidden-literals.test.ts tests/checks/privacy-literals.test.ts tests/checks/privacy-release.test.ts tests/behaviour/dispatch-token-closure.test.ts`; then `git diff --name-only "$(git merge-base origin/main-tools HEAD)"...HEAD -- package.json pnpm-lock.yaml 'packages/*/package.json' pnpm-workspace.yaml` (expect empty) |
+| TC-ATTEMPT-035 | existing scans, unchanged | Existing – No Change | Suite (scans and gates) + Review-verified (lockfile and manifest diff) | `bun test tests/checks/exit-code-literals.test.ts tests/checks/error-table-sync.test.ts tests/checks/config-default-positions.test.ts tests/checks/forbidden-literals.test.ts tests/checks/privacy-literals.test.ts tests/checks/privacy-release.test.ts tests/behaviour/dispatch-token-closure.test.ts`; then `git diff --name-only "$(git merge-base origin/main-tools HEAD)"...HEAD -- package.json pnpm-lock.yaml 'packages/*/package.json' pnpm-workspace.yaml` (expect empty) |
 | TC-ATTEMPT-036 | `tests/checks/dispatch-attempts-test-isolation.test.ts` | To Implement | Suite | `bun test tests/checks/dispatch-attempts-test-isolation.test.ts` |
-| TC-ATTEMPT-038 | `tests/structure/dispatch-attempts-count-rule.test.ts` | To Implement | Suite + revert (P2) | `bun test tests/structure/dispatch-attempts-count-rule.test.ts` |
+| TC-ATTEMPT-038 | `tests/structure/dispatch-attempts-count-rule.test.ts` | To Implement | Suite + mutation (P2) | `bun test tests/structure/dispatch-attempts-count-rule.test.ts` |
 
 ### 7.2 Supporting changes (not test cases)
 
@@ -1803,12 +1810,14 @@ Runtime expectations: the two-checkout and migrated-root suites spawn `git` a bo
 | 7 — gates and release | TC-ATTEMPT-035, 036 | The aggregate `pnpm check` run and the diff review are the phase's evidence. |
 | Review gate (before DoD) | Mutation/revert bundle P1–P4 (§7.4) | Recorded in §10 and in the change review. |
 
+**Cell-level ownership follows the test cases.** TC-ATTEMPT-028 cells 1–3 and TC-ATTEMPT-034 cells 1, 4, 5, 6 belong with the attempts branch and digest group; TC-ATTEMPT-028 cell 4 (the summary's block key order including `idsTruncated`, its narrowed `unresolvedIds`, and the matching human line) and TC-ATTEMPT-034 cells 2–3 (the resolve payload's added keys and both blocks' `idsTruncated`) belong with the resolve and shared-count group, because they cannot be green before the count rule exists. The delivery plan states the same split in its own five-phase numbering.
+
 ### 7.4 Revert and mutation bundle
 
 | Id | Procedure | Expected red | Proves |
 |---|---|---|---|
 | P1 | Rename a delivered resolve key (`principal` → `actor`) in the resolve payload; run the stability suite; restore. | TC-ATTEMPT-034 | The shape assertion guards delivered behaviour that predates this change. |
-| P2 | Restore the delivered derivations (`unresolved: unresolvedIds.length`, `resolved: folded.length - unresolvedIds.length`) in the divergence block; run the count suites; restore. | TC-ATTEMPT-022, TC-ATTEMPT-038 | The exact-count rule and its single implementation; this is the negative control for the structural scan. |
+| P2 | Reintroduce a list-length derivation (`unresolved: unresolvedIds.length`, `resolved: folded.length - unresolvedIds.length`) in the shared divergence block; run the count suites; restore. | TC-ATTEMPT-022, TC-ATTEMPT-038 | The exact-count rule and its single implementation: the mutation under-reports the 25-open case as `20` and reds the behavioural cell, while the structural scan names the offending expression. |
 | P3 | Drop the logical `repository` filter in the attempts read (return every matching record from the store); run the scope suite; restore. | TC-ATTEMPT-011, TC-ATTEMPT-012 | The twice-enforced scope: the physical root alone is not enough. |
 | P4 | Clamp a `--limit` above the maximum to 100 instead of refusing, **and** accept `07`/`001`/`+7` as the same integer; run the ref suite; restore. | TC-ATTEMPT-003 | The "nothing is clamped or normalised" clause (DEC-10, AC-F1-3) and `hasMore`'s honesty. |
 
@@ -1869,7 +1878,7 @@ pnpm check:help
 | TR-6 | Golden rot: a regenerated `attempts.txt` silently blesses a wrong cell. | The same test asserts each cell and the line grammar independently of the golden; regeneration is an explicit reviewed command. |
 | TR-7 | A review-verified criterion is quietly counted as suite-covered. | §3.1 labels each class; §10 records each review item with its quoted evidence; the DoD gate reads §3.1, not the prose. |
 | TR-8 | The 5,000-record measurement measures the fixture rather than the product. | Records are shared frozen objects built once outside the timed loop; the counting wrapper asserts exactly one `readRecords` per invocation; the measured p95 is recorded. |
-| TR-9 | The count-agreement test passes because both surfaces call the same wrong helper. | TC-ATTEMPT-022 asserts the exact numbers in both directions; TC-ATTEMPT-038 asserts the single derivation structurally; P2 is the negative control. |
+| TR-9 | The count-agreement test passes because both surfaces call the same wrong helper. | TC-ATTEMPT-022 asserts the exact repository-scoped numbers (unchanged on an unmigrated root, lower on a migrated one), the 20-identifier narrowing, and the resolve-side block; TC-ATTEMPT-038 asserts the single derivation structurally and that the uncalled capped-list helper is retired; P2 is the negative control. |
 | TR-10 | `hasMore` implemented as `attempts.length === limit` passes the simple cells. | TC-ATTEMPT-005 recomputes the predicate and includes the `3 of 3` and `0 matches` cells; TC-ATTEMPT-009/010 add the byte-shortened and ledger-truncated cells. |
 | TR-11 | The foreign-exclusion count is asserted only with same-ref foreign records. | TC-ATTEMPT-012 adds a foreign record for `GH-999` and asserts the count is unchanged when `--ref` narrows; TC-ATTEMPT-010 adds a foreign record in the omitted ledger tail. |
 | TR-12 | An existing text selector mistakes the attempts payload for another form. | TC-ATTEMPT-034 calls each selector with each of the four payload shapes, including a handover payload that also carries no `result` key. |
@@ -1885,7 +1894,7 @@ pnpm check:help
 - `createProductionComposer` derives the project state root from `resolveProjectScope` at compose time and exposes `resolveProductionRepository(..., { persist: false })` for the gate surfaces; the attempts read composes on the same two facts.
 - The local PM context is `${cwd}/.ai/local/pm-context.yaml`, parsed by `readLocalPmContext` into `context.activeChange?.workItemRef`; the delivered spend command's refusal pattern is reusable, with the file name added.
 - `ERROR_TABLE` holds 124 identities with four `dispatch` rows, documented 124/124 by `tests/checks/error-table-sync.test.ts`.
-- `foldEvidenceWindow`'s divergence block is the delivered store-wide, uncapped fold, and `summarizeDispatchDivergences` caps identifiers at 20 and derives the counts from the capped list — both are the defect this change corrects, and both are replaced by one computation.
+- `foldEvidenceWindow`'s divergence block is the delivered store-wide, uncapped fold: `unresolved` and `resolved` are already exact counts over the whole store, and `unresolvedIds` returns every open identifier. The capped-list derivation exists only in `summarizeDispatchDivergences`, which caps identifiers at 20 and derives its counts from the capped list and has **no caller** on any delivered surface (grep over `packages/**` and `tests/**` finds only its two barrel re-exports and one allowance row). This change makes the shared computation repository-scoped, narrows `unresolvedIds` — and the human `unresolved_divergences=` line — to the documented 20 with `idsTruncated`, adds the block to the resolve result, and retires the uncalled helper.
 - The attempts and resolve surfaces share the envelope's `command: "dispatch"` value (DEC-7), so no new envelope token is introduced.
 - Tests may create real temporary repositories and spawn `git`; `git` is already required by `tests/fixtures/watchdog` and `tests/fixtures/pilot`.
 - The M2 `attempts(1)` page is edited at story delivery under the pack's own "refined at story delivery" rule, so its pre-delivery text is not a test oracle.
@@ -1923,6 +1932,7 @@ The previous revision of this plan recorded nine findings (X-1…X-9). **All nin
 |---------|------|--------|---------|
 | 1.0 | 2026-11-11 | @test-plan-writer | Initial test plan for GH-289 from spec v1.0 and TDR-0023 (Proposed): **39 test cases** covering all **35** acceptance criteria (`AC-F1-1`…`AC-F9-2`), the eleven NFRs with thresholds, and the delivered gate battery. New fixtures under `tests/fixtures/dispatch/**` (in-process attempts harness, real-production attempts wrapper, record builders, two digest goldens); four revert/mutation procedures (P1–P4) including the two halves of the TDR-0023 count risk; and four declared findings (X-1 an AC-less requirement for malformed-request grammar, X-2 "opens no store" vs inherited effects, X-4 the `idsTruncated` shape addition on the summary, X-5 the two-marker collision), plus five precision findings (X-3, X-6, X-7, X-8, X-9). |
 | 1.1 | 2026-11-11 | @test-plan-writer | Aligned to **spec v1.1** (revision driven by the `dor_check` findings). Acceptance coverage **35 → 36**: `AC-F1-6` (request-grammar refusals) added to §3.1 and owned by **TC-ATTEMPT-039**, whose AC-less label is removed; the TC count stays **39** and every `TC-ATTEMPT-001…039` identifier is unchanged. Aligned the five closed imprecisions: `excluded.foreignRepository` now asserted within the retained ledger window with both AC-F3-2 branches split between TC-012 (window, `--ref`-independent) and TC-010 (omitted tail → 0); `idsTruncated` asserted as the one declared additive key on **both** divergence blocks with the four delivered fields' order preserved (TC-022 step 8, TC-028, TC-034); the two identity markers named and asserted separately (TC-013, TC-014); `truncation.bound` pinned to `5000`/`65536` per scope (TC-009, TC-010); `--limit` canonical-decimal refusals `07`, `+7`, ` 7`, `001` added (TC-003, mutation P4 extended). §8.3 now records each finding with its v1.1 ruling and marks X-1…X-9 closed without deleting the v1.0 finding text. Every fixture, negative assertion, gate command, and review-verified gap is preserved. |
+| 1.2 | 2026-11-11 | @test-plan-writer | Aligned to **spec v1.3** and readiness iteration 1. Acceptance coverage stays **36/36** and the TC count stays **39**; every `TC-ATTEMPT-001…039` identifier, fixture, negative assertion, and gate command is unchanged. **B2:** TC-ATTEMPT-028 and TC-ATTEMPT-034 now declare their cell ownership — TC-028 cells 1–3 and TC-034 cells 1, 4, 5, 6 are green at the command phase (delivery plan phase 2); TC-028 cell 4 (the summary block's key order including `idsTruncated`, its narrowed `unresolvedIds`, and the matching human line) and TC-034 cells 2–3 (the resolve payload's added keys and both blocks' `idsTruncated`) complete with the count rule (phase 3). **A2:** TC-ATTEMPT-003's missing-value note now states that `--limit` is deliberately not a `requiresValue` flag and that the command module's `attempts` grammar refuses the cell before any runtime call, because the shared parser would answer `fallback.invocation`. **B3:** corrected every statement that described the delivered summary's count as a bounded-list artefact — §1's premise, §1.1, §3.1/§3.2/§3.3, TC-ATTEMPT-022 (restated as: unchanged on an unmigrated root, lower on a migrated root, a new block on the resolve result, and an `unresolvedIds` narrowing to 20 with `idsTruncated` while `unresolved` stays exact), TC-ATTEMPT-028 step 4, TC-ATTEMPT-034 step 3 and its review step, TC-ATTEMPT-038 (the retired `summarizeDispatchDivergences` has no surviving caller and no second derivation remains; P2 is now a list-length mutation that reports 20 instead of 25), §7.4 P2, §8.1 TR-9, and §8.2. `AC-F9-2`'s evidence class reads "Suite (scans and gates), review-verified (lockfile and manifest diff)" in §3.1, §5.1, §7.1, and TC-ATTEMPT-035; §10 gains the B2/B3 reconciliation notes. |
 
 ## 10. Test Execution Log
 
@@ -1961,13 +1971,15 @@ Not yet executed: this plan is the phase-3 artefact and no test in it has run. R
 | TC-ATTEMPT-032 | AC-F8-3 | — | Pending | |
 | TC-ATTEMPT-033 | AC-F8-4 | — | Pending | |
 | TC-ATTEMPT-034 | AC-F9-1 additive-only half | — | Pending | |
-| TC-ATTEMPT-035 | AC-F9-2 lockfile and diff half | — | Pending | |
+| TC-ATTEMPT-035 | AC-F9-2 lockfile and manifest diff half | — | Pending | |
 
 **Reconciliation notes to `@doc-syncer`**
 
 - X-1, X-3, X-4, X-9: **satisfied by spec v1.1** (`AC-F1-6` added; the foreign count qualified to the retained window in F-3/DM-1/AC-F3-2; `idsTruncated` declared on both divergence blocks in §8.5; `truncation.bound` defined per scope in DM-5). No further spec change is owed; the reconciliation pass should carry the same wording into `feature-dispatch-engine.md` and `contracts.md`.
 - X-2: AC-F1-2 still says "opens no store". Spec v1.1 §8.5/NFR-3 enumerate the inherited store-opening effects, and this plan reads the phrase as "performs no store read"; the reconciliation pass should either adopt that wording in AC-F1-2's mirror in the feature spec or leave it, but should not describe the refusal as effect-free.
 - X-8: the shared count computation's module name is the delivery plan's decision; if the plan names one, this plan's structural target list narrows to it (TC-ATTEMPT-038), and the doc reconciliation should name the same module.
+- B3 (spec v1.3): the delivered summary's `unresolved` and `resolved` were already exact and store-wide, and the capped-list derivation lived only in the uncalled `summarizeDispatchDivergences`. The reconciliation pass must describe this change as repository-scoping the shared computation, adding the block to the resolve result, and narrowing `unresolvedIds` (and the human `unresolved_divergences=` line) to the documented 20 with `idsTruncated`; it must not describe the delivered number as a bounded-list artefact or claim the count moves up past 20 open divergences.
+- B2 (ownership): TC-ATTEMPT-028 cell 4 and TC-ATTEMPT-034 cells 2–3 land with the count rule in delivery plan phase 3, not with the command phase; the §10 rows for those cells are appended at the phase-3 boundary.
 
 **Measured values (informational only)**
 
