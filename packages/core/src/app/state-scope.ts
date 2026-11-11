@@ -57,6 +57,16 @@ const environmentVariableName = (environmentPrefix: string): string =>
   `${environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`;
 
 /**
+ * The exact `<PREFIX>_STATE_DIR` variable name the host-root rule reads.
+ *
+ * Exported so a composing site that must bind the same name in a detached
+ * child's environment or in an installed unit consumes this one derivation
+ * instead of composing the name a second time (GH-288 F-6, NFR-9).
+ */
+export const stateScopeEnvironmentName = (environmentPrefix: string): string =>
+  environmentVariableName(environmentPrefix);
+
+/**
  * Resolve the host state root: `<PREFIX>_STATE_DIR` wins outright when set;
  * the default is `<home>/<brand.stateDirectoryName>`. A relative override is
  * `config.value.invalid`. No ambient working directory participates.

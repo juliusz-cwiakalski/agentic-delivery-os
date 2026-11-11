@@ -10,13 +10,31 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createProductionComposer } from "../../packages/cli/src/production";
-import { createMountHarness, openMountStore } from "../fixtures/daemon/mount-harness";
+import {
+  createMountHarness,
+  openMountStore,
+  productionStateRoot,
+} from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
 import * as capturedDegradation from "../fixtures/daemon/mount-mutants/captured-degradation";
 
 const isFailure = (value: unknown): value is { error: { code: string } } =>
   typeof value === "object" && value !== null && "error" in value;
+
+/** The project state root the production composition opens for one harness. */
+const projectRootOf = (harness: ReturnType<typeof createMountHarness>): string =>
+  productionStateRoot({
+    environment: {
+      HOME: harness.home,
+      PATH: "/usr/bin",
+      [`${harness.brand.environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`]:
+        harness.stateDirectory,
+    },
+    cwd: harness.root,
+    homeDirectory: harness.home,
+    brand: harness.brand,
+  });
 
 const queueList = async (stateDirectory: string, home: string, root: string, brand: never) => {
   const program = createProductionComposer({
@@ -43,19 +61,24 @@ describe("TC-DAEMON-077 the durable resolver is the production wire", () => {
     const live = createMountHarness({ label: "wiring-live" });
     const released = createMountHarness({ label: "wiring-released" });
     try {
-      appendInstance(live.store, { pid: 4321, scope: scopeOf(live.stateDirectory) });
-      appendHeartbeat(live.store, {
+      // The records live in the project state root each composition opens.
+      const liveRoot = projectRootOf(live);
+      const liveStore = openMountStore(liveRoot);
+      appendInstance(liveStore, { pid: 4321, scope: scopeOf(liveRoot) });
+      appendHeartbeat(liveStore, {
         instanceId: "instance-live",
         beatAt: new Date(Date.now()).toISOString(),
       });
-      appendInstance(released.store, { pid: 4321, scope: scopeOf(released.stateDirectory) });
-      appendInstance(released.store, {
+      const releasedRoot = projectRootOf(released);
+      const releasedStore = openMountStore(releasedRoot);
+      appendInstance(releasedStore, { pid: 4321, scope: scopeOf(releasedRoot) });
+      appendInstance(releasedStore, {
         operation: "released",
         releaseReason: "drain",
         recordedAt: new Date(Date.now()).toISOString(),
         heartbeatAt: new Date(Date.now()).toISOString(),
       });
-      appendHeartbeat(released.store, {
+      appendHeartbeat(releasedStore, {
         instanceId: "instance-live",
         beatAt: new Date(Date.now()).toISOString(),
       });

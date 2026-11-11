@@ -12,6 +12,12 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DaemonComposition } from "../../../packages/cli/src/daemon-compose";
+import {
+  ensureProjectIdentityMarkerText,
+  readProjectIdentityMarker,
+} from "../../../packages/adapters/src/file/project-identity";
+import { nodeRepositoryIo, readCheckoutIdentity } from "../../../packages/adapters/src/repo/index";
+import { resolveProjectScope, stateScopeRoots } from "../../../packages/core/src/app/state-scope";
 import { resolveDaemonSettings } from "../../../packages/core/src/config/index";
 import type { BrandIdentity } from "../../../packages/core/src/contracts/index";
 import {
@@ -475,4 +481,32 @@ export const createMemorySupervisor = (): MemorySupervisor => {
       failing.add(command);
     },
   };
+};
+
+/**
+ * The project state root the production composition resolves for the same
+ * facts (GH-288 F-1, GH-286 F-3): the one directory the daemon store, lock,
+ * settings, socket, and supervisor scope share. The policy and the adapter seam
+ * are the delivered ones; only the injected facts differ.
+ */
+export const productionStateRoot = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly cwd: string;
+  readonly homeDirectory: string;
+  readonly brand: BrandIdentity;
+}): string => {
+  const scope = resolveProjectScope({
+    environment: input.environment,
+    environmentPrefix: input.brand.environmentPrefix,
+    stateDirectoryName: input.brand.stateDirectoryName,
+    homeDirectory: input.homeDirectory,
+    checkout: readCheckoutIdentity({ cwd: input.cwd, io: nodeRepositoryIo() }),
+    ports: {
+      readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
+      writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
+      newProjectIdentifier: () => globalThis.crypto.randomUUID().replace(/-/gu, ""),
+    },
+  });
+  if (!scope.ok) throw new Error(`scope resolution failed: ${scope.error.code}`);
+  return stateScopeRoots(scope.value).projectRoot;
 };

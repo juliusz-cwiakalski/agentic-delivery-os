@@ -49,9 +49,7 @@ const renderSystemdUnit = (input: {
     "[Service]",
     "Type=simple",
     `ExecStart=${input.binary} daemon start --foreground`,
-    ...(input.workingDirectory === undefined
-      ? []
-      : [`WorkingDirectory=${input.workingDirectory}`]),
+    ...(input.workingDirectory === undefined ? [] : [`WorkingDirectory=${input.workingDirectory}`]),
     `Environment=${input.environmentName}=${input.stateDirectory}`,
     "Restart=on-failure",
     "",

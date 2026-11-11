@@ -14,14 +14,14 @@ export const description = "the spawn sends the state binding only, dropping PAT
 
 const ORIGINAL = `        const spawnEnvironment =
           composition.reentryEnvironment === undefined
-            ? { [composition.environmentName]: composition.stateDirectory }
+            ? { [composition.environmentName]: stateDirectoryBinding }
             : {
                 ...composition.reentryEnvironment,
-                [composition.environmentName]: composition.stateDirectory,
+                [composition.environmentName]: stateDirectoryBinding,
               };`;
 
 const MUTATED = `        const spawnEnvironment = {
-          [composition.environmentName]: composition.stateDirectory,
+          [composition.environmentName]: stateDirectoryBinding,
         };`;
 
 export const apply = (source: string): string => {

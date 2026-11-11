@@ -783,3 +783,91 @@ notes:
       bounded limitation in the PR description rather than silently waived."
     type: "decision"
     date: "2026-11-11"
+  - text: "Resume-sync integration: `origin/main-tools` (723454e4, GH-288
+      per-repository state scoping and the projects overview) merged into
+      `feat/GH-286/daemon-command-mounting` after the pull request reported
+      CONFLICTING. Twenty-one files conflicted and every one was resolved by
+      composing both intents, never by choosing a side: `production.ts` (six
+      hunks) now resolves the one state-scope policy (`resolveProjectScope` plus
+      `stateScopeRoots`, GH-288 F-1) and feeds its project state root to the
+      daemon store, lock, settings, socket, and supervisor scope (GH-286 F-3),
+      keeping the host index, the host-wide owner-hold marker, the scope-refusal
+      program, the scope warnings, and the projects runtime; `daemon-compose.ts`
+      keeps GH-288's `type Result` import and gains the composed settings
+      helper; the prompt-required set carries all eighteen commands (the
+      delivered sixteen plus `daemon` and `projects`); the help, coverage, and
+      composition guards carry both families and both reference pages; the
+      two entrypoint suites list both; `owner-hold-doc.test.ts`,
+      `delivery-modes.md`, and the reconciled spec pages carry both phrase sets
+      (the host-wide marker wording from GH-288 plus GH-286's marker-path
+      sentences). Composed behaviour in one paragraph: the host root is the
+      delivered override-aware rule (absolute `<PREFIX>_STATE_DIR`, otherwise
+      the injected home plus the brand state directory name); the project root
+      is `<host root>/projects/<project key>`; the daemon's store, lock,
+      settings, socket, supervisor scope, and re-entry derivation are that one
+      project root; the `<PREFIX>_STATE_DIR` binding written into the detached
+      child's environment and into the installed unit names the HOST root, so
+      the re-entered process derives the same project root instead of nesting a
+      second `projects/` segment; the installed unit additionally carries
+      `WorkingDirectory=<checkout root>`, because a project-scoped root is
+      derived from the checkout and a unit started outside it would resolve the
+      declared `unbound` scope; the queue and lanes degradation resolver stays
+      GH-286's durable predicate; the owner hold and the host index stay at the
+      host root; and GH-288's `projects list` keeps its injected daemon seam
+      unchanged (TC-PROJ-017 pins the unmounted-declaration cell, so wiring the
+      now-mounted family into that column is follow-up, not forced here).
+      Superseded GH-286 cells, each reconciled in its own suite and declared
+      rather than silently dropped: (a) AC-F3-4's non-absolute-override
+      tolerance, because GH-288 makes any host-root resolution failure a
+      classified whole-program scope refusal (TC-DAEMON-053 now asserts the
+      family stays mounted and answers `config.value.invalid` with nothing
+      written); (b) AC-F3-5's 'non-daemon families keep the delivered
+      home-based template', because GH-288 refuses the same scope for every
+      prompt-required command (TC-DAEMON-054 asserts that one classified
+      refusal instead of the `homeBasedStateDirectory` source token); (c) the
+      delivered `resolveStateDirectoryScope` helper, which GH-288 removed in
+      favour of the app-tier policy, so the state-directory suites now read
+      `resolveHostStateRoot`. Additive integration surface, required by the
+      composition rather than chosen: `DaemonComposition` gains
+      `stateDirectoryEnvironmentValue?` (the binding value, defaulting to
+      `stateDirectory`) and `workingDirectory?`; `SupervisorInstallRequest`
+      gains `workingDirectory?`; both `renderSystemdUnit` implementations emit
+      the optional `WorkingDirectory=` line; the policy exports
+      `stateScopeEnvironmentName` so the variable name is composed once; and
+      `daemon-compose` exports `resolveComposedDaemonSettings` so GH-288's
+      single-call-site rule for `resolveDaemonSettings` survives the mount.
+      `tests/structure/inventory.json` and the ports inventory stay byte-identical;
+      `EXECUTABLE_ALLOWANCES` gains exactly the two new exported symbols and the
+      structure suite's own allowance rows. Decision-id collision resolved: both
+      changes minted TDR-0022, so the daemon record (unmerged at the time) is
+      renumbered TDR-0023 across its file, id, title, index row, and every
+      GH-286 artifact and reconciled page, and GH-288 keeps TDR-0022. Test
+      reconciliation, all in GH-286/GH-288 suites and all to the composed
+      behaviour: `daemon-state-scope` (project root and the two superseded
+      cells), `daemon-start-detached` (host-root helper), `daemon-degradation-
+      projection`, `daemon-degradation-wiring`, `daemon-mutants` (mutant anchors
+      follow the renamed binding expression), `daemon-production-composition`
+      (18-family counts, project-root socket paths and a seeded project store,
+      the composed resolver token), `daemon-install-mount` (one added
+      production-shaped cell pinning the host-root binding, the checkout working
+      directory, and the project-root scope digest), `daemon-status` (composed
+      resolver token), and GH-288's `projects-state-scope-policy` (the settings
+      resolution sites live at the one composing file and its two composing
+      helpers are called only from production). Gates at this tree: pnpm
+      typecheck 0, pnpm lint 0 (80 pre-existing warnings, 25 infos, 0 errors),
+      pnpm format:check 0, pnpm check:help 0, error-table-sync OK
+      (entries=124 corpus=60), test-doc-distribution no drift (83 docs),
+      plan validate verdict=valid readyForDevelopment=true, git diff --check
+      clean, and the daemon (272), GH-288 (67), and combined daemon-plus-projects
+      (339) batteries green. The full battery under TMPDIR=$PWD/tmp/tmpdir and
+      --max-concurrency 4 reached 7359 pass, 4 skip, 1 fail across 912 files,
+      the single failure being TC-WIRE-002's 5 s per-test threshold in
+      `privacy-ci-wiring` (two full-tree privacy scans measured at 2.57 s and
+      2.87 s alone, so the two-scan test sits at ~5.4 s; it passed in two
+      earlier batteries on this identical tree and passes intermittently in
+      isolation, 1 of 3 runs). That guard is delivered and is left unedited
+      rather than weakened; the two other battery runs of this integration
+      flaked only the watchdog fixture-setup and privacy 5 s thresholds, each
+      green in isolation. No pull request merge is performed by this step."
+    type: "info"
+    date: "2026-11-11"

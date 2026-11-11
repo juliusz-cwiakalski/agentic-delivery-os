@@ -240,6 +240,7 @@ export {
   projectStateRoot,
   projectsContainerPath,
   resolveHostStateRoot,
+  stateScopeEnvironmentName,
   resolveProjectScope,
   type StateScopeRoots,
   sanitizeProjectBasename,

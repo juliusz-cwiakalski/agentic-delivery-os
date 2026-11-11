@@ -15,11 +15,11 @@ export const description =
 
 const ORIGINAL = `            : {
                 ...composition.reentryEnvironment,
-                [composition.environmentName]: composition.stateDirectory,
+                [composition.environmentName]: stateDirectoryBinding,
               };`;
 
 const MUTATED = `            : {
-                [composition.environmentName]: composition.stateDirectory,
+                [composition.environmentName]: stateDirectoryBinding,
                 ...composition.reentryEnvironment,
               };`;
 

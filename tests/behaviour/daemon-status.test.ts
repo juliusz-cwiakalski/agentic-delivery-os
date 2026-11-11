@@ -430,7 +430,10 @@ describe("TC-DAEMON-063 the configured control plane", () => {
     const source = readFileSync(join(process.cwd(), "packages/cli/src/production.ts"), "utf8");
     expect(source).not.toContain("daemon.sock");
     expect(source).not.toContain("5_000");
-    expect(source).toContain("resolveDaemonSettings");
+    // The delivered resolver has one call site at the composing seam (GH-288
+    // AC-F6-4), so production consumes that seam's helper and still derives no
+    // literal of its own.
+    expect(source).toContain("resolveProjectDaemonSettings");
   });
 });
 

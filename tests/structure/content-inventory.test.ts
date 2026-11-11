@@ -2152,6 +2152,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveProjectScope",
     "sanitizeProjectBasename",
     "serializeProjectIdentityMarker",
+    "stateScopeEnvironmentName",
     "stateScopeRoots",
     "unboundStateRoot",
   ],

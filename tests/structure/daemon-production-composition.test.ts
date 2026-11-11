@@ -21,6 +21,7 @@ import {
   createMountHarness,
   createRecordingSupervisor,
   openMountStore,
+  productionStateRoot,
 } from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
@@ -65,7 +66,9 @@ const invoke = async (options: {
 describe("TC-DAEMON-010 the family is prompt-required and composed unconditionally", () => {
   test("daemon is a member exactly once and the set grew by one", () => {
     expect(PROMPT_REQUIRED_COMMANDS.filter((command) => command === "daemon")).toHaveLength(1);
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(17);
+    // The delivered sixteen families, plus the GH-286 mount and the GH-288
+    // `projects` family: one member per prompt-required command, no duplicate.
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(18);
   });
 
   test("the composed program registers the declared grammar unchanged", () => {
@@ -115,7 +118,7 @@ describe("TC-DAEMON-010 the family is prompt-required and composed unconditional
       PROMPT_REQUIRED_COMMANDS: readonly string[];
     };
     expect(mutated.PROMPT_REQUIRED_COMMANDS).not.toContain("daemon");
-    expect(mutated.PROMPT_REQUIRED_COMMANDS).toHaveLength(16);
+    expect(mutated.PROMPT_REQUIRED_COMMANDS).toHaveLength(17);
   });
 });
 
@@ -132,7 +135,7 @@ describe("TC-DAEMON-014 a composition with every optional input absent", () => {
       expect(program.commands.daemon).toBeDefined();
       const selected = selectPromptRequiredProgram(program);
       expect(selected.commands.daemon).toBeDefined();
-      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(17);
+      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(18);
     } finally {
       harness.dispose();
     }
@@ -279,7 +282,7 @@ describe("TC-DAEMON-015 selection and containment through the entrypoint", () =>
         cwd: harness.root,
       });
       // A delivered prompt-required command still resolves, so the equality in
-      // step 1 is the delivered 17-family set and not a daemon-only set.
+      // step 1 is the full prompt-required set and not a daemon-only set.
       expect(run.exitCode).toBe(0);
       const envelope = JSON.parse(run.stdout) as { data?: unknown; error?: unknown };
       expect(envelope.error).toBeUndefined();
@@ -322,6 +325,19 @@ describe("TC-DAEMON-063/070 the production configuration-acquisition path", () =
       daemonEntry: `${harness.root}/bin/${harness.brand.binaryName}`,
     })(harness.brand);
 
+  /** The project state root the composed daemon uses for these facts. */
+  const projectRootOf = (harness: ReturnType<typeof createMountHarness>): string =>
+    productionStateRoot({
+      environment: {
+        HOME: harness.home,
+        [`${harness.brand.environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`]:
+          harness.stateDirectory,
+      },
+      cwd: harness.root,
+      homeDirectory: harness.home,
+      brand: harness.brand,
+    });
+
   const queueDegraded = async (program: ReturnType<typeof compose>) => {
     const result = await program.commands.queue?.handler({
       positionals: ["list"],
@@ -335,7 +351,10 @@ describe("TC-DAEMON-063/070 the production configuration-acquisition path", () =
   test("(a) a configured socket path, heartbeat interval, and lock staleness reach the runtime", async () => {
     const harness = createMountHarness({ label: "prod-config-a" });
     try {
-      const configuredSocket = `${harness.stateDirectory}/configured.sock`;
+      // The delivered settings rule refuses a socket path outside the state
+      // directory, so the configured path is inside the project state root.
+      const projectRoot = projectRootOf(harness);
+      const configuredSocket = `${projectRoot}/configured.sock`;
       writeUserConfig(
         harness,
         [
@@ -347,8 +366,10 @@ describe("TC-DAEMON-063/070 the production configuration-acquisition path", () =
         ].join("\n"),
       );
       // A 40 s old beat is inside the configured bound and outside the default.
-      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
-      appendHeartbeat(harness.store, {
+      // The durable records live in the project state root the composition opens.
+      const store = openMountStore(projectRoot);
+      appendInstance(store, { pid: 4321, scope: scopeOf(projectRoot) });
+      appendHeartbeat(store, {
         instanceId: "instance-live",
         beatAt: new Date(Date.now() - 40_000).toISOString(),
       });
@@ -390,11 +411,14 @@ describe("TC-DAEMON-063/070 the production configuration-acquisition path", () =
           socket: { path: string };
           heartbeat: { intervalMs: number };
         };
-        expect(data.socket.path).toBe(`${harness.stateDirectory}/daemon.sock`);
+        expect(data.socket.path).toBe(`${projectRootOf(harness)}/daemon.sock`);
         expect(data.heartbeat.intervalMs).toBe(5_000);
       }
       const source = readFileSync(join(process.cwd(), "packages/cli/src/production.ts"), "utf8");
-      expect(source).toContain("resolveDaemonSettings");
+      // The delivered resolver has one call site at the composing seam (GH-288
+      // AC-F6-4), so production consumes that seam's helper and still derives
+      // no literal of its own.
+      expect(source).toContain("resolveProjectDaemonSettings");
       expect(source).not.toContain("daemon.sock");
       expect(source).not.toContain("5_000");
     } finally {

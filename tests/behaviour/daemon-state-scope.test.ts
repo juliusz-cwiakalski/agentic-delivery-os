@@ -1,6 +1,13 @@
 /**
  * The single state-directory scope family (TC-DAEMON-050, 051, 052, 053, 054).
  *
+ * The composition scope is the one state-scope policy: the host root
+ * (`<PREFIX>_STATE_DIR` when absolute, otherwise `<home>/<brand.stateDirectoryName>`)
+ * and the per-project root beneath it (GH-288 F-1). The daemon family consumes
+ * the policy-derived project state root for its store, lock, settings, socket,
+ * and supervisor scope, and the `<PREFIX>_STATE_DIR` binding it writes names the
+ * host root, so a re-entered or installed process derives the same project root.
+ *
  * The production composer is exercised through the composed program's handlers;
  * the observer detail a production fact cannot expose is proved by a directly
  * composed runtime over the same facts, and the two are compared character for
@@ -9,12 +16,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
 import { createProductionComposer } from "../../packages/cli/src/production";
-import { resolveStateDirectoryScope } from "../../packages/core/src/config/index";
-import { type ControlConnection, ERROR_TABLE } from "../../packages/core/src/contracts/index";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { daemonScopeDigest } from "../../packages/core/src/domain/daemon-lock";
 import {
   createMountHarness,
@@ -86,6 +93,12 @@ const productionProgram = (options: {
   return { brand, program: composer(brand) };
 };
 
+/**
+ * The project state root the daemon reports: the directory holding the derived
+ * socket path is the one scope its store, lock, settings, and supervisor use.
+ */
+const projectRootOf = (socketPath: string): string => dirname(socketPath);
+
 describe("TC-DAEMON-050 one resolved directory", () => {
   test("an absolute override is the one scope for the store, lock, socket, and supervisor", async () => {
     const root = createMountRoot("scope-050");
@@ -108,12 +121,19 @@ describe("TC-DAEMON-050 one resolved directory", () => {
         instance: { scope: string };
         socket: { path: string };
       };
-      const digest = daemonScopeDigest(override);
+      // The host root is the override; the project root is derived beneath it,
+      // and the daemon's store, lock, socket, and supervisor scope are that one
+      // project directory.
+      const projectRoot = projectRootOf(receipt.socket.path);
+      const digest = daemonScopeDigest(projectRoot);
+      expect(projectRoot.startsWith(`${override}/projects/`)).toBe(true);
       expect(receipt.instance.scope).toBe(digest);
-      expect(receipt.socket.path.startsWith(`${override}/`)).toBe(true);
+      expect(receipt.socket.path.startsWith(`${projectRoot}/`)).toBe(true);
 
-      // The store landed under the override and nowhere under the home template.
-      expect(listDirectory(override)).toContain("ledger.default.jsonl");
+      // The store landed under the project root and nowhere under the home
+      // template or directly at the host root.
+      expect(listDirectory(projectRoot)).toContain("ledger.default.jsonl");
+      expect(listDirectory(override)).not.toContain("ledger.default.jsonl");
       expect(existsSync(`${home}/${brand.stateDirectoryName}`)).toBe(false);
 
       const status = await call(definition, ["status"]);
@@ -128,11 +148,11 @@ describe("TC-DAEMON-050 one resolved directory", () => {
       expect(data.supervisor.scope).toBe(digest);
       expect(data.instance?.scope).toBe(digest);
 
-      // The delivered resolvers over the same resolved directory agree exactly:
+      // The delivered resolvers over the same project directory agree exactly:
       // the settings socket path and the scope digest the composition reports.
-      const delivered = mountSettings(override);
+      const delivered = mountSettings(projectRoot);
       expect(delivered.socketPath).toBe(receipt.socket.path);
-      expect(daemonScopeDigest(override)).toBe(data.supervisor.scope);
+      expect(daemonScopeDigest(projectRoot)).toBe(data.supervisor.scope);
     } finally {
       removeMountRoot(root);
     }
@@ -181,7 +201,8 @@ describe("TC-DAEMON-051 the child resolves the same directory", () => {
       expect(keys.filter((key) => key === binding)).toHaveLength(1);
       expect(environment[binding]).toBe(harness.stateDirectory);
 
-      const childView = resolveStateDirectoryScope({
+      // The child re-resolves the same host root from the authoritative binding.
+      const childView = resolveHostStateRoot({
         environment,
         environmentPrefix: harness.brand.environmentPrefix,
         stateDirectoryName: harness.brand.stateDirectoryName,
@@ -190,7 +211,7 @@ describe("TC-DAEMON-051 the child resolves the same directory", () => {
 
       // A forwarded look-alike merged before the binding cannot win.
       const merged = { ...{ [binding]: "/forwarded/other" }, ...environment };
-      const mergedView = resolveStateDirectoryScope({
+      const mergedView = resolveHostStateRoot({
         environment: merged,
         environmentPrefix: harness.brand.environmentPrefix,
         stateDirectoryName: harness.brand.stateDirectoryName,
@@ -209,11 +230,11 @@ describe("TC-DAEMON-051 the child resolves the same directory", () => {
 });
 
 describe("TC-DAEMON-052 the no-override default is byte-identical", () => {
-  test("the resolved directory is the delivered home template", () => {
+  test("the resolved host root is the delivered home template", () => {
     const root = createMountRoot("scope-052");
     try {
       const brand = mountBrand();
-      const resolved = resolveStateDirectoryScope({
+      const resolved = resolveHostStateRoot({
         environment: {},
         environmentPrefix: brand.environmentPrefix,
         stateDirectoryName: brand.stateDirectoryName,
@@ -221,7 +242,7 @@ describe("TC-DAEMON-052 the no-override default is byte-identical", () => {
       });
       expect(resolved.ok && resolved.value).toBe(`${root}/${brand.stateDirectoryName}`);
 
-      const trailing = resolveStateDirectoryScope({
+      const trailing = resolveHostStateRoot({
         environment: {},
         environmentPrefix: brand.environmentPrefix,
         stateDirectoryName: brand.stateDirectoryName,
@@ -234,25 +255,27 @@ describe("TC-DAEMON-052 the no-override default is byte-identical", () => {
     }
   });
 
-  test("the production composition agrees with the delivered edge resolution", async () => {
+  test("the production composition agrees with the delivered host-root resolution", async () => {
     const root = createMountRoot("scope-052b");
     try {
       const brand = mountBrand();
       const environment = { HOME: root, PATH: "/usr/bin" };
-      const { program } = productionProgram({ environment, home: root, cwd: process.cwd(), brand });
+      const { program } = productionProgram({ environment, home: root, cwd: root, brand });
       const definition = program.commands.daemon;
       if (definition === undefined) throw new Error("daemon is not registered");
       const started = await call(definition, ["start"]);
       expect(isFailure(started)).toBe(false);
-      const edge = resolveStateDirectoryScope({
+      const hostRoot = resolveHostStateRoot({
         environment,
         environmentPrefix: brand.environmentPrefix,
         stateDirectoryName: brand.stateDirectoryName,
         homeDirectory: root,
       });
-      const durable = existsSync(`${root}/${brand.stateDirectoryName}/ledger.default.jsonl`);
-      expect(durable).toBe(true);
-      expect(edge.ok && edge.value).toBe(`${root}/${brand.stateDirectoryName}`);
+      expect(hostRoot.ok && hostRoot.value).toBe(`${root}/${brand.stateDirectoryName}`);
+      const receipt = started.data as { socket: { path: string } };
+      const projectRoot = projectRootOf(receipt.socket.path);
+      expect(projectRoot.startsWith(`${root}/${brand.stateDirectoryName}/projects/`)).toBe(true);
+      expect(existsSync(`${projectRoot}/ledger.default.jsonl`)).toBe(true);
     } finally {
       removeMountRoot(root);
     }
@@ -260,7 +283,7 @@ describe("TC-DAEMON-052 the no-override default is byte-identical", () => {
 });
 
 describe("TC-DAEMON-053 a non-absolute override keeps the command mounted", () => {
-  test("the composition does not throw, keeps the home value, and the edge still reports invalid", async () => {
+  test("the composition does not throw, the family stays mounted, and the edge reports invalid", async () => {
     const root = createMountRoot("scope-053");
     try {
       const home = join(root, "home");
@@ -272,12 +295,14 @@ describe("TC-DAEMON-053 a non-absolute override keeps the command mounted", () =
       };
       const { program } = productionProgram({ environment, home, cwd: root, brand });
       const definition = program.commands.daemon;
+      // The family stays registered in every outcome: a non-absolute override is
+      // a classified refusal, never a missing prompt-required command.
       expect(definition).toBeDefined();
       if (definition === undefined) return;
 
       // The delivered resolution edge is unchanged: the invalid override is
-      // reported, not swallowed, and yields no store.
-      const edge = resolveStateDirectoryScope({
+      // reported with the variable name, and yields no store.
+      const edge = resolveHostStateRoot({
         environment,
         environmentPrefix: brand.environmentPrefix,
         stateDirectoryName: brand.stateDirectoryName,
@@ -289,10 +314,15 @@ describe("TC-DAEMON-053 a non-absolute override keeps the command mounted", () =
         expect(edge.error.key).toBe(stateDirectoryName(brand));
       }
 
-      // The kept value is the home template: an in-process start writes there.
+      // The mounted family answers the same classified identity as every other
+      // command in that scope, and writes nothing anywhere.
       const started = await call(definition, ["start"]);
-      expect(isFailure(started)).toBe(false);
-      expect(existsSync(`${home}/${brand.stateDirectoryName}/ledger.default.jsonl`)).toBe(true);
+      expect(isFailure(started)).toBe(true);
+      if (isFailure(started)) {
+        expect(started.error.code).toBe("config.value.invalid");
+        expect(exitOf(started.error.code)).toBe(1);
+      }
+      expect(existsSync(`${home}/${brand.stateDirectoryName}`)).toBe(false);
       expect(existsSync(join(root, "relative"))).toBe(false);
       expect(existsSync(join(process.cwd(), "relative"))).toBe(false);
 
@@ -361,9 +391,22 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
       expect(span).toBeDefined();
       expect(forbiddenConstructions(span as string)).toEqual([]);
 
-      // The non-daemon families keep the delivered home-based template.
-      expect(source).toContain("homeBasedStateDirectory");
-      expect(source).toContain(": homeBasedStateDirectory");
+      // An unresolvable host root is one classified refusal for every
+      // prompt-required command, so no family silently derives a root-level
+      // path while the daemon family refuses (GH-288 F-1, AC-F1-3).
+      const companion = program.commands.status;
+      expect(companion).toBeDefined();
+      if (companion !== undefined) {
+        const companionOutcome = await companion.handler({
+          positionals: [],
+          flags: {},
+          global: {},
+        } as never);
+        expect(isFailure(companionOutcome)).toBe(true);
+        if (isFailure(companionOutcome)) {
+          expect(companionOutcome.error.code).toBe("config.value.invalid");
+        }
+      }
 
       // Filesystem and socket absence.
       expect(existsSync(rootLevel)).toBe(existedBefore);
@@ -374,7 +417,7 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
     }
   });
 
-  test("the control composition reaches five handlers and resolves the home template", async () => {
+  test("the control composition reaches five handlers over the project state root", async () => {
     const root = createMountRoot("scope-054b");
     try {
       const home = join(root, "home");
@@ -383,7 +426,7 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
       const { program } = productionProgram({
         environment,
         home,
-        cwd: process.cwd(),
+        cwd: root,
         brand,
       });
       const definition = program.commands.daemon;
@@ -393,15 +436,13 @@ describe("TC-DAEMON-054 an unresolvable state directory keeps the family mounted
         const code = isFailure(result) ? result.error.code : undefined;
         expect(code).not.toBe("config.value.invalid");
       }
-      // A non-daemon command still resolves `<home>/<brand.stateDirectoryName>`.
+      // A non-daemon command still resolves the same host root from the policy.
       const status = program.commands.status;
       expect(status).toBeDefined();
       if (status !== undefined) {
         await status.handler({ positionals: [], flags: {}, global: {} } as never);
       }
-      // The delivered edge resolution the non-daemon store shares still names
-      // the home-based template for the same facts.
-      const edge = resolveStateDirectoryScope({
+      const edge = resolveHostStateRoot({
         environment,
         environmentPrefix: brand.environmentPrefix,
         stateDirectoryName: brand.stateDirectoryName,

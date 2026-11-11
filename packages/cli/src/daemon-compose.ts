@@ -36,6 +36,8 @@ import {
 import {
   CONTROL_PROTOCOL_CURRENT,
   type ConfigFailure,
+  type ConfigNodeOrigins,
+  type ConfigValue,
   type ControlTopic,
   type ControlTransport,
   DAEMON_HEARTBEAT_STATES,
@@ -82,6 +84,15 @@ import {
   readEconomicsRecords,
 } from "@delivery-os/core/state";
 /**
+ * The acquired configuration a composing entrypoint resolved for this
+ * invocation, in the shape the delivered settings resolution consumes it.
+ */
+export type ComposedDaemonSettingsInput = {
+  readonly values: Readonly<Record<string, ConfigValue>>;
+  readonly origins: ConfigNodeOrigins;
+};
+
+/**
  * The ONE place that supplies a state directory to the delivered daemon settings
  * resolution (GH-288 F-6, AC-F6-4, DEC-12).
  *
@@ -90,11 +101,18 @@ import {
  * inside-the-state-directory rule keeps refusing an outside path. The settings
  * resolution itself is unchanged and the daemon family stays unmounted (NG-4);
  * reverting this argument to the host root is the mutation AC-F6-4 records.
+ *
+ * A composing entrypoint that acquired configuration for its invocation passes
+ * it here rather than calling the delivered resolver itself, so this stays the
+ * one site that reaches it (GH-286 F-4, GH-288 AC-F6-4).
  */
 export const resolveProjectDaemonSettings = (
   projectStateRoot: string,
+  acquired?: ComposedDaemonSettingsInput,
 ): Result<DaemonSettings, ConfigFailure> =>
-  resolveDaemonSettings({}, {}, { stateDirectory: projectStateRoot });
+  resolveDaemonSettings(acquired?.values ?? {}, acquired?.origins ?? {}, {
+    stateDirectory: projectStateRoot,
+  });
 
 import type { DaemonCommandRuntime as CommandRuntime } from "./commands/daemon.js";
 
@@ -135,7 +153,7 @@ export type DaemonComposition = {
   };
   /**
    * The additional variables the detached child receives. Merged beneath the
-   * authoritative `<PREFIX>_STATE_DIR` binding, which is written last; omitting
+   * authoritative state-directory binding, which is written last; omitting
    * the input keeps the delivered single-variable spawn.
    */
   readonly reentryEnvironment?: Readonly<Record<string, string>>;

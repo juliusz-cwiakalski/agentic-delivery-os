@@ -12,7 +12,7 @@ import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compos
 import { projectExitCode } from "../../packages/cli/src/projection";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
-import { resolveStateDirectoryScope } from "../../packages/core/src/config/index";
+import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
 import {
   createMountHarness,
   mountComposition,
@@ -590,7 +590,7 @@ describe("TC-DAEMON-040 re-entry environment", () => {
     expect(result.stateDirectory).not.toBe(
       `${result.harness.home}/${result.brand.stateDirectoryName}`,
     );
-    const childView = resolveStateDirectoryScope({
+    const childView = resolveHostStateRoot({
       environment: result.environment,
       environmentPrefix: result.brand.environmentPrefix,
       stateDirectoryName: result.brand.stateDirectoryName,
@@ -637,7 +637,7 @@ describe("TC-DAEMON-040 re-entry environment", () => {
       const mutant = { [binding]: "/forwarded/other", PATH: "/usr/bin" };
       const mutantKeys = Object.keys(mutant);
       expect(mutantKeys[0]).toBe(binding);
-      const childView = resolveStateDirectoryScope({
+      const childView = resolveHostStateRoot({
         environment: mutant,
         environmentPrefix: harness.brand.environmentPrefix,
         stateDirectoryName: harness.brand.stateDirectoryName,

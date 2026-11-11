@@ -12,6 +12,7 @@ import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/d
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import { createProductionComposer } from "../../packages/cli/src/production";
+import { nodeRepositoryIo, readCheckoutIdentity } from "../../packages/adapters/src/repo/index";
 import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import {
   DAEMON_SUPERVISOR_COMMAND_FORMS,
@@ -32,6 +33,7 @@ import {
   listDirectory,
   mountComposition,
   mountSettings,
+  productionStateRoot,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
@@ -104,6 +106,9 @@ const createInstallRecorder = (): InstallRecorder => {
         stateDirectory: request.stateDirectory,
         environmentName: request.environmentName,
         unit: request.unit,
+        ...(request.workingDirectory === undefined
+          ? {}
+          : { workingDirectory: request.workingDirectory }),
       });
     },
     installCalls: () => requests.length,
@@ -216,6 +221,71 @@ describe("TC-DAEMON-100 the installed unit", () => {
       expect(unit).not.toContain("HOME=");
       // The state directory is never the unit directory.
       expect(unit).not.toContain(`${harness.stateDirectory}/systemd/user`);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("the production composition binds the host root and pins the checkout as the unit's working directory", async () => {
+    // The composed truth (GH-288 F-1 plus GH-286 F-3): the unit's
+    // state-directory binding names the HOST root, so the unit process derives
+    // the same project state root instead of nesting a second `projects/`
+    // segment, and the unit runs in the checkout so that derivation resolves the
+    // project rather than the declared `unbound` scope.
+    const harness = createMountHarness({ label: "install-prod-100", override: "absolute" });
+    try {
+      const recorder = createInstallRecorder();
+      const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
+      const hostRoot = harness.stateDirectory;
+      const checkout = readCheckoutIdentity({ cwd: harness.root, io: nodeRepositoryIo() });
+      if (checkout.kind !== "resolved") throw new Error("the fixture cwd is not a checkout");
+      const projectRoot = productionStateRoot({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: hostRoot,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        brand: harness.brand,
+      });
+      const program = createProductionComposer({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: hostRoot,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        workingName: harness.brand.binaryName,
+        supervisor: recorder.port,
+        daemonEntry: entry,
+      })(harness.brand);
+      const result = await program.commands.daemon?.handler({
+        positionals: ["install"],
+        flags: {},
+        global: {},
+      } as never);
+      expect(isFailure(result)).toBe(false);
+      if (isFailure(result)) return;
+
+      const request = recorder.requests[0];
+      expect(request?.environmentName).toBe(stateDirectoryName(harness.brand));
+      // The binding value is the host root, never the derived project root.
+      expect(request?.stateDirectory).toBe(hostRoot);
+      expect(request?.stateDirectory).not.toBe(projectRoot);
+      // The unit runs where the checkout identity resolves.
+      expect(request?.workingDirectory).toBe(checkout.checkoutRoot);
+      // The receipt's scope is the state directory the daemon actually writes.
+      expect(request?.scope).toBe(daemonScopeDigest(projectRoot));
+
+      const unit = recorder.unitText();
+      expect(unit).toContain(`Environment=${stateDirectoryName(harness.brand)}=${hostRoot}`);
+      expect(unit).toContain(`WorkingDirectory=${checkout.checkoutRoot}`);
+      expect(unit.split("\n").filter((line) => line.startsWith("Environment="))).toHaveLength(1);
+      expect(unit.split("\n").filter((line) => line.startsWith("WorkingDirectory="))).toHaveLength(
+        1,
+      );
     } finally {
       harness.dispose();
     }

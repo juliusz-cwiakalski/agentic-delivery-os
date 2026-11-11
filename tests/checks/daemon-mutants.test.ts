@@ -51,6 +51,7 @@ import {
   createMountHarness,
   mountComposition,
   openMountStore,
+  productionStateRoot,
   reentryEnvironmentFrom,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
@@ -825,8 +826,21 @@ describe("GH-286 degradation mutation controls", () => {
     }>(hardcodedDegradation, "production.ts");
     const harness = createMountHarness({ label: "mutant-hardcoded" });
     try {
-      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
-      appendHeartbeat(harness.store, {
+      // The composition opens the project state root, so the live records live
+      // there (GH-288 F-1, GH-286 F-3).
+      const projectRoot = productionStateRoot({
+        environment: {
+          HOME: harness.home,
+          PATH: "/usr/bin",
+          [stateDirectoryName(harness.brand)]: harness.stateDirectory,
+        },
+        cwd: harness.root,
+        homeDirectory: harness.home,
+        brand: harness.brand,
+      });
+      const store = openMountStore(projectRoot);
+      appendInstance(store, { pid: 4321, scope: scopeOf(projectRoot) });
+      appendHeartbeat(store, {
         instanceId: "instance-live",
         beatAt: new Date(Date.now()).toISOString(),
       });

@@ -15,7 +15,11 @@ import { createProductionComposer, daemonReachable } from "../../packages/cli/sr
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
 import type { QueueDegradationReason } from "../../packages/core/src/contracts/index";
-import { createMountHarness, openMountStore } from "../fixtures/daemon/mount-harness";
+import {
+  createMountHarness,
+  openMountStore,
+  productionStateRoot,
+} from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 
 const isFailure = (value: unknown): value is { error: { code: string } } =>
@@ -33,12 +37,33 @@ const durableReachability = (input: {
 
 const NOW = (): number => Date.now();
 
+/**
+ * The project state root the production composition opens for one harness's
+ * facts: the durable records a production-shaped case seeds must live there,
+ * because the daemon's store, lock, and socket are that one directory (GH-288
+ * F-1, GH-286 F-3).
+ */
+const projectRootOf = (harness: ReturnType<typeof createMountHarness>): string =>
+  productionStateRoot({
+    environment: {
+      HOME: harness.home,
+      PATH: "/usr/bin",
+      [`${harness.brand.environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`]:
+        harness.stateDirectory,
+    },
+    cwd: harness.root,
+    homeDirectory: harness.home,
+    brand: harness.brand,
+  });
+
 describe("TC-DAEMON-070 a live instance yields an empty marker on both reads", () => {
   test("queue list and lanes list report degraded: []", async () => {
     const harness = createMountHarness({ label: "deg-070" });
     try {
-      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
-      appendHeartbeat(harness.store, {
+      const projectRoot = projectRootOf(harness);
+      const store = openMountStore(projectRoot);
+      appendInstance(store, { pid: 4321, scope: scopeOf(projectRoot) });
+      appendHeartbeat(store, {
         instanceId: "instance-live",
         beatAt: new Date(NOW()).toISOString(),
       });
@@ -76,14 +101,16 @@ describe("TC-DAEMON-071 and TC-DAEMON-072 released and absent stores degrade", (
   test("a released instance yields exactly [daemon-unreachable] on both reads", async () => {
     const harness = createMountHarness({ label: "deg-071" });
     try {
-      appendInstance(harness.store, { pid: 4321, scope: scopeOf(harness.stateDirectory) });
-      appendInstance(harness.store, {
+      const projectRoot = projectRootOf(harness);
+      const store = openMountStore(projectRoot);
+      appendInstance(store, { pid: 4321, scope: scopeOf(projectRoot) });
+      appendInstance(store, {
         operation: "released",
         releaseReason: "drain",
         recordedAt: new Date(NOW()).toISOString(),
         heartbeatAt: new Date(NOW()).toISOString(),
       });
-      appendHeartbeat(harness.store, {
+      appendHeartbeat(store, {
         instanceId: "instance-live",
         beatAt: new Date(NOW()).toISOString(),
       });

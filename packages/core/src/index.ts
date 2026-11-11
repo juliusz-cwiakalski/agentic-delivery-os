@@ -246,6 +246,7 @@ export {
   projectsContainerPath,
   resolveHostStateRoot,
   resolveProjectScope,
+  stateScopeEnvironmentName,
   type StateScopeRoots,
   sanitizeProjectBasename,
   serializeProjectIdentityMarker,

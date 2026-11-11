@@ -103,13 +103,13 @@ import {
   releaseQueueLease,
   resolveConfig,
   resolveCoordinatorSettings,
-  resolveDaemonSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
+  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
   stateScopeRoots,
@@ -205,10 +205,6 @@ const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKEN
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
 
 const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
-
-/** The exact `<PREFIX>_STATE_DIR` variable the state-directory resolution reads. */
-const stateDirectoryEnvironmentName = (environmentPrefix: string): string =>
-  `${environmentPrefix.toUpperCase().replace(/_+$/u, "")}_STATE_DIR`;
 
 /** The user configuration root the supervisor adapter writes the unit under. */
 const supervisorConfigDirectoryFor = (input: {
@@ -498,7 +494,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // The two layers (GH-288 F-1, DEC-12): the delivered host root holds
     // host-wide controls only, and the derived project root holds every
     // delivery artifact of this checkout. One policy resolves both — the host
-    // root honours the absolute `<PREFIX>_STATE_DIR` override and otherwise the
+    // root honours the absolute state-directory environment override and otherwise the
     // home default — and that same policy is the daemon family's one
     // state-directory resolution (GH-286 F-3, DM-5): no inline home-plus-brand
     // composition survives here, and an unresolvable host root is the
@@ -645,7 +641,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         values: Readonly<Record<string, ConfigValue>>,
         origins: ConfigNodeOrigins,
       ): { readonly settings: DaemonSettings; readonly restartBound: number } | undefined => {
-        const settings = resolveDaemonSettings(values, origins, { stateDirectory: directory });
+        const settings = resolveProjectDaemonSettings(directory, { values, origins });
         if (!settings.ok) return undefined;
         const lane = resolveLaneSettings(values, origins);
         return {
@@ -727,7 +723,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         settings: configuration.settings,
         restartBound: configuration.restartBound,
         stateDirectory: directory,
-        // The `<PREFIX>_STATE_DIR` binding names the host root, so a re-entered
+        // The state-directory binding names the host root, so a re-entered
         // child or the installed unit derives this same project state root from
         // it instead of nesting a second `projects/` segment under the project
         // root (GH-288 F-1, GH-286 F-3).
@@ -737,7 +733,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         workingDirectory: checkoutRoot,
         unit: `${brand.binaryName}-daemon.service`,
         binary: facts.daemonEntry ?? "",
-        environmentName: stateDirectoryEnvironmentName(brand.environmentPrefix),
+        environmentName: stateScopeEnvironmentName(brand.environmentPrefix),
         ...(supervisorConfigDirectory === undefined ? {} : { supervisorConfigDirectory }),
         ...(facts.processId === undefined ? {} : { pid: facts.processId }),
         ...(facts.signalHost === undefined ? {} : { signalHost: facts.signalHost }),
