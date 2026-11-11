@@ -109,6 +109,7 @@ import {
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type SupervisorPort,
   VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
@@ -254,11 +255,20 @@ export type ProductionCompositionFacts = {
   readonly gitChildRunner?: GitChildRunner;
   /** The supervisor's own process id (the bin supplies `process.pid`). */
   readonly processId?: number;
-  /** The process signal subscription seam (the bin supplies the host process). */
+  /**
+   * The process signal subscription seam (the bin supplies the host process).
+   */
   readonly signalHost?: {
     readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
     readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
   };
+  /**
+   * The running entry path (the bin supplies `process.argv[1]`), so the detached
+   * child and the installed unit name the same executable.
+   */
+  readonly daemonEntry?: string;
+  /** A pass-through supervisor seam so install is provable without a live systemd. */
+  readonly supervisor?: SupervisorPort;
   /**
    * The recorded coordinator session facts override. Production derives them
    * from the delivered lane ledger; tests and embedders may inject the same

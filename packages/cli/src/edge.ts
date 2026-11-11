@@ -3892,7 +3892,14 @@ export type QueueComposition = {
   readonly nowIso: () => string;
   readonly nowMs: () => number;
   readonly newFenceToken: () => string;
-  readonly degraded?: readonly QueueDegradationReason[];
+  /**
+   * The degradation marker set, or a resolver consulted per projection. The
+   * array member keeps the delivered semantics; absence keeps the delivered
+   * `["daemon-unreachable"]` fallback.
+   */
+  readonly degraded?:
+    | readonly QueueDegradationReason[]
+    | (() => readonly QueueDegradationReason[]);
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
   readonly readyRuntime?: QueueReadyCommandRuntime;
   /** The per-pass owner-hold reader supplied by the production composition. */
@@ -4250,9 +4257,19 @@ const watchStreamFor = (
     });
 };
 
+/** Resolve the degradation marker set; absence keeps the delivered fallback. */
+const resolveDegraded = (
+  value: QueueComposition["degraded"],
+): readonly QueueDegradationReason[] =>
+  value === undefined
+    ? (["daemon-unreachable"] as const)
+    : typeof value === "function"
+      ? value()
+      : value;
+
 /** Compose the full queue command runtime from the injected state and facts. */
 export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
-  const degraded = composition.degraded ?? (["daemon-unreachable"] as const);
+  const degraded = resolveDegraded(composition.degraded);
   const readSchedule = (next: number): QueueRuntimeSchedule => {
     const built = buildQueueFacts(composition, parkContextFor(composition));
     if (!built.ok) return built;
@@ -4489,7 +4506,7 @@ export const createLanesCommandRuntime = (
       data: foldLanes({
         schedule,
         economics: composition.economics ?? {},
-        degraded: composition.degraded ?? (["daemon-unreachable"] as const),
+        degraded: resolveDegraded(composition.degraded),
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
       }),
     };

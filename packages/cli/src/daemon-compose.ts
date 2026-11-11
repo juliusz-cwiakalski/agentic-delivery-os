@@ -95,6 +95,19 @@ export type DaemonComposition = {
   readonly transport?: ControlTransport;
   readonly socketPath?: string;
   readonly daemonEntry?: string;
+  /** The composing process id; a positive integer is forwarded to the runtime. */
+  readonly pid?: number;
+  /** The process signal subscription seam the foreground lifetime owns. */
+  readonly signalHost?: {
+    readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+    readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+  };
+  /**
+   * The additional variables the detached child receives. Merged beneath the
+   * authoritative `<PREFIX>_STATE_DIR` binding, which is written last; omitting
+   * the input keeps the delivered single-variable spawn.
+   */
+  readonly reentryEnvironment?: Readonly<Record<string, string>>;
   readonly newFenceToken: () => string;
   readonly newLockToken: () => string;
   readonly newInstanceId: () => string;
@@ -192,6 +205,11 @@ const failure = (code: string, summary?: string) => ({
 type WatchSnapshot = { readonly topic: ControlTopic; readonly snapshot: unknown };
 
 const byteLength = (text: string): number => new TextEncoder().encode(text).length;
+
+/** A composing pid is forwarded only when it is a positive integer. */
+const positivePid = (pid: number | undefined): number | undefined =>
+  pid !== undefined && Number.isInteger(pid) && pid > 0 ? pid : undefined;
+
 
 /** Sort object keys recursively so equal content serializes identically. */
 const canonicalValue = (value: unknown): unknown => {
@@ -365,6 +383,7 @@ export const createBlockerAnswerConsumer = (composition: {
 export const createDaemonCommandRuntime = (composition: DaemonComposition): CommandRuntime => {
   const clock = composition.clock ?? createNodeClock();
   const nowIso = composition.nowIso ?? clock.nowIso;
+  const composingPid = positivePid(composition.pid);
   const processPort = composition.processPort ?? createNodeProcessPort();
   const platform =
     composition.platform ??
@@ -503,6 +522,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       newFenceToken: composition.newFenceToken,
       newLockToken: composition.newLockToken,
       newInstanceId: composition.newInstanceId,
+      ...(composingPid === undefined ? {} : { pid: composingPid }),
       ...(composition.wake === undefined ? {} : { wake: composition.wake }),
       ...(composition.executor === undefined ? {} : { executor: composition.executor }),
       ...(supervise === undefined ? {} : { supervision: supervise }),

@@ -18,6 +18,18 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 1 complete (additive daemon-mount composition inputs and
+      TDR-0022 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
+      `reentryEnvironment?` input; `pid` is forwarded to the runtime only when it
+      is a positive integer; `ProductionCompositionFacts` gains `daemonEntry?` and
+      `supervisor?`; `QueueComposition.degraded` widens to the array-or-resolver
+      union with one additive resolution helper so the delivered array and
+      fallback bytes are unchanged; `tests/types/daemon-mount.type-test.ts` proves
+      every addition optional. Gate: `pnpm typecheck` green, 23/23 tests in the
+      daemon and state contract suites, ambient-globals clean, `git diff --check`
+      clean. No exported signature narrowed, no module or export added."
+    type: "info"
+    date: "2026-11-11"
   - text: "State detection: ticket GH-286 open with label `change`, zero comments,
       no open or merged PR for the branch, local branch
       feat/GH-286/daemon-command-mounting checked out at origin/main-tools tip
