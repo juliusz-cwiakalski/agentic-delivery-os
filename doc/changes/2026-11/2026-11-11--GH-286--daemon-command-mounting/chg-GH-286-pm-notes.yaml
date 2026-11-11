@@ -922,3 +922,31 @@ notes:
       attributable to this integration, and no delivered guard was edited."
     type: "info"
     date: "2026-11-11"
+  - text: "Second resume sync, after the merge above landed and `main-tools`
+      advanced from 723454e4 to `eb3c947b` (GH-268, the pre-PR commitlint range
+      gate and its CI-safe test degradation), which left the pull request
+      CONFLICTING again. Merged as `4b966403`. One file conflicted,
+      `doc/spec/features/feature-autonomous-delivery.md`, and only in
+      `links.related_changes`: the union keeps GH-286, GH-288 and GH-268 in one
+      list rather than choosing a side, and the GH-268 `summary` and
+      `last_updated` values that auto-merged are kept as delivered, so the
+      delivery-script set named there includes `lint-commit-range.sh`. GH-268's
+      new phase-9 supplementary gate was then run on this branch as the updated
+      repository instructions require: `./scripts/lint-commit-range.sh --base
+      origin/main-tools` reported VERDICT: PASS (41 commits in range, 0 offending
+      commits, 0 distinct rules hit, base merge-base eb3c947b, head 4b966403,
+      repository-local commitlint). Gates on `4b966403`: `pnpm typecheck` 0; the
+      documentation and CI-wiring suites (doc-conformance, error-table-sync,
+      reference-page-parity, help-guide-coverage mutants, ci-wiring, ci-checks)
+      153 pass, 0 fail; test-doc-distribution no drift (83 docs);
+      help-guide-coverage covered; prompt-conformance clean (5 prompts);
+      exports-parity 0; `plan validate GH-286` verdict=valid
+      readyForDevelopment=true; `git diff --check` clean; the full battery
+      `bun test --max-concurrency 4` 7360 pass, 4 skip, 0 fail across 912 files;
+      and `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 with the same counts. One
+      earlier `pnpm check` attempt on this tree flaked only
+      `privacy-ci-wiring` TC-WIRE-002 at 5042.93 ms, 43 ms over the runner's 5 s
+      default, and was green on the retry; that guard is delivered and was left
+      unedited. No pull request merge is performed by this step."
+    type: "info"
+    date: "2026-11-11"
