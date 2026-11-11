@@ -2,24 +2,56 @@
 # stated commit-message contract, the corrected resume-sync instruction, and
 # distribution/documentation truth.
 #
+# Plan revision: v1.1 (2026-11-11), DoR iteration 1 remediation against
+# readiness-review/readiness-iter-1.md, spec v1.3 and test plan v0.3. Phase ids
+# and declared scope are unchanged; only pins, verification, coverage notes and
+# a `docHandoffs` declaration were amended:
+#   - Finding 1: the Phase 2 raw-write check is negation-exempt, names
+#     .opencode/agent/committer.md:31 as the expected exempt match, and asserts
+#     that prohibition survives (it was never a violation).
+#   - Finding 2: the Phase 5 /check and /check-fix assertions use the real
+#     backticked row literals with ERE anchors and require re-verification;
+#     every other literal assertion in the plan was swept the same way.
+#   - Finding 3: binary resolution is repository-local first, then PATH, with
+#     origin disclosure and foreign-origin parity-risk wording (DEC-10); the
+#     dogfood commands use the published invocation with no PATH prefix.
+#   - Finding 4: Appendix C rows 9-10 are recorded as `docHandoffs` on Phases 4
+#     and 5 (system_spec_update reconciliation, not delivery edits).
+#   - Finding 6: both new files are committed 100755, asserted in Phase 1 and
+#     proven by scripts/test-all.sh discovery in Phase 4.
+#   - Finding 7: the plan cites test plan v0.3, which now links back to this file.
+#
 # SOURCES (single source of truth, read before delivery):
-#   - Spec: ./chg-GH-268-spec.md (v1.1; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
+#   - Spec: ./chg-GH-268-spec.md (v1.3; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
 #     DM-1.a..DM-1.i terminal-condition contract, DM-2 diagnostics, DM-3
-#     remediation-mode rule; NFR-1..NFR-10; RSK-1..RSK-8; DEC-1..DEC-9;
-#     NG-1..NG-7; §7.2 out-of-scope; §10 telemetry; §18 rollout/self-application;
-#     Appendix C documentation impact register)
-#   - Test plan: ./chg-GH-268-test-plan.md (v0.2; 40 TCs: TC-COMMITLINT-001..021,
-#     TC-PROMPT-001..006, TC-DOC-001..007, TC-DIST-001..003, TC-CONFINE-001..002,
-#     TC-DOGFOOD-001; §6.2 fixture matrix and per-case binary resolution; §6.4
+#     remediation-mode rule; NFR-1..NFR-10; RSK-1..RSK-8; DEC-1..DEC-10, with
+#     DEC-10 fixing the lint-binary precedence and disclosure; amended AC-F3-3
+#     (repository-local binary first, origin disclosure, DM-1.g unchanged) and
+#     AC-F4-1 (remediation-ownership split); NG-1..NG-7; §7.2 out-of-scope;
+#     §10 telemetry; §12 assumptions; §18 rollout/self-application; Appendix C
+#     rows 1-10)
+#   - Test plan: ./chg-GH-268-test-plan.md (v0.3, which now declares
+#     `implementation_plan: ./chg-GH-268-plan.yaml`; 40 TCs:
+#     TC-COMMITLINT-001..021, TC-PROMPT-001..006, TC-DOC-001..007,
+#     TC-DIST-001..003, TC-CONFINE-001..002, TC-DOGFOOD-001; §6.2 fixture matrix
+#     with the amended binary-resolution rows FX-CLEAN-NO-DEPS/FX-LOCAL-BIN/
+#     FX-DECOY-PATH/FX-PATH-FOREIGN/FX-NO-CONFIG-LOCAL-BIN; §6.4
 #     read-only/no-network instrumentation; §7 file mapping; §8.3 OQ-1..OQ-6)
+#   - Readiness review: ./readiness-review/readiness-iter-1.md (findings 1, 2, 3,
+#     4 and 6 are closed here; findings 5, 7, 8, 9 and 10 are spec/test-plan
+#     owned and already landed in spec v1.3 / test plan v0.3)
 #   - PM record: ./chg-GH-268-pm-notes.yaml (three binding decisions: warn-only
 #     hook, resume-sync instruction in scope, repository automation not a CLI
 #     command)
-#   - System spec reconciled in lifecycle phase 7 (@doc-syncer), not here:
-#     doc/spec/features/feature-quality-gates-and-pr.md,
-#     doc/spec/features/feature-autonomous-delivery.md,
-#     doc/spec/features/feature-monorepo-scaffold-toolchain.md (Appendix C
-#     rows 1-3; TC-DOC-002/003/005 are that phase's obligation)
+#   - System spec reconciled in lifecycle phase 7 (@doc-syncer), not here — the
+#     plan records these as handoff obligations, never as code edits:
+#     doc/spec/features/feature-quality-gates-and-pr.md (row 1),
+#     doc/spec/features/feature-autonomous-delivery.md (row 2 plus row 9's three
+#     delivered-set enumerations: the overview sentence, the Core Components
+#     table, and the "Install inventory" blockquote),
+#     doc/spec/features/feature-monorepo-scaffold-toolchain.md (row 3),
+#     doc/guides/autonomous-batch-delivery.md (row 10, the install comment
+#     block). TC-DOC-002/003/005 are that phase's obligation.
 #
 # ORDERING (every phase independently committable; the tree is green at every
 # phase boundary):
@@ -65,11 +97,27 @@
 #     .commitlintrc{,.json,.yaml,.yml}) checked at the repository top level; the
 #     gate adds no config source and passes no --config, so the authority's
 #     discovery is mirrored rather than re-implemented (DEC-1, RSK-1).
-#   - Binary resolution is PATH-only: `command -v commitlint` (test plan OQ-2,
-#     §8.2). No node_modules inference, so PATH scrubbing simulates absence
-#     (TC-COMMITLINT-008) and PATH injection selects the pinned binary. A caller
-#     that needs the workspace binary supplies it on PATH (the dogfood evidence
-#     command does).
+#   - Binary resolution and disclosure (DEC-10, amended AC-F3-3): the lint tool
+#     is resolved repository-local first — `<repository-toplevel>/node_modules/.bin/commitlint`
+#     when present and executable — then by `command -v commitlint` on `PATH`.
+#     The verdict header names the resolved binary and its origin
+#     (`repository-local` | `PATH` | unavailable). A binary resolved through
+#     `PATH` from outside the repository is disclosed with a parity-risk token
+#     (`parity` / `outside the repository`) and still renders its normal verdict:
+#     disclosure is a risk to reconcile, never a failure. `DM-1.g` keeps its
+#     meaning — no usable binary at all is `ERROR`, exit 2, with an install hint.
+#     The configuration check precedes binary resolution, so a present binary can
+#     never manufacture a verdict where there is no authority to mirror
+#     (TC-COMMITLINT-007 step 3). The published invocation
+#     `./scripts/lint-commit-range.sh --base <ref>` therefore works on this
+#     repository with no `PATH` modification — the workspace install places the
+#     CLI in `node_modules/.bin` and does not put it on `PATH` (spec §12, RSK-1).
+#   - Suite fixtures that need a local binary create their own
+#     `node_modules/.bin/commitlint` (a helper symlink to the repository's pinned
+#     binary) and fixtures that test absence never contain a `node_modules` tree,
+#     so the host dependency tree can never make an absence case vacuous
+#     (TC-COMMITLINT-008 notes). A decoy earlier on `PATH` must never execute
+#     (DECOY_MARKER absent) and the local binary must decide the verdict.
 #   - Lint invocation and parse contract (test plan OQ-1): one
 #     `commitlint --color=false` invocation per commit in
 #     `git rev-list --reverse <merge-base>..HEAD`, message read with
@@ -98,10 +146,16 @@
 #     shim is reached only through PATH.
 #   - Prompt contract (AC-F4-1, TC-PROMPT-001/003): the committer and PM prompts
 #     state the subject rule, the body/footer 100-character rule, the
-#     no-plain-merge-subject rule, and both remediation modes as constraints on
-#     the artifact. They teach no raw git write recipe: `git add|commit|reset|
-#     stash|rebase` in .opencode/** fails pnpm check:prompt, so the modes are
-#     named, never scripted.
+#     no-plain-merge-subject rule, both remediation modes, and the ownership split
+#     as constraints on the artifact: the committer owns the message it produces
+#     and never rewrites history; the PM owns the range verdict and selects the
+#     mode; the acting agent performs the history action outside the gate; the gate
+#     only reports. They teach no raw git write recipe. The pre-existing
+#     prohibition at `.opencode/agent/committer.md:31`
+#     (`Never run `git add`, `git commit`, `git reset`, or any other raw git write
+#     command.`) is load-bearing and stays: prompt conformance is negation-exempt,
+#     so a matching line inside a negation is compliant, and deleting it would
+#     remove the rule the scan relies on (readiness finding 1).
 #   - Generated plugin (AGENTS.md "Generated plugin rule"): editing
 #     .opencode/agent/{committer,pm}.md makes .ados-claude/agents/{committer,pm}.md
 #     stale, and CI fails on a stale plugin. Phase 2 regenerates with
@@ -119,6 +173,14 @@
 #     scripts/uninstall.sh; the installer/uninstaller fixture helpers seed the
 #     file so install, re-install, dry-run, and removal are all asserted. No
 #     marker-driven path and no doc-distribution change is involved.
+#   - Executable bits (AC-F7-1, TC-DIST-001 steps 2-3, readiness finding 6):
+#     scripts/lint-commit-range.sh and scripts/.tests/test-lint-commit-range.sh
+#     are committed mode 100755. `scripts/test-all.sh` discovers suites with
+#     `find ... -name 'test-*.sh' -perm -u+x`, so a 100644 suite is silently
+#     omitted and the aggregate runner would print "all passed" without running
+#     the change's primary suite. `bash scripts/.tests/test-lint-commit-range.sh`
+#     passes regardless of the bit, so only the committed-mode assertion catches
+#     the omission; Phase 1 asserts it and Phase 4 proves discovery by name.
 #   - Documentation (AC-F6-2, AC-F8-1): AGENTS.md states the gate as a
 #     supplementary lifecycle pre-PR gate in the delivery-process and
 #     delivery-infrastructure notes (never in the /check or /check-fix rows, and
@@ -126,6 +188,23 @@
 #     guide's §9 actions and exit criteria name the range lint and the never-waive
 #     rule. doc/guides/change-lifecycle.md keeps `ados_distribution:
 #     redistributable`; AGENTS.md carries no marker today and gains none.
+#     Row literals are pinned against the current file and must be re-verified
+#     before use: the /check and /check-fix rows carry backticks around the
+#     command names (`| `/check` | Run quality gates (no fixes) |`, AGENTS.md
+#     lines 111-112 today). Asserting the bare `| /check | ...` form is
+#     unsatisfiable and would tempt stripping a row this change must not touch
+#     (readiness finding 2); every other literal assertion in this plan was
+#     re-checked against the tree the same way.
+#   - Handoff obligations created by distribution (Appendix C rows 9-10,
+#     readiness finding 4): the moment Phase 4 registers the gate, three
+#     enumerations on doc/spec/features/feature-autonomous-delivery.md (the
+#     overview sentence listing delivered scripts, the Core Components table, and
+#     the "Install inventory" blockquote naming the ADOS_DELIVERY_SCRIPTS set) and
+#     the install comment block in doc/guides/autonomous-batch-delivery.md become
+#     factually incomplete. They are recorded on Phases 4 and 5 as `docHandoffs`
+#     and reconciled by @doc-syncer in lifecycle phase 7; no delivery phase edits
+#     doc/spec/** or that guide, and no doneArtifacts slot exists for a doc
+#     reconciliation, so the handoff is declared as data instead.
 #   - Release obligations: no changeset is authored, because no package surface
 #     moves (NG-5, DEC-8) — the change is scripts, prompts, and docs only. The
 #     release artifact is the pull request to main-tools with the dogfood verdict
@@ -134,17 +213,19 @@
 #     as its subject (conventional, work item referenced), body/footer lines
 #     <= 100 characters, and no manual staging.
 #
-# DECLARATION-ONLY KEYS: `acCoverage`, `tcCoverage`, and `verification` are
-# evidence declarations consumed by the delivery loop; `plan validate` ignores
-# them. They record no progress and no task list — progress lives in pm-notes
-# `notes:`.
+# DECLARATION-ONLY KEYS: `acCoverage`, `tcCoverage`, `verification`, and
+# `docHandoffs` are evidence/handoff declarations consumed by the delivery loop;
+# `plan validate` ignores them. They record no progress and no task list —
+# progress lives in pm-notes `notes:`.
 #
 # COVERAGE INVARIANT: all 19 acceptance criteria appear exactly once in
 # `acCoverage`, in the phase that can satisfy each in full (AC-F6-1 lands with
 # Phase 5 because its recorded-evidence half needs the dogfood run over a range
-# that contains every delivered commit). All 40 test cases have a declared home:
-# TC-DOC-002/003/005 and TC-CONFINE-001 are declared here as handoffs (system_spec
-# update phase and PR-time review respectively), never silently dropped.
+# that contains every delivered commit; AC-F3-3's amended binary-resolution and
+# disclosure half is satisfied by Phase 1's suite). All 40 test cases have a
+# declared home: TC-DOC-002/003/005 and TC-CONFINE-001 are declared here as
+# handoffs (system-spec update phase and PR-time review respectively), never
+# silently dropped.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-268
@@ -158,7 +239,10 @@ tier:
     - "the gate fetches, pushes, or mutates refs, the index, the working tree, the stash, or history"
     - "the gate adds, relaxes, or re-implements a commitlint rule instead of consuming the root configuration's verdict"
     - "a repository that configures commitlint and cannot verify reports SKIP or PASS instead of ERROR"
-    - "a prompt states a raw git write recipe (git add/commit/reset/stash/rebase in command position) and pnpm check:prompt fails"
+    - "a repository-local node_modules/.bin/commitlint is present but a PATH binary decides the verdict, or a decoy on PATH executes"
+    - "a foreign-origin binary is reported as a failure instead of a disclosed parity risk"
+    - "the new gate or its suite is committed without the executable bit, so scripts/test-all.sh discovery skips it"
+    - "a prompt states a raw git write recipe (git add/commit/reset/stash/rebase in command position) and pnpm check:prompt fails, or the pre-existing prohibition at .opencode/agent/committer.md:31 is deleted"
     - "the range lint is referenced by AGENTS.md, the change-lifecycle guide, or a lifecycle prompt before the script exists in the tree"
     - "the resume-sync instruction still emits a bare merge, or its assertion passes against the reverted instruction"
     - "pnpm check, /check, /check-fix, the CLI/MCP surface, or scripts/quality-gates.sh changes"
@@ -205,15 +289,17 @@ phases:
       - "AC-NFR4-1"
       - "AC-NFR6-1"
     tcCoverage:
-      - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip, missing binary, invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
+      - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip with and without a local binary, binary resolution and disclosure — local-first preference, decoy never executed, foreign origin disclosed not failed, absence loud — invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
     verification:
       - "bash -n scripts/lint-commit-range.sh || syntax clean; set -Eeuo pipefail plus traps, usage(), --help, --version, and one-job-per-function sectioning per .ai/rules/bash.md"
-      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary from node_modules/.bin; the suite fails loudly with an install hint when the binary is absent (never a silent skip)"
+      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary; fixture-local node_modules/.bin/commitlint symlinks exercise the local-first path, absence fixtures carry no node_modules tree, and the suite fails loudly with an install hint when the host binary is missing (never a silent skip)"
       - "./scripts/lint-commit-range.sh --help >/dev/null && ./scripts/lint-commit-range.sh --version | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+' || help and version exit 0 and the version is semver-shaped"
       - "./scripts/lint-commit-range.sh --nonsense; test $? -eq 2 || usage error names the accepted invocation and the offending argument, and GIT_TRACE shows no rev-list/merge-base/rev-parse/for-each-ref call"
       - "grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | sort -u || the exit literals are exactly {0, 1, 2}"
       - "grep -nE 'curl|wget|scp|ssh|nc ' scripts/lint-commit-range.sh || no network helper in command position; any hint text sits inside a quoted string"
-      - "PATH=\"$PWD/node_modules/.bin:$PATH\" ./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, and the commit count in range (early smoke; the formal dogfood evidence is Phase 5)"
+      - "./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, commit count, and a verdict header whose binary field is node_modules/.bin/commitlint with origin repository-local; no PATH prefix is used, so this also proves the published invocation works on this repository (early smoke; formal dogfood evidence is Phase 5)"
+      - "git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh || both entries are mode 100755, matching the existing 100755 gate/suite convention, so scripts/test-all.sh discovery (-perm -u+x) cannot silently skip the suite"
+      - "test -x scripts/lint-commit-range.sh && test -x scripts/.tests/test-lint-commit-range.sh || both files are executable on disk as well as in the index"
       - "git status --porcelain && git stash list || unchanged after every outcome: the suite asserts working-tree, index, ref, file-list, and fsck digests across PASS, FAIL, SKIP, and ERROR"
 
   # ---------------------------------------------------------------------------
@@ -242,17 +328,19 @@ phases:
     acCoverage:
       - "AC-F4-1"
     tcCoverage:
-      - "TC-PROMPT-001 (committer states subject, body/footer <=100, no plain merge subject, and both modes)"
-      - "TC-PROMPT-002 (PM quality_gates names the gate, requires it before phase completion, states the remediation loop, the never-waive rule, and the pm-notes verdict evidence, while keeping the @runner/@fixer routing)"
-      - "TC-PROMPT-003 (constraints, not recipes; pnpm check:prompt and the raw-write greps stay green)"
+      - "TC-PROMPT-001 (committer states subject, body/footer <=100, no plain merge subject, both modes, and the ownership split)"
+      - "TC-PROMPT-002 (PM quality_gates names the gate, requires it before phase completion, states the remediation loop and that the PM owns the mode choice, the never-waive rule, and the pm-notes verdict evidence, while keeping the @runner/@fixer routing)"
+      - "TC-PROMPT-003 (constraints, not recipes, with negation-exempt evidence: pnpm check:prompt exit 0 and the pre-existing prohibition retained)"
     verification:
-      - "pnpm check:prompt || prompt conformance green: no raw git write, no plan progress, no hand-edited phase state in the two edited prompts"
+      - "pnpm check:prompt || prompt conformance green: no raw git write, no plan progress, no hand-edited phase state in the two edited prompts (this is the mechanical evidence for TC-PROMPT-003 step 2, which is negation-exempt by design)"
+      - "grep -nF 'Never run `git add`, `git commit`, `git reset`' .opencode/agent/committer.md || the load-bearing prohibition survives byte-identical (today .opencode/agent/committer.md:31); it is the expected and only pre-existing match of the raw-write scan and must never be deleted or reworded"
+      - "grep -nE '\\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md | grep -viE '\\bnever\\b|\\bmust not\\b|\\bdo not\\b|\\bdon.t\\b|\\bno\\b' || empty output: every match (including line 31) sits inside a negation sentence, so a negated match is compliant and the change adds no non-negated occurrence"
       - "grep -niE 'SURGICAL REWORD' .opencode/agent/committer.md && grep -n 'CONDENSE-TO-ONE' .opencode/agent/committer.md || both remediation modes are stated as artifact constraints"
       - "grep -n 'Merge remote-tracking branch' .opencode/agent/committer.md && grep -n '100' .opencode/agent/committer.md || the plain merge subject is named in a prohibiting sentence and body/footer lines are bounded at 100 characters"
       - "grep -nE 'type\\(scope\\)|conventional' .opencode/agent/committer.md || the conventional subject carrying the work item reference is stated"
+      - "grep -niE 'never rewrit|does not rewrit' .opencode/agent/committer.md && grep -niE 'selects? the (mode|remediation)|chooses? the (mode|remediation)|owns the (range )?verdict' .opencode/agent/pm.md || the AC-F4-1 ownership split is stated in full: the committer owns its message and never rewrites history (never the gate, never the acting agent), the PM owns the range verdict and selects the mode, the acting agent performs the history action, the gate only reports"
       - "grep -n 'lint-commit-range' .opencode/agent/pm.md && grep -n 'phase complete' .opencode/agent/pm.md && grep -nE 'unable to verify|ERROR' .opencode/agent/pm.md || the quality_gates step names the gate, couples it to phase completion, and forbids waiving an unresolved verification"
-      - "grep -nE '\\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md || no line (grep exits 1 when nothing matches), so no raw rewrite recipe is taught"
-      - "grep -n 'pm-notes' .opencode/agent/pm.md || the verdict (outcome, commit count, offender count, mode) is recorded as a notes entry"
+      - "grep -n 'pm-notes' .opencode/agent/pm.md || the verdict (outcome, commit count, offender count, mode, resolved binary and origin) is recorded as a notes entry"
       - "scripts/build-claude-plugin.sh --verbose || the Claude Code plugin is regenerated, and a second run produces byte-identical output, so .ados-claude/agents/{committer,pm}.md are current and CI's stale-plugin guard passes"
       - "git status --porcelain .ados-claude || exactly the two generated agent files are modified; no command, skill, or manifest change"
 
@@ -302,15 +390,19 @@ phases:
     acCoverage:
       - "AC-F7-1"
     tcCoverage:
-      - "TC-DIST-001 (registered in ADOS_DELIVERY_SCRIPTS; installed executable, byte-identical, and updated on re-install)"
+      - "TC-DIST-001 (registered in ADOS_DELIVERY_SCRIPTS; both new files committed 100755 so discovery cannot skip the suite; installed executable, byte-identical, and updated on re-install)"
       - "TC-DIST-002 (removed by the unconditional delivery list; sibling user files survive; empty-dir cleanup intact; --dry-run reports without removing)"
       - "TC-DIST-003 (both suites green and the marker-derived install-set guard still matches)"
+    docHandoffs:
+      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 9 (a) overview sentence listing delivered scripts, (b) Core Components delivered-file table, (c) the Install inventory blockquote naming the ADOS_DELIVERY_SCRIPTS set: registering the gate here makes all three factually incomplete. Reconciled by @doc-syncer in lifecycle phase 7; asserted by TC-DOC-003 steps 4-6. Not a delivery-phase edit."
+      - "doc/guides/autonomous-batch-delivery.md — Appendix C row 10, the install.sh --local comment block enumerating the delivery scripts copied into ./scripts/: reconcile with the installer set (add the gate, or mark the list illustrative and name the installer as authoritative) at system-spec update; asserted by TC-DOC-003 step 7."
     verification:
       - "grep -n 'scripts/lint-commit-range.sh' scripts/install.sh scripts/uninstall.sh || registered in ADOS_DELIVERY_SCRIPTS and in the unconditional local removal list"
+      - "git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh scripts/deliver-ticket.sh scripts/.tests/test-deliver-ticket.sh || all four agree on mode 100755, so the new pair follows the established convention rather than inventing one and the suite is discoverable"
       - "bash scripts/.tests/test-install.sh || the sandbox install places the gate, marks it executable, keeps it byte-identical, and updates a modified installed copy on re-install"
       - "bash scripts/.tests/test-uninstall.sh || the gate is removed, an unrelated scripts/ file survives, and --dry-run reports it without removal"
       - "bash scripts/.tests/test-doc-distribution.sh || the derived install set still matches the sandbox install (no marker or manifest drift)"
-      - "bash scripts/test-all.sh || the suite aggregator stays green with the new delivery entry"
+      - "bash scripts/test-all.sh || the aggregator is green and its output lists test-lint-commit-range.sh, proving -perm -u+x discovery actually ran the change's primary suite instead of silently omitting it"
 
   # ---------------------------------------------------------------------------
   # PHASE 5 — documentation truth, self-application, conformance, release
@@ -339,18 +431,24 @@ phases:
       - "AC-F8-1"
       - "AC-NFR8-1"
     tcCoverage:
-      - "TC-DOGFOOD-001 (self-application: this branch's own range passes the gate, the verdict is recorded as pm-notes evidence, and only then may quality_gates complete)"
-      - "TC-DOC-001 (AGENTS.md states a supplementary lifecycle pre-PR gate; /check and /check-fix rows unchanged; no run-all-gates instruction; the registration note covers the gate)"
+      - "TC-DOGFOOD-001 (self-application with the published invocation and no PATH prefix: this branch's own range passes, the header names the repository-local binary, the verdict is recorded as pm-notes evidence, and only then may quality_gates complete)"
+      - "TC-DOC-001 (AGENTS.md states a supplementary lifecycle pre-PR gate; the backticked /check and /check-fix rows are byte-unchanged; no run-all-gates instruction; the registration note covers the gate)"
       - "TC-DOC-004 (change-lifecycle section 9 actions and exit criteria name the range lint and the never-waive rule; owner and diagram unchanged; marker retained)"
       - "TC-DOC-006 (touched docs keep their markers; no new doc area; doc-distribution guard green; AGENTS.md gains no marker)"
       - "TC-DOC-007 (doc-conformance, prompt conformance, help coverage, doc-distribution, pnpm check, and git diff --check all green)"
       - "TC-CONFINE-002 (automated tree invariants: commitlint authority, warn-only hook, aggregate gate scope, exports parity, tests/checks green)"
       - "TC-CONFINE-001 (handoff: PR-time diff review by @reviewer; the allowlist plus the mandated .ados-claude/agents/{committer,pm}.md generation, doc/spec/features/** system-spec reconciliation, and this change folder)"
-      - "TC-DOC-002, TC-DOC-003, TC-DOC-005 (handoffs: owed by the system_spec_update phase @doc-syncer per Appendix C rows 1-3; not a delivery phase and not claimed here)"
+      - "TC-DOC-002, TC-DOC-003, TC-DOC-005 (handoffs: owed by the system_spec_update phase @doc-syncer per Appendix C rows 1-3, row 9's three delivered-set enumerations, and row 10's batch-delivery install block; not a delivery phase and not claimed here)"
+    docHandoffs:
+      - "doc/spec/features/feature-quality-gates-and-pr.md — Appendix C row 1: range-lint capability and the stated committer contract, including DEC-4's limit (the gate does not reject plain merge subjects)."
+      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 2 (resume-sync instruction shape and its assertion) plus row 9 (overview sentence, Core Components table, Install inventory blockquote)."
+      - "doc/spec/features/feature-monorepo-scaffold-toolchain.md — Appendix C row 3: keep 'CI commitlint is the authority', name the local gate as its mirror, and state the DEC-10 binary precedence so the page matches the shipped gate."
+      - "doc/guides/autonomous-batch-delivery.md — Appendix C row 10: reconcile the install comment block with the installer's delivery set."
+      - "Also registered here so the reconciliation does not lose them: AC-F4-1's ownership split and AC-F3-3's origin disclosure are cited by the quality-gates/PR page and the scaffold toolchain page; no delivery phase edits doc/spec/**."
     verification:
-      - "PATH=\"$PWD/node_modules/.bin:$PATH\" ./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, and commit count with zero offenders; the verdict line (outcome, commit count, offender count, mode) is recorded verbatim in a pm-notes notes entry before quality_gates completes"
+      - "./scripts/lint-commit-range.sh --base main-tools || PASS (exit 0) naming the resolved base, merge-base, HEAD, and commit count with zero offenders, exactly as published with no PATH prefix; the verdict header names node_modules/.bin/commitlint with origin repository-local (a PATH origin must be recorded as a parity risk and investigated before completion, never waived). The verdict line (outcome, commit count, offender count, mode, resolved binary and origin) is recorded verbatim in a pm-notes notes entry before quality_gates completes"
       - "grep -n 'lint-commit-range' AGENTS.md || the gate is named in the delivery-process and delivery-infrastructure context as a supplementary pre-PR gate"
-      - "grep -nE '^\\| /check \\| Run quality gates \\(no fixes\\) \\|$' AGENTS.md && grep -nE '^\\| /check-fix \\| Run quality gates and fix failures \\|$' AGENTS.md || both command rows are byte-unchanged"
+      - "grep -cE '^\\| `/check` \\| Run quality gates \\(no fixes\\) \\|$' AGENTS.md && grep -cE '^\\| `/check-fix` \\| Run quality gates and fix failures \\|$' AGENTS.md || each returns 1 (AGENTS.md lines 111-112 today): both backticked rows are byte-unchanged. Re-verify with sed -n '105,115p' AGENTS.md before pinning; if a row legitimately moved, update the literal, never delete the assertion and never strip the backticks"
       - "grep -n 'scripts/quality-gates.sh' AGENTS.md || no match (grep exits 1), and no new run-all-quality-gates instruction is introduced"
       - "grep -n 'lint-commit-range' doc/guides/change-lifecycle.md && grep -n 'ados_distribution: redistributable' doc/guides/change-lifecycle.md || section 9 actions and exit criteria name the gate and the guide keeps its marker"
       - "bun test tests/checks/doc-conformance.test.ts || current-truth phrase table green"
@@ -360,6 +458,6 @@ phases:
       - "bun run scripts/checks/exports-parity.ts && bun test tests/checks || no product-surface drift and no invariant regression"
       - "test ! -e scripts/quality-gates.sh && ! grep -n 'lint-commit-range' package.json || the aggregate gate is untouched (NG-5, DEC-8)"
       - "bash scripts/.tests/test-lint-commit-range.sh && bash scripts/.tests/test-deliver-ticket.sh && bash scripts/.tests/test-install.sh && bash scripts/.tests/test-uninstall.sh || every touched surface's suite is green at the final phase HEAD"
-      - "git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD || every changed path is inside a declared phase scope, plus .ados-claude/agents/{committer,pm}.md (mandatory generated plugin), doc/spec/features/** (system_spec_update), and this change folder; no .github/workflows/**, .husky/**, commitlint.config.js, packages/**, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh"
+      - "git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD || every changed path is inside a declared phase scope, plus .ados-claude/agents/{committer,pm}.md (mandatory generated plugin), doc/spec/features/** and doc/guides/autonomous-batch-delivery.md (system_spec_update handoff), and this change folder; no .github/workflows/**, .husky/**, commitlint.config.js, packages/**, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
       - "git diff --check || zero whitespace errors and zero conflict markers"
