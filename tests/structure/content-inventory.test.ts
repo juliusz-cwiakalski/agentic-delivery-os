@@ -177,6 +177,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchVerboseText",
   ],
   "cli/src/commands/daemon.ts": ["createDaemonCommandDefinition"],
+  "cli/src/commands/events.ts": ["createEventsCommandDefinition", "toTopicRecord"],
+  "cli/src/output/events-text.ts": ["renderEventsDescribeText", "renderEventsListText"],
+
   "cli/src/commands/coordinator.ts": ["createCoordinatorCommandDefinition"],
   "cli/src/commands/coordinator-loop.ts": [
     "createCoordinatorSupervisor",

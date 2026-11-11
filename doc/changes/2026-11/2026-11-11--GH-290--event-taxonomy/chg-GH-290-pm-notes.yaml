@@ -107,3 +107,33 @@ notes:
       11-phase lifecycle from phase 1.
     type: "info"
     date: "2026-11-11"
+  - text: >-
+      Plan phase 1 complete (commit 319bed9f): the one authored declaration
+      `packages/core/src/contracts/taxonomy.ts` (six topics, 0/0/4/3/3/3 kinds,
+      per-kind payload lists, derived unions, closed shape/lane/ordering/
+      overflow values, and the module's one pure `validateTaxonomy`), the
+      `CONTROL_TOPICS` widening to six, the additive `ControlEnvelopeEventData`
+      member plus the `overflow`/`taxonomyVersion` stamps on the degraded body,
+      the new `events` domain kind with exactly three rows, the contract-index
+      re-export, and the three documented result-contract rows (124 -> 127).
+      Gate: `pnpm typecheck` green; the eleven-suite Phase-1 batch reports 162
+      pass / 0 fail; `error-table-sync` entries=127 documented=127 OK;
+      exports-parity 5/5 publishables OK; ambient-globals 178 files clean.
+      Deviations, all disclosed by the primitive as scope drift or resolved
+      outside the tree: (1) `packages/cli/src/daemon-compose.ts` is edited in
+      this phase with a one-line handler parameter type widening (declared only
+      in plan Phase 4) because widening `ControlTopic` otherwise breaks the
+      Phase-1 build; the edit is type-only and the delivered queue/lanes
+      resolution is untouched until Phase 4. (2) `scripts/checks/
+      error-table-sync.ts` gains the three `events` two-segment codes in its
+      exact allowlist; no phase declared that file, and the bidirectional sync
+      gate cannot pass otherwise. (3) The untracked amended
+      `TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` was held outside
+      the tree (`tmp/tmpdir/held/`) for this commit only: a standalone
+      `commit GH-290` stages the union of every declared plan phase, so the
+      Phase-8 record would otherwise be swept into Phase 1 with a template
+      subject naming it as an invented tracker reference. It is restored before
+      the Phase-8 commit that declares it. Citation nits N-1..N-3 from DoR
+      iteration 4 remain open for their owning phases.
+    type: "info"
+    date: "2026-11-12"

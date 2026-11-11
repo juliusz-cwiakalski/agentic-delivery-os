@@ -109,9 +109,9 @@ import {
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
-  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeEnvironmentName,
   stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -120,7 +120,6 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
   type ConfigValue,
-  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
@@ -149,6 +148,7 @@ import {
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
   type ProjectsListEntry,
+  type QueueDegradationReason,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type SupervisorPort,
@@ -2218,6 +2218,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       coordinator: createProductionCoordinatorComposition(),
       projects: { readProjects },
+      // The taxonomy reference surface needs nothing: the runtime is the
+      // compiled declaration, so the production composer supplies it
+      // unconditionally (GH-290 F-2, DEC-F).
+      events: {},
     };
 
     const program = createConfigProgram(configured);

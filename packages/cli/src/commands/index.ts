@@ -42,6 +42,8 @@ export type {
 export { createDispatchCommandDefinition } from "./dispatch.js";
 export type { DoctorCommandRuntime } from "./doctor.js";
 export { createDoctorCommandDefinition } from "./doctor.js";
+export type { EventsCommandRuntime, EventsData, EventsTopicRecord } from "./events.js";
+export { createEventsCommandDefinition, toTopicRecord } from "./events.js";
 export type { LanesCommandRuntime, LanesRuntimeRead } from "./lanes.js";
 export { createLanesCommandDefinition } from "./lanes.js";
 export type {
