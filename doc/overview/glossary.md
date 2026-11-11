@@ -8,7 +8,7 @@ owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, coordinator-supervision, and harness-adapter terms used across the repository."
 ---
 

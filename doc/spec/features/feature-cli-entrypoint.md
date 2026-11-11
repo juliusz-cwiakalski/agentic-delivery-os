@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch`, `coordinator`, and `daemon` families, fail-closed `fallback.internal` containment for an uncomposed invocation, the declared credential references registered for serialization redaction from the injected environment, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
   related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-277", "GH-279", "GH-280", "GH-284", "GH-286", "GH-288", "GH-289"]
-  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019", "TDR-0022", "TDR-0023"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019", "TDR-0022", "TDR-0023", "TDR-0024"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
     - "packages/cli/src/entrypoint.ts"

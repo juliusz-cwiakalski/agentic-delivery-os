@@ -5,7 +5,7 @@
 - **Branch:** `feat/GH-289/evidence-inspection` (22 commits; merge base `723454e4` on `main-tools`)
 - **Artifacts reviewed:** `chg-GH-289-spec.md` v1.4 (36 ACs), `chg-GH-289-test-plan.md` v1.3 (39 TCs),
   `chg-GH-289-plan.yaml` revision 2.1 (5 delivery phases), `chg-GH-289-pm-notes.yaml`,
-  `readiness-review/readiness-iter-{1,2,3}.md`, `doc/decisions/TDR-0023-*.md` (Proposed)
+  `readiness-review/readiness-iter-{1,2,3}.md`, `doc/decisions/TDR-0024-*.md` (Proposed)
 - **Machine record:** [`review-iter-1.yaml`](./review-iter-1.yaml) (same findings, reviewer schema)
 - **Reviewed at:** 2026-11-11
 
@@ -132,7 +132,7 @@ backlog/status/registry, `doc/00-index.md`, `doc/overview/{architecture-overview
 
 | Phase | Commit | Declared files | Alignment |
 |-------|--------|----------------|-----------|
-| 1 | `415395f8` | 15 | exact; `TDR-0023`/`decisions/00-index.md` deliberately untouched (work item 1.1 verifies presence only) |
+| 1 | `415395f8` | 15 | exact; `TDR-0024`/`decisions/00-index.md` deliberately untouched (work item 1.1 verifies presence only) |
 | 2 | `a40c4bc8` | 19 | exact; the changeset landed here (declared deviation: the release gate reds any boundary with a `packages/` diff without it) plus the pm-notes phase write |
 | 3 | `b95695dc` | 19 | 19/19 declared touched-or-intentionally-not (`dispatch-bounds.test.ts` unchanged by design, `attempt-records.ts` declares-but-unused); one **extra** edited file, `dispatch-additive-stability.test.ts` (F-10) |
 | 4 | `9d56ebeb` | 6 | exact |

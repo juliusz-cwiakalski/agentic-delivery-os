@@ -1,5 +1,5 @@
 ---
-id: TDR-0023
+id: TDR-0024
 decision_type: tdr
 status: Proposed
 created: 2026-11-11
@@ -83,7 +83,7 @@ links:
   roadmap_items: ["M2-S12", "M2-S16"]
 ---
 
-# TDR-0023: Dispatch Attempt Read Side and Local-Evidence Resolve — Closed-Taxonomy Reuse, Empty-History Success, Record-Bounded Projection Cardinality, Unconditional Evidence Mode, One Exact Divergence Count, and Twice-Enforced Repository Scope
+# TDR-0024: Dispatch Attempt Read Side and Local-Evidence Resolve — Closed-Taxonomy Reuse, Empty-History Success, Record-Bounded Projection Cardinality, Unconditional Evidence Mode, One Exact Divergence Count, and Twice-Enforced Repository Scope
 
 ## Context
 
@@ -430,3 +430,7 @@ ALT-5 satisfies every constraint C-1 through C-8. No accepted-risk exceptions ar
 - **Corrected statement now carried by D-5:** the delivered `unresolved` is already exact and store-wide; the one rule this change creates is a shared **repository-scoped** computation; the summary's `unresolvedIds` and its human `unresolved_divergences=` line narrow to the at-most-20 list the feature spec already documents, with `idsTruncated`; and the uncalled capped-list helper is retired rather than aligned, so no second derivation survives. The change's real effects on reported numbers are therefore three: the count moves **down** on a migrated root (the store-wide subject is corrected), the resolve result gains a divergence block, and a delivered identifier field narrows to its documented bound while the count stays exact.
 - **Sections amended in this revision:** Context (the two divergence-fold facts), Problem Framing item 2, driver 1 and driver 5 wording, the two-folds evidence row, Mental Models (second-order thinking), Alternative 0 and Alternative 5, the Rationale, C-7's statement and verification (the narrowing is now named there as an exception), the C-5 and C-7 attestation rows, **D-5** (rationale rewritten; the ruling itself is unchanged), Trade-offs (the positive count sentence and both negative bullets), Implementation Plan item 3, Verification Criteria (count agreement and additive stability), the Confidence Rating, and the third unresolved question. **D-1, D-2, D-3, D-4, D-6, and D-7 are unchanged**; the remaining constraint text (C-1…C-6, C-8), the alternative set, the DACI assignment, and the status are unchanged.
 - **Spec alignment:** readiness finding B3's remediation of `chg-GH-289-spec` **v1.3** (§8.5, RSK-6, AC-F7-1, F-7, F-9) states the same three movements — the counts are already exact and store-wide, so on an unmigrated root they do not move; they narrow to the declared repository's records on a migrated root; and `unresolvedIds` narrows to the documented 20 with `idsTruncated` — and retires the uncalled helper's derivation in the same terms. This note is B3 remediation item 5 and makes this record and spec v1.3 say the same thing. The bound the summary now honours is the one already documented in `doc/spec/features/feature-dispatch-engine.md` (bounds table, "Unresolved divergence ids in a summary — 20"). No source, spec, plan, or test file was changed by this alignment.
+
+### 2026-11-11 — renumbered to TDR-0024 (identifier collision)
+
+- **Why and scope:** this record was drafted as TDR-0023 on the GH-289 branch, but GH-286's daemon-lifecycle record merged to `main-tools` as TDR-0023 first (`3c9f8a59`) and identifiers are never reused, so this record takes the next free identifier, TDR-0024; only the identifier changed — the `id` field, the H1, the index row, and every downstream reference — while the status stays `Proposed` and no ruling, constraint, alternative, or evidence changed.

@@ -1,6 +1,6 @@
 /**
  * The `dispatch attempts` read use case (GH-289 F-1, F-3, F-4; DEC-1, DEC-3,
- * DEC-8; TDR-0023 C-6).
+ * DEC-8; TDR-0024 C-6).
  *
  * Reads one repository's recorded attempts over injected ports. The reference
  * and the checkout identity resolve before the store is touched, so a refusal

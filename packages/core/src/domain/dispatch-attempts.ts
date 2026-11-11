@@ -1,6 +1,6 @@
 /**
  * The pure attempt read-side projection, total order, and bounded page
- * (GH-289 F-2, F-6; DM-1, DM-2, DM-4, DM-5; TDR-0023 C-3).
+ * (GH-289 F-2, F-6; DM-1, DM-2, DM-4, DM-5; TDR-0024 C-3).
  *
  * No I/O, no clock, no locale, no terminal width, and no `Buffer`: the byte
  * length is computed in runtime-neutral code. The projection is a fixed

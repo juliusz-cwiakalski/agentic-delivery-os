@@ -10,7 +10,7 @@ Reviewed: `chg-GH-289-spec.md` v1.2 (36 ACs, DEC-1..DEC-16, §15.1, §16.1, Appe
 §7.3 grouping, §7.4 P1-P4, §8.2-8.3), `chg-GH-289-plan.yaml` revision 1.0 (5 delivery
 phases; `plan validate GH-289` re-run for this review → `verdict=valid`,
 `readyForDevelopment=true`, `tier=full`), `chg-GH-289-pm-notes.yaml`, and
-`doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md`
+`doc/decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md`
 (untracked, `status: Proposed`).
 
 Source evidence re-derived for this review (not re-read from the artifacts):
@@ -45,7 +45,7 @@ false fact about delivered behaviour that phase 5 would write into the system sp
 - plan_coverage: FAIL (B2: two TCs owned by a phase that cannot make them green; A4)
 - test_traceability: PASS (36 §3.1 rows, 39 §7.1 rows; every TC names an existing or declared file and fixture)
 - cross_artifact_consistency: FAIL (B2, B3; A2, A3, A5)
-- decision_capture: PASS (DEC-1..DEC-16 in-spec, five rulings graduated to TDR-0023, OQ-1 deferred with its precondition; A5 is a contract-surface nit, not a capture gap)
+- decision_capture: PASS (DEC-1..DEC-16 in-spec, five rulings graduated to TDR-0024, OQ-1 deferred with its precondition; A5 is a contract-surface nit, not a capture gap)
 - system_spec_consistency: FAIL (B3: the summary's delivered divergence block is described wrongly in §8.5/RSK-6/DEC-15 and in the plan's residual-risk paragraph)
 - plan_doc_update_coverage: PASS (§16.1's fifteen rows are each owned by phase 4 or phase 5; A8 is frontmatter hygiene)
 - plan_code_area_coverage: FAIL (B1: the contract-surface fixture is unscoped; A1, A4)
@@ -192,7 +192,7 @@ Suggested fix (exact):
 4. Plan lines 253-259: state the two real movements (down; new block on resolve) and the
    identifier narrowing; keep the P2 mutation rationale (a list-length implementation now
    under-reports 25 as 20), which is correct.
-5. Ask `@decision-advisor` to align TDR-0023 D-5's rationale sentence with the corrected
+5. Ask `@decision-advisor` to align TDR-0024 D-5's rationale sentence with the corrected
    statement before the record is accepted at PR review.
 
 ## Non-blocking findings (apply in the same pass; none of these reds a gate)
@@ -384,8 +384,8 @@ Target: delivery_planning (no artifact rewrite needed before delivery).
   `status.md`, `cli-command-registry.md` and `test-spec-dispatch-engine.md` all exist.
   Phase 4 owns the two gate fixtures; phase 5 owns the other thirteen rows. Nothing §16.1
   requires is unowned.
-- **TDR-0023 is indexed and untracked as the plan says** (`git status`: one untracked
-  entry; `doc/decisions/00-index.md:49` already carries the TDR-0023 row), and phases 1
+- **TDR-0024 is indexed and untracked as the plan says** (`git status`: one untracked
+  entry; `doc/decisions/00-index.md:49` already carries the TDR-0024 row), and phases 1
   and 5 reference it without restating it.
 - **No delivery-evidence write outside the declared scope is implied.** `forbidden-literals`
   scans `doc/**` minus `doc/changes/` and `doc/decisions/`
