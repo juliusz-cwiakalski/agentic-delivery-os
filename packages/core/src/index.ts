@@ -109,7 +109,6 @@ export {
   appendDispatchDivergence,
   appendDispatchHandover,
   type DispatchAppendResult,
-  type DispatchDivergenceSummary,
   type DispatchLedgerRead,
   foldDispatchDivergences,
   isEvidenceClass,
@@ -117,7 +116,6 @@ export {
   readDispatchDivergences,
   readDispatchHandover,
   resolveDispatchDivergence,
-  summarizeDispatchDivergences,
   writeDispatchAuthority,
 } from "./app/dispatch-ledger.js";
 export {

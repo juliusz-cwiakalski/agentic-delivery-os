@@ -226,3 +226,95 @@ describe("TC-ATTEMPT-034 cell 7 delivered forms keep fallback.invocation", () =>
     });
   }
 });
+
+describe("TC-ATTEMPT-034 cells 2-3 resolve additions and both blocks", () => {
+  test("the resolve payload adds mode, repository and the block after the five keys", async () => {
+    const scenario = createCommandScenario({ gate: {} });
+    try {
+      const { appendDispatchDivergence } = await import(
+        "../../packages/core/src/app/dispatch-ledger"
+      );
+      appendDispatchDivergence(
+        scenario.state.store,
+        scenario.state.fenceToken,
+        makeDivergence({ divergenceId: "DIV-ADD" }),
+      );
+      const result = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "resolve",
+        "DIV-ADD",
+        "--note",
+        "reason",
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      const data = result.envelope?.data as Record<string, unknown>;
+      expect(Object.keys(data)).toEqual([
+        "divergenceId",
+        "state",
+        "resolved",
+        "note",
+        "principal",
+        "mode",
+        "repository",
+        "divergences",
+      ]);
+      expect(data.mode).toBe("local-evidence");
+      const block = data.divergences as Record<string, unknown>;
+      expect(Object.keys(block)).toEqual([
+        "reported",
+        "resolved",
+        "unresolved",
+        "unresolvedIds",
+        "idsTruncated",
+      ]);
+      expect(block.idsTruncated).toBe(false);
+      expect(block.unresolvedIds).toEqual([]);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("both blocks carry idsTruncated, true exactly when identifiers were dropped", async () => {
+    const scenario = createCommandScenario({ gate: {} });
+    try {
+      const { appendDispatchDivergence } = await import(
+        "../../packages/core/src/app/dispatch-ledger"
+      );
+      for (let index = 1; index <= 21; index += 1) {
+        appendDispatchDivergence(
+          scenario.state.store,
+          scenario.state.fenceToken,
+          makeDivergence({
+            divergenceId: `DIV-${String(index).padStart(2, "0")}`,
+            recordedAt: `2026-11-08T10:${String(index).padStart(2, "0")}:00.000Z`,
+          }),
+        );
+      }
+      const summary = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      const summaryBlock = (
+        (summary.envelope?.data ?? {}) as { readonly divergences: Record<string, unknown> }
+      ).divergences;
+      expect(Object.keys(summaryBlock)).toEqual([
+        "reported",
+        "resolved",
+        "unresolved",
+        "unresolvedIds",
+        "idsTruncated",
+      ]);
+      expect(summaryBlock.unresolved).toBe(21);
+      expect((summaryBlock.unresolvedIds as readonly string[]).length).toBe(20);
+      expect(summaryBlock.idsTruncated).toBe(true);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

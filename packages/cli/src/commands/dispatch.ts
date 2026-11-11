@@ -21,6 +21,7 @@ import {
   type DeliveryResultToken,
   type DispatchAttemptsData,
   type DispatchEnvelopeData,
+  type DispatchResolveData,
   type DispatchSummaryData,
   type ProjectionClass,
 } from "@delivery-os/core/contracts";
@@ -28,6 +29,7 @@ import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
   renderDispatchAttemptsText,
   renderDispatchHandoverText,
+  renderDispatchResolveText,
   renderDispatchSummaryText,
   renderDispatchText,
   renderDispatchVerboseText,
@@ -67,7 +69,7 @@ export type DispatchResolveRuntime = {
     readonly divergenceId: string;
     readonly note: string;
   }) => Promise<
-    | { readonly ok: true; readonly data: Record<string, unknown> }
+    | { readonly ok: true; readonly data: DispatchResolveData }
     | { readonly ok: false; readonly error: DispatchRuntimeFailure }
   >;
 };
@@ -132,6 +134,12 @@ const projectionOf = (value: DispatchToken): ProjectionClass => {
   if (row === undefined) throw new Error("delivery-result token is not in the taxonomy");
   return row.projectionClass;
 };
+
+const isResolveData = (data: unknown): data is DispatchResolveData =>
+  typeof data === "object" &&
+  data !== null &&
+  (data as { readonly mode?: unknown }).mode === "local-evidence" &&
+  typeof (data as { readonly divergenceId?: unknown }).divergenceId === "string";
 
 const isSummaryData = (data: unknown): data is DispatchSummaryData =>
   typeof data === "object" &&
@@ -231,6 +239,7 @@ export const createDispatchCommandDefinition = (
   humanText: (data, _brand, context) => {
     if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
     if (isSummaryData(data)) return renderDispatchSummaryText(data);
+    if (isResolveData(data)) return renderDispatchResolveText(data);
     const envelope = data as Partial<DispatchEnvelopeData>;
     if (envelope.result !== undefined && envelope.lastMessage !== undefined) {
       return context?.verbose === true

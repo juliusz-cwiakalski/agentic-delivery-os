@@ -114,6 +114,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "foldEvidenceWindow",
     "handoverConditionsSnapshot",
     "longestConsecutiveRun",
+    "summarizeRepositoryDivergences",
     "toSummaryData",
   ],
   "core/src/app/dispatch-ledger.ts": [
@@ -127,7 +128,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readDispatchDivergences",
     "readDispatchHandover",
     "resolveDispatchDivergence",
-    "summarizeDispatchDivergences",
     "writeDispatchAuthority",
   ],
   "adapters/src/file/dispatch-authority.ts": [
@@ -175,6 +175,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/output/dispatch-text.ts": [
     "renderDispatchAttemptsText",
     "renderDispatchHandoverText",
+    "renderDispatchResolveText",
     "renderDispatchSummaryText",
     "renderDispatchText",
     "renderDispatchVerboseText",
