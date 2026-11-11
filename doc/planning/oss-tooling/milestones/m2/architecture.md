@@ -61,7 +61,6 @@ unrelated directories behaves identically to one whose members share a
 workspace directory. No member repository is required to live inside a
 workspace, and the workspace adds discovery only.
 
-
 ## C4 Level 2: containers
 
 ```mermaid

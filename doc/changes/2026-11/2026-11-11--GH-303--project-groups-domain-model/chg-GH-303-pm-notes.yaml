@@ -404,3 +404,18 @@ notes:
       doc/planning/oss-tooling/milestones/m2/commands/repos.md'."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 4 (guard registration) complete at commit d8fa8f20. Scope:
+      scripts/checks/forbidden-literals.registry.json — exactly one added row,
+      `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, inserted
+      between the `queue.md` and `spend.md` entries; no other row touched and no
+      guard change. Gates on enumerated tokens: P37 registered=140
+      base_registered=139 delta=1, queue_row=88 repos_row=89 spend_row=90,
+      position=between-queue-and-spend, duplicates=0,
+      unregistered_findings=0; P42 forbidden_exit=0 classes=5/5
+      scanned_total=140 planning_scanned=10/10 missing_from_scan=0
+      not_scanned_hits=0 violations=0 failures=0 seed_hits=0; P38
+      dist_guard_exit=0 planning_markers=0; lint exit 0; plan validate
+      verdict=valid. The guard-red window is exactly one commit wide, as the
+      plan's ordering note declares."
+    type: "info"
+    date: "2026-11-11"

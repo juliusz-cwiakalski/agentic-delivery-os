@@ -223,3 +223,29 @@ invocations, the one-step migration is documented in
 [the migration guide](../../guides/migrating-to-per-repository-state.md), and the
 owner hold stays host-wide. The remaining M2 stories are unaffected by this
 delivery and stay planned.
+
+## M2 domain-model amendment (2026-11-11)
+
+Planning state only: this section records the GH-303 amendment to the M2 plan
+and claims no M2 delivery and no milestone exit.
+
+1. The domain model is now three-level: a repository is one checkout and the
+   delivery unit, a project is a configured group of repositories whose
+   membership is declared in configuration, and a workspace is an optional
+   discovery root that is never required. The model is drawn in
+   milestones/m2/architecture.md.
+2. M2-S11 is amended in place: per-repository state scoping, the host-level
+   index, the migration note, the tests clause and the same-ref collision
+   criterion are unchanged, the flat enumeration is `repos list` with repo
+   key, root, state location, daemon reachability and handover state, and the
+   entry records the deprecation alias transition for the case where a flat
+   `projects list` had landed first.
+3. M2-S18 (project groups) and M2-S19 (cross-repository changes) join the
+   Epic M2 story set, depending on M2-S11 and, for M2-S19, on M2-S18 and the
+   delivered M1-S17.
+4. The naming boundary is `repos` for the flat enumeration and `projects` for
+   groups. cli-command-registry.md reconciles `repos`, `projects` and the M3
+   hygiene verbs to that boundary, and the new pack page carries its one
+   registry row.
+5. The entrypoint delta note now lists `repos` and `projects` as two planned
+   root families instead of calling `projects` the host view of checkouts.

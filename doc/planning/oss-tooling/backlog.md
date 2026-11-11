@@ -1057,7 +1057,8 @@ The M2 stories below now read on three levels. A repository is one git
 checkout and stays the delivery unit; a project is a named group of
 repositories whose membership is declared in configuration; a workspace is an
 optional persisted directory usable as a discovery root, and it is never
-required. The naming boundary follows from that: `repos` is the flat enumeration of managed checkouts and `projects` is the group surface, owned by the amended M2-S11 and by M2-S18 respectively.
+required. The naming boundary follows from that: `repos` is the flat enumeration and `projects` is the group surface.
+The first is owned by the amended M2-S11 and the second by M2-S18.
 Entrypoint consequence: both become root families, so the root listing meets
 the repository family and the project family separately.
 

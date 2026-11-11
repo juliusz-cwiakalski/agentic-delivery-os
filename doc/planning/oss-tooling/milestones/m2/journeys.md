@@ -16,7 +16,8 @@ workstation, and one of those members lives outside any shared directory.
 2. `<binary> repos list` shows the flat enumeration behind that group: each
    member's repo key, root, state location, daemon reachability, and handover
    state, discovered from each checkout's identity.
-3. The naming boundary holds in this view too: `repos` is the flat enumeration of checkouts, and `projects` groups them.
+3. The naming boundary holds in this view too: `repos` is the flat
+   enumeration of checkouts, and `projects` groups them.
 4. `<binary> queue --project <key>` and `<binary> status --project <key>` scope
    both reads to the project, so running, waiting, and parked work arrive
    already filtered.
