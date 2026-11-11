@@ -1,0 +1,1091 @@
+# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 1.0
+# (2026-11-11). Authored against spec v1.2 and test plan v1.1.
+#
+# One ticket, one PR against main-tools, five delivery phases. Every phase is an
+# independently committable slice that is green at its own boundary: no phase needs
+# a later phase to compile, to assert, or to be meaningful. Everything richer than
+# the parsed schema is carried in YAML comments so the parsed document stays
+# schema-strict: the only parsed keys are schemaVersion, workItemRef, tier,
+# defaultLeases, defaultWeightClass and phases (id, title, kind, summary, scope,
+# interactions, doneArtifacts, leases, weightClass, leaseClass). This plan declares
+# phases and scope only: there is no `tasks` key and no progress log — phase
+# progress is a pm-notes `notes:` entry.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-289-spec.md — v1.2, 36 acceptance criteria
+#                (AC-F1-1..AC-F9-2), F-1..F-9 with capability detail in §5.1,
+#                DM-1..DM-6 in §8.3, §8.5 backward compatibility (the two declared
+#                additive points), NFR-1..NFR-11 in §9, RSK-1..RSK-10 in §11,
+#                OQ-1..OQ-3 in §14, DEC-1..DEC-16 in §15 and the five graduated
+#                rulings in §15.1, §16 component impact and §16.1 documentation
+#                impact with the phase-7 handoff facts, §17 evidence classes,
+#                §18 delivery order, §19 (no migration), Appendices A (traceability),
+#                B (SC-M2-S12-01/02 reconciliation), C (M2 attempts(1) corrections,
+#                items 1-6) and D (normative read-side field set).
+#   - Test plan: ./chg-GH-289-test-plan.md — v1.1, 39 test cases
+#                (TC-ATTEMPT-001..039) covering 36/36 ACs; §3.1 AC→TC coverage and
+#                evidence classes, §3.2 interface coverage, §3.3 NFR coverage,
+#                §4 test types and layers, §5.2 scenario details, §6 environments
+#                and the fixture inventory, §7.1 the TC→file mapping (the exact
+#                test paths this plan declares), §7.2 supporting changes, §7.3 phase
+#                grouping, §7.4 the P1..P4 revert/mutation bundle, §7.5 gate
+#                commands, §8.1 risks TR-1..TR-15, §8.3 the closed findings X-1..X-9
+#                and their reconciliation notes to `@doc-syncer`, §9 revision log,
+#                §10 execution log (which this change fills).
+#   - Decision:  doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+#                (Proposed) — D-1..D-7 and C-1..C-8, the eight-step implementation
+#                order, the verification criteria, and the residual risks this plan
+#                must own: the two-direction count movement, the two-fold-site
+#                convergence, the disclosure-only cross-repository posture, and the
+#                projection-widening obligation.
+#   - Ticket:    GH-289 (M2-S12). Three acceptance clauses, traced in spec Appendix A:
+#                the attempt read side carrying token / corroboration triple /
+#                divergence refs / timestamps / harness; the machine envelope per
+#                repository; the local-only resolve with the mode declared and the
+#                unresolved counts left behind; coverage and floor staying on the
+#                summary.
+#   - M2 pack:   doc/planning/oss-tooling/milestones/m2/{contracts.md (§ attempts.v1),
+#                commands/attempts.md, test-scenarios.md (SC-M2-S12-01/02),
+#                architecture.md, entrypoint-delta.md, README.md} plus
+#                doc/planning/oss-tooling/{backlog.md (M2-S12), status.md,
+#                cli-command-registry.md}.
+#   - Schema:    doc/spec/features/feature-plan-schema.md,
+#                packages/core/src/domain/plan-validate.ts,
+#                packages/core/src/contracts/plan.ts,
+#                doc/templates/implementation-plan-template.md.
+#   - Rules:     AGENTS.md, .ai/rules/typescript.md, .ai/rules/testing-strategy.md,
+#                .ai/rules/bash.md, .dependency-cruiser.cjs.
+#   - Precedent: doc/changes/2026-11/2026-11-11--GH-288--multi-repo-workstations/
+#                chg-GH-288-plan.yaml (structure, phase-boundary discipline,
+#                mount-unit atomicity, comment-carried phase data).
+#
+# PHASE ORDER AND WHY (spec §18, with the test plan's §7.3 grouping):
+#   1 contracts + the pure projection/order/page helper + the repository-scoped read
+#     use case. Everything after consumes them, and the two independent output
+#     bounds (ledger 5,000 and machine 65,536 bytes) are properties of the `data`
+#     object this phase produces, so they are assertable here.
+#   2 the `attempts` branch, its grammar refusals, the bounded digest, and the
+#     composition that opens exactly one store. The surface is the only observable
+#     of phase 1 and the only place where repository isolation, read-only posture,
+#     refusals, determinism, and additive stability can be asserted end to end.
+#   3 the resolve result extension and the one exact divergence-count rule. TDR-0023
+#     D-5 and D-7 bind the resolve block and the summary block to one computation,
+#     so both surfaces and both count directions move in the same commit as their
+#     owning criteria (AC-F5-5, TC-ATTEMPT-022/038).
+#   4 the mount unit: family usage line, fifth help entry, coverage-inventory row,
+#     parity pin, and the help suites that pin the count. One unit, because the
+#     parity gate asserts the see-also target exists AND is registered, so a partial
+#     landing leaves a gate red (spec F-8, DEC-14).
+#   5 reconciliation, execution evidence, the changeset, and the closing aggregate
+#     gate. Nothing here changes product behaviour.
+#
+# TWO DECLARED DEVIATIONS from test-plan §7.3 (both are facts about where an
+# assertion can be green, not scope reductions; the test plan's own rules permit the
+# deviation and ask the plan to name it):
+#   - TC-ATTEMPT-009, TC-ATTEMPT-010 and TC-ATTEMPT-037 are owned by phase 1, not by
+#     the command phase. Each asserts a property of the read use case's `data`
+#     (byte budget and page omission, ledger retention and its precedence, the
+#     single verified read and its latency), so all three are green at phase 1's
+#     boundary over the delivered store port; phase 2 re-runs them through the CLI
+#     as an additive cell (the file is declared in both phases) and does not take
+#     ownership. AC-F2-4 and AC-F2-5 are therefore owned by phase 1.
+#   - TC-ATTEMPT-036 (NFR-11 test isolation) is owned by phase 3, not by phase 2:
+#     it scans every new suite for the approved base and a post-run fingerprint, and
+#     phase 3 is the LAST phase that creates a new suite. Phase 1 and phase 2 run it
+#     over their own files as a supporting gate without transferring ownership.
+#
+# AC OWNERSHIP (all 36 criteria, exactly one owning phase each; a later phase may
+# re-run an assertion, which is additive and never transfers ownership):
+#   phase 1  AC-F2-4, AC-F2-5                                  (2)
+#   phase 2  AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6,
+#            AC-F2-1, AC-F2-2, AC-F2-3,
+#            AC-F3-1, AC-F3-2, AC-F3-3,
+#            AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4,
+#            AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4,
+#            AC-F7-1, AC-F9-1                                 (22)
+#   phase 3  AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-4, AC-F5-5, AC-F6-5  (6)
+#   phase 4  AC-F7-2, AC-F8-1, AC-F8-2                          (3)
+#   phase 5  AC-F8-3, AC-F8-4, AC-F9-2                          (3)
+#   (2 + 22 + 6 + 3 + 3 = 36; no AC is unmapped and no AC id is invented.)
+#
+# TC OWNERSHIP (39/39, each owned exactly once):
+#   phase 1  TC-ATTEMPT-009, TC-ATTEMPT-010, TC-ATTEMPT-037       (3)
+#   phase 2  TC-ATTEMPT-001, TC-ATTEMPT-002, TC-ATTEMPT-003,
+#            TC-ATTEMPT-004, TC-ATTEMPT-005, TC-ATTEMPT-006,
+#            TC-ATTEMPT-007, TC-ATTEMPT-008, TC-ATTEMPT-011,
+#            TC-ATTEMPT-012, TC-ATTEMPT-013, TC-ATTEMPT-014,
+#            TC-ATTEMPT-015, TC-ATTEMPT-016, TC-ATTEMPT-017,
+#            TC-ATTEMPT-023, TC-ATTEMPT-024, TC-ATTEMPT-025,
+#            TC-ATTEMPT-026, TC-ATTEMPT-028, TC-ATTEMPT-034,
+#            TC-ATTEMPT-039                                      (22)
+#   phase 3  TC-ATTEMPT-018, TC-ATTEMPT-019, TC-ATTEMPT-020,
+#            TC-ATTEMPT-021, TC-ATTEMPT-022, TC-ATTEMPT-027,
+#            TC-ATTEMPT-036, TC-ATTEMPT-038                       (8)
+#   phase 4  TC-ATTEMPT-029, TC-ATTEMPT-030, TC-ATTEMPT-031       (3)
+#   phase 5  TC-ATTEMPT-032, TC-ATTEMPT-033, TC-ATTEMPT-035       (3)
+#   (3 + 22 + 8 + 3 + 3 = 39; no TC is unowned and no TC id is invented.)
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the commit
+# path and the review agree; every line stays within 100 characters):
+#   phase 1  feat(dispatch): read the attempt ledger through one projection and page
+#   phase 2  feat(dispatch): mount attempts with a bounded deterministic digest
+#   phase 3  feat(dispatch): declare local-evidence resolve and one exact count
+#   phase 4  feat(dispatch): advertise attempts and register its reference page
+#   phase 5  docs(dispatch): reconcile evidence inspection and close the release
+#
+# THE MOUNT UNIT IS PHASE 4, NOT PHASE 2, AND BOTH BOUNDARIES ARE GREEN.
+# `dispatch attempts` is a subfamily, so the prompt-required set and the root family
+# listing do not change (spec F-8, NG-6). No gate asserts that a delivered verb has
+# a help entry, and the only pinned count is the four dispatch entries asserted by
+# `tests/structure/dispatch-help-inventory.test.ts` plus the parity pin. Phase 2
+# therefore cannot move that count, and phase 4 lands, in one commit: the family
+# usage line plus `--ref`/`--limit` options and one example in
+# `packages/cli/src/help.ts`, the fifth entry whose see-also target is
+# `pageIn(M2_REFERENCE_ROOT, "attempts")` (the delivered M2 page-root helper), the
+# `referencePages` row in `tests/fixtures/help-guide/coverage.json`, the pin moving
+# from four to five and the test title stating five in
+# `tests/checks/reference-page-parity.test.ts`, the five-entry list and the new
+# entry's option/example cells in `tests/structure/dispatch-help-inventory.test.ts`,
+# and `dispatch attempts --help` added to the poisoned-composer set in
+# `tests/behaviour/dispatch-help-version.test.ts`. `scripts/checks/help-guide-coverage.ts`
+# needs no change: `attempts` is not prompt-required, so the per-command page map is
+# untouched and the M1 `dispatch(1)` page stays dispatch's family page (DEC-13).
+#
+# THE COMMAND-LINE GRAMMAR IS OWNED BY THE COMMAND MODULE, AND THE DELIVERED
+# REFUSALS ARE PRESERVED. AC-F1-3 requires a missing `--limit` value to be
+# `input.value.rejected` at exit 1, and AC-F1-6 requires an unknown flag and an
+# unexpected positional to be `input.value.rejected` as well. The shared parser
+# (`packages/cli/src/index.ts` `parseInvocation`) classifies a missing value for a
+# `requiresValue` flag, an unknown flag, and a fourth positional as
+# `fallback.invocation` (verified by reading the parser and by invoking the built
+# entrypoint on 2026-11-11), so the two requirement cannot both be met by adding the
+# flags to `requiresValue`. Phase 2 therefore: (a) leaves the delivered
+# `requiresValue` entries (`--harness`, `--resume-prompt`, `--repo`, `--note`)
+# untouched and adds `acceptsAnyFlag: true`, so no parser-level refusal pre-empts
+# the attempts grammar; (b) validates the `attempts` tail from `invocation.argv`
+# inside the command module — canonical `[A-Z]+-\d+` ref, canonical decimal
+# `[1-9][0-9]*` limit in 1..100 with default 20, unknown flag, unexpected positional
+# — all as `input.value.rejected` with a bounded summary, before any runtime call
+# and therefore before any store read; and (c) keeps every delivered form's refusal
+# identity by classifying an unknown flag on `dispatch <ref>`,
+# `dual-run summary|resolve`, and `handover` as `fallback.invocation` in the same
+# handler guard, so AC-F9-1 and NG-6 hold (TC-ATTEMPT-034 adds the cell that pins
+# it). The two flags are still declared value-taking flags in the published grammar
+# (help entry, synopsis, reference page); `CommandDefinition.requiresValue` is a
+# parser hint, not the published grammar.
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - No new error identity. `ERROR_TABLE` stays at 124 identities with exactly four
+#     `dispatch` rows, no `attempts.*` string exists anywhere, and no token,
+#     projection class, or exit literal is added (AC-F4-4, DM-6, DEC-1, TDR-0023
+#     C-1). Malformed request, unresolvable active reference and unresolvable
+#     identity are `input.value.rejected` under `kind: "input"` at exit 1; an
+#     unreadable store keeps its own `state.*` code under `kind: "state"` at exit 2.
+#   - `attempts.v1` `data` carries exactly `repository`, `ref`, `refSource`
+#     (`"flag"` | `"active-change"`), `limit`, `matched`, `hasMore`, `attempts[]`,
+#     `excluded.foreignRepository`, and `truncation` only when a bound binds; no
+#     top-level envelope key is added and `command` stays `"dispatch"` (DEC-7,
+#     Appendix D).
+#   - Each row projects exactly the sixteen declared fields; `divergenceRef` is one
+#     identifier or explicit `null` (never a list); `endedAt` maps the stored finish
+#     timestamp one-to-one; `comparison` is `{class, token, outcome}` with `token`
+#     `null` exactly when the class is not-applicable; `resumeMode` is the recorded
+#     mode or `null`; `evidenceRefs` is at most sixteen identifiers; no `schema`,
+#     `handoverState`, or `prefillCostAcknowledged` key is projected (DEC-4, DEC-6,
+#     TDR-0023 C-3).
+#   - Read bounds: ledger read 5,000 records; page 20 by default, 1 minimum, 100
+#     maximum; machine `data` 65,536 UTF-8 bytes; human digest 40 lines and 8,192
+#     bytes with at most 37 rows beside a truncation line; 16 evidence references
+#     per record; 20 unresolved identifiers per block; resolution note 240
+#     characters (DM-4). Every bound that binds is declared; `truncation.bound` is
+#     5000 for `ledger` and 65536 for `page`, and the ledger scope wins (DM-5).
+#   - `unresolved` is the exact folded open count for the reported repository on
+#     BOTH the resolve result and `dispatch dual-run summary`; `unresolvedIds` is
+#     bounded to 20 with `idsTruncated` true exactly when identifiers were omitted;
+#     no surface derives a count from an identifier list's length (DEC-15, TDR-0023
+#     C-5, D-5). The eligibility predicate tests for zero and no verdict moves.
+#   - Repository scope is enforced twice: the project state root from GH-288 plus a
+#     logical filter on each record's own `repository`; excluded records are counted
+#     (`excluded.foreignRepository`, independent of `--ref`, computed over the
+#     retained ledger window) and never named; identity resolves with persistence
+#     disabled, so the dispatch repository binding marker is never created, repaired,
+#     or re-persisted; an invocation outside a checkout refuses at exit 1 (DEC-8,
+#     TDR-0023 C-6).
+#   - The READ performs exactly one verified store read: the repository port supplied
+#     by the composition passes NO scheduler key (`resolveProductionRepository(
+#     undefined, { persist: false })`), because `schedulerKeyForRef` would read the
+#     queue ledger and break NFR-2's exactly-one-read bound. A checkout whose
+#     identity resolves from neither the marker nor the normalized remote refuses
+#     rather than reading the queue. This is a composition decision, recorded here
+#     so the identity chain's inputs are reviewable.
+#   - Read-only with respect to evidence: 0 attempt/divergence/handover/authority
+#     appends, 0 fence acquisitions, store bytes/modes/mtimes unchanged; the only
+#     permitted effects are the host-index maintenance write (zero when unchanged)
+#     and the create-once project checkout identity marker (NFR-3, AC-F4-1).
+#   - No new state record kind, schema version, key prefix, fold rule, validation
+#     predicate, configuration key, workspace package, subpath, external dependency,
+#     product literal, or binary literal (NG-1, NFR-9, AC-F9-2).
+#   - Boundaries hold in every phase (`.dependency-cruiser.cjs`,
+#     `.ai/rules/typescript.md`): `packages/core/src/domain` imports `contracts`
+#     only; `app` may import `domain`, `config` and `contracts`; filesystem and git
+#     I/O stay in `packages/adapters`; the CLI imports core only from `.` and the
+#     declared subpaths; `packages/cli/src/help/prompt-required-commands.ts` is
+#     dependency-free and unchanged.
+#   - The M1 page `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` is
+#     BYTE-UNCHANGED (DEC-13). No phase declares it, no phase edits it.
+#   - Every new module is registered in `tests/structure/inventory.json` and its
+#     executable exports in `tests/structure/content-inventory.test.ts` IN THE PHASE
+#     THAT CREATES THEM, because those suites compare the committed inventory with
+#     the actual file set and the actual export set.
+#
+# TDR-0023 RESIDUAL RISKS AS OWNED WORK (phase 3; do not let either drift):
+#   - One shared exact count computation consumed by BOTH the resolve result and the
+#     summary, with no list-length derivation anywhere. The computation lives in
+#     `packages/core/src/domain/dispatch-gate.ts` (the module that already owns the
+#     divergence block and the gate that reads it) as one exported pure function over
+#     (records, repository) returning `{reported, resolved, unresolved, unresolvedIds,
+#     idsTruncated}`; `foldEvidenceWindow` consumes it, `resolveDispatchDivergenceEvidence`
+#     consumes it, and the retired `summarizeDispatchDivergences` list-length
+#     derivation is DELETED from `packages/core/src/app/dispatch-ledger.ts` with its
+#     `DispatchDivergenceSummary` type. TC-ATTEMPT-038 pins the single derivation
+#     structurally and TC-ATTEMPT-022 pins the exact numbers behaviourally; P2 is
+#     their negative control.
+#   - The count moves in BOTH directions on a migrated root, and only one direction is
+#     named in the spec's risk table: UP when more than 20 divergences are open (the
+#     delivered rule reported the capped list length) and DOWN when foreign open
+#     divergences leave the repository-scoped count. TC-ATTEMPT-022 asserts both
+#     directions (25 open for the reported repository, plus 5 open for another
+#     repository that must not be counted), and phase 5's reconciliation notes state
+#     both movements for `@doc-syncer` and for the M2 page.
+#   - Disclosure-only cross-repository resolution stays disclosed, not prevented:
+#     the resolve result names the divergence's own repository and scopes its counts
+#     to it (DEC-9, TDR-0023 D-7). No guard is added (NG-7, deferred with OQ-1).
+#   - The projection is a fixed allowlist that must move with the record: the
+#     sixteen-field exact-set assertion is the intended friction (TC-ATTEMPT-006).
+#
+# TEST ISOLATION IS A GATE CONDITION IN EVERY PHASE THAT BUILDS A FIXTURE (NFR-11,
+# TC-ATTEMPT-036, TR-4): every suite reaches `mkdtempSync` only through an approved
+# helper under `tests/fixtures/projects/state-scope.ts`'s `APPROVED_BASE`
+# (`<repo>/tmp/tmpdir`); the host root and the home are always distinct directories
+# (neither an ancestor of the other); the brand-derived state override points at the
+# per-test host root; the non-checkout cell uses `nonCheckoutDirectory()`, which
+# pre-asserts `findGitRoot === undefined`; no suite composes the production program
+# with this repository as `cwd`; a post-run fingerprint of the real state directory
+# is unchanged. The aggregate gate runs as
+# `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`.
+#
+# EVIDENCE DISCIPLINE (spec §17 classes, carried not upgraded):
+#   - Suite: the phase gates below. The P1..P4 revert/mutation bundle (§7.4) proves
+#     the detection power of behaviour that the pre-change tree already exhibits and
+#     is executed and recorded in phase 5 (the review gate before DoD): P1 renames a
+#     delivered resolve key and must red TC-ATTEMPT-034; P2 restores the delivered
+#     list-length derivations and must red TC-ATTEMPT-022 and TC-ATTEMPT-038; P3 drops
+#     the logical repository filter and must red TC-ATTEMPT-011 and TC-ATTEMPT-012;
+#     P4 clamps an over-limit `--limit` and accepts `07`/`001`/`+7` and must red
+#     TC-ATTEMPT-003. Each is applied, run, reverted, and re-run green; none is
+#     committed.
+#   - Review-verified (never claimed as suite): AC-F8-3 (TC-ATTEMPT-032), AC-F8-4
+#     (TC-ATTEMPT-033), the side-effect enumeration half of AC-F4-1, the string-absence
+#     half of AC-F4-4 over the M2 page and corpus, the reference-page half of AC-F7-2,
+#     the additive-only half of AC-F9-1, and the lockfile/diff half of AC-F9-2.
+#   - Not claimed by any phase: cross-platform path/mtime semantics (TR-2), any
+#     performance framework beyond the single in-process p95 cell (TC-ATTEMPT-037).
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (`system_spec_update`, `@doc-syncer`;
+# phase 5 authors the same pages so the handoff is a verification of current truth):
+#   - doc/spec/features/feature-dispatch-engine.md: the grammar gains
+#     `dispatch attempts [--ref <ref>] [--limit <n>]`; a read-side section states the
+#     envelope, the sixteen-field projection, the total order, the three bounds and
+#     their declared omissions, the ref resolution, the empty-history rule, and the
+#     count-only foreign disclosure; the resolve paragraph gains the unconditional
+#     `local-evidence` mode, the subject repository, and the shared counts; the error
+#     paragraph states that the read side adds no row and maps its refusals; the
+#     bounds table gains the page bounds, the human row budget, and the 65,536-byte
+#     data budget.
+#   - doc/spec/features/feature-result-contract.md: no row changes; one clarifying
+#     sentence where the dispatch rows are consumed — the attempts read and the
+#     resolve extension reuse the `input` and `state` identities and add no entry.
+#   - doc/spec/features/feature-cli-entrypoint.md: `dispatch attempts` joins the
+#     enumerated dispatch subforms; the prompt-required set and the seventeen-family
+#     root listing are unchanged.
+#   - doc/spec/features/feature-state-layer.md: the store-opening read paragraph names
+#     the attempts read as a store opener that writes no delivery evidence and
+#     inherits only the host-index maintenance write and the create-once project
+#     checkout identity marker.
+#   - doc/spec/features/feature-projects.md: one sentence — the dispatch attempts read
+#     is read-only with respect to evidence and inherits the store-opening effects;
+#     the dispatch repository binding marker is never created or repaired by a read.
+#   - doc/quality/test-specs/test-spec-dispatch-engine.md: coverage rows for the
+#     attempts read and the resolve result; `links.related_changes` gains `GH-289`;
+#     `last_updated` advances.
+#   - doc/planning/oss-tooling/milestones/m2/commands/attempts.md: the delivered
+#     reference page (Appendix C items 1-6): `--help` and `--version`, the resolved
+#     exit table with no `attempts.*` rows and empty history at exit 0,
+#     `command: "dispatch"`, `divergenceRef` singular-or-`null`, the declared digest
+#     with its truncation line and coverage/floor pointer, the stated bounds, and the
+#     proposed status header retained (planned-until-milestone-exit).
+#   - doc/planning/oss-tooling/milestones/m2/contracts.md: `attempts.v1` refined at
+#     story delivery — singular divergence reference, unconditional `local-evidence`
+#     mode, repository-scoped counts, and the read bounds.
+#   - doc/planning/oss-tooling/{backlog.md (M2-S12 progress marker), status.md (M2
+#     delivery snapshot per its maintenance convention), cli-command-registry.md (the
+#     `attempts` subfamily note gains GH-289 / M2-S12)} and
+#     doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md (the observed
+#     composition note: `dispatch attempts` mounted as a subfamily, the root listing
+#     unchanged).
+#   - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md: BYTE-UNCHANGED
+#     (DEC-13); the subfamily documents itself in its own milestone's page root.
+#   - Current-truth facts the reconciliation must state rather than paraphrase away:
+#     the read side adds no error identity and an `attempts.*` string anywhere means
+#     the document is stale; a store is not a repository, so the physical root is
+#     necessary but not sufficient; an empty verified history is success while a torn
+#     store is a fault at exit 2; the summary's number moves in both directions on a
+#     migrated root; coverage and floor live only on the summary.
+#
+# ROLLBACK: the change is additive and ships behind no flag. Reverting the change
+# removes one verb, two flags, three additive resolve `data` keys, one additive human
+# line, and the `idsTruncated` key, and restores the retired count derivations (which
+# under-reported past 20 open divergences and over-reported on a migrated root). No
+# record was written, rewritten, re-attributed, or migrated by this change, so no data
+# rollback exists; the read side wrote no delivery evidence. TDR-0023 stays valid as a
+# record of the design even if the change is reverted; a reversal is recorded in the
+# record's history.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-289
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - error-table-row-attempts-code-token-projection-or-exit-literal-added
+    - malformed-request-classified-outside-input-value-rejected
+    - store-read-or-append-performed-before-grammar-accepts-the-request
+    - attempts-read-performs-more-than-one-verified-store-read
+    - list-length-derivation-survives-or-a-second-divergence-count-appears
+    - projection-wider-than-the-attempt-record-or-divergenceRef-becomes-a-list
+    - repository-filter-only-physical-or-a-foreign-identifier-disclosed
+    - dispatch-repository-binding-marker-created-or-repaired-by-a-read
+    - prompt-required-set-or-root-family-listing-changed
+    - m1-dispatch-reference-page-modified
+    - help-entry-inventory-row-or-parity-pin-landed-in-separate-phases
+    - coverage-or-floor-duplicated-on-the-attempts-surface
+    - blank-note-accepted-or-note-length-becoming-a-write-failure
+    - state-record-schema-version-key-prefix-or-fold-changed
+    - new-package-subpath-dependency-configuration-key-or-brand-literal
+    - test-writes-to-the-real-state-directory-or-the-live-checkout
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Attempts contracts, the projection, the ordered bounded page, and the
+  # repository-scoped read use case
+  # Commit: feat(dispatch): read the attempt ledger through one projection and page
+  #
+  # Goal: turn the durable attempt record into one declared consumer shape and one
+  # bounded, deterministic, repository-scoped read, with every bound declared and no
+  # surface change yet — so phase 2 has nothing left to decide about what the data is.
+  #
+  # Work:
+  #  1.1 doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+  #      is committed here (it is authored and currently untracked in the working
+  #      tree): D-1..D-7 and C-1..C-8 govern every later phase, so the record must not
+  #      arrive after the code it binds. doc/decisions/00-index.md is declared with it;
+  #      its TDR-0023 row is already committed at the next free identifier, and the
+  #      declaration keeps any index correction inside this phase's scope. Do NOT
+  #      restate the record's contents in this plan or in the spec.
+  #  1.2 packages/core/src/contracts/dispatch.ts: the `attempts.v1` data and
+  #      projection types beside the delivered dispatch constants — `DispatchAttemptView`
+  #      (the sixteen fields of Appendix D, with `divergenceRef` typed as
+  #      `string | null` and no optional members), `DispatchAttemptsTruncation`
+  #      (`{scope: "ledger" | "page", bound, omittedRecords}`), `DispatchAttemptsData`
+  #      (the nine declared keys), the `AttemptsRefSource` vocabulary
+  #      (`"flag" | "active-change"`), and the read bounds
+  #      `ATTEMPTS_DEFAULT_LIMIT = 20`, `ATTEMPTS_MIN_LIMIT = 1`, `ATTEMPTS_MAX_LIMIT = 100`,
+  #      `ATTEMPTS_MAX_DATA_BYTES = 65536`, `ATTEMPTS_MAX_HUMAN_LINES = 40`,
+  #      `ATTEMPTS_MAX_HUMAN_BYTES = 8192`, `ATTEMPTS_HUMAN_ROW_BUDGET = 37`, and the
+  #      canonical limit form `ATTEMPTS_LIMIT_PATTERN = "[1-9][0-9]*"`. Types and
+  #      constants only: no record kind, schema version, token, projection class,
+  #      configuration key, or product literal.
+  #  1.3 packages/core/src/domain/dispatch-attempts.ts (new, pure): `projectAttempt`
+  #      (the sixteen-field projection, `endedAt` from the stored finish timestamp,
+  #      `divergenceRef` present-and-`null` when the record has none, `resumeMode`
+  #      `null` when absent, `evidenceRefs` passed through bounded), `orderAttempts`
+  #      (`startedAt` descending, `recordedAt` descending, `attemptId` ascending, so
+  #      the order is total and independent of insertion and map order) and
+  #      `selectAttemptsPage` (repository filter, then ref filter, then order, then the
+  #      row bound, then the UTF-8 byte budget, returning the kept rows, `matched`,
+  #      `hasMore`, the count-only foreign disclosure, and at most one truncation
+  #      object whose ledger scope wins). No I/O, no clock, no locale, no terminal
+  #      width, no `Buffer`: the byte length is computed in runtime-neutral code.
+  #  1.4 packages/core/src/app/dispatch-attempts.ts (new, app tier): the read use case
+  #      over injected ports — the store, the repository port, the active-reference
+  #      port and the clock. It refuses with `input.value.rejected` (kind `input`) and
+  #      a bounded summary naming the context file and the `--ref` remedy when the
+  #      active reference does not resolve, and naming the checkout when the repository
+  #      does not resolve, in both cases BEFORE touching the store; it performs exactly
+  #      one `readDispatchAttempts` call; and it maps a read failure to the delivered
+  #      `state.*` code under `kind: "state"` (never `dispatch.state-unverified`, which
+  #      is the gate's own wrapper, and never an empty success). An empty verified read
+  #      is a success with `attempts: []`, `matched: 0`, `hasMore: false`.
+  #  1.5 Export surface: add the new module's exported names to
+  #      packages/core/src/app/index.ts and packages/core/src/index.ts (both use
+  #      explicit name lists, so the additions are deliberate one-line entries), and
+  #      add the new contract names to packages/core/src/contracts/index.ts. No new
+  #      subpath and no `packages/core/package.json` `exports` change, so
+  #      `bun run scripts/checks/workspace-entrypoints.ts`, `tests/structure/subpaths.test.ts`
+  #      and `pnpm check:boundaries` stay green.
+  #  1.6 Registration: `tests/structure/inventory.json` rows for the two new modules
+  #      and `EXECUTABLE_ALLOWANCES` entries for their exported functions and for the
+  #      new constants in `core/src/contracts/dispatch.ts`.
+  #  1.7 Fixtures (new): tests/fixtures/dispatch/attempt-records.ts — `maximalAttempt()`
+  #      (16 x 64-character evidence references, 40-character attempt id),
+  #      `ledgerOf(n)` (ascending `startedAt`, shared frozen objects), `openDivergences(n,
+  #      repository)`, `resolvedDivergences(n, repository)`, `withHistory(id)` (an open
+  #      record after an earlier resolved one, so the fold's latest-per-identifier rule
+  #      is exercised) and `longNote(400)`; and tests/fixtures/dispatch/attempts-harness.ts
+  #      — an isolated state root, a store wrapper exposing read/append/fence counters
+  #      that accepts no root, key or path, a fixed repository resolver, an
+  #      active-reference source with `absent` / `unparsable` / `no-active-change` /
+  #      `present` variants, an app-level `read(input)`, and `dispose()`. Phase 2
+  #      extends the same harness with the command-level `invoke(argv)`.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-ATTEMPT-009  100 maximal records serialize to at most 65,536 UTF-8 bytes of
+  #                   `data`; a shortened page declares scope `"page"`, `bound: 65536`
+  #                   and a non-zero `omittedRecords` equal to the dropped eligible
+  #                   rows, with `hasMore: true`; a small page carries no `truncation`
+  #                   (the file also carries the pure projection cells of TC-ATTEMPT-006,
+  #                   TC-ATTEMPT-007 and TC-ATTEMPT-008, owned by phase 2)
+  #   TC-ATTEMPT-010  a ledger above 5,000 considers at most 5,000, declares scope
+  #                   `"ledger"` with `bound: 5000` and the omitted count, keeps
+  #                   `matched <= 5000`, returns the newest rows, lets the ledger scope
+  #                   win over the page scope, and does NOT count a foreign record that
+  #                   sits only in the omitted tail
+  #   TC-ATTEMPT-037  exactly one `readRecords` per invocation, zero additional reads,
+  #                   and p95 within 5 s over the 5,000-record bound (frozen records
+  #                   built outside the timed loop; the measured value goes to test-plan
+  #                   §10 at phase 5)
+  #
+  # Done when: those three TCs are green; the projection's exact sixteen-key set and
+  # the `divergenceRef`-present-as-`null` cells are green; the order is byte-stable
+  # across two runs and across two opposite insertion orders; `pnpm typecheck`,
+  # `pnpm check:boundaries`, `bun run scripts/checks/workspace-entrypoints.ts`,
+  # `bun test tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts`,
+  # `biome check` and the aggregate gate
+  # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) are green; and no test
+  # writes outside its temporary root. The aggregate runs here because this phase adds
+  # two source modules and two core barrels, the widest structural change in the change.
+  #
+  # Non-goals: the command branch, the flags, the digest and the composition (phase 2);
+  # the resolve extension and the count rule (phase 3 — the summary's block is NOT
+  # touched here, so no reported number moves without its owning criterion); help,
+  # inventory and the parity pin (phase 4); reconciliation and release (phase 5).
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Attempts contracts, the sixteen-field projection, the ordered bounded page, and the repository-scoped read use case"
+    kind: delivery
+    summary: >-
+      Declare `attempts.v1` beside the delivered dispatch constants — the sixteen-field
+      view with `divergenceRef` singular-or-`null` and `endedAt` mapped one-to-one, the
+      nine-key data shape, the `flag`/`active-change` ref-source vocabulary, and the read
+      bounds (page 20 / 1 / 100, data 65,536 bytes, 5,000-record ledger, 16 evidence
+      references, 20 identifiers, 240-character note) — and add one pure domain module
+      that projects, totally orders (`startedAt` desc, `recordedAt` desc, `attemptId`
+      asc) and selects the page under the row bound and the byte budget with a single
+      declared truncation object whose ledger scope wins, plus one app-tier read use case
+      that resolves the reference and the checkout identity before touching the store,
+      performs exactly one verified ledger read, filters each record on its own
+      repository while disclosing foreign records as a count over the retained window,
+      treats an empty verified read as success, and maps an unreadable store to its own
+      `state.*` identity with no new error row; TDR-0023 is committed with this phase
+      so the rulings bind before the code, and the two new modules are registered in the
+      inventory and the executable allowlist.
+    scope:
+      files:
+        - doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+        - doc/decisions/00-index.md
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/dispatch-attempts.ts
+        - packages/core/src/app/dispatch-attempts.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/attempt-records.ts
+        - tests/fixtures/dispatch/attempts-harness.ts
+        - tests/behaviour/dispatch-attempts-bounds.test.ts
+        - tests/behaviour/dispatch-attempts-contract.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/dispatch-attempts.ts
+        role: producer
+      - kind: contract-file
+        target: doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-289 in progress; TDR-0023 committed and indexed; phase 1 evidence recorded in pm-notes notes"
+    weightClass: standard
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The `attempts` branch, its refusals, the bounded digest, and the
+  # composition that opens one store
+  # Commit: feat(dispatch): mount attempts with a bounded deterministic digest
+  #
+  # Goal: make the read reachable and make every property a consumer or an operator can
+  # observe true at once — grammar before any read, one store, one repository, one
+  # digest, one envelope, and the delivered shapes untouched.
+  #
+  # Work:
+  #  2.1 packages/cli/src/commands/dispatch.ts: add `DispatchAttemptsRuntime`
+  #      (`read({ref?, limit?})`) to `DispatchCommandRuntime`, the `attempts` verb
+  #      branch, and the command's own grammar over `invocation.argv` as recorded in the
+  #      header (canonical ref, canonical decimal limit with default 20 and range 1..100,
+  #      unknown flag, unexpected positional — all `input.value.rejected` before any
+  #      runtime call), plus the `acceptsAnyFlag: true` declaration and the guard that
+  #      keeps the four delivered forms' unknown-flag refusal at `fallback.invocation`.
+  #      The attempts payload must be discriminated by its `attempts` array in the text
+  #      selector BEFORE the summary and handover branches, and an attempts payload
+  #      projects as a plain success at exit 0 (no `result`, `verdict` or `operation`).
+  #  2.2 packages/cli/src/output/dispatch-text.ts: `renderDispatchAttemptsText` — one
+  #      summary line `attempts=<n>; repository=<identity>; ref=<ref>; has_more=<true|false>`,
+  #      then one row per attempt newest first as
+  #      `<startedAt> <ref> <token> <corroboration> <divergenceRef|none> <harness> <evidenceClass>`
+  #      with timestamps printed exactly as stored, then an optional
+  #      `truncation=human:bound:<kept>,omitted:<dropped>` line (at most 37 rows beside
+  #      it), then `next: dispatch dual-run summary --repo <repository> (coverage and
+  #      floor)`; bounded to 40 lines and 8,192 bytes with rows dropped from the oldest
+  #      end and `has_more` untouched by the cut; the corroboration cell is the closed
+  #      three-value derivation (`corroborated` / `uncorroborated` / `vacuous`); no
+  #      `result=`, `pr_url=`, `exit_code=` or `last_message=` key appears. Register both
+  #      new renderers in packages/cli/src/output/index.ts and in the
+  #      `cli/src/output/dispatch-text.ts` executable allowance.
+  #  2.3 packages/cli/src/edge.ts: extend `createDispatchGateRuntime` (the gate runtime
+  #      the harness and production already share) with the `attempts` surface over the
+  #      same store, the persistence-disabled repository port, the active-reference port
+  #      and the clock — no new exported function, so the edge's executable allowance is
+  #      unchanged; add `DispatchAttemptsRuntime` to the type export list in
+  #      packages/cli/src/commands/index.ts.
+  #  2.4 packages/cli/src/production.ts: compose the attempts surface over the project
+  #      state root (GH-288's `stateDirectory`), `resolveProductionRepository(undefined,
+  #      { persist: false })` (no scheduler key, so no queue read: exactly one store read
+  #      per invocation), and the delivered local-context seam
+  #      (`readLocalPmContext({ path: pmContextPath, fs: localFs })`, the same path the
+  #      digest and the spend read side use). Nothing is persisted: a read never creates
+  #      or repairs the dispatch repository binding marker.
+  #  2.5 Fixtures: tests/fixtures/dispatch/attempts-harness.ts gains the command-level
+  #      `invoke(argv)` returning `{exit, stdout, stderr, envelope, data, readCount}`;
+  #      tests/fixtures/dispatch/attempts-production.ts is new — the real-production
+  #      wrapper over `tests/fixtures/projects/production.ts` (shared host root across
+  #      two checkouts, seeded attempt and divergence records through the delivered
+  #      append helpers, a written and removed `.ai/local/pm-context.yaml`, the
+  #      byte/mode/mtime snapshot helper, and the two marker readers); and
+  #      tests/fixtures/dispatch/golden/attempts.txt plus `attempts-empty.txt` are the
+  #      reviewed canonical digests (regenerated only by an explicit reviewed command).
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-ATTEMPT-001  explicit flag and the active-change default, `refSource` exact
+  #   TC-ATTEMPT-002  three unresolvable-context cells, one refusal, no store read
+  #   TC-ATTEMPT-003  limit grammar: 1 and 100 accepted; 0, 101, -1, abc, 07, +7, ` 7`,
+  #                   001 and a missing value refused with zero store reads; default 20
+  #   TC-ATTEMPT-004  total order across identical start instants and two insertion orders
+  #   TC-ATTEMPT-005  `matched` and `hasMore` state the page's relation to the match set
+  #                   (3-of-3, 0-match, and the shortened page)
+  #   TC-ATTEMPT-006  the sixteen-field exact key set through the command, the singular
+  #                   `divergenceRef`, and the absence of `divergenceRefs`, `schema`,
+  #                   `handoverState`, `prefillCostAcknowledged`
+  #   TC-ATTEMPT-007  `endedAt`/`startedAt`/`recordedAt` fidelity, unmodified text
+  #                   instants, and the corroboration triple
+  #   TC-ATTEMPT-008  comparison projection and the `not-applicable` null token
+  #   TC-ATTEMPT-011  two projects on one host root, same reference (P3 negative control)
+  #   TC-ATTEMPT-012  a migrated project root holding two repositories: count-only
+  #                   disclosure over the retained window, independent of `--ref`
+  #   TC-ATTEMPT-013  outside any checkout: refuse, never read the `unbound` store, and
+  #                   create no dispatch repository binding marker
+  #   TC-ATTEMPT-014  read-only by evidence: zero appends, zero fences, stable
+  #                   bytes/modes/mtimes, and the two markers asserted through their own
+  #                   helpers (the side-effect enumeration is review-verified)
+  #   TC-ATTEMPT-015  a verified empty history is success, not refusal
+  #   TC-ATTEMPT-016  torn, unreadable and permission-denied stores keep their `state.*`
+  #                   identity at exit 2 and are never reported as empty
+  #   TC-ATTEMPT-017  taxonomy closure: 124 identities, four `dispatch` rows, zero
+  #                   `attempts.*` strings in code, help, the result-contract page and the
+  #                   rendered output (the M2 page and corpus halves are review-verified
+  #                   at phase 5, which also adds the two `doc/spec/**` scan targets)
+  #   TC-ATTEMPT-023  digest shape: summary line, seven cells, pointer, no run-form keys
+  #   TC-ATTEMPT-024  the corroboration cell is a closed three-value derivation
+  #   TC-ATTEMPT-025  human budget: 40 lines, 8,192 bytes, oldest dropped, declared cut,
+  #                   `has_more` unchanged
+  #   TC-ATTEMPT-026  two byte-identical text runs and two structurally identical payloads
+  #   TC-ATTEMPT-028  no `coverage`, `floor`, `verdict`, `eligibility` or `unmetConditions`
+  #                   key on the attempts envelope, and the summary keeps the gate
+  #   TC-ATTEMPT-034  delivered shapes stable, the attempts payload discriminated by its
+  #                   `attempts` array against all four selectors, and the delivered
+  #                   branches' unknown-flag refusal still `fallback.invocation` (P1
+  #                   negative control)
+  #   TC-ATTEMPT-039  grammar refusals: non-canonical ref, unknown flag, unexpected
+  #                   positional — exit 1, `input.value.rejected`, zero store reads,
+  #                   nothing appended, no `attempts.*` identity
+  #
+  # Done when: those twenty-two TCs are green; the two-run text output is byte-identical
+  # and the two machine payloads structurally identical; `readCount === 1` on every
+  # successful cell and `0` on every refusal cell; `pnpm build && bun test` for the
+  # subprocess-adjacent cells; `pnpm check:boundaries` green with no new dependency edge;
+  # `bun test tests/checks/error-table-sync.test.ts tests/structure/dispatch-error-identity.test.ts`
+  # and `bun run scripts/checks/error-table-sync.ts` green with the registry unchanged;
+  # `bun run scripts/checks/forbidden-literals.ts`,
+  # `bun run scripts/checks/privacy-literals.ts`,
+  # `bun test tests/checks/exit-code-literals.test.ts tests/checks/privacy-literals.test.ts`
+  # green; `biome check`; and the aggregate gate
+  # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) green. The aggregate
+  # runs here because this phase changes the delivered dispatch family's parser
+  # declaration and its composition.
+  # Isolation: the scope and production cells use one temporary host root with two real
+  # checkouts and a home that is a distinct directory; the 200-row and 5,001-row cells
+  # seed records rather than checkouts; the non-checkout cell uses
+  # `nonCheckoutDirectory()`.
+  #
+  # Non-goals: the resolve result extension and the count rule (phase 3); the help entry,
+  # the coverage row and the parity pin (phase 4 — at this boundary the dispatch help
+  # entries are still exactly four and the inventory is unchanged, which is green);
+  # reconciliation and release (phase 5).
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "The `dispatch attempts` branch, its grammar refusals, the bounded digest, and the composition that opens exactly one store"
+    kind: delivery
+    summary: >-
+      Mount `dispatch attempts [--ref <ref>] [--limit <n>]` as a subfamily whose grammar
+      the command module owns: a canonical `[A-Z]+-\d+` reference, a canonical decimal
+      `[1-9][0-9]*` limit bounded to 1..100 with default 20, and an unknown flag or an
+      unexpected positional each refuse at exit 1 with `input.value.rejected` before any
+      runtime call — while `acceptsAnyFlag` plus a handler guard keep every delivered
+      form's unknown-flag refusal at `fallback.invocation`; the surface resolves the
+      active reference through the delivered local PM context seam when `--ref` is
+      omitted, resolves the checkout identity with persistence disabled and no queue read
+      so the read performs exactly one verified store read, filters every record on its
+      own repository while disclosing foreign records as a count over the retained
+      window, names the checkout on an identity refusal, treats an empty verified read as
+      success, and renders the declared digest — summary line, seven-cell rows newest
+      first, an optional human truncation line with at most 37 rows beside it, and the
+      coverage/floor pointer — inside 40 lines and 8,192 bytes, with the attempts payload
+      discriminated by its `attempts` array so no existing selector can mistake it for
+      the run, summary or handover form.
+    scope:
+      files:
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/attempts-harness.ts
+        - tests/fixtures/dispatch/attempts-production.ts
+        - tests/fixtures/dispatch/golden/attempts.txt
+        - tests/fixtures/dispatch/golden/attempts-empty.txt
+        - tests/behaviour/dispatch-attempts-ref.test.ts
+        - tests/behaviour/dispatch-attempts-contract.test.ts
+        - tests/behaviour/dispatch-attempts-bounds.test.ts
+        - tests/behaviour/dispatch-attempts-scope.test.ts
+        - tests/behaviour/dispatch-attempts-refusals.test.ts
+        - tests/behaviour/dispatch-attempts-digest.test.ts
+        - tests/behaviour/dispatch-additive-stability.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/golden/attempts.txt
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-289 in progress; phase 2 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Local-evidence resolve result and one exact divergence-count rule
+  # Commit: feat(dispatch): declare local-evidence resolve and one exact count
+  #
+  # Goal: make the resolve result evidence of what moved, and make the number it reports
+  # the same number the summary reports — one computation, exact in both directions, with
+  # the retired list-length derivation deleted rather than left beside it.
+  #
+  # Work:
+  #  3.1 packages/core/src/contracts/dispatch.ts: `DispatchDivergenceBlock`
+  #      (`reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated`) and
+  #      `DispatchResolveData` (the five delivered keys plus `mode`, `repository`,
+  #      `divergences`); change `DispatchSummaryData.divergences` to the block type so the
+  #      one declared additive key appears on both surfaces and the four delivered fields
+  #      keep their names, types, meanings and order. No new executable export, so the
+  #      contracts allowance is unchanged; the new types go through
+  #      packages/core/src/contracts/index.ts.
+  #  3.2 packages/core/src/domain/dispatch-gate.ts: export
+  #      `summarizeRepositoryDivergences(records, repository)` — fold latest-per-identifier
+  #      over the records of that repository, `unresolved` = the exact count still `open`,
+  #      `resolved` and `reported` from the same fold, `unresolvedIds` the first at most
+  #      20 of them, `idsTruncated` true exactly when identifiers were omitted — and make
+  #      `foldEvidenceWindow` consume it instead of its inline store-wide uncapped fold.
+  #      This is the single home of the count (TDR-0023 D-5, C-5; TC-ATTEMPT-038 pins it).
+  #  3.3 packages/core/src/app/dispatch-gate.ts: `resolveDispatchDivergenceEvidence`
+  #      returns `mode: "local-evidence"` unconditionally (first resolution and replay),
+  #      `repository` from the resolved record, and `divergences` computed by the same
+  #      computation over that repository's records after the append. Keep the delivered
+  #      order: a blank or whitespace-only note is refused (`input.value.rejected`, nothing
+  #      appended), a note over 240 characters is clamped before the record is built and
+  #      reported as stored, an absent identifier stays `input.value.rejected` at exit 1,
+  #      and a store fault keeps its own `state.*` code at exit 2. Replay stays an
+  #      idempotent noop with unchanged counts.
+  #  3.4 packages/core/src/app/dispatch-ledger.ts: DELETE `summarizeDispatchDivergences`
+  #      and the `DispatchDivergenceSummary` type (the retired
+  #      `unresolved: unresolvedIds.length` / `resolved: folded.length - unresolvedIds.length`
+  #      derivation; no consumer exists — verified across `packages/**` and `tests/**`),
+  #      and drop both names from packages/core/src/app/index.ts,
+  #      packages/core/src/index.ts and the `core/src/app/dispatch-ledger.ts` executable
+  #      allowance. `foldDispatchDivergences` and `resolveDispatchDivergence` are
+  #      unchanged.
+  #  3.5 packages/cli/src/commands/dispatch.ts and packages/cli/src/output/dispatch-text.ts:
+  #      type the resolve runtime's data as `DispatchResolveData`, add the resolve text
+  #      selector, and render exactly one line
+  #      `divergence=<id>; state=<state>; appended=<true|false>; unresolved=<n>; mode=local-evidence; repository=<identity>`
+  #      (a replay prints the same line with `appended=false` and the unchanged count).
+  #      Register the new renderer in packages/cli/src/output/index.ts. The summary
+  #      renderer is unchanged: its counts become exact through 3.2.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-ATTEMPT-018  resolve extension: `mode`, the divergence's own repository,
+  #                   `resolved: true`, `state: "resolved"`, the count down by exactly
+  #                   one and the identifier gone from `unresolvedIds`, the five
+  #                   delivered keys unchanged in meaning
+  #   TC-ATTEMPT-019  resolve purity: zero credential resolutions, network requests,
+  #                   harness spawns and model calls, including with an unreachable
+  #                   tracker configured
+  #   TC-ATTEMPT-020  replay appends nothing, reports `resolved: false`, the stored note
+  #                   and principal, unchanged counts, and leaves the open record
+  #                   byte-identical
+  #   TC-ATTEMPT-021  blank and whitespace-only notes refused with nothing appended; a
+  #                   400-character note succeeds with a stored note of exactly 240
+  #                   characters and no write failure
+  #   TC-ATTEMPT-022  twenty-five open divergences for the reported repository (plus five
+  #                   open for another): BOTH surfaces report `unresolved: 25`, both carry
+  #                   the four delivered fields plus `idsTruncated`, at most 20 identifiers
+  #                   with `idsTruncated: true`, and neither derives the count from the
+  #                   list; the downward direction is the foreign-divergence cell (P2
+  #                   negative control)
+  #   TC-ATTEMPT-027  one deterministic resolve line, including on replay
+  #   TC-ATTEMPT-038  one divergence-count computation: the exported computation and its
+  #                   two consumers, zero second fold, zero list-length derivation (P2)
+  #   TC-ATTEMPT-036  test isolation across every new suite: the approved base, the
+  #                   pre-write guard, the real-state fingerprint, and no direct `tmpdir()`
+  #                   use (cross-cutting; owned here because this is the last phase that
+  #                   adds a suite)
+  #
+  # Done when: those eight TCs are green; the summary's `divergences` block carries
+  # `idsTruncated` with its four delivered fields in delivered order; the attempts
+  # envelope still carries no gate key (TC-ATTEMPT-028 re-run); `pnpm --filter
+  # @delivery-os/core typecheck && pnpm --filter @delivery-os/cli typecheck`,
+  # `pnpm check:boundaries` (the shared computation introduces no forbidden tier edge and
+  # no new subpath), `bun run scripts/checks/error-table-sync.ts`,
+  # `bun test tests/behaviour/dispatch-delivered-evidence-divergence.test.ts
+  # tests/behaviour/dispatch-dual-run-summary.test.ts tests/behaviour/dispatch-gate-evidence.test.ts`
+  # (the regression surfaces that touch the divergence block) and the aggregate gate
+  # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) are green.
+  # `tests/behaviour/dispatch-bounds.test.ts` is declared because test-plan §7.5 names it
+  # as the single permitted existing-test adjustment; it currently encodes no divergence
+  # count (checked 2026-11-11), so an unchanged file is the expected outcome and any edit
+  # is limited to an expectation that encodes the retired derivation.
+  #
+  # Non-goals: any change to the gate's verdict, coverage, floor or eligibility semantics
+  # (the predicate tests for zero, so no verdict moves); a repository guard on divergence
+  # writes (NG-7, deferred); help, inventory, and the parity pin (phase 4).
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Local-evidence resolve result and one exact divergence-count rule shared with the summary"
+    kind: delivery
+    summary: >-
+      Extend the resolve success payload additively — `mode: "local-evidence"` on every
+      success including a replay, `repository` from the resolved divergence, and the
+      divergence block (`reported`, `resolved`, the exact folded open `unresolved`, at most
+      20 `unresolvedIds`, `idsTruncated`) — and make that block and the summary's block one
+      computation in the domain tier that folds latest-per-identifier over one repository's
+      records, so `unresolved` is the exact count rather than the length of a capped list and
+      a migrated root stops counting another repository's open divergences; the retired
+      list-length derivation and its summary type are deleted from the app ledger with their
+      export and allowance entries, the resolve keeps the delivered order of note clamping
+      and blank-note refusal with an idempotent replay, and one deterministic human line
+      makes the mode, the counts and the subject repository visible without `--json`.
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/dispatch-gate.ts
+        - packages/core/src/app/dispatch-gate.ts
+        - packages/core/src/app/dispatch-ledger.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/output/index.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/attempt-records.ts
+        - tests/behaviour/dispatch-resolve-result.test.ts
+        - tests/behaviour/dispatch-divergence-count.test.ts
+        - tests/behaviour/dispatch-bounds.test.ts
+        - tests/structure/dispatch-resolve-composition.test.ts
+        - tests/structure/dispatch-attempts-count-rule.test.ts
+        - tests/checks/dispatch-attempts-test-isolation.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-gate.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-289 in progress; phase 3 evidence recorded in pm-notes notes"
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The mount unit: family usage lines, the fifth help entry, the coverage
+  # inventory, and the parity pin
+  # Commit: feat(dispatch): advertise attempts and register its reference page
+  #
+  # Goal: make the subfamily reachable and documented from `--help`, with the gates
+  # green in the same commit (spec F-8, DEC-13, DEC-14). One unit, because the parity
+  # gate asserts each see-also target both exists and is registered in the coverage
+  # inventory.
+  #
+  # Work:
+  #  4.1 packages/cli/src/help.ts: the `dispatch` family entry gains the usage line
+  #      `<binary> dispatch attempts [--ref <ref>] [--limit <n>]`, the `--ref <ref>` and
+  #      `--limit <n>` options, and one example; a fifth entry is added at the path
+  #      `["dispatch", "attempts"]` with summary, usage, options, an example, and
+  #      `seeAlso: [pageIn(M2_REFERENCE_ROOT, "attempts")]` (the delivered M2 page-root
+  #      helper, DEC-13). The root listing stays at seventeen families because `attempts`
+  #      is a subfamily; `packages/cli/src/help/prompt-required-commands.ts` is untouched
+  #      and the entrypoint composition is unchanged.
+  #  4.2 tests/fixtures/help-guide/coverage.json: one `referencePages` row for
+  #      `doc/planning/oss-tooling/milestones/m2/commands/attempts.md`; `commands` is
+  #      unchanged because `attempts` is not prompt-required. `scripts/checks/help-guide-coverage.ts`
+  #      needs no change: its per-command page map still points `dispatch` at the M1 page.
+  #  4.3 tests/checks/reference-page-parity.test.ts: the dispatch help-entry pin moves
+  #      from four to five and the test title states five (DEC-14). The `pageFor` map is
+  #      NOT changed for `dispatch`: the M1 page stays the family page and the M2 attempts
+  #      page is a see-also target, which the first parity test already covers by requiring
+  #      existence plus registration.
+  #  4.4 tests/structure/dispatch-help-inventory.test.ts: the five-entry list gains
+  #      `["dispatch", "attempts"]` with its M2 see-also target, and the entry's usage,
+  #      option and example cells are asserted; the family-usage cell gains
+  #      `dispatch attempts`.
+  #  4.5 tests/behaviour/dispatch-help-version.test.ts: `["dispatch", "attempts", "--help"]`
+  #      joins the poisoned-composer set, proving the new page is a pure data lookup.
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-ATTEMPT-029  the pointer is the only route from evidence to the gate: the digest's
+  #                   pointer line, the help synopsis, and (review-verified) the reference
+  #                   page all name `dispatch dual-run summary --repo <repository>`, and no
+  #                   second surface computes coverage or floor
+  #   TC-ATTEMPT-030  `dispatch attempts --help` exits 0 and renders usage, both options,
+  #                   the global option block, an example and the exit-code block with no
+  #                   state, network, git or configuration read; the root listing still
+  #                   names exactly seventeen families with no `attempts` row
+  #   TC-ATTEMPT-031  `pnpm check:help` and the parity gate are green, the dispatch pin is
+  #                   five, the M2 attempts page is registered, and the see-also target
+  #                   resolves
+  #
+  # Done when: those three TCs are green; `pnpm check:help` green;
+  # `bun test tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage.test.ts
+  # tests/checks/help-guide-coverage-mutants.test.ts tests/structure/dispatch-help-inventory.test.ts
+  # tests/behaviour/dispatch-help-version.test.ts tests/structure/dispatch-attempts-composition.test.ts`
+  # green; the M1 `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` is
+  # byte-unchanged (a diff against the phase base is the receipt); `pnpm typecheck`,
+  # `pnpm check:boundaries` and `biome check` green.
+  # Gate choice (justified): this phase changes the static help inventory, one fixture and
+  # four test files, and no source outside `packages/cli/src/help.ts`; the aggregate gate
+  # `TMPDIR=$PWD/tmp/tmpdir pnpm check` is therefore NOT re-run here — the narrower battery
+  # above covers every file this phase can affect, and the aggregate re-runs on the final
+  # tree at phase 5. `pnpm check:help` is run explicitly because it is part of the
+  # aggregate and is the gate this phase moves.
+  #
+  # Non-goals: any page content (phase 5 owns Appendix C items 1-6 and the system specs);
+  # the prompt-required set and the root listing (NG-6); any change to `dispatch`'s
+  # existing four entries' text beyond the added usage line, options and example.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "The mount unit: family usage lines, the fifth help entry, the coverage inventory, and the parity pin"
+    kind: delivery
+    summary: >-
+      Make the subfamily reachable in one commit: the `dispatch` family entry gains the
+      `dispatch attempts [--ref <ref>] [--limit <n>]` usage line, both options and one
+      example; a fifth entry at the path `dispatch attempts` carries its own summary,
+      usage, options, example and a see-also target in the M2 page root; the coverage
+      inventory registers the M2 attempts page while its command list stays unchanged
+      because `attempts` is not prompt-required; the reference-page parity pin moves from
+      four entries to five with its title stating five; and the help inventory and
+      poisoned-composer suites pin the five-entry list and prove the new page is a pure
+      data lookup with no state, git, configuration or network read, while the root
+      listing keeps its seventeen families and the M1 dispatch page stays byte-unchanged.
+    scope:
+      files:
+        - packages/cli/src/help.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/checks/reference-page-parity.test.ts
+        - tests/structure/dispatch-help-inventory.test.ts
+        - tests/behaviour/dispatch-help-version.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/help-guide/coverage.json
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-289 in progress; phase 4 evidence recorded in pm-notes notes"
+    weightClass: standard
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Reconciliation, execution evidence, and the five-package minor release
+  # Commit: docs(dispatch): reconcile evidence inspection and close the release
+  #
+  # Goal: leave the durable record correct — the delivered reference page, the contract
+  # refinement, the system specs, the planning corpus, the execution evidence, and the
+  # release artifact — and close the change. Nothing here changes product behaviour.
+  #
+  # Work:
+  #  5.1 doc/planning/oss-tooling/milestones/m2/commands/attempts.md: complete the six
+  #      declared corrections of spec Appendix C — the three `attempts.*` rows removed and
+  #      the exit table restated (empty history is exit 0; exit 1 names the malformed-input
+  #      and unresolvable-context refusals; a store fault is the delivered `state.*`
+  #      identity at exit 2), `command: "dispatch"`, `attempts[].divergenceRef` singular or
+  #      `null` with the record-field list matching the projection, the declared digest
+  #      with its human truncation line and coverage/floor pointer replacing the bare
+  #      example table (a token from the eleven-token vocabulary), and `--help`/
+  #      `--version` plus the stated bounds and the `divergenceRef`/`endedAt` naming and
+  #      local-evidence mode notes. Keep `Status: Proposed (M2)` and the
+  #      planned-until-milestone-exit semantics; this is a refinement under the pack's own
+  #      "refined at story delivery" rule, not a rewrite.
+  #  5.2 doc/planning/oss-tooling/milestones/m2/contracts.md: `attempts.v1` refined to the
+  #      singular divergence reference, the unconditional `local-evidence` mode, the
+  #      repository-scoped counts with `idsTruncated`, and the read bounds.
+  #  5.3 The five system-spec reconciliations named in the header's phase-7 handoff:
+  #      feature-dispatch-engine (grammar, read-side section, resolve fields, error reuse,
+  #      bounds), feature-result-contract (one clarifying sentence, no row change),
+  #      feature-cli-entrypoint (`dispatch attempts` in the enumerated subforms),
+  #      feature-state-layer (the store-opening read paragraph), feature-projects (the
+  #      read-only-with-respect-to-evidence sentence and the two marker roles).
+  #  5.4 doc/quality/test-specs/test-spec-dispatch-engine.md: coverage rows for the attempts
+  #      read and the resolve result, `links.related_changes` gains `GH-289`, and
+  #      `last_updated` advances.
+  #  5.5 The planning corpus: `doc/planning/oss-tooling/backlog.md` (M2-S12 progress marker
+  #      naming the delivered read side, the local-evidence resolve result and the
+  #      coverage/floor pointer), `doc/planning/oss-tooling/status.md` (M2 delivery snapshot
+  #      per its maintenance convention), `doc/planning/oss-tooling/cli-command-registry.md`
+  #      (the `attempts` subfamily note gains GH-289 / M2-S12), and
+  #      `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` (the observed
+  #      composition note: `attempts` mounted as a subfamily, the root listing unchanged).
+  #  5.6 TDR-0023 stays `Proposed` with `decision_date: null`: the owner accepts at the PR
+  #      review. This phase verifies the record is present, indexed, and cited by the
+  #      changed specs rather than restated; it does not author or accept it.
+  #  5.7 The release artifact: exactly one added changeset,
+  #      `.changeset/gh-289-dispatch-attempt-read-side-minor.md`, declaring all five
+  #      fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`,
+  #      `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) at `minor` with a
+  #      non-empty body. `tests/checks/privacy-release.test.ts` (TC-RELEASE-001/002) pins
+  #      exactly that shape: a `patch` entry, a missing package, a sixth package,
+  #      `@delivery-os/testkit`, or a second added changeset fails the gate, and every
+  #      pre-existing changeset stays byte-identical. The no-dependency/no-lockfile clause
+  #      is review-verified by diffing `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+  #      and `packages/*/package.json` against the merge base.
+  #  5.8 Evidence: append the per-gate rows and the per-TC notes to
+  #      `chg-GH-289-test-plan.md` §10, the measured p95 from TC-ATTEMPT-037, and the
+  #      P1..P4 bundle outcomes — each procedure applied, its named assertion red under the
+  #      configuration that must red, restored, and re-run green. Record the review-verified
+  #      rows of §10 (TC-ATTEMPT-014 side-effect enumeration, TC-ATTEMPT-017 M2 page and
+  #      corpus string absence, TC-ATTEMPT-029 reference-page half, TC-ATTEMPT-032,
+  #      TC-ATTEMPT-033, TC-ATTEMPT-034 additive-only half, TC-ATTEMPT-035 lockfile half).
+  #  5.9 tests/structure/dispatch-attempts-taxonomy.test.ts: add the two `doc/spec/**` scan
+  #      targets (`doc/spec/features/feature-dispatch-engine.md`,
+  #      `doc/spec/features/feature-result-contract.md`) to the `attempts.*` absence scan in
+  #      this phase, so no earlier phase could be red on a document that had not yet been
+  #      reconciled (TR-13).
+  #
+  # Test obligations (owning TCs; must be green at this boundary):
+  #   TC-ATTEMPT-032  the M2 attempts page is the delivered reference page (review-verified:
+  #                   Appendix C items 1-6, the M1 page byte-unchanged)
+  #   TC-ATTEMPT-033  the feature spec and the planning corpus state the delivered behaviour
+  #                   (review-verified: grammar, read side, resolve fields, error reuse,
+  #                   bounds, the contract refinement, the corpus entries)
+  #   TC-ATTEMPT-035  no new configuration key, dependency, package, token, projection,
+  #                   exit literal or brand literal (suite scans) and an empty branch diff
+  #                   for manifests and the lockfile (review-verified)
+  #
+  # Done when: those three TCs are green; every earlier phase's owning TCs are green in one
+  # run; `bun test tests/checks/privacy-release.test.ts` green with exactly one added
+  # changeset; `bun test tests/structure/dispatch-attempts-taxonomy.test.ts
+  # tests/checks/error-table-sync.test.ts` green with the registry at 124/4 and zero
+  # `attempts.*` strings anywhere including the two new doc targets;
+  # `bun run scripts/checks/forbidden-literals.ts`, `bun run scripts/checks/privacy-literals.ts`,
+  # `bun test tests/checks/forbidden-literals.test.ts tests/checks/privacy-literals.test.ts`
+  # green; `bash scripts/.tests/test-doc-distribution.sh` is NOT required by this change
+  # (no document under the scanned set — `doc/guides/`, `doc/templates/`, the standalone
+  # docs — is added or edited; if a phase-5 edit ever reaches one, run it explicitly
+  # because it is not part of the aggregate); `pnpm check:help` and the parity gate green;
+  # the P1..P4 rows and the review rows are recorded in test-plan §10; the aggregate gate
+  # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) is green; and
+  # `bun packages/cli/bin/delivery-os.ts plan validate GH-289` answers valid.
+  #
+  # Phase-7 handoff obligations (see the header block; nothing is silently dropped): the
+  # five system-spec pages, the quality test-spec page, the M2 page refinements, the four
+  # planning-corpus documents, TDR-0023 and the current-truth facts listed there are the
+  # `@doc-syncer` inputs for lifecycle phase 7 (`system_spec_update`), which re-verifies
+  # them before DoD. The PR is opened at lifecycle phase 11 by `@pr-manager` and recorded
+  # as a pm-notes `notes:` entry; it is not a deliverable of this phase.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Reconciliation, execution evidence, and the five-package minor release"
+    kind: delivery
+    summary: >-
+      Author the durable record and close the release without changing product behaviour:
+      the M2 attempts page becomes the delivered reference page (resolved exit table with
+      no `attempts.*` rows and empty history at exit 0, `command: "dispatch"`, singular
+      `divergenceRef`, the declared digest with its truncation line and coverage/floor
+      pointer, `--help`/`--version`, stated bounds, proposed status retained), the M2
+      `attempts.v1` statement is refined to the singular reference, the unconditional
+      local-evidence mode, repository-scoped counts and the read bounds, the dispatch
+      engine, result-contract, CLI-entrypoint, state-layer and projects specs state the
+      delivered grammar, read side, resolve fields, error reuse and store-opening effects
+      with TDR-0023 cited rather than restated, the quality test-spec and the planning
+      corpus record the delivery, one added changeset declares the five fixed-group
+      packages at `minor` while pre-existing changesets stay byte-identical, the P1..P4
+      revert/mutation bundle and every review-verified row are recorded in the test plan's
+      execution log, the taxonomy scan gains its two `doc/spec/**` targets, and the
+      aggregate gate is green under a repository-local temporary directory.
+    scope:
+      files:
+        - .changeset/gh-289-dispatch-attempt-read-side-minor.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/commands/attempts.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/status.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-projects.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/chg-GH-289-test-plan.md
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+    interactions:
+      - kind: contract-file
+        target: .changeset/gh-289-dispatch-attempt-read-side-minor.md
+        role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-dispatch-engine.md
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "PR for feat/GH-289/evidence-inspection targeting main-tools, opened at lifecycle phase 11 by @pr-manager and recorded as a pm-notes notes entry"
+      pipelineId: "pnpm check aggregate gate green under TMPDIR=$PWD/tmp/tmpdir, with the release, help, parity, taxonomy and literal gates green"
+      trackerTransition: "GH-289 in review; DoD evidence per phase recorded in pm-notes notes"
+    weightClass: heavy
