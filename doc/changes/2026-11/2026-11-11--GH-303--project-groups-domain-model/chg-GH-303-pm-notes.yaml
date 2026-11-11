@@ -5,9 +5,9 @@ delivery_mode: autonomous
 milestone: M2
 phases:
   clarify_scope: { started: null, completed: 2026-11-11T10:03:49.191Z }
-  specification: { started: null, completed: 2026-11-11T12:22:12.001Z }
-  test_planning: { started: null, completed: 2026-11-11T12:22:19.982Z }
-  delivery_planning: { started: null, completed: 2026-11-11T12:22:29.373Z }
+  specification: { started: null, completed: 2026-11-11T18:57:15.574Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
   delivery: { started: null, completed: 2026-11-11T14:09:58.234Z }
   system_spec_update: { started: null, completed: 2026-11-11T14:13:22.813Z }
@@ -781,35 +781,124 @@ notes:
     type: "info"
     date: "2026-11-11"
   - text: "BLOCKER at PR creation (phase 11): origin/main-tools advanced from the
-      merge base 5372dbac to 723454e4 — feat(GH-288): per-repository state scoping
-      and the projects overview — while GH-303 was in flight. GH-288 DELIVERED
-      `projects list` as the flat checkout overview, with current-truth docs
-      (doc/spec/features/feature-projects.md, feature-cli-entrypoint.md), a
-      migration guide and TDR-0022. The assumption this change was specified,
-      tested and reviewed against — that no delivered spec covers these surfaces —
-      no longer holds, and merging main-tools into the branch conflicts in six
-      files (cli-command-registry.md, m2/architecture.md,
-      m2/commands/projects.md, m2/contracts.md, m2/entrypoint-delta.md,
-      status.md) for a semantic reason, not a textual one. Resolving it requires
-      deciding how a just-shipped user-facing surface is retired, which is a
-      product decision outside the reviewed scope of this branch: the ticket's
-      rename-transition sentence anticipated the case, but this change was planned
-      as a blueprint amendment only."
+      merge base 5372dbac to 723454e4 — feat(GH-288): per-repository state
+      scoping and the projects overview — while GH-303 was in flight. GH-288
+      DELIVERED `projects list` as the flat checkout overview, with
+      current-truth docs (doc/spec/features/feature-projects.md,
+      feature-cli-entrypoint.md), a migration guide and TDR-0022. The assumption
+      this change was specified, tested and reviewed against — that no delivered
+      spec covers these surfaces — no longer holds, and merging main-tools into
+      the branch conflicts in six files (cli-command-registry.md,
+      m2/architecture.md, m2/commands/projects.md, m2/contracts.md,
+      m2/entrypoint-delta.md, status.md) for a semantic reason, not a textual
+      one. Resolving it requires deciding how a just-shipped user-facing surface
+      is retired, which is a product decision outside the reviewed scope of this
+      branch: the ticket's rename-transition sentence anticipated the case, but
+      this change was planned as a blueprint amendment only."
     type: "blocker"
     date: "2026-11-11"
-  - text: "Blocker handling per the session rule: no conflict was resolved, no rebase
-      or history rewrite was attempted, nothing was force-pushed and nothing was
-      merged. PR #306 is open against main-tools at head 02fa87d3 and reports
-      CONFLICTING; the branch and its reviewed artifacts are intact. The ticket is
-      labelled human-input-needed and the comment records the decision needed with
-      three options: (1) reconcile in-change — reopen delivery to amend the
-      delivered-surface rename (doc/spec, guide, TDR-0022 and the deprecation
-      alias) before rebasing; (2) rebase and narrow — resolve the six conflicts
-      keeping the planned amendment and carry the delivered-surface rename as a
-      separate, human-approved ticket; (3) hold — keep the PR as the design record
-      until a superseding ticket exists. PM stopped rather than choosing: option 1
-      expands scope far beyond the reviewed 13-file manifest, option 2 creates
-      future work that PM may not ticket autonomously, and either changes what the
-      DoR and the two review passes actually approved."
+  - text: "Blocker handling per the session rule: no conflict was resolved, no
+      rebase or history rewrite was attempted, nothing was force-pushed and
+      nothing was merged. PR #306 is open against main-tools at head 02fa87d3
+      and reports CONFLICTING; the branch and its reviewed artifacts are intact.
+      The ticket is labelled human-input-needed and the comment records the
+      decision needed with three options: (1) reconcile in-change — reopen
+      delivery to amend the delivered-surface rename (doc/spec, guide, TDR-0022
+      and the deprecation alias) before rebasing; (2) rebase and narrow —
+      resolve the six conflicts keeping the planned amendment and carry the
+      delivered-surface rename as a separate, human-approved ticket; (3) hold —
+      keep the PR as the design record until a superseding ticket exists. PM
+      stopped rather than choosing: option 1 expands scope far beyond the
+      reviewed 13-file manifest, option 2 creates future work that PM may not
+      ticket autonomously, and either changes what the DoR and the two review
+      passes actually approved."
     type: "decision"
+    date: "2026-11-11"
+  - text: "Blocker resolved by owner instruction: rebase onto 723454e4 (option 2,
+      rebase and narrow). Rebase complete at fd9e548c with three conflicted
+      commits; resolutions: m2/architecture.md kept the branch terminology while
+      preserving GH-288's delivered host-root facts; m2/contracts.md kept
+      repos.v1 / group projects.v1 / configuration schema / cross-repo plan
+      shape and restored the delivered field anchors; m2/commands/projects.md
+      kept the group page and preserved GH-288's --help/--version rows, closed
+      daemon vocabulary and SCOPE section; m2/entrypoint-delta.md kept the
+      repos/projects planned bullets plus a GH-288 mounted-by bullet;
+      cli-command-registry.md kept the repos and group-projects rows with the
+      delivered marker 'M2-S11 (shipped in GH-288)'; status.md was a pure union
+      of the GH-288 delivery snapshot and this change's amendment section;
+      backlog.md, forbidden-literals.registry.json and doc/decisions/00-index.md
+      auto-merged (registry keeps every GH-288 row plus this change's single
+      repos.md row, 141 -> 142). No conflict marker, delivered fact or
+      domain-model statement was dropped; a stray marker and a lost contracts.md
+      anchor were found and folded back into their originating commits."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Post-rebase re-baseline: spec v1.3, test plan v1.3 and plan v1.3 correct
+      the premise that no delivered spec covered these surfaces, set the base to
+      723454e4, record that GH-288 has shipped the flat `projects list` and that
+      this change records the prospective rename to `repos list` with a
+      deprecation alias, and add the per-page disambiguation requirement without
+      adding an AC (45 ACs / 45 TCs unchanged, 13 product files unchanged). Test
+      plan v1.3 re-pins P00 BASE to 723454e4, re-derives every base-observed
+      value (backlog 1460 lines, M2-S11 1169-1189, insertion window 1292:1292,
+      status 225 -> 251 with the new section at 227, registry 141 -> 142 with
+      rows 89/90/91, 46 seeds / 46 Assert), and adds two narrowly scoped
+      allowances: P32's sanctioned() accepts only the shipped-surface rename
+      sentence or the delivered host-overview sentence, and P36's
+      sanctioned_claim() accepts only the four preserved GH-288 delivered facts.
+      Both were proved to still detect planted violations (a flat-enumeration
+      projects statement; a delivered claim for repos list, project groups or
+      cross-repository changes)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Post-rebase corpus repair (doc-sync findings) at e2537eca: the backlog
+      transition note and the status amendment no longer read conditionally
+      ('had landed'); they state that GH-288 has shipped the flat `projects
+      list` and that the group story renames it with a deprecation alias. The
+      Epic M2 context paragraph gains the shipped-fact sentence required by
+      AC-F4-2, and the journey plus the S18 seed block gain the AC-F9-1/F-8
+      disambiguation sentence. No delivered GH-288 fact was regressed."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Post-rebase verification at e2537eca: the full procedure sweep is 45/45
+      PASS (P28 new_section_count=1 at 227, P29 225 -> 251 with 0 removed and 26
+      additions confined, P34 13/13 containment, P32 0/17 survivors with both
+      sanctioned allowances proved, P36 delivered_claims=0, P37 142 vs 141 with
+      rows 89/90/91, P41 26/26, P42 planning_scanned=10/10 seed_hits=0, P45
+      17/17, P01 retained clauses 5/5 and transition_note=OK). @doc-syncer
+      re-ran phase 7 at this head: current truth correctly describes the shipped
+      flat `projects list`, the corpus states a prospective rename only, the six
+      delivered GH-288 facts are preserved, and no doc/spec coverage gap exists,
+      so no current-truth file was edited. Guards: test-doc-distribution exit 0
+      with 83 in-scope docs and no drift; forbidden-literals exit 0 with 142
+      user-facing docs and 0 violations; plan validate
+      valid/readyForDevelopment; lint GH-303 conforms. Aggregate gate: first
+      repository-local run exited 1 at load ~9 with two load-induced timeouts
+      only (TC-WIRE-002 5660 ms and TC-WATCHDOG-005 30000 ms) and zero assertion
+      failures; re-run after load dropped to 5.74 exited 0 with 7206 pass / 4
+      skip / 0 fail and every sub-gate green (boundaries 383 modules,
+      ambient-globals 177, secret-read boundary 351, prompt-conformance 5 clean,
+      help-guide coverage, exports parity 5 publishables). The green run is the
+      authoritative evidence and no failure was reclassified as environmental
+      without the quiescent re-run."
+    type: "info"
+    date: "2026-11-11"
+  - text: "PR CREATION (phase 11): PR #306 —
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/306 — open
+      against main-tools, created from docs/GH-303/project-groups-domain-model,
+      linked as 'Refs #303' so it cross-references without closing the ticket
+      and labelled documentation. After the rebase the branch tip is e2537eca
+      and the PR head is force-pushed with lease to that commit; base is
+      main-tools at 723454e4. Merge authority stays with the CEO or the human;
+      this change does not merge. Residuals for the human reviewer, none
+      blocking an AC: the shipped `packages/cli/src/help.ts` reference page for
+      `projects` now points at the group page while the flat contract moves to
+      commands/repos.md (DEC-10 consequence, needs an owner decision); the
+      board-page deferral owned by M2-S4; preserved M1-era
+      'projects'-for-checkouts lines in backlog.md (847, 863, 1082) and the
+      frozen M1 pack; the accepted gate-instrument artifacts (P09/P10/P11
+      summary verdict lines); and the commit primitive's templated subjects,
+      which truncate long paths because the primitive exposes no subject
+      option."
+    type: "info"
     date: "2026-11-11"
