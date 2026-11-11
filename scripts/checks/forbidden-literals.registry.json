@@ -62,6 +62,7 @@
     }
   ],
   "registered": [
+    "doc/guides/migrating-to-per-repository-state.md",
     "doc/guides/provider-conditions-and-parks.md",
     "doc/guides/rename-drill.md",
     "doc/guides/tracker-credential-provisioning.md",

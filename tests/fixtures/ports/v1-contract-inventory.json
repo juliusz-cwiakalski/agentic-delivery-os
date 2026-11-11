@@ -2844,6 +2844,7 @@
       "STATE_BOUNDARY_VERDICTS",
       "STATE_DRIVER_KINDS",
       "STATE_LEVELS",
+      "STATE_MIGRATION_NOTE_PATH",
       "STATE_SALVAGE_PAYLOAD_SCHEMA",
       "STATE_SALVAGE_RECORD_KEY",
       "STATE_SALVAGE_RECORD_KIND",
@@ -3438,7 +3439,8 @@
       "ProjectStateLocation",
       "ProjectsErrorCode",
       "ProjectsListData",
-      "ProjectsListEntry"
+      "ProjectsListEntry",
+      "STATE_MIGRATION_NOTE_PATH"
     ],
     "provider-profile.ts": [
       "DEFAULT_ENV_RECORD_NAME_PATTERN",

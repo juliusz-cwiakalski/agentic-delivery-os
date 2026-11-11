@@ -135,6 +135,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readDispatchAuthority",
     "readDispatchAuthorityFact",
   ],
+  "adapters/src/file/state-root-inventory.ts": ["isStoreArtifactName", "readStateRootArtifacts"],
   "adapters/src/file/dispatch-identity.ts": [
     "dispatchIdentityMarkerPath",
     "ensureDispatchIdentityMarkerText",
@@ -2108,6 +2109,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "PROJECT_KEY_PATTERN",
     "PROJECT_STATE_LOCATIONS",
     "PROJECT_UNBOUND_SEGMENT",
+    "STATE_MIGRATION_NOTE_PATH",
   ],
   "core/src/app/projects.ts": [
     "classifyProjectStateLocation",
@@ -2135,6 +2137,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/app/state-scope.ts": [
     "checkoutDirectoryName",
+    "legacyStoreWarning",
     "hostIndexPath",
     "parseProjectIdentityMarker",
     "projectDiscriminator",

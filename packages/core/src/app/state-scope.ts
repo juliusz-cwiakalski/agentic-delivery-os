@@ -14,6 +14,7 @@
  */
 
 import type { ConfigFailure, Result } from "../contracts/index.js";
+import { OWNER_HOLD_MARKER_NAME } from "../contracts/owner-hold.js";
 import {
   HOST_INDEX_ARTIFACT_NAME,
   PROJECT_IDENTIFIER_HEX_LENGTH,
@@ -26,6 +27,7 @@ import {
   PROJECT_UNBOUND_SEGMENT,
   PROJECTS_CONTAINER_SEGMENT,
   PROJECTS_ERROR_CODES,
+  STATE_MIGRATION_NOTE_PATH,
   type ProjectIdentityMarker,
   type ProjectIdentityMarkerRead,
   type ProjectScope,
@@ -79,6 +81,45 @@ export const resolveHostStateRoot = (input: HostStateRootInput): Result<string, 
   return trimmed.length === 0
     ? { ok: false, error: { kind: "config", code: "config.value.invalid", key: name } }
     : { ok: true, value: `${trimmed}/${input.stateDirectoryName}` };
+};
+
+/** The legacy-detection facts: what the host root holds and whether a project root exists. */
+export type LegacyStoreFacts = {
+  /** The delivered store artifacts present directly at the host root. */
+  readonly hostArtifacts: readonly string[];
+  readonly projectRootExists: boolean;
+};
+
+/** The names the legacy predicate excludes by contract (spec A4). */
+const LEGACY_EXCLUDED_NAMES: readonly string[] = [
+  HOST_INDEX_ARTIFACT_NAME,
+  OWNER_HOLD_MARKER_NAME,
+  PROJECTS_CONTAINER_SEGMENT,
+  PROJECT_UNBOUND_SEGMENT,
+];
+
+/**
+ * The pure legacy-detection predicate (GH-288 F-8, AC-F8-2, A4).
+ *
+ * A host is unmigrated when its host root still holds at least one delivered
+ * store artifact while the resolved project state root does not exist. The host
+ * index, the host-wide owner-hold marker, the project container and the
+ * `unbound` scope are excluded by name, so a migrated host never warns. The
+ * predicate returns the one bounded warning; it never moves, deletes, or opens
+ * a store.
+ */
+export const legacyStoreWarning = (facts: LegacyStoreFacts): string | undefined => {
+  if (facts.projectRootExists) return undefined;
+  const artifacts = facts.hostArtifacts.filter(
+    (name) =>
+      !LEGACY_EXCLUDED_NAMES.includes(name) && !name.startsWith(`${HOST_INDEX_ARTIFACT_NAME}.`),
+  );
+  if (artifacts.length === 0) return undefined;
+  return (
+    "the host root still holds delivery store artifacts while this checkout has no project " +
+    `state root, so delivery state is not repository-scoped yet; see ${STATE_MIGRATION_NOTE_PATH} ` +
+    "for the one-step move (nothing was moved or deleted)"
+  );
 };
 
 /** The host index document path under the host root (declared once). */

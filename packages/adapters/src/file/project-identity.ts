@@ -45,17 +45,28 @@ export const readProjectIdentityMarker = (
       text: readFileSync(projectIdentityMarkerPath(gitCommonDirectory), "utf8"),
     };
   } catch (error) {
-    return (error as { readonly code?: unknown }).code === "ENOENT"
-      ? { state: "absent" }
-      : { state: "unreadable" };
+    const code = (error as { readonly code?: unknown }).code;
+    // A missing path is absent; a path whose parent is not a directory is also
+    // absent (the marker cannot exist there), and creation then reports the
+    // state-location failure DEC-17 assigns to that cell.
+    return code === "ENOENT" || code === "ENOTDIR" ? { state: "absent" } : { state: "unreadable" };
   }
 };
 
 /** Write and sync one payload to a sibling temporary file; undefined on failure. */
+const removeQuietly = (path: string): void => {
+  try {
+    rmSync(path, { force: true });
+  } catch {
+    // Nothing to remove, or the parent is not a directory: either way the
+    // marker creation that follows reports the failure.
+  }
+};
+
 const writeMarkerTemporary = (path: string, content: string): string | undefined => {
   const temporary = `${path}.${process.pid.toString(36)}.tmp`;
-  rmSync(temporary, { force: true });
   try {
+    removeQuietly(temporary);
     const descriptor = openSync(temporary, "wx", 0o600);
     try {
       writeFileSync(descriptor, content, "utf8");
@@ -65,7 +76,7 @@ const writeMarkerTemporary = (path: string, content: string): string | undefined
     }
     return temporary;
   } catch {
-    rmSync(temporary, { force: true });
+    removeQuietly(temporary);
     return undefined;
   }
 };
@@ -97,7 +108,7 @@ export const ensureProjectIdentityMarkerText = (
     // A concurrent writer landed the marker first (or the filesystem refuses a
     // hard link); the marker that exists, if any, governs.
   } finally {
-    rmSync(temporary, { force: true });
+    removeQuietly(temporary);
   }
   const landed = readProjectIdentityMarker(gitCommonDirectory);
   return landed.state === "present" ? landed.text : undefined;

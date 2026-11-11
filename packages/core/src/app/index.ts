@@ -228,6 +228,8 @@ export {
   checkoutDirectoryName,
   type HostStateRootInput,
   hostIndexPath,
+  type LegacyStoreFacts,
+  legacyStoreWarning,
   type ProjectIdentityPorts,
   type ProjectScopeInput,
   type ProjectScopeOutcome,

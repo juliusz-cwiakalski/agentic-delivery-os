@@ -229,6 +229,7 @@
     "src/file/pm-notes-parser.ts",
     "src/file/project-identity.ts",
     "src/file/secret-scan.ts",
+    "src/file/state-root-inventory.ts",
     "src/file/yaml-parser.ts",
     "src/git/commit.ts",
     "src/git/index.ts",

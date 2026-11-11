@@ -460,3 +460,60 @@ describe("TC-PROJ-041 projects list writes nothing", () => {
     }
   });
 });
+
+describe("TC-PROJ-042 cells 1 and 3 — first use and a present-but-unreadable root", () => {
+  test("an absent root is first use with no warning; an unreadable root names key and location", async () => {
+    const host = createHostFixture("cells-state-location");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const first = createRepository(base, "cells-first-use");
+      const blocked = createRepository(base, "cells-blocked");
+      const a = harnessFor(host, "cells-first", first);
+      const b = harnessFor(host, "cells-blocked", blocked);
+      harnesses.push(a, b);
+      await register(a);
+      await register(b);
+
+      // Cell 1: the registered checkout has never opened a store.
+      const firstUse = await a.run(["projects", "list", "--json"]);
+      expect(firstUse.exitCode).toBe(0);
+      expect(firstUse.stderr).not.toContain("migration");
+      const row = entriesOf(firstUse).find((entry) => entry.projectKey === a.projectKey);
+      expect(row?.handoverState).toBe("shell");
+      const daemon = row?.daemonReachable as { readonly reason?: string } | undefined;
+      expect(daemon?.reason).toBe("daemon-not-mounted");
+      expect(existsSync(a.stateLocation)).toBe(false);
+      // A state-opening command then creates the store; the row is unchanged.
+      expect((await a.run(["queue", "add", REF, "--priority", "1", "--json"])).exitCode).toBe(0);
+      expect(existsSync(a.stateLocation)).toBe(true);
+      const after = await a.run(["projects", "list", "--json"]);
+      const rowAfter = entriesOf(after).find((entry) => entry.projectKey === a.projectKey);
+      expect(rowAfter?.handoverState).toBe("shell");
+
+      // Cell 3: a present but unreadable state location.
+      const location = projectStateRoot(host.hostRoot, b.projectKey);
+      removeDirectory(location);
+      mkdirSync(dirname(location), { recursive: true });
+      writeFileSync(location, "opaque\n");
+      const failed = await a.run(["projects", "list", "--json"]);
+      expect(failed.exitCode).toBe(2);
+      const error = failed.envelope?.error as
+        | { readonly code?: string; readonly summary?: string }
+        | undefined;
+      expect(error?.code).toBe("projects.state-unavailable");
+      expect(error?.summary ?? "").toContain(b.projectKey);
+      expect(error?.summary ?? "").toContain(location);
+      expect(failed.envelope?.data).toBeUndefined();
+
+      // The exit set over both cells is {0, 2} and no other identity appears.
+      expect(new Set([firstUse.exitCode, after.exitCode, failed.exitCode])).toEqual(
+        new Set([0, 2]),
+      );
+    } finally {
+      for (const harness of harnesses) harness.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+});

@@ -31,6 +31,7 @@ import {
   readOwnerHoldMarker,
   readPmNotesText,
   readProjectIdentityMarker,
+  readStateRootArtifacts,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
   replaceHostIndexFile,
@@ -81,6 +82,7 @@ import {
   type HarnessSettings,
   type HostIndexRootProbe,
   type LaneSettings,
+  legacyStoreWarning,
   maintainHostIndex,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
@@ -467,6 +469,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : { state: "resolved", projectIdentifier: marker.projectIdentifier };
     };
     const maintainsIndex = invocation?.command !== PROJECTS_COMMAND_FAMILY;
+    // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
+    // reported once per state-opening invocation, moves nothing, deletes
+    // nothing, and never changes the exit code. A migrated host emits nothing.
+    const legacyWarning =
+      maintainsIndex && scope.value.scope.kind === "project"
+        ? legacyStoreWarning({
+            hostArtifacts: readStateRootArtifacts(hostRoot),
+            projectRootExists: existsSync(scope.value.scope.stateLocation),
+          })
+        : undefined;
+    if (legacyWarning !== undefined) maintenanceWarnings.push(legacyWarning);
     if (maintainsIndex && scope.value.scope.kind === "project") {
       const current = scope.value.scope;
       hostIndexAccess.countRead();
@@ -1827,6 +1840,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }
       const entries: ProjectsListEntry[] = [];
       const warnings: string[] = [];
+      let legacyChecked = false;
       for (const entry of document.projects) {
         const stateLocation = projectStateRoot(hostRoot, entry.projectKey);
         let stat: ReturnType<typeof statSync> | undefined;
@@ -1840,6 +1854,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           directory: stat?.isDirectory() === true,
           readable: stat !== undefined,
         });
+        if (classification === "first-use" && !legacyChecked) {
+          // AC-F3-5 cell 2: an absent root beside a host-root store is a
+          // warning, never `projects.state-unavailable`, and the list stays
+          // write-free while reporting it once.
+          legacyChecked = true;
+          const legacy = legacyStoreWarning({
+            hostArtifacts: readStateRootArtifacts(hostRoot),
+            projectRootExists: false,
+          });
+          if (legacy !== undefined) warnings.push(legacy);
+        }
         if (classification === "state-unavailable") {
           return {
             ok: false,

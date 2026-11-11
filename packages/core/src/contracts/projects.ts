@@ -27,6 +27,12 @@ export const PROJECTS_CONTAINER_SEGMENT = "projects" as const;
 /** The declared host-scoped scope for an invocation outside any work tree (DEC-10). */
 export const PROJECT_UNBOUND_SEGMENT = "unbound" as const;
 
+/**
+ * The delivered migration note (GH-288 F-8, AC-F8-3). The legacy-detection
+ * warning names this path, so the warning and the document cannot drift.
+ */
+export const STATE_MIGRATION_NOTE_PATH = "doc/guides/migrating-to-per-repository-state.md" as const;
+
 /** The inclusive basename bound applied after sanitisation (F-1, DEC-3). */
 export const PROJECT_KEY_MAX_BASENAME_LENGTH = 32 as const;
 

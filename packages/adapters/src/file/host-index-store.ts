@@ -50,9 +50,9 @@ export const readHostIndexFile = (hostRoot: string): HostIndexRead => {
 /** Write one payload to a synced sibling file; undefined on failure. */
 const writeSibling = (path: string, content: string): string | undefined => {
   const temporary = `${path}.${process.pid.toString(36)}.tmp`;
-  mkdirSync(dirname(path), { recursive: true });
-  rmSync(temporary, { force: true });
   try {
+    mkdirSync(dirname(path), { recursive: true });
+    rmSync(temporary, { force: true });
     const descriptor = openSync(temporary, "wx", 0o600);
     try {
       writeFileSync(descriptor, content, "utf8");
@@ -62,7 +62,11 @@ const writeSibling = (path: string, content: string): string | undefined => {
     }
     return temporary;
   } catch {
-    rmSync(temporary, { force: true });
+    try {
+      rmSync(temporary, { force: true });
+    } catch {
+      // The parent may not be a directory; the caller reports the write failure.
+    }
     return undefined;
   }
 };

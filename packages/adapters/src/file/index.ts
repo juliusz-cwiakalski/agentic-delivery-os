@@ -49,6 +49,10 @@ export {
   replaceDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";
 export {
+  isStoreArtifactName,
+  readStateRootArtifacts,
+} from "./state-root-inventory.js";
+export {
   createHostIndexAccess,
   type HostIndexAccess,
   type HostIndexRead,
