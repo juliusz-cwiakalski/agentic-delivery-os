@@ -780,3 +780,36 @@ notes:
       primitive-generated commit subjects."
     type: "info"
     date: "2026-11-11"
+  - text: "BLOCKER at PR creation (phase 11): origin/main-tools advanced from the
+      merge base 5372dbac to 723454e4 — feat(GH-288): per-repository state scoping
+      and the projects overview — while GH-303 was in flight. GH-288 DELIVERED
+      `projects list` as the flat checkout overview, with current-truth docs
+      (doc/spec/features/feature-projects.md, feature-cli-entrypoint.md), a
+      migration guide and TDR-0022. The assumption this change was specified,
+      tested and reviewed against — that no delivered spec covers these surfaces —
+      no longer holds, and merging main-tools into the branch conflicts in six
+      files (cli-command-registry.md, m2/architecture.md,
+      m2/commands/projects.md, m2/contracts.md, m2/entrypoint-delta.md,
+      status.md) for a semantic reason, not a textual one. Resolving it requires
+      deciding how a just-shipped user-facing surface is retired, which is a
+      product decision outside the reviewed scope of this branch: the ticket's
+      rename-transition sentence anticipated the case, but this change was planned
+      as a blueprint amendment only."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "Blocker handling per the session rule: no conflict was resolved, no rebase
+      or history rewrite was attempted, nothing was force-pushed and nothing was
+      merged. PR #306 is open against main-tools at head 02fa87d3 and reports
+      CONFLICTING; the branch and its reviewed artifacts are intact. The ticket is
+      labelled human-input-needed and the comment records the decision needed with
+      three options: (1) reconcile in-change — reopen delivery to amend the
+      delivered-surface rename (doc/spec, guide, TDR-0022 and the deprecation
+      alias) before rebasing; (2) rebase and narrow — resolve the six conflicts
+      keeping the planned amendment and carry the delivered-surface rename as a
+      separate, human-approved ticket; (3) hold — keep the PR as the design record
+      until a superseding ticket exists. PM stopped rather than choosing: option 1
+      expands scope far beyond the reviewed 13-file manifest, option 2 creates
+      future work that PM may not ticket autonomously, and either changes what the
+      DoR and the two review passes actually approved."
+    type: "decision"
+    date: "2026-11-11"
