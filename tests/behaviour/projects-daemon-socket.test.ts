@@ -83,3 +83,63 @@ describe("TC-PROJ-023 the socket path derives from the project root", () => {
     }
   });
 });
+
+describe("TC-PROJ-023 the production caller supplies the project root to the composing site", () => {
+  it("the probe receives a socket path inside each project root, never a host-root path", async () => {
+    const host = createHostFixture("daemon-socket-caller");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ReturnType<typeof createProductionProjectsHarness>[] = [];
+    const socketPaths: string[] = [];
+    try {
+      const checkout = createRepository(base, "caller-a");
+      // A mounted composition whose probe records the path the composing site
+      // derived; the answer is `socket-absent` so nothing listens.
+      const harness = createProductionProjectsHarness({
+        label: "caller-a",
+        host,
+        workingDirectory: checkout,
+        originUrl: "https://github.com/owner/caller-a.git",
+        daemon: {
+          mounted: true,
+          capability: () => ({
+            probe: async (input) => {
+              socketPaths.push(input.socketPath);
+              return "socket-absent" as const;
+            },
+          }),
+        },
+      });
+      harnesses.push(harness);
+      const second = createRepository(base, "caller-b");
+      const other = createProductionProjectsHarness({
+        label: "caller-b",
+        host,
+        workingDirectory: second,
+        originUrl: "https://github.com/owner/caller-b.git",
+      });
+      harnesses.push(other);
+      for (const record of harnesses) {
+        expect((await record.run(["queue", "list", "--json"])).exitCode).toBe(0);
+        // A state root must exist for the socket question to be asked at all.
+        expect((await record.run(["queue", "add", "GH-241", "--json"])).exitCode).toBe(0);
+      }
+
+      const listed = await harness.run(["projects", "list", "--json"]);
+      expect(listed.exitCode).toBe(0);
+      expect(socketPaths.length).toBeGreaterThanOrEqual(2);
+      for (const path of socketPaths) {
+        // Each derived path lies inside a project root, and no path is derived at
+        // the host-root level (which is what reverting the argument produces).
+        expect(path.startsWith(`${host.hostRoot}/projects/`)).toBe(true);
+      }
+      const insideA = socketPaths.filter((path) => path.startsWith(`${harness.stateLocation}/`));
+      const insideB = socketPaths.filter((path) => path.startsWith(`${other.stateLocation}/`));
+      expect(insideA.length).toBe(1);
+      expect(insideB.length).toBe(1);
+    } finally {
+      for (const record of harnesses) record.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+});

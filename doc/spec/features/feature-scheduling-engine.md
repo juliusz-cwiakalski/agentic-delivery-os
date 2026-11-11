@@ -195,8 +195,10 @@ than discovering work by hand.
 
 An owner hold is a global read-only gate, never a park. The scheduling facts gain
 one optional injected fact resolved at the CLI/MCP edge from the brand-derived
-`<PREFIX>_OWNER_HOLD` environment value, the fixed production store directory
-`<home>/<stateDirectoryName>`, and its `owner-hold` marker. Environment wins when
+`<PREFIX>_OWNER_HOLD` environment value, the host root (an absolute
+`<PREFIX>_STATE_DIR` when set, otherwise `<home>/<stateDirectoryName>`), and its
+`owner-hold` marker at that host root. The hold is host-wide: no per-project
+marker is read, so one hold stops every project. Environment wins when
 active; a marker that exists but cannot be read, is not regular, or cannot be
 stat'd is active without a reason (fail closed); only a non-existent path is
 inactive. The reason is one control-free line bounded to 160 characters.

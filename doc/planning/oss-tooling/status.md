@@ -210,3 +210,16 @@ Maintenance convention: each future M2 story delivery updates its backlog entry
 (progress markers) and, at meaningful boundaries, this status snapshot and the
 milestone pack, so the planning corpus keeps stating the current M2 state
 instead of surviving as ticket memory.
+
+## M2 delivery snapshot (2026-11-11)
+
+M2-S11 (multi-repository workstations) was delivered by GH-288 and merged to
+`main-tools`. Delivery state now resolves as two layers — the host root plus a
+per-repository project root derived from the checkout identity marker — so two
+checkouts of different repositories never share phase state, queue entries, or
+lane leases for one ref. `projects list [--json]` is the mounted, read-only host
+overview, the derived host index is maintained only on store-opening
+invocations, the one-step migration is documented in
+[the migration guide](../../guides/migrating-to-per-repository-state.md), and the
+owner hold stays host-wide. The remaining M2 stories are unaffected by this
+delivery and stay planned.

@@ -380,9 +380,17 @@ honoured and leaves the default in effect. An explicitly set absolute value wins
 outright and is never merged with the default; a non-absolute value is
 `config.value.invalid`. The default when the variable is unset is
 `<home>/<brand.stateDirectoryName>`. No `--state-dir` flag and no
-state-directory configuration key exist. The supervisor unit writes its
-`Environment=` binding under the same name, so the installed unit and the
-resolver agree on the scope. See [Resident Dispatch
-Daemon](feature-resident-daemon.md). The owner-hold marker is resolved from
-`<home>/<brand.stateDirectoryName>` and is not relocated by this scope; its
-contract is in [Scheduling Engine](feature-scheduling-engine.md).
+state-directory configuration key exist.
+
+The rule is implemented once, in the app-tier state-scope policy
+(`packages/core/src/app/state-scope.ts`), and every surface consumes it. The
+resolved directory is the **host root**: the delivery store and every other
+project-owned artifact now live under `<host root>/projects/<project key>`, and
+the owner-hold marker and the host index stay at the host root. The store honours
+the override from this change onward; the earlier statement that the state
+directory was not relocated by this scope is retired. The supervisor unit writes
+its `Environment=` binding under the same name, so the installed unit and the
+policy agree on the scope. See [Resident Dispatch
+Daemon](feature-resident-daemon.md) and [Projects Host
+Overview](feature-projects.md). The owner-hold marker is resolved at the host
+root; its contract is in [Scheduling Engine](feature-scheduling-engine.md).

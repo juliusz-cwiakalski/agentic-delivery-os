@@ -18,6 +18,29 @@ links:
 
 The state layer is the durable local substrate later verification reads through. A store is opened from an injected identity — level, workspace identifier, fence namespace, schema version, and a concrete state directory — and exposes one driver-neutral port: append, read with a key-set assertion, read the verified record list, replace a derived document, acquire/release/recover a fence, check integrity, repair a terminal torn tail, run the explicit guided salvage operation, and read or get-or-create a store-managed artifact.
 
+### State root scope
+
+A store is opened per repository. Two layers resolve its directory: the **host
+root** — an absolute `<PREFIX>_STATE_DIR` environment override when set,
+otherwise the injected home plus `brand.stateDirectoryName` — and the **project
+state root** `<host root>/projects/<project key>`, derived from the checkout's
+identity marker (see [Projects Host Overview](feature-projects.md)). Every
+delivery artifact lives under the project root; the host root keeps only the
+host-wide documents: the derived host index `host-index.json` (the only host-wide
+*index* document) and the host-wide owner-hold marker, plus the `projects/`
+container and the declared `unbound/` scope.
+
+The workspace identifier stays `default` inside every project root and the
+artifact names, modes, record kinds, fold rules, validation predicates, and
+schema version are unchanged: isolation comes from the root, not from re-keying
+the workspace. The delivered override-aware rule is the store's host-root rule
+from this change onward, so the store honours the override for the first time.
+Migration of an existing single store is one directory move that rewrites
+nothing (see [Migrating to Per-Repository Delivery State](../../guides/migrating-to-per-repository-state.md)).
+The durable record of these choices is
+[TDR-0022](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md);
+this page states the delivered behaviour and does not restate the decision.
+
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
 The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the commit primitive writes `commit.telemetry` events and reads them as convergence corroboration (the atomic transition record carries the landed SHA as primary evidence); the command audit ledger writes a reservation and an invocation record per audited command invocation under one shared fence and reads a keyed chain and bounded history; the retro registry writes `retro.level`, `retro.run`, and `retro.trigger` records under its own validated boundary while the retro evidence sidecar lives outside the store as a separate artifact family; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; closeout writes `harness.telemetry` session-group and capture-outcome records and reads them to skip already-captured session groups; the resume economics path writes `economics.restart` events and one terminal `economics.budget-exhaustion` record per delivery and folds them into the per-delivery economics view; the merge transaction writes and reads the `merge.gate-verification`, `merge.waiver`, and `merge.transaction` records, and the board reads recorded waivers as gate evidence; the blockers channel writes `blocker.question` and `blocker.answer` records and reads them to derive open/answered closure; the coordinator supervisor writes `coordinator.iteration`, `coordinator.restart`, `coordinator.stuck`, `coordinator.exhaustion`, `coordinator.wake`, and `coordinator.fence` records and reads them to rebuild its decisions, budget epoch and ordinals, stuck verdict, wake dedupe, and instance lease; and the status digest, the queue-ready ready-set, the brief, and the doctor diagnostic read the verified provider park fold and state-store verdicts while the status digest and brief also read the verified blocker fold, and the spend read side reads the `harness.telemetry` session-group and capture-outcome families plus the ref's transition history through the same verified port, all without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.

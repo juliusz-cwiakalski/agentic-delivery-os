@@ -241,6 +241,18 @@ All suites inject facts through the shared board harness and matrix; nothing rea
 
 ## Operational & Support
 
+### Owner hold and host scope
+
+The owner hold is a stop-all control and stays **host-wide**. The marker is read
+at the host root — an absolute `<PREFIX>_STATE_DIR` when set, otherwise
+`<home>/<brand.stateDirectoryName>` — and the brand-derived environment source
+keeps its precedence over the marker. No per-project marker exists and no code
+path reads `<project root>/owner-hold`, so one hold stops every project on the
+host and migration leaves it in place. The gating behaviour and the
+`queue.precondition.unmet`/`owner-hold` refusal are in [Scheduling
+Engine](feature-scheduling-engine.md); the state root it is read at is in
+[Projects Host Overview](feature-projects.md).
+
 ### Configuration
 
 The SLA adds no configuration key. Thresholds, comparator, gate kinds and classes, defaults, `slaState`, unknown-age reasons, audiences, caps, collector ids, and the family prefix/suffix are contract data. The `board` command accepts no command-specific flag beyond the global `--json` switch.
