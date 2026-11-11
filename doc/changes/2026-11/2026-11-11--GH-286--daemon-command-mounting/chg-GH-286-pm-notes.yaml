@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-11T12:46:44.491Z }
   review_fix: { started: null, completed: 2026-11-11T16:46:50.772Z }
   quality_gates: { started: null, completed: 2026-11-11T16:56:23.722Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-11T16:57:06.116Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -765,4 +765,21 @@ notes:
       git-fixture suites' localized branch-switch output and one 5 s TC-WIRE-002
       threshold that is green in this run."
     type: "info"
+    date: "2026-11-11"
+  - text: "dod_check verification: all nine plan phases are delivered and the plan
+      validates (verdict=valid, readyForDevelopment=true, 0 errors); every
+      lifecycle phase through quality_gates is recorded complete; the working
+      tree is clean; every plan phase carries a pm-notes evidence entry naming
+      its commit and gate; the specification's 52 ACs are all proven except
+      AC-NFR-2's relative p95 clause, which the test plan records as a declared
+      deferral in section 10.3. PM acceptance (recorded exception): the
+      delivered requirement behind NFR-3 — at most two additional daemon-fact
+      reads, no socket connect, no process probe, no sleep on the queue/lanes
+      read path — is proven by the source scan and the counting test, and the
+      measured resolver p95 (2.8-3.6 ms against a 2.2-3.2 ms baseline on the
+      reference store) stays inside the absolute status budget; the relative
+      clause was a proxy measurement the hermetic suite cannot express without a
+      production seam the plan deliberately excluded. It is carried as a known,
+      bounded limitation in the PR description rather than silently waived."
+    type: "decision"
     date: "2026-11-11"
