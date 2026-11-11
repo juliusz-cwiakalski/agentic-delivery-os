@@ -3,7 +3,7 @@ title: "feat(dispatch): attempt history inspection and divergence resolution (M2
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-11T17:20:00Z", completed: 2026-11-11T16:18:24.374Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-11T16:31:34.378Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -69,4 +69,41 @@ notes:
       rule instead of silently adding rows. A contract decision record is the
       expected home for that ruling."
     type: risk
+    date: "2026-11-11"
+  - text: "Specification v1.0 written (35 ACs, F-1..F-9). Contract rulings: no new
+      error-table rows (input.value.rejected for malformed request and
+      unresolvable context/identity; the failing state.* identity for an
+      unreadable store); empty history is a successful exit-0 read;
+      `divergenceRef` is singular with explicit null; `mode: \"local-evidence\"`
+      is unconditional on every successful resolve; the resolve result gains
+      repository plus the four-field divergence block; read isolation is
+      enforced twice (project state root plus a filter on the record's own
+      repository, excluded records disclosed as a count only); `--ref` omitted
+      resolves active_change.workItemRef from .ai/local/pm-context.yaml;
+      `--limit` default 20, range 1..100, refused never clamped; ordering is
+      startedAt desc, recordedAt desc, attemptId asc. Written to the spec's §15
+      DEC-1..DEC-16."
+    type: decision
+    date: "2026-11-11"
+  - text: "TDR-0023 recorded for the seven precedent-setting rulings
+      (doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-res\
+      olve.md) with the index row in doc/decisions/00-index.md. The TDR stays
+      Proposed pending PR review. Its residual risks must reach the plan: (i)
+      making divergence counts exact and repository-scoped can move a reported
+      number in either direction, not only up (spec RSK-6 states only the upward
+      direction); (ii) two fold sites must converge on one shared helper -
+      foldEvidenceWindow leaves unresolvedIds uncapped while
+      summarizeDispatchDivergences caps the list and derives resolved from it,
+      so a change that only adds idsTruncated at one site leaves the other
+      wrong; (iii) the cross-repository resolve posture is disclosed, not
+      prevented (OQ-1, deferred with its guard precondition named)."
+    type: risk
+    date: "2026-11-11"
+  - text: "Commit-scope note: TDR-0023 and the decision index sit outside the change
+      folder, and a phase completion without a plan stages only the change
+      folder, so those two files stay untracked until the plan declares them in
+      a delivery-phase scope. The plan must declare
+      doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-reso\
+      lve.md and doc/decisions/00-index.md explicitly."
+    type: info
     date: "2026-11-11"
