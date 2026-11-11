@@ -1,14 +1,14 @@
 ---
 id: chg-GH-290-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-11
 last_updated: 2026-11-11
 owners: [engineering]
 service: delivery-os daemon subscribe surface (event taxonomy v1, reference command, mount)
 labels: [daemon, control-protocol, events, taxonomy, contracts, cli, help, m2]
 version_impact: minor
-summary: "Pin event taxonomy v1 as a comparison a test runs: the six-topic declaration (and the absence of `status`) is asserted by exact set equality, each event topic's kind set and per-kind payload-field list is asserted per topic, one authored declaration is proven to be the only source for both the `events list` / `events describe <topic>` surface and the daemon-emitted frames, the eight-field envelope and per-`(topic, lane)` monotonic `sequence` are observed end to end through the delivered control session/server over a real store (with a bounded real-unix-socket variant), overflow-to-repoll is proven identical for all six topics with exactly one `degraded` frame per overflowing subscription carrying `overflow: \"repoll\"` and `taxonomyVersion: \"v1\"`, the delivered `queue`/`lanes` snapshot frames are proven byte-identical, the mount is proven as one unit (prompt-required 18→19, root help 19 families, family and verb help entries, M2 reference page, coverage-inventory rows, page-root row) together with the guards that fail when any piece is missing, and additivity is proven by unchanged vocabulary, unchanged state schema, unchanged dependency set, and exactly three error rows in one new `events` kind. The two declared gaps (`queue.graph.remove` `emitted: false`, `phase.state.began` derived at the first `complete`) and the S17 boundary are asserted, not assumed. 38 acceptance criteria (33 capability plus 5 non-functional) are bound to 45 test cases; every criterion is covered, five of them partly through a named substitute assertion recorded in §3.5."
+summary: "Pin event taxonomy v1 as a comparison a test runs: the six-topic declaration (and the absence of `status`) is asserted by exact set equality, each event topic's kind set and per-kind payload-field list is asserted per topic, one authored declaration is proven to be the only source for both the `events list` / `events describe <topic>` surface and the daemon-emitted frames, the eight-field envelope and per-`(topic, lane)` monotonic `sequence` are observed end to end through the delivered control session/server over a real store (with a bounded real-unix-socket variant), overflow-to-repoll is proven identical for all six topics with exactly one `degraded` frame per overflowing subscription carrying `overflow: \"repoll\"` and `taxonomyVersion: \"v1\"`, the delivered `queue`/`lanes` snapshot frames are proven byte-identical, the mount is proven as one unit (prompt-required 18→19, root help 19 families, family and verb help entries, M2 reference page, coverage-inventory rows, page-root row) together with the guards that fail when any piece is missing, and additivity is proven by unchanged vocabulary, unchanged state schema, unchanged dependency set, and exactly three error rows in one new `events` kind. The two declared gaps (`queue.graph.remove` `emitted: false`, `phase.state.began` derived at the first `complete`) and the S17 boundary are asserted, not assumed. 38 acceptance criteria (33 capability plus 5 non-functional) are bound to 45 test cases; every criterion is covered, five of them partly through a named substitute assertion recorded in §3.5. v1.1 aligns the plan with spec v1.1: `lane` is always a non-empty string, `ref` is nullable only on `blockers.state`, snapshot topics declare `kinds: []`/`payloadFields: []`, NFR-2 is one shared whole-store read per tick, and v1 has no truncation path."
 links:
   change_spec: ./chg-GH-290-spec.md
   implementation_plan: ./chg-GH-290-plan.yaml
@@ -19,13 +19,13 @@ links:
 
 ## 1. Scope and Objectives
 
-This change publishes a contract, so the risk is not that a feature is missing — it is that the contract looks published while one of six independent facts is false, and every consumer inherits the falsehood. Each fact is therefore proven as a comparison a test runs, never as a prose claim. **First, the topic set and the kind sets are exact.** The declaration's six topics equal the served set and `status` is absent (`TC-EVT-001`); each event topic's kind set equals the contract section's enumeration — 4 / 3 / 3 / 3 — with `queue` and `lanes` carrying the single `snapshot` kind (`TC-EVT-002`). A count copied from the planning page's example (6 and 4) would pass a "topics exist" test and fail this one, which is exactly why the assertion is set equality per topic and a token scan for the four S17 kind names. **Second, there is one authored source.** The surface is generated from the declaration, not hand-written beside it: an injected declaration copy changes the surface record and the emitted frame together (`TC-EVT-006`), the command module carries no literal kind arrays (source scan), and a single drift in any one of five items — version, kind, payload field, ordering, overflow — fails a named per-topic assertion that names the drifted item (`TC-EVT-003`). **Third, the envelope is real on the wire and ordered per lane.** A subscriber to `queue.graph` observes an `entry` and then a `dependency-edge` event it can act on, each carrying exactly `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion` and no `cursor`, end to end through the delivered control server and session over a real store (`TC-EVT-020`, with a bounded real-unix-socket variant `TC-EVT-021`); the per-`(topic, lane)` counters are monotonic and shared by two subscribers (`TC-EVT-030`), independent across lanes and topics (`TC-EVT-031`), and restart-scoped (`TC-EVT-032`).
+This change publishes a contract, so the risk is not that a feature is missing — it is that the contract looks published while one of six independent facts is false, and every consumer inherits the falsehood. Each fact is therefore proven as a comparison a test runs, never as a prose claim. **First, the topic set and the kind sets are exact.** The declaration's six topics equal the served set and `status` is absent (`TC-EVT-001`); each event topic's kind set equals the contract section's enumeration — 4 / 3 / 3 / 3 — while `queue` and `lanes` declare no kind at all (`kinds: []`) (`TC-EVT-002`). A count copied from the planning page's example (6 and 4) would pass a "topics exist" test and fail this one, which is exactly why the assertion is set equality per topic and a token scan for the four S17 kind names. **Second, there is one authored source.** The surface is generated from the declaration, not hand-written beside it: an injected declaration copy changes the surface record and the emitted frame together (`TC-EVT-006`), the command module carries no literal kind arrays (source scan), and a single drift in any one of five items — version, kind, payload field, ordering, overflow — fails a named per-topic assertion that names the drifted item (`TC-EVT-003`). **Third, the envelope is real on the wire and ordered per lane.** A subscriber to `queue.graph` observes an `entry` and then a `dependency-edge` event it can act on, each carrying exactly `topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`, `taxonomyVersion` and no `cursor`, with `lane` always a non-empty string and `ref` nullable only on `blockers.state`, end to end through the delivered control server and session over a real store (`TC-EVT-020`, with a bounded real-unix-socket variant `TC-EVT-021`); the per-`(topic, lane)` counters are monotonic and shared by two subscribers (`TC-EVT-030`), independent across lanes and topics (`TC-EVT-031`), and restart-scoped (`TC-EVT-032`).
 
 **Fourth, overflow stays exactly as delivered and gains only a readable remedy, on all six topics.** A subscription that stops reading receives exactly one `degraded` frame carrying `degraded: "subscriber-overflow"`, `overflow: "repoll"`, and `taxonomyVersion: "v1"`, is the only subscription dropped, and every other subscription on that topic keeps receiving (`TC-EVT-040`); the value on the frame and the value on the reference record are rendered from one constant, proven by a mutant that moves both or neither (`TC-EVT-041`); and the single capacity bound still refuses with `daemon.subscriber-degraded` (`TC-EVT-042`). **Fifth, the delivered snapshot topics do not move.** `queue` and `lanes` keep `{topic, cursor, snapshot}`, the `cursor: 0` baseline, and change-only cursor advancement, with the degraded frame's two additive fields as the only delta (`TC-EVT-050`, `TC-EVT-051`), and the delivered control/session/server/watch suites pass unmodified as controls. **Sixth, the mount is one unit or the guards fail.** `events` is prompt-required (18 → 19), composed unconditionally, reachable from root `--help` (19 families) with family and verb help entries, backed by the M2 reference page, a coverage-inventory `commands` and `referencePages` row, and the page-root row (`TC-EVT-060`..`TC-EVT-063`); and each of those pieces is removed in a temp copy by a mutant that must trip a named guard (`TC-EVT-064`), so "partially mounted" cannot pass.
 
-The plan is deliberately adversarial about the failure modes the ticket names. **A second copy of the contract**: a hand-written surface would still pass a "the counts look right" test, so `TC-EVT-006` mutates the declaration once and asserts both consumers move, and `TC-EVT-003` proves five drift classes each fail a named assertion. **A declared kind with no emitter**: `remove` is asserted to be declared, `emitted: false`, and never produced by a full-delivery fixture (`TC-EVT-027`), while all fourteen emitted kinds are asserted to appear at least once — so the declaration cannot be a list of wishful entries. **A derived begin presented as a record**: `began` is asserted to be produced from the first `complete`, once per phase, immediately before that phase's first `completed`, with ascending sequence on the same lane (`TC-EVT-025`). **A client that treats `sequence` as durable**: a second daemon incarnation over the same store restarts the counter and the declared rule routes the client to a repoll (`TC-EVT-032`), and the surface is asserted to describe the restart discontinuity rather than imply a durable revision. **A version prose asserts**: both the surface record and every emitted frame are compared against the same declaration (`TC-EVT-011`, `TC-EVT-022`), so a version that only one of them reports fails.
+The plan is deliberately adversarial about the failure modes the ticket names. **A second copy of the contract**: a hand-written surface would still pass a "the counts look right" test, so `TC-EVT-006` mutates the declaration once and asserts both consumers move, and `TC-EVT-003` proves five drift classes each fail a named assertion. **A declared kind with no emitter**: `remove` is asserted to be declared, `emitted: false`, and never produced by a full-delivery fixture (`TC-EVT-027`), while all twelve emitted kinds are asserted to appear at least once — so the declaration cannot be a list of wishful entries. **A derived begin presented as a record**: `began` is asserted to be produced from the first `complete`, once per phase, immediately before that phase's first `completed`, with ascending sequence on the same lane (`TC-EVT-025`). **A client that treats `sequence` as durable**: a second daemon incarnation over the same store restarts the counter and the declared rule routes the client to a repoll (`TC-EVT-032`), and the surface is asserted to describe the restart discontinuity rather than imply a durable revision. **A version prose asserts**: both the surface record and every emitted frame are compared against the same declaration (`TC-EVT-011`, `TC-EVT-022`), so a version that only one of them reports fails.
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and no plan phase is asserted (the implementation plan is a later artifact). Where delivery owns a name — a module path, a validator function, an injection seam, a private projection helper — the scenario asserts the declared property through the public surface, the control frames, or an injected port, and names the seam; a case that cannot resolve its seam must fail naming the missing contract rather than skip. All 38 acceptance criteria are covered; there are no TODO rows and no orphan cases. Five criteria are covered partly through a named substitute assertion (§3.5) because one half of their wording is a client-side reaction, an out-of-tree peer, or an in-memory growth property that no server test can observe; that is recorded, not smoothed over.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-290-plan.yaml`, not asserted here. Where delivery owns a name — a module path, a validator function, an injection seam, a private projection helper — the scenario asserts the declared property through the public surface, the control frames, or an injected port, and names the seam; a case that cannot resolve its seam must fail naming the missing contract rather than skip. All 38 acceptance criteria are covered; there are no TODO rows and no orphan cases. Five criteria are covered partly through a named substitute assertion (§3.5) because one half of their wording is a client-side reaction, an out-of-tree peer, or an in-memory growth property that no server test can observe; that is recorded, not smoothed over.
 
 ### 1.1 In Scope
 
@@ -37,7 +37,7 @@ This document is a verification map, not an execution claim: no command was run 
 - Byte-level preservation of the delivered `queue`/`lanes` snapshot frames and their surface records (F-6; AC-F6-1, AC-F6-2; DM-3; EVT-3).
 - The mount as one unit and the guards in both directions: prompt-required set, production composition, root and verb help, M2 reference page, coverage inventory, page-root mapping, file-set inventory, v1 contract inventory, and executable-export allowances (F-7; AC-F7-1..AC-F7-4; DEC-F; §8.5).
 - Additivity and the error table: unchanged wire types, frame kinds, degraded reasons, stop modes, protocol version, buffer bound, state schema, record kinds, and dependency set; exactly three error rows in one new `events` kind; the one intentional delivered refusal-identity change (F-8; AC-F8-1..AC-F8-4; DM-6, DM-8; EVT-5; DEC-L).
-- The measured NFRs: reference-surface purity and latency, publish-tick read/socket/probe/sleep cost and added latency, burst cap with watermark pending, frame bound and truncation marker, and privacy of every projected value (AC-NFR-1..AC-NFR-5; NFR-1, NFR-2, NFR-3, NFR-5, NFR-10).
+- The measured NFRs: reference-surface purity and latency, publish-tick read/socket/probe/sleep cost and added latency, burst cap with watermark pending, frame bound with no truncation path, and privacy of every projected value (AC-NFR-1..AC-NFR-5; NFR-1, NFR-2, NFR-3, NFR-5, NFR-10).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -61,17 +61,17 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-290-spec.md`](./chg-GH-290-spec.md) v1.0 | Binding source: F-1..F-8, **38 ACs** (AC-F1-1..AC-F1-5, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-7, AC-F4-1..AC-F4-3, AC-F5-1..AC-F5-3, AC-F6-1..AC-F6-2, AC-F7-1..AC-F7-4, AC-F8-1..AC-F8-4, AC-NFR-1..AC-NFR-5), DEC-A..DEC-M, DM-1..DM-8, EVT-1..EVT-5, NFR-1..NFR-10, RSK-1..RSK-9, OQ-1/OQ-2, §5.1 topic/kind/payload tables, §6 flows 1–7, Appendix C (closed vocabularies), Appendix D (exit matrix), Appendix E (kind→record source map), Appendix F (frame matrix). |
-| [`TDR-0024-public-event-taxonomy-v1-subscribe-surface.md`](../../../decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record consumed unchanged: DC-1 (contract section is the kind authority, S17 shapes out of scope), DC-2 (seven-field envelope inside the open `data` body, per-`(topic, lane)` sequence, cursor excluded), DC-3 (delivered overflow preserved, `repoll` declared per topic), DC-4 (versioned machine-readable reference surface, pinned per topic, mounted as one unit), DC-5 (what v1 pins, may grow, and what forces v2). |
+| [`chg-GH-290-spec.md`](./chg-GH-290-spec.md) v1.1 | Binding source: F-1..F-8, **38 ACs** (AC-F1-1..AC-F1-5, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-7, AC-F4-1..AC-F4-3, AC-F5-1..AC-F5-3, AC-F6-1..AC-F6-2, AC-F7-1..AC-F7-4, AC-F8-1..AC-F8-4, AC-NFR-1..AC-NFR-5), DEC-A..DEC-O, DM-1..DM-9, EVT-1..EVT-5, NFR-1..NFR-10, RSK-1..RSK-10, OQ-1/OQ-2, §5.1 topic/kind/payload tables, §6 flows 1–7, Appendix C (closed vocabularies), Appendix D (exit matrix), Appendix E (kind→record source map), Appendix F (frame matrix). |
+| [`TDR-0024-public-event-taxonomy-v1-subscribe-surface.md`](../../../decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record whose DC-1 (contract section is the kind authority, S17 shapes out of scope), DC-3 (delivered overflow preserved, `repoll` declared per topic), DC-4 (versioned machine-readable reference surface, pinned per topic, mounted as one unit), and DC-5 (what v1 pins, may grow, and what forces v2) are consumed as written. Two DC-2 statements are amended by the record's owner through `@decision-advisor` at the GH-290 review: `occurredAt` is the source record's own timestamp (not an injected clock) and `sequence` is a process-scoped counter allocated at emission (not one allocated from the durable state revision); its Problem-Frame exclusion of new error identities is reconciled with DC-4 in the same amendment. The plan must not describe the record as committed unchanged. |
 | [`chg-GH-290-pm-notes.yaml`](./chg-GH-290-pm-notes.yaml) | Context only: clarify-scope findings. The specification is the source of truth. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,behaviour,conformance,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate; absences and invariants are proven by a failing check that names the offending field. |
 | [`.ai/rules/typescript.md`](../../../../.ai/rules/typescript.md) | Strict typing; injected clock/randomness/environment; data-only contracts (no clock, I/O, or call expression in the declaration); pure domain; adapters own I/O; injected fakes over `mock.module`. |
-| **Planning seeds (contract authority and scenarios)** | `doc/planning/oss-tooling/milestones/m2/contracts.md` §Event taxonomy v1 (topics, kind enumeration, payload shapes, ordering, overflow, versioning) and §S17 mapping — the sole kind-set authority; `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` SC-M2-S13-01 (`queue.graph` monotonic `sequence` + pinned `data.taxonomyVersion`) and SC-M2-S13-02 (`data.overflow == "repoll"` per new topic); `doc/planning/oss-tooling/milestones/m2/commands/events.md` (the page whose example counts and stop/park/resume prose are reconciled by phase-7 doc sync and are non-governing). |
+| **Planning seeds (contract authority and scenarios)** | `doc/planning/oss-tooling/milestones/m2/contracts.md` §Event taxonomy v1 (topics, kind enumeration, payload shapes, ordering, overflow, versioning) and §S17 mapping — the sole kind-set authority; `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` SC-M2-S13-01 (`queue.graph` monotonic `sequence` + pinned `data.taxonomyVersion`) and SC-M2-S13-02 (`data.overflow == "repoll"` per new topic); `doc/planning/oss-tooling/milestones/m2/commands/events.md` (the page whose example counts and stop/park/resume prose are reconciled by the Phase-5 mount and are non-governing). |
 | **Delivered contracts consumed under test** | `packages/core/src/contracts/control.ts` (`CONTROL_TOPICS`, `CONTROL_WIRE_TYPES`, `CONTROL_FRAME_KINDS`, `CONTROL_DEGRADED_REASONS`, `CONTROL_STOP_MODES`, `ControlEventData`), `packages/core/src/contracts/error-table.ts`, `packages/core/src/contracts/daemon.ts` (`DAEMON_MAX_FRAME_BYTES`, `daemon.subscription-buffer` default), `packages/core/src/domain/control-codec.ts` (`decodeControlLine`, `encodeControlFrame`), `packages/core/src/domain/control-session.ts`, `packages/core/src/app/control-server.ts`, `packages/core/src/app/daemon-runtime.ts`, `packages/core/src/domain/watch-stream.ts`, `packages/core/src/app/watch.ts`, `packages/cli/src/daemon-compose.ts` (subscribe handler, watch projection, publish tick) |
 | **Delivered record shapes and read folds consumed unchanged** | `packages/core/src/contracts/queue.ts` (`queue.entry`, `queue.dependency`, `queue.lease`, `queue.park`), `packages/core/src/contracts/dispatch.ts` (`dispatch.attempt`, `HARNESS_OUTCOMES` incl. `refused`), `packages/core/src/contracts/registry.ts` (`phase.transition`, `foldPhaseState`), `packages/core/src/contracts/blockers.ts` (`blocker.question`, `blocker.answer`), `packages/core/src/contracts/daemon.ts` (`daemon.lane`), with the app-level appenders and read folds used as the *production writers* in fixtures. |
-| **Mount surfaces and guards under test** | `packages/cli/src/help/prompt-required-commands.ts` (`PROMPT_REQUIRED_COMMANDS`, 18 today), `packages/cli/src/help.ts` (`ROOT_HELP`, `COMMAND_HELP`, `allHelpEntries`, `M2_REFERENCE_ROOT`), `packages/cli/src/entrypoint.ts` (`runEntrypoint`, `selectPromptRequiredProgram`), `packages/cli/src/edge.ts`, `scripts/checks/help-guide-coverage.ts` (`PAGE_ROOT`, `M2_PAGE_ROOT`, page resolution), `tests/fixtures/help-guide/coverage.json`, `tests/checks/{help-guide-coverage,reference-page-parity,doc-conformance,error-table-sync,exports-parity,exit-code-literals,prompt-conformance-mutants}.test.ts`, `scripts/checks/{prompt-conformance,error-table-sync,exports-parity,ambient-globals,workspace-entrypoints}.ts`, `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` |
-| **Reference page reconciled by this change** | `doc/planning/oss-tooling/milestones/m2/commands/events.md` — must carry `--help` and `--version`, must describe 4/3/3/3 kinds, must declare `queue`/`lanes` as snapshot topics, and must not carry the stop/parked/resumed/park-edge prose as v1 kinds. |
-| **Delivered suites that must keep passing without semantic change** | `tests/behaviour/{control-codec,control-conformance,control-session,control-connection,control-transport,watch-stream,daemon-lifecycle,daemon-degradation*,daemon-heartbeat,daemon-lane-supervision,daemon-crash-restart,daemon-effects,daemon-watch-state-changes,queue-cli,queue-watch,lanes,lanes-watch,entrypoint-help,entrypoint-help-coverage,entrypoint-composition,error-classification*}.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract,error-table,envelope-contract}.test.ts`, `tests/golden/{queue-list,lanes-list,daemon-*}.test.ts`, `tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,exit-code-literals}.test.ts` |
+| **Mount surfaces and guards under test** | `packages/cli/src/help/prompt-required-commands.ts` (`PROMPT_REQUIRED_COMMANDS`, 18 before the mount and 19 after), `packages/cli/src/help.ts` (`ROOT_HELP`, `COMMAND_HELP`, `allHelpEntries`, `M2_REFERENCE_ROOT`), `packages/cli/src/entrypoint.ts` (`runEntrypoint`, `selectPromptRequiredProgram`), `packages/cli/src/edge.ts`, `scripts/checks/help-guide-coverage.ts` (`PAGE_ROOT`, `M2_PAGE_ROOT`, page resolution), `tests/fixtures/help-guide/coverage.json`, `tests/checks/{help-guide-coverage,reference-page-parity,doc-conformance,error-table-sync,exports-parity,exit-code-literals,prompt-conformance-mutants}.test.ts`, `scripts/checks/{prompt-conformance,error-table-sync,exports-parity,ambient-globals,workspace-entrypoints}.ts`, `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` |
+| **Reference page reconciled by this change** | `doc/planning/oss-tooling/milestones/m2/commands/events.md` (Phase 5, together with the mount) — must carry `--help` and `--version`, must describe 4/3/3/3 kinds and declare `queue`/`lanes` as snapshot topics with `kinds: []`, and must not carry the stop/parked/resumed/park-edge prose as v1 kinds. |
+| **Delivered suites that must keep passing** | `tests/behaviour/{control-codec,control-conformance,control-session,control-connection,control-transport,watch-stream,daemon-lifecycle,daemon-degradation*,daemon-heartbeat,daemon-lane-supervision,daemon-crash-restart,daemon-effects,daemon-watch-state-changes,queue-cli,queue-watch,lanes,lanes-watch,error-classification*}.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract,error-table,envelope-contract}.test.ts`, `tests/golden/{queue-list,lanes-list,daemon-*}.test.ts`, `tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,exit-code-literals}.test.ts`. The four mount-touched delivered suites (`entrypoint-help`, `entrypoint-help-coverage`, `entrypoint-composition`, `daemon-production-composition`) and their exact roles are enumerated once in §7. |
 | **Precedent to mirror** | `tests/behaviour/daemon-watch-state-changes.test.ts` (real `createDaemonCommandRuntime` + manual wake + injected clock + temp store over `tests/fixtures/state/harness`), `tests/behaviour/control-connection.test.ts` (real `createControlServer` over `createMemoryTransportPair`), `tests/behaviour/control-transport.test.ts` (real `createUnixTransport` + `createControlServer` under a temp state directory), `tests/structure/coordinator-production-composition.test.ts` (temp root, injected facts, prompt-required membership) |
 | **Ticket** | GitHub issue `juliusz-cwiakalski/agentic-delivery-os#290` |
 | **TMPDIR caveat** | `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` — `tests/checks/ci-baseline-parity.test.ts` runs `git clone --local`, which fails on a cross-device hardlink error when `TMPDIR` is tmpfs; the canonical local gate is `TMPDIR="$PWD/tmp/tmpdir" pnpm check`. |
@@ -85,22 +85,22 @@ All 38 acceptance criteria map to at least one named case, and no case is an orp
 | AC ID | Criterion (condensed) | TC ID(s) | Status |
 |---|---|---|---|
 | AC-F1-1 | The declared topic set is exactly the six topics, `status` is absent, `queue.graph` is the only topic with parent `queue`, and every topic declares shape, frame, lane, ordering, overflow, and kind records | TC-EVT-001 | Covered |
-| AC-F1-2 | Kind sets are exact per topic (4/3/3/3; snapshot topics single `snapshot`), with no S17 kind and none taken from the planning example counts | TC-EVT-002, TC-EVT-016, TC-EVT-027 | Covered |
+| AC-F1-2 | Kind sets are exact per topic (4/3/3/3; snapshot topics declare no kind), with no S17 kind and none taken from the planning example counts | TC-EVT-002, TC-EVT-016, TC-EVT-027 | Covered |
 | AC-F1-3 | A drift in version, a kind, a payload field, the ordering value, or the overflow value fails at least one named per-topic test that names the drifted item; with no drift every per-topic test passes | TC-EVT-003, TC-EVT-006 | Covered |
-| AC-F1-4 | Integrity violations (duplicate topic, empty kinds, duplicated kind, kind without payload fields, unknown shape/ordering/overflow, missing frame field) each fail the check, and a failing declaration yields `events.taxonomy-unavailable` at exit `2` and renders no page | TC-EVT-004, TC-EVT-014 | Covered |
+| AC-F1-4 | Integrity violations (duplicate topic, an empty kind list on an event topic, a kind declared on a snapshot topic, a duplicated kind, a kind without payload fields, an unknown shape/ordering/overflow value, a missing frame field) each fail the check, and a failing declaration yields `events.taxonomy-unavailable` at exit `2` and renders no page | TC-EVT-004, TC-EVT-014 | Covered |
 | AC-F1-5 | An added payload field inside v1 decodes successfully, unknown payload fields are tolerated, and the declared `payloadFields` list is unchanged unless the taxonomy version changed | TC-EVT-005, TC-EVT-003 | Covered |
 | AC-F2-1 | `events list --json` exits `0` with `taxonomyVersion: "v1"`, the eight-field `envelope[]`, and six topic records exactly equal to the declaration | TC-EVT-011, TC-EVT-010, TC-EVT-013, TC-EVT-006 | Covered |
 | AC-F2-2 | `events describe <topic>` text names shape, kinds with `emitted`, per-kind payload fields, lane rule, ordering, overflow, and frame within 40 lines / 8 192 bytes; `--json` returns exactly one topic record | TC-EVT-012, TC-EVT-013, TC-EVT-010 | Covered |
 | AC-F2-3 | An unknown topic (including `status`) yields `events.topic-unknown` at exit `1` naming the topic and the six declared names; an absent/unknown verb yields `events.verb-unknown` at exit `1` naming `list` and `describe` | TC-EVT-014, TC-EVT-075 | Covered |
 | AC-F2-4 | Any reference invocation performs zero state/config/git/network/filesystem reads, zero writes, and zero composer invocations, and the envelope is `{ ok, command, data, error?, warnings? }` with `command` = `events list`/`events describe` | TC-EVT-011, TC-EVT-015, TC-EVT-080 | Covered |
 | AC-F2-5 | Every `queue.graph` kind carries a non-empty `payloadFields` list, `remove` alone carries `emitted: false`, and the topic's `payloadFields` equals the derived union of its kinds' lists | TC-EVT-016 | Covered |
-| AC-F3-1 | On every event topic the `data` keys are exactly the eight declared fields in order; `lane` is present (null where no lane holds the subject); `kind` is in its topic's set; `occurredAt` equals the source record timestamp; no `cursor` | TC-EVT-020, TC-EVT-021, TC-EVT-022, TC-EVT-006 | Covered |
+| AC-F3-1 | On every event topic the `data` keys are exactly the eight declared fields in order; `lane` is a non-empty string on every frame; `ref` is a non-empty string except on `blockers.state`, where it is a string or explicit `null` (the question record's `ref`; `null` for a CLI-published question); `kind` is in its topic's set; `occurredAt` equals the source record timestamp; no `cursor` | TC-EVT-020, TC-EVT-021, TC-EVT-022, TC-EVT-006 | Covered |
 | AC-F3-2 | A `queue.graph` subscriber receives an `entry` event (payload `ref`, `priority`, `recordedAt`) and then a `dependency-edge` event (payload `edges`, `added`, `removed`) it can act on | TC-EVT-020, TC-EVT-021, TC-EVT-023 | Covered |
 | AC-F3-3 | A re-written dependency record with an identical folded edge set publishes no `dependency-edge` event | TC-EVT-023 | Covered |
 | AC-F3-4 | A lane reaching `delivering` emits `started` (`ref`, `spawnOrdinal`, `recordedAt`), a refused attempt emits `refused` (`attemptId`, `token`, `startedAt`, `finishedAt`, `evidenceRefs`), and any other outcome emits `completed` whose payload `outcome` names what happened | TC-EVT-024 | Covered |
 | AC-F3-5 | The first `complete` for a phase emits `began` then `completed` on the same lane with ascending sequence; a later `complete` emits only `completed`; a `reopen` emits `reopened` with its reason | TC-EVT-025 | Covered |
 | AC-F3-6 | A published question emits `published`, a recorded answer emits `updated` with its resume mode, and a consumed answer's `resumeIntent` emits `cleared` naming question, lane, and resume mode — each exactly once per source record | TC-EVT-026 | Covered |
-| AC-F3-7 | No `remove` event is emitted by any v1 path, the surface reports `emitted: false`, and the emitted kind set per topic equals the declared set minus the declared non-emitted kinds | TC-EVT-027 | Covered |
+| AC-F3-7 | No `remove` event is emitted by any v1 path, the surface reports `emitted: false`, each event topic's emitted kind set equals its declared set minus its declared non-emitted kinds, and the two snapshot topics declare no kind and carry none on the wire | TC-EVT-027 | Covered |
 | AC-F4-1 | For one lane, received `sequence` values are strictly increasing with no gap, and two subscribers of the same topic receive the same `sequence` for the same event | TC-EVT-030, TC-EVT-020 | Covered |
 | AC-F4-2 | Two lanes' sequences are independent with no cross-lane or cross-topic order asserted; a gap or any value at or below the last observed value routes the client to a repoll and no order is inferred from `occurredAt` or a cursor | TC-EVT-031 | Covered — substitute (AMB-T1) |
 | AC-F4-3 | A restart-produced sequence at or below the last observed value is a detected discontinuity answered with a repoll, and the ordering declaration documents the per-lane scope and the restart discontinuity | TC-EVT-032 | Covered — substitute (AMB-T2) |
@@ -108,24 +108,24 @@ All 38 acceptance criteria map to at least one named case, and no case is an orp
 | AC-F5-2 | Every topic's declared `overflow` is `repoll` and equals the value on that topic's degraded frame, both from one declaration constant | TC-EVT-041, TC-EVT-040 | Covered |
 | AC-F5-3 | Exceeding the subscription capacity bound is still refused with `daemon.subscriber-degraded` under the same single bound, with no new key, marker, or vocabulary value | TC-EVT-042 | Covered |
 | AC-F6-1 | `queue`/`lanes` frames are exactly `{topic, cursor, snapshot}`, the baseline carries `cursor: 0`, the cursor advances only on change, and the delivered snapshot expectation set passes unchanged | TC-EVT-050 | Covered |
-| AC-F6-2 | A snapshot topic's record declares `shape: snapshot`, exactly the one `snapshot` kind, the frame `["topic","cursor","snapshot"]`, and `ordering: snapshot-revision`, with no per-lane sequence claim | TC-EVT-051 | Covered |
+| AC-F6-2 | A snapshot topic's record declares `shape: snapshot`, an empty `kinds[]` and `payloadFields[]` (no kind is declared or fabricated), the frame `["topic","cursor","snapshot"]`, and `ordering: snapshot-revision`, with no per-lane sequence claim | TC-EVT-051 | Covered |
 | AC-F7-1 | `events` is prompt-required (19 members), the production composer supplies the runtime, selection completes without the containment throw, and `events list` reaches its handler composing no store/config/transport/supervisor input | TC-EVT-060, TC-EVT-064 | Covered |
 | AC-F7-2 | Root `--help` lists nineteen families including `events`; `events --help` exits `0` with usage, options, examples, exit codes, and a see-also to the M2 page; both verb `--help` forms exit `0` | TC-EVT-061, TC-EVT-064 | Covered |
 | AC-F7-3 | The coverage check reports zero failures (page exists, has `--help` and `--version`, is in `commands` and `referencePages`, resolves through the `events` page root) and reference-page parity holds | TC-EVT-062, TC-EVT-064 | Covered |
-| AC-F7-4 | Prompt conformance and help checks pass; the file-set inventory and v1 contract inventory equal the tree in both directions with the new modules/exports; executable-export allowances name the new files | TC-EVT-063, TC-EVT-064 | Covered |
+| AC-F7-4 | Prompt conformance and help checks pass; the file-set inventory and v1 contract inventory equal the tree in both directions with the new modules/exports; executable-export allowances name the new files; every delivered count assertion the mount changes reports the post-mount value, including the production-composition suite's 19/19/18 | TC-EVT-063, TC-EVT-064 | Covered |
 | AC-F8-1 | Wire types, frame kinds, degraded reasons, stop modes, protocol version/floor, and the buffer bound are unchanged; `CONTROL_TOPICS` has six members; no frame carries a field outside `data` that delivered frames did not | TC-EVT-070, TC-EVT-042, TC-EVT-075 | Covered |
 | AC-F8-2 | A v1 peer that ignores unknown `data` fields decodes an event frame and a degraded frame carrying the additive fields, routes the frame as an event, and keeps its existing handling | TC-EVT-071 | Covered — substitute (AMB-T3b) |
 | AC-F8-3 | The new `events` kind carries exactly three rows with the declared classes/exits, no existing row is added, removed, or reworded, the documented table matches the code both ways, and every path exits only `0`/`1`/`2` | TC-EVT-072, TC-EVT-014, TC-EVT-075 | Covered |
 | AC-F8-4 | `STATE_SCHEMA_VERSION` is unchanged, no record kind/payload schema/key prefix/migration/seed is added, and the taxonomy projects existing records only | TC-EVT-073, TC-EVT-074 | Covered |
 | AC-NFR-1 | Any `events` invocation performs no state/config/git/network/filesystem read, writes nothing, invokes no composer, and returns within the reference-surface latency budget | TC-EVT-080, TC-EVT-015 | Covered |
-| AC-NFR-2 | A publish tick performs at most one bounded read per source ledger, opens no socket, probes no process, takes no sleep, and adds at most the declared p95 latency over the delivered tick | TC-EVT-081 | Covered |
-| AC-NFR-3 | A burst emits at most the per-topic per-tick cap, keeps the remainder pending via a per-lane watermark, drops nothing, and creates no unbounded in-memory event queue | TC-EVT-082 | Covered — substitute for the bounded-state half (AMB-T3c) |
-| AC-NFR-4 | Every event frame is at or below the frame bound, and a payload cut by the bound sets `truncated: true` with `truncationReason: "frame-max-bytes"` rather than being silently shortened | TC-EVT-083, TC-EVT-071 | Covered |
+| AC-NFR-2 | A publish tick counts exactly one whole-store `readRecords()` through an injected `StateStorePort`, identical with one subscriber and with N subscribers and whether two or four event topics have subscribers, opens no socket, probes no process, takes no sleep, and adds at most the declared p95 latency over the delivered tick | TC-EVT-081 | Covered |
+| AC-NFR-3 | A burst emits at most the per-topic per-tick cap, keeps the remainder pending via the per-`(topic, lane, source family)` watermark (DM-9), drops nothing, and creates no unbounded in-memory event queue | TC-EVT-082 | Covered — substitute for the bounded-state half (AMB-T3c) |
+| AC-NFR-4 | Every event frame is at or below the frame bound, the worst-case declared payload is provably under it from the delivered caps, no payload is cut, no `truncated`/`truncationReason` field appears, and no frame is silently shortened | TC-EVT-083, TC-EVT-071 | Covered |
 | AC-NFR-5 | No new output, frame, or payload carries a credential, token, prompt, transcript, diff, or repository content; `repositoryRoot` never appears; evidence is identifiers, counts, closed values, or bounded text | TC-EVT-084 | Covered |
 
 **Capability coverage** (every F-# has at least one TC): F-1 → 001, 002, 003, 004, 005, 006; F-2 → 010, 011, 012, 013, 014, 015, 016, 075; F-3 → 020, 021, 022, 023, 024, 025, 026, 027; F-4 → 020, 021, 030, 031, 032; F-5 → 040, 041, 042; F-6 → 050, 051; F-7 → 060, 061, 062, 063, 064; F-8 → 070, 071, 072, 073, 074, 075.
 
-**Decision coverage**: DEC-A → 002, 027; DEC-B → 001, 002, 050, 051; DEC-C → 040, 041, 042; DEC-D → 020, 022, 030, 031, 032; DEC-E → 003, 006, 011, 022; DEC-F → 060, 061, 062, 063, 064; DEC-G → 011, 022, 032; DEC-H → 020, 075; DEC-I → 030, 032; DEC-J → 025, 027, 016; DEC-K → 001, 011, 016; DEC-L → 014, 075; DEC-M → 004, 014. **Ticket-scenario coverage**: SC-M2-S13-01 → 020, 021, 030; SC-M2-S13-02 → 040, 041.
+**Decision coverage**: DEC-A → 002, 027; DEC-B → 001, 002, 050, 051; DEC-C → 040, 041, 042; DEC-D → 020, 022, 030, 031, 032; DEC-E → 003, 006, 011, 022; DEC-F → 060, 061, 062, 063, 064; DEC-G → 011, 022, 032; DEC-H → 020, 075; DEC-I → 030, 032; DEC-J → 025, 027, 016; DEC-K → 001, 011, 016; DEC-L → 014, 075; DEC-M → 004, 014; DEC-N → 081; DEC-O → 083. **Ticket-scenario coverage**: SC-M2-S13-01 → 020, 021, 030; SC-M2-S13-02 → 040, 041.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -133,19 +133,20 @@ The specification declares no REST/HTTP endpoint (API-#), no new listener, and n
 
 | Element | TC ID(s) | Observable assertion |
 |---|---|---|
-| EVT-1 Event-topic frame | 020, 021, 022, 023, 024, 025, 026, 030, 031, 040, 070, 071, 083 | `type: frame`, `kind: event`, `data` keys exactly `topic, kind, lane, ref, sequence, occurredAt, payload, taxonomyVersion` in order; `kind` in the topic's set; `lane` present (nullable); `sequence` positive integer; `occurredAt` the source record's ISO-8601 UTC timestamp; payload keys within the kind's declared list; no `cursor`. |
+| EVT-1 Event-topic frame | 020, 021, 022, 023, 024, 025, 026, 030, 031, 040, 070, 071, 083 | `type: frame`, `kind: event`, `data` keys exactly `topic, kind, lane, ref, sequence, occurredAt, payload, taxonomyVersion` in order; `kind` in the topic's set; `lane` always a non-empty string; `ref` a non-empty string on `queue.graph`/`dispatch.attempt`/`phase.state` and a string or explicit `null` on `blockers.state`; `sequence` positive integer; `occurredAt` the source record's ISO-8601 UTC timestamp; payload keys within the kind's declared list and no truncation marker; no `cursor`. |
 | EVT-2 Degraded frame | 040, 041, 050, 070, 071, 075 | Exactly one frame per overflowing subscription; `degraded: "subscriber-overflow"` and the closed reason vocabulary unchanged; `data` additionally carries `overflow: "repoll"` and `taxonomyVersion: "v1"` for all six topics; only that subscription is dropped; `daemon.subscriber-degraded` still refuses an over-capacity subscribe. |
 | EVT-3 Snapshot frame | 050, 051, 040 | Byte-identical `{ topic, cursor, snapshot }` on `queue`/`lanes`; baseline `cursor: 0`; change-only cursor advancement; no envelope field; the degraded frame's two additive fields are the only snapshot-topic delta. |
 | EVT-4 Consumed durable records (unchanged) | 020, 023, 024, 025, 026, 027, 073 | Every emitted kind maps to exactly one of `queue.entry`, `queue.dependency`, `queue.lease`, `daemon.lane`, `dispatch.attempt`, `phase.transition`, `blocker.question`, `blocker.answer`, and the delivering lane's `resumeIntent`; no field, vocabulary, schema, or key prefix changes. |
 | EVT-5 No new record, capsule event, outbox effect, or telemetry | 073, 074, 081 | No record is appended by the taxonomy; no `events.jsonl` capsule event kind is added; no command receipt, metric, trace, or log is added; the projection writes nothing. |
-| DM-1 Taxonomy declaration | 001, 002, 003, 004, 005, 006, 016 | Runtime-neutral data: a version constant, the closed six-topic set, one record per topic with `name, version, shape, parent?, frame[], lane, kinds[], payloadFields[], ordering, overflow`; types and `as const` data only — the ambient-globals/scan checks find no clock, I/O, environment, or call expression. |
-| DM-2 Event frame data | 020, 022, 030, 071, 083 | Eight fields in declared order inside the delivered open `data`; `taxonomyVersion` outside `payload`; the seven contract fields carry the change; no new top-level frame field. |
+| DM-1 Taxonomy declaration | 001, 002, 003, 004, 005, 006, 016 | Runtime-neutral data: a version constant, the closed six-topic set, one record per topic with `name, version, shape, parent?, frame[], lane, kinds[], payloadFields[], ordering, overflow`; `kinds[]`/`payloadFields[]` are empty on a snapshot topic; types and `as const` data only — the ambient-globals/scan checks find no clock, I/O, environment, or call expression. |
+| DM-2 Event frame data | 020, 022, 026, 030, 071, 083 | Eight fields in declared order inside the delivered open `data`; `lane` always a non-empty string; `ref` non-empty except the nullable `blockers.state` field; `taxonomyVersion` outside `payload`; the seven contract fields carry the change; no new top-level frame field; no truncation marker. |
 | DM-3 Snapshot frame data (unchanged) | 050, 051 | Exactly `{ topic, cursor, snapshot? }` for `queue` and `lanes`; the envelope is absent. |
 | DM-4 Degraded frame data | 040, 041, 042, 050 | Delivered `{ degraded, topic? }` plus `overflow: "repoll"` and `taxonomyVersion: "v1"`; the marker and drop behaviour unchanged; the bound is still the single `daemon.subscription-buffer`. |
-| DM-5 Sequence semantics | 020, 030, 031, 032, 082 | Allocated once per emitted event per `(topic, lane)`; positive; increments by exactly one; shared across subscribers of the topic; process-scoped with a restart discontinuity; not durable, not persisted, not seeded from a ledger (a populated store baselines rather than replays). |
+| DM-5 Sequence semantics | 020, 030, 031, 032, 082 | Allocated once per emitted event per `(topic, lane)` at emission by the publishing process; positive; increments by exactly one; shared across subscribers of the topic; process-scoped with a restart discontinuity; not durable, not persisted, not seeded from a ledger (a populated store baselines rather than replays). |
 | DM-6 Topic-set widening | 001, 070, 075, 060 | `CONTROL_TOPICS` has the six declared members; the event body union gains the envelope member; the subscribe accept tolerates a topic with no snapshot; no wire type, codec rule, or protocol version changes. |
 | DM-7 Events envelope and topic record | 010, 011, 012, 013, 014, 016, 062 | `{ ok, command, data: { taxonomyVersion, envelope[], topics[] }, error?, warnings? }`; per-topic keys exactly as declared; closed `shape`/`lane`/`ordering`/`overflow` values; `kinds[]` elements carry `name`, `emitted`, `payloadFields[]`. |
 | DM-8 No state-schema change | 073, 074 | `STATE_SCHEMA_VERSION` unchanged; no record kind, payload schema, key prefix, migration, backfill, or seed; the only contract addition outside the taxonomy is three error rows. |
+| DM-9 Emission watermark | 081, 082 | Per observed `(topic, lane, source family)`, the identity of the last emitted source record — its `key` paired with its `sequence` position in the `readRecords()` view; at most one entry per observed pair, replaced by a later record of the same family; bounded by 4 event topics × observed distinct lanes × ≤3 source families, independent of record, event, and subscriber count; initialised to the store's current tail on first observation (no replay); the unemitted remainder stays pending because the watermark does not advance past it. |
 | Appendix D exit matrix | 004, 010, 011, 012, 013, 014, 060, 061, 072, 075 | Every outcome resolves to exactly one identity and one exit digit; `events.topic-unknown`/`events.verb-unknown` → `1` (`user-validation`), `events.taxonomy-unavailable` → `2` (`platform-provider`); no other digit is reachable from the mounted surface; a control error frame carries no exit digit. |
 | Appendix E source map | 020, 023, 024, 025, 026, 027 | Each kind is produced by exactly the declared durable record, `began` by the first `complete` observation, and `remove` by no v1 path. |
 | Appendix F frame matrix | 022, 050, 051, 040 | Snapshot topics carry three `data` fields and `snapshot-revision`; event topics carry the eight fields and `sequence-per-lane`; the degraded frame carries the two additive fields on any topic. |
@@ -155,10 +156,10 @@ The specification declares no REST/HTTP endpoint (API-#), no new listener, and n
 | NFR ID | Requirement (threshold) | TC ID(s) | Status |
 |---|---|---|---|
 | NFR-1 | Reference-surface purity: 0 state/config/git/network/filesystem reads, 0 writes, 0 composer invocations; p95 ≤ 100 ms; ≤ 40 lines and ≤ 8 192 bytes | TC-EVT-080, TC-EVT-015, TC-EVT-010, TC-EVT-012 | Covered |
-| NFR-2 | Publish-tick cost: ≤ 1 bounded read per source ledger per tick, 0 socket connects, 0 process probes, 0 sleeps; added p95 tick latency ≤ 25 ms over the delivered tick | TC-EVT-081 | Covered |
-| NFR-3 | Burst handling, no silent loss: ≤ 64 events per topic per tick; the remainder stays pending via a per-`(topic, lane)` watermark; 0 dropped; 0 unbounded in-memory event queues | TC-EVT-082, TC-EVT-023 | Covered — substitute (AMB-T3c) |
-| NFR-4 | Envelope conformance: 100% of emitted events carry all eight fields; `lane` never absent; `kind` always in its topic's declared set | TC-EVT-022, TC-EVT-020, TC-EVT-021, TC-EVT-030 | Covered |
-| NFR-5 | Frame bound: every event frame ≤ `DAEMON_MAX_FRAME_BYTES`; a cut payload sets `truncated: true` with `truncationReason: "frame-max-bytes"`; nothing silently shortened | TC-EVT-083, TC-EVT-071 | Covered |
+| NFR-2 | Publish-tick cost: exactly one whole-store `readRecords()` per tick through the injected `StateStorePort`, constant across subscriber count, subscribed-topic count, and store size; 0 per-topic/per-subscriber reads, 0 socket connects, 0 process probes, 0 sleeps; added p95 tick latency ≤ 25 ms over the delivered tick | TC-EVT-081 | Covered |
+| NFR-3 | Burst handling, no silent loss: ≤ 64 events per topic per tick; the remainder stays pending via the per-`(topic, lane, source family)` watermark (DM-9); 0 dropped; 0 unbounded in-memory event queues; watermark ≤ 4 event topics × observed lanes × 3 families | TC-EVT-082, TC-EVT-023 | Covered — substitute (AMB-T3c) |
+| NFR-4 | Envelope conformance: 100% of emitted events carry all eight fields; `lane` never absent and never `null`; `ref` nullable only on `blockers.state`; `kind` always in its topic's declared set | TC-EVT-022, TC-EVT-020, TC-EVT-021, TC-EVT-026, TC-EVT-030 | Covered |
+| NFR-5 | Frame bound: every event frame ≤ `DAEMON_MAX_FRAME_BYTES`; the worst-case declared payload is under the cap from the delivered caps; no payload is truncated and no `truncated`/`truncationReason` field exists; nothing silently shortened | TC-EVT-083, TC-EVT-071 | Covered |
 | NFR-6 | Ordering determinism: 0 non-monotonic values per `(topic, lane)` within one incarnation; 100% of discontinuities route to a repoll; 0 orderings inferred from `occurredAt` or `cursor` | TC-EVT-030, TC-EVT-031, TC-EVT-032 | Covered |
 | NFR-7 | Overflow parity for each of the six topics: one degraded event, that subscription gone, other subscriptions still receiving, `overflow == "repoll"` on frame and record | TC-EVT-040, TC-EVT-041, TC-EVT-042 | Covered |
 | NFR-8 | Additivity: 0 new wire types, 0 new state record kinds, 0 payload schema versions, 0 migrations, 0 new package dependencies, 3 new error rows and 0 changed existing rows | TC-EVT-070, TC-EVT-072, TC-EVT-073, TC-EVT-074 | Covered |
@@ -185,21 +186,21 @@ The specification declares no REST/HTTP endpoint (API-#), no new listener, and n
 
 | ID | What is asserted, and how | Cases | AC |
 |---|---|---|---|
-| **DECL-G1 — `queue.graph.remove` is declared and never emitted** | (i) the surface reports the kind with `emitted: false` and a non-empty payload list `ref, reason, recordedAt`; (ii) a full-delivery fixture (entry, dependency add/change, lease release, lane delivering, refused/completed attempts, phase complete/reopen, blocker cycle) emits no `remove` frame across many ticks; (iii) the emitted `(topic, kind)` set equals the declared set minus the one non-emitted kind, and every `emitted: true` kind appears at least once; (iv) a scan finds no projection branch producing `remove`. The declared `reason` vocabulary is asserted against the S15 list in the payload-field declaration, not by exercising an S15 path. | 016, 027 | AC-F2-5, AC-F3-7 |
+| **DECL-G1 — `queue.graph.remove` is declared and never emitted** | (i) the surface reports the kind with `emitted: false` and a non-empty payload list `ref, reason, recordedAt`; (ii) a full-delivery fixture (entry, dependency add/change, lease release, lane delivering, refused/completed attempts, phase complete/reopen, blocker cycle) emits no `remove` frame across many ticks; (iii) for each of the four **event** topics, the emitted `(topic, kind)` set equals that topic's declared set minus its declared non-emitted kinds, and every `emitted: true` kind appears at least once; the two snapshot topics are excluded from the equality because they declare `kinds: []` and carry no `kind` on the wire; (iv) a scan finds no projection branch producing `remove`. The declared `reason` vocabulary is asserted against the S15 list in the payload-field declaration, not by exercising an S15 path. | 016, 027 | AC-F2-5, AC-F3-7 |
 | **DECL-G2 — `phase.state.began` is derived at the first `complete`** | One `complete` transition is appended for a phase whose projection has no prior `started`; the stream must contain `began` immediately followed by `completed`, same lane, ascending sequence, `began.payload` = `{changeRef, phaseId, timestamp}` taken from that transition; a second `complete` for the same phase produces only `completed`; `began` is emitted exactly once per phase for the whole stream; a `reopen` produces `reopened` with `reason`. No begin record is appended (record-count assertion). | 025 | AC-F3-5 |
-| **S17 boundary — no stop/parked/resumed/park-edge shape exists in v1** | The declaration is token-scanned for `stop`, `parked`, `resumed`, and `park-edge` outside the closed vocabularies that legitimately contain `stop` as a *wire type* and `parked`/`preempted` as *lane states* (the scan runs over kind names and payload field names only); the M2 page's taxonomy section is scanned the same way; `TC-EVT-027` asserts the emitted set equals the declared set, so an undeclared shape cannot appear on the wire; `TC-EVT-031` asserts the stop mode vocabulary is unchanged and is not a kind. | 002, 027, 070 | AC-F1-2, AC-F3-7, AC-F8-1 |
+| **S17 boundary — no stop/parked/resumed/park-edge shape exists in v1** | The declaration is token-scanned for `stop`, `parked`, `resumed`, and `park-edge` outside the closed vocabularies that legitimately contain `stop` as a *wire type* and `parked`/`preempted` as *lane states* (the scan runs over kind names and payload field names only); the M2 page's taxonomy section is scanned the same way; `TC-EVT-027` asserts the emitted set equals the declared set, so an undeclared shape cannot appear on the wire; `TC-EVT-070` asserts the stop mode vocabulary is unchanged and is not a kind. | 002, 027, 070 | AC-F1-2, AC-F3-7, AC-F8-1 |
 | **AMB-T1 — AC-F4-2's "the client's declared action is a repoll"** | The server cannot observe a consumer's next action. **Substitute:** (i) two lanes' sequence series are independent and start at 1; (ii) the ordering declaration is `sequence-per-lane` on every event topic; (iii) the reference page's ordering section contains the gap→repoll rule (token assertion on `gap` and `repoll`); (iv) a source scan asserts no ordering comparator or sort on `occurredAt` and no use of `cursor` as an ordering key; (v) no frame carries both `sequence` and `cursor`. The client's reaction itself is documented, not executed. | 031 | AC-F4-2 |
 | **AMB-T2 — AC-F4-3's "the subscriber detects the discontinuity and repolls"** | **Substitute:** a second incarnation over the same populated store emits `sequence: 1` for a lane whose previous incarnation reached `N > 1`, and `1 ≤ N` is asserted directly (the declared discontinuity predicate); the page's ordering section names the restart discontinuity and the repoll remedy; the projection is asserted not to seed counters from the ledger (a populated store baselines and the first observed change starts at 1). Detection by a live client is a client-side property. | 032 | AC-F4-3 |
 | **AMB-T3 — AC-F5-1's "the client's next action is a repoll"** | **Substitute:** the degraded frame carries `overflow: "repoll"` and `taxonomyVersion: "v1"` (the instruction a client reads), the reference record declares the same value, and the frame/record are proven to render from one constant (`TC-EVT-041`). | 040 | AC-F5-1 |
 | **AMB-T3b — AC-F8-2's "a v0 peer"** | No v0 binary exists in the tree. **Substitute:** the delivered codec (the v1 peer implementation) decodes an event frame and a degraded frame carrying the additive fields, routes the event, and keeps every delivered negative control (exactly-one-of `payload`/`data`/`error`, no `id` on events) intact; the additive fields live only inside `data`, and a synthetic extra `data` field also decodes, which is the wire property a v0 peer relies on. | 071 | AC-F8-2 |
-| **AMB-T3c — AC-NFR-3's "no unbounded in-memory event queue"** | **Substitute:** the burst case asserts the observable cap and the pending remainder are emitted on later ticks with contiguous sequences and zero loss; the bounded-state half is asserted structurally — pending state is keyed per `(topic, lane)` (entry count ≤ number of lanes) and the projection module contains no array that accumulates events across ticks (source scan plus an injected inspector when the delivery exposes one). Memory growth over ticks is not measured in bytes. | 082 | AC-NFR-3 |
+| **AMB-T3c — AC-NFR-3's "no unbounded in-memory event queue"** | **Substitute:** the burst case asserts the observable cap and the pending remainder are emitted on later ticks with contiguous sequences and zero loss; the bounded-state half is asserted structurally — the watermark is keyed per `(topic, lane, source family)` with the DM-9 identity (record key + sequence position), at most one entry per observed pair, bounded by 4 event topics × observed distinct lanes × ≤3 source families, and the projection module contains no array that accumulates events across ticks (source scan plus an injected inspector when the delivery exposes one). Memory growth over ticks is not measured in bytes. | 082 | AC-NFR-3 |
 
 ## 4. Test Types and Layers
 
 - **Unit / structure (contract-level), `bun:test` under `tests/structure/`** — declaration shape and closed values, drift comparators, integrity validator, single-source mutation, control-vocabulary equality, state-layer and dependency additivity, production composition membership, ordering declaration. No I/O; imports the declaration and the pure comparators directly.
 - **Contract / conformance, `bun:test` under `tests/checks/` and `tests/golden/`** — help coverage, reference-page parity, prompt conformance, error-table sync, exit-code literals, inventory both-directions, exports parity, page token scans, goldens for the text pages and snapshot frames. These are the guards that fail in both directions when the mount or the contract is incomplete.
 - **Behaviour (integration over the delivered seams), `bun:test` under `tests/behaviour/`** — the reference commands over the composition; the event topics observed through the real `createControlServer` + `createControlSession` over a real temp store, with the in-memory transport pair (and one real unix socket variant); overflow at a small bounded buffer; snapshot preservation; restart. This is where the ticket's three acceptance criteria are proven.
-- **Measured NFR, `bun:test` with recording counters and `performance.now()`** — purity counters, per-ledger read counts, connect/probe/sleep counters, p50/p95 measurements against a same-run baseline, frame sizes, and the burst cap. Measurements are printed with the environment and iteration count.
+- **Measured NFR, `bun:test` with recording counters and `performance.now()`** — purity counters, whole-store `readRecords()` counts through an injected `StateStorePort`, connect/probe/sleep counters, p50/p95 measurements against a same-run baseline, frame sizes, and the burst cap. Measurements are printed with the environment and iteration count.
 - **Not used:** `mock.module`-style substitution of the modules under test, real network, real `sleep`, real `$HOME`/state directory, and any test that writes the live tree. Fakes are injected ports (clock, transport pair, recording edge, manual wake) — never a mock of the projection, the session, the server, or the codec.
 
 ## 5. Test Scenarios
@@ -225,7 +226,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 | TC-EVT-016 | `queue.graph` kind records carry non-empty payload lists, `remove` alone is unemitted, and the union is derived | Happy Path | Critical | High | AC-F2-5, AC-F1-2; F-2, F-3; DM-7; DEC-J |
 | TC-EVT-020 | A `queue.graph` subscriber observes `entry` then `dependency-edge` through the real session/server, with the envelope and per-lane sequence | Happy Path | Critical | Critical | AC-F3-1, AC-F3-2, AC-F4-1; F-3, F-4; DM-2, DM-5; EVT-1; NFR-4 |
 | TC-EVT-021 | **Integration-marked**: the same observation over a real unix socket under a temp state directory | Happy Path | Important | Medium | AC-F3-1, AC-F3-2; F-3; EVT-1; NFR-4 |
-| TC-EVT-022 | Every emitted frame on all four event topics carries exactly the eight declared fields, with `lane` nullable and no `cursor` | Happy Path | Critical | Critical | AC-F3-1; F-3; DM-2; EVT-1; NFR-4 |
+| TC-EVT-022 | Every emitted frame on all four event topics carries exactly the eight declared fields, with `lane` always a non-empty string, `ref` nullable only on `blockers.state`, and no `cursor` | Happy Path | Critical | Critical | AC-F3-1; F-3; DM-2; EVT-1; NFR-4 |
 | TC-EVT-023 | A dependency delta emits `added`/`removed`; an identical folded edge set emits nothing | Corner Case | Critical | High | AC-F3-3, AC-F3-2; F-3; DM-2; NFR-3 |
 | TC-EVT-024 | Dispatch emits `started`, `refused` for a refusal, and `completed` for every other outcome with its `outcome` named | Happy Path | Critical | High | AC-F3-4; F-3; DM-2; EVT-4; NFR-4 |
 | TC-EVT-025 | Phase emits `began` (derived once) then `completed`, and `reopened` carries its reason | Happy Path | Critical | Critical | AC-F3-5; F-3; DM-2; DEC-J; NFR-4 |
@@ -238,7 +239,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 | TC-EVT-041 | The declared `overflow` and the frame's `overflow` come from one constant and cannot disagree | Corner Case | Critical | Critical | AC-F5-2; F-5; DM-4; DEC-C; NFR-7 |
 | TC-EVT-042 | The subscription capacity bound and the `daemon.subscriber-degraded` refusal are unchanged | Regression | Critical | High | AC-F5-3, AC-F8-1; F-5, F-8; DM-4; NFR-7 |
 | TC-EVT-050 | `queue` and `lanes` frames stay byte-identical, baseline at `cursor: 0`, and change-only | Regression | Critical | Critical | AC-F6-1; F-6; DM-3; EVT-3 |
-| TC-EVT-051 | Snapshot topic records declare the snapshot shape, the single kind, the three-field frame, and snapshot-revision ordering | Happy Path | Critical | High | AC-F6-2; F-6; DM-7; EVT-3 |
+| TC-EVT-051 | Snapshot topic records declare the snapshot shape, empty `kinds[]`/`payloadFields[]`, the three-field frame, and snapshot-revision ordering | Happy Path | Critical | High | AC-F6-2; F-6; DM-7; EVT-3 |
 | TC-EVT-060 | `events` is prompt-required (19), composed unconditionally with no runtime input, and reaches its handler | Happy Path | Critical | Critical | AC-F7-1; F-7; DM-6; DEC-F |
 | TC-EVT-061 | Root help lists nineteen families, the family page renders five sections, and both verb pages answer `--help` | Happy Path | Critical | High | AC-F7-2; F-7; NFR-1 |
 | TC-EVT-062 | Help coverage and reference-page parity pass with the M2 page, both inventory rows, and the page root | Happy Path | Critical | Critical | AC-F7-3; F-7; DM-7; DEC-F |
@@ -251,9 +252,9 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 | TC-EVT-074 | The additivity inventory holds: no new wire type, record kind, schema version, migration, dependency, or capsule event | Regression | Critical | High | AC-F8-4; F-8; EVT-5; NFR-8 |
 | TC-EVT-075 | An unknown subscribe topic is refused as `events.topic-unknown` (never `daemon.state-recovery-failed`), a known event topic is accepted with no synthetic baseline, and `since` is ignored | Negative | Critical | Critical | AC-F2-3, AC-F8-1, AC-F8-3; F-8; DM-6; DEC-H, DEC-L |
 | TC-EVT-080 | The reference surface stays pure and inside its latency and output budgets | Happy Path | Important | High | AC-NFR-1, AC-F2-4; NFR-1; GAP-T4 |
-| TC-EVT-081 | A publish tick reads each ledger at most once, opens no socket, probes no process, sleeps zero times, and stays inside its added-latency budget | Happy Path | Important | High | AC-NFR-2; NFR-2, NFR-9; GAP-T4 |
-| TC-EVT-082 | A burst above the per-tick cap emits the cap, keeps the remainder pending, loses nothing, and keeps bounded state | Corner Case | Critical | High | AC-NFR-3; NFR-3; AMB-T3c |
-| TC-EVT-083 | Every event frame respects the frame bound and an over-bound payload is truncated with the declared marker | Edge Case | Critical | High | AC-NFR-4; NFR-5; DM-2 |
+| TC-EVT-081 | A publish tick performs exactly one `readRecords()` per tick, identical across 1 vs N subscribers and 2 vs 4 subscribed event topics, opens no socket, probes no process, sleeps zero times, and stays inside its added-latency budget | Happy Path | Important | High | AC-NFR-2; NFR-2, NFR-9; DM-9; DEC-N; GAP-T4 |
+| TC-EVT-082 | A burst above the per-tick cap emits the cap, keeps the remainder pending through the DM-9 watermark, loses nothing, and keeps the watermark bounded per `(topic, lane, source family)` | Corner Case | Critical | High | AC-NFR-3; NFR-3; DM-9; AMB-T3c |
+| TC-EVT-083 | Every event frame respects the frame bound, the worst-case declared payload is under the cap, and no payload is truncated | Edge Case | Critical | High | AC-NFR-4; NFR-5; DM-2; DEC-O |
 | TC-EVT-084 | No payload, page, or error carries a credential, token, prompt, transcript, diff, repository content, or `repositoryRoot` | Negative | Critical | Critical | AC-NFR-5; NFR-10; NFR-4 |
 
 ### 5.2 Scenario Details
@@ -279,7 +280,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 1. Read `TAXONOMY.topics` and assert `map(name)` equals `["queue","lanes","queue.graph","dispatch.attempt","phase.state","blockers.state"]` exactly (same members, same declared order), with `length === 6`.
 2. Assert `TAXONOMY.topics.every((t) => t.name !== "status")` and that no topic record is named `status`; assert `TAXONOMY.version === "v1"` and every topic's `version === "v1"`.
 3. Assert exactly one topic has a `parent`: `queue.graph`, value `queue`; every other topic's `parent` is absent/undefined.
-4. For every topic assert `shape ∈ {"snapshot","event"}`, `frame` is a non-empty ordered array of known field names, `lane ∈ {"none","ref","change-ref","blocker-lane"}`, `ordering ∈ {"sequence-per-lane","snapshot-revision"}`, `overflow === "repoll"`, and `kinds` is a non-empty array whose elements each carry `name` (non-empty string), `emitted` (boolean), and `payloadFields` (array).
+4. For every topic assert `shape ∈ {"snapshot","event"}`, `frame` is a non-empty ordered array of known field names, `lane ∈ {"none","ref","change-ref","blocker-lane"}`, `ordering ∈ {"sequence-per-lane","snapshot-revision"}`, `overflow === "repoll"`, and `kinds` is an array (non-empty on every event topic, empty on every snapshot topic) whose elements each carry `name` (non-empty string), `emitted` (boolean), and `payloadFields` (array), with `payloadFields` empty on a snapshot topic.
 5. Assert `CONTROL_TOPICS` deep-equals the declared topic names (surface set equals served set) and that no name appears twice.
 6. Assert the declaration is data-only: the ambient-globals scan reports no call expression, clock, environment read, or I/O import reachable from the module.
 
@@ -296,7 +297,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F1-2, F-1, F-3, DM-1, NFR-8; DEC-A, DEC-J; RSK-1, RSK-7
+**Related IDs**: AC-F1-2, F-1, F-3, DM-1, NFR-8; DEC-A, DEC-B, DEC-J, DEC-K; RSK-1, RSK-7
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/event-taxonomy-declaration.test.ts` (new); `tests/checks/event-taxonomy-conformance.test.ts` (new, page token scan)
@@ -308,14 +309,14 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Steps**:
 1. Assert `queue.graph.kinds.map(name)` equals `["entry","dependency-edge","release","remove"]`; `dispatch.attempt` equals `["started","refused","completed"]`; `phase.state` equals `["began","completed","reopened"]`; `blockers.state` equals `["published","updated","cleared"]`.
-2. Assert `queue.kinds` and `lanes.kinds` each equal `["snapshot"]` with a single record.
-3. Assert the kind counts are exactly `4, 3, 3, 3` — the example counts `6` and `4` fail by construction; assert no topic has more than 4 kinds.
+2. Assert `queue.kinds` and `lanes.kinds` each deep-equal `[]` (a snapshot topic declares no kind), and that their `payloadFields` each deep-equal `[]`.
+3. Assert the event-topic kind counts are exactly `4, 3, 3, 3` and the snapshot topics declare zero kinds — the example counts `6` and `4` fail by construction; assert no topic has more than 4 kinds.
 4. Recursively collect every kind name across the declaration and assert none of `stop`, `parked`, `resumed`, `park-edge` appears; the scan is restricted to kind names and payload field names, so the legitimate wire type `stop` and lane states `parked`/`preempted` are not false positives.
-5. Run the same token scan over the taxonomy section of `doc/planning/oss-tooling/milestones/m2/commands/events.md` and assert the four names are absent and the printed counts are `1/1/4/3/3/3`.
+5. Run the same token scan over the taxonomy section of `doc/planning/oss-tooling/milestones/m2/commands/events.md` (reconciled in Phase 5, read here in Phase 6) and assert the four names are absent and the printed counts are `0/0/4/3/3/3`.
 6. Non-vacuity control: assert the reference page still exists and the scan actually visited at least one section (a non-zero line count), so a missing page fails rather than passes.
 
 **Expected Outcome**:
-- Each topic's declared kind set equals the contract enumeration, in declared order; the snapshot topics carry one kind each; no S17 kind is declared in code or described as a v1 kind on the page.
+- Each event topic's declared kind set equals the contract enumeration, in declared order; the snapshot topics declare no kind at all; no S17 kind is declared in code or described as a v1 kind on the page.
 - Any kind addition, rename, removal, or reordering fails naming the topic and the kind.
 
 **Notes / Clarifications**:
@@ -370,15 +371,15 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Preconditions / fixture**:
 - The integrity validator is a pure function over a declaration value (`validateTaxonomy(declaration)`); the mounted command accepts an injected declaration defaulting to the shipped one (the seam `TC-EVT-004` needs; GAP-T5).
-- Six violation fixtures in `drift-mutants.ts`.
+- Seven violation fixtures in `drift-mutants.ts`.
 
 **Steps**:
-1. Call the validator with each fixture and assert a violation naming the offending topic and field: duplicate topic names; an empty `kinds` list; a kind repeated within a topic; a kind whose `payloadFields` is absent or empty; an unknown `shape`, `ordering`, or `overflow` value; a `frame` missing a declared field.
+1. Call the validator with each fixture and assert a violation naming the offending topic and field: duplicate topic names; an empty `kinds` list on an event topic; any kind declared on a snapshot topic; a kind repeated within a topic; a kind whose `payloadFields` is absent or empty; an unknown `shape`, `ordering`, or `overflow` value; a `frame` missing a declared field.
 2. Assert the shipped declaration validates with zero violations (positive control), so the validator is not vacuously strict.
 3. Compose the `events` command with an injected invalid declaration; run `events list` and `events describe queue`; assert exit `2`, `error.code === "events.taxonomy-unavailable"`, `category === "platform"`, `retryable === false`, `consequence === "not_landed"`, and a remediation class of `platform-provider`.
 4. Assert stdout carries no page: for the text form, no topic rows and no partial table; for `--json`, no `data.topics`.
 5. Assert the failure path reads no store, configuration, network, or filesystem (recording counters zero) — the declaration is the only input.
-6. Assert every listed violation class is reachable from the validator (six of six) and that a passing declaration renders the full page (control).
+6. Assert every listed violation class is reachable from the validator (seven of seven) and that a passing declaration renders the full page (control).
 
 **Expected Outcome**:
 - Each integrity violation fails the check by name; a failing declaration exits `2` with `events.taxonomy-unavailable`, platform class, non-retryable, `not_landed`, and renders nothing.
@@ -466,7 +467,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Steps**:
 1. Run `events list`; assert exit `0`.
 2. Assert the output equals the golden byte-for-byte (including trailing newline) and that the golden was regenerated only by the documented command (the golden file carries its generation header).
-3. Assert per-row grammar: `queue` and `lanes` match `^\S+\s+v1\s+shape=snapshot\s+kinds=1\s+ordered by snapshot revision\s+overflow=repoll$`; each event topic matches `^\S+\s+v1\s+shape=event\s+kinds=(4|3)\s+(parent=queue\s+)?ordered per lane\s+overflow=repoll$`; only `queue.graph` carries `parent=`.
+3. Assert per-row grammar: `queue` and `lanes` match `^\S+\s+v1\s+shape=snapshot\s+kinds=0\s+ordered by snapshot revision\s+overflow=repoll$`; each event topic matches `^\S+\s+v1\s+shape=event\s+kinds=(4|3)\s+(parent=queue\s+)?ordered per lane\s+overflow=repoll$`; only `queue.graph` carries `parent=`.
 4. Assert row order equals the declaration order and that `status` appears nowhere.
 5. Assert the page contains no ANSI escape (no `\u001b[`), at most 40 lines, and at most 8 192 bytes.
 6. Assert the command ran with zero composer invocations and zero store/config/transport reads.
@@ -523,9 +524,9 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 1. Run `events describe queue.graph`; assert exit `0` and byte-equality with the golden.
 2. Assert the page names the topic, `shape=event`, and `parent=queue`.
 3. Assert each of the four kinds appears with its `emitted` state, and that `remove` is the only row rendered as not emitted.
-4. Assert each kind's payload field list appears verbatim in declared order, including the optional markers for `repository?` and `parkCause?`.
+4. Assert each kind's payload field list appears verbatim in declared order, including the optional marker for `repository?` on `entry`; assert no `parkCause` or truncation field is rendered for any kind.
 5. Assert the page names the lane rule (`ref`), the ordering sentence (per lane / `sequence-per-lane`), the overflow sentence (`repoll`), and the eight-field frame list in declared order.
-6. Run `events describe lanes`; assert `shape=snapshot`, one kind `snapshot`, frame `["topic","cursor","snapshot"]`, `snapshot-revision` ordering, and that no per-lane sequence promise is stated.
+6. Run `events describe lanes`; assert `shape=snapshot`, `kinds: []`, `payloadFields: []`, frame `["topic","cursor","snapshot"]`, `snapshot-revision` ordering, that the page states a snapshot topic declares no kind, and that no per-lane sequence promise is stated.
 7. Assert every page is ≤ 40 lines and ≤ 8 192 bytes and contains no ANSI escape.
 
 **Expected Outcome**:
@@ -639,7 +640,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Steps**:
 1. `events describe queue.graph --json`: assert `kinds.length === 4`; every kind's `payloadFields` is a non-empty array; `emitted` is `true` for `entry`, `dependency-edge`, `release` and `false` for `remove` only.
-2. Assert the per-kind lists: `entry` = `["ref","repository?","priority","recordedAt"]`; `dependency-edge` = `["ref","edges[]","added[]","removed[]","recordedAt"]`; `release` = `["leaseId","repository","ref","holder","runner","weightClass","parkCause?","recordedAt"]`; `remove` = `["ref","reason","recordedAt"]`.
+2. Assert the per-kind lists: `entry` = `["ref","repository?","priority","recordedAt"]`; `dependency-edge` = `["ref","edges[]","added[]","removed[]","recordedAt"]`; `release` = `["leaseId","repository","ref","holder","runner","weightClass","operation","recordedAt"]` (no `parkCause`; its `operation` is always `released`); `remove` = `["ref","reason","recordedAt"]`.
 3. Assert `remove`'s payload field vocabulary for `reason` is documented as `landed|abandoned|superseded|reconciled` on the page, and that the declaration marks it non-emitted.
 4. Assert the topic record's `payloadFields` equals the derived union of the four lists in first-seen order, computed independently in the test.
 5. Commit a mutant where the topic's `payloadFields` is replaced by a hand-authored array differing from the union; assert the surface test fails naming `payloadFields` and `queue.graph`.
@@ -713,9 +714,9 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Notes / Clarifications**:
 - This is the only socket-bound case for the subscription path; it is bounded and never runs against a real daemon process.
 
-#### TC-EVT-022 - Every emitted frame on all four event topics carries exactly the eight declared fields, with `lane` nullable and no `cursor`
+#### TC-EVT-022 - Every emitted frame on all four event topics carries exactly the eight declared fields, with `lane` always a non-empty string, `ref` nullable only on `blockers.state`, and no `cursor`
 
-**Objective**: Prove envelope conformance at 100% across a scripted full-delivery stream, including the null-lane case.
+**Objective**: Prove envelope conformance at 100% across a scripted full-delivery stream: `lane` is always a non-empty string on every event topic, and `ref` is nullable only on `blockers.state`, where a CLI-published question records `null`.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
@@ -728,20 +729,20 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Preconditions / fixture**:
 - A scripted stream covering every emitted kind: `queue.graph` `entry`, `dependency-edge`, `release`; `dispatch.attempt` `started`, `refused`, `completed`; `phase.state` `began`, `completed`, `reopened`; `blockers.state` `published`, `updated`, `cleared`.
-- A blocker question published with no recorded lane (the null-lane cell).
+- A CLI-published blocker question (`blockers publish`, no `--ref`) whose durable record carries the required non-empty `lane` and `ref: null`.
 
 **Steps**:
 1. Collect every frame emitted across the stream (each tick drained).
 2. For each frame assert `Object.keys(data)` equals the eight declared fields **in order** and that `"cursor" in data === false`.
 3. Assert `kind` is a member of its topic's declared kind set for 100% of frames, and that a frame's `kind` is never valid only for another topic (`completed` appears on both `dispatch.attempt` and `phase.state`, discriminated by `topic`).
-4. Assert `lane` is present on every frame: either a non-empty string or explicit `null`; assert the null cell occurs for the lane-less blocker question and that no frame omits the key.
-5. Assert `ref` is a non-empty string on every frame; `sequence` is a positive integer; `occurredAt` is an ISO-8601 UTC string ending in `Z` and parses to the source record's timestamp; `payload` is a plain object whose present keys are a subset of the kind's declared list and which contains every non-optional declared key.
-6. Assert `taxonomyVersion === "v1"` on every frame.
-7. Assert the payload union observed over the stream is a subset of the declared `payloadFields` union for each topic (nothing leaks in).
+4. Assert `lane` is present as a non-empty string on every frame of every event topic — never absent and never `null` — and that it equals the declared lane rule's subject: the entry `ref` on `queue.graph`, the delivery `ref` on `dispatch.attempt`, the `changeRef` on `phase.state`, and the question record's required `lane` on `blockers.state`.
+5. Assert `ref` is present on every frame; on `queue.graph`, `dispatch.attempt`, and `phase.state` it is a non-empty string equal to the source record's `ref`; on `blockers.state` it is a string or explicit `null`, and the CLI-published question yields `null` (never an absent key and never a fabricated string).
+6. Assert `sequence` is a positive integer; `occurredAt` is an ISO-8601 UTC string ending in `Z` and parses to the source record's timestamp; `payload` is a plain object whose present keys are a subset of the kind's declared list and which contains every non-optional declared key; `taxonomyVersion === "v1"`.
+7. Assert the payload union observed over the stream is a subset of the declared `payloadFields` union for each topic (nothing leaks in), and that no payload carries a `truncated` or `truncationReason` key.
 
 **Expected Outcome**:
-- 100% envelope conformance, explicit null lanes, no `cursor`, ordered keys, and payload keys bounded by the declaration.
-- A missing `lane`, an absent `taxonomyVersion`, a `cursor`, an undeclared kind, or an undeclared payload key fails.
+- 100% envelope conformance; `lane` always a non-empty string; `ref` nullable only on `blockers.state` and `null` for a CLI-published question; no `cursor`; ordered keys; payload keys bounded by the declaration and no truncation marker.
+- An absent or `null` `lane`, a `null` `ref` on a non-nullable topic, an absent `taxonomyVersion`, a `cursor`, an undeclared kind, an undeclared payload key, or a truncation marker fails.
 
 #### TC-EVT-023 - A dependency delta emits `added`/`removed`; an identical folded edge set emits nothing
 
@@ -845,19 +846,19 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Tags**: @backend, @events, @blockers
 
 **Preconditions / fixture**:
-- A question record with `options[]` and no lane; an answer record with `choice`, `answeringAudience`, `resumeMode`; a delivering lane whose consumption records `resumeIntent`.
+- A question record with `options[]`, the required non-empty `lane` (e.g. `GH-290`), and `ref: null` as the CLI publish path records it; an answer record with `choice`, `answeringAudience`, `resumeMode`; a delivering lane whose consumption records `resumeIntent`.
 
 **Steps**:
-1. Append the question; tick; assert one `published` frame with payload `{id, type, audience, question, options[], askedAt}` and `lane === null`.
-2. Append the answer; tick; assert one `updated` frame with `{id, answeringAudience, choice?, text?, answeredAt, resumeMode}`.
+1. Append the question; tick; assert one `published` frame with payload `{id, type, audience, question, options[], askedAt}`; the envelope `lane === "GH-290"` and `ref === null`.
+2. Append the answer; tick; assert one `updated` frame with `{id, answeringAudience, choice?, text?, answeredAt, resumeMode}`; the envelope `lane` is the question's lane and `ref` is the question's `ref` (`null`).
 3. Tick again **before** the daemon consumes the answer; assert no `cleared` frame (the answer alone is not a clear).
-4. Record `resumeIntent` on the delivering lane; tick; assert one `cleared` frame with `{id, lane, resumeMode, clearedAt}` where `lane` is the delivering lane and `resumeMode` matches the answer's.
-5. Assert each source record produced exactly one frame (re-tick emits nothing) and that the three `lane` values are `null`, `null`, and the lane ref respectively.
-6. Assert the blocker text is the bounded delivered value (no truncation of the delivered cap, no extra fields).
+4. Record `resumeIntent` on the delivering lane; tick; assert one `cleared` frame with `{id, lane, resumeMode, clearedAt}` where the payload `lane` is the question record's lane (the delivering lane the `resumeIntent` was recorded on) and `resumeMode` matches the answer's; the envelope `lane` is that same lane and `ref` is the question's `ref` (`null`).
+5. Assert each source record produced exactly one frame (re-tick emits nothing) and that the envelope `lane` is the question's non-empty lane on all three frames while `ref` is explicit `null` on all three.
+6. Assert the blocker text is the bounded delivered value (no truncation of the delivered cap, no extra fields) and that no frame carries a `parkCause` or truncation marker.
 
 **Expected Outcome**:
-- `published` → `updated` → `cleared`, one frame per source record, with `cleared` naming the lane and the resume mode and appearing only after consumption.
-- A `cleared` emitted on the answer, a duplicate, or a lane-less `cleared` fails.
+- `published` → `updated` → `cleared`, one frame per source record, with a non-empty question lane throughout, `ref` explicit `null` for the CLI-published question, and `cleared` naming the lane and the resume mode and appearing only after consumption.
+- A `cleared` emitted on the answer, a duplicate, a `null` or absent lane on any blocker frame, or a fabricated `ref` fails.
 
 #### TC-EVT-027 - `remove` is never emitted and the emitted kind set equals the declared set minus non-emitted kinds
 
@@ -876,9 +877,9 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 - A full-delivery fixture: entry, dependency add then change, lease `released`, lane `delivering`, refused and completed attempts, phase complete and reopen, blocker published/answered/cleared — over many ticks (at least three per append batch).
 
 **Steps**:
-1. Run the fixture to completion, draining each tick; collect the distinct `(topic, kind)` pairs observed.
-2. Compute the expected set from the declaration: every declared pair whose kind has `emitted: true`.
-3. Assert set equality — no extra pair (no undeclared shape, no S17 kind) and no missing pair (every emitted kind appeared at least once).
+1. Run the fixture to completion, draining each tick; collect the distinct `(topic, kind)` pairs observed on the four **event** topics only (a snapshot frame carries no `kind`, so it cannot contribute a pair).
+2. Compute the expected set from the declaration: for each of the four event topics, every declared pair whose kind has `emitted: true`. The two snapshot topics are excluded from the equality explicitly because they declare `kinds: []`; assert their `kinds`/`payloadFields` are empty and that no frame on `queue` or `lanes` carries a `kind`.
+3. Assert set equality per event topic — no extra pair (no undeclared shape, no S17 kind) and no missing pair (every emitted kind appeared at least once). The twelve emitted kinds are `queue.graph` `entry`/`dependency-edge`/`release`, `dispatch.attempt` `started`/`refused`/`completed`, `phase.state` `began`/`completed`/`reopened`, and `blockers.state` `published`/`updated`/`cleared`.
 4. Assert no frame anywhere has `kind === "remove"` and that `queue.graph` frames number exactly the entry/dependency/release events in the fixture.
 5. Assert the surface reports `queue.graph.remove` with `emitted: false` in both text and `--json` forms.
 6. Source scan: assert no module in the projection or composition path contains a branch that produces `remove` (search for the kind name outside the declaration and the surface renderer), and assert no `queue`-removal verb exists that could feed one.
@@ -1100,13 +1101,13 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 - `queue`/`lanes` frames are byte-identical to the delivered behaviour, baseline `cursor: 0`, change-only advancement, with the degraded stamp as the only delta.
 - An added field, a re-keyed frame, a reordered key, or a dedupe change fails the byte comparison or the delivered suites.
 
-#### TC-EVT-051 - Snapshot topic records declare the snapshot shape, the single kind, the three-field frame, and snapshot-revision ordering
+#### TC-EVT-051 - Snapshot topic records declare the snapshot shape, empty `kinds[]`/`payloadFields[]`, the three-field frame, and snapshot-revision ordering
 
-**Objective**: Prove the surface tells a client that these two topics are snapshot topics and carry no per-lane sequence promise.
+**Objective**: Prove the surface tells a client that these two topics are snapshot topics, declare no kind at all, and carry no per-lane sequence promise.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F6-2, F-6, DM-7, EVT-3, DEC-B
+**Related IDs**: AC-F6-2, F-6, DM-7, EVT-3, DEC-B, DEC-K
 **Test Type(s)**: Contract, Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/events-describe.test.ts` (new)
@@ -1118,15 +1119,15 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Steps**:
 1. Assert `shape === "snapshot"`, `lane === "none"`, `ordering === "snapshot-revision"`, `overflow === "repoll"`.
-2. Assert `kinds.length === 1` with `name === "snapshot"` and `emitted === true`.
+2. Assert `kinds` deep-equals `[]` — no `snapshot` kind, and no fabricated kind of any name.
 3. Assert `frame` deep-equals `["topic","cursor","snapshot"]`.
-4. Assert `payloadFields` equals the derived union of the one kind's list and does not include `kind`, `lane`, `ref`, `sequence`, `occurredAt`, or `taxonomyVersion`.
-5. Assert the text page contains no per-lane sequence sentence and does state that the cursor is a snapshot revision (token assertion on `snapshot revision` and absence of `per lane`).
+4. Assert `payloadFields` deep-equals `[]` and does not include `kind`, `lane`, `ref`, `sequence`, `occurredAt`, or `taxonomyVersion`.
+5. Assert the text page contains no per-lane sequence sentence, does state that the cursor is a snapshot revision (token assertion on `snapshot revision` and absence of `per lane`), and states that a snapshot topic declares no kind.
 6. Assert no snapshot topic declares a `parent` and none appears with the event-topic frame.
 
 **Expected Outcome**:
-- The two delivered topics are described as snapshot topics with one kind, three frame fields, and snapshot-revision ordering, with no envelope or per-lane claim.
-- A snapshot topic described as an event topic, or an added kind, fails.
+- The two delivered topics are described as snapshot topics with empty `kinds[]`/`payloadFields[]`, three frame fields, and snapshot-revision ordering, with no envelope or per-lane claim.
+- A snapshot topic described as an event topic, a fabricated kind, or a non-empty payload list fails.
 
 #### TC-EVT-060 - `events` is prompt-required (19), composed unconditionally with no runtime input, and reaches its handler
 
@@ -1166,7 +1167,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F7-2, F-7, NFR-1
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/events-mount-help.test.ts` (new); `tests/behaviour/entrypoint-help.test.ts` (update)
+**Target Layer / Location**: `tests/behaviour/events-mount-help.test.ts` (new); `tests/behaviour/entrypoint-help.test.ts` (delivered control — no edit required: its hand list already omits `coordinator` and `projects`; adding `events` is documentation only, while the equality that matters is carried by `entrypoint-help-coverage` in `TC-EVT-062`)
 **Harness entry**: `bun test tests/behaviour/events-mount-help.test.ts tests/behaviour/entrypoint-help.test.ts`
 **Tags**: @ui, @cli, @help
 
@@ -1195,7 +1196,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F7-3, F-7, DM-7, DEC-F
 **Test Type(s)**: Checks, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/checks/help-guide-coverage.ts` (update: `events` row); `tests/fixtures/help-guide/coverage.json` (update); `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`; `doc/planning/oss-tooling/milestones/m2/commands/events.md` (update, phase 7)
+**Target Layer / Location**: `scripts/checks/help-guide-coverage.ts` (update: `events` row); `tests/fixtures/help-guide/coverage.json` (update); `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`; `tests/behaviour/entrypoint-help-coverage.test.ts` (delivered control; its coverage-fixture assertion runs green after the fixture row lands); `doc/planning/oss-tooling/milestones/m2/commands/events.md` (update, Phase 5 — reconciled with the mount, before the Phase-6 page token scans)
 **Harness entry**: `bun run scripts/checks/help-guide-coverage.ts`; `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts`
 **Tags**: @checks, @help, @docs
 
@@ -1224,12 +1225,13 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F7-4, F-7, F-8, NFR-8
 **Test Type(s)**: Checks, Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` (update); `tests/checks/exports-parity.test.ts`; `scripts/checks/prompt-conformance.ts`; `scripts/checks/workspace-entrypoints.ts`
-**Harness entry**: `bun run scripts/checks/prompt-conformance.ts`; `bun test tests/structure/content-inventory.test.ts tests/checks/exports-parity.test.ts tests/checks/prompt-conformance.test.ts`
+**Target Layer / Location**: `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` (update); `tests/checks/exports-parity.test.ts`; `scripts/checks/prompt-conformance.ts`; `scripts/checks/workspace-entrypoints.ts`; `tests/structure/daemon-production-composition.test.ts` (update: three prompt-required count assertions)
+**Harness entry**: `bun run scripts/checks/prompt-conformance.ts`; `bun test tests/structure/content-inventory.test.ts tests/checks/exports-parity.test.ts tests/checks/prompt-conformance.test.ts tests/structure/daemon-production-composition.test.ts`
 **Tags**: @checks, @contract, @inventory
 
 **Preconditions / fixture**:
 - Inventory rows for the new modules: the taxonomy contract, the event projection, the `events` command, and the composition helper; the v1 contract inventory entries for the new exports.
+- The delivered `daemon-production-composition.test.ts` is in the Phase-5 edit set for its three prompt-required length assertions.
 
 **Steps**:
 1. Run prompt conformance; assert exit `0` (no plan-progress, hand-edited phase state, raw git writes, or retired platform literals).
@@ -1238,10 +1240,11 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 4. Assert the executable-export allowances name the new files that host executable exports, and that no file gained an executable export without an allowance.
 5. Assert `bun run scripts/checks/workspace-entrypoints.ts` passes (no undeclared cross-package import from the new modules).
 6. Assert the contract index re-exports the declaration (so a consumer imports it from the index, not a deep path).
+7. Run `daemon-production-composition.test.ts`; assert its three prompt-required length assertions report the post-mount values — 19 for the full set, 19 for the composition with every optional input absent, and 18 for the daemon-omission mutant (18/18/17 before the mount).
 
 **Expected Outcome**:
-- Prompt conformance and both inventories pass in both directions; the new modules and exports are registered; allowances are named.
-- A missing inventory row, an unlisted export, an undeclared import, or a dropped file fails.
+- Prompt conformance and both inventories pass in both directions; the new modules and exports are registered; allowances are named; the production-composition suite reports 19/19/18.
+- A missing inventory row, an unlisted export, an undeclared import, a dropped file, or a stale prompt-required count (18/18/17) fails.
 
 #### TC-EVT-064 - Removing any one mount piece trips a named guard (negative controls for all six pieces and both inventories)
 
@@ -1325,12 +1328,12 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 2. Assert the decoded `data` retains the additive fields and that no field was moved outside `data`.
 3. Decode the synthetic extra-field frame; assert success (an unknown `data` field is tolerated), which is the property a v0/v1 peer relies on.
 4. Assert every delivered negative control is still refused with the delivered identity (no validation was relaxed).
-5. Assert the frame size of each additive frame is ≤ `DAEMON_MAX_FRAME_BYTES`.
+5. Assert the frame size of each additive frame is ≤ `DAEMON_MAX_FRAME_BYTES`, and that no decoded payload carries a `truncated` or `truncationReason` key (v1 has no truncation path).
 6. Assert encode→decode round-trip fidelity for the additive frames (no field dropped by the codec).
 
 **Expected Outcome**:
-- Additive frames decode and route; unknown `data` fields are tolerated; no delivered validation relaxed; the frame bound holds.
-- A closed `data` body, a rejected additive field, or a relaxed negative control fails.
+- Additive frames decode and route; unknown `data` fields are tolerated; no delivered validation relaxed; the frame bound holds and no truncation marker is introduced.
+- A closed `data` body, a rejected additive field, a relaxed negative control, or a truncation marker fails.
 
 **Notes / Clarifications**:
 - No v0 binary exists; AMB-T3b records the substitution.
@@ -1424,7 +1427,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 #### TC-EVT-075 - An unknown subscribe topic is refused as `events.topic-unknown` (never `daemon.state-recovery-failed`), a known event topic is accepted with no synthetic baseline, and `since` is ignored
 
-**Objective**: Prove the one intentional delivered behaviour change (DEC-L) and the event-topic subscription semantics (DEC-H) at the control plane.
+**Objective**: Prove the one intentional delivered behaviour change (DEC-L): the delivered handler accepted a topic outside the closed set and answered it with the `lanes` snapshot labelled with the requested topic name (a wrong-data path), and this change refuses it as `events.topic-unknown` before any store read. Also prove the event-topic subscription semantics (DEC-H): a known event topic is accepted with no synthetic baseline and `since` is ignored.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1437,11 +1440,12 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Preconditions / fixture**:
 - The real server + session over the in-memory pair, with a recording state edge counting reads.
+- The delivered baseline behaviour is the pre-change one: no layer validates the topic value and every non-`queue` topic resolves to the `lanes` snapshot (`daemon-compose.ts:384,1164-1171`), so the case asserts the refusal that replaces that accept-then-mislable path.
 
 **Steps**:
-1. Send `subscribe { topic: "status" }`; assert an error frame with `error.code === "events.topic-unknown"`, `category: "user"`, `retryable: false`, `consequence: "not_landed"`.
+1. Send `subscribe { topic: "status" }`; assert an error frame with `error.code === "events.topic-unknown"`, `category: "user"`, `retryable: false`, `consequence: "not_landed"` (instead of the delivered `ok: true` plus a `lanes` snapshot labelled `status`).
 2. Assert the state edge recorded **zero** reads for that refusal (the decision is made from the declaration before any ledger read).
-3. Assert no error frame anywhere in the case carries `daemon.state-recovery-failed` for a topic refusal.
+3. Assert no error frame anywhere in the case carries `daemon.state-recovery-failed` for a topic refusal, and that no frame carrying the `lanes` snapshot under the requested unknown topic name is delivered.
 4. Send `subscribe { topic: "queue.graph" }`; assert `ok: true` and a `subscriptionId`; assert **no** frame is delivered until the next observed change (no synthetic baseline).
 5. Send `subscribe { topic: "queue.graph", since: 42 }`; assert it is accepted (not refused) and that no replay occurs — the first frame after a change carries `sequence: 1`, not a replay from `42`.
 6. Send `subscribe { topic: "queue" }`; assert the delivered baseline frame still arrives with `cursor: 0` (snapshot topics unchanged).
@@ -1479,34 +1483,36 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 - Zero reads/writes/composers; p95 ≤ 100 ms with the measurement recorded; output inside the human bounds; byte-identical repeats.
 - A read, a write, a composer call, an over-bound page, or a p95 above the budget fails with the measurement attached.
 
-#### TC-EVT-081 - A publish tick reads each ledger at most once, opens no socket, probes no process, sleeps zero times, and stays inside its added-latency budget
+#### TC-EVT-081 - A publish tick performs exactly one `readRecords()` per tick, identical across 1 vs N subscribers and 2 vs 4 subscribed event topics, opens no socket, probes no process, sleeps zero times, and stays inside its added-latency budget
 
-**Objective**: Prove the publish tick's cost budget and non-blocking shape, including the absence of socket, probe, and sleep on the publish path.
+**Objective**: Prove NFR-2 over the delivered port: one whole-store `readRecords()` per tick, counted through an injected `StateStorePort`, constant as subscribers and subscribed topics grow, with no socket, probe, sleep, or blocked subscriber on the publish path.
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-NFR-2, NFR-2, NFR-9, GAP-T4
+**Related IDs**: AC-NFR-2, NFR-2, NFR-9, DM-9, DEC-N, GAP-T4
 **Test Type(s)**: Performance, Behaviour
 **Automation Level**: Semi-automated
-**Target Layer / Location**: `tests/behaviour/events-tick-cost.test.ts` (new)
+**Target Layer / Location**: `tests/behaviour/events-tick-cost.test.ts` (new; delivered by the plan's shared-read restructure phase)
 **Harness entry**: `bun test tests/behaviour/events-tick-cost.test.ts`
 **Tags**: @perf, @daemon, @backend
 
 **Preconditions / fixture**:
-- A counting wrapper around the four source read folds (`readQueueEntries`, `readQueueDependencies`, `readQueueLeases`, the attempt/phase/blocker/lane reads) recording call counts per tick; recording transport, process port, and clock with `sleep` counters.
+- The tick is composed with an injected `StateStorePort` whose `readRecords()` increments a counter and delegates to the real temp store, so each call made inside one tick is counted directly (no wall-clock inference and no log parsing).
+- Recording transport, process port, and clock with connect/probe/`sleep` counters.
 - The same fixture store measured twice in one run: tick **without** the event projection (baseline) and tick **with** it.
 
 **Steps**:
-1. Assert per tick at most one bounded read per source ledger (≤ 4 for the four event planes, plus the delivered snapshot reads), and that the reads are not repeated within a tick.
-2. Assert zero socket connects, zero process probes, and zero `sleep` calls on the publish path.
-3. Assert the tick does not await a subscriber write: with a full subscriber buffer, the tick completes and another subscriber still receives (NFR-9).
-4. Measure p50/p95 tick duration over 50 ticks with and without the event projection; assert added p95 ≤ 25 ms.
-5. Record the store shape (entries, dependencies, attempts, phases, blockers) and the environment in the output.
-6. Assert no unbounded scan: the number of records read per tick equals a bounded page (not the whole ledger count) when the ledger is large; assert the read returns at most the configured bound.
+1. Release one tick on the populated reference store with two event topics subscribed and one subscriber; assert the `readRecords()` counter increased by exactly `1` for that tick, and that a second tick counts exactly one more.
+2. Repeat with `N` subscribers (e.g. 1 vs 5) on the same topics; assert the per-tick `readRecords()` count is still exactly `1` — no per-subscriber read exists.
+3. Repeat with two event topics subscribed versus all four; assert the per-tick `readRecords()` count is still exactly `1` — no per-topic read exists.
+4. Assert no fold inside the tick performs its own store read: the counter never exceeds one per tick, and a source scan finds no `readRecords()` call outside the one composition seam that provides the shared view.
+5. Assert zero socket connects, zero process probes, and zero `sleep` calls on the publish path.
+6. Assert the tick does not await a subscriber write: with a full subscriber buffer, the tick completes and another subscriber still receives (NFR-9).
+7. Measure p50/p95 tick duration over 50 ticks with and without the event projection; assert added p95 ≤ 25 ms; record the store shape (entries, dependencies, attempts, phases, blockers) and the environment in the output.
 
 **Expected Outcome**:
-- ≤ 1 read per ledger per tick; zero connects/probes/sleeps; no publish blocked on a subscriber; added p95 ≤ 25 ms with evidence.
-- A per-tick full scan, a socket on the publish path, a sleep, or a blocked tick fails.
+- Exactly one `readRecords()` per tick, identical for 1 vs N subscribers and 2 vs 4 subscribed event topics; zero connects/probes/sleeps; no publish blocked on a subscriber; added p95 ≤ 25 ms with evidence.
+- A second read per tick, a per-subscriber or per-topic read, a socket on the publish path, a sleep, or a blocked tick fails.
 
 #### TC-EVT-082 - A burst above the per-tick cap emits the cap, keeps the remainder pending, loses nothing, and keeps bounded state
 
@@ -1523,27 +1529,27 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 
 **Preconditions / fixture**:
 - 100 dependency changes for one lane appended before a single tick, with the subscriber draining.
-- An injected inspector (or a declared read accessor) for the projection's pending state when available; otherwise a source scan substitute (AMB-T3c).
+- An injected inspector (or a declared read accessor) for the projection's watermark/pending state when available; otherwise a source scan substitute (AMB-T3c).
 
 **Steps**:
-1. Release one tick; assert at most 64 frames are emitted for that `(topic, lane)` and that the first 64 are the first 64 changes in order.
-2. Assert the remaining 36 stay pending (not dropped, not buffered as 36 frames): release further ticks and assert all 36 arrive in order with contiguous sequences.
+1. Release one tick; assert at most 64 frames are emitted for that topic (the declared per-topic per-tick cap) and that the first 64 are the first 64 changes in order for the lane.
+2. Assert the remaining 36 stay pending (not dropped, not buffered as 36 frames): release further ticks and assert all 36 arrive in order with contiguous sequences. The watermark does not advance past an unemitted delta, so the remainder is still observable on the next tick.
 3. Assert the total emitted equals 100, the lane's sequence series is `1..100` with no gap and no repeat.
 4. Assert no lower-than-64-then-64 oscillation: the cap is applied per tick, and the pending remainder is emitted before newly observed changes (attempted in this fixture by appending one more change mid-drain and asserting it arrives last).
-5. Assert the pending state is keyed per `(topic, lane)` with at most one entry per lane (inspector), and that the projection module contains no array accumulating events across ticks (source scan) — the AMB-T3c substitute.
+5. Assert the watermark's identity and bound per DM-9: at most one entry per observed `(topic, lane, source family)`, keyed by the last emitted record's `key` plus its `sequence` position in the `readRecords()` view; the bound is 4 event topics × observed distinct lanes × ≤3 source families, independent of record and event count (inspector); no array accumulates events across ticks (source scan) — the AMB-T3c substitute.
 6. Assert zero loss: the set of emitted `(ref, edges)` deltas equals the set appended.
 
 **Expected Outcome**:
-- Cap respected, remainder pending and emitted later, contiguous sequences, zero loss, bounded per-lane pending state.
-- A drop, a reorder, a gap, an unbounded queue, or a cap violation fails.
+- Cap respected, remainder pending through the DM-9 watermark and emitted later, contiguous sequences, zero loss, watermark bounded by (event topics × lanes × source families).
+- A drop, a reorder, a gap, an unbounded event queue, a watermark keyed only by `(topic, lane)`, or a cap violation fails.
 
-#### TC-EVT-083 - Every event frame respects the frame bound and an over-bound payload is truncated with the declared marker
+#### TC-EVT-083 - Every event frame respects the frame bound, the worst-case declared payload is under the cap, and no payload is truncated
 
-**Objective**: Prove the bound and the truncation contract: nothing is silently shortened.
+**Objective**: Prove the bound structurally: every declared payload fits below `DAEMON_MAX_FRAME_BYTES` from the delivered caps, nothing is silently shortened, and v1 has no truncation marker.
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-NFR-4, NFR-5, DM-2
+**Related IDs**: AC-NFR-4, NFR-5, DM-2, DEC-O
 **Test Type(s)**: Behaviour, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/events-frame-bound.test.ts` (new)
@@ -1551,20 +1557,20 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Tags**: @backend, @events, @bounds
 
 **Preconditions / fixture**:
-- A blocker question at the delivered maximum text length, an answer with maximum `text`, and an attempt with a large `evidenceRefs[]` (at the declared cap).
-- A forced over-bound fixture: a payload whose serialized size exceeds `DAEMON_MAX_FRAME_BYTES`.
+- Worst-case declared payload fixtures: a `dependency-edge` with three lists of 32 refs of 64 characters each, a `refused` attempt with 16 evidence refs, a blocker question at 120 characters with 4 options of 60 characters, and an answer at 160 characters.
+- The delivered cap constants (`QUEUE_MAX_REF_CHARS` 64, `QUEUE_MAX_EDGES_PER_ENTRY` 32, `DISPATCH_MAX_EVIDENCE_REFS` 16, `BLOCKER_MAX_QUESTION_CHARS` 120, `BLOCKER_MAX_OPTIONS` 4, `BLOCKER_MAX_OPTION_CHARS` 60, `BLOCKER_MAX_ANSWER_CHARS` 160).
 
 **Steps**:
-1. Emit frames for the maximum-size delivered payloads; assert each encoded line is ≤ 65 536 bytes.
-2. Force the over-bound payload; assert the frame is emitted with `payload.truncated === true` and `payload.truncationReason === "frame-max-bytes"`, and that the frame itself is ≤ the bound.
-3. Assert the frame still decodes and still carries the eight envelope fields (truncation is inside `payload`).
-4. Assert a control (under-bound) payload has no `truncated` key.
-5. Assert the truncation is not silent: a scan of the projection shows no path that slices a serialized frame or drops a field without setting the marker.
-6. Assert the reference page's per-kind payload bounds are respected by the maximum-size fixtures (no payload field beyond its declared cap).
+1. Emit frames for the worst-case delivered payloads; assert each encoded line is ≤ 65 536 bytes (`DAEMON_MAX_FRAME_BYTES`) and well below it (the declared worst case is a `dependency-edge` under ~7 KB).
+2. Assert the worst-case size is derived from the declared caps, not measured alone: compute the maximum serialized `dependency-edge` payload from 32 × 64-character refs per list and assert the result is an order of magnitude below the frame bound.
+3. Assert no payload carries a `truncated` or `truncationReason` key, and that neither name appears in any kind's declared `payloadFields`.
+4. Assert no frame is silently shortened: for each worst-case frame the payload keys equal the kind's declared list and each variable-length value retains its source length up to its declared cap (no clipping below the cap).
+5. Assert every worst-case frame still decodes and still carries the eight envelope fields.
+6. Assert the reference page's per-kind payload bounds are respected by the worst-case fixtures (no payload field beyond its declared cap).
 
 **Expected Outcome**:
-- All frames within the bound; an over-bound payload carries the truncation marker and reason; under-bound payloads carry none.
-- A frame above the bound, a silent shortening, or a missing marker fails.
+- All frames within the bound, with the worst case provably under it from the delivered caps; no truncation marker anywhere; worst-case values are not clipped.
+- A frame above the bound, a silent shortening, an introduced `truncated`/`truncationReason` field, or a worst-case payload that cannot fit fails.
 
 #### TC-EVT-084 - No payload, page, or error carries a credential, token, prompt, transcript, diff, repository content, or `repositoryRoot`
 
@@ -1610,7 +1616,7 @@ TC IDs use the `EVT` feature prefix and follow the capability blocks of the spec
 **Test data.**
 
 - **Scripted timelines** live in `tests/fixtures/events/taxonomy-cases.ts` (new): one declarative row per emitted kind carrying the appender call, the source record fields, the expected `(topic, kind, lane, ref)`, and the expected payload key set. The row is the single fixture a case replays; adding a kind to the fixture without a declaration fails `TC-EVT-027`.
-- **Declaration mutants** live in `tests/fixtures/events/drift-mutants.ts` (new): five drift copies (version, kind, payload field, ordering, overflow) and six integrity violations (duplicate topic, empty kinds, duplicate kind, kind without payload fields, unknown closed value, missing frame field), each naming the case it must trip. Mutants are applied to deep copies in memory or to temp copies on disk; the live tree is never mutated.
+- **Declaration mutants** live in `tests/fixtures/events/drift-mutants.ts` (new): five drift copies (version, kind, payload field, ordering, overflow) and seven integrity violations (duplicate topic, empty kinds on an event topic, a kind on a snapshot topic, duplicate kind, kind without payload fields, unknown closed value, missing frame field), each naming the case it must trip. Mutants are applied to deep copies in memory or to temp copies on disk; the live tree is never mutated.
 - **Overflow fixtures** live in `tests/fixtures/events/overflow-cases.ts` (new): six rows, one per topic, each declaring `subscriptionBuffer`, the change sequence that forces overflow, and the expected degraded `data` key set.
 - **Contracted baselines** live in `tests/fixtures/events/{delivered-vocabularies,error-table-baseline,additivity-baseline}.json` (new), captured from the delivered tree before the change: the nine wire types, four frame kinds, three degraded reasons, two stop modes, protocol version/floor, the buffer bound and setting name, the error table minus the `events` kind, the record-kind set, the schema-version constants, the dependency sets, the capsule event-kind set, and the writable-root set. Each baseline is a tree invariant (a committed expectation), never a diff against a moving base branch.
 - **Goldens** live in `tests/fixtures/events/goldens/` (new): `events-list.txt`, `events-describe-queue-graph.txt`, `events-describe-lanes.txt`, and the snapshot frame bytes captured from the delivered behaviour. Regenerated only by the documented golden command, with a review diff.
@@ -1655,7 +1661,7 @@ The ticket's first and third acceptance criteria are observed through the delive
 
 ## 7. Automation Plan and Implementation Mapping
 
-**File-inventory authority.** The paths below are this plan's intended grouping. No implementation plan exists at authoring time; when the delivery plan is authored, its file inventory may consolidate suites (for example one `tests/behaviour/events-subscribe.test.ts` absorbing the four per-topic files) as long as every TC remains its own `test(...)` title and no assertion, counter, fixture, or negative control is dropped. Where the two disagree about a path, the delivery plan wins; where they disagree about an assertion, this plan wins.
+**File-inventory authority.** The paths below are this plan's execution grouping and are consistent with `chg-GH-290-plan.yaml`'s `scope.files` (the plan is the delivery authority). Where the delivery plan consolidates suites (for example one `tests/behaviour/events-subscribe.test.ts` absorbing the four per-topic files), every TC must remain its own `test(...)` title and no assertion, counter, fixture, or negative control may be dropped. Where the two disagree about a path, the delivery plan wins; where they disagree about an assertion, this plan wins.
 
 **Seam discipline.** The cases compose one of four shapes, declared per case:
 
@@ -1666,14 +1672,14 @@ The ticket's first and third acceptance criteria are observed through the delive
 | **R** — real control server + real session over a real store (transport/clock/wake injected) | 020, 021 (real socket), 022, 023, 024, 025, 026, 027, 030, 031, 032, 040, 042, 050, 075, 081, 082, 083, 084 | The delivered session/server/codec/projection with the delivered appenders; only transport, clock, and wake are doubles. |
 | **G** — guard suites and their mutants (no command invocation) | 062, 063, 064, 072, 071 (codec only), 084 (scan half) | Runs the checks and mutation fixtures. |
 
-A case appears in more than one row only when it asserts both a structural half and a runtime half (for example `TC-EVT-016`'s payload union and its surface rendering); the row records which half needs which shape, and no case is counted twice in the §3.4 totals.
+A case appears in more than one row only when it asserts both a structural half and a runtime half (for example `TC-EVT-016`'s payload union and its surface rendering); the row records which half needs which shape, and no case is counted twice in the §3.4 totals. `TC-EVT-081`'s cost half replaces the delivered folds with one tick composed over an injected `StateStorePort` whose `readRecords()` is counted; the server, session, projection, and appenders remain the delivered implementations.
 
 | TC ID | Test file to create or update | Execution command | Mocking / fixtures | Status |
 |---|---|---|---|---|
 | TC-EVT-001 | `tests/structure/event-taxonomy-declaration.test.ts` (new) | `bun test tests/structure/event-taxonomy-declaration.test.ts` | Shipped `TAXONOMY`; `CONTROL_TOPICS`; ambient scan | To Implement |
 | TC-EVT-002 | `tests/structure/event-taxonomy-declaration.test.ts` (new); `tests/checks/event-taxonomy-conformance.test.ts` (new) | `bun test tests/structure/event-taxonomy-declaration.test.ts tests/checks/event-taxonomy-conformance.test.ts` | `taxonomy-cases.ts`; M2 page token scan | To Implement |
 | TC-EVT-003 | `tests/structure/event-taxonomy-drift.test.ts` (new) | `bun test tests/structure/event-taxonomy-drift.test.ts` | Five drift mutants; production comparators | To Implement |
-| TC-EVT-004 | `tests/structure/event-taxonomy-integrity.test.ts` (new); `tests/behaviour/events-errors.test.ts` (new) | `bun test tests/structure/event-taxonomy-integrity.test.ts tests/behaviour/events-errors.test.ts` | Six violation mutants; injected invalid declaration | To Implement |
+| TC-EVT-004 | `tests/structure/event-taxonomy-integrity.test.ts` (new); `tests/behaviour/events-errors.test.ts` (new) | `bun test tests/structure/event-taxonomy-integrity.test.ts tests/behaviour/events-errors.test.ts` | Seven violation mutants; injected invalid declaration | To Implement |
 | TC-EVT-005 | `tests/structure/event-taxonomy-additive.test.ts` (new); `tests/behaviour/events-decode-additive.test.ts` (new) | `bun test tests/structure/event-taxonomy-additive.test.ts tests/behaviour/events-decode-additive.test.ts` | Synthetic extra payload field; delivered codec | To Implement |
 | TC-EVT-006 | `tests/structure/event-taxonomy-single-source.test.ts` (new); `tests/checks/event-taxonomy-conformance.test.ts` (new) | `bun test tests/structure/event-taxonomy-single-source.test.ts tests/checks/event-taxonomy-conformance.test.ts` | Injected declaration copies; literal-array scan | To Implement |
 | TC-EVT-010 | `tests/behaviour/events-list.test.ts` (new); `tests/golden/events-reference-page.test.ts` (new) | `bun test tests/behaviour/events-list.test.ts tests/golden/events-reference-page.test.ts` | `events-list.txt` golden; synthetic brand | To Implement |
@@ -1682,10 +1688,10 @@ A case appears in more than one row only when it asserts both a structural half 
 | TC-EVT-013 | `tests/behaviour/events-describe.test.ts` (new) | `bun test tests/behaviour/events-describe.test.ts` | `list --json` captured in-process | To Implement |
 | TC-EVT-014 | `tests/behaviour/events-errors.test.ts` (new) | `bun test tests/behaviour/events-errors.test.ts` | Decision table; invalid declaration; recording counters | To Implement |
 | TC-EVT-015 | `tests/behaviour/events-purity.test.ts` (new); `tests/checks/events-hermetic.test.ts` (new) | `bun test tests/behaviour/events-purity.test.ts tests/checks/events-hermetic.test.ts` | Recording edge/config/transport; armed fs/net/spawn guard; empty environment | To Implement |
-| TC-EVT-016 | `tests/behaviour/events-describe.test.ts` (new); `tests/structure/event-taxonomy-single-source.test.ts` (new) | `bun test tests/behaviour/events-describe.test.ts tests/structure/event-taxonomy-single-source.test.ts` | Payload expectation table; hand-authored-union mutant | To Implement |
+| TC-EVT-016 | `tests/behaviour/events-describe.test.ts` (new); `tests/structure/event-taxonomy-single-source.test.ts` (new, Phase 6 half) | `bun test tests/behaviour/events-describe.test.ts tests/structure/event-taxonomy-single-source.test.ts` | Payload expectation table; hand-authored-union mutant | To Implement |
 | TC-EVT-020 | `tests/behaviour/events-subscribe-queue-graph.test.ts` (new); `tests/fixtures/events/event-harness.ts` (new) | `bun test tests/behaviour/events-subscribe-queue-graph.test.ts` | Real runtime/server/session; `createMemoryTransportPair`; injected clock + manual wake; temp store | To Implement |
 | TC-EVT-021 | `tests/conformance/events/real-socket-subscribe.test.ts` (new) | `bun test tests/conformance/events/real-socket-subscribe.test.ts` | `createUnixTransport`; temp `0700` root; 10 s timeout; `finally` close | To Implement |
-| TC-EVT-022 | `tests/behaviour/events-envelope-conformance.test.ts` (new) | `bun test tests/behaviour/events-envelope-conformance.test.ts` | Scripted full-delivery stream; lane-less blocker row | To Implement |
+| TC-EVT-022 | `tests/behaviour/events-envelope-conformance.test.ts` (new) | `bun test tests/behaviour/events-envelope-conformance.test.ts` | Scripted full-delivery stream; CLI-published blocker with `ref: null` and a required lane | To Implement |
 | TC-EVT-023 | `tests/behaviour/events-dependency-delta.test.ts` (new) | `bun test tests/behaviour/events-dependency-delta.test.ts` | Four dependency records incl. an identical rewrite | To Implement |
 | TC-EVT-024 | `tests/behaviour/events-subscribe-dispatch.test.ts` (new) | `bun test tests/behaviour/events-subscribe-dispatch.test.ts` | Lane record + five attempt outcomes | To Implement |
 | TC-EVT-025 | `tests/behaviour/events-subscribe-phase.test.ts` (new) | `bun test tests/behaviour/events-subscribe-phase.test.ts` | Two `complete` + one `reopen`; record-count oracle | To Implement |
@@ -1700,9 +1706,9 @@ A case appears in more than one row only when it asserts both a structural half 
 | TC-EVT-050 | `tests/behaviour/events-snapshot-preserved.test.ts` (new) + five delivered suites as controls | `bun test tests/behaviour/events-snapshot-preserved.test.ts tests/behaviour/{control-session,control-connection,daemon-watch-state-changes,queue-watch,lanes-watch}.test.ts` | Snapshot golden bytes; snapshot-topic overflow row | To Implement |
 | TC-EVT-051 | `tests/behaviour/events-describe.test.ts` (new) | `bun test tests/behaviour/events-describe.test.ts` | `list`/`describe` records for `queue`/`lanes` | To Implement |
 | TC-EVT-060 | `tests/structure/events-production-composition.test.ts` (new); `tests/behaviour/entrypoint-composition.test.ts` (update) | `bun test tests/structure/events-production-composition.test.ts tests/behaviour/entrypoint-composition.test.ts` | Injected facts; recording factories; membership-omission and conditional-registration mutants | To Implement |
-| TC-EVT-061 | `tests/behaviour/events-mount-help.test.ts` (new); `tests/behaviour/entrypoint-help.test.ts` (update) | `bun test tests/behaviour/events-mount-help.test.ts tests/behaviour/entrypoint-help.test.ts` | Counting composer; synthetic brand; help bounds | To Implement |
-| TC-EVT-062 | `scripts/checks/help-guide-coverage.ts` (update); `tests/fixtures/help-guide/coverage.json` (update); `doc/planning/oss-tooling/milestones/m2/commands/events.md` (update, phase 7) | `bun run scripts/checks/help-guide-coverage.ts`; `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` | Page-root row; page `--help`/`--version`; inventory rows | Existing – Update |
-| TC-EVT-063 | `tests/structure/inventory.json` (update); `tests/structure/content-inventory.test.ts`; `tests/checks/exports-parity.test.ts`; `scripts/checks/prompt-conformance.ts` | `bun run scripts/checks/prompt-conformance.ts`; `bun test tests/structure/content-inventory.test.ts tests/checks/exports-parity.test.ts tests/checks/prompt-conformance.test.ts` | File-set and v1-contract inventory rows; export allowances | Existing – Update |
+| TC-EVT-061 | `tests/behaviour/events-mount-help.test.ts` (new); `tests/behaviour/entrypoint-help.test.ts` (delivered control — no edit required) | `bun test tests/behaviour/events-mount-help.test.ts tests/behaviour/entrypoint-help.test.ts` | Counting composer; synthetic brand; help bounds | To Implement |
+| TC-EVT-062 | `scripts/checks/help-guide-coverage.ts` (update); `tests/fixtures/help-guide/coverage.json` (update); `doc/planning/oss-tooling/milestones/m2/commands/events.md` (update, Phase 5); `tests/behaviour/entrypoint-help-coverage.test.ts` (delivered control) | `bun run scripts/checks/help-guide-coverage.ts`; `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/behaviour/entrypoint-help-coverage.test.ts` | Page-root row; page `--help`/`--version`; inventory rows; prompt-required/inventory equality | Existing – Update |
+| TC-EVT-063 | `tests/structure/inventory.json` (update); `tests/structure/content-inventory.test.ts`; `tests/checks/exports-parity.test.ts`; `scripts/checks/prompt-conformance.ts`; `tests/structure/daemon-production-composition.test.ts` (update: 18/18/17 → 19/19/18) | `bun run scripts/checks/prompt-conformance.ts`; `bun test tests/structure/content-inventory.test.ts tests/checks/exports-parity.test.ts tests/checks/prompt-conformance.test.ts tests/structure/daemon-production-composition.test.ts` | File-set and v1-contract inventory rows; export allowances; post-mount count assertions | Existing – Update |
 | TC-EVT-064 | `tests/checks/help-guide-coverage-mutants.test.ts` (update); `tests/checks/event-mount-guards.test.ts` (new); `tests/fixtures/events/mount-mutants.ts` (new) | `bun test tests/checks/help-guide-coverage-mutants.test.ts tests/checks/event-mount-guards.test.ts` | Eight temp-copy mutants | To Implement |
 | TC-EVT-070 | `tests/structure/event-control-vocabulary.test.ts` (new); `tests/structure/daemon-vocabulary.test.ts` (control) | `bun test tests/structure/event-control-vocabulary.test.ts tests/structure/daemon-vocabulary.test.ts` | `delivered-vocabularies.json`; emitted-frame key sets | To Implement |
 | TC-EVT-071 | `tests/behaviour/events-decode-additive.test.ts` (new); `tests/behaviour/control-codec.test.ts` (control) | `bun test tests/behaviour/events-decode-additive.test.ts tests/behaviour/control-codec.test.ts` | Serialized additive frames; four negative controls | To Implement |
@@ -1711,12 +1717,21 @@ A case appears in more than one row only when it asserts both a structural half 
 | TC-EVT-074 | `tests/structure/event-additivity-inventory.test.ts` (new) | `bun test tests/structure/event-additivity-inventory.test.ts` | `additivity-baseline.json`; manifest/lockfile parse; capsule event set | To Implement |
 | TC-EVT-075 | `tests/behaviour/events-subscribe-refusal.test.ts` (new) | `bun test tests/behaviour/events-subscribe-refusal.test.ts` | Real server/session; `status`/unknown/known/`since` requests; read counter | To Implement |
 | TC-EVT-080 | `tests/behaviour/events-purity.test.ts` (new) | `bun test tests/behaviour/events-purity.test.ts` | Recording counters; 5 warm-up + 50 measured; `performance.now()` | To Implement |
-| TC-EVT-081 | `tests/behaviour/events-tick-cost.test.ts` (new) | `bun test tests/behaviour/events-tick-cost.test.ts` | Counting read wrapper; transport/probe/sleep counters; same-run baseline | To Implement |
-| TC-EVT-082 | `tests/behaviour/events-burst.test.ts` (new); `tests/structure/event-projection-bounds.test.ts` (new) | `bun test tests/behaviour/events-burst.test.ts tests/structure/event-projection-bounds.test.ts` | 100-change burst; pending-state inspector or scan | To Implement |
-| TC-EVT-083 | `tests/behaviour/events-frame-bound.test.ts` (new) | `bun test tests/behaviour/events-frame-bound.test.ts` | Max-size delivered payloads; forced over-bound fixture | To Implement |
+| TC-EVT-081 | `tests/behaviour/events-tick-cost.test.ts` (new; shared-read restructure phase) | `bun test tests/behaviour/events-tick-cost.test.ts` | Injected `StateStorePort` counting `readRecords()`; transport/probe/sleep counters; same-run baseline; 1-vs-N subscriber and 2-vs-4 topic matrices | To Implement |
+| TC-EVT-082 | `tests/behaviour/events-burst.test.ts` (new); `tests/structure/event-projection-bounds.test.ts` (new) | `bun test tests/behaviour/events-burst.test.ts tests/structure/event-projection-bounds.test.ts` | 100-change burst; DM-9 watermark inspector (per `(topic, lane, source family)`) or scan | To Implement |
+| TC-EVT-083 | `tests/behaviour/events-frame-bound.test.ts` (new) | `bun test tests/behaviour/events-frame-bound.test.ts` | Worst-case declared payloads from the delivered caps; no forced over-bound fixture | To Implement |
 | TC-EVT-084 | `tests/behaviour/events-privacy.test.ts` (new); `tests/checks/event-privacy-literals.test.ts` (new) | `bun test tests/behaviour/events-privacy.test.ts tests/checks/event-privacy-literals.test.ts` | Privacy canaries; full-delivery + max-size outputs | To Implement |
 
-**Delivered suites used as unmodified controls:** `tests/behaviour/{control-codec,control-conformance,control-session,control-connection,control-transport,watch-stream,daemon-lifecycle,daemon-watch-state-changes,queue-watch,lanes-watch,queue-cli,lanes,entrypoint-help,entrypoint-help-coverage,entrypoint-composition}.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract,error-table,envelope-contract}.test.ts`, `tests/golden/{queue-list,lanes-list}.test.ts`, `tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,exit-code-literals}.test.ts`. Any change to one of these assertions outside the declared mount rows (the prompt-required enumeration, the coverage fixture, the page-root row, the inventories, and the export allowances) is a finding, not an adjustment.
+**Role of every delivered suite the mount touches** (each suite appears once, with one role):
+
+| Delivered suite | Role |
+|---|---|
+| `tests/behaviour/entrypoint-help-coverage.test.ts` | No assertion edit: its coverage-fixture assertion (`coverage.commands` equals `PROMPT_REQUIRED_COMMANDS`) runs green once the Phase-5 fixture row lands. Carries the prompt-required/inventory equality for `TC-EVT-062`. |
+| `tests/behaviour/entrypoint-composition.test.ts` | Edited: its `EXPECTED` prompt-required list gains `events` (`TC-EVT-060`, Phase 5). |
+| `tests/structure/daemon-production-composition.test.ts` | Edited: its three prompt-required length assertions change 18/18/17 → 19/19/18 (`TC-EVT-063`, Phase 5). |
+| `tests/behaviour/entrypoint-help.test.ts` | No edit required: its hand list already omits `coordinator` and `projects`; adding `events` is documentation only. Runs as a delivered control in `TC-EVT-061`. |
+
+**Delivered suites used as unmodified controls:** `tests/behaviour/{control-codec,control-conformance,control-session,control-connection,control-transport,watch-stream,daemon-lifecycle,daemon-watch-state-changes,queue-watch,lanes-watch,queue-cli,lanes}.test.ts`, `tests/structure/{queue-scheduling-contract,daemon-vocabulary,daemon-contract,state-contract,error-table,envelope-contract}.test.ts`, `tests/golden/{queue-list,lanes-list}.test.ts`, `tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,exit-code-literals}.test.ts`. Any change to one of these assertions outside the roles tabled above (the prompt-required enumeration and its counts, the coverage fixture, the page-root row, the inventories, and the export allowances) is a finding, not an adjustment.
 
 **Not changed, deliberately:** `tests/checks/doc-conformance.test.ts`'s page list is not extended (§8.5 precedent: it already omits `dispatch`, `coordinator`, and `projects`; `events`' `--help`/`--version` coverage is carried by the help-coverage guard, `TC-EVT-062`).
 
@@ -1744,20 +1759,23 @@ A case appears in more than one row only when it asserts both a structural half 
 - The four event topics' source ledgers and folds are available and read-only for the daemon; each emitted kind maps to exactly one of them (Appendix E), asserted by `TC-EVT-020`..`TC-EVT-027`.
 - The declaration is injected into the `events` runtime and into the projection through one seam, defaulting to the shipped constant; `TC-EVT-004`/`TC-EVT-006` need that seam, and its absence is a named failure (GAP-T5), not a skip.
 - The publish tick accepts an injected manual wake and clock in tests; the delivered suites already compose this way (`daemon-watch-state-changes.test.ts`).
-- A snapshot topic's single-kind `payloadFields` list is delivered data, not invented by this plan; `TC-EVT-051` asserts the derivation invariant and the absence of envelope fields rather than guessing its exact contents.
+- A snapshot topic declares `kinds: []` and `payloadFields: []`; `TC-EVT-051` asserts that empty declaration, the absence of any fabricated `snapshot` kind, and the absence of envelope fields rather than guessing contents.
+- The publish tick accepts an injected `StateStorePort` whose `readRecords()` can be wrapped by a counter; NFR-2's proof depends on that seam, and its absence is a named failure (GAP-T5), not a skip.
+- The per-`(topic, lane, source family)` watermark exposes an inspector or a declared read accessor; when it does not, `TC-EVT-082` uses the source-scan substitute recorded in AMB-T3c and states so in the test output.
 - Baselines (vocabularies, error table minus `events`, record kinds, schema versions, dependency sets, capsule events) are captured from the delivered tree before the change and committed as tree invariants, never as a branch diff.
 
 ### 8.3 Open Questions
 
 - **OQ-A (non-blocking, owner `@reviewer`)** — Does any consumer outside the repository decode an event `data` body strictly enough to reject the added fields? The specification carries this as OQ-1; `TC-EVT-071` proves the additive decode for the delivered codec, and `TC-EVT-005` proves an extra payload field is tolerated. Review-confirmed only.
 - **OQ-B (deferred, owner `@pm`)** — Does a client need a sequence that survives a restart? v1 declares the restart a discontinuity (DEC-I); `TC-EVT-032` asserts the declared behaviour and the documented remedy. A durable sequence is a recorded follow-up (§7.3), not a gap in this plan.
-- **OQ-C (non-blocking, owner `@test-plan-writer`/`@reviewer`)** — The pending-watermark inspector used by `TC-EVT-082` may not exist; the case then uses the source-scan substitute recorded in AMB-T3c, which must be stated in the test output rather than silently swapped.
+- **OQ-C (non-blocking, owner `@test-plan-writer`/`@reviewer`)** — The DM-9 watermark inspector used by `TC-EVT-082` may not exist; the case then uses the source-scan substitute recorded in AMB-T3c, which must be stated in the test output rather than silently swapped.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-11 | `@test-plan-writer` | Initial test plan for GH-290 / M2-S13: 45 cases binding all 38 acceptance criteria (33 capability + 5 non-functional), with the six-topic and kind-set equality, five drift classes, the integrity/exit matrix, single-source mutation proof, the end-to-end `queue.graph` subscription through the delivered session/server (plus a bounded real-socket variant), envelope conformance, per-`(topic, lane)` ordering and restart scope, six-topic overflow parity with the additive stamp and the one-constant proof, byte-identical snapshot preservation, the mount as one unit with eight guard-negative controls, additivity and the exactly-three-row error table, the delivered refusal-identity change, and the measured NFRs. Records the two declared gaps (`remove` unemitted, `began` derived), the S17 boundary, three substitute assertions (AMB-T1..T3b, plus AMB-T3c), and the determinism method for the end-to-end cases. |
+| 1.1 | 2026-11-11 | `@test-plan-writer` | DoR iteration-1 remediation against spec v1.1. `TC-EVT-022` drops the null-lane fixture and asserts `lane` is a non-empty string on every event-topic frame with `ref` nullable only on `blockers.state` (`null` for a CLI-published question); `TC-EVT-026` follows the same lane/ref rule on the blocker plane. `TC-EVT-051`, `TC-EVT-002` and `TC-EVT-027` adopt `kinds: []`/`payloadFields: []` on snapshot topics and scope emitted-set equality to the four event topics. `TC-EVT-081` is re-derived from NFR-2 as one counting `readRecords()` per tick through an injected `StateStorePort`, constant across 1-vs-N subscribers and 2-vs-4 subscribed topics. `TC-EVT-082` uses the DM-9 watermark identity and its lanes × ≤3 source-family bound. `TC-EVT-083` and the `TC-EVT-071` mapping replace the forced over-bound/truncation case with a provable worst-case-under-cap assertion and a no-truncation-marker assertion. `TC-EVT-075` restates the delivered accept-then-mislable behaviour while keeping the `daemon.state-recovery-failed` negative assertion. The M2 page reconciliation is Phase 5 everywhere (A-3). §7 gives each mount-touched delivered suite exactly one role and adds the `daemon-production-composition` count assertions and the `TC-EVT-016` single-source half (A-4). `parkCause`, stale `DM-8`/`DEC-M`/`RSK-9` references, and the TDR "consumed unchanged" wording are corrected to spec v1.1. TC set unchanged at 45; AC coverage unchanged at 38/38. |
 
 ## 10. Test Execution Log
 
