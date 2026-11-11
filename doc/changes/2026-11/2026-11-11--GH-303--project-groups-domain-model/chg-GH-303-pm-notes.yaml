@@ -5,7 +5,7 @@ delivery_mode: autonomous
 milestone: M2
 phases:
   clarify_scope: { started: null, completed: 2026-11-11T10:03:49.191Z }
-  specification: { started: null, completed: 2026-11-11T18:57:15.574Z }
+  specification: { started: null, completed: 2026-11-11T20:30:16.403Z }
   test_planning: { started: null, completed: 2026-11-11T18:57:22.822Z }
   delivery_planning: { started: null, completed: 2026-11-11T18:57:30.498Z }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }

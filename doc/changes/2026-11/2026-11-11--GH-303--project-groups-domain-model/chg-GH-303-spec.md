@@ -3,7 +3,7 @@ change:
   ref: GH-303
   type: docs
   status: Proposed
-  version: 1.3
+  version: 1.4
   base_revision: 723454e4
   slug: project-groups-domain-model
   title: "Amend the M2 plan: three-level domain model with project groups, optional workspaces, and cross-repository changes"
@@ -21,319 +21,841 @@ change:
 
 # CHANGE SPECIFICATION
 
-> **PURPOSE**: Correct the M2 plan's domain model from one grouping level (repository) to three (repository, project, workspace) by amending M2-S11 in place, adding M2-S18 project groups and M2-S19 cross-repository changes, and propagating one naming boundary — `repos` enumerates checkouts, `projects` groups them — through the whole committed planning corpus, naming the flat `projects list` that GH-288 has already shipped as the surface this change renames, so delivery agents execute M2 from a single, non-contradictory blueprint while current truth keeps describing today's shipped behaviour.
+> **PURPOSE**: Correct the M2 plan's domain model and its naming surface so one
+> spelling never carries two meanings: the group contract is
+> `project-groups.v1` with `groupKey`, the delivered flat record set keeps
+> `projects.v1` and its shipped `projects list` behaviour, the flat surface
+> becomes `repos list` / `repos.v1` / `repoKey` under one stated rename rule
+> with the `projects list --flat` alias, and every delivered fact, error
+> identity, unbound-scope behaviour, and repository-vocabulary token is
+> preserved — so delivery agents execute M2 from a corpus that is internally
+> consistent and testable.
 
 ## 1. SUMMARY
 
-This change amends the committed M2 planning corpus. It replaces the plan's single grouping unit with a three-level domain model: a **repository** is one git checkout and stays the delivery unit; a **project** is a named group of repositories whose membership is declared in configuration; a **workspace** is an optional persisted directory usable as a discovery root and never mandatory. The flat checkout overview has already shipped: GH-288 delivered M2-S11 and mounted `projects list`, so the shipped name and the planned grouping name now collide. Because the M2 plan spends the group name on that shipped flat list, the change amends M2-S11 in place — its delivered per-repository state scoping, host index, and collision acceptance criteria are unchanged and its GH-288 delivery record is preserved, while its enumeration surface becomes `repos list` as a planned rename that carries a deprecation alias the group story owns — and adds two stories: M2-S18 (project groups, membership configuration, optional workspace discovery, project-scoped queue and status reads, mixed tracker kinds accepted at validation) and M2-S19 (one change spanning member repositories of one project: one lifecycle, one spec and plan, one definition of done, a branch and pull request per member). Every planning page that uses `projects list` with the group meaning also states, at least once, that the shipped `projects list` is the flat enumeration this change renames to `repos list`, so the corpus is disambiguated rather than half-renamed. The blueprint pack, the two command pages, the scenario seeds, the journeys, the entrypoint delta note, the pack and milestone indices, the status snapshot, and the command registry are reconciled to the same model and the same naming boundary. No product code, no delivered surface, and no tracker ticket is created, and current truth — the feature specs for the shipped overview, the migration guide, and the state-scope decision record — continues to describe today's shipped behaviour until the rename ships.
+This change amends the committed M2 planning corpus to a three-level domain
+model — repository, project group, optional workspace — and to one naming
+surface in which each spelling has exactly one meaning. It splits the
+delivered flat record set from the new group contract: groups are
+`project-groups.v1` with `data.groups[]` and `groupKey`; the delivered flat
+payload stays `projects.v1` with `data.projects[]` and `projectKey`; the flat
+surface becomes `repos list` with `repos.v1`, `data.repos[]`, and `repoKey`
+under a single stated rename rule, with `projects list --flat` as the
+deprecation alias owned by M2-S18 and retired at the M3 boundary. It
+re-lands M2-S18 and M2-S19 against that surface: configuration-only
+membership with an undeclared-clone seed, project-scoped reads expressed as
+`queue list --project <groupKey>` and `status --project <groupKey>`,
+classified partial failure instead of a whole-read failure, one queue entry per
+member for cross-member edges, per-member CI corroboration, dependency
+ordering, and contracted envelopes for every scenario assertion. It also
+restores the delivered `repos` page semantics (the `unbound` scope and the
+`projects.*` error identities), reconciles the board to the repository-key
+boundary, and splits the command-registry row so the delivered `projects list`
+and the prospective `repos` name are not conflated.
 
 ## 2. CONTEXT
 
 ### 2.1 Current State Snapshot
 
-- **The backlog carries M2-S2 through M2-S17 with no grouping model, and M2-S11 is already delivered.** The Epic M2 block opens at `## Epic M2: Ceremonies, measurement, and memory (months 3-6)` with a retirement note (M2-S1 retired into M1, gap deliberate), lists its stories in file order S2, S3, S10, S4, S5, S6, S7, S8, S9, S11, S12, S13, S14, S15, S16, S17, and closes with a blank line and a `---` separator before `## Epic M3`. There is no project-membership story and no cross-repository-change story anywhere in the file.
-- **M2-S11 is delivered by GH-288 and its shipped enumeration surface is still called `projects`.** The entry carries `- Ticket: GH-288 (milestone M2)` and a `- Progress: delivered by GH-288 — …` line recording the two-layer state scope (host root plus a per-repository project root), the checkout identity marker with its minted project key, the derived host index with bounded maintenance and the collision guard, the read-only `projects list [--json]` overview, the one-step migration guide, and the host-wide owner hold. Its goal says "a projects command gives one CLI overview of every managed checkout"; its tasks name `projects list` reporting repo key, root, state location, daemon reachability, and handover state; its AC says two checkouts of different repositories on one host both using ref GH-241 hold disjoint phase state and queue entries and `projects list` enumerates them without manual configuration; it depends on M0-S5, M1-S17.
-- **The M2 blueprint pack repeats the same naming and now carries GH-288's delivered contract facts.** `doc/planning/oss-tooling/milestones/m2/` holds `README.md`, `architecture.md`, `contracts.md`, `test-scenarios.md`, `journeys.md`, `entrypoint-delta.md`, and `commands/{projects,attempts,events,spend,queue,board}.md`. `commands/projects.md` is the M2-S11 contract page: it documents `projects list [--json]` as "one overview of every delivery-managed checkout on the host", records the planned end state until M2 exits, and states the delivered contract detail — the closed daemon reason vocabulary `daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`, the `unbound` scope outside any git work tree with its bounded warning, and the exit projection. `contracts.md`'s `## projects.v1` section defines the flat per-checkout record (`projectKey` as the repository identity derived from the checkout identity, `root`, `stateLocation`, the `daemonReachable` object carrying the same closed reason set, `handoverState`) plus a host index revision, with the isolation and migration clauses kept; `architecture.md` names a `projects list` projector component and a `projects list` CLI one-shot, its `### Multi-repository overview` flow walks `projects list` → host index → repo key, and its state paragraph records the host-wide owner-hold marker at the host root; `journeys.md` opens with a "Multi-repo morning overview" in which three delivery repositories are read through `projects list`; `test-scenarios.md` carries `SC-M2-S11-01` (the two same-ref checkouts stay disjoint) and `SC-M2-S11-02` ("`projects list` enumerates both checkouts without manual configuration").
-- **The entrypoint delta names `projects` as the host overview and records it as mounted.** `entrypoint-delta.md`'s M2-planned additions open with "`projects` becomes a root family: the host overview of managed checkouts", followed by a **Mounted by GH-288 (M2-S11)** note stating that `projects list` is in the prompt-required set, composed by the production entrypoint, advertised in root `--help`, and served by the M2 command page as its reference page. Its mounting paragraph explains that mounting a family takes a prompt-set change plus a help reference page per command and records GH-288 as having done exactly that for `projects`, while the remaining additions stay planned.
-- **The command registry assigns the two names to two different meanings and records the flat one as shipped.** `cli-command-registry.md`'s M2 table has `ados projects` = M2-S11 "workstation overview of managed checkouts" with the note "Shipped in GH-288 (M2-S11)"; its M3 table has `ados repos` = M3-S6 "clone, branch, and worktree hygiene"; and its boundary note reads "`projects` (workstation overview, M2-S11) and the future M3 `repos` family are distinct surfaces, so the names never collide."
-- **Both indices enumerate the pack without a `repos` page.** `milestones/m2/README.md` lists twelve artifacts in its pack-contents table and maps stories S2 through S17 to surfaces; `milestones/README.md`'s M2 index row links exactly those twelve targets. Neither knows a `commands/repos.md`, and no map row exists for S18 or S19.
-- **`status.md` ends with the 2026-11-11 M2 delivery snapshot**, which records M2-S11 as delivered by GH-288 — the two-layer state scope, the mounted read-only `projects list [--json]`, the derived host index, the one-step migration guide, and the host-wide owner hold — and states that the remaining M2 stories stay planned. Every earlier dated section, including the 2026-11-10 planning snapshot (M1 story delivery at 23 of 23, the M2 story set S2–S17, the two GH-284 amendments) and its maintenance convention, is a historical record.
-- **The guards have different scopes.** `scripts/.tests/test-doc-distribution.sh` marker-checks `doc/guides/**` and a fixed standalone list and skips `doc/planning/**`. `scripts/checks/forbidden-literals.ts` scans user-facing docs under `doc/**` except `doc/changes/**` and `doc/decisions/**`, requires every scanned doc to be listed in `scripts/checks/forbidden-literals.registry.json#registered` (141 entries at the change base, including all twelve M2 pack documents; GH-288 added two registrations outside `doc/planning/**` — the migration guide and the shipped overview's feature spec), fails closed on an unregistered doc or a duplicate entry, and has no sorting requirement — the list is alphabetical apart from one pre-existing out-of-order pair. A new pack page therefore needs exactly one registered row.
-- **Current truth describes the shipped flat `projects list`, not the planned split.** `doc/spec/features/feature-projects.md` (status Current) states the delivered behaviour: the two-layer state scope of a host root plus a per-repository project root, the checkout identity marker and its minted project key, the derived host index with bounded maintenance, and the read-only `projects list [--json]` surface as the family's only verb. `doc/spec/features/feature-cli-entrypoint.md` records `projects` as a prompt-required, composed family whose reference page is the M2 command page; `doc/guides/migrating-to-per-repository-state.md` records the one-step move into the per-repository root; and `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` records the durable state-scope decision. None of them knows a `repos` family, a project group, a workspace discovery root, or a cross-repository change, because those remain M2-planned surfaces. Current truth therefore continues to describe today's shipped behaviour, and the planning corpus is the only place the future split — the flat surface becomes `repos list`, `projects` becomes the group surface, and the rename carries a deprecation alias — is stated.
-- **Gate reality.** The aggregate gate is `pnpm check` (lint, format:check, typecheck, test, boundaries, prompt-conformance, help-guide-coverage, exports-parity). Under the default `TMPDIR` it currently exits 1 with two failures: `tests/checks/ci-baseline-parity.test.ts` (a `git clone --local` hardlink crossing devices) and `TC-WIRE-002` in `tests/checks/privacy-ci-wiring.test.ts`, a pre-existing timing sensitivity that times out at 5000 ms in both `TMPDIR` modes when run standalone and passes inside the full repository-local suite. With a repository-local `TMPDIR` the full suite exits 0. `test-doc-distribution.sh` has the opposite requirement and needs the default `TMPDIR`. No mermaid syntax validator exists in this repository; diagram validity is established structurally (fence count, fence closure, diagram-type keyword, heading association), and this change adds no tooling.
+- **Change base and revision state.** The product-file accounting is taken
+  against change base `723454e4` (`main-tools` with GH-288 merged). The branch
+  already carries the v1.3 amendment; this revision corrects that amendment's
+  rendered corpus, so the snapshot below records the base facts plus the exact
+  state this revision must leave behind. The corpus spans thirteen existing M2
+  pack and planning documents, one new pack command page, and the
+  forbidden-literals registration row that page requires.
+- **The group surface is currently keyed to the delivered flat name.**
+  `milestones/m2/contracts.md` assigns the group fields — a group list, a group
+  identity, and a `members[]` list — to the delivered flat contract name and to
+  the delivered flat identity token; the same file's `repos.v1` section says the
+  shipped `projects list --json` returns the same records as
+  `data.projects[]`. One command spelling therefore appears to return two
+  shapes, and one identity token denotes a group in one section and a repository
+  in another.
+- **The delivered flat payload has no declared owner of its own name.** Nothing
+  in the corpus says that `projects.v1` is the delivered flat record set that
+  survives as the alias payload; the only reading available is that the name
+  was reassigned. The delivered envelope (`data.projects[]`,
+  `hostIndexRevision`, `projectKey`) is recorded in current truth at
+  `doc/spec/features/feature-projects.md`.
+- **The repository-vocabulary tokens carry no mapping clause.** The
+  `project-identity.json` checkout marker, the `<host root>/projects/<key>`
+  container, the host index's `projects[]`/`projectKey` fields, and the
+  `--project-root` configuration flag are all repository vocabulary, but no
+  clause says so, so a reader can mistake each of them for group vocabulary and
+  plan a rename that would break the delivered state layout.
+- **Membership has no configuration document.** `contracts.md` states that the
+  member list is the configured membership and that the envelope never infers a
+  member from a scan, but it names no document path, no format, and no member
+  selector; the S18 task still reads "scan for managed clones inside", which
+  invites the reading that a directory scan admits clones.
+- **Project-scoped aggregation is undefined.** No clause states where member
+  records come from, in what order they merge, what happens when one member's
+  state is unreadable, or what a member with no implemented tracker adapter
+  contributes. `commands/projects.md` currently answers the first of these by
+  failing the whole read with `projects.state-unavailable` at exit 2.
+- **The queue/lane representation for cross-member edges is unstated.**
+  `contracts.md` and `architecture.md` describe a cross-repository change as one
+  lifecycle with a branch and pull request per member, but neither says whether
+  the change holds one queue entry or one per member, nor how release behaves.
+- **`commands/repos.md` has lost delivered semantics.** Its synopsis and OPTIONS
+  table have no `--help` and no `--version`; it has no scope section, so the
+  `unbound` scope outside any git work tree is absent; its error table invents
+  `repos.identity-unreadable`, `repos.index-corrupt`, and
+  `repos.state-unavailable` and maps a non-work-tree root to
+  `repos.identity-unreadable` at exit 1, although the delivered behaviour is the
+  declared `unbound` scope at exit 0 with one warning; its STATE example shows a
+  checkout-local path; and its example key carries no identity discriminator.
+- **`commands/projects.md` carries the wrong envelope and an orphan field.**
+  It documents the delivered flat contract name, the `data.projects[]` payload,
+  and the delivered identity token as the group surface; it carries a
+  `daemonReachable.reason` paragraph although `members[].daemonReachable` does
+  not exist; it describes "a project scope" for queue and status reads without
+  naming a grammar.
+- **`commands/board.md` claims group scope.** Its synopsis offers
+  `--project <key>`, its prose says the board reads "every managed project on
+  the host through the project model", its envelope field is `projects[]`, and
+  its attribution says the remainder depends on "the project model M2-S11
+  introduces" — although M2-S11 delivered per-repository state and the host
+  index, and M2-S18 scopes only queue and status reads.
+- **The backlog has drifted from the delivered story.** M2-S11's goal, its
+  enumeration task, and its acceptance criterion already read `repos list`, and
+  the entry no longer carries the acceptance criterion that describes the
+  shipped `projects list`; the `projectKey → repoKey` and
+  `data.projects[] → data.repos[]` renames have no owner; S18 has no rename,
+  alias, migration-guide, configuration-only-membership, scoped-grammar, or
+  decision-record task; S19 has no dependency-ordering acceptance; and M2-S4
+  does not depend on M2-S18 although its map row consumes the group envelope.
+- **The seeds assert uncontracted and retired envelopes.**
+  `test-scenarios.md` opens with "stories M2-S2 through M2-S17";
+  `SC-M2-S18-01` asserts `projects list --json.data.projects[].members[]`;
+  `SC-M2-S19-02` asserts a `change.data.definitionOfDone` /
+  `change.data.blockingMember` family that no contract declares;
+  `SC-M2-S19-01` asserts `closeout.data.members[]`, also undeclared;
+  `SC-M2-S11-02` asserts the delivered surface as `repos list` today; and there
+  is no seed for configuration-only membership, an undeclared clone, per-member
+  CI corroboration, dependency ordering, or the alias shape.
+- **The registry carries two Delivery rows for one name.**
+  `cli-command-registry.md` has an M2 `ados repos` row with Delivery "M2-S11
+  (shipped in GH-288)" and a separate M3 `ados repos` row with Delivery "M3-S6";
+  the M2 `ados projects` row is attributed to M2-S18 only; and `projects` is
+  absent from COMMAND FAMILIES.
+- **The pack index and the delta note overstate what this change does.**
+  `milestones/m2/README.md` keeps the M2-S4 advisory note even though the
+  dependency is being declared, names the group envelope by the flat contract
+  name, and does not name the S18 status scope delta;
+  `entrypoint-delta.md` records the reference-page move as an effect of this
+  change; and `architecture.md` has no sentence distinguishing the discovery
+  workspace root from the state layer's fixed `default` workspace identifier.
+- **Guard reality is unchanged.** `scripts/checks/forbidden-literals.ts` scans
+  user-facing docs under `doc/**` except `doc/changes/**` and
+  `doc/decisions/**`, literal-scans only registered documents absent at
+  `corpusBaseline`, and fails closed on an unregistered or duplicated entry;
+  `registered` holds 141 entries at the change base, and the new
+  `commands/repos.md` is the one row this change adds (142).
+  `scripts/.tests/test-doc-distribution.sh` marker-checks `doc/guides/**` and a
+  fixed standalone list and skips `doc/planning/**`. The aggregate gate is
+  `pnpm check`; under the default `TMPDIR` it can fail on
+  `tests/checks/ci-baseline-parity.test.ts` (cross-device `git clone --local`)
+  and on a 5000 ms `TC-WIRE-002` timeout in
+  `tests/checks/privacy-ci-wiring.test.ts`, while a repository-local `TMPDIR`
+  run is green. No mermaid validator exists; diagram validity is established
+  structurally.
 
 ### 2.2 Pain Points / Gaps
 
-- **The plan spends the group name on a checkout list that has already shipped.** The three-level model reserves `projects` for a group of repositories, but M2-S11 delivered the flat enumeration under that name: `projects list` is mounted, and M2-S11, the pack, the journey, the scenarios, the entrypoint delta, the registry, and current truth all use `projects` for it. A reader cannot tell which entity `projects` means, the shipped surface and the planned grouping model share one name, and the future rename has to be stated without misdescribing what ships today.
-- **Nothing declares membership.** No configuration, contract, or scenario says which repositories belong to one product or system. Neither the board, the queue, nor the status read can scope to a project, so every cross-repository view must be re-derived by hand from a flat list.
-- **No story plans a multi-repository change.** Work spanning several repositories is forced into N independent changes with N lifecycles, N specs, N definitions of done, and no single place that says whether the change as a whole landed.
-- **The workspace level is unstated.** Without an explicit statement that a workspace is an optional directory and never a required one, a reader can infer either that a shared directory is mandatory or that "workspace" is a new artifact namespace — while in this repository's vocabulary `workspace` already names the per-change artifact set.
-- **The M3 hygiene name is reserved against the wrong meaning.** The registry reserves `repos` for M3-S6 clone/branch/worktree hygiene while the ticket assigns the flat enumeration to `repos`; unless both meanings are reconciled into one family story with a documented split, the naming surface contradicts the plan.
-- **A half-rename is the natural failure mode.** Pack index, contents table, contracts, entrypoint delta, journey, scenario seed `SC-M2-S11-02`, registry, and current truth each name the flat enumeration; renaming some and not others — or renaming the blueprint while current truth still describes the shipped command — leaves a corpus that is internally contradictory while every individual page looks correct, and a page that adopts the group meaning without naming the shipped flat surface leaves a reader unable to tell which command the sentence is about.
+- **One spelling, two shapes.** The corpus lets `projects list` mean the
+  delivered flat record set and the group surface at the same time, so no
+  reader — human or agent — can decide what a `projects list` sentence asserts
+  without dating it.
+- **The group identity token is borrowed.** Reusing the delivered repository
+  identity token at the group level makes the one token that identifies a
+  checkout also identify a group, which breaks the traceability of the delivered
+  host index and the identity marker.
+- **Delivered semantics are being renamed by documentation.** The `unbound`
+  scope, the `projects.*` error identities, and the host-root state layout are
+  delivered behaviour; documenting them as `repos.*` and as failures turns a
+  docs change into a silent behaviour claim.
+- **Repository vocabulary is up for renegotiation.** Without the mapping
+  clause, a future reader can plan to rename the identity marker, the projects
+  container, the host-index fields, or `--project-root` as part of the group
+  story, which would be a state-layout migration disguised as naming.
+- **Membership can be inferred instead of declared.** A task that says "scan
+  for managed clones inside" admits undeclared clones into a project, so the
+  group view can show repositories nobody configured.
+- **Aggregation has no failure model.** Failing a whole project read because one
+  member's state is unavailable hides the members that are readable and makes
+  partial degradation indistinguishable from a host-wide failure.
+- **The queue cannot express a cross-member change.** Without one queue entry
+  per member and a release rule, a two-repository change either holds one entry
+  for two repositories or holds none, and release semantics become guesswork.
+- **The board is scoped by a name that has no group meaning.** A board claiming
+  group scope while its key is a repository key creates a third meaning for
+  `project`.
+- **The registry asserts a delivery that has not happened.** Two Delivery rows
+  for `repos`, one of them shipped, is a factually false registry for a name
+  whose rename has not landed.
+- **Ownership is split and therefore unenforceable.** The rename, alias, field
+  renames, and migration-guide update sit between two stories, so each can
+  assume the other did it.
 
 ## 3. PROBLEM STATEMENT
 
-Because the M2 plan models the repository as the only grouping unit, spends the group name on a flat checkout list that GH-288 has already shipped, and leaves current truth describing that shipped command, delivery agents cannot declare which repositories belong together, cannot scope a board, queue, or status read to a project, and cannot plan one change across several repositories — and because the flat enumeration's name is shared across the backlog, the blueprint pack, the indices, the entrypoint delta, the command registry, and current truth, any partial correction either leaves the committed plan contradicting itself or leaves the plan and current truth asserting different meanings for one command — resulting in a blueprint that must be re-litigated story by story, cross-repository work split into unrelated lifecycles, and review that cannot tell whether the planned naming surface is coherent.
+Because the M2 planning corpus gives one command spelling two shapes, borrows
+the delivered repository identity token for groups, and leaves the delivered
+`repos` semantics, membership declaration, aggregation failure model, queue
+representation, and registry attribution unstated, delivery agents and the
+owner cannot tell which contract a page describes or which story owns a rename,
+and any partial correction leaves a corpus in which `projects list` means two
+things, a repository token names a group, and a documented error path silently
+contradicts shipped behaviour — resulting in a blueprint that must be
+re-litigated page by page, scenarios that assert envelopes no contract
+declares, and review that cannot prove the naming surface is coherent.
 
 ## 4. GOALS
 
-- **G-1**: M2-S11 is amended in place: its delivered per-repository state scoping from the checkout identity, its host-level index, its migration note, its collision tests, its two-checkout GH-241 collision acceptance criterion, and its GH-288 delivery record stay unchanged, while its goal, its enumeration task, and its enumeration acceptance criterion name `repos list` with the fields repo key, root, state location, daemon reachability, and handover state, and the entry records the rename transition — now the planned transition, because the flat `projects list` has shipped and the group story is the change that renames it with a deprecation alias.
-- **G-2**: M2-S18 lands in the canonical backlog with the ticket's goal, its five task clauses, its five acceptance clauses, and its dependency on M2-S11, and the blueprint covers what the story needs: a project configuration schema, an optional workspace discovery root, a group-listing surface, project-scoped queue and status reads, mixed tracker kinds accepted at validation with the unimplemented member classified not-yet-supported, and the documented naming boundary.
-- **G-3**: M2-S19 lands in the canonical backlog with the ticket's goal, its six task clauses, its three acceptance clauses, and its dependencies on M2-S11, M2-S18, and the delivered M1-S17, and the blueprint carries a cross-repository change plan shape in which one lifecycle drives a branch and pull request per member repository under one shared definition of done.
-- **G-4**: The three-level model and the `repos`/`projects` naming boundary appear consistently in the M2 architecture, contracts, both command pages, scenario seeds, journeys, entrypoint delta note, pack index, milestone index, status snapshot, command registry, and backlog, with no page asserting the other page's meaning and every page that uses `projects list` with the group meaning carrying at least one sentence that the shipped `projects list` is the flat enumeration this change renames to `repos list`.
-- **G-5**: The change is docs-only: exactly thirteen product files change (twelve planning documents under `doc/planning/oss-tooling/**`, one of them new, plus one guard registry row), no product code, test, tooling, or delivered surface changes, and every repository guard that applies to the corpus is green.
-- **G-6**: Planned-not-delivered semantics survive and delivered facts are preserved: the touched command pages keep `Status: Proposed (M2)`, the pack keeps its planned-until-exit statement, no part of the corpus claims that `repos`, project groups, workspace discovery, or cross-repository changes are delivered, the GH-288 delivery record for M2-S11 and the delivered contract facts of the flat surface stay intact, and current truth is left describing the shipped surface.
+- **G-1**: The contract identity split is complete and unambiguous:
+  `project-groups.v1` with `data.groups[]` and `groupKey` is the group contract;
+  `projects.v1` keeps its delivered flat record set (`data.projects[]`,
+  `projectKey`); `repos.v1` with `data.repos[]` and `repoKey` is the planned
+  flat surface; no contract, page, seed, or registry row asserts otherwise.
+- **G-2**: Exactly one normative rename rule is stated, in `contracts.md`, and
+  every other location references it: from M2-S18 `projects list` enumerates
+  groups and `repos list` enumerates the flat record set; the deprecation alias
+  is the different token `projects list --flat`, returning the delivered
+  `projects.v1` payload, owned by M2-S18, retired at the M3 boundary; no text
+  describes one spelling returning two shapes at one time.
+- **G-3**: Every repository-vocabulary token carries the mapping clause: the
+  `project-identity.json` marker, the `<host root>/projects/<key>` container,
+  the host index's `projects[]`/`projectKey` fields, and `--project-root` denote
+  a repository checkout and keep that meaning permanently unless a code change
+  renames them.
+- **G-4**: M2-S11 keeps the delivered story it shipped, including the acceptance
+  criterion that describes the shipped `projects list` surface, the GH-288
+  delivery record, and the state-scoping and collision clauses; the rename, the
+  alias, the field renames, the migration-guide update, configuration-only
+  membership, the scoped-read grammar, and the superseding decision record are
+  owned by M2-S18 as the single owner.
+- **G-5**: `commands/repos.md` states the delivered semantics: a non-work-tree
+  root is the declared `unbound` scope at exit 0 with one bounded warning and is
+  never a failure; the delivered `projects.identity-unreadable`,
+  `projects.registry-corrupt`, and `projects.state-unavailable` identities are
+  retained with any `repos.*` prefix change recorded as S18 code work; the
+  STATE example is `<host root>/projects/<key>` with a key conforming to
+  `PROJECT_KEY_PATTERN`; and `--help`/`--version` are listed with no-state-read
+  semantics alongside the restored scope section.
+- **G-6**: The board stays on the repository-key boundary: `board --project`
+  takes a repository key, the board spans managed repositories rather than
+  groups, its envelope names repositories, and its attribution names the
+  per-repository state scope and host index M2-S11 delivered; M2-S18 scopes only
+  queue and status reads, expressed as `queue list --project <groupKey>` and
+  `status --project <groupKey>`, with the M1 status page frozen and the S18
+  delta named in the M2 pack's README row.
+- **G-7**: Membership is configuration-only and aggregation is classified:
+  registration means declaring `workspaceRoot` and `members` in the project
+  configuration document at a declared path and format; a scan only locates
+  declared members and never admits an undeclared clone; project-scoped reads
+  merge member records in declared order, classify per-member outcomes
+  (`observed`, `not-yet-supported`, `state-unavailable`, `unregistered`), and
+  degrade a single unavailable member as a classified partial result rather
+  than a whole-read exit 2.
+- **G-8**: A cross-repository change has an explicit queue/lane representation:
+  one queue entry per member keyed by that member's ref, per-member dependency
+  edges, and a release rule in which releasing the change drops each member's
+  lease while the entries stay, removal happens per member with the change's
+  reason, and one member landing never removes another member's entry.
+- **G-9**: M2-S19 is verifiable: it carries a dependency-ordering acceptance and
+  per-member CI corroboration, every assertion reads a declared envelope
+  (`project-groups.v1`, `repos.v1`, `plan.data.members[]`,
+  `closeout.data.members[]`, `verify gates.data.definitionOfDone` with
+  `blockingMembers[]`), and "one review flow" is defined executably as one
+  review run over the declared member pull-request set with one verdict per
+  member.
+- **G-10**: The registry, the indices, and the derived surfaces agree: the
+  `repos` name has one row marked not-delivered and owned by M2-S18 pending the
+  superseding decision record and code change required by ODR-0003, the
+  delivered `projects` row keeps its Delivery attribution, `projects` joins
+  COMMAND FAMILIES, M2-S4 depends on M2-S18, the pack README drops the advisory
+  note and names the S18 status delta, the scenario intro reads M2-S2 through
+  M2-S19, and the two cheap notes (discovery root versus `default` workspace
+  identifier; the reference-page move phrased as pending S18 code work) are
+  landed.
 
 ### 4.1 Success Metrics / KPIs
 
 | Metric | Target |
 |---|---|
-| M2-S11 amendment clauses applied (state scoping and collision kept; enumeration surface renamed; transition noted) | 3 of 3 |
-| New M2 stories in the backlog | 2 (M2-S18, M2-S19) |
-| Ticket clauses carried with unchanged meaning (12 S18 + 11 S19 + 3 M2-S11 amendment) | 26 of 26; 0 omitted, 0 added, 0 reworded in substance |
-| Product files changed (all paths except `doc/changes/**`) | exactly 13 — 12 under `doc/planning/oss-tooling/**` (11 modified plus 1 new) + `scripts/checks/forbidden-literals.registry.json` |
+| Functional capabilities | 14 |
+| Functional acceptance criteria | 56 |
+| Non-functional requirements / their acceptance criteria | 13 / 13 |
+| Total acceptance criteria | 69 |
+| New decisions recorded (DEC-19 through DEC-32) | 14 |
+| Board-derived clauses covered (Appendix A.2) | 32 of 32 |
+| Ticket clauses preserved in substance (Appendix A.1) | 26 of 26; 0 reworded |
+| Normative rename-rule statements in the corpus | exactly 1 |
+| Surviving `projects.v1`-as-group-contract statements | 0 |
+| Surviving `projectKey`-as-group-identity statements | 0 |
+| Surviving one-spelling-two-shapes statements | 0 |
+| Product files changed (all paths except `doc/changes/**`) | exactly 15 — 14 under `doc/planning/oss-tooling/**` (13 modified plus 1 new) + `scripts/checks/forbidden-literals.registry.json` |
 | New files created | 1 (`milestones/m2/commands/repos.md`) |
-| Appendix B naming-matrix locations carrying the required meaning | 100%; 0 statements presenting the group meaning as today's shipped behaviour, and the shipped flat surface named wherever the group meaning appears |
-| Command pages carrying `Status: Proposed (M2)` | 2 of 2 (`repos`, `projects`) |
 | Pack index targets in the `milestones/README.md` M2 row | 13 (was 12) |
-| New scenario seeds | ≥ 4 (≥ 2 for S18, ≥ 2 for S19), each with exactly one `Assert:` line; amended S11 seeds use `repos list` |
+| New scenario seeds | ≥ 10 (≥ 5 for S18, ≥ 5 for S19), each with exactly one `Assert:` line |
+| Alias shape-asserting seeds | 1 (`projects list --flat` versus `projects list`) |
+| Deliverable-state seeds | 1 undeclared clone inside the registered workspace root, asserted not to be a member |
+| Registry entries | 142 (141 at base; one added row) |
+| Planning documents literal-scanned | 12 of 14 (2 exempt: `backlog.md`, `cli-command-registry.md`) |
 | `bash scripts/.tests/test-doc-distribution.sh` (default `TMPDIR`) | exit 0 |
-| Aggregate `pnpm check` (repository-local `TMPDIR`, full suite — the authoritative gate) | exit 0; any failure here is a delivery failure |
-| Default-`TMPDIR` aggregate run | recorded; its `ci-baseline-parity` failure and its `TC-WIRE-002` 5000 ms timeout each recorded and re-run, and tolerated only while the repository-local run is green on the same head; any other failure is a delivery failure |
-| Delivered/current/shipped claims for the four planned surfaces (`repos`, project groups, workspace discovery, cross-repository changes) | 0; the shipped flat `projects list` facts recorded by GH-288 stay stated |
-| Pages using `projects list` with the group meaning that carry the disambiguation sentence (at least once per page) | 100% — `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section |
-| GH-288 delivered facts preserved (M2-S11 `Ticket`/`Progress` lines, `projects.v1` closed daemon reason set, `unbound` scope, mounted delta note, registry shipped statement, 2026-11-11 status snapshot) | 6 of 6 present; the registry statement travels verbatim with the flat surface to its `ados repos` row |
+| Aggregate `pnpm check` (repository-local `TMPDIR`, full suite — authoritative) | exit 0; any failure here is a delivery failure |
+| Default-`TMPDIR` aggregate run | recorded; the `ci-baseline-parity` failure and the `TC-WIRE-002` 5000 ms timeout each recorded and re-run, tolerated only while the repository-local run is green on the same head |
+| Delivered facts preserved (GH-288 record, closed daemon reason set, `unbound` scope, exit projection, mounted delta note, 2026-11-11 status snapshot, delivered error identities, host-root state layout) | 9 of 9 present |
+| Pages using the group meaning that carry a time-scoped disambiguation referencing the rename rule | 100% |
 
 ### 4.2 Non-Goals
 
-- **NG-1**: Delivering any M2 story, including M2-S18 and M2-S19; this change plans and documents, it does not implement project configuration, discovery, scoped reads, or cross-repository lifecycles.
-- **NG-2**: Changing any product behaviour, command composition, or entrypoint registration; `repos` stays unregistered and unbuilt, and the shipped `projects` family keeps exactly the composition GH-288 mounted — this change neither renames nor aliases it.
-- **NG-3**: Rewriting `doc/spec/**` or `doc/overview/**`; current truth describes the shipped flat `projects list`, this change leaves it unedited, and phase 7 records that no current-truth change is required because the shipped surface is unchanged.
-- **NG-4**: Creating tracker tickets for M2-S18 or M2-S19; the PM proposes, the owner decides.
-- **NG-5**: Re-wiring existing story dependencies. No dependency line changes except the two new entries; in particular M2-S4's dependency set is not amended, and its use of the group envelope is recorded with the pack's existing advisory convention.
-- **NG-6**: Restructuring `roadmap.md`, `backlog-ranking.md`, `measurement-baseline.yaml`, or any page not named in §7.1, including the M1 pack.
-- **NG-7**: Adding a diagram validator, a naming lint, a documentation drift check, or any other new tooling or gate; and changing the scope or behaviour of the two existing doc guards.
-- **NG-8**: Renaming, aliasing, deprecating, or documenting different behaviour for the shipped `projects list` in code or in current truth; the rename lands only when the group story ships.
+- **NG-1**: Delivering any M2 story, including the M2-S18 rename, the alias, and
+  M2-S19; this change plans and documents.
+- **NG-2**: Changing any product behaviour, command composition, or entrypoint
+  registration; `repos` stays unbuilt and unregistered, and the shipped
+  `projects list` keeps exactly the behaviour GH-288 mounted.
+- **NG-3**: Renaming the delivered marker, container, host-index fields, or
+  `--project-root`; the mapping clause fixes them as repository vocabulary and
+  any future rename needs a code change.
+- **NG-4**: Authoring the superseding decision record for the `repos` name; that
+  record is an M2-S18 task because it precedes S18's code change under ODR-0003.
+- **NG-5**: Rewriting `doc/spec/**`, `doc/overview/**`, or
+  `doc/guides/migrating-to-per-repository-state.md`; current truth keeps
+  describing the delivered flat surface, and the migration-guide update is an
+  S18 task.
+- **NG-6**: Editing the M1 status page, the M1 pack, or the M0 pack; the M1
+  status page is frozen and the S18 status delta is named in the M2 README row.
+- **NG-7**: Creating tracker tickets for M2-S18 or M2-S19.
+- **NG-8**: Adding a diagram validator, a naming lint, a drift check, or any new
+  tooling or gate, and changing either doc guard's scope or behaviour.
+- **NG-9**: Introducing, in new or changed text, a statement that `repos` is a
+  group, that `projects list` is both surfaces at once, or that a repository
+  token is group vocabulary.
 
 ## 5. FUNCTIONAL CAPABILITIES
 
 | ID | Capability | Rationale |
 |----|------------|-----------|
-| F-1 | M2-S11 is amended in place | The delivered collision and state-scoping work and its GH-288 record must survive; the plan needs the enumeration surface renamed prospectively, with the alias transition, without asserting that the shipped surface already changed |
-| F-2 | M2-S18 project groups lands in the backlog | Membership of repositories in a project is a first-class planning unit, not an inference from a flat list |
-| F-3 | M2-S19 cross-repository changes lands in the backlog | Cross-repository work is a daily case and needs one lifecycle, one spec and plan, and one definition of done |
-| F-4 | The backlog records the domain-model context and preserves every other byte | The naming split must be visible where the story set is read, without disturbing the epic structure or other entries |
-| F-5 | The M2 architecture carries the three-level model, the adjusted overview flow, the cross-repository change flow, and the boundary invariants | A reader must see repositories as members of projects and workspaces as optional before reading any contract |
-| F-6 | The contracts define the flat enumeration envelope, the group envelope, the project configuration schema, and the cross-repository change plan shape | Both command pages and both stories need one contract to point at, with no field carrying two meanings |
-| F-7 | The command pages split: a new flat-enumeration page and a rewritten group page | Two surfaces sharing one page would keep the naming collision alive |
-| F-8 | Scenario seeds cover S18 and S19, and the S11 seeds use the corrected surface | Seeds are the first draft of each story's test plan and must be executable against the corrected model |
-| F-9 | The multi-repository morning overview journey is rewritten for a project | The journey is the readable test of whether the model answers the operator's real question |
-| F-10 | The entrypoint delta note states the `repos`/`projects` split | The note is where a reader learns which families M2 adds and how a family becomes reachable |
-| F-11 | The pack and milestone indices learn the new page and the two new stories | A page or story that no index points at is not discoverable |
-| F-12 | `status.md` gains a dated snapshot for this amendment without rewriting history | Planning state must stay current and auditable, with earlier snapshots intact |
-| F-13 | The command registry reconciles `repos`, `projects`, and the M3 hygiene verbs | The registry is the locked naming surface and must not contradict the plan |
-| F-14 | One naming boundary and one disambiguation sentence hold across every touched location | A half-rename is the failure mode this change exists to prevent; after GH-288 shipped the flat surface under the group name, every page that uses the group meaning must also name the shipped flat surface the change renames |
+| F-1 | M2-S11 is amended in place and keeps the delivered story it shipped | The GH-288 record, the state scoping, the collision criterion, and the shipped-surface acceptance criterion are delivered truth; the story must not be rewritten to describe a surface it did not ship |
+| F-2 | M2-S18 becomes the single owner of the rename, alias, field renames, migration guide, config-only membership, scoped grammar, and decision record | One owner per rename is the only way the transition is enforceable instead of assumed |
+| F-3 | M2-S19 is verifiable end to end | A cross-repository change is only plannable if its ordering, CI corroboration, envelopes, and review flow are contracted |
+| F-4 | The backlog records the domain-model context, declares the S4 edge, and preserves every other byte | The story set must read coherently without disturbing the epic structure |
+| F-5 | The architecture carries the three-level model, the adjusted flows, the queue/lane representation, and the discovery-root distinction | A reader must see repositories as members, workspaces as optional, and cross-member work as explicit before reading any contract |
+| F-6 | The contracts define one identity split, one rename rule, one mapping clause, one configuration document, one aggregation model, one queue representation, and one change-plan shape | Every page and seed points at one contract each, with no field carrying two meanings |
+| F-7 | The command pages state delivered semantics for `repos`, the group surface for `projects`, the repository-key boundary for `board`, and the scope grammar for `queue` | Two surfaces, one page each, and no page claims another's scope |
+| F-8 | Scenario seeds cover S18 and S19 with contracted assertions and carry the delivered-story split | Seeds are the first draft of each test plan and must be executable against the corrected model |
+| F-9 | The morning-overview journey is rewritten for a project | The journey is the readable test of whether the model answers the operator's question |
+| F-10 | The entrypoint delta note states the split and phases the reference-page move as pending S18 code work | The note is where a reader learns what M2 adds and when a page moves |
+| F-11 | The pack and milestone indices learn the new page, the corrected contract owners, and the S18 status delta | A page, delta, or owner that no index points at is not discoverable |
+| F-12 | `status.md` gains one dated correction snapshot without rewriting history | Planning state must stay current and auditable |
+| F-13 | The command registry splits the delivered and prospective names and keeps one Delivery row per name | The registry is the locked naming surface; a false delivery claim contradicts the plan |
+| F-14 | One naming boundary, one time-scoped disambiguation, and one terminology lock hold across every touched location | A half-rename is the failure mode this change exists to prevent |
 
 ### 5.1 Capability Details
 
-- **F-1 — M2-S11 amended in place.** The entry keeps its heading `### M2-S11 Multi-repository workstations`, its dependency line `- Depends on: M0-S5, M1-S17.`, the per-repository state scoping derived from the checkout identity (the git common dir marker) with a host-level index, the migration note for existing single-store users, the tests proving two checkouts using the same ref cannot observe each other's documents, and the acceptance criterion that two checkouts of different repositories on one host both using ref GH-241 hold disjoint phase state and queue entries. Only the naming changes: the goal no longer calls the flat enumeration a "projects command"; the enumeration task reads `repos list` and keeps the same five reported fields (repo key, root, state location, daemon reachability, handover state); the enumeration acceptance criterion reads `repos list`; and the entry records the transition — the flat `projects list` has shipped, so the group story renames it with a deprecation alias. The entry keeps its `- Ticket: GH-288 (milestone M2)` line, its `- Progress: delivered by GH-288 …` record, and every delivered fact those lines and the retained clauses state. The entry keeps the existing story shape (Goal, Tasks, AC, Depends on), its file position, and its code.
-- **F-2 — M2-S18 in the backlog.** The Epic M2 block gains `### M2-S18 Project groups` carrying the ticket's goal, its five task clauses (project configuration declaring member repositories, any tracker adapter, mixed trackers remaining valid configuration even if only GitHub is exercised initially; optional workspace-directory discovery root — register a directory, scan for managed clones inside, never required; `projects list` rendering groups with member repos, health, and state; project scoping for queue and status reads; naming boundary documented as `repos` = flat enumeration and `projects` = groups), its five acceptance clauses (a two-member project in one workspace directory is discoverable by registering that directory; the same project configured with repositories in unrelated directories behaves identically; `projects list` shows the group with both members and their state; queue and status accept a project scope; a configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified not-yet-supported rather than rejected silently), and `- Depends on: M2-S11.`. No `- Ticket:` line is added: the reading guide says that line appears only for created stories. The blueprint coverage for the story is F-5, F-6, F-7, F-8, and F-9.
-- **F-3 — M2-S19 in the backlog.** The block gains `### M2-S19 Cross-repository changes` with the ticket's goal (one change may span multiple repositories of one project: one lifecycle, one spec and plan, one definition of done, with a branch and pull request per member repository), its six task clauses (the plan declares member repositories and their slices; one lifecycle drives per-repo branches and PRs; per-repo gates and one shared DoD; closeout across member repositories with branch cleanup and issue closure per tracker; dependency edges between member repositories' steps where order matters; evidence records enumerate all member PRs), its three acceptance clauses (a two-repository change produces one spec, two branches, two PRs, one review flow, and a closeout that lands both; per-repo CI truth is corroborated per member before the change counts done; a member failing its gates blocks the shared DoD with the failing member named), and `- Depends on: M2-S11, M2-S18, M1-S17.`
-- **F-4 — The backlog context note and preservation.** The Epic M2 block gains one new paragraph immediately after the existing retirement note and before `### M2-S2`, recording the domain-model amendment: the plan now distinguishes repository, project, and workspace; the flat enumeration has already shipped as `projects list` under GH-288, so the split is the planned end state and the rename carries a deprecation alias; `repos` is the flat enumeration owned by the amended M2-S11 and `projects` is the group surface owned by M2-S18; the entrypoint consequence is that both become root families. The existing retirement note, the epic heading, the frontmatter, the reading guide, the cross-cutting principles, every other story, the separator, and the `## Epic M3` heading stay byte-identical; the two new story entries are inserted after the M2-S17 entry's last line, inside the block and before the blank line and `---` separator that close it.
-- **F-5 — The architecture states the model.** `milestones/m2/architecture.md` gains the three-level model in its C4 Level 1 context: repository as the delivery unit, project as a configured group of repositories, workspace as an optional directory usable as a discovery root; the relations make membership explicit and make the workspace optional in the diagram itself. The `### Multi-repository overview` flow is rewritten so the overview is scoped to a project — group resolution, member enumeration, optional workspace discovery, then per-member state and health — and a new `### Cross-repository change` flow describes one lifecycle driving member branches and pull requests, per-member gates, the shared definition of done, and closeout across members. `## Boundary invariants at M2 exit` gains the naming boundary, one-membership-declaration statement, workspace-optional statement, and one-lifecycle-per-cross-repository-change statement. Wherever the group listing is named, the page states that the shipped `projects list` is the flat enumeration this change renames to `repos list`. The C4 level structure, the `## Key flows` structure, and the mermaid fence conventions are preserved.
-- **F-6 — The contracts.** `milestones/m2/contracts.md` defines, as planned M2 contracts: `repos.v1`, the flat enumeration owned by the amended M2-S11, carrying the repo key derived from the checkout identity, the root, the per-repository state location, daemon reachability with the closed degradation reason set, the `unbound` scope, handover state, and the host index revision; `projects.v1`, redefined as the group surface owned by M2-S18, carrying the group identity and name, its member list with each member's repo key, root, tracker kind, state, and health, and the optional workspace root, and carrying once the statement that the shipped `projects list` is the flat enumeration this change renames to `repos list`; the project configuration schema, declaring membership, a tracker kind per member, and an optional workspace discovery root, with mixed tracker kinds valid at validation and an unimplemented member classified as not-yet-supported rather than rejected; and the cross-repository change plan shape, declaring member repositories and their slices, each member's branch and pull request, member step dependency edges, per-member gates, the shared definition of done, per-member closeout including branch cleanup and per-tracker issue closure, and evidence that enumerates every member pull request. No field denotes a repository under the group's name, and no contract asserts that the group surface or the cross-repository change is delivered; the flat contract keeps describing the shipped behaviour it already records.
-- **F-7 — The command pages.** `milestones/m2/commands/repos.md` is new: the flat enumeration contract moved out of `projects.md`, carrying the pack status header, a bare command name, the `repos list [--json]` surface, the five reported fields, the machine envelope under `repos[]`, exit codes, an error table, invocation examples, see-also links, the GH-288 delivered contract facts kept intact (the closed daemon reason vocabulary `daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`, the read-only scope statement, the `unbound` scope outside any git work tree with its bounded warning, and the exit projection), and an explicit rename note stating that this content is the flat enumeration shipped as `projects list` and documented here under `repos` as the amended M2-S11's planned name. `milestones/m2/commands/projects.md` is rewritten as the group surface: it enumerates projects with their member repositories, health, and state; it documents project-scoped reads for queue and status; it points at `projects.v1` and the project configuration schema; it states the naming boundary and carries at least once the sentence that the shipped `projects list` is the flat enumeration this change renames to `repos list`; and it no longer claims to enumerate managed checkouts. Both pages keep `Status: Proposed (M2)` and neither claims the group surface is registered at the root listing.
-- **F-8 — The scenario seeds.** `test-scenarios.md` gains at least two `SC-M2-S18-*` seeds and at least two `SC-M2-S19-*` seeds, each with exactly one `Assert:` line in the pack's established form, covering at least: discovery through a registered workspace directory, the same project without any workspace behaving identically, group listing with members and state, project-scoped queue and status reads, mixed tracker-kind configuration with the unimplemented member classified not-yet-supported, and — for S19 — one spec with two member branches and two pull requests under one review flow and one closeout, plus a member failing its gates blocking the shared definition of done with that member named. The two S11 seeds are amended to the `repos list` surface, including the first seed's assert line, and no seed asserts that the group surface's own behaviour enumerates checkouts; the S18 and S19 seeds state once that the shipped `projects list` is the flat enumeration this change renames to `repos list`.
-- **F-9 — The journey.** `journeys.md`'s opening "Multi-repo morning overview" is rewritten as a project-scoped morning overview: a project with several member repositories, at least one member living outside any shared directory, the flat view from `repos list`, the group view from `projects list` with members and health, project-scoped queue and status reads, and a board scoped to the project; the journey states that a project configured without a shared workspace reads identically and that same-ref members stay disjoint, and it states once that the shipped `projects list` is the flat enumeration this change renames to `repos list`. The remaining journeys stay as written except where they name the flat enumeration.
-- **F-10 — The entrypoint delta.** `entrypoint-delta.md`'s M2-planned additions carry two additions alongside the shipped state — `repos` as the flat enumeration of managed checkouts (amended M2-S11) and `projects` as the group surface (M2-S18) — while the **Mounted by GH-288 (M2-S11)** note stays as the record that `projects list` is today's mounted host overview; the note therefore states that `projects` is the host overview today and becomes the group surface under the planned split, with the flat enumeration moving to `repos`. Its mounting paragraph names both families and keeps the mechanism explanation, and the page carries the one-sentence disambiguation. The observed composition, the daemon gap, the mount mechanism, and the snapshot statement stay as written.
-- **F-11 — The indices.** `milestones/m2/README.md`'s pack-contents table gains a `commands/repos.md` row and keeps one row per artifact; its story-to-artifact map gains rows for M2-S18 and M2-S19 pointing at the group envelope, the configuration schema, the cross-repository change flow, and their seeds, and the M2-S11 row points at `repos.v1`. The M2-S4 row, which points at the group envelope, gains the pack's advisory phrase `(advisory: consumed at delivery; the owning story declares the edge)` in the same form the M2-S3, M2-S5 and M2-S10 rows carry, so the consumption edge is recorded on the map instead of as a new dependency. `milestones/README.md`'s M2 index row gains `m2/commands/repos.md`, for thirteen targets, while the M0 and M1 rows stay byte-identical.
-- **F-12 — The status snapshot.** `status.md` gains one dated section placed after the 2026-11-11 delivery snapshot, recording this amendment as planning state: the three-level model, the M2-S11 amendment and its planned rename transition, the addition of M2-S18 and M2-S19 with their dependencies, the naming boundary and its registry reconciliation, the corrected entrypoint delta, and one sentence stating that the shipped `projects list` is the flat enumeration this change renames to `repos list`. No earlier dated section is edited, no line is removed, reordered, or modified, and the section claims neither M2 delivery nor milestone exit.
-- **F-13 — The command registry.** `cli-command-registry.md` gains one M2 row for `ados repos` whose purpose is the flat enumeration (repo key, root, state location, daemon reachability, handover state) owned by the amended M2-S11, and that row records that GH-288 shipped the flat overview under the `projects list` name and that it renames to `repos list` under M2-S18; its `ados projects` row is rewritten as the group surface with membership, health, state, and project-scoped reads, owned by M2-S18; its M3-S6 `ados repos` row is reconciled so the hygiene verbs (clone, branch, worktree) are the family's later subcommands rather than a separate future family; and the boundary note is replaced by the naming boundary (`repos` = flat enumeration and, later, its hygiene verbs; `projects` = groups). The "Shipped in GH-288 (M2-S11)" statement is not dropped. Every other row stays byte-identical, and no row claims the group surface is delivered.
-- **F-14 — One naming boundary and one disambiguation sentence everywhere.** Across the twelve planning documents, `repos list` (and `repos` as the flat family) means the flat enumeration of managed checkouts, and `projects`/`projects list` means a configured group of repositories with its members; a location that names both states the relation; a location that names only one uses it with the correct meaning. Every page that uses `projects list` with the group meaning carries, at least once per page, one sentence stating that the shipped `projects list` is the flat enumeration this change renames to `repos list` — the minimum set being `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section. Statements that record delivered GH-288 facts, in which `projects list` legitimately names the shipped flat surface, are preserved and are not treated as boundary violations. Current truth is outside the twelve documents and keeps describing the shipped surface. Every location in Appendix B is in the required state after the change.
+- **F-1 — M2-S11 amended in place, delivered story intact.** The entry keeps its
+  heading, its `- Depends on: M0-S5, M1-S17.` line, its
+  `- Ticket: GH-288 (milestone M2)` line, its `- Progress: delivered by GH-288 …`
+  record, the per-repository state scoping derived from the checkout identity
+  with a host-level index, the migration note, the tests clause, and the
+  two-checkout ref-GH-241 collision acceptance criterion. Its goal keeps the
+  shipped overview meaning and no longer promises `repos list`; its enumeration
+  task keeps the delivered meaning and names the flat record set; its
+  enumeration acceptance criterion keeps describing the shipped
+  `projects list` surface. It records the planned transition in one sentence:
+  the rename, the `--flat` alias, and the field renames are M2-S18's work. No
+  `repos list` acceptance criterion, no `projectKey → repoKey` clause, and no
+  `data.projects[] → data.repos[]` clause appears in this entry.
+- **F-2 — M2-S18 in the backlog, as the single owner.** The entry keeps its
+  heading and its twelve ticket clauses (Appendix A.1) and gains six derived
+  task clauses and one derived acceptance criterion: (a) the rename — from
+  M2-S18, `projects list` enumerates groups and `repos list` enumerates the flat
+  record set; (b) the alias — `projects list --flat` returns the delivered
+  `projects.v1` payload (`data.projects[]`, `projectKey`, `hostIndexRevision`),
+  owned by M2-S18 and retired at the M3 boundary; (c) the field renames —
+  `projectKey → repoKey` and `data.projects[] → data.repos[]` on the flat
+  surface; (d) the migration-guide update for
+  `doc/guides/migrating-to-per-repository-state.md`; (e) configuration-only
+  membership plus the scoped-read grammar `queue list --project <groupKey>` and
+  `status --project <groupKey>`; (f) the superseding decision record for the
+  `repos` name before the registry row moves to Delivery. The derived
+  acceptance criterion asserts the alias payload shape. The entry states that
+  the rename is S18 code work and is not current truth.
+- **F-3 — M2-S19 in the backlog, verifiable.** The entry keeps its heading and
+  its eleven ticket clauses and gains a dependency-ordering acceptance
+  criterion ("a member step with a dependency edge does not start before the
+  prerequisite member's pull request lands, and the evidence lists the pull
+  requests in landing order"). Its per-member CI corroboration clause is stated
+  testably: CI truth on each member's pushed head is read and recorded, and an
+  unavailable reading blocks the shared definition of done as a classified
+  outcome rather than counting as green. "One review flow" is defined
+  executably in the contract the story points at: exactly one review run over
+  the declared member pull-request set, one verdict per member, each member
+  reviewed once.
+- **F-4 — The backlog context note, the S4 edge, and preservation.** The Epic M2
+  block gains one context paragraph after the retirement note stating the
+  three-level model, configuration-only membership, the delivered flat surface
+  and the rename rule by reference (not restated), and the root-family
+  consequence. M2-S4's `- Depends on:` line gains M2-S18 and keeps its terminal
+  period; no other S4 clause changes. The retirement note, the epic heading, the
+  frontmatter, the reading guide, the cross-cutting principles, every story
+  other than M2-S11, M2-S18, M2-S19, and M2-S4, the closing separator, and the
+  `## Epic M3` heading stay byte-identical.
+- **F-5 — The architecture states the model and the representation.**
+  `milestones/m2/architecture.md` keeps the three-level C4 context (repository
+  as delivery unit, project as a configured group of repositories, workspace as
+  an optional discovery root) and gains one sentence distinguishing the
+  discovery workspace root from the state layer's fixed `default` workspace
+  identifier, so the two uses of "workspace" cannot be conflated. The overview
+  flow stays project-scoped; the cross-repository change flow gains the queue
+  representation (one queue entry per member, per-member dependency edges).
+  `## Boundary invariants at M2 exit` gains the rename rule reference, the
+  configuration-only membership statement, the one-queue-entry-per-member
+  statement, and the release rule statement.
+- **F-6 — The contracts.** `milestones/m2/contracts.md` defines, as planned M2
+  contracts: `repos.v1`, the flat record set with `data.repos[]`, `repoKey`,
+  `root`, `stateLocation`, `daemonReachable` with the closed reason set, the
+  `unbound` scope, `handoverState`, and the host index revision; the delivered
+  `projects.v1` record set with `data.projects[]`, `projectKey`, and
+  `hostIndexRevision`, explicitly retained as the alias payload; the group
+  contract `project-groups.v1` with `data.groups[]`, `groupKey`, `name`, the
+  optional `workspaceRoot`, and `members[]` each carrying `repoKey`, `root`,
+  `trackerKind`, `state`, `health`, and `daemonReachable`; the canonical rename
+  rule; the repository-vocabulary mapping clause; the project configuration
+  document (path, format, schema, member selector, configuration-only
+  membership); the project-scoped aggregation clause; the queue/lane
+  representation and release rule; and the cross-repository change plan shape
+  with its `plan.data.members[]`, `closeout.data.members[]`, and shared
+  definition-of-done verdict at `verify gates`. No section calls the group
+  contract `projects.v1`, and no field of `projects.v1` denotes a group.
+- **F-7 — The command pages.** `commands/repos.md` is the flat record-set page:
+  `Status: Proposed (M2)`, a bare `repos` name, a synopsis carrying
+  `repos list [--json]`, `repos --help`, `repos list --help`, and
+  `repos --version`, OPTIONS rows for `--json`, `--help`, and `--version` with
+  no-state-read semantics (no state, git, configuration, or network read), the
+  five reported fields, the `repos.v1` envelope, exit codes, an error table
+  carrying the delivered `projects.identity-unreadable`,
+  `projects.registry-corrupt`, and `projects.state-unavailable` identities, a
+  scope section restoring the read-only statement and the `unbound` behaviour
+  (non-work-tree root, exit 0, one bounded warning, never a failure and never a
+  row), a STATE example at `<host root>/projects/<key>` with a key conforming to
+  `PROJECT_KEY_PATTERN` (for example `delivery-a-1a2b3c4d`), the carried mapping
+  clause, and a rename note pointing at the canonical rule.
+  `commands/projects.md` is the group page: `project-groups.v1`,
+  `data.groups[]`, `groupKey`, `members[].daemonReachable` documented on the
+  page and in the contract, the configuration document and aggregation
+  behaviour by reference, the scoped-read grammar, the `--flat` alias as a
+  pointer to the rename rule, no group-scoped board claim, and a time-scoped
+  disambiguation. `commands/queue.md` gains `queue list --project <groupKey>`
+  in its synopsis and OPTIONS. `commands/board.md` is reconciled to the
+  repository-key boundary: `--project <key>` takes a repository key, `--all`
+  spans managed repositories, the envelope lists repository keys, the refusal
+  identity uses repository vocabulary, and the attribution names the M2-S11
+  per-repository state scope and host index.
+- **F-8 — The scenario seeds.** `test-scenarios.md` opens with "stories M2-S2
+  through M2-S19". It gains at least five S18 seeds and five S19 seeds, each with
+  exactly one `Assert:` line: S18 covers discovery through a registered
+  workspace directory, the same project without a workspace, group listing with
+  member health and `daemonReachable`, project-scoped queue and status reads,
+  mixed tracker-kind classification, and configuration-only membership with one
+  undeclared clone inside the root that is not a member; S19 covers one spec
+  with two member branches, two pull requests, one review flow and one closeout,
+  a failing member blocking the shared definition of done with the member named,
+  per-member CI corroboration, dependency ordering, and the alias shape. Every
+  assertion reads a declared envelope; no assertion uses a `change.data.*`
+  family. The two S11 seeds are reconciled: `SC-M2-S11-01` reads `repos list`,
+  and `SC-M2-S11-02` is prospective, asserting the S18 rename rather than the
+  delivered surface.
+- **F-9 — The journey.** `journeys.md`'s opening journey stays a project-scoped
+  morning overview and states: configuration-only membership, the flat view from
+  `repos list`, the group view from `projects list`, the project-scoped queue
+  and status reads, same-ref disjointness, workspace optionality, and one
+  time-scoped disambiguation referencing the rename rule.
+- **F-10 — The entrypoint delta.** `entrypoint-delta.md` lists `repos` as the
+  flat record set owned by M2-S18 and `projects` as the group surface owned by
+  M2-S18, keeps the **Mounted by GH-288 (M2-S11)** note stating that the shipped
+  `projects list` is the delivered flat surface, and phrases the reference-page
+  move as pending S18 code work rather than as an effect of this change.
+- **F-11 — The indices.** `milestones/m2/README.md`'s pack-contents table keeps
+  one row per artifact and states `commands/repos.md` as the flat record set
+  owned by M2-S18; its contracts row names `repos.v1`, the group contract
+  `project-groups.v1`, the delivered `projects.v1` payload, the configuration
+  document, and the change plan shape; its map rows put M2-S11 on the delivered
+  `projects.v1`, M2-S18 on `project-groups.v1` plus the configuration document
+  plus the S18 status scope delta plus the superseding decision record, and
+  M2-S19 on the change plan shape; the M2-S4 row loses the advisory phrase
+  because the dependency is now declared; the scenarios row reads S2 through
+  S19. `milestones/README.md`'s M2 row links `m2/commands/repos.md` for thirteen
+  targets.
+- **F-12 — The status snapshot.** `status.md` gains one dated correction
+  section recording the contract split, the rename rule and alias, the
+  ownership split, configuration-only membership, the scoped-read grammar, the
+  board boundary, the registry split, and the S4 edge, as planning state only.
+  No earlier line changes.
+- **F-13 — The command registry.** `cli-command-registry.md` carries one
+  `ados projects` row: delivered flat record set as `projects list`, Delivery
+  `M2-S11 (shipped in GH-288)`, Extended `M2-S18` (the spelling becomes the
+  group surface while the delivered record set remains reachable only through
+  the `--flat` alias until the M3 boundary). It carries one `ados repos` row:
+  prospective flat record set, Delivery `-`, Extended `M2-S18` (delivery owner,
+  rename and alias) and `M3-S6` (clone, branch, and worktree hygiene verbs),
+  marked not-delivered pending the superseding decision record and code change
+  required by ODR-0003. The M3 table carries no second `ados repos` Delivery
+  row. `projects` joins COMMAND FAMILIES in the Operate line. The boundary note
+  names the two meanings and points at the rename rule.
+- **F-14 — One naming boundary and one terminology lock.** Across the fourteen
+  planning documents, `repos`/`repos list` means the flat record set and
+  `projects`/`projects list` means a configured group of repositories from
+  M2-S18 onward; every page using the group meaning carries a time-scoped
+  disambiguation that references the rename rule instead of restating it; the
+  group contract is `project-groups.v1`, a group identity is `groupKey`, and a
+  repository identity is `repoKey` (delivered as `projectKey`); the state layer's
+  scope is per-checkout and is never called a project scope; and no page asserts
+  one spelling returning both shapes at one time. Delivered GH-288 facts are
+  preserved, and where a page's surface name moves, the delivered fact is
+  carried to the location that owns the delivered surface.
 
 ## 6. USER & SYSTEM FLOWS
 
 ```
 Flow 1 — The owner validates the corrected model before delivery
   Owner opens milestones/README.md -> M2 row -> m2/README.md
-    -> architecture: repository, project, workspace with workspace optional
-    -> contracts: repos.v1 (flat), projects.v1 (groups), configuration schema,
-       cross-repository change plan shape
+    -> architecture: repository, project group, optional workspace;
+       one sentence separates the discovery root from the `default` workspace id
+    -> contracts: project-groups.v1 (groups, groupKey), projects.v1 (delivered
+       flat payload), repos.v1 (flat record set), the one rename rule, the
+       mapping clause, the configuration document, aggregation, queue/lane
     -> commands/repos.md and commands/projects.md: two pages, two meanings
-  Owner compares against intent; refinements land in the pack, not in a ticket.
+  Owner checks the registry row split and the S4 dependency; refinements land
+  in the pack, not in a ticket.
 
 Flow 2 — A delivery agent executes M2-S18 from repository truth
   Agent reads backlog.md Epic M2
-    -> M2-S11 (amended): repos list enumerates checkouts
-    -> M2-S18: project groups, configuration, optional workspace discovery,
-       project-scoped queue and status reads, mixed tracker classification
-    -> m2/README.md map row -> architecture flow -> contracts schema
+    -> M2-S11 (delivered): the shipped projects list surface, its record, its
+       state scoping, and its collision criterion
+    -> M2-S18: the rename, the --flat alias, the field renames, the migration
+       guide, configuration-only membership, the scoped grammar, the decision
+       record
+    -> m2/README.md row -> architecture flow -> contracts clauses
     -> inherits SC-M2-S18-* seeds as the first draft of its test plan
   (no ticket lookup required)
 
-Flow 3 — A project configured without any shared workspace
-  Operator declares project membership in configuration, no workspace root
-    -> membership resolves from the declared repositories wherever they live
-    -> repos list shows the checkouts; projects list shows the group and members
-    -> queue and status reads scoped to the project return the same shape
-       as for a project whose members share a directory
-  (a registered workspace root would only add discovery, never a requirement)
-  (the flat surface is the shipped projects list today; after the planned
-   rename it is repos list)
+Flow 3 — Configuration-only membership with an undeclared clone
+  Operator declares groupKey, optional workspaceRoot, and members in the
+  project configuration document
+    -> the read resolves members from configuration, in declared order
+    -> the scan inside workspaceRoot locates the declared checkouts only
+    -> a clone inside the root that is not declared is never a member
+    -> projects list shows the configured members with health and state
+  (declaring nothing means no group; a scan never admits a member)
 
-Flow 4 — One change across two member repositories (planned, M2-S19)
-  One change, one lifecycle
-    -> one spec and plan declaring member repositories and their slices
-    -> per member: branch, pull request, gates, CI corroboration
+Flow 4 — A project-scoped read with one degraded member
+  Reader runs queue list --project <groupKey> or status --project <groupKey>
+    -> members resolved from configuration, in declared order
+    -> one member's state is unavailable -> that member is classified
+       state-unavailable, the read reports partial with the degraded member
+       named, and the readable members are returned at exit 0
+    -> a member with no implemented adapter is classified not-yet-supported,
+       contributes no records, and never fails the read
+    -> exit 2 only when the configuration document or the invoking scope
+       cannot be read
+
+Flow 5 — One change across two member repositories (planned, M2-S19)
+  One change, one lifecycle, one spec and plan
+    -> one queue entry per member, with the second member's entry depending on
+       the first member's entry
+    -> per member: branch, pull request, gates, CI corroboration on the pushed
+       head (an unavailable reading blocks, never counts as green)
+    -> one review flow: one review run over both pull requests, one verdict per
+       member
     -> one shared definition of done; a failing member blocks it and is named
-    -> closeout cleans both branches and closes issues per tracker
-    -> evidence enumerates both pull requests
+       through verify gates (definitionOfDone, blockingMembers)
+    -> closeout reports each member (branch cleanup, pull-request number, issue
+       closure, landed); release dropped each member's lease, and one member
+       landing removed only its own entry
 
-Flow 5 — A reviewer audits the naming boundary and the disambiguation
-  Reviewer searches the corpus for the two names
-    -> every flat-enumeration statement reads repos list
-    -> every group statement reads projects / projects list
-    -> every page using the group meaning carries one sentence naming the
-       shipped projects list as the flat surface this change renames
-    -> every GH-288 delivered fact (delivery record, closed daemon reason
-       vocabulary, unbound scope, mounted delta note, shipped registry note,
-       2026-11-11 status snapshot) is still present
-    -> registry, contracts, entrypoint delta, indices, journey, and seeds agree
-    -> no page attests that projects list is the group surface today
-    -> doc/spec is unedited and still describes the shipped surface
+Flow 6 — A reviewer audits the naming surface
+  Reviewer searches the corpus for the two names and the two identities
+    -> every flat-record statement reads repos list; every group statement reads
+       projects list (from M2-S18)
+    -> the rename rule appears once, in contracts, and elsewhere by reference
+    -> no line says the group contract is projects.v1 or that a group identity
+       is projectKey
+    -> the delivered facts are present: the GH-288 record, the closed daemon
+       reason set, the unbound scope at exit 0, the projects.* error
+       identities, the host-root state layout, the mounted delta note, the
+       shipped projects registry row, the 2026-11-11 snapshot
+    -> doc/spec is unedited and still describes the delivered surface
 ```
 
 ## 7. SCOPE & BOUNDARIES
 
 ### 7.1 In Scope
 
-- `doc/planning/oss-tooling/backlog.md`: the in-place M2-S11 amendment with its GH-288 delivery record retained, the M2-S18 and M2-S19 entries inside the Epic M2 block, and one new Epic M2 context paragraph recording the domain model, the shipped flat surface, and the root-family consequence.
-- `doc/planning/oss-tooling/milestones/m2/architecture.md`: the three-level model in the C4 Level 1 context, the project-scoped overview flow, the cross-repository change flow, and boundary invariants including the naming boundary.
-- `doc/planning/oss-tooling/milestones/m2/contracts.md`: `repos.v1`, the redefined `projects.v1` group envelope, the project configuration schema, and the cross-repository change plan shape.
-- `doc/planning/oss-tooling/milestones/m2/commands/repos.md`: **new file** — the flat enumeration contract moved from `projects.md` with its GH-288 delivered facts, plus a rename note.
-- `doc/planning/oss-tooling/milestones/m2/commands/projects.md`: rewritten as the group surface with members, health, state, and project-scoped reads.
-- `doc/planning/oss-tooling/milestones/m2/test-scenarios.md`: new S18 and S19 seeds, each with one `Assert:` line, and the S11 seeds amended to `repos list`.
-- `doc/planning/oss-tooling/milestones/m2/journeys.md`: the multi-repository morning overview rewritten as a project-scoped overview.
-- `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md`: the M2-planned additions and the mounting paragraph corrected to the `repos`/`projects` split, with the GH-288 mount note retained.
-- `doc/planning/oss-tooling/milestones/m2/README.md`: the pack-contents table row for `commands/repos.md` and the story-to-artifact map rows for S18 and S19, with the S11 row pointing at `repos.v1`.
-- `doc/planning/oss-tooling/milestones/README.md`: the M2 index row gains `m2/commands/repos.md`.
-- `doc/planning/oss-tooling/status.md`: one new dated planning snapshot for this amendment, placed after the 2026-11-11 delivery snapshot.
-- `doc/planning/oss-tooling/cli-command-registry.md`: the `ados repos` M2 row, the redefined `ados projects` row, the reconciled M3-S6 row, and the replaced boundary note.
-- `scripts/checks/forbidden-literals.registry.json`: exactly one added registration for the new pack page, at its sorted position, with no duplicate and no other row changed.
-- The one-sentence disambiguation on every page that uses `projects list` with the group meaning, and the preservation of every GH-288 delivered fact in those twelve documents: both are edits inside the files above, so no additional path enters the manifest.
-- The change artifacts under `doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/`.
+- `doc/planning/oss-tooling/backlog.md`: the in-place M2-S11 amendment that
+  keeps the delivered story and its shipped-surface acceptance criterion, the
+  M2-S18 entry as the single rename owner with its derived tasks and alias
+  acceptance, the M2-S19 entry with its ordering acceptance, M2-S4's
+  `Depends on` gaining M2-S18, and one Epic M2 context paragraph.
+- `doc/planning/oss-tooling/milestones/m2/architecture.md`: the three-level C4
+  context, the discovery-root versus `default` sentence, the project-scoped
+  overview flow, the cross-repository change flow with the queue/lane
+  representation, and the boundary invariants.
+- `doc/planning/oss-tooling/milestones/m2/contracts.md`: `repos.v1`, the
+  retained delivered `projects.v1`, `project-groups.v1`, the canonical rename
+  rule, the repository-vocabulary mapping clause, the project configuration
+  document, the aggregation clause, the queue/lane representation and release
+  rule, and the cross-repository change plan shape with its closeout and
+  definition-of-done envelopes.
+- `doc/planning/oss-tooling/milestones/m2/commands/repos.md`: **new file** —
+  the flat record-set page with delivered semantics, the `unbound` scope, the
+  delivered error identities, the host-root STATE example, `--help`/`--version`
+  with no-state-read semantics, the carried mapping clause, and the rename
+  pointer.
+- `doc/planning/oss-tooling/milestones/m2/commands/projects.md`: rewritten as
+  the group page with `project-groups.v1`, `groupKey`, member
+  `daemonReachable`, aggregation and partial-failure behaviour, and the scoped
+  grammar.
+- `doc/planning/oss-tooling/milestones/m2/commands/queue.md`: the
+  `queue list --project <groupKey>` synopsis and OPTIONS row.
+- `doc/planning/oss-tooling/milestones/m2/commands/board.md`: the
+  repository-key boundary, the repository-vocabulary envelope and refusal
+  identity, and the corrected attribution.
+- `doc/planning/oss-tooling/milestones/m2/test-scenarios.md`: the S2-S19 intro,
+  the S18 and S19 seed sets with one `Assert:` line each, contracted-envelope
+  assertions only, the alias shape seed, and the two S11 seeds reconciled.
+- `doc/planning/oss-tooling/milestones/m2/journeys.md`: the opening journey
+  reconciled to the corrected model and the time-scoped disambiguation.
+- `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md`: the split, the
+  retained GH-288 mount note, and the reference-page move phrased as pending S18
+  code work.
+- `doc/planning/oss-tooling/milestones/m2/README.md`: the contents rows, the
+  corrected map rows (S11, S18, S19, S4, scenarios), and the S18 status delta.
+- `doc/planning/oss-tooling/milestones/README.md`: the M2 index row gaining
+  `m2/commands/repos.md`.
+- `doc/planning/oss-tooling/status.md`: one new dated correction section.
+- `doc/planning/oss-tooling/cli-command-registry.md`: the split `ados projects`
+  and `ados repos` rows, the removal of the second `repos` Delivery row, the
+  ODR-0003 lock statement, `projects` in COMMAND FAMILIES, and the boundary
+  note.
+- `scripts/checks/forbidden-literals.registry.json`: exactly one added
+  registration for the new pack page, at its position, with no duplicate and no
+  other row changed.
+- The change artifacts under
+  `doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/`.
 
 ### 7.2 Out of Scope
 
-- [OUT] Any product code, command implementation, configuration loader, discovery scan, scoped read, or lifecycle behaviour; no file under `packages/**` changes.
-- [OUT] Any delivered surface or entrypoint registration; `repos` and `projects` stay uncomposed and unlisted.
-- [OUT] Rewriting `doc/spec/**` or `doc/overview/**`; current truth describes the shipped flat `projects list`, this change leaves it as written, and phase 7 records that the shipped surface needs no reconciliation.
-- [OUT] Renaming, aliasing, deprecating, or otherwise changing the shipped `projects list` surface in code, in `--help` output, or in current truth; the rename ships only with M2-S18.
-- [OUT] Changes to `tests/**`, `.opencode/**`, `.ai/**`, `doc/guides/**`, `doc/templates/**`, or any `scripts/**` file other than the single registry row; in particular no change to either doc guard's scope or behaviour and no new check.
+- [OUT] Any product code, command implementation, configuration loader, scan, scoped read, alias, or lifecycle behaviour; no file under `packages/**` changes.
+- [OUT] Any delivered surface or entrypoint registration; `repos` stays uncomposed and unlisted.
+- [OUT] Rewriting `doc/spec/**` or `doc/overview/**`; current truth keeps describing the delivered surface.
+- [OUT] Editing `doc/guides/migrating-to-per-repository-state.md`; its update is an M2-S18 task.
+- [OUT] Editing the M1 status page, the M1 pack, or the M0 pack.
+- [OUT] Renaming `project-identity.json`, `<host root>/projects/<key>`, the host index's `projects[]`/`projectKey`, or `--project-root`.
+- [OUT] Changes to `tests/**`, `.opencode/**`, `.ai/**`, `doc/guides/**`, `doc/templates/**`, or any `scripts/**` file other than the single registry row.
 - [OUT] Creating tracker tickets for M2-S18 or M2-S19.
-- [OUT] Amending any existing story's dependency or body other than M2-S11; the M2-S4 board's use of the group envelope is recorded under the pack's advisory convention instead of a new dependency edge.
+- [OUT] Authoring the superseding decision record for the `repos` name.
 - [OUT] Reorganising `roadmap.md`, `backlog-ranking.md`, `measurement-baseline.yaml`, or `doc/planning/oss-tooling/user-journeys.md`.
-- [OUT] Editing the M1 pack, the M0 pack, or any M2 page not named in §7.1.
 - [OUT] Any private, fleet, hosted, repository, or proprietary product name in new or changed text.
 
 ### 7.3 Deferred / Maybe-Later
 
-- The deprecation alias itself: the flat `projects list` shipped in GH-288, so the alias is now a required part of the future rename; this change records the transition and implements no alias, because the rename belongs to M2-S18.
-- Project-scoped reads beyond queue and status (board scoping, spend scoping, retro scoping) are story work under M2-S4, M2-S6, and M2-S10, not planning scope here.
-- A mechanical naming-boundary drift check, if review shows the manual rule is insufficient after the first M2 delivery.
-- Reconciling the rest of the planning corpus to the three-level model where it speaks of repositories alone (roadmap, ranking, user journeys) — a later editorial pass, out of this ticket's file set.
-- Whether M2-S4's dependency set should admit M2-S18 once the board is delivered against the group envelope; the pack's advisory convention covers the gap meanwhile.
+- The rename, the alias, and the field renames themselves: M2-S18 code work.
+- Group scoping for any read other than queue and status (board, spend, retro):
+  story work under M2-S4, M2-S6, and M2-S10, and explicitly not an S18 claim.
+- A mechanical naming-boundary drift check, if review shows the manual rule is
+  insufficient after the first M2 delivery.
+- Reconciling the rest of the planning corpus (roadmap, ranking, user journeys)
+  to the three-level model — a later editorial pass outside this ticket's file
+  set.
+- Whether a group should also scope the daemon supervision battery; no story
+  claims it today.
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 
 ### 8.1 REST / HTTP Endpoints
 
-N/A. This change delivers no endpoint. The contracts it documents (`repos.v1`, the redefined `projects.v1`, the project configuration schema, the cross-repository change plan shape) are planned M2 contracts, not delivered interfaces.
+N/A. This change delivers no endpoint. The contracts it documents
+(`repos.v1`, the delivered `projects.v1`, `project-groups.v1`, the project
+configuration document, the aggregation clause, the queue representation, and
+the cross-repository change plan shape) are planned M2 contracts, not delivered
+interfaces.
 
 ### 8.2 Events / Messages
 
-N/A for this change. No event, topic, message, or payload changes. The planning text may reference project scope in existing planned surfaces (queue and status reads), but nothing is delivered or versioned here.
+N/A for this change. No event, topic, message, or payload changes. The planning
+text references the `queue.graph` event kinds already contracted by M2-S13 for
+dependency-edge changes; nothing is delivered or versioned here.
 
 ### 8.3 Data Model Impact
 
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | Backlog story entry | Heading `### Mx-Sn Title`, optional `- Ticket:` line, then `- Goal:`, `- Tasks:`, `- AC:`, `- Depends on:`. Codes are stable identifiers; file position carries no ordering meaning. An `AC` block may be one inline criterion or an indented numbered list. |
-| DM-2 | Domain level | The three-level vocabulary with fixed mandatory/optional semantics: repository = one git checkout and the delivery unit (always the leaf, always present); project = a named group of repositories whose membership is declared in configuration (the grouping level, one or many members); workspace = a persisted directory usable as a discovery root for a project's clones (optional, never required). |
-| DM-3 | Project configuration document | A declared configuration artifact that names a project, lists its member repositories, assigns a tracker kind per member, and optionally names a workspace discovery root. Mixed tracker kinds are valid at validation time; a member whose tracker kind has no implemented adapter is classified as not-yet-supported rather than rejected. |
-| DM-4 | `repos.v1` envelope | The flat enumeration's machine envelope: per checkout, the repo key derived from the checkout identity, the absolute root, the per-repository state location, daemon reachability with the closed degradation reason set and the `unbound` scope outside a work tree, and handover state, plus the host index revision. Owned by the amended M2-S11; current truth describes its shipped behaviour under the `projects list` name until the rename ships. |
-| DM-5 | `projects.v1` envelope | The group surface's machine envelope: the group identity and name, its members each with repo key, root, tracker kind, state, and health, the optional workspace root, and the project scope accepted by queue and status reads. Owned by M2-S18. No field denotes a repository under a group-named key. |
-| DM-6 | Cross-repository change plan shape | The plan declaration for one change across member repositories: member repositories and their slices, each member's branch and pull request, dependency edges between member steps, per-member gates, one shared definition of done, per-member closeout (branch cleanup, per-tracker issue closure), and evidence listing every member pull request. Owned by M2-S19. |
-| DM-7 | Scenario seed | A `### SC-M2-<story>-<n> <title>` block with Given/When/Then prose and exactly one `Assert:` line stating a predicate over an envelope field, exit code, or file/ledger fact. |
-| DM-8 | Command page | A page with a `Status:` header, NAME, SYNOPSIS, OPTIONS, OUTPUT (text digest and machine envelope), EXIT STATUS, invocation examples, an error table, and see-also links; command names are bare with the `<binary>` invocation prefix. |
+| DM-2 | Domain level | Repository = one git checkout and the delivery unit (the leaf, always present). Project = a named group of repositories whose membership is declared in configuration. Workspace = an optional persisted directory usable as a discovery root for a group's declared members; never required. |
+| DM-3 | Project configuration document | The configuration artifact at `<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`, holding `groups[]` with `groupKey`, `name`, optional `workspaceRoot`, and `members[]` where each member declares a repository selector (`root` or `repoKey`) and a `trackerKind`. Membership is configuration-only; a scan locates declared members and never admits an undeclared clone. |
+| DM-4 | `repos.v1` envelope | The flat record set: `data.repos[]` with `repoKey`, `root`, `stateLocation`, `daemonReachable` (with the closed reason set and the `unbound` scope), `handoverState`, plus `hostIndexRevision`. Owned by M2-S18 as the renamed flat surface; not delivered by this change. |
+| DM-5 | `project-groups.v1` envelope | The group contract: `data.groups[]`, each with `groupKey` (the group identity), `name`, optional `workspaceRoot`, and `members[]` each carrying `repoKey`, `root`, `trackerKind`, `state`, `health`, and `daemonReachable`. Owned by M2-S18. |
+| DM-6 | `projects.v1` envelope (delivered) | The delivered flat record set: `data.projects[]` with `projectKey`, `root`, `stateLocation`, `daemonReachable`, `handoverState`, plus `hostIndexRevision`. Keeps this meaning permanently and is the payload returned by `projects list --flat`. |
+| DM-7 | Rename rule and alias | The canonical statement: from M2-S18 `projects list` enumerates groups and `repos list` enumerates the flat record set; the deprecation alias is the different token `projects list --flat`, returning the delivered `projects.v1` payload, owned by M2-S18, retired at the M3 boundary. |
+| DM-8 | Project-scoped aggregation | Members resolved from configuration in declared order; per-member outcome vocabulary `observed`, `not-yet-supported`, `state-unavailable`, `unregistered`; one degraded member yields a classified partial result (exit 0, `partial` true, degraded members named); exit 2 only when the configuration or the invoking scope cannot be read. |
+| DM-9 | Queue/lane representation (cross-member) | One queue entry per member keyed by that member's ref; per-member dependency edges; release drops each member lease while entries stay; removal is per member with the change's reason; one member landing never removes another's entry; one lane per member entry, never a cross-repository lane. |
+| DM-10 | Cross-repository change plan shape | `plan.data.members[]` (repoKey, slice, branch, pullRequest, dependsOn[], gates); per-member gates; one review flow (one run over the declared pull-request set, one verdict per member); shared definition-of-done verdict at `verify gates` (`data.definitionOfDone`, `data.blockingMembers[]`); `closeout.data.members[]` (repoKey, branch, cleanup, pullRequest, issueClosure, landed); evidence enumerating every member pull request in landing order. |
+| DM-11 | Repository-vocabulary mapping | The `project-identity.json` marker, the `<host root>/projects/<key>` container, the host index's `projects[]`/`projectKey` fields, and `--project-root` each denote a repository checkout and keep that meaning permanently unless a code change renames them. |
+| DM-12 | Scenario seed | A `### SC-M2-<story>-<n> <title>` block with Given/When/Then prose and exactly one `Assert:` line stating a predicate over a declared envelope field, exit code, or file/ledger fact. |
+| DM-13 | Command page | A page with a `Status:` header, NAME, SYNOPSIS, OPTIONS, OUTPUT (text digest and machine envelope), EXIT STATUS, invocation examples, an error table, and see-also links; command names are bare with the `<binary>` invocation prefix. |
 
 ### 8.4 External Integrations
 
-- Tracker adapters are separate engines, so a project may declare members with different tracker kinds. This change documents that configuration as valid and records the not-yet-supported classification for a member with no implemented adapter; it performs no tracker read or write.
-- No other external integration is touched: no provider, vendor API, credential path, or hosted surface is added, removed, or reconfigured.
+- Tracker adapters remain separate engines, so a group may declare members with
+  different tracker kinds. This change documents that configuration as valid and
+  records the `not-yet-supported` classification for a member with no
+  implemented adapter; it performs no tracker read or write.
+- No other external integration is touched: no provider, vendor API, credential
+  path, or hosted surface is added, removed, or reconfigured.
 
 ### 8.5 Backward Compatibility
 
-- M2-S11's state-scoping, host-index, migration, test, and collision clauses keep their meaning and their dependency line, so the delivered work the story describes is unaffected by the rename.
-- The change delivers nothing executable: the shipped `projects list` surface keeps its behaviour, output shape, exit codes, and help entry, current truth keeps describing it, readers' existing links to the pack resolve, and no page is removed.
-- The planned rename is prospective: the blueprint states that the flat surface becomes `repos list` and that the rename carries a deprecation alias when the group story ships, so no reader is told that the shipped command has already changed.
-- `projects.v1` is redefined before delivery: the plan states that consumers of the group envelope read member lists, and the M2-S4 map row gains the pack's advisory phrase `(advisory: consumed at delivery; the owning story declares the edge)` — the same form the M2-S3, M2-S5 and M2-S10 rows carry — rather than a new dependency edge. The base M2-S4 row carries no such note, so the phrase is added by this change (AC-F6-5, DEC-14) and the row's meaning changes only by that added phrase.
-- `status.md` history is additive: no base line is removed, reordered, or modified, so earlier snapshots keep their recorded meaning.
-- The registry's existing rows, including the M3-S6 hygiene row and the historical rename note, keep their bytes except for the M3-S6 row this change reconciles.
+- The delivered `projects list` surface keeps its behaviour, output shape, exit
+  codes, help entry, and state layout; current truth keeps describing it.
+- `projects.v1` is not redefined: it keeps the delivered flat record set and its
+  `data.projects[]` payload, which is what the `--flat` alias returns.
+- The rename is prospective: the corpus states that from M2-S18 the spellings
+  split, and that the alias carries the delivered payload until the M3 boundary.
+- The repository-vocabulary tokens keep their meaning permanently; no reader of
+  this corpus is told that the identity marker, the projects container, the
+  host-index fields, or `--project-root` will be renamed.
+- `board --project` keeps taking a repository key; nothing in this change widens
+  the board to a group.
+- `status.md` history is additive: no base line is removed, reordered, or
+  modified.
+- The registry's existing rows keep their bytes except for the two rows this
+  change splits and the COMMAND FAMILIES line.
 
 ## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
 
 | ID | Requirement | Threshold |
 |----|-------------|-----------|
-| NFR-1 | Docs-only containment | Exactly 13 product files change (all paths except `doc/changes/**`): 12 under `doc/planning/oss-tooling/**` — 11 modified plus 1 new — and `scripts/checks/forbidden-literals.registry.json`. Zero files change under `doc/spec/**`, `doc/overview/**`, `doc/guides/**`, `doc/templates/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, or any other `scripts/**` path. Phase 7 records that the shipped surface is unchanged and therefore no current-truth reconciliation is required, and edits nothing. |
-| NFR-2 | Backlog preservation and placement | 100% byte identity for the frontmatter block, the `## Reading guide`, `## Cross-cutting principles`, the Epic M2 heading and its retirement note, every existing story other than M2-S11, the blank line and `---` separator closing the Epic M2 block, and the `## Epic M3` heading. The only changed regions are the M2-S11 entry, one added context paragraph after the retirement note, and two inserted entries between M2-S17's last line and the closing separator. 0 story codes renamed, reordered, or removed. |
-| NFR-3 | Planned-not-delivered semantics with delivered facts preserved | 2 of 2 command pages carry the exact header `Status: Proposed (M2)`; 0 claims — status header, delivery attribution, or prose — that `repos`, project groups, workspace discovery, or cross-repository changes are delivered, current, or shipped; the GH-288 delivery record for M2-S11 and the delivered contract facts of the flat enumeration (closed daemon reason set, `unbound` scope, exit projection, mounted delta note, shipped registry statement, 2026-11-11 status snapshot) are present, and the registry statement is carried verbatim to the flat family's row where the surface name moves; the pack's planned-until-exit statement survives verbatim; 0 pack pages relabelled as snapshots. |
-| NFR-4 | Forbidden-literals registration | Exactly 1 row added to `registered` (141 → 142), placed at its lexicographic position inside the existing `doc/planning/oss-tooling/milestones/m2/commands/` group so the surrounding rows keep their relative order; 0 duplicate entries; the guard reports 0 unregistered-doc findings and 0 violations. |
-| NFR-5 | Doc-distribution guard | `bash scripts/.tests/test-doc-distribution.sh` exits 0 when run with the default `TMPDIR`; 0 `ados_distribution` markers added to any planning document. |
-| NFR-6 | Aggregate gate | The authoritative run is `pnpm check` with a repository-filesystem `TMPDIR` (`mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check`) over the full suite; it must exit 0 on the branch head, and any failure there — including a repeated `TC-WIRE-002` timeout — is a delivery failure to investigate, never an environmental exemption. Both the default-`TMPDIR` and repository-local-`TMPDIR` runs are recorded in the delivery evidence. A default-run failure of `tests/checks/ci-baseline-parity.test.ts` (cross-device hardlink) and a default-run `TC-WIRE-002` timeout in `tests/checks/privacy-ci-wiring.test.ts` (5000 ms timing sensitivity; passes inside the repository-local suite) are each recorded and re-run, and are not delivery failures only while the repository-local run is green on the same head. Any other default-run failure is a delivery failure to investigate and is never silently reclassified as environmental. |
-| NFR-7 | Document structure (no new tooling) | Every touched file's fenced-block count is even, so every mermaid block closes before the next heading; every diagram fence is tagged `mermaid` and its first body line begins with `flowchart`, `graph`, `sequenceDiagram`, `classDiagram`, or `stateDiagram-v2`; `## C4 Level 1`, `## C4 Level 2`, and `## C4 Level 3` appear exactly once each; `## Key flows` holds exactly 8 `###` headings, each owning exactly one mermaid block. Proven by the same structural read the pack already uses; no validator, script, or gate is added. |
-| NFR-8 | Ticket clause fidelity | 26 of 26 ticket clauses present with unchanged meaning (12 for S18, 11 for S19, 3 for the M2-S11 amendment); 0 added acceptance criteria; 0 clauses weakened to "may", merged, or dropped; the only editorial degrees of freedom are whitespace, line wrapping, and typographic normalisation. |
-| NFR-9 | Public/OSS hygiene and the forbidden-literal scanned set | 0 private fleet, repository, host, hosted, or proprietary product names in new or changed text. The guard's `userFacingDocs` scope covers `doc/**` except `doc/changes/**` and `doc/decisions/**`, but it literal-scans only the documents listed in its `registered` list that are absent at `corpusBaseline`; a document present at that baseline is never literal-scanned even though it sits inside the scope. After this change, of the twelve planning documents this change touches, exactly ten are literal-scanned and two are not. The ten scanned documents are `milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, `milestones/m2/commands/repos.md` (new), `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, and `status.md` (10 scanned); the other two, `backlog.md` and `cli-command-registry.md`, are not registered and are therefore not literal-scanned (2 exempt). Against the three seed literals `ados`, `ADOS_`, and `~/.ados` (case-insensitive, delimited from lowercase ASCII letters on both sides), every one of the 10 scanned documents contains 0 occurrences of any seed literal and writes every command name with the pack's `<binary>` invocation prefix; 0 violations and 0 unregistered-doc findings across all five scope classes. GH-288 added its two registrations outside `doc/planning/**` (the migration guide and the shipped overview's feature spec), so the scanned set of this change's twelve documents is unchanged by the rebase. |
-| NFR-10 | Link integrity and non-duplication | 0 broken relative links introduced or left behind; 0 pack documents restating a story's acceptance-criteria block instead of referencing the story code. |
-| NFR-11 | Status history retention | In `status.md`, 0 base lines removed, reordered, or modified; every added line lies inside the one new dated section; a whole-file retention comparison passes, and no whole-section `cmp` is asserted. |
-| NFR-12 | Naming-boundary consistency and disambiguation | 0 occurrences in the twelve planning documents of `repos list` or `repos` denoting a group; 0 occurrences of `projects list` or `projects` denoting the flat enumeration outside the two permitted classes — the required per-page disambiguation sentence and statements recording delivered GH-288 facts about the shipped surface; 100% of the Appendix B matrix rows in their required state, including at least one disambiguation sentence on each of `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section. |
+| NFR-1 | Docs-only containment | Exactly 15 product files change (all paths except `doc/changes/**`): 14 under `doc/planning/oss-tooling/**` — 13 modified plus the new `milestones/m2/commands/repos.md` — and `scripts/checks/forbidden-literals.registry.json`. Zero files change under `doc/spec/**`, `doc/overview/**`, `doc/guides/**`, `doc/templates/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, or any other `scripts/**` path. `doc/planning/oss-tooling/milestones/m1/commands/status.md` is byte-identical. |
+| NFR-2 | Backlog preservation and placement | 100% byte identity for the frontmatter, the `## Reading guide`, `## Cross-cutting principles`, the Epic M2 heading and its retirement note, every story other than M2-S11, M2-S18, M2-S19, and M2-S4, the blank line and `---` separator closing the Epic M2 block, and the `## Epic M3` heading. The M2-S4 diff is confined to its `- Depends on:` line. 0 story codes renamed, reordered, or removed. |
+| NFR-3 | Planned-not-delivered semantics with delivered facts preserved | 2 of 2 command pages carry the exact header `Status: Proposed (M2)`; 0 claims that `repos`, project groups, workspace discovery, or cross-repository changes are delivered; the registry marks `repos` not-delivered; the nine delivered facts (GH-288 record, closed daemon reason set, `unbound` scope, exit projection, `projects.*` error identities, host-root state layout, mounted delta note, shipped `projects` registry attribution, 2026-11-11 status snapshot) are present and unaltered; the pack's planned-until-exit statement survives verbatim. |
+| NFR-4 | Forbidden-literals registration | Exactly 1 row added to `registered` (141 → 142), placed inside the existing `doc/planning/oss-tooling/milestones/m2/commands/` group so the surrounding rows keep their relative order; 0 duplicate entries; the guard reports 0 unregistered-doc findings and 0 violations. |
+| NFR-5 | Doc-distribution guard | `bash scripts/.tests/test-doc-distribution.sh` exits 0 with the default `TMPDIR`; 0 `ados_distribution` markers added to any planning document. |
+| NFR-6 | Aggregate gate | The authoritative run is `pnpm check` with a repository-filesystem `TMPDIR` over the full suite; it must exit 0 on the branch head. Both aggregate runs are recorded. A default-run `ci-baseline-parity` failure and a default-run 5000 ms `TC-WIRE-002` timeout are each recorded and re-run and are excused only while the repository-local run is green on the same head; any other default-run failure, or a repository-local `TC-WIRE-002` repeat, is a delivery failure. |
+| NFR-7 | Document structure (no new tooling) | Every touched file's fenced-block count is even; every diagram fence is tagged `mermaid` and its first body line begins with `flowchart`, `graph`, `sequenceDiagram`, `classDiagram`, or `stateDiagram-v2`; `## C4 Level 1`, `## C4 Level 2`, and `## C4 Level 3` appear exactly once each; `## Key flows` holds exactly 8 `###` headings, each owning exactly one mermaid block. No validator, script, or gate is added. |
+| NFR-8 | Clause fidelity and coverage | 26 of 26 ticket clauses preserved with unchanged meaning (12 for S18, 11 for S19, 3 for the M2-S11 amendment) and 32 of 32 board-derived clauses covered (Appendix A.2) = 58 clauses traced; 0 ticket clauses reworded, weakened, merged, or dropped; derived clauses are recorded as derived additions and never rewrite ticket text. |
+| NFR-9 | Public/OSS hygiene and the scanned set | 0 private fleet, repository, host, hosted, or proprietary product names in new or changed text. Of the 14 planning documents this change touches, 12 are literal-scanned (`milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, `milestones/m2/commands/repos.md`, `milestones/m2/commands/queue.md`, `milestones/m2/commands/board.md`, `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, `status.md`) and 2 are exempt because they are neither registered nor scanned (`backlog.md` and `cli-command-registry.md`, both present at `corpusBaseline` and unregistered): 0 occurrences of the seed literals `ados`, `ADOS_`, or `~/.ados` in the scanned set, every command name written with the `<binary>` prefix, 0 violations, 0 unregistered-doc findings. |
+| NFR-10 | Link integrity and non-duplication | 0 broken relative links introduced or left behind; 0 pack documents restating a story's acceptance block instead of referencing the story code. |
+| NFR-11 | Status history retention | In `status.md`, 0 base lines removed, reordered, or modified; every added line lies inside the one new dated section. |
+| NFR-12 | Naming-boundary consistency and disambiguation | 0 occurrences of `repos`/`repos list` denoting a group; 0 occurrences of `projects`/`projects list` denoting the flat record set outside the time-scoped per-page disambiguation and statements recording delivered GH-288 facts; the alias token appears only where the alias is defined or pointed at; 100% of Appendix B rows in their required state. |
+| NFR-13 | Terminology lock and vocabulary separation | 0 statements that the group contract is `projects.v1`; 0 statements that a group identity is `projectKey`; 0 statements that one spelling returns both shapes at one time; `groupKey` is the only group identity token and `repoKey` the only planned repository identity token; the state layer's scope is called per-checkout and never a project scope; the four repository-vocabulary tokens are described as repository checkouts wherever they appear. |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
-N/A. No runtime surface is added or modified, so no metric, log, trace, span, or alert is emitted. The change produces documentary evidence only: the two gate runs, the structural diagram read, the naming-matrix scan, the clause-fidelity table, and the file-set comparison recorded in the change artifacts.
+N/A. No runtime surface is added or modified, so no metric, log, trace, span, or
+alert is emitted. The change produces documentary evidence only: the two gate
+runs, the structural diagram read, the naming-matrix and terminology scans, the
+clause-fidelity tables, and the file-set comparison recorded in the change
+artifacts.
 
 ## 11. RISKS & MITIGATIONS
 
 | ID | Risk | Impact | Probability | Mitigation | Residual Risk |
 |----|------|--------|-------------|------------|---------------|
-| RSK-1 | Half-rename: some locations keep `projects list` for the flat enumeration while others move to `repos list`, leaving a corpus that contradicts itself page by page | H | H | Appendix B enumerates every location and its required meaning; F-14 and AC-F14-1/AC-F14-2 scan the whole corpus, require the disambiguation sentence wherever the group meaning is used, and preserve delivered facts; NFR-12 sets the zero-survivor threshold outside those two permitted classes; review reads the matrix, not individual pages | L: a peripheral page outside the matrix could still use an ambiguous phrase |
-| RSK-2 | Backlog structure damaged: an entry inserted below the `---` separator or the separator/`## Epic M3` moved, breaking the epic block | M | M | Placement pinned in F-4 and AC-F4-1; hunk containment in AC-F4-3; preservation in NFR-2 | L |
-| RSK-3 | `projects.v1` redefinition leaves a field meaning two things (`projectKey` as both group and repository identity) | M | M | AC-F6-2 states the group/member split and forbids a group-named key denoting a repository; AC-F6-1 fixes the flat envelope's keys | L |
-| RSK-4 | The mixed tracker-kind clause is softened to "mixed trackers are not supported" or silently dropped | H | M | AC-F2-2 and AC-F6-3 make the classification vocabulary checkable; NFR-8's 26-clause oracle counts it | L |
-| RSK-5 | Planned content reads as delivered, or a page loses its status header while being rewritten | M | M | NFR-3 and AC-NFR3-1 require the exact header on both command pages and zero delivery claims; `projects.md` is rewritten in place rather than replaced by a differently-labelled page | L |
-| RSK-6 | The single registry row is missing, duplicated, or inserted far from its sorted position, failing the guard | M | L | NFR-4 fixes 141 → 142, one row, sorted position between `queue.md` and `spend.md`; AC-NFR4-1 checks the guard output | L |
-| RSK-7 | The gate runs are confused: the authoritative repository-local `pnpm check` result is not recorded, a default-run `TC-WIRE-002` timeout or `ci-baseline-parity` failure is tolerated on a head whose repository-local run is not green, or any other default-run failure is reclassified as environmental | M | M | NFR-6 and AC-NFR6-1 make the repository-local full-suite run authoritative, require both runs recorded, and admit only the two named default-only failures, each recorded, re-run, and conditional on a green repository-local run on the same head; NFR-5 and AC-NFR5-1 keep the distribution guard on the default `TMPDIR` | L |
-| RSK-8 | The three-level model is asserted in words but not drawn, leaving readers to guess membership and workspace optionality from prose | M | M | F-5 and AC-F5-1/AC-F5-2 require the model in the C4 context with relations; NFR-7 pins the diagram structure; the overview and cross-repository flows carry the operational reading | L |
-| RSK-9 | Editing mermaid blocks while rewriting the overview flow breaks fence balance or the keyword line, with no renderer to catch it | L | M | NFR-7's structural read (even fence counts, tagged fences, keyword first line, one diagram per flow heading) is applied to every touched file | L |
-| RSK-10 | `status.md` history is rewritten instead of appended while adding the snapshot | M | L | AC-F12-2 and NFR-11 use a whole-file retention oracle with additions confined to one section | L |
-| RSK-11 | The M3-S6 reconciliation is read as re-scoping M3 hygiene work, creating an apparent delivery change | M | L | F-13 and AC-F13-1 keep M3-S6 delivery attribution unchanged and only restate the verbs as family subcommands; the registry row's Delivery column keeps M3-S6 | L |
-| RSK-12 | A contract name for the flat envelope drifts between `repos.v1` and an invented synonym, so the pages point at different contracts | M | M | DEC-3 fixes `repos.v1` as the single name; AC-F6-1 and AC-F7-1 both require it | L |
-| RSK-13 | The rebase's delivered facts are lost: the amendment rewrites or silently drops GH-288 delivery statements, or the moved flat page loses the closed daemon reason vocabulary and `unbound` scope, so the blueprint and current truth disagree about the shipped surface | M | M | AC-F1-1 requires the M2-S11 delivery record intact, AC-F7-1 requires the delivered contract facts on the flat page, AC-F14-2 requires them preserved corpus-wide, and the §4.1 KPI fixes the six preserved items | L |
+| RSK-1 | Half-rename: some locations keep `projects list` for the flat record set while others use it for groups, leaving a corpus that contradicts itself page by page | H | H | Appendix B enumerates every location; AC-F14-1/AC-F14-2/AC-F14-3 scan the corpus; NFR-12 and NFR-13 set zero-survivor thresholds; the rename rule is stated once and referenced elsewhere | L: a peripheral page outside the matrix could still use an ambiguous phrase |
+| RSK-2 | Backlog structure damaged: an entry inserted below the separator or the separator moved | M | M | Placement pinned in AC-F4-1; hunk containment in AC-F4-3; preservation in NFR-2 | L |
+| RSK-3 | The group contract keeps the flat name in one page while another page uses it correctly, recreating the two-shape reading | H | M | AC-F6-2 and AC-F6-3 fix the two envelopes; AC-F14-3 forbids the affirmation; NFR-13 makes it a zero-count assertion | L |
+| RSK-4 | The alias drifts into a second flat spelling with a different shape, or is described as `projects list` unqualified | M | M | DEC-21 fixes the token, payload, owner, and retirement; AC-F6-4 and AC-F8-5 assert both shapes | L |
+| RSK-5 | A repository-vocabulary token is planned for rename, implying a state-layout migration inside a docs change | H | L | AC-F6-5 requires the mapping clause verbatim in contracts and carried on both pages; NFR-13 asserts the four tokens are described as checkouts | L |
+| RSK-6 | The delivered `repos` semantics are lost again while the page is rewritten: `unbound` becomes an error or the delivered identities are renamed | H | M | AC-F7-2, AC-F7-3, and AC-F7-4 fix scope, identities, and the STATE example; NFR-3 counts the nine delivered facts | L |
+| RSK-7 | Membership is inferred from a scan, so an undeclared clone is admitted | M | M | AC-F6-6 states configuration-only membership; AC-F8-1 requires the undeclared-clone seed; AC-F5-2 and the architecture invariant repeat it | L |
+| RSK-8 | Aggregation reintroduces a whole-read exit 2 for one degraded member | M | M | AC-F6-7 and AC-F7-6 fix the classified partial result; the scenario asserts partial with the degraded member named | L |
+| RSK-9 | The cross-member queue representation stays unstated, so release semantics are guessed | M | M | AC-F6-8 states one entry per member and the release rule; AC-F5-3 carries it into the architecture invariants | L |
+| RSK-10 | The board keeps a group claim, creating a third meaning for `project` | M | M | AC-F7-8 reconciles `board.md`; AC-F7-6 forbids the group-scoped board claim on the projects page; AC-F11-1 keeps the README row honest | L |
+| RSK-11 | The registry keeps two Delivery rows for `repos`, asserting a delivery that has not happened | H | M | AC-F13-1 and AC-F13-2 fix the row split and the COMMAND FAMILIES entry; AC-F2-6 records the decision-record task | L |
+| RSK-12 | M2-S4 consumes the group contract without a declared edge | M | L | AC-F4-4 declares the dependency; AC-F11-1 removes the advisory note so the map and the dependency agree | L |
+| RSK-13 | S19 assertions return to undeclared envelopes (`change.data.*`) while being "fixed" | M | M | AC-F3-4, AC-F6-9, AC-F8-3 declare `plan`, `closeout`, and `verify gates` envelopes and forbid the retired family | L |
+| RSK-14 | A member with no implemented adapter is rejected instead of classified | H | M | AC-F2-2, AC-F6-7, AC-F8-1 keep the `not-yet-supported` token checkable | L |
+| RSK-15 | Clause fidelity is sacrificed while adding derived requirements | M | M | NFR-8 separates 26 preserved ticket clauses from 32 board-derived clauses; AC-NFR8-1 checks both counts | L |
+| RSK-16 | The single registry row is missing, duplicated, or misplaced | M | L | NFR-4 fixes 141 → 142, one row, one position; AC-NFR4-1 checks the guard output | L |
+| RSK-17 | The gate runs are confused and a default-only failure is excused on a non-green head | M | M | NFR-6 and AC-NFR6-1 make the repository-local full suite authoritative and name the two tolerated default-only failures | L |
+| RSK-18 | Diagram structure breaks while the flows are edited, with no renderer to catch it | L | M | NFR-7's structural read applies to every touched file | L |
+| RSK-19 | `status.md` history is rewritten instead of appended | M | L | AC-F12-2 and NFR-11 use a whole-file retention oracle | L |
+| RSK-20 | The M1 status page is edited to carry the S18 delta, breaking a frozen delivered page | M | L | AC-F7-9 pins the delta to the M2 README row; NFR-1 requires the page byte-identical | L |
+| RSK-21 | The reference-page move is recorded as delivered by this docs change | M | L | AC-F10-1 phrases it as pending S18 code work; NFR-3 forbids delivery claims | L |
 
 ## 12. ASSUMPTIONS
 
-- The ticket body is the normative requirement source for the M2-S11 amendment, the S18 and S19 story text, the blueprint targets, and the acceptance list.
-- M2-S11 is delivered: GH-288 shipped the two-layer per-repository state scope and mounted the read-only `projects list [--json]` overview, and `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/guides/migrating-to-per-repository-state.md`, and `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` describe that shipped behaviour. The `repos` family, the group surface, workspace discovery, and cross-repository lifecycles remain undelivered. The rename-transition clause is therefore a live planned transition: the group story renames the shipped surface with a deprecation alias, and this change records it while implementing no alias.
-- `doc/planning/**` is outside the distribution-marker guard's scan set but inside the forbidden-literals guard's `userFacingDocs` scope, so the one new pack page needs exactly one registry row and the guard fails closed otherwise.
-- The forbidden-literals guard literal-scans only the documents its `registered` list names that are absent at `corpusBaseline`, not every document inside `doc/**`. This change touches twelve planning documents, of which ten are literal-scanned and two are not. The ten scanned documents are `milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, `milestones/m2/commands/repos.md` (new), `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, and `status.md` (10 scanned); the two exempt documents are `backlog.md` and `cli-command-registry.md`, which are not registered and are therefore not literal-scanned (twelve planning documents in total: 10 scanned, 2 exempt). Because the seed literals are `ados`, `ADOS_`, and `~/.ados`, every scanned document must write command names with the pack's `<binary>` invocation prefix and must never write the working-name literal — including the new `status.md` section, where a command name written literally fails the guard even though the same text is tolerated in a not-registered document. GH-288 added two registrations outside `doc/planning/**` (the migration guide and the projects feature spec), so the registered total at the change base `723454e4` is 141 and the scanned set of this change's twelve documents is unchanged by the rebase.
-- `scripts/checks/forbidden-literals.ts` has no sorting requirement; the alphabetical convention of its `registered` list is followed for reviewability, and one pre-existing out-of-order pair is left untouched.
-- No mermaid syntax validator exists in this repository, so diagram validity is established structurally (NFR-7) and no renderer or gate is invented.
-- Backlog story order in the file is not numeric; insertion positions are read from the file, not assumed, and the Epic M2 block closes with a blank line and `---` before `## Epic M3`.
-- Existing backlog and pack statements about M1 delivery, M2-S11 state scoping, and the daemon registration gap remain true and are preserved.
-- M1-S17 is delivered, so M2-S19's dependency on it is satisfiable as stated.
-- The environment's default `TMPDIR` is tmpfs; the two doc guards have opposite `TMPDIR` requirements, and both are recorded rather than resolved by changing the environment for the repository. The default-run aggregate gate has two known failure modes — the cross-device `ci-baseline-parity` clone and the 5000 ms `TC-WIRE-002` timeout — both of which the full repository-local suite clears.
-- Story codes, not file positions, identify stories, and pack documents reference story codes instead of restating acceptance blocks.
+- The ticket body (GH-303) remains the normative source for the M2-S11
+  amendment, the S18 and S19 story text, the blueprint targets, and the ticket
+  acceptance list; the review board's findings and decisions are the normative
+  source for the derived clauses listed in Appendix A.2.
+- M2-S11 is delivered by GH-288: the two-layer state scope, the checkout
+  identity marker with its minted project key, the host index, the read-only
+  `projects list [--json]` overview, the one-step migration guide, and the
+  host-wide owner hold. `doc/spec/features/feature-projects.md`,
+  `doc/spec/features/feature-cli-entrypoint.md`,
+  `doc/guides/migrating-to-per-repository-state.md`, and
+  `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` describe
+  that delivered behaviour and are unedited here.
+- The delivered error identities are exactly `projects.identity-unreadable`,
+  `projects.registry-corrupt`, and `projects.state-unavailable`, and a
+  non-work-tree root is the declared `unbound` scope at exit 0 with one
+  warning — verified against the delivered contracts and the projects feature
+  spec.
+- `PROJECT_KEY_PATTERN` is
+  `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$`, so an example key such as
+  `delivery-a-1a2b3c4d` is valid and a bare basename is not.
+- The project configuration document lives at
+  `<configDirectoryName>/projects.yaml` with schema
+  `delivery.projects.groups.v1`; the brand's directory name is configuration
+  data, never a literal in planning text.
+- `doc/planning/**` is outside the distribution-marker scope but inside the
+  forbidden-literals `userFacingDocs` scope, and the guard literal-scans only
+  registered documents absent at `corpusBaseline`.
+- The forbidden-literals `registered` list holds 141 entries at base
+  `723454e4`; the new page adds the one row (142). The list has no sorting
+  requirement; the alphabetical convention is followed for reviewability.
+- No mermaid syntax validator exists, so diagram validity is established
+  structurally and no renderer or gate is invented.
+- Backlog story order in the file is not numeric; insertion positions are read
+  from the file, and the Epic M2 block closes with a blank line and `---`.
+- M1-S17 is delivered, so M2-S19's dependency on it is satisfiable.
+- M2-S4 needs the group contract, so its dependency on M2-S18 is declared rather
+  than recorded as advisory.
+- The environment's default `TMPDIR` is tmpfs; the two doc guards have opposite
+  requirements and both are recorded rather than resolved by changing the
+  environment.
 
 ## 13. DEPENDENCIES
 
 | Direction | Item | Notes |
 |-----------|------|-------|
-| Depends on | GH-303 ticket text | Normative source for the amendment, both stories, the blueprint targets, and acceptance |
-| Depends on | Repository state at change base `723454e4` (`main-tools`, GH-288 merged) | The rebased base carries the shipped M2-S11 delivery and the reconciled pack, indices, status snapshot, and registry |
-| Depends on | Shipped GH-288 delivery (M2-S11, `projects list` mounted) | The premise the amendment corrects: the flat surface exists in code, in the prompt-required set, in root help, and in current truth, so the rename is prospective and the alias is a real transition |
-| Depends on | Delivered M1 baseline (M1-S17 in particular) | M2-S19's dependency line names M1-S17; the M2-S11 state-scoping premises are M0-S5 and M1-S17 |
-| Depends on | Current M2 corpus in its GH-288 state | Every touched file must exist in that state before the amendment applies; verified in the working tree at `723454e4` |
-| Depends on | Doc guards and the aggregate gate | `test-doc-distribution.sh` (default `TMPDIR`), `forbidden-literals` (one new registration), `pnpm check` (repository-local `TMPDIR`, full suite, authoritative) |
-| Blocks | M2-S18 and M2-S19 ticket creation and delivery | Tickets are created from backlog entries; the pack seeds each story's test plan |
-| Blocks | Any M2 board work that scopes to a project | The group envelope is the surface such work consumes; the pack records it as advisory until S18 delivers |
-| Related | M2-S4 board | Consumes the group envelope; its dependency set is deliberately unchanged (NG-5) and the map row carries the advisory note |
-| Related | M3-S6 repository hygiene | The hygiene verbs become `repos` subcommands delivered later; no M3 delivery is changed |
-| Related | Current truth for the shipped flat surface (`feature-projects.md`, `feature-cli-entrypoint.md`, the migration guide, TDR-0022) | Unchanged by this change; describes today's shipped behaviour until the rename ships |
-| Related | #286 (daemon mount) | Untouched prerequisite context recorded in the entrypoint delta note; not re-litigated here |
+| Depends on | GH-303 ticket text | Normative source for the amendment, both stories, the blueprint targets, and ticket acceptance |
+| Depends on | Six-critic review board record on PR #306 | Normative source for the 32 derived clauses in Appendix A.2 |
+| Depends on | ODR-0003 command-registry lock rule | A rename after M0 requires a superseding decision record plus a code change, which fixes the registry row split and the S18 decision-record task |
+| Depends on | Repository state at change base `723454e4` (`main-tools`, GH-288 merged) | The base carries the delivered M2-S11 facts, the pack, the indices, the snapshot, and the 141-row registry |
+| Depends on | Shipped GH-288 delivery (M2-S11, `projects list` mounted) | The premise: the flat surface exists in code, in the prompt-required set, in root help, in current truth, and in the delivered `projects.v1` payload |
+| Depends on | Delivered M1 baseline (M1-S17 in particular) | M2-S19's dependency line names M1-S17; the M2-S11 premises are M0-S5 and M1-S17 |
+| Depends on | Doc guards and the aggregate gate | `test-doc-distribution.sh` (default `TMPDIR`), `forbidden-literals` (one new registration), `pnpm check` (repository-local `TMPDIR`, authoritative) |
+| Blocks | M2-S18 and M2-S19 ticket creation and delivery | Tickets are created from backlog entries; the pack seeds each test plan |
+| Blocks | Any M2 board work that consumes the group contract | The dependency is now declared (M2-S4 on M2-S18) |
+| Related | M3-S6 repository hygiene | The hygiene verbs are the `repos` family's later subcommands delivered by M3-S6; no M3 delivery is changed |
+| Related | Current truth for the delivered flat surface | Unchanged here; describes the delivered surface until S18 ships |
+| Related | #286 (daemon mount) | Untouched prerequisite context recorded in the entrypoint delta note |
 
 ## 14. OPEN QUESTIONS
 
-None outstanding. The two ambiguities the ticket carried — the `repos`/M3-S6 name reservation and the unnamed entrypoint delta note — were resolved by the PM's intake decisions and are recorded as DEC-2 and DEC-4. Every other editing choice (contract name, insertion position, status handling, alias timing) is recorded as a decision rather than left open.
+None outstanding. The review board's decisions A-D resolved the contract
+identity, the flat surface name, the rename rule and alias, and the group
+identity; every other choice this revision needed (configuration document path
+and format, aggregation and partial-failure semantics, the board's key
+vocabulary, the queue representation, the status scope surface, the S4 edge,
+and the registry lock statement) is recorded as a decision (DEC-19 through
+DEC-32) rather than left open.
 
 | ID | Question | Context | Status |
 |----|----------|---------|--------|
@@ -343,43 +865,59 @@ None outstanding. The two ambiguities the ticket carried — the `repos`/M3-S6 n
 
 | ID | Decision | Rationale | Date |
 |----|----------|-----------|------|
-| DEC-1 | The change is docs-only and its product-file budget is exactly 13 files: 12 under `doc/planning/oss-tooling/**` (11 modified plus 1 new) plus `scripts/checks/forbidden-literals.registry.json` | The ticket's acceptance is "docs-only change; guards green; no code"; the registry row is required because the forbidden-literals guard scans `doc/planning/**` and fails closed | 2026-11-11 |
-| DEC-2 | `repos` is the flat enumeration family owned by the amended M2-S11 (`repos list`), and the M3-S6 clone/branch/worktree hygiene verbs are that family's later subcommands; `projects` is the group surface owned by M2-S18 | The ticket assigns the flat enumeration to the name M3 reserves; leaving the registry's two meanings unreconciled would break the "guards green, no contradictions" acceptance, so the family is defined once and its later verbs are scoped inside it | 2026-11-11 |
-| DEC-3 | The flat enumeration contract is named `repos.v1` and `projects.v1` is redefined as the group envelope | The pack's contract names are one per surface (`attempts.v1`, `telemetry.v1`); a single fixed name keeps the two command pages pointing at one contract and makes the field split checkable | 2026-11-11 |
-| DEC-4 | The ticket's "entrypoint delta note" is read as two requirements: one new Epic M2 context paragraph in `backlog.md`, and the correction of `m2/entrypoint-delta.md`'s root-family line and mounting paragraph | The backlog bullet and the blueprint bullet each name a delta note; both are needed so the story set and the blueprint say the same thing | 2026-11-11 |
-| DEC-5 | Index edits are in scope as derived consistency: `m2/README.md`'s contents table and story-to-artifact map, and `milestones/README.md`'s M2 index row | A new page and two new stories that no index points at are not discoverable; the GH-284 precedent treated the same index as part of the pack | 2026-11-11 |
-| DEC-6 | `status.md` gains one new dated section only, placed after the 2026-11-11 M2 delivery snapshot; no earlier dated section is edited and no base line is modified, and the new section claims planning state, not delivery | Follows the GH-266, GH-284 and GH-288 precedent: dated sections are historical records, and the snapshot records the amendment as plan state | 2026-11-11 |
-| DEC-7 | No deprecation alias is implemented here; the backlog and the pack record the transition as the group story's obligation | The flat `projects list` shipped in GH-288, so an alias is now genuinely required when the rename ships — and it still belongs to the rename's own change, because activating an alias for a surface this change does not rename would invent behaviour | 2026-11-11 |
-| DEC-8 | M2-S18 and M2-S19 are inserted after the M2-S17 entry and before the blank line and `---` separator that close the Epic M2 block, in code order S18 then S19, and M2-S11 is amended in place | Appending inside the block minimises the diff and preserves every anchor; the epics' separators are structural, so inserting below one would strand it inside the block | 2026-11-11 |
-| DEC-9 | The three-level model is stated in the C4 Level 1 context with membership and optionality visible in the diagram, and a new `### Cross-repository change` flow is added under `## Key flows`; the overview flow is rewritten in place | The model is the change's central claim, so it must be drawn where a reader starts; keeping the flow section's structure preserves the pack convention | 2026-11-11 |
-| DEC-10 | `commands/repos.md` is a new page carrying the flat enumeration content moved from `projects.md` with a rename note; `projects.md` is rewritten in place as the group surface; both keep `Status: Proposed (M2)` | Two surfaces with two meanings need two pages, and rewriting in place keeps each page's identity and avoids a second rename on top of the first | 2026-11-11 |
-| DEC-11 | `SC-M2-S11-01` is amended alongside `SC-M2-S11-02`: its assert line names the flat surface, so it must read `repos list` to satisfy the naming boundary | The ticket names only the second seed, but leaving the first seed's assert on `projects list` would be a surviving flat-enumeration statement and make the boundary AC unsatisfiable | 2026-11-11 |
-| DEC-12 | Mixed tracker kinds are declared valid configuration at validation time, and a member whose tracker kind has no implemented adapter is classified with the fixed token `not-yet-supported` in the envelope and the group listing | The ticket requires "accepted at validation time … classified as not-yet-supported rather than rejected silently"; a fixed token makes the clause testable instead of a prose promise | 2026-11-11 |
-| DEC-13 | The project configuration schema and the cross-repository change plan shape are documented as planned data shapes in `contracts.md`, not as delivered configuration or lifecycle behaviour | M2-S18 and M2-S19 are undelivered stories; the pack records intended contracts, and status semantics keep them planned | 2026-11-11 |
-| DEC-14 | M2-S4's dependency set is not amended; this change adds the pack's advisory phrase ("advisory: consumed at delivery; the owning story declares the edge") to the map row pointing the board at the group envelope, in the same form the M2-S3, M2-S5 and M2-S10 rows use | NG-5 keeps this change's edits inside the ticket's story set; the advisory convention records the map-vs-dependency gap without misstating S4's scope | 2026-11-11 |
-| DEC-15 | The registry edit is exactly one row, inserted at its lexicographic position inside the `m2/commands/` group (between `queue.md` and `spend.md`); the one pre-existing out-of-order pair elsewhere in the list is not re-sorted | The guard requires uniqueness and presence, not order; sorting only the new row keeps the diff minimal and reviewable | 2026-11-11 |
-| DEC-16 | The gates are invoked per guard: the distribution guard with the default `TMPDIR`, and the aggregate gate with a repository-local `TMPDIR` as the authoritative full-suite run, with both aggregate runs recorded. A default-run `ci-baseline-parity` failure and a default-run `TC-WIRE-002` timeout are each recorded and re-run, and are excused only while the repository-local full suite is green on the same head; any other default-run failure, or a `TC-WIRE-002` repeat inside the repository-local run, is a delivery failure | The aggregate gate's two known default-`TMPDIR` failures are a cross-device clone and a 5000 ms timing sensitivity that passes inside the full repository-local suite, so the repository-local full suite decides delivery and every tolerated default-run failure is named, re-run, and conditional rather than waved through | 2026-11-11 |
-| DEC-17 | Phase 7 records that no current-truth change is required, and `doc/spec/**` and `doc/overview/**` stay untouched | Current truth describes the shipped flat `projects list`; this change renames nothing in code, so the correct phase-7 outcome is a verified no-op on the shipped surface rather than a speculative rewrite of delivered behaviour | 2026-11-11 |
-| DEC-18 | The correction after the rebase onto `723454e4` makes four things part of the requirement: the change base revision, the shipped GH-288 state, the per-page disambiguation sentence, and the preservation of GH-288 delivered facts | The rebase brought GH-288 into `main-tools`, so the premises this specification was written on changed; without the disambiguation sentence the corpus would be half-renamed and would read as denying a shipped command, and without fact preservation the plan would silently overwrite delivery truth | 2026-11-11 |
+| DEC-1 | The change is docs-only and its product-file budget is exactly 15 files: 14 under `doc/planning/oss-tooling/**` (13 modified plus 1 new) plus `scripts/checks/forbidden-literals.registry.json` | The ticket's acceptance is "docs-only change; guards green; no code"; the registry row is required because the guard fails closed on an unregistered new page | 2026-11-11 |
+| DEC-2 | `repos` is the flat record-set family delivered by M2-S18 (rename and alias), and the M3-S6 clone/branch/worktree hygiene verbs are that family's later subcommands; `projects` is the group surface owned by M2-S18 | The ticket assigns the flat record set to the name M3 reserves; the family is defined once with the flat record set first and hygiene verbs later | 2026-11-11 |
+| DEC-3 | **Superseded by DEC-19.** The flat contract is not renamed onto the delivered name: the delivered flat contract stays `projects.v1`, the renamed flat surface is `repos.v1`, and the group contract is `project-groups.v1` | Reusing `projects.v1` for groups made one name carry two payloads and contradicted the delivered envelope | 2026-11-11 |
+| DEC-4 | The ticket's "entrypoint delta note" is read as two requirements: one new Epic M2 context paragraph in `backlog.md`, and the correction of `m2/entrypoint-delta.md`'s root-family line and mounting paragraph | The backlog bullet and the blueprint bullet each name a delta note; both are needed so the story set and the blueprint agree | 2026-11-11 |
+| DEC-5 | Index edits are in scope as derived consistency: `m2/README.md`'s contents table and map, and `milestones/README.md`'s M2 index row | A new page and two new stories that no index points at are not discoverable | 2026-11-11 |
+| DEC-6 | `status.md` gains one new dated section only, after the 2026-11-11 delivery snapshot; no earlier section or line changes | Dated sections are historical records; the snapshot records the amendment as plan state | 2026-11-11 |
+| DEC-7 | No alias, rename, or deprecation is implemented by this change; the alias is recorded as M2-S18's obligation with its token, payload, owner, and retirement fixed by DEC-21 | The delivered flat surface exists, so the alias is a real transition — but it belongs to the change that renames the surface | 2026-11-11 |
+| DEC-8 | M2-S18 and M2-S19 are inserted after M2-S17 and before the closing separator; M2-S11 is amended in place | Appending inside the block minimises the diff and preserves every anchor | 2026-11-11 |
+| DEC-9 | The three-level model is stated in the C4 Level 1 context, and a `### Cross-repository change` flow is added; the overview flow is rewritten in place | The model is the change's central claim, so it is drawn where a reader starts | 2026-11-11 |
+| DEC-10 | `commands/repos.md` is a new page carrying the flat record-set content with the delivered semantics; `projects.md` is rewritten in place as the group page; both keep `Status: Proposed (M2)` | Two surfaces with two meanings need two pages, and rewriting in place keeps each page's identity | 2026-11-11 |
+| DEC-11 | **Amended by DEC-20.** `SC-M2-S11-01` names the flat surface; `SC-M2-S11-02` becomes prospective and asserts the S18 rename rather than the delivered surface, because M2-S11's delivered acceptance criterion keeps describing the shipped `projects list` | Leaving either seed asserting the delivered surface as `repos list` would attribute an undelivered rename to the delivered story | 2026-11-11 |
+| DEC-12 | Mixed tracker kinds are valid configuration at validation time, and a member whose tracker kind has no implemented adapter is classified `not-yet-supported` | A fixed token makes the clause testable instead of a prose promise | 2026-11-11 |
+| DEC-13 | The configuration document and the change plan shape are documented as planned data shapes | M2-S18 and M2-S19 are undelivered; the pack records intended contracts | 2026-11-11 |
+| DEC-14 | **Superseded by DEC-28.** M2-S4's dependency set is no longer left advisory: it gains M2-S18 and the map row loses the advisory phrase | The board consumes the group contract, so a declared edge is honest and the advisory convention is no longer needed | 2026-11-11 |
+| DEC-15 | The registry edit adds exactly one row for the new page; the one pre-existing out-of-order pair elsewhere is not re-sorted | The guard requires uniqueness and presence, not order | 2026-11-11 |
+| DEC-16 | The gates are invoked per guard: distribution guard with the default `TMPDIR`; aggregate gate with a repository-local `TMPDIR` as authoritative, with both runs recorded | The aggregate gate's two default-only failures are a cross-device clone and a timing sensitivity | 2026-11-11 |
+| DEC-17 | Phase 7 records that no current-truth change is required, and `doc/spec/**` and `doc/overview/**` stay untouched | Current truth describes the delivered surface; this change renames nothing in code | 2026-11-11 |
+| DEC-18 | The rebase onto `723454e4` made the shipped GH-288 state, the per-page disambiguation, and delivered-fact preservation part of the requirement | The rebase changed the premises: the delivered flat surface now exists | 2026-11-11 |
+| DEC-19 | **Decision A.** The group contract is `project-groups.v1` with top-level `data.groups[]` and the group identity field `groupKey`; `projects.v1` keeps its delivered meaning — the flat record set with `data.projects[]` and `projectKey` — and is never reused for groups | Reusing the delivered name and its repository-shaped identity field made one contract carry two meanings and broke traceability of the delivered envelope | 2026-11-11 |
+| DEC-20 | **Decision B.** The flat surface is `repos list --json` returning `repos.v1` with `data.repos[]` and the record field `repoKey` | The flat surface moves to the name reserved for it and takes repository vocabulary with it | 2026-11-11 |
+| DEC-21 | **Decision C.** One rename rule, stated once: from M2-S18, `projects list` enumerates groups and `repos list` enumerates the flat record set; the deprecation alias is the different token `projects list --flat`, which returns the delivered `projects.v1` payload (`data.projects[]`); the alias is owned by M2-S18 and retires at the M3 boundary. The alias requires an S18 acceptance criterion, a shape-asserting seed, and an S18 task to update `doc/guides/migrating-to-per-repository-state.md` | One rule with one owner and one payload removes the reading in which a single command spelling returns two shapes | 2026-11-11 |
+| DEC-22 | **Decision D.** A group's identity field is `groupKey`; `projectKey` is never a group identity | The delivered repository identity token keeps its meaning, so no reader can confuse a group with a checkout | 2026-11-11 |
+| DEC-23 | The project configuration document is `<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`, with `groups[]` holding `groupKey`, `name`, optional `workspaceRoot`, and `members[]` where each member declares a repository selector (`root` or `repoKey`) and a `trackerKind` | Membership needs a declared path and format to be configuration-only and testable; a selector keeps the declaration independent of where a checkout lives | 2026-11-11 |
+| DEC-24 | Project-scoped aggregation is defined once: members from configuration in declared order; per-member outcomes `observed`, `not-yet-supported`, `state-unavailable`, `unregistered`; one degraded member yields exit 0 with `partial` true and the degraded members named; exit 2 only when the configuration or the invoking scope cannot be read | A read that fails wholesale for one unavailable member cannot show the members that are readable; classifying the member is both truthful and testable | 2026-11-11 |
+| DEC-25 | The status scope surface is pinned as `status --project <groupKey>`; the M1 status page stays frozen and the S18 delta is named in the M2 pack README row | Naming the surface removes the ambiguity in "status accepts a project scope" without editing a delivered page | 2026-11-11 |
+| DEC-26 | `board --project` stays a repository key, the board's envelope lists repository keys, and its refusal identity uses repository vocabulary (`board.repository-unknown`); the group claim is removed | The board is a host view over managed checkouts; only queue and status are group-scoped in S18 | 2026-11-11 |
+| DEC-27 | A cross-repository change holds one queue entry per member keyed by that member's ref; dependency edges are per member; release drops each member lease while entries stay, removal is per member with the change's reason, and one member's landing removes only its entry; one lane per member entry | Without an explicit representation, a two-repository change either shares one entry or holds none, and release semantics become guesswork | 2026-11-11 |
+| DEC-28 | M2-S4's dependency line gains M2-S18 and the M2 pack's map row loses the advisory phrase | The dependency is real and declared; the advisory convention existed only because the edge was missing | 2026-11-11 |
+| DEC-29 | The registry splits into one delivered `projects` row (M2-S11, shipped GH-288) and one prospective `repos` row (Delivery `-`, Extended M2-S18 and M3-S6), marked not-delivered pending the superseding decision record and code change required by ODR-0003; the record itself is an S18 task | Two Delivery rows for one name asserts a delivery that has not happened and contradicts the ODR-0003 lock rule | 2026-11-11 |
+| DEC-30 | The board-mandated additions to M2-S18 and M2-S19 are recorded as derived task and acceptance clauses (Appendix A.2), never as rewrites of ticket clauses | Fidelity to the ticket and coverage of the board are both required; separating them keeps both auditable | 2026-11-11 |
+| DEC-31 | S19's shared definition-of-done verdict is contracted at `verify gates` (`data.definitionOfDone`, `data.blockingMembers[]`), and closeout reports `closeout.data.members[]` | S19's failing-member assertion needs a declared envelope instead of a retired `change.data` family | 2026-11-11 |
+| DEC-32 | "One review flow" is defined executably as one review run over the declared member pull-request set with one verdict per member, each member reviewed once | The phrase is otherwise untestable, and a per-member review cycle would silently multiply the lifecycle | 2026-11-11 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |-----------|--------|
-| `doc/planning/oss-tooling/backlog.md` | Updated: M2-S11 amended in place with its GH-288 delivery record retained, M2-S18 and M2-S19 added, one Epic M2 context paragraph naming the shipped flat surface |
-| `doc/planning/oss-tooling/milestones/m2/architecture.md` | Updated: three-level C4 context, project-scoped overview flow, cross-repository change flow, boundary invariants |
-| `doc/planning/oss-tooling/milestones/m2/contracts.md` | Updated: `repos.v1`, redefined `projects.v1`, project configuration schema, cross-repository change plan shape |
-| `doc/planning/oss-tooling/milestones/m2/commands/repos.md` | New: flat enumeration contract with rename note |
-| `doc/planning/oss-tooling/milestones/m2/commands/projects.md` | Updated: rewritten as the group surface with members, health, state, and project scope |
-| `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` | Updated: S18 and S19 seeds, S11 seeds amended to `repos list` |
-| `doc/planning/oss-tooling/milestones/m2/journeys.md` | Updated: multi-repository morning overview rewritten as a project-scoped overview |
-| `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` | Updated: `repos`/`projects` split in the planned additions and the mounting paragraph, with the GH-288 mount note retained |
-| `doc/planning/oss-tooling/milestones/m2/README.md` | Updated: pack-contents row for `commands/repos.md`, map rows for S18 and S19, S11 row on `repos.v1` |
+| `doc/planning/oss-tooling/backlog.md` | Updated: M2-S11 keeps the delivered story and its shipped-surface acceptance; M2-S18 owns the rename, alias, field renames, migration guide, config-only membership, scoped grammar, and decision record; M2-S19 gains ordering; M2-S4 depends on M2-S18; one context paragraph |
+| `doc/planning/oss-tooling/milestones/m2/architecture.md` | Updated: three-level context, discovery-root versus `default` sentence, project-scoped overview flow, cross-repository flow with the queue representation, boundary invariants |
+| `doc/planning/oss-tooling/milestones/m2/contracts.md` | Updated: `repos.v1`, retained `projects.v1`, `project-groups.v1`, rename rule, mapping clause, configuration document, aggregation, queue/lane representation, change plan shape |
+| `doc/planning/oss-tooling/milestones/m2/commands/repos.md` | New: flat record-set page with delivered semantics, `unbound` scope, delivered error identities, host-root STATE example, `--help`/`--version`, mapping clause |
+| `doc/planning/oss-tooling/milestones/m2/commands/projects.md` | Updated: group page with `project-groups.v1`, `groupKey`, member `daemonReachable`, aggregation and partial failure, scoped grammar |
+| `doc/planning/oss-tooling/milestones/m2/commands/queue.md` | Updated: `queue list --project <groupKey>` in synopsis and OPTIONS |
+| `doc/planning/oss-tooling/milestones/m2/commands/board.md` | Updated: repository-key boundary, repository-vocabulary envelope and refusal identity, corrected attribution |
+| `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` | Updated: S2-S19 intro, S18/S19 seed sets, contracted-envelope assertions, alias seed, S11 seeds reconciled |
+| `doc/planning/oss-tooling/milestones/m2/journeys.md` | Updated: opening journey reconciled, time-scoped disambiguation |
+| `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` | Updated: split, retained mount note, reference-page move as pending S18 code work |
+| `doc/planning/oss-tooling/milestones/m2/README.md` | Updated: contents rows, corrected map rows (S11, S18 with the status delta and decision record, S19, S4, scenarios) |
 | `doc/planning/oss-tooling/milestones/README.md` | Updated: M2 index row gains `m2/commands/repos.md` |
-| `doc/planning/oss-tooling/status.md` | Updated: one new dated planning snapshot after the 2026-11-11 delivery snapshot |
-| `doc/planning/oss-tooling/cli-command-registry.md` | Updated: `ados repos` (M2), `ados projects` (groups), M3-S6 row reconciled, boundary note replaced |
+| `doc/planning/oss-tooling/status.md` | Updated: one new dated correction section |
+| `doc/planning/oss-tooling/cli-command-registry.md` | Updated: split rows, one Delivery row per name, ODR-0003 lock statement, `projects` in COMMAND FAMILIES, boundary note |
 | `scripts/checks/forbidden-literals.registry.json` | Updated: one registration for the new pack page |
-| `doc/spec/**`, `doc/overview/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, all other `scripts/**`, the M1 pack, and the M0 pack | Unchanged; `feature-projects.md`, `feature-cli-entrypoint.md`, the migration guide, and TDR-0022 keep describing the shipped flat `projects list`, and the shipped command keeps its behaviour and help entry |
+| `doc/spec/**`, `doc/overview/**`, `doc/guides/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, all other `scripts/**`, the M1 pack, and the M0 pack | Unchanged; the delivered surface, its feature specs, the migration guide, and TDR-0022 keep describing today's behaviour |
 
 ## 17. ACCEPTANCE CRITERIA
 
@@ -387,136 +925,208 @@ None outstanding. The two ambiguities the ticket carried — the `repos`/M3-S6 n
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F1-1 | **Given** the M2-S11 entry in `backlog.md`, **when** it is compared with the base revision `723454e4`, **then** the heading, the `- Depends on: M0-S5, M1-S17.` line, the `- Ticket: GH-288 (milestone M2)` line, the `- Progress: delivered by GH-288 …` record, the per-repository state scoping derived from the checkout identity with a host-level index, the migration note, the tests clause, and the two-checkout ref-GH-241 collision acceptance criterion are unchanged in substance; the goal, the enumeration task, and the enumeration acceptance criterion name `repos list`; the enumeration fields are exactly repo key, root, state location, daemon reachability, and handover state; and the entry records the transition as the planned rename — the flat `projects list` has shipped, and the group story renames it with a deprecation alias. | F-1, DM-1 |
-| AC-F1-2 | **Given** the amended M2-S11 entry, **when** every occurrence of the two names in it is read, **then** `projects list` does not appear as the enumeration surface, `repos list` does not appear with group semantics, no clause of the retained state-scoping or collision set has been weakened, merged, or moved to another story, and the delivered GH-288 record is still present and is not restated as a plan. | F-1, NFR-8 |
-| AC-F2-1 | **Given** `backlog.md`, **when** the Epic M2 block is read, **then** `### M2-S18 Project groups` appears with `- Goal:`, `- Tasks:`, `- AC:`, and `- Depends on: M2-S11.`, carrying all 12 ticket clauses enumerated in Appendix A (1 goal, 5 tasks, 5 acceptance, 1 dependency), with no `- Ticket:` line and no added acceptance criterion. | F-2, DM-1, NFR-8 |
-| AC-F2-2 | **Given** the S18 entry and the contracts, **when** the mixed-tracker clause is checked, **then** the entry states that a configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified not-yet-supported rather than rejected silently, and the contracts name the same classification and the same acceptance rule, with no clause softened to "supported later" or "rejected". | F-2, F-6, DEC-12 |
-| AC-F3-1 | **Given** `backlog.md`, **when** the Epic M2 block is read, **then** `### M2-S19 Cross-repository changes` appears with `- Goal:`, `- Tasks:`, `- AC:`, and `- Depends on: M2-S11, M2-S18, M1-S17.`, carrying all 11 ticket clauses enumerated in Appendix A (1 goal, 6 tasks, 3 acceptance, 1 dependency), with no added criterion and no omitted clause. | F-3, DM-1, NFR-8 |
-| AC-F3-2 | **Given** the S19 entry, **when** its acceptance block is read, **then** each of its three criteria is independently identifiable: (1) a two-repository change produces one spec, two branches, two PRs, one review flow, and a closeout that lands both; (2) per-repo CI truth is corroborated per member before the change counts done; (3) a member failing its gates blocks the shared DoD with the failing member named. | F-3, NFR-8 |
-| AC-F3-3 | **Given** `contracts.md`'s cross-repository change plan shape, **when** it is read against the S19 task clauses, **then** it declares member repositories and their slices, one lifecycle driving per-member branches and pull requests, per-member gates, one shared definition of done, per-member closeout with branch cleanup and per-tracker issue closure, dependency edges between member steps where order matters, and evidence enumerating every member pull request. | F-3, F-6, DM-6 |
-| AC-F4-1 | **Given** the `backlog.md` diff against the base revision, **when** insertion positions are checked, **then** the two new entries lie after the M2-S17 entry's last line, inside the Epic M2 block, and before the blank line and `---` separator that close the block; the separator, the blank line after it, and the `## Epic M3` heading are byte-identical and follow the inserted entries. | F-4, NFR-2, DEC-8 |
-| AC-F4-2 | **Given** the Epic M2 block, **when** it is compared with the base revision, **then** one new context paragraph follows the existing retirement note and precedes `### M2-S2`, stating the repository/project/workspace distinction, the `repos`/`projects` boundary, the fact that the flat enumeration has already shipped as `projects list` under GH-288 so the split is the planned end state and the rename carries a deprecation alias, and the root-family consequence for the entrypoint; the retirement note, the epic heading, the frontmatter, the reading guide, the cross-cutting principles, and every other story are byte-identical. | F-4, NFR-2, DEC-4 |
-| AC-F4-3 | **Given** the `backlog.md` diff with zero context, **when** the hunks are inspected, **then** every hunk lies inside the M2-S11 entry, the one added context paragraph, or one of the two inserted entries, and no hunk quotes a neighbouring story's line. | F-4, NFR-2 |
-| AC-F5-1 | **Given** `milestones/m2/architecture.md`, **when** its C4 Level 1 context is read, **then** it presents repository, project, and workspace as three related levels — the repository as the delivery unit, the project as a configured group of repositories with declared members, the workspace as an optional directory usable as a discovery root — with the optionality visible in the diagram and prose, and no level described as mandatory that the ticket calls optional. | F-5, DM-2, RSK-8 |
-| AC-F5-2 | **Given** the same document, **when** the model prose is read, **then** a project's membership is declared in configuration, a workspace is never required, a project whose members live in unrelated directories behaves identically to one whose members share a workspace directory, and no member repository is required to live inside a workspace. | F-5, DM-2, DM-3 |
-| AC-F5-3 | **Given** `milestones/m2/architecture.md`, **when** the flows and invariants are read, **then** the multi-repository overview flow is scoped to a project (group resolution, member enumeration, optional workspace discovery, per-member state and health) and no longer starts from a flat host list; a `### Cross-repository change` flow exists describing one lifecycle across member branches and pull requests, per-member gates, the shared definition of done, and closeout; and `## Boundary invariants at M2 exit` states the naming boundary, declared membership, workspace optionality, and one lifecycle per cross-repository change. | F-5, DM-2, DM-6 |
-| AC-F6-1 | **Given** `contracts.md`, **when** the flat enumeration contract is read, **then** it is named `repos.v1`, owned by the amended M2-S11, and defines the record as repo key derived from the checkout identity, root, state location, daemon reachability with the closed degradation reason set and the `unbound` scope, handover state, and the host index revision, matching the fields the S11 entry names. | F-6, DM-4, DEC-3 |
-| AC-F6-2 | **Given** the redefined `projects.v1`, **when** its fields are read, **then** it carries a group identity and name, a member list where each member carries its own repo key, root, tracker kind, state, and health, and the optional workspace root; it defines the project scope accepted by queue and status reads; and no group-named field denotes a repository, while no member field denotes the group. | F-6, DM-5, RSK-3 |
-| AC-F6-3 | **Given** the project configuration schema, **when** it is read, **then** it declares a project, its member repositories, a tracker kind per member, and an optional workspace discovery root; it states that mixed tracker kinds are valid at validation time and that a member whose tracker kind has no implemented adapter is classified not-yet-supported rather than rejected; and it states that a configuration without any workspace root is valid and behaves identically. | F-6, DM-3, DEC-12 |
-| AC-F6-4 | **Given** the cross-repository change plan shape, **when** it is read, **then** it declares member repositories and their slices, one lifecycle producing a branch and pull request per member, per-member gates, one shared definition of done, per-member closeout with branch cleanup and per-tracker issue closure, dependency edges between member steps where order matters, and evidence enumerating every member pull request. | F-6, DM-6 |
-| AC-F6-5 | **Given** `contracts.md` and `milestones/m2/README.md`, **when** the downstream consumers of the group envelope are checked, **then** the contracts state that consumers of `projects.v1` read the group envelope with its members; the M2-S4 story-to-artifact map row pointing at that envelope gains the advisory note "(advisory: consumed at delivery; the owning story declares the edge)" in the same phrasing the M2-S3, M2-S5 and M2-S10 rows use, rather than a new dependency edge. | F-6, F-11, DEC-14 |
-| AC-F7-1 | **Given** `milestones/m2/commands/repos.md`, **when** it is read, **then** it carries `Status: Proposed (M2)`, a bare `repos` name with the `<binary>` invocation prefix, the `repos list [--json]` synopsis, the five reported fields, the machine envelope under `repos[]`, exit codes, at least one invocation example, an error table, and see-also links; it keeps the GH-288 delivered contract facts intact — the closed daemon reason vocabulary `daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`, the read-only scope statement, the `unbound` scope outside any git work tree with its bounded warning, and the exit projection; and it contains a rename note stating that this content is the flat enumeration shipped as `projects list` and documented here under `repos` as the amended M2-S11's planned name. | F-7, DM-8, DEC-10 |
-| AC-F7-2 | **Given** `milestones/m2/commands/projects.md`, **when** it is read, **then** it carries `Status: Proposed (M2)`, a bare `projects` name, a synopsis offering group listing and the project scope used by queue and status reads, member repositories with health and state in its output shape, references to the group envelope and the project configuration schema, the naming boundary, and at least once the sentence that the shipped `projects list` is the flat enumeration this change renames to `repos list`; and no statement attributes the enumeration of managed checkouts to the group surface's own current behaviour. | F-7, DM-5, DM-8, DEC-10 |
-| AC-F7-3 | **Given** the two command pages together, **when** their surfaces are compared, **then** the flat enumeration's contract appears only on the `repos` page and the group surface only on the `projects` page, the `projects` page refers to the shipped flat enumeration only in its disambiguation sentence, each page points at its own contract, and both pages state the planned status without claiming the group surface is registered at the root listing. | F-7, F-14, NFR-3 |
-| AC-F8-1 | **Given** `test-scenarios.md`, **when** the S18 and S19 seeds are counted and read, **then** at least two `SC-M2-S18-*` and at least two `SC-M2-S19-*` seeds exist, each carrying exactly one `Assert:` line; the S18 set covers discovery through a registered workspace directory, the same project without a workspace, group listing with members and state, project-scoped queue and status reads, and mixed tracker-kind classification; the S19 set covers one spec with two member branches, two pull requests, one review flow and one closeout, plus a failing member blocking the shared definition of done with the member named. | F-8, DM-7 |
-| AC-F8-2 | **Given** the two `SC-M2-S11-*` seeds, **when** they are read, **then** both use the `repos list` surface, the first seed's assert line refers to `repos list` rows rather than `projects list` rows, the second seed's title and prose name `repos list`, its asserted fields are the five flat-enumeration fields, and no scenario asserts that the group surface's own behaviour enumerates checkouts. | F-8, F-14, DEC-11 |
-| AC-F9-1 | **Given** `journeys.md`, **when** its opening journey is read, **then** it is a project-scoped morning overview over a project with several member repositories, at least one member outside any shared directory; it uses `repos list` for the flat view and `projects list` for the group view with members and health; it shows project-scoped queue and status reads; it states that the same project without a shared workspace reads identically; it states that same-ref members stay disjoint; and it states once that the shipped `projects list` is the flat enumeration this change renames to `repos list`. | F-9, DM-5 |
-| AC-F10-1 | **Given** `entrypoint-delta.md`, **when** its M2-planned additions and mounting paragraph are read, **then** they list `repos` as the flat enumeration of managed checkouts (amended M2-S11) and `projects` as the group surface (M2-S18) as two additions, they keep the **Mounted by GH-288 (M2-S11)** note stating that `projects list` is today's mounted host overview, they state that `projects` becomes the group surface under the planned split with the flat enumeration moving to `repos`, the mounting paragraph names both families, and the page carries the one-sentence disambiguation; the observed composition, the daemon gap, the snapshot statement, and the remaining planned additions are unchanged in meaning. | F-10, DEC-4 |
-| AC-F11-1 | **Given** `milestones/m2/README.md`, **when** its pack-contents table and story-to-artifact map are read, **then** the table carries one row for `commands/repos.md` with its purpose alongside the other twelve, the map carries a row for M2-S18 and a row for M2-S19 naming their architecture flow, contract surfaces, and seeds, the M2-S11 row points at `repos.v1`, and the planned-until-exit statement is unchanged. | F-11, F-14 |
-| AC-F11-2 | **Given** `milestones/README.md`, **when** its `## Index` table is read, **then** the M2 row links `m2/commands/repos.md` in addition to its previous twelve targets, for thirteen targets, with the table formatting followed, and the M0 and M1 rows are byte-identical to the base revision. | F-11, DEC-5 |
-| AC-F12-1 | **Given** the new dated section in `status.md`, placed after the 2026-11-11 delivery snapshot, **when** it is read, **then** it records this amendment as planning state: the three-level model, the M2-S11 amendment with its planned rename transition, the addition of M2-S18 and M2-S19 with their dependencies, the naming boundary and its registry reconciliation, the corrected entrypoint delta note, and one sentence stating that the shipped `projects list` is the flat enumeration this change renames to `repos list`; and it claims neither M2 delivery nor milestone exit. | F-12, DEC-6 |
+| AC-F1-1 | **Given** the M2-S11 entry and the base revision `723454e4`, **when** they are compared, **then** the heading, the `- Depends on: M0-S5, M1-S17.` line, the `- Ticket: GH-288 (milestone M2)` line, the `- Progress: delivered by GH-288 …` record, the per-repository state scoping, the host index, the migration note, the tests clause, and the two-checkout ref-GH-241 collision acceptance criterion are unchanged in substance; the enumeration acceptance criterion still describes the shipped `projects list` surface; and the entry records the planned transition as M2-S18's rename with the `--flat` alias. | F-1, DM-1 |
+| AC-F1-2 | **Given** the amended M2-S11 entry, **when** every clause is read, **then** it contains no `repos list` acceptance criterion and no `projectKey → repoKey` or `data.projects[] → data.repos[]` rename clause, no delivered clause is weakened, merged, or moved, and the GH-288 record is present and is not restated as a plan. | F-1, NFR-8, NFR-13 |
+| AC-F1-3 | **Given** the M2-S11 and M2-S18 entries together, **when** ownership is checked clause by clause, **then** the rename, the alias, the field renames, the migration-guide update, configuration-only membership, the scoped-read grammar, and the superseding decision record are each claimed by exactly one story — M2-S18 — and M2-S11 names M2-S18 as that single owner. | F-1, F-2, DM-1 |
+| AC-F2-1 | **Given** `backlog.md`, **when** the Epic M2 block is read, **then** `### M2-S18 Project groups` appears with `- Goal:`, `- Tasks:`, `- AC:`, and `- Depends on: M2-S11.`, carrying the 12 ticket clauses of Appendix A.1 verbatim in substance and no `- Ticket:` line. | F-2, DM-1, NFR-8 |
+| AC-F2-2 | **Given** the S18 entry and the contracts, **when** the mixed-tracker clause is checked, **then** both state that a configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently, and no clause is softened to "supported later" or "rejected". | F-2, F-6, DEC-12 |
+| AC-F2-3 | **Given** the S18 entry, **when** its tasks and acceptance block are read, **then** it carries the rename task (from M2-S18 `projects list` enumerates groups and `repos list` enumerates the flat record set), the alias task (`projects list --flat` returns the delivered `projects.v1` payload with `data.projects[]`, owned by M2-S18, retired at the M3 boundary), and an acceptance criterion asserting that alias payload shape. | F-2, DM-7, DEC-21 |
+| AC-F2-4 | **Given** the S18 entry, **when** the remaining derived tasks are read, **then** it carries the field-rename task (`projectKey → repoKey`, `data.projects[] → data.repos[]`), the task to update `doc/guides/migrating-to-per-repository-state.md`, and a statement that these are S18 code work and not current truth. | F-2, DM-4, DM-6 |
+| AC-F2-5 | **Given** the S18 entry, **when** the membership and scope tasks are read, **then** registration is declared as configuration-only (`workspaceRoot` and `members` in the project configuration document, with a scan only locating declared members), and the scoped-read task names `queue list --project <groupKey>` and `status --project <groupKey>`. | F-2, DM-3, DM-8 |
+| AC-F2-6 | **Given** the S18 entry and the registry, **when** the `repos` delivery claim is checked, **then** S18 carries the task to author the superseding decision record for the `repos` name before the registry row moves to Delivery, and no task claims the rename has shipped. | F-2, F-13, DEC-29 |
+| AC-F3-1 | **Given** `backlog.md`, **when** the Epic M2 block is read, **then** `### M2-S19 Cross-repository changes` appears with `- Goal:`, `- Tasks:`, `- AC:`, and `- Depends on: M2-S11, M2-S18, M1-S17.`, carrying the 11 ticket clauses of Appendix A.1 verbatim in substance and no added or omitted ticket clause. | F-3, DM-1, NFR-8 |
+| AC-F3-2 | **Given** the S19 entry, **when** its acceptance block is read, **then** each of its three ticket criteria is independently identifiable, "one review flow" is defined executably as one review run over the declared member pull-request set with one verdict per member and no member reviewed twice, and the per-member CI corroboration criterion states that an unavailable CI reading blocks the shared definition of done rather than counting as green. | F-3, DM-10, DEC-32 |
+| AC-F3-3 | **Given** the S19 entry, **when** the derived acceptance criterion is read, **then** it states that a member step with a dependency edge does not start before the prerequisite member's pull request lands and that the evidence lists the pull requests in landing order. | F-3, DM-10 |
+| AC-F3-4 | **Given** `contracts.md`'s cross-repository change plan shape, **when** it is read against the S19 acceptance set, **then** it declares `plan.data.members[]` (repoKey, slice, branch, pullRequest, dependsOn[], gates), per-member gates, the one-review-flow definition, the shared verdict at `verify gates` (`data.definitionOfDone`, `data.blockingMembers[]`), `closeout.data.members[]` (repoKey, branch, cleanup, pullRequest, issueClosure, landed), and evidence enumerating every member pull request in landing order. | F-3, F-6, DM-10, DEC-31 |
+| AC-F4-1 | **Given** the `backlog.md` diff against the base revision, **when** insertion positions are checked, **then** the two new entries lie after M2-S17's last line, inside the Epic M2 block, and before the blank line and `---` that close it, and the separator and `## Epic M3` heading are byte-identical and follow the inserted entries. | F-4, NFR-2, DEC-8 |
+| AC-F4-2 | **Given** the Epic M2 block, **when** it is compared with the base revision, **then** one new context paragraph follows the retirement note and precedes `### M2-S2`, stating the repository/group/workspace distinction, configuration-only membership, the delivered flat surface, the rename rule by reference (not restated), and the root-family consequence; the retirement note, epic heading, frontmatter, reading guide, cross-cutting principles, and every other story are byte-identical. | F-4, NFR-2, DEC-4 |
+| AC-F4-3 | **Given** the `backlog.md` diff with zero context, **when** the hunks are inspected, **then** every hunk lies inside the M2-S11 entry, the M2-S18 entry, the M2-S19 entry, the M2-S4 `- Depends on:` line, or the one added context paragraph, and no hunk quotes a neighbouring story's line. | F-4, NFR-2 |
+| AC-F4-4 | **Given** the M2-S4 entry, **when** its dependency line is compared with the base revision, **then** it reads `- Depends on: M1-S5, M1-S17, M2-S11, M2-S18.` with its terminal period, and every other line of the entry is byte-identical. | F-4, F-11, DEC-28 |
+| AC-F5-1 | **Given** `milestones/m2/architecture.md`, **when** the C4 Level 1 context is read, **then** it presents repository, project group, and workspace as three related levels — repository as the delivery unit, project as a configured group of repositories with declared members, workspace as an optional directory usable as a discovery root — with the optionality visible in the diagram and prose. | F-5, DM-2, RSK-8 |
+| AC-F5-2 | **Given** the same document, **when** the model prose is read, **then** a group's membership is declared in configuration, a directory scan only locates declared members and never admits an undeclared clone, a workspace is never required, and a group whose members live in unrelated directories behaves identically to one whose members share a root. | F-5, DM-2, DM-3 |
+| AC-F5-3 | **Given** the architecture, **when** the flows and invariants are read, **then** the overview flow is group-scoped, the cross-repository change flow names one queue entry per member with per-member dependency edges, and `## Boundary invariants at M2 exit` states the naming boundary by reference to the rename rule, configuration-only membership, one queue entry per member, the release rule, workspace optionality, and one lifecycle per cross-repository change. | F-5, DM-2, DM-9, DM-10 |
+| AC-F5-4 | **Given** the architecture's workspace discussion, **when** the state paragraph and the model prose are compared, **then** one sentence distinguishes the discovery workspace root (an optional directory) from the state layer's fixed `default` workspace identifier (the workspace key inside every per-checkout state root), and no sentence collapses the two. | F-5, DM-2 |
+| AC-F6-1 | **Given** `contracts.md`, **when** the `repos.v1` section is read, **then** it defines the flat record set as `data.repos[]` with `repoKey`, `root`, `stateLocation`, `daemonReachable` including the closed reason set and the `unbound` scope, `handoverState`, and `hostIndexRevision`, records the rename from the delivered surface, and attributes the surface to M2-S18. | F-6, DM-4, DEC-20 |
+| AC-F6-2 | **Given** the `project-groups.v1` section, **when** its fields are read, **then** it defines `data.groups[]` with `groupKey` as the group identity, `name`, the optional `workspaceRoot`, and `members[]` each carrying `repoKey`, `root`, `trackerKind`, `state`, `health`, and `daemonReachable`; a member field never denotes the group, and no group-named field denotes a repository. | F-6, DM-5, DEC-19, DEC-22 |
+| AC-F6-3 | **Given** the `projects.v1` section, **when** it is read, **then** it defines the delivered flat record set (`data.projects[]`, `projectKey`, `hostIndexRevision`), names `project-groups.v1` as the group contract, and contains no sentence describing `projects.v1` as the group contract and no field of `projects.v1` denoting a group. | F-6, DM-6, DEC-19 |
+| AC-F6-4 | **Given** `contracts.md`, **when** the rename rule is checked, **then** it appears exactly once as the sentence "**From M2-S18, `projects list` enumerates groups and `repos list` enumerates the flat record set; the deprecation alias is the different token `projects list --flat`, owned by M2-S18, which returns the delivered `projects.v1` payload (`data.projects[]`) and retires at the M3 boundary.**"; the alias token is used only for that meaning; and no location in the corpus describes one spelling returning both shapes at one time. | F-6, DM-7, DEC-21, DEC-22 |
+| AC-F6-5 | **Given** `contracts.md`, **when** the repository-vocabulary mapping is read, **then** one clause states that the `project-identity.json` marker, the `<host root>/projects/<key>` container, the host index's `projects[]`/`projectKey` fields, and `--project-root` each denote a repository checkout and keep that meaning permanently unless a code change renames them; and the clause is carried in `commands/repos.md`, in `commands/projects.md`, and in the `repos.v1` section. | F-6, DM-11, F-7 |
+| AC-F6-6 | **Given** the project configuration section, **when** it is read, **then** it declares the document path `<configDirectoryName>/projects.yaml`, the schema `delivery.projects.groups.v1`, `groups[]` with `groupKey`, `name`, optional `workspaceRoot`, and `members[]` with a repository selector (`root` or `repoKey`) plus `trackerKind`; states that membership is configuration-only; and states that a scan inside `workspaceRoot` locates declared members only and never admits an undeclared clone. | F-6, DM-3, DEC-23 |
+| AC-F6-7 | **Given** the project-scoped aggregation clause, **when** it is read, **then** it states that members come from configuration in declared order, defines the per-member outcomes `observed`, `not-yet-supported`, `state-unavailable`, and `unregistered`, states that one `state-unavailable` member produces a classified partial result at exit 0 with `partial` true and the degraded member named, states that exit 2 occurs only when the configuration document or the invoking scope cannot be read, and states that a `not-yet-supported` member contributes no records and never fails the read. | F-6, DM-8, DEC-24 |
+| AC-F6-8 | **Given** the queue/lane representation clause, **when** it is read, **then** it states one queue entry per member keyed by that member's ref, per-member dependency edges, the release rule (release drops each member lease while entries stay, removal is per member with the change's reason, one member's landing removes only its entry), and one lane per member entry with no cross-repository lane. | F-6, DM-9, DEC-27 |
+| AC-F6-9 | **Given** the cross-repository change plan shape, **when** it is read, **then** it declares the `plan.data.members[]`, `verify gates` definition-of-done verdict, and `closeout.data.members[]` envelopes of AC-F3-4, the one-review-flow definition, per-member CI corroboration, dependency ordering, and evidence enumerating every member pull request. | F-6, DM-10, DEC-31, DEC-32 |
+| AC-F7-1 | **Given** `commands/repos.md`, **when** it is read, **then** it carries `Status: Proposed (M2)`, a bare `repos` name with the `<binary>` prefix, a synopsis with `repos list [--json]`, `repos --help`, `repos list --help`, and `repos --version`, OPTIONS rows for `--json`, `--help`, and `--version` where both help forms and the version state no read of state, git, configuration, or the network, the five reported fields, the `repos.v1` envelope, exit codes, examples, an error table, see-also links, and a rename pointer to the canonical rule. | F-7, DM-13, DEC-21 |
+| AC-F7-2 | **Given** `commands/repos.md`, **when** its scope section is read, **then** it restores the read-only statement (no index maintenance, no pruning, no replacement, no creation of state roots, and the two permitted side effects named) and states that an invocation outside any git work tree uses the declared `unbound` scope, emits one bounded warning, registers nothing, keeps its exit code, and is never reported as a row. | F-7, DM-4, F-6 |
+| AC-F7-3 | **Given** `commands/repos.md`, **when** the error table and the `unbound` prose are compared, **then** the table carries the delivered identities `projects.identity-unreadable`, `projects.registry-corrupt`, and `projects.state-unavailable`, a non-work-tree root appears as the `unbound` scope at exit 0 rather than as an error, and any `repos.*` prefix change is stated as M2-S18 code work and never as current truth. | F-7, DM-4, F-6 |
+| AC-F7-4 | **Given** `commands/repos.md`, **when** the examples and the STATE column are read, **then** the state location is `<host root>/projects/<key>`, the example key conforms to `PROJECT_KEY_PATTERN` (for example `delivery-a-1a2b3c4d`), and the page carries the mapping clause sentence. | F-7, DM-11 |
+| AC-F7-5 | **Given** `commands/projects.md`, **when** it is read, **then** it names `project-groups.v1`, `data.groups[]`, and `groupKey`; documents `members[].daemonReachable` with the closed reason vocabulary; contains no orphan `daemonReachable.reason` paragraph unattached to a group field; uses `data.groups[]` and `groupKey` in its envelope table and examples; and points at the configuration document and the aggregation clause. | F-7, DM-5 |
+| AC-F7-6 | **Given** `commands/projects.md`, **when** the behaviour prose is read, **then** it describes the classified partial result for one degraded member, the `not-yet-supported` member, and the exit codes of the aggregation clause; it makes no group-scoped board claim; its `--project` argument is `<groupKey>`; it documents `--flat` as a pointer to the rename rule; and it carries a time-scoped disambiguation that does not describe one spelling returning both shapes at one time. | F-7, DM-7, DM-8 |
+| AC-F7-7 | **Given** the two command pages together, **when** their surfaces are compared, **then** `repos.v1` and the flat record set appear only on the `repos` page, `project-groups.v1` and the group surface only on the `projects` page, each page points at its own contract, and neither claims the other's surface or registration. | F-7, F-14, NFR-3 |
+| AC-F7-8 | **Given** `commands/board.md`, **when** it is read, **then** `--project <key>` is described as a repository key, `--all` spans managed repositories, the envelope lists repository keys, the refusal identity uses repository vocabulary, the attribution names the per-repository state scope and host index delivered by M2-S11, and no sentence claims a group-scoped board. | F-7, DM-11, DEC-26 |
+| AC-F7-9 | **Given** `commands/queue.md` and the M2 pack README, **when** the scope grammar is checked, **then** `queue.md`'s synopsis and OPTIONS carry `queue list --project <groupKey>`, the S18 status delta is pinned as `status --project <groupKey>` and named in the M2 README's S18 row, and `doc/planning/oss-tooling/milestones/m1/commands/status.md` is byte-identical to the base revision. | F-7, DM-8, DEC-25 |
+| AC-F8-1 | **Given** `test-scenarios.md`, **when** the S18 seeds are counted and read, **then** at least five `SC-M2-S18-*` seeds exist, each with exactly one `Assert:` line, covering discovery through a registered workspace directory, the same group without a workspace, group listing with member health and `daemonReachable`, `queue list --project <groupKey>` and `status --project <groupKey>`, mixed tracker-kind classification, and configuration-only membership with one undeclared clone inside the root that is asserted not to be a member. | F-8, DM-12, DEC-23 |
+| AC-F8-2 | **Given** the same document, **when** the S19 seeds are counted and read, **then** at least five `SC-M2-S19-*` seeds exist, each with exactly one `Assert:` line, covering one spec with two member branches and two pull requests under one review flow and one closeout, a failing member blocking the shared definition of done with the member named, per-member CI corroboration including the unavailable-reading case, and dependency ordering with the evidence in landing order. | F-8, DM-10, DM-12 |
+| AC-F8-3 | **Given** every S18 and S19 `Assert:` line, **when** the fields it reads are checked against the contracts, **then** each reads only `project-groups.v1`, `repos.v1`, `plan.data.members[]`, `closeout.data.members[]`, or `verify gates.data.definitionOfDone`/`blockingMembers[]`; zero assertions use a `change.data.*` family; and the `closeout.data.members[]` assertion is backed by the contract declaration of AC-F3-4. | F-8, DM-10, DEC-31 |
+| AC-F8-4 | **Given** the two `SC-M2-S11-*` seeds, **when** they are read, **then** `SC-M2-S11-01` names the flat record set through `repos list`, and `SC-M2-S11-02` is prospective — asserting the S18 rename (delivered spelling to `repos list`, plus the alias payload) rather than the delivered surface as `repos list` today; and no seed asserts a shipped `projects list` group enumeration. | F-8, F-1, DEC-11 |
+| AC-F8-5 | **Given** the alias seed, **when** it is read, **then** it asserts in one scenario that `projects list --flat --json` returns the delivered `projects.v1` payload (`data.projects[]`, `projectKey`, `hostIndexRevision`) while `projects list --json` returns `project-groups.v1` (`data.groups[]`, `groupKey`). | F-8, DM-7, DEC-21 |
+| AC-F8-6 | **Given** the document's introduction, **when** it is read, **then** it states "M2-S2 through M2-S19" and states at least two seeds per story. | F-8, F-11 |
+| AC-F9-1 | **Given** `journeys.md`, **when** the opening journey is read, **then** it is a group-scoped morning overview that shows membership from configuration, the flat view from `repos list`, the group view from `projects list`, the project-scoped queue and status reads, workspace optionality, same-ref disjointness, and one time-scoped disambiguation referencing the rename rule. | F-9, DM-2, DM-5 |
+| AC-F10-1 | **Given** `entrypoint-delta.md`, **when** its planned additions and mounting paragraph are read, **then** `repos` appears as the flat record set owned by M2-S18 and `projects` as the group surface owned by M2-S18, the **Mounted by GH-288 (M2-S11)** note states that the shipped `projects list` is the delivered flat surface, the reference-page move is phrased as pending S18 code work, and the observed composition, daemon gap, snapshot statement, and remaining additions are unchanged in meaning. | F-10, DEC-4 |
+| AC-F11-1 | **Given** `milestones/m2/README.md`, **when** its contents table and map are read, **then** the table has one row per artifact with `commands/repos.md` stated as the flat record set owned by M2-S18; the contracts row names `repos.v1`, the group contract `project-groups.v1`, the delivered `projects.v1` payload, the configuration document, and the change plan shape; M2-S11 maps to the delivered `projects.v1`, M2-S18 maps to `project-groups.v1` plus the configuration document plus the `status --project <groupKey>` delta plus the superseding decision record, M2-S19 maps to the change plan shape, the M2-S4 row carries no advisory phrase, and the scenarios row reads S2 through S19. | F-11, F-14, DEC-28 |
+| AC-F11-2 | **Given** `milestones/README.md`, **when** its index table is read, **then** the M2 row links `m2/commands/repos.md` in addition to its previous targets, for thirteen targets, and the M0 and M1 rows are byte-identical to the base revision. | F-11, DEC-5 |
+| AC-F12-1 | **Given** the new dated section in `status.md` placed after the 2026-11-11 delivery snapshot, **when** it is read, **then** it records the contract split (`project-groups.v1`/`groupKey`; delivered `projects.v1`; `repos.v1`/`repoKey`), the rename rule and alias, the S18 ownership of the rename, configuration-only membership, the scoped-read grammar, the board boundary, the registry split, and the S4 edge, as planning state only, claiming neither M2 delivery nor milestone exit. | F-12, DEC-6 |
 | AC-F12-2 | **Given** `status.md` compared with the base revision, **when** a line-retention comparison runs over the whole file, **then** every base line is present, in the same order, byte-identical, and every added line lies inside the one new dated section. | F-12, NFR-11, DEC-6 |
-| AC-F13-1 | **Given** `cli-command-registry.md`, **when** the `repos` and `projects` rows and the boundary note are read, **then** the M2 table carries an `ados repos` row whose purpose is the flat enumeration with the five reported fields and Delivery M2-S11, and that row records that GH-288 shipped the flat overview as `projects list` and that it renames to `repos list` under M2-S18; the `ados projects` row's purpose is the group surface with membership, health, state, and project-scoped reads and Delivery M2-S18; the M3-S6 row attributes clone, branch, and worktree hygiene to `repos` subcommands delivered later; the boundary note states the naming boundary; and no row attributes the group surface, a workspace discovery root, or a cross-repository change to a delivered family. | F-13, DEC-2, NFR-3 |
-| AC-F13-2 | **Given** the `cli-command-registry.md` diff, **when** the rows are compared with the base revision, **then** only the `ados projects` row, the M3-S6 row, the boundary note line, and the one added `ados repos` M2 row differ; every other row, including the historical rename note, is byte-identical. | F-13, NFR-1 |
-| AC-F14-1 | **Given** the twelve touched planning documents, **when** the corpus is searched for both names, **then** zero occurrences of `repos list`/`repos` denote a group and zero occurrences of `projects list`/`projects` denote the flat enumeration outside the required per-page disambiguation sentence and statements recording delivered GH-288 facts about the shipped surface; every location in Appendix B is in the state the matrix requires. | F-14, NFR-12, RSK-1 |
-| AC-F14-2 | **Given** the twelve touched planning documents, **when** every page that uses `projects list` with the group meaning is read, **then** each carries at least once a sentence stating that the shipped `projects list` is the flat enumeration this change renames to `repos list` — the verified minimum set being `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section; every statement recording a delivered GH-288 fact about the shipped surface is present in its base form, or — where the page or row's surface name moves — carried verbatim to the location that owns the flat surface, and none is reworded as a plan; a location that names both surfaces states the boundary once in the same terms — `repos` enumerates checkouts, `projects` groups them — and no two touched pages give the two names contradictory meanings. | F-14, DM-2, NFR-12, RSK-1, RSK-13 |
+| AC-F13-1 | **Given** `cli-command-registry.md`, **when** the `projects` and `repos` rows are read, **then** exactly one `ados projects` row carries Delivery `M2-S11 (shipped in GH-288)` with Extended `M2-S18` describing the group spelling and the `--flat` retirement, and exactly one `ados repos` row carries Delivery `-` with Extended `M2-S18` (rename and alias) and `M3-S6` (hygiene verbs), marked not-delivered pending the superseding decision record and code change required by ODR-0003; no second `ados repos` Delivery row exists in any milestone table. | F-13, DEC-29 |
+| AC-F13-2 | **Given** the registry, **when** COMMAND FAMILIES and the remaining rows are checked, **then** `projects` appears in the Operate family line, the boundary note names the two meanings and points at the rename rule, no name carries two Delivery rows, and every other row is byte-identical to the base revision. | F-13, NFR-1, DEC-29 |
+| AC-F14-1 | **Given** the fourteen touched planning documents, **when** the corpus is searched for both names, **then** zero occurrences of `repos`/`repos list` denote a group and zero occurrences of `projects`/`projects list` denote the flat record set outside the time-scoped per-page disambiguation and statements recording delivered GH-288 facts; every Appendix B row is in the state the matrix requires. | F-14, NFR-12, RSK-1 |
+| AC-F14-2 | **Given** the same corpus, **when** every page using the group meaning is read, **then** each carries at least once a time-scoped disambiguation referencing the rename rule — the verified minimum set being `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section; every delivered GH-288 fact is present in its base form or carried to the location that owns the delivered surface; and no two touched pages give the two names contradictory meanings. | F-14, DM-2, NFR-12, RSK-1 |
+| AC-F14-3 | **Given** the same corpus, **when** the terminology lock is checked, **then** zero statements affirm that the group contract is `projects.v1`, zero statements affirm that a group identity is `projectKey`, zero statements affirm that one spelling returns both shapes at one time, `groupKey` is the only group identity token, `repoKey` the only planned repository identity token, and the state layer's scope is called per-checkout and never a project scope. | F-14, NFR-13, DEC-19, DEC-22 |
 
 ### 17.2 Non-Functional
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-NFR1-1 | **Given** the whole-change diff filtered to product files (all paths except `doc/changes/**`), **when** the changed-path list is inspected, **then** exactly 13 files change — 12 under `doc/planning/oss-tooling/**` (the eleven modified documents plus the new `milestones/m2/commands/repos.md`) and `scripts/checks/forbidden-literals.registry.json` — and zero files change under `doc/spec/**`, `doc/overview/**`, `doc/guides/**`, `doc/templates/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, or any other `scripts/**` path. | NFR-1 |
-| AC-NFR2-1 | **Given** the `backlog.md` diff, **when** the preservation set is checked, **then** every heading except the two new entries is byte-identical, every existing story except M2-S11 is byte-identical, the frontmatter, reading guide, cross-cutting principles, epic retirement note, closing separator, and `## Epic M3` heading are byte-identical, and no story code has been renamed, reordered, or removed. | NFR-2, F-4 |
-| AC-NFR3-1 | **Given** the touched pack pages, **when** their status is read, **then** `commands/repos.md` and `commands/projects.md` both carry the exact header `Status: Proposed (M2)`; zero occurrences in the touched corpus attribute `repos`, project groups, workspace discovery, or cross-repository changes to a delivered, current, or shipped surface; the GH-288 delivery record for M2-S11 and the delivered contract facts of the flat enumeration are present and unaltered; the pack README's planned-until-exit statement survives verbatim; and no page is relabelled as a snapshot. | NFR-3, F-7, F-12, RSK-5 |
-| AC-NFR4-1 | **Given** the branch head, **when** `scripts/checks/forbidden-literals.registry.json` is read and the guard runs, **then** `registered` holds exactly one more entry than the base revision `723454e4` (141 → 142), that entry is `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, it sits between the `queue.md` and `spend.md` entries with the surrounding order preserved, there are no duplicates, every other entry is byte-identical, and the guard reports zero unregistered-doc findings and zero violations. | NFR-4, DEC-15 |
+| AC-NFR1-1 | **Given** the whole-change diff filtered to product files, **when** the changed-path list is inspected, **then** exactly 15 files change — 14 under `doc/planning/oss-tooling/**` (the 13 modified documents plus the new `milestones/m2/commands/repos.md`) and `scripts/checks/forbidden-literals.registry.json` — zero files change under `doc/spec/**`, `doc/overview/**`, `doc/guides/**`, `doc/templates/**`, `packages/**`, `tests/**`, `.opencode/**`, `.ai/**`, or any other `scripts/**` path, and `milestones/m1/commands/status.md` is byte-identical. | NFR-1 |
+| AC-NFR2-1 | **Given** the `backlog.md` diff, **when** the preservation set is checked, **then** every heading except the two new entries is byte-identical, every story other than M2-S11, M2-S18, M2-S19, and M2-S4 is byte-identical, the M2-S4 diff is confined to its dependency line, the frontmatter, reading guide, cross-cutting principles, retirement note, closing separator, and `## Epic M3` heading are byte-identical, and no story code has been renamed, reordered, or removed. | NFR-2, F-4 |
+| AC-NFR3-1 | **Given** the touched pack pages, **when** their status and claims are read, **then** `commands/repos.md` and `commands/projects.md` both carry `Status: Proposed (M2)`; zero occurrences attribute `repos`, project groups, workspace discovery, or cross-repository changes to a delivered surface; the registry marks `repos` not-delivered; the nine delivered facts are present and unaltered; the pack README's planned-until-exit statement survives verbatim; and no page is relabelled as a snapshot. | NFR-3, F-7, F-12, F-13 |
+| AC-NFR4-1 | **Given** the branch head, **when** `scripts/checks/forbidden-literals.registry.json` is read and the guard runs, **then** `registered` holds exactly one more entry than at base `723454e4` (141 → 142), that entry is `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, it sits inside the `m2/commands/` group with the surrounding order preserved, there are no duplicates, every other entry is byte-identical, and the guard reports zero unregistered-doc findings and zero violations. | NFR-4, DEC-15 |
 | AC-NFR5-1 | **Given** the branch head, **when** `bash scripts/.tests/test-doc-distribution.sh` runs with the default `TMPDIR`, **then** it exits 0 and no planning document carries an `ados_distribution` marker. | NFR-5, DEC-16 |
-| AC-NFR6-1 | **Given** the branch head, **when** the aggregate gate is run once with the default `TMPDIR` and once with a repository-filesystem `TMPDIR` created under the repository, **then** (a) the repository-local full-suite run exits 0 and is the authoritative gate, so any failure in it — including a repeated `TC-WIRE-002` timeout — is a delivery failure; (b) both invocations and their results are recorded; (c) a default-run failure of `tests/checks/ci-baseline-parity.test.ts` and a default-run `TC-WIRE-002` timeout in `tests/checks/privacy-ci-wiring.test.ts` are each recorded and re-run, and are not delivery failures only because the repository-local run is green on the same head; and (d) any other default-run failure is a delivery failure to investigate, never silently reclassified as environmental. | NFR-6, DEC-16, RSK-7 |
-| AC-NFR7-1 | **Given** each touched file that contains mermaid, **when** the structural read runs (fence count, fence tag, first body line keyword, heading association), **then** fence counts are even, every diagram fence is tagged `mermaid`, every first body line begins with an allowed diagram-type keyword, `## C4 Level 1`, `## C4 Level 2`, and `## C4 Level 3` each appear exactly once, and `## Key flows` holds exactly 8 `###` headings each owning exactly one mermaid block; no validator, script, or gate is added. | NFR-7, RSK-9 |
-| AC-NFR8-1 | **Given** the amended and new backlog entries, **when** each is diffed clause by clause against Appendix A, **then** 26 of 26 ticket clauses are present, the missing-clause, added-criterion, and changed-meaning counts are each zero, and the only differences are whitespace, line wrapping, and typographic normalisation. | NFR-8, F-1, F-2, F-3 |
-| AC-NFR9-1 | **Given** the branch head, **when** the forbidden-literals guard runs, **then** (a) of the twelve planning documents this change touches, the `userFacingDocs` literal scan covers exactly ten — `milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, the new `milestones/m2/commands/repos.md`, `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, and `status.md` (10 scanned) — while the other two, `backlog.md` and `cli-command-registry.md`, are exempt from that scan because neither is registered (2 exempt, twelve planning documents in total); (b) the guard reports zero violations and zero unregistered-doc findings across all five scope classes, so none of the ten scanned documents contains `ados`, `ADOS_`, or `~/.ados` and every command name in them carries the `<binary>` invocation prefix; and (c) no private fleet, repository, host, hosted, or proprietary product name appears in new or changed text. | NFR-9, RSK-1 |
+| AC-NFR6-1 | **Given** the branch head, **when** the aggregate gate runs once with the default `TMPDIR` and once with a repository-filesystem `TMPDIR`, **then** (a) the repository-local full-suite run exits 0 and is authoritative, so any failure in it — including a repeated `TC-WIRE-002` timeout — is a delivery failure; (b) both invocations and results are recorded; (c) a default-run `ci-baseline-parity` failure and a default-run `TC-WIRE-002` timeout are each recorded and re-run and are excused only because the repository-local run is green on the same head; and (d) any other default-run failure is a delivery failure. | NFR-6, DEC-16, RSK-17 |
+| AC-NFR7-1 | **Given** each touched file containing mermaid, **when** the structural read runs (fence count, fence tag, first body line keyword, heading association), **then** fence counts are even, every diagram fence is tagged `mermaid`, every first body line begins with an allowed keyword, `## C4 Level 1`, `## C4 Level 2`, and `## C4 Level 3` each appear exactly once, `## Key flows` holds exactly 8 `###` headings with one mermaid block each, and no validator, script, or gate is added. | NFR-7, RSK-18 |
+| AC-NFR8-1 | **Given** the amended and new backlog entries, **when** each is diffed clause by clause against Appendix A, **then** 26 of 26 ticket clauses are present with unchanged meaning, 32 of 32 board-derived clauses are covered, the missing, added-to-ticket, and changed-meaning counts are each zero for ticket clauses, and the only differences are whitespace, line wrapping, and typographic normalisation. | NFR-8, F-1, F-2, F-3 |
+| AC-NFR9-1 | **Given** the branch head, **when** the forbidden-literals guard runs, **then** (a) of the 14 planning documents this change touches, exactly 12 are literal-scanned (`milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, the new `milestones/m2/commands/repos.md`, `milestones/m2/commands/queue.md`, `milestones/m2/commands/board.md`, `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, `status.md`) and 2 are exempt (`backlog.md` and `cli-command-registry.md`, unregistered and present at `corpusBaseline`); (b) the guard reports zero violations and zero unregistered-doc findings, so none of the 12 scanned documents contains `ados`, `ADOS_`, or `~/.ados` and every command name carries the `<binary>` prefix; and (c) no private fleet, repository, host, hosted, or proprietary product name appears in new or changed text. | NFR-9, RSK-1 |
 | AC-NFR10-1 | **Given** the touched documents, **when** their relative links and content are inspected, **then** zero relative links are broken and zero pack documents restate a story's acceptance block instead of referencing its code. | NFR-10 |
-| AC-NFR11-1 | **Given** `status.md`, **when** the retention oracle runs over the whole file, **then** zero base lines are removed, reordered, or modified, and every added line lies inside the new dated section; no whole-section `cmp` is asserted. | NFR-11, F-12 |
-| AC-NFR12-1 | **Given** the twelve planning documents, **when** the naming-boundary and disambiguation scan runs, **then** the count of `repos list`/`repos` occurrences with group meaning is 0; the count of `projects list`/`projects` occurrences with flat-enumeration meaning is 0 outside the required per-page disambiguation sentence and statements recording delivered GH-288 facts about the shipped surface; each of `backlog.md`, `m2/contracts.md`, `m2/commands/projects.md`, `m2/test-scenarios.md`, `m2/journeys.md`, and the new `status.md` section carries the disambiguation sentence at least once; and 100% of Appendix B's rows hold their required meaning. | NFR-12, F-14, RSK-1, RSK-13 |
+| AC-NFR11-1 | **Given** `status.md`, **when** the retention oracle runs over the whole file, **then** zero base lines are removed, reordered, or modified and every added line lies inside the new dated section. | NFR-11, F-12 |
+| AC-NFR12-1 | **Given** the fourteen planning documents, **when** the naming-boundary and disambiguation scan runs, **then** the count of group-meaning `repos` occurrences is 0; the count of flat-meaning `projects` occurrences is 0 outside the time-scoped disambiguation and delivered-fact statements; the alias token appears only where the alias is defined or pointed at; each named page carries the disambiguation; and 100% of Appendix B rows hold their required meaning. | NFR-12, F-14, RSK-1 |
+| AC-NFR13-1 | **Given** the same corpus, **when** the terminology lock runs, **then** the count of statements affirming that the group contract is `projects.v1` is 0; the count affirming a group identity is `projectKey` is 0; the count describing one spelling returning both shapes at one time is 0; the state layer's scope is never called a project scope; and the four mapping-clause tokens are described as repository checkouts wherever they are mentioned. | NFR-13, F-14, RSK-3, RSK-5 |
 
 ### 17.3 Definition of Done
 
-- [ ] `backlog.md` carries the amended M2-S11 (state scoping, host index, migration note, collision tests, the GH-241 collision AC, and the GH-288 `Ticket`/`Progress` delivery record retained; enumeration surface `repos list`; rename transition recorded as the planned rename with the alias), M2-S18 and M2-S19 inside the Epic M2 block with their 23 ticket clauses and the amendment's 3, and one new Epic M2 context paragraph naming the shipped flat surface, with the separator and `## Epic M3` intact and every other byte preserved (AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1, AC-F4-2, AC-F4-3, AC-NFR2-1, AC-NFR8-1).
-- [ ] `milestones/m2/architecture.md` states the three-level model in the C4 context with workspace optionality visible, rewrites the overview flow as project-scoped, adds the cross-repository change flow, and extends the boundary invariants with the naming boundary, declared membership, workspace optionality, and one lifecycle per cross-repository change; diagram structure holds (AC-F5-1, AC-F5-2, AC-F5-3, AC-NFR7-1).
-- [ ] `milestones/m2/contracts.md` defines `repos.v1`, the redefined `projects.v1` group envelope with member fields, the project configuration schema with mixed tracker kinds and the not-yet-supported classification, the optional workspace discovery root, the cross-repository change plan shape, and the consumer note for the group envelope, and the M2-S4 map row carries the advisory note (AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F2-2, AC-F3-3).
-- [ ] `milestones/m2/commands/repos.md` exists as the flat enumeration contract with the rename note and the GH-288 delivered contract facts intact, and `commands/projects.md` is rewritten as the group surface with members, health, state, project scope, and the one-sentence disambiguation; both keep `Status: Proposed (M2)` and neither attests the other's surface (AC-F7-1, AC-F7-2, AC-F7-3, AC-NFR3-1).
-- [ ] `test-scenarios.md` carries at least two S18 and two S19 seeds with one `Assert:` line each, and both S11 seeds use `repos list`; `journeys.md`'s opening journey is project-scoped and states workspace optionality and same-ref disjointness (AC-F8-1, AC-F8-2, AC-F9-1).
-- [ ] `entrypoint-delta.md` records the `repos`/`projects` split in its planned additions and mounting paragraph, keeps the GH-288 mounted note that `projects list` is today's host overview, and carries the one-sentence disambiguation (AC-F10-1).
-- [ ] `milestones/m2/README.md` lists the new page and maps S18 and S19 with the S11 row on `repos.v1`; `milestones/README.md`'s M2 row links thirteen targets with M0 and M1 untouched (AC-F11-1, AC-F11-2).
-- [ ] `status.md` carries one new dated section claiming planning state only, under the retention oracle; `cli-command-registry.md` reconciles `ados repos`, `ados projects`, the M3-S6 row, and the boundary note with every other row byte-identical (AC-F12-1, AC-F12-2, AC-F13-1, AC-F13-2, AC-NFR11-1).
-- [ ] The naming boundary holds across every Appendix B location: zero group-meaning `repos` statements, zero flat-enumeration `projects` statements outside the disambiguation sentence and the preserved GH-288 delivery facts, one disambiguation sentence on each page that uses the group meaning, no shipped fact lost, and no two pages in contradiction (AC-F14-1, AC-F14-2, AC-NFR12-1).
-- [ ] Exactly 13 product files changed, the single registry row is in its sorted position, `bash scripts/.tests/test-doc-distribution.sh` exits 0 under the default `TMPDIR`, the forbidden-literals guard is green with zero violations over exactly the ten literal-scanned planning documents (of the twelve planning documents this change touches, ten are scanned — the nine existing registered pack and status documents plus the new page — and two are exempt: `backlog.md` and `cli-command-registry.md`, neither registered), each of which writes every command name with the `<binary>` prefix and none of the seed literals `ados`, `ADOS_`, or `~/.ados`, and the authoritative repository-local-`TMPDIR` full `pnpm check` exits 0 with both aggregate runs recorded; a default-run `ci-baseline-parity` failure and a default-run `TC-WIRE-002` timeout are each recorded, re-run, and excused only while the repository-local run is green on the same head, while any other default-run failure or a repository-local `TC-WIRE-002` repeat is treated as a delivery failure (AC-NFR1-1, AC-NFR4-1, AC-NFR5-1, AC-NFR6-1, AC-NFR9-1, AC-NFR10-1).
-- [ ] This change delivered no M2 story, no product behaviour, command composition, or entrypoint registration changed, the shipped `projects list` surface and current truth are unchanged, no tracker ticket was created, and phase 7 recorded that the shipped surface requires no current-truth reconciliation (NG-1, NG-2, NG-4, NG-8, DEC-17).
+- [ ] `backlog.md` carries M2-S11 with its delivered record, its state scoping, its collision criterion, and its shipped-surface acceptance criterion; M2-S18 as the single owner of the rename, the `--flat` alias, the field renames, the migration guide, configuration-only membership, the scoped grammar, and the decision record; M2-S19 with its ordering acceptance; M2-S4 depending on M2-S18; and one context paragraph, with the separator and `## Epic M3` intact (AC-F1-1, AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6, AC-F3-1, AC-F3-2, AC-F3-3, AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-NFR2-1).
+- [ ] `milestones/m2/architecture.md` states the three-level model with workspace optionality visible, distinguishes the discovery workspace root from the state layer's `default` identifier, keeps the group-scoped overview flow, names one queue entry per member with the release rule in the cross-repository flow and the invariants, and holds its diagram structure (AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-4, AC-NFR7-1).
+- [ ] `milestones/m2/contracts.md` defines `repos.v1`, the retained delivered `projects.v1`, `project-groups.v1`, the single rename rule, the mapping clause, the configuration document, the aggregation clause, the queue/lane representation, and the change plan shape with its closeout and definition-of-done envelopes (AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F6-6, AC-F6-7, AC-F6-8, AC-F6-9, AC-F3-4).
+- [ ] `milestones/m2/commands/repos.md` exists with the delivered semantics, the `unbound` scope, the delivered error identities, the host-root STATE example with a pattern-valid key, `--help`/`--version` with no-state-read semantics, and the mapping clause; `commands/projects.md` is the group page with `project-groups.v1`, `groupKey`, member `daemonReachable`, aggregation and partial failure, the scoped grammar, and no orphan field; `commands/queue.md` and `commands/board.md` carry the scope grammar and the repository-key boundary; both command pages keep `Status: Proposed (M2)` (AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4, AC-F7-5, AC-F7-6, AC-F7-7, AC-F7-8, AC-F7-9, AC-NFR3-1).
+- [ ] `test-scenarios.md` opens with S2 through S19, carries at least five S18 and five S19 seeds with one `Assert:` line each, asserts only declared envelopes, includes the undeclared-clone, CI-corroboration, dependency-ordering, and alias-shape seeds, and reconciles the two S11 seeds with `SC-M2-S11-02` prospective; `journeys.md`'s opening journey is group-scoped and disambiguated (AC-F8-1, AC-F8-2, AC-F8-3, AC-F8-4, AC-F8-5, AC-F8-6, AC-F9-1).
+- [ ] `entrypoint-delta.md` records the split, keeps the GH-288 mount note, and phrases the reference-page move as pending S18 code work (AC-F10-1).
+- [ ] `milestones/m2/README.md` lists the new page, maps S11 to the delivered payload, S18 to the group contract plus the configuration document plus the status delta plus the decision record, S19 to the change plan shape, drops the S4 advisory note, and reads S2 through S19; `milestones/README.md`'s M2 row links thirteen targets (AC-F11-1, AC-F11-2).
+- [ ] `status.md` carries one new dated correction section under the retention oracle; `cli-command-registry.md` splits the two rows, keeps one Delivery row per name, states the ODR-0003 lock, adds `projects` to COMMAND FAMILIES, and keeps every other row byte-identical (AC-F12-1, AC-F12-2, AC-F13-1, AC-F13-2, AC-NFR11-1).
+- [ ] The naming surface holds across every Appendix B location: zero group-meaning `repos` statements, zero flat-meaning `projects` statements outside the disambiguation and delivered facts, one normative rename rule, zero affirmations of the old identities, and the nine delivered facts present (AC-F14-1, AC-F14-2, AC-F14-3, AC-NFR12-1, AC-NFR13-1).
+- [ ] Exactly 15 product files change, the single registry row is in position, the distribution guard exits 0 under the default `TMPDIR`, the forbidden-literals guard is green over exactly the twelve scanned planning documents with zero violations, and the authoritative repository-local-`TMPDIR` full `pnpm check` exits 0 with both aggregate runs recorded (AC-NFR1-1, AC-NFR4-1, AC-NFR5-1, AC-NFR6-1, AC-NFR8-1, AC-NFR9-1, AC-NFR10-1).
+- [ ] This change delivered no M2 story, changed no product behaviour, command composition, entrypoint registration, delivered surface, current truth, or tracker ticket, and phase 7 recorded that the delivered surface requires no current-truth reconciliation (NG-1, NG-2, NG-5, NG-7, DEC-17).
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
-One docs-only pull request against `main-tools` from base `723454e4`. Recommended commit sequence, so each commit is reviewable on its own and later commits can point at earlier names: (1) the backlog — M2-S11 amendment, the context paragraph, M2-S18 and M2-S19; (2) contracts — `repos.v1`, the group envelope, the configuration schema, the change plan shape; (3) the command pages — new `repos.md`, rewritten `projects.md`; (4) architecture, scenarios, journeys, and the entrypoint delta note; (5) the indices, the status snapshot, the command registry, and the registry row. No feature flag, no migration, no coordination window: the documents are read by maintainers and delivery agents, and the only adoption step is that M2-S18 and M2-S19 tickets are created from the new backlog entries.
+One docs-only pull request against `main-tools` from base `723454e4`, correcting
+the corpus on the existing branch. Recommended commit sequence: (1) contracts —
+the identity split, the rename rule, the mapping clause, the configuration
+document, aggregation, the queue representation, and the change plan shape;
+(2) the backlog — M2-S11 delivered story restored, M2-S18 as the rename owner,
+M2-S19 ordering, the M2-S4 edge, and the context paragraph; (3) the command
+pages — `repos`, `projects`, `queue`, `board`; (4) architecture, scenarios,
+journeys, and the entrypoint delta note; (5) the indices, the status correction,
+the registry rows, and the registry registration. No feature flag, no migration,
+no coordination window: the only adoption step is that M2-S18 and M2-S19 tickets
+are created from the corrected entries, and M2-S18 authors its decision record
+before its code change.
 
 ## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
 
-N/A. No stored data, schema, index, or seed set changes. The only migration is editorial and naming-only: pages that meant the flat enumeration say `repos` instead of `projects`, and readers of the plan see the group surface where the group name always belonged. The shipped `projects list` keeps its stored state and its behaviour: nothing is migrated, no runtime state moves, and no deprecation alias is active, because the rename this change records has not shipped.
+N/A. No stored data, schema, index, or seed set changes. The only migration is
+editorial: pages that meant the flat record set say `repos` for the planned
+surface and keep `projects` for the delivered one. The delivered state layer, the
+identity marker, the projects container, the host index, and the `unbound` scope
+are untouched — which is why the mapping clause fixes them as repository
+vocabulary and why no rename of them is planned. No deprecation alias is active,
+because the rename this change documents has not shipped.
 
 ## 20. PRIVACY / COMPLIANCE REVIEW
 
-None. The change touches public planning documents and adds no personal data, telemetry, tracking, or credential path. The planning text names tracker kinds generically (a per-member configuration field), never a specific credentialed integration, and no private host, repository, or product name is introduced.
+None. The change touches public planning documents and adds no personal data,
+telemetry, tracking, or credential path. The planning text names tracker kinds
+generically, never a specific credentialed integration, and introduces no private
+host, repository, or product name.
 
 ## 21. SECURITY REVIEW HIGHLIGHTS
 
-No security impact. The change adds no runtime surface, permission, credential flow, or executable content. The only security-adjacent statement is that tracker kinds are configuration data and that mixed kinds are validated rather than rejected; it introduces no new trust boundary. Published text must not include secrets, hostnames, or internal URLs, which NFR-9 covers.
+No security impact. The change adds no runtime surface, permission, credential
+flow, or executable content. The only security-adjacent statement is that tracker
+kinds are configuration data and that mixed kinds are validated rather than
+rejected, which introduces no new trust boundary. Published text must not include
+secrets, hostnames, or internal URLs, which NFR-9 covers.
 
 ## 22. MAINTENANCE & OPERATIONS IMPACT
 
-- The naming boundary is now the corpus's maintenance invariant: any later page that speaks about managed checkouts uses `repos`, and any page about grouping uses `projects`. The Appendix B matrix is the review checklist while the rule is manual.
-- The pack remains planned-until-M2-exit; the two command pages are proposals until their stories deliver, and the status snapshot records this amendment as plan state, not as delivery.
-- Each future M2 delivery (S4, S18, S19) updates its backlog entry, its pack rows, and the status snapshot at meaningful boundaries, per the convention the 2026-11-10 snapshot states.
-- The flat `projects list` shipped in GH-288, so the recorded transition is live: when the group story ships the rename, it adds the deprecation alias, and the registry, pack, delta note, and current truth are updated together so the boundary never splits.
-- Current truth stays the record of shipped behaviour: the projects overview spec and the entrypoint spec change when the rename ships, not when the plan states it.
-- The M3-S6 hygiene verbs are part of the `repos` family; when they deliver, `repos.md` becomes the family page and gains the hygiene verbs, so the family page and the registry stay in step.
+- The contract identity split and the single rename rule are the corpus's
+  maintenance invariant: the group contract is `project-groups.v1`, the delivered
+  flat contract is `projects.v1`, the planned flat contract is `repos.v1`, and any
+  page that mentions them references the rule rather than restating it.
+- The mapping clause is permanent: a future rename of the identity marker, the
+  projects container, the host-index fields, or `--project-root` is a code change
+  with a state-layout consequence, never a documentation edit.
+- The pack remains planned-until-M2-exit; the command pages are proposals until
+  their stories deliver, and the status section records this correction as plan
+  state.
+- M2-S18 owns the transition end to end: the decision record, the rename, the
+  alias, the field renames, and the migration-guide update. M2-S19 owns the
+  cross-repository lifecycle. Each delivery updates its backlog entry, pack rows,
+  and the status snapshot at meaningful boundaries.
+- The registry stays locked: the `repos` row moves to Delivery only after S18's
+  superseding decision record and code change; until then it stays marked
+  not-delivered, per ODR-0003.
+- Current truth remains the record of delivered behaviour: the projects feature
+  spec, the entrypoint spec, and the migration guide change when S18 ships, not
+  when the plan says so.
 
 ## 23. GLOSSARY
 
 | Term | Definition |
 |------|------------|
-| Repository | One git checkout; the delivery unit, and the leaf of the three-level model. Identified by its checkout identity (the git common dir marker). |
-| Project | A named group of repositories that belong together (a product or system spanning repositories), with membership declared in configuration. |
-| Workspace | An optional persisted directory where a project's repositories are cloned; usable as a discovery root, never mandatory. Distinct from the per-change artifact set this repository also calls a workspace. |
-| Member repository | A repository declared as part of a project. |
-| Flat enumeration | The host-level list of managed checkouts with repo key, root, state location, daemon reachability, and handover state. Shipped as `projects list` (GH-288) and produced by `repos list` after the planned rename. |
-| Group surface | The project-level view listing groups with their members, health, and state, and accepting a project scope for reads. Produced by `projects list`. |
-| Naming boundary | The rule that `repos` means the flat enumeration (and, later, its hygiene subcommands) while `projects` means groups, stated wherever both names appear. |
-| Cross-repository change | One change spanning member repositories of one project: one lifecycle, one spec and plan, one definition of done, a branch and pull request per member. |
+| Repository | One git checkout; the delivery unit and the leaf of the model. Identified by its checkout identity (the git common dir marker) and, from M2-S18, by `repoKey` on the flat surface. |
+| Project group | A named group of repositories that belong together, with membership declared in configuration. Identified by `groupKey`. |
+| Workspace (discovery) | An optional persisted directory usable as a discovery root for a group's declared members; never mandatory, and distinct from the state layer's fixed `workspace` identifier `default`. |
+| Member repository | A repository declared in a group's configuration. |
+| Flat record set | The host-level list of managed checkouts with repository key, root, state location, daemon reachability, and handover state. Delivered as `projects list` (`projects.v1`); planned as `repos list` (`repos.v1`) from M2-S18. |
+| Group surface | The project-level view listing groups with their members, health, and state, and accepting the scoped read argument. Produced by `projects list` from M2-S18 as `project-groups.v1`. |
+| Rename rule | The one normative statement: from M2-S18, `projects list` enumerates groups and `repos list` enumerates the flat record set; the alias is `projects list --flat`, returning the delivered `projects.v1` payload, owned by M2-S18 and retired at the M3 boundary. |
+| Deprecation alias | The token `projects list --flat` that returns the delivered `projects.v1` payload during the transition. It is a different token from `projects list`, which enumerates groups from M2-S18. |
+| Delivered flat payload | `projects.v1`: `data.projects[]` with `projectKey`, plus `hostIndexRevision`. Keeps this meaning permanently. |
+| Group identity | `groupKey`: the field naming a group in `project-groups.v1` and in the configuration document. Never `projectKey`. |
+| Repository vocabulary | The tokens that denote a repository checkout and keep that meaning permanently unless a code change renames them: `project-identity.json`, `<host root>/projects/<key>`, the host index's `projects[]`/`projectKey`, and `--project-root`. |
+| Project configuration document | `<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`, declaring groups with `groupKey`, optional `workspaceRoot`, and `members[]` (repository selector plus `trackerKind`). |
+| Project-scoped read | A read narrowed to one group's members, expressed as `queue list --project <groupKey>` or `status --project <groupKey>`. Not the state layer's scope. |
+| Per-checkout state scope | The state layer's scope: a host root plus one root per checkout, with the `unbound` scope outside any work tree. Never a project scope. |
+| Classified partial result | A project-scoped read outcome in which one or more members are classified (`not-yet-supported`, `state-unavailable`, `unregistered`) while the readable members are returned at exit 0 with `partial` true and the degraded members named. |
+| One queue entry per member | The representation of a cross-repository change: one queue entry per member keyed by that member's ref, with per-member dependency edges and a release rule that drops each member's lease while entries stay. |
+| One review flow | One review run over the declared member pull-request set, with one verdict per member and each member reviewed once. |
+| Cross-repository change | One change spanning member repositories of one group: one lifecycle, one spec and plan, one definition of done, a branch and pull request per member, one queue entry per member. |
 | Slice | The part of a cross-repository change that belongs to one member repository. |
-| Deprecation alias | The compatibility name the renamed flat surface keeps when the group story renames `projects list` to `repos list`. The shipped surface exists (GH-288), so the alias is required at the rename; it is not active in this change. |
-| Shipped flat surface | The delivered `projects list [--json]` overview of managed checkouts (GH-288, M2-S11), which current truth describes under that name until the rename ships. |
-| Disambiguation sentence | The one sentence each planning page that uses `projects list` with the group meaning carries, stating that the shipped `projects list` is the flat enumeration this change renames to `repos list`. |
+| Disambiguation (time-scoped) | The short sentence each page using the group meaning carries, dating the spellings and pointing at the rename rule instead of restating it. |
 | Planned-until-exit | Pack convention: everything in a milestone pack is a proposal until the milestone exits, after which the pack is a snapshot. |
 | Docs-only change | A change whose product files are documentation plus a data-only guard registry registration, with no behaviour, test, or tooling change. |
 
 ## 24. APPENDICES
 
-### Appendix A — Ticket clause table (fidelity oracle)
+### Appendix A — Clause oracle
 
-The table is the oracle for AC-F2-1, AC-F3-1, and AC-NFR8-1: 26 clauses, each present in the backlog entry with unchanged meaning. Clause IDs are for the change artifacts, not for the backlog.
+#### A.1 Ticket clauses (26)
+
+Preserved in substance; the oracle for AC-F2-1, AC-F3-1, and AC-NFR8-1.
 
 | Clause | Source | Required substance | Spec requirement |
 |---|---|---|---|
 | S18-G | S18 Goal | A project is a configured group of repositories; the tooling can enumerate groups with their members and scope delivery views per project, with the workspace directory usable as an optional discovery root. | F-2 |
 | S18-T1 | S18 Tasks | Project configuration declaring member repositories (any tracker adapter; mixed trackers remain valid configuration even if only GitHub is exercised initially). | F-2, F-6 |
 | S18-T2 | S18 Tasks | Optional workspace-directory discovery root: register a directory, scan for managed clones inside; never required. | F-2, F-6 |
-| S18-T3 | S18 Tasks | `projects list` rendering groups with member repos, health, and state. | F-2, F-7 |
-| S18-T4 | S18 Tasks | Project scoping for queue and status reads. | F-2, F-6, F-7 |
-| S18-T5 | S18 Tasks | Naming boundary documented: `repos` = flat enumeration, `projects` = groups. | F-2, F-14 |
+| S18-T3 | S18 Tasks | `projects list` renders groups with member repositories, health, and state (from M2-S18, that spelling is the group surface). | F-2, F-7 |
+| S18-T4 | S18 Tasks | Project scoping for queue and status reads. | F-2, F-7 |
+| S18-T5 | S18 Tasks | Naming boundary documented: `repos` = flat record set, `projects` = groups. | F-2, F-14 |
 | S18-A1 | S18 AC | A project with two member repositories in one workspace directory is discoverable by registering that directory. | F-6, F-8 |
-| S18-A2 | S18 AC | The same project configured with repositories in unrelated directories behaves identically (workspace optional). | F-5, F-6, F-8 |
+| S18-A2 | S18 AC | The same project configured with repositories in unrelated directories behaves identically. | F-5, F-6, F-8 |
 | S18-A3 | S18 AC | `projects list` shows the group with both members and their state. | F-6, F-7 |
 | S18-A4 | S18 AC | Queue and status accept a project scope. | F-6, F-7 |
-| S18-A5 | S18 AC | A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified as not-yet-supported rather than rejected silently. | F-2, F-6, DEC-12 |
+| S18-A5 | S18 AC | A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently. | F-2, F-6, DEC-12 |
 | S18-D | S18 Depends | M2-S11. | F-2 |
-| S19-G | S19 Goal | One change may span multiple repositories of one project: one lifecycle, one spec and plan, one definition of done, with a branch and pull request per member repository. | F-3 |
+| S19-G | S19 Goal | One change may span multiple repositories of one project: one lifecycle, one spec and plan, one definition of done, a branch and pull request per member. | F-3 |
 | S19-T1 | S19 Tasks | The plan declares member repositories and their slices. | F-3, F-6 |
 | S19-T2 | S19 Tasks | One lifecycle drives per-repo branches and PRs. | F-3, F-6 |
 | S19-T3 | S19 Tasks | Per-repo gates and one shared DoD. | F-3, F-6 |
@@ -528,90 +1138,177 @@ The table is the oracle for AC-F2-1, AC-F3-1, and AC-NFR8-1: 26 clauses, each pr
 | S19-A3 | S19 AC | A member failing its gates blocks the shared DoD with the failing member named. | F-3, F-6, F-8 |
 | S19-D | S19 Depends | M2-S11, M2-S18, M1-S17. | F-3 |
 | S11-1 | M2-S11 amendment | Per-repository state scoping, host index, and collision ACs unchanged. | F-1 |
-| S11-2 | M2-S11 amendment | The enumeration surface becomes `repos list` (repo key, root, state location, daemon reachability, handover state). | F-1 |
-| S11-3 | M2-S11 amendment | Note the rename transition: if `projects list` ships first as the flat enumeration, the group story renames it with a deprecation alias (the condition is met — GH-288 shipped it). | F-1, DEC-7 |
+| S11-2 | M2-S11 amendment | The delivered enumeration acceptance criterion keeps describing the shipped `projects list` surface. | F-1, DEC-11 |
+| S11-3 | M2-S11 amendment | The entry records the rename transition: M2-S18 renames the flat surface to `repos list` with the `--flat` alias. | F-1, DEC-7, DEC-21 |
 
-### Appendix B — Naming-boundary matrix (consistency oracle)
+#### A.2 Board-derived clauses (32)
 
-Every row is a location the naming boundary must hold in. "Flat" means the location uses `repos`/`repos list` for the enumeration of managed checkouts; "Group" means it uses `projects`/`projects list` for a configured group. Two classes may name the flat enumeration without breaking the boundary: the required per-page disambiguation sentence, and statements recording delivered GH-288 facts about the shipped surface. The current-truth rows are listed because they must stay exactly as they are.
+Covered by this revision; the oracle for AC-NFR8-1 and the DoD. "Board" means
+the six-critic review board on PR #306 (blocking findings 1-6, should-fix 7-16,
+cheap notes 17-18, decisions A-D).
+
+| Clause | Source | Required substance | Spec requirement |
+|---|---|---|---|
+| BRD-1 | Board 1 / DEC-19 | The group contract is `project-groups.v1` with `data.groups[]`. | AC-F6-2 |
+| BRD-2 | Board 1 / DEC-19 | `projects.v1` keeps the delivered flat record set and is never the group contract. | AC-F6-3 |
+| BRD-3 | Board 1 / DEC-20 | `repos list --json` returns `repos.v1` with `data.repos[]` and `repoKey`. | AC-F6-1 |
+| BRD-4 | Board 3 / DEC-21 | One rename rule; no text describes one spelling returning two shapes. | AC-F6-4 |
+| BRD-5 | Board 3 / DEC-21 | The alias is `projects list --flat`, returning the delivered payload, owned by M2-S18, retired at the M3 boundary. | AC-F2-3, AC-F6-4 |
+| BRD-6 | Board 3 / DEC-21 | A shape-asserting alias seed exists. | AC-F8-5 |
+| BRD-7 | Board 3 / DEC-21 | S18 carries the migration-guide update task. | AC-F2-4 |
+| BRD-8 | Board 2 | The mapping clause covers the marker, the container, the host-index fields, and `--project-root` and is carried in contracts and both pages. | AC-F6-5 |
+| BRD-9 | Board 4 | A non-work-tree root is the `unbound` scope, never a failure; exit code preserved. | AC-F7-2 |
+| BRD-10 | Board 4 | The delivered `projects.*` error identities are retained; a `repos.*` prefix change is S18 code work. | AC-F7-3 |
+| BRD-11 | Board 4 | The STATE example is `<host root>/projects/<key>` with a `PROJECT_KEY_PATTERN` key. | AC-F7-4 |
+| BRD-12 | Board 7 | `repos.md` lists `--help` and `--version` with no-state-read semantics. | AC-F7-1 |
+| BRD-13 | Board 7 | `repos.md` restores the scope and `unbound` section. | AC-F7-2 |
+| BRD-14 | Board 8 | The orphaned `daemonReachable.reason` paragraph is removed or moved to where the field exists. | AC-F7-5 |
+| BRD-15 | Board 8 | Member health is carried as `members[].daemonReachable` on the page and in the contract. | AC-F7-5, AC-F6-2 |
+| BRD-16 | Board 9 | The read grammar is `queue list --project <groupKey>`, added to `queue.md` synopsis and options. | AC-F7-9, AC-F2-5 |
+| BRD-17 | Board 9 / DEC-25 | The status scope surface is pinned and named in the M2 README row; the M1 status page stays frozen. | AC-F7-9, AC-F11-1 |
+| BRD-18 | Board 10 / DEC-23 | Membership is configuration-only; a scan only locates declared members; an undeclared-clone seed exists. | AC-F6-6, AC-F8-1 |
+| BRD-19 | Board 13 / DEC-24 | Aggregation is defined once with merge order, classified partial failure, and not-yet-supported handling. | AC-F6-7 |
+| BRD-20 | Board 12 / DEC-27 | The queue/lane representation is one queue entry per member, with the release rule, in contracts and architecture. | AC-F6-8, AC-F5-3 |
+| BRD-21 | Board 11 | A per-member CI corroboration seed exists. | AC-F8-2 |
+| BRD-22 | Board 11 | A dependency-ordering acceptance criterion exists. | AC-F3-3 |
+| BRD-23 | Board 11 / DEC-31 | `SC-M2-S19-02` no longer asserts a retired `change.data.*` family; assertions use contracted envelopes. | AC-F8-3 |
+| BRD-24 | Board 11 / DEC-31 | `closeout.data.members[]` is declared in contracts (or the assert re-pointed). | AC-F3-4, AC-F6-9 |
+| BRD-25 | Board 11 / DEC-32 | "One review flow" is defined executably. | AC-F3-2 |
+| BRD-26 | Board 14 / DEC-29 | The registry row splits; one Delivery row per name; the `repos` row is not-delivered pending the decision record and code change per ODR-0003. | AC-F13-1 |
+| BRD-27 | Board 14 / DEC-29 | S18 carries the task to author the superseding decision record. | AC-F2-6 |
+| BRD-28 | Board 14 | `projects` is added to COMMAND FAMILIES. | AC-F13-2 |
+| BRD-29 | Board 15 / DEC-28 | M2-S4 depends on M2-S18 and the README advisory note is updated. | AC-F4-4, AC-F11-1 |
+| BRD-30 | Board 16 | The scenario introduction reads "M2-S2 through M2-S19". | AC-F8-6 |
+| BRD-31 | Board 17 | The architecture distinguishes the discovery workspace root from the `default` workspace identifier. | AC-F5-4 |
+| BRD-32 | Board 18 | The reference-page move is phrased as pending S18 code work. | AC-F10-1 |
+
+### Appendix B — Naming and identity matrix (consistency oracle)
+
+Every row is a location the naming surface must hold in. "Flat" means the
+location uses `repos`/`repos list` for the flat record set; "Group" means it uses
+`projects`/`projects list` for a configured group from M2-S18; "Delivered"
+means it records the shipped `projects list`/`projects.v1` behaviour. Three
+classes may name the delivered flat surface without breaking the boundary: the
+time-scoped per-page disambiguation, the delivered-fact statements, and the alias
+definition.
 
 | Location | What it must say | What it must not say |
 |---|---|---|
-| `backlog.md` M2-S11 | Flat: `repos list` enumerates checkouts with the five fields; GH-288 delivery record retained; the transition recorded as the planned rename | `projects list` as the enumeration surface the plan intends to keep; any loss of the delivered record |
-| `backlog.md` M2-S18 / M2-S19 | Group: `projects list` renders groups; boundary stated in S18-T5; one sentence naming the shipped flat `projects list` as the surface this change renames | `repos` as a group; the group meaning without the disambiguation sentence |
-| `backlog.md` Epic M2 context paragraph | Both: three-level model, the boundary, and the fact that the flat surface shipped as `projects list` under GH-288 | Any claim that `projects` is only a planned name |
-| `m2/contracts.md` `repos.v1` | Flat: `repos list` envelope with the GH-288 closed daemon reason set | Group fields in the flat envelope |
-| `m2/contracts.md` `projects.v1` + configuration schema | Group: group identity, members with repo keys and tracker kinds, optional workspace root, and one sentence naming the shipped flat surface | A group-named key denoting a repository; the group meaning without the disambiguation sentence |
-| `m2/architecture.md` | Both: three-level context, project-scoped overview flow, cross-repository change flow, boundary invariants, and the shipped-surface statement where the group listing is named | `projects list` as the host index reader; `repos` as a group |
-| `m2/commands/repos.md` | Flat, with the rename note and the GH-288 delivered contract facts (closed reason set, `unbound` scope, read-only scope, exit projection) | Any group surface; the loss of a delivered fact |
-| `m2/commands/projects.md` | Group, with members, health, state, project scope, and one sentence naming the shipped flat `projects list` as the surface this change renames | Any statement that the group surface's own current behaviour enumerates checkouts |
-| `m2/test-scenarios.md` S11 seeds | Flat: `repos list` in prose, titles, and assert lines | `projects list` rows for checkouts |
-| `m2/test-scenarios.md` S18/S19 seeds | Group: group listing and project scope with the disambiguation sentence; cross-repository lifecycle | Flat-enumeration assertions |
-| `m2/journeys.md` opening journey | Both, with each name in its own role and the disambiguation sentence | `projects list` as the flat view without the sentence |
-| `m2/entrypoint-delta.md` planned additions and mount paragraph | Both families, each with its own meaning, with the GH-288 mounted note retained | `projects` as the host overview without the shipped flat surface being named |
-| `m2/README.md` contents and map rows | Both: `repos.md` row; S11 on `repos.v1`; S4 row carries the advisory note; S18/S19 on the group envelope and change plan shape | Map rows conflating the two |
+| `backlog.md` M2-S11 | Delivered: shipped `projects list` enumeration AC, GH-288 record, state scoping, collision criterion; one sentence naming M2-S18 as the rename owner | A `repos list` acceptance criterion; a field-rename clause; any loss of the delivered record |
+| `backlog.md` M2-S18 / M2-S19 | Group plus rename: the rename, the `--flat` alias, the field renames, the migration guide, config-only membership, the scoped grammar, the decision record; S19 ordering and CI corroboration | `repos` as a group; the `repos` rename inside M2-S11; an alias without a payload shape |
+| `backlog.md` M2-S4 | Repository keys only: the board consumes the host index and depends on M2-S18 | A group-scoped board claim |
+| `backlog.md` Epic M2 context paragraph | Both, by reference to the rename rule, plus configuration-only membership | A restatement of the alias mechanics |
+| `m2/contracts.md` `repos.v1` | Flat: `data.repos[]`, `repoKey`, delivered record fields, the carried mapping clause | Group fields; `data.projects[]`; a delivered claim |
+| `m2/contracts.md` `projects.v1` | Delivered: flat record set, `data.projects[]`, `projectKey`, `hostIndexRevision`; named as the alias payload | Any group field or group claim |
+| `m2/contracts.md` `project-groups.v1` + configuration + aggregation + queue | Group: `data.groups[]`, `groupKey`, members with `daemonReachable`, config-only membership, classified partial failure, one queue entry per member, the release rule | `projectKey` as a group identity; a scan that admits clones; a whole-read failure for one member |
+| `m2/architecture.md` | Both, by reference; configuration-only membership; one queue entry per member; the discovery-root versus `default` distinction | `projects list` reading the host index; the two workspace meanings collapsed |
+| `m2/commands/repos.md` | Flat: delivered semantics, `unbound` at exit 0, `projects.*` identities, host-root STATE example, `--help`/`--version`, mapping clause | A `repos.*` identity as current truth; a non-work-tree failure; a group surface |
+| `m2/commands/projects.md` | Group: `project-groups.v1`, `data.groups[]`, `groupKey`, member `daemonReachable`, aggregation, scoped grammar, `--flat` pointer, time-scoped disambiguation | The orphan reason paragraph; a group-scoped board claim; a restatement of the alias mechanics |
+| `m2/commands/queue.md` | Scope grammar: `queue list --project <groupKey>` in synopsis and options | A group-scoped mutation |
+| `m2/commands/board.md` | Repository keys: `--project` is a repository key, `repositories[]`, repository-vocabulary refusal, M2-S11 attribution | Any group scope; "the project model M2-S11 introduces" |
+| `m2/test-scenarios.md` | S2-S19 intro; delivered/group/flat roles by seed; declared envelopes only; alias shape seed | `change.data.*`; a delivered surface asserted as `repos list` today |
+| `m2/journeys.md` opening journey | Both, each name in its role, with the time-scoped disambiguation | A flat view without the disambiguation |
+| `m2/entrypoint-delta.md` | Both families with M2-S18 ownership; retained GH-288 mount note; reference-page move pending S18 | The move as an effect of this change |
+| `m2/README.md` contents and map rows | `repos.md` as the M2-S18 flat record set; S11 on delivered `projects.v1`; S18 on `project-groups.v1` + configuration + status delta + decision record; S19 on the plan shape; S4 without the advisory note; scenarios S2-S19 | Map rows conflating the two contracts; a group contract named `projects.v1` |
 | `milestones/README.md` M2 row | Both pages linked (13 targets) | — |
-| `cli-command-registry.md` rows and boundary note | Flat (`ados repos`, M2-S11) recording that GH-288 shipped the flat overview as `projects list`; Group (`ados projects`, M2-S18); hygiene verbs as `repos` subcommands (M3-S6 later) | The old "distinct surfaces" note; `projects` as a planned-only name; the loss of the GH-288 shipped statement |
+| `cli-command-registry.md` rows and boundary note | One `projects` row (Delivery M2-S11 shipped) and one `repos` row (Delivery `-`, Extended M2-S18 and M3-S6, not-delivered pending ODR-0003); `projects` in COMMAND FAMILIES; the rename rule referenced | Two Delivery rows; a shipped `repos`; a group meaning for `repos` |
 | `status.md` 2026-11-11 delivery snapshot | Delivered GH-288 facts, preserved byte-identical | Any reworded or removed delivery fact |
-| `status.md` new section | Both, in the same terms, with the disambiguation sentence | Any contrary meaning |
-| `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/guides/migrating-to-per-repository-state.md`, `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` | Current truth for the shipped flat `projects list`; untouched by this change | Any edit in this change; any claim that current truth already says `repos list` |
+| `status.md` new correction section | The split, the rename rule, the ownership, configuration-only membership, the scoped grammar, the board boundary, the registry split, the S4 edge | Any contrary meaning; a delivery claim |
+| `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/guides/migrating-to-per-repository-state.md`, `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` | Delivered truth for the shipped `projects list`; untouched by this change | Any edit here; a claim that current truth already says `repos list` |
 
 ### Appendix C — File manifest and change type
 
-Verified against change base `723454e4`; the manifest is unchanged by the rebase — 13 product files, 12 under `doc/planning/oss-tooling/**` (11 modified plus 1 new) and the one registry row.
+Verified against change base `723454e4`; 15 product files — 14 under
+`doc/planning/oss-tooling/**` (13 modified plus 1 new) and the one registry row.
 
 | # | Path | Change |
 |---|---|---|
-| 1 | `doc/planning/oss-tooling/backlog.md` | Amend M2-S11 in place; add one Epic M2 context paragraph; insert M2-S18 and M2-S19 |
-| 2 | `doc/planning/oss-tooling/milestones/m2/architecture.md` | Three-level C4 context; project-scoped overview flow; cross-repository change flow; boundary invariants |
-| 3 | `doc/planning/oss-tooling/milestones/m2/contracts.md` | Add `repos.v1`; redefine `projects.v1`; add configuration schema and cross-repository change plan shape |
-| 4 | `doc/planning/oss-tooling/milestones/m2/commands/repos.md` | **New** flat-enumeration contract with rename note |
-| 5 | `doc/planning/oss-tooling/milestones/m2/commands/projects.md` | Rewrite as the group surface |
-| 6 | `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` | Add S18/S19 seeds; amend both S11 seeds |
-| 7 | `doc/planning/oss-tooling/milestones/m2/journeys.md` | Rewrite the opening journey as project-scoped |
-| 8 | `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` | Add `repos` as the flat enumeration beside the mounted `projects` host-overview fact; correct the mount paragraph; keep the GH-288 note |
-| 9 | `doc/planning/oss-tooling/milestones/m2/README.md` | Contents row for `repos.md`; map rows for S18/S19; S11 on `repos.v1`; the S4 row gains the advisory note |
-| 10 | `doc/planning/oss-tooling/milestones/README.md` | M2 index row gains `m2/commands/repos.md` |
-| 11 | `doc/planning/oss-tooling/status.md` | One new dated planning snapshot, after the 2026-11-11 delivery snapshot |
-| 12 | `doc/planning/oss-tooling/cli-command-registry.md` | `ados repos` (M2, carrying the GH-288 shipped statement), `ados projects` (groups), M3-S6 reconciled, boundary note replaced |
-| 13 | `scripts/checks/forbidden-literals.registry.json` | One registration for the new pack page |
+| 1 | `doc/planning/oss-tooling/backlog.md` | Restore M2-S11's delivered story; make M2-S18 the rename owner with its derived tasks and alias AC; add S19 ordering; declare the S4 edge; one context paragraph |
+| 2 | `doc/planning/oss-tooling/milestones/m2/architecture.md` | Three-level context; discovery-root versus `default` sentence; group-scoped overview flow; cross-repository flow with the queue representation; boundary invariants |
+| 3 | `doc/planning/oss-tooling/milestones/m2/contracts.md` | `repos.v1`; retained `projects.v1`; `project-groups.v1`; rename rule; mapping clause; configuration document; aggregation; queue/lane; change plan shape |
+| 4 | `doc/planning/oss-tooling/milestones/m2/commands/repos.md` | **New** flat record-set page with delivered semantics, `unbound` scope, delivered error identities, host-root STATE example, help/version, mapping clause |
+| 5 | `doc/planning/oss-tooling/milestones/m2/commands/projects.md` | Rewrite as the group page with `project-groups.v1`, `groupKey`, member `daemonReachable`, aggregation, scoped grammar |
+| 6 | `doc/planning/oss-tooling/milestones/m2/commands/queue.md` | `queue list --project <groupKey>` in synopsis and options |
+| 7 | `doc/planning/oss-tooling/milestones/m2/commands/board.md` | Repository-key boundary, repository-vocabulary envelope and refusal identity, corrected attribution |
+| 8 | `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` | S2-S19 intro; S18/S19 seed sets; declared-envelope assertions; alias seed; S11 seeds reconciled |
+| 9 | `doc/planning/oss-tooling/milestones/m2/journeys.md` | Opening journey reconciled; time-scoped disambiguation |
+| 10 | `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md` | Split, retained mount note, reference-page move as pending S18 code work |
+| 11 | `doc/planning/oss-tooling/milestones/m2/README.md` | Contents rows; corrected map rows (S11, S18 with the status delta and decision record, S19, S4, scenarios) |
+| 12 | `doc/planning/oss-tooling/milestones/README.md` | M2 index row gains `m2/commands/repos.md` |
+| 13 | `doc/planning/oss-tooling/status.md` | One new dated correction section |
+| 14 | `doc/planning/oss-tooling/cli-command-registry.md` | Split rows; one Delivery row per name; ODR-0003 lock; `projects` in COMMAND FAMILIES; boundary note |
+| 15 | `scripts/checks/forbidden-literals.registry.json` | One registration for the new pack page |
 
 ### Appendix D — Gate and evidence record
 
 | Evidence | How it is produced | Expected result |
 |---|---|---|
 | Distribution-marker guard | `bash scripts/.tests/test-doc-distribution.sh` with the default `TMPDIR` | exit 0; 0 markers added |
-| Aggregate gate (authoritative) | `mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check`, full suite | exit 0; any failure is a delivery failure |
-| Aggregate gate (recorded) | `pnpm check` with the default `TMPDIR` | recorded; a `ci-baseline-parity` failure and a `TC-WIRE-002` 5000 ms timeout each recorded and re-run, tolerated only while the authoritative run is green on the same head; any other failure is a delivery failure |
-| Forbidden-literals | `pnpm check`'s prompt/guard battery or the check's own entry point | 0 unregistered-doc findings, 0 violations, 142 registered entries (141 at base `723454e4`), and exactly 10 of the 12 planning documents literal-scanned (12 touched: 10 scanned, 2 exempt — `backlog.md` and `cli-command-registry.md` are not registered, hence not scanned); every scanned command name carries the `<binary>` prefix |
-| Delivered-fact preservation | Diff of the M2-S11 entry, `projects.v1`, the flat command page, the delta note, the registry rows, and the 2026-11-11 status snapshot against base `723454e4` | 6 of 6 GH-288 facts present (the registry shipped statement carried verbatim to the `ados repos` row); 0 reworded as plan |
-| Clause fidelity | Appendix A diffed against the head backlog | 26 of 26 present, 0 added, 0 changed meaning |
-| Naming boundary | Corpus search over the twelve planning documents plus the Appendix B walk | 0 group-meaning `repos` occurrences; 0 flat-`projects list` occurrences outside the disambiguation sentence and preserved GH-288 facts; the disambiguation sentence on each of the six named pages |
-| Document structure | Structural read of fence counts, fence tags, keyword lines, and heading association | 0 failures, no new tooling |
-| File containment | Diff filtered to product files | exactly 13 files, none outside the manifest |
-| Status retention | Whole-file line comparison of `status.md` | 0 base lines changed; additions only in the new section |
+| Aggregate gate (authoritative) | repository-local `TMPDIR` full `pnpm check` | exit 0; any failure is a delivery failure |
+| Aggregate gate (recorded) | `pnpm check` with the default `TMPDIR` | recorded; the two named default-only failures recorded, re-run, and excused only behind a green authoritative run on the same head |
+| Forbidden-literals | the guard's own entry point | 142 registered entries (141 at base), 0 unregistered-doc findings, 0 violations, exactly 12 of 14 planning documents scanned, 2 exempt |
+| Delivered-fact preservation | diff of the M2-S11 entry, the `projects.v1` section, the `repos` page, the delta note, the registry rows, and the 2026-11-11 snapshot against base `723454e4` | 9 of 9 delivered facts present; 0 reworded as plan |
+| Contract identity split | corpus search for the group contract and the group identity | 0 affirmations that the group contract is `projects.v1`; 0 affirmations that a group identity is `projectKey`; the rename rule appears exactly once |
+| Shape disambiguation | corpus search for `--flat` and for two-shape sentences | the alias token appears only where the alias is defined or pointed at; 0 sentences describing one spelling returning both shapes at one time |
+| Clause fidelity | Appendix A.1 and A.2 diffed against the head backlog and corpus | 26 of 26 ticket clauses, 32 of 32 board clauses |
+| Naming boundary | corpus search over the 14 planning documents plus the Appendix B walk | 0 group-meaning `repos`; 0 flat-meaning `projects` outside the disambiguation and delivered facts; the disambiguation on the six named pages |
+| Terminology and vocabulary | corpus search for the four repository-vocabulary tokens and for "project scope" in state-layer prose | each token described as a repository checkout; 0 state-layer uses of "project scope" |
+| Document structure | structural read of fence counts, tags, keyword lines, heading association | 0 failures, no new tooling |
+| File containment | diff filtered to product files | exactly 15 files, none outside the manifest |
+| Status retention | whole-file line comparison of `status.md` | 0 base lines changed; additions only in the new section |
+| AC and procedure counts | id extraction from §17 plus the test-plan mapping | 56 functional + 13 NFR = 69 ACs, each with at least one oracle |
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.3 | 2026-11-11 | @spec-writer | Rebase correction after the branch was rebased onto `origin/main-tools` `723454e4`, which brought GH-288 / PR #305 into the base and changed the facts this specification was written on. (1) Base reference updated to `723454e4` in the frontmatter (`base_revision`), §13 (new base row, the corpus row, and a shipped-GH-288 dependency row), §17.3, §18, Appendix C, and Appendix D. (2) The "no delivered spec covers these surfaces" claims are replaced with the true state: `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-cli-entrypoint.md`, `doc/guides/migrating-to-per-repository-state.md`, and `doc/decisions/TDR-0022-multi-repository-workstation-state-scope.md` describe the shipped flat `projects list`; current truth keeps describing today's shipped behaviour until the rename ships, and the planning corpus is the only place the future split is stated (§2.1, §2.2, §3, §4.1, NG-2/NG-3, §8.5, §12, §19, §22, §23, Appendix B, AC-NFR3-1, AC-NFR1-1/DoD, DEC-6/DEC-7/DEC-17). (3) §2.1 now records the GH-288 base state: M2-S11 carries the `Ticket`/`Progress` delivery record, the pack carries the delivered contract facts (closed daemon reason vocabulary, `unbound` scope, exit projection), the entrypoint delta records the mount, the registry row records the shipment, and `status.md` ends with the 2026-11-11 delivery snapshot. (4) The disambiguation requirement was added to the functional scope and to an existing AC without changing the AC count: F-14 and its capability detail now require, at least once per page, a sentence stating that the shipped `projects list` is the flat enumeration this change renames to `repos list`, with GH-288 delivered facts preserved; AC-F14-2 (extended) and AC-F14-1, AC-F7-1, AC-F7-2, AC-F4-2, AC-F1-1, AC-F1-2, AC-NFR12-1, NFR-3, NFR-12, §4.1 KPIs, §6 Flow 5, §17.3 DoD, RSK-1, and the new RSK-13 carry it. (5) Counts verified against the rebased tree: the forbidden-literals `registered` count is 141 at base `723454e4` and 142 after this change (GH-288 added two non-planning registrations), and the scanned set of this change's twelve planning documents is unchanged at ten scanned, two exempt (`backlog.md`, `cli-command-registry.md`) — the ten registered documents are absent at `corpusBaseline`, the two exempt ones are present. The 13-product-file manifest is unchanged. AC set unchanged: 45 ACs (33 functional + 12 non-functional), no AC added or removed. |
-| 1.2 | 2026-11-11 | @spec-writer | Remediated DoR iteration 2 (non-blocking) plus one recorded delivery constraint. (1) §8.5 no longer calls the M2-S4 advisory note "existing": the bullet now states the note is added by this change, names the exact advisory phrase, notes that the base row carries none, and cross-references AC-F6-5 and DEC-14. (2) The forbidden-literal constraint is now explicit: NFR-9 was extended (no new NFR) and AC-NFR9-1 was extended (no new AC) to state that the guard's `userFacingDocs` scope covers `doc/**` except `doc/changes/**` and `doc/decisions/**` but literal-scans only documents listed in `registered` that are absent at `corpusBaseline`, to enumerate the scanned set of ten documents out of this change's twelve planning documents (`milestones/README.md`, `milestones/m2/README.md`, `milestones/m2/architecture.md`, `milestones/m2/contracts.md`, `milestones/m2/commands/projects.md`, the new `milestones/m2/commands/repos.md`, `milestones/m2/test-scenarios.md`, `milestones/m2/journeys.md`, `milestones/m2/entrypoint-delta.md`, `status.md`) and to record the two exempt documents (`backlog.md` and `cli-command-registry.md`, not registered and therefore not literal-scanned), and to require zero occurrences of the seed literals `ados`, `ADOS_`, and `~/.ados` with every command name carrying the `<binary>` prefix; the same constraint is noted in the §12 assumptions, in the §17.3 Definition of Done, and in Appendix D. Extended AC: AC-NFR9-1 (with NFR-9). AC set unchanged: 45 ACs (33 functional + 12 non-functional), no AC added or removed. Count clarification within v1.2: the scanned-set accounting is now stated identically in NFR-9, AC-NFR9-1, §12, the §17.3 Definition of Done and Appendix D — twelve planning documents total, ten literal-scanned, two exempt (`backlog.md` and `cli-command-registry.md`) — with no requirement changed. |
-| 1.1 | 2026-11-11 | @spec-writer | Remediated DoR iteration 1: NFR-6/AC-NFR6-1 now make the repository-local-TMPDIR full-suite run the authoritative gate, require both aggregate runs recorded, and name both default-run-only failures (`ci-baseline-parity` and the `TC-WIRE-002` 5000 ms timeout) as recorded, re-run, and excused only behind a green repository-local run on the same head, with any other default-run failure a delivery failure (NFR-6, KPI rows, RSK-7, DoD, DEC-16, Appendix D). Made the M2-S4 advisory note an owned edit and corrected the containment accounting to 13 product files (12 planning documents: 11 modified plus the new `commands/repos.md`, plus the registry row) across G-5, F-11/F-14, §7.1, NFR-1/NFR-12, DEC-1/DEC-14, §16, AC-F6-5/AC-F14-1/AC-NFR1-1/AC-NFR12-1, DoD, and Appendix C. Count correction within the same iteration: an interim draft over-counted the product-file budget by one file (an extra page edit); the manifest was corrected to the verified 13 product files above. AC set unchanged: 45 ACs (33 functional + 12 non-functional), no AC added or removed. |
+| 1.4 | 2026-11-11 | @spec-writer | Review-board remediation. The six-critic external review board on PR #306 — CTO, API Integration Engineer, Domain Expert, QA Engineer, SRE, and Technical Writer — returned six blocking findings, ten should-fix findings, and two cheap notes against the delivered corpus. (1) Contracts are re-keyed: the group contract is `project-groups.v1` with `data.groups[]` and `groupKey` (DEC-19, DEC-22), the delivered flat contract keeps `projects.v1` with `data.projects[]` and `projectKey` (DEC-19), and the flat surface becomes `repos list`/`repos.v1`/`data.repos[]`/`repoKey` (DEC-20). (2) One rename rule is stated once, with `projects list --flat` as the different alias token returning the delivered payload, owned by M2-S18 and retired at the M3 boundary, carrying an S18 acceptance criterion, a shape-asserting seed, and the migration-guide task (DEC-21; AC-F2-3, AC-F2-4, AC-F6-4, AC-F8-5). (3) The repository-vocabulary mapping clause fixes the identity marker, the projects container, the host-index fields, and `--project-root` as repository checkouts (BRD-8; AC-F6-5). (4) `commands/repos.md` regains the delivered semantics: `unbound` at exit 0, the `projects.*` error identities, the host-root STATE example with a pattern-valid key, `--help`/`--version` with no-state-read semantics, and the scope section. (5) The board stays on the repository-key boundary and its M2-S11 attribution is corrected. (6) M2-S11 keeps the delivered story and its shipped-surface acceptance criterion; M2-S18 becomes the single owner of the rename, alias, field renames, migration guide, configuration-only membership, scoped grammar, and decision record; `SC-M2-S11-02` becomes prospective. (7) Membership is configuration-only at a declared path and format, with an undeclared-clone seed; aggregation is defined once with classified partial failure and not-yet-supported handling; the queue/lane representation is one entry per member with the release rule. (8) M2-S19 gains per-member CI corroboration, dependency ordering, `closeout.data.members[]`, a `verify gates` definition-of-done verdict, contracted-envelope assertions, and an executable "one review flow". (9) The registry row splits with one Delivery row per name under the ODR-0003 lock, `projects` joins COMMAND FAMILIES, M2-S4 depends on M2-S18, the scenario intro reads M2-S2 through M2-S19, and the two cheap notes land. (10) Sections, goals, NFRs, risks, data model, appendices, and the DoD are realigned; the AC set is renumbered to 69 (56 functional + 13 NFR); 14 new decisions (DEC-19..DEC-32) and a 32-clause board oracle (Appendix A.2) are added; the file manifest grows to 15 with `commands/queue.md` and `commands/board.md`. |
+| 1.3 | 2026-11-11 | @spec-writer | Rebase correction after the branch was rebased onto `origin/main-tools` `723454e4`, which brought GH-288 / PR #305 into the base and changed the facts this specification was written on. (1) Base reference updated to `723454e4` in the frontmatter, §13, §17.3, §18, Appendix C, and Appendix D. (2) The "no delivered spec covers these surfaces" claims were replaced with the true state: the projects feature spec, the entrypoint spec, the migration guide, and TDR-0022 describe the shipped flat `projects list`; current truth keeps describing today's shipped behaviour until the rename ships. (3) §2.1 records the GH-288 base state: the M2-S11 delivery record, the delivered contract facts, the entrypoint mount, the registry shipment, and the 2026-11-11 delivery snapshot. (4) The per-page disambiguation sentence was added without changing the AC count, with GH-288 delivered facts preserved. (5) Counts verified against the rebased tree: 141 registry entries at base, 142 after the new page. |
+| 1.2 | 2026-11-11 | @spec-writer | Remediated DoR iteration 2 plus one recorded delivery constraint: the M2-S4 advisory note is stated as an owned edit, and the forbidden-literals constraint became explicit (the guard scans only registered documents absent at `corpusBaseline`: nine registered planning documents plus the new page, with `backlog.md` and `cli-command-registry.md` exempt). AC set unchanged at 45. |
+| 1.1 | 2026-11-11 | @spec-writer | Remediated DoR iteration 1: the repository-local-`TMPDIR` full-suite run became the authoritative gate with both runs recorded and the two default-only failures named; the advisory note became an owned edit; the containment accounting was corrected to 13 product files. AC set unchanged at 45. |
 | 1.0 | 2026-11-11 | @spec-writer | Initial specification |
 
 ---
 
 ## AUTHORING GUIDELINES
 
-- The ticket body (GH-303) is the normative source for the M2-S11 amendment, the M2-S18 and M2-S19 story text, the blueprint targets, and the acceptance list; the PM intake notes supplied the binding decisions (registry and index scope, the `repos`/M3-S6 name resolution, the entrypoint-delta reading, the flat-envelope contract surface, the status snapshot handling), encoded as DEC-1 through DEC-18 rather than re-litigated.
-- Repository facts were read from the working tree at the rebased change base `723454e4` rather than assumed: the M2-S11 entry's clauses and its GH-288 `Ticket`/`Progress` delivery record, the Epic M2 block's story order and closing separator, the twelve-document pack with its `projects.v1`/`projects.md`/`journeys.md`/`test-scenarios.md`/`entrypoint-delta.md` statements and its GH-288 delivered contract facts, the two index tables, the 2026-11-11 M2 delivery snapshot and the 2026-11-10 planning snapshot before it, the registry's 141 explicit entries and absent sorting requirement, the four shipped-current-truth documents, the guards' differing scopes, and the gate battery with its opposite `TMPDIR` requirements.
-- The rebase onto `723454e4` was treated as a change of premises, not a cosmetic merge: the shipped `projects list`, the delivered contract facts, the mounted entrypoint note, the registry's shipped attribution, and the delivery snapshot are base state that this change preserves, and the per-page disambiguation sentence is what keeps the corpus from reading as a denial of the shipped command (DEC-18).
-- One ticket ambiguity was resolved by the PM and is recorded: the `repos` name is reserved by M3-S6 for hygiene while the ticket assigns it the flat enumeration, so the family is defined once with enumeration today and hygiene verbs later (DEC-2); the registry is therefore a derived deliverable even though the ticket's file list names only blueprint documents.
-- Contract naming was left to this document by the PM and fixed here as `repos.v1` (flat) alongside the redefined `projects.v1` (groups), so both command pages point at one contract each (DEC-3).
-- Three derived-consistency edits are recorded rather than silently taken: the new pack page's registry row (DEC-1, DEC-15), both S11 scenario seeds, including `SC-M2-S11-01`'s assert line, which the ticket does not name but the boundary requires (DEC-11), and the M2-S4 advisory note on the map row, which the tree does not yet carry and this change adds (DEC-14).
-- The template at `doc/templates/change-spec-template.md` governed structure; every section is present in order, and the Definition of Done lives under Section 17 so the mandated ordering is preserved.
-- No implementation detail, code path, or step-by-step task appears; planned contracts are described as required shapes and behaviours, and the change's product files are named only to bound the edit.
+- The GH-303 ticket body is the normative source for the M2-S11 amendment, the
+  M2-S18 and M2-S19 ticket clauses, the blueprint targets, and the ticket
+  acceptance list. The six-critic review board on PR #306 is the normative source
+  for the 32 derived clauses in Appendix A.2, including decisions A-D, which are
+  encoded as DEC-19 through DEC-22 and were not re-deliberated.
+- Repository facts were read from the working tree at the change base
+  `723454e4` and from the delivered corpus on the branch: the M2-S11 entry and
+  its GH-288 record, the pack's contract sections and delivered contract facts,
+  the two command pages, the queue and board pages, the seeds, the two index
+  tables, the registry rows, the 2026-11-11 status snapshot, the delivered error
+  identities and `unbound` semantics in the shipped contracts and the projects
+  feature spec, and `PROJECT_KEY_PATTERN`.
+- The review was treated as a correctness gate on the delivered corpus, not as a
+  style preference: each blocking/should-fix finding and each cheap note has a
+  derived clause in Appendix A.2 and at least one acceptance criterion, and no
+  finding was answered by prose alone.
+- Decisions A-D were encoded exactly as made: the group contract is
+  `project-groups.v1` with `groupKey`; the flat surface is `repos list` /
+  `repos.v1` / `repoKey`; the rename rule is stated once with
+  `projects list --flat` as the alias; and `projects.v1` keeps its delivered
+  flat meaning. The spec adds only the implementation-free details the findings
+  required (the configuration document path and format, the aggregation
+  vocabulary, the queue representation, the status scope surface, the board key
+  vocabulary, and the registry lock statement), each recorded as a decision.
+- Derived requirements are kept visibly separate from ticket text (Appendix A.1
+  versus A.2, DEC-30), so a later reader can tell which clause came from the
+  ticket and which from the board.
+- The change is planned-not-delivered throughout: the rename, the alias, the
+  field renames, configuration-only membership, the scoped grammar, and the
+  cross-repository lifecycle are M2-S18 and M2-S19 work; the corpus says so on
+  every page that could be misread.
+- The template at `doc/templates/change-spec-template.md` governed structure;
+  every section is present in order, and the Definition of Done lives under
+  Section 17 so the mandated ordering is preserved.
+- No implementation detail, code path, or step-by-step task appears; planned
+  contracts are described as required shapes and behaviours, and the change's
+  product files are named only to bound the edit.
 
 ## VALIDATION CHECKLIST
 
@@ -619,7 +1316,7 @@ Verified against change base `723454e4`; the manifest is unchanged by the rebase
 - [x] `owners` has at least one entry
 - [x] `status` is "Proposed"
 - [x] All sections present in order (1-25 + guidelines + checklist)
-- [x] ID prefixes consistent and unique (F-, AC-, NFR-, RSK-, DEC-, DM-, OQ-)
+- [x] ID prefixes consistent and unique (F-, AC-, NFR-, RSK-, DEC-, DM-, BRD-)
 - [x] Acceptance criteria reference at least one F-/NFR-/DM- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
