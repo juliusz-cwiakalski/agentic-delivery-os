@@ -2,7 +2,7 @@
 id: chg-GH-288-test-plan
 status: Updated
 created: 2026-11-11
-last_updated: 2026-11-11T14:30:00Z
+last_updated: 2026-11-11T19:00:00Z
 owners: [engineering]
 service: delivery-os
 labels: [feature, projects, state-layer, cli-composition, m2-s11, multi-repository]
@@ -26,13 +26,14 @@ The plan's central discipline is that **the headline isolation evidence is produ
 
 - Two-checkout, same-ref isolation at the store level and at every read surface (`phase`, `queue`, `lanes`, `status`, `dispatch`).
 - Project identity stability: nested invocation, linked worktree, rename, move, second clone of one remote, nested repository, and the declared host-scoped `unbound` scope outside any work tree (`AC-F1-5`).
+- **Project key derivation and its collision guard** (`AC-F1-6`): the `<sanitised basename>-<eight hex>` shape, the `project` fallback, immutability across a rename (including a rename to a different basename), the by-construction distinctness of two checkouts whose directories share a basename, and the index entry a different identifier already holds being kept (with a warning) instead of adopted.
 - The state-scope override honouring: the host root is the delivered override-aware rule (`<PREFIX>_STATE_DIR` when absolute, otherwise home plus brand), and every derivation site — the production store, the MCP store, and the runtime-aware edge's audit store — resolves under it (`AC-F6-1`).
-- The checkout identity marker discipline: created once, atomic, `0600`, never rewritten, no hardcoded name.
-- The derived host index: absent ≠ corrupt, first-run success, corrupt-file preservation, bounded maintenance, provably-dead pruning that never touches state, monotonic revision, and state locations always re-derived.
-- The `projects list [--json]` contract: exact envelope fields, ordering, deterministic text table, exit-code matrix, and the three new error identities.
+- The checkout identity marker discipline: created once, atomic, `0600`, never rewritten, no hardcoded name, and validated against its recorded basename and identifier on every read.
+- The derived host index: absent ≠ corrupt, first-run success, corrupt-file preservation, bounded maintenance with an exact write rule, provably-dead pruning that never touches state, revision advancing only on a change, and state locations always re-derived.
+- The `projects list [--json]` contract: exact envelope fields, ordering, deterministic text table, exit-code matrix, the three new error identities, **the write-nothing guarantee** (`AC-F3-4`), and **the four state-location cells** — first use, legacy warning, present-but-unreadable root, and uncreatable marker (`AC-F3-5`).
 - Handover projection across all eight concrete cells of the five-row truth table (spec §6 Flow 5 / Appendix B), including `in-transition` in both directions and a malformed derived view.
-- Daemon reachability in both branches: the unmounted shipped build (declared reason, no probe) and a mounted composition with a real local unix socket (reachable, `socket-absent`, `socket-unreachable`, `state-absent`) under a bounded, write-free probe.
-- One state-scope policy consumed by the CLI composition, MCP serve, daemon socket derivation, dispatch state root, retro sidecar, owner-hold read, and the CLI-independent bash fallback.
+- Daemon reachability in both branches: the unmounted shipped build (declared reason, no probe) and a mounted composition with a real local unix socket (reachable, `socket-absent`, `socket-unreachable`, `state-absent`) under a bounded, write-free probe; plus **the composing site supplying the project state root** to the settings resolution (`AC-F6-4`, mutation-verified).
+- One state-scope policy, living in the app tier at `packages/core/src/app/state-scope.ts` and exported from the existing `@delivery-os/core` root entry with no new subpath, consumed by the CLI composition, MCP serve, the runtime-aware edge audit store, the daemon composition site, the dispatch state root, the retro sidecar, the owner-hold read, and the CLI-independent bash fallback (`AC-F6-1`, NFR-9).
 - Host-wide owner-hold continuity across project scoping and across migration.
 - Migration: byte-identical move of the full store artifact set, audit-chain verification, retro sidecar readability, host-root emptiness afterwards, the inverse move, and the legacy-detection warning.
 - Mount and documentation obligations: prompt-required membership, help entries, reference page registration, help-coverage and reference-page parity gates, three error-table rows under one new domain kind, no new hardcoded literal.
@@ -45,15 +46,18 @@ The plan's central discipline is that **the headline isolation evidence is produ
 - **No per-project owner holds, no `projects` verb beyond `list`, no re-attribution of historical records, no filesystem crawl for checkouts** (spec NG-5, NG-6, NG-7). The `unbound` scope is covered by `AC-F1-5` (added in spec v1.1); its behaviour is asserted by TC-PROJ-005 as that criterion's owning test.
 - **No mount of the resident daemon lifecycle family.** The unmounted branch is asserted; making the probe live in the shipped build is another story (spec NG-4, §7.3).
 - **No new performance tooling.** NFR-4 is measured with a bounded assertion suite plus recorded wall-clock, not a benchmark harness (mirrors the delivered GH-273 precedent).
-- **`AC-F8-3`, `AC-F10-1`, `AC-F10-2` and the diff-level halves of `AC-F9-2`, `AC-F9-3`, `AC-F10-3` are review-verified.** No permanent suite asserts a diff against a moving base branch (`.ai/rules/testing-strategy.md` §"Invariant-test authoring"); the tree-invariant halves are automated and the diff halves are recorded in the change review and §10.
+- **`AC-F8-3`, `AC-F10-1`, `AC-F10-2`, the M1-snapshot-unchanged half of `AC-F9-2`, the unchanged-row half of `AC-F9-3`, and the no-dependency/no-lockfile-change half of `AC-F10-3` are review-verified**, exactly as spec v1.2 §17 now splits them. No permanent suite asserts a diff against a moving base branch (`.ai/rules/testing-strategy.md` §"Invariant-test authoring"); the tree-invariant halves are automated and each diff half names its exact review check in TC-PROJ-030, TC-PROJ-031 and TC-PROJ-035.
 - **The 200-project latency cell uses seeded index rows, not 200 real checkouts.** Creating 200 real repositories would add minutes to the gate for no new code path; the read path under measurement is index-driven, and the real-checkout path is already exercised at 2 projects (TC-PROJ-001/002/007) and 25 (TC-PROJ-037). The seeded cell asserts the reported revision equals the seeded revision, so it cannot pass while silently ignoring the index.
 - **`git` binary is required** by the identity, isolation, worktree and migration suites (spec §12 assumption). A missing `git` fails those suites loudly rather than skipping them; see risk TR-2.
 - **MCP parity is asserted in-process**, not over a transport; the MCP surface's wire protocol is unchanged by this change and stays with the existing MCP suites.
+- **The three new criteria are behaviours of the delivered family, not new scope**: `AC-F1-6` constrains key derivation (already in scope under F-1/DEC-3), `AC-F3-4` constrains the `projects list` posture (already in scope under F-3/DEC-5), and `AC-F3-5` reconciles the four state-location cells (already in scope under DEC-8/DEC-16). No new command, verb, flag, record, or configuration key is tested.
+- **The `domain`-tier placement of the policy is not tested as a design preference.** The tests assert the **app-tier** module the spec now names (`packages/core/src/app/state-scope.ts`) and the boundary gate that forbids the alternative; they do not assert "not domain" beyond what `.dependency-cruiser.cjs` already enforces.
 
 ## 2. References
 
-- Change specification: [chg-GH-288-spec.md](./chg-GH-288-spec.md) (v1.1) — F-1…F-10, AC-F1-1…AC-F10-3 (35 criteria, including AC-F1-5 for the `unbound` scope), DM-1…DM-7, NFR-1…NFR-11, DEC-1…DEC-16 (DEC-16 names what a `projects.identity-unreadable` refusal discloses), Appendix A (state-scope matrix), Appendix B (handover matrix), Appendix C (daemon reason vocabulary), Appendix D (evidence map), Appendix E (scenario reconciliation).
-- Implementation plan: [chg-GH-288-plan.yaml](./chg-GH-288-plan.yaml) — **produced in phase 4**; this test plan is its input, and the TC ids below are grouped so the plan's phases cite them directly (§7).
+- Change specification: [chg-GH-288-spec.md](./chg-GH-288-spec.md) (v1.2) — F-1…F-10, AC-F1-1…AC-F10-3 (38 criteria, including AC-F1-5/AC-F1-6 for identity, AC-F3-4/AC-F3-5 for the overview's posture and state-location cells), DM-1…DM-7, NFR-1…NFR-11, DEC-1…DEC-19 (DEC-16 refusal naming, DEC-17 closed identity outcomes, DEC-18 collision guard), Appendix A (state-scope matrix, now a closed identity table), Appendix B (handover matrix), Appendix C (daemon reason vocabulary), Appendix D (evidence map), Appendix E (scenario reconciliation).
+- Implementation plan: [chg-GH-288-plan.yaml](./chg-GH-288-plan.yaml) — revision 1.0, 7 phases, TC ownership per its header. This test plan is its input; §7 gives the phase grouping and flags that the plan was written against the **35-AC / 39-TC** baseline and must be re-mapped for the three criteria and three TCs spec v1.2 and this revision add (§8.3 X-1).
+- Definition of Ready: [readiness-review/readiness-iter-1.md](./readiness-review/readiness-iter-1.md) — the findings this revision absorbs (B3, B4, B9/A7, B10, plus A2, A3, A5, A6 and B8's test-plan half).
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, invariant-test authoring rules, gate battery.
 - TypeScript workspace rules: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict-TS, purity, ports/adapters, bun:test authoring.
 - M2 milestone pack: [architecture §"Multi-repository overview"](../../../planning/oss-tooling/milestones/m2/architecture.md), [contracts `projects.v1`](../../../planning/oss-tooling/milestones/m2/contracts.md), [command page `projects`](../../../planning/oss-tooling/milestones/m2/commands/projects.md), [test scenarios §M2-S11](../../../planning/oss-tooling/milestones/m2/test-scenarios.md).
@@ -74,41 +78,44 @@ Every acceptance criterion names an evidence class in spec §17. This plan mirro
 | AC-F1-2 | `phase list`, `queue list`, `lanes`, `status`, `dispatch` each report only their own checkout's state. | TC-PROJ-002 | Suite | Covered |
 | AC-F1-3 | Key and state location identical from a nested directory, a linked worktree, after rename, and after a move; only the reported root changes; a nested repository resolves to its own project. | TC-PROJ-003 | Suite | Covered (worktree `root` expectation: resolution R-1) |
 | AC-F1-4 | Two clones of one remote are two projects; all worktrees of one clone are one project; the marker is created once, atomically, `0600`, never rewritten, and carries no hardcoded name. | TC-PROJ-004 | Suite | Covered |
-| AC-F1-5 | An invocation whose `cwd` is not inside a git work tree resolves to the declared host-scoped `unbound` root (no failure, no invented key), emits exactly one bounded warning naming the unbound condition, registers no project in the host index, creates no project state root, keeps its exit code unchanged, and never substitutes a path-derived key. | TC-PROJ-005 | Suite | Covered — this TC is the criterion's owning test (spec Appendix D) |
+| AC-F1-5 | An invocation whose `cwd` is not inside a git work tree resolves to the declared host-scoped `unbound` root (no failure, no invented key), emits exactly one bounded warning naming the unbound condition, registers no project in the host index, creates no project state root, keeps its exit code unchanged, and never substitutes a path-derived key. | TC-PROJ-005 | Suite | Covered — this TC is the criterion's owning test (spec Appendix D); DEC-17 link adds no behaviour |
+| AC-F1-6 | Two checkouts of different repositories whose directories share a **basename** mint distinct `<sanitised basename>-<eight hex>` keys, distinct state roots, and disjoint same-ref state; a rename (including to a different basename) leaves key and state root unchanged while the reported root moves; and a key the index already holds under a different identifier is kept unchanged with a warning while the second checkout reports `projects.state-unavailable` naming its own root, its key, and the conflicting identifier. | TC-PROJ-040 | Suite | Covered (three labelled cells; the collision cell is the one spec Appendix A row 7 describes) |
 | AC-F2-1 | No index → exit `0`, empty `data.projects`, `hostIndexRevision` `0`, **no** `projects.registry-corrupt`; an invocation inside a checkout creates the index and the next list reports the project. | TC-PROJ-006 | Suite + mutation (P2) | Covered |
 | AC-F2-2 | Two managed checkouts with no hand-written registry report both projects with all five fields plus the revision, from either checkout. | TC-PROJ-007 | Suite | Covered |
 | AC-F2-3 | Corrupt index refuses at exit `2` with `projects.registry-corrupt`, names the index, changes no file; the next state-opening invocation preserves the corrupt file as a timestamped sibling, writes a fresh index, and the following list succeeds. | TC-PROJ-008 | Suite | Covered |
 | AC-F2-4 | A vanished root entry and an entry whose marker resolves to a different identifier are pruned; the referenced state roots are untouched; re-registration restores the same key and state location. | TC-PROJ-009 | Suite + mutation (P3) | Covered |
-| AC-F2-5 | Revision increases monotonically per index write and is the revision the list reports; a recorded state location that disagrees is a warning and the derived location is reported. | TC-PROJ-010 | Suite + mutation (P4) | Covered |
+| AC-F2-5 | Revision increases monotonically with each index write and is the revision the list reports; a write happens only when the maintained content changes (zero writes and no revision advance when nothing changed); a recorded state location that disagrees is a warning and the derived location is reported. | TC-PROJ-010 | Suite + mutation (P4) | Covered (write rule per spec v1.2 F-2/NFR-4; see §8.3 X-2) |
 | AC-F3-1 | Exactly the five contract fields per entry, ordered by `projectKey`, `data.hostIndexRevision` alongside `data.projects`, no new top-level envelope key. | TC-PROJ-011 | Suite | Covered |
-| AC-F3-2 | Two runs produce byte-identical human output with exactly the columns `key`, `root`, `state`, `daemon`, `handover`, sorted by key; an unreachable daemon renders its reason. | TC-PROJ-012 | Suite | Covered (also carries the read-only/stability half of F-3; see §8.3 OQ-T2) |
-| AC-F3-3 | Produced list `0`; unknown verb `1`; unreadable identity `1` with `projects.identity-unreadable`, naming the offending checkout root in the runtime summary plus the project key and identifier when the marker is readable but identity still does not resolve; present-but-unreadable state location `2` with `projects.state-unavailable`, naming the project key and its state location; no other project's root disclosed in the envelope, its warnings, or its text; no other exit code. | TC-PROJ-013 | Suite | Covered (naming rule per DEC-16) |
+| AC-F3-2 | Two runs produce byte-identical human output with exactly the columns `key`, `root`, `state`, `daemon`, `handover`, sorted by key; an unreachable daemon renders its reason. | TC-PROJ-012 | Suite | Covered (the write-nothing posture is owned by AC-F3-4 / TC-PROJ-041) |
+| AC-F3-3 | Produced list `0`; unknown verb `1`; the **invoking** checkout's identity being unreadable exits `1` with `projects.identity-unreadable`, naming the invoking checkout root and the failing `.git` path or the project key and identifier the unreadable marker holds; a present-but-unreadable state location exits `2` with `projects.state-unavailable`, naming the project key and its state location; no other project's root disclosed in the envelope, its warnings, or its text; no other exit code; and the refusal is provoked by **bytes** (marker unreadable, invalid JSON, missing field, or internally inconsistent key-vs-identifier), never by a resolver returning nothing. | TC-PROJ-013 | Suite | Covered (DEC-16 naming; DEC-17 closed outcomes; the `findGitRoot → nothing` case is asserted to be `unbound` at exit 0, not a refusal) |
+| AC-F3-4 | With at least two registered projects and one project holding state, a byte-and-mtime snapshot of the host root before and after `projects list --json` and `projects list` is identical for the host index file and for every entry under the `projects` container: no index write, no revision change, no prune, no corrupt-file replacement, no project-root creation, no state mutation. | TC-PROJ-041 | Suite | Covered (snapshot includes the index file and the `projects/` directory explicitly) |
+| AC-F3-5 | The four state-location cells: absent project root + no host store files = first use (exit `0`, no warning, `shell`, `state-absent`); absent project root + host store files = legacy warning and **not** `projects.state-unavailable`, exit unchanged; present but unreadable/non-directory root = exit `2` with `projects.state-unavailable` naming the project key and state location; uncreatable identity marker = exit `2` with `projects.state-unavailable` naming the checkout root and the failing marker path. | TC-PROJ-042 | Suite | Covered (four labelled cells; cell 2 shares its emission with AC-F8-2 / TC-PROJ-027, cell 3 shares its assertion with AC-F3-3 / TC-PROJ-013) |
 | AC-F4-1 | Folded `authoritative` + agreeing derived view → `engine`; folded `dual-run` → `shell`; no record and no view → `shell`. | TC-PROJ-014 | Suite | Covered |
 | AC-F4-2 | Folded `authoritative` with an absent, `dual-run`, or malformed view → `in-transition`; folded `dual-run` with an `authoritative` view → `in-transition`. | TC-PROJ-015 | Suite + mutation (P5) | Covered |
 | AC-F4-3 | `engine` only on agreement, `in-transition` only on disagreement, and a present-but-unreadable state location is a state failure rather than a fabricated state. | TC-PROJ-016 | Mutation (P5) + Suite (refusal half) | Covered |
 | AC-F5-1 | The shipped composition reports `reachable: false` with the unmounted reason for every entry at exit `0`, and attempts no probe. | TC-PROJ-017 | Suite | Covered |
 | AC-F5-2 | A mounted composition reports `reachable: true` with no reason against a bound socket, and `false` with the absent-socket reason when nothing is bound. | TC-PROJ-018 | Suite | Covered |
 | AC-F5-3 | The reason is exactly the declared vocabulary member for absent socket, refused connect, and absent state root; the probe is bounded by the declared timeout and performs no write and no command. | TC-PROJ-019 | Suite | Covered |
-| AC-F6-1 | Exactly one state-scope rule implementation below the CLI tier; the production composition, the MCP serve composition, **and the runtime-aware edge** all consume it; no surface composes a state directory from home and brand directly; and each of those sites honours the delivered environment override when it is set. | TC-PROJ-020 (structural) + TC-PROJ-021, TC-PROJ-022 (override honoured at runtime) | Suite | Covered (three derivation sites pinned; override honouring carried behaviourally by 021/022) |
+| AC-F6-1 | Exactly one state-scope rule implementation, in the app tier at `packages/core/src/app/state-scope.ts`, exported from the existing `@delivery-os/core` root entry with **no new subpath**; the production composition, the MCP serve composition, and the runtime-aware edge all consume it; no surface composes a state directory from home and brand directly; and each site honours the delivered environment override when it is set. | TC-PROJ-020 (structural) + TC-PROJ-021, TC-PROJ-022 (override honoured at runtime) | Suite | Covered (module path pinned; subpath absence asserted; three sites plus seven consumers) |
 | AC-F6-2 | `phase complete`, `queue add`, `commit`, `dispatch` write every store artifact under the project root with none at the host root; `status`, `lanes`, `retro`, `spend` read the same root. | TC-PROJ-021 | Suite + revert (P1) | Covered |
 | AC-F6-3 | CLI and MCP open the identical project root for one checkout; MCP payload and error parity unchanged. | TC-PROJ-022 | Suite | Covered |
-| AC-F6-4 | The daemon socket path derives from the project root and satisfies the inside-the-state-directory rule; an explicit outside path is refused. | TC-PROJ-023 | Suite | Covered |
+| AC-F6-4 | Given a project state root, the daemon socket path is derived through the **composing site**, which supplies that project root rather than the host root, so the socket path lies inside the project state root; an explicit socket path outside it is still refused. The derivation rule itself is delivered, so the criterion is proven by mutation: reverting the composing site's argument to the host root must turn the asserting test red; the structural half asserts the composing site passes the policy-derived project root, because the settings resolution has no caller and the daemon composition derives no socket path of its own today. | TC-PROJ-023 | Mutation-verified (mutation P8: revert the composing site's argument to the host root) + Suite (containment refusal unchanged) | Covered (spec §17 evidence class; mutation named in TC-PROJ-039) |
 | AC-F6-5 | The bash fallback reports `authoritative` from the project root, reports `dual-run` with no project root, keeps environment-override precedence, and does not widen its search depth. | TC-PROJ-024 | Suite + mutation (P6) | Covered |
 | AC-F7-1 | A host-root owner-hold marker is observed by every project; the environment override outranks it; no per-project marker is read. | TC-PROJ-025 | Suite | Covered |
 | AC-F8-1 | The move preserves every byte and mode, the audit chain still verifies, the retro sidecar still reads, the same reads work after the move, and the inverse move restores the pre-migration reads. | TC-PROJ-026 | Suite | Covered |
 | AC-F8-2 | One warning naming the migration note on the error stream, nothing moved, nothing deleted, exit unchanged; no warning on a migrated host. | TC-PROJ-027 | Suite + mutation (P7) | Covered |
 | AC-F8-3 | The marker stays at the host root, the hold still stops every project, and the note states the primary-checkout designation, the fresh-start consequence, owner-hold continuity, the `unbound` scope, and the reversal step. | TC-PROJ-028 | Review-verified (+ suite for the note's distribution class and registration) | Covered |
 | AC-F9-1 | `--help` lists `projects`; `projects --help`, `projects list --help`, `--version` succeed at exit `0` with no state, network, git, or configuration read. | TC-PROJ-029 | Suite | Covered |
-| AC-F9-2 | `pnpm check:help` and the parity test green; `projects` in the coverage inventory; its page registered; the page contains `--help` and `--version`. | TC-PROJ-030 | Suite (tree half) + Review-verified (M1-pages-unmodified half) | Covered (§8.3 OQ-T3) |
+| AC-F9-2 | Tree-invariant half (Suite): `pnpm check:help` (`scripts/checks/help-guide-coverage.ts`) and `tests/checks/reference-page-parity.test.ts` green, `projects` in the coverage inventory, its page registered, the page contains `--help` and `--version`. Diff half (review-verified): the M1 milestone snapshot pages are unmodified against the merge base. | TC-PROJ-030 | Suite (tree) + Review-verified (diff inspection against the merge base) | Covered — both halves labelled in TC-PROJ-030; the review check is named |
 | AC-F9-3 | Exactly three rows under one new domain kind, each documented in the result-contract spec, no existing row added, retired, or reworded. | TC-PROJ-031 | Suite (rows) + Review-verified (unchanged-row half) | Covered |
 | AC-F9-4 | No new hardcoded product or binary literal; every name resolves from the injected brand identity. | TC-PROJ-032 | Suite | Covered |
-| AC-F10-1 | The state-layer, CLI-entrypoint, branding-seam, dispatch-engine, and owner-gate pages state the new root and the new surface, and a `projects` feature page exists. | TC-PROJ-033 | Review-verified | Covered |
+| AC-F10-1 | The state-layer page states the two-layer state root and names the host index as the only host-wide **index** document (with the host-wide owner-hold marker also at the host root); the CLI-entrypoint page lists `projects list` in the prompt-required set and states the two-layer resolution; the branding-seam page states that the state directory name names the host root; the dispatch-engine page states that the authority document is read under the project root; the owner-gate page states that the hold is host-wide; a `projects` feature page exists. | TC-PROJ-033 | Review-verified | Covered (wording aligned to spec v1.2: "only host-wide *index* file") |
 | AC-F10-2 | The backlog entry, status snapshot, command registry, M2 entrypoint delta, and the command page's proposed status are reconciled. | TC-PROJ-034 | Review-verified | Covered |
-| AC-F10-3 | Exactly one new changeset, five fixed-group packages at `minor`, the only one added, pre-existing ones byte-identical, no dependency or lockfile change. | TC-PROJ-035 | Suite (existing release suite) | Covered — no new test |
+| AC-F10-3 | Tree-invariant half (Suite): exactly one new changeset, five fixed-group packages at `minor`, the only one added, pre-existing changesets byte-identical (`tests/checks/privacy-release.test.ts` TC-RELEASE-001/002). Diff half (review-verified): no dependency or lockfile change, by inspecting the branch diff for `package.json` and `pnpm-lock.yaml`. | TC-PROJ-035 | Suite (release suite) + Review-verified (branch diff inspection) | Covered — no new test; the review check is named because no permanent assertion exists |
 
-All 35 acceptance criteria (`AC-F1-1`…`AC-F10-3`, including `AC-F1-5`) are mapped; none is unmapped, marked TODO, or AC-less. Every test case names the AC it proves.
+All 38 acceptance criteria (`AC-F1-1`…`AC-F10-3`, including `AC-F1-5`, `AC-F1-6`, `AC-F3-4`, `AC-F3-5`) are mapped; none is unmapped, marked TODO, or AC-less, and every TC names the AC it proves.
 
-Functional capabilities are covered transitively: F-1 → 001, 002, 003, 004, 005; F-2 → 006, 007, 008, 009, 010; F-3 → 011, 012, 013; F-4 → 014, 015, 016; F-5 → 017, 018, 019; F-6 → 020, 021, 022, 023, 024; F-7 → 025, 026; F-8 → 026, 027, 028; F-9 → 029, 030, 031, 032; F-10 → 033, 034, 035.
+Functional capabilities are covered transitively: F-1 → 001, 002, 003, 004, 005, **040**; F-2 → 006, 007, 008, 009, 010, **041**; F-3 → 011, 012, 013, **041**, **042**; F-4 → 014, 015, 016; F-5 → 017, 018, 019; F-6 → 020, 021, 022, 023, 024; F-7 → 025, 026; F-8 → 026, 027, 028, **042**; F-9 → 029, 030, 031, 032; F-10 → 033, 034, 035.
 
 ### 3.2 Interface Coverage (DM-#, command surface, registries)
 
@@ -116,12 +123,12 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 
 | Interface element | Observable contract | TC ID(s) |
 |-------------------|---------------------|----------|
-| DM-1 checkout identity marker | One file inside the git common directory; `0600`; created once via a synced sibling plus a link; never rewritten; shared by the clone's worktrees; travels with a renamed/moved checkout; carries a readable key plus an opaque identifier; no hardcoded name. | TC-PROJ-003, TC-PROJ-004 |
-| DM-2 host index | One host-root document with a schema identity, a monotonic revision, and one entry per project (key, identifier, absolute root, derived state location, last write); derived, rebuildable, never authoritative. | TC-PROJ-008, TC-PROJ-010 |
+| DM-1 checkout identity marker | One file inside the git common directory with a declared schema identity; `0600`; created once via a synced sibling plus a link; never rewritten; shared by the clone's worktrees; travels with a renamed/moved checkout; carries the key `<sanitised mint-time basename>-<eight hex of the identifier>`, the identifier, the mint-time basename, and a creation timestamp; the key is re-validated against the recorded basename and identifier on every read; no hardcoded name. | TC-PROJ-003, TC-PROJ-004, TC-PROJ-040 |
+| DM-2 host index | The host-level document at `<host root>/host-index.json`, schema `delivery.projects.host-index.v1`, both declared in the `projects` contracts module (never spelled as a literal by a consumer); a monotonic revision plus one entry per project (key, identifier, absolute root, derived state location, last write); exactly one read and at most one write per maintaining invocation, zero when nothing changed, never on a read-only verb; derived and rebuildable; excluded from the legacy predicate. | TC-PROJ-008, TC-PROJ-010, TC-PROJ-027, TC-PROJ-041 |
 | DM-3 project state root | `<host root>/projects/<project key>` holding exactly the delivered store artifacts under workspace `default`; the host root keeps only the index, the optional owner-hold marker, the project container, and `unbound`. | TC-PROJ-021, TC-PROJ-023, TC-PROJ-026 |
 | DM-4 `projects.v1` envelope data | Entries with exactly five fields plus `data.hostIndexRevision`; entries sorted by key; `daemonReachable` is `{ reachable, reason? }`. | TC-PROJ-011, TC-PROJ-014, TC-PROJ-017 |
 | DM-5 handover projection | Derived, unpersisted, closed value set `engine` \| `shell` \| `in-transition`, computed from the folded latest handover operation and the derived authority document. | TC-PROJ-014, TC-PROJ-015, TC-PROJ-016 |
-| DM-6 error identities | `projects.identity-unreadable` (refusal, exit 1), `projects.registry-corrupt` (state, exit 2), `projects.state-unavailable` (state, exit 2), each with category, retryability, consequence, remediation, projection class, documented in the result-contract spec; the refusal's naming rule (offending checkout root, plus project key and identifier when the marker is readable but identity does not resolve, and no other project's root) is DEC-16. | TC-PROJ-013, TC-PROJ-031 |
+| DM-6 error identities | `projects.identity-unreadable` (refusal, exit 1, always about the **invoking** checkout), `projects.registry-corrupt` (state, exit 2), `projects.state-unavailable` (state, exit 2, covering a present-but-unreadable state root, an uncreatable marker, and the key-held-by-another-identifier collision), each with category, retryability, consequence, remediation, projection class, documented in the result-contract spec; naming per DEC-16 (key + state location when they exist, checkout root + failing `.git`/marker path when they do not). | TC-PROJ-013, TC-PROJ-031, TC-PROJ-040, TC-PROJ-042 |
 | DM-7 owner-hold scope | Unchanged meaning and location: read at the host root, applies to every project, environment override keeps precedence, no per-project marker. | TC-PROJ-025, TC-PROJ-026 |
 | `projects list` (text) | Deterministic table, columns `key`, `root`, `state`, `daemon`, `handover`, sorted by key, exit per contract. | TC-PROJ-012, TC-PROJ-013 |
 | `projects list --json` | `{ ok, command, data, error?, warnings? }` with `data.projects[]` and `data.hostIndexRevision`; no new top-level key. | TC-PROJ-011, TC-PROJ-013 |
@@ -132,8 +139,13 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 | Every store-opening command (grammar unchanged) | No grammar, flag, envelope, key order, or exit projection change; only the resolved state root changes. | TC-PROJ-021, TC-PROJ-036 |
 | MCP surface | Same scope policy, therefore the same state root for the same checkout; tool names, payloads, and error parity unchanged. | TC-PROJ-022 |
 | Shell fallback (bash) | Resolves the same project state root before locating the authority document; override precedence unchanged; search depth not widened. | TC-PROJ-024 |
-| State-scope override (`<PREFIX>_STATE_DIR`) | The delivered override-aware rule is the host-root authority for **all three** derivation sites (production store, MCP store, runtime-aware edge audit store): an absolute override wins, otherwise home plus brand; no site composes home plus brand inline; a non-absolute override stays `config.value.invalid`. | TC-PROJ-020 (structural: no inline composition, one implementation), TC-PROJ-021 (store and audit ledger under the override), TC-PROJ-022 (MCP store under the override) |
+| State-scope policy module | One implementation at `packages/core/src/app/state-scope.ts` (app tier: the only core tier permitted to import `config` + `contracts` + `domain` together), exported from the existing `@delivery-os/core` root entry; **no new subpath** is declared in `packages/core/package.json` `exports`; `scripts/checks/workspace-entrypoints.ts` and `tests/structure/subpaths.test.ts` stay green. | TC-PROJ-020 |
+| State-scope override (`<PREFIX>_STATE_DIR`) | The delivered override-aware rule is the host-root authority for **all three** derivation sites (production store, MCP store, runtime-aware edge audit store): an absolute override wins, otherwise home plus brand; no site composes home plus brand inline; override precedence (and the non-absolute refusal) exists in exactly one place. | TC-PROJ-020 (structural: no inline composition, one precedence site), TC-PROJ-021 (store and audit ledger under the override), TC-PROJ-022 (MCP store under the override) |
 | Runtime-aware edge audit store | The command audit store resolves under the same host root and, inside a checkout, under the project root — i.e. the edge consumes the policy rather than a private derivation. | TC-PROJ-021 |
+| Daemon composition site | Supplies the policy-derived **project** state root to the delivered settings resolution, so the derived socket path lies inside the project root; the lifecycle family itself stays unmounted and the settings resolution has no other caller. | TC-PROJ-023 |
+| Project key derivation | Shape `<sanitised basename>-<eight lowercase hex>`, basename lowercased / non-`[a-z0-9]` runs collapsed / stripped / ≤ 32 chars / `unbound` refused, `project` fallback when the name sanitises away, validated as a single path segment; minted once and never recomputed. | TC-PROJ-040, TC-PROJ-004 |
+| `projects list` write posture | No index maintenance, no revision change, no prune, no corrupt-file replacement, no project-root creation, no state mutation, no migration — for both the text and the JSON projection. | TC-PROJ-041 |
+| State-location cells | First use, legacy warning, present-but-unreadable root, uncreatable marker — each with its declared exit, warning posture and naming. | TC-PROJ-042, TC-PROJ-027, TC-PROJ-013 |
 | `unbound` host scope | A declared host-scoped root beside the project container; one bounded warning; no project registration; no project root; not reported as a project row. | TC-PROJ-005 |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -143,12 +155,12 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 | NFR-1 | 0 shared store files and 0 cross-observed documents across the two-checkout same-ref scenario, asserted per read surface. | TC-PROJ-001, TC-PROJ-002, TC-PROJ-021 | File-set disjointness and per-surface observation are separate assertions, not one. |
 | NFR-2 | 0 diffs in store artifact names, modes, and semantics; existing state suites green without modification. | TC-PROJ-036 | Suite-green half is automated; "without modification" and "0 diffs" are review-verified. |
 | NFR-3 | Two identical human tables byte for byte; structurally identical JSON across runs and across index entry ordering. | TC-PROJ-012 | Includes the read-only/stability assertion (index bytes, revision, mtime unchanged). |
-| NFR-4 | Maintenance p95 ≤ 10 ms with ≤ 1 index read and ≤ 1 write per invocation; `projects list` p95 ≤ 500 ms at 25 projects and ≤ 4 s at 200; per-project reads bounded to the handover prefix. | TC-PROJ-037, TC-PROJ-019 | Runtime counts via a counting index/edge seam; "no crawl" also asserted structurally. |
-| NFR-5 | 0 `reachable: true` without a successful bounded connect; 0 `engine` without agreement; 0 `in-transition` without disagreement; 0 `projects.registry-corrupt` on an absent index. | TC-PROJ-006, TC-PROJ-008, TC-PROJ-013, TC-PROJ-016, TC-PROJ-017, TC-PROJ-019 | Each clause has its own assertion; none is inferred from another. |
-| NFR-6 | 100% identical key and state location across rename, linked worktree, move, and nested invocation. | TC-PROJ-003, TC-PROJ-004 | Measured per cell, not as an average. |
+| NFR-4 | Exactly one index read and **at most one** index write per maintaining invocation (zero writes and no revision advance when nothing changed); **no maintenance on `projects list` or any read-only verb**; maintenance p95 ≤ 10 ms; `projects list` p95 ≤ 500 ms at 25 projects and ≤ 4 s at 200; per-project reads bounded to the handover prefix. | TC-PROJ-037, TC-PROJ-010, TC-PROJ-041, TC-PROJ-019 | Read/write counts observed through the **declared injected index-access fact and its counters** (spec v1.2 F-2), not a private seam; "no crawl" also asserted structurally. |
+| NFR-5 | 0 `reachable: true` without a successful bounded connect; 0 `engine` without agreement; 0 `in-transition` without disagreement; 0 `projects.registry-corrupt` on an absent index; 0 `projects.state-unavailable` on an ordinary first use. | TC-PROJ-006, TC-PROJ-008, TC-PROJ-013, TC-PROJ-016, TC-PROJ-017, TC-PROJ-019, TC-PROJ-042 | Each clause has its own assertion; the first-use clause is AC-F3-5 cell 1. |
+| NFR-6 | 100% identical key and state location across rename, linked worktree, move, and nested invocation; distinct keys and state locations for two checkouts whose directories share a basename. | TC-PROJ-003, TC-PROJ-004, TC-PROJ-040 | Measured per cell, not as an average; the same-basename pair is its own cell. |
 | NFR-7 | 0 content changes across all store artifacts; audit chain verifies; retro sidecar reads; the inverse move restores the pre-migration reads. | TC-PROJ-026 | Byte and mode comparison per artifact plus functional reads. |
 | NFR-8 | 0 writes outside the per-test temporary root, asserted by a guard that fails the suite on a leak. | TC-PROJ-038 | Pre-write guard (throws) plus post-run fingerprint of the real state directory (unchanged). |
-| NFR-9 | 1 state-scope policy implementation; ≥ 7 consumers asserted structurally (CLI composition, MCP serve, runtime-aware edge audit store, daemon socket derivation, dispatch state root, retro sidecar, owner-hold read) plus the shell fallback; 0 inline home-plus-brand compositions remaining; the delivered override precedence honoured by all of them. | TC-PROJ-020, TC-PROJ-021, TC-PROJ-022 | Consumers enumerated explicitly in TC-PROJ-020; override honouring asserted behaviourally in TC-PROJ-021/022. |
+| NFR-9 | 1 state-scope policy implementation in the app tier (`packages/core/src/app/state-scope.ts`) with no new subpath; ≥ 7 consumers asserted structurally (CLI composition, MCP serve, runtime-aware edge audit store, **the daemon composition site that supplies the project root**, dispatch state root, retro sidecar, owner-hold read) plus the shell fallback; 0 inline home-plus-brand compositions remaining; the delivered override precedence honoured by all of them. | TC-PROJ-020, TC-PROJ-021, TC-PROJ-022, TC-PROJ-023 | Consumers enumerated explicitly in TC-PROJ-020; the daemon consumer is asserted at the composing site because the settings resolution has no caller (§8.3 X-3). |
 | NFR-10 | 0 new product or binary literals; 0 new dependencies; 0 new workspace packages; boundary, literal, and licence gates green. | TC-PROJ-004, TC-PROJ-032, TC-PROJ-035, TC-PROJ-036 | |
 | NFR-11 | `pnpm check` green with a temporary directory override, including help-coverage, reference-page parity, error-table sync, and the release gate. | All TCs (per-gate rows in §7) | Reported in §10 per gate, not as one aggregate verdict. |
 
@@ -156,10 +168,10 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1, §8.2 — the surface 
 
 All new tests are `bun:test` suites under `tests/**`, discovered by `pnpm test`. Fixtures are never named `*.test.ts`.
 
-- **Behaviour / integration (`tests/behaviour/projects-*.test.ts`)** — the real production composition (`createProductionComposer` → `runCli`) over real temporary host roots and real temporary git checkouts. Only external seams are injected (home directory, environment record, harness spawn runner, GitHub transport, git child runner, daemon capability, clock, run id). TC-PROJ-001…019, 021, 022, 025, 026, 027, 029.
-- **Structural (`tests/structure/projects-*.test.ts`)** — TypeScript AST over `packages/**/src/**` plus declared allowlists; no composition, no fixture build, no `git` spawn. TC-PROJ-020 (all three derivation sites plus the seven-consumer allowlist), and the structural halves of TC-PROJ-024, TC-PROJ-036.
+- **Behaviour / integration (`tests/behaviour/projects-*.test.ts`)** — the real production composition (`createProductionComposer` → `runCli`) over real temporary host roots and real temporary git checkouts. Only declared seams are injected (home directory, environment record, `cwd`, harness spawn runner, GitHub transport, git child runner, daemon capability, clock, run-id, and the observability-only index-access/counter facts). TC-PROJ-001…019, 021, 022, 025, 026, 027, 029, 040, 041, 042.
+- **Structural (`tests/structure/projects-*.test.ts`)** — TypeScript AST over `packages/**/src/**` plus declared allowlists; no composition, no fixture build, no `git` spawn. TC-PROJ-020 (the app-tier policy module, no new subpath, all three sites, seven consumers, override precedence in one place), the composing-site half of TC-PROJ-023, and the structural halves of TC-PROJ-024, TC-PROJ-036.
 - **Structural extension (existing files)** — the bash-fallback assertions extend `tests/structure/dispatch-bash-authority.test.ts` (which already owns the "authority read is a plain file read" invariant and the forbidden-call scan) rather than creating a second owner of the same subject.
-- **Checks (`tests/checks/projects-*.test.ts`)** — mutation-tested guards and meta-assertions: the isolation guard's negative controls (TC-PROJ-038), and the existing gate suites that this change must keep green (`error-table-sync`, `help-guide-coverage`, `reference-page-parity`, `forbidden-literals`, `privacy-literals`, `privacy-release`).
+- **Checks (`tests/checks/projects-*.test.ts`)** — mutation-tested guards and meta-assertions: the isolation guard's negative controls (TC-PROJ-038), and the existing gate suites that this change must keep green (`error-table-sync.test.ts`, `help-guide-coverage.test.ts`, `reference-page-parity.test.ts`, `forbidden-literals.test.ts`, `privacy-literals.test.ts`, `privacy-release.test.ts`).
 - **Unit / pure** — the state-scope policy over injected facts (host root, brand state directory name, resolved checkout identity), the handover projection function, the daemon reason selector, and the host-index entry predicate are asserted directly in their owning test files (fragments inside TC-PROJ-003/014/015/019) so a UI-level green cannot hide a pure-function regression.
 - **Manual / review (evidence class: review-verified)** — TC-PROJ-028, TC-PROJ-033, TC-PROJ-034, the diff halves of TC-PROJ-030/031/035/036, and the whole revert/mutation bundle TC-PROJ-039.
 - **Performance** — TC-PROJ-037 only. No new performance framework; the measurement runs inside the normal suite with recorded wall-clock in §10.
@@ -184,7 +196,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 | TC-PROJ-010 | Monotonic revision; state location always re-derived | Regression | Integration | High | Suite + mutation (P4) | AC-F2-5, DM-2 |
 | TC-PROJ-011 | Envelope shape: exactly five fields, key order, no new top-level key | Contract | Integration | High | Suite | AC-F3-1, DM-4 |
 | TC-PROJ-012 | Deterministic table, reason rendering, and a read-only list | Regression | Integration | High | Suite | AC-F3-2, NFR-3 |
-| TC-PROJ-013 | Exit-code matrix, DEC-16 refusal naming, and the three error identities | Negative | Integration | High | Suite | AC-F3-3, DM-6, NFR-5 |
+| TC-PROJ-013 | Exit-code matrix, DEC-16 naming, and the three error identities (bytes-provable provocations) | Negative | Integration | High | Suite | AC-F3-3, DM-6, NFR-5 |
 | TC-PROJ-014 | Handover projection: `engine` and `shell` rows | Happy Path | Integration | High | Suite | AC-F4-1, DM-5 |
 | TC-PROJ-015 | Handover projection: every disagreement cell is `in-transition` | Corner Case | Integration | High | Suite + mutation (P5) | AC-F4-2, DM-5 |
 | TC-PROJ-016 | No invented handover state; unreadable state location is an error | Negative | Integration | High | Mutation (P5) + Suite | AC-F4-3, NFR-5 |
@@ -194,23 +206,26 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 | TC-PROJ-020 | One state-scope policy across three derivation sites, every consumer, no inline composition | Regression | Structural | High | Suite | AC-F6-1, NFR-9 |
 | TC-PROJ-021 | Write placement, override honouring, and read parity across the command families | Regression | Integration | High | Suite + revert (P1) | AC-F6-2, AC-F6-1 (override clause), DM-3, NFR-1 |
 | TC-PROJ-022 | MCP and CLI open the identical project root under the override | Regression | Integration | High | Suite | AC-F6-3, AC-F6-1 (override clause), NFR-9 |
-| TC-PROJ-023 | Daemon socket derives from the project root; outside path refused | Regression | Integration + Unit | High | Suite | AC-F6-4, DM-3 |
+| TC-PROJ-023 | Daemon socket derives from the project root through the composing site (mutation-verified) | Regression | Integration + Structural | High | Mutation-verified (P8) + Suite | AC-F6-4, DM-3 |
 | TC-PROJ-024 | Bash fallback resolves the project root without widening its search | Regression | Structural + Integration | High | Suite + mutation (P6) | AC-F6-5 |
 | TC-PROJ-025 | Owner hold stays host-wide across projects | Regression | Integration | High | Suite | AC-F7-1, DM-7 |
 | TC-PROJ-026 | Migration preserves bytes, modes, audit chain, and retro sidecar; inverse move restores | Happy Path | Integration | High | Suite | AC-F8-1, DM-3, DM-7, NFR-7 |
 | TC-PROJ-027 | Legacy detection warns once and moves nothing | Negative | Integration | High | Suite + mutation (P7) | AC-F8-2 |
 | TC-PROJ-028 | Migration note content, distribution class, and registration | Documentation | Manual + Structural | High | Review-verified (+ suite) | AC-F8-3, F-10 |
 | TC-PROJ-029 | `projects` is reachable from the built help surface with no side effects | Happy Path | Integration | High | Suite | AC-F9-1 |
-| TC-PROJ-030 | Help-coverage, reference-page parity, and inventory registration | Contract | Structural | High | Suite + Review-verified | AC-F9-2 |
+| TC-PROJ-030 | Mount unit: prompt set, help entries, reference page, inventory row, and error rows as one indivisible unit | Contract | Structural | High | Suite + Review-verified | AC-F9-1, AC-F9-2, AC-F9-3 |
 | TC-PROJ-031 | Exactly three error rows under one new domain kind, documented both ways | Contract | Structural | High | Suite + Review-verified | AC-F9-3, DM-6 |
 | TC-PROJ-032 | No new hardcoded product or binary literal | Regression | Structural | High | Suite | AC-F9-4, NFR-10 |
 | TC-PROJ-033 | System-spec reconciliation | Documentation | Manual | High | Review-verified | AC-F10-1 |
 | TC-PROJ-034 | Planning-corpus reconciliation | Documentation | Manual | High | Review-verified | AC-F10-2 |
-| TC-PROJ-035 | Release changeset shape | Contract | Structural | High | Suite (existing) | AC-F10-3, NFR-10 |
+| TC-PROJ-035 | Release changeset shape | Contract | Structural + Manual | High | Suite (tree half) + Review-verified (diff half) | AC-F10-3, NFR-10 |
 | TC-PROJ-036 | State contract preserved and existing suites green unmodified | Regression | Structural + Review | High | Suite + Review-verified | NFR-2, NFR-10 |
 | TC-PROJ-037 | Bounded work: latency, maintenance cost, read/write counts, no crawl | Performance | Integration | Medium | Suite | NFR-4 |
 | TC-PROJ-038 | Test isolation: guard, leak detector, no real-state writes | Regression | Checks | High | Suite | NFR-8 |
-| TC-PROJ-039 | Revert and mutation evidence bundle (P1–P7) | Regression | Manual | High | Review-verified | NFR-4 evidence discipline; AC-F1-1/2-1/2-4/2-5/4-2/4-3/6-2/6-5/8-2 evidence classes |
+| TC-PROJ-039 | Revert and mutation evidence bundle (P1–P8) | Regression | Manual | High | Review-verified | NFR-4 evidence discipline; AC evidence classes incl. AC-F6-4 |
+| TC-PROJ-040 | Same-basename checkouts: key shape, distinctness, immutability, and the collision guard | Corner Case | Integration | High | Suite | AC-F1-6, DM-1, DM-2, NFR-6 |
+| TC-PROJ-041 | `projects list` writes nothing: byte/mtime snapshot of host index and `projects/` | Regression | Integration | High | Suite | AC-F3-4, DM-2 |
+| TC-PROJ-042 | The four state-location cells: first use, legacy warning, unreadable root, uncreatable marker | Edge Case | Integration | High | Suite | AC-F3-5, DM-6, NFR-5 |
 
 ### 5.2 Scenario Details
 
@@ -246,12 +261,13 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - `phase-state.GH-241.json` exists under **both** roots (same file name, by design) and the two files' bytes differ: A's document records two completed phases, B's records one.
 - A's store contains exactly one queue record for `GH-241` with `priority === 1`; B's contains exactly one with `priority === 5`. **Neither ledger contains a record the other wrote**: A's record set carries no `priority === 5` record and B's carries no `priority === 1` record (asserted per record, not per count).
 - The store file names under each root are exactly the delivered layout under workspace `default` (`ledger.default.jsonl`, `header.default.json`, `documents.default/`, and the rest of the delivered artifact set); no artifact from one project appears under the other's root.
-- The host root `H` contains no store artifact: its listing is exactly the host index plus the `projects/` container (plus the owner-hold marker when TC-PROJ-025's fixture sets one).
+- **No store artifact exists at the host root `H`.** The assertion is *absence of store artifacts*, not an exact set: `H` may hold nothing at all (phase 1 does not yet write the host index), or the host index plus `projects/` once the index exists. What is forbidden in every state is any of `ledger.<ws>.jsonl`, `header.<ws>.json`, `index.<ws>.sqlite`, `fence.<ws>.lock`, `documents.<ws>/`, `quarantine.<ws>/`, `chain-key.<ws>.json`, `chain-key.retro.<ws>.json`, `retro-evidence.<ws>.jsonl`, or `retro-evidence.lock` directly under `H`. The exact host-root set for each lifecycle state is enumerated in TC-PROJ-041.
 
 **Notes / Clarifications**:
 
 - The file name `phase-state.GH-241.json` and the key `queue.entries:GH-241` are **identical in both projects** — that identity is the defect being corrected, so the assertions are cross-store record checks, not path-name checks. Asserting "the paths differ" alone would pass on any two directories and prove nothing.
 - The two checkouts are real repositories because the identity input is `resolveCheckoutGitDirectories`; a fabricated `.git` directory is accepted only in the cells that do not assert git semantics (TC-PROJ-007/008/009/010 build their fixtures from real `git init` too, for uniformity, and it costs one process spawn per fixture).
+- **Phase-boundary correction (DoR B4).** This TC is phase 1's headline evidence and must be green at phase 1's boundary, where the host index does not exist yet. It therefore asserts *no store artifact at the host root* rather than *exactly the index plus `projects/`*; the exact-set assertion lives in TC-PROJ-021 (after one store-opening invocation) and TC-PROJ-026 (after migration), and is restated for every lifecycle state in TC-PROJ-041. Asserting the index here would have made phase 1 unpassable without phase 2's deliverable.
 - Pre-change behaviour (P1) reds this test at its first assertion: both checkouts open `<H>`, so both write the same `phase-state.GH-241.json` and A's ledger read returns a record carrying B's priority.
 
 #### TC-PROJ-002 - No read surface observes the other checkout
@@ -501,7 +517,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 **Preconditions**:
 
-- A registered checkout `R` whose host index exists and is valid at revision `n`.
+- A registered checkout `R` whose host index exists and is valid at revision `n`; the index path comes from the `projects` contracts module (`<host root>/host-index.json`, schema `delivery.projects.host-index.v1`), never a literal in the test.
 - The test then replaces the index document content with a non-parsable payload (`{ "schema": ` truncated) and records the exact bytes written.
 
 **Steps**:
@@ -576,28 +592,32 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 **Preconditions**:
 
-- A registered checkout `R` whose index entry records a valid `stateLocation`, and a fresh host root used for the monotonicity half.
-- The test can read and rewrite the index document (it is untrusted input by contract).
+- A registered checkout `R` whose index entry records a valid `stateLocation`, and a fresh host root used for the write-rule half.
+- The test can read and rewrite the index document (it is untrusted input by contract), and the index path comes from the `projects` contracts module rather than a literal.
+- The observability-only index-access fact and its counters are supplied by the composition (spec v1.2 F-2: "index access and the counters … are injected facts of the composition").
 
 **Steps**:
 
-1. Trigger three successive maintenance runs (three state-opening invocations in `R`) and read the index revision after each.
-2. Run `projects list --json` and compare `data.hostIndexRevision` with the revision read from the index.
-3. Rewrite `R`'s recorded `stateLocation` to an absolute path outside `H` (`/tmp/gh288-not-a-project`), leaving the key unchanged.
-4. Run `projects list --json`; capture the reported `stateLocation`, any warning, and whether the injected path exists.
-5. Run one state-opening invocation in `R`, then re-read the index entry.
+1. **Write rule — unchanged state.** Run three successive state-opening invocations in `R` with nothing else changed; capture the index revision, the revision advance and the write count after each.
+2. **Write rule — changed state.** Change one maintained fact (a new checkout registers, or a recorded checkout root changes), run one state-opening invocation, and re-read revision and write count.
+3. Run `projects list --json` and compare `data.hostIndexRevision` with the revision read from the index, and assert the list performed **no** index write.
+4. Rewrite `R`'s recorded `stateLocation` to an absolute path outside `H` (`/tmp/gh288-not-a-project`), leaving the key unchanged.
+5. Run `projects list --json`; capture the reported `stateLocation`, any warning, and whether the injected path exists.
+6. Run one state-opening invocation in `R`, then re-read the index entry.
 
 **Expected Outcome**:
 
-- Step 1: revisions are strictly increasing (`r1 < r2 < r3`), each increment by one per write, and no run writes twice (asserted by the counting index seam in TC-PROJ-037 as well).
-- Step 2: `data.hostIndexRevision` equals the revision the index carries; it is the revision that was read, not a fresh computation.
-- Step 4: the reported `stateLocation` is the **derived** `<H>/projects/<key>`, never the injected value; a warning names the project and states that the recorded location disagreed; the injected path (`/tmp/gh288-not-a-project`) still does not exist (nothing opened a store there).
-- Step 5: the recorded value has been repaired to the derived value.
+- Step 1: **zero writes and no revision advance** across the three unchanged runs (`writes === 0`, `revision` identical to the value read before step 1). This is the exact rule spec v1.2 F-2/NFR-4 states ("zero writes and no revision advance when nothing changed"), not the older unconditional-write reading.
+- Step 2: exactly **one** write and a revision increase of exactly one, because the maintained content changed; no invocation ever writes twice.
+- Step 3: `data.hostIndexRevision` equals the revision the index carries; it is the revision that was read, not a fresh computation; the list's own write count is zero.
+- Step 5: the reported `stateLocation` is the **derived** `<H>/projects/<key>`, never the injected value; a warning names the project and states that the recorded location disagreed; the injected path (`/tmp/gh288-not-a-project`) still does not exist (nothing opened a store there).
+- Step 6: the recorded value has been repaired to the derived value, with exactly one write for the repair.
 - Tampering with any other entry field does not change a reported `stateLocation` (the value is derived for every row).
 
 **Notes / Clarifications**:
 
-- Requirement §21 calls the index untrusted; the mutation P4 replaces the derivation with the recorded value, and step 4 must then red — both because the path is wrong and because `/tmp/gh288-not-a-project` must never be created.
+- Requirement §21 calls the index untrusted; the mutation P4 replaces the derivation with the recorded value, and step 5 must then red — both because the path is wrong and because `/tmp/gh288-not-a-project` must never be created.
+- **Spec v1.2 changed the write rule.** Earlier revisions of this plan asserted "three unchanged maintenance runs bump the revision by one each"; spec v1.2 F-2 and NFR-4 pin the opposite (a write only when the maintained content changes, zero writes and no revision advance otherwise), so the assertion now covers both halves — unchanged ⇒ zero writes, changed ⇒ exactly one. DoR advisory A3 is closed by that spec change (§8.3 X-2).
 - The warning is asserted for its presence and its naming, not for exact prose (the surface is a warning, not a contract field).
 
 #### TC-PROJ-011 - Envelope shape: exactly five fields, key order, no new top-level key
@@ -674,14 +694,14 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Notes / Clarifications**:
 
 - Byte-identity on the raw stdout is deliberate: a table that pads columns from a clock, a locale, or a map iteration order fails here and nowhere else.
-- The read-only half is carried here and in TC-PROJ-008 step 2. Spec F-3 states read-only behaviour but no AC asserts it in isolation; see OQ-T2 in §8.3.
+- The write-nothing posture now has its own criterion (`AC-F3-4`, TC-PROJ-041), which owns the byte+mode+mtime snapshot of the host index and the `projects/` container. This TC keeps only the weaker determinism assertion (two runs produce identical output and the revision and listing are unchanged), so the two are complementary rather than duplicated: determinism is about output, TC-PROJ-041 is about writing nothing at all.
 
-#### TC-PROJ-013 - Exit-code matrix, DEC-16 refusal naming, and the three error identities
+#### TC-PROJ-013 - Exit-code matrix, DEC-16 naming, and the three error identities (bytes-provable provocations)
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-3, DM-6, DEC-16, NFR-5, §21 disclosure boundary
+**Related IDs**: F-3, AC-F3-3, DM-6, DEC-16, DEC-17, NFR-5, §21 disclosure boundary
 **Evidence Class**: Suite
 **Test Type(s)**: Integration
 **Automation Level**: Automated
@@ -691,35 +711,39 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Preconditions**:
 
 - A registered host with a valid index containing **at least two** projects, so "names no other project's root" is testable and not vacuous.
-- A checkout whose git metadata cannot be parsed (the `.git` file's `gitdir:` target is unparsable or points nowhere), for the identity-refusal cell, and a second checkout whose identity marker is **readable** but whose identity still does not resolve (the marker parses but carries no usable key/identifier), for the key-and-identifier cell.
+- Every refusal provocation is a **byte-level** condition, per spec v1.2: the checkout's git metadata is present but its `.git` file carries an **empty `gitdir:` value** (Appendix A row 2), and the invoking checkout's identity marker is written with (i) unreadable permissions, (ii) invalid JSON, (iii) a missing required field, and (iv) an internally inconsistent key-vs-identifier pair (a key whose basename or discriminator does not match the recorded basename and identifier). No provocation makes the checkout resolver return nothing.
+- An **anti-collapse control**: a checkout whose `.git` is a file that is *not* a `gitdir:` pointer, and a directory with no `.git` at all, are the `unbound` state (exit `0`, one warning) — never the refusal.
 - A third project whose derived state location exists but is a **regular file** (deterministic "present but unreadable" without relying on permission bits).
 
 **Steps**:
 
 1. `projects list --json` on a healthy host → assert `0`.
 2. `projects --json` (no verb) and `projects frobnicate --json` → assert exit `1` and the refusal classification; assert no index read occurred (index mtime unchanged).
-3. Run `projects list --json` inside the checkout whose git metadata cannot be parsed; capture the exit code, `error`, `warnings`, the runtime summary, and the raw text output.
-4. Run the same command inside the checkout whose marker is readable but unresolvable; capture the same fields.
-5. Replace the third project's derived state location directory with a regular file; run `projects list --json`; capture the same fields.
-6. Scan every capture for the **root prefix and state location of the other projects**.
-7. Enumerate every exit code observed across steps 1–5.
+3. Run `projects list --json` inside the checkout whose `.git` file has an empty `gitdir:` value; capture exit, `error`, `warnings`, the runtime summary and the raw text output.
+4. Run the same command inside a checkout whose marker is unreadable (EACCES), then one whose marker is invalid JSON, then one missing a required field, then one internally inconsistent; capture the same fields for each.
+5. Run the same command in the two anti-collapse controls (non-`gitdir:` `.git` file, and no `.git`).
+6. Replace the third project's derived state location directory with a regular file; run `projects list --json`; capture the same fields.
+7. Scan every capture for the **root prefix and state location of the other projects**.
+8. Enumerate every exit code observed across steps 1–6.
 
 **Expected Outcome**:
 
 - Step 1: exit `0`.
 - Step 2: exit `1` for both; the error is the shared invocation classification (unknown verb / malformed invocation) and names the refused verb; the index was not read or written.
-- Step 3: exit `1` with `error.code === "projects.identity-unreadable"`; the error's **runtime summary names the offending checkout root** (the absolute path of the checkout the command ran in), the failure is not silently skipped, and no row is fabricated for that subject.
-- Step 4: exit `1` with the same code; because the marker is readable but the identity does not resolve, the summary names **both the project key and the project identifier** recorded in that marker (in addition to the offending root, per DEC-16).
-- Step 5: exit `2` with `error.code === "projects.state-unavailable"`; the summary names **the project key and its state location**; the opaque file is left in place (the command does not repair, delete, or move it).
-- Step 6: no other project's `root` prefix and no other project's `stateLocation` occurs anywhere in the envelope, the warnings, or the text output of steps 3–5. The refusal names only the subject it is about.
-- Step 7: the observed set of exit codes is exactly `{0, 1, 2}`; no other code is produced by the family.
+- Step 3: exit `1` with `error.code === "projects.identity-unreadable"`; the runtime summary names the **invoking checkout root** and the failing `.git` path; no row is fabricated.
+- Step 4: exit `1` with the same code for all four byte provocations; each names the invoking checkout root, and the marker categories additionally name **the project key and the identifier the marker holds** where those fields are readable (DEC-16). An inconsistent key-vs-identifier pair is a refusal, not a silently adopted key.
+- Step 5: exit `0` with exactly one warning naming the unbound condition, and **no** `projects.identity-unreadable` — the anti-collapse assertion that the resolver returning nothing is `unbound` (AC-F1-5), never a refusal (DEC-17).
+- Step 6: exit `2` with `error.code === "projects.state-unavailable"`; the summary names **the project key and its state location**; the opaque file is left in place.
+- Step 7: no other project's `root` prefix and no other project's `stateLocation` occurs anywhere in the envelope, the warnings, or the text output of steps 3–6.
+- Step 8: the observed set of exit codes is exactly `{0, 1, 2}`; no other code is produced by the family.
 - No error message contains record content, credentials, or a ref (the disclosure boundary of §20/§21).
 
 **Notes / Clarifications**:
 
-- Spec v1.1 closed the v1 ambiguity PG-2 by specifying the naming rule as `DEC-16`. This test therefore asserts a contract instead of selecting one of two readings: the offending checkout root is always named, the key and identifier are named exactly when the marker is readable and the identity still does not resolve, the state failure names the project key and state location, and no other project's root is disclosed.
-- The "no other project's root" negative needs a host with at least two projects; with one project it would pass vacuously. That is why the precondition requires two, and why step 6 scans the text output as well as the envelope — a host overview must not turn one failure into a disclosure of the whole host.
-- The "present but unreadable" provocation uses a regular file rather than `chmod 000` so the assertion is identical under a root-in-container CI user; permission-based variants are recorded as an optional additional cell and skipped when `process.getuid?.() === 0`.
+- Spec v1.2 closed the unproducible-provocation finding (DoR B6): `findGitRoot` returning `undefined` is the `unbound` state and can never be an identity refusal, so the test builds every refusal from **bytes** — an empty `gitdir:` value for the git-metadata row, and four marker-corruption shapes for the marker rows. Step 5 is the guard that keeps the two states from collapsing into one another in either direction.
+- The subject is the **invoking** checkout (spec v1.2 AC-F3-3 wording), not an indexed entry: the refusal is about the checkout the command is scoping, and "no other project's root" is the assertion that the refusal does not become a host-wide disclosure.
+- Writing a marker by hand is legitimate here because the test corrupts a marker the product created in a prior step; the product's create-once rule is asserted separately in TC-PROJ-004.
+- The "present but unreadable" provocation uses a regular file rather than `chmod 000` so the assertion is identical under a root-in-container CI user; the EACCES cell in step 4 is the permission-based variant and is skipped when `process.getuid?.() === 0`, with the invalid-JSON / missing-field / inconsistent cells always run.
 - "No other exit code" is asserted as a set equality over the family's observed codes, which is the strongest statement a suite can make without enumerating an infinite input space.
 
 #### TC-PROJ-014 - Handover projection: `engine` and `shell` rows
@@ -938,7 +962,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - The reason vocabulary is closed by contract (Appendix C); the assertion is set membership in the declared list *plus* exact equality per condition, so a new invented reason string fails.
 - `ECONNREFUSED` via a stale socket file is used instead of a proxy or a firewall simulation because it is deterministic, local, and needs no privileges.
 
-#### TC-PROJ-020 - One state-scope policy across three derivation sites, every consumer, no inline composition
+#### TC-PROJ-020 - One state-scope policy in the app tier, three derivation sites, every consumer, no inline composition
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -953,35 +977,36 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Preconditions**:
 
 - The source tree at the change branch; `typescript` is already a dev dependency used by existing structure suites.
-- A declared consumer allowlist in the test (the seven structural consumers plus the shell fallback path), modelled on `STATE_CONSUMERS` in `tests/structure/state-scope.test.ts`. The seven are: production CLI composition, MCP serve, **runtime-aware edge audit store**, daemon socket derivation, dispatch state root, retro sidecar location, owner-hold read.
+- The single policy module is the one spec v1.2 names: `packages/core/src/app/state-scope.ts`. This test asserts **that** module and no other; it does not assert a design preference.
+- A declared consumer allowlist in the test (the seven structural consumers plus the shell fallback path), modelled on `STATE_CONSUMERS` in `tests/structure/state-scope.test.ts`. The seven are: production CLI composition, MCP serve, **runtime-aware edge audit store**, **the daemon composition site that supplies the project root**, dispatch state root, retro sidecar location, owner-hold read.
 
 **Steps**:
 
 1. AST-scan every `packages/**/src/**/*.ts` file for a state-directory derivation from home plus brand: any path-composition expression whose operands include `stateDirectoryName` (or an equivalent brand-derived directory name) combined with a home or environment-derived directory.
-2. Assert the scan finds exactly **one** such site, and that it is the policy module (below the CLI tier, in `core`).
-3. Assert the three known sites each consume the policy and contain no inline composition: `packages/cli/src/production.ts` (the delivery store), `packages/mcp/src/serve.ts` (the MCP store), and the runtime-aware edge's audit-store composition.
-4. Assert each of the **seven** consumers consumes the policy rather than re-deriving: CLI composition, MCP serve, runtime-aware edge audit store, daemon socket derivation, dispatch state root, retro sidecar location, owner-hold read; plus the shell fallback (`scripts/lib/dispatch-authority.sh`) resolves the project root.
-5. Assert the environment-variable suffix composition (`_STATE_DIR`) and the override read appear in exactly one place (the policy), so override precedence cannot be re-implemented per site.
-6. Assert the policy's override branch is covered by a behaviour-adjacent assertion: the policy is called with `{ override: <absolute>, home, brandName }` and with `{ override: undefined, home, brandName }`, returning the override in the first case and home-plus-brand in the second, and returning `config.value.invalid` for a non-absolute override. (The end-to-end proof that each site honours it is carried by TC-PROJ-021 and TC-PROJ-022.)
-7. **Seeded negative control:** in a temporary copy of `packages/`, inject the pre-change inline expression into a new file; assert the scan reports it and names the file. Repeat with an injected second copy of the override read and assert it is reported as a duplicate.
-8. Assert `PROMPT_REQUIRED_COMMANDS` contains `projects` and the entrypoint's restriction step keeps it.
+2. Assert the scan finds exactly **one** such site, and that it is `packages/core/src/app/state-scope.ts` (the app tier — the only core tier permitted to import `config`, `contracts`, and `domain` together).
+3. Assert the module is **exported from the existing `@delivery-os/core` root entry** and that **no new subpath** was declared: `packages/core/package.json` `exports` gained no key, `workspaceImports` in the consuming packages still name `.`, and `scripts/checks/workspace-entrypoints.ts` plus `tests/structure/subpaths.test.ts` are green.
+4. Assert the three known sites each consume the policy and contain no inline composition: `packages/cli/src/production.ts` (the delivery store), `packages/mcp/src/serve.ts` (the MCP store), and the runtime-aware edge's audit-store composition.
+5. Assert each of the **seven** consumers consumes the policy rather than re-deriving: CLI composition, MCP serve, runtime-aware edge audit store, daemon composition site, dispatch state root, retro sidecar location, owner-hold read; plus the shell fallback (`scripts/lib/dispatch-authority.sh`) resolves the project root.
+6. Assert the environment-variable suffix composition (`_STATE_DIR`) and the override read appear in exactly one place (the policy), so override precedence cannot be re-implemented per site.
+7. Assert the policy's override branch is covered by a pure-function assertion: the policy is called with `{ override: <absolute>, home, brandName }`, with `{ override: undefined, home, brandName }`, and with a relative override, returning the override, home-plus-brand, and `config.value.invalid` respectively. (The end-to-end proof that each site honours it is carried by TC-PROJ-021 and TC-PROJ-022.)
+8. **Seeded negative control:** in a temporary copy of `packages/`, inject the pre-change inline expression into a new file; assert the scan reports it and names the file. Repeat with an injected second copy of the override read and assert it is reported as a duplicate.
 
 **Expected Outcome**:
 
-- Exactly one derivation site exists, and the failure message names any additional file and line.
-- `production.ts`, `serve.ts`, and the edge's audit-store composition all reference the policy and none contains `${...}/${...stateDirectoryName}` (or an equivalent) any more. **Reversion-detecting:** today all three exist — `production.ts` composes inline and ignores the override, `serve.ts` repeats the inline composition, and the edge applies the override-aware helper — so an unmodified tree reds this test at step 2 and again at step 3.
-- All **seven** consumers plus the shell fallback are named by the assertion; an eighth surface that bypasses the policy fails deliberately.
-- Steps 5–6: the override suffix, the override read, and the override precedence exist in exactly one place, and the policy returns the override when it is set. A site that re-implements precedence (even correctly) fails at step 5.
-- The seeded negative controls report exactly the injected file (the scan cannot silently pass) and report the duplicated override read.
-- `projects` is in the prompt-required set (the board-family failure mode, F-9/RSK-11).
+- Exactly one derivation site exists and it is the app-tier module; the failure message names any additional file and line.
+- **No new subpath:** `packages/core/package.json` `exports` is unchanged and both `scripts/checks/workspace-entrypoints.ts` and `tests/structure/subpaths.test.ts` are green; an added subpath reds the test by name.
+- `production.ts`, `serve.ts`, and the edge's audit-store composition all reference the policy and none contains `${...}/${...stateDirectoryName}` (or an equivalent) any more. **Reversion-detecting:** today all three exist — `production.ts` composes inline and ignores the override, `serve.ts` repeats the inline composition, and the edge applies the override-aware helper — so an unmodified tree reds this test at step 2 and again at step 4.
+- All **seven** consumers plus the shell fallback are named by the assertion; an eighth surface that bypasses the policy, or a helper that re-implements override precedence, fails deliberately.
+- Steps 6–7: the override suffix, the override read, and the override precedence exist in exactly one place, and the policy returns the override when it is set.
+- The seeded negative controls report exactly the injected file and report the duplicated override read.
 
 **Notes / Clarifications**:
 
-- Spec v1.1 corrected the premise: there are **three** derivation sites, and only the runtime-aware edge honours `<PREFIX>_STATE_DIR` today (the delivery store and the MCP store compose home-plus-brand inline, so an operator who sets the override sees the audit ledger relocate while the store stays under the home default). This test now pins all three, and `AC-F6-1` requires each to honour the override — which is why step 5 forbids a second precedence implementation instead of merely forbidding a second path composition.
+- **Prompt-required membership is not asserted here.** It moved to TC-PROJ-030, where the mount obligations land as one indivisible unit (DoR B3): the prompt set, the help entries, the reference page, the coverage-inventory row, the error-table rows and the command definition are all needed before *any* of them can be green, because `scripts/checks/help-guide-coverage.ts` and `tests/checks/reference-page-parity.test.ts` each assert **set equality** with `PROMPT_REQUIRED_COMMANDS`. Asserting the prompt set at this TC's phase would have made an intermediate phase commit a red `pnpm check` — either direction fails: a new prompt-set member with no inventory row fails "missing from the coverage inventory", and an inventory row with no prompt-set member fails "inventory names a non-prompt-required command".
+- **App-tier placement (spec v1.2, DoR B5):** `tier-domain-only-contracts` forbids `domain` from importing `config`, so a policy that consumes the delivered override-aware helper cannot live there. The test names the app-tier module the spec now names, and the boundary gate (`pnpm check:boundaries`) is the assertion that no forbidden edge was introduced.
 - AST, not text: comments, strings, and documentation examples must not trip the rule, and a legitimate rename must not require editing line numbers.
 - The allowlist is deliberate friction: adding a surface that derives a state path requires editing this test, which is the anti-recurrence intent (spec §22 "Test maintenance").
-- Step 6 is a pure-function assertion, so it stays in the structural file without composing a program; the runtime half of the override clause belongs to TC-PROJ-021 (store and audit ledger) and TC-PROJ-022 (MCP store), where a real host root and a real environment record exist.
-- Step 8's prompt-set assertion lives here rather than in TC-PROJ-030 because it is a structural property of the composition, and TC-PROJ-030 asserts the *documentation* gates over the same set.
+- Step 7 is a pure-function assertion, so it stays in the structural file without composing a program; the runtime half of the override clause belongs to TC-PROJ-021 (store and audit ledger) and TC-PROJ-022 (MCP store), where a real host root and a real environment record exist.
 
 #### TC-PROJ-021 - Write placement, override honouring, and read parity across the command families
 
@@ -1063,41 +1088,45 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - A distinct home is required for the same reason as in TC-PROJ-021: with `HOME === H` a store that ignored the override would still land under `H`.
 - Parity is asserted in-process because the change does not touch the transport; the MCP wire protocol stays with the existing MCP suites.
 
-#### TC-PROJ-023 - Daemon socket derives from the project root; outside path refused
+#### TC-PROJ-023 - Daemon socket derives from the project root through the composing site (mutation-verified)
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, F-5, AC-F6-4, DM-3
-**Evidence Class**: Suite
-**Test Type(s)**: Integration + Unit
+**Related IDs**: F-6, F-5, AC-F6-4, DEC-12, DM-3
+**Evidence Class**: Mutation-verified (mutation P8: revert the composing site's argument to the host root) + Suite (the containment refusal is unchanged)
+**Test Type(s)**: Integration + Structural
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/projects-daemon-socket.test.ts` (unit calls into `resolveDaemonSettings`)
-**Tags**: @backend, @daemon, @config
+**Target Layer / Location**: `tests/behaviour/projects-daemon-socket.test.ts` (behavioural cells) and `tests/structure/projects-state-scope-policy.test.ts` (the composing-site structural assertion)
+**Tags**: @backend, @daemon, @config, @structure
 
 **Preconditions**:
 
-- Two registered projects with distinct project roots; the configuration catalog's daemon branch resolved without an explicit `socket-path`.
+- Two registered projects with distinct project roots under one temporary host root `H`.
+- Two delivered facts this test must respect (spec v1.2 F-5): `resolveDaemonSettings` already derives `socketPath` from whatever state directory it is given and already refuses a path outside it; and **nothing in the shipped build calls it** — `packages/cli/src/daemon-compose.ts` derives no socket path of its own. The criterion is therefore about **the composing site's argument**, not about the settings rule and not about that module's internals.
+- The daemon composition site is the delivered seam that supplies a state directory to the settings resolution; the test identifies it through the policy consumer allowlist rather than assuming a file name.
 
 **Steps**:
 
-1. Resolve daemon settings with `stateDirectory` = project A's root; capture `socketPath`.
-2. Resolve with project B's root; capture `socketPath`.
-3. Resolve with project A's root plus an explicit absolute `socket-path` outside A's root.
-4. Resolve with project A's root plus a **relative** `socket-path`.
-5. Resolve with an explicit absolute `socket-path` that is a sibling of A's root but not inside it.
+1. **Structural half — the composing site supplies the project root.** Assert the composing site passes the **policy-derived project state root** (not `H`, not a home-plus-brand value) into the settings resolution, and that it obtains that root from the single policy module.
+2. **Structural half — nothing else supplies a state directory to the settings resolution.** Assert the settings resolution has exactly one call site in `packages/**/src`, so a second, host-root-scoped caller cannot quietly appear.
+3. **Behavioural half — derivation inside the project root.** With the composing site's own argument, resolve settings and capture `socketPath` for project A and for project B: each is `<projectRoot>/<default socket file name>`, the two differ because the roots differ, and neither equals a path under `H` directly.
+4. **Behavioural half — containment.** Resolve with project A's root plus an explicit absolute `socket-path` outside A's root, then with a **relative** `socket-path`, then with an absolute path that is a sibling of A's root but not inside it.
+5. **Mutation note (evidence, executed in TC-PROJ-039 P8).** Revert the composing site's argument to `H` and confirm this test reds; restore.
 
 **Expected Outcome**:
 
-- Steps 1–2: the default socket path is `<projectRoot>/<default socket file name>`; the two paths differ because the roots differ; each satisfies the inside-the-state-directory rule (a lexical containment check against the project root, not the host root).
-- Step 3: refused with `config.value.invalid` and key `daemon.socket-path`.
-- Step 4: accepted and resolved relative to the project root, still inside it.
-- Step 5: refused with `config.value.invalid` and key `daemon.socket-path` — the rule is containment in the **project** root, so a path inside the host root but outside the project is refused.
-- The resolved socket path never points at the host root, even when the host root is the parent of the project root.
+- Step 1: the composing site's argument is the policy-derived project root; the assertion names the composing site and the argument expression, and fails if the argument is `H` or a home-plus-brand value.
+- Step 2: exactly one call site exists; a second call site fails with its file name.
+- Step 3: both socket paths lie inside their own project roots and differ; no socket path is derived at the host-root level.
+- Step 4: an explicit outside path is refused with `config.value.invalid` / key `daemon.socket-path`; a relative path is accepted and stays inside the project root; a sibling-of-A path that is inside `H` but outside A's root is **refused** — the rule is containment in the project root, not the host root.
+- Step 5: under the P8 mutation the test reds at step 1 (and at step 3, because the derived path moves to the host root); restored, it is green.
 
 **Notes / Clarifications**:
 
-- Step 5 is the assertion that distinguishes "derived from the project root" from "derived from the host root": a host-root-scoped rule would accept a path beside `projects/`.
+- **Why this criterion is mutation-verified** (spec v1.2 §17, DoR B11): the derivation rule is delivered and already derives from whatever directory it is handed, so an unmodified tree passes every *settings-level* clause. The behaviour under test is therefore the composing site's choice of argument, and its detection power is proven by reverting that argument — exactly the mutation the spec names.
+- The settings resolution has no caller today, so there is no live socket derivation to observe end to end. The structural half is the honest form of the assertion: it pins the argument at the single site that supplies it, and step 2 keeps the site unique. This is also why NFR-9's daemon consumer is worded as "the daemon composition site that supplies the project root" rather than "daemon socket derivation".
+- Steps 3–4 exist because the containment rule is the part that makes the argument's origin observable: if the composing site passed `H`, a sibling-of-A path would be accepted, so step 4's third cell is a second, behavioural witness of the same defect.
 - The default socket file name is read from the delivered contracts constant; the test asserts relative placement and containment, not an exact file name string.
 
 #### TC-PROJ-024 - Bash fallback resolves the project root without widening its search
@@ -1241,6 +1270,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 2. Count occurrences of the migration-note reference in stderr.
 3. Run the same command on the migrated host; capture stderr.
 4. Run a second state-opening command on the unmigrated host in the same process lifetime (to prove the warning is per invocation and not cumulative noise).
+5. **Index-exclusion cell:** on a host root whose only contents are the host index document and (optionally) the host-wide owner-hold marker — no store artifact at all — run a state-opening command and capture stderr.
 
 **Expected Outcome**:
 
@@ -1250,12 +1280,15 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - Step 2: the count is exactly `1` (not `0`, not one per command family, not repeated per artifact).
 - Step 3: the count is `0` on a migrated host.
 - Step 4: the warning appears once per invocation (no accumulation, no suppression after the first).
+- Step 5: the count is `0` — the host index and the owner-hold marker are **not** store artifacts and never trigger the legacy predicate (spec v1.2 A4: the predicate names the delivered store artifact set and excludes the index document, the owner-hold marker and the `unbound` scope). A migrated host that has only an index and a hold must not warn forever.
 
 **Notes / Clarifications**:
 
 - Mutation P7 removes the detection branch; this test must then red at step 2 with a count of `0`.
 - "Nothing moved" is asserted by digest, not by listing: a move that preserved names but rewrote content (for example by re-serializing) would pass a name check.
 - The single shared constant for the note's path is what keeps the warning and the note from drifting; the test asserts the reference, not the sentence.
+- Step 5 is the guard against the predicate being written as "any file at the host root": since the index (`host-index.json`) and the owner-hold marker now live there by contract, a set-membership predicate is required, and this cell reds if it regresses to a directory-is-non-empty check.
+- AC-F3-5 cell 2 (absent project root with host store files ⇒ warning, **not** `projects.state-unavailable`) is the same emission observed from the `projects list` side; this TC owns the emission, TC-PROJ-042 owns the classification.
 
 #### TC-PROJ-028 - Migration note content, distribution class, and registration
 
@@ -1263,24 +1296,26 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-8, F-7, F-10, AC-F8-3, §16.1, §19, §8.5 (override relocation)
-**Evidence Class**: Review-verified (content); Suite (distribution marker and registry presence)
+**Evidence Class**: Review-verified (content); Suite (distribution marker, registry presence, header generation)
 **Test Type(s)**: Manual + Structural
 **Automation Level**: Semi-automated
-**Target Layer / Location**: the new guide under `doc/guides/`, plus the suite half in `bash scripts/.tests/test-doc-distribution.sh`
+**Target Layer / Location**: the new guide under `doc/guides/`, plus the suite half in `bash scripts/.tests/test-doc-distribution.sh`, `scripts/add-header-location.sh`, `scripts/checks/forbidden-literals.ts` and `tests/checks/forbidden-literals.test.ts`
 **Tags**: @docs, @review, @migration
 
 **Preconditions**:
 
-- The migration note exists as a delivered guide; the forbidden-literals registry names it in the user-facing-docs scope.
+- The migration note exists as a delivered guide under `doc/guides/`; its front-matter header block is generated by `scripts/add-header-location.sh` (never hand-written) and it carries `ados_distribution: redistributable`.
 
 **Steps**:
 
-1. **Suite half:** the note's front matter declares `ados_distribution: redistributable`; the note is registered in `scripts/checks/forbidden-literals.registry.json` under the user-facing-docs scope; `bash scripts/.tests/test-doc-distribution.sh` is green.
-2. **Review half:** read the note against the six required statements and record each with its location.
+1. **Suite half (distribution + registration):** the note declares `ados_distribution: redistributable`; the note is registered in `scripts/checks/forbidden-literals.registry.json` under the user-facing-docs scope; `bash scripts/.tests/test-doc-distribution.sh` is green; and the registration is proven live by `bun run scripts/checks/forbidden-literals.ts` plus `bun test tests/checks/forbidden-literals.test.ts`.
+2. **Suite half (header generation):** the header block was produced by `scripts/add-header-location.sh` and the generated `source:` line points at the delivered branch, not hand-edited.
+3. **Review half:** read the note against the six required statements and record each with its location.
 
 **Expected Outcome**:
 
-- Suite: the distribution marker, the registry presence, and the distribution drift guard are all green.
+- Suite: the distribution marker, the registry presence, the header block, and the distribution drift guard are all green.
+- **The missing-registration failure is named explicitly:** an unregistered new guide under `doc/` makes `scripts/checks/forbidden-literals.ts` fail with the "unregistered user-facing doc absent at corpusBaseline" violation, and `tests/checks/forbidden-literals.test.ts` (which calls `scan(ROOT)`) reds with it. That is the check this obligation exists to satisfy, and it is why the registry edit must land in the same phase as the guide (DoR B9/A7).
 - Review, with each item quoted in §10:
   1. the primary-checkout designation and why (no record carries repository attribution);
   2. the fresh-start consequence for every other checkout;
@@ -1334,43 +1369,45 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - This is the assertion that closes the board-family failure mode (F-9, RSK-11): a family that is composed but not prompt-required is dropped by the entrypoint's restriction step, so `--help` would not list it. Step 2 detects that directly.
 - The subprocess cell exists because the prompt-required restriction and the drop-everything-else rule run in the real process path; the in-process cell is what can observe the seam counters.
 
-#### TC-PROJ-030 - Help-coverage, reference-page parity, and inventory registration
+#### TC-PROJ-030 - The mount unit: prompt set, help entries, reference page, inventory row, error rows, and command definition as one indivisible unit
 
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-9, AC-F9-2, DEC-13, G-8
-**Evidence Class**: Suite (tree half) + Review-verified (M1-pages-unmodified half)
+**Related IDs**: F-9, AC-F9-1, AC-F9-2, AC-F9-3, DEC-13, DM-6, G-8, RSK-11
+**Evidence Class**: Suite (tree-invariant half) + Review-verified (M1-snapshot-unchanged half, diff inspection against the merge base)
 **Test Type(s)**: Structural
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/checks/help-guide-coverage-mutants.test.ts`, `tests/fixtures/help-guide/coverage.json`
+**Target Layer / Location**: `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/checks/help-guide-coverage-mutants.test.ts`, `tests/fixtures/help-guide/coverage.json`, `packages/cli/src/help/prompt-required-commands.ts`, `packages/cli/src/help.ts`, `packages/cli/src/commands/projects.ts`, `packages/core/src/contracts/error-table.ts`
 **Tags**: @backend, @docs, @gates
 
 **Preconditions**:
 
-- The coverage inventory declares `projects` in `commands` and registers its page in `referencePages`; the parity gate resolves a per-command reference page root so the M2 page serves the M2 command.
+- The mount obligations land as **one unit** in one phase: `projects` in `PROMPT_REQUIRED_COMMANDS`; its help entries at the root and at the family/verb; its reference page registered with the per-command page root and containing `--help` and `--version`; its row in the coverage inventory; its three error-table rows; and its command definition composed by the edge.
 
 **Steps**:
 
-1. Run `runHelpGuideCoverage()` and assert zero failures.
-2. Run the reference-page parity suite and assert zero failures.
-3. Assert the inventory's `commands` set equals `PROMPT_REQUIRED_COMMANDS` (including `projects`).
-4. Assert the parity map resolves `projects` to the M2 command page, and that the page contains both `--help` and `--version`.
+1. **The unit, asserted in one snapshot.** In a single run, assert all six members are present together: `PROMPT_REQUIRED_COMMANDS` contains `projects`; `packages/cli/src/help.ts` has the root and family/verb entries with at least one example and the shared exit-code block; the inventory's `commands` contains `projects` and `referencePages` registers its M2 page; the page contains `--help` and `--version`; `ERROR_TABLE` carries the three `projects.*` rows; and the composed program's command definition exists.
+2. Run `runHelpGuideCoverage()` and the parity suite; assert zero failures each.
+3. Assert set **equality** in both directions: inventory `commands` ⊆ `PROMPT_REQUIRED_COMMANDS` and ⊇ it.
+4. Assert the restriction step keeps `projects`: running `<binary> projects --help` resolves rather than refusing with "not part of the composed prompt-required set".
 5. Assert the mutants suite still detects a removed inventory row and a page missing `--version` (the gates stay live).
-6. **Review:** diff the M1 milestone snapshot pages and record that none changed.
+6. **Review half (diff inspection against the merge base):** record that `doc/planning/oss-tooling/milestones/m1/**` is unmodified.
 
 **Expected Outcome**:
 
-- Steps 1–2: both gates green via `pnpm check:help` and the parity test.
-- Step 3: set equality, not containment — an inventory that lists `projects` while `PROMPT_REQUIRED_COMMANDS` lacks it (or vice versa) fails.
-- Step 4: the resolved page path is the M2 page under the declared per-command root; it contains `--help` and `--version`; the page is registered in `referencePages`.
+- Step 1: all six members present. This is the assertion the phase boundary depends on: because both gates verify **set equality**, any intermediate state is red — a prompt-set member without an inventory row fails "missing from the coverage inventory", and an inventory row without a prompt-set member fails "inventory names a non-prompt-required command"; an unknown error code additionally collapses to `fallback.internal` in the classifier. The five obligations therefore cannot be split across phases, and this TC is green only at the phase that lands them all (DoR B3).
+- Steps 2–3: both gates green; set equality, not containment.
+- Step 4: `projects --help` is served from the static inventory, not refused.
 - Step 5: the mutation probes still report the seeded failure by name, so a green gate means something.
-- Step 6: the recorded diff shows zero changes to `doc/planning/oss-tooling/milestones/m1/**`.
+- Step 6: the recorded diff shows zero changes under the M1 milestone snapshot.
 
 **Notes / Clarifications**:
 
-- Step 6 cannot be a permanent suite: asserting "the M1 pages are unmodified" is a diff against a moving base, which `.ai/rules/testing-strategy.md` forbids in permanent suites. The tree-invariant half (gates green, membership, page content) is automated and the diff half is recorded in §10 and the review verdict — see OQ-T3.
+- **Why this TC owns the prompt set and TC-PROJ-020 does not.** The prompt-required membership is not a property of the policy module; it is one of six obligations that are only jointly satisfiable. Asserting it in the policy test made an earlier phase commit a red `pnpm check` (DoR B3), so the assertion moved here and the policy test now stops at "no inline composition, one precedence site".
+- **Evidence split, labelled per spec v1.2:** steps 1–5 are the tree-invariant **Suite** half of `AC-F9-2`; step 6 is the **review-verified** half, and its exact review check is "diff the tracked files under `doc/planning/oss-tooling/milestones/m1/**` against `git merge-base origin/main-tools HEAD` and record zero changed paths". No permanent suite asserts a diff against a moving base (`.ai/rules/testing-strategy.md`), so the half stays review-verified rather than being silently claimed as automated.
 - Step 5 is what keeps the gates honest: a gate that passes on any input is worse than no gate because it advertises coverage it does not provide.
+- The page's content obligations beyond `--help`/`--version` (error rows, `daemon` vocabulary, `unbound` row) are review-verified in TC-PROJ-034, not here; this TC owns reachability and gate health.
 
 #### TC-PROJ-031 - Exactly three error rows under one new domain kind, documented both ways
 
@@ -1466,7 +1503,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 **Expected Outcome**:
 
-- `feature-state-layer.md` states the two-layer root (host root plus project root) and names the host index as the only host-level document.
+- `feature-state-layer.md` states the two-layer root (host root plus project root) and names the host index as the only host-wide **index** document, explicitly noting that the host-wide owner-hold marker also lives at the host root — the "only host-level document" phrasing is wrong and must not appear (spec v1.2 A2).
 - `feature-cli-entrypoint.md` lists `projects list` in the prompt-required set and states the two-layer resolution.
 - `feature-branding-seam.md` states that `stateDirectoryName` names the host root.
 - `feature-dispatch-engine.md` states that the authority document is read under the project root and that the shell fallback resolves that root.
@@ -1505,13 +1542,17 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - `status.md`: one M2 delivery snapshot entry, shaped per the file's own maintenance convention (not invented here).
 - `cli-command-registry.md`: the `projects` row moves from planned to delivered, naming this change.
 - `milestones/m2/entrypoint-delta.md`: the observed composition gains `projects`; the remaining M2 additions stay planned.
-- `milestones/m2/commands/projects.md`: keeps the pack's proposed status header, gains the `--help`/`--version` contract, documents `daemonReachable` as `{ reachable, reason? }` with the closed vocabulary, documents `projects.state-unavailable` as present-but-unreadable or unestablishable, and states that listing is read-only.
+- `milestones/m2/commands/projects.md`: keeps the pack's proposed status header; gains the `--help`/`--version` contract; documents `daemonReachable` as `{ reachable, reason? }` with the closed vocabulary; documents `projects.state-unavailable` as present-but-unreadable or unestablishable with an absent root being a first-use state; states that listing is read-only **without exception**; aligns the `state` column example with the delivered `<host root>/projects/<key>` layout; and carries the two corrections DoR B8 found missing:
+  - **(a) the `projects.identity-unreadable` row no longer claims "the root is not a git work tree"** — that condition is the declared `unbound` scope at exit `0`; the row names the unreadable-marker and unusable-git-metadata conditions instead;
+  - **(b) the `daemon` column vocabulary is the closed reason set** (`daemon-not-mounted`, `state-absent`, `socket-absent`, `socket-unreachable`, or reachable) in both the OUTPUT text and the EXAMPLES, with no bare `reachable`/`unreachable`;
+  - and an explicit **`unbound` row** is added (exit `0`, one warning, no registration).
 - `milestones/m2/README.md`: only if the pack index needs the status note adjusted; the planned-until-exit semantics stay.
 
 **Notes / Clarifications**:
 
 - The pack's status semantics are a trap: "delivered" must not be written where the pack says "planned until M2 exit". The command page therefore keeps `Status: Proposed (M2)` while the entrypoint delta records the observed composition — that asymmetry is correct, and the review must record that it was deliberate.
 - The status snapshot's *shape* is governed by that document's own convention, so this plan does not prescribe a row format.
+- **Page-versus-behaviour agreement (DoR B8).** The two corrections in (a) and (b) are reviewed as *agreement with a delivered criterion*, not as prose preference: the `identity-unreadable` row must not contradict AC-F1-5's exit-`0` `unbound` state, and the `daemon` examples must not contradict AC-F3-2's "reason, never a bare negative". Neither contradiction is caught by TC-PROJ-030, which asserts only reachability and page registration, so this review cell is the only guard and the review must quote both corrected passages in §10.
 
 #### TC-PROJ-035 - Release changeset shape
 
@@ -1519,11 +1560,11 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-10, AC-F10-3, DEC-15, NFR-10
-**Evidence Class**: Suite (existing — no new test)
-**Test Type(s)**: Structural
-**Automation Level**: Automated
-**Target Layer / Location**: `tests/checks/privacy-release.test.ts` (TC-RELEASE-001/002), `scripts/checks/changesets-group.ts`
-**Tags**: @backend, @release
+**Evidence Class**: Suite (release suite, tree-invariant half) + Review-verified (no-dependency/no-lockfile-change half, branch diff inspection)
+**Test Type(s)**: Structural + Manual
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `tests/checks/privacy-release.test.ts` (TC-RELEASE-001/002), `scripts/checks/changesets-group.ts`; the review half reads the branch diff for `package.json` and `pnpm-lock.yaml`
+**Tags**: @backend, @release, @review
 
 **Preconditions**:
 
@@ -1531,19 +1572,19 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 **Steps**:
 
-1. Run `bun test tests/checks/privacy-release.test.ts`.
-2. Run `bun run scripts/checks/changesets-group.ts`.
-3. Assert the new changeset lists exactly the five fixed-group packages at `minor` and carries a non-empty body describing the state-root scoping, the `projects` family, the migration step, and the mount obligations.
+1. **Suite half:** run `bun test tests/checks/privacy-release.test.ts` and `bun run scripts/checks/changesets-group.ts`.
+2. **Suite half:** assert the new changeset lists exactly the five fixed-group packages at `minor` and carries a non-empty body describing the state-root scoping, the `projects` family, the migration step, and the mount obligations.
+3. **Review half (named check):** inspect `git diff --name-only "$(git merge-base origin/main-tools HEAD)"...HEAD -- package.json pnpm-lock.yaml 'packages/*/package.json'` and record that it is empty.
 
 **Expected Outcome**:
 
-- Exactly one changeset is added relative to the merge base; every pre-existing changeset is byte-identical; no pre-existing changeset is modified or deleted.
-- The added changeset lists exactly `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode` at `minor`, excludes `@delivery-os/testkit`, and has a non-empty body.
-- No package manifest version changed; the lockfile is unchanged; `changesets-group` is green.
+- Steps 1–2 (Suite, the tree-invariant half): exactly one changeset is added relative to the merge base; every pre-existing changeset is byte-identical; the added one lists exactly `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode` at `minor`, excludes `@delivery-os/testkit`, and has a non-empty body; no manifest version hand-edit; `changesets-group` green.
+- Step 3 (review-verified, the diff half): the branch diff for the root `package.json`, `pnpm-lock.yaml`, and every `packages/*/package.json` is **empty** — no dependency added, no lockfile change, no manifest version change.
 - The changeset body is accurate: it states that delivery state now lives under a per-repository root, that existing installs must perform the one-step move, and that delivery commands are expected to run inside a checkout (spec §18 communication).
 
 **Notes / Clarifications**:
 
+- **Evidence split, labelled per spec v1.2 §17 (DoR B10).** The delivered release suite asserts the changeset's count, shape and body, and that pre-existing changesets are byte-identical; it does **not** assert the absence of a dependency or lockfile change — `pnpm install --frozen-lockfile` succeeds just as well after a legitimate dependency bump. That half is therefore review-verified with the exact command in step 3, and this plan does not claim a permanent assertion for it.
 - This suite already exists and already anchors on the merge base and tolerates a growing population (it asserts non-vacuity rather than a fixed count). This plan adds nothing: duplicating it would create two owners of one invariant.
 - The body's accuracy is review-verified inside this TC; it is not assertable.
 
@@ -1598,7 +1639,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 - **25-project cell:** 25 real checkouts, each with a materialized project root containing a real store with one queue entry and one handover record (so the per-project reads are not trivially empty).
 - **200-project cell:** an index with 200 entries and 200 materialized empty project roots; the index's revision is recorded.
-- A counting index seam (index reads and writes per invocation) and a counting filesystem edge that records every directory enumeration.
+- The **declared injected index-access fact and its counters** (spec v1.2 F-2: "index access and the counters that make 'one read, at most one write' observable are injected facts of the composition") plus the counting filesystem edge. Both are observability-only: they accept no root, no key, and no path, so TR-1 still holds.
 - A warm-up run before measurement so module and page caches are populated.
 
 **Steps**:
@@ -1620,11 +1661,13 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - Step 6: revision and length match the seeded index — the measurement is of the real read path, not of a short-circuit.
 - Recorded wall-clock values are written to §10 as informational evidence (a regression in absolute numbers is visible even when the threshold holds).
 
-**Notes / Clarifications**:
+- **Notes / Clarifications**:
 
 - p95 over 10 samples is a floor, not a statistical claim; the point is that no cell is pathologically slow and that the counts are bounded. The plan states the sample count and the warm-up so the numbers are reproducible.
+- The read/write counts are asserted against the **declared injected index-access fact**, not a private test seam (DoR A5): the counters are part of the composition contract in spec v1.2 F-2, so the assertion exercises the same path production uses. A harness that invented its own counter would prove nothing about "one read, at most one write".
 - The "no crawl" assertion is structural as well as runtime: the host-index module must not contain a recursive directory walk, asserted by AST. A counting edge proves the current path; the AST assertion prevents a future one.
 - The 200-project cell seeds the index rather than creating 200 repositories; that is declared in §1.2 and mitigated by step 6's revision/length assertions.
+- **`projects list` is excluded from the maintenance measurement** because spec v1.2 F-2/NFR-4 require zero maintenance on that path; its absence of writes is asserted by TC-PROJ-041, and asserting a "maintenance cost" for it here would contradict the contract.
 
 #### TC-PROJ-038 - Test isolation: guard, leak detector, no real-state writes
 
@@ -1666,12 +1709,12 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - The guard's "not an ancestor of the workspace" clause is the mirror of `tests/fixtures/watchdog/temp-git.ts`'s `guardFixtureRoot`; both exist because a destructive-adjacent teardown must never target the checkout it runs in.
 - Step 6 is the `TMPDIR` trap made explicit: with `TMPDIR=$PWD/tmp/tmpdir`, `tmpdir()` is *inside* the repository and `findGitRoot` ascends into this repo's own `.git`. Fixtures that need "outside any work tree" must therefore use the GH-273 fallback, and fixtures with their own `.git` are unaffected because the nearest enclosing root wins.
 
-#### TC-PROJ-039 - Revert and mutation evidence bundle (P1–P7)
+#### TC-PROJ-039 - Revert and mutation evidence bundle (P1–P8)
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-1, AC-F2-1, AC-F2-4, AC-F2-5, AC-F4-2, AC-F4-3, AC-F6-2, AC-F6-5, AC-F8-2, NFR-4 evidence discipline, spec Appendix D
+**Related IDs**: AC-F1-1, AC-F2-1, AC-F2-4, AC-F2-5, AC-F4-2, AC-F4-3, AC-F6-2, AC-F6-4, AC-F6-5, AC-F8-2, NFR-4 evidence discipline, spec Appendix D
 **Evidence Class**: Review-verified (manual procedures; evidence recorded in the change review and §10)
 **Test Type(s)**: Manual
 **Automation Level**: Manual
@@ -1681,7 +1724,7 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 **Preconditions**:
 
 - A green tree with all new suites passing; a clean working tree (or a scratch commit) so each artifact can be reverted or mutated and restored; never run in CI.
-- The seven procedures are distinguished up front and are **never merged**: P1 two-layer resolution, P2 absent-index-as-corrupt, P3 prune-deletes-state, P4 trust-recorded-location, P5 `in-transition` unreachable, P6 shell-fallback depth widening, P7 legacy-detection removal. Each changes exactly one artifact.
+- The eight procedures are distinguished up front and are **never merged**: P1 two-layer resolution, P2 absent-index-as-corrupt, P3 prune-deletes-state, P4 trust-recorded-location, P5 `in-transition` unreachable, P6 shell-fallback depth widening, P7 legacy-detection removal, **P8 daemon composing-site argument reverted to the host root**. Each changes exactly one artifact.
 
 **Steps and expected red sets**:
 
@@ -1693,20 +1736,150 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 5. **P4 — trust-recorded-location mutation.** In the row projection, report the index's recorded `stateLocation` instead of the derived one. Run the host-index and list-contract suites. *Red:* TC-PROJ-010 step 4 (reports the injected path and, in the same run, the assertion that the injected path was never created). *Green:* TC-PROJ-011/012/013.
 6. **P5 — `in-transition` unreachable mutation.** In the handover projection, return `shell` for every disagreement. Run the handover suite. *Red:* TC-PROJ-015 (all four disagreement cells) and TC-PROJ-016 step 1 (the biconditional). *Green:* TC-PROJ-014 (the agreeing cells) and every non-handover suite.
 7. **P6 — shell-fallback depth widening.** In `scripts/lib/dispatch-authority.sh`, replace the project-root resolution with a widened search (`-maxdepth 3` over the host root) and leave everything else untouched. Run the bash-authority suite. *Red:* TC-PROJ-024 step 1 (declared resolution step absent / depth widened) and step 3 (the old-location document is now consulted). *Green:* steps 2, 4, 5 of TC-PROJ-024.
-8. **P7 — legacy-detection removal.** Remove the legacy-detection branch from the production composition. Run the migration suite. *Red:* TC-PROJ-027 step 2 (warning count `0`, expected `1`). *Green:* TC-PROJ-026 and every other suite.
-9. After each procedure, restore the artifact and re-run the affected suites; record the restored green run.
+8. **P7 — legacy-detection removal.** Remove the legacy-detection branch from the production composition. Run the migration suite. *Red:* TC-PROJ-027 step 2 (warning count `0`, expected `1`) and step 5 (the index-only host behaves the same before and after, so no red there — record that cell as green either way). *Green:* TC-PROJ-026, TC-PROJ-042 cells 1/3/4, and every other suite.
+9. **P8 — daemon composing-site argument reverted to the host root.** In the daemon composition site, pass the **host root** instead of the policy-derived project state root to the settings resolution; change nothing else. Run the daemon-socket and policy suites. *Red:* TC-PROJ-023 step 1 (the argument is not the project root) and step 4's sibling-of-A cell (a path inside the host root but outside the project is now accepted). *Green:* TC-PROJ-017/018/019 (the probe uses a fixture-supplied root and never reaches this argument), every non-daemon suite.
+10. After each procedure, restore the artifact and re-run the affected suites; record the restored green run.
 
 **Expected Outcome**:
 
 - Each procedure reds exactly the named set and leaves the named green set green; every deviation is recorded and investigated rather than normalized.
-- The red sets are attributable to one artifact each: P1 and P2 never share a red, P5 never reds TC-PROJ-014, P6 never reds any non-bash test.
+- The red sets are attributable to one artifact each: P1 and P2 never share a red, P5 never reds TC-PROJ-014, P6 never reds any non-bash test, P8 never reds a probe test.
 - The restore after each procedure returns the full suite to green.
 
 **Notes / Clarifications**:
 
 - This is deliberately not a permanent suite: a test that rewrites shipped source during its own run violates test isolation and would be unsafe in CI.
-- Evidence ownership: P1 → AC-F1-1, AC-F6-2; P2 → AC-F2-1; P3 → AC-F2-4; P4 → AC-F2-5; P5 → AC-F4-2, AC-F4-3; P6 → AC-F6-5; P7 → AC-F8-2.
+- Evidence ownership: P1 → AC-F1-1, AC-F6-2; P2 → AC-F2-1; P3 → AC-F2-4; P4 → AC-F2-5; P5 → AC-F4-2, AC-F4-3; P6 → AC-F6-5; P7 → AC-F8-2; **P8 → AC-F6-4** (the criterion whose evidence class is `mutation-verified` in spec v1.2, with this mutation named in its text).
 - The exact file paths are the delivery plan's to name; this plan names the artifact by role so the procedure stays valid if a module is renamed during delivery, and requires §10 to record the concrete path actually reverted.
+- P8 exists because `AC-F6-4` cannot be proven by an unmodified tree: the delivered settings rule already derives a socket path from whatever directory it is handed (DoR B11). Reverting the composing site's argument is the only in-place change that distinguishes "derived from the project root" from "derived from the host root".
+
+#### TC-PROJ-040 - Same-basename checkouts: key shape, distinctness, immutability, and the collision guard
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, AC-F1-6, DM-1, DM-2, DEC-3, DEC-18, NFR-6, RSK-14, Appendix A rows 7/10/12
+**Evidence Class**: Suite
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/projects-identity.test.ts` over `tests/fixtures/projects/temp-repos.ts`
+**Tags**: @backend, @state, @git, @identity
+
+**Preconditions**:
+
+- One temporary host root `H` and one temporary home (distinct from `H`).
+- Two **real** repositories created under two different parent directories but with the **same basename** (`.../work/frontend` and `.../other/frontend`), each with its own git common directory and one commit; both are used on the one host.
+- A third repository whose directory name sanitises to nothing (a name of separators only, for example `---`), for the fallback cell.
+
+**Steps**:
+
+1. **Shape and distinctness.** Resolve the scope from both `frontend` checkouts; capture `projectKey`, `stateLocation`, `root`.
+2. **State disjointness.** In each, run the delivered `queue add` and `phase complete` for the same ref; compare the two stores' records (the harness reads each store directly — no `projects list` needed).
+3. **Immutability.** Rename checkout A's directory from `frontend` to `frontend-renamed` (a **different** basename), resolve again, and capture the three values.
+4. **Collision guard.** Copy checkout B's marker bytes into a checkout C that has its own git common directory but no marker, so C mints nothing and presents a key the index already holds under B's identifier. Run a state-opening command in C, then `projects list --json`.
+5. **Fallback.** Resolve from the `---` checkout and capture the key.
+6. **Basename bounds.** Assert the sanitisation rules on the minted basename: lowercased, non-`[a-z0-9]` runs collapsed to one `-`, leading/trailing separators stripped, ≤ 32 characters, the literal `unbound` refused as a basename (a checkout directory named `unbound` must not produce a key starting `unbound-`).
+
+**Expected Outcome**:
+
+- Step 1: both keys match `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$`; the two keys **differ**; the two `stateLocation` values differ and each equals `<H>/projects/<its key>`; each key is a single path segment.
+- Step 2: phase documents and queue records for the same ref live in two disjoint roots and neither store holds a record the other wrote (the same cross-store assertion TC-PROJ-001 makes, now with same-basename checkouts).
+- Step 3: `projectKey` and `stateLocation` are **unchanged** after renaming to a different basename (the mint-time basename travels in the marker); only `root` moves.
+- Step 4: exit `2` with `projects.state-unavailable`; the message names checkout C's own root, the conflicting key, and the conflicting identifier; **the existing index entry is unchanged** (its identifier, root and stateLocation are byte-identical to the pre-run snapshot, and no revision advance occurs for a rejected registration); C's state root is **not** the one B owns, and nothing under B's root was mutated (byte snapshot equality). One warning names the key and both checkout roots.
+- Step 5: the key is `project-<eight hex>` — the declared fallback, never an empty basename and never a path-derived value.
+- Step 6: every minted basename satisfies the sanitisation rules; a checkout directory named `unbound` never yields a key whose basename is `unbound`.
+
+**Notes / Clarifications**:
+
+- **This is the criterion DoR B1 added.** Without it, two checkouts of different repositories whose directories share a basename (an ordinary workstation case) minted the same readable key and re-created the exact same-ref collision the ticket removes. The discriminator is derived from the project identifier, so distinctness is by construction — but "by construction" is only true if a test creates the case, which this one does.
+- Cell 3 is deliberately a rename to a **different** basename: TC-PROJ-003 already covers a rename that keeps the same name pattern, but only this cell proves the key came from the marker rather than from the current directory.
+- Cell 4 is DEC-18 / Appendix A row 7. It is a "never by construction" path, reachable only by a copied or corrupt marker, so the fixture copies marker bytes deliberately. The assertion that the index entry is **unchanged** is what distinguishes "keep + warn" from "adopt": an implementation that overwrote the entry with C's identifier would pass a warning-only test.
+- The regex is asserted as a shape (prefix + hyphen + eight hex), never as an expected key string: the discriminator is random, and pinning it would make the suite rewrite itself.
+
+#### TC-PROJ-041 - `projects list` writes nothing: byte/mtime snapshot of the host index and `projects/`
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-3, F-2, AC-F3-4, DM-2, DEC-5, NFR-5, §8.1
+**Evidence Class**: Suite
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/projects-list-contract.test.ts`
+**Tags**: @backend, @cli, @projects, @read-only
+
+**Preconditions**:
+
+- A host with **at least two registered projects**, one of them holding real state (a queue entry, a phase document, and an audit record), each with its own project root.
+- A snapshot helper that records, for the host root: the index file's **bytes, mode and mtime**; and for the `projects` container: every entry's name, kind, size and mtime recursively, plus each file's sha256.
+
+**Steps**:
+
+1. Take snapshot `S0`.
+2. Run `projects list --json`, then `projects list` (text), then both again.
+3. Take snapshot `S1`; diff `S0` against `S1`.
+4. **Lifecycle-state cells** — repeat the snapshot/diff for each host-root state and record the exact expected set:
+   - **(a) never-invoked host root:** the host root may not exist at all, or be empty. `projects list` must leave it that way; no index, no `projects/`, no `unbound`.
+   - **(b) after one store-opening invocation inside a checkout:** exactly `host-index.json` and `projects/<key>/` (plus `owner-hold` if the fixture sets one, plus `unbound` only if an out-of-checkout invocation occurred).
+   - **(c) after `projects list` only (no state-opening invocation ever):** unchanged from (a) — no index and no `projects/` is created by listing.
+5. Assert the **absence of store artifacts** at the host root in every state: none of `ledger.<ws>.jsonl`, `header.<ws>.json`, `index.<ws>.sqlite`, `fence.<ws>.lock`, `documents.<ws>/`, `quarantine.<ws>/`, `chain-key.<ws>.json`, `chain-key.retro.<ws>.json`, `retro-evidence.<ws>.jsonl`, `retro-evidence.lock`.
+
+**Expected Outcome**:
+
+- Step 3: `S0` and `S1` are identical — index bytes, mode and mtime unchanged; revision unchanged; no prune occurred (the registered set is the same); no corrupt-file sibling appeared; no project root created or removed; every project file's sha256 unchanged; no `projects/` mtime change.
+- Step 4(a): the host root is still absent, or still empty.
+- Step 4(b): the listing leaves the set at exactly `{host-index.json, projects/}` (plus the fixture's owner-hold marker), with both unchanged.
+- Step 4(c): listing alone creates neither the index nor `projects/`; the host root is unchanged from (a).
+- Step 5: no store artifact exists directly under the host root in any of the three states.
+- The four `projects list` invocations in step 2 all exit `0`.
+
+**Notes / Clarifications**:
+
+- **This criterion DoR B2 added.** F-3 said "read-only, never prunes, never migrates, never creates a project root", but no AC owned it, and the plan puts maintenance in the production composition for *every* state-opening invocation — so a maintenance-on-list implementation would have violated DEC-5 and been caught only incidentally. The snapshot deliberately covers the **index file** and the **`projects/` directory** by name, because those are the two places a stray write would land.
+- **mtime is included on purpose.** A byte-identical rewrite (same content, new inode or new mtime) still means the command wrote, and a mtime-insensitive snapshot would pass it. The index is compared on bytes *and* mtime.
+- Step 4(c) is the cell that distinguishes "read-only because there was nothing to do" from "read-only by contract": a fresh host with no index must stay empty after a listing, which also proves `projects list` does not run the first-run registration that a state-opening command performs (AC-F2-1's second half).
+- The exact-set assertion lives here rather than in TC-PROJ-001 because the index is a phase-2 deliverable and TC-PROJ-001 must be green at phase 1's boundary (DoR B4).
+- No permanent test asserts a diff against a moving base; this is a before/after snapshot within one test, which is a tree property and therefore allowed.
+
+#### TC-PROJ-042 - The four state-location cells: first use, legacy warning, unreadable root, uncreatable marker
+
+**Scenario Type**: Edge Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-3, F-8, AC-F3-5, DM-6, DEC-8, DEC-16, NFR-5, Appendix A rows 3/5
+**Evidence Class**: Suite
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/projects-list-contract.test.ts` (cells 1, 3) and `tests/behaviour/projects-migration.test.ts` (cells 2, 4)
+**Tags**: @backend, @projects, @state, @migration
+
+**Preconditions**:
+
+- One temporary host root `H` per cell; a temporary home distinct from `H`; at least one other registered project so the surviving rows are observable.
+- Cell 4 (uncreatable marker) is provoked **without relying on permissions**: the checkout resolves a git common directory that is a **regular file** (so the marker path's parent is not a directory), and the permission-based variant (a read-only common directory) is an additional sub-case skipped when `process.getuid?.() === 0`.
+
+**Steps**:
+
+1. **Cell 1 — first use.** Register a checkout (a state-opening invocation) but leave its project root absent, with **no** store artifacts anywhere at `H`. Run `projects list --json`, then a state-opening command in the checkout, then `projects list --json` again.
+2. **Cell 2 — legacy warning.** Same registration, but with a populated store at `H` (ledger, header, documents). Run `projects list --json` and capture exit, `error`, `warnings` and stderr.
+3. **Cell 3 — present but unreadable root.** Replace the project's derived state location directory with a regular file; run `projects list --json`.
+4. **Cell 4 — uncreatable marker.** With no marker present, make the marker's creation fail (common directory path is a regular file); run a state-opening command in that checkout, then `projects list --json`.
+5. Assert the cross-cell invariants: no cell emits an error code outside the three declared identities, and the exit set over cells 1–4 is `{0, 2}`.
+
+**Expected Outcome**:
+
+- **Cell 1:** exit `0`, **no** warning, **no** `projects.state-unavailable`; the row reports `handoverState === "shell"` and `daemonReachable.reason === "state-absent"` (or `daemon-not-mounted` in the shipped build — the cell asserts the reason is one of the declared vocabulary members that corresponds to an absent root, and records which). The second listing shows the same row, and the intervening state-opening command created the store (so "absent root" was a state, not a failure).
+- **Cell 2:** exit `0`; the legacy-detection warning is present exactly once and names the migration note; **`projects.state-unavailable` is not reported** and the exit code is unchanged by the warning. The warning's emission is owned by AC-F8-2 / TC-PROJ-027; this cell owns only the classification (warning, not error).
+- **Cell 3:** exit `2` with `projects.state-unavailable`; the message names the project key **and** its state location; the opaque file is left in place; other rows are not reported (the command answers honestly or fails, never both).
+- **Cell 4:** exit `2` with `projects.state-unavailable`; the message names the **checkout root** and the **failing marker path** — and, per DEC-16's conditional, does **not** claim a project key or a state location, because neither exists; nothing is created at the marker path, and no path-derived key is substituted.
+- No cell fabricates a state: cell 1 is a first use, cell 2 is a warning, cells 3–4 are the declared state failure.
+
+**Notes / Clarifications**:
+
+- **This criterion reconciles DEC-8 and DEC-16 (DoR B7).** DEC-8 put `projects.state-unavailable` on "a state location that cannot be established at all (including an uncreatable marker)", while DEC-16 required the error to name the project key and state location — unsatisfiable when no marker exists. Spec v1.2 made the naming conditional and split the cells; this test asserts the conditional both ways: names key + state location when they exist (cell 3), names root + failing path when they do not (cell 4).
+- **Cell overlap is intentional and declared.** Cell 2's warning is emitted by the code AC-F8-2 owns (TC-PROJ-027), and cell 3's assertion is the same one AC-F3-3 requires (TC-PROJ-013 step 6). One helper asserts each cell; three criteria trace to it. The alternative — three divergent copies of the same provocation — is how a contract drifts.
+- **Cell 1 is the negative control for NFR-5.** "Absent is not corrupt" has a sibling: "absent is not unavailable". A freshly discovered checkout has no store by definition, so refusing the overview for it would make the command unusable on a real host.
+- The permission-free provocation for cell 4 is deliberate: `chmod`-based failures differ under a root-in-container CI user, and a test that silently passes as root would leave the cell unproven.
 
 ## 6. Environments and Test Data
 
@@ -1725,6 +1898,8 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 - Every suite creates a per-test **host root** and a per-test **home**, both under the approved base, and passes them in three consistent ways: `homeDirectory` explicitly on the composition facts, `HOME` in the injected environment record, and the brand-derived state-directory override (`<PREFIX>_STATE_DIR`, computed from the resolved brand identity — the prefix is upper-cased and its trailing underscore collapsed, so the test derives the variable name rather than spelling it) set to the absolute host root.
 - **The home is always a distinct directory from the host root**, and neither is an ancestor of the other. This is not cosmetic: an absolute override and a home-plus-brand default would otherwise coincide, so a store that ignored the override would still resolve into the host root and the override-honouring assertions in TC-PROJ-021/022 would pass vacuously. The fixture factory enforces the distinction and TC-PROJ-038 step 7 meta-asserts it.
 - The brand is resolved once per suite from the single declared neutral working-name constant already used by `tests/fixtures/queue/production/harness.ts`; no new product or binary literal is introduced by the fixtures (AC-F9-4).
+- **Host-root lifecycle states are first-class fixtures**, because three criteria assert what the host root may contain: never-invoked (absent or empty), after one store-opening invocation (`host-index.json` + `projects/<key>/`, plus the fixture's owner-hold marker), after `projects list` only (unchanged from never-invoked), and migrated (store artifacts under the project root, host root holding only the index and the optional hold). `tests/fixtures/projects/host-root.ts` owns these factories so no suite re-derives the set.
+- **The index artifact name and schema come from the `projects` contracts module** (`host-index.json`, `delivery.projects.host-index.v1`), never a literal in a test — the same rule the product follows (spec v1.2 DM-2).
 - The fixture guard runs **before** any store is opened and rejects: the live workspace root, any ancestor of it, the real state directory derived from `os.homedir()`, and any path outside the approved base ∪ OS temp root. This mirrors `guardFixtureRoot` in `tests/fixtures/watchdog/temp-git.ts`.
 - The leak detector fingerprints the real state directory (names, sizes, mtimes; "absent" as a sentinel) before and after the suite and asserts equality, so a leak fails the suite even on a machine where that directory is already populated.
 - Cleanup is `rmSync(recursive, force)` in a `finally`, per fixture; no test leaves a host root or a repository behind.
@@ -1746,8 +1921,10 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 
 - `tests/fixtures/projects/state-scope.ts` — approved base, host-root factory, home factory (distinct from the host root by construction), `guardStateFixtureRoot`, `realStateFingerprint`, the non-checkout directory helper, and the brand-resolved state-directory override name.
 - `tests/fixtures/projects/temp-repos.ts` — real repository factory, clone factory, linked-worktree factory, nested-repository factory, and the sanitized git environment.
-- `tests/fixtures/projects/production.ts` — the production-composition harness: host root, home, cwd, injected seams (spawn runner, transport, git child runner, daemon capability), `run(argv)`, project-root resolution, and host-root/project-root snapshots.
-- `tests/fixtures/projects/host-index.ts` — index seeding/reading helpers for the corrupt, pruned, mistrusted-location, and 200-entry cells, plus the counting index seam.
+- `tests/fixtures/projects/production.ts` — the production-composition harness: host root, home, cwd, injected seams (spawn runner, transport, git child runner, daemon capability, **the daemon composition site's state-directory argument**, and the observability-only index-access/counter facts), `run(argv)`, project-root resolution, and host-root/project-root snapshots.
+- `tests/fixtures/projects/host-index.ts` — index seeding/reading helpers for the corrupt, pruned, mistrusted-location, wrong-identifier, and 200-entry cells, plus the declared index-access counter wrapper.
+- `tests/fixtures/projects/host-root.ts` — the four host-root lifecycle factories (never-invoked, after one store-opening invocation, after `projects list` only, migrated) and the byte+mode+mtime snapshot helper used by TC-PROJ-041.
+- `tests/fixtures/projects/markers.ts` — marker read/write helpers for the corruption cells (unreadable, invalid JSON, missing field, inconsistent key-vs-identifier) and the copied-marker collision cell, built on the product's own marker seam so the fixture never invents a second format.
 - Fixture files are never named `*.test.ts`.
 
 **Reused fixtures.** `tests/fixtures/state/harness.ts` (`makeTempRoot`, `makeIdentity`, `openStore`, `listStoreFiles`, `ledgerDigest`, `digestPaths`, `keyArtifactMode`, `seedAuditPairs`, `quarantine*`), `tests/fixtures/queue/production/harness.ts` (production-composition shape and `makeNonCheckoutDirectory`), `tests/fixtures/watchdog/temp-git.ts` (guard and real-git discipline), `tests/fixtures/pilot/repo.ts` (sanitized git environment), `tests/fixtures/mcp/**` (MCP composition), `tests/fixtures/help-guide/coverage.json` (inventory), `tests/golden/helpers` (`bufferSink`, `SYNTHETIC_BRAND`).
@@ -1778,49 +1955,62 @@ Runtime expectations: the two-checkout suites spawn `git` a bounded number of ti
 | TC-PROJ-020 | `tests/structure/projects-state-scope-policy.test.ts` | To Implement | Suite (structural; three sites + override precedence in one place) | `bun test tests/structure/projects-state-scope-policy.test.ts` |
 | TC-PROJ-021 | `tests/behaviour/projects-state-placement.test.ts` | To Implement | Suite + revert (P1); runtime half of AC-F6-1's override clause | `bun test tests/behaviour/projects-state-placement.test.ts` |
 | TC-PROJ-022 | `tests/behaviour/projects-scope-mcp.test.ts` | To Implement | Suite; MCP half of AC-F6-1's override clause | `bun test tests/behaviour/projects-scope-mcp.test.ts` |
-| TC-PROJ-023 | `tests/behaviour/projects-daemon-socket.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-daemon-socket.test.ts` |
+| TC-PROJ-023 | `tests/behaviour/projects-daemon-socket.test.ts` (behavioural) + `tests/structure/projects-state-scope-policy.test.ts` (composing site) | To Implement | Mutation-verified (P8) + Suite | `bun test tests/behaviour/projects-daemon-socket.test.ts tests/structure/projects-state-scope-policy.test.ts` |
 | TC-PROJ-024 | `tests/structure/dispatch-bash-authority.test.ts` (extend) | Existing – Update | Suite + mutation (P6) | `bun test tests/structure/dispatch-bash-authority.test.ts` |
 | TC-PROJ-025 | `tests/behaviour/projects-owner-hold.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-owner-hold.test.ts` |
 | TC-PROJ-026 | `tests/behaviour/projects-migration.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-migration.test.ts` |
 | TC-PROJ-027 | same | To Implement | Suite + mutation (P7) | same |
-| TC-PROJ-028 | `bash scripts/.tests/test-doc-distribution.sh` (suite half: distribution marker and registry presence) | Existing – No Change (note added) | Review-verified + Suite | `bash scripts/.tests/test-doc-distribution.sh` |
+| TC-PROJ-028 | `bash scripts/.tests/test-doc-distribution.sh`; `scripts/add-header-location.sh` (header); `scripts/checks/forbidden-literals.ts` + `tests/checks/forbidden-literals.test.ts` (registry) | Existing – No Change (note added, registry row added) | Review-verified + Suite | `bash scripts/.tests/test-doc-distribution.sh && bun run scripts/checks/forbidden-literals.ts && bun test tests/checks/forbidden-literals.test.ts` |
 | TC-PROJ-029 | `tests/behaviour/projects-help.test.ts` | To Implement | Suite | `pnpm build && bun test tests/behaviour/projects-help.test.ts` |
-| TC-PROJ-030 | `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts` | Existing – No Change (inventory + page map updated) | Suite + Review-verified | `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` and `pnpm check:help` |
+| TC-PROJ-030 | `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/fixtures/help-guide/coverage.json`, `scripts/checks/help-guide-coverage.ts`, `packages/cli/src/help*`, `packages/cli/src/commands/projects.ts` | Existing – **Update** (inventory row, per-command page root in both the parity test and the coverage script, help entries, prompt-set membership) | Suite + Review-verified | `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` and `pnpm check:help` |
 | TC-PROJ-031 | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts` | Existing – No Change | Suite + Review-verified | `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts` |
 | TC-PROJ-032 | `tests/checks/forbidden-literals.test.ts`, `tests/checks/privacy-literals.test.ts` | Existing – No Change (registry updated) | Suite | `bun run scripts/checks/forbidden-literals.ts && bun run scripts/checks/privacy-literals.ts` |
 | TC-PROJ-033 | none (manual) | Manual Only | Review-verified | — (review verdict + §10) |
 | TC-PROJ-034 | none (manual) | Manual Only | Review-verified | — (review verdict + §10) |
-| TC-PROJ-035 | `tests/checks/privacy-release.test.ts` | Existing – No Change | Suite | `bun test tests/checks/privacy-release.test.ts` |
+| TC-PROJ-035 | `tests/checks/privacy-release.test.ts` + branch-diff review | Existing – No Change | Suite + Review-verified | `bun test tests/checks/privacy-release.test.ts`; then `git diff --name-only "$(git merge-base origin/main-tools HEAD)"...HEAD -- package.json pnpm-lock.yaml 'packages/*/package.json'` (expect empty) |
 | TC-PROJ-036 | existing state/audit/retro/inventory suites | Existing – No Change | Suite + Review-verified | `bun test tests/structure/state-contract.test.ts tests/structure/state-imports.test.ts tests/structure/content-inventory.test.ts tests/behaviour/audit-chain.test.ts tests/behaviour/retro-chain.test.ts tests/behaviour/retro-key-artifact.test.ts` (and the rest of the family) |
 | TC-PROJ-037 | `tests/behaviour/projects-performance.test.ts` + structural half in `projects-state-scope-policy.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-performance.test.ts` |
 | TC-PROJ-038 | `tests/checks/projects-test-isolation.test.ts` | To Implement | Suite | `bun test tests/checks/projects-test-isolation.test.ts` |
-| TC-PROJ-039 | none (manual) | Manual Only | Review-verified | the seven procedures in TC-PROJ-039, each followed by the affected file's `bun test` |
+| TC-PROJ-039 | none (manual) | Manual Only | Review-verified | the eight procedures in TC-PROJ-039 (P1–P8), each followed by the affected file's `bun test` |
+| TC-PROJ-040 | `tests/behaviour/projects-identity.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-identity.test.ts` |
+| TC-PROJ-041 | `tests/behaviour/projects-list-contract.test.ts` | To Implement | Suite | `bun test tests/behaviour/projects-list-contract.test.ts` |
+| TC-PROJ-042 | `tests/behaviour/projects-list-contract.test.ts` (cells 1, 3) + `tests/behaviour/projects-migration.test.ts` (cells 2, 4) | To Implement | Suite | `bun test tests/behaviour/projects-list-contract.test.ts tests/behaviour/projects-migration.test.ts` |
 
 **Phase grouping for `@plan-writer`** (so the delivery plan can cite TCs per phase):
 
-| Phase (spec §18 order) | TCs |
-|---|---|
-| 1 — state-scope policy and identity marker | TC-PROJ-003, 004, 005, 020, 038 |
-| 2 — host index | TC-PROJ-006, 007, 008, 009, 010, 037 (structural half may land later) |
-| 3 — `projects` command and projections | TC-PROJ-001, 002, 011, 012, 013, 014, 015, 016, 017, 018, 019 |
-| 4 — policy consumption on every surface | TC-PROJ-021, 022, 023, 024, 025 |
-| 5 — migration and legacy detection | TC-PROJ-026, 027, 028 |
-| 6 — mount, help, errors, literals | TC-PROJ-029, 030, 031, 032 |
-| 7 — reconciliation and release | TC-PROJ-033, 034, 035, 036 |
-| Review gate (after phase 7, before DoD) | TC-PROJ-039 |
+| Phase (spec §18 order) | TCs | Newly added by this revision |
+|---|---|---|
+| 1 — state-scope policy, identity marker, key derivation | TC-PROJ-003, 004, 005, 020, 038; **TC-PROJ-040 cells 1–3 and 5–6** (key shape, distinctness, immutability, fallback) | TC-PROJ-040 (partly) |
+| 2 — host index and maintenance | TC-PROJ-006, 007, 008, 009, 010, 037 (structural half may land later) | — |
+| 3 — `projects` command and projections | TC-PROJ-001, 002, 011, 012, 013, 014, 015, 016, 017, 018, 019, **TC-PROJ-040 cell 4** (collision guard, reported through the surface), **TC-PROJ-041**, **TC-PROJ-042 cells 1 and 3** | TC-PROJ-040 (cell 4), TC-PROJ-041, TC-PROJ-042 (partly) |
+| 4 — policy consumption on every surface | TC-PROJ-021, 022, 023, 024, 025 | — |
+| 5 — migration, legacy detection, `unbound` classification | TC-PROJ-026, 027, 028, **TC-PROJ-042 cell 2** | TC-PROJ-042 (cell 2) |
+| 6 — mount, help, coverage, errors, literals | TC-PROJ-029, 030, 031, 032 | — |
+| 7 — reconciliation and release | TC-PROJ-033, 034, 035, 036 | — |
+| Review gate (after phase 7, before DoD) | TC-PROJ-039 (P1–P8) | P8 |
 
-Phase 3 lists TC-PROJ-001/002 even though isolation is phase 1's property, because the tests can only be written once the command that reports project roots exists; the *code* that satisfies them lands in phase 1. The delivery plan should say which; this plan does not reorder the spec's delivery order.
+Rules the phase table must respect, because each is a gate fact rather than a preference:
+
+- **TC-PROJ-001/002** are listed under phase 3 for the historical reason that their surface assertions read store artifacts, but they have no dependency on `projects list` and the delivery plan may own them in phase 1 (the plan as written does). Either way the **host-root assertion is absence-of-store-artifacts**, not an exact set (DoR B4) — see TC-PROJ-001.
+- **TC-PROJ-030 cannot be split**: the prompt-set membership, the help entries, the reference page, the coverage-inventory row, the error rows, and the command definition are green only together, because `scripts/checks/help-guide-coverage.ts` and `tests/checks/reference-page-parity.test.ts` each assert set equality with `PROMPT_REQUIRED_COMMANDS` (DoR B3). It is therefore the *last* phase's criterion, even though parts of it read like earlier-phase work.
+- **TC-PROJ-031 (error rows) travels with the command that emits them**, because `packages/cli/src/classify.ts` maps an undeclared code to `fallback.internal`; the plan as written owns it in phase 3.
+- **TC-PROJ-042 spans phases 3 and 5**: cells 1 and 3 are `projects list` behaviours, cell 2 needs the legacy detector, cell 4 needs the marker-write failure path. It is one criterion, so the test file must be green only at the last owning phase; the earlier phases carry the cells they can.
+- **TC-PROJ-041** depends only on the index and the surface, so it is green as soon as both exist (phase 3); its never-invoked and list-only cells are also the reason it cannot be asserted in phase 1.
+
+The delivery plan (`chg-GH-288-plan.yaml`, revision 1.0) still maps **35 ACs / 39 TCs**; spec v1.2 and this revision add three criteria and three TCs, so the plan must be re-mapped before the next `dor_check` (§8.3 X-1). This plan does not reorder the spec's delivery order.
 
 **Supporting changes (not test cases):**
 
-- `tests/fixtures/projects/state-scope.ts`, `temp-repos.ts`, `production.ts`, `host-index.ts` — new fixtures (§6).
+- `tests/fixtures/projects/state-scope.ts`, `temp-repos.ts`, `production.ts`, `host-index.ts`, `host-root.ts`, `markers.ts` — new fixtures (§6).
 - `tests/fixtures/help-guide/coverage.json` — `projects` in `commands`, its M2 page in `referencePages`.
-- `scripts/checks/help-guide-coverage.ts` and `tests/checks/reference-page-parity.test.ts` — the per-command reference page root (DEC-13).
-- `scripts/checks/forbidden-literals.registry.json` — the migration note in the user-facing-docs scope.
-- `packages/cli/src/help/prompt-required-commands.ts` and `packages/cli/src/help.ts` — `projects` in the set and its help entries.
+- `scripts/checks/help-guide-coverage.ts` and `tests/checks/reference-page-parity.test.ts` — the per-command reference page root (DEC-13); both are **updates**, not no-change files (spec v1.2 §16.1, DoR A6).
+- `scripts/checks/forbidden-literals.registry.json` — the migration note in the user-facing-docs scope; the registry edit must land in the same phase as the guide, because `scripts/checks/forbidden-literals.ts` fails on an unregistered new doc under `doc/` (DoR B9/A7).
+- `packages/cli/src/help/prompt-required-commands.ts` and `packages/cli/src/help.ts` — `projects` in the set and its help entries; both land with the rest of the mount unit (TC-PROJ-030).
+- `packages/core/src/contracts/projects.ts` — the marker schema, the index artifact name/schema identity (`host-index.json`, `delivery.projects.host-index.v1`), and the three error identities, so no consumer spells a literal.
 - `packages/core/src/contracts/error-table.ts` — one domain kind, three rows, matching `doc/spec/features/feature-result-contract.md`.
+- `packages/core/package.json` — **unchanged** `exports`: the policy is exported from the existing core root entry and declares no new subpath (AC-F6-1).
 
-**Mocking requirements per TC:** only declared seams — `homeDirectory`, the environment record, `cwd`, the harness spawn runner and starter, the GitHub transport, the git child runner, the daemon capability, the clock, and the run-id factory. No `bun:test` `mock.module`, no monkey-patching of adapters, no module-load-time stubbing.
+**Mocking requirements per TC:** only declared seams — `homeDirectory`, the environment record, `cwd`, the harness spawn runner and starter, the GitHub transport, the git child runner, the daemon capability, **the daemon composition site's state-directory argument**, and the **observability-only index-access fact and its counters** (spec v1.2 F-2; DoR A5). The counter seam accepts no root, no key, and no path, so TR-1 ("the harness cannot supply a root or a key") still holds. No `bun:test` `mock.module`, no monkey-patching of adapters, no module-load-time stubbing.
 
 **Gate battery mapping** (the quality bar is `TMPDIR=$PWD/tmp/tmpdir pnpm check`):
 
@@ -1828,13 +2018,14 @@ Phase 3 lists TC-PROJ-001/002 even though isolation is phase 1's property, becau
 |---|---|---|---|
 | Build (prerequisite) | `pnpm build` | all subprocess cells (TC-PROJ-029) | Required because the bin imports package subpaths that resolve to `dist`; `pnpm test`/`pnpm check` run it via `pretest`/`pretypecheck`, but a direct `bun test` does not. |
 | Aggregate | `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` | all | lint → format:check → typecheck → test → check:boundaries → prompt-conformance → help-coverage → exports-parity |
-| Help coverage | `pnpm check:help` | TC-PROJ-030 | |
-| Reference-page parity | `bun test tests/checks/reference-page-parity.test.ts` | TC-PROJ-030 | |
-| Error-table sync | `bun test tests/checks/error-table-sync.test.ts` | TC-PROJ-031 | bidirectional |
-| Literal scans | `bun run scripts/checks/forbidden-literals.ts`, `bun run scripts/checks/privacy-literals.ts` | TC-PROJ-032 | |
-| Release shape | `bun test tests/checks/privacy-release.test.ts`, `bun run scripts/checks/changesets-group.ts` | TC-PROJ-035 | |
-| Doc distribution | `bash scripts/.tests/test-doc-distribution.sh` | TC-PROJ-028 | blocks merge on drift |
-| Boundaries | `pnpm check:boundaries` | TC-PROJ-020, TC-PROJ-036 | the new policy module must not introduce a forbidden edge |
+| Help coverage | `pnpm check:help` (`scripts/checks/help-guide-coverage.ts`) | TC-PROJ-030 | bidirectional set equality with `PROMPT_REQUIRED_COMMANDS` |
+| Reference-page parity | `bun test tests/checks/reference-page-parity.test.ts` | TC-PROJ-030 | set equality; the per-command page root is an update to this file (DoR A6) |
+| Error-table sync | `bun test tests/checks/error-table-sync.test.ts` | TC-PROJ-031 | bidirectional; the delivered file name is `error-table-sync.test.ts` (DoR A6) |
+| Literal scans | `bun run scripts/checks/forbidden-literals.ts`, `bun run scripts/checks/privacy-literals.ts`, `bun test tests/checks/forbidden-literals.test.ts tests/checks/privacy-literals.test.ts` | TC-PROJ-032, **TC-PROJ-028** | **the migration guide must be registered in `scripts/checks/forbidden-literals.registry.json` in the same phase**: an unregistered new doc under `doc/` fails `forbidden-literals.ts` with "unregistered user-facing doc absent at corpusBaseline", and `tests/checks/forbidden-literals.test.ts` (which calls `scan(ROOT)`) reds with it (DoR B9/A7). |
+| Release shape | `bun test tests/checks/privacy-release.test.ts`, `bun run scripts/checks/changesets-group.ts` + branch-diff review | TC-PROJ-035 | the no-dependency/no-lockfile half is review-verified, not asserted |
+| Doc distribution | `bash scripts/.tests/test-doc-distribution.sh` | TC-PROJ-028 | blocks merge on drift; the guide's header block comes from `scripts/add-header-location.sh`, never hand-written (DoR A7) |
+| Subpaths / entrypoints | `bun run scripts/checks/workspace-entrypoints.ts` (inside `pnpm check:boundaries`) and `bun test tests/structure/subpaths.test.ts` | TC-PROJ-020 | proves the policy declares **no new subpath** (AC-F6-1) |
+| Boundaries | `pnpm check:boundaries` | TC-PROJ-020, TC-PROJ-036 | the app-tier policy must not introduce a forbidden edge; `tier-domain-only-contracts` is why the module is `app`, not `domain` |
 | Whitespace | `git diff --check` | all | |
 
 **Focused verification while iterating** (after one `pnpm build`):
@@ -1872,13 +2063,21 @@ bun test tests/checks tests/structure tests/behaviour/queue-production-binding.t
 | TR-9 | The `projects list` latency measurement is flaky on a loaded CI machine. | p95 over 10 samples after a warm-up, with the thresholds taken from the spec and the measured values recorded; a threshold breach is investigated, not retried silently. |
 | TR-10 | An override-honouring cell passes vacuously because the fixture's home equals the host root, so a store that ignores `<PREFIX>_STATE_DIR` still resolves into the host root. | The fixture factory always produces a home distinct from the host root (neither an ancestor of the other), asserted by TC-PROJ-038 step 7; TC-PROJ-021/022 additionally assert the home-default path was never created. |
 | TR-11 | A structural single-site assertion is satisfied by moving the inline composition into a shared helper that still ignores the override. | TC-PROJ-020 step 5 requires the override read and its precedence to exist in exactly one place (the policy), and step 6 asserts the policy's own override branch; the behavioural cells in TC-PROJ-021/022 fail if the helper ignores the override. |
+| TR-12 | Two same-basename checkouts silently share a state root because the suite never creates that case. | TC-PROJ-040 creates two real repositories whose directories share the basename, in different parents, and asserts distinct keys, distinct roots and disjoint same-ref state; the key shape assertion (`-<eight hex>`) fails if the discriminator is dropped. |
+| TR-13 | `projects list` grows a maintenance side effect and no test notices, because byte comparison alone misses a rewritten file. | TC-PROJ-041 compares index bytes **and** mtime plus a recursive size/mtime/sha256 snapshot of `projects/`, and asserts the never-invoked and list-only host roots stay empty. |
+| TR-14 | The uncreatable-marker cell silently passes as root in CI. | TC-PROJ-042 provokes it structurally (the marker's parent path is a regular file), which fails identically for any user; the permission-based variant is gated on `process.getuid?.() !== 0`. |
 
 ### 8.2 Assumptions
 
 - `resolveCheckoutGitDirectories` returns the git directory and the common directory from the working directory and never ascends above the first `.git` (verified in `packages/adapters/src/repo/index.ts`; spec §12).
 - The git common directory is shared by all linked worktrees of one repository and by no second repository; a file stored beside it survives a rename (the delivered dispatch-identity discipline).
 - The store facade accepts an injected state directory per open and creates missing parents, so a deeper root needs no state-layer change.
-- The host root is the delivered override-aware rule: an absolute environment override wins, otherwise the injected home plus the brand state directory name (spec v1.1 §2.1, §12, §8.5). There are **three** derivation sites today and only the runtime-aware edge honours the override: `packages/cli/src/production.ts` composes `${homeDirectory}/${brand.stateDirectoryName}` inline, `packages/mcp/src/serve.ts` repeats that inline composition, and `packages/cli/src/edge.ts` (`stateDirectoryFor`) applies `resolveStateDirectoryScope`. After the change all three consume the one policy, so the tests must supply a home **distinct** from the host root (otherwise an override-blind store would pass) and must assert the home-default path was never created.
+- The host root is the delivered override-aware rule: an absolute environment override wins, otherwise the injected home plus the brand state directory name (spec v1.2 §2.1, §12, §8.5). There are **three** derivation sites today and only the runtime-aware edge honours the override: `packages/cli/src/production.ts` composes `${homeDirectory}/${brand.stateDirectoryName}` inline, `packages/mcp/src/serve.ts` repeats that inline composition, and `packages/cli/src/edge.ts` (`stateDirectoryFor`) applies `resolveStateDirectoryScope`. After the change all three consume the one app-tier policy, so the tests must supply a home **distinct** from the host root (otherwise an override-blind store would pass) and must assert the home-default path was never created.
+- The single policy module is `packages/core/src/app/state-scope.ts` and is exported from the existing `@delivery-os/core` root entry; no new subpath is declared, and `scripts/checks/workspace-entrypoints.ts` plus `tests/structure/subpaths.test.ts` keep that true (spec v1.2 F-6/AC-F6-1).
+- The identity outcome is a closed table (spec v1.2 F-1/DEC-17/Appendix A): `findGitRoot` returning nothing is the `unbound` state and is never an identity refusal, so every refusal cell is provoked by **bytes** — an empty `gitdir:` value, or a corrupt/inconsistent marker — never by a resolver returning `undefined`.
+- The project key is `<sanitised basename>-<eight hex of the identifier>` with the `project` fallback, minted once and recorded with its mint-time basename, so a rename cannot re-key it and two same-basename checkouts cannot collide by construction (spec v1.2 F-1/DEC-3/DEC-18).
+- `resolveDaemonSettings` already derives a socket path from whatever state directory it is given and already refuses a path outside it, but **nothing calls it today** and the daemon composition derives no socket path of its own; `AC-F6-4` is therefore asserted at the composing site and proven by mutation, not by calling the settings rule directly (spec v1.2 F-5/AC-F6-4).
+- The host index document is `<host root>/host-index.json` with schema `delivery.projects.host-index.v1`, declared in the `projects` contracts module, and it is excluded from the legacy-detection predicate along with the owner-hold marker and the `unbound` scope (spec v1.2 DM-2, A4).
 - The runtime-aware edge keeps composing the command audit store through the same policy, so after the change the audit ledger lands under the project root rather than at the host root; the existing audit suites keep their injected seams and stay green unmodified.
 - `PROMPT_REQUIRED_COMMANDS` is the single authority for the composed set; the coverage inventory mirrors it (the parity suite asserts set equality).
 - The `projects` family is not yet composed, so every new suite is a new file and no existing golden changes.
@@ -1887,32 +2086,57 @@ bun test tests/checks tests/structure tests/behaviour/queue-production-binding.t
 - Tests may create real temporary repositories and may spawn `git` (spec §12).
 - `origin/main-tools` exists in the test work tree for the release suite; the release suite already anchors on the merge base and tolerates a growing changeset population.
 
-### 8.3 Findings: closed by spec v1.1 and remaining acknowledged items
+### 8.3 Findings: closed by the specification and DoR iteration 1, plus cross-artifact items
 
-All findings raised by test plan v1 have been dispositioned. Three are **closed** by the spec revision (each is listed with its closure evidence, so it cannot be re-raised at `dor_check`); three remain as **recorded, resolved-by-acknowledgement** items that need no further action.
+Every finding this plan raised, and every DoR iteration-1 finding that belongs to test planning, is dispositioned below. Closed items name their closure evidence so they cannot be re-raised at the next `dor_check`; acknowledged items need no further action; cross-artifact items are handed to `@plan-writer`/`@pm`.
 
 **Closed by spec v1.1:**
 
 | ID | Was | Closed by | Verified in this plan |
 |----|-----|-----------|----------------------|
-| G-1 | The declared host-scoped `unbound` scope had no acceptance criterion; `TC-PROJ-005` was AC-less. | Spec v1.1 R1 added **`AC-F1-5`** (declared `unbound` root, one bounded warning, no registration, no project root, unchanged exit code, no path-derived key) and recorded its Appendix D evidence row naming `TC-PROJ-005`. | `TC-PROJ-005` is now `AC-F1-5`'s owning test; §3.1 has the AC row with no AC-less marker; §1.2, §5.1, §7 and §10 no longer describe a gap. |
-| PG-2 | The subject of a `projects.identity-unreadable` refusal was unspecified for a host-overview read; the plan carried an `IDENTITY_REFUSAL_SUBJECT` placeholder constant. | Spec v1.1 R2 specified the naming rule in `AC-F3-3` and recorded it as **`DEC-16`**: the offending checkout root in the runtime summary, plus the project key and identifier when the marker is readable but identity still does not resolve; `projects.state-unavailable` names the project key and its state location; no other project's root in the envelope, warnings, or text. | `TC-PROJ-013` asserts the specified naming in three cells and adds the "no other project's root disclosed" negative; the placeholder constant is gone. |
-| OQ-T4 | The plan's source probe found that the production store ignored `<PREFIX>_STATE_DIR` while the runtime-aware edge honoured it, and that `AC-F6-1` claimed a single site. | Spec v1.1 R3 corrected §2.1, §2.2, G-6, the §4.1 KPI table, F-1, F-6, the §12 assumption, the §8.5 compatibility list, §16, §16.1, §19 and **strengthened `AC-F6-1`**: three derivation sites today, only the edge override-aware, and every site must honour the override after the change. | `TC-PROJ-020` pins all three sites, the seven-consumer allowlist, and single-place override precedence; `TC-PROJ-021`/`TC-PROJ-022` prove override honouring behaviourally with a home distinct from the host root; `TC-PROJ-028` requires the note to state the override relocation. |
+| G-1 | The declared host-scoped `unbound` scope had no acceptance criterion; `TC-PROJ-005` was AC-less. | Spec v1.1 added **`AC-F1-5`** and recorded its Appendix D evidence row naming `TC-PROJ-005`. | `TC-PROJ-005` is `AC-F1-5`'s owning test; §3.1 has the AC row with no AC-less marker. |
+| PG-2 | The subject of a `projects.identity-unreadable` refusal was unspecified; the plan carried an `IDENTITY_REFUSAL_SUBJECT` placeholder constant. | Spec v1.1 specified the naming rule in `AC-F3-3` and recorded **`DEC-16`**. Spec v1.2 then closed the remaining half by making the provocation byte-based and the subject the invoking checkout (`DEC-17`). | `TC-PROJ-013` asserts the naming contract across the git-metadata row and four marker-corruption rows, plus the anti-collapse control; the placeholder is gone. |
+| OQ-T4 | The production store ignored `<PREFIX>_STATE_DIR` while only the runtime-aware edge honoured it, and `AC-F6-1` claimed a single site. | Spec v1.1 corrected §2.1/§8.5/§16 and strengthened `AC-F6-1` to three sites; spec v1.2 fixed the policy's tier and module. | `TC-PROJ-020` pins the app-tier module, all three sites, seven consumers, single-place precedence and no new subpath; `TC-PROJ-021`/`TC-PROJ-022` prove override honouring behaviourally. |
 
-> Naming note: the finding id **G-1** in this finding table is a *test-plan finding* id and is unrelated to spec goal **G-1** ("Scope delivery state per repository"), which is referenced in several TCs' `Related IDs` rows. The two never refer to the same thing.
+**Closed by spec v1.2 (each also answers a DoR blocking finding):**
+
+| ID | Was | Closed by | Verified in this plan |
+|----|-----|-----------|----------------------|
+| OQ-T2 (was "list read-only carried inside existing TCs") | F-3 required `projects list` to be read-only, but no AC owned it (DoR **B2**). | **`AC-F3-4`** — list writes nothing, proven by a byte+mtime snapshot covering the host index file and the `projects/` directory. | **TC-PROJ-041** is the owning test; §3.1 no longer routes this to "carried inside existing TCs". |
+| OQ-T3 (was "evidence-class split") | `AC-F9-2` and `AC-F10-3` claimed `Suite` while containing diff-against-a-moving-base clauses (DoR **B10**). | Spec v1.2 §17 splits **`AC-F9-2`** and **`AC-F10-3`** explicitly: tree half suite, diff half review-verified. | §3.1 labels both halves; `TC-PROJ-030` step 6 and `TC-PROJ-035` step 3 name the **exact review check** each diff half uses. |
+| OQ-T5 (was "sequencing") | This plan preceded the implementation plan, so no TC cited a phase id. | The plan exists (`chg-GH-288-plan.yaml`, revision 1.0) and §7 maps every TC to a phase. | §7 phase grouping, including the three new TCs. |
+| B3 | `TC-PROJ-020` required `PROMPT_REQUIRED_COMMANDS` to contain `projects`, which only the mount phase can make green — an unsatisfiable phase boundary (both help gates assert set equality). | Restated: the prompt set, help entries, reference page, coverage-inventory row, error rows and command definition are asserted **as one indivisible unit** in `TC-PROJ-030`; `TC-PROJ-020` no longer asserts prompt-set membership. | TC-PROJ-020 notes state why it cannot be split; TC-PROJ-030 step 1 asserts the six members together and §7 repeats the gate fact. |
+| B4 | `TC-PROJ-001` asserted the host root's listing was "exactly the host index plus `projects/`", a phase-2 deliverable in a phase-1 test. | Restated as **absence of store artifacts**, with the exact expected set enumerated per lifecycle state in `TC-PROJ-041` (never-invoked / after one store-opening invocation / after `projects list` only / migrated). | TC-PROJ-001 expected outcome and notes; TC-PROJ-041 steps 4–5. |
+| B9 / A7 | The new user-facing guide would red the literal scan the moment it landed, and no phase owned the registry edit; the header block generation was unstated. | `TC-PROJ-028` now owns registration **and** header generation, names the check that reds (`scripts/checks/forbidden-literals.ts` → "unregistered user-facing doc absent at corpusBaseline", with `tests/checks/forbidden-literals.test.ts`), and the gate battery carries both obligations. | TC-PROJ-028 steps 1–2; §7 literal-scan and doc-distribution rows. |
+| B10 | Two criteria claimed evidence the delivered gates do not produce. | Same as OQ-T3: split named above, and every changed-class criterion now names either the pinned assertion that reds on a revert/mutation (`AC-F6-4` → P8) or the exact review check. | §3.1 rows for AC-F6-4, AC-F9-2, AC-F10-3; TC-PROJ-039 P8. |
+| A2 | `AC-F10-1`/`TC-PROJ-033` required "the only host-level document", contradicting the host-wide owner-hold marker. | Spec v1.2 rewords to "the only host-wide **index** document"; the plan mirrors it. | TC-PROJ-033 expected outcome. |
+| A3 | The index write rule was unpinned, and `TC-PROJ-010` forced an unconditional-write reading. | Spec v1.2 pins the rule: exactly one read, at most one write, **zero writes and no revision advance when nothing changed**, no maintenance on `projects list`. | TC-PROJ-010 steps 1–2 assert both halves (unchanged ⇒ 0 writes, changed ⇒ 1); NFR-4 row restated. |
+| A5 | `TC-PROJ-037`/`TC-PROJ-036` relied on "a counting index seam"/"counting edge" that no declared seam provided. | Spec v1.2 F-2 declares index access and its counters as injected composition facts. | §6 fixtures, §7 mocking requirements, and TC-PROJ-037 now name the **declared** fact; TR-1 still holds because the counters accept no root, key or path. |
+| A6 | `reference-page-parity.test.ts` was marked "No Change" while DEC-13 edits it, and the error-table sync file name was wrong. | §7 rows corrected: the parity test and the coverage script are **Existing – Update**; the delivered file is `tests/checks/error-table-sync.test.ts`. | §7 automation rows and gate battery. |
+| B6 / B7 (spec-side, test impact) | The identity refusal had no producible provocation, and the uncreatable-marker cell had no owner. | Spec v1.2 added `DEC-17` (closed identity outcomes, byte-provable) and **`AC-F3-5`** (four state-location cells). | TC-PROJ-013's byte provocations + anti-collapse control; TC-PROJ-042's four cells. |
+| B8 (test-plan half) | The M2 command page's `identity-unreadable` row and `daemon` example would contradict the delivered behaviour, and no gate catches it. | Spec v1.2 itemises both corrections in §16.1. | TC-PROJ-034's page-agreement review cells (a)/(b). |
+| B1 (test-plan half) | No cell created two checkouts with the same basename, so the key-collision design hole was untested. | Spec v1.2 added **`AC-F1-6`** (key shape, distinctness, immutability, collision guard). | TC-PROJ-040, three labelled cells plus the fallback and bounds cells. |
+
+> Naming note: the finding id **G-1** in this table is a *test-plan finding* id and is unrelated to spec goal **G-1** ("Scope delivery state per repository"), which is referenced in several TCs' `Related IDs` rows. The two never refer to the same thing.
 
 **Recorded, resolved by acknowledgement (no action required):**
 
 | ID | Item | Disposition | Test obligation |
 |----|------|-------------|-----------------|
-| R-1 | Which checkout `root` a linked worktree reports: the invoking worktree's path, or the clone's main checkout path. `AC-F1-3` requires the key and state location to be identical and only "the reported checkout root" to change after a rename; both readings satisfy that. | Acknowledged as an implementation detail the ACs deliberately leave open. Test default: the **invoking worktree's absolute path** (the same rule as a nested directory). If delivery reports the main checkout instead, only that one assertion changes; key and state-location equality are unaffected. Recorded in §10. | TC-PROJ-003 cell 3. |
-| OQ-T2 | **Coverage allocation, not a spec gap.** Spec F-3 requires `projects list` to be read-only ("never prunes, never migrates, never creates a project root"), but no AC asserts that clause in isolation; the nearest are `AC-F3-2` (stability) and `AC-F2-3` (corrupt read changes no file). | Acknowledged and carried inside existing TCs rather than promoted to a new AC: `TC-PROJ-012` (index bytes, revision, mtime and host-root listing unchanged across two runs) and `TC-PROJ-008` step 2. No new TC and no new AC claimed. | TC-PROJ-012, TC-PROJ-008. |
-| OQ-T3 | **Evidence-class split.** `AC-F9-2` names `Suite` but includes "the M1 milestone snapshot pages are unmodified"; `AC-F9-3` names `Suite` but includes "no existing row … reworded"; `AC-F10-3` names `Suite` but includes "every pre-existing changeset is byte-identical" — diff-against-a-moving-base claims, which `.ai/rules/testing-strategy.md` forbids in permanent suites. | Acknowledged and split per criterion: the **tree-invariant** half is a suite (gates green, membership/set equality, page content, row count and code set, changeset shape via the existing merge-base-anchored release suite), and the **diff** half is review-verified and recorded in §10. Nothing is dropped; the class is stated honestly in §3.1. | TC-PROJ-030 (step 6), TC-PROJ-031 (step 6), TC-PROJ-035 (rides the existing merge-base-anchored suite). |
-| OQ-T5 | **Sequencing.** This plan was written before the implementation plan, so no TC cites a plan phase id. | Acknowledged: §7 maps TCs to the spec's §18 phase order so `@plan-writer` can cite them; TC ids are stable and grouped by subject, not by phase. | §7 phase grouping table. |
+| R-1 | Which checkout `root` a linked worktree reports: the invoking worktree's path, or the clone's main checkout path. `AC-F1-3` and now `AC-F1-6` require the key and state location to be identical and only "the reported checkout root" to move; both readings satisfy that. | Acknowledged as an implementation detail the ACs deliberately leave open. Test default: the **invoking worktree's absolute path** (the same rule as a nested directory). If delivery reports the main checkout instead, only that one assertion changes. Recorded in §10. | TC-PROJ-003 cell 3. |
 
-No item above blocks delivery and no item requires a PM ruling. G-1, PG-2 and OQ-T4 are closed by the spec's own text; R-1, OQ-T2, OQ-T3 and OQ-T5 are acknowledged implementation or evidence-allocation choices.
+**Cross-artifact items handed to `@plan-writer` / `@pm` (not test-plan defects):**
 
-No acceptance criterion is unmapped, and no test case is orphaned: every one of the 35 criteria has at least one owning TC, and every TC names at least one AC (or, for the cross-cutting NFR TCs 036–039, names the NFR it proves and the ACs whose evidence class it serves).
+| ID | Item | Evidence | Owner |
+|----|------|----------|-------|
+| X-1 | `chg-GH-288-plan.yaml` revision 1.0 maps **35 ACs / 39 TCs**; spec v1.2 and this revision add `AC-F1-6`, `AC-F3-4`, `AC-F3-5` and `TC-PROJ-040`, `-041`, `-042`. The plan's AC/TC ownership block, its per-phase `testObligations`, and its declared AC counts must be re-mapped before the next `dor_check`, otherwise mapping arithmetic fails on the plan side. | plan header "35" / "39/39"; spec §17 has 38 ACs; this plan has 42 TCs. | `@plan-writer`, then `@pm` |
+| X-2 | The index write rule changed under the plan's feet (A3): a phase that assumes "one write per invocation" will now be green with zero writes on unchanged state. Any phase `Done when` phrased as "revision advances per invocation" needs re-wording. | spec v1.2 F-2/NFR-4; TC-PROJ-010. | `@plan-writer` |
+| X-3 | `AC-F6-4`'s composing site must be named by the plan (it is currently described as `daemon-compose.ts` deriving a socket path, which that module does not do). The plan's phase-4 work text and its `Done when` should name the site that supplies the state directory to `resolveDaemonSettings`. | spec v1.2 F-5/§16 component row; TC-PROJ-023. | `@plan-writer` |
+| X-4 | `TDR-0022` (state root, identity, policy, help page root) is a phase-7 deliverable per spec v1.2 §16. No test covers it and none should; it is listed here so the DoD gate does not read its absence as a test-plan gap. | spec v1.2 §16 decision-record row, DEC-19. | `@pm` / `@decision-advisor` |
+
+No item above blocks delivery. Every finding this plan raised is closed; the four remaining entries are one acknowledged implementation choice (R-1) and three handoffs (X-1…X-3) plus one non-test deliverable (X-4).
+
+No acceptance criterion is unmapped, and no test case is orphaned: all **38** criteria have at least one owning TC, and every TC names at least one AC (or, for the cross-cutting NFR TCs 036–039, names the NFR it proves and the ACs whose evidence class it serves).
 
 ### 8.4 Test-maintenance notes
 
@@ -1927,6 +2151,7 @@ No acceptance criterion is unmapped, and no test case is orphaned: every one of 
 |---------|------|--------|---------|
 | 1 | 2026-11-11 | @test-plan-writer | Initial test plan for GH-288 from spec v1.0: 39 test cases covering all 34 acceptance criteria, the seven non-functional requirements with thresholds, and the delivered gate battery; new fixtures under `tests/fixtures/projects/**`; the seven-procedure revert/mutation bundle; and five declared items (gap G-1, provocation PG-2, worktree-root resolution R-1, evidence-class split OQ-T3, production-override premise finding OQ-T4). |
 | 2 | 2026-11-11 | @test-plan-writer | Re-aligned to spec **v1.1** after the `specification` phase was reopened on this plan's v1 findings. The revision changes exactly four things and no TC id moved. **(1) G-1 closed:** spec v1.1 added `AC-F1-5` (declared `unbound` root, one bounded warning, no project registration, no project root, unchanged exit code, no path-derived key); `TC-PROJ-005` is now its owning test — the AC-less marker is removed from §3.1/§5.1/§7/§10, the criterion appears in the coverage matrix with its Appendix D traceability, and the TC's assertions were rewritten one-to-one onto the criterion's clauses. **(2) PG-2 closed:** spec v1.1 specified the refusal naming rule as `DEC-16`; `TC-PROJ-013` was renamed "Exit-code matrix, DEC-16 refusal naming, and the three error identities", the `IDENTITY_REFUSAL_SUBJECT` placeholder constant was deleted, and the test now asserts the offending checkout root in the runtime summary, the project key plus identifier when the marker is readable but identity does not resolve, the project key and state location on `projects.state-unavailable`, and a new negative that no other project's root appears in the envelope, warnings, or text. **(3) OQ-T4 closed and `AC-F6-1` strengthened:** spec v1.1 recorded the three derivation sites (production store and MCP store inline and override-blind; only the runtime-aware edge override-aware) — `TC-PROJ-020` now pins all three sites, a seven-consumer allowlist (adding the edge audit store), single-place override precedence plus a policy-branch assertion, and a duplicated-override-read negative control; `TC-PROJ-021` and `TC-PROJ-022` gained the behavioural override half with a home **distinct** from the host root and a home-default negative; `TC-PROJ-038` gained a home-distinctness meta-assertion; `TC-PROJ-028` now requires the migration note to state the override relocation. **(4) Findings closed and recorded:** §8.3 was restructured into "closed by spec v1.1" (G-1 → AC-F1-5, PG-2 → DEC-16, OQ-T4 → §2.1/§8.5/AC-F6-1) and "resolved by acknowledgement" (R-1 worktree root choice, OQ-T2 read-only carried inside existing TCs, OQ-T3 evidence-class split, OQ-T5 sequencing), so none can be re-raised at DoR; two new testing risks (TR-10 vacuous-override cell, TR-11 helper-that-ignores-the-override) were added. Traceability re-verified set-equal to the spec's 35 ACs; TC ids unchanged at 39 and no TC added or removed. |
+| 3 | 2026-11-11 | @test-plan-writer | Re-aligned to spec **v1.2** and to DoR iteration 1 (`readiness-review/readiness-iter-1.md`, verdict NOT_READY). No existing TC id changed; **three TCs added (39 → 42)** and 35 → **38** ACs. **(1) `AC-F1-6` → new TC-PROJ-040:** key shape `<sanitised basename>-<eight hex>` with the `project` fallback and the basename bounds, distinct keys/roots/disjoint state for two same-basename checkouts, immutability across a rename to a *different* basename, and the DEC-18 collision guard (index entry kept unchanged + warning, second checkout `projects.state-unavailable` naming its own root, its key and the conflicting identifier). Closes DoR B1's test half. **(2) `AC-F3-4` → new TC-PROJ-041:** `projects list` writes nothing, proven by a byte+mode+mtime snapshot covering the host index file and every entry under `projects/`, with the exact host-root set enumerated for never-invoked / after one store-opening invocation / after `projects list` only / migrated, and the store-artifact absence assertion in every state. Closes OQ-T2 and DoR B2. **(3) `AC-F3-5` → new TC-PROJ-042:** the four state-location cells (first use; legacy warning not an error; present-but-unreadable root naming key + state location; uncreatable marker naming checkout root + failing path), with the permission-free provocation and the declared cell overlaps. Closes DoR B7 and DEC-8/DEC-16. **(4) `AC-F3-3` revised in TC-PROJ-013:** every refusal is provoked by **bytes** (empty `gitdir:` value; unreadable / invalid-JSON / missing-field / inconsistent marker), the subject is the invoking checkout, and a new anti-collapse control asserts `findGitRoot → nothing` is `unbound` at exit 0, never a refusal (declined DoR B6). **(5) `AC-F6-1` revised in TC-PROJ-020:** the single policy module is named (`packages/core/src/app/state-scope.ts`, app tier), exported from the existing core root entry with **no new subpath** (asserted against `packages/core/package.json` `exports`, `workspace-entrypoints.ts` and `subpaths.test.ts`), and the daemon consumer is renamed to "the daemon composition site that supplies the project root". **(6) `AC-F6-4` revised in TC-PROJ-023:** no longer a direct `resolveDaemonSettings` test; it asserts the **composing site's argument** structurally (single call site, project root not host root), keeps the containment cells behaviourally, and is declared **mutation-verified with P8** (revert the argument to the host root) — added to the TC-PROJ-039 bundle (P1–P8). **(7) DoR test-plan findings absorbed:** B3 — prompt-set membership moved out of TC-PROJ-020 into TC-PROJ-030, which now asserts prompt set + help entries + reference page + inventory row + error rows + command definition as one indivisible unit with the gate-equality rationale; B4 — TC-PROJ-001's host-root assertion restated as absence-of-store-artifacts with the exact per-lifecycle sets in TC-PROJ-041; B9/A7 — TC-PROJ-028 now owns the `forbidden-literals.registry.json` registration and the `add-header-location.sh` header, names the check that reds, and both appear in the gate battery; B10 — `AC-F9-2` and `AC-F10-3` are labelled tree-suite + review-verified with the **exact review check** named in TC-PROJ-030/035, and `AC-F6-4`'s mutation is named. **(8) Spec-driven corrections:** A2 — AC-F10-1/TC-PROJ-033 wording is "the only host-wide *index* file"; A3 — TC-PROJ-010 now asserts the pinned write rule (zero writes and no revision advance when unchanged, exactly one when changed); A5 — the index-access fact and its counters are named as **declared injected composition facts** in §6/§7 and TC-PROJ-037; A6 — the parity test and coverage script are "Existing – Update" and the error-table sync file is `tests/checks/error-table-sync.test.ts`; B8 — TC-PROJ-034 gained the page-agreement review cells for the `identity-unreadable` row and the `daemon` vocabulary. **(9) Traceability and coverage:** §3.1/§3.2/§3.3/§5.1/§5.2/§7/§8/§10 updated; matrix re-verified set-equal to the spec's **38** ACs; new risks TR-12 (same-basename collision), TR-13 (list maintenance side effect), TR-14 (uncreatable-marker cell as root); §8.3 restructured with the DoR dispositions and four cross-artifact handoffs (X-1 plan re-map to 38 ACs/42 TCs, X-2 write-rule wording, X-3 composing-site naming, X-4 TDR-0022). |
 
 ## 10. Test Execution Log
 
@@ -1941,10 +2166,11 @@ Populated during delivery, review, and the quality-gate phase. Record per file: 
 | Help coverage | `pnpm check:help` | | | |
 | Reference-page parity | `bun test tests/checks/reference-page-parity.test.ts` | | | |
 | Error-table sync | `bun test tests/checks/error-table-sync.test.ts` | | | |
-| Literal scans | `bun run scripts/checks/forbidden-literals.ts`; `bun run scripts/checks/privacy-literals.ts` | | | |
-| Release shape | `bun test tests/checks/privacy-release.test.ts`; `bun run scripts/checks/changesets-group.ts` | | | |
-| Doc distribution | `bash scripts/.tests/test-doc-distribution.sh` | | | |
-| Boundaries | `pnpm check:boundaries` | | | |
+| Literal scans | `bun run scripts/checks/forbidden-literals.ts`; `bun run scripts/checks/privacy-literals.ts`; `bun test tests/checks/forbidden-literals.test.ts`; `bun test tests/checks/privacy-literals.test.ts` | | | also proves the migration guide is registered (unregistered new `doc/` file reds) |
+| Release shape | `bun test tests/checks/privacy-release.test.ts`; `bun run scripts/checks/changesets-group.ts`; branch diff for `package.json` / `pnpm-lock.yaml` | | | the no-dependency half is the review cell, not an assertion |
+| Doc distribution | `bash scripts/.tests/test-doc-distribution.sh` | | | header block generated by `scripts/add-header-location.sh` |
+| Subpaths / entrypoints | `bun run scripts/checks/workspace-entrypoints.ts`; `bun test tests/structure/subpaths.test.ts` | | | proves the policy declares no new subpath |
+| Boundaries | `pnpm check:boundaries` | | | app-tier policy must not add a forbidden edge |
 | Whitespace | `git diff --check` | | | |
 
 **Per-test-case rows:**
@@ -1963,7 +2189,7 @@ Populated during delivery, review, and the quality-gate phase. Record per file: 
 | TC-PROJ-010 | | | |
 | TC-PROJ-011 | | | |
 | TC-PROJ-012 | | | |
-| TC-PROJ-013 | | | record the three DEC-16 naming cells and the "no other project's root" scan |
+| TC-PROJ-013 | | | record the five DEC-16 naming cells (git metadata + four marker shapes), the anti-collapse control, and the "no other project's root" scan |
 | TC-PROJ-014 | | | |
 | TC-PROJ-015 | | | |
 | TC-PROJ-016 | | | |
@@ -1980,13 +2206,16 @@ Populated during delivery, review, and the quality-gate phase. Record per file: 
 | TC-PROJ-027 | | | |
 | TC-PROJ-028 | | | review item: quote the five required statements |
 | TC-PROJ-029 | | | |
-| TC-PROJ-030 | | | review item: M1 page diff (expect zero) |
+| TC-PROJ-030 | | | review item: M1 page diff against the merge base (expect zero changed paths) |
 | TC-PROJ-031 | | | review item: error-table/spec diff (new kind only) |
 | TC-PROJ-032 | | | review item: registry diff (one addition, no scope change) |
-| TC-PROJ-033 | | | review item: one quoted sentence per system-spec page |
-| TC-PROJ-034 | | | review item: one quoted line per corpus file |
-| TC-PROJ-035 | | | |
+| TC-PROJ-033 | | | review item: one quoted sentence per system-spec page; confirm "only host-wide *index* file" wording |
+| TC-PROJ-034 | | | review item: one quoted line per corpus file, plus the two corrected passages on the M2 command page (identity-unreadable row, daemon vocabulary) |
+| TC-PROJ-035 | | | Suite row + review row for the empty `package.json`/`pnpm-lock.yaml` branch diff |
 | TC-PROJ-036 | | | review item: `tests/**` diff (expect zero edits in state/audit/retro suites) |
-| TC-PROJ-037 | | | record p95 at 25 and 200 projects, maintenance p95, index read/write counts |
+| TC-PROJ-037 | | | record p95 at 25 and 200 projects, maintenance p95, and index read/write counts from the declared index-access counters |
 | TC-PROJ-038 | | | |
-| TC-PROJ-039 | | | record P1–P7 separately: artifact path, red set, green set, restored green run — never one combined row |
+| TC-PROJ-039 | | | record P1–P8 separately: artifact path, red set, green set, restored green run — never one combined row |
+| TC-PROJ-040 | | | record both same-basename keys (shape only, never the literal), the rename-stability pair, and the kept index entry's byte snapshot |
+| TC-PROJ-041 | | | record the byte+mode+mtime snapshot diff for both projections, and the host-root set for each of the four lifecycle states |
+| TC-PROJ-042 | | | record all four cells with their exit codes and naming; note which daemon reason cell 1 observed in the shipped build |
