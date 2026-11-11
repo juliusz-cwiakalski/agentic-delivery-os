@@ -127,7 +127,9 @@ Defined once for every group-scoped read, owned by M2-S18.
   `not-yet-supported`, `state-unavailable`, or `unregistered`.
 - **Classified partial failure.** One `state-unavailable` member produces a
   classified partial result at exit 0 with `partial` true and the degraded
-  member named; the readable members are still returned.
+  member named; the readable members are still returned. The envelope carries
+  `data.partial` (true when any member is degraded) and `data.degradedMembers[]`,
+  each naming a degraded member by its `repoKey` and its outcome.
 - **Restricted exit 2.** Exit `2` occurs only when the configuration document
   or the invoking scope cannot be read.
 - **Not-yet-supported.** A `not-yet-supported` member contributes no records
@@ -153,14 +155,17 @@ group, owned by M2-S19.
 
 - **Members and slices.** `plan.data.members[]` declares one entry per member
   with `repoKey`, `slice`, `branch`, `pullRequest`, `dependsOn[]`, and
-  `gates`.
+  `gates`; each element of `dependsOn[]` is a member `repoKey`.
 - **One lifecycle, per-member delivery.** One lifecycle drives a branch and a
   pull request per member repository, under one review flow: exactly one review run over the declared member pull-request set, one verdict per member,
   and no member is reviewed twice.
 - **Gates and definition of done.** Per-member gates decide each member, and
   one shared definition of done decides the change. The shared verdict is
-  declared at `verify gates` as `data.definitionOfDone` and
-  `data.blockingMembers[]`.
+  declared at `verify gates` as `data.definitionOfDone` — an object with
+  `status` (`green`, `blocked`, or `incomplete`), `members[]` (one entry per
+  member with `repoKey`, `gates.ci`, and `verdict`), and `evidence[]` (member
+  pull requests in landing order) — plus `data.blockingMembers[]`, which lists
+  the `repoKey` of every member blocking the verdict.
 - **Per-member CI corroboration.** CI truth on each member's pushed head is
   read and recorded; an unavailable reading blocks the shared definition of
   done rather than counting as green.

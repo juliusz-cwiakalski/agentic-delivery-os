@@ -61,7 +61,7 @@ Given two managed repositories on one host, when `<binary> board --all`
 runs, then every lane appears under its repository key, and the total equals
 the sum of the per-repository boards with no row duplicated.
 
-Assert: `board --all.data.projects` holds both repository keys and the row count equals the sum of the per-repository boards.
+Assert: `board --all.data.repositories` holds both repository keys and the row count equals the sum of the per-repository boards.
 
 ## M2-S5 Steer
 
@@ -392,7 +392,7 @@ Given a configured group with running, waiting, and parked work, when
 `<binary> status --project <groupKey>` run, then both reads return only that
 group's work.
 
-Assert: both envelopes name the same `groupKey` and omit other groups' entries.
+Assert: `projects list --json` returns `project-groups.v1` with `data.groups[]` naming only the scoped group's `groupKey` and members, both scoped invocations exit `0`, and no undeclared `queue.*` or `status.*` envelope is read.
 
 ### SC-M2-S18-05 Mixed tracker kinds are classified, not rejected
 
@@ -417,7 +417,7 @@ Given one member whose per-repository state is `state-unavailable` and one
 readable member, when `<binary> projects list --json` runs, then the read
 returns the readable member with a classified partial result at exit `0`.
 
-Assert: `project-groups.v1` returns `data.groups[]` with `partial` true and the degraded `state-unavailable` member named.
+Assert: `project-groups.v1` returns `data.partial` true and `data.degradedMembers[]` naming the `state-unavailable` member, while `data.groups[]` still carries the readable members.
 
 ### SC-M2-S18-08 The alias payload and the group payload are both asserted
 
@@ -444,7 +444,7 @@ Given a two-repository change where one member's gates fail, when the change
 is evaluated, then the failing member blocks the shared definition of done and
 is named in the envelope.
 
-Assert: `verify gates` `data.definitionOfDone` is blocked and `data.blockingMembers[]` equals the failing member's `repoKey`.
+Assert: `verify gates` `data.definitionOfDone.status` equals `blocked` and `data.blockingMembers[]` equals the failing member's `repoKey`.
 
 ### SC-M2-S19-03 Per-member CI truth is corroborated
 
@@ -452,7 +452,7 @@ Given a two-repository change, when the shared verdict is evaluated, then CI
 truth on each member's pushed head is read and recorded per member before the
 change counts done.
 
-Assert: `verify gates` `data.definitionOfDone` cites `gates.ci` corroborated per member for both `plan.data.members[]` entries.
+Assert: `verify gates` `data.definitionOfDone.members[]` carries `gates.ci` corroborated per member for both `plan.data.members[]` entries.
 
 ### SC-M2-S19-04 An unavailable CI reading does not count as green
 
@@ -460,7 +460,7 @@ Given a member whose CI reading is unavailable, when the shared definition of
 done is evaluated, then the unavailable reading blocks it as a classified
 outcome rather than counting as green.
 
-Assert: `verify gates` `data.blockingMembers[]` names that member and `data.definitionOfDone` is not green.
+Assert: `verify gates` `data.blockingMembers[]` names that member and `data.definitionOfDone.status` is not `green`.
 
 ### SC-M2-S19-05 Member dependency edges order the slices
 

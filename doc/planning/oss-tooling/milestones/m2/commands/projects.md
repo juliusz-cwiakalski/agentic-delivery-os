@@ -129,9 +129,9 @@ its handover evidence removes a leftover `*.tmp` sibling. Neither can create,
 change, or prune an index entry, a phase document, a queue record, or any
 other store content.
 
-Only queue and status are group-scoped. `board --project` stays a repository
-key and is never group-scoped, and this page makes no group-scoped board
-claim.
+Outside the projects family itself, only queue and status are group-scoped.
+`board --project` stays a repository key and is never group-scoped, and this
+page makes no group-scoped board claim.
 
 The repository vocabulary is permanent: the `project-identity.json` marker,
 the `<host root>/projects/<key>` container, the host index's `projects[]` and
@@ -145,9 +145,9 @@ rule: it returns the delivered flat payload and is not restated here.
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `projects.config-invalid` | The configuration document cannot be read or contradicts itself | 1 |
+| `projects.config-invalid` | The configuration document contradicts itself or fails schema/content validation | 1 |
 | `projects.unknown-group` | The requested group key is not configured | 1 |
-| `projects.scope-unavailable` | The configuration document or the invoking scope cannot be read | 2 |
+| `projects.scope-unavailable` | The configuration document cannot be read, or the invoking scope is unavailable | 2 |
 
 ## SEE ALSO
 

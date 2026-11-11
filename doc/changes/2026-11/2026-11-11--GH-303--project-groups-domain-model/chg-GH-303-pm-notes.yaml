@@ -1040,3 +1040,37 @@ notes:
       violations; lint GH-303 exit 0 conforms."
     type: "info"
     date: "2026-11-11"
+  - text: "BOARD RE-VERIFICATION REMEDIATION (second round, one commit): all 18
+      original findings closed; two new blocking and four should-fix items
+      fixed. (1) BLOCKING test-scenarios.md:64 — SC-M2-S4-02 asserted the
+      removed `board --all.data.projects`; it now asserts
+      `board --all.data.repositories`, matching commands/board.md:54 and the
+      example at :81, with prose and one Assert line unchanged. (2) BLOCKING
+      test-scenarios.md:395 — SC-M2-S18-04 asserted a group-scoped queue/status
+      envelope that no contract declares; per TP-10 it now asserts the scoped
+      member set through `project-groups.v1` (`data.groups[]`, `groupKey`) plus
+      the exit code, and reads no undeclared `queue.*`/`status.*` envelope.
+      (3) commands/projects.md:148,150 — one input now has one exit code:
+      `projects.config-invalid` is schema/content invalidity at exit 1, and an
+      unreadable/unavailable configuration document routes to
+      `projects.scope-unavailable` at exit 2, matching contracts.md:131-132.
+      (4) contracts.md:128-131,155-167 — declared the shapes the seeds read:
+      `data.partial` and `data.degradedMembers[]` name the degraded member,
+      `data.definitionOfDone` is an object (`status` green/blocked/incomplete,
+      `members[]` with `gates.ci`, `evidence[]`), and each
+      `plan.data.members[].dependsOn[]` element is a member `repoKey`; the S18-07
+      and S19-02/03/04 asserts were adjusted to those declared paths.
+      (5) commands/projects.md:132 — SCOPE now reads 'Outside the projects family
+      itself, only queue and status are group-scoped', consistent with the
+      page's own `projects list --project <groupKey>` grammar.
+      (6) milestones/m2/README.md:62 — the S18 map row lists SC-M2-S18-01..08
+      and names SC-M2-S18-08 as the AC-F8-5 alias-shape assertion. Guards:
+      distribution exit 0; forbidden-literals exit 0, 5/5 classes, 0 violations;
+      lint GH-303 exit 0 conforms; plan validate valid. Gate tokens: P38
+      board_anchors=7/7 stale/group=0; P40 8 seeds, 7/7 topics; P41 5 seeds, 5/5
+      topics; P44 alias seed SC-M2-S18-08; P51 retained=OK; P22 11/11 +
+      rv_unbound_scope=OK; P33 all exit values 1/2/2 and unbound scope-only;
+      P62 PASS (excused: local 7206/4/0, default 7205/4/1 with only the named
+      CI baseline parity failure and a recorded rerun)."
+    type: "info"
+    date: "2026-11-11"

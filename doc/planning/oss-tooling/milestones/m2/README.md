@@ -59,7 +59,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S15 Queue lifecycle completion | queue auto-release after merge and closeout | queue lifecycle mutations, single-flight | SC-M2-S15-01, SC-M2-S15-02, SC-M2-S15-03 |
 | M2-S16 Engine-first delivery operations | single-flight refusal across dispatch paths, handover-gate evaluation | `attempts.v1`, event taxonomy v1 | SC-M2-S16-01, SC-M2-S16-02 |
 | M2-S17 Provider-aware peak pausing | S17 park and resume under a provider peak | provider profile fields, peak-window rule schema, park reasons, resume events | SC-M2-S17-01, SC-M2-S17-02, SC-M2-S17-03, SC-M2-S17-04, SC-M2-S17-05 |
-| M2-S18 Project groups | multi-repository overview (group-scoped) | `project-groups.v1`, the project configuration document, the `status --project <groupKey>` delta, and the superseding decision record | SC-M2-S18-01, SC-M2-S18-02, SC-M2-S18-03, SC-M2-S18-04, SC-M2-S18-05 |
+| M2-S18 Project groups | multi-repository overview (group-scoped) | `project-groups.v1`, the project configuration document, the `status --project <groupKey>` delta, and the superseding decision record | SC-M2-S18-01, SC-M2-S18-02, SC-M2-S18-03, SC-M2-S18-04, SC-M2-S18-05, SC-M2-S18-06, SC-M2-S18-07, SC-M2-S18-08 (the AC-F8-5 alias-shape assertion) |
 | M2-S19 Cross-repository changes | cross-repository change | the cross-repository change plan shape (`plan.data.members[]`, `closeout.data.members[]`, `verify gates`) | SC-M2-S19-01, SC-M2-S19-02, SC-M2-S19-03, SC-M2-S19-04, SC-M2-S19-05 |
 
 ## How to read
