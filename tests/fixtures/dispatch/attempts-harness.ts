@@ -11,6 +11,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { nodeFileSystemFacts } from "../../../packages/adapters/src/file/config-source";
 import { readLocalPmContext } from "../../../packages/adapters/src/file/pm-context";
+import { createDispatchCommandDefinition } from "../../../packages/cli/src/commands/dispatch";
+import { createDispatchGateRuntime } from "../../../packages/cli/src/edge";
+import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import {
   readDispatchAttemptHistory,
   type DispatchAttemptsReadInput,
@@ -19,6 +22,7 @@ import {
   appendDispatchAttempt,
   readDispatchAttempts,
 } from "../../../packages/core/src/app/dispatch-ledger";
+import { resolveBrandIdentity } from "../../../packages/core/src/branding/index";
 import type {
   DispatchAttemptRecord,
   StateRecord,
@@ -41,6 +45,36 @@ export type AttemptsHarnessOptions = {
   readonly records?: readonly DispatchAttemptRecord[];
   /** A store wrapper around the counted store (faults, explicit ledger views). */
   readonly wrap?: (store: StateStorePort) => StateStorePort;
+};
+
+/** The delivered five-field command result (asserted from the code, not the pack). */
+export type CommandEnvelope = {
+  readonly schemaVersion: string;
+  readonly runId: string;
+  readonly exitCode: number;
+  readonly timing: { readonly totalMs: number };
+  readonly data?: unknown;
+  readonly error?: {
+    readonly code: string;
+    readonly category: string;
+    readonly retryable: boolean;
+    readonly consequence: string;
+    readonly remediationHint: string;
+    readonly summary?: string;
+  };
+};
+
+/** One command-level invocation observation. */
+export type AttemptsInvocation = {
+  readonly exit: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly envelope?: CommandEnvelope;
+  /** The envelope's `data` on success, typed by the caller. */
+  readonly data?: unknown;
+  readonly error?: CommandEnvelope["error"];
+  /** Store ledger reads performed by this invocation only. */
+  readonly readCount: number;
 };
 
 export type AttemptsHarness = {
@@ -139,6 +173,12 @@ export const attemptLedgerRecord = (
   payload: attempt as unknown as StateRecord["payload"],
 });
 
+const brand = (() => {
+  const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
+  if (!resolved.ok) throw new Error("brand resolution failed");
+  return resolved.value;
+})();
+
 const writeContext = (checkout: string, state: ActiveChangeState, ref: string): string => {
   const contextPath = join(checkout, ".ai", "local", "pm-context.yaml");
   mkdirSync(join(checkout, ".ai", "local"), { recursive: true });
@@ -190,6 +230,67 @@ export const createAttemptsHarness = (options: AttemptsHarnessOptions = {}): Att
       },
       input,
     );
+  const gateRuntime = createDispatchGateRuntime({
+    store,
+    stateRoot: root,
+    fenceToken: "fence-attempts",
+    nowIso: () => "2026-11-11T10:00:00.000Z",
+    gate: {
+      scope: "production",
+      principal: "coder@local",
+      resolveRepository: (repo: string) => repository ?? repo,
+    },
+    attempts: {
+      resolveRepository: () => repository,
+      resolveActiveRef: () => {
+        const context = readLocalPmContext({ path: contextPath, fs });
+        return context.ok ? (context.context.activeChange?.workItemRef ?? null) : null;
+      },
+      contextPath,
+    },
+  });
+  const runtime = {
+    ...gateRuntime,
+    run: {
+      run: async () => ({
+        ok: false as const,
+        error: { kind: "input", code: "input.value.rejected" },
+      }),
+    },
+  };
+  const definition = createDispatchCommandDefinition(runtime);
+  const invoke = async (argv: readonly string[]): Promise<AttemptsInvocation> => {
+    const before = counters.readRecords;
+    const out: string[] = [];
+    const err: string[] = [];
+    const streams: CliStreams = {
+      stdout: { write: (chunk: string) => out.push(chunk) },
+      stderr: { write: (chunk: string) => err.push(chunk) },
+    };
+    const exit = await runCli(argv, streams, {
+      brand,
+      clock: { now: () => Date.parse("2026-11-11T10:00:00.000Z") },
+      newRunId: () => "run-attempts",
+      secrets: [],
+      program: { commands: { dispatch: definition } },
+    });
+    const stdout = out.join("");
+    const stderr = err.join("");
+    const trimmed = stdout.trim();
+    const envelope =
+      trimmed.startsWith("{") && trimmed.endsWith("}")
+        ? (JSON.parse(trimmed) as CommandEnvelope)
+        : undefined;
+    return {
+      exit,
+      stdout,
+      stderr,
+      ...(envelope === undefined ? {} : { envelope }),
+      ...(envelope?.data === undefined ? {} : { data: envelope.data }),
+      ...(envelope?.error === undefined ? {} : { error: envelope.error }),
+      readCount: counters.readRecords - before,
+    };
+  };
   return {
     root,
     checkout,
@@ -197,6 +298,7 @@ export const createAttemptsHarness = (options: AttemptsHarnessOptions = {}): Att
     store,
     counters,
     read,
+    invoke,
     records: () => {
       const readRecords = readDispatchAttempts(base);
       return readRecords.ok ? readRecords.records : [];

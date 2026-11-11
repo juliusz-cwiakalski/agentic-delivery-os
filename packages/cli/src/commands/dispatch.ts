@@ -1,22 +1,32 @@
 /**
- * The `dispatch` command family (GH-239 F-1, F-5, F-6; DM-5, DM-6).
+ * The `dispatch` command family (GH-239 F-1, F-5, F-6; GH-289 F-1, F-9;
+ * DM-5, DM-6).
  *
- * Grammar runs before any runtime call. Phase 4 composes the one-shot run form;
- * phase 5 adds `--resume-prompt`, phase 6 adds `dual-run summary`,
- * `dual-run resolve`, and `handover --revert`. The handler returns data or a
- * classified failure and never chooses an exit literal.
+ * Grammar runs before any runtime call. The handler owns the `attempts`
+ * subfamily's tail grammar — canonical reference shape, canonical decimal limit
+ * bounded to 1..100, an unknown option, and an unexpected positional — so each
+ * refusal is `input.value.rejected` before any runtime call and therefore
+ * before any store read. Because the definition opts the family out of the
+ * shared parser's unknown-flag branch, a handler guard keeps the four delivered
+ * forms' unknown-flag refusal at `fallback.invocation`. The handler returns data
+ * or a classified failure and never chooses an exit literal.
  */
 
 import type { DispatchRunResult } from "@delivery-os/core";
 import {
+  ATTEMPTS_LIMIT_PATTERN,
+  ATTEMPTS_MAX_LIMIT,
+  ATTEMPTS_MIN_LIMIT,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
+  type DispatchAttemptsData,
   type DispatchEnvelopeData,
   type DispatchSummaryData,
   type ProjectionClass,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
+  renderDispatchAttemptsText,
   renderDispatchHandoverText,
   renderDispatchSummaryText,
   renderDispatchText,
@@ -78,19 +88,40 @@ export type DispatchHandoverRuntime = {
   >;
 };
 
+/** The attempt-history read surface (GH-289 F-1); production composes it. */
+export type DispatchAttemptsRuntime = {
+  readonly read: (input: {
+    readonly ref?: string;
+    readonly limit?: number;
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchAttemptsData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
+
 /** Everything the dispatch command family can be composed with. */
 export type DispatchCommandRuntime = {
   readonly run: DispatchRunRuntime;
   readonly summary?: DispatchSummaryRuntime;
   readonly resolve?: DispatchResolveRuntime;
   readonly handover?: DispatchHandoverRuntime;
+  readonly attempts?: DispatchAttemptsRuntime;
 };
 
 const REF_PATTERN = /^[A-Z]+-\d+$/;
+const LIMIT_PATTERN = new RegExp(`^${ATTEMPTS_LIMIT_PATTERN}$`);
+
+/** The declared flags of the four delivered forms; anything else is unknown. */
+const DELIVERED_FLAGS = new Set(["--revert", "--harness", "--resume-prompt", "--repo", "--note"]);
 
 const failure = (code: string, summary?: string) => ({
   ok: false as const,
   error: { kind: "input", code, ...(summary === undefined ? {} : { summary }) },
+});
+
+const fallbackInvocation = (summary: string) => ({
+  ok: false as const,
+  error: { kind: "fallback", code: "fallback.invocation", summary },
 });
 
 /** A local short alias: keeps the parameter type recognizable. */
@@ -110,6 +141,68 @@ const isSummaryData = (data: unknown): data is DispatchSummaryData =>
   typeof (data as { readonly eligibility?: unknown }).eligibility === "boolean" &&
   (data as { readonly coverage?: unknown }).coverage !== undefined;
 
+/** An attempts payload is discriminated by its single declared array key. */
+const isAttemptsData = (data: unknown): data is DispatchAttemptsData =>
+  typeof data === "object" &&
+  data !== null &&
+  Array.isArray((data as { readonly attempts?: unknown }).attempts) &&
+  typeof (data as { readonly hasMore?: unknown }).hasMore === "boolean" &&
+  (data as { readonly refSource?: unknown }).refSource !== undefined;
+
+/** The parsed `attempts` request, or the grammar's refusal summary. */
+type AttemptsRequest =
+  | { readonly ok: true; readonly ref?: string; readonly limit?: number }
+  | { readonly ok: false; readonly summary: string };
+
+const parseAttemptsRequest = (tokens: readonly string[]): AttemptsRequest => {
+  let ref: string | undefined;
+  let limit: number | undefined;
+  for (let index = 2; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === undefined) continue;
+    if (!token.startsWith("--")) {
+      return {
+        ok: false,
+        summary: `unexpected argument "${token}"; dispatch attempts accepts --ref <ref> and --limit <n>`,
+      };
+    }
+    if (token !== "--ref" && token !== "--limit") {
+      return {
+        ok: false,
+        summary: `unknown option "${token}"; dispatch attempts accepts --ref <ref> and --limit <n>`,
+      };
+    }
+    const value = tokens[index + 1];
+    if (value === undefined || value.startsWith("--")) {
+      return { ok: false, summary: `missing value for "${token}"` };
+    }
+    index += 1;
+    if (token === "--ref") {
+      if (!REF_PATTERN.test(value)) {
+        return {
+          ok: false,
+          summary: `"${value}" is not a canonical work item reference (expected letters-dash-digits, e.g. GH-289)`,
+        };
+      }
+      ref = value;
+      continue;
+    }
+    const parsed = LIMIT_PATTERN.test(value) ? Number(value) : Number.NaN;
+    if (!Number.isInteger(parsed) || parsed < ATTEMPTS_MIN_LIMIT || parsed > ATTEMPTS_MAX_LIMIT) {
+      return {
+        ok: false,
+        summary: `"${value}" is not a canonical decimal limit in ${ATTEMPTS_MIN_LIMIT}..${ATTEMPTS_MAX_LIMIT} (no sign, whitespace, or leading zero)`,
+      };
+    }
+    limit = parsed;
+  }
+  return {
+    ok: true,
+    ...(ref === undefined ? {} : { ref }),
+    ...(limit === undefined ? {} : { limit }),
+  };
+};
+
 /** Build the one dispatch command definition over the injected runtime. */
 export const createDispatchCommandDefinition = (
   runtime: DispatchCommandRuntime,
@@ -117,6 +210,7 @@ export const createDispatchCommandDefinition = (
   flags: ["--revert"],
   requiresValue: ["--harness", "--resume-prompt", "--repo", "--note"],
   positionals: { max: 3 },
+  acceptsAnyFlag: true,
   humanSuccess: true,
   exitProjection: (data) => {
     if (isSummaryData(data)) return "success";
@@ -135,6 +229,7 @@ export const createDispatchCommandDefinition = (
     return result === undefined ? "success" : projectionOf(result);
   },
   humanText: (data, _brand, context) => {
+    if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
     if (isSummaryData(data)) return renderDispatchSummaryText(data);
     const envelope = data as Partial<DispatchEnvelopeData>;
     if (envelope.result !== undefined && envelope.lastMessage !== undefined) {
@@ -153,8 +248,33 @@ export const createDispatchCommandDefinition = (
     }
     return undefined;
   },
-  handler: async ({ positionals, flags }: CommandInvocation) => {
+  handler: async ({ positionals, flags, argv }: CommandInvocation) => {
     const [first, second, third] = positionals;
+    const isAttempts = first === "attempts";
+
+    // The definition accepts any flag so the attempts grammar (not the parser)
+    // answers its refusals. Every other form therefore needs this guard to keep
+    // the delivered `fallback.invocation` identity for an undeclared flag.
+    if (!isAttempts) {
+      const undeclared = argv.find(
+        (token) => token.startsWith("--") && !DELIVERED_FLAGS.has(token),
+      );
+      if (undeclared !== undefined) {
+        return fallbackInvocation(`unknown flag "${undeclared}"`);
+      }
+    }
+
+    if (isAttempts) {
+      if (runtime.attempts === undefined) return failure("input.value.rejected");
+      const request = parseAttemptsRequest(argv);
+      if (!request.ok) return failure("input.value.rejected", request.summary);
+      const result = await runtime.attempts.read({
+        ...(request.ref === undefined ? {} : { ref: request.ref }),
+        ...(request.limit === undefined ? {} : { limit: request.limit }),
+      });
+      return result.ok ? { data: result.data } : { error: result.error };
+    }
+
     const repoFlag = typeof flags["--repo"] === "string" ? flags["--repo"] : undefined;
     const noteFlag = typeof flags["--note"] === "string" ? flags["--note"] : undefined;
 

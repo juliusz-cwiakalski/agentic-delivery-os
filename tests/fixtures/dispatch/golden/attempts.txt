@@ -1,0 +1,5 @@
+attempts=3; repository=github.com/owner/repo; ref=GH-289; has_more=false
+2026-11-08T10:02:00.000Z GH-289 merged uncorroborated DIV-3 claude-code controlled-proof
+2026-11-08T10:01:00.000Z GH-289 merged uncorroborated DIV-2 claude-code controlled-proof
+2026-11-08T10:00:00.000Z GH-289 merged uncorroborated DIV-1 claude-code controlled-proof
+next: dispatch dual-run summary --repo github.com/owner/repo (coverage and floor)

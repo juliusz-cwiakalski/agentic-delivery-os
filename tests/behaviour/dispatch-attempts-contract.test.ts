@@ -10,14 +10,18 @@
  * the `attempts` branch.
  */
 import { describe, expect, test } from "bun:test";
-import { DISPATCH_ATTEMPT_PAYLOAD_SCHEMA } from "../../packages/core/src/contracts/index";
+import {
+  DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
+  type DispatchAttemptsData,
+} from "../../packages/core/src/contracts/index";
 import {
   orderAttempts,
   projectAttempt,
   selectAttemptsPage,
 } from "../../packages/core/src/domain/dispatch-attempts";
 import { DISPATCH_NOW } from "../fixtures/dispatch/harness";
-import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
+import { ATTEMPTS_REF, ledgerOf, maximalAttempt } from "../fixtures/dispatch/attempt-records";
+import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
 import { comparisonForToken, makeAttempt, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const DECLARED_FIELDS = [
@@ -188,5 +192,165 @@ describe("TC-ATTEMPT-005 matched and hasMore", () => {
     expect(data.hasMore).toBe(false);
     expect(data.attempts).toEqual([]);
     expect(data.truncation).toBeUndefined();
+  });
+});
+
+describe("TC-ATTEMPT-006..008 command-level projection", () => {
+  test("every returned row carries exactly the sixteen declared fields", async () => {
+    const harness = createAttemptsHarness({ label: "contract-command", records: ledgerOf(3) });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      expect(result.exit).toBe(0);
+      const data = result.data as DispatchAttemptsData;
+      for (const row of data.attempts) {
+        expect(Object.keys(row).sort()).toEqual([...DECLARED_FIELDS].sort());
+        for (const absent of [
+          "schema",
+          "handoverState",
+          "prefillCostAcknowledged",
+          "divergenceRefs",
+        ]) {
+          expect(Object.hasOwn(row, absent)).toBe(false);
+        }
+        expect(typeof row.divergenceRef === "string" || row.divergenceRef === null).toBe(true);
+      }
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("stored instants are projected and printed unmodified", async () => {
+    const record = maximalAttempt({
+      attemptId: "A-INSTANT",
+      startedAt: "2026-11-08T10:00:00.123Z",
+      finishedAt: "2026-11-08T10:05:00.456Z",
+      recordedAt: "2026-11-08T10:06:00.789Z",
+    });
+    const harness = createAttemptsHarness({ label: "contract-instants", records: [record] });
+    try {
+      const machine = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      const row = (machine.data as DispatchAttemptsData).attempts[0];
+      expect(row?.endedAt).toBe(record.finishedAt);
+      expect(row?.startedAt).toBe(record.startedAt);
+      expect(row?.recordedAt).toBe(record.recordedAt);
+      expect(row?.corroboration).toEqual(record.corroboration);
+      const human = await harness.invoke(["dispatch", "attempts", "--ref", ATTEMPTS_REF]);
+      expect(human.stdout).toContain("2026-11-08T10:00:00.123Z");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("the comparison projection carries the null token only when not applicable", async () => {
+    const harness = createAttemptsHarness({
+      label: "contract-comparison",
+      records: [
+        maximalAttempt({ attemptId: "A-COMPARE", comparison: comparisonForToken("merged") }),
+        maximalAttempt({
+          attemptId: "A-NOT-APPLICABLE",
+          token: "max-restarts",
+          comparison: comparisonForToken("max-restarts"),
+        }),
+      ],
+    });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      const rows = (result.data as DispatchAttemptsData).attempts;
+      const notApplicable = rows.find((row) => row.attemptId === "A-NOT-APPLICABLE");
+      expect(notApplicable?.comparison).toEqual({
+        class: "not-applicable",
+        token: null,
+        outcome: "not-applicable",
+      });
+      const comparing = rows.find((row) => row.attemptId === "A-COMPARE");
+      expect(comparing?.comparison.class).toBe("tracker-truth");
+      expect(comparing?.comparison.token).toBe("merged");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("matched and hasMore describe the page's relation to the match set", async () => {
+    const harness = createAttemptsHarness({ label: "contract-page", records: ledgerOf(3) });
+    try {
+      const full = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--limit",
+        "3",
+        "--json",
+      ]);
+      expect((full.data as DispatchAttemptsData).matched).toBe(3);
+      expect((full.data as DispatchAttemptsData).hasMore).toBe(false);
+      const short = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--limit",
+        "2",
+        "--json",
+      ]);
+      expect((short.data as DispatchAttemptsData).matched).toBe(3);
+      expect((short.data as DispatchAttemptsData).hasMore).toBe(true);
+      const none = await harness.invoke(["dispatch", "attempts", "--ref", "GH-999", "--json"]);
+      expect(none.exit).toBe(0);
+      expect((none.data as DispatchAttemptsData).matched).toBe(0);
+      expect((none.data as DispatchAttemptsData).hasMore).toBe(false);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("TC-ATTEMPT-028 cells 1-3 the read side carries no gate key", () => {
+  test("no coverage, floor, verdict, eligibility or unmetConditions key at any depth", async () => {
+    const harness = createAttemptsHarness({ label: "contract-gate-keys", records: ledgerOf(4) });
+    try {
+      const result = await harness.invoke([
+        "dispatch",
+        "attempts",
+        "--ref",
+        ATTEMPTS_REF,
+        "--json",
+      ]);
+      const forbidden = ["coverage", "floor", "verdict", "eligibility", "unmetConditions"];
+      const walk = (value: unknown): void => {
+        if (Array.isArray(value)) {
+          for (const entry of value) walk(entry);
+          return;
+        }
+        if (typeof value !== "object" || value === null) return;
+        for (const [key, nested] of Object.entries(value)) {
+          expect(forbidden, key).not.toContain(key);
+          walk(nested);
+        }
+      };
+      walk(result.data);
+      // The read performs one ledger read and never touches the gate surfaces.
+      expect(result.readCount).toBe(1);
+    } finally {
+      harness.dispose();
+    }
   });
 });

@@ -144,6 +144,7 @@ import {
   readActiveLeases,
   readCommandReceipts,
   readDaemonLanes,
+  readDispatchAttemptHistory,
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
@@ -345,6 +346,7 @@ import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./comm
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import {
   createDispatchCommandDefinition,
+  type DispatchAttemptsRuntime,
   type DispatchCommandRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
@@ -392,7 +394,7 @@ import { createSpendCommandDefinition, type SpendCommandRuntime } from "./comman
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 
-export type { DispatchCommandRuntime } from "./commands/dispatch.js";
+export type { DispatchAttemptsRuntime, DispatchCommandRuntime } from "./commands/dispatch.js";
 
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
@@ -4638,73 +4640,103 @@ export type DispatchGateComposition = {
   readonly fenceToken: string;
   readonly nowIso: () => string;
   readonly gate: NonNullable<DispatchComposition["gate"]>;
+  /**
+   * The attempt-history read ports (GH-289). Optional like every other gate
+   * member: a composition that supplies none keeps exactly the delivered three
+   * gate surfaces.
+   */
+  readonly attempts?: {
+    readonly resolveRepository: () => string | undefined;
+    readonly resolveActiveRef: () => string | null;
+    readonly contextPath: string;
+  };
 };
 
 /**
  * Build the typed evidence-gate runtime (`dual-run summary`, `dual-run resolve`,
- * `handover [--revert]`) over the injected store and identity resolver. It needs
- * no harness settings, so a composition can expose it without resolving them.
+ * `handover [--revert]`, and `attempts` when its ports are supplied) over the
+ * injected store and identity resolver. It needs no harness settings, so a
+ * composition can expose it without resolving them.
  */
 export const createDispatchGateRuntime = (
   composition: DispatchGateComposition,
 ): Required<
   Pick<import("./commands/dispatch.js").DispatchCommandRuntime, "summary" | "resolve" | "handover">
-> => ({
-  summary: {
-    summarize: async (repo: string) => {
-      const repository = composition.gate.resolveRepository(repo);
-      if (repository === undefined) {
-        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-      }
-      const result = summarizeDispatchEvidence({
-        store: composition.store,
-        repository,
-        scope: composition.gate.scope,
-        nowIso: composition.nowIso(),
-        ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
-      });
-      return result.ok
-        ? { ok: true as const, data: result.data }
-        : { ok: false as const, error: result.error };
+> & { readonly attempts?: DispatchAttemptsRuntime } => {
+  const attemptsPorts = composition.attempts;
+  return {
+    summary: {
+      summarize: async (repo: string) => {
+        const repository = composition.gate.resolveRepository(repo);
+        if (repository === undefined) {
+          return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+        }
+        const result = summarizeDispatchEvidence({
+          store: composition.store,
+          repository,
+          scope: composition.gate.scope,
+          nowIso: composition.nowIso(),
+          ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
+        });
+        return result.ok
+          ? { ok: true as const, data: result.data }
+          : { ok: false as const, error: result.error };
+      },
     },
-  },
-  resolve: {
-    resolve: async (input: { readonly divergenceId: string; readonly note: string }) =>
-      resolveDispatchDivergenceEvidence({
-        store: composition.store,
-        fenceToken: composition.fenceToken,
-        divergenceId: input.divergenceId,
-        note: input.note,
-        principal: composition.gate.principal,
-        nowIso: composition.nowIso(),
-      }),
-  },
-  handover: {
-    handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
-      const repository = composition.gate.resolveRepository(input.repo);
-      if (repository === undefined) {
-        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-      }
-      return input.revert
-        ? revertDispatchHandoverEvidence({
-            store: composition.store,
-            fenceToken: composition.fenceToken,
-            repository,
-            scope: composition.gate.scope,
-            nowIso: composition.nowIso(),
-            principal: composition.gate.principal,
-          })
-        : handoverDispatchEvidence({
-            store: composition.store,
-            fenceToken: composition.fenceToken,
-            repository,
-            scope: composition.gate.scope,
-            nowIso: composition.nowIso(),
-            principal: composition.gate.principal,
-          });
+    resolve: {
+      resolve: async (input: { readonly divergenceId: string; readonly note: string }) =>
+        resolveDispatchDivergenceEvidence({
+          store: composition.store,
+          fenceToken: composition.fenceToken,
+          divergenceId: input.divergenceId,
+          note: input.note,
+          principal: composition.gate.principal,
+          nowIso: composition.nowIso(),
+        }),
     },
-  },
-});
+    handover: {
+      handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
+        const repository = composition.gate.resolveRepository(input.repo);
+        if (repository === undefined) {
+          return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+        }
+        return input.revert
+          ? revertDispatchHandoverEvidence({
+              store: composition.store,
+              fenceToken: composition.fenceToken,
+              repository,
+              scope: composition.gate.scope,
+              nowIso: composition.nowIso(),
+              principal: composition.gate.principal,
+            })
+          : handoverDispatchEvidence({
+              store: composition.store,
+              fenceToken: composition.fenceToken,
+              repository,
+              scope: composition.gate.scope,
+              nowIso: composition.nowIso(),
+              principal: composition.gate.principal,
+            });
+      },
+    },
+    ...(attemptsPorts === undefined
+      ? {}
+      : {
+          attempts: {
+            read: async (input: { readonly ref?: string; readonly limit?: number }) =>
+              readDispatchAttemptHistory(
+                {
+                  store: composition.store,
+                  resolveRepository: attemptsPorts.resolveRepository,
+                  resolveActiveRef: attemptsPorts.resolveActiveRef,
+                  contextPath: attemptsPorts.contextPath,
+                },
+                input,
+              ),
+          },
+        }),
+  };
+};
 
 /**
  * Build the dispatch command runtime. An unknown or uncomposed harness is a
