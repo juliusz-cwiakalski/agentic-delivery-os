@@ -4,9 +4,9 @@ title: "feat(projects): multi-repository workstations - per-repository state
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-11T01:55:00Z", completed: 2026-11-11T00:51:47.273Z }
-  specification: { started: null, completed: 2026-11-11T01:16:16.133Z }
-  test_planning: { started: null, completed: 2026-11-11T01:22:28.084Z }
-  delivery_planning: { started: null, completed: 2026-11-11T01:32:31.252Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -55,6 +55,55 @@ notes:
       tests/fixtures/help-guide/coverage.json plus a reference page for the new
       family, and the migration note owed to existing single-store users."
     type: info
+    date: "2026-11-11"
+  - text: "Test planning found two spec gaps (an in-scope unbound behaviour with no
+      AC, and an unspecified identity-refusal subject) plus a source-probe
+      accuracy finding: production.ts composes the state directory inline and
+      ignores the delivered <PREFIX>_STATE_DIR override, and mcp/serve.ts
+      repeats it, so three derivation sites exist today and only the
+      runtime-aware edge honours the override. Specification reopened, revised
+      to v1.1 (AC-F1-5, AC-F3-3 naming, AC-F6-1 strengthened, DEC-16, §2.1
+      corrected), re-completed (commit 6f28f34b); test plan revised to v2 (39
+      TCs, 35/35 ACs) and completed (commit 754a7062); plan validated and
+      completed (commit 1c8f2f6f)."
+    type: info
+    date: "2026-11-11"
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md). 12
+      blocking: B1 project-key collision for two checkouts with the same
+      basename; B2 the F-3 read-only clause has no owning AC; B3 phase 4 needs
+      the prompt-required set change owned by phase 6 (both help gates verify
+      set equality, so it cannot be green early); B4 phase 1 asserts a host-root
+      listing that only exists after the phase-2 index; B5 the policy location
+      (core/domain consuming core/config) violates the
+      tier-domain-only-contracts boundary rule and plan/test-plan name different
+      policy files; B6 the AC-F3-3 identity-refusal provocation is unreachable
+      through the delivered git-directory resolution; B7 DEC-8 and DEC-16
+      disagree about whether projects.state-unavailable can name a project key
+      and state location that cannot exist, with no covering cell; B8 the M2
+      projects page contradicts AC-F1-5 and AC-F3-2 and nothing corrects it; B9
+      no phase owns the forbidden-literals registry entry the new guide
+      requires; B10 two ACs declare Suite evidence for assertions the pinned
+      release gate does not make and for a diff-against-moving-base half; B11
+      AC-F6-4 is already satisfied by unmodified resolveDaemonSettings while
+      plan 4.4 names a file that does not derive the socket; B12 four
+      precedent-setting DECs have no TDR. Advisories A1-A8. Reopened
+      specification, test_planning, delivery_planning; no delivery phase
+      entered."
+    type: blocker
+    date: "2026-11-11"
+  - text: "Retro: the spec set the contract surface correctly but two classes of
+      defect reached the gate. (i) Placement/sequencing was asserted instead of
+      probed: B5 (dependency-cruiser tier rule) and B3 (help gates verify set
+      equality, so the prompt-set change and the command definition must land in
+      one phase) would both have been caught by running the two gates and
+      reading .dependency-cruiser.cjs before writing the policy location and
+      phase order. (ii) Evidence classes were declared from intent rather than
+      from the pinned test sources: B10/B11 would have been caught by reading
+      privacy-release.test.ts and resolveDaemonSettings before labelling Suite.
+      Lesson: when a spec places a module or orders phases, run the boundary and
+      coverage gates against the plan's file list; when an AC declares Suite,
+      name the pinned test that makes it red."
+    type: retro
     date: "2026-11-11"
   - text: "Scope clarifications resolved without human input: the M2 pack fixes the
       contract (projectKey from the git common dir marker, stateLocation per
