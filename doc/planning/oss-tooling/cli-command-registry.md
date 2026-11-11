@@ -189,8 +189,9 @@ GitHub, Azure on demand).
 | `ados projects` | Workstation overview of managed checkouts: repo key, root, state location, daemon reachability, handover state; per-repository state scoping from the checkout identity (git common dir marker) with a host-level index. Shipped in GH-288 (M2-S11) | operator, coordinator | M2-S11 (shipped in GH-288) | - |
 | `ados events` | Subscribe event-taxonomy reference: lists the versioned topics (`queue` and `lanes`, extended by `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`) with their kinds, payload shape, ordering guarantee, and overflow-to-repoll rule | sessions, coordinator | M2-S13 | - |
 
-`attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12)
-and not a root family.
+`attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12,
+shipped in GH-289) and not a root family; it adds no prompt-required entry and
+no root-listing row.
 Boundary note: `projects` (workstation overview, M2-S11) and the future M3 `repos` family are distinct surfaces, so the names never collide.
 
 ### M3: Surfaces, adapters, validators

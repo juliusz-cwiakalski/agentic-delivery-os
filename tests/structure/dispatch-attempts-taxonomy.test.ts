@@ -27,9 +27,8 @@ const PROPOSED_IDENTITIES = [
 const QUOTED_CODE = /["'`]attempts\.[a-z][a-z-]*["'`]/u;
 
 /**
- * The scan targets owned by the code and help surfaces plus the result-contract
- * page. The dispatch-engine page is added by the reconciliation phase, once the
- * page states the delivered behaviour.
+ * The scan targets: the code and help surfaces plus the two reconciled spec
+ * pages, added here once they state the delivered behaviour.
  */
 const SCAN_TARGETS = [
   "packages/core/src/contracts/dispatch.ts",
@@ -39,6 +38,7 @@ const SCAN_TARGETS = [
   "packages/cli/src/output/dispatch-text.ts",
   "packages/cli/src/help.ts",
   "doc/spec/features/feature-result-contract.md",
+  "doc/spec/features/feature-dispatch-engine.md",
 ] as const;
 
 describe("TC-ATTEMPT-017 taxonomy closure", () => {

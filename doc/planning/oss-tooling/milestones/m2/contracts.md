@@ -42,22 +42,41 @@ The project overview contract, owned by M2-S11.
 
 The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
 
-- **Record fields.** Attempt id, ref, `token`, the corroboration triple
-  (pm-notes phase evidence, tracker state, CI on the pushed head), divergence
-  refs, start and end timestamps, and the harness identity recorded per
-  attempt.
+- **Record fields.** The projection carries sixteen fields per attempt: attempt
+  id, repository, ref, harness, evidence class, outcome, `token`, start and end
+  timestamps (`endedAt` is the consumer name for the recorded finish), a single
+  `divergenceRef` (identifier or explicit `null`), the corroboration triple
+  (pm-notes phase evidence, tracker state, CI on the pushed head), the
+  false-success flag, the comparison (`class`, `token` or `null`, `outcome`), the
+  recorded resume mode or `null`, the bounded evidence references, and the
+  recorded-at timestamp. A list-valued divergence field is not part of the
+  contract: the durable record carries at most one reference.
 - **Read side.** `attempts.v1` is the per-ref read side:
-  `<binary> dispatch attempts --ref <ref> [--limit <n>]` returns that ref's
-  history as a machine envelope; `--limit` bounds the page and the envelope
-  reports whether more attempts remain. A repository's history is the union over its refs,
-  while the backlog keeps the ticket's per-repository wording.
+  `<binary> dispatch attempts [--ref <ref>] [--limit <n>]` returns that ref's
+  history as a machine envelope; omitted, the ref resolves from
+  `.ai/local/pm-context.yaml`. `--limit` is canonical decimal, 1..100, default
+  20, refused rather than clamped; the envelope reports `matched`, `hasMore`,
+  the bounded `truncation`, and the count-only `excluded.foreignRepository`. A
+  repository's history is the union over its refs; the read is scoped to the
+  invoking checkout's repository both physically (project state root) and
+  logically (record filter).
 - **Divergence resolution.** `<binary> dispatch dual-run resolve <divergence-id> --note <text>`
   resolves a recorded divergence (no `--ref` on resolve: the divergence id
-  carries the ref); the result reports unresolved counts. When live tracker
-  truth is unreachable, resolution runs from local evidence and declares
-  `local-evidence` mode in the envelope.
+  carries the ref). The result keeps the five delivered keys and adds
+  `mode: "local-evidence"` unconditionally, the divergence's own `repository`,
+  and the shared repository-scoped `divergences` block (`reported`, `resolved`,
+  the exact open `unresolved`, at most 20 `unresolvedIds`, `idsTruncated`). A
+  blank note is refused; a note over 240 characters is clamped and reported as
+  stored.
+- **Error identities.** The read side adds no error row: a malformed request and
+  an unresolvable context or identity are `input.value.rejected` (exit 1), an
+  unreadable store keeps its delivered `state.*` identity as that row projects,
+  and a verified empty history is success. No `attempts.*` identity exists.
 - **Coverage and floor.** The summary keeps reporting evidence coverage and
-  the exposure floor; the contract does not replace the handover gate.
+  the exposure floor; the contract does not replace the handover gate. Its
+  divergence block joins the same repository-scoped computation, so `unresolved`
+  is exact for the reported repository and `unresolvedIds` honours the
+  20-identifier bound.
 
 ## Event taxonomy v1
 

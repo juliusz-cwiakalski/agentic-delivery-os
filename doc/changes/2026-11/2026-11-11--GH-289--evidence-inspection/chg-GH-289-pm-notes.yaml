@@ -295,3 +295,22 @@ notes:
       (NFR-2 bounds `attempts`)."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 4 complete (commit 9d56ebeb). The mount unit landed whole:
+      the `dispatch` family entry gains the `dispatch attempts [--ref <ref>]
+      [--limit <n>]` usage line, both options and one example; a fifth entry at
+      `dispatch attempts` carries its summary, usage, both options, examples and
+      the M2 see-also target pageIn(M2_REFERENCE_ROOT, \"attempts\"); the
+      coverage inventory registers the M2 attempts page while `commands` stays
+      unchanged because attempts is not prompt-required; the reference-page
+      parity pin moves from four to five with its title stating five; the help
+      inventory asserts the five-entry list plus the new entry's usage/option/
+      example cells; the poisoned-composer set gains `dispatch attempts --help`;
+      and tests/structure/dispatch-attempts-composition.test.ts pins the pointer,
+      both help surfaces, the seventeen-family root listing, and the absence of
+      gate keys on the read side. Green: pnpm check:help, the six named help/
+      parity/inventory/composition suites 23/23, cli typecheck, boundaries,
+      lint and format; the M1 dispatch page is byte-unchanged (empty diff). Per
+      the plan's gate choice the aggregate pnpm check is not re-run here; it
+      re-runs on the final tree at phase 5."
+    type: info
+    date: "2026-11-11"
