@@ -646,3 +646,39 @@ notes:
       green). Not pushed and no pull request opened."
     type: "info"
     date: "2026-11-11"
+  - text: "Plan phase 9 final gate (tasks 9.15-9.22 bookkeeping, closing note): this
+      note supersedes the aggregate numbers of the note above. 92d2df11 is the
+      bookkeeping commit of record for the iteration-2 continuation (plan v1.7
+      header, the spec 8.5 and AC-F8-4 permitted-update sites, the owner-hold doc
+      guard, the crash-restart and staleness-agreement suites, the uninstall
+      symmetry fix and the pm-notes evidence); 1df9e74e carries the primary
+      Phase-9 remediation and 97a3f410 and 72e2c1a7 the trailing doc-sync pages.
+      The doc guard is reconciled honestly rather than by restating the retired
+      claim: doc/guides/delivery-modes.md keeps its store-derived wording (the
+      marker follows the resolved store directory, an absolute <PREFIX>_STATE_DIR
+      relocates store and marker together, otherwise the home-based
+      <home>/<brand.stateDirectoryName> applies, there is no marker-path setting,
+      and the home default is never moved) and tests/checks/owner-hold-doc.test.ts
+      pins that truth with one added negative cell asserting the retired 'no
+      store relocation' phrase is absent; every other assertion in the guard is
+      intact. The guard file is a declared Phase-9 scope file and a named
+      permitted-update site in spec 8.5 and AC-F8-4 (the PM-authorised mechanical
+      list extension, which changes no criterion's meaning). Final full battery
+      under TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4: 7284 pass, 4 skip, 0
+      fail, 7288 tests across 897 files in 488.11 s — one more passing test than
+      the 7283 recorded above, because the guard's added negative cell is a new
+      test. Gates at this tree: owner-hold-doc plus doc-conformance 22/22; the
+      crash-restart, staleness-agreement, start-detached, install-mount, lock and
+      lock-concurrency suites 57/57; the remaining Phase-9 daemon suites 110/110;
+      the remediation group 68/68; the lock/lifecycle/degradation group 76/76;
+      pnpm typecheck clean; pnpm lint exit 0 (72 pre-existing warnings, 25
+      infos, 0 errors); pnpm format:check clean; plan validate verdict=valid,
+      readyForDevelopment=true; git diff --check clean. Test plan 10.2 carries
+      these numbers. Accepted limitation (F-9, NF-5): phase-mode commits take the
+      commit primitive's deterministic template subject, so 92d2df11 and the
+      follow-up bookkeeping commit carry a docs-class subject over change
+      artifacts and source, and the change semantics live in the pull-request
+      description; no commit subject was rewritten by hand. Not pushed and no pull
+      request opened."
+    type: "info"
+    date: "2026-11-11"
