@@ -1,14 +1,14 @@
 ---
 id: chg-GH-303-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-11T11:40:00Z
-last_updated: 2026-11-11T11:40:00Z
+last_updated: 2026-11-11T12:40:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs, planning]
 version_impact: none
-summary: "Docs-only verification of the M2 domain-model amendment against spec v1.0: 33 functional and 12 non-functional acceptance criteria bound one-to-one to 45 test cases and 45 executable procedures (plus a P00 base-loader) whose oracles are diff predicates, line-retention comparisons, section-scoped content scans, the Appendix B naming-boundary matrix, the two doc guards with their opposite TMPDIR requirements, the 139-to-140 forbidden-literals registration, and a structural mermaid read; thirteen product files change (twelve planning documents, one new, plus the guard registry row), the Epic M2 insertion is pinned to the one-line window between M2-S17's last line and the block-closing separator derived from the tree (1286:1286), status.md is held to a whole-file line-retention oracle with additions confined to one derived new dated section, and every procedure was run against base 5372dbac before any product edit so each expected failure is recorded rather than assumed."
+summary: "Docs-only verification of the M2 domain-model amendment against spec v1.1: 33 functional and 12 non-functional acceptance criteria bound one-to-one to 45 test cases and 45 executable procedures (plus a P00 shared preamble) whose oracles are diff predicates, line-retention comparisons, section-scoped content scans, the Appendix B naming-boundary matrix with sentence-level semantic detectors, the two doc guards with their opposite TMPDIR requirements, the 139-to-140 forbidden-literals registration, and a structural mermaid read; thirteen product files change (twelve planning documents: 11 modified plus the new commands/repos.md, plus the guard registry row). Every procedure was run in a fresh shell against base 5372dbac and every changed procedure was also run against a conforming never-committed worktree fixture at 5372dbac with the thirteen changes applied, so each base-observed failure and each fixture-derived post-change expectation is recorded separately rather than assumed; the fixture is the source of the post-change literals (Epic M2 window opens at S17's last line + 1, context paragraph paragraph_lines=4, backlog headings 74 to 76, registry 139 to 140)."
 links:
   change_spec: ./chg-GH-303-spec.md
   implementation_plan: ./chg-GH-303-plan.yaml
@@ -38,7 +38,7 @@ The plan was executed against the pre-change tree before any product edit: every
 - `doc/planning/oss-tooling/status.md`: one new dated planning section, under a whole-file line-retention oracle (no base line removed, reordered, or modified; additions confined to the one new section).
 - `doc/planning/oss-tooling/cli-command-registry.md`: the `ados repos` M2 row, the redefined `ados projects` row, the reconciled M3-S6 row, and the replaced boundary note, with every other row byte-identical.
 - `scripts/checks/forbidden-literals.registry.json`: exactly one added registration (139 → 140) between the `queue.md` and `spend.md` entries.
-- Repository guards: `bash scripts/.tests/test-doc-distribution.sh` with the **default** `TMPDIR` (exit 0), `bun run scripts/checks/forbidden-literals.ts` (0 violations, 0 unregistered docs), and `pnpm check` with a **repository-local** `TMPDIR` (exit 0), with the default-`TMPDIR` run recorded and only a lone `tests/checks/ci-baseline-parity.test.ts` failure classified environmental.
+- Repository guards: `bash scripts/.tests/test-doc-distribution.sh` with the **default** `TMPDIR` (exit 0), `bun run scripts/checks/forbidden-literals.ts` (0 violations, 0 unregistered docs), and `pnpm check` with a **repository-local** `TMPDIR` (full suite, exit 0, authoritative), with both aggregate runs recorded and the two named default-only failures (`ci-baseline-parity` and the `TC-WIRE-002` timeout) excused only while the repository-local run is green on the same head.
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -47,18 +47,18 @@ The plan was executed against the pre-change tree before any product edit: every
 - **G-3 — mermaid syntax validity is not testable in this repository.** No validator exists and NFR-7 adds none. P40 proves structure only: fence counts even per touched file, every diagram fence tagged `mermaid`, every first body line starting with `flowchart`/`graph`/`sequenceDiagram`/`classDiagram`/`stateDiagram-v2`, `## C4 Level 1/2/3` exactly once each, and exactly 8 `###` headings under `## Key flows` each owning exactly one mermaid block (7 at base, one added). A syntactically broken diagram satisfying those conditions is not caught. **Compensation:** the reviewer opens the rendered GitHub preview of `architecture.md` (RSK-9). Owner: `@reviewer`.
 - **G-4 — the naming-boundary scan is pattern-based.** P32 (forbidden half, Appendix B walked as 17 regions plus a corpus scan) and P45 (required half) match the vocabulary this plan knows. A page that says something flat about checkouts in words the matrix does not anticipate survives. **Compensation:** the reviewer walks Appendix B by hand and reads the diff of the twelve documents; the scan's scope is declared so the residue is bounded, not denied (RSK-1). Owner: `@reviewer`.
 - **G-5 — status-section content quality is review.** P28 proves the new section exists, is unique, carries the six required anchors, and claims no delivery; P29/P44 prove nothing was removed, reordered, or modified and that additions sit inside it. Neither proves the prose is accurate. **Compensation:** the reviewer reads the new section against F-12 and DEC-6. Owner: `@reviewer`.
-- **G-6 — the two guards have opposite `TMPDIR` requirements in this environment.** `scripts/.tests/test-doc-distribution.sh` needs the default `TMPDIR`; `pnpm check` needs a repository-filesystem `TMPDIR` because `tests/checks/ci-baseline-parity.test.ts` runs `git clone --local`, which fails with a cross-device hardlink when `tmpdir()` is tmpfs. P38 runs the distribution guard with `env -u TMPDIR`; P39 runs the aggregate gate twice and classifies **only** a lone default-run `ci-baseline-parity` failure as environmental. Any other default-run failure, or any repository-local failure, is a delivery failure (DEC-16, RSK-7). Owner: `@runner` at phase 9. **Observed at base and flagged:** the default-`TMPDIR` run also failed `TC-WIRE-002 … the command is read-only, deterministic, and unaffected by a throwing fetch` with a 5000 ms timeout. That test runs alone red in both `TMPDIR` modes at base (5041.80 ms default, 5538.72 ms repository-local) and green inside both full-suite runs, so it is a pre-existing timing sensitivity of a `pnpm check:privacy-literals` spawn, not a consequence of this docs change — and the spec's single-test exemption does not cover it. Disposition: re-run the authoritative gate on a quiet machine at phase 9; a repeat failure in the repository-local run is a delivery failure under AC-NFR6-1 and must be escalated to the ticket owner as a gate defect, never reclassified as environmental.
+- **G-6 — the two guards have opposite `TMPDIR` requirements in this environment.** `scripts/.tests/test-doc-distribution.sh` needs the default `TMPDIR`; `pnpm check` needs a repository-filesystem `TMPDIR` because `tests/checks/ci-baseline-parity.test.ts` runs `git clone --local`, which fails with a cross-device hardlink when `tmpdir()` is tmpfs. P38 runs the distribution guard with `env -u TMPDIR`. P39 follows spec v1.1 AC-NFR6-1 exactly: the repository-local full-suite run is authoritative and must exit 0; both runs are recorded; a default-run `ci-baseline-parity` failure and a default-run `TC-WIRE-002` 5000 ms timeout are each recorded and re-run and are excused **only** while the repository-local run is green on the same head; any other default-run failure, or a `TC-WIRE-002` repeat inside the repository-local run, is a delivery failure (DEC-16, RSK-7). Owner: `@runner` at phase 9. **Observed at base:** the default-`TMPDIR` run exits 1 with exactly those two named failures (`CI baseline parity (hermetic partial clone)` and `TC-WIRE-002`), and the repository-local full-suite run exits 0; both are recorded, the standalone re-runs are recorded in P39's re-run record, and the pair is therefore classified `excused` rather than reclassified as environmental. A repeat of `TC-WIRE-002` inside the authoritative run is a delivery failure and must be escalated to the ticket owner as a gate defect.
 - **G-7 — `pnpm check` proves no-regression, not document correctness.** It can stay green while a story loses a clause or a page keeps the wrong meaning. It is a containment gate; the content procedures carry the requirements.
 - **G-8 — passing preservation controls are not evidence of delivery.** P29, P35, P38, P42, P43, and P44 pass their retention, guard, link, or soundness halves on the pre-change tree. They become evidence only together with the failing new-content procedures and the mutation self-tests; Section 10 labels them `PASS (control)`.
 - **G-9 — prose quality of the architecture, contracts, journeys, and seeds is review, not a command.** The procedures prove required sections, fields, flows, counts, and one-`Assert:`-per-seed shape; they do not prove the design is coherent or that a seed is the right seed. **Compensation:** the reviewer reads `architecture.md`, `contracts.md`, `test-scenarios.md`, and `journeys.md` against the spec's Appendix B row descriptions. Owner: `@reviewer`.
-- **G-10 — containment is counted on the branch diff, not on the working tree.** P34 counts `git diff --name-only 5372dbac...HEAD` filtered to product files and additionally reports `worktree_product_changes` from `git status --porcelain`, so an uncommitted product edit cannot hide behind a clean commit range.
+- **G-10 — containment is decidable before the P5 commit.** P34 compares the base revision with the **working tree** (one-dot `git diff --name-only "$BASE" -- .`, plus untracked product files from `git ls-files --others --exclude-standard`), filtered to product files and compared against the 13-path manifest in both directions. That makes the P5 gate decidable at the boundary it gates and still non-vacuous (`product_files=0/13` is a missing deliverable). The committed range (`"$BASE"...HEAD`) is reported separately as a post-commit verification step, not as the gate. Every other containment check in this plan (forbidden roots, `other_scripts_changed`) uses the same base..worktree set.
 - **Not applicable:** unit, integration, contract-execution, E2E, performance, migration, telemetry, and security-surface testing. There is no runtime code path, schema, or emitted artifact; the spec declares no API or event surface (spec §8.1, §8.2). Per `.ai/rules/testing-strategy.md`, a `doc/**` change uses static/diff and content checks plus the repository guards, and adds no committed test code — NFR-1 forbids touching `tests/**`, `.ai/**`, and any `scripts/**` path except the one registry row.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-303-spec.md`](./chg-GH-303-spec.md) v1.0 | Binding source: F-1..F-14, 33 functional + 12 non-functional ACs (45), NFR-1..NFR-12, DM-1..DM-8, DEC-1..DEC-17, RSK-1..RSK-12, Appendix A (26-clause fidelity oracle), Appendix B (16-row naming matrix, walked as 17 regions), Appendix C (13-file manifest), Appendix D (gate evidence) |
+| [`chg-GH-303-spec.md`](./chg-GH-303-spec.md) v1.1 | Binding source: F-1..F-14, 33 functional + 12 non-functional ACs (45), NFR-1..NFR-12, DM-1..DM-8, DEC-1..DEC-17, RSK-1..RSK-12, Appendix A (26-clause fidelity oracle), Appendix B (16-row naming matrix, walked as 17 regions), Appendix C (13-file manifest), Appendix D (gate evidence) |
 | [`chg-GH-303-pm-notes.yaml`](./chg-GH-303-pm-notes.yaml) | Binding intake decisions: docs-only autonomous delivery, the `repos`/M3-S6 name resolution, the entrypoint-delta reading, the derived index and registry scope, the flat-envelope contract name, and the recorded repository facts (separator structure, guards, `TMPDIR` behaviour) |
 | GH-303 ticket (`juliusz-cwiakalski/agentic-delivery-os#303`) | Normative story text transcribed into spec Appendix A; read at authoring time and re-read by the reviewer for the paraphrase pass (G-1) |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review and PR-time gates, never to the permanent suite |
@@ -117,7 +117,7 @@ Forward traceability: every acceptance criterion appears exactly once, and every
 | AC-NFR3-1 | Both command pages carry the exact header, zero delivered claims for the three planned surfaces, the pack's planned-until-exit statement verbatim, and no page relabelled as a snapshot | TC-M2DOM-036 | Covered |
 | AC-NFR4-1 | `registered` grows 139 → 140 with `.../m2/commands/repos.md` between the `queue.md` and `spend.md` entries, no duplicates, and the guard reporting 0 unregistered docs and 0 violations | TC-M2DOM-037 | Covered |
 | AC-NFR5-1 | `bash scripts/.tests/test-doc-distribution.sh` exits 0 under the default `TMPDIR`, and no planning document carries an `ados_distribution` marker | TC-M2DOM-038 | Covered |
-| AC-NFR6-1 | Both aggregate runs recorded; the repository-local run exits 0; a default-run failure is environmental only when its sole failing test is `tests/checks/ci-baseline-parity.test.ts` | TC-M2DOM-039 | Covered |
+| AC-NFR6-1 | Both aggregate runs recorded; the repository-local full-suite run is authoritative and must exit 0 (any failure there, including a repeated `TC-WIRE-002`, is a delivery failure); a default-run `ci-baseline-parity` failure and a default-run `TC-WIRE-002` timeout are each recorded, re-run, and excused only while the repository-local run is green on the same head; any other default-run failure is a delivery failure | TC-M2DOM-039 | Covered |
 | AC-NFR7-1 | Structural diagram read: even fence counts, `mermaid` tags, allowed keyword first lines, C4 1/2/3 exactly once, and 8 `###` headings under `## Key flows` each owning one block, with no new tooling | TC-M2DOM-040 | Covered |
 | AC-NFR8-1 | 26 of 26 ticket clauses present with unchanged meaning; 0 missing, 0 added, 0 changed in substance | TC-M2DOM-041 | Covered |
 | AC-NFR9-1 | The forbidden-literals guard reports zero violations and no private fleet, repository, host, hosted, or proprietary name appears in new or changed text | TC-M2DOM-042 | Covered |
@@ -181,7 +181,7 @@ The spec declares no REST/HTTP endpoint and no event surface (spec §8.1, §8.2)
 | NFR-3 | Planned-not-delivered semantics | TC-019, TC-020, TC-021, TC-036 | Covered (exact headers, claim scan, verbatim pack statement); residue G-5 |
 | NFR-4 | Forbidden-literals registration | TC-037, TC-042 | Covered (139 → 140, position, duplicates, guard output) |
 | NFR-5 | Doc-distribution guard | TC-038 | Covered (default `TMPDIR`, zero planning markers) |
-| NFR-6 | Aggregate gate | TC-039 | Covered (both runs recorded, lone parity failure classified, DEC-16); environment caveat G-6 |
+| NFR-6 | Aggregate gate | TC-039 | Covered (authoritative repository-local full suite, both runs recorded, the two named default-only failures recorded and re-run, any other failure a delivery failure; DEC-16); environment caveat G-6 |
 | NFR-7 | Document structure (no new tooling) | TC-040 | Covered structurally; syntax residue G-3 |
 | NFR-8 | Ticket clause fidelity | TC-003, TC-005, TC-041 | Covered by the 26-row table; meaning residue G-1 |
 | NFR-9 | Public/OSS hygiene | TC-042 | Covered (guard plus added-line read); residue G-4 |
@@ -203,7 +203,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**` change is covered by **static/di
 
 **No test code, suite, or harness is added, and that is correct here.** Every assertion is a property of the diff against a moving base, which the testing strategy assigns to review and PR-time gates rather than the permanent suite; NFR-1 forbids touching `tests/**`, `.ai/**`, and any `scripts/**` path except the single registry row, so committing a helper script would violate the change's own containment criterion.
 
-Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, branch HEAD `6d9a2e58`, no product edits) before this plan was written. Section 5.2 records the observed output per test case and Section 10 records the verdict.
+Each procedure in Section 7.1 was run in a fresh shell against the pre-change tree (`5372dbac`, branch HEAD `5a6cbf48`, no product edits) before this plan was published, and every changed procedure was also run against the conforming, never-committed worktree fixture. Section 5.2 records the base-observed output and the fixture-derived expectation per test case; Section 10 records both verdicts.
 
 ## 5. Test Scenarios
 
@@ -249,7 +249,7 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 | TC-M2DOM-036 | Both command pages stay `Status: Proposed (M2)` and nothing claims delivery | Negative | Critical | High | AC-NFR3-1 | Content |
 | TC-M2DOM-037 | The registry grows by exactly one sorted row and the guard reports no unregistered doc | Happy Path | Critical | High | AC-NFR4-1 | Guard + content |
 | TC-M2DOM-038 | The distribution guard passes under the default `TMPDIR` with no planning markers | Regression | Important | Medium | AC-NFR5-1 | Guard |
-| TC-M2DOM-039 | Both aggregate-gate runs are recorded and only a lone parity failure is environmental | Regression | Critical | High | AC-NFR6-1 | Guard |
+| TC-M2DOM-039 | Both aggregate-gate runs are recorded; the repository-local full suite is authoritative and only the two named default-only failures are excused behind a green local run | Regression | Critical | High | AC-NFR6-1 | Guard |
 | TC-M2DOM-040 | The touched documents satisfy the structural diagram conditions, with eight key flows each owning one block | Corner Case | Critical | High | AC-NFR7-1 | Structural |
 | TC-M2DOM-041 | All 26 ticket clauses are present with no addition and no omission | Corner Case | Critical | High | AC-NFR8-1 | Content |
 | TC-M2DOM-042 | The forbidden-literals guard is clean and no private name was introduced | Negative | Important | Medium | AC-NFR9-1 | Guard |
@@ -277,18 +277,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P01**: extract the M2-S11 entry from the head backlog, then test the five retained clauses (`git common dir marker`, `host-level index`, `migration note`, `cannot observe each other`, `disjoint phase state and queue entries`), the exact `- Depends on: M0-S5, M1-S17.` line, the five-field `repos list` sentence, the `deprecation alias` transition sentence, and the absence of the base goal phrase `a projects command gives one CLI overview`.
-2. Read the amended goal and enumeration acceptance criterion once to confirm the five fields are the only ones named.
+1. Run **P01**: extract the M2-S11 entry, assert the five retained anchors, the exact `- Depends on: M0-S5, M1-S17.` line, the five `repos list` fields (on the squashed entry), the transition note, and the absence of the old "projects command … one CLI overview" goal.
+2. Run the block in a fresh shell; `repos_list_fields` is matched after `squash()` so a wrapped line cannot fake a miss.
 
 **Expected Outcome**:
 
 - `retained_clauses=5/5`; `depends_line=exact`; `repos_list_fields=OK`; `transition_note=OK`; `goal_projects_command=ABSENT`; verdict `PASS`.
-- The entry is amended in place: same heading, same position, same shape (Goal, Tasks, AC, Depends on).
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (`5372dbac`, before any product edit): `retained_clauses=5/5`; `depends_line=exact`; `repos_list_fields=MISSING`; `transition_note=MISSING`; `goal_projects_command=PRESENT (must be ABSENT)`; verdict **FAIL**. The retained half is a passing control; the rename half is absent, which is exactly the amendment's work.
-- Result label for Section 10: **FAIL (rename absent; retained clauses pass as control)**.
+- **Base-observed:** `retained_clauses=5/5`; `depends_line=exact`; `repos_list_fields=MISSING`; `transition_note=MISSING`; `goal_projects_command=PRESENT` → **FAIL**.
+- **Fixture-derived post-change expectation:** all five lines as above → **PASS**. The v1.0 block matched the multi-line field list without squashing; the fixture and the squashed form make the anchor satisfiable on a wrapped entry.
 
 #### TC-M2DOM-002 - Inside the amended entry, no flat `projects list` survives and no retained clause was weakened, merged, or moved
 
@@ -307,16 +306,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P02**: count `projects list` and `repos list` inside the extracted entry, count group-meaning `repos` phrases inside it, and prove the collision clause was not moved by requiring exactly one copy of `disjoint phase state and queue entries` word-wide and that copy inside the M2-S11 range.
-2. Confirm the counts are scoped to the entry, not to the whole file, so a legitimate `projects list` in M2-S18 cannot mask a survivor here.
+1. Run **P02**: count **flat statements** inside the M2-S11 entry with the sentence-level `@flat` detector, not raw `projects list` occurrences. The entry is allowed (and required) to mention `projects list` in its transition clause ("if a flat `projects list` ships before …"); only a statement that attributes enumeration to `projects` is a survivor.
+2. Assert at least one `repos list`, zero group-meaning `repos`, exactly one copy of the collision clause, and its presence inside the S11 entry.
 
 **Expected Outcome**:
 
-- `projects_list_in_entry=0`; `repos_list_in_entry>=1`; `group_meaning_repos_in_entry=0`; `collision_clause_copies=1`; `inside_s11=1`; verdict `PASS`.
+- `flat_projects_statements_in_entry=0`; `projects_list_raw_mentions>=1` (the transition note); `repos_list_in_entry>=1`; `group_meaning_repos_in_entry=0`; `collision_clause_copies=1`; `inside_s11=1`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `projects_list_in_entry=2 repos_list_in_entry=0 group_meaning_repos_in_entry=0 collision_clause_copies=1 inside_s11=1`; verdict **FAIL**. Both base `projects list` occurrences (the task and the acceptance criterion) are the flat-enumeration statements the amendment removes; the "one copy, inside the entry" half is a passing control that would fail if the clause were duplicated into another story.
+- **Base-observed:** `flat_projects_statements_in_entry=3` (goal, task, AC); `projects_list_raw_mentions=2`; `repos_list_in_entry=0` → **FAIL**.
+- **Fixture-derived post-change expectation:** `flat_projects_statements_in_entry=0`; `projects_list_raw_mentions=2` (the mandated transition clause); `repos_list_in_entry=3` → **PASS**. A raw-occurrence ban would make AC-F1-1 and F-1 mutually unsatisfiable; the statement-level oracle is the correct reading of AC-F1-2.
 
 #### TC-M2DOM-003 - The M2-S18 entry carries its four labels and all twelve ticket clauses
 
@@ -477,17 +477,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P08**. The insertion window is derived from the tree, not assumed: `start` = M2-S17's last non-blank line + 1, `end` = the head `---` line before `## Epic M3` minus 1. Then require the head's `---`/blank/`## Epic M3` triple to equal the base's, a blank line immediately before the separator, and S18 before S19 inside the window.
-2. Do not hardcode line numbers: the assertion is that the window is non-empty and that S18/S19 fall inside it.
+1. Run **P08**: `backlog_ranges()` derives `S17_LAST`, `SEP_LINE`, `M3_LINE`, `WS=S17_LAST+1`, and `WE=SEP_LINE-1` from the head. Compare the separator triple (`---`, blank line, `## Epic M3`) with the base snapshot, assert the blank line immediately before the separator, locate S18 and S19, and assert `WS <= s18 < s19 <= WE`.
+2. Read the derived values; a literal post-change line number is never an expected value.
 
 **Expected Outcome**:
 
-- `s17_last=<n> separator=<n+2> epic_m3=<n+4>`; `window_empty=no`; `separator_sequence=identical`; `blank_line_before_separator=1`; `s18_line` and `s19_line` inside the window with `s18_line < s19_line`; `placement=inside-window`; verdict `PASS`.
+- `window_empty=no`; `separator_sequence=identical`; `blank_line_before_separator=1`; `placement=inside-window`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`; `window_empty=no (1 line(s))`; `separator_sequence=identical`; `blank_line_before_separator=1`; `s18_line=absent s19_line=absent`; `placement=FAIL`; verdict **FAIL (change absent)**. The window is exactly the blank line at 1286 — the ticket's "before the blank line and separator" is a one-line insertion point, which is why the entries must be inserted above it and the separator itself must not move.
-- The separator triple and the blank-before-separator check are passing controls: they already hold and must keep holding.
+- **Base-observed (no product edit):** `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`; `s18_line=absent s19_line=absent`; `placement=FAIL` → **FAIL (change absent)**.
+- **Fixture-derived post-change expectation** (conforming, never-committed worktree at base `5372dbac` with the context paragraph, the S11 amendment, and S18/S19 applied): `s17_last=1293 separator=1310 epic_m3=1312 window=1294:1309`; `s18_line=1294 s19_line=1300`; `placement=inside-window` → **PASS**. The window is recomputed from the head, so a different conforming edit may legitimately produce different line numbers; `placement=inside-window` is the invariant.
 
 #### TC-M2DOM-009 - One context paragraph sits between the retirement note and `### M2-S2`, and the surrounding regions are byte-identical
 
@@ -506,17 +506,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P09**: derive the retirement note's range and the M2-S2 heading line, take the lines strictly between them, and require at least one non-blank line carrying all three level names, the `repos`/`projects` boundary, and the root-family consequence.
-2. Compare the frontmatter block, `## Reading guide`, `## Cross-cutting principles`, the retirement note text, and the Epic M2 heading against the base snapshots with `cmp`.
+1. Run **P09**: anchor the retirement note by its first line (`Note: the M1 redefinition moved the queue`) and its **last line** (`the gap is deliberate. M2 stories keep their codes.`), and anchor the next heading as `### M2-S2`. The context paragraph is the window `note_end+1 .. s2_line-1`; assert the note's byte identity against the base snapshot, `note_end+1 < s2_line`, `paragraph_lines>=1`, a blank line immediately after the note end and before `### M2-S2`, and the line numbers of the note's first/last lines unchanged from base.
+2. Assert the paragraph names repository/project/workspace, the `repos`/`projects` boundary, and the root-family consequence; compare the frontmatter, reading guide, and cross-cutting principles with the base snapshot.
 
 **Expected Outcome**:
 
-- `paragraph_lines>=1`; `three_levels=OK`; `boundary=OK`; `root_family=OK`; `fm`, `rg`, `cc`, `retirement_note` all `byte-identical`; `epic_heading=OK`; verdict `PASS`.
+- `note_start_line=anchored(...)`, `note_end_line=anchored(...)`; `retirement_note=OK`; `paragraph_lines>=1`; `paragraph_strictly_between=OK`; `blank_after_note=1`; `blank_before_s2=1`; `three_levels=OK`; `boundary=OK`; `root_family=OK`; `fm`/`rguide`/`cc` `byte-identical`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `retirement_note=1051..1054 context_paragraph=1055..1055 paragraph_lines=0`; `three_levels=MISSING`; `boundary=MISSING`; `root_family=MISSING`; `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`; `retirement_note=byte-identical`; `epic_heading=OK`; verdict **FAIL (no context paragraph)**. Every preservation half is a passing control; the insertion window between the note and M2-S2 is one blank line wide, which pins the paragraph's position without a line number.
-- The retirement note's end is derived as "last non-blank line before `### M2-S2`", not as a fixed number, so the same code reads the base and the head.
+- **Base-observed:** `retirement_note=1051..1054 context_paragraph=1055..1055 paragraph_lines=0`; the note, frontmatter, reading guide, and principles are already byte-identical; `paragraph_strictly_between=FAIL` → **FAIL (no context paragraph)**. The old window formula ("last non-empty line before M2-S2, plus one") collapsed onto the paragraph itself once a paragraph existed; the note's own last line is the stable anchor and is preserved by NFR-2, so it cannot drift.
+- **Fixture-derived post-change expectation:** `retirement_note=1051..1054 context_paragraph=1055..1060 paragraph_lines=4 blank_after_note=1 blank_before_s2=1 paragraph_strictly_between=OK`; all three level/boundary/root-family anchors `OK` → **PASS**.
 
 #### TC-M2DOM-010 - Every zero-context backlog hunk lies inside the three permitted regions
 
@@ -535,17 +535,18 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P10**: classify every `@@` hunk of the zero-context diff against the three allowed ranges — the M2-S11 entry, the context-paragraph window, and the new-entry window — and print each hunk that falls outside.
-2. Confirm the classifier's three self-tests fire: a paragraph-line insertion is inside, an insertion two lines below the separator is outside, and an insertion at the window start is inside.
+1. Run **P10**: classify every zero-context backlog hunk against three ranges derived from the head — the M2-S11 entry (`s11_line:s11_end`), the context paragraph (`note_end+1:s2_line-1`), and the insertion window (`s17_last+1:separator-1`). A hunk is inside only when its added range is wholly contained.
+2. Require at least one hunk (`non_vacuous=yes`) and run the three classifier self-tests: a paragraph line is inside, a line two below the separator is outside, and the first window line is inside.
+3. If the implementation carries per-block helpers, assert they are present: P10 uses the ranges from `backlog_ranges()` in P00, never a stale variable from another block.
 
 **Expected Outcome**:
 
-- `hunks: inside=N outside=0`; `hunk confinement OK`; `non_vacuous=yes`; `classifier_self_tests=3/3`; verdict `PASS`.
+- `backlog_hunks>=1`; `hunks: inside=<n> outside=0`; `hunk confinement OK`; `non_vacuous=yes`; `classifier_self_tests=3/3`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=3/3`; verdict **FAIL (vacuous)**. Zero hunks is a missing deliverable, not containment: the procedure explicitly labels it.
-- The self-tests are what make a later `inside=N outside=0` believable; they run on every invocation.
+- **Base-observed:** `backlog_hunks=0`; `non_vacuous=no`; `classifier_self_tests=3/3` → **FAIL (vacuous)**, not a pass.
+- **Fixture-derived post-change expectation:** `ranges=s11:1174:1191 context:1055:1060 window:1294:1309`; `backlog_hunks=6`; `hunks: inside=6 outside=0`; `non_vacuous=yes` → **PASS**. The ranges are derived, not quoted; the fixture's numbers are evidence of the conforming shape, not the only acceptable head.
 
 #### TC-M2DOM-011 - C4 Level 1 draws repository, project, and workspace with the workspace optional in the diagram itself
 
@@ -760,7 +761,7 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P18**: require a `consumers of projects.v1` statement in the contracts and the advisory phrase `consumed at delivery` on the `| M2-S4 ` map row, then confirm M2-S4's `- Depends on:` line is untouched (TC-035 covers the byte half).
+1. Run procedure **P18**: require a `consumers of projects.v1` statement in the contracts and the exact advisory phrase `(advisory: consumed at delivery; the owning story declares the edge)` on the `| M2-S4 ` map row — the same phrasing the M2-S3, M2-S5 and M2-S10 rows use — then confirm M2-S4's `- Depends on:` line is untouched (TC-035 covers the byte half).
 2. Confirm the map row carries the convention rather than a new dependency edge, which NG-5 forbids.
 
 **Expected Outcome**:
@@ -788,17 +789,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P19**: check ten conditions — exact `Status: Proposed (M2)` header, bare `` `repos` `` NAME, `repos list [--json]` synopsis, the five field names, a `repos[]` envelope key, `## EXIT STATUS`, `## ERRORS`, `## SEE ALSO`, the `<binary>` invocation prefix, and a rename note naming `projects list` and the amended M2-S11.
-2. Confirm the page is modelled on its siblings (same section order as `projects.md`) so the pack reads uniformly (G-9 review half).
+1. Run **P19**: `$R` is defined by **P00** as `milestones/m2/commands/repos.md`; read it (or report `repos_md=absent`) and test the nine page conditions — exact `Status: Proposed (M2)`, bare `repos` NAME, `repos list [--json]` synopsis, `repos[]` envelope, `## EXIT STATUS`, `## ERRORS`, `## SEE ALSO`, `<binary>` prefix, and the rename note — plus the five flat-enumeration fields.
+2. Run the block in a fresh shell as `source P00; source P19`; a missing `$R` must be reported as `repos_md=absent`, never read as an empty file.
 
 **Expected Outcome**:
 
-- `checks=9/9` (header, NAME, synopsis, `repos[]` envelope, EXIT STATUS, ERRORS, SEE ALSO, `<binary>` prefix, rename note); `fields=5/5` (repo key, root, state location, daemon reachability, handover state, accepting either the prose name or the camelCase key); verdict `PASS`.
+- `checks=9/9`; `fields=5/5`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `repos_md=absent`; `checks=0/9 fields=0/5`; verdict **FAIL (change absent)**. This is the only new file in the change, so its absence is the expected pre-change state.
-- Satisfiability proven against a conforming fixture (`/tmp/gh303/fx/commands/repos.md`, written to the ACs and never committed): `checks=9/9 fields=5/5`; `P19 verdict: PASS`. The first draft of this oracle counted nine conditions but required ten, and matched only prose field names; both defects were found by the fixture run and fixed.
+- **Base-observed:** `repos_md=absent`; `checks=0/9 fields=0/5` → **FAIL (change absent)**.
+- **Fixture-derived post-change expectation:** a conforming `commands/repos.md` with the rename note on one line gives `checks=9/9 fields=5/5` → **PASS**. The v1.0 procedure referenced an undefined `$R`; `$R` (and `$PJ`) are now P00 variables and the block is executed in a fresh shell, so the recorded evidence can come from the published block.
 
 #### TC-M2DOM-020 - The rewritten `projects` page is the group surface and never claims to enumerate checkouts
 
@@ -817,17 +818,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P20**: require eight conditions — header, bare NAME, `projects list`, project scope, member/health/state in the output shape, a `projects.v1` pointer, a configuration pointer, and the naming boundary — and forbid three flat-enumeration phrases (`enumerates checkouts`, `overview of every delivery-managed checkout`, `every delivery-managed checkout`).
-2. Confirm the rewrite happened in place: same path, same page identity (DEC-10), not a differently-labelled replacement.
+1. Run **P20**: `$PJ` is defined by **P00** as `milestones/m2/commands/projects.md`; test the seven page conditions (exact status header, bare `projects` NAME, group listing, project scope, `projects.v1` pointer, configuration pointer, naming boundary), the three output fields (member, health, state), and the flat-statement ban.
+2. Run the block in a fresh shell as `source P00; source P20`.
 
 **Expected Outcome**:
 
-- `checks=7/7` (header, NAME, `projects list`, project scope, `projects.v1` pointer, configuration pointer, naming boundary); `fields=3/3` (member, health, state in the output shape); `forbidden_flat_statements=0`; verdict `PASS`.
+- `checks=7/7`; `fields=3/3`; `forbidden_flat_statements=0`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `checks=4/7` (header, NAME, `projects list`, `projects.v1` present; project scope, configuration pointer, naming boundary missing), `fields=1/3`, `forbidden_flat_statements=1`; verdict **FAIL**. The surviving statement is the page's own NAME line, `one overview of every delivery-managed checkout on the host` — the exact sentence AC-F7-2 removes.
-- Satisfiability proven against a conforming fixture (`/tmp/gh303/fx/commands/projects.md`): `checks=7/7 fields=3/3 forbidden_flat_statements=0`; `P20 verdict: PASS`. The first draft of the ban pattern flagged the **required** boundary sentence (`repos` enumerates checkouts) on the projects page; the corrected pattern only forbids attaching the enumeration to `projects`/`projects list`, which is the TP-3 conflict applied to this oracle.
+- **Base-observed:** `checks=4/7 fields=1/3 forbidden_flat_statements=1` → **FAIL**.
+- **Fixture-derived post-change expectation:** a rewritten group-surface page gives `checks=7/7 fields=3/3 forbidden_flat_statements=0` → **PASS**. The triage threshold is `checks<7`, matching the seven conditions the block actually counts.
 
 #### TC-M2DOM-021 - The two command pages split the two surfaces and point at their own contracts
 
@@ -846,8 +847,8 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P21**: require `repos.v1` in the `repos` page and `projects[]` absent there; require `projects.v1` in the `projects` page with `repos.v1` and `repos[]` absent there; require the exact header and an "not registered" statement on both.
-2. Note the deliberate interpretation: the `projects` page *may* mention the word `repos` in its naming-boundary sentence (AC-F14-2 requires it), so the oracle tests contract pointers and envelope keys, not the bare word.
+1. Run **P21**: `$R` and `$PJ` are P00 variables. Assert the `repos` page carries `repos.v1` and no `projects[]`, the `projects` page carries `projects.v1` and no `repos.v1` or `repos[]`, both carry the exact status header, and both state that they are not yet registered.
+2. Run the block in a fresh shell as `source P00; source P21`.
 
 **Expected Outcome**:
 
@@ -855,8 +856,8 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `repos_page=absent`, `projects_page: projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1`; verdict **FAIL**. The `projects` page already disclaims registration, which is a passing control for the planned-status half.
-- Satisfiability proven against the same two conforming fixtures: `repos_page: repos.v1=2 projects[]=0 header=1 not_registered=1`; `projects_page: projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1`; `P21 verdict: PASS`. The page-split oracle is therefore both falsifiable (base) and satisfiable (fixture).
+- **Base-observed:** `repos_page` absent; `projects_page: projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1` → **FAIL**.
+- **Fixture-derived post-change expectation:** `repos.v1=2 projects[]=0 header=1 not_registered=1` and `projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1` → **PASS**. The bare word `repos` may appear in the projects page's boundary sentence; the page split is tested on contract pointers and envelope keys, not on the word.
 
 #### TC-M2DOM-022 - The S18 and S19 seeds exist, carry one `Assert:` each, and cover the required topics
 
@@ -1043,16 +1044,18 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P28**: derive the new section as the first `## ` heading present in the head and absent from the base (no fixed title is assumed), then require six anchors inside it — the three-level model, `repos list`, the deprecation alias, M2-S18, M2-S19, and the naming boundary — plus `registry` and an entrypoint-delta reference.
-2. Forbid delivery or exit claims inside that section only (`M2 exit complete`, `delivered by M2-S18`, …), so earlier sections' legitimate M1 history is not misjudged.
+1. Run **P28**: `newsecs_of()` lists every `## ` heading in the head absent from the base snapshot. Require **exactly one** (`new_section_count=1`), require no `## ` heading after it (`headings_after_new_section=0`), and derive the heading from the head.
+2. Require the heading to follow the file's existing form — title text followed by the parenthesised change date, `^## .+ \(2026-11-11\)$` — and test the six required anchors (three levels, `repos list`, deprecation alias, M2-S18, M2-S19, naming boundary) plus registry and entrypoint-delta coverage, with no delivery claim.
 
 **Expected Outcome**:
 
-- `new_section_line` present and unique; `new_section_heading` names this amendment and a date; six `section anchor OK` lines plus `registry` and the delta reference; `delivery_claim=ABSENT`; `section_anchors=6/6`; verdict `PASS`.
+- `new_section_count=1`; `new_section_heading=## GH-303 domain-model amendment (2026-11-11)` (the title text is free; the date form is enforced); `heading_form=title-plus-parenthesised-date`; `headings_after_new_section=0`; `section_anchors=6/6`; `delivery_claim=ABSENT`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `new_section_line=absent`; `new_section=absent`; verdict **FAIL (change absent)**. The base file ends with the `## M2 planning snapshot (2026-11-10)` section at line 187 of 212, so the new section is expected after it — but the procedure does not assume that position, only uniqueness.
+- **Base-observed:** `new_section_count=0 new_section_line=absent` → **FAIL (change absent)**.
+- **Fixture-derived post-change expectation:** `new_section_count=1 new_section_line=214`, heading `## GH-303 domain-model amendment (2026-11-11)`, `section_anchors=6/6`, `headings_after_new_section=0` → **PASS**. The v1.0 procedure derived only the first new heading; the count and the "no heading after" assertion make a second new section or an out-of-section insertion fail (finding 16).
+- The date is pinned in the file's existing convention (title first, date parenthesised), so the plan's date token is enforced without inventing a title.
 
 #### TC-M2DOM-029 - Every base status line is retained in order and every addition sits in the new section
 
@@ -1071,17 +1074,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P29**: with `diff -U0` against the base snapshot, count removed lines (zero expected: the diff's minimal edit script makes "zero removals" equivalent to "every base line present, in order, byte-identical") and count added hunks whose new-file start precedes the new section's boundary.
-2. The boundary is the derived new-section heading minus one line, so the single blank separator line before the heading counts as inside.
+1. Run **P29**: `diffstat()` counts removed and added lines for the whole file; `newsec_of()`/`newsec_count()` locate the new section; additions are classified against the boundary `new_section_line-1` (the single blank separator belongs to the section).
+2. Pass conditions: `removed_lines=0`, `added_outside_section=0`, `new_section_count<=1`, and `headings_after_new_section=0`. Zero additions is a legitimate base control; two new sections fail.
 
 **Expected Outcome**:
 
-- `removed_lines=0`; `additions>0`; `added_outside_section=0`; `base_lines_retained=OK`; `additions_confined=OK`; verdict `PASS`.
+- `removed_lines=0`; `base_lines_retained=OK`; `additions_confined=OK`; verdict `PASS` (`PASS (control)` on the pre-change tree).
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `removed_lines=0 additions=0 new_section_line=absent added_outside_section=0`; `base_lines=212 head_lines=212`; verdict **PASS (control)**. Zero removals with zero additions is a retention control only: the additions half is vacuous until the change lands, which is why TC-044 proves the oracle bites.
-- No whole-section `cmp` is used anywhere: a section comparison cannot coexist with the appended lines this AC requires.
+- **Base-observed:** `removed_lines=0 additions=0 new_section_count=0`; `base_lines=212 head_lines=212` → **PASS (control)**.
+- **Fixture-derived post-change expectation:** `removed_lines=0 additions=18 new_section_line=214 new_section_count=1 headings_after=0 added_outside_section=0`; `base_lines=212 head_lines=230` → **PASS**. Existence of the section is TC-028's oracle; TC-029 owns retention and confinement, so it stays a control at base while still rejecting a second section.
 
 #### TC-M2DOM-030 - The registry carries the reconciled `repos`, `projects`, and M3-S6 rows plus the new boundary note
 
@@ -1156,17 +1159,19 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P32**: walk the matrix's fifth field (the forbidden statement) per region — 16 Appendix B rows, with the combined `M2-S18 / M2-S19` row split into two regions for 17 total — with each row's region extracted by mode (`entry`, `sect`, `firstsec`, `s11group`, `newgroup`, `m2row`, `newsec`, `whole`), and count survivors.
-2. Run both self-tests: a flat `projects list` sentence appended to a copy of `contracts.md` must be detected, and a group-meaning `repos` sentence appended to a copy of `architecture.md` must be detected.
+1. Run **P32**: walk the 17 matrix regions. The forbidden field is either a literal ERE or a sentence-level mode: `@flat` flags a sentence that attributes enumeration to `projects` (enumeration vocabulary, a CLI/host overview, or the flat field set within the same sentence), `@group` flags a sentence that attributes group/member semantics to `repos` **without** an `enumerat` predicate before the next `projects` clause, and `@both` runs both. This is the design that lets the ticket-mandated S18 goal ("group of repositories … enumerate groups") and the boundary clause ("`repos` = flat enumeration, `projects` = groups") pass while still flagging a real survivor.
+2. Before counting, require every region to be non-empty (`region=EMPTY` is a failure, never a vacuous `forbidden=0`). Run the self-tests: a flat `projects list` sentence is detected, a group-meaning `repos` sentence is detected, the required boundary sentence is **not** flagged, and the base `commands/board.md` text (unchanged by this change) is **not** flagged.
+3. The `s11backlog` mode anchors on the three-hash `### M2-S11 ` heading; `s11seeds` anchors on the test-scenarios story section. The `newsec` region is empty at base and is reported as `EMPTY`, not as `OK`.
 
 **Expected Outcome**:
 
-- every row `forbidden=0`; `rows_with_survivors=0/17`; `self_test_flat=detected`; `self_test_group=detected`; verdict `PASS`.
+- Every row `forbidden=0 OK`; `matrix_rows=17`; `regions_empty=0`; `rows_with_survivors=0/17`; `self_test_flat=detected`; `self_test_group=detected`; `self_test_boundary_allowed=OK`; `base_board_accepted=OK`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `rows_with_survivors=6/17` — `CT-PV1` (`projectKey` as repository identity), `ARCH` (`projects list` reading the host index), `TS-S11` (four flat references in the two S11 seeds), `EPD` (`host overview`), `M2RD` (S11 row on `projects.v1`), `REG` (`distinct surfaces`); `self_test_flat=detected`; `self_test_group=detected`; verdict **FAIL**. The two self-tests prove the scan is not inert; the six survivors prove it is aimed at real defects.
-- Row regions are scoped so a legitimate group-meaning `projects list` in M2-S18 cannot be counted as a survivor.
+- **Base-observed:** `rows_with_survivors=15/17` — nine survivor rows plus five `region=EMPTY` rows and `CMD-R region=NOFILE`. The two `projects list` occurrences in the M2-S11 entry are detected as flat statements (the task line and the AC), and the goal's "projects command … one CLI overview" is detected as a third; the base `projects.md` contributes three flat statements, and `CT-PV1`, `ARCH`, `TS-S11`, `JRN`, `EPD`, `M2RD`, and `REG` each contribute one literal survivor. Both direction self-tests are `detected`, and the required boundary sentence is not flagged. Verdict **FAIL**.
+- **Fixture-derived post-change expectation:** `rows_with_survivors=0/17`, `regions_empty=0`, all four self-tests as above → **PASS**. This is the direct proof that the BL-18 detector is satisfiable on the ticket-verbatim S18/S19 text without rewording a clause.
+- A planted violation still fails: the two injected sentences are reported, so a green head is evidence and not an inert scan.
 
 #### TC-M2DOM-033 - Every location naming both surfaces states the boundary once in the same terms
 
@@ -1176,7 +1181,7 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 **Related IDs**: AC-F14-2, F-14, DM-2, RSK-1
 **Test Type(s)**: Manual (content inspection)
 **Automation Level**: Semi-automated (uncommitted procedure)
-**Target Layer / Location**: the eight both-name locations (context paragraph, architecture, journey, delta note, both READMEs, registry, status)
+**Target Layer / Location**: the six both-name prose locations (Epic M2 context paragraph, architecture, journey, delta note, registry, status); the two index rows are link-only and covered by TC-026/TC-027
 **Tags**: @docs, @naming
 
 **Preconditions**:
@@ -1185,17 +1190,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P33**: for each of the eight locations, require the region to mention both `repos` and `projects` **and** a boundary statement (`flat enumeration`, or `enumerates … (group|projects)`, or `repos … checkouts … projects … group`).
-2. Confirm the eight are exactly the Appendix B rows whose required statement names both surfaces.
+1. Run **P33**: for each of the **six prose locations whose Appendix B row requires a relation statement** — the Epic M2 context paragraph, architecture, the opening journey, the entrypoint delta note, the registry, and the status section — require both names and a boundary statement (`flat enumeration`, `enumerates … (group|projects)`, or `repos … checkouts … projects … group`).
+2. Treat the two index rows (`m2/README.md` and `milestones/README.md`) as link-only locations: Appendix B requires "Both pages linked (13 targets)" and the S11/S18/S19 map rows, not a boundary sentence. Their link and row coverage is checked by **P26/P27**, so P33 does not over-assert prose the spec does not ask for.
 
 **Expected Outcome**:
 
-- `boundary_locations=8/8`; verdict `PASS`.
+- `boundary_locations=6/6`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `boundary_locations=0/8`. `ARCH repos=0 projects=5`, `EPD repos=0 projects=4`, `REG repos=8 projects=4`, `M2RD repos=0 projects=5` — every region mentions one name or names both without ever stating the relationship. Verdict **FAIL**.
-- This is the AC that catches two pages each individually correct but contradicting each other, which no per-page check can see.
+- **Base-observed:** `boundary_locations=0/6` — `ARCH projects=5`, `EPD projects=4`, `REG repos=8 projects=4`; every location names one side or both without the relationship. Verdict **FAIL**.
+- **Fixture-derived post-change expectation:** all six `boundary=OK` → **PASS**. The v1.0 procedure required 8 locations and forced a boundary sentence into the two index rows, which F-11/AC-F11-1/2 do not require; the six prose locations are exactly the ones the spec makes say it.
 
 #### TC-M2DOM-034 - Exactly thirteen product files change and nothing outside the manifest moves
 
@@ -1214,17 +1219,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P34**: list `git diff --name-only 5372dbac...HEAD`, drop `doc/changes/**`, and compare against the 13-path manifest in both directions (`expected_not_changed`, `unexpected_changed`).
-2. Report forbidden-root hits (`doc/spec`, `doc/overview`, `doc/guides`, `doc/templates`, `packages`, `tests`, `.opencode`, `.ai`), any `scripts/` path other than the registry, and `worktree_product_changes` from `git status --porcelain`.
+1. Run **P34**: build the changed product set from the **base..worktree** state — `git diff --name-only "$BASE" -- .` plus `git ls-files --others --exclude-standard` — drop `doc/changes/**`, and compare against the 13-path manifest in both directions. This is decidable before the P5 commit and does not require a clean worktree.
+2. Report forbidden-root hits, any `scripts/` path other than the registry, and (separately, not as a gate) the committed range `"$BASE"...HEAD` as a post-commit verification step. A pending post-commit check is reported as `post_commit_check=pending`, never as a pass.
 
 **Expected Outcome**:
 
-- `product_files=13/13`; `expected_not_changed=0`; `unexpected_changed=` (empty); `other_scripts_changed=0`; `worktree_product_changes=0`; verdict `PASS`.
+- `product_files=13/13`; `expected_not_changed=0`; `unexpected_changed=` (empty); `other_scripts_changed=0`; `post_commit_check=pending` before the commit; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `product_files=0/13`; `expected_not_changed=13`; `unexpected_changed=`; `other_scripts_changed=0`; `worktree_product_changes=0`; verdict **FAIL (change absent or out of scope)**. Zero changed files is a missing deliverable, not containment; the procedure reports both sides so it cannot be satisfied by an empty diff.
-- The worktree line is what stops an uncommitted product edit from hiding behind a clean commit range (G-10).
+- **Base-observed:** `product_files=0/13`; `expected_not_changed=13`; verdict **FAIL (change absent or out of scope)**. Zero changed files is a missing deliverable, not containment.
+- **Fixture-derived post-change expectation:** `product_files=13/13`; `expected_not_changed=0`; `unexpected_changed=`; `other_scripts_changed=0`; `post_commit_check=pending (no product commit yet; base..worktree is the gate)` → **PASS**. The v1.0 gate combined `"$BASE"...HEAD` with `git status --porcelain`, so it could not pass at the P5 boundary; the base..worktree form is both decidable and non-vacuous.
 
 #### TC-M2DOM-035 - Backlog preservation: every other story, region, and code is untouched
 
@@ -1243,16 +1248,18 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P35**: compare the extracted entry of every base heading except `### M2-S11 ` byte for byte, count added and removed headings, flag any new heading that is not `### M2-S18` or `### M2-S19`, verify the base heading order is a subsequence of the head order, and re-run the four region comparisons.
-2. Confirm `+2` headings exactly, so a story code cannot be quietly renamed into a "new" story.
+1. Run **P35**: compare every base `### ` story except M2-S11 with its head counterpart; report `stories_kept`, `changed`, `removed`; compute `base_headings`/`head_headings`/`added`; list new headings and reject any that is not M2-S18 or M2-S19; verify base heading order; compare the frontmatter, reading guide, cross-cutting principles, and retirement-note regions byte-for-byte.
+2. The verdict accepts the base control (`new_headings=0`) and the conforming head (`new_headings=2`, both S18/S19); any other new heading fails.
 
 **Expected Outcome**:
 
-- `stories_kept=73 changed=0 removed=0`; `base_headings=74 head_headings=76 added=2`; `new_headings=2` with no `UNEXPECTED:` line; `order=OK`; `fm`, `rg`, `cc`, `retirement_note` all `byte-identical`; verdict `PASS`.
+- Conforming head: `stories_kept=73 changed=0 removed=0`; `base_headings=74 head_headings=76 added=2`; `new_headings=2`; `order=OK`; all four regions `byte-identical`; verdict `PASS`.
+- Base: the same with `head_headings=74 added=0`, `new_headings=0` → `PASS (control)`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `stories_kept=73 changed=0 removed=0`; `base_headings=74 head_headings=74 added=0`; `new_headings=0`; `order=OK`; all four regions `byte-identical`; verdict **PASS (control)**. The counts are derived from the files, not assumed: 74 `###` headings at base, of which M2-S11 is excluded from the byte comparison and two are expected to be added.
+- **Base-observed:** `base_headings=74 head_headings=74 added=0`; `stories_kept=73 changed=0 removed=0`; `order=OK`; four regions `byte-identical` → **PASS (control)**.
+- **Fixture-derived post-change expectation:** `base_headings=74 head_headings=76 added=2` → **PASS**. The v1.0 plan gate quoted `67/69`; those literals are wrong in both directions. The post-change expectation is **74 → 76**; the base observation is **74 → 74**. This plan records both, labelled.
 
 #### TC-M2DOM-036 - Both command pages stay `Status: Proposed (M2)` and nothing claims delivery
 
@@ -1299,16 +1306,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P37**: extract the `registered` array (one entry per line) from head and base, compare counts, require the `repos.md` entry to sit exactly between `queue.md` and `spend.md`, and count duplicates.
-2. Run `bun run scripts/checks/forbidden-literals.ts` and count `unregistered user-facing doc` findings.
+1. Run **P37**: `reg_entries()` reads the `registered` array from an explicit file argument — the head registry and the base snapshot separately — so head and base counts cannot be confused. Require `registered=140`, `base_registered=139`, `delta=1`, no duplicates, the `repos.md` entry at `queue_index+1`, `spend` at `repos_index+1`, and 0 unregistered-doc findings from the guard.
+2. Run `bun run scripts/checks/forbidden-literals.ts` from the repository root and require exit 0.
 
 **Expected Outcome**:
 
-- `registered=140 base_registered=139 delta=1`; `position=between-queue-and-spend`; `duplicates=0`; `unregistered_findings=0`; verdict `PASS`.
+- `registered=140 base_registered=139 delta=1`; `queue_row=88 repos_row=89 spend_row=90`; `position=between-queue-and-spend`; `duplicates=0`; `unregistered_findings=0`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `registered=139 base_registered=139 delta=0`; `queue_row=88 repos_row=absent spend_row=89`; `position=repos-not-registered`; `duplicates=0`; `unregistered_findings=0`; verdict **FAIL**. The row numbers are array indices derived by the extractor; at base `spend.md` immediately follows `queue.md`, so the required insertion point is unambiguous.
+- **Base-observed:** `registered=139 base_registered=139 delta=0`; `queue_row=88 repos_row=absent spend_row=89`; `position=repos-not-registered` → **FAIL**.
+- **Fixture-derived post-change expectation:** `registered=140 base_registered=139 delta=1`; `queue_row=88 repos_row=89 spend_row=90`; `position=between-queue-and-spend`; `duplicates=0`; `unregistered_findings=0`; the fixture run of the real guard reports `140 file(s), 0 violations` → **PASS**. The v1.0 `reg_entries` read `$REG` for both sides, so `base_registered` silently equalled the head count; the explicit file argument fixes it.
 
 #### TC-M2DOM-038 - The distribution guard passes under the default `TMPDIR` with no planning markers
 
@@ -1338,7 +1346,7 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 - Observed on the pre-change tree: `dist_guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`; verdict **PASS (control)**. It must stay 0 after the change; a 13th in-scope doc would mean a planning file was put in scope or marked by mistake.
 
-#### TC-M2DOM-039 - Both aggregate-gate runs are recorded and only a lone parity failure is environmental
+#### TC-M2DOM-039 - Both aggregate-gate runs are recorded; the repository-local full suite is authoritative and only the two named default-only failures are excused behind a green local run
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1355,23 +1363,23 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Authoritative run: `mkdir -p "$REPO_ROOT/tmp/tmpdir" && TMPDIR="$REPO_ROOT/tmp/tmpdir" pnpm check`; record the exit code, the test totals, and the tail stages.
-2. Recorded run: `env -u TMPDIR pnpm check`; record the exit code and every failing test name.
-3. Classify: the repository-local run must exit 0; a default run is environmental **only** when the sole failing test is `tests/checks/ci-baseline-parity.test.ts`. Any other default failure, or any repository-local failure, is a delivery failure.
+1. Run **P39** with `RUN_GATES=1` for the two gate invocations: (a) the authoritative repository-local `TMPDIR` full-suite `pnpm check`; (b) the default-`TMPDIR` run. Both logs and exit codes are written under `$SH`.
+2. Classify exactly as spec v1.1 AC-NFR6-1 requires:
+   - (a) `repo_local_exit=0` is mandatory; **any** failure in the repository-local run, including a repeated `TC-WIRE-002`, is `delivery`.
+   - (b) Both runs must be recorded (`recorded_local=yes`, `recorded_default=yes`).
+   - (c) A default-run failure of `CI baseline parity` and a default-run `TC-WIRE-002` timeout are each recorded and re-run; they are excused **only** when every default failure is one of those two and the repository-local run is green on the same head. A recorded re-run entry is required (`p39-rerun.txt`); a missing entry is `missing-rerun`, not a pass.
+   - (d) Any other default-run failure is `delivery`.
+3. Run the classifier's four synthetic branches: both-green, excused pair, unexcused default failure, repository-local failure, and excused-pair-without-rerun (all recorded in the fixture log).
 
 **Expected Outcome**:
 
-- `repo_local_exit=0` with `lint`, `format:check`, `typecheck`, `test`, `check:boundaries`, `prompt-conformance`, `help-guide-coverage`, and `exports-parity` all green.
-- `default_exit` recorded; when it is 1, `default_failed_tests` is exactly `CI baseline parity (hermetic partial clone)` and `default_failure_class=environmental`.
-- Verdict `PASS` requires the conjunction: repository-local green **and** `default_failure_class` in {`none`, `environmental`}.
+- `repo_local_exit=0`; `recorded_local=yes`; `recorded_default=yes`; `default_failure_class=none` or `excused`; `rerun_recorded=yes` when `excused`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree — repository-local run: `repo_local_exit=0`, `7133 pass`, `4 skip`, `0 fail`, `7137 expect() calls` across `880` files in `490.75s`; `no dependency violations found (373 modules, 1101 dependencies cruised)`; `prompt-conformance: 5 prompt(s) clean`; `help-guide-coverage: all prompt-required commands covered`; `exports-parity: 5 publishables pass attw`.
-- Observed on the pre-change tree — default-`TMPDIR` run: `default_exit=1`, `2 fail` of 7137 across 880 files in `662.35s`: `CI baseline parity (hermetic partial clone)` (the expected cross-device hardlink) **and** `TC-WIRE-002 … the command is read-only, deterministic, and unaffected by a throwing fetch` (`timed out after 5000ms`). `default_failed_tests=2`; `default_failure_class=delivery`; verdict **FAIL**, and the failing half is **not** caused by this change.
-- Characterisation of the second failure at base: `tests/checks/privacy-ci-wiring.test.ts` run alone fails in **both** `TMPDIR` modes (`5041.80ms` default, `5538.72ms` repository-local) while both full-suite runs of the repository-local gate report it green — a pre-existing timing sensitivity of the `pnpm check:privacy-literals` spawn. The spec's single-test exemption does not cover it, so it is escalated rather than reclassified (G-6, TR-11, §7.3).
-- Delivery disposition: re-run the authoritative gate on a quiet machine at phase 9 and record both runs again. A repeat failure inside the repository-local run is a delivery failure under AC-NFR6-1.
-- The opposite requirement between the two guards is deliberate: `test-doc-distribution.sh` (P38) needs the default `TMPDIR`, and running either one the other way produces a false red (G-6).
+- **Base-observed:** repository-local full-suite run exit 0 (`7133 pass`, `4 skip`, `0 fail`, `7137 tests` across `880` files); default run exit 1 with exactly `CI baseline parity (hermetic partial clone)` and `TC-WIRE-002 … timed out after 5000ms`. Both are recorded; the two named failures are re-run standalone (parity reproduces the cross-device clone; `TC-WIRE-002` is a 5 s timing sensitivity that passes inside the full repository-local suite) and the pair is classified **`excused`** only because `repo_local_exit=0`. Verdict **PASS (policy-conforming)**, not an environmental reclassification.
+- **Synthetic classifier fixtures:** `none` → PASS, `excused` with rerun → PASS, unexcused default failure → FAIL (`delivery`), repository-local failure with a repeated `TC-WIRE-002` → FAIL (`delivery`), excused pair without a rerun record → FAIL (`missing-rerun`). The failure branches are therefore proven, not assumed.
+- A repeat `TC-WIRE-002` inside the authoritative run is a delivery failure under AC-NFR6-1(a); the spec's default-run allowance never reaches the repository-local run.
 
 #### TC-M2DOM-040 - The touched documents satisfy the structural diagram conditions, with eight key flows each owning one block
 
@@ -1505,19 +1513,16 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P44**: state the oracle (`whole-file-line-retention`, not a whole-section `cmp`), compute removed/modified count and additions for the real tree, then build a conforming fixture (base + one appended dated section with a blank separator) and require `removed=0`, `added>0`, `outside=0`.
-2. From the conforming fixture, derive four mutants — delete a base line, replace a base line, swap two adjacent base lines, insert a line before the new section — and require each to be flagged.
+1. Run **P44**: state the oracle (`whole-file-line-retention`, not a whole-section `cmp`), compute removed/modified and added counts for the real tree, then build a conforming fixture (base plus one appended dated section with a blank separator) and require `removed=0`, `added>0`, `outside=0`.
+2. Derive four mutants from the conforming fixture — delete a base line, replace a base line, swap two adjacent base lines, insert a line before the new section — and require each to be detected.
 
 **Expected Outcome**:
 
-- Real tree: `removed_or_modified=0`, `additions>0` (vacuous before the change).
-- `conforming_fixture: removed=0 added=5 outside=0 verdict=OK`; `delete_fixture: removed>0`; `modify_fixture: removed>0`; `swap_fixture: removed>0`; `outside_insert_fixture: outside_hunks>0`; verdict `PASS`.
+- Real tree: `removed_or_modified=0`; fixture: `conforming_fixture: removed=0 added=5 outside=0 verdict=OK`; each mutant flagged; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `oracle=whole-file-line-retention (whole-section cmp not used)`; `base_lines=212 removed_or_modified=0 additions=0`; `conforming_fixture: removed=0 added=5 outside=0 verdict=OK`; `delete_fixture: removed=1`; `modify_fixture: removed=1`; `swap_fixture: removed=1`; `outside_insert_fixture: outside_hunks=1`; verdict **PASS**. All four mutants are detected, and the conforming fixture is accepted, so the oracle is neither inert nor unsatisfiable.
-- The first draft of this procedure counted `NR` instead of `FNR` when locating the new section, which reported the offset-absolute line number and flagged the conforming fixture. The run caught it; the corrected form prints `FNR` and the fixture now passes.
-- Respecting AC-NFR11-1's last clause: no whole-section `cmp` appears anywhere in this plan.
+- **Base-observed and fixture-verified:** the conforming fixture is accepted (`removed=0`, `added=5`, `outside=0`), and all four mutants are detected (`delete=1`, `modify=1`, `swap=1`, `outside_hunks=1`). The real tree is `removed_or_modified=0`; on the conforming head the same oracle accepts 18 additions. Verdict **PASS**. No whole-section `cmp` appears anywhere in this plan.
 
 #### TC-M2DOM-045 - The required half of the naming matrix holds in all seventeen Appendix B locations
 
@@ -1536,16 +1541,17 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 
 **Steps**:
 
-1. Run procedure **P45**: walk the same matrix, this time asserting the required statement per region, and report the row count alongside the pass count so a shortened matrix fails.
-2. Run both fixtures: a conforming `## repos.v1` snippet must pass, and a snippet missing `repo key` must be reported as missing.
+1. Run **P45**: walk the same 17 regions; assert each region is non-empty and contains its required statement. The S19 region's required statement is `one lifecycle` (the S19 entry does not have to repeat `projects list`; Appendix B places the group statement in S18-T5), and the M2-S18/M2-S19 Appendix B row is split into `BL-18` and `BL-19`.
+2. Run both fixtures: a conforming `## repos.v1` snippet passes; a snippet missing `repo key` is reported as missing.
 
 **Expected Outcome**:
 
-- `matrix_rows_required=17/17`; `positive_fixture=OK`; `negative_fixture=detected`; verdict `PASS`.
+- `matrix_rows_required=17/17`; `regions_empty=0`; `positive_fixture=OK`; `negative_fixture=detected`; verdict `PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree: `matrix_rows_required=1/17` (only the journey row's `projects list`); `positive_fixture=OK`; `negative_fixture=detected`; verdict **FAIL**. The 17 regions are counted from the matrix the procedure carries: it transcribes spec Appendix B's 16 rows and splits the combined `backlog.md M2-S18 / M2-S19` row into `BL-18` and `BL-19`, so each entry is checked with its own required and forbidden statement. These are the same 17 regions TC-032 scans.
+- **Base-observed:** `matrix_rows_required=1/17` — only `JRN` passes (the old journey names `projects list`); `BL-S11` is now non-empty (`### M2-S11 ` anchor) and fails on content because its required `repos list` is absent; `positive_fixture=OK`; `negative_fixture=detected` → **FAIL**.
+- **Fixture-derived post-change expectation:** `matrix_rows_required=17/17`, `regions_empty=0` → **PASS**. The S11 row is the change's most important location; it is now checked by both halves.
 
 ## 6. Environments and Test Data
 
@@ -1554,35 +1560,50 @@ Each procedure in Section 7.1 was run against the pre-change tree (`5372dbac`, b
 | Environment | Local developer worktree of this repository on branch `docs/GH-303/project-groups-domain-model`; no server, container, service, credential, or network dependency |
 | Toolchain | `git` (diff and base snapshots), `bash`, `awk`, `grep`, `sed`, `diff`, `comm`, `cmp`, `bun` (guards and the workspace test suite), `pnpm` (aggregate gate); all already required by the repository |
 | Base revision | `5372dbacb9c36e1d79d1e55873264155a53f44ff` (`origin/main-tools` at authoring time). Snapshots are materialised with `git show "$BASE:<path>"` so later base movement cannot silently widen a comparison |
-| Branch head at authoring | `6d9a2e58` — the specification and pm-notes commits only; **no product file is edited**, which is why every new-content procedure fails and every preservation procedure passes |
+| Branch head at authoring | `5a6cbf48` — specification, pm-notes, and the DoR record; **no product file is edited**, which is why every new-content procedure fails and every preservation procedure passes. The conforming fixture is a separate `git worktree` at base `5372dbac` with the thirteen changes applied and **never committed** (`/tmp/gh303/fx/repo`) |
 | Files under test | 11 existing planning documents + 1 new (`milestones/m2/commands/repos.md`) + `scripts/checks/forbidden-literals.registry.json`; all paths in spec Appendix C |
-| Test data | Base snapshots at `/tmp/gh303/base-{backlog,status,milestones-README,registry,forbidden}.{md,json}`; head files read from the worktree; no fixture is ever written inside the repository |
-| Mutation fixtures | `/tmp`-only, never committed: a flat-`projects list` sentence (P32), a group-meaning `repos` sentence (P32), a conforming `repos.v1` snippet and a deficient one (P45), a mutated `ados supervise` row (P31), a conforming status head and four mutants — delete, modify, swap, insert-outside (P44) |
-| Derived facts (measured, not assumed) | `backlog.md` 1454 lines: M2-S17 heading 1262, last content 1285, block-closing `---` 1287, `## Epic M3` 1289 → insertion window `1286:1286` (one blank line); M2-S11 entry 1169–1183; retirement note 1051–1054, context window 1055–1055; `status.md` 212 lines with its last `##` heading at 187; `milestones/README.md` M2 row 12 targets; `m2/README.md` 12 contents rows; `architecture.md` 20 fences / 10 mermaid / C4 1-1-1 / 7 key flows; `test-scenarios.md` 40 seeds and 40 `Assert:` lines; registry 139 entries with `m2/commands/queue.md` at index 88 and `spend.md` at 89 |
+| Test data | Base snapshots at `/tmp/gh303/base-{backlog,status,milestones-README,registry,forbidden}.{md,json}`, materialised with `git show 5372dbac:<path>`; head files read from the worktree; the conforming fixture lives only in `/tmp/gh303/fx/repo`; no fixture is ever written inside the repository |
+| Mutation fixtures | `/tmp`-only, never committed: a flat-`projects list` sentence and a group-meaning `repos` sentence (P32, plus the required-boundary and base-`board.md` negative controls), a conforming `repos.v1` snippet and a deficient one (P45), a mutated `ados supervise` row (P31), a conforming status head and four mutants — delete, modify, swap, insert-outside (P44), and five synthetic P39 gate logs (both-green, excused pair, unexcused default failure, repository-local failure, excused pair without a rerun record) |
+| Base-observed facts (measured at `5372dbac`, not assumed) | `backlog.md` 1454 lines: M2-S17 heading 1262, last content 1285, block-closing `---` 1287, `## Epic M3` 1289 → insertion window `1286:1286` (one blank line); M2-S11 entry 1169–1183; retirement note 1051–1054, context window 1055–1055 (`paragraph_lines=0`); `status.md` 212 lines with its last `##` heading at 187 and no new section; `milestones/README.md` M2 row 12 targets; `m2/README.md` 12 contents rows; `architecture.md` 20 fences / 10 mermaid / C4 1-1-1 / 7 key flows; `test-scenarios.md` 40 seeds and 40 `Assert:` lines; registry 139 entries with `m2/commands/queue.md` at index 88 and `spend.md` at 89; backlog `###` headings 74; `base_headings=74 head_headings=74 added=0` |
+| Fixture-derived post-change expectations (measured on the conforming worktree, never committed) | `s17_last=1293 separator=1310 epic_m3=1312 window=1294:1309`, `s18_line=1294 s19_line=1300`, `placement=inside-window`; retirement note `1051..1054`, `context_paragraph=1055..1060`, `paragraph_lines=4`, `paragraph_strictly_between=OK`; backlog headings `74 → 76`, `added=2`; `status.md` `new_section_count=1` at line 214, `additions=18`, `removed=0`; registry `139 → 140`, `queue=88 repos=89 spend=90`; `architecture.md` 22 fences / 11 mermaid / 8 key flows; `repos.md` 4 fences; `product_files=13/13`; `boundary_locations=6/6`; `matrix_rows_required=17/17`, `rows_with_survivors=0/17`. These are evidence that the oracles are satisfiable; they are not universal literals, and the procedures recompute each range from the head. |
+| Plan-gate token note | The plan's P1 gate expectation for P35 must be the fixture-derived `base_headings=74 head_headings=76 added=2` (base-observed `74/74/0`); `67/69` is not reproducible. For P08/P09 the post-change expectation is the invariant (`placement=inside-window`, `separator_sequence=identical`, `blank_line_before_separator=1`, `paragraph_lines>0`, `retirement_note=1051..1054`), because the separator and window are recomputed from the head; the base-only literals (`separator=1287 window=1286:1286`, `context_paragraph=1055..1055`) are labelled as base observations. |
 | Guard scope | `test-doc-distribution.sh` scans `doc/guides/**` and a fixed standalone set (82 in-scope docs) and skips `doc/planning/**`; `forbidden-literals.ts` scans `doc/**` minus `doc/changes/**` and `doc/decisions/**` and fails closed on an unregistered new doc, so the new page needs exactly one registration |
 | Isolation | Every procedure is read-only with respect to the repository: writes go to `/tmp/gh303` only, and no file under test is edited to make a check pass. `pnpm check` writes `tmp/tmpdir/` (git-ignored) as its `TMPDIR` |
-| Environment caveat | `/tmp` is tmpfs in this checkout: the two doc guards have opposite `TMPDIR` requirements (G-6). P38 runs the distribution guard with `env -u TMPDIR`; P39 runs the aggregate gate twice and classifies only a lone default-run `ci-baseline-parity` failure as environmental |
+| Environment caveat | `/tmp` is tmpfs in this checkout: the two doc guards have opposite `TMPDIR` requirements (G-6). P38 runs the distribution guard with `env -u TMPDIR`; P39 runs the aggregate gate twice and follows spec v1.1 AC-NFR6-1: the repository-local full suite is authoritative (exit 0; any failure there is a delivery failure), both runs are recorded, and only a recorded, re-run default-run `ci-baseline-parity` failure or `TC-WIRE-002` timeout is excused while the repository-local run is green on the same head |
 | Cleanup | `rm -rf /tmp/gh303` and `rm -rf <repo>/tmp/tmpdir` |
 | Evidence capture | The Section 10 log, the guard summaries, and the two gate results are pasted into the PR description per `.ai/rules/testing-strategy.md` |
 
 ## 7. Automation Plan and Implementation Mapping
 ### 7.1 Procedure Pack — How to Run, in Order
 
-Run from the repository root on the branch head with `bash`. Every procedure is uncommitted and read-only with respect to the repository: it writes only under `/tmp/gh303`, never stages, never edits a file under test, and is never added to `tests/**`, `scripts/**`, or `.ai/**` (AC-NFR1-1). **P00** defines the base snapshots, the `entry()`/`section()`/`firstsec()`/`squash()` extractors, the `clause_rows()` anchor table, and the `fence_blocks()` inventory; every later block assumes the same shell. Procedure numbers match test-case numbers (`P01` = `TC-M2DOM-001`, … `P45` = `TC-M2DOM-045`), and Section 7.2 maps each TC to its block.
+Run from the repository root on the branch head with `bash`. Every procedure is uncommitted and read-only with respect to the repository: it writes only under `/tmp/gh303`, never stages, never edits a file under test, and is never added to `tests/**`, `scripts/**`, or `.ai/**` (AC-NFR1-1). **P00 is a shared preamble**: it defines every path (`$BL`, `$ST`, `$MR`, `$M2`, `$A`, `$RG`, `$R`, `$PJ`, `$REG`, `$SH`), the extractors (`entry()`, `section()`, `story_section()`, `firstsec()`, `squash()`), the 26-clause table, `fence_blocks()`, the retention helpers (`diffstat()`, `newsecs_of()`, `newsec_of()`, `newsec_count()`), the derived backlog ranges (`backlog_ranges()`), and the naming-matrix helpers (`matrix_rows()`, `path_of()`, `region()`, `forbidden_hits()`, `forbidden_count()`). **Run each procedure in a fresh shell** as `bash -c 'source P00; source Pn'`; no block depends on another block's definitions, and every block starts with a loud guard that aborts if P00 is not loaded or if a helper it declares is missing. Procedure numbers match test-case numbers (`P01` = `TC-M2DOM-001`, … `P45` = `TC-M2DOM-045`); Section 7.2 maps each TC to its block.
 
-Two blocks depend on helpers defined in an earlier block and say so in their comment: **P10** needs the ranges computed by P08 and P09, and **P45** needs the matrix helpers defined by P32. Everything else runs standalone after P00.
-
-**P00 — materialise the base snapshots, the extractors, and the shared 26-clause table**
+**P00 — shared preamble: base snapshots, all helpers, derived ranges, and the 26-clause table**
 
 ```bash
+# P00 — shared preamble: base snapshots, paths, extractors, derived facts.
+# Every procedure begins by asserting the preamble is loaded, and helpers are
+# defined here exactly once so no block depends on another block's definitions.
 BASE=$(git rev-parse 5372dbac)
+ROOT=$(git rev-parse --show-toplevel); cd "$ROOT" || exit 1
 BL=doc/planning/oss-tooling/backlog.md
 ST=doc/planning/oss-tooling/status.md
 MR=doc/planning/oss-tooling/milestones/README.md
 M2=doc/planning/oss-tooling/milestones/m2
 REG=scripts/checks/forbidden-literals.registry.json
+A="$M2/architecture.md"
+RG=doc/planning/oss-tooling/cli-command-registry.md
+R="$M2/commands/repos.md"
+PJ="$M2/commands/projects.md"
 SH=/tmp/gh303
 mkdir -p "$SH"
+P00_READY=gh303
+require_p00() { [ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block as bash -c \"\$(P00); \$(Pn)\"" >&2; exit 1; }; }
+need() { local n; for n in "$@"; do case "$n" in
+  entry|section|firstsec|squash|cnt|has|clause_rows|fence_blocks|diffstat|newsec_of|newsecs_of|newsec_count|matrix_rows|path_of|region|forbidden_hits|forbidden_count|backlog_ranges|story_section) command -v "$n" >/dev/null 2>&1 || { echo "FATAL: missing helper $n (P00)" >&2; exit 1; } ;;
+  BASE|BL|ST|MR|M2|REG|A|RG|R|PJ|SH) [ -n "${!n:-}" ] || { echo "FATAL: missing variable $n (P00)" >&2; exit 1; } ;;
+  *) echo "FATAL: unknown dependency $n" >&2; exit 1 ;;
+ esac; done; }
 
 entry() { # $1=file $2=heading prefix
   awk -v h="$2" 'index($0,h)==1{f=1;print;next} f&&(/^### /||/^---$/||/^## /){exit} f{print}' "$1" 2>/dev/null
@@ -1591,7 +1612,8 @@ section() { # $1=file $2=exact "## " heading line
   awk -v h="$2" '$0==h{f=1;print;next} f&&/^## /{exit} f{print}' "$1" 2>/dev/null
 }
 firstsec() { awk 'f&&/^## /{exit} /^## /{f=1} f' "$1" 2>/dev/null; }
-squash() { sed ':a;N;$!ba;s/-\n//g' | tr '\n' ' '; }
+story_section() { awk -v h="$2" 'index($0,"## "h" ")==1{f=1;print;next} f&&/^## /{exit} f{print}' "$1" 2>/dev/null; }
+squash() { sed ':a;N;$!ba;s/-\n//g' | tr '\n' ' ' | tr -s ' '; }
 cnt() { grep -oE "$2" "$1" 2>/dev/null | wc -l; }
 has() { [ -f "$1" ] && grep -Eiq -- "$2" "$1"; }
 
@@ -1633,42 +1655,136 @@ CLAUSES
 }
 
 fence_blocks() { # $1=file -> "tag|firstbody"
-  awk '/^```/{ if (inb) {inb=0; next} inb=1; tag=substr($0,4); fb=""; next } inb&&fb==""&&NF{fb=$0} inb&&!printed{print tag"|"fb; printed=1}' "$1" 2>/dev/null
+  awk '/^```/{ if (inb) {inb=0; printed=0; next} inb=1; tag=substr($0,4); fb=""; next } inb&&fb==""&&NF{fb=$0} inb&&!printed{print tag"|"fb; printed=1}' "$1" 2>/dev/null
+}
+
+diffstat() { # $1=base $2=head -> "removed added"
+  local d r a
+  d=$(diff -U0 "$1" "$2" || true)
+  r=$(printf '%s\n' "$d" | grep -E '^-' | grep -v '^---' | wc -l)
+  a=$(printf '%s\n' "$d" | grep -E '^\+' | grep -v '^+++' | wc -l)
+  echo "$r $a"
+}
+
+newsecs_of() { awk 'NR==FNR{if(/^## /)s[$0]=1; next} /^## /&&!($0 in s){print FNR}' "$1" "$2"; }
+newsec_of() { newsecs_of "$1" "$2" | head -1; }
+newsec_count() { newsecs_of "$1" "$2" | wc -l; }
+
+backlog_ranges() { # set the derived ranges from $BL on every call, never reused across blocks
+  S11_LINE=$(grep -n '^### M2-S11 ' "$BL" | cut -d: -f1)
+  S11_END=$(awk -v s="$S11_LINE" 'NR>s && /^#{2,3} /{print NR-1; exit}' "$BL")
+  NOTE_S=$(grep -n '^Note: the M1 redefinition moved the queue' "$BL" | cut -d: -f1)
+  NOTE_E=$(grep -n '^the gap is deliberate\. M2 stories keep their codes\.$' "$BL" | cut -d: -f1)
+  S2_LINE=$(grep -n '^### M2-S2 ' "$BL" | cut -d: -f1)
+  S17_LINE=$(grep -n '^### M2-S17 ' "$BL" | cut -d: -f1)
+  S17_LAST=$(awk -v s="$S17_LINE" 'NR>s { if ($0 ~ /^---$/ || $0 ~ /^## / || $0 ~ /^### /) exit; if (NF>0) l=NR } END{print l+0}' "$BL")
+  M3_LINE=$(grep -n '^## Epic M3' "$BL" | cut -d: -f1)
+  SEP_LINE=$(awk -v m="$M3_LINE" 'NR<m && /^---$/{l=NR} END{print l+0}' "$BL")
+  WS=$((S17_LAST+1)); WE=$((SEP_LINE-1))
+}
+
+forbidden_hits() { # stdin text; $1=flat|group|both; prints "TYPE<TAB>statement"
+  awk -v mode="$1" '
+  function norm(s,  t){ t=tolower(s); gsub(/[[:space:]]+/," ",t); return t }
+  function flat(t){ return (t ~ /(^|[^a-z0-9])projects( list| command| surface)?[^.]{0,90}(enumerat|one (cli )?overview|host overview|lists? (every|all|each)|repo key|state location|daemon reachability|handover state)/) }
+  function group(t,  rest,seg,p){ rest=t
+    while (match(rest, /(^|[^a-z0-9])repos([^a-z0-9]|$)/)) {
+      seg=substr(rest, RSTART, 90)
+      p=index(seg,"projects"); if (p>0) seg=substr(seg,1,p-1)
+      if (seg ~ /(^|[^a-z0-9])(group|grouping|member)/ && seg !~ /enumerat/) return 1
+      rest=substr(rest, RSTART+RLENGTH)
+    }
+    return 0 }
+  { line=$0; gsub(/\r/,"",line); n=split(line,a,/[.!?;]/)
+    for(i=1;i<=n;i++){ t=norm(a[i])
+      if ((mode=="flat"||mode=="both") && flat(t)) print "FLAT\t" a[i]
+      if ((mode=="group"||mode=="both") && group(t)) print "GROUP\t" a[i]
+    } }'
+}
+forbidden_count() { case "$2" in @flat) printf '%s' "$1" | forbidden_hits flat | wc -l ;; @group) printf '%s' "$1" | forbidden_hits group | wc -l ;; @both) printf '%s' "$1" | forbidden_hits both | wc -l ;; *) printf '%s' "$1" | grep -Eoi -- "$2" | wc -l ;; esac; }
+
+matrix_rows() { cat <<'MATRIX'
+BL-S11|BL|s11backlog||repos list|@both
+BL-18|BL|entry|### M2-S18 |projects list|@both
+BL-19|BL|entry|### M2-S19 |one lifecycle|@both
+BL-CTX|BL|para|ctx|repositor.*project.*workspace|@flat
+CT-RV1|contracts|sect|## repos.v1|repo key|group identity
+CT-PV1|contracts|sect|## projects.v1|member|projectKey.{0,40}repository identity
+ARCH|architecture|whole||group of repositor|projects list.{0,60}host index
+CMD-R|cmd-repos|whole||flat enumeration|projects\[\]
+CMD-P|cmd-projects|whole||member|@flat
+TS-S11|test-scenarios|s11seeds||repos list|@both
+TS-NEW|test-scenarios|newgroup||group|@both
+JRN|journeys|firstsec||projects list|@flat
+EPD|entrypoint-delta|whole||flat enumeration|host overview
+M2RD|m2-readme|whole||commands/repos.md|\| M2-S11 .{0,80}projects\.v1
+MSRD|milestones-readme|m2row||m2/commands/repos.md|XXXNONE
+REG|registry|whole||ados repos.{0,120}flat enumeration|distinct surfaces
+STAT|status|newsec||naming boundary|@both
+MATRIX
+}
+path_of() { case "$1" in
+  BL) echo "$BL";; contracts) echo "$M2/contracts.md";; architecture) echo "$A";;
+  cmd-repos) echo "$R";; cmd-projects) echo "$PJ";;
+  test-scenarios) echo "$M2/test-scenarios.md";; journeys) echo "$M2/journeys.md";;
+  entrypoint-delta) echo "$M2/entrypoint-delta.md";; m2-readme) echo "$M2/README.md";;
+  milestones-readme) echo "$MR";; registry) echo "$RG";;
+  status) echo "$ST";; *) echo "";; esac; }
+region() { # $1=file $2=mode $3=arg
+  [ -f "$1" ] || return 0
+  case "$2" in
+    whole) cat "$1" ;;
+    entry) entry "$1" "$3" ;;
+    sect) section "$1" "$3" ;;
+    firstsec) firstsec "$1" ;;
+    para) backlog_ranges; sed -n "$((NOTE_E+1)),$((S2_LINE-1))p" "$BL" ;;
+    s11backlog) entry "$1" '### M2-S11 ' ;;
+    s11seeds) story_section "$1" 'M2-S11' ;;
+    newgroup) awk '/^## M2-S1[89] /{f=1} f&&/^## /&&!/^## M2-S1[89] /{f=0} f' "$1" ;;
+    m2row) grep -E '^\| M2 \(' "$1" ;;
+    newsec) local s; s=$(newsec_of "$SH/base-status.md" "$1"); [ -z "$s" ] && return 0; sed -n "${s},\$p" "$1" ;;
+  esac
 }
 ```
 
 **P01 — M2-S11 retained clauses, `repos list` fields, and the transition note**
 
 ```bash
-e=$(entry "$BL" '### M2-S11 ')
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need entry squash
+e=$(entry "$BL" '### M2-S11 '); eq=$(printf '%s' "$e" | squash)
 c=0; for a in 'git common dir marker' 'host.level index' 'migration note' 'cannot observe each other' 'disjoint phase state and queue entries'; do
   printf '%s' "$e" | grep -Eiq -- "$a" && c=$((c+1)) || echo "retained MISSING: $a"; done
 echo "retained_clauses=$c/5"
 printf '%s\n' "$e" | grep -Fxq -- '- Depends on: M0-S5, M1-S17.' && echo "depends_line=exact" || echo "depends_line=CHANGED"
-printf '%s' "$e" | grep -Eiq 'repos list.*repo key.*root.*state location.*daemon reachability.*handover state' && echo "repos_list_fields=OK" || echo "repos_list_fields=MISSING"
+printf '%s' "$eq" | grep -Eiq 'repos list.*repo key.*root.*state location.*daemon reachability.*handover state' && echo "repos_list_fields=OK" || echo "repos_list_fields=MISSING"
 printf '%s' "$e" | grep -Eiq 'deprecation alias' && echo "transition_note=OK" || echo "transition_note=MISSING"
 printf '%s' "$e" | grep -Eiq 'a projects command gives one CLI overview' && echo "goal_projects_command=PRESENT (must be ABSENT)" || echo "goal_projects_command=ABSENT"
-[ "$c" -eq 5 ] && printf '%s' "$e" | grep -Eiq 'repos list.*handover state' && printf '%s' "$e" | grep -Eiq 'deprecation alias' && echo "P01 verdict: PASS" || echo "P01 verdict: FAIL"
+[ "$c" -eq 5 ] && printf '%s' "$eq" | grep -Eiq 'repos list.*handover state' && printf '%s' "$e" | grep -Eiq 'deprecation alias' && echo "P01 verdict: PASS" || echo "P01 verdict: FAIL"
 ```
 
 **P02 — naming inside the M2-S11 entry and the collision clause's single copy**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need entry squash forbidden_hits
 e=$(entry "$BL" '### M2-S11 ')
-pl=$(printf '%s' "$e" | grep -o 'projects list' | wc -l)
+pl_flat=$(printf '%s' "$e" | squash | forbidden_hits flat | wc -l)
+pl_raw=$(printf '%s' "$e" | grep -o 'projects list' | wc -l)
 rl=$(printf '%s' "$e" | grep -o 'repos list' | wc -l)
-rg=$(printf '%s' "$e" | grep -oiE '\brepos\b[^.]{0,40}(group|member)' | wc -l)
+rg=$(printf '%s' "$e" | squash | forbidden_hits group | wc -l)
 moved=$(grep -c 'disjoint phase state and queue entries' "$BL")
 s11=$(grep -n '^### M2-S11 ' "$BL" | cut -d: -f1)
 s11e=$(awk -v s="$s11" 'NR>s && /^#{2,3} /{print NR-1; exit}' "$BL")
 inside=$(sed -n "${s11},${s11e}p" "$BL" | grep -c 'disjoint phase state and queue entries')
-echo "projects_list_in_entry=$pl repos_list_in_entry=$rl group_meaning_repos_in_entry=$rg collision_clause_copies=$moved inside_s11=$inside"
-[ "$pl" -eq 0 ] && [ "$rl" -ge 1 ] && [ "$rg" -eq 0 ] && [ "$moved" -eq 1 ] && [ "$inside" -eq 1 ] && echo "P02 verdict: PASS" || echo "P02 verdict: FAIL"
+echo "flat_projects_statements_in_entry=$pl_flat projects_list_raw_mentions=$pl_raw repos_list_in_entry=$rl group_meaning_repos_in_entry=$rg collision_clause_copies=$moved inside_s11=$inside"
+[ "$pl_flat" -eq 0 ] && [ "$rl" -ge 1 ] && [ "$rg" -eq 0 ] && [ "$moved" -eq 1 ] && [ "$inside" -eq 1 ] && echo "P02 verdict: PASS" || echo "P02 verdict: FAIL"
 ```
 
 **P03 — M2-S18 entry shape and its twelve ticket clauses**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 h18=$(grep -m1 '^### M2-S18 ' "$BL" || true)
 if [ -z "$h18" ]; then echo "S18=absent"; echo "clauses_present=0/12"; echo "P03 verdict: FAIL (change absent)"; else
   e18=$(entry "$BL" "$h18" | squash)
@@ -1687,6 +1803,7 @@ fi
 **P04 — mixed tracker kinds and the `not-yet-supported` classification**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 h18=$(grep -m1 '^### M2-S18 ' "$BL" || true)
 ct=$(mktemp); cp "$M2/contracts.md" "$ct"
 s18=$( [ -n "$h18" ] && entry "$BL" "$h18" | squash || echo "")
@@ -1702,6 +1819,7 @@ rm -f "$ct"
 **P05 — M2-S19 entry shape and its eleven ticket clauses**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 h19=$(grep -m1 '^### M2-S19 ' "$BL" || true)
 if [ -z "$h19" ]; then echo "S19=absent"; echo "clauses_present=0/11"; echo "P05 verdict: FAIL (change absent)"; else
   e19=$(entry "$BL" "$h19" | squash); ok=0; tot=0
@@ -1718,6 +1836,7 @@ fi
 **P06 — the three S19 acceptance criteria as independent items**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 h19=$(grep -m1 '^### M2-S19 ' "$BL" || true)
 if [ -z "$h19" ]; then echo "S19=absent numbered_items=0/3"; echo "P06 verdict: FAIL (change absent)"; else
   ac=$(entry "$BL" "$h19" | awk '/^- AC:/{f=1;next} /^- Depends on:/{f=0} f')
@@ -1733,6 +1852,7 @@ fi
 **P07 — S19 task clauses traced into the contracts**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 ct="$M2/contracts.md"
 tbl() { cat <<'T'
 T1|member repositor.*slices
@@ -1754,56 +1874,61 @@ else echo "contracts=absent"; echo "P07 verdict: FAIL"; fi
 **P08 — insertion window inside the Epic M2 block and the separator sequence**
 
 ```bash
-s17=$(grep -n '^### M2-S17 ' "$BL" | cut -d: -f1)
-s17last=$(awk -v s="$s17" 'NR>s { if ($0 ~ /^---$/ || $0 ~ /^## / || $0 ~ /^### /) exit; if (NF>0) l=NR } END{print l+0}' "$BL")
-m3=$(grep -n '^## Epic M3' "$BL" | cut -d: -f1)
-sep=$(awk -v m="$m3" 'NR<m && /^---$/{l=NR} END{print l+0}' "$BL")
-ws=$((s17last+1)); we=$((sep-1))
-echo "s17_last=$s17last separator=$sep epic_m3=$m3 window=$ws:$we"
-[ "$ws" -le "$we" ] && echo "window_empty=no ($((we-ws+1)) line(s))" || echo "window_empty=yes"
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need backlog_ranges
+backlog_ranges
 b3=$(grep -n '^## Epic M3' "$SH/base-backlog.md" | cut -d: -f1)
 bsep=$(awk -v m="$b3" 'NR<m && /^---$/{l=NR} END{print l+0}' "$SH/base-backlog.md")
 bseq=$(sed -n "${bsep},$((bsep+2))p" "$SH/base-backlog.md")
-hseq=$(sed -n "${sep},$((sep+2))p" "$BL")
+hseq=$(sed -n "${SEP_LINE},$((SEP_LINE+2))p" "$BL")
+blank_before=$(awk -v s="$SEP_LINE" 'NR==s-1&&NF==0{c=1} END{print c+0}' "$BL")
+p18=$(grep -n '^### M2-S18 ' "$BL" | cut -d: -f1 || true)
+p19=$(grep -n '^### M2-S19 ' "$BL" | cut -d: -f1 || true)
+echo "s17_last=$S17_LAST separator=$SEP_LINE epic_m3=$M3_LINE window=$WS:$WE"
+[ "$WS" -le "$WE" ] && echo "window_empty=no ($((WE-WS+1)) line(s))" || echo "window_empty=yes"
 [ "$bseq" = "$hseq" ] && echo "separator_sequence=identical" || echo "separator_sequence=CHANGED"
-blank_before=$(awk -v s="$sep" 'NR==s-1&&NF==0{c=1} END{print c+0}' "$BL")
 echo "blank_line_before_separator=$blank_before"
-p18=$(grep -n '^### M2-S18 ' "$BL" | cut -d: -f1 || true); p19=$(grep -n '^### M2-S19 ' "$BL" | cut -d: -f1 || true)
 echo "s18_line=${p18:-absent} s19_line=${p19:-absent}"
-if [ -n "$p18" ] && [ -n "$p19" ] && [ "$p18" -ge "$ws" ] && [ "$p19" -le "$we" ] && [ "$p18" -lt "$p19" ]; then echo "placement=inside-window"; else echo "placement=FAIL"; fi
-[ -n "$p18" ] && [ -n "$p19" ] && [ "$bseq" = "$hseq" ] && [ "$blank_before" -eq 1 ] && [ "$p18" -ge "$ws" ] && [ "$p19" -le "$we" ] && [ "$p18" -lt "$p19" ] && echo "P08 verdict: PASS" || echo "P08 verdict: FAIL (change absent)"
+if [ -n "$p18" ] && [ -n "$p19" ] && [ "$p18" -ge "$WS" ] && [ "$p19" -le "$WE" ] && [ "$p18" -lt "$p19" ]; then echo "placement=inside-window"; else echo "placement=FAIL"; fi
+[ -n "$p18" ] && [ -n "$p19" ] && [ "$bseq" = "$hseq" ] && [ "$blank_before" -eq 1 ] && [ "$p18" -ge "$WS" ] && [ "$p19" -le "$WE" ] && [ "$p18" -lt "$p19" ] && echo "P08 verdict: PASS" || echo "P08 verdict: FAIL (change absent or misplaced)"
 ```
 
 **P09 — the Epic M2 context paragraph and the preserved leading regions**
 
 ```bash
-note_s=$(grep -n '^Note: the M1 redefinition moved the queue' "$BL" | cut -d: -f1)
-s2=$(grep -n '^### M2-S2 ' "$BL" | cut -d: -f1)
-note_e=$(awk -v s="$note_s" -v e="$s2" 'NR>=s && NR<e && NF>0 {l=NR} END{print l+0}' "$BL")
-para=$(sed -n "$((note_e+1)),$((s2-1))p" "$BL")
-echo "retirement_note=$note_s..$note_e context_paragraph=$((note_e+1))..$((s2-1)) paragraph_lines=$(printf '%s\n' "$para" | grep -c .)"
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need backlog_ranges squash
+backlog_ranges
+bNOTE_S=$(grep -n '^Note: the M1 redefinition moved the queue' "$SH/base-backlog.md" | cut -d: -f1)
+bNOTE_E=$(grep -n '^the gap is deliberate\. M2 stories keep their codes\.$' "$SH/base-backlog.md" | cut -d: -f1)
+[ -n "$NOTE_S" ] && [ "$NOTE_S" -eq "$bNOTE_S" ] && echo "note_start_line=anchored($NOTE_S)" || echo "note_start_line=SHIFTED"
+[ -n "$NOTE_E" ] && [ "$NOTE_E" -eq "$bNOTE_E" ] && echo "note_end_line=anchored($NOTE_E)" || echo "note_end_line=SHIFTED"
+awk -v s="$bNOTE_S" -v e="$bNOTE_E" 'NR>=s&&NR<=e' "$SH/base-backlog.md" > "$SH/note-b"
+awk -v s="$NOTE_S" -v e="$NOTE_E" 'NR>=s&&NR<=e' "$BL" > "$SH/note-h"
+cmp -s "$SH/note-b" "$SH/note-h" && echo "retirement_note=OK" || echo "retirement_note=CHANGED"
+para=$(sed -n "$((NOTE_E+1)),$((S2_LINE-1))p" "$BL")
+pl=$(printf '%s\n' "$para" | grep -c .)
+blank_after_note=$(awk -v n="$((NOTE_E+1))" 'NR==n&&NF==0{c=1} END{print c+0}' "$BL")
+blank_before_s2=$(awk -v n="$((S2_LINE-1))" 'NR==n&&NF==0{c=1} END{print c+0}' "$BL")
+echo "retirement_note=${NOTE_S}..${NOTE_E} context_paragraph=$((NOTE_E+1))..$((S2_LINE-1)) paragraph_lines=$pl blank_after_note=$blank_after_note blank_before_s2=$blank_before_s2"
+if [ "$((NOTE_E+1))" -lt "$S2_LINE" ] && [ "$pl" -ge 1 ] && [ "$blank_after_note" -eq 1 ] && [ "$blank_before_s2" -eq 1 ]; then echo "paragraph_strictly_between=OK"; else echo "paragraph_strictly_between=FAIL"; fi
 printf '%s' "$para" | grep -Eiq 'repositor' && printf '%s' "$para" | grep -Eiq 'project' && printf '%s' "$para" | grep -Eiq 'workspace' && echo "three_levels=OK" || echo "three_levels=MISSING"
 printf '%s' "$para" | grep -Eiq 'repos.*projects|projects.*repos' && echo "boundary=OK" || echo "boundary=MISSING"
 printf '%s' "$para" | grep -Eiq 'root famil' && echo "root_family=OK" || echo "root_family=MISSING"
 fm() { awk 'NR==1&&$0=="---"{f=1} f{print} f&&NR>1&&$0=="---"{exit}' "$1"; }
-rg() { awk '/^## Reading guide/{f=1} /^## Cross-cutting principles/{exit} f{print}' "$1"; }
+rguide() { awk '/^## Reading guide/{f=1} /^## Cross-cutting principles/{exit} f{print}' "$1"; }
 cc() { awk '/^## Cross-cutting principles/{f=1} /^## Epic M0:/{exit} f{print}' "$1"; }
-note() { awk -v s="$1" -v e="$2" 'NR>=s&&NR<=e' "$BL"; }
-for r in fm rg cc; do $r "$SH/base-backlog.md" > "$SH/$r-b"; $r "$BL" > "$SH/$r-h"; cmp -s "$SH/$r-b" "$SH/$r-h" && echo "$r=byte-identical" || echo "$r=CHANGED"; done
-bnote_s=$(grep -n '^Note: the M1 redefinition moved the queue' "$SH/base-backlog.md" | cut -d: -f1)
-bs2=$(grep -n '^### M2-S2 ' "$SH/base-backlog.md" | cut -d: -f1)
-bnote_e=$(awk -v s="$bnote_s" -v e="$bs2" 'NR>=s && NR<e && NF>0 {l=NR} END{print l+0}' "$SH/base-backlog.md")
-awk -v s="$bnote_s" -v e="$bnote_e" 'NR>=s&&NR<=e' "$SH/base-backlog.md" > "$SH/note-b"
-awk -v s="$note_s" -v e="$note_e" 'NR>=s&&NR<=e' "$BL" > "$SH/note-h"
-cmp -s "$SH/note-b" "$SH/note-h" && echo "retirement_note=byte-identical" || echo "retirement_note=CHANGED"
+for r in fm rguide cc; do $r "$SH/base-backlog.md" > "$SH/$r-b"; $r "$BL" > "$SH/$r-h"; cmp -s "$SH/$r-b" "$SH/$r-h" && echo "$r=byte-identical" || echo "$r=CHANGED"; done
 grep -Fq '## Epic M2: Ceremonies, measurement, and memory (months 3-6)' "$BL" && echo "epic_heading=OK" || echo "epic_heading=MISSING"
-pl=$(printf '%s' "$para" | grep -c .)
-[ "$pl" -gt 0 ] && echo "P09 verdict: PASS" || echo "P09 verdict: FAIL (no context paragraph)"
+[ "$pl" -ge 1 ] && [ "$((NOTE_E+1))" -lt "$S2_LINE" ] && echo "P09 verdict: PASS" || echo "P09 verdict: FAIL (no context paragraph)"
 ```
 
 **P10 — zero-context hunk confinement**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need backlog_ranges
+backlog_ranges
 hunk_guard() { local -a R=("$@"); local inside=0 outside=0 h c d last ok r a b
   while IFS= read -r h; do
     case "$h" in '@@'*) ;; *) continue ;; esac
@@ -1817,25 +1942,27 @@ hunk_guard() { local -a R=("$@"); local inside=0 outside=0 h c d last ok r a b
     [ "$ok" -eq 1 ] && inside=$((inside+1)) || { outside=$((outside+1)); echo "OUTSIDE: $h (added $c..$last)"; }
   done
   echo "hunks: inside=$inside outside=$outside"; [ "$outside" -eq 0 ]; }
-s11r="$s11:$s11e"
-ho=$(git diff --name-only 5372dbac..HEAD -- "$BL" | wc -l)
+s11r="$S11_LINE:$S11_END"
+ctxr="$((NOTE_E+1)):$((S2_LINE-1))"
+echo "ranges=s11:$s11r context:$ctxr window:$WS:$WE"
 hc=$(diff -U0 "$SH/base-backlog.md" "$BL" | grep -cE '^@@' || true)
 echo "backlog_hunks=$hc"
 if [ "$hc" -ge 1 ]; then
-  diff -U0 "$SH/base-backlog.md" "$BL" | grep -E '^@@' | hunk_guard "$s11r" "$((note_e+1)):$((s2-1))" "$ws:$we" && echo "hunk confinement OK" || echo "hunk confinement FAILED"
+  diff -U0 "$SH/base-backlog.md" "$BL" | grep -E '^@@' | hunk_guard "$s11r" "$ctxr" "$WS:$WE" && echo "hunk confinement OK" || echo "hunk confinement FAILED"
   echo "non_vacuous=yes"
 else echo "FAIL: no backlog hunk (change absent)"; echo "non_vacuous=no"; fi
-# classifier self-tests: the context-paragraph line is inside, separator+2 is outside
 t=0
-printf '@@ -%d,0 +%d,1 @@\n' "$((note_e+1))" "$((note_e+1))" | hunk_guard "$((note_e+1)):$((s2-1))" >/dev/null && t=$((t+1))
-printf '@@ -%d,0 +%d,1 @@\n' "$((sep+2))" "$((sep+2))" | hunk_guard "$ws:$we" >/dev/null || t=$((t+1))
-printf '@@ -%d,0 +%d,1 @@\n' "$ws" "$ws" | hunk_guard "$ws:$we" >/dev/null && t=$((t+1))
+printf '@@ -%d,0 +%d,1 @@\n' "$((NOTE_E+1))" "$((NOTE_E+1))" | hunk_guard "$ctxr" >/dev/null && t=$((t+1))
+printf '@@ -%d,0 +%d,1 @@\n' "$((SEP_LINE+2))" "$((SEP_LINE+2))" | hunk_guard "$WS:$WE" >/dev/null || t=$((t+1))
+printf '@@ -%d,0 +%d,1 @@\n' "$WS" "$WS" | hunk_guard "$WS:$WE" >/dev/null && t=$((t+1))
 echo "classifier_self_tests=$t/3"
+[ "$hc" -ge 1 ] && [ "$t" -eq 3 ] && echo "P10 verdict: PASS" || echo "P10 verdict: FAIL"
 ```
 
 **P11 — C4 Level 1: three levels with the workspace optional in the diagram**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 A="$M2/architecture.md"
 l1=$(section "$A" '## C4 Level 1: system context')
 diag=$(printf '%s\n' "$l1" | awk '/^```mermaid/{f=1;next} /^```/{f=0} f')
@@ -1851,18 +1978,20 @@ printf '%s' "$lsq" | grep -Eiq 'group of repositor|configured group' && printf '
 **P12 — model prose: declared membership, optional workspace, unrelated directories**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 sq=$(cat "$A" | squash)
 printf '%s' "$sq" | grep -Eiq 'membership (is )?declared in configuration|declared in configuration' && echo "membership_declared=OK" || echo "membership_declared=MISSING"
 printf '%s' "$sq" | grep -Eiq 'workspace (is )?(never required|optional)|never (a )?required' && echo "workspace_never_required=OK" || echo "workspace_never_required=MISSING"
 printf '%s' "$sq" | grep -Eiq 'unrelated director' && echo "unrelated_dirs=OK" || echo "unrelated_dirs=MISSING"
 printf '%s' "$sq" | grep -Eiq 'identically' && echo "identical_behaviour=OK" || echo "identical_behaviour=MISSING"
-printf '%s' "$sq" | grep -Eiq 'must live inside a workspace|required to live inside' && echo "member_must_be_inside=PRESENT (violation)" || echo "member_must_be_inside=ABSENT"
+printf '%s' "$sq" | grep -Eiq 'members? (must|shall) live inside a workspace|members? are required to live inside|a workspace is required' && echo "member_must_be_inside=PRESENT (violation)" || echo "member_must_be_inside=ABSENT"
 printf '%s' "$sq" | grep -Eiq 'unrelated director.*identically' && echo "P12 verdict: PASS" || echo "P12 verdict: FAIL"
 ```
 
 **P13 — the project-scoped overview flow, the cross-repository flow, and four invariants**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 ov=$(section "$A" '### Multi-repository overview'); ovs=$(printf '%s' "$ov" | squash)
 echo "overview_mentions_member=$(printf '%s' "$ovs" | grep -oic 'member' || true) group=$(printf '%s' "$ovs" | grep -oic 'group' || true) workspace=$(printf '%s' "$ovs" | grep -oic 'workspace' || true)"
 xr=$(section "$A" '### Cross-repository change')
@@ -1879,6 +2008,7 @@ printf '%s' "$ovs" | grep -Eiq 'member' && printf '%s' "$ovs" | grep -Eiq 'group
 **P14 — `repos.v1` and its seven fields**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 rv=$(section "$M2/contracts.md" '## repos.v1'); rvs=$(printf '%s' "$rv" | squash)
 echo "repos_v1_section=$([ -n "$rv" ] && echo present || echo absent)"
 printf '%s' "$rvs" | grep -Eiq 'M2-S11' && echo "owned_by_M2-S11=OK" || echo "owned_by_M2-S11=MISSING"
@@ -1892,6 +2022,7 @@ echo "repos_v1_fields=$n/7"
 **P15 — `projects.v1` as the group envelope**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 pv=$(section "$M2/contracts.md" '## projects.v1'); pvs=$(printf '%s' "$pv" | squash)
 echo "projects_v1_section=$([ -n "$pv" ] && echo present || echo absent)"
 for f in 'group' 'member' 'tracker kind|trackerKind' 'health' 'workspace root' 'project scop'; do
@@ -1904,6 +2035,7 @@ if [ -n "$pv" ] && printf '%s' "$pvs" | grep -Eiq 'member' && printf '%s' "$pvs"
 **P16 — the project configuration schema**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 ct="$M2/contracts.md"
 cfgs=$(grep -nE '^## .*(configuration|config schema)' "$ct" | head -1 | cut -d: -f1)
 if [ -z "$cfgs" ]; then echo "configuration_schema=absent"; echo "fields=0/8"; echo "P16 verdict: FAIL (change absent)"; else
@@ -1917,6 +2049,9 @@ if [ -z "$cfgs" ]; then echo "configuration_schema=absent"; echo "fields=0/8"; e
 **P17 — the cross-repository change plan shape**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need section squash
+ct="$M2/contracts.md"
 xr=$(grep -nE '^## .*(Cross-repository change|change plan shape|Cross-repository)' "$ct" | head -1 | cut -d: -f1)
 if [ -z "$xr" ]; then echo "change_plan_shape=absent"; echo "elements=0/7"; echo "P17 verdict: FAIL (change absent)"; else
   hdr=$(sed -n "${xr}p" "$ct"); body=$(section "$ct" "$hdr" | squash); n=0
@@ -1929,16 +2064,18 @@ if [ -z "$xr" ]; then echo "change_plan_shape=absent"; echo "elements=0/7"; echo
 **P18 — group-envelope consumers and the M2-S4 advisory note**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 ct="$M2/contracts.md"
 printf '%s' "$(cat "$ct" | squash)" | grep -Eiq 'consumers? of .?projects\.v1' && echo "consumer_note=OK" || echo "consumer_note=MISSING"
 s4row=$(grep -E '^\| M2-S4 ' "$M2/README.md")
-printf '%s' "$s4row" | grep -Eiq 'consumed at delivery' && echo "s4_advisory=OK" || echo "s4_advisory=MISSING"
-printf '%s' "$(cat "$ct" | squash)" | grep -Eiq 'consumers? of .?projects\.v1' && printf '%s' "$s4row" | grep -Eiq 'consumed at delivery' && echo "P18 verdict: PASS" || echo "P18 verdict: FAIL"
+printf '%s' "$s4row" | grep -Fiq '(advisory: consumed at delivery; the owning story declares the edge)' && echo "s4_advisory=OK" || echo "s4_advisory=MISSING"
+printf '%s' "$(cat "$ct" | squash)" | grep -Eiq 'consumers? of .?projects\.v1' && printf '%s' "$s4row" | grep -Fiq '(advisory: consumed at delivery; the owning story declares the edge)' && echo "P18 verdict: PASS" || echo "P18 verdict: FAIL"
 ```
 
 **P19 — the new `commands/repos.md` page**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 if [ ! -f "$R" ]; then echo "repos_md=absent"; echo "checks=0/9 fields=0/5"; echo "P19 verdict: FAIL (change absent)"; else
   n=0
   grep -Fxq 'Status: Proposed (M2)' "$R" && n=$((n+1)) || echo "MISSING status header"
@@ -1959,6 +2096,7 @@ if [ ! -f "$R" ]; then echo "repos_md=absent"; echo "checks=0/9 fields=0/5"; ech
 **P20 — the rewritten `commands/projects.md` page**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 n=0
 grep -Fxq 'Status: Proposed (M2)' "$PJ" && n=$((n+1)) || echo "MISSING status header"
 grep -Eiq '^`projects`' "$PJ" && n=$((n+1)) || echo "MISSING bare NAME"
@@ -1976,6 +2114,7 @@ echo "checks=$n/7 fields=$fields/3 forbidden_flat_statements=$bad"
 **P21 — the two command pages compared**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 r1=0; [ -f "$R" ] && r1=$(grep -c 'repos\.v1' "$R" || true)
 r2=0; [ -f "$R" ] && r2=$(grep -c 'projects\[\]' "$R" || true)
 p1=$(grep -c 'projects\.v1' "$PJ"); p2=$(grep -c 'repos\.v1' "$PJ"); p3=$(grep -c 'repos\[\]' "$PJ")
@@ -1989,6 +2128,7 @@ echo "projects_page: projects.v1=$p1 repos.v1=$p2 repos[]=$p3 header=$h2 not_reg
 **P22 — S18 and S19 seeds, per-seed assert counts, and topic coverage**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 TS="$M2/test-scenarios.md"
 seed_asserts() { awk -v id="$2" 'index($0,"### "id)==1{f=1;next} f&&/^#{2,3} /{exit} f&&/^Assert:/{c++} END{print c+0}' "$1"; }
 s18n=$(grep -c '^### SC-M2-S18-' "$TS" || true); s19n=$(grep -c '^### SC-M2-S19-' "$TS" || true)
@@ -1998,7 +2138,7 @@ for id in $(grep -oE '^### (SC-M2-S1[89]-[0-9]+)' "$TS" | awk '{print $2}'); do
   a=$(seed_asserts "$TS" "$id"); [ "$a" -eq 1 ] || { echo "ASSERT COUNT $id=$a"; bad=$((bad+1)); }; done
 echo "assert_violations=$bad"
 sq=$(cat "$TS" | squash); n=0
-for f in 'workspace director.*register|register.*workspace director' 'without a workspace|unrelated director' 'projects list.*member' 'project scop.*queue and status' 'mixing tracker kinds|mixed tracker' 'not-yet-supported' 'two branches|two PRs' 'one review flow' 'closeout' 'failing.*shared definition of done|blocks the shared'; do
+for f in 'workspace director.*register|register.*workspace director' 'without a workspace|unrelated director' 'projects list.*member' 'project[ -]scop.*queue and status' 'mixing tracker kinds|mixed tracker' 'not-yet-supported' 'two branches|two PRs' 'one review flow' 'closeout' 'failing.*shared definition of done|blocks the shared'; do
   printf '%s' "$sq" | grep -Eiq "$f" && n=$((n+1)) || echo "topic MISSING: $f"; done
 echo "coverage_anchors=$n/10"
 [ "$s18n" -ge 2 ] && [ "$s19n" -ge 2 ] && [ "$bad" -eq 0 ] && [ "$n" -eq 10 ] && echo "P22 verdict: PASS" || echo "P22 verdict: FAIL"
@@ -2007,6 +2147,7 @@ echo "coverage_anchors=$n/10"
 **P23 — the two S11 seeds**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 TS="$M2/test-scenarios.md"
 a1=$(awk '/^### SC-M2-S11-01/{f=1;next} f&&/^#{2,3} /{exit} f&&/^Assert:/{print}' "$TS")
 t2=$(grep -m1 '^### SC-M2-S11-02' "$TS")
@@ -2023,6 +2164,7 @@ echo "flat_assert_survivors=$bad"
 **P24 — the opening journey**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 J="$M2/journeys.md"
 j1=$(firstsec "$J"); j1s=$(printf '%s' "$j1" | squash)
 echo "opening_journey_lines=$(printf '%s\n' "$j1" | wc -l)"
@@ -2041,13 +2183,14 @@ echo "journey_anchors=$n/4"
 **P25 — the entrypoint delta note**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 EPD="$M2/entrypoint-delta.md"
 add=$(section "$EPD" '## M2-planned additions'); adds=$(printf '%s' "$add" | squash)
 mount=$(section "$EPD" '## Mounting a new command'); mounts=$(printf '%s' "$mount" | squash)
 printf '%s' "$adds" | grep -Eiq '`repos`.{0,120}(flat enumeration|enumerat)' && echo "repos_addition=OK" || echo "repos_addition=MISSING"
 printf '%s' "$adds" | grep -Eiq '`projects`.{0,160}(group|member)' && echo "projects_addition=OK" || echo "projects_addition=MISSING"
 printf '%s' "$mounts" | grep -Eiq 'repos' && printf '%s' "$mounts" | grep -Eiq 'projects' && echo "mount_names_both=OK" || echo "mount_names_both=MISSING"
-grep -Eic '`projects` becomes a root family|host overview of managed checkouts|host overview' "$EPD" | sed 's/^/host_overview_claims=/'
+grep -Eic 'host overview of managed checkouts|host overview' "$EPD" | sed 's/^/host_overview_claims=/'
 for t in 'Sixteen families' '#286' 'milestone snapshot' 'unknown flag' 'unexpected argument'; do grep -Fq "$t" "$EPD" && echo "preserved $t OK" || echo "preserved $t MISSING"; done
 ho=$(grep -Eic 'host overview' "$EPD" || true)
 printf '%s' "$adds" | grep -Eiq 'flat enumeration' && printf '%s' "$adds" | grep -Eiq 'group' && [ "$ho" -eq 0 ] && echo "P25 verdict: PASS" || echo "P25 verdict: FAIL"
@@ -2056,6 +2199,7 @@ printf '%s' "$adds" | grep -Eiq 'flat enumeration' && printf '%s' "$adds" | grep
 **P26 — the pack README contents row and map rows**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 MRD="$M2/README.md"
 rows=$(section "$MRD" '## Pack contents' | grep -cE '^\| \[|^\| `')
 echo "pack_rows=$rows/13"
@@ -2071,6 +2215,7 @@ grep -Fq 'Everything in this pack is **planned until M2 exit**' "$MRD" && echo "
 **P27 — the milestone M2 index row**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 m2row=$(grep -E '^\| M2 \(' "$MR")
 echo "m2_targets=$(printf '%s' "$m2row" | grep -o '](m2/' | wc -l)/13"
 printf '%s' "$m2row" | grep -q 'm2/commands/repos.md' && echo "repos_target=OK" || echo "repos_target=MISSING"
@@ -2085,45 +2230,49 @@ n=$(printf '%s' "$m2row" | grep -o '](m2/' | wc -l)
 **P28 — the new dated status section**
 
 ```bash
-ns=$(awk 'NR==FNR{if(/^## /)s[$0]=1; next} /^## /&&!($0 in s){print FNR; exit}' "$SH/base-status.md" "$ST")
-echo "new_section_line=${ns:-absent}"
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need newsec_of newsec_count squash
+ncount=$(newsec_count "$SH/base-status.md" "$ST")
+ns=$(newsec_of "$SH/base-status.md" "$ST")
+lastbase=$(grep -n '^## ' "$SH/base-status.md" | tail -1 | cut -d: -f1)
+echo "new_section_count=$ncount new_section_line=${ns:-absent} base_last_heading=$lastbase"
 if [ -z "$ns" ]; then echo "new_section=absent"; echo "P28 verdict: FAIL (change absent)"; else
   hdr=$(sed -n "${ns}p" "$ST"); body=$(awk -v s="$ns" 'NR>=s{f=1} f&&NR>s&&/^## /{exit} f' "$ST" | squash)
   echo "new_section_heading=$hdr"
+  printf '%s' "$hdr" | grep -Eq '^## .+ \(2026-11-11\)$' && echo "heading_form=title-plus-parenthesised-date" || echo "heading_form=UNEXPECTED"
+  after=$(awk -v s="$ns" 'NR>s && /^## /{c++} END{print c+0}' "$ST")
+  echo "headings_after_new_section=$after"
   for p in 'three.level|repositor.*project.*workspace' 'M2-S11' 'repos list' 'deprecation alias' 'M2-S18' 'M2-S19' 'naming boundary' 'registry' 'entrypoint delta|entrypoint-delta'; do
     printf '%s' "$body" | grep -Eiq "$p" && echo "section anchor OK: $p" || echo "section anchor MISSING: $p"; done
   printf '%s' "$body" | grep -Eiq 'M2 (has )?exit(ed)? complete|milestone exit complete|delivered by M2-S1[89]' && echo "delivery_claim=PRESENT (violation)" || echo "delivery_claim=ABSENT"
   n=0; for p in 'three.level|repositor.*project.*workspace' 'repos list' 'deprecation alias' 'M2-S18' 'M2-S19' 'naming boundary'; do printf '%s' "$body" | grep -Eiq "$p" && n=$((n+1)); done
   echo "section_anchors=$n/6"
-  [ "$n" -eq 6 ] && echo "P28 verdict: PASS" || echo "P28 verdict: FAIL"; fi
+  [ "$ncount" -eq 1 ] && [ "$after" -eq 0 ] && printf '%s' "$hdr" | grep -Eq '^## .+ \(2026-11-11\)$' && [ "$n" -eq 6 ] && echo "P28 verdict: PASS" || echo "P28 verdict: FAIL"; fi
 ```
 
 **P29 — status line retention: presence, order, and confinement**
 
 ```bash
-diffstat() { # $1=base $2=head -> "removed added"
-  local d; d=$(diff -U0 "$1" "$2" || true)
-  local r a
-  r=$(printf '%s\n' "$d" | grep -E '^-' | grep -v '^---' | wc -l)
-  a=$(printf '%s\n' "$d" | grep -E '^\+' | grep -v '^+++' | wc -l)
-  echo "$r $a"
-}
-newsec_of() { awk 'NR==FNR{if(/^## /)s[$0]=1; next} /^## /&&!($0 in s){print FNR; exit}' "$1" "$2"; }
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need diffstat newsec_of newsec_count
 read -r rem add <<< "$(diffstat "$SH/base-status.md" "$ST")"
+ncount=$(newsec_count "$SH/base-status.md" "$ST")
 ns=$(newsec_of "$SH/base-status.md" "$ST")
 if [ -z "$ns" ]; then out=$add; else
   out=$(diff -U0 "$SH/base-status.md" "$ST" | grep -E '^@@' | sed -E 's/^@@ -[0-9]+(,[0-9]+)? \+([0-9]+)(,([0-9]+))? @@.*/\2 \4/' | awk -v s="$((ns-1))" '{c=$1; d=($2==""?1:$2); if (c<s) print}' | wc -l)
 fi
-echo "removed_lines=$rem additions=$add new_section_line=${ns:-absent} added_outside_section=$out"
+after=$(awk -v s="${ns:-999999}" 'NR>s && /^## /{c++} END{print c+0}' "$ST")
+echo "removed_lines=$rem additions=$add new_section_line=${ns:-absent} new_section_count=$ncount headings_after=${after} added_outside_section=$out"
 echo "base_lines=$(wc -l < "$SH/base-status.md") head_lines=$(wc -l < "$ST")"
 [ "$rem" -eq 0 ] && echo "base_lines_retained=OK" || echo "base_lines_retained=FAILED ($rem removed/modified/reordered)"
 [ "$out" -eq 0 ] && echo "additions_confined=OK" || echo "additions_confined=FAILED ($out hunk(s) before the new section)"
-[ "$rem" -eq 0 ] && [ "$out" -eq 0 ] && echo "P29 verdict: PASS (control)" || echo "P29 verdict: FAIL"
+[ "$rem" -eq 0 ] && [ "$out" -eq 0 ] && [ "$ncount" -le 1 ] && [ "$after" -eq 0 ] && echo "P29 verdict: PASS (control or conforming)" || echo "P29 verdict: FAIL"
 ```
 
 **P30 — the command registry rows and boundary note**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 RG="$PWD/doc/planning/oss-tooling/cli-command-registry.md"
 m2sec=$(awk '/^### M2: /{f=1} /^### M3: /{f=0} f' "$RG")
 m3sec=$(awk '/^### M3: /{f=1} /^### M4: /{f=0} f' "$RG")
@@ -2149,6 +2298,7 @@ echo "registry_anchors=$n/7"
 **P31 — registry diff containment**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 classify() { # $1 = changed line text
   case "$1" in
     '| `ados projects` '*) echo allowed ;;
@@ -2182,85 +2332,47 @@ echo "fixture_outside=$mut out_of_scope_changes=$(grep -c . "$SH/p31-mut.txt" ||
 [ "$changed" -ge 1 ] && [ "$out" -eq 0 ] && [ "$mut" -ge 1 ] && echo "P31 verdict: PASS" || { [ "$changed" -eq 0 ] && echo "P31 verdict: FAIL (vacuous: no registry change)"; }
 ```
 
-**P32 — the naming matrix, forbidden half, with two self-tests**
+**P32 — the naming matrix, forbidden half (sentence-level detectors), with self-tests**
+
+> The forbidden field is a literal ERE or `@flat`/`@group`/`@both`. The sentence-level modes are what let the ticket-mandated S18 goal and boundary clause pass while a statement that attributes enumeration to `projects`, or group semantics to `repos`, is still flagged. Each matrix region is required to be non-empty before it is counted, and the self-tests cover both directions plus the two negative controls (the required boundary sentence and the unchanged base `commands/board.md`).
 
 ```bash
-matrix_rows() { cat <<'MATRIX'
-BL-S11|BL|s11group||repos list|projects list
-BL-18|BL|entry|### M2-S18 |projects list|repos.{0,40}group
-BL-19|BL|entry|### M2-S19 |projects list|repos.{0,40}group
-BL-CTX|BL|para|ctx|repositor.*project.*workspace|projects.{0,60}enumerat.{0,40}checkout
-CT-RV1|contracts|sect|## repos.v1|repo key|group identity
-CT-PV1|contracts|sect|## projects.v1|member|projectKey.{0,40}repository identity
-ARCH|architecture|whole||group of repositor|projects list.{0,60}host index
-CMD-R|cmd-repos|whole||flat enumeration|projects\[\]
-CMD-P|cmd-projects|whole||member|enumerates (managed )?checkouts
-TS-S11|test-scenarios|s11group||repos list|projects list
-TS-NEW|test-scenarios|newgroup||group|repos list.{0,60}flat enumeration
-JRN|journeys|firstsec||projects list|projects list.{0,60}flat
-EPD|entrypoint-delta|whole||flat enumeration|host overview
-M2RD|m2-readme|whole||commands/repos.md|\| M2-S11 .{0,80}projects\.v1
-MSRD|milestones-readme|m2row||m2/commands/repos.md|XXXNONE
-REG|registry|whole||ados repos.{0,120}flat enumeration|distinct surfaces
-STAT|status|newsec||naming boundary|projects.{0,60}enumerat.{0,40}checkout
-MATRIX
-}
-path_of() { case "$1" in
-  BL) echo "$BL";; contracts) echo "$M2/contracts.md";; architecture) echo "$M2/architecture.md";;
-  cmd-repos) echo "$M2/commands/repos.md";; cmd-projects) echo "$M2/commands/projects.md";;
-  test-scenarios) echo "$M2/test-scenarios.md";; journeys) echo "$M2/journeys.md";;
-  entrypoint-delta) echo "$M2/entrypoint-delta.md";; m2-readme) echo "$M2/README.md";;
-  milestones-readme) echo "$MR";; registry) echo "$PWD/doc/planning/oss-tooling/cli-command-registry.md";;
-  status) echo "$ST";; esac }
-region() { # $1=file $2=mode $3=arg
-  [ -f "$1" ] || return 0
-  case "$2" in
-    whole) cat "$1" ;;
-    entry) entry "$1" "$3" ;;
-    sect) section "$1" "$3" ;;
-    firstsec) firstsec "$1" ;;
-    para) local np; np=$(grep -n '^Note: the M1 redefinition moved the queue' "$BL" | cut -d: -f1)
-          local s2l; s2l=$(grep -n '^### M2-S2 ' "$BL" | cut -d: -f1)
-          local ne; ne=$(awk -v s="$np" -v e="$s2l" 'NR>=s && NR<e && NF>0 {l=NR} END{print l+0}' "$BL")
-          sed -n "$((ne+1)),$((s2l-1))p" "$BL" ;;
-    s11group) awk '/^## M2-S11 /{f=1} f&&/^## /&&!/^## M2-S11 /{f=0} f' "$1" ;;
-    newgroup) awk '/^## M2-S1[89] /{f=1} f&&/^## /&&!/^## M2-S1[89] /{f=0} f' "$1" ;;
-    m2row) grep -E '^\| M2 \(' "$1" ;;
-    newsec) local s; s=$(newsec_of "$SH/base-status.md" "$ST"); [ -z "$s" ] && return 0; awk -v s="$s" 'NR>=s' "$1" ;;
-  esac
-}
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need matrix_rows path_of region forbidden_hits forbidden_count backlog_ranges
 echo "-- P32: forbidden-statement half --"
-p32fail=0
+p32fail=0; p32empty=0; rows=0
 while IFS='|' read -r id palias mode arg req forb; do
-  [ -z "$id" ] && continue; [ "$forb" = "XXXNONE" ] && continue
-  f=$(path_of "$palias"); txt=$(region "$f" "$mode" "$arg" | squash)
-  c=$(printf '%s' "$txt" | grep -Eoi -- "$forb" | wc -l)
-  if [ "$c" -eq 0 ]; then echo "$id forbidden=0 OK"; else echo "$id forbidden=$c SURVIVOR"; p32fail=$((p32fail+1)); fi
+  [ -z "$id" ] && continue; rows=$((rows+1))
+  f=$(path_of "$palias")
+  if [ ! -f "$f" ]; then echo "$id region=NOFILE"; p32fail=$((p32fail+1)); continue; fi
+  txt=$(region "$f" "$mode" "$arg" | squash)
+  if [ -z "$txt" ]; then echo "$id region=EMPTY"; p32empty=$((p32empty+1)); p32fail=$((p32fail+1)); continue; fi
+  if [ "$forb" = "XXXNONE" ]; then echo "$id forbidden=none-required region=OK"; continue; fi
+  c=$(forbidden_count "$txt" "$forb")
+  if [ "$c" -eq 0 ]; then echo "$id forbidden=0 OK"; else
+    echo "$id forbidden=$c SURVIVOR"
+    case "$forb" in @*) printf '%s' "$txt" | forbidden_hits "${forb#@}" | sed 's/^/    /' ;; *) printf '%s' "$txt" | grep -Eoi -- "$forb" | sed 's/^/    /' ;; esac
+    p32fail=$((p32fail+1)); fi
 done < <(matrix_rows)
-echo "rows_with_survivors=$p32fail/17"
-# self-test: a flat projects-list statement injected into a copy must be detected
-cp "$M2/contracts.md" "$SH/mut-flat.md"
-printf '\nThe `projects list` command enumerates every managed checkout.\n' >> "$SH/mut-flat.md"
-st=$(printf '%s' "$(cat "$SH/mut-flat.md" | squash)" | grep -Eoi 'projects list.{0,60}enumerat.{0,40}checkout' | wc -l)
-echo "self_test_flat=$([ "$st" -ge 1 ] && echo detected || echo FAILED)"
-# self-test: group-meaning repos injected must be detected
-cp "$M2/architecture.md" "$SH/mut-group.md"
-printf '\nThe `repos` group lists its members and their health.\n' >> "$SH/mut-group.md"
-sg=$(printf '%s' "$(cat "$SH/mut-group.md" | squash)" | grep -Eoi 'repos.{0,40}group' | wc -l)
-echo "self_test_group=$([ "$sg" -ge 1 ] && echo detected || echo FAILED)"
-[ "$p32fail" -eq 0 ] && [ "$st" -ge 1 ] && [ "$sg" -ge 1 ] && echo "P32 verdict: PASS" || echo "P32 verdict: FAIL (survivors or scan inert)"
+echo "matrix_rows=$rows regions_empty=$p32empty rows_with_survivors=$p32fail/$rows"
+st=$(printf 'The `projects list` command enumerates every managed checkout.\n' | forbidden_hits both | wc -l)
+sg=$(printf 'The `repos` group lists its members and their health.\n' | forbidden_hits both | wc -l)
+sn=$(printf 'The naming boundary: `repos` enumerates checkouts, `projects` groups them.\n' | forbidden_hits both | wc -l)
+b0=$(cat "$M2/commands/board.md" | squash | forbidden_hits both | wc -l)
+echo "self_test_flat=$([ "$st" -ge 1 ] && echo detected || echo FAILED) self_test_group=$([ "$sg" -ge 1 ] && echo detected || echo FAILED) self_test_boundary_allowed=$([ "$sn" -eq 0 ] && echo OK || echo FAILED) base_board_accepted=$([ "$b0" -eq 0 ] && echo OK || echo FLAGGED)"
+[ "$p32fail" -eq 0 ] && [ "$rows" -eq 17 ] && [ "$p32empty" -eq 0 ] && [ "$st" -ge 1 ] && [ "$sg" -ge 1 ] && [ "$sn" -eq 0 ] && [ "$b0" -eq 0 ] && echo "P32 verdict: PASS" || echo "P32 verdict: FAIL (survivors, empty region, or scan inert)"
 ```
 
-**P33 — boundary statements at the eight both-name locations**
+**P33 — boundary statements at the six both-name prose locations**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need matrix_rows path_of region squash
 both_rows() { cat <<'B'
 BL-CTX|BL|para|ctx
 ARCH|architecture|whole|
 JRN|journeys|firstsec|
 EPD|entrypoint-delta|whole|
-M2RD|m2-readme|whole|
-MSRD|milestones-readme|m2row|
 REG|registry|whole|
 STAT|status|newsec
 B
@@ -2269,18 +2381,23 @@ ok=0; tot=0
 while IFS='|' read -r id palias mode arg; do
   [ -z "$id" ] && continue; tot=$((tot+1))
   f=$(path_of "$palias"); txt=$(region "$f" "$mode" "$arg" | squash)
-  r=$(printf '%s' "$txt" | grep -oiE '\brepos\b' | wc -l)
-  p=$(printf '%s' "$txt" | grep -oiE '\bprojects\b' | wc -l)
-  b=$(printf '%s' "$txt" | grep -Eoi 'flat enumeration|enumerat[^.]{0,60}(group|projects)|repos.{0,40}(checkout|flat).{0,80}projects.{0,40}group|projects.{0,40}group.{0,80}repos' | wc -l)
+  r=$(printf '%s' "$txt" | grep -oiE '(^|[^a-z0-9])repos([^a-z0-9]|$)' | wc -l)
+  p=$(printf '%s' "$txt" | grep -oiE '(^|[^a-z0-9])projects([^a-z0-9]|$)' | wc -l)
+  b=$(printf '%s' "$txt" | grep -Eoi 'flat enumeration|enumerat[^.]{0,60}(group|projects)|repos[^.]{0,40}(checkout|flat)[^.]{0,80}projects[^.]{0,40}group|projects[^.]{0,40}group[^.]{0,80}repos' | wc -l)
   if [ "$r" -ge 1 ] && [ "$p" -ge 1 ] && [ "$b" -ge 1 ]; then ok=$((ok+1)); echo "$id boundary=OK"; else echo "$id repos=$r projects=$p boundary=$b"; fi
 done < <(both_rows)
 echo "boundary_locations=$ok/$tot"
-[ "$ok" -eq "$tot" ] && echo "P33 verdict: PASS" || echo "P33 verdict: FAIL"
+echo "index_rows_checked_by=P26/P27 (link-only locations; no boundary sentence required by Appendix B)"
+[ "$ok" -eq "$tot" ] && [ "$tot" -eq 6 ] && echo "P33 verdict: PASS" || echo "P33 verdict: FAIL"
 ```
 
-**P34 — product-file containment against the thirteen-file manifest**
+**P34 — product-file containment on the base..worktree manifest**
+
+> The gate is the **base..worktree** set (`git diff --name-only "$BASE" -- .` plus untracked product files), so it is decidable at the P5 boundary; the committed range is reported separately as `post_commit_check` and is not the gate.
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00
 manifest() { cat <<'M'
 doc/planning/oss-tooling/backlog.md
 doc/planning/oss-tooling/milestones/m2/architecture.md
@@ -2297,53 +2414,68 @@ doc/planning/oss-tooling/cli-command-registry.md
 scripts/checks/forbidden-literals.registry.json
 M
 }
-git diff --name-only "$BASE"...HEAD | grep -v '^doc/changes/' | sort > "$SH/prod.txt"
-echo "product_files=$(wc -l < "$SH/prod.txt")/13"
+# Base..working-tree manifest check: decidable before the P5 commit.
+{ git diff --name-only "$BASE" -- . ; git ls-files --others --exclude-standard ; } | grep -v '^doc/changes/' | sed '/^$/d' | LC_ALL=C sort -u > "$SH/prod.txt"
 manifest | LC_ALL=C sort > "$SH/man.txt"
+echo "product_files=$(grep -c . "$SH/prod.txt")/13"
 echo "expected_not_changed=$(comm -13 "$SH/prod.txt" "$SH/man.txt" | wc -l)"
-echo "unexpected_changed=$(comm -23 "$SH/prod.txt" "$SH/man.txt")"
+echo "unexpected_changed=$(comm -23 "$SH/prod.txt" "$SH/man.txt" | tr '\n' ' ')"
 for root in doc/spec/ doc/overview/ doc/guides/ doc/templates/ packages/ tests/ .opencode/ .ai/; do
   n=$(grep -c "^$root" "$SH/prod.txt" || true); [ "$n" -eq 0 ] || echo "FORBIDDEN ROOT CHANGED: $root ($n)"; done
 other_scripts=$(grep '^scripts/' "$SH/prod.txt" | grep -vc '^scripts/checks/forbidden-literals.registry.json' || true)
 echo "other_scripts_changed=$other_scripts"
-wt=$(git status --porcelain | grep -v '^.. doc/changes/' | wc -l)
-echo "worktree_product_changes=$wt"
-n=$(wc -l < "$SH/prod.txt"); e=$(comm -13 "$SH/prod.txt" "$SH/man.txt" | wc -l); u=$(comm -23 "$SH/prod.txt" "$SH/man.txt" | wc -l)
-[ "$n" -eq 13 ] && [ "$e" -eq 0 ] && [ "$u" -eq 0 ] && [ "$wt" -eq 0 ] && echo "P34 verdict: PASS" || echo "P34 verdict: FAIL (change absent or out of scope)"
+# Post-commit verification (reported, not gated here): the committed range must reproduce the same set.
+head_diff=$(git diff --name-only "$BASE"...HEAD 2>/dev/null | grep -v '^doc/changes/' | sed '/^$/d' | sort -u)
+if [ -z "$head_diff" ]; then echo "post_commit_check=pending (no product commit yet; base..worktree is the gate)"; else
+  echo "post_commit_check=$(diff <(printf '%s\n' "$head_diff") "$SH/prod.txt" >/dev/null && echo identical || echo DIFFERS)"; fi
+n=$(grep -c . "$SH/prod.txt"); e=$(comm -13 "$SH/prod.txt" "$SH/man.txt" | wc -l); u=$(comm -23 "$SH/prod.txt" "$SH/man.txt" | wc -l)
+[ "$n" -eq 13 ] && [ "$e" -eq 0 ] && [ "$u" -eq 0 ] && [ "$other_scripts" -eq 0 ] && ! grep -qE '^doc/(spec|overview|guides|templates)/|^packages/|^tests/|^\.opencode/|^\.ai/' "$SH/prod.txt" && echo "P34 verdict: PASS" || echo "P34 verdict: FAIL (change absent or out of scope)"
 ```
 
 **P35 — backlog preservation and heading order**
 
 ```bash
-python_missing=0
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need entry backlog_ranges
 compare_stories() { # $1 base $2 head
-  local changed=0 removed=0 kept=0 h b
+  local changed=0 removed=0 kept=0 h b n
   while IFS= read -r h; do
     case "$h" in '### M2-S11 '*) continue ;; esac
     b=$(entry "$1" "$h"); n=$(entry "$2" "$h")
     if [ -z "$n" ]; then removed=$((removed+1)); echo "REMOVED: $h"; else
-      kept=$((kept+1)); [ "$b" = "$n" ] && : || { changed=$((changed+1)); echo "CHANGED: $h"; }
+      kept=$((kept+1)); [ "$b" = "$n" ] || { changed=$((changed+1)); echo "CHANGED: $h"; }
     fi
   done < <(grep '^### ' "$1")
   echo "stories_kept=$kept changed=$changed removed=$removed"
 }
 echo "-- real head --"; compare_stories "$SH/base-backlog.md" "$BL"
-bh=$(grep '^### ' "$SH/base-backlog.md" | wc -l); hh=$(grep '^### ' "$BL" | wc -l)
+bh=$(grep -c '^### ' "$SH/base-backlog.md"); hh=$(grep -c '^### ' "$BL")
 echo "base_headings=$bh head_headings=$hh added=$((hh-bh))"
 newonly=$(comm -13 <(grep '^### ' "$SH/base-backlog.md" | LC_ALL=C sort) <(grep '^### ' "$BL" | LC_ALL=C sort) | sed '/^$/d')
-echo "new_headings=$(printf '%s' "$newonly" | wc -l)"
-printf '%s' "$newonly" | grep -vE '^### M2-S1[89] ' | sed '/^$/d' | sed 's/^/UNEXPECTED: /'
+echo "new_headings=$(printf '%s\n' "$newonly" | grep -c . || true)"
+printf '%s\n' "$newonly" | grep -vE '^### M2-S1[89] ' | sed '/^$/d' | sed 's/^/UNEXPECTED: /'
 i=0; order=OK
 while IFS= read -r h; do j=$(awk -v h="$h" '$0==h{print NR; exit}' "$BL"); [ "${j:-0}" -lt "$i" ] && order=FAIL; i=${j:-0}; done < <(grep '^### ' "$SH/base-backlog.md")
 echo "order=$order"
-for lbl in fm rg cc; do cmp -s "$SH/$lbl-b" "$SH/$lbl-h" && echo "$lbl=byte-identical" || echo "$lbl=CHANGED"; done
-cmp -s "$SH/note-b" "$SH/note-h" && echo "retirement_note=byte-identical" || echo "retirement_note=CHANGED"
-[ "$order" = "OK" ] && [ "$(printf '%s' "$newonly" | sed '/^$/d' | wc -l)" -le 2 ] && echo "P35 verdict: PASS (control)" || echo "P35 verdict: FAIL (control)"
+fm() { awk 'NR==1&&$0=="---"{f=1} f{print} f&&NR>1&&$0=="---"{exit}' "$1"; }
+rg() { awk '/^## Reading guide/{f=1} /^## Cross-cutting principles/{exit} f{print}' "$1"; }
+cc() { awk '/^## Cross-cutting principles/{f=1} /^## Epic M0:/{exit} f{print}' "$1"; }
+note() { awk -v s="$1" -v e="$2" 'NR>=s&&NR<=e' "$BL"; }
+for r in fm rg cc; do $r "$SH/base-backlog.md" > "$SH/p35-$r-b"; $r "$BL" > "$SH/p35-$r-h"; cmp -s "$SH/p35-$r-b" "$SH/p35-$r-h" && echo "$r=byte-identical" || echo "$r=CHANGED"; done
+bns=$(grep -n '^Note: the M1 redefinition moved the queue' "$SH/base-backlog.md" | cut -d: -f1)
+bne=$(grep -n '^the gap is deliberate\. M2 stories keep their codes\.$' "$SH/base-backlog.md" | cut -d: -f1)
+backlog_ranges
+awk -v s="$bns" -v e="$bne" 'NR>=s&&NR<=e' "$SH/base-backlog.md" > "$SH/p35-note-b"
+awk -v s="$NOTE_S" -v e="$NOTE_E" 'NR>=s&&NR<=e' "$BL" > "$SH/p35-note-h"
+cmp -s "$SH/p35-note-b" "$SH/p35-note-h" && echo "retirement_note=byte-identical" || echo "retirement_note=CHANGED"
+newc=$(printf '%s\n' "$newonly" | sed '/^$/d' | wc -l)
+[ "$order" = "OK" ] && [ "$newc" -eq 2 ] && echo "P35 verdict: PASS" || { [ "$newc" -eq 0 ] && echo "P35 verdict: PASS (control: no new story yet)"; } || echo "P35 verdict: FAIL"
 ```
 
 **P36 — planned-not-delivered semantics**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 n=0; [ -f "$M2/commands/repos.md" ] && grep -Fxq 'Status: Proposed (M2)' "$M2/commands/repos.md" && n=$((n+1))
 grep -Fxq 'Status: Proposed (M2)' "$M2/commands/projects.md" && n=$((n+1))
 echo "proposed_headers=$n/2"
@@ -2361,15 +2493,16 @@ echo "snapshot_relabels=$snap"
 **P37 — the forbidden-literals registration 139 → 140**
 
 ```bash
-reg_entries() { awk '/"registered": \[/{f=1;next} f&&/^  \]/{f=0} f' "$REG" | sed -E 's/^ *"([^"]*)",?$/\1/'; }
-reg_entries > "$SH/reg-head.txt"
-n=$(wc -l < "$SH/reg-head.txt"); b=$(reg_entries < "$SH/base-forbidden.json" | wc -l)
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need cnt
+reg_entries() { awk '/"registered": \[/{f=1;next} f&&/^  \]/{f=0} f' "${1:-$REG}" | sed -E 's/^ *"([^"]*)",?$/\1/'; }
+reg_entries "$REG" > "$SH/reg-head.txt"
+n=$(wc -l < "$SH/reg-head.txt"); b=$(reg_entries "$SH/base-forbidden.json" | wc -l)
 echo "registered=$n base_registered=$b delta=$((n-b))"
 q=$(grep -n 'milestones/m2/commands/queue.md' "$SH/reg-head.txt" | cut -d: -f1)
 s=$(grep -n 'milestones/m2/commands/spend.md' "$SH/reg-head.txt" | cut -d: -f1)
 r=$(grep -n 'milestones/m2/commands/repos.md' "$SH/reg-head.txt" | cut -d: -f1)
 echo "queue_row=${q:-absent} repos_row=${r:-absent} spend_row=${s:-absent}"
-[ -n "$qr_placeholder" ] 2>/dev/null
 if [ -n "$r" ] && [ -n "$q" ] && [ -n "$s" ]; then
   [ "$r" -eq "$((q+1))" ] && [ "$s" -eq "$((r+1))" ] && echo "position=between-queue-and-spend" || echo "position=OUT-OF-ORDER"; else echo "position=repos-not-registered"; fi
 echo "duplicates=$(sort "$SH/reg-head.txt" | uniq -d | wc -l)"
@@ -2381,6 +2514,7 @@ echo "unregistered_findings=$g_one"
 **P38 — the distribution guard under the default `TMPDIR`**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 # default TMPDIR is required here: the guard and `pnpm check` have opposite requirements
 env -u TMPDIR bash scripts/.tests/test-doc-distribution.sh > "$SH/p38.log" 2>&1; rc=$?
 echo "dist_guard_exit=$rc"
@@ -2390,41 +2524,62 @@ echo "planning_markers=$markers"
 [ "$rc" -eq 0 ] && [ "$markers" -eq 0 ] && echo "P38 verdict: PASS (control)" || echo "P38 verdict: FAIL"
 ```
 
-**P39 — both aggregate-gate invocations**
+**P39 — both aggregate-gate invocations and the AC-NFR6-1 v1.1 classifier**
 
-The aggregate gate is run twice, because the two doc guards have opposite `TMPDIR` requirements in this environment (G-6). Record both exit codes and, for the default run, every failing test name.
+> Run with `RUN_GATES=1` for the two real invocations (it writes `$SH/p39-{local,default}.{rc,log}`); the classifier reads those files and the re-run record `$SH/p39-rerun.txt`. `P39_FIXTURE_DIR=/tmp/gh303/p39fix/<case>` points it at a synthetic log set, which is how the five classifier branches (`none`, `excused`, unexcused, repository-local failure, missing rerun) are proven without re-running the gate.
 
 ```bash
-set -uo pipefail
-cd "$(git rev-parse --show-toplevel)"
-REPO_ROOT="$PWD"
-
-# (a) authoritative run: repository-filesystem TMPDIR
-mkdir -p "$REPO_ROOT/tmp/tmpdir"
-TMPDIR="$REPO_ROOT/tmp/tmpdir" pnpm check > /tmp/gh303/p39-local.log 2>&1; local_rc=$?
-echo "repo_local_exit=$local_rc"
-grep -E '^ *[0-9]+ (pass|skip|fail)$|no dependency violations|prompt-conformance|help-guide-coverage|exports-parity' /tmp/gh303/p39-local.log | tail -8
-
-# (b) recorded run: default TMPDIR (unset / tmpfs)
-env -u TMPDIR pnpm check > /tmp/gh303/p39-default.log 2>&1; default_rc=$?
-echo "default_exit=$default_rc"
-grep -E '^\(fail\)' /tmp/gh303/p39-default.log | sed -E 's/ \[.*//' | sort -u > /tmp/gh303/p39-fail.txt
-echo "default_failed_tests=$(wc -l < /tmp/gh303/p39-fail.txt)"
-cat /tmp/gh303/p39-fail.txt
-
-# classification: environmental only when the sole default failure is the parity test
-if [ "$default_rc" -eq 0 ]; then cls=none; echo "default_failure_class=none"
-elif [ "$(wc -l < /tmp/gh303/p39-fail.txt)" -eq 1 ] && grep -q 'CI baseline parity' /tmp/gh303/p39-fail.txt; then
-  cls=environmental; echo "default_failure_class=environmental (lone cross-device hardlink)"
-else cls=delivery; echo "default_failure_class=delivery"; fi
-# AC-NFR6-1: the repository-local run must be green AND any default failure must be the lone parity test
-[ "$local_rc" -eq 0 ] && { [ "$cls" = none ] || [ "$cls" = environmental ]; } \
-  && echo "P39 verdict: PASS" || echo "P39 verdict: FAIL (local_rc=$local_rc default_class=$cls)"
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00
+# Policy (spec v1.1 AC-NFR6-1 / NFR-6 / DEC-16):
+#  (a) the repository-local full-suite run is authoritative: exit 0 required;
+#      any failure there, including a repeated TC-WIRE-002 timeout, is a delivery failure;
+#  (b) both runs are recorded;
+#  (c) a default-run ci-baseline-parity failure and a default-run TC-WIRE-002 timeout
+#      are recorded and re-run, and are excused only while the repository-local run is
+#      green on the same head;
+#  (d) any other default-run failure is a delivery failure.
+GATE_DIR=${P39_FIXTURE_DIR:-$SH}
+if [ "${RUN_GATES:-0}" = "1" ]; then
+  REPO_ROOT=$(git rev-parse --show-toplevel); mkdir -p "$REPO_ROOT/tmp/tmpdir"
+  TMPDIR="$REPO_ROOT/tmp/tmpdir" pnpm check > "$SH/p39-local.log" 2>&1; echo $? > "$SH/p39-local.rc"
+  env -u TMPDIR pnpm check > "$SH/p39-default.log" 2>&1; echo $? > "$SH/p39-default.rc"
+fi
+for f in local.rc local.log default.rc default.log; do
+  [ -s "$GATE_DIR/p39-$f" ] || { echo "FATAL: missing or empty $GATE_DIR/p39-$f; run P39 with RUN_GATES=1" >&2; exit 1; }
+done
+local_rc=$(cat "$GATE_DIR/p39-local.rc"); default_rc=$(cat "$GATE_DIR/p39-default.rc")
+local_fail=$(grep -E '^\(fail\)' "$GATE_DIR/p39-local.log" | sed -E 's/ \[.*//; s/^\(fail\) //' | sort -u)
+default_fail=$(grep -E '^\(fail\)' "$GATE_DIR/p39-default.log" | sed -E 's/ \[.*//; s/^\(fail\) //' | sort -u)
+echo "repo_local_exit=$local_rc default_exit=$default_rc"
+echo "local_failed_tests=$(printf '%s\n' "$local_fail" | grep -c . || true) default_failed_tests=$(printf '%s\n' "$default_fail" | grep -c . || true)"
+printf '%s\n' "$default_fail" | sed '/^$/d' | sed 's/^/default_fail: /'
+local_summary=$(grep -E '^ *[0-9]+ (pass|skip|fail)$' "$GATE_DIR/p39-local.log" | tr '\n' ' ')
+default_summary=$(grep -E '^ *[0-9]+ (pass|skip|fail)$' "$GATE_DIR/p39-default.log" | tr '\n' ' ')
+echo "recorded_local=yes ($local_summary) recorded_default=yes ($default_summary)"
+allowed_re='CI baseline parity|TC-WIRE-002'
+other=0; excused=0
+while IFS= read -r t; do
+  [ -z "$t" ] && continue
+  if printf '%s' "$t" | grep -Eq "$allowed_re"; then excused=$((excused+1)); else other=$((other+1)); echo "UNEXCUSED: $t"; fi
+done <<< "$default_fail"
+if [ "$local_rc" -ne 0 ]; then cls=delivery; reason="repository-local full suite failed (authoritative)"
+elif [ "$default_rc" -eq 0 ]; then cls=none; reason="both runs green"
+elif [ "$other" -eq 0 ] && [ "$excused" -ge 1 ]; then cls=excused; reason="only the two named default-only failures, repository-local green"
+else cls=delivery; reason="default run failed with an unexcused test"; fi
+echo "default_failure_class=$cls reason=$reason"
+builtin=/dev/null
+if [ "$cls" = "excused" ]; then
+  rerun=$(cat "$GATE_DIR/p39-rerun.txt" 2>/dev/null || true)
+  if [ -z "$rerun" ]; then echo "rerun_recorded=no"; cls=missing-rerun; else echo "rerun_recorded=yes ($(printf '%s' "$rerun" | tr '\n' ';'))"; fi
+else echo "rerun_recorded=n/a"; fi
+[ "$cls" = "none" ] || [ "$cls" = "excused" ] && echo "P39 verdict: PASS ($cls)" || echo "P39 verdict: FAIL ($cls: $reason)"
 ```
 
 **P40 — the structural diagram read**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 kw='^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram-v2)'
 fcheck() { local f="$1" fences mer untagged bad first
   fences=$(grep -c '^```' "$f"); mer=$(grep -c '^```mermaid' "$f"); untagged=0; bad=0
@@ -2455,6 +2610,7 @@ echo "$ownfail"
 **P41 — the 26-clause fidelity scan**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 cat > "$SH/e18.txt" <<'E'
 E
 { entry "$BL" '### M2-S18 '; entry "$BL" '### M2-S19 '; entry "$BL" '### M2-S11 '; } | squash > "$SH/fid.txt"
@@ -2470,6 +2626,7 @@ echo "clause_scan: total=$tot present=$pres missing=$((tot-pres))"
 **P42 — the forbidden-literals guard**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 bun run scripts/checks/forbidden-literals.ts > "$SH/p42.log" 2>&1; rc=$?
 echo "forbidden_exit=$rc"
 grep -E '^OK forbidden-literals|violation' "$SH/p42.log" | head -3
@@ -2480,6 +2637,7 @@ echo "violations=$(grep -cE '^  - |VIOLATION' "$SH/p42.log" || true)"
 **P43 — relative links and restated acceptance blocks**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
 broken=0
 for f in "$BL" "$M2/README.md" "$M2/architecture.md" "$M2/contracts.md" "$M2/test-scenarios.md" "$M2/journeys.md" "$M2/entrypoint-delta.md" "$M2/commands/projects.md" "$M2/commands/repos.md" "$MR" "$ST" "$PWD/doc/planning/oss-tooling/cli-command-registry.md"; do
   [ -f "$f" ] || continue; d=$(dirname "$f")
@@ -2498,111 +2656,107 @@ echo "restated_ac_blocks=$restated"
 **P44 — retention-oracle soundness with four mutants**
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need diffstat newsec_of newsec_count
 echo "oracle=whole-file-line-retention (whole-section cmp not used)"
 read -r rem add <<< "$(diffstat "$SH/base-status.md" "$ST")"
 echo "base_lines=$(wc -l < "$SH/base-status.md") retained=$(wc -l < "$SH/base-status.md") removed_or_modified=$rem additions=$add"
-# conforming fixture: base plus one appended dated section
 cp "$SH/base-status.md" "$SH/fix-ok.md"
 printf '\n## GH-303 amendment (2026-11-11)\n\nPlanning state only.\nThe naming boundary holds.\n' >> "$SH/fix-ok.md"
-fixcheck() { # $1=fixture -> "removed added outside"
-  local r a s o
+fixcheck() { local r a s o
   read -r r a <<< "$(diffstat "$SH/base-status.md" "$1")"
   s=$(newsec_of "$SH/base-status.md" "$1")
-  # the new section's bound includes the single blank separator line before its heading
   if [ -z "$s" ]; then o=$a; else o=$(diff -U0 "$SH/base-status.md" "$1" | grep -E '^@@' | sed -E 's/^@@ -[0-9]+(,[0-9]+)? \+([0-9]+)(,([0-9]+))? @@.*/\2 \4/' | awk -v s="$((s-1))" '{c=$1; d=($2==""?1:$2); if (c<s) print}' | wc -l); fi
-  echo "$r $a $o"
-}
+  echo "$r $a $o"; }
 read -r fr fa fo <<< "$(fixcheck "$SH/fix-ok.md")"
 echo "conforming_fixture: removed=$fr added=$fa outside=$fo verdict=$([ "$fr" -eq 0 ] && [ "$fo" -eq 0 ] && [ "$fa" -gt 0 ] && echo OK || echo FAILED)"
 cp "$SH/fix-ok.md" "$SH/fix-del.md"; sed -i '190d' "$SH/fix-del.md"
-read -r dr da do_ <<< "$(fixcheck "$SH/fix-del.md")"
-echo "delete_fixture: removed=$dr (expect >0)"
+read -r dr da do_ <<< "$(fixcheck "$SH/fix-del.md")"; echo "delete_fixture: removed=$dr (expect >0)"
 cp "$SH/fix-ok.md" "$SH/fix-mod.md"; sed -i '100s/.*/MUTATED LINE/' "$SH/fix-mod.md"
-read -r mr ma mo <<< "$(fixcheck "$SH/fix-mod.md")"
-echo "modify_fixture: removed=$mr (expect >0)"
-cp "$SH/fix-ok.md" "$SH/fix-swap.md"; sed -n '50p;51p' "$SH/base-status.md" > /dev/null
-awk 'NR==50{a=$0;next} NR==51{print; print a; next} {print}' "$SH/fix-swap.md" > "$SH/fix-swap2.md"
-read -r sr sa so <<< "$(fixcheck "$SH/fix-swap2.md")"
-echo "swap_fixture: removed=$sr (expect >0)"
+read -r mr ma mo <<< "$(fixcheck "$SH/fix-mod.md")"; echo "modify_fixture: removed=$mr (expect >0)"
+cp "$SH/fix-ok.md" "$SH/fix-swap.md"; awk 'NR==50{a=$0;next} NR==51{print; print a; next} {print}' "$SH/fix-swap.md" > "$SH/fix-swap2.md"
+read -r sr sa so <<< "$(fixcheck "$SH/fix-swap2.md")"; echo "swap_fixture: removed=$sr (expect >0)"
 cp "$SH/fix-ok.md" "$SH/fix-out.md"; sed -i '5i INJECTED OUTSIDE THE SECTION' "$SH/fix-out.md"
-read -r or_ oa oo <<< "$(fixcheck "$SH/fix-out.md")"
-echo "outside_insert_fixture: outside_hunks=$oo (expect >0)"
+read -r or_ oa oo <<< "$(fixcheck "$SH/fix-out.md")"; echo "outside_insert_fixture: outside_hunks=$oo (expect >0)"
 [ "$fr" -eq 0 ] && [ "$fo" -eq 0 ] && [ "$fa" -gt 0 ] && [ "$dr" -gt 0 ] && [ "$mr" -gt 0 ] && [ "$sr" -gt 0 ] && [ "$oo" -gt 0 ] && [ "$rem" -eq 0 ] && echo "P44 verdict: PASS" || echo "P44 verdict: FAIL"
 ```
 
 **P45 — the naming matrix, required half, with two fixtures**
 
-> Requires the `matrix_rows()`, `path_of()`, and `region()` helpers defined in **P32**.
+> Uses the `matrix_rows()`, `path_of()`, and `region()` helpers defined in **P00**. Every region must be non-empty, and the S19 row requires `one lifecycle` because Appendix B places the group statement in S18-T5.
 
 ```bash
+[ "${P00_READY:-}" = "gh303" ] || { echo "FATAL: P00 preamble not loaded; run each block in a fresh shell as 'source P00; source Pn'" >&2; exit 1; }
+require_p00; need matrix_rows path_of region backlog_ranges
 echo "-- P45: required-statement half --"
-p45ok=0; p45tot=0
+p45ok=0; p45tot=0; p45empty=0
 while IFS='|' read -r id palias mode arg req forb; do
   [ -z "$id" ] && continue; p45tot=$((p45tot+1))
-  f=$(path_of "$palias"); txt=$(region "$f" "$mode" "$arg" | squash)
+  f=$(path_of "$palias")
+  if [ ! -f "$f" ]; then echo "$id required=NOFILE"; continue; fi
+  txt=$(region "$f" "$mode" "$arg" | squash)
+  if [ -z "$txt" ]; then echo "$id required=EMPTY"; p45empty=$((p45empty+1)); continue; fi
   c=$(printf '%s' "$txt" | grep -Eoi -- "$req" | wc -l)
   if [ "$c" -ge 1 ]; then p45ok=$((p45ok+1)); echo "$id required=OK"; else echo "$id required=MISSING"; fi
 done < <(matrix_rows)
-echo "matrix_rows_required=$p45ok/$p45tot"
-# self-test: a conforming fixture passes, a row missing its anchor fails
+echo "matrix_rows_required=$p45ok/$p45tot regions_empty=$p45empty"
 printf '## repos.v1\n\nThe flat enumeration contract: repo key, root, state location.\n' > "$SH/fix-good.md"
 g=$(region "$SH/fix-good.md" sect '## repos.v1' | squash | grep -Eoi 'repo key' | wc -l)
 printf '## repos.v1\n\nThe enumeration contract.\n' > "$SH/fix-bad.md"
 b=$(region "$SH/fix-bad.md" sect '## repos.v1' | squash | grep -Eoi 'repo key' | wc -l)
 echo "positive_fixture=$([ "$g" -ge 1 ] && echo OK || echo FAILED) negative_fixture=$([ "$b" -eq 0 ] && echo detected || echo FAILED)"
-[ "$p45ok" -eq "$p45tot" ] && [ "$p45tot" -eq 17 ] && echo "P45 verdict: PASS" || echo "P45 verdict: FAIL ($p45ok/$p45tot rows in required state)"
+[ "$p45ok" -eq "$p45tot" ] && [ "$p45tot" -eq 17 ] && [ "$p45empty" -eq 0 ] && [ "$g" -ge 1 ] && [ "$b" -eq 0 ] && echo "P45 verdict: PASS" || echo "P45 verdict: FAIL ($p45ok/$p45tot rows in required state)"
 ```
-
 
 ### 7.2 TC → Procedure → Implementation Mapping
 
-| TC ID | AC | Procedure | Execution command | Implementation status | Recorded evidence (pre-change tree) |
+| TC ID | AC | Procedure | Execution command | Implementation status | Recorded evidence (base tree and conforming fixture) |
 |---|---|---|---|---|---|
-| TC-M2DOM-001 | AC-F1-1 | P01 | `bash` block **P01** | Manual Only — uncommitted procedure | `retained_clauses=5/5`; `depends_line=exact`; `repos_list_fields=MISSING`; `transition_note=MISSING`; `goal_projects_command=PRESENT (must be ABSENT)` → FAIL |
-| TC-M2DOM-002 | AC-F1-2 | P02 | `bash` block **P02** | Manual Only — uncommitted procedure | `projects_list_in_entry=2 repos_list_in_entry=0 group_meaning_repos_in_entry=0 collision_clause_copies=1 inside_s11=1` → FAIL |
-| TC-M2DOM-003 | AC-F2-1 | P03 | `bash` block **P03** | Manual Only — uncommitted procedure | `S18=absent`; `clauses_present=0/12` → FAIL (change absent) |
-| TC-M2DOM-004 | AC-F2-2 | P04 | `bash` block **P04** | Manual Only — uncommitted procedure | `s18_nyts=0 contracts_nyts=0`; `s18_validation=MISSING`; `s18_rather_than_rejected=MISSING`; `softening=ABSENT` → FAIL |
-| TC-M2DOM-005 | AC-F3-1 | P05 | `bash` block **P05** | Manual Only — uncommitted procedure | `S19=absent`; `clauses_present=0/11` → FAIL (change absent) |
-| TC-M2DOM-006 | AC-F3-2 | P06 | `bash` block **P06** | Manual Only — uncommitted procedure | `S19=absent numbered_items=0/3` → FAIL (change absent) |
-| TC-M2DOM-007 | AC-F3-3 | P07 | `bash` block **P07** | Manual Only — uncommitted procedure | `contract MISSING: T1,T2,T3,T4,T6`; `s19_task_to_contract=1/6` → FAIL |
-| TC-M2DOM-008 | AC-F4-1 | P08 | `bash` block **P08** | Manual Only — uncommitted procedure | `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`; `window_empty=no`; `separator_sequence=identical`; `blank_line_before_separator=1`; `s18_line=absent s19_line=absent`; `placement=FAIL` → FAIL |
-| TC-M2DOM-009 | AC-F4-2 | P09 | `bash` block **P09** | Manual Only — uncommitted procedure | `retirement_note=1051..1054 context_paragraph=1055..1055 paragraph_lines=0`; `three_levels/boundary/root_family=MISSING`; `fm`,`rg`,`cc`,`retirement_note` `byte-identical` → FAIL (no paragraph) |
-| TC-M2DOM-010 | AC-F4-3 | P10 | `bash` block **P10** | Manual Only — uncommitted procedure | `backlog_hunks=0`; `non_vacuous=no`; `classifier_self_tests=3/3` → FAIL (vacuous) |
-| TC-M2DOM-011 | AC-F5-1 | P11 | `bash` block **P11** | Manual Only — uncommitted procedure | `l1_lines=32`; `level_repository=OK`; `project_as_group=MISSING`; `workspace_in_diagram=MISSING`; `workspace_optional_in_diagram=MISSING` → FAIL |
-| TC-M2DOM-012 | AC-F5-2 | P12 | `bash` block **P12** | Manual Only — uncommitted procedure | `membership_declared/workspace_never_required/unrelated_dirs/identical_behaviour=MISSING`; `member_must_be_inside=ABSENT` → FAIL |
-| TC-M2DOM-013 | AC-F5-3 | P13 | `bash` block **P13** | Manual Only — uncommitted procedure | `overview_mentions_member=0 group=0 workspace=0`; `cross_repo_flow_heading=absent`; `invariants naming=0 membership=0 workspace=0 lifecycle=0` → FAIL |
-| TC-M2DOM-014 | AC-F6-1 | P14 | `bash` block **P14** | Manual Only — uncommitted procedure | `repos_v1_section=absent`; `repos_v1_fields=0/7` → FAIL |
-| TC-M2DOM-015 | AC-F6-2 | P15 | `bash` block **P15** | Manual Only — uncommitted procedure | `projects_v1_section=present`; six group anchors `MISSING`; `group_named_key_denotes_repo=PRESENT (violation)` → FAIL |
-| TC-M2DOM-016 | AC-F6-3 | P16 | `bash` block **P16** | Manual Only — uncommitted procedure | `configuration_schema=absent`; `fields=0/8` → FAIL (change absent) |
-| TC-M2DOM-017 | AC-F6-4 | P17 | `bash` block **P17** | Manual Only — uncommitted procedure | `change_plan_shape=absent`; `elements=0/7` → FAIL (change absent) |
-| TC-M2DOM-018 | AC-F6-5 | P18 | `bash` block **P18** | Manual Only — uncommitted procedure | `consumer_note=MISSING`; `s4_advisory=MISSING` → FAIL |
-| TC-M2DOM-019 | AC-F7-1 | P19 | `bash` block **P19** | Manual Only — uncommitted procedure | `repos_md=absent`; `checks=0/9 fields=0/5` → FAIL (change absent); conforming fixture `9/9 5/5` → PASS |
-| TC-M2DOM-020 | AC-F7-2 | P20 | `bash` block **P20** | Manual Only — uncommitted procedure | `checks=4/7 fields=1/3`; `forbidden_flat_statements=1` → FAIL; conforming fixture `7/7 3/3 0` → PASS |
-| TC-M2DOM-021 | AC-F7-3 | P21 | `bash` block **P21** | Manual Only — uncommitted procedure | `repos_page=absent`; `projects_page: projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1` → FAIL |
-| TC-M2DOM-022 | AC-F8-1 | P22 | `bash` block **P22** | Manual Only — uncommitted procedure | `s18_seeds=0 s19_seeds=0`; `assert_violations=0`; `coverage_anchors=1/10` → FAIL |
-| TC-M2DOM-023 | AC-F8-2 | P23 | `bash` block **P23** | Manual Only — uncommitted procedure | `s11_01_assert_repos_list=0 …projects_list=1`; `s11_02_title/body_repos_list=0`; `assert_fields=5/5`; `flat_assert_survivors=1` → FAIL |
-| TC-M2DOM-024 | AC-F9-1 | P24 | `bash` block **P24** | Manual Only — uncommitted procedure | `opening_journey_lines=15`; `project_scoped=OK`; `member_outside_shared_dir=MISSING`; `flat_view_repos_list=MISSING`; `group_view_projects_list=OK`; `scoped_reads=MISSING`; `workspace_optional_stated=MISSING`; `same_ref_disjoint=OK` → FAIL |
-| TC-M2DOM-025 | AC-F10-1 | P25 | `bash` block **P25** | Manual Only — uncommitted procedure | `repos_addition/projects_addition/mount_names_both=MISSING`; `host_overview_claims=1`; five `preserved … OK` → FAIL |
-| TC-M2DOM-026 | AC-F11-1 | P26 | `bash` block **P26** | Manual Only — uncommitted procedure | `pack_rows=12/13`; `repos_row/map_s18/map_s19/s11_row_repos_v1=MISSING`; `planned_until_exit=verbatim` → FAIL |
-| TC-M2DOM-027 | AC-F11-2 | P27 | `bash` block **P27** | Manual Only — uncommitted procedure | `m2_targets=12/13`; `repos_target=MISSING`; `m0_row=byte-identical`; `m1_row=byte-identical` → FAIL |
-| TC-M2DOM-028 | AC-F12-1 | P28 | `bash` block **P28** | Manual Only — uncommitted procedure | `new_section_line=absent`; `new_section=absent` → FAIL (change absent) |
-| TC-M2DOM-029 | AC-F12-2 | P29 | `bash` block **P29** | Manual Only — uncommitted procedure | `removed_lines=0 additions=0 new_section_line=absent added_outside_section=0`; `base_lines=212 head_lines=212` → PASS (control) |
-| TC-M2DOM-030 | AC-F13-1 | P30 | `bash` block **P30** | Manual Only — uncommitted procedure | `m2_repos_row=absent old_projects_meaning=1`; `old_boundary_note=PRESENT (violation)`; `registry_anchors=0/7` → FAIL |
-| TC-M2DOM-031 | AC-F13-2 | P31 | `bash` block **P31** | Manual Only — uncommitted procedure | `changed_lines=0`; `outside=0`; `fixture_outside=2` → FAIL (vacuous: no registry change) |
-| TC-M2DOM-032 | AC-F14-1 | P32 | `bash` block **P32** | Manual Only — uncommitted procedure | `rows_with_survivors=6/17` (CT-PV1, ARCH, TS-S11, EPD, M2RD, REG); `self_test_flat=detected`; `self_test_group=detected` → FAIL |
-| TC-M2DOM-033 | AC-F14-2 | P33 | `bash` block **P33** | Manual Only — uncommitted procedure | `boundary_locations=0/8` (`ARCH projects=5`, `EPD projects=4`, `REG repos=8 projects=4`, `M2RD projects=5`) → FAIL |
-| TC-M2DOM-034 | AC-NFR1-1 | P34 | `bash` block **P34** | Manual Only — uncommitted procedure | `product_files=0/13`; `expected_not_changed=13`; `unexpected_changed=`; `other_scripts_changed=0`; `worktree_product_changes=0` → FAIL |
-| TC-M2DOM-035 | AC-NFR2-1 | P35 | `bash` block **P35** | Manual Only — uncommitted procedure | `stories_kept=73 changed=0 removed=0`; `base_headings=74 head_headings=74 added=0`; `order=OK`; four regions `byte-identical` → PASS (control) |
-| TC-M2DOM-036 | AC-NFR3-1 | P36 | `bash` block **P36** | Manual Only — uncommitted procedure | `proposed_headers=1/2`; `delivered_claims=0`; `pack_statement=verbatim`; `snapshot_relabels=0` → FAIL |
-| TC-M2DOM-037 | AC-NFR4-1 | P37 | `bash` block **P37** + `bun run scripts/checks/forbidden-literals.ts` | Manual Only — uncommitted procedure | `registered=139 base_registered=139 delta=0`; `queue_row=88 repos_row=absent spend_row=89`; `duplicates=0`; `unregistered_findings=0` → FAIL |
-| TC-M2DOM-038 | AC-NFR5-1 | P38 | `env -u TMPDIR bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | `dist_guard_exit=0`; `no drift — 82 in-scope docs`; `planning_markers=0` → PASS (control) |
-| TC-M2DOM-039 | AC-NFR6-1 | P39 | `mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check` and `env -u TMPDIR pnpm check` | Existing gate — no change | repository-local `repo_local_exit=0` (7133 pass, 4 skip, 0 fail, 7137 tests, 880 files, 490.75s); default `default_exit=1`, `default_failed_tests=2`, `default_failure_class=delivery` → FAIL (pre-existing second failure, not caused by this change; see G-6) |
-| TC-M2DOM-040 | AC-NFR7-1 | P40 | `bash` block **P40** | Manual Only — uncommitted procedure | all files `even`, `untagged_diagrams=0`, `bad_keywords=0`; `c4_headings=1/1/1`; `key_flows_headings=7/8`; `flow_ownership_bad=0` → FAIL |
-| TC-M2DOM-041 | AC-NFR8-1 | P41 | `bash` block **P41** | Manual Only — uncommitted procedure | `clause_scan: total=26 present=1 missing=25` → FAIL |
-| TC-M2DOM-042 | AC-NFR9-1 | P42 | `bun run scripts/checks/forbidden-literals.ts` | Existing guard — no change | `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `userFacingDocs: 139 file(s)` → PASS (control) |
-| TC-M2DOM-043 | AC-NFR10-1 | P43 | `bash` block **P43** | Manual Only — uncommitted procedure | `broken_links=0`; `restated_ac_blocks=0` → PASS (control) |
-| TC-M2DOM-044 | AC-NFR11-1 | P44 | `bash` block **P44** | Manual Only — uncommitted procedure | `oracle=whole-file-line-retention (whole-section cmp not used)`; `removed_or_modified=0`; `conforming_fixture verdict=OK`; `delete/modify/swap=removed 1`; `outside_insert_hunks=1` → PASS |
-| TC-M2DOM-045 | AC-NFR12-1 | P45 | `bash` block **P45** | Manual Only — uncommitted procedure | `matrix_rows_required=1/17`; `positive_fixture=OK`; `negative_fixture=detected` → FAIL |
+| TC-M2DOM-001 | AC-F1-1 | P01 | `bash` block **P01** | Manual Only — uncommitted procedure | base `retained_clauses=5/5 depends_line=exact repos_list_fields=MISSING transition_note=MISSING goal_projects_command=PRESENT` → FAIL; fixture `5/5 exact OK OK ABSENT` → PASS |
+| TC-M2DOM-002 | AC-F1-2 | P02 | `bash` block **P02** | Manual Only — uncommitted procedure | base `flat_projects_statements_in_entry=3 raw=2 repos_list_in_entry=0` → FAIL; fixture `flat=0 raw=2 repos_list=3 group_meaning=0` → PASS |
+| TC-M2DOM-003 | AC-F2-1 | P03 | `bash` block **P03** | Manual Only — uncommitted procedure | base `S18=absent clauses_present=0/12` → FAIL; fixture `12/12 shape_labels=4/4 ticket_line=0` → PASS |
+| TC-M2DOM-004 | AC-F2-2 | P04 | `bash` block **P04** | Manual Only — uncommitted procedure | base `s18_nyts=0 contracts_nyts=0 validation MISSING rather_than_rejected MISSING softening ABSENT` → FAIL; fixture `1/1 validation OK rather_than_rejected OK softening ABSENT` → PASS |
+| TC-M2DOM-005 | AC-F3-1 | P05 | `bash` block **P05** | Manual Only — uncommitted procedure | base `S19=absent clauses_present=0/11` → FAIL; fixture `11/11 shape_labels=4/4` → PASS |
+| TC-M2DOM-006 | AC-F3-2 | P06 | `bash` block **P06** | Manual Only — uncommitted procedure | base `S19=absent numbered_items=0/3` → FAIL; fixture `3/3 a1=1 a2=1 a3=1` → PASS |
+| TC-M2DOM-007 | AC-F3-3 | P07 | `bash` block **P07** | Manual Only — uncommitted procedure | base `contract MISSING T1,T2,T3,T4,T6; s19_task_to_contract=1/6` → FAIL; fixture `6/6` → PASS |
+| TC-M2DOM-008 | AC-F4-1 | P08 | `bash` block **P08** | Manual Only — uncommitted procedure | base `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286; s18_line=absent s19_line=absent; placement=FAIL` → FAIL; fixture `s17_last=1293 separator=1310 epic_m3=1312 window=1294:1309; s18=1294 s19=1300; placement=inside-window` → PASS |
+| TC-M2DOM-009 | AC-F4-2 | P09 | `bash` block **P09** | Manual Only — uncommitted procedure | base `retirement_note=1051..1054 context=1055..1055 paragraph_lines=0 paragraph_strictly_between=FAIL` → FAIL; fixture `context=1055..1060 paragraph_lines=4 strictly_between=OK levels/boundary/root=OK` → PASS |
+| TC-M2DOM-010 | AC-F4-3 | P10 | `bash` block **P10** | Manual Only — uncommitted procedure | base `backlog_hunks=0 non_vacuous=no self_tests=3/3` → FAIL (vacuous); fixture `ranges s11 1174:1191 context 1055:1060 window 1294:1309; hunks=6 inside=6 outside=0` → PASS |
+| TC-M2DOM-011 | AC-F5-1 | P11 | `bash` block **P11** | Manual Only — uncommitted procedure | base `repository_as_delivery_unit=MISSING project_as_group=MISSING workspace=MISSING optional=MISSING` → FAIL; fixture all four `OK`, mandatory claim `ABSENT` → PASS |
+| TC-M2DOM-012 | AC-F5-2 | P12 | `bash` block **P12** | Manual Only — uncommitted procedure | base four anchors `MISSING` → FAIL; fixture `membership/never-required/unrelated/identically=OK; member_must_be_inside=ABSENT` → PASS |
+| TC-M2DOM-013 | AC-F5-3 | P13 | `bash` block **P13** | Manual Only — uncommitted procedure | base `overview member=0 group=0 workspace=0; cross_repo=absent; invariants 0/0/0/0` → FAIL; fixture `1/1/1; present mermaid=7; invariants 1/1/1/1` → PASS |
+| TC-M2DOM-014 | AC-F6-1 | P14 | `bash` block **P14** | Manual Only — uncommitted procedure | base `repos_v1=absent fields=0/7` → FAIL; fixture `present owned=OK fields=7/7` → PASS |
+| TC-M2DOM-015 | AC-F6-2 | P15 | `bash` block **P15** | Manual Only — uncommitted procedure | base six anchors `MISSING`; `group_named_key_denotes_repo=PRESENT` → FAIL; fixture all six `OK`, violation `ABSENT` → PASS |
+| TC-M2DOM-016 | AC-F6-3 | P16 | `bash` block **P16** | Manual Only — uncommitted procedure | base `configuration_schema=absent fields=0/8` → FAIL; fixture `8/8` → PASS |
+| TC-M2DOM-017 | AC-F6-4 | P17 | `bash` block **P17** | Manual Only — uncommitted procedure | base `change_plan_shape=absent elements=0/7` → FAIL; fixture `elements=8/8` → PASS |
+| TC-M2DOM-018 | AC-F6-5 | P18 | `bash` block **P18** | Manual Only — uncommitted procedure | base `consumer_note=MISSING s4_advisory=MISSING` → FAIL; fixture both `OK` → PASS |
+| TC-M2DOM-019 | AC-F7-1 | P19 | `bash` block **P19** | Manual Only — uncommitted procedure | base `repos_md=absent checks=0/9 fields=0/5` → FAIL; fixture `9/9 5/5` → PASS |
+| TC-M2DOM-020 | AC-F7-2 | P20 | `bash` block **P20** | Manual Only — uncommitted procedure | base `checks=4/7 fields=1/3 forbidden=1` → FAIL; fixture `7/7 3/3 0` → PASS |
+| TC-M2DOM-021 | AC-F7-3 | P21 | `bash` block **P21** | Manual Only — uncommitted procedure | base `repos_page absent; projects_page projects.v1=2 repos.v1=0 repos[]=0 header=1` → FAIL; fixture `repos.v1=2 projects[]=0 header=1 not_registered=1` both pages → PASS |
+| TC-M2DOM-022 | AC-F8-1 | P22 | `bash` block **P22** | Manual Only — uncommitted procedure | base `s18_seeds=0 s19_seeds=0 coverage=1/10` → FAIL; fixture `3/2 seeds asserts=0 coverage=10/10` → PASS |
+| TC-M2DOM-023 | AC-F8-2 | P23 | `bash` block **P23** | Manual Only — uncommitted procedure | base `s11_01 repos=0 projects=1; title/body repos=0; flat_survivors=1` → FAIL; fixture `repos=1 projects=0; title=1 body=2; fields=5/5; survivors=0` → PASS |
+| TC-M2DOM-024 | AC-F9-1 | P24 | `bash` block **P24** | Manual Only — uncommitted procedure | base `journey=15 lines anchors=3/4; four anchors MISSING` → FAIL; fixture `20 lines anchors=4/4 all OK` → PASS |
+| TC-M2DOM-025 | AC-F10-1 | P25 | `bash` block **P25** | Manual Only — uncommitted procedure | base `additions/mount=MISSING host_overview_claims=1` → FAIL; fixture `repos/projects/mount OK host_overview_claims=0 five preserved` → PASS |
+| TC-M2DOM-026 | AC-F11-1 | P26 | `bash` block **P26** | Manual Only — uncommitted procedure | base `pack_rows=12/13 four rows MISSING` → FAIL; fixture `13/13 all rows OK planned_until_exit=verbatim` → PASS |
+| TC-M2DOM-027 | AC-F11-2 | P27 | `bash` block **P27** | Manual Only — uncommitted procedure | base `m2_targets=12/13 repos_target=MISSING` → FAIL; fixture `13/13 repos_target=OK M0/M1 byte-identical` → PASS |
+| TC-M2DOM-028 | AC-F12-1 | P28 | `bash` block **P28** | Manual Only — uncommitted procedure | base `new_section_count=0 new_section_line=absent` → FAIL; fixture `count=1 line=214 heading ## ... (2026-11-11) anchors=6/6 headings_after=0` → PASS |
+| TC-M2DOM-029 | AC-F12-2 | P29 | `bash` block **P29** | Manual Only — uncommitted procedure | base `removed=0 additions=0 count=0` → PASS (control); fixture `removed=0 additions=18 line=214 count=1 headings_after=0 outside=0` → PASS |
+| TC-M2DOM-030 | AC-F13-1 | P30 | `bash` block **P30** | Manual Only — uncommitted procedure | base `m2_repos=absent old_projects=1 old_boundary=PRESENT anchors=0/7` → FAIL; fixture `m2_repos=present old_projects=0 old_boundary=ABSENT anchors=7/7` → PASS |
+| TC-M2DOM-031 | AC-F13-2 | P31 | `bash` block **P31** | Manual Only — uncommitted procedure | base `changed_lines=0 outside=0 fixture_outside=2` → FAIL (vacuous); fixture `changed=7 outside=0 fixture_outside=2` → PASS |
+| TC-M2DOM-032 | AC-F14-1 | P32 | `bash` block **P32** | Manual Only — uncommitted procedure | base `rows_with_survivors=15/17 regions_empty=5; both self-tests detected` → FAIL; fixture `0/17 regions_empty=0; flat/group detected, boundary allowed, base board accepted` → PASS |
+| TC-M2DOM-033 | AC-F14-2 | P33 | `bash` block **P33** | Manual Only — uncommitted procedure | base `boundary_locations=0/6 (ARCH projects=5, EPD projects=4, REG repos=8 projects=4)` → FAIL; fixture `6/6` → PASS |
+| TC-M2DOM-034 | AC-NFR1-1 | P34 | `bash` block **P34** | Manual Only — uncommitted procedure | base `product_files=0/13 expected_not_changed=13` → FAIL; fixture `13/13 expected_not_changed=0 other_scripts=0 post_commit=pending` → PASS |
+| TC-M2DOM-035 | AC-NFR2-1 | P35 | `bash` block **P35** | Manual Only — uncommitted procedure | base `stories_kept=73; base_headings=74 head_headings=74 added=0; order=OK` → PASS (control); fixture `base_headings=74 head_headings=76 added=2; new_headings=2; order=OK` → PASS |
+| TC-M2DOM-036 | AC-NFR3-1 | P36 | `bash` block **P36** | Manual Only — uncommitted procedure | base `proposed_headers=1/2 delivered_claims=0 pack_statement=verbatim relabels=0` → FAIL; fixture `2/2 0 verbatim 0` → PASS |
+| TC-M2DOM-037 | AC-NFR4-1 | P37 | `bash` block **P37** + `bun run scripts/checks/forbidden-literals.ts` | Manual Only — uncommitted procedure | base `registered=139 base=139 delta=0 repos_row=absent position=repos-not-registered` → FAIL; fixture `140/139 delta=1 rows 88/89/90 position=between-queue-and-spend duplicates=0 unregistered=0` → PASS |
+| TC-M2DOM-038 | AC-NFR5-1 | P38 | `env -u TMPDIR bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | base `dist_guard_exit=0 no drift 82 in-scope docs planning_markers=0` → PASS (control); unchanged guard |
+| TC-M2DOM-039 | AC-NFR6-1 | P39 | `mkdir -p <repo>/tmp/tmpdir && TMPDIR=<repo>/tmp/tmpdir pnpm check` and `env -u TMPDIR pnpm check` | Existing gate — no change | base repository-local `exit=0` (7133 pass, 4 skip, 0 fail, 7137 tests, 880 files, 480.99s); default `exit=1` (7131 pass, 4 skip, 2 fail, 678.41s) with `CI baseline parity` + `TC-WIRE-002` (`timed out after 5000ms`), both re-run and recorded → `default_failure_class=excused` → PASS (policy-conforming); classifier fixtures `none`/`excused` PASS, unexcused/repository-local-failure/missing-rerun FAIL |
+| TC-M2DOM-040 | AC-NFR7-1 | P40 | `bash` block **P40** | Manual Only — uncommitted procedure | base `c4=1/1/1 key_flows=7/8 ownership=0 all fences even` → FAIL; fixture `c4=1/1/1 key_flows=8/8 ownership=0 architecture 22 fences/11 mermaid repos.md 4 fences` → PASS |
+| TC-M2DOM-041 | AC-NFR8-1 | P41 | `bash` block **P41** | Manual Only — uncommitted procedure | base `clause_scan total=26 present=1 missing=25` → FAIL; fixture `26/26 missing=0` → PASS |
+| TC-M2DOM-042 | AC-NFR9-1 | P42 | `bun run scripts/checks/forbidden-literals.ts` | Existing guard — no change | base `forbidden_exit=0 5/5 scope classes 0 violations userFacingDocs=139` → PASS (control); fixture guard `140 file(s), 0 violations` |
+| TC-M2DOM-043 | AC-NFR10-1 | P43 | `bash` block **P43** | Manual Only — uncommitted procedure | base `broken_links=0 restated_ac_blocks=0` → PASS (control); fixture same |
+| TC-M2DOM-044 | AC-NFR11-1 | P44 | `bash` block **P44** | Manual Only — uncommitted procedure | base `oracle=whole-file-line-retention; conforming fixture OK; delete/modify/swap=1; outside=1` → PASS; fixture real tree `removed=0 additions=18` accepted |
+| TC-M2DOM-045 | AC-NFR12-1 | P45 | `bash` block **P45** | Manual Only — uncommitted procedure | base `matrix_rows_required=1/17` → FAIL; fixture `17/17 regions_empty=0 positive=OK negative=detected` → PASS |
 
 No test file is created or updated: no permanent-suite change is permitted or needed (NFR-1; testing-strategy invariant rule — a branch-diff assertion belongs to review and PR-time gates, never to the permanent suite).
 
@@ -2611,14 +2765,14 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | Symptom | Meaning | Action |
 |---|---|---|
 | P34 prints `product_files` other than 13, or any path in `unexpected_changed` | The containment budget is broken (AC-NFR1-1/DEC-1) | Revert the out-of-manifest path; the manifest is spec Appendix C, 12 planning files + 1 registry |
-| P34 prints `worktree_product_changes>0` | An uncommitted product edit sits outside the commit range | Commit it through the plan's phase structure or discard it; a clean commit range is not evidence on its own |
-| P34 prints `non_vacuous`-style emptiness (`product_files=0/13`) | The change is absent, not contained | This is a missing deliverable, never a pass |
-| P08 prints `separator_sequence=CHANGED`, `blank_line_before_separator=0`, or `placement=FAIL` | The insertion landed below the `---` separator, moved it, or swallowed the blank line (AC-F4-1/RSK-2) | Move S18/S19 above the blank line at the derived window; leave `---`, the blank line, and `## Epic M3` untouched |
+| P34 prints `post_commit_check=DIFFERS` after the commit | The committed range does not reproduce the base..worktree product set | Reconcile the commit: the gate is the base..worktree set, and the committed range is the post-commit verification step |
+| P34 prints emptiness (`product_files=0/13`) or `unexpected_changed` is non-empty | The change is absent, or an out-of-manifest path is in the base..worktree set | A missing deliverable is never a pass; revert the named out-of-manifest path |
+| P08 prints `separator_sequence=CHANGED`, `blank_line_before_separator=0`, or `placement=FAIL` | The insertion landed below the `---` separator, moved it, or swallowed the blank line (AC-F4-1/RSK-2) | Move S18/S19 above the blank line at the derived window (`s17_last+1 .. separator-1`); leave `---`, the blank line, and `## Epic M3` untouched |
 | P10 prints an `OUTSIDE` hunk or `non_vacuous=no` | A backlog hunk escaped the S11 entry, the context paragraph, or the new entries (AC-F4-3) | Restore the surrounding bytes; a zero-hunk run is a missing deliverable |
-| P09 prints `paragraph_lines=0` or a missing level | The Epic M2 context paragraph is absent or incomplete (AC-F4-2) | Insert exactly one paragraph between the retirement note and `### M2-S2`, naming repository/project/workspace, the boundary, and the root-family consequence |
+| P09 prints `paragraph_lines=0`, `paragraph_strictly_between=FAIL`, or a missing level | The Epic M2 context paragraph is absent, incomplete, or outside the note-to-M2-S2 window (AC-F4-2) | Insert exactly one paragraph whose non-empty lines lie strictly between the retirement note's last line and `### M2-S2`, with a blank line on each side, naming repository/project/workspace, the boundary, and the root-family consequence |
 | P35 prints `CHANGED:`/`REMOVED:` naming a story, or `order=FAIL` | Backlog preservation broken (AC-NFR2-1) | Restore the named story byte for byte; only M2-S11 may change and only S18/S19 may be added |
 | P01 prints a `retained MISSING:` line | An M2-S11 state-scoping, host-index, migration, test, or collision clause was lost in the rename (AC-F1-1) | Restore the clause; the rename touches the name, the enumeration task, and the enumeration AC only |
-| P02 prints `projects_list_in_entry>0`, `group_meaning_repos_in_entry>0`, or `collision_clause_copies>1` | A flat statement survives inside the amended entry, or the collision clause was duplicated into another story (AC-F1-2) | Rewrite the statement to `repos list`; keep the collision clause in M2-S11 only |
+| P02 prints `flat_projects_statements_in_entry>0`, `group_meaning_repos_in_entry>0`, or `collision_clause_copies>1` | A flat statement survives inside the amended entry, or the collision clause was duplicated into another story (AC-F1-2) | Rewrite the statement to `repos list`; the raw `projects list` mention in the mandated transition clause is allowed; keep the collision clause in M2-S11 only |
 | P03/P05 print `MISSING <clause id>` | A ticket clause from the 26-row table has no anchor (AC-F2-1/AC-F3-1/AC-NFR8-1) | Restore the named clause; the id and short clause are printed, then run the G-1 paraphrase read |
 | P41 prints `missing>0` or `total≠26` | Fidelity is incomplete or the table shrank | Restore the anchors; never delete a table row to make the scan pass |
 | P04 prints `s18_validation=MISSING`, `s18_rather_than_rejected=MISSING`, a zero `nyts` count, or `softening=PRESENT` | The mixed-tracker clause was softened or lost (AC-F2-2/RSK-4) | Restore "accepted at validation time with the unimplemented member classified not-yet-supported rather than rejected silently" in both the entry and the contracts |
@@ -2627,8 +2781,8 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | P12/P13 print a missing anchor | Model prose, a flow, or an invariant is incomplete (AC-F5-2/AC-F5-3) | Add the named statement; keep the overview flow project-scoped and the cross-repository flow present |
 | P14/P15/P16/P17 print `absent` or a missing field | A contract shape is missing or a field carries the wrong meaning (AC-F6-*/RSK-3, RSK-12) | Add the section or the field; `repos.v1` is the flat envelope, `projects.v1` the group envelope, and no group-named key may denote a repository |
 | P18 prints `consumer_note=MISSING` or `s4_advisory=MISSING` | The group envelope's consumers are unstated or the M2-S4 row was given a dependency edge (AC-F6-5/DEC-14) | Add the consumer sentence and the advisory note; do not edit M2-S4's `- Depends on:` line (NG-5) |
-| P19 prints `repos_md=absent` or `checks<10` | The new contract page is missing or incomplete (AC-F7-1) | Create `commands/repos.md` with the header, name, synopsis, five fields, `repos[]`, exit status, example, error table, see-also, and the rename note |
-| P20 prints `checks<8` or `forbidden_flat_statements>0` | `projects.md` still describes checkouts (AC-F7-2) | Rewrite it as the group surface; remove every "enumerates checkouts" statement |
+| P19 prints `repos_md=absent` or `checks<9` | The new contract page is missing or incomplete (AC-F7-1) | Create `commands/repos.md` with the header, name, synopsis, five fields, `repos[]`, exit status, example, error table, see-also, and the rename note |
+| P20 prints `checks<7` or `forbidden_flat_statements>0` | `projects.md` still describes checkouts (AC-F7-2) | Rewrite it as the group surface; remove every "enumerates checkouts" statement |
 | P21 prints `repos.v1>0` on the projects page or `projects[]>0` on the repos page | The two pages share one surface (AC-F7-3) | Keep each page on its own contract; the bare word `repos` may appear only in the boundary sentence |
 | P22/P23 print a zero seed count, `assert_violations>0`, or a missing topic | The seed set is short, a seed has zero or two `Assert:` lines, or a required topic is uncovered (AC-F8-1/AC-F8-2) | Add or amend the named seed; exactly one `Assert:` per seed; the S11 seeds read `repos list` |
 | P24 prints a missing journey anchor | The opening journey was not rewritten (AC-F9-1) | Rewrite it project-scoped with one member outside any shared directory, `repos list` for the flat view, `projects list` for the group view, scoped reads, and the two equivalence statements |
@@ -2638,14 +2792,15 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | P29/P44 print `removed_lines>0`, `added_outside_section>0`, or a mutant that is not detected | A base status line was removed, reordered, or modified, an addition escaped the new section, or the oracle is unsound (AC-F12-2/AC-NFR11-1/RSK-10) | Restore the base line byte for byte; confine additions to the new section (its boundary includes the single blank separator line). Never substitute a whole-section `cmp` |
 | P30 prints `old_boundary_note=PRESENT` or `registry_anchors<7` | The registry still assigns the two names to the old meanings (AC-F13-1/RSK-11) | Add the M2 `ados repos` row, rewrite `ados projects` as the group surface, reconcile M3-S6 as later `repos` subcommands, and replace the boundary note |
 | P31 prints an `OUTSIDE:` line or `fixture_outside=0` | A registry row outside the four permitted regions changed, or the classifier is inert (AC-F13-2) | Restore the named row; the fixture must always report at least one `OUTSIDE` |
-| P32 prints a `SURVIVOR` row | A flat-`projects list` or group-meaning-`repos` statement survives (AC-F14-1/RSK-1) | Fix the named location using Appendix B's required statement; re-run until `0/17` |
-| P33 prints `boundary_locations<8/8` | A location naming both surfaces does not state the relationship (AC-F14-2) | State it once in the same terms: `repos` enumerates checkouts, `projects` groups them |
-| P45 prints a `required=MISSING` row | An Appendix B location lacks its required statement (AC-NFR12-1) | Add the required statement for that region; keep the matrix at 16 rows / 17 regions |
+| P32 prints a `SURVIVOR` row or `region=EMPTY` | A flat-`projects list` or group-meaning-`repos` statement survives, or a region anchor is wrong so the scan is vacuous (AC-F14-1/RSK-1) | Fix the named location using Appendix B's required statement; an empty region fails instead of reporting `forbidden=0`; re-run until `rows_with_survivors=0/17` and `regions_empty=0` |
+| P33 prints `boundary_locations<6/6` | A prose location naming both surfaces does not state the relationship (AC-F14-2); the two index rows are link-only and are checked by P26/P27 | State it once in the same terms: `repos` enumerates checkouts, `projects` groups them |
+| P45 prints a `required=MISSING` row or `required=EMPTY` | An Appendix B location lacks its required statement, or its region anchor is empty (AC-NFR12-1) | Add the required statement for that region; keep the matrix at 16 rows / 17 regions (`BL-18` + `BL-19` split) |
 | P36 prints `proposed_headers<2`, `delivered_claims>0`, `pack_statement=CHANGED`, or `snapshot_relabels>0` | A page overclaims or lost its planned status (AC-NFR3-1/RSK-5) | Restore the exact header, remove the delivery claim, keep the pack statement verbatim, and do not relabel a page as a snapshot |
 | P37 prints `registered≠140`, `position=repos-not-registered`, `position=OUT-OF-ORDER`, or `duplicates>0` | The registry row is missing, duplicated, or misplaced (AC-NFR4-1/RSK-6) | Add exactly one row `doc/planning/oss-tooling/milestones/m2/commands/repos.md` between the `queue.md` and `spend.md` entries |
 | P38 prints a non-zero exit | A scoped doc was disturbed or a planning marker appeared (AC-NFR5-1) | Check P34 first; `doc/planning/**` must stay outside the marker set |
-| P39 prints `repo_local_exit>0` | A gate failure under the authoritative `TMPDIR` (AC-NFR6-1) | Fix the failure; the repository-local run has no environmental exemption |
-| P39 prints `default_failure_class=delivery` | A default-run failure other than the lone parity test (AC-NFR6-1) | Investigate the named test. As observed at base, `TC-WIRE-002` (a 5 s timeout around a `pnpm check:privacy-literals` spawn) fails alone and passes in-suite: re-run the authoritative gate on a quiet machine, record the re-run, and if it recurs in the repository-local run escalate it as a gate defect — do not reclassify it as environmental (G-6, TR-11) |
+| P39 prints `repo_local_exit>0` | A failure in the authoritative repository-local full suite (AC-NFR6-1(a)) | Fix it; the repository-local run has no environmental exemption, and a repeated `TC-WIRE-002` there is a delivery failure |
+| P39 prints `default_failure_class=delivery` | A default-run failure that is neither `ci-baseline-parity` nor `TC-WIRE-002`, or a default failure on a head whose repository-local run is not green (AC-NFR6-1(c)/(d)) | Investigate the named test; record the re-run; never reclassify it as environmental (G-6, TR-11). The two named default-only failures are excused only with `repo_local_exit=0` and a `p39-rerun.txt` record |
+| P39 prints `missing-rerun` for an excused pair | The two named default failures were not re-run and recorded (AC-NFR6-1(c)) | Re-run each in isolation, write the result to `$SH/p39-rerun.txt`, and re-classify |
 | P39 dies with `ENOENT`/`mkdtemp` | The repository-local `TMPDIR` directory was not created | Keep `mkdir -p "$REPO_ROOT/tmp/tmpdir"` before the repository-local run |
 | P40 prints an odd fence count, `UNTAGGED-DIAGRAM`, `BAD-KEYWORD`, `c4_headings≠1/1/1`, or `key_flows_headings≠8` | A diagram is structurally invalid or a flow heading is unowned (AC-NFR7-1/RSK-9) | Fix the fence or the keyword line; keep one mermaid block per flow heading, then have the reviewer render the page (G-3) |
 | P42 prints a non-zero exit or a violation | A forbidden literal appeared or a doc is unregistered (AC-NFR9-1) | Reword the line; never widen the allowlist |
@@ -2667,7 +2822,7 @@ No test file is created or updated: no permanent-suite change is permitted or ne
 | TR-8 | A wrapped or hyphenated line defeats an anchor | The shared `squash()` helper joins a trailing hyphen before collapsing newlines, and every procedure that reads prose uses it |
 | TR-9 | A check is run on a moving base | Snapshots are materialised from the pinned `5372dbac`; re-run P00 if the base advances before delivery |
 | TR-10 | `pnpm check` is green but unrelated to the documents | Content procedures carry the ACs; P39 is a no-regression gate only (G-7) |
-| TR-11 | A non-parity default-run failure is excused as "environmental" when the spec's exemption covers only the parity test | P39's classification requires exactly one failing test and it must be `CI baseline parity`; any other failure is `delivery` and must be re-run in isolation and recorded. Observed at base: `TC-WIRE-002` fails alone in both `TMPDIR` modes and passes in-suite — recorded in §1.2 G-6 and Section 10, and escalated rather than reclassified |
+| TR-11 | A default-run failure is excused without the repository-local run being green, or a `TC-WIRE-002` repeat inside the authoritative run is waved through | P39 makes the repository-local full suite authoritative (exit 0; any failure, including a repeated `TC-WIRE-002`, is `delivery`), requires both runs recorded, admits only the two named default-only failures, requires a recorded re-run for each, and excuses them only while the repository-local run is green on the same head. The classifier's five synthetic branches prove each disposition |
 | TR-12 | The 26-row clause table drifts from the ticket and silently shrinks | P41 counts its own rows (`total=26`); a row removed from the table changes the total and fails the scan |
 
 ### 8.2 Assumptions
@@ -2687,11 +2842,11 @@ None. The spec closed its two ticket ambiguities as DEC-2 and DEC-4 and recorded
 
 | ID | Question | Blocking? | Owner | Disposition |
 |---|---|---|---|---|
-| — | None outstanding | — | — | Closed by spec v1.0 and the pm-notes decisions |
+| — | None outstanding | — | — | Closed by spec v1.1 and the pm-notes decisions |
 
 ### 8.4 Interpretation Decisions and Flagged Spec Gaps
 
-Three places where the spec's wording admits more than one mechanical reading, and how this plan resolves each without asking for a spec change:
+Eight places where the spec's wording admits more than one mechanical reading, and how this plan resolves each without asking for a spec change:
 
 | ID | Spec text | Ambiguity | Resolution in this plan |
 |---|---|---|---|
@@ -2699,68 +2854,73 @@ Three places where the spec's wording admits more than one mechanical reading, a
 | TP-2 | AC-F3-3 and AC-F6-4 | Both describe the cross-repository change plan shape in `contracts.md` | Split by direction: TC-007 traces the six S19 task clauses (clause → contract); TC-017 asserts the shape's seven declared elements (contract → fields). Declared in the §3.1 coverage note |
 | TP-3 | AC-F7-3 ("the flat enumeration appears only on the `repos` page") versus AC-F14-2 (every both-name location states the boundary) | The `projects` page must name `repos` in its boundary sentence, so a literal word ban would make the two criteria mutually unsatisfiable | P21 tests contract pointers and envelope keys (`repos.v1`, `repos[]`, `projects.v1`, `projects[]`), not the bare word; the boundary sentence is positively required by P33 |
 | TP-4 | NFR-7 ("`## Key flows` holds exactly 8 `###` headings") | The number is stated as an end state while the base has 7 | The plan treats 7 → 8 as the derived consequence of AC-F5-3's new flow and records both numbers (P40), so a missing flow fails as a count mismatch rather than as an unexplained constant |
-| TP-5 | F-12/AC-F12-1 do not fix the new section's title or date text | A fixed string would over-specify the author and break on a legitimate wording choice | P28 derives the section as the first `## ` heading present in the head and absent from the base, and requires uniqueness — a second new section fails |
+| TP-5 | F-12/AC-F12-1 require a new dated section but do not fix its title; the plan's TP-5 pin names only the leading date token `2026-11-11` | A fixed title would over-specify the author; a leading-date form contradicts the file's convention (`## M2 planning snapshot (2026-11-10)`) | P28 derives the section as the **only** `## ` heading present in the head and absent from the base (a second new section fails), requires no heading after it, and enforces the date in the file's existing form: title first, date parenthesised, `^## .+ \(2026-11-11\)$`. The title text stays free |
 
-No spec gap blocks delivery. Flags raised for the author's awareness, all with a working oracle: TP-1 to TP-5 above.
+| TP-6 | AC-F14-2 ("every location that names both surfaces states the boundary") versus Appendix B's two index rows | `m2/README.md` and `milestones/README.md` link both surfaces but Appendix B requires only "Both pages linked (13 targets)" and the map rows; forcing a boundary sentence into a link table would over-assert prose the spec does not ask for | P33 checks the six **prose** locations whose Appendix B row requires a relation statement, and P26/P27 own the two index rows as link and row coverage. The boundary rule is still stated in every prose location that names both |
+| TP-7 | AC-F6-2's group-envelope rule versus `commands/board.md`'s existing `projects[]` field | `board.md` is **not** in this change's 13-file manifest and is not edited; its pre-existing `projects[]` field means "project keys included in the board" and is not the redefined `projects.v1` group envelope | P15's `projectKey`/repository-identity ban is scoped to the `## projects.v1` section of `contracts.md`; P32 carries a negative control that the base `commands/board.md` text is **not** flagged (`base_board_accepted=OK`). The page's reconciliation is a deferred item owned by S4/S18 (spec §7.3), not a defect of this change |
+| TP-8 | Spec §18's recommended five-commit sequence versus the plan's P4-before-P5 ordering | The spec's sequence puts the registry row in the last commit with the indices and status; the plan puts it in P4 because the forbidden-literals guard fails closed on an unregistered new doc, creating a real guard-red window otherwise | The plan's ordering constraint is authoritative for execution; P34's base..worktree manifest and P37's position check are commit-order independent, so no oracle assumes the spec's sequence. The spec/plan wording reconciliation belongs to the plan artifact, not to this test plan |
+
+No spec gap blocks delivery. Flags raised for the author's awareness, all with a working oracle: TP-1 to TP-8 above.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 1.1 | 2026-11-11 | @test-plan-writer | Remediated DoR iteration 1 (`readiness-review/readiness-iter-1.md`) against spec v1.1, with every changed procedure executed in a **fresh shell** on the base tree and on a **conforming, never-committed worktree fixture** (`/tmp/gh303/fx/repo`, base `5372dbac` + the thirteen changes). **Blocking findings, fixed with proof:** (1) BL-18/P32 — replaced the `repos.{0,40}group` regex with sentence-level `@flat`/`@group`/`@both` detectors that attribute enumeration to `projects` and group semantics to `repos` only when the sentence has no `enumerat` predicate before the next `projects` clause; fixture `rows_with_survivors=0/17` on the ticket-verbatim S18/S19 text, base `15/17`, both direction self-tests `detected`, required boundary sentence not flagged. (2) P09/P10 — the context window is now `retirement-note last line + 1 .. ### M2-S2 - 1`; fixture `paragraph_lines=4 paragraph_strictly_between=OK blank_after_note=1 blank_before_s2=1`, P10 `backlog_hunks=6 inside=6 outside=0`; base `paragraph_lines=0`. (3) P19/P20/P21 — `$R` and `$PJ` are P00 variables; fresh-shell fixture `9/9 5/5`, `7/7 3/3 0`, P21 `PASS`. (4) Cross-procedure dependencies — every helper (`entry/section/firstsec/squash/clause_rows/fence_blocks/diffstat/newsec*/matrix_rows/path_of/region/forbidden_* /backlog_ranges/story_section`) and every path (`$A`, `$RG`, `$R`, `$PJ`, …) now lives in P00; each block opens with a loud guard and declares `need`; P17's missing `$ct` and P37's head-vs-base `reg_entries` bug are fixed, and P32 treats an empty region as a failure, so the STAT row can no longer fail open. (5) BL-S11 — the region anchor is `### M2-S11 `; base `BL-S11 forbidden=3 SURVIVOR` (two `projects list` statements plus the goal's overview claim), fixture `BL-S11 forbidden=0`, `P45 BL-S11 required=OK`. (6) P34 — restated as a base..worktree manifest check (`git diff --name-only "$BASE" -- .` plus untracked), decidable before the P5 commit; fixture `product_files=13/13 expected_not_changed=0 post_commit_check=pending`, base `0/13`. (7) TC-039/P39 — aligned to AC-NFR6-1 v1.1: repository-local full suite authoritative, both runs recorded, the two named default-only failures recorded and re-run and excused only while the local run is green, any other failure `delivery`; base `repo_local_exit=0 default_exit=1 default_failure_class=excused`, five classifier branches prove `none`/`excused` pass and unexcused/local-failure/no-rerun fail. (8) Stale P1 tokens — `P35` records base `74 → 74 added=0` and fixture `74 → 76 added=2`; P08/P09 base (1285/1287/1289, window 1286:1286; note 1051..1054, context 1055..1055) and fixture (1293/1310/1312, window 1294:1309; context 1055..1060) values are labelled separately. **Non-blocking 10–16:** TP-5 now enforces the date in the file's parenthesised form and P28 requires exactly one new `##` heading with none after it; §7.3 thresholds are `checks<9`/`checks<7`; P33 checks the six prose locations whose Appendix B row requires a boundary statement and leaves the two index rows to P26/P27; P32 carries a negative control that the unchanged base `commands/board.md` text is not flagged (`base_board_accepted=OK`); the spec §18/plan ordering deviation is declared as TP-8 and no oracle depends on commit order; the authoring-defect count is stated once (four); P02 counts flat statements so the mandated `projects list` transition clause is allowed. **Counts unchanged: 45 ACs (33 functional + 12 non-functional), 45 TCs, 1:1 mapping.** Base verdicts: 38 FAIL + 7 PASS (TC-029, TC-035, TC-038, TC-039, TC-042, TC-043, TC-044; TC-039 is policy-conforming rather than a preservation control); conforming fixture: 45/45 PASS. No product file, spec, plan, pm-notes, or other artifact was edited by this revision. |
 | 1.0 | 2026-11-11 | @test-plan-writer | Initial test plan for spec v1.0: 45 acceptance criteria (33 functional + 12 non-functional) covered exactly once by 45 test cases in bidirectional traceability with no orphans, backed by 46 procedure blocks (P00 base loader + P01–P45, with procedure number matching test-case number). **Derived, not assumed:** insertion window `1286:1286` (M2-S17 last content 1285, separator 1287, `## Epic M3` 1289) on a 1454-line backlog; context window `1055:1055` between the retirement note (1051–1054) and `### M2-S2`; `status.md` 212 lines with its last heading at 187; registry 139 entries with `queue.md` at index 88 and `spend.md` at 89; `architecture.md` 20 fences / 10 mermaid / C4 1-1-1 / 7 key flows; `test-scenarios.md` 40 seeds and 40 `Assert:` lines; 12 contents rows and 12 M2 index targets. **Executed against base `5372dbac` before any product edit:** 39 procedures FAIL — 38 because the change is absent or a statement survives, and one (P39) because the default-`TMPDIR` gate is red at base for a pre-existing reason outside the change — while 6 procedures PASS as labelled controls (P29, P35, P38, P42, P43, P44), and every scan carries a fixture proving it bites (P31 registry mutation, P32 two direction fixtures, P44 four retention mutants, P45 positive/negative pair). Four authoring defects were found by these runs and fixed before publication: a clause-table row containing a `|` split the row and dropped `S19-T6` (`total=26 present=1` exposed it); the new-section locator printed `NR` instead of `FNR`, which flagged the conforming status fixture; the `repos`-page oracle counted nine conditions but required ten and matched only prose field names; and the `projects`-page ban pattern flagged the **required** boundary sentence. The two command-page oracles were then proven satisfiable against conforming, never-committed fixtures in `/tmp/gh303/fx/commands/` (`checks=9/9 fields=5/5`, `checks=7/7 fields=3/3 forbidden=0`, page split `PASS`) while still failing on the real pack. Two gate runs recorded: repository-local `pnpm check` exit 0 (7133 pass, 4 skip, 0 fail across 880 files in 490.75s); the default-`TMPDIR` run exit 1 with two failures of 7137 across 880 files in 662.35s — the expected environmental `CI baseline parity` and a pre-existing, independently reproduced `TC-WIRE-002` timeout that the spec's exemption does not cover, recorded as a flagged gap in §1.2 G-6 and in Section 10, with TC-039 therefore recorded as FAIL at base for a reason outside the change. Five interpretation decisions and spec-gap flags recorded as TP-1 to TP-5; ten declared gaps (G-1 to G-10) with named owners; twelve testing risks (TR-1 to TR-12). No test code is added. |
 
 ## 10. Test Execution Log
 
-Run date 2026-11-11 against base `5372dbacb9c36e1d79d1e55873264155a53f44ff` on branch `docs/GH-303/project-groups-domain-model` (head `6d9a2e58`, specification and pm-notes commits only, **no product file edited**). Every procedure was executed in one shell session seeded by P00; the aggregate gate was executed twice as a separate step (P39). Rows labelled `FAIL` prove the procedure detects the missing deliverable; rows labelled `PASS (control)` prove a preservation property that must survive the change; the fixture results recorded in the notes prove each scan is not inert.
+Run date 2026-11-11 against base `5372dbacb9c36e1d79d1e55873264155a53f44ff` on branch `docs/GH-303/project-groups-domain-model` (head `5a6cbf48`, specification/pm-notes/DoR commits only, **no product file edited**). Every procedure was executed **in a fresh shell** as `source P00; source Pn`; the aggregate gate is a separate pair of runs (P39), and every changed procedure was also run against the **conforming, never-committed worktree fixture** at `/tmp/gh303/fx/repo` (base `5372dbac` plus the thirteen changes). A `FAIL` on the base tree proves the procedure detects the missing deliverable; a `PASS` on the fixture proves the oracle is satisfiable on a conforming head; a `PASS (control)` proves a preservation property that must survive the change. The fixture is not committed and is not a deliverable.
 
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
-| TC-M2DOM-001 | 2026-11-11 | FAIL (rename absent; retained clauses pass as control) | `retained_clauses=5/5`; `depends_line=exact`; `repos_list_fields=MISSING`; `transition_note=MISSING`; `goal_projects_command=PRESENT (must be ABSENT)` |
-| TC-M2DOM-002 | 2026-11-11 | FAIL | `projects_list_in_entry=2 repos_list_in_entry=0 group_meaning_repos_in_entry=0 collision_clause_copies=1 inside_s11=1` |
-| TC-M2DOM-003 | 2026-11-11 | FAIL (change absent) | `S18=absent`; `clauses_present=0/12` |
-| TC-M2DOM-004 | 2026-11-11 | FAIL | `s18_nyts=0 contracts_nyts=0`; `s18_validation=MISSING`; `s18_rather_than_rejected=MISSING`; `softening=ABSENT` |
-| TC-M2DOM-005 | 2026-11-11 | FAIL (change absent) | `S19=absent`; `clauses_present=0/11` |
-| TC-M2DOM-006 | 2026-11-11 | FAIL (change absent) | `S19=absent numbered_items=0/3` |
-| TC-M2DOM-007 | 2026-11-11 | FAIL | `contract MISSING: T1,T2,T3,T4,T6`; `s19_task_to_contract=1/6` |
-| TC-M2DOM-008 | 2026-11-11 | FAIL (change absent); preservation controls PASS | `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`; `window_empty=no`; `separator_sequence=identical`; `blank_line_before_separator=1`; `placement=FAIL` |
-| TC-M2DOM-009 | 2026-11-11 | FAIL (no context paragraph); preservation controls PASS | `retirement_note=1051..1054 context_paragraph=1055..1055 paragraph_lines=0`; `fm`/`rg`/`cc`/`retirement_note` `byte-identical`; `epic_heading=OK` |
-| TC-M2DOM-010 | 2026-11-11 | FAIL (vacuous: no hunk) | `backlog_hunks=0`; `non_vacuous=no`; `classifier_self_tests=3/3` |
-| TC-M2DOM-011 | 2026-11-11 | FAIL | `l1_lines=32`; `repository_as_delivery_unit=MISSING`; `project_as_group=MISSING`; `workspace_in_diagram=MISSING`; `workspace_optional_in_diagram=MISSING`; `workspace_mandatory_claim=ABSENT` |
-| TC-M2DOM-012 | 2026-11-11 | FAIL | four required anchors `MISSING`; `member_must_be_inside=ABSENT` |
-| TC-M2DOM-013 | 2026-11-11 | FAIL | `overview_mentions_member=0 group=0 workspace=0`; `cross_repo_flow_heading=absent`; `invariants naming=0 membership=0 workspace=0 lifecycle=0` |
-| TC-M2DOM-014 | 2026-11-11 | FAIL | `repos_v1_section=absent`; `repos_v1_fields=0/7` |
-| TC-M2DOM-015 | 2026-11-11 | FAIL | `projects_v1_section=present`; six group anchors `MISSING`; `group_named_key_denotes_repo=PRESENT (violation)` |
-| TC-M2DOM-016 | 2026-11-11 | FAIL (change absent) | `configuration_schema=absent`; `fields=0/8` |
-| TC-M2DOM-017 | 2026-11-11 | FAIL (change absent) | `change_plan_shape=absent`; `elements=0/7` |
-| TC-M2DOM-018 | 2026-11-11 | FAIL | `consumer_note=MISSING`; `s4_advisory=MISSING` |
-| TC-M2DOM-019 | 2026-11-11 | FAIL (change absent); conforming fixture PASS | `repos_md=absent`; `checks=0/9 fields=0/5`; fixture `/tmp/gh303/fx/commands/repos.md` → `checks=9/9 fields=5/5` / `PASS` |
-| TC-M2DOM-020 | 2026-11-11 | FAIL; conforming fixture PASS | `checks=4/7 fields=1/3`; `forbidden_flat_statements=1`; fixture `/tmp/gh303/fx/commands/projects.md` → `7/7 3/3 0` / `PASS` |
-| TC-M2DOM-021 | 2026-11-11 | FAIL | `repos_page=absent`; `projects_page: projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1` |
-| TC-M2DOM-022 | 2026-11-11 | FAIL | `s18_seeds=0 s19_seeds=0`; `assert_violations=0`; `coverage_anchors=1/10` |
-| TC-M2DOM-023 | 2026-11-11 | FAIL | `s11_01_assert_projects_list=1`; `s11_02_title/body_repos_list=0`; `assert_fields=5/5`; `flat_assert_survivors=1` |
-| TC-M2DOM-024 | 2026-11-11 | FAIL; two controls PASS | `journey_anchors=3/4`; `member_outside_shared_dir`/`flat_view_repos_list`/`scoped_reads`/`workspace_optional_stated=MISSING`; `same_ref_disjoint=OK` |
-| TC-M2DOM-025 | 2026-11-11 | FAIL; five preservation checks PASS | `repos_addition`/`projects_addition`/`mount_names_both=MISSING`; `host_overview_claims=1` |
-| TC-M2DOM-026 | 2026-11-11 | FAIL; statement control PASS | `pack_rows=12/13`; four rows `MISSING`; `planned_until_exit=verbatim` |
-| TC-M2DOM-027 | 2026-11-11 | FAIL; M0/M1 control PASS | `m2_targets=12/13`; `repos_target=MISSING`; `m0_row`/`m1_row=byte-identical` |
-| TC-M2DOM-028 | 2026-11-11 | FAIL (change absent) | `new_section_line=absent`; `new_section=absent` |
-| TC-M2DOM-029 | 2026-11-11 | PASS (control) | `removed_lines=0 additions=0 added_outside_section=0`; `base_lines=212 head_lines=212` |
-| TC-M2DOM-030 | 2026-11-11 | FAIL | `m2_repos_row=absent old_projects_meaning=1`; `old_boundary_note=PRESENT (violation)`; `registry_anchors=0/7` |
-| TC-M2DOM-031 | 2026-11-11 | FAIL (vacuous: no registry change) | `changed_lines=0`; `outside=0`; `fixture_outside=2` (the mutated `ados supervise` row is reported) |
-| TC-M2DOM-032 | 2026-11-11 | FAIL; both self-tests detected | `rows_with_survivors=6/17` — CT-PV1, ARCH, TS-S11, EPD, M2RD, REG; `self_test_flat=detected`; `self_test_group=detected` |
-| TC-M2DOM-033 | 2026-11-11 | FAIL | `boundary_locations=0/8` (`ARCH projects=5`, `EPD projects=4`, `REG repos=8 projects=4`, `M2RD projects=5`) |
-| TC-M2DOM-034 | 2026-11-11 | FAIL (vacuous: change absent) | `product_files=0/13`; `expected_not_changed=13`; `unexpected_changed=`; `other_scripts_changed=0`; `worktree_product_changes=0` |
-| TC-M2DOM-035 | 2026-11-11 | PASS (control) | `stories_kept=73 changed=0 removed=0`; `base_headings=74 head_headings=74 added=0`; `order=OK`; four regions `byte-identical` |
-| TC-M2DOM-036 | 2026-11-11 | FAIL; three controls PASS | `proposed_headers=1/2`; `delivered_claims=0`; `pack_statement=verbatim`; `snapshot_relabels=0` |
-| TC-M2DOM-037 | 2026-11-11 | FAIL | `registered=139 base_registered=139 delta=0`; `queue_row=88 repos_row=absent spend_row=89`; `duplicates=0`; `unregistered_findings=0` |
-| TC-M2DOM-038 | 2026-11-11 | PASS (control) | `dist_guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0` |
-| TC-M2DOM-039 | 2026-11-11 | FAIL (pre-existing gate defect, not caused by this change); authoritative run green | Repository-local: exit 0 — `7133 pass`, `4 skip`, `0 fail`, `7137 expect() calls`, `880 files`, `490.75s`; `no dependency violations found (373 modules, 1101 dependencies cruised)`; `prompt-conformance: 5 prompt(s) clean`; `help-guide-coverage: all prompt-required commands covered`; `exports-parity: 5 publishables pass attw`. Default `TMPDIR`: exit 1 — `2 fail` of 7137 across 880 files in `662.35s`: (a) `CI baseline parity (hermetic partial clone)` (cross-device hardlink — the expected environmental failure), and (b) `TC-WIRE-002 … the command is read-only, deterministic, and unaffected by a throwing fetch` (`timed out after 5000ms`). Characterisation of (b) at base: the same file run alone fails at `5041.80ms` under the default `TMPDIR` and at `5538.72ms` under the repository-local `TMPDIR`, while both full-suite runs of the repository-local gate report it green — a pre-existing timing-sensitive spawn of `pnpm check:privacy-literals`, independent of this docs change (no product file is touched). Disposition: re-run the authoritative gate on a quiet machine at phase 9; a repeat failure in the repository-local run is a delivery failure under AC-NFR6-1 and must be escalated to the ticket/owner as an environmental gate defect, never silently excused (see G-6 and the §7.3 row) |
-| TC-M2DOM-040 | 2026-11-11 | FAIL; all other structural conditions PASS | every file `fences even`, `untagged_diagrams=0`, `bad_keywords=0` (`architecture.md` 20 fences / 10 mermaid, `entrypoint-delta.md` 4, `commands/projects.md` 6, `cli-command-registry.md` 2); `c4_headings=1/1/1`; `key_flows_headings=7/8`; `flow_ownership_bad=0` |
-| TC-M2DOM-041 | 2026-11-11 | FAIL | `clause_scan: total=26 present=1 missing=25` (the one hit is `S11-1`'s retained anchor) |
-| TC-M2DOM-042 | 2026-11-11 | PASS (control) | `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `userFacingDocs: 139 file(s)` |
-| TC-M2DOM-043 | 2026-11-11 | PASS (control) | `broken_links=0`; `restated_ac_blocks=0` |
-| TC-M2DOM-044 | 2026-11-11 | PASS | `oracle=whole-file-line-retention (whole-section cmp not used)`; real tree `removed_or_modified=0 additions=0`; `conforming_fixture: removed=0 added=5 outside=0 verdict=OK`; `delete_fixture: removed=1`; `modify_fixture: removed=1`; `swap_fixture: removed=1`; `outside_insert_fixture: outside_hunks=1` |
-| TC-M2DOM-045 | 2026-11-11 | FAIL; both fixtures behave | `matrix_rows_required=1/17`; `positive_fixture=OK`; `negative_fixture=detected` |
+| TC-M2DOM-001 | 2026-11-11 | FAIL (base); PASS (fixture) | base `retained_clauses=5/5 depends_line=exact repos_list_fields=MISSING transition_note=MISSING goal_projects_command=PRESENT`; fixture `repos_list_fields=OK transition_note=OK goal_projects_command=ABSENT` |
+| TC-M2DOM-002 | 2026-11-11 | FAIL (base); PASS (fixture) | base `flat_projects_statements_in_entry=3 projects_list_raw_mentions=2 repos_list_in_entry=0`; fixture `flat=0 raw=2 repos_list=3 group_meaning=0 collision_copies=1 inside_s11=1` |
+| TC-M2DOM-003 | 2026-11-11 | FAIL (base); PASS (fixture) | base `S18=absent clauses_present=0/12`; fixture `clauses_present=12/12 shape_labels=4/4 ticket_line=0` |
+| TC-M2DOM-004 | 2026-11-11 | FAIL (base); PASS (fixture) | base `s18_nyts=0 contracts_nyts=0 validation=MISSING rather_than_rejected=MISSING softening=ABSENT`; fixture `1/1 validation=OK rather_than_rejected=OK softening=ABSENT` |
+| TC-M2DOM-005 | 2026-11-11 | FAIL (base); PASS (fixture) | base `S19=absent clauses_present=0/11`; fixture `clauses_present=11/11 shape_labels=4/4` |
+| TC-M2DOM-006 | 2026-11-11 | FAIL (base); PASS (fixture) | base `S19=absent numbered_items=0/3`; fixture `numbered_items=3/3 a1=1 a2=1 a3=1` |
+| TC-M2DOM-007 | 2026-11-11 | FAIL (base); PASS (fixture) | base `contract MISSING: T1,T2,T3,T4,T6; s19_task_to_contract=1/6`; fixture `s19_task_to_contract=6/6` |
+| TC-M2DOM-008 | 2026-11-11 | FAIL (base); PASS (fixture) | base `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286; s18/s19 absent; placement=FAIL`; fixture `s17_last=1293 separator=1310 epic_m3=1312 window=1294:1309; s18=1294 s19=1300; placement=inside-window; separator_sequence=identical; blank_before=1` |
+| TC-M2DOM-009 | 2026-11-11 | FAIL (base); PASS (fixture) | base `retirement_note=1051..1054 context=1055..1055 paragraph_lines=0 paragraph_strictly_between=FAIL`; fixture `context=1055..1060 paragraph_lines=4 strictly_between=OK blank_after_note=1 blank_before_s2=1 levels/boundary/root=OK; fm/rguide/cc byte-identical` |
+| TC-M2DOM-010 | 2026-11-11 | FAIL (base, vacuous); PASS (fixture) | base `backlog_hunks=0 non_vacuous=no classifier_self_tests=3/3`; fixture `ranges s11:1174:1191 context:1055:1060 window:1294:1309; backlog_hunks=6; inside=6 outside=0; non_vacuous=yes` |
+| TC-M2DOM-011 | 2026-11-11 | FAIL (base); PASS (fixture) | base `repository_as_delivery_unit=MISSING project_as_group=MISSING workspace_in_diagram=MISSING workspace_optional=MISSING`; fixture all four `OK`, `workspace_mandatory_claim=ABSENT` |
+| TC-M2DOM-012 | 2026-11-11 | FAIL (base); PASS (fixture) | base four anchors `MISSING member_must_be_inside=ABSENT`; fixture `membership_declared/workspace_never_required/unrelated_dirs/identical_behaviour=OK member_must_be_inside=ABSENT` |
+| TC-M2DOM-013 | 2026-11-11 | FAIL (base); PASS (fixture) | base `overview member=0 group=0 workspace=0; cross_repo=absent; invariants 0/0/0/0`; fixture `1/1/1; cross_repo present mermaid=7; invariants 1/1/1/1` |
+| TC-M2DOM-014 | 2026-11-11 | FAIL (base); PASS (fixture) | base `repos_v1_section=absent repos_v1_fields=0/7`; fixture `present owned_by_M2-S11=OK fields=7/7` |
+| TC-M2DOM-015 | 2026-11-11 | FAIL (base); PASS (fixture) | base six group anchors `MISSING`; `group_named_key_denotes_repo=PRESENT`; fixture all six `OK`, violation `ABSENT` |
+| TC-M2DOM-016 | 2026-11-11 | FAIL (base); PASS (fixture) | base `configuration_schema=absent fields=0/8`; fixture `fields=8/8` |
+| TC-M2DOM-017 | 2026-11-11 | FAIL (base); PASS (fixture) | base `change_plan_shape=absent elements=0/7`; fixture `elements=8/8` (the shape has eight checked anchors) |
+| TC-M2DOM-018 | 2026-11-11 | FAIL (base); PASS (fixture) | base `consumer_note=MISSING s4_advisory=MISSING`; fixture `consumer_note=OK s4_advisory=OK` |
+| TC-M2DOM-019 | 2026-11-11 | FAIL (base); PASS (fixture) | base `repos_md=absent checks=0/9 fields=0/5`; fixture `checks=9/9 fields=5/5` |
+| TC-M2DOM-020 | 2026-11-11 | FAIL (base); PASS (fixture) | base `checks=4/7 fields=1/3 forbidden_flat_statements=1`; fixture `checks=7/7 fields=3/3 forbidden_flat_statements=0` |
+| TC-M2DOM-021 | 2026-11-11 | FAIL (base); PASS (fixture) | base `repos_page=absent; projects_page projects.v1=2 repos.v1=0 repos[]=0 header=1 not_registered=1`; fixture `repos.v1=2 projects[]=0 header=1 not_registered=1` both pages |
+| TC-M2DOM-022 | 2026-11-11 | FAIL (base); PASS (fixture) | base `s18_seeds=0 s19_seeds=0 assert_violations=0 coverage_anchors=1/10`; fixture `s18_seeds=3 s19_seeds=2 assert_violations=0 coverage_anchors=10/10` |
+| TC-M2DOM-023 | 2026-11-11 | FAIL (base); PASS (fixture) | base `s11_01 repos=0 projects=1; s11_02 title/body repos=0; assert_fields=5/5; flat_assert_survivors=1`; fixture `s11_01 repos=1 projects=0; s11_02 title=1 body=2; fields=5/5; survivors=0` |
+| TC-M2DOM-024 | 2026-11-11 | FAIL (base); PASS (fixture) | base `opening_journey_lines=15 journey_anchors=3/4` with four anchors `MISSING`; fixture `20 lines anchors=4/4` all anchors `OK` |
+| TC-M2DOM-025 | 2026-11-11 | FAIL (base); PASS (fixture) | base `repos_addition/projects_addition/mount_names_both=MISSING; host_overview_claims=1`; fixture `repos/projects/mount=OK host_overview_claims=0` and five preserved tokens `OK` |
+| TC-M2DOM-026 | 2026-11-11 | FAIL (base); PASS (fixture) | base `pack_rows=12/13 four rows MISSING planned_until_exit=verbatim`; fixture `pack_rows=13/13 repos/map_s18/map_s19/s11_row=OK planned_until_exit=verbatim` |
+| TC-M2DOM-027 | 2026-11-11 | FAIL (base); PASS (fixture) | base `m2_targets=12/13 repos_target=MISSING`; fixture `m2_targets=13/13 repos_target=OK m0/m1 byte-identical` |
+| TC-M2DOM-028 | 2026-11-11 | FAIL (base); PASS (fixture) | base `new_section_count=0 new_section_line=absent`; fixture `count=1 line=214 heading=## GH-303 domain-model amendment (2026-11-11) heading_form=title-plus-parenthesised-date headings_after=0 anchors=6/6 delivery_claim=ABSENT` |
+| TC-M2DOM-029 | 2026-11-11 | PASS (control); PASS (fixture) | base `removed_lines=0 additions=0 count=0 outside=0`; fixture `removed=0 additions=18 line=214 count=1 headings_after=0 outside=0; base_lines=212 head_lines=230` |
+| TC-M2DOM-030 | 2026-11-11 | FAIL (base); PASS (fixture) | base `m2_repos_row=absent old_projects_meaning=1 old_boundary_note=PRESENT anchors=0/7`; fixture `m2_repos_row=present old_projects_meaning=0 old_boundary_note=ABSENT anchors=7/7` |
+| TC-M2DOM-031 | 2026-11-11 | FAIL (base, vacuous); PASS (fixture) | base `changed_lines=0 outside=0 fixture_outside=2`; fixture `changed_lines=7 outside=0 fixture_outside=2` |
+| TC-M2DOM-032 | 2026-11-11 | FAIL (base); PASS (fixture) | base `rows_with_survivors=15/17 regions_empty=5; self_test_flat/group=detected`; fixture `0/17 regions_empty=0; flat/group detected, boundary_allowed=OK, base_board_accepted=OK` |
+| TC-M2DOM-033 | 2026-11-11 | FAIL (base); PASS (fixture) | base `boundary_locations=0/6 (ARCH projects=5, EPD projects=4, REG repos=8 projects=4)`; fixture `6/6` |
+| TC-M2DOM-034 | 2026-11-11 | FAIL (base); PASS (fixture) | base `product_files=0/13 expected_not_changed=13 unexpected= other_scripts=0`; fixture `13/13 expected_not_changed=0 unexpected= other_scripts=0 post_commit_check=pending` |
+| TC-M2DOM-035 | 2026-11-11 | PASS (control); PASS (fixture) | base `stories_kept=73 changed=0 removed=0; base_headings=74 head_headings=74 added=0; order=OK`; fixture `base_headings=74 head_headings=76 added=2 new_headings=2 order=OK`, four regions `byte-identical` |
+| TC-M2DOM-036 | 2026-11-11 | FAIL (base); PASS (fixture) | base `proposed_headers=1/2 delivered_claims=0 pack_statement=verbatim snapshot_relabels=0`; fixture `2/2 0 verbatim 0` |
+| TC-M2DOM-037 | 2026-11-11 | FAIL (base); PASS (fixture) | base `registered=139 base_registered=139 delta=0 queue=88 repos=absent spend=89 position=repos-not-registered`; fixture `140/139 delta=1 queue=88 repos=89 spend=90 position=between-queue-and-spend duplicates=0 unregistered=0` |
+| TC-M2DOM-038 | 2026-11-11 | PASS (control) | `dist_guard_exit=0`; `no drift — 82 in-scope docs`; `planning_markers=0` |
+| TC-M2DOM-039 | 2026-11-11 | PASS (policy-conforming at base); classifier fixtures PASS | base repository-local `exit=0` (7133 pass, 4 skip, 0 fail, 7137 tests, 880 files, 480.99s); default `exit=1` (7131 pass, 4 skip, 2 fail, 678.41s) with `CI baseline parity (hermetic partial clone)` and `TC-WIRE-002` (`timed out after 5000ms`), both recorded and re-run → `default_failure_class=excused` with `repo_local_exit=0`; classifier branches `none`/`excused` PASS, unexcused/repository-local-failure/no-rerun FAIL |
+| TC-M2DOM-040 | 2026-11-11 | FAIL (base); PASS (fixture) | base `c4=1/1/1 key_flows=7/8 ownership=0`; fixture `c4=1/1/1 key_flows=8/8 ownership=0`, architecture `22 fences / 11 mermaid`, `repos.md 4 fences` |
+| TC-M2DOM-041 | 2026-11-11 | FAIL (base); PASS (fixture) | base `clause_scan: total=26 present=1 missing=25`; fixture `total=26 present=26 missing=0` |
+| TC-M2DOM-042 | 2026-11-11 | PASS (control) | `forbidden_exit=0`; `5/5 scope classes scanned, 0 violations`; base `userFacingDocs: 139`, fixture `140 file(s)` |
+| TC-M2DOM-043 | 2026-11-11 | PASS (control) | `broken_links=0`; `restated_ac_blocks=0` (base and fixture) |
+| TC-M2DOM-044 | 2026-11-11 | PASS | `oracle=whole-file-line-retention`; conforming fixture `removed=0 added=5 outside=0`; delete/modify/swap `removed=1`; outside_insert `outside_hunks=1`; real base/fixture `removed_or_modified=0` |
+| TC-M2DOM-045 | 2026-11-11 | FAIL (base); PASS (fixture) | base `matrix_rows_required=1/17`; fixture `17/17 regions_empty=0 positive_fixture=OK negative_fixture=detected` |
 
-Aggregate pre-change verdict: **39 of 45 procedures FAIL** — 38 because the change is absent or because a statement the change must remove survives, and TC-039 because a pre-existing non-parity test failure makes the default-`TMPDIR` gate red at base — and **6 PASS as declared controls** (TC-029, TC-035, TC-038, TC-042, TC-043, TC-044). No procedure passes by accident: the six controls are labelled, and every scan, classifier, and retention oracle carries at least one fixture proving it detects the defect it targets. Two authoring defects were caught by these runs before publication (a clause-table row containing `|`, and an `NR`-versus-`FNR` offset in the status new-section locator); both are recorded in the revision log.
+Aggregate verdict: **38 of 45 procedures FAIL on the base tree** — every one because the change is absent, because a statement the change must remove survives, or because a new-content region is empty — and **7 PASS as labelled controls/policy-conforming** (TC-029, TC-035, TC-038, TC-039, TC-042, TC-043, TC-044). **On the conforming fixture, 45 of 45 procedures PASS** (P39 by its classifier, whose five synthetic branches include the failure dispositions). No procedure passes by accident: every scan, classifier, and retention oracle carries at least one fixture proving it detects the defect it targets, and every changed procedure was run on a conforming head before publication.
 
-Re-run instruction for delivery: run P00 → P34 (containment) → P37/P38/P42 (guards) → P39 (both gate invocations, on a quiet machine) → P08/P10 (placement) → P01–P07, P09 → P11–P33 → P35, P40, P41, P43–P45 → the manual reads (G-1, G-2, G-3, G-4, G-5, G-9). Cheap containment and guards first: an out-of-manifest change or a red gate makes every downstream content reading moot.
+Re-run instruction for delivery: run P00 → P34 (base..worktree containment) → P37/P38/P42 (guards) → P39 (both gate invocations, `RUN_GATES=1`) → P08/P10 (placement) → P01–P07, P09 → P11–P33 → P35, P40, P41, P43–P45 → the manual reads (G-1, G-2, G-3, G-4, G-5, G-9). Cheap containment and guards first: an out-of-manifest change or a red authoritative gate makes every downstream content reading moot.

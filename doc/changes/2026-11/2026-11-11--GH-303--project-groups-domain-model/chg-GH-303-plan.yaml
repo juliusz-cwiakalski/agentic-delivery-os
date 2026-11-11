@@ -2,19 +2,23 @@
 # (repository, project, optional workspace) with project groups and
 # cross-repository changes.
 #
-# Plan revision: v1.0 (2026-11-11). Aligned to spec v1.0 (45 ACs: 33 functional
+# Plan revision: v1.1 (2026-11-11). Aligned to spec v1.1 (45 ACs: 33 functional
 # + 12 non-functional, Appendix A 26-clause oracle, Appendix B 16-row naming
-# matrix walked as 17 regions, Appendix C 13-file manifest, Appendix D gate
-# record) and test plan v1.0 (45 TCs TC-M2DOM-001..045, procedures P00..P45,
-# every procedure executed against base 5372dbac before any product edit).
+# matrix walked as 17 regions, Appendix C 13-file manifest — 11 modified plus 1
+# new plus the registry row, Appendix D gate record with the repository-local
+# run authoritative) and test plan v1.1 (45 TCs TC-M2DOM-001..045, procedures
+# P00..P45 in §7.1, §8.4 interpretation decisions TP-1..TP-8, §6 base-observed
+# versus fixture-derived expectations, §10 base-tree and conforming-fixture log).
+# Revision history and the fixed DoR findings are declared under `revision:`.
 #
 # Sources (single source of truth):
-#   - Spec: ./chg-GH-303-spec.md v1.0 — F-1..F-14, NFR-1..NFR-12, DM-1..DM-8,
+#   - Spec: ./chg-GH-303-spec.md v1.1 — F-1..F-14, NFR-1..NFR-12, DM-1..DM-8,
 #     DEC-1..DEC-17, RSK-1..RSK-12, AC-F1-1..AC-F14-2, AC-NFR1-1..AC-NFR12-1,
 #     §17.3 DoD, Appendices A-D.
-#   - Test plan: ./chg-GH-303-test-plan.md v1.0 — 45 TCs, procedures P00..P45 in
+#   - Test plan: ./chg-GH-303-test-plan.md v1.1 — 45 TCs, procedures P00..P45 in
 #     §7.1, §7.2 TC -> procedure map, §1.2 declared gaps G-1..G-10, §8.4
-#     interpretation decisions TP-1..TP-5, §10 base-tree execution log.
+#     interpretation decisions TP-1..TP-8, §6 expectation classes, §10 base-tree
+#     execution log plus the conforming-fixture run of every changed procedure.
 #   - PM notes: ./chg-GH-303-pm-notes.yaml — docs-only autonomous delivery, the
 #     `repos`/M3-S6 name resolution, the entrypoint-delta reading, the derived
 #     index and registry scope, the flat-envelope contract name, and the
@@ -27,10 +31,15 @@
 # Change shape: docs-only. Exactly thirteen product files change — twelve under
 # doc/planning/oss-tooling/** (eleven modified plus the new
 # milestones/m2/commands/repos.md) and scripts/checks/forbidden-literals.registry.json
-# (one registration row, 139 -> 140). No file changes under doc/spec/**,
-# doc/overview/**, doc/guides/**, doc/templates/**, packages/**, tests/**,
-# .opencode/**, .ai/**, or any other scripts/** path. The workflow phase
-# `system_spec_update` records "no current-truth change required" and edits
+# (one registration row, 139 -> 140). Per-phase scope: P1 backlog (1), P2
+# architecture + contracts (2), P3 the two command pages + seeds + journeys +
+# entrypoint delta (5), P4 the registry row (1), P5 the two indices + status +
+# command registry (4); the sets are disjoint and sum to 13. No file changes
+# under doc/spec/**, doc/overview/**, doc/guides/**, doc/templates/**,
+# packages/**, tests/**, .opencode/**, .ai/**, or any other scripts/** path, and
+# `milestones/m2/commands/board.md` is deliberately out of scope and unedited
+# (its `projects[]` reconciliation is deferred to S4/S18, TP-7). The workflow
+# phase `system_spec_update` records "no current-truth change required" and edits
 # nothing (DEC-17, NFR-1). doc/changes/** artifacts are change evidence and
 # never count toward the 13-file budget.
 #
@@ -55,7 +64,10 @@
 # (P3) until its registration lands (P4) the forbidden-literals guard and
 # therefore `pnpm check` are red by construction. P4 is sequenced immediately
 # after P3, P3 and P4 land back-to-back with no intervening commit, and P3
-# claims no guard gate. Every other phase boundaries on a guard-green tree.
+# claims no guard gate. Every other phase boundaries on a guard-green tree. This
+# plan's order is authoritative for execution and supersedes the recommended
+# commit sequence in spec §18 for this delivery; no oracle depends on commit
+# order (TP-8, test plan §8.4).
 #
 # TC mapping (all 45, each claimed exactly once; TC <-> AC is 1:1 per test plan
 # §3.1, so AC coverage is the same partition):
@@ -101,8 +113,10 @@ tier:
       "rather than rejected" wording is missing (P04, AC-F2-2, RSK-4)
     - >-
       `projects list` survives anywhere as the flat enumeration, `repos` or
-      `repos list` is used for a group, or any Appendix B location is not in its
-      required state (P32, P33, P45, AC-F14-1, AC-F14-2, AC-NFR12-1)
+      `repos list` is used for a group, any of the seventeen matrix regions is
+      empty or still carries a forbidden statement, or one of the six both-name
+      prose locations does not state the boundary (P32, P33, P45, AC-F14-1,
+      AC-F14-2, AC-NFR12-1, TP-6)
     - >-
       Either command page loses the exact header `Status: Proposed (M2)`, a page
       claims registration at the root listing, the flat surface appears on the
@@ -120,9 +134,11 @@ tier:
       guard reports an unregistered doc or a violation (P37, P42, AC-NFR4-1,
       AC-NFR9-1)
     - >-
-      A base status.md line is removed, reordered, or modified, or an added line
+      A base status.md line is removed, reordered, or modified; an added line
       falls before the single blank separator line that precedes the one new
-      dated section (P29, P44, AC-F12-2, AC-NFR11-1)
+      section; more than one new `##` heading appears or any `##` heading follows
+      it; the heading is not of the form `## <title> (2026-11-11)`; or the
+      section claims delivery (P28, P29, P44, AC-F12-1, AC-F12-2, AC-NFR11-1)
     - >-
       The M2 pack contents table is not thirteen rows, the story-to-artifact map
       lacks an M2-S18 or M2-S19 row, the M2-S11 row does not point at `repos.v1`,
@@ -145,11 +161,13 @@ tier:
       a duplicated C4 heading, or other than eight `###` headings under
       `## Key flows` each owning one block (P40, AC-NFR7-1, RSK-9)
     - >-
-      The repository-local-TMPDIR `pnpm check` is non-zero; the default-TMPDIR
-      run fails on anything other than the lone tests/checks/ci-baseline-parity.test.ts
-      failure; either run is left unrecorded; or the known TC-WIRE-002 timing
-      sensitivity is reclassified as environmental instead of re-run and
-      escalated (P39, AC-NFR6-1, UG-1)
+      The repository-local-TMPDIR full-suite `pnpm check` is non-zero — any
+      failure there, including a repeated TC-WIRE-002 timeout, is a delivery
+      failure; either aggregate run is left unrecorded; the re-run record for an
+      excused default-run failure is missing; a default-run failure other than
+      tests/checks/ci-baseline-parity.test.ts or the TC-WIRE-002 5000 ms timeout
+      is present; or an excused pair is claimed without the repository-local run
+      green on the same head (P39, AC-NFR6-1, UG-1)
     - >-
       `bash scripts/.tests/test-doc-distribution.sh` is non-zero under the
       default TMPDIR, or any planning document gains an `ados_distribution`
@@ -162,15 +180,164 @@ tier:
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
+revision:
+  version: "1.1"
+  revisedAt: "2026-11-11"
+  supersedes: "1.0"
+  driver: readiness-review/readiness-iter-1.md (NOT_READY, 2026-11-11)
+  scope: >-
+    delivery_planning findings 6, 7, 9 and 10; test-planning findings 2, 5, 12
+    and 16 adopted where they change this plan's gates (P09/P10 context window,
+    P32/BL-S11 regions, P33's six prose locations, one new `##` heading), plus
+    the test plan's TP-6/TP-7/TP-8 resolutions
+  history:
+    - version: "1.0"
+      date: "2026-11-11"
+      note: >-
+        Initial plan aligned to spec v1.0 and test plan v1.0: six phases,
+        thirteen product files, 45 ACs and 45 TCs claimed exactly once.
+    - version: "1.1"
+      date: "2026-11-11"
+      findings:
+        - id: 9
+          facet: cross_artifact_consistency
+          change: >-
+            Stale gate tokens replaced. P35 now carries base-observed
+            `base_headings=74 head_headings=74 added=0` and the fixture-derived
+            post-change `base_headings=74 head_headings=76 added=2` (the `67/69`
+            literal is gone). P08 keeps base `separator=1287 epic_m3=1289
+            window=1286:1286` as a labelled base observation and gates the
+            fixture-derived `window=1294:1309` separators plus the invariants
+            `placement=inside-window`, `separator_sequence=identical`,
+            `blank_line_before_separator=1`. P09 keeps base
+            `context_paragraph=1055..1055 paragraph_lines=0` as a labelled base
+            observation and gates the fixture-derived
+            `context_paragraph=1055..1060 paragraph_lines=4
+            paragraph_strictly_between=OK`. Every post-change expectation in
+            P1..P5 is now labelled fixture-derived (source: test plan §6 and
+            §10) and no base value is quoted as an expectation.
+        - id: 6
+          facet: plan_coverage
+          change: >-
+            P34 is declared as the base..worktree manifest check decidable at
+            the P5 boundary (`git diff --name-only "$BASE" -- .` plus untracked,
+            filtered to product paths). The committed range
+            (`"$BASE"...HEAD`) is reported separately as `post_commit_check`,
+            re-run after the P5 commit; `worktree_product_changes` is no longer
+            a gate token, and the P5 `dependsOn` no longer claims a clean
+            worktree. At the P5 boundary `post_commit_check=DIFFERS` is expected
+            because the four P5 paths are still uncommitted; the gate is the
+            base..worktree set.
+        - id: 7
+          facet: cross_artifact_consistency
+          change: >-
+            Gate policy aligned to spec v1.1 AC-NFR6-1 and test plan P39: the
+            repository-local full-suite run is authoritative (exit 0; a
+            TC-WIRE-002 repeat there is a delivery failure); both runs are
+            recorded; only a recorded and re-run default-run
+            `ci-baseline-parity` failure or `TC-WIRE-002` timeout is excused and
+            only while the repository-local run is green on the same head; any
+            other default-run failure is a delivery failure. The previous
+            "record, re-run, escalate" wording is removed, `gateCommands`
+            declares the re-run record as required evidence, and P5's and P6's
+            P39 gates use the classifier tokens `default_failure_class` and
+            `rerun_recorded`.
+        - id: 10
+          facet: cross_artifact_consistency
+          change: >-
+            The status heading pin now matches test plan v1.1 P28 and the file
+            convention: `## <title> (2026-11-11)`, title first with the date
+            parenthesised, plus `new_section_count=1` and
+            `headings_after_new_section=0`. The earlier "heading begins with
+            2026-11-11" pin is removed from TP-5 and from P5's constraints.
+        - id: 5
+          facet: plan_vs_test_plan
+          change: >-
+            Tokens re-read against test plan v1.1 §7.1, §6 and §10: P02 uses
+            `flat_projects_statements_in_entry` (the mandated `projects list`
+            transition clause is allowed, `projects_list_raw_mentions` is not
+            gated); the P32 S11 region is anchored on `### M2-S11 ` and gates
+            `matrix_rows=17`, `regions_empty=0` and `rows_with_survivors=0/17`,
+            so an empty region can no longer pass vacuously and P45's
+            `matrix_rows_required=17/17` required half is satisfiable; P17 is
+            `elements=8/8` (eight procedure anchors over AC-F6-4's seven
+            elements); P32 also
+            carries `self_test_boundary_allowed=OK` and the
+            `base_board_accepted=OK` negative control; P33 is
+            `boundary_locations=6/6` with the two index rows owned by P26/P27;
+            P40 gates `c4_headings=1/1/1`, `key_flows_headings=8/8` and
+            `flow_ownership_bad=0`; P44 uses the four mutant tokens.
+        - id: "TP-6/TP-7/TP-8"
+          facet: plan_vs_test_plan
+          change: >-
+            Adopted the test plan's v1.1 resolutions: P33 owns the six both-name
+            prose locations while P26/P27 own the two link-only index rows
+            (TP-6); `milestones/m2/commands/board.md` stays out of scope and
+            unedited with P32's `base_board_accepted=OK` as the negative
+            control, and its reconciliation is a deferred S4/S18 item (TP-7);
+            this plan's P4-before-P5 order is authoritative for execution and
+            supersedes the spec §18 recommended sequence, with no oracle
+            depending on commit order (TP-8).
+  adoptedExpectations:
+    baseObserved:
+      backlogLines: 1454
+      backlogStoryHeadings: "74"
+      m2S11Entry: "1169..1183"
+      s17LastContentLine: 1285
+      epicM2SeparatorLine: 1287
+      epicM3Line: 1289
+      insertionWindow: "1286:1286"
+      retirementNote: "1051..1054"
+      contextWindow: "1055:1055"
+      statusLines: 212
+      statusLastHeading: 187
+      registryEntries: 139
+      registryQueueRow: 88
+      registrySpendRow: 89
+      architectureFences: 20
+      architectureMermaid: 10
+      architectureKeyFlows: 7
+      seeds: 40
+    fixtureDerived:
+      s17LastContentLine: 1293
+      epicM2SeparatorLine: 1310
+      epicM3Line: 1312
+      insertionWindow: "1294:1309"
+      s18Line: 1294
+      s19Line: 1300
+      contextWindow: "1055..1060"
+      contextParagraphLines: 4
+      backlogStoryHeadings: "76"
+      backlogHeadingsAdded: 2
+      statusNewSectionLine: 214
+      statusAdditions: 18
+      statusRemoved: 0
+      registryEntries: 140
+      registryRowPositions: "queue=88 repos=89 spend=90"
+      architectureFences: 22
+      architectureMermaid: 11
+      architectureKeyFlows: 8
+      reposPageFences: 4
+      productFiles: "13/13"
+      boundaryLocations: "6/6"
+      matrixRegions: 17
+      rowsWithSurvivors: "0/17"
+  note: >-
+    Fixture-derived values come from the never-committed conforming worktree
+    described in test plan §6 and §10; they are evidence that an oracle is
+    satisfiable, never universal literals. Every procedure recomputes its ranges
+    from the head, and the plan's gates assert the invariants plus these
+    bounded expectations.
 sources:
   spec:
     path: ./chg-GH-303-spec.md
-    version: "1.0"
+    version: "1.1"
   testPlan:
     path: ./chg-GH-303-test-plan.md
-    version: "1.0"
+    version: "1.1"
     procedures: P00..P45
     testCases: TC-M2DOM-001..TC-M2DOM-045
+    interpretationDecisions: TP-1..TP-8
   pmNotes: ./chg-GH-303-pm-notes.yaml
   ticket: "juliusz-cwiakalski/agentic-delivery-os#303"
   baseRevision: 5372dbac
@@ -213,29 +380,47 @@ gateCommands:
       `plan diff` is not usable in this checkout: the composed runtime returns
       an unreadable diff port (`input.value.rejected`, "repository diff for
       GH-303 could not be read"), so the command is declared unavailable rather
-      than declared green. P34's branch-diff manifest is the authoritative
-      containment check and the reviewer re-reads the diff at phase 8.
+      than declared green. P34's base..worktree manifest (base revision versus
+      the working tree, filtered to product paths) is the authoritative
+      containment check and is decidable at the P5 boundary; the committed range
+      is reported separately as `post_commit_check` after the P5 commit. The
+      reviewer re-reads the diff at phase 8.
   docDistribution:
     command: "env -u TMPDIR bash scripts/.tests/test-doc-distribution.sh"
     tmpdir: "default (unset / environment TMPDIR)"
     expectation: "exit 0; 0 planning markers (P38)"
   forbiddenLiterals:
     command: "bun run scripts/checks/forbidden-literals.ts"
-    expectation: "exit 0; 140 registered entries; 0 unregistered-doc findings; 0 violations (P42)"
+    expectation: "exit 0; 140 registered entries (base 139 + the one new row); 0 unregistered-doc findings; 0 violations (P42)"
   aggregateGateAuthoritative:
     command: "mkdir -p \"$REPO_ROOT/tmp/tmpdir\" && TMPDIR=\"$REPO_ROOT/tmp/tmpdir\" pnpm check"
     tmpdir: "repository-local (repo/tmp/tmpdir), required because tests/checks/ci-baseline-parity.test.ts runs `git clone --local` and a tmpfs TMPDIR fails with a cross-device hardlink"
-    expectation: "exit 0 (P39, AC-NFR6-1)"
+    expectation: >-
+      exit 0, and this run is the authoritative gate. Any failure here —
+      including a repeated TC-WIRE-002 timeout that the default run also showed
+      — is a delivery failure; there is no environmental exemption for the
+      repository-local run (P39, AC-NFR6-1(a))
+    baseObserved: "repo_local_exit=0 (7133 pass, 4 skip, 0 fail, 7137 tests, 880 files, 480.99s)"
   aggregateGateRecorded:
     command: "env -u TMPDIR pnpm check"
     tmpdir: "default (environment TMPDIR)"
     expectation: >-
-      recorded with its failing test names; only a lone
-      tests/checks/ci-baseline-parity.test.ts failure is environmental. Any
-      other default-run failure is a delivery failure, except that a lone
-      TC-WIRE-002 (tests/checks/privacy-ci-wiring.test.ts) failure is recorded,
-      re-run in isolation on a quiet machine, and escalated per UG-1 — never
-      reclassified.
+      recorded with its exit code, pass/skip/fail summary, and every failing
+      test name, on the same head as the authoritative run. Only two
+      default-run-only failures are excusable:
+      tests/checks/ci-baseline-parity.test.ts and the TC-WIRE-002 5000 ms
+      timeout in tests/checks/privacy-ci-wiring.test.ts. Each must be recorded
+      AND re-run, and is excused only while `repo_local_exit=0` on the same
+      head; any other default-run failure is a delivery failure to investigate
+      (AC-NFR6-1(b)(c)(d), UG-1)
+    baseObserved: "default_exit=1, default_failed_tests=2 (CI baseline parity (hermetic partial clone), TC-WIRE-002 timed out after 5000ms), default_failure_class=excused"
+  aggregateGateRerunRecord:
+    artifact: "/tmp/gh303/p39-rerun.txt (P39 `$SH/p39-rerun.txt`)"
+    required: "whenever `default_failure_class=excused`, i.e. whenever a default-run failure is being excused"
+    expectation: >-
+      present and non-empty, naming each excused test with its isolation re-run
+      result; P39 reports `rerun_recorded=yes (...)` and downgrades to
+      `missing-rerun` (a FAIL) when the record is absent (AC-NFR6-1(c))
   tmpdirRule: >-
     The two doc guards have opposite TMPDIR requirements in this environment and
     are invoked per guard as above; the environment is never changed to make a
@@ -245,15 +430,15 @@ orderingConstraints:
   - "P1 -> P2 -> P3 -> P4 -> P5. P3 and P4 are adjacent by construction: the forbidden-literals guard is red between the new page (P3) and its registration (P4)."
   - "P2 precedes P3 because both command pages, the seeds, and the journey point at `repos.v1`, the group envelope, and the configuration schema that P2 lands; a forward reference would make P43 fail at the P3 boundary."
   - "P2 precedes P1 only in reader order, not in commit order: P1 lands the story codes that P2's map rows and contracts cite, and P4 is independent of P5 except for the entry count."
-  - "P5 runs last because P34 requires all thirteen product files to be present and the worktree clean (`worktree_product_changes=0`), and P26/P27/P32/P33/P45/TM-034 need every artifact in place."
+  - "P5 runs last because P34's base..worktree containment oracle needs all thirteen product files present, and P26/P27/P32/P33/P45/TM-034 need every artifact in place; P34 no longer requires a clean worktree, and the committed range is checked separately as `post_commit_check`."
   - "P6, when opened, runs after the review verdict and before the PR; it adds no product path and no phase except itself."
-  - "`plan diff` is unavailable in this checkout (the composed runtime returns an unreadable diff port), so P34's branch-diff manifest is the sole containment oracle; the reviewer additionally re-reads the change diff at phase 8."
+  - "`plan diff` is unavailable in this checkout (the composed runtime returns an unreadable diff port), so P34's base..worktree manifest is the sole containment oracle; the reviewer additionally re-reads the change diff at phase 8."
 crossArtifactResolutions:
   note: >-
-    The test plan flags five places where two artifacts pull in different
-    directions (TP-1..TP-5, test plan §8.4). Each is resolved here by naming the
+    The test plan flags eight places where two artifacts pull in different
+    directions (TP-1..TP-8, test plan §8.4). Each is resolved here by naming the
     governing AC/TC and the phase that owns the gate; none is silently absorbed
-    and none requires a spec change.
+    and none requires a further spec change.
   TP-1:
     tension: "AC-F12-2 and AC-NFR11-1 both govern status.md line retention, so a naive mapping yields two test cases over one predicate."
     governing: "AC-F12-2 (TC-M2DOM-029) and AC-NFR11-1 (TC-M2DOM-044)."
@@ -269,8 +454,10 @@ crossArtifactResolutions:
     governing: "AC-F3-3 (TC-M2DOM-007) and AC-F6-4 (TC-M2DOM-017)."
     resolution: >-
       Split by direction inside P2: TC-007 traces the six S19 task clauses
-      forward (clause -> contract) and TC-017 asserts the shape's seven declared
-      elements backward (contract -> fields). AC-F3-3 cannot pass before
+      forward (clause -> contract) and TC-017 asserts the shape backward
+      (contract -> fields) with P17's eight procedure anchors, which cover
+      AC-F6-4's seven elements (the lifecycle element is checked twice, as
+      `branch` and as `pull request`). AC-F3-3 cannot pass before
       contracts.md exists, so its TC is owned by P2 even though the S19 entry
       lands in P1; the overlap is declared, not double-counted.
   TP-3:
@@ -281,8 +468,8 @@ crossArtifactResolutions:
       on attaching the enumeration to `projects`. P21 therefore tests contract
       pointers and envelope keys (`repos.v1`, `repos[]`, `projects.v1`,
       `projects[]`) rather than the bare word, and P33 positively requires the
-      boundary sentence at the eight both-name locations. Both gates run at the
-      phases that own them (P3 for P21, P5 for P33).
+      boundary statement at the six both-name prose locations. Both gates run at
+      the phases that own them (P3 for P21, P5 for P33).
   TP-4:
     tension: "NFR-7 states `## Key flows` holds exactly eight `###` headings while the base tree has seven."
     governing: "AC-NFR7-1 (TC-M2DOM-040), with AC-F5-3 (TC-M2DOM-013)."
@@ -297,27 +484,66 @@ crossArtifactResolutions:
     tension: "F-12/AC-F12-1 fix neither the new status section's title nor its exact date text."
     governing: "AC-F12-1 (TC-M2DOM-028) and AC-F12-2 (TC-M2DOM-029)."
     resolution: >-
-      The plan pins only the leading date token `2026-11-11` in the new section
-      heading, for auditability. The rest of the heading is the author's choice:
-      P28 derives the section positionally as the first `##` heading present in
-      the head and absent from the base, and requires uniqueness, so a second
-      new section fails and no fixed title string is asserted.
+      The plan pins the heading form and the date, not the title string: P28
+      requires exactly one new `##` heading matching `^## <title> \(2026-11-11\)$`
+      — the file's own convention, `## M2 planning snapshot (2026-11-10)`, title
+      first with the date parenthesised — plus `new_section_count=1` and
+      `headings_after_new_section=0`. A second new `##` heading anywhere in
+      status.md moves the derived boundary and therefore fails, so an
+      out-of-section insertion cannot hide behind the positional derivation. The
+      title text itself is the author's choice.
+  TP-6:
+    tension: "AC-F14-2 requires the boundary at every location that names both surfaces, while Appendix B's two index rows (`m2/README.md` map rows, `milestones/README.md` M2 row) require only that both pages are linked."
+    governing: "AC-F14-2 (TC-M2DOM-033) with AC-F11-1/AC-F11-2 (TC-M2DOM-026, TC-M2DOM-027)."
+    resolution: >-
+      Split by location class: P33 owns the six prose locations whose Appendix B
+      row requires a relation statement (backlog context paragraph, architecture,
+      journeys, entrypoint delta, registry, status section) and gates
+      `boundary_locations=6/6`; P26 and P27 own the two index rows as contents-row,
+      map-row, and link coverage. No boundary sentence is demanded in a link
+      table, and no prose location is left without one.
+  TP-7:
+    tension: "AC-F6-2's group-envelope rule versus `milestones/m2/commands/board.md`, which already carries a `projects[]` field."
+    governing: "AC-F6-2 (TC-M2DOM-015) and AC-NFR12-1 (TC-M2DOM-045), with AC-NFR1-1 (TC-M2DOM-034)."
+    resolution: >-
+      `commands/board.md` is not in the thirteen-file manifest, is not edited,
+      and its pre-existing `projects[]` ("project keys included in the board")
+      is not the redefined group envelope. P15's repository-identity ban is
+      scoped to the `## projects.v1` section of contracts.md, and P32 carries the
+      negative control `base_board_accepted=OK` so the unchanged base page is
+      provably not flagged. The page's reconciliation is a deferred item owned by
+      S4/S18 (spec §7.3), not a defect of this change.
+  TP-8:
+    tension: "Spec §18's recommended five-commit sequence puts the registry row with the indices and status last; this plan lands it in P4, before P5."
+    governing: "AC-NFR1-1 (TC-M2DOM-034) and AC-NFR9-1 (TC-M2DOM-037)."
+    resolution: >-
+      This plan's order is authoritative for execution and supersedes the spec
+      §18 recommended sequence: P4 immediately follows P3 because the
+      forbidden-literals guard fails closed on an unregistered new page, so the
+      alternative creates a guard-red window three commits wide. No oracle
+      depends on commit order — P34's base..worktree manifest and P37's position
+      check are commit-order independent — and the spec's sequence remains a
+      statement of the recommended review order, not a gate.
 upstreamGaps:
   - id: UG-1
-    severity: high
+    severity: medium
     summary: >-
-      NFR-6 / AC-NFR6-1 exempt only a lone tests/checks/ci-baseline-parity.test.ts
-      failure from a default-TMPDIR aggregate run, but the observed base tree
-      also fails TC-WIRE-002 (tests/checks/privacy-ci-wiring.test.ts) standalone
-      in both TMPDIR modes (5041.80 ms default, 5538.72 ms repository-local) and
-      passes inside both full suites (test plan §1.2 G-6, TR-11, §10).
+      The default-TMPDIR aggregate run at base exits 1 on two named tests:
+      tests/checks/ci-baseline-parity.test.ts and the TC-WIRE-002 5000 ms timeout
+      in tests/checks/privacy-ci-wiring.test.ts. The same TC-WIRE-002 test also
+      exceeds 5000 ms standalone in both TMPDIR modes but passes inside both full
+      suites (test plan §1.2 G-6, TR-11, §10).
     disposition: >-
-      Not reclassified as environmental and not absorbed by widening the spec's
-      exemption. The authoritative repository-local run must be green; a
-      TC-WIRE-002 failure in that run FAILS the phase and is escalated to the
-      ticket owner as a gate defect. A default-run failure of TC-WIRE-002 is
-      recorded verbatim, re-run in isolation on a quiet machine, and reported
-      with both observations.
+      AC-NFR6-1 v1.1 names both failures and admits them only as recorded,
+      re-run exemptions behind a green repository-local run on the same head, so
+      nothing is reclassified and nothing is widened. Concretely: the
+      authoritative repository-local run must exit 0 — any failure there,
+      including a repeated TC-WIRE-002, FAILS the phase and is escalated to the
+      ticket owner as a gate defect; both runs are recorded with their failing
+      test names; the two named default-run failures are recorded and re-run with
+      the re-run captured in `p39-rerun.txt` (a required artifact); any other
+      default-run failure, or an excused pair without a green repository-local
+      run, FAILS the phase.
     owner: "@runner (phase 9 quality_gates); escalation target: ticket owner"
   - id: UG-2
     severity: low
@@ -373,7 +599,7 @@ phases:
     dependsOn: []
     constraints:
       - "Insert the two new entries after M2-S17's last content line, inside the Epic M2 block, before the block-closing blank line and `---` separator, in code order S18 then S19 (DEC-8); never insert below the separator."
-      - "Place the context paragraph after the epic retirement note and before `### M2-S2`, inside the single line window the base tree leaves there; the retirement note itself stays byte-identical."
+      - "Place the context paragraph after the epic retirement note's last line and before `### M2-S2`: P09 derives the window as `note_end + 1 .. (### M2-S2 line - 1)`, requires at least one non-empty line inside it, exactly one blank line on each side of the paragraph, and the retirement note byte-identical (it is anchored by its own first and last line, 1051..1054 in base, not by the last non-empty line before `### M2-S2`)."
       - "Keep the story shape `### Mx-Sn Title` + `- Goal:` + `- Tasks:` + `- AC:` + `- Depends on:`; no `- Ticket:` line for either new story (the reading guide reserves it for created stories); exact dependency lines `- Depends on: M2-S11.` and `- Depends on: M2-S11, M2-S18, M1-S17.`."
       - "M2-S19's `- AC:` is an indented numbered list of exactly three items, each independently identifiable; no fourth criterion and no merged pair."
       - "The S11 entry keeps its heading, position, shape, dependency line, state-scoping, host-index, migration note, test clause, and collision criterion; only the naming changes plus the transition note."
@@ -381,17 +607,25 @@ phases:
     gates:
       - >-
         P00 — executed once in this shell against base 5372dbac: base snapshots
-        plus `entry()`, `section()`, `firstsec()`, `squash()`, `clause_rows()`.
-        Expected: base snapshots ready (backlog 1454 lines, status 212 lines,
-        registry 139 entries, `queue.md` at index 88).
+        plus `entry()`, `story_section()`, `section()`, `firstsec()`, `squash()`,
+        `clause_rows()`, `fence_blocks()`, the retention helpers
+        (`diffstat()`, `newsecs_of()`, `newsec_of()`, `newsec_count()`),
+        `backlog_ranges()`, and the naming-matrix helpers (`matrix_rows()`,
+        `path_of()`, `region()`, `forbidden_hits()`, `forbidden_count()`), with
+        every path (`$BL`, `$ST`, `$MR`, `$M2`, `$A`, `$RG`, `$R`, `$PJ`, `$REG`,
+        `$SH`) defined once. Base-observed snapshots: backlog 1454 lines, status
+        212 lines, registry 139 entries, `queue.md` at index 88, backlog story
+        headings 74. Every block runs in a fresh shell as `source P00; source Pn`.
       - >-
         P01 -> `retained_clauses=5/5`; `depends_line=exact`;
         `repos_list_fields=OK`; `transition_note=OK`;
         `goal_projects_command=ABSENT`; P01 verdict: PASS
       - >-
-        P02 -> `projects_list_in_entry=0`; `repos_list_in_entry>=1`;
+        P02 -> `flat_projects_statements_in_entry=0`; `repos_list_in_entry>=1`;
         `group_meaning_repos_in_entry=0`; `collision_clause_copies=1`;
-        `inside_s11=1`; P02 verdict: PASS
+        `inside_s11=1`; P02 verdict: PASS (fixture-derived fixture:
+        `projects_list_raw_mentions=2`, i.e. the mandated transition clause is
+        allowed and only the flat statement is banned)
       - >-
         P03 -> `clauses_present=12/12`; `shape_labels=4/4`; `ticket_line=0`;
         P03 verdict: PASS
@@ -400,38 +634,53 @@ phases:
         P06 -> `numbered_items=3/3`; `a1>=1`; `a2>=1`; `a3>=1`; P06 verdict:
         PASS
       - >-
-        P08 -> `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`;
-        `window_empty=no`; `separator_sequence=identical`;
-        `blank_line_before_separator=1`; `placement=inside-window`;
-        P08 verdict: PASS
+        P08, base observation (base versus base): `s17_last=1285 separator=1287
+        epic_m3=1289 window=1286:1286 window_empty=no`. Base is not the
+        expectation: the separator and window are recomputed from the head, so
+        the gate is the fixture-derived pair (test plan §6, §10) plus the
+        invariants — fixture-derived: `s17_last=1293 separator=1310 epic_m3=1312
+        window=1294:1309`, `s18_line=1294 s19_line=1300`; gated:
+        `placement=inside-window`; `separator_sequence=identical`;
+        `blank_line_before_separator=1`; `window_empty=no`; P08 verdict: PASS
       - >-
-        P09 -> `retirement_note=1051..1054`; `paragraph_lines>0`;
-        `three_levels=OK`; `boundary=OK`; `root_family=OK`;
-        `fm`/`rg`/`cc`=byte-identical; `retirement_note=byte-identical`;
+        P09, base observation: `retirement_note=1051..1054`,
+        `context_paragraph=1055..1055`, `paragraph_lines=0`,
+        `paragraph_strictly_between=FAIL` (the deliverable is absent). Gate
+        (fixture-derived, test plan §6, §10): `context_paragraph=1055..1060`,
+        `paragraph_lines=4`, `paragraph_strictly_between=OK`,
+        `blank_after_note=1`, `blank_before_s2=1`; plus the invariants
+        `note_start_line=anchored(1051)`, `note_end_line=anchored(1054)`,
+        `retirement_note=OK`, `three_levels=OK`, `boundary=OK`,
+        `root_family=OK`, `fm`/`rguide`/`cc`=byte-identical,
         `epic_heading=OK`; P09 verdict: PASS
       - >-
-        P10 -> `backlog_hunks>=1`; `hunks: inside=M outside=0`;
-        `hunk confinement OK`; `non_vacuous=yes`;
-        `classifier_self_tests=3/3`
+        P10, base observation: `backlog_hunks=0`, `non_vacuous=no`. Gate
+        (fixture-derived): `backlog_hunks=6`, `hunks: inside=6 outside=0`,
+        `hunk confinement OK`, `non_vacuous=yes`; and in every run
+        `classifier_self_tests=3/3`; P10 verdict: PASS
       - >-
-        P35 -> `stories_kept` equals the base heading count, `changed=0`,
-        `removed=0`;
-        `base_headings=67 head_headings=69 added=2`; `new_headings=2` and both
-        are `### M2-S18`/`### M2-S19` (no UNEXPECTED line); `order=OK`;
-        `fm`/`rg`/`cc`=byte-identical; `retirement_note=byte-identical`;
-        P35 verdict: PASS (control)
+        P35, base observation (base versus base): `base_headings=74
+        head_headings=74 added=0`, `new_headings=0`,
+        `stories_kept=73 changed=0 removed=0`, `order=OK`, i.e.
+        `P35 verdict: PASS (control: no new story yet)`. Gate
+        (fixture-derived, test plan §6, §10): `base_headings=74
+        head_headings=76 added=2`, `new_headings=2`, both new headings are
+        `### M2-S18`/`### M2-S19` with no `UNEXPECTED:` line,
+        `stories_kept=73 changed=0 removed=0`, `order=OK`,
+        `fm`/`rguide`/`cc`=byte-identical, `retirement_note=byte-identical`;
+        `P35 verdict: PASS`
       - >-
         P41 -> `clause_scan: total=26 present=26 missing=0`; P41 verdict: PASS
       - >-
         P38 -> `dist_guard_exit=0`; `planning_markers=0` (executed as a control
         at this HEAD; TC-M2DOM-038 is claimed at P5)
       - >-
-        P42 -> `forbidden_exit=0`; no violation line (executed as a control at
-        this HEAD; TC-M2DOM-042 is claimed at P5)
+        P42 -> `forbidden_exit=0`; `violations=0` (executed as a control at this
+        HEAD; TC-M2DOM-042 is claimed at P5)
       - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
       - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
     definitionOfDone:
-      - "`backlog.md` has exactly three changed regions: the M2-S11 entry, one added context paragraph, and the two inserted entries; P08 and P10 prove the placement and hunk confinement and P35 proves every other story and region is byte-identical."
+      - "`backlog.md` has exactly three changed regions (six zero-context hunks): the M2-S11 entry, one added context paragraph, and the two inserted entries; P08 and P10 prove the placement and hunk confinement and P35 proves every other story and region is byte-identical."
       - "M2-S11 shows all five retained clauses, the exact dependency line, `repos list` with the five fields, and the deprecation-alias transition; it no longer contains the base phrase `a projects command gives one CLI overview`."
       - "M2-S18 and M2-S19 carry all 26 ticket clauses (12 + 11 + the 3 amendment clauses) with no clause added, omitted, weakened, merged, or reordered, and P41's 26-row scan is 26/26."
       - "The context paragraph states the three levels, the naming boundary, and the root-family consequence, and sits between the retirement note and `### M2-S2`."
@@ -493,31 +742,38 @@ phases:
       - "Mermaid edits must keep every fence balanced; there is no validator, so the structural read is the bar (NFR-7)."
     gates:
       - >-
-        P11 -> `l1_lines>=1`; `level_repository=OK`; `project_as_group=OK`;
+        P11 -> `repository_as_delivery_unit=OK`; `project_as_group=OK`;
         `workspace_in_diagram=OK`; `workspace_optional_in_diagram=OK`;
-        P11 verdict: PASS
+        `workspace_mandatory_claim=ABSENT`; P11 verdict: PASS
       - >-
         P12 -> `membership_declared=OK`; `workspace_never_required=OK`;
         `unrelated_dirs=OK`; `identical_behaviour=OK`;
         `member_must_be_inside=ABSENT`; P12 verdict: PASS
       - >-
-        P13 -> overview mentions member/group/workspace with each count >= 1;
-        `cross_repo_flow_heading` present; invariants naming/membership/
-        workspace/lifecycle each >= 1; P13 verdict: PASS
+        P13 -> `overview_mentions_member>=1 group>=1 workspace>=1`;
+        `cross_repo_flow_heading=present`; `cross_repo_mermaid>=1`;
+        `invariants naming>=1 membership>=1 workspace>=1 lifecycle>=1`;
+        P13 verdict: PASS
       - >-
-        P14 -> `repos_v1_section=present`; `repos_v1_fields=7/7` (repo key,
-        root, state location, daemon reachability with degradation reason,
-        handover state, host index revision); P14 verdict: PASS
+        P14 -> `repos_v1_section=present`; `owned_by_M2-S11=OK`;
+        `repos_v1_fields=7/7` (repo key, root, state location, daemon
+        reachability, handover state, host index revision, degradation reason);
+        P14 verdict: PASS
       - >-
-        P15 -> six group anchors present (group identity, group name, member
-        list, per-member repo key/root, tracker kind, health/state);
-        `group_named_key_denotes_repo=ABSENT`; P15 verdict: PASS
+        P15 -> `projects_v1_section=present`; the six group fields OK (group,
+        member, tracker kind, health, workspace root, project scope) and
+        `group_identity_name=OK`; `group_named_key_denotes_repo=ABSENT`
+        (scoped to the `## projects.v1` section — the ban is not applied to
+        other pages, TP-7); P15 verdict: PASS
       - >-
         P16 -> `configuration_schema=present`; `fields=8/8` including the
         optional workspace discovery root, validation-time mixed kinds, and
         `not-yet-supported`; P16 verdict: PASS
       - >-
-        P17 -> `change_plan_shape=present`; `elements=7/7`; P17 verdict: PASS
+        P17 -> `change_plan_shape=present`; `elements=8/8` (eight procedure
+        anchors covering AC-F6-4's seven elements — the single lifecycle element
+        is checked twice, as `branch` and as `pull request`; test plan §10);
+        P17 verdict: PASS
       - >-
         P07 -> `s19_task_to_contract=6/6` (members and slices; one lifecycle
         producing a branch and pull request; per-member gates; branch cleanup
@@ -527,23 +783,24 @@ phases:
         P04 -> `s18_nyts>=1`; `contracts_nyts>=1`; `s18_validation=OK`;
         `s18_rather_than_rejected=OK`; `softening=ABSENT`; P04 verdict: PASS
       - >-
-        P40 -> `mermaid_fences` counted; `keyword_and_fence_exit=0`;
-        `heading_association=OK`; `C4 Level 1/2/3 has diagram=OK (heads=1
-        own=1)`; `c4_headings_with_diagrams=3/3`; `flow_headings=8`;
-        `flow_headings_with_diagrams=8/8`; `flow_section=OK`; base control
-        records seven head flows; P40 verdict: PASS
+        P40, base observation: `c4_headings=1/1/1`,
+        `key_flows_headings=7/8`, `flow_ownership_bad=0`. Gate
+        (fixture-derived, test plan §6, §10): every fence count even (base 20
+        fences / 10 mermaid; fixture-derived 22 / 11), no `UNTAGGED-DIAGRAM` and
+        no `BAD-KEYWORD` line, `c4_headings=1/1/1`,
+        `key_flows_headings=8/8`, `flow_ownership_bad=0`; P40 verdict: PASS
       - >-
         P38 -> `dist_guard_exit=0`; `planning_markers=0` (control at this HEAD)
       - >-
-        P42 -> `forbidden_exit=0` (control at this HEAD; TC-M2DOM-042 is
-        claimed at P5)
+        P42 -> `forbidden_exit=0`; `violations=0` (control at this HEAD;
+        TC-M2DOM-042 is claimed at P5)
       - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
       - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
     definitionOfDone:
       - "The architecture draws repository, project, and optional workspace with membership visible in the diagram and states that a workspace is never required, that membership is declared in configuration, and that a project whose members live in unrelated directories behaves identically."
       - "The overview flow starts from a project (group resolution, member enumeration, optional workspace discovery, per-member state and health) and the cross-repository change flow describes one lifecycle across member branches and PRs, per-member gates, the shared definition of done, and closeout."
       - "`## Boundary invariants at M2 exit` states the naming boundary, declared membership, workspace optionality, and one lifecycle per cross-repository change."
-      - "`contracts.md` defines `repos.v1` and the redefined `projects.v1` with no shared meaning, plus the configuration schema (mixed kinds valid at validation, unimplemented member `not-yet-supported`, no-workspace configuration valid) and the seven-element change plan shape."
+      - "`contracts.md` defines `repos.v1` and the redefined `projects.v1` with no shared meaning, plus the configuration schema (mixed kinds valid at validation, unimplemented member `not-yet-supported`, no-workspace configuration valid) and the change plan shape with AC-F6-4's seven elements (P17's eight anchors)."
       - "The structural diagram read passes with eight key flows and three C4 headings, and no contract claims a delivered surface."
     coverage:
       acceptanceCriteria:
@@ -619,7 +876,9 @@ phases:
         repos[]=0 header=1 not_registered>=1`; P21 verdict: PASS
       - >-
         P22 -> `s18_seeds>=2`; `s19_seeds>=2`; `assert_violations=0`;
-        `coverage_anchors=10/10`; P22 verdict: PASS
+        `coverage_anchors=10/10`; P22 verdict: PASS (fixture-derived: three S18
+        and two S19 seeds; the gate is the `>=2` invariant, never a seed count
+        literal)
       - >-
         P23 -> `s11_01_assert_repos_list>=1`; `s11_01_assert_projects_list=0`;
         `s11_02_title_repos_list>=1`; `s11_02_body_repos_list>=1`;
@@ -631,9 +890,10 @@ phases:
         `same_ref_disjoint=OK`; `journey_anchors=4/4`; P24 verdict: PASS
       - >-
         P25 -> `repos_addition=OK`; `projects_addition=OK`;
-        `mount_names_both=OK`; `host_overview=0`; the five preserved tokens
-        (`Sixteen families`, `#286`, `milestone snapshot`, `unknown flag`,
-        `unexpected argument`) each reported OK; P25 verdict: PASS
+        `mount_names_both=OK`; `host_overview_claims=0`; the five preserved
+        tokens (`Sixteen families`, `#286`, `milestone snapshot`, `unknown flag`,
+        `unexpected argument`) each reported `preserved ... OK`; P25 verdict:
+        PASS
       - >-
         P36 -> `proposed_headers=2/2`; `delivered_claims=0`;
         `pack_statement=verbatim`; `snapshot_relabels=0`; P36 verdict: PASS
@@ -702,12 +962,14 @@ phases:
       - "Add exactly one row; keep every existing entry in its current order (the base list is not globally sorted); add no duplicate; place the row between the `queue.md` and `spend.md` entries so `repos_index = queue_index + 1` and `spend_index = repos_index + 1`."
       - "Change nothing else in the file and nothing in scripts/checks/forbidden-literals.ts: the guard's scope, allowlist rules, and tests stay as they are (NFR-7/NG-7 forbid new tooling and guard changes)."
       - "The phase proves the guard restored, not the guard redesigned: no allowlist entry, no exemption, no path bypass."
-      - "P34 is expected to report `product_files=12/13` with `expected_not_changed=1` at this commit because the index/status/registry phase is still open; containment is therefore claimed at P5 and P6 only, never here."
+      - "P34 is informational here and is not a gate: the base..worktree manifest is incomplete by construction at this boundary (nine of the thirteen paths are present — the eight landed by P1..P3 plus this registry row — with `expected_not_changed=4` for the four P5 paths). Containment is claimed at P5; nothing is asserted about the committed range at this commit."
     gates:
       - >-
-        P37 -> `registered=140`; `base_registered=139`; `delta=1`;
-        `position=between-queue-and-spend` (the repos row at the queue row plus
-        one and the spend row at the repos row plus one); `duplicates=0`;
+        P37, base observation: `registered=139 base_registered=139 delta=0`,
+        `queue_row=88 spend_row=89`, `position=repos-not-registered`. Gate
+        (fixture-derived, test plan §6, §10): `registered=140`;
+        `base_registered=139`; `delta=1`; `queue_row=88 repos_row=89
+        spend_row=90`; `position=between-queue-and-spend`; `duplicates=0`;
         `unregistered_findings=0`; P37 verdict: PASS
       - >-
         P42 -> `forbidden_exit=0`; `violations=0` (the guard is green again, and
@@ -754,16 +1016,17 @@ phases:
       - phase: 3
         reason: "The contents row and the M2 index target link `commands/repos.md`; the map rows must match the seeds and the flows as delivered in P2 and P3."
       - phase: 4
-        reason: "P34's containment oracle requires the complete thirteen-file manifest and a clean worktree, so it can only pass after the registry row lands."
+        reason: "P34's base..worktree containment oracle requires the complete thirteen-file manifest, so it only passes once the registry row has landed and every earlier product path is present."
       - phase: 2
         reason: "The M2-S4 advisory row points at the group envelope and the S11 map row points at `repos.v1`; both names are fixed in P2."
     constraints:
-      - "`m2/README.md`: the pack-contents table keeps one row per artifact and grows to thirteen by adding the `commands/repos.md` row; the story-to-artifact map gains an `| M2-S18 |` row and an `| M2-S19 |` row, and the `| M2-S11 |` row points at `repos.v1`; the planned-until-exit statement survives verbatim."
+      - "`m2/README.md`: the pack-contents table keeps one row per artifact and grows to thirteen by adding the `commands/repos.md` row; the story-to-artifact map gains an `| M2-S18 |` row and an `| M2-S19 |` row, and the `| M2-S11 |` row points at `repos.v1`; the `| M2-S4 |` row gains the advisory note `(advisory: consumed at delivery; the owning story declares the edge)` verbatim as used by the S3, S5 and S10 rows (AC-F6-5, an owned edit in spec Appendix C row 9); the planned-until-exit statement survives verbatim. The two index rows are link-only and carry no boundary sentence (TP-6)."
       - "`milestones/README.md`: the M2 row links `m2/commands/repos.md` in addition to its previous twelve targets, for thirteen `](m2/` targets on one physical line; the M0 and M1 rows stay byte-identical."
-      - "`status.md`: append one blank separator line and then one `##` dated section at EOF whose heading begins with `2026-11-11`; remove, reorder, and modify nothing; every added line lies at or after `new_section_line - 1`; the section records planning state only and must not use a delivery or exit claim (AC-F12-1, NFR-11)."
-      - "`status.md` section anchors, all required: the three-level model, `M2-S11`, `repos list`, `deprecation alias`, `M2-S18`, `M2-S19`, the naming boundary; it also names the registry reconciliation and the corrected entrypoint delta note."
+      - "`status.md`: append one blank separator line and then one `##` section at EOF whose heading matches `^## <title> \\(2026-11-11\\)$` — the file's own convention, title first with the date parenthesised as in `## M2 planning snapshot (2026-11-10)`; exactly one new `##` heading may exist and none may follow it; remove, reorder, and modify nothing; every added line lies at or after `new_section_line - 1`; the section records planning state only and must not use a delivery or exit claim (AC-F12-1, NFR-11, TP-5)."
+      - "`status.md` anchors: the six counted anchors are the three-level model, `repos list`, `deprecation alias`, `M2-S18`, `M2-S19`, and the naming boundary; the section must also print `M2-S11`, `registry`, and `entrypoint delta` anchor lines, and name the corrected entrypoint delta note (P28)."
       - "`cli-command-registry.md`: add one M2 `ados repos` row (flat enumeration, the five fields, daemon reachability, Delivery M2-S11); rewrite the `ados projects` row as the group surface (membership, health, state, project-scoped reads, Delivery M2-S18); reconcile the M3-S6 `ados repos` row so clone/branch/worktree hygiene are later `repos` subcommands with Delivery still M3-S6; replace the boundary note with the naming boundary on ONE line beginning exactly `Boundary note:`."
       - "Registry containment: only the M2 `ados projects` row, the one added M2 `ados repos` row, the M3 `ados repos` row, and the boundary note line may differ; the historical rename note and every other row stay byte-identical."
+      - "`milestones/m2/commands/board.md` is not edited and is not in the manifest; P32's `base_board_accepted=OK` control proves the unchanged page is not flagged (TP-7)."
       - "Release and reconciliation obligations for this change are declarations, not edits: `system_spec_update` records that no current-truth change is required and touches nothing under doc/spec/** or doc/overview/**; there is no tag, release, deployment, or tracker transition; the PR is created by the orchestrator, not by this phase."
     gates:
       - >-
@@ -776,36 +1039,51 @@ phases:
         P27 -> `m2_targets=13/13`; `repos_target=OK`;
         `m0_row=byte-identical`; `m1_row=byte-identical`; P27 verdict: PASS
       - >-
-        P28 -> `new_section_line` printed for the one new section;
-        `section_anchors=6/6`;
+        P28 -> `new_section_count=1`; `new_section_line` printed for the one new
+        section (fixture-derived: line 214, base last heading 187);
+        `heading_form=title-plus-parenthesised-date`;
+        `headings_after_new_section=0`; `section_anchors=6/6`;
         `delivery_claim=ABSENT`; P28 verdict: PASS
       - >-
-        P29 -> `removed_lines=0 additions>0 added_outside_section=0`;
-        `base_lines_retained=OK`; `additions_confined=OK`;
-        P29 verdict: PASS (control)
+        P29 -> `removed_lines=0` (fixture-derived `additions=18`);
+        `added_outside_section=0`; `new_section_count=1`;
+        `headings_after=0`; `base_lines_retained=OK`; `additions_confined=OK`;
+        P29 verdict: PASS (control or conforming)
       - >-
         P44 -> `oracle=whole-file-line-retention (whole-section cmp not used)`;
-        `conforming_fixture` OK; `delete_fixture: removed>0`;
-        `modify_fixture: removed>0`; `swap_fixture: removed>0`;
-        `outside_insert_fixture: outside_hunks>0`; P44 verdict: PASS
+        `conforming_fixture: removed=0 added=5 outside=0 verdict=OK` (its own
+        five-line synthetic section, not this change's status head);
+        `delete_fixture: removed=1`; `modify_fixture: removed=1`;
+        `swap_fixture: removed=1`; `outside_insert_fixture: outside_hunks=1`;
+        `removed_or_modified=0` on the real head; P44 verdict: PASS
       - >-
         P30 -> `m2_repos_row=present`; `old_projects_meaning=0`;
         `registry_anchors=7/7`; `old_boundary_note=ABSENT`; P30 verdict: PASS
       - >-
-        P31 -> `changed_lines>=1`; `hunks_classified>=1 outside=0`;
-        `fixture_outside>=1`; P31 verdict: PASS
+        P31 -> `changed_lines>=1` (fixture-derived: 7); `hunks_classified>=1`;
+        `outside=0`; `fixture_outside=2`; P31 verdict: PASS
       - >-
-        P32 -> `rows_with_survivors=0/17`; `self_test_flat=detected`;
-        `self_test_group=detected`; P32 verdict: PASS
-      - "P33 -> `boundary_locations=8/8`; P33 verdict: PASS"
+        P32 -> `matrix_rows=17`; `regions_empty=0`;
+        `rows_with_survivors=0/17`; `self_test_flat=detected`;
+        `self_test_group=detected`; `self_test_boundary_allowed=OK`;
+        `base_board_accepted=OK`; P32 verdict: PASS
       - >-
-        P45 -> `matrix_rows_required=17/17`; `positive_fixture=OK`;
-        `negative_fixture=detected`; P45 verdict: PASS
+        P33 -> `boundary_locations=6/6`; `index_rows_checked_by=P26/P27`;
+        P33 verdict: PASS
       - >-
-        P34 -> `product_files=13/13`; `expected_not_changed=0`;
-        `unexpected_changed` empty; `other_scripts_changed=0`;
-        `worktree_product_changes=0`; no `FORBIDDEN ROOT CHANGED` line;
-        P34 verdict: PASS
+        P45 -> `matrix_rows_required=17/17`; `regions_empty=0`;
+        `positive_fixture=OK`; `negative_fixture=detected`; P45 verdict: PASS
+      - >-
+        P34 (the containment gate, decidable at this boundary): the oracle is
+        the base..worktree manifest — `git diff --name-only "$BASE" -- .` plus
+        untracked product files, filtered to product paths — so nothing here
+        depends on the P5 commit. Gate: `product_files=13/13`;
+        `expected_not_changed=0`; `unexpected_changed=` empty;
+        `other_scripts_changed=0`; no `FORBIDDEN ROOT CHANGED` line; P34
+        verdict: PASS. At this boundary `post_commit_check=DIFFERS` is expected
+        and is NOT a gate, because the four P5 paths are still uncommitted.
+        Base observation for the same procedure: `product_files=0/13`; the
+        fixture-derived pass is `13/13`.
       - >-
         P43 -> `broken_links=0`; `restated_ac_blocks=0`; P43 verdict: PASS
         (control)
@@ -814,29 +1092,49 @@ phases:
       - >-
         P42 -> `forbidden_exit=0`; `violations=0`; P42 verdict: PASS (control)
       - >-
-        P39 -> `repo_local_exit=0`; `default_exit=<0|1>` recorded with
-        `default_failed_tests`; `default_failure_class=none|environmental`;
-        P39 verdict: PASS. A default-run failure is environmental only when its
-        sole failing test is `CI baseline parity`; a lone TC-WIRE-002 failure is
-        recorded and escalated per UG-1, never reclassified; TC-WIRE-002 in the
-        repository-local run fails the phase.
+        P39 (AC-NFR6-1 v1.1, both invocations on the same head):
+        `repo_local_exit=0` — authoritative, and any failure there, including a
+        repeated TC-WIRE-002, FAILS this phase; `default_exit` recorded with
+        `default_failed_tests` and the failing test names; `recorded_local=yes
+        (...)` and `recorded_default=yes (...)` both printed;
+        `default_failure_class=none|excused`
+        (base observation on 5372dbac: `default_exit=1`,
+        `default_failed_tests=2`, `default_failure_class=excused`,
+        `reason=only the two named default-only failures, repository-local
+        green`); when `excused`, `rerun_recorded=yes (...)` from
+        `/tmp/gh303/p39-rerun.txt`, which is required evidence and whose absence
+        yields `missing-rerun` and a FAIL. Any other default-run failure is
+        `default_failure_class=delivery` and fails the phase; nothing is
+        reclassified as environmental. The classifier tokens are the gate; if
+        the default run is fully green the printed verdict line mislabels the
+        `none` case (a shell-precedence quirk in the procedure), so record
+        `default_failure_class=none` and report the block for a test-plan fix
+        rather than waiving anything. P39 verdict: PASS
+      - >-
+        Post-commit verification (reported after this phase's commit, separate
+        from the pre-boundary gate list): re-run P34 -> the committed range now
+        reproduces the base..worktree set, i.e. `post_commit_check=identical`
+        along with `product_files=13/13`; a `DIFFERS` result means the commit
+        does not contain what the gate saw and must be reconciled. This check
+        gates the phase exit evidence and the PR, not the pre-commit boundary.
       - >-
         Regression sweep (no TC re-claimed): P01, P02, P03, P04, P05, P06, P07,
         P08, P09, P10, P11, P12, P13, P14, P15, P16, P17, P19, P20, P21, P22,
-        P23, P24, P25, P35, P36, P37, P40, P41 each re-run at the final HEAD and
-        each reporting PASS
+        P23, P24, P25, P35, P36, P37, P40, P41 each re-run in a fresh shell at
+        the final HEAD and each reporting PASS
       - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
       - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid, readyForDevelopment=true"
       - >-
         `./node_modules/.bin/delivery-os lint plan GH-303` -> verdict=valid with
         no error entry (write-time conformance, complementary to `lint GH-303`)
     definitionOfDone:
-      - "The pack README has thirteen contents rows including the new page, map rows for M2-S18 and M2-S19, the M2-S11 row pointing at `repos.v1`, and the planned-until-exit statement verbatim."
+      - "The pack README has thirteen contents rows including the new page, map rows for M2-S18 and M2-S19, the M2-S11 row pointing at `repos.v1`, the M2-S4 row carrying the advisory note verbatim, and the planned-until-exit statement verbatim."
       - "The milestone M2 index row reaches thirteen targets including `m2/commands/repos.md`, and the M0 and M1 rows are byte-identical to base."
-      - "`status.md` carries exactly one new dated section, positioned at EOF after a single blank separator line, with the six required anchors and no delivery or exit claim; every base line is retained in order and unmodified."
+      - "`status.md` carries exactly one new section, positioned at EOF after a single blank separator line, with a heading in the file's `## <title> (2026-11-11)` form, no `##` heading after it, the six counted anchors, and no delivery or exit claim; every base line is retained in order and unmodified."
       - "The command registry states the naming boundary once, carries the M2 `ados repos` row and the group-meaning `ados projects` row, keeps M3-S6 as the later hygiene subcommands, and changes no row outside the four permitted regions."
-      - "The naming boundary holds across all seventeen Appendix B regions: zero flat `projects list` statements, zero group-meaning `repos` statements, and eight both-name locations each stating the boundary."
-      - "Exactly thirteen product files changed, P34 confirms no path outside the manifest and a clean worktree, both aggregate runs are recorded with the repository-local run green, and the doc-distribution and forbidden-literals guards are green."
+      - "The naming boundary holds across all seventeen matrix regions: zero flat `projects list` statements, zero group-meaning `repos` statements, and all six both-name prose locations stating the boundary (the two index rows are link-only, TP-6). `board.md` is untouched and provably not flagged (TP-7)."
+      - "Exactly thirteen product files changed relative to base in the base..worktree manifest, P34 confirms no path outside the manifest, and after the commit P34's `post_commit_check=identical` confirms the committed range reproduces it."
+      - "Both aggregate runs are recorded on the same head with the repository-local run green and authoritative, the re-run record exists for any excused default-run failure, no default-run failure is unexcused, and the doc-distribution and forbidden-literals guards are green (AC-NFR6-1)."
       - "Release obligations are discharged as declarations: no tag, deployment, or tracker transition; `system_spec_update` records no required current-truth change and edits nothing; the PR is the orchestrator's step, not this phase's."
     coverage:
       acceptanceCriteria:
@@ -918,19 +1216,27 @@ phases:
         full: the content procedure(s) for each named finding, with their
         expected PASS tokens unchanged from the phase that first owned them
       - >-
-        P34 -> `product_files=13/13`; `expected_not_changed=0`;
-        `unexpected_changed` empty; `worktree_product_changes=0`;
-        P34 verdict: PASS
+        P34 (base..worktree containment, unchanged in policy) ->
+        `product_files=13/13`; `expected_not_changed=0`; `unexpected_changed`
+        empty; `other_scripts_changed=0`; P34 verdict: PASS; and after the
+        remediation commit `post_commit_check=identical`
       - >-
-        P32 -> `rows_with_survivors=0/17` with both self-tests detected; P45 ->
-        `matrix_rows_required=17/17` with both fixtures behaving; P33 ->
-        `boundary_locations=8/8`
+        P32 -> `matrix_rows=17`; `regions_empty=0`;
+        `rows_with_survivors=0/17` with `self_test_flat=detected`,
+        `self_test_group=detected`, `self_test_boundary_allowed=OK`,
+        `base_board_accepted=OK`; P45 -> `matrix_rows_required=17/17` with
+        `positive_fixture=OK` and `negative_fixture=detected`; P33 ->
+        `boundary_locations=6/6`
       - "P38 -> `dist_guard_exit=0`; `planning_markers=0`"
       - "P42 -> `forbidden_exit=0`; `violations=0`"
       - >-
-        P39 -> `repo_local_exit=0`; `default_exit` recorded with its failing
-        test names; `default_failure_class=none|environmental`; P39 verdict:
-        PASS (UG-1 applies unchanged)
+        P39 (AC-NFR6-1 v1.1 applies unchanged) -> `repo_local_exit=0` and
+        authoritative; `default_exit` recorded with its failing test names;
+        `default_failure_class=none|excused`; when `excused`,
+        `rerun_recorded=yes (...)` from the re-run record, which is required
+        evidence; any other default-run failure is `delivery` and fails the
+        phase. P39 verdict: PASS (same classifier-token rule as P5, including
+        the `none`-case verdict-line quirk)
       - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
       - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
     definitionOfDone:
