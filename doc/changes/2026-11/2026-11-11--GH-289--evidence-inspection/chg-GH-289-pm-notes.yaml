@@ -7,7 +7,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T17:53:04.940Z }
   delivery_planning: { started: null, completed: 2026-11-11T17:53:13.027Z }
   dor_check: { started: null, completed: 2026-11-11T18:02:22.552Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-11T19:49:54.370Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -228,75 +228,73 @@ notes:
       domain helper packages/core/src/domain/dispatch-attempts.ts
       (projectAttempt / orderAttempts / selectAttemptsPage, runtime-neutral
       UTF-8 byte length) and app read use case
-      packages/core/src/app/dispatch-attempts.ts (one readDispatchAttempts
-      call, ref and identity resolved before the store, state.* mapped with
-      kind state). Green: dispatch-attempts-contract 10/10,
-      dispatch-attempts-bounds 8/8, subpaths+content-inventory+
-      port-contract-inventory 21/21, pnpm check aggregate 7224 pass / 4 skip /
-      0 fail (exit 0, TMPDIR=$PWD/tmp/tmpdir). Deviation: the commit primitive
-      derives the subject and type deterministically from the latest completed
-      lifecycle phase (dor_check -> chore) and accepts only canonical lifecycle
-      phases in --phase, so the plan's declared feat(dispatch) subjects cannot
-      be produced without hand-composing a message; the actual subject is
-      recorded here instead."
+      packages/core/src/app/dispatch-attempts.ts (one readDispatchAttempts call,
+      ref and identity resolved before the store, state.* mapped with kind
+      state). Green: dispatch-attempts-contract 10/10, dispatch-attempts-bounds
+      8/8, subpaths+content-inventory+ port-contract-inventory 21/21, pnpm check
+      aggregate 7224 pass / 4 skip / 0 fail (exit 0, TMPDIR=$PWD/tmp/tmpdir).
+      Deviation: the commit primitive derives the subject and type
+      deterministically from the latest completed lifecycle phase (dor_check ->
+      chore) and accepts only canonical lifecycle phases in --phase, so the
+      plan's declared feat(dispatch) subjects cannot be produced without
+      hand-composing a message; the actual subject is recorded here instead."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 2 complete (commit a40c4bc8). The `dispatch attempts`
-      branch, its command-owned grammar (canonical ref, canonical decimal
-      limit 1..100 defaulting to 20, unknown flag, unexpected positional - all
-      input.value.rejected before any runtime call), `acceptsAnyFlag: true`
-      plus the handler guard that keeps the four delivered forms at
-      fallback.invocation, the bounded deterministic digest (summary line,
-      seven cells, closed corroboration derivation, truncation line with at
-      most 37 rows beside it, coverage/floor pointer, 40-line/8,192-byte
-      budget), the edge composition with optional attempts ports, the
-      production composition (persistence-disabled identity, no scheduler key,
-      local PM context seam), the harness invoke(), the production fixture and
-      the two digests. Green: attempts-ref 21/21, attempts-contract 15/15,
-      attempts-bounds 10/10, attempts-digest 10/10, attempts-refusals 5/5,
-      attempts-scope 4/4, taxonomy 3/3, additive-stability 10/10, the 416
-      delivered dispatch suites, error-table 102/102 plus sync, literals and
-      boundaries, and the aggregate pnpm check 7284 pass / 4 skip / 0 fail
-      (exit 0). Three deviations, all forced by delivered truth rather than
-      preference: (1) the release gate reds every boundary with a packages/
-      diff unless exactly one changeset is added, so
-      .changeset/gh-289-dispatch-attempt-read-side-minor.md landed here rather
-      than in phase 5, which now verifies it and keeps it byte-identical; the
-      plan's per-phase green invariant wins over the phase's file list. (2)
-      The delivered CommandResult envelope carries no `kind` field, so cell 7
-      asserts error.code fallback.invocation plus exit 1 plus a throwing store
-      seam instead of asserting `kind: fallback` (DoR residual risk R1). (3)
-      The delivered `state.permission.denied` row projects user-validation and
-      therefore exits 1, not 2; the store-fault cell asserts the delivered row
-      identity and its delivered projection, and this is recorded as a
-      spec-vs-code gap for @doc-syncer rather than fixed by adding a row."
+  - text: "Plan phase 2 complete (commit a40c4bc8). The `dispatch attempts` branch,
+      its command-owned grammar (canonical ref, canonical decimal limit 1..100
+      defaulting to 20, unknown flag, unexpected positional - all
+      input.value.rejected before any runtime call), `acceptsAnyFlag: true` plus
+      the handler guard that keeps the four delivered forms at
+      fallback.invocation, the bounded deterministic digest (summary line, seven
+      cells, closed corroboration derivation, truncation line with at most 37
+      rows beside it, coverage/floor pointer, 40-line/8,192-byte budget), the
+      edge composition with optional attempts ports, the production composition
+      (persistence-disabled identity, no scheduler key, local PM context seam),
+      the harness invoke(), the production fixture and the two digests. Green:
+      attempts-ref 21/21, attempts-contract 15/15, attempts-bounds 10/10,
+      attempts-digest 10/10, attempts-refusals 5/5, attempts-scope 4/4, taxonomy
+      3/3, additive-stability 10/10, the 416 delivered dispatch suites,
+      error-table 102/102 plus sync, literals and boundaries, and the aggregate
+      pnpm check 7284 pass / 4 skip / 0 fail (exit 0). Three deviations, all
+      forced by delivered truth rather than preference: (1) the release gate
+      reds every boundary with a packages/ diff unless exactly one changeset is
+      added, so .changeset/gh-289-dispatch-attempt-read-side-minor.md landed
+      here rather than in phase 5, which now verifies it and keeps it
+      byte-identical; the plan's per-phase green invariant wins over the phase's
+      file list. (2) The delivered CommandResult envelope carries no `kind`
+      field, so cell 7 asserts error.code fallback.invocation plus exit 1 plus a
+      throwing store seam instead of asserting `kind: fallback` (DoR residual
+      risk R1). (3) The delivered `state.permission.denied` row projects
+      user-validation and therefore exits 1, not 2; the store-fault cell asserts
+      the delivered row identity and its delivered projection, and this is
+      recorded as a spec-vs-code gap for @doc-syncer rather than fixed by adding
+      a row."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 3 complete (commit b95695dc). The resolve result carries
-      mode: \"local-evidence\" unconditionally, the divergence's own repository,
-      and the shared block; DispatchDivergenceBlock (reported, resolved,
-      unresolved, unresolvedIds, idsTruncated) is one domain computation
+  - text: "Plan phase 3 complete (commit b95695dc). The resolve result carries mode:
+      \"local-evidence\" unconditionally, the divergence's own repository, and
+      the shared block; DispatchDivergenceBlock (reported, resolved, unresolved,
+      unresolvedIds, idsTruncated) is one domain computation
       (summarizeRepositoryDivergences in domain/dispatch-gate.ts) consumed by
       foldEvidenceWindow and by resolveDispatchDivergenceEvidence, and the
       uncalled list-length helper plus its type are deleted from the app ledger,
       both barrels and the allowance. A blank/whitespace note is refused before
       any read or write; the 240-character clamp is preserved; replay stays an
       idempotent noop with unchanged counts; the summary's counts become
-      repository-scoped and its identifier list narrows to 20 with
-      idsTruncated; the one-line resolve digest is registered. Contract
-      fixture gains DispatchDivergenceBlock and DispatchResolveData in both
-      entries. Green: resolve-result 6/6, divergence-count 3/3, count-rule
-      6/6, resolve-composition 1/1, test-isolation 5/5, additive-stability 12/12,
-      the divergence regression suites 36/36, content-inventory and
-      port-contract 18/18, error-table sync 124/124, boundaries, and the
-      aggregate pnpm check 7306 pass / 4 skip / 0 fail (exit 0). Deviation:
-      none from the plan; the resolve performs one additional verified ledger
-      read to compute the block, which the one-read bound does not cover
-      (NFR-2 bounds `attempts`)."
+      repository-scoped and its identifier list narrows to 20 with idsTruncated;
+      the one-line resolve digest is registered. Contract fixture gains
+      DispatchDivergenceBlock and DispatchResolveData in both entries. Green:
+      resolve-result 6/6, divergence-count 3/3, count-rule 6/6,
+      resolve-composition 1/1, test-isolation 5/5, additive-stability 12/12, the
+      divergence regression suites 36/36, content-inventory and port-contract
+      18/18, error-table sync 124/124, boundaries, and the aggregate pnpm check
+      7306 pass / 4 skip / 0 fail (exit 0). Deviation: none from the plan; the
+      resolve performs one additional verified ledger read to compute the block,
+      which the one-read bound does not cover (NFR-2 bounds `attempts`)."
     type: info
     date: "2026-11-11"
-  - text: "Plan phase 4 complete (commit 9d56ebeb). The mount unit landed whole:
-      the `dispatch` family entry gains the `dispatch attempts [--ref <ref>]
+  - text: "Plan phase 4 complete (commit 9d56ebeb). The mount unit landed whole: the
+      `dispatch` family entry gains the `dispatch attempts [--ref <ref>]
       [--limit <n>]` usage line, both options and one example; a fifth entry at
       `dispatch attempts` carries its summary, usage, both options, examples and
       the M2 see-also target pageIn(M2_REFERENCE_ROOT, \"attempts\"); the
@@ -305,12 +303,44 @@ notes:
       parity pin moves from four to five with its title stating five; the help
       inventory asserts the five-entry list plus the new entry's usage/option/
       example cells; the poisoned-composer set gains `dispatch attempts --help`;
-      and tests/structure/dispatch-attempts-composition.test.ts pins the pointer,
-      both help surfaces, the seventeen-family root listing, and the absence of
-      gate keys on the read side. Green: pnpm check:help, the six named help/
-      parity/inventory/composition suites 23/23, cli typecheck, boundaries,
-      lint and format; the M1 dispatch page is byte-unchanged (empty diff). Per
-      the plan's gate choice the aggregate pnpm check is not re-run here; it
-      re-runs on the final tree at phase 5."
+      and tests/structure/dispatch-attempts-composition.test.ts pins the
+      pointer, both help surfaces, the seventeen-family root listing, and the
+      absence of gate keys on the read side. Green: pnpm check:help, the six
+      named help/ parity/inventory/composition suites 23/23, cli typecheck,
+      boundaries, lint and format; the M1 dispatch page is byte-unchanged (empty
+      diff). Per the plan's gate choice the aggregate pnpm check is not re-run
+      here; it re-runs on the final tree at phase 5."
+    type: info
+    date: "2026-11-11"
+  - text: "Plan phase 5 complete (commit 6bd89e5f). Reconciliation and release
+      evidence: the M2 attempts page is the delivered reference page (--help and
+      --version, the resolved exit table with no attempts.* rows and empty
+      history at exit 0, the delivered five-field CommandResult example with no
+      invented command field, singular divergenceRef, the declared digest with
+      its truncation line and coverage/floor pointer, stated bounds, Proposed
+      (M2) retained); the M2 attempts.v1 statement is refined (sixteen-field
+      projection, singular reference, unconditional mode, repository-scoped
+      counts with idsTruncated, read bounds, no error identity); the five system
+      specs are reconciled (dispatch-engine grammar plus a read-side section,
+      resolve fields, error reuse and bounds; result-contract one clarifying
+      sentence and no row change; cli-entrypoint subform; state-layer
+      store-opening consumer; projects read-only sentence) with last_updated
+      advanced and GH-289 appended to related_changes on every edited page and
+      TDR-0023 cited; the quality test-spec gains the new coverage rows and
+      GH-289; backlog/status/registry/entrypoint-delta record the delivery; the
+      taxonomy scan gained the two doc/spec targets; the changeset added in
+      phase 2 is verified as the single added five-package minor; test-plan
+      section 10 carries the suite, gate, P1-P4, review and measured rows (p95
+      6.3 ms). P1-P4 executed as temporary local edits, each red under the
+      configuration that must red and restored green; P3 red TC-ATTEMPT-012 but
+      not TC-ATTEMPT-011 because that cell exercises the physical project root,
+      which the logical-filter mutation leaves intact. Green on the final tree:
+      aggregate pnpm check 7312 pass / 4 skip / 0 fail (exit 0), plan validate
+      verdict valid, doc conformance 11/11, privacy-literals 0 violations,
+      forbidden literals clean, git diff --check clean. Deviation: the M2 page
+      states the delivered envelope shape (no command field) instead of the
+      pack's command: \"dispatch\" example, per DoR residual risk R2; and the
+      page states a state fault follows that row's delivered projection because
+      state.permission.denied exits 1."
     type: info
     date: "2026-11-11"
