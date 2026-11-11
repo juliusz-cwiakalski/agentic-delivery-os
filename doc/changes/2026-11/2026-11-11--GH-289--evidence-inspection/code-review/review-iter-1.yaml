@@ -1,0 +1,321 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-289
+branch: feat/GH-289/evidence-inspection
+status: FAIL
+summary: >-
+  First local review of GH-289 (M2-S12), 22 commits over merge base 723454e4.
+  No product defect and no AC contradicted by shipped behaviour: the read side is
+  a pure domain projection over an injected app use case, the attempts grammar is
+  validated in the command module before any runtime call, repository scope is
+  enforced physically and logically with count-only foreign disclosure, one
+  exported domain function now produces the divergence block for both the resolve
+  result and the summary with the list-length helper deleted, and every GH-289
+  suite and every change-relevant gate is green when re-run (56 + 30 + 33 targeted
+  suite tests, 457 dispatch regression tests, 171 inventory/registry tests, typecheck,
+  boundaries, help coverage, exports parity, literal/privacy scans, doc-distribution).
+  The change fails this iteration on evidence quality: four medium findings show
+  delivered assertions narrower than the test plan declares inside TCs that carry AC
+  evidence (the attempts envelope key set is never asserted, TC-022 omits its
+  unmigrated-root baseline and the narrowed human unresolved_divergences= line,
+  TC-014 omits its append/fence counters, sha256 evidence, torn-binding cell and
+  project-marker cell, and TC-029 step 3 neither implements nor asserts the attempts
+  help pointer). Six low findings cover a spec AC that contradicts the digest grammar
+  (AC-F2-2), reduced TC-039/TC-038/TC-036 coverage, a duplicated flag vocabulary in the
+  command module, and one undeclared phase-3 file. All findings are remediable inside
+  the change's declared file scope in review_fix without new scope and without
+  behaviour change.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 4
+  low: 6
+  info: 5
+spec_compliance: FAIL
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: test-plan-alignment
+    location: tests/behaviour/dispatch-attempts-contract.test.ts:326
+    message: >-
+      TC-028 step 2 and spec Appendix D are normative on the attempts envelope
+      ("exactly eight always-present keys plus truncation only when a bound
+      binds"), but the delivered cell only scans for the five forbidden gate keys
+      at any depth. No test asserts Object.keys(data) for the attempts envelope, so
+      an undeclared envelope key (ok, kind, command, refs[], a stray truncated)
+      would pass. Row-level closure is asserted at :212.
+    suggestion: >-
+      Add an exact sorted envelope key-set assertion for a page with and without a
+      bound binding (a row-limited page and a ledger-truncated read), pinning the
+      truncation presence rule as well.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: test-plan-alignment
+    location: tests/behaviour/dispatch-divergence-count.test.ts:43
+    message: >-
+      Two declared TC-022 cells are absent. (a) No unmigrated-root baseline proves
+      the repository scope moves nothing where nothing is foreign (28/3/25), so
+      AC-F7-1's "unchanged on an unmigrated root" half has no suite cell; every
+      fixture is migrated or tiny. (b) The human unresolved_divergences= line is
+      never asserted for the over-20 case (TC-022 step 2, TC-028 step 4), although
+      the renderer prints unresolvedIds correctly at dispatch-text.ts:73.
+    suggestion: >-
+      Add a 25-open + 3-resolved no-foreign fixture asserting 28/3/25 with
+      idsTruncated true, and a text-form assertion on the >20 block whose
+      unresolved_divergences= value equals unresolvedIds.join(",").
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: test-plan-alignment
+    location: tests/behaviour/dispatch-attempts-scope.test.ts:146
+    message: >-
+      TC-014 declares counters, sha256 evidence, a torn-binding-marker cell, a
+      project-checkout-identity-marker cell, both invocations and host-index write
+      counts. Delivered asserts only size:mode:mtimeMs equality over ledger* files,
+      record counts and binding-marker absence. Missing: append/acquireFence/
+      releaseFence counters on a successful read, sha256 ("bytes unchanged" is
+      nominal against TR-2), the torn-binding cell, the project-marker cell
+      (projectIdentityMarker() is exposed but never called; readStoreFile is exported
+      and unused), the second (text) invocation, and the host-index write count.
+    suggestion: >-
+      Wire the existing capabilities, or narrow the TC-014 steps and the plan's
+      expected outcome to what is asserted.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: test-plan-alignment
+    location: tests/structure/dispatch-attempts-composition.test.ts:32
+    message: >-
+      TC-029 step 3 requires the dispatch attempts help entry to name
+      "dispatch dual-run summary --repo <repo>", and the test docstring plus test-plan
+      section 10 claim both help surfaces do. The assertion only checks the entry's
+      summary contains "attempt" and the delivered entry (packages/cli/src/help.ts:435)
+      names no summary. AC-F7-2 is still satisfied through the family entry's usage
+      line, so this is an evidence/wording defect, not a behaviour break.
+    suggestion: >-
+      Add one pointer line to the attempts help entry and assert it in TC-029 step 3,
+      or correct the docstring and the section 10 row to "the family help entry".
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/chg-GH-289-spec.md:448
+    message: >-
+      AC-F2-2 requires "all three [instants] are printed unmodified in text", while
+      F-6, AC-F6-1 and the golden digest row print only startedAt. The two criteria
+      contradict each other and the implementation follows the specific one; TC-007
+      correctly asserts only the machine values plus the first cell.
+    suggestion: >-
+      Correct AC-F2-2 to "the digest prints startedAt unmodified" and record it in
+      spec section 25. No code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: test-plan-alignment
+    location: tests/behaviour/dispatch-attempts-ref.test.ts:192
+    message: >-
+      TC-039 declares six ref-shape cells (241, gh-241, GH-, GH241, GH-241-extra,
+      ""), a refusal-summary naming assertion and a byte-identical store snapshot;
+      delivered covers one ref cell, the unknown flag and one positional, with an
+      append counter in place of the byte comparison. The AC-F1-6 identity (exit 1,
+      input.value.rejected, zero reads, no attempts.*) is asserted.
+    suggestion: >-
+      Extend the cell list to the declared shapes, assert the summary names the
+      supplied value, and either restore the byte comparison or declare the counter
+      as the observable.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: test-plan-alignment
+    location: tests/structure/dispatch-attempts-count-rule.test.ts:24
+    message: >-
+      TC-038 declares an AST parse with an import-graph scan, step 5 (the signature
+      admits a repository scope and both call sites pass one) and a repo-wide absence
+      scan. Delivered is substring scans over two files plus a five-file absence list,
+      including a formatting-sensitive string check. The behavioural half is strong.
+    suggestion: >-
+      Either implement step 5/6 as declared with file:line reporting, or narrow the
+      TC-038 steps and the section 8.4 note to the delivered string-scan discipline.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: test-plan-alignment
+    location: tests/checks/dispatch-attempts-test-isolation.test.ts:23
+    message: >-
+      TC-036 scans "every new suite" but NEW_SUITES lists 11 of 13 new suites;
+      tests/structure/dispatch-attempts-composition.test.ts is omitted (it routes
+      through the approved base, so no violation exists — the scan is incomplete).
+    suggestion: Add the composition suite to NEW_SUITES.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/dispatch.ts:117
+    message: >-
+      DELIVERED_FLAGS re-declares the definition's flag vocabulary instead of deriving
+      it from flags plus requiresValue. A future declared flag that is not added here
+      is silently refused as fallback.invocation on all four delivered forms.
+    suggestion: >-
+      Derive the allowed set from the definition, or add a structural assertion that
+      the two agree with a comment naming the coupling.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/chg-GH-289-plan.yaml
+    message: >-
+      Plan scope alignment is otherwise exact, but phase 3 (commit b95695dc) modified
+      tests/behaviour/dispatch-additive-stability.test.ts, which only phase 2 declares.
+      The plan itself assigns TC-034 cells 2-3 to phase 3, so the declaration is the
+      omission rather than the edit.
+    suggestion: >-
+      Add that suite to phase 3 scope, or record that phases 2 and 3 intentionally
+      co-own it.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: I-1
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/chg-GH-289-spec.md:457
+    message: >-
+      AC-F4-3 says a permission-denied read exits 2; the delivered
+      state.permission.denied row projects user-validation and exits 1, and the
+      reconciled pages state that truth. Declared as a delivery deviation; the spec AC
+      was not corrected, so the criterion is not satisfied as written.
+    suggestion: >-
+      Correct AC-F4-3 to "each exits with that row's delivered projection". No code
+      change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: I-2
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/dispatch.ts:220
+    message: >-
+      positionals.max = 3 means a tail longer than "dispatch attempts a b" is refused
+      by the shared parser as fallback.invocation rather than by the module grammar as
+      input.value.rejected. AC-F1-6's single-positional cell is satisfied.
+    suggestion: Optional — raise the positional ceiling or document the boundary.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: I-3
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/core/src/app/dispatch-attempts.ts:63
+    message: >-
+      The unresolvable-identity refusal names "this checkout" generically where spec
+      section 10 says the summary should name the checkout; the context refusal does
+      name its file. AC-F3-3 is satisfied in substance.
+    suggestion: Optional — interpolate the checkout path through an injected port.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: I-4
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/output/dispatch-text.ts:99
+    message: >-
+      utf8Bytes duplicates the domain utf8Length (domain/dispatch-attempts.ts:36):
+      two implementations of one declared bound.
+    suggestion: Optional — export the domain helper and consume it in the renderer.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: I-5
+    severity: info
+    confidence: high
+    category: environment
+    location: pnpm check
+    message: >-
+      The aggregate re-run on this loaded host finished 7288 pass / 4 skip / 24 fail,
+      and every failure is a 5 s-budget timeout in a suite this change does not touch
+      (closeout, capsule, watchdog, privacy, forbidden-literals); privacy-ci-wiring
+      passes 14/14 alone and 7288 + 24 = 7312, the delivered pass count.
+    suggestion: >-
+      The runner must re-run the aggregate on a quiet host before dod_check; do not
+      read this review's aggregate failure count as a regression.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-11T22:30:00Z
+next_step: >-
+  CALL_CODER — review_fix with F-1..F-10 (five suites plus one fixture, one help line,
+  the DELIVERED_FLAGS derivation, AC-F2-2/AC-F4-3 wording, one phase-3 scope row), then
+  re-review as iteration 2. I-1..I-5 need no code change. No remediation phase was
+  appended to chg-GH-289-plan.yaml in this review session by instruction; the review
+  artifacts are review-iter-1.md and review-iter-1.yaml.
