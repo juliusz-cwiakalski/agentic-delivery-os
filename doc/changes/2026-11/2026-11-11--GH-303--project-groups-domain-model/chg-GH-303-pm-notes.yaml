@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-11T10:03:49.191Z }
   specification: { started: null, completed: 2026-11-11T10:09:57.996Z }
   test_planning: { started: null, completed: 2026-11-11T10:40:55.347Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-11T10:47:01.075Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -141,5 +141,29 @@ notes:
       record both runs, and treat a repeat in the repo-local run as a delivery
       failure to investigate — never reclassify it as environmental without
       evidence."
+    type: "risk"
+    date: "2026-11-11"
+  - text: "Delivery planning complete: chg-GH-303-plan.yaml — 6 phases (P1 backlog,
+      P2 architecture+contracts, P3 command pages+seeds+journey+delta, P4
+      forbidden-literals registry row, P5 indices+status+command registry+final
+      battery, P6 conditional review remediation). Every phase declares scope
+      files, dependsOn, gates with expected tokens, and definitionOfDone; 45/45
+      ACs and 45/45 TCs claimed exactly once. `plan validate` verdict=valid,
+      readyForDevelopment, exit 0; `lint plan` errors=[]. Two deliberate
+      deviations, both declared: the registry row (P4) is sequenced before the
+      index/status commit because the forbidden-literals guard fails closed on
+      an unregistered doc, and `plan diff` is declared unavailable (the
+      runtime's diff port rejects in this checkout) so P34's branch-diff
+      manifest is the sole containment oracle."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Upstream gap UG-1 carried into delivery and quality gates: AC-NFR6-1
+      exempts only a lone ci-baseline-parity failure, but the base tree also
+      fails TC-WIRE-002 standalone in both TMPDIR modes while passing in-suite.
+      The plan requires the repository-local full-suite run to be green,
+      escalates a repeat there as a gate defect, and never reclassifies a
+      default-run occurrence without evidence. UG-2 (which S18 seed carries
+      which topic) is treated as a seed-set property; UG-3 (NFR-3 beyond the P36
+      claim vocabulary) is declared residual for @reviewer."
     type: "risk"
     date: "2026-11-11"

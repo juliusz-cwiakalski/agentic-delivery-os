@@ -1,0 +1,942 @@
+# GH-303 implementation plan — amend the M2 plan to a three-level domain model
+# (repository, project, optional workspace) with project groups and
+# cross-repository changes.
+#
+# Plan revision: v1.0 (2026-11-11). Aligned to spec v1.0 (45 ACs: 33 functional
+# + 12 non-functional, Appendix A 26-clause oracle, Appendix B 16-row naming
+# matrix walked as 17 regions, Appendix C 13-file manifest, Appendix D gate
+# record) and test plan v1.0 (45 TCs TC-M2DOM-001..045, procedures P00..P45,
+# every procedure executed against base 5372dbac before any product edit).
+#
+# Sources (single source of truth):
+#   - Spec: ./chg-GH-303-spec.md v1.0 — F-1..F-14, NFR-1..NFR-12, DM-1..DM-8,
+#     DEC-1..DEC-17, RSK-1..RSK-12, AC-F1-1..AC-F14-2, AC-NFR1-1..AC-NFR12-1,
+#     §17.3 DoD, Appendices A-D.
+#   - Test plan: ./chg-GH-303-test-plan.md v1.0 — 45 TCs, procedures P00..P45 in
+#     §7.1, §7.2 TC -> procedure map, §1.2 declared gaps G-1..G-10, §8.4
+#     interpretation decisions TP-1..TP-5, §10 base-tree execution log.
+#   - PM notes: ./chg-GH-303-pm-notes.yaml — docs-only autonomous delivery, the
+#     `repos`/M3-S6 name resolution, the entrypoint-delta reading, the derived
+#     index and registry scope, the flat-envelope contract name, and the
+#     observed guard/TMPDIR facts.
+#   - Ticket: juliusz-cwiakalski/agentic-delivery-os#303 — normative clause
+#     source for the M2-S11 amendment and the S18/S19 story text.
+#   - Base revision: 5372dbac (= origin/main-tools). Every preservation oracle
+#     compares against it. Branch: docs/GH-303/project-groups-domain-model.
+#
+# Change shape: docs-only. Exactly thirteen product files change — twelve under
+# doc/planning/oss-tooling/** (eleven modified plus the new
+# milestones/m2/commands/repos.md) and scripts/checks/forbidden-literals.registry.json
+# (one registration row, 139 -> 140). No file changes under doc/spec/**,
+# doc/overview/**, doc/guides/**, doc/templates/**, packages/**, tests/**,
+# .opencode/**, .ai/**, or any other scripts/** path. The workflow phase
+# `system_spec_update` records "no current-truth change required" and edits
+# nothing (DEC-17, NFR-1). doc/changes/** artifacts are change evidence and
+# never count toward the 13-file budget.
+#
+# Six phases, one Conventional Commit each via the `commit` primitive; no
+# hand-authored git command, no manual staging, no phase-state edit. Five phases
+# are unconditional and map one-to-one onto the requested deliverable set; P6 is
+# the conditional post-review remediation phase and stays closed unless a review
+# verdict names a product-file defect.
+#   P1  backlog.md (S11 amendment, context paragraph, S18 + S19)      (a)
+#   P2  architecture.md + contracts.md                                (b)
+#   P3  commands/repos.md (new) + commands/projects.md + seeds +
+#       journeys.md + entrypoint-delta.md                             (c)
+#   P4  forbidden-literals.registry.json (one row)                    (e)
+#   P5  m2/README.md + milestones/README.md + status.md +
+#       cli-command-registry.md + the final verification battery      (d)
+#   P6  conditional review remediation (opened only on a FAIL verdict)
+#
+# Ordering note (binding, see orderingConstraints): the requested deliverable
+# set lists the indices/status/registry commit before the forbidden-literals row.
+# That order is not executable here: the guard fails closed on an unregistered
+# user-facing doc, so from the moment milestones/m2/commands/repos.md exists
+# (P3) until its registration lands (P4) the forbidden-literals guard and
+# therefore `pnpm check` are red by construction. P4 is sequenced immediately
+# after P3, P3 and P4 land back-to-back with no intervening commit, and P3
+# claims no guard gate. Every other phase boundaries on a guard-green tree.
+#
+# TC mapping (all 45, each claimed exactly once; TC <-> AC is 1:1 per test plan
+# §3.1, so AC coverage is the same partition):
+#   P1 (10): 001, 002, 003, 005, 006, 008, 009, 010, 035, 041
+#   P2 (10): 004, 007, 011, 012, 013, 014, 015, 016, 017, 040
+#   P3 ( 8): 019, 020, 021, 022, 023, 024, 025, 036
+#   P4 ( 1): 037
+#   P5 (16): 018, 026, 027, 028, 029, 030, 031, 032, 033, 034, 038, 039, 042,
+#            043, 044, 045
+#   P6 ( 0 claimed): re-proves without re-claiming; a remediated artifact's TC
+#            moves to P6 only if the remediation re-delivers it, and the plan is
+#            revised in the same commit so the mapping stays 45/45 exactly once.
+# (10+10+8+1+16 = 45; set difference against 001..045 is empty.)
+#
+# This plan declares phases, scope, goals, gates, and done-conditions only. It
+# records no progress and carries no task log: phase state belongs in
+# chg-GH-303-pm-notes.yaml, progress in a pm-notes `notes:` entry.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-303
+tier:
+  name: lite
+  phases: [1, 2, 3, 4, 5, 6]
+  escalationTriggers:
+    - >-
+      The product-file diff is not exactly the thirteen paths of Appendix C
+      (twelve planning documents plus the forbidden-literals registry), or any
+      path appears under doc/spec/, doc/overview/, doc/guides/, doc/templates/,
+      packages/, tests/, .opencode/, .ai/, or scripts/ other than that one
+      registry file (P34, NFR-1, AC-NFR1-1)
+    - >-
+      A backlog hunk falls outside the M2-S11 entry, the one added Epic M2
+      context paragraph, or the two inserted entries; the block-closing blank
+      line, the `---` separator, or the `## Epic M3` heading changes; or a
+      third heading is added (P08, P10, P35, AC-F4-1, AC-F4-3, AC-NFR2-1)
+    - >-
+      The 26-clause clause table loses a row or any clause is missing, added, or
+      softened; or M2-S11's retained state-scoping, host-index, migration, test,
+      or collision clause is weakened, merged, or moved (P01, P02, P41,
+      AC-F1-1, AC-F1-2, AC-NFR8-1)
+    - >-
+      The mixed-tracker clause is softened, or `not-yet-supported` is absent
+      from either the S18 entry or contracts.md, or the validation-time /
+      "rather than rejected" wording is missing (P04, AC-F2-2, RSK-4)
+    - >-
+      `projects list` survives anywhere as the flat enumeration, `repos` or
+      `repos list` is used for a group, or any Appendix B location is not in its
+      required state (P32, P33, P45, AC-F14-1, AC-F14-2, AC-NFR12-1)
+    - >-
+      Either command page loses the exact header `Status: Proposed (M2)`, a page
+      claims registration at the root listing, the flat surface appears on the
+      projects page's contract pointers or envelope keys, or a page is
+      relabelled as a snapshot (P20, P21, P36, AC-F7-2, AC-F7-3, AC-NFR3-1)
+    - >-
+      The flat contract is not named `repos.v1`, the group envelope carries a
+      group-named key denoting a repository, or the configuration schema loses
+      the optional workspace root or the mixed-kind rule (P14, P15, P16,
+      AC-F6-1, AC-F6-2, AC-F6-3, RSK-3)
+    - >-
+      `registered` is not exactly 140 entries, the new row is not
+      `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, it is not
+      between the `queue.md` and `spend.md` entries, a duplicate exists, or the
+      guard reports an unregistered doc or a violation (P37, P42, AC-NFR4-1,
+      AC-NFR9-1)
+    - >-
+      A base status.md line is removed, reordered, or modified, or an added line
+      falls before the single blank separator line that precedes the one new
+      dated section (P29, P44, AC-F12-2, AC-NFR11-1)
+    - >-
+      The M2 pack contents table is not thirteen rows, the story-to-artifact map
+      lacks an M2-S18 or M2-S19 row, the M2-S11 row does not point at `repos.v1`,
+      the milestone M2 index row reaches fewer than thirteen targets, or the M0
+      or M1 rows change (P26, P27, AC-F11-1, AC-F11-2)
+    - >-
+      The command registry keeps the old "distinct surfaces" boundary note, has
+      no M2 `ados repos` row, attributes the group surface to the old
+      workstation-overview meaning, leaves the M3-S6 row unattributed as later
+      `repos` subcommands, or changes any row outside the four permitted regions
+      (P30, P31, AC-F13-1, AC-F13-2)
+    - >-
+      A scenario seed lacks exactly one `Assert:` line or carries two, fewer
+      than two S18 or two S19 seeds exist, an S11 seed still asserts a flat
+      `projects list`, or an S18/S19 coverage anchor is missing (P22, P23,
+      AC-F8-1, AC-F8-2)
+    - >-
+      The structural diagram read fails on any touched file: an odd fence count,
+      an untagged diagram, a first body line outside the allowed keyword set,
+      a duplicated C4 heading, or other than eight `###` headings under
+      `## Key flows` each owning one block (P40, AC-NFR7-1, RSK-9)
+    - >-
+      The repository-local-TMPDIR `pnpm check` is non-zero; the default-TMPDIR
+      run fails on anything other than the lone tests/checks/ci-baseline-parity.test.ts
+      failure; either run is left unrecorded; or the known TC-WIRE-002 timing
+      sensitivity is reclassified as environmental instead of re-run and
+      escalated (P39, AC-NFR6-1, UG-1)
+    - >-
+      `bash scripts/.tests/test-doc-distribution.sh` is non-zero under the
+      default TMPDIR, or any planning document gains an `ados_distribution`
+      marker (P38, AC-NFR5-1)
+    - >-
+      The spec or test plan is revised past the versions this plan cites, or the
+      base advances past 5372dbac: re-read the reopened procedures, re-run P00
+      and every affected gate, refresh the pins in this plan, and revise the
+      plan rather than mixing revisions (TR-9)
+defaultLeases:
+  - "repo:main-tools"
+defaultWeightClass: standard
+sources:
+  spec:
+    path: ./chg-GH-303-spec.md
+    version: "1.0"
+  testPlan:
+    path: ./chg-GH-303-test-plan.md
+    version: "1.0"
+    procedures: P00..P45
+    testCases: TC-M2DOM-001..TC-M2DOM-045
+  pmNotes: ./chg-GH-303-pm-notes.yaml
+  ticket: "juliusz-cwiakalski/agentic-delivery-os#303"
+  baseRevision: 5372dbac
+changeShape:
+  docsOnly: true
+  productFiles: 13
+  planningDocuments: 12
+  newFiles:
+    - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+  guardRegistryRows: 1
+  unchangedRoots:
+    - doc/spec/**
+    - doc/overview/**
+    - doc/guides/**
+    - doc/templates/**
+    - packages/**
+    - tests/**
+    - .opencode/**
+    - .ai/**
+  systemSpecUpdate: "records that no current-truth change is required; edits nothing (DEC-17)"
+commitConvention:
+  oneCommitPerPhase: true
+  subjectTemplate: "docs(GH-303): followed by the phase's one-line summary"
+  mechanism: "the `commit` primitive, driven by the phase `summary`; never a hand-authored git command"
+  forbidden:
+    - "manual `git add` / `git commit` / `git stash`"
+    - "hand-edited phase state or completion markers"
+    - "a second commit inside one phase to hide a failed gate"
+  phaseState: "`phase complete GH-303 delivery` at the lifecycle boundary; `phase list` to read state"
+gateCommands:
+  planSchema:
+    command: "./node_modules/.bin/delivery-os plan validate GH-303"
+    expectation: "verdict=valid, readyForDevelopment=true, totalErrors=0"
+  planConformance:
+    command: "./node_modules/.bin/delivery-os lint GH-303"
+    expectation: "exit 0 (pm-notes and plan conformance)"
+  containment:
+    command: "none — P34 is the containment oracle"
+    expectation: >-
+      `plan diff` is not usable in this checkout: the composed runtime returns
+      an unreadable diff port (`input.value.rejected`, "repository diff for
+      GH-303 could not be read"), so the command is declared unavailable rather
+      than declared green. P34's branch-diff manifest is the authoritative
+      containment check and the reviewer re-reads the diff at phase 8.
+  docDistribution:
+    command: "env -u TMPDIR bash scripts/.tests/test-doc-distribution.sh"
+    tmpdir: "default (unset / environment TMPDIR)"
+    expectation: "exit 0; 0 planning markers (P38)"
+  forbiddenLiterals:
+    command: "bun run scripts/checks/forbidden-literals.ts"
+    expectation: "exit 0; 140 registered entries; 0 unregistered-doc findings; 0 violations (P42)"
+  aggregateGateAuthoritative:
+    command: "mkdir -p \"$REPO_ROOT/tmp/tmpdir\" && TMPDIR=\"$REPO_ROOT/tmp/tmpdir\" pnpm check"
+    tmpdir: "repository-local (repo/tmp/tmpdir), required because tests/checks/ci-baseline-parity.test.ts runs `git clone --local` and a tmpfs TMPDIR fails with a cross-device hardlink"
+    expectation: "exit 0 (P39, AC-NFR6-1)"
+  aggregateGateRecorded:
+    command: "env -u TMPDIR pnpm check"
+    tmpdir: "default (environment TMPDIR)"
+    expectation: >-
+      recorded with its failing test names; only a lone
+      tests/checks/ci-baseline-parity.test.ts failure is environmental. Any
+      other default-run failure is a delivery failure, except that a lone
+      TC-WIRE-002 (tests/checks/privacy-ci-wiring.test.ts) failure is recorded,
+      re-run in isolation on a quiet machine, and escalated per UG-1 — never
+      reclassified.
+  tmpdirRule: >-
+    The two doc guards have opposite TMPDIR requirements in this environment and
+    are invoked per guard as above; the environment is never changed to make a
+    guard pass, and both aggregate runs are recorded in the delivery evidence
+    (DEC-16, NFR-5, NFR-6).
+orderingConstraints:
+  - "P1 -> P2 -> P3 -> P4 -> P5. P3 and P4 are adjacent by construction: the forbidden-literals guard is red between the new page (P3) and its registration (P4)."
+  - "P2 precedes P3 because both command pages, the seeds, and the journey point at `repos.v1`, the group envelope, and the configuration schema that P2 lands; a forward reference would make P43 fail at the P3 boundary."
+  - "P2 precedes P1 only in reader order, not in commit order: P1 lands the story codes that P2's map rows and contracts cite, and P4 is independent of P5 except for the entry count."
+  - "P5 runs last because P34 requires all thirteen product files to be present and the worktree clean (`worktree_product_changes=0`), and P26/P27/P32/P33/P45/TM-034 need every artifact in place."
+  - "P6, when opened, runs after the review verdict and before the PR; it adds no product path and no phase except itself."
+  - "`plan diff` is unavailable in this checkout (the composed runtime returns an unreadable diff port), so P34's branch-diff manifest is the sole containment oracle; the reviewer additionally re-reads the change diff at phase 8."
+crossArtifactResolutions:
+  note: >-
+    The test plan flags five places where two artifacts pull in different
+    directions (TP-1..TP-5, test plan §8.4). Each is resolved here by naming the
+    governing AC/TC and the phase that owns the gate; none is silently absorbed
+    and none requires a spec change.
+  TP-1:
+    tension: "AC-F12-2 and AC-NFR11-1 both govern status.md line retention, so a naive mapping yields two test cases over one predicate."
+    governing: "AC-F12-2 (TC-M2DOM-029) and AC-NFR11-1 (TC-M2DOM-044)."
+    resolution: >-
+      Kept as two TCs by predicate, not collapsed: TC-029 owns presence, order,
+      and addition confinement; TC-044 owns byte identity plus the oracle's
+      soundness (delete, modify, swap, outside-insertion mutants) and the
+      explicit "no whole-section cmp" clause. Both execute at P5 because
+      status.md lands there; the plan gates them as a pair and never asserts a
+      whole-section comparison anywhere.
+  TP-2:
+    tension: "AC-F3-3 and AC-F6-4 both describe the cross-repository change plan shape in contracts.md."
+    governing: "AC-F3-3 (TC-M2DOM-007) and AC-F6-4 (TC-M2DOM-017)."
+    resolution: >-
+      Split by direction inside P2: TC-007 traces the six S19 task clauses
+      forward (clause -> contract) and TC-017 asserts the shape's seven declared
+      elements backward (contract -> fields). AC-F3-3 cannot pass before
+      contracts.md exists, so its TC is owned by P2 even though the S19 entry
+      lands in P1; the overlap is declared, not double-counted.
+  TP-3:
+    tension: "AC-F7-3 forbids the flat enumeration on the projects page while AC-F14-2 requires every both-name location to state the boundary, so a literal word ban on `repos` would make the two criteria mutually unsatisfiable."
+    governing: "AC-F7-3 (TC-M2DOM-021) and AC-F14-2 (TC-M2DOM-033)."
+    resolution: >-
+      The projects page MUST name `repos` in its boundary sentence; the ban is
+      on attaching the enumeration to `projects`. P21 therefore tests contract
+      pointers and envelope keys (`repos.v1`, `repos[]`, `projects.v1`,
+      `projects[]`) rather than the bare word, and P33 positively requires the
+      boundary sentence at the eight both-name locations. Both gates run at the
+      phases that own them (P3 for P21, P5 for P33).
+  TP-4:
+    tension: "NFR-7 states `## Key flows` holds exactly eight `###` headings while the base tree has seven."
+    governing: "AC-NFR7-1 (TC-M2DOM-040), with AC-F5-3 (TC-M2DOM-013)."
+    resolution: >-
+      Seven to eight is treated as the derived consequence of the new
+      cross-repository flow, not as an unexplained constant. P13 proves the flow
+      exists and P40 records both the base seven and the head eight; a missing
+      flow therefore fails as a count mismatch. P40 is claimed at P2, where the
+      only diagram-bearing file is touched, and re-run at P5 over the full
+      touched set without re-claiming TC-040.
+  TP-5:
+    tension: "F-12/AC-F12-1 fix neither the new status section's title nor its exact date text."
+    governing: "AC-F12-1 (TC-M2DOM-028) and AC-F12-2 (TC-M2DOM-029)."
+    resolution: >-
+      The plan pins only the leading date token `2026-11-11` in the new section
+      heading, for auditability. The rest of the heading is the author's choice:
+      P28 derives the section positionally as the first `##` heading present in
+      the head and absent from the base, and requires uniqueness, so a second
+      new section fails and no fixed title string is asserted.
+upstreamGaps:
+  - id: UG-1
+    severity: high
+    summary: >-
+      NFR-6 / AC-NFR6-1 exempt only a lone tests/checks/ci-baseline-parity.test.ts
+      failure from a default-TMPDIR aggregate run, but the observed base tree
+      also fails TC-WIRE-002 (tests/checks/privacy-ci-wiring.test.ts) standalone
+      in both TMPDIR modes (5041.80 ms default, 5538.72 ms repository-local) and
+      passes inside both full suites (test plan §1.2 G-6, TR-11, §10).
+    disposition: >-
+      Not reclassified as environmental and not absorbed by widening the spec's
+      exemption. The authoritative repository-local run must be green; a
+      TC-WIRE-002 failure in that run FAILS the phase and is escalated to the
+      ticket owner as a gate defect. A default-run failure of TC-WIRE-002 is
+      recorded verbatim, re-run in isolation on a quiet machine, and reported
+      with both observations.
+    owner: "@runner (phase 9 quality_gates); escalation target: ticket owner"
+  - id: UG-2
+    severity: low
+    summary: >-
+      F-8 and AC-F8-1 require the S18/S19 seed set to cover ten topics but do
+      not say which seed carries which topic; P22 squashes the seed set before
+      matching.
+    disposition: >-
+      The plan treats the ten coverage anchors as a property of the seed set
+      (at least two S18 and two S19 seeds, each with exactly one `Assert:`
+      line), never of an individual seed. No seed is required to carry all
+      topics, and no anchor may be carried by prose outside the seeded blocks.
+    owner: "@coder at P3; @reviewer reads the seeds against the spec (test plan G-9)"
+  - id: UG-3
+    severity: low
+    summary: >-
+      The spec's NFR-3 barrier is broader than its mechanical oracle: P36 greps
+      for a fixed vocabulary of delivery claims, so prose that attributes
+      delivery to the planned surfaces in unanticipated words would pass the
+      scan.
+    disposition: >-
+      Declared residual, matching test plan G-4/G-5/G-9. The plan states the
+      authoring prohibition as a constraint in P3, P5, and P6 and hands the
+      semantic read to `@reviewer`; P36 remains the mechanical floor and its
+      green result is never presented as proof of wording quality.
+    owner: "@reviewer (phase 8 review_fix)"
+coverageSummary:
+  acceptanceCriteria: 45
+  testCases: 45
+  functionalAcceptanceCriteria: 33
+  nonFunctionalAcceptanceCriteria: 12
+  claimedExactlyOnce: true
+phases:
+  - id: 1
+    title: "P1 — Amend M2-S11 in place and land M2-S18/M2-S19 inside the Epic M2 block"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): amend M2-S11 and add M2-S18/M2-S19 to the backlog"
+    goal: >-
+      Correct the Epic M2 story set so the plan distinguishes repository,
+      project, and workspace: M2-S11 keeps its per-repository state scoping,
+      host-level index, migration note, tests, and GH-241 collision criterion
+      while its goal, enumeration task, and enumeration acceptance criterion
+      name `repos list` with exactly the five fields and the entry records the
+      conditional deprecation alias; M2-S18 (project groups) and M2-S19
+      (cross-repository changes) land with all 12 and 11 ticket clauses; one new
+      Epic M2 context paragraph records the three-level model, the
+      `repos`/`projects` boundary, and the root-family consequence. [F-1, F-2,
+      F-3, F-4]
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+    dependsOn: []
+    constraints:
+      - "Insert the two new entries after M2-S17's last content line, inside the Epic M2 block, before the block-closing blank line and `---` separator, in code order S18 then S19 (DEC-8); never insert below the separator."
+      - "Place the context paragraph after the epic retirement note and before `### M2-S2`, inside the single line window the base tree leaves there; the retirement note itself stays byte-identical."
+      - "Keep the story shape `### Mx-Sn Title` + `- Goal:` + `- Tasks:` + `- AC:` + `- Depends on:`; no `- Ticket:` line for either new story (the reading guide reserves it for created stories); exact dependency lines `- Depends on: M2-S11.` and `- Depends on: M2-S11, M2-S18, M1-S17.`."
+      - "M2-S19's `- AC:` is an indented numbered list of exactly three items, each independently identifiable; no fourth criterion and no merged pair."
+      - "The S11 entry keeps its heading, position, shape, dependency line, state-scoping, host-index, migration note, test clause, and collision criterion; only the naming changes plus the transition note."
+      - "Preserve byte-identical: frontmatter, `## Reading guide`, `## Cross-cutting principles`, the Epic headings, the retirement note, every other story, the separator sequence, and `## Epic M3`. Add no `ados_distribution` marker and no private or proprietary name."
+    gates:
+      - >-
+        P00 — executed once in this shell against base 5372dbac: base snapshots
+        plus `entry()`, `section()`, `firstsec()`, `squash()`, `clause_rows()`.
+        Expected: base snapshots ready (backlog 1454 lines, status 212 lines,
+        registry 139 entries, `queue.md` at index 88).
+      - >-
+        P01 -> `retained_clauses=5/5`; `depends_line=exact`;
+        `repos_list_fields=OK`; `transition_note=OK`;
+        `goal_projects_command=ABSENT`; P01 verdict: PASS
+      - >-
+        P02 -> `projects_list_in_entry=0`; `repos_list_in_entry>=1`;
+        `group_meaning_repos_in_entry=0`; `collision_clause_copies=1`;
+        `inside_s11=1`; P02 verdict: PASS
+      - >-
+        P03 -> `clauses_present=12/12`; `shape_labels=4/4`; `ticket_line=0`;
+        P03 verdict: PASS
+      - "P05 -> `clauses_present=11/11`; `shape_labels=4/4`; P05 verdict: PASS"
+      - >-
+        P06 -> `numbered_items=3/3`; `a1>=1`; `a2>=1`; `a3>=1`; P06 verdict:
+        PASS
+      - >-
+        P08 -> `s17_last=1285 separator=1287 epic_m3=1289 window=1286:1286`;
+        `window_empty=no`; `separator_sequence=identical`;
+        `blank_line_before_separator=1`; `placement=inside-window`;
+        P08 verdict: PASS
+      - >-
+        P09 -> `retirement_note=1051..1054`; `paragraph_lines>0`;
+        `three_levels=OK`; `boundary=OK`; `root_family=OK`;
+        `fm`/`rg`/`cc`=byte-identical; `retirement_note=byte-identical`;
+        `epic_heading=OK`; P09 verdict: PASS
+      - >-
+        P10 -> `backlog_hunks>=1`; `hunks: inside=M outside=0`;
+        `hunk confinement OK`; `non_vacuous=yes`;
+        `classifier_self_tests=3/3`
+      - >-
+        P35 -> `stories_kept` equals the base heading count, `changed=0`,
+        `removed=0`;
+        `base_headings=67 head_headings=69 added=2`; `new_headings=2` and both
+        are `### M2-S18`/`### M2-S19` (no UNEXPECTED line); `order=OK`;
+        `fm`/`rg`/`cc`=byte-identical; `retirement_note=byte-identical`;
+        P35 verdict: PASS (control)
+      - >-
+        P41 -> `clause_scan: total=26 present=26 missing=0`; P41 verdict: PASS
+      - >-
+        P38 -> `dist_guard_exit=0`; `planning_markers=0` (executed as a control
+        at this HEAD; TC-M2DOM-038 is claimed at P5)
+      - >-
+        P42 -> `forbidden_exit=0`; no violation line (executed as a control at
+        this HEAD; TC-M2DOM-042 is claimed at P5)
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
+    definitionOfDone:
+      - "`backlog.md` has exactly three changed regions: the M2-S11 entry, one added context paragraph, and the two inserted entries; P08 and P10 prove the placement and hunk confinement and P35 proves every other story and region is byte-identical."
+      - "M2-S11 shows all five retained clauses, the exact dependency line, `repos list` with the five fields, and the deprecation-alias transition; it no longer contains the base phrase `a projects command gives one CLI overview`."
+      - "M2-S18 and M2-S19 carry all 26 ticket clauses (12 + 11 + the 3 amendment clauses) with no clause added, omitted, weakened, merged, or reordered, and P41's 26-row scan is 26/26."
+      - "The context paragraph states the three levels, the naming boundary, and the root-family consequence, and sits between the retirement note and `### M2-S2`."
+      - "The doc-distribution guard and the forbidden-literals guard are green at this commit (no new user-facing file exists yet) and `lint GH-303` exits 0."
+    coverage:
+      acceptanceCriteria:
+        - AC-F1-1
+        - AC-F1-2
+        - AC-F2-1
+        - AC-F3-1
+        - AC-F3-2
+        - AC-F4-1
+        - AC-F4-2
+        - AC-F4-3
+        - AC-NFR2-1
+        - AC-NFR8-1
+      testCases:
+        - TC-M2DOM-001
+        - TC-M2DOM-002
+        - TC-M2DOM-003
+        - TC-M2DOM-005
+        - TC-M2DOM-006
+        - TC-M2DOM-008
+        - TC-M2DOM-009
+        - TC-M2DOM-010
+        - TC-M2DOM-035
+        - TC-M2DOM-041
+
+  - id: 2
+    title: "P2 — State the three-level model in the M2 architecture and define the four contracts"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): state the three-level model in the M2 architecture and contracts"
+    goal: >-
+      Make the model legible before any contract is read and give both command
+      pages and both new stories one contract each: the architecture presents
+      repository, project, and optional workspace with declared membership, a
+      project-scoped overview flow, a cross-repository change flow, and four
+      boundary invariants; the contracts define `repos.v1` (flat enumeration),
+      the redefined `projects.v1` (group envelope), the project configuration
+      schema with mixed tracker kinds and the `not-yet-supported`
+      classification, and the cross-repository change plan shape. [F-5, F-6]
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/architecture.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/contracts.md
+        role: producer
+    dependsOn:
+      - phase: 1
+        reason: "The contracts and the architecture cite M2-S11, M2-S18, and M2-S19 by story code, and the S18 entry is where the mixed-tracker clause lives that P04 checks."
+    constraints:
+      - "Keep the committed C4 headings `## C4 Level 1: system context`, `## C4 Level 2: containers`, and `## C4 Level 3: components`, exactly once each, each immediately followed by one mermaid block whose first body line starts with an allowed diagram keyword."
+      - "`## Key flows` carries exactly eight `###` headings, each owning exactly one mermaid block; the overview flow is rewritten in place and the cross-repository flow is the added eighth."
+      - "No field denotes a repository under the group's name and no member field denotes the group; `repos.v1` is the only flat-enumeration contract name."
+      - "The contracts keep the planned-until-exit posture: they describe required shapes for undelivered stories and claim no delivered surface."
+      - "Mermaid edits must keep every fence balanced; there is no validator, so the structural read is the bar (NFR-7)."
+    gates:
+      - >-
+        P11 -> `l1_lines>=1`; `level_repository=OK`; `project_as_group=OK`;
+        `workspace_in_diagram=OK`; `workspace_optional_in_diagram=OK`;
+        P11 verdict: PASS
+      - >-
+        P12 -> `membership_declared=OK`; `workspace_never_required=OK`;
+        `unrelated_dirs=OK`; `identical_behaviour=OK`;
+        `member_must_be_inside=ABSENT`; P12 verdict: PASS
+      - >-
+        P13 -> overview mentions member/group/workspace with each count >= 1;
+        `cross_repo_flow_heading` present; invariants naming/membership/
+        workspace/lifecycle each >= 1; P13 verdict: PASS
+      - >-
+        P14 -> `repos_v1_section=present`; `repos_v1_fields=7/7` (repo key,
+        root, state location, daemon reachability with degradation reason,
+        handover state, host index revision); P14 verdict: PASS
+      - >-
+        P15 -> six group anchors present (group identity, group name, member
+        list, per-member repo key/root, tracker kind, health/state);
+        `group_named_key_denotes_repo=ABSENT`; P15 verdict: PASS
+      - >-
+        P16 -> `configuration_schema=present`; `fields=8/8` including the
+        optional workspace discovery root, validation-time mixed kinds, and
+        `not-yet-supported`; P16 verdict: PASS
+      - >-
+        P17 -> `change_plan_shape=present`; `elements=7/7`; P17 verdict: PASS
+      - >-
+        P07 -> `s19_task_to_contract=6/6` (members and slices; one lifecycle
+        producing a branch and pull request; per-member gates; branch cleanup
+        with issue closure; dependency edges; evidence enumerating member PRs);
+        P07 verdict: PASS
+      - >-
+        P04 -> `s18_nyts>=1`; `contracts_nyts>=1`; `s18_validation=OK`;
+        `s18_rather_than_rejected=OK`; `softening=ABSENT`; P04 verdict: PASS
+      - >-
+        P40 -> `mermaid_fences` counted; `keyword_and_fence_exit=0`;
+        `heading_association=OK`; `C4 Level 1/2/3 has diagram=OK (heads=1
+        own=1)`; `c4_headings_with_diagrams=3/3`; `flow_headings=8`;
+        `flow_headings_with_diagrams=8/8`; `flow_section=OK`; base control
+        records seven head flows; P40 verdict: PASS
+      - >-
+        P38 -> `dist_guard_exit=0`; `planning_markers=0` (control at this HEAD)
+      - >-
+        P42 -> `forbidden_exit=0` (control at this HEAD; TC-M2DOM-042 is
+        claimed at P5)
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
+    definitionOfDone:
+      - "The architecture draws repository, project, and optional workspace with membership visible in the diagram and states that a workspace is never required, that membership is declared in configuration, and that a project whose members live in unrelated directories behaves identically."
+      - "The overview flow starts from a project (group resolution, member enumeration, optional workspace discovery, per-member state and health) and the cross-repository change flow describes one lifecycle across member branches and PRs, per-member gates, the shared definition of done, and closeout."
+      - "`## Boundary invariants at M2 exit` states the naming boundary, declared membership, workspace optionality, and one lifecycle per cross-repository change."
+      - "`contracts.md` defines `repos.v1` and the redefined `projects.v1` with no shared meaning, plus the configuration schema (mixed kinds valid at validation, unimplemented member `not-yet-supported`, no-workspace configuration valid) and the seven-element change plan shape."
+      - "The structural diagram read passes with eight key flows and three C4 headings, and no contract claims a delivered surface."
+    coverage:
+      acceptanceCriteria:
+        - AC-F2-2
+        - AC-F3-3
+        - AC-F5-1
+        - AC-F5-2
+        - AC-F5-3
+        - AC-F6-1
+        - AC-F6-2
+        - AC-F6-3
+        - AC-F6-4
+        - AC-NFR7-1
+      testCases:
+        - TC-M2DOM-004
+        - TC-M2DOM-007
+        - TC-M2DOM-011
+        - TC-M2DOM-012
+        - TC-M2DOM-013
+        - TC-M2DOM-014
+        - TC-M2DOM-015
+        - TC-M2DOM-016
+        - TC-M2DOM-017
+        - TC-M2DOM-040
+
+  - id: 3
+    title: "P3 — Split the two command pages and propagate the model into the seeds, the journey, and the entrypoint delta"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): split the repos and projects command pages and seed S18/S19 scenarios"
+    goal: >-
+      Give the two surfaces two pages and one meaning each: a new
+      `commands/repos.md` carries the flat enumeration (with a rename note) and
+      a rewritten `commands/projects.md` carries the group surface with members,
+      health, state, and project-scoped reads; the scenario seeds cover S18 and
+      S19 with one `Assert:` line each and both S11 seeds move to `repos list`;
+      the opening journey becomes a project-scoped morning overview; the
+      entrypoint delta note splits `repos` from `projects` and stops calling
+      `projects` the host overview. [F-7, F-8, F-9, F-10]
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - doc/planning/oss-tooling/milestones/m2/journeys.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        role: producer
+    dependsOn:
+      - phase: 2
+        reason: "Both pages, the seeds, and the journey point at `repos.v1`, the group envelope, and the configuration schema; a forward reference would break the link check at this boundary."
+      - phase: 1
+        reason: "The S11 seeds and the entrypoint delta must agree with the amended M2-S11 wording and the S18/S19 story codes."
+    constraints:
+      - "`commands/repos.md` line 1 is `# repos(1)`, line 3 is exactly `Status: Proposed (M2)`; the page carries NAME, SYNOPSIS (`repos list [--json]`), the five reported fields, the machine envelope under `repos[]`, EXIT STATUS, EXAMPLES, ERRORS (a table), SEE ALSO, and an explicit rename note."
+      - "`commands/projects.md` is rewritten in place: same identity, `Status: Proposed (M2)` on line 3, group listing, project scope for queue and status, member repositories with health and state, pointers to `projects.v1` and the configuration schema, and the naming boundary sentence; it must not claim to enumerate checkouts."
+      - "Both pages state they are not registered at the root listing; neither page is relabelled as a snapshot."
+      - "Every S18/S19 seed carries exactly one `Assert:` line; the ten required topics are a property of the seed set, not of any single seed (UG-2). The seed block shape is the pack's established `### SC-M2-S18-01`-style heading (story code plus a two-digit ordinal) with Given/When/Then prose."
+      - "Both `SC-M2-S11-*` seeds speak `repos list` in title, prose, and assert line, and assert the five flat fields; no seed anywhere asserts that `projects list` enumerates checkouts."
+      - "The delta note keeps the observed composition, the daemon gap with #286, the mount mechanism, and the snapshot statement; only the planned-additions and mounting paragraphs change."
+      - "No prose in this commit attributes delivery, currency, or shipment to `repos`, `projects`, project groups, workspace discovery, or cross-repository changes (NFR-3, UG-3)."
+    gates:
+      - >-
+        P19 -> `checks=9/9`; `fields=5/5`; P19 verdict: PASS
+      - >-
+        P20 -> `checks=7/7`; `fields=3/3`; `forbidden_flat_statements=0`;
+        P20 verdict: PASS
+      - >-
+        P21 -> `repos_page: repos.v1>=1 projects[]=0 header=1
+        not_registered>=1`; `projects_page: projects.v1>=1 repos.v1=0
+        repos[]=0 header=1 not_registered>=1`; P21 verdict: PASS
+      - >-
+        P22 -> `s18_seeds>=2`; `s19_seeds>=2`; `assert_violations=0`;
+        `coverage_anchors=10/10`; P22 verdict: PASS
+      - >-
+        P23 -> `s11_01_assert_repos_list>=1`; `s11_01_assert_projects_list=0`;
+        `s11_02_title_repos_list>=1`; `s11_02_body_repos_list>=1`;
+        `assert_fields=5/5`; `flat_assert_survivors=0`; P23 verdict: PASS
+      - >-
+        P24 -> `project_scoped=OK`; `member_outside_shared_dir=OK`;
+        `flat_view_repos_list=OK`; `group_view_projects_list=OK`;
+        `scoped_reads=OK`; `workspace_optional_stated=OK`;
+        `same_ref_disjoint=OK`; `journey_anchors=4/4`; P24 verdict: PASS
+      - >-
+        P25 -> `repos_addition=OK`; `projects_addition=OK`;
+        `mount_names_both=OK`; `host_overview=0`; the five preserved tokens
+        (`Sixteen families`, `#286`, `milestone snapshot`, `unknown flag`,
+        `unexpected argument`) each reported OK; P25 verdict: PASS
+      - >-
+        P36 -> `proposed_headers=2/2`; `delivered_claims=0`;
+        `pack_statement=verbatim`; `snapshot_relabels=0`; P36 verdict: PASS
+      - >-
+        Scoped link read over the five P3 files (the P43 procedure scoped to
+        this file set, not the TC claim): every relative link resolves,
+        including `commands/repos.md` from the delta note and the see-also links
+        on both command pages
+      - >-
+        P38 -> `dist_guard_exit=0`; `planning_markers=0` (control at this HEAD)
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
+      - >-
+        Explicitly NOT a gate at this commit: P42/P37 and `pnpm check`. The new
+        page is unregistered until P4, so the forbidden-literals guard fails
+        closed here by construction; P3 and P4 land back-to-back and no green
+        guard claim is made at this boundary (see orderingConstraints).
+    definitionOfDone:
+      - "`commands/repos.md` exists as a complete flat-enumeration contract with the rename note, and `commands/projects.md` is the group surface; both carry `Status: Proposed (M2)` and neither claims registration."
+      - "The page split is provable from the files alone: the flat surface appears only on `repos.md`, the group surface only on `projects.md`, each page points at its own contract name, and the projects page never states that `projects list` enumerates checkouts."
+      - "At least two S18 and two S19 seeds exist with exactly one `Assert:` line each, the ten required topics are covered across the seed set, and both S11 seeds use `repos list` with the five flat fields."
+      - "The opening journey is a project-scoped morning overview with one member outside any shared directory, both views (`repos list` flat, `projects list` group), project-scoped queue and status reads, workspace optionality, and same-ref disjointness."
+      - "The entrypoint delta note lists `repos` (flat) and `projects` (group) as two additions, names both families in the mounting paragraph, contains no `host overview` claim, and preserves the observed composition, the daemon gap, and the snapshot statement."
+      - "The doc-distribution guard and `lint GH-303` are green; the forbidden-literals guard is red only for the single unregistered new page and stays so until P4."
+    coverage:
+      acceptanceCriteria:
+        - AC-F7-1
+        - AC-F7-2
+        - AC-F7-3
+        - AC-F8-1
+        - AC-F8-2
+        - AC-F9-1
+        - AC-F10-1
+        - AC-NFR3-1
+      testCases:
+        - TC-M2DOM-019
+        - TC-M2DOM-020
+        - TC-M2DOM-021
+        - TC-M2DOM-022
+        - TC-M2DOM-023
+        - TC-M2DOM-024
+        - TC-M2DOM-025
+        - TC-M2DOM-036
+
+  - id: 4
+    title: "P4 — Register the new pack page with the forbidden-literals guard"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): register the new repos command page with the forbidden-literals guard"
+    goal: >-
+      Restore a guard-green tree after the new page lands, and satisfy the
+      guard's fail-closed contract: exactly one registration row for
+      `doc/planning/oss-tooling/milestones/m2/commands/repos.md` at its
+      lexicographic position inside the `m2/commands/` group (between `queue.md`
+      and `spend.md`), 139 to 140 entries, no duplicate, no other row touched,
+      and no guard behaviour or scope change. [NFR-4, NFR-9, DEC-15]
+    scope:
+      files:
+        - scripts/checks/forbidden-literals.registry.json
+    dependsOn:
+      - phase: 3
+        reason: "The registration names a file that must already exist, and it must land in the immediately following commit so the guard-red window is exactly one commit wide."
+      - phase: 1
+        reason: "The registry's content assertions are read against base 5372dbac's 139-entry list, which the backlog commit must not perturb."
+    constraints:
+      - "Add exactly one row; keep every existing entry in its current order (the base list is not globally sorted); add no duplicate; place the row between the `queue.md` and `spend.md` entries so `repos_index = queue_index + 1` and `spend_index = repos_index + 1`."
+      - "Change nothing else in the file and nothing in scripts/checks/forbidden-literals.ts: the guard's scope, allowlist rules, and tests stay as they are (NFR-7/NG-7 forbid new tooling and guard changes)."
+      - "The phase proves the guard restored, not the guard redesigned: no allowlist entry, no exemption, no path bypass."
+      - "P34 is expected to report `product_files=12/13` with `expected_not_changed=1` at this commit because the index/status/registry phase is still open; containment is therefore claimed at P5 and P6 only, never here."
+    gates:
+      - >-
+        P37 -> `registered=140`; `base_registered=139`; `delta=1`;
+        `position=between-queue-and-spend` (the repos row at the queue row plus
+        one and the spend row at the repos row plus one); `duplicates=0`;
+        `unregistered_findings=0`; P37 verdict: PASS
+      - >-
+        P42 -> `forbidden_exit=0`; `violations=0` (the guard is green again, and
+        its exit code is the restoration proof; TC-M2DOM-042 is claimed at P5
+        over the complete corpus)
+      - >-
+        P38 -> `dist_guard_exit=0`; `planning_markers=0` (control at this HEAD)
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
+    definitionOfDone:
+      - "`registered` holds exactly one more entry than base (139 to 140), that entry is the new pack page path, and the surrounding order is preserved."
+      - "The guard reports zero unregistered-doc findings and zero violations, with no scope, allowlist, or behaviour change in the guard itself."
+      - "No `ados_distribution` marker and no private or proprietary name is introduced by this commit."
+    coverage:
+      acceptanceCriteria:
+        - AC-NFR4-1
+      testCases:
+        - TC-M2DOM-037
+
+  - id: 5
+    title: "P5 — Reconcile the indices, the status snapshot, and the command registry; close with the full verification battery"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): reconcile the M2 indices, status snapshot, and command registry"
+    goal: >-
+      Make every touched artifact discoverable, current, and non-contradictory,
+      and close the change: the pack README learns the new page and the S18/S19
+      map rows; the milestone M2 index row reaches thirteen targets; `status.md`
+      gains one dated planning section under the retention oracle; the command
+      registry reconciles `ados repos`, `ados projects`, the M3-S6 row, and the
+      boundary note; then the whole corpus is verified against all 45 ACs and
+      the two doc guards, with the release and reconciliation obligations
+      discharged as declarations. [F-11, F-12, F-13, F-14, NFR-1, NFR-5, NFR-6,
+      NFR-10, NFR-11, NFR-12]
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/README.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model
+    dependsOn:
+      - phase: 3
+        reason: "The contents row and the M2 index target link `commands/repos.md`; the map rows must match the seeds and the flows as delivered in P2 and P3."
+      - phase: 4
+        reason: "P34's containment oracle requires the complete thirteen-file manifest and a clean worktree, so it can only pass after the registry row lands."
+      - phase: 2
+        reason: "The M2-S4 advisory row points at the group envelope and the S11 map row points at `repos.v1`; both names are fixed in P2."
+    constraints:
+      - "`m2/README.md`: the pack-contents table keeps one row per artifact and grows to thirteen by adding the `commands/repos.md` row; the story-to-artifact map gains an `| M2-S18 |` row and an `| M2-S19 |` row, and the `| M2-S11 |` row points at `repos.v1`; the planned-until-exit statement survives verbatim."
+      - "`milestones/README.md`: the M2 row links `m2/commands/repos.md` in addition to its previous twelve targets, for thirteen `](m2/` targets on one physical line; the M0 and M1 rows stay byte-identical."
+      - "`status.md`: append one blank separator line and then one `##` dated section at EOF whose heading begins with `2026-11-11`; remove, reorder, and modify nothing; every added line lies at or after `new_section_line - 1`; the section records planning state only and must not use a delivery or exit claim (AC-F12-1, NFR-11)."
+      - "`status.md` section anchors, all required: the three-level model, `M2-S11`, `repos list`, `deprecation alias`, `M2-S18`, `M2-S19`, the naming boundary; it also names the registry reconciliation and the corrected entrypoint delta note."
+      - "`cli-command-registry.md`: add one M2 `ados repos` row (flat enumeration, the five fields, daemon reachability, Delivery M2-S11); rewrite the `ados projects` row as the group surface (membership, health, state, project-scoped reads, Delivery M2-S18); reconcile the M3-S6 `ados repos` row so clone/branch/worktree hygiene are later `repos` subcommands with Delivery still M3-S6; replace the boundary note with the naming boundary on ONE line beginning exactly `Boundary note:`."
+      - "Registry containment: only the M2 `ados projects` row, the one added M2 `ados repos` row, the M3 `ados repos` row, and the boundary note line may differ; the historical rename note and every other row stay byte-identical."
+      - "Release and reconciliation obligations for this change are declarations, not edits: `system_spec_update` records that no current-truth change is required and touches nothing under doc/spec/** or doc/overview/**; there is no tag, release, deployment, or tracker transition; the PR is created by the orchestrator, not by this phase."
+    gates:
+      - >-
+        P18 -> `consumer_note=OK`; `s4_advisory=OK`; P18 verdict: PASS
+      - >-
+        P26 -> `pack_rows=13/13`; `repos_row=OK`; `map_s18=OK`;
+        `map_s19=OK`; `s11_row_repos_v1=OK`; `planned_until_exit=verbatim`;
+        P26 verdict: PASS
+      - >-
+        P27 -> `m2_targets=13/13`; `repos_target=OK`;
+        `m0_row=byte-identical`; `m1_row=byte-identical`; P27 verdict: PASS
+      - >-
+        P28 -> `new_section_line` printed for the one new section;
+        `section_anchors=6/6`;
+        `delivery_claim=ABSENT`; P28 verdict: PASS
+      - >-
+        P29 -> `removed_lines=0 additions>0 added_outside_section=0`;
+        `base_lines_retained=OK`; `additions_confined=OK`;
+        P29 verdict: PASS (control)
+      - >-
+        P44 -> `oracle=whole-file-line-retention (whole-section cmp not used)`;
+        `conforming_fixture` OK; `delete_fixture: removed>0`;
+        `modify_fixture: removed>0`; `swap_fixture: removed>0`;
+        `outside_insert_fixture: outside_hunks>0`; P44 verdict: PASS
+      - >-
+        P30 -> `m2_repos_row=present`; `old_projects_meaning=0`;
+        `registry_anchors=7/7`; `old_boundary_note=ABSENT`; P30 verdict: PASS
+      - >-
+        P31 -> `changed_lines>=1`; `hunks_classified>=1 outside=0`;
+        `fixture_outside>=1`; P31 verdict: PASS
+      - >-
+        P32 -> `rows_with_survivors=0/17`; `self_test_flat=detected`;
+        `self_test_group=detected`; P32 verdict: PASS
+      - "P33 -> `boundary_locations=8/8`; P33 verdict: PASS"
+      - >-
+        P45 -> `matrix_rows_required=17/17`; `positive_fixture=OK`;
+        `negative_fixture=detected`; P45 verdict: PASS
+      - >-
+        P34 -> `product_files=13/13`; `expected_not_changed=0`;
+        `unexpected_changed` empty; `other_scripts_changed=0`;
+        `worktree_product_changes=0`; no `FORBIDDEN ROOT CHANGED` line;
+        P34 verdict: PASS
+      - >-
+        P43 -> `broken_links=0`; `restated_ac_blocks=0`; P43 verdict: PASS
+        (control)
+      - >-
+        P38 -> `dist_guard_exit=0`; `planning_markers=0`; P38 verdict: PASS
+      - >-
+        P42 -> `forbidden_exit=0`; `violations=0`; P42 verdict: PASS (control)
+      - >-
+        P39 -> `repo_local_exit=0`; `default_exit=<0|1>` recorded with
+        `default_failed_tests`; `default_failure_class=none|environmental`;
+        P39 verdict: PASS. A default-run failure is environmental only when its
+        sole failing test is `CI baseline parity`; a lone TC-WIRE-002 failure is
+        recorded and escalated per UG-1, never reclassified; TC-WIRE-002 in the
+        repository-local run fails the phase.
+      - >-
+        Regression sweep (no TC re-claimed): P01, P02, P03, P04, P05, P06, P07,
+        P08, P09, P10, P11, P12, P13, P14, P15, P16, P17, P19, P20, P21, P22,
+        P23, P24, P25, P35, P36, P37, P40, P41 each re-run at the final HEAD and
+        each reporting PASS
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid, readyForDevelopment=true"
+      - >-
+        `./node_modules/.bin/delivery-os lint plan GH-303` -> verdict=valid with
+        no error entry (write-time conformance, complementary to `lint GH-303`)
+    definitionOfDone:
+      - "The pack README has thirteen contents rows including the new page, map rows for M2-S18 and M2-S19, the M2-S11 row pointing at `repos.v1`, and the planned-until-exit statement verbatim."
+      - "The milestone M2 index row reaches thirteen targets including `m2/commands/repos.md`, and the M0 and M1 rows are byte-identical to base."
+      - "`status.md` carries exactly one new dated section, positioned at EOF after a single blank separator line, with the six required anchors and no delivery or exit claim; every base line is retained in order and unmodified."
+      - "The command registry states the naming boundary once, carries the M2 `ados repos` row and the group-meaning `ados projects` row, keeps M3-S6 as the later hygiene subcommands, and changes no row outside the four permitted regions."
+      - "The naming boundary holds across all seventeen Appendix B regions: zero flat `projects list` statements, zero group-meaning `repos` statements, and eight both-name locations each stating the boundary."
+      - "Exactly thirteen product files changed, P34 confirms no path outside the manifest and a clean worktree, both aggregate runs are recorded with the repository-local run green, and the doc-distribution and forbidden-literals guards are green."
+      - "Release obligations are discharged as declarations: no tag, deployment, or tracker transition; `system_spec_update` records no required current-truth change and edits nothing; the PR is the orchestrator's step, not this phase's."
+    coverage:
+      acceptanceCriteria:
+        - AC-F6-5
+        - AC-F11-1
+        - AC-F11-2
+        - AC-F12-1
+        - AC-F12-2
+        - AC-F13-1
+        - AC-F13-2
+        - AC-F14-1
+        - AC-F14-2
+        - AC-NFR1-1
+        - AC-NFR5-1
+        - AC-NFR6-1
+        - AC-NFR9-1
+        - AC-NFR10-1
+        - AC-NFR11-1
+        - AC-NFR12-1
+      testCases:
+        - TC-M2DOM-018
+        - TC-M2DOM-026
+        - TC-M2DOM-027
+        - TC-M2DOM-028
+        - TC-M2DOM-029
+        - TC-M2DOM-030
+        - TC-M2DOM-031
+        - TC-M2DOM-032
+        - TC-M2DOM-033
+        - TC-M2DOM-034
+        - TC-M2DOM-038
+        - TC-M2DOM-039
+        - TC-M2DOM-042
+        - TC-M2DOM-043
+        - TC-M2DOM-044
+        - TC-M2DOM-045
+
+  - id: 6
+    title: "P6 — Conditional review remediation"
+    kind: delivery
+    weightClass: standard
+    summary: "docs(GH-303): apply review remediation"
+    goal: >-
+      Close the file-level findings of a `@reviewer` FAIL verdict (or an
+      accepted `@readiness-reviewer` blocker that names a product file) inside
+      the change's existing product budget, without adding a product path and
+      without weakening any gate. This phase stays CLOSED unless a review
+      verdict names a defect in one of the thirteen product files; it is
+      declared so remediation is a planned phase rather than an undeclared
+      commit.
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/milestones/m2/architecture.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - doc/planning/oss-tooling/milestones/m2/journeys.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/README.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - scripts/checks/forbidden-literals.registry.json
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model
+    dependsOn:
+      - phase: 5
+        reason: "Remediation repairs a delivered artifact, so it can only open after the full battery has run once and a review verdict names a defect."
+    constraints:
+      - "Adds no product path: every edited product file is already inside the thirteen-file manifest, so P34's budget is unchanged."
+      - "Fixes the named finding only; it does not re-litigate upstream decisions (DEC-1..DEC-17) or re-scope a neighbouring page."
+      - "If a remediation re-delivers an artifact whose TC was claimed in an earlier phase, this plan is revised in the same commit to move that TC to P6, keeping the 45/45 exactly-once mapping true."
+      - "Any gate that was green at P5 is re-run after remediation; no phase may pass by lowering a gate, deleting a procedure, or narrowing a scan."
+    gates:
+      - >-
+        The specific procedures that cover the remediated artifacts, re-run in
+        full: the content procedure(s) for each named finding, with their
+        expected PASS tokens unchanged from the phase that first owned them
+      - >-
+        P34 -> `product_files=13/13`; `expected_not_changed=0`;
+        `unexpected_changed` empty; `worktree_product_changes=0`;
+        P34 verdict: PASS
+      - >-
+        P32 -> `rows_with_survivors=0/17` with both self-tests detected; P45 ->
+        `matrix_rows_required=17/17` with both fixtures behaving; P33 ->
+        `boundary_locations=8/8`
+      - "P38 -> `dist_guard_exit=0`; `planning_markers=0`"
+      - "P42 -> `forbidden_exit=0`; `violations=0`"
+      - >-
+        P39 -> `repo_local_exit=0`; `default_exit` recorded with its failing
+        test names; `default_failure_class=none|environmental`; P39 verdict:
+        PASS (UG-1 applies unchanged)
+      - "`./node_modules/.bin/delivery-os lint GH-303` -> exit 0"
+      - "`./node_modules/.bin/delivery-os plan validate GH-303` -> verdict=valid"
+    definitionOfDone:
+      - "Every file-level finding in the review verdict is addressed in the file it names, with the finding id recorded in the commit body."
+      - "The full battery is green again, the thirteen-file budget is unchanged, and no gate, procedure, or scan was weakened to accommodate the fix."
+      - "If any TC ownership moved, this plan and the test plan's mapping are consistent at the same commit; otherwise the mapping is untouched."
+    coverage:
+      acceptanceCriteria: []
+      testCases: []
