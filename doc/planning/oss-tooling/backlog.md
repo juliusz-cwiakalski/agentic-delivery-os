@@ -1059,6 +1059,9 @@ repositories whose membership is declared in configuration; a workspace is an
 optional persisted directory usable as a discovery root, and it is never
 required. The naming boundary follows from that: `repos` is the flat enumeration and `projects` is the group surface.
 The first is owned by the amended M2-S11 and the second by M2-S18.
+GH-288 has already shipped `projects list` as the flat enumeration this
+change renames to `repos list`, so the split is the planned end state and
+this amendment records the prospective rename with its deprecation alias.
 Entrypoint consequence: both become root families, so the root listing meets
 the repository family and the project family separately.
 
@@ -1191,8 +1194,10 @@ the repository family and the project family separately.
   repo key, root, state location, daemon reachability, handover state;
   migration note for existing single-store users; tests proving two checkouts
   using the same ref cannot observe each other's documents; transition note:
-  if a flat `projects list` had landed before the group story (M2-S18), the
-  group story renames it with a deprecation alias.
+  the shipped `projects list` surface is the flat enumeration this change
+  renames to `repos list`; the group story (M2-S18) performs that rename,
+  takes `projects` for groups, and keeps a deprecation alias for the flat
+  surface until it lands. GH-288 shipped it under M2-S11.
 - AC: two checkouts of different repositories on one host, both using ref
   GH-241, hold disjoint phase state and queue entries; `repos list`
   enumerates them without manual configuration.

@@ -9,6 +9,8 @@ true. Scope is in [../../backlog.md](../../backlog.md); the surfaces are in
 
 The owner starts the day with one project: three member repositories on one
 workstation, and one of those members lives outside any shared directory.
+The shipped `projects list` surface is the flat enumeration this change
+renames to `repos list`.
 
 1. `<binary> projects list` shows the project with its members, their health,
    and their state. Membership was declared in configuration, so nothing was

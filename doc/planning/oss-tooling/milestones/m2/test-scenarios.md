@@ -355,6 +355,10 @@ Assert: `status` and `brief` each show `parkedCount`, `reason`, and `until`, and
 
 ## M2-S18 Project groups
 
+The shipped `projects list` surface is the flat enumeration this change
+renames to `repos list`; the seeds below read it as the future `projects`
+group view.
+
 ### SC-M2-S18-01 Project members are discoverable through a registered workspace directory
 
 Given a project whose configuration names two member repositories cloned

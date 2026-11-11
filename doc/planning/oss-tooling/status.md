@@ -238,8 +238,8 @@ and claims no M2 delivery and no milestone exit.
    index, the migration note, the tests clause and the same-ref collision
    criterion are unchanged, the flat enumeration is `repos list` with repo
    key, root, state location, daemon reachability and handover state, and the
-   entry records the deprecation alias transition for the case where a flat
-   `projects list` had landed first.
+   entry records the deprecation alias: the shipped `projects list` surface
+   is the flat enumeration this change renames to `repos list` (GH-288).
 3. M2-S18 (project groups) and M2-S19 (cross-repository changes) join the
    Epic M2 story set, depending on M2-S11 and, for M2-S19, on M2-S18 and the
    delivered M1-S17.
