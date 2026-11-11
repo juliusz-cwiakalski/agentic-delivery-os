@@ -1,5 +1,29 @@
-# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 1.0
-# (2026-11-11). Authored against spec v1.2 and test plan v1.1.
+# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.0
+# (2026-11-11). Authored against spec v1.3 and test plan v1.2.
+#
+# REVISION 2.0 — discharges the DoR iteration-1 findings (readiness-iter-1.md):
+#   B1  contract-surface fixture: tests/fixtures/ports/v1-contract-inventory.json is
+#       declared in phase 1 and phase 3, both phases state the two-entry same-commit
+#       rule for every name they add, and both boundaries run the inventory suite.
+#   B2  TC ownership arithmetic: TC-ATTEMPT-028 and TC-ATTEMPT-034 are split by cell
+#       (phase 2 owns 028 cells 1-3 and 034 cells 1, 4, 5, 6; phase 3 owns 028 cell 4
+#       and 034 cells 2-3), so the count is 3 + 20 + 10 + 3 + 3 = 39.
+#   B3  residual-risk paragraph: replaced with the verified delivered truth — the
+#       summary's `unresolved` is already exact and store-wide, so nothing moves up
+#       past 20; the change scopes the computation to the repository (count moves
+#       down on a migrated root), adds the block to the resolve result, narrows
+#       `unresolvedIds` and the human line to the documented at-most-20 list with
+#       `idsTruncated`, and retires the uncalled list-length helper.
+#   A1  composition optionality: the new composition members are optional and the
+#       attempts surface is composed only when supplied, so the two gate fixtures and
+#       the gate-less composition assertion need no edit.
+#   A3  deviation accounting: this header maps test-plan §7.3's seven groups onto the
+#       five phases TC by TC instead of claiming two deviations.
+#   A4  phase 4 work item 4.6 authors tests/structure/dispatch-attempts-composition.test.ts.
+#   A5  bounds constants: the three delivered dispatch budgets are reused; only five
+#       genuinely new constant names are declared.
+#   A8  frontmatter upkeep: phase 5 advances `last_updated` and appends `GH-289` on
+#       every edited feature page, and states the test-spec list policy.
 #
 # One ticket, one PR against main-tools, five delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary: no phase needs
@@ -12,32 +36,35 @@
 # progress is a pm-notes `notes:` entry.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-289-spec.md — v1.2, 36 acceptance criteria
+#   - Spec:      ./chg-GH-289-spec.md — v1.3, 36 acceptance criteria
 #                (AC-F1-1..AC-F9-2), F-1..F-9 with capability detail in §5.1,
 #                DM-1..DM-6 in §8.3, §8.5 backward compatibility (the two declared
-#                additive points), NFR-1..NFR-11 in §9, RSK-1..RSK-10 in §11,
-#                OQ-1..OQ-3 in §14, DEC-1..DEC-16 in §15 and the five graduated
+#                additive points and the declared `unresolvedIds` narrowing),
+#                NFR-1..NFR-11 in §9, RSK-1..RSK-10 in §11, OQ-1..OQ-3 in §14,
+#                DEC-1..DEC-16 in §15 and the five graduated
 #                rulings in §15.1, §16 component impact and §16.1 documentation
 #                impact with the phase-7 handoff facts, §17 evidence classes,
 #                §18 delivery order, §19 (no migration), Appendices A (traceability),
 #                B (SC-M2-S12-01/02 reconciliation), C (M2 attempts(1) corrections,
 #                items 1-6) and D (normative read-side field set).
-#   - Test plan: ./chg-GH-289-test-plan.md — v1.1, 39 test cases
+#   - Test plan: ./chg-GH-289-test-plan.md — v1.2, 39 test cases
 #                (TC-ATTEMPT-001..039) covering 36/36 ACs; §3.1 AC→TC coverage and
 #                evidence classes, §3.2 interface coverage, §3.3 NFR coverage,
 #                §4 test types and layers, §5.2 scenario details, §6 environments
 #                and the fixture inventory, §7.1 the TC→file mapping (the exact
 #                test paths this plan declares), §7.2 supporting changes, §7.3 phase
-#                grouping, §7.4 the P1..P4 revert/mutation bundle, §7.5 gate
-#                commands, §8.1 risks TR-1..TR-15, §8.3 the closed findings X-1..X-9
-#                and their reconciliation notes to `@doc-syncer`, §9 revision log,
-#                §10 execution log (which this change fills).
+#                grouping and the cell-ownership paragraph, §7.4 the P1..P4
+#                revert/mutation bundle, §7.5 gate commands, §8.1 risks TR-1..TR-15,
+#                §8.3 the closed findings X-1..X-9 and their reconciliation notes to
+#                `@doc-syncer`, §9 revision log, §10 execution log (which this change
+#                fills).
 #   - Decision:  doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
-#                (Proposed) — D-1..D-7 and C-1..C-8, the eight-step implementation
-#                order, the verification criteria, and the residual risks this plan
-#                must own: the two-direction count movement, the two-fold-site
-#                convergence, the disclosure-only cross-repository posture, and the
-#                projection-widening obligation.
+#                (Proposed, D-5 rationale corrected) — D-1..D-7 and C-1..C-8, the
+#                eight-step implementation order, the verification criteria, and the
+#                residual risks this plan must own: the repository-scoped count
+#                movement (down only, plus the declared identifier narrowing), the
+#                two-fold-site convergence, the disclosure-only cross-repository
+#                posture, and the projection-widening obligation.
 #   - Ticket:    GH-289 (M2-S12). Three acceptance clauses, traced in spec Appendix A:
 #                the attempt read side carrying token / corroboration triple /
 #                divergence refs / timestamps / harness; the machine envelope per
@@ -70,8 +97,10 @@
 #     refusals, determinism, and additive stability can be asserted end to end.
 #   3 the resolve result extension and the one exact divergence-count rule. TDR-0023
 #     D-5 and D-7 bind the resolve block and the summary block to one computation,
-#     so both surfaces and both count directions move in the same commit as their
-#     owning criteria (AC-F5-5, TC-ATTEMPT-022/038).
+#     so both surfaces move in the same commit as their owning criteria (AC-F5-5,
+#     TC-ATTEMPT-022/038): the summary's already-exact count becomes
+#     repository-scoped, its identifier list narrows to the documented bound, and the
+#     resolve result gains the block.
 #   4 the mount unit: family usage line, fifth help entry, coverage-inventory row,
 #     parity pin, and the help suites that pin the count. One unit, because the
 #     parity gate asserts the see-also target exists AND is registered, so a partial
@@ -79,20 +108,49 @@
 #   5 reconciliation, execution evidence, the changeset, and the closing aggregate
 #     gate. Nothing here changes product behaviour.
 #
-# TWO DECLARED DEVIATIONS from test-plan §7.3 (both are facts about where an
-# assertion can be green, not scope reductions; the test plan's own rules permit the
-# deviation and ask the plan to name it):
-#   - TC-ATTEMPT-009, TC-ATTEMPT-010 and TC-ATTEMPT-037 are owned by phase 1, not by
-#     the command phase. Each asserts a property of the read use case's `data`
-#     (byte budget and page omission, ledger retention and its precedence, the
-#     single verified read and its latency), so all three are green at phase 1's
-#     boundary over the delivered store port; phase 2 re-runs them through the CLI
-#     as an additive cell (the file is declared in both phases) and does not take
-#     ownership. AC-F2-4 and AC-F2-5 are therefore owned by phase 1.
-#   - TC-ATTEMPT-036 (NFR-11 test isolation) is owned by phase 3, not by phase 2:
-#     it scans every new suite for the approved base and a post-run fingerprint, and
-#     phase 3 is the LAST phase that creates a new suite. Phase 1 and phase 2 run it
-#     over their own files as a supporting gate without transferring ownership.
+# PHASE GROUPING: TEST-PLAN §7.3 → THIS PLAN, TC BY TC (the complete mapping).
+# The test plan groups by spec §18's seven steps; this plan delivers five phases, so
+# every TC is re-homed below with its reason. Nothing is dropped and no movement is
+# hidden: a TC appears once, in the phase that completes it, and the two TCs that
+# complete across a boundary say which cells belong where (TC OWNERSHIP, below).
+#   TP1 (contracts, projection, page helper) → plan 2:
+#     TC-ATTEMPT-006, 007, 008, 024, and 028 cells 1-3. Plan 1 exercises the pure cells
+#     of 006/007/008 over the same files as an additive gate, but each TC's definition
+#     is command-level (`createCommandScenario` / `invoke`), so ownership follows the
+#     definition and stays with the command phase. TC-028's cell 4 completes in plan 3.
+#   TP2 (read runtime: isolation, refusals, bounds) → plan 2 for TC-ATTEMPT-011..016;
+#     plan 1 for TC-ATTEMPT-037.
+#     Why: 037 asserts the read use case's single verified read and its p95, and the
+#     use case lands in plan 1, where the assertion is green over the delivered store
+#     port; plan 2 re-runs it through the CLI as an additive cell (the file is declared
+#     in both phases) without taking ownership. The remaining runtime cells are only
+#     observable through the composed command, so the runtime group merges into the
+#     command phase.
+#   TP3 (command branch, flags and renderers) → plan 2 for TC-ATTEMPT-001..005, 023,
+#     025, 026, 034 cells 1, 4, 5, 6 and 039; plan 1 for TC-ATTEMPT-009 and TC-ATTEMPT-010.
+#     Why: 009/010 assert properties of the read use case's own `data` (the page byte
+#     budget and its declaration; ledger retention, its precedence and the foreign
+#     count over the retained window), which plan 1 produces and plan 2 only re-renders;
+#     AC-F2-4 and AC-F2-5 are therefore owned by plan 1. TC-034's cells 2-3 complete in
+#     plan 3 with the shared count rule.
+#   TP4 (resolve enrichment and the shared count rule) → plan 3 for TC-ATTEMPT-018..022,
+#     027, 038, plus 028 cell 4 and 034 cells 2-3. Unmoved.
+#   TP5 (help, inventory and the parity pin as one unit) → plan 4 for TC-ATTEMPT-029..031.
+#     Unmoved; the unit cannot be split because the parity and coverage gates assert set
+#     equality in both directions.
+#   TP6 (specification and corpus reconciliation) → plan 5 for TC-ATTEMPT-032 and 033;
+#     plan 2 for TC-ATTEMPT-017.
+#     Why: 017's live cells are the taxonomy counts and the code/help/output string
+#     absence, green from plan 2 on; its two `doc/spec/**` scan targets are added by
+#     plan 5 (TR-13) so no earlier phase is red on a document not yet reconciled. The
+#     document halves of 017 are review-verified in plan 5.
+#   TP7 (gates and release) → plan 5 for TC-ATTEMPT-035; plan 3 for TC-ATTEMPT-036.
+#     Why: 036 scans every new suite for the approved base and a post-run fingerprint,
+#     and plan 3 is the LAST phase that creates a suite; plans 1 and 2 run it over
+#     their own files as a supporting gate without transferring ownership.
+# Merged groups: TP2 and TP3 land in one phase, and TP1's command-level cells land
+# there with them, because the read runtime and the projection are only observable
+# through the command surface. Five phases, seven groups, 39 TCs, no loss.
 #
 # AC OWNERSHIP (all 36 criteria, exactly one owning phase each; a later phase may
 # re-run an assertion, which is additive and never transfers ownership):
@@ -106,9 +164,15 @@
 #   phase 3  AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-4, AC-F5-5, AC-F6-5  (6)
 #   phase 4  AC-F7-2, AC-F8-1, AC-F8-2                          (3)
 #   phase 5  AC-F8-3, AC-F8-4, AC-F9-2                          (3)
-#   (2 + 22 + 6 + 3 + 3 = 36; no AC is unmapped and no AC id is invented.)
+#   (2 + 22 + 6 + 3 + 3 = 36; no AC is unmapped and no AC id is invented. AC-F7-1 and
+#   AC-F9-1 are owned here as whole criteria; the cells that require the shared count
+#   rule — the summary block's narrowed identifier list and matching human line, and the
+#   resolve payload's added keys — are asserted at phase 3's boundary under the same TC
+#   split (TC-ATTEMPT-028 cell 4, TC-ATTEMPT-034 cells 2-3), so neither criterion is
+#   claimed green before every one of its cells is.)
 #
-# TC OWNERSHIP (39/39, each owned exactly once):
+# TC OWNERSHIP (39/39, each TC counted exactly once, in the phase where it completes;
+# two TCs complete across a boundary and the split is by cell):
 #   phase 1  TC-ATTEMPT-009, TC-ATTEMPT-010, TC-ATTEMPT-037       (3)
 #   phase 2  TC-ATTEMPT-001, TC-ATTEMPT-002, TC-ATTEMPT-003,
 #            TC-ATTEMPT-004, TC-ATTEMPT-005, TC-ATTEMPT-006,
@@ -116,14 +180,19 @@
 #            TC-ATTEMPT-012, TC-ATTEMPT-013, TC-ATTEMPT-014,
 #            TC-ATTEMPT-015, TC-ATTEMPT-016, TC-ATTEMPT-017,
 #            TC-ATTEMPT-023, TC-ATTEMPT-024, TC-ATTEMPT-025,
-#            TC-ATTEMPT-026, TC-ATTEMPT-028, TC-ATTEMPT-034,
-#            TC-ATTEMPT-039                                      (22)
+#            TC-ATTEMPT-026, TC-ATTEMPT-039                     (20)
 #   phase 3  TC-ATTEMPT-018, TC-ATTEMPT-019, TC-ATTEMPT-020,
 #            TC-ATTEMPT-021, TC-ATTEMPT-022, TC-ATTEMPT-027,
-#            TC-ATTEMPT-036, TC-ATTEMPT-038                       (8)
+#            TC-ATTEMPT-036, TC-ATTEMPT-038,
+#            TC-ATTEMPT-028 (cells 1-3 green in phase 2, cell 4 here),
+#            TC-ATTEMPT-034 (cells 1, 4, 5, 6 green in phase 2, cells 2-3 here)
+#                                                                (10)
 #   phase 4  TC-ATTEMPT-029, TC-ATTEMPT-030, TC-ATTEMPT-031       (3)
 #   phase 5  TC-ATTEMPT-032, TC-ATTEMPT-033, TC-ATTEMPT-035       (3)
-#   (3 + 22 + 8 + 3 + 3 = 39; no TC is unowned and no TC id is invented.)
+#   (3 + 20 + 10 + 3 + 3 = 39; no TC is unowned and no TC id is invented. Phase 2's
+#   twenty are all green at phase 2's own boundary: 028 and 034 are counted in phase 3
+#   because that is where their last cell lands, and phase 2 owns only the cells its
+#   declared surface can make green.)
 #
 # COMMIT CONVENTION (one commit per plan phase; subjects declared here so the commit
 # path and the review agree; every line stays within 100 characters):
@@ -236,7 +305,12 @@
 #   - Every new module is registered in `tests/structure/inventory.json` and its
 #     executable exports in `tests/structure/content-inventory.test.ts` IN THE PHASE
 #     THAT CREATES THEM, because those suites compare the committed inventory with
-#     the actual file set and the actual export set.
+#     the actual file set and the actual export set. The same rule binds the contract
+#     surface: every name exported from `packages/core/src/contracts` is entered in
+#     BOTH lists of `tests/fixtures/ports/v1-contract-inventory.json` — the
+#     `"dispatch.ts"` list and the contracts barrel `"index.ts"` list — in the phase
+#     that declares it, because `tests/structure/port-contract-inventory.test.ts`
+#     compares both directions and a missing or unexpected name reds it.
 #
 # TDR-0023 RESIDUAL RISKS AS OWNED WORK (phase 3; do not let either drift):
 #   - One shared exact count computation consumed by BOTH the resolve result and the
@@ -250,13 +324,26 @@
 #     `DispatchDivergenceSummary` type. TC-ATTEMPT-038 pins the single derivation
 #     structurally and TC-ATTEMPT-022 pins the exact numbers behaviourally; P2 is
 #     their negative control.
-#   - The count moves in BOTH directions on a migrated root, and only one direction is
-#     named in the spec's risk table: UP when more than 20 divergences are open (the
-#     delivered rule reported the capped list length) and DOWN when foreign open
-#     divergences leave the repository-scoped count. TC-ATTEMPT-022 asserts both
-#     directions (25 open for the reported repository, plus 5 open for another
-#     repository that must not be counted), and phase 5's reconciliation notes state
-#     both movements for `@doc-syncer` and for the M2 page.
+#   - What actually moves, stated as the delivered code and spec v1.3 §8.5 / RSK-6 /
+#     DEC-15 state it — the delivered summary's `unresolved` is ALREADY exact and
+#     store-wide, so nothing moves up past 20 and no delivered count was a capped-list
+#     artefact: `foldEvidenceWindow` keeps every open identifier with no cap,
+#     `unresolved` is that list's length, `resolved` is the fold minus it, and
+#     `packages/cli/src/output/dispatch-text.ts` prints every identifier. The change
+#     therefore does four things, and each is asserted or declared: (a) it computes the
+#     block over the reported repository, so on a migrated root the count and
+#     `reported` move DOWN by the other repository's open divergences (TC-ATTEMPT-022
+#     asserts 33/3/30 delivered → 28/3/25 scoped, with 25 open for the reported
+#     repository and 5 open for another that must not be counted, and 28/3/25 unchanged
+#     on an unmigrated root); (b) it puts that block on the resolve result, which
+#     reported no counts before; (c) it narrows the summary's `unresolvedIds` and the
+#     human `unresolved_divergences=` line to the documented at-most-20 list with
+#     `idsTruncated`, aligning the field with the bound
+#     `doc/spec/features/feature-dispatch-engine.md` already states; and (d) it retires
+#     the uncalled `summarizeDispatchDivergences`, the only place a list-length
+#     derivation ever existed and the only place any surface could have reported 20 for
+#     25 open divergences. Phase 5's reconciliation notes state these movements for
+#     `@doc-syncer` and for the M2 page and claim no upward movement.
 #   - Disclosure-only cross-repository resolution stays disclosed, not prevented:
 #     the resolve result names the divergence's own repository and scopes its counts
 #     to it (DEC-9, TDR-0023 D-7). No guard is added (NG-7, deferred with OQ-1).
@@ -278,8 +365,10 @@
 #   - Suite: the phase gates below. The P1..P4 revert/mutation bundle (§7.4) proves
 #     the detection power of behaviour that the pre-change tree already exhibits and
 #     is executed and recorded in phase 5 (the review gate before DoD): P1 renames a
-#     delivered resolve key and must red TC-ATTEMPT-034; P2 restores the delivered
-#     list-length derivations and must red TC-ATTEMPT-022 and TC-ATTEMPT-038; P3 drops
+#     delivered resolve key and must red TC-ATTEMPT-034; P2 reintroduces a list-length
+#     derivation in the shared block (`unresolved: unresolvedIds.length`,
+#     `resolved: folded.length - unresolvedIds.length`), which reports 20 for a 25-open
+#     repository, and must red TC-ATTEMPT-022 and TC-ATTEMPT-038; P3 drops
 #     the logical repository filter and must red TC-ATTEMPT-011 and TC-ATTEMPT-012;
 #     P4 clamps an over-limit `--limit` and accepts `07`/`001`/`+7` and must red
 #     TC-ATTEMPT-003. Each is applied, run, reverted, and re-run green; none is
@@ -339,13 +428,16 @@
 #     the read side adds no error identity and an `attempts.*` string anywhere means
 #     the document is stale; a store is not a repository, so the physical root is
 #     necessary but not sufficient; an empty verified history is success while a torn
-#     store is a fault at exit 2; the summary's number moves in both directions on a
-#     migrated root; coverage and floor live only on the summary.
+#     store is a fault at exit 2; the summary's count is already exact and moves only
+#     DOWN on a migrated root while its identifier list narrows to the documented 20;
+#     coverage and floor live only on the summary.
 #
 # ROLLBACK: the change is additive and ships behind no flag. Reverting the change
 # removes one verb, two flags, three additive resolve `data` keys, one additive human
-# line, and the `idsTruncated` key, and restores the retired count derivations (which
-# under-reported past 20 open divergences and over-reported on a migrated root). No
+# line, and the `idsTruncated` key; it returns the summary's counts to store-wide and
+# its identifier list to every open identifier, and it restores the uncalled
+# `summarizeDispatchDivergences` helper (which derived a count from a list it capped,
+# so a caller would have under-reported 25 open divergences as 20). No
 # record was written, rewritten, re-attributed, or migrated by this change, so no data
 # rollback exists; the read side wrote no delivery evidence. TDR-0023 stays valid as a
 # record of the design even if the change is reverted; a reversal is recorded in the
@@ -398,14 +490,26 @@ phases:
   #      (the sixteen fields of Appendix D, with `divergenceRef` typed as
   #      `string | null` and no optional members), `DispatchAttemptsTruncation`
   #      (`{scope: "ledger" | "page", bound, omittedRecords}`), `DispatchAttemptsData`
-  #      (the nine declared keys), the `AttemptsRefSource` vocabulary
-  #      (`"flag" | "active-change"`), and the read bounds
-  #      `ATTEMPTS_DEFAULT_LIMIT = 20`, `ATTEMPTS_MIN_LIMIT = 1`, `ATTEMPTS_MAX_LIMIT = 100`,
-  #      `ATTEMPTS_MAX_DATA_BYTES = 65536`, `ATTEMPTS_MAX_HUMAN_LINES = 40`,
-  #      `ATTEMPTS_MAX_HUMAN_BYTES = 8192`, `ATTEMPTS_HUMAN_ROW_BUDGET = 37`, and the
-  #      canonical limit form `ATTEMPTS_LIMIT_PATTERN = "[1-9][0-9]*"`. Types and
-  #      constants only: no record kind, schema version, token, projection class,
-  #      configuration key, or product literal.
+  #      (the eight always-present keys plus `truncation` only when a bound binds), the
+  #      `AttemptsRefSource` vocabulary
+  #      (`"flag" | "active-change"`), and the read bounds. Only five of the bound names
+  #      are new — `ATTEMPTS_DEFAULT_LIMIT = 20`, `ATTEMPTS_MIN_LIMIT = 1`,
+  #      `ATTEMPTS_MAX_LIMIT = 100`, `ATTEMPTS_HUMAN_ROW_BUDGET = 37` and the canonical
+  #      limit form `ATTEMPTS_LIMIT_PATTERN = "[1-9][0-9]*"`. The three byte/line
+  #      budgets are IMPORTED from the delivered dispatch bounds rather than declared
+  #      again: `DISPATCH_MAX_MACHINE_BYTES` (65,536) for the serialized `data`,
+  #      `DISPATCH_MAX_HUMAN_LINES` (40) and `DISPATCH_MAX_HUMAN_BYTES` (8,192) for the
+  #      digest, which is what spec §22's "beside the delivered dispatch bounds" means;
+  #      a second declaration of one bound is the drift that sentence prevents, and each
+  #      extra name would cost a contract-fixture entry.
+  #      CONTRACT SURFACE (a gate, not a formality): the nine names this item adds —
+  #      these four types and five constants — are entered in BOTH the `"dispatch.ts"`
+  #      list and the contracts barrel `"index.ts"` list of
+  #      tests/fixtures/ports/v1-contract-inventory.json in the SAME commit, because
+  #      `tests/structure/port-contract-inventory.test.ts` compares that fixture with
+  #      the real export set in both directions and reds on a missing or unexpected
+  #      name. Types and constants only: no record kind, schema version, token,
+  #      projection class, configuration key, or product literal.
   #  1.3 packages/core/src/domain/dispatch-attempts.ts (new, pure): `projectAttempt`
   #      (the sixteen-field projection, `endedAt` from the stored finish timestamp,
   #      `divergenceRef` present-and-`null` when the record has none, `resumeMode`
@@ -430,13 +534,18 @@ phases:
   #  1.5 Export surface: add the new module's exported names to
   #      packages/core/src/app/index.ts and packages/core/src/index.ts (both use
   #      explicit name lists, so the additions are deliberate one-line entries), and
-  #      add the new contract names to packages/core/src/contracts/index.ts. No new
-  #      subpath and no `packages/core/package.json` `exports` change, so
+  #      add the new contract names to packages/core/src/contracts/index.ts together
+  #      with BOTH entries of tests/fixtures/ports/v1-contract-inventory.json (the
+  #      `"dispatch.ts"` list and the barrel `"index.ts"` list) in the same commit — the
+  #      barrel re-export and its fixture row are one edit, so no commit leaves the
+  #      contract inventory red. No new subpath and no
+  #      `packages/core/package.json` `exports` change, so
   #      `bun run scripts/checks/workspace-entrypoints.ts`, `tests/structure/subpaths.test.ts`
   #      and `pnpm check:boundaries` stay green.
   #  1.6 Registration: `tests/structure/inventory.json` rows for the two new modules
   #      and `EXECUTABLE_ALLOWANCES` entries for their exported functions and for the
-  #      new constants in `core/src/contracts/dispatch.ts`.
+  #      five new constants in `core/src/contracts/dispatch.ts` — no allowance row for
+  #      the three reused dispatch budgets, which keep their delivered rows.
   #  1.7 Fixtures (new): tests/fixtures/dispatch/attempt-records.ts — `maximalAttempt()`
   #      (16 x 64-character evidence references, 40-character attempt id),
   #      `ledgerOf(n)` (ascending `startedAt`, shared frozen objects), `openDivergences(n,
@@ -470,7 +579,9 @@ phases:
   # the `divergenceRef`-present-as-`null` cells are green; the order is byte-stable
   # across two runs and across two opposite insertion orders; `pnpm typecheck`,
   # `pnpm check:boundaries`, `bun run scripts/checks/workspace-entrypoints.ts`,
-  # `bun test tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts`,
+  # `bun test tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts
+  # tests/structure/port-contract-inventory.test.ts` (the contract-surface gate this
+  # phase can red: nine added exports, both fixture entries),
   # `biome check` and the aggregate gate
   # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) are green; and no test
   # writes outside its temporary root. The aggregate runs here because this phase adds
@@ -487,9 +598,11 @@ phases:
     summary: >-
       Declare `attempts.v1` beside the delivered dispatch constants — the sixteen-field
       view with `divergenceRef` singular-or-`null` and `endedAt` mapped one-to-one, the
-      nine-key data shape, the `flag`/`active-change` ref-source vocabulary, and the read
-      bounds (page 20 / 1 / 100, data 65,536 bytes, 5,000-record ledger, 16 evidence
-      references, 20 identifiers, 240-character note) — and add one pure domain module
+      eight always-present data keys plus `truncation` only when a bound binds, the
+      `flag`/`active-change` ref-source vocabulary, five new bound constants reusing the
+      three delivered byte/line budgets (page 20 / 1 / 100, data 65,536 bytes,
+      5,000-record ledger, 16 evidence references, 20 identifiers, 240-character note)
+      — and add one pure domain module
       that projects, totally orders (`startedAt` desc, `recordedAt` desc, `attemptId`
       asc) and selects the page under the row bound and the byte budget with a single
       declared truncation object whose ledger scope wins, plus one app-tier read use case
@@ -499,7 +612,8 @@ phases:
       treats an empty verified read as success, and maps an unreadable store to its own
       `state.*` identity with no new error row; TDR-0023 is committed with this phase
       so the rulings bind before the code, and the two new modules are registered in the
-      inventory and the executable allowlist.
+      inventory and the executable allowlist while every added contract name lands in
+      both entries of the contract-surface fixture.
     scope:
       files:
         - doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
@@ -512,6 +626,7 @@ phases:
         - packages/core/src/index.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
         - tests/fixtures/dispatch/attempt-records.ts
         - tests/fixtures/dispatch/attempts-harness.ts
         - tests/behaviour/dispatch-attempts-bounds.test.ts
@@ -555,9 +670,11 @@ phases:
   #      then one row per attempt newest first as
   #      `<startedAt> <ref> <token> <corroboration> <divergenceRef|none> <harness> <evidenceClass>`
   #      with timestamps printed exactly as stored, then an optional
-  #      `truncation=human:bound:<kept>,omitted:<dropped>` line (at most 37 rows beside
-  #      it), then `next: dispatch dual-run summary --repo <repository> (coverage and
-  #      floor)`; bounded to 40 lines and 8,192 bytes with rows dropped from the oldest
+  #      `truncation=human:bound:<kept>,omitted:<dropped>` line (at most
+  #      `ATTEMPTS_HUMAN_ROW_BUDGET` = 37 rows beside it), then
+  #      `next: dispatch dual-run summary --repo <repository> (coverage and
+  #      floor)`; bounded to the delivered `DISPATCH_MAX_HUMAN_LINES` (40) and
+  #      `DISPATCH_MAX_HUMAN_BYTES` (8,192) with rows dropped from the oldest
   #      end and `has_more` untouched by the cut; the corroboration cell is the closed
   #      three-value derivation (`corroborated` / `uncorroborated` / `vacuous`); no
   #      `result=`, `pr_url=`, `exit_code=` or `last_message=` key appears. Register both
@@ -569,12 +686,31 @@ phases:
   #      and the clock — no new exported function, so the edge's executable allowance is
   #      unchanged; add `DispatchAttemptsRuntime` to the type export list in
   #      packages/cli/src/commands/index.ts.
+  #      OPTIONALITY IS THE CONTRACT (A1): `DispatchCommandRuntime.attempts` is an
+  #      optional member like the delivered `summary`, `resolve` and `handover`, the new
+  #      `DispatchGateComposition` ports (`attempts` on the gate composition, carrying the
+  #      read use case's inputs) are optional, and `createDispatchGateRuntime` composes
+  #      the attempts surface ONLY when they are supplied — its return type gains
+  #      `attempts?: DispatchAttemptsRuntime`, not a required member. Two consequences
+  #      follow and both are asserted rather than hoped for: a composition that supplies
+  #      no attempts ports keeps exactly the delivered three gate surfaces, so
+  #      `tests/fixtures/dispatch/golden/harness.ts`,
+  #      `tests/conformance/dispatch/controlled-repo.ts` and
+  #      `tests/structure/dispatch-composition.test.ts` (whose gate-less scenario asserts
+  #      `Object.keys(scenario.runtime)` is exactly `["run"]`) need NO edit and are
+  #      deliberately not declared in this phase's scope; and a composition that omits
+  #      `gate` entirely still exposes the run surface alone. Every delivered optional
+  #      member (`gate?`, `preflight?`, `restartBudget?`, `restartCount?`, `waitForCadence?`)
+  #      sets this precedent; a required member would be a breaking change to every
+  #      existing fixture and composition for no consumer benefit.
   #  2.4 packages/cli/src/production.ts: compose the attempts surface over the project
   #      state root (GH-288's `stateDirectory`), `resolveProductionRepository(undefined,
   #      { persist: false })` (no scheduler key, so no queue read: exactly one store read
   #      per invocation), and the delivered local-context seam
   #      (`readLocalPmContext({ path: pmContextPath, fs: localFs })`, the same path the
-  #      digest and the spend read side use). Nothing is persisted: a read never creates
+  #      digest and the spend read side use) — supplying every optional port, so the
+  #      production composition is the one that carries `dispatch attempts`. Nothing is
+  #      persisted: a read never creates
   #      or repairs the dispatch repository binding marker.
   #  2.5 Fixtures: tests/fixtures/dispatch/attempts-harness.ts gains the command-level
   #      `invoke(argv)` returning `{exit, stdout, stderr, envelope, data, readCount}`;
@@ -620,17 +756,27 @@ phases:
   #   TC-ATTEMPT-025  human budget: 40 lines, 8,192 bytes, oldest dropped, declared cut,
   #                   `has_more` unchanged
   #   TC-ATTEMPT-026  two byte-identical text runs and two structurally identical payloads
-  #   TC-ATTEMPT-028  no `coverage`, `floor`, `verdict`, `eligibility` or `unmetConditions`
-  #                   key on the attempts envelope, and the summary keeps the gate
-  #   TC-ATTEMPT-034  delivered shapes stable, the attempts payload discriminated by its
-  #                   `attempts` array against all four selectors, and the delivered
-  #                   branches' unknown-flag refusal still `fallback.invocation` (P1
-  #                   negative control)
+  #   TC-ATTEMPT-028  CELLS 1-3 (this phase's green set: the attempts envelope carries no
+  #                   `coverage`, `floor`, `verdict`, `eligibility` or `unmetConditions`
+  #                   key at any depth, and the gate summarizer counter is 0). Cell 4 —
+  #                   the summary's block key order with `idsTruncated`, its narrowed
+  #                   `unresolvedIds` and the matching human line — completes in phase 3
+  #                   with the shared count rule and is owned there.
+  #   TC-ATTEMPT-034  CELLS 1, 4, 5, 6 (this phase's green set: the four delivered `data`
+  #                   key sets and order unchanged, the attempts payload discriminated by
+  #                   its `attempts` array against all four text selectors, the attempts
+  #                   payload a plain success at exit 0, and the delivered branches'
+  #                   unknown-flag refusal still `fallback.invocation` — the P1 negative
+  #                   control). Cells 2-3 — the resolve payload's added keys and both
+  #                   blocks' `idsTruncated` — complete in phase 3 and are owned there.
   #   TC-ATTEMPT-039  grammar refusals: non-canonical ref, unknown flag, unexpected
   #                   positional — exit 1, `input.value.rejected`, zero store reads,
   #                   nothing appended, no `attempts.*` identity
   #
-  # Done when: those twenty-two TCs are green; the two-run text output is byte-identical
+  # Done when: those twenty TCs are green, together with the phase-2 cells of
+  # TC-ATTEMPT-028 (cells 1-3) and TC-ATTEMPT-034 (cells 1, 4, 5, 6) — the split is
+  # stated so this boundary is satisfiable without the count rule of phase 3;
+  # the two-run text output is byte-identical
   # and the two machine payloads structurally identical; `readCount === 1` on every
   # successful cell and `0` on every refusal cell; `pnpm build && bun test` for the
   # subprocess-adjacent cells; `pnpm check:boundaries` green with no new dependency edge;
@@ -710,18 +856,24 @@ phases:
   # Commit: feat(dispatch): declare local-evidence resolve and one exact count
   #
   # Goal: make the resolve result evidence of what moved, and make the number it reports
-  # the same number the summary reports — one computation, exact in both directions, with
-  # the retired list-length derivation deleted rather than left beside it.
+  # the same number the summary reports — one computation, exact for its repository, with
+  # the uncalled list-length helper deleted rather than left beside it.
   #
   # Work:
   #  3.1 packages/core/src/contracts/dispatch.ts: `DispatchDivergenceBlock`
   #      (`reported`, `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated`) and
   #      `DispatchResolveData` (the five delivered keys plus `mode`, `repository`,
   #      `divergences`); change `DispatchSummaryData.divergences` to the block type so the
-  #      one declared additive key appears on both surfaces and the four delivered fields
-  #      keep their names, types, meanings and order. No new executable export, so the
-  #      contracts allowance is unchanged; the new types go through
-  #      packages/core/src/contracts/index.ts.
+  #      one declared additive key appears on both surfaces, the four delivered fields
+  #      keep their names, types and order, and of their meanings only `unresolvedIds`
+  #      narrows (to the documented at-most-20 list) while `reported`, `resolved` and
+  #      `unresolved` keep theirs as exact counts (spec v1.3 §8.5). No new executable
+  #      export, so the contracts allowance is unchanged; the new types go through
+  #      packages/core/src/contracts/index.ts, and BOTH of their names are entered in
+  #      both entries of tests/fixtures/ports/v1-contract-inventory.json (the
+  #      `"dispatch.ts"` list and the barrel `"index.ts"` list) in the same commit —
+  #      `tests/structure/port-contract-inventory.test.ts` compares both directions, so
+  #      the type and its fixture row are one edit.
   #  3.2 packages/core/src/domain/dispatch-gate.ts: export
   #      `summarizeRepositoryDivergences(records, repository)` — fold latest-per-identifier
   #      over the records of that repository, `unresolved` = the exact count still `open`,
@@ -777,14 +929,35 @@ phases:
   #   TC-ATTEMPT-027  one deterministic resolve line, including on replay
   #   TC-ATTEMPT-038  one divergence-count computation: the exported computation and its
   #                   two consumers, zero second fold, zero list-length derivation (P2)
+  #   TC-ATTEMPT-028  CELL 4 (owned here; cells 1-3 were made green in phase 2 and are
+  #                   re-run here): the summary's divergence block is exactly `reported`,
+  #                   `resolved`, `unresolved`, `unresolvedIds`, `idsTruncated` in that
+  #                   order; the first three keep their delivered names, types, meanings
+  #                   and order as exact counts; more than 20 open identifiers return
+  #                   exactly 20 with `idsTruncated: true` while `unresolved` stays the
+  #                   exact count; below the bound every identifier returns with
+  #                   `idsTruncated: false`; and the human `unresolved_divergences=` line
+  #                   prints exactly the returned identifiers.
+  #   TC-ATTEMPT-034  CELLS 2-3 (owned here; cells 1, 4, 5, 6 were made green in phase 2
+  #                   and are re-run here): the five delivered resolve keys keep their
+  #                   names, types, meanings and leading order with `mode`, `repository`
+  #                   and `divergences` after them, and both blocks — summary and resolve
+  #                   result — carry exactly `reported`, `resolved`, `unresolved`,
+  #                   `unresolvedIds`, `idsTruncated` in that order, with at most 20
+  #                   identifiers and `idsTruncated` true exactly when identifiers were
+  #                   dropped (P1's rename must red this cell).
   #   TC-ATTEMPT-036  test isolation across every new suite: the approved base, the
   #                   pre-write guard, the real-state fingerprint, and no direct `tmpdir()`
   #                   use (cross-cutting; owned here because this is the last phase that
   #                   adds a suite)
   #
-  # Done when: those eight TCs are green; the summary's `divergences` block carries
-  # `idsTruncated` with its four delivered fields in delivered order; the attempts
-  # envelope still carries no gate key (TC-ATTEMPT-028 re-run); `pnpm --filter
+  # Done when: those ten TCs are green (the eight wholly-owned plus TC-ATTEMPT-028 and
+  # TC-ATTEMPT-034, whose completing cells land here); the summary's `divergences` block
+  # carries `idsTruncated` with its four delivered fields in delivered order; the attempts
+  # envelope still carries no gate key (TC-ATTEMPT-028 cells 1-3 re-run);
+  # `bun test tests/structure/port-contract-inventory.test.ts` green with
+  # `DispatchDivergenceBlock` and `DispatchResolveData` present in both fixture entries;
+  # `pnpm --filter
   # @delivery-os/core typecheck && pnpm --filter @delivery-os/cli typecheck`,
   # `pnpm check:boundaries` (the shared computation introduces no forbidden tier edge and
   # no new subpath), `bun run scripts/checks/error-table-sync.ts`,
@@ -810,9 +983,10 @@ phases:
       divergence block (`reported`, `resolved`, the exact folded open `unresolved`, at most
       20 `unresolvedIds`, `idsTruncated`) — and make that block and the summary's block one
       computation in the domain tier that folds latest-per-identifier over one repository's
-      records, so `unresolved` is the exact count rather than the length of a capped list and
-      a migrated root stops counting another repository's open divergences; the retired
-      list-length derivation and its summary type are deleted from the app ledger with their
+      records, so the summary's already-exact count becomes repository-scoped (a migrated
+      root stops counting another repository's open divergences) and its identifier list
+      narrows to the documented at-most-20 list with `idsTruncated`; the uncalled
+      list-length helper and its summary type are deleted from the app ledger with their
       export and allowance entries, the resolve keeps the delivered order of note clamping
       and blank-note refusal with an idempotent replay, and one deterministic human line
       makes the mode, the counts and the subject repository visible without `--json`.
@@ -829,6 +1003,7 @@ phases:
         - packages/cli/src/output/dispatch-text.ts
         - packages/cli/src/output/index.ts
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
         - tests/fixtures/dispatch/attempt-records.ts
         - tests/behaviour/dispatch-resolve-result.test.ts
         - tests/behaviour/dispatch-divergence-count.test.ts
@@ -878,12 +1053,25 @@ phases:
   #      `dispatch attempts`.
   #  4.5 tests/behaviour/dispatch-help-version.test.ts: `["dispatch", "attempts", "--help"]`
   #      joins the poisoned-composer set, proving the new page is a pure data lookup.
+  #  4.6 tests/structure/dispatch-attempts-composition.test.ts (NEW — the suite this
+  #      phase's done-when requires and no earlier work item created): author
+  #      TC-ATTEMPT-029's suite half. Three cells: (a) the digest's pointer line is
+  #      exactly `next: dispatch dual-run summary --repo <repository> (coverage and
+  #      floor)`; (b) the family entry's synopsis names
+  #      `dispatch dual-run summary --repo <repository>`; (c) the `dispatch attempts`
+  #      help entry names it too, and the attempts envelope and digest carry no
+  #      `coverage`, `floor`, `verdict`, `eligibility` or `unmetConditions` key, so no
+  #      second surface computes the gate. The reference-page half of TC-ATTEMPT-029
+  #      stays review-verified in phase 5 (AC-F7-2). The suite reads the help inventory
+  #      and the rendered digest as data, so it composes nothing and touches no store.
   #
   # Test obligations (owning TCs; must be green at this boundary):
   #   TC-ATTEMPT-029  the pointer is the only route from evidence to the gate: the digest's
-  #                   pointer line, the help synopsis, and (review-verified) the reference
+  #                   pointer line, the help synopsis (family entry and the `dispatch
+  #                   attempts` entry), and (review-verified in phase 5) the reference
   #                   page all name `dispatch dual-run summary --repo <repository>`, and no
-  #                   second surface computes coverage or floor
+  #                   second surface computes coverage or floor — asserted by the new
+  #                   tests/structure/dispatch-attempts-composition.test.ts (work 4.6)
   #   TC-ATTEMPT-030  `dispatch attempts --help` exits 0 and renders usage, both options,
   #                   the global option block, an example and the exit-code block with no
   #                   state, network, git or configuration read; the root listing still
@@ -900,7 +1088,8 @@ phases:
   # byte-unchanged (a diff against the phase base is the receipt); `pnpm typecheck`,
   # `pnpm check:boundaries` and `biome check` green.
   # Gate choice (justified): this phase changes the static help inventory, one fixture and
-  # four test files, and no source outside `packages/cli/src/help.ts`; the aggregate gate
+  # four existing test files, and authors one new one, with no source outside
+  # `packages/cli/src/help.ts`; the aggregate gate
   # `TMPDIR=$PWD/tmp/tmpdir pnpm check` is therefore NOT re-run here — the narrower battery
   # above covers every file this phase can affect, and the aggregate re-runs on the final
   # tree at phase 5. `pnpm check:help` is run explicitly because it is part of the
@@ -920,10 +1109,13 @@ phases:
       usage, options, example and a see-also target in the M2 page root; the coverage
       inventory registers the M2 attempts page while its command list stays unchanged
       because `attempts` is not prompt-required; the reference-page parity pin moves from
-      four entries to five with its title stating five; and the help inventory and
+      four entries to five with its title stating five; the help inventory and
       poisoned-composer suites pin the five-entry list and prove the new page is a pure
-      data lookup with no state, git, configuration or network read, while the root
-      listing keeps its seventeen families and the M1 dispatch page stays byte-unchanged.
+      data lookup with no state, git, configuration or network read; and one new
+      structural suite pins the single declared pointer route from the digest, the family
+      synopsis and the attempts entry to `dispatch dual-run summary --repo <repository>`,
+      while the root listing keeps its seventeen families and the M1 dispatch page stays
+      byte-unchanged.
     scope:
       files:
         - packages/cli/src/help.ts
@@ -968,14 +1160,28 @@ phases:
   #      singular divergence reference, the unconditional `local-evidence` mode, the
   #      repository-scoped counts with `idsTruncated`, and the read bounds.
   #  5.3 The five system-spec reconciliations named in the header's phase-7 handoff:
-  #      feature-dispatch-engine (grammar, read-side section, resolve fields, error reuse,
-  #      bounds), feature-result-contract (one clarifying sentence, no row change),
+  #      feature-dispatch-engine (grammar, read-side section, resolve fields, the corrected
+  #      divergence-block statement per spec v1.3 §8.5, error reuse, bounds),
+  #      feature-result-contract (one clarifying sentence, no row change),
   #      feature-cli-entrypoint (`dispatch attempts` in the enumerated subforms),
   #      feature-state-layer (the store-opening read paragraph), feature-projects (the
   #      read-only-with-respect-to-evidence sentence and the two marker roles).
+  #      FRONTMATTER UPKEEP ON EVERY EDITED PAGE (A8): each edited feature page advances
+  #      `last_updated` to this change's date and appends `GH-289` to
+  #      `links.related_changes`, preserving the existing entries verbatim
+  #      (`feature-dispatch-engine.md` currently ends at `GH-288`, so its list ends
+  #      `..., "GH-288", "GH-289"`). A page whose body moved but whose metadata still
+  #      names the previous change is a `@doc-syncer` finding, so the metadata edit is
+  #      part of the same page edit, not a follow-up.
   #  5.4 doc/quality/test-specs/test-spec-dispatch-engine.md: coverage rows for the attempts
-  #      read and the resolve result, `links.related_changes` gains `GH-289`, and
-  #      `last_updated` advances.
+  #      read and the resolve result, plus the frontmatter upkeep — `last_updated`
+  #      advances and `links.related_changes` gains `GH-289` while every existing
+  #      identifier stays. LIST POLICY, stated so it is deliberate: the list records the
+  #      changes that touched THIS test spec, and it currently reads `GH-239`, `GH-275`,
+  #      `GH-277`, `GH-279` — GH-288 is absent because it did not touch this page. This
+  #      phase therefore appends `GH-289` only and does not fabricate a `GH-288` entry; if
+  #      `@doc-syncer` concludes GH-288 belongs there, that is a separate documentation
+  #      correction, not this change rewriting another change's record.
   #  5.5 The planning corpus: `doc/planning/oss-tooling/backlog.md` (M2-S12 progress marker
   #      naming the delivered read side, the local-evidence resolve result and the
   #      coverage/floor pointer), `doc/planning/oss-tooling/status.md` (M2 delivery snapshot
@@ -1032,7 +1238,10 @@ phases:
   # because it is not part of the aggregate); `pnpm check:help` and the parity gate green;
   # the P1..P4 rows and the review rows are recorded in test-plan §10; the aggregate gate
   # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) is green; and
-  # `bun packages/cli/bin/delivery-os.ts plan validate GH-289` answers valid.
+  # `bun packages/cli/bin/delivery-os.ts plan validate GH-289` answers valid. The
+  # frontmatter half is review-verified in the diff: every edited feature page and the
+  # quality test-spec carry an advanced `last_updated` and `GH-289` appended to
+  # `links.related_changes` with the existing entries preserved.
   #
   # Phase-7 handoff obligations (see the header block; nothing is silently dropped): the
   # five system-spec pages, the quality test-spec page, the M2 page refinements, the four
@@ -1054,7 +1263,8 @@ phases:
       local-evidence mode, repository-scoped counts and the read bounds, the dispatch
       engine, result-contract, CLI-entrypoint, state-layer and projects specs state the
       delivered grammar, read side, resolve fields, error reuse and store-opening effects
-      with TDR-0023 cited rather than restated, the quality test-spec and the planning
+      with TDR-0023 cited rather than restated and every edited page's `last_updated` and
+      `links.related_changes` advanced, the quality test-spec and the planning
       corpus record the delivery, one added changeset declares the five fixed-group
       packages at `minor` while pre-existing changesets stay byte-identical, the P1..P4
       revert/mutation bundle and every review-verified row are recorded in the test plan's
