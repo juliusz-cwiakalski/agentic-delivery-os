@@ -2,6 +2,43 @@
 # (2026-11-11). Rewritten against spec v1.2 (38 ACs) and test plan v3 (42 TCs), and
 # against the DoR iteration-1 findings (readiness-review/readiness-iter-1.md).
 #
+# REVISION NOTE (revision 2.0, amended after DoR iteration 2 —
+# readiness-review/readiness-iter-2.md). Numbering stays 2.0: this pass is
+# mechanical, changing scope declarations and wording only. No AC or TC ownership,
+# no phase count, no tier, no interaction, and no parsed key changes.
+#   B13 the second new user-facing document is registered where it is created:
+#       phase 6 now scopes `scripts/checks/forbidden-literals.registry.json`
+#       (the new `feature-projects` page is absent at `corpusBaseline`, so the
+#       scan fails an unregistered new doc under `doc/`) and `doc/00-index.md`
+#       (the landing page hand-lists every feature page). The registry-diff claim
+#       is now true at every boundary: exactly one addition at phase 5's boundary
+#       (the migration guide) and exactly two in the final tree (guide + page).
+#   B14 the mount unit's missing members are scoped: `packages/cli/src/edge.ts`
+#       (`ConfigProgramOptions` and the `commands` map that `production.ts` passes
+#       to `createConfigProgram`; without it the built entrypoint throws for the
+#       new prompt-required name) and
+#       `tests/behaviour/entrypoint-composition.test.ts` (TC-ENTRY-009's literal
+#       EXPECTED command list). The "both gates assert set equality" statements
+#       are corrected to "three pins": the coverage gate, the parity test, and
+#       TC-ENTRY-009. Every other `PROMPT_REQUIRED_COMMANDS` consumer was
+#       re-checked and is list-driven (`tests/fixtures/entrypoint/programs.ts`,
+#       `tests/behaviour/entrypoint-help-coverage.test.ts`,
+#       `tests/structure/cli-edge-seam.test.ts`,
+#       `tests/structure/entrypoint-bin.test.ts`,
+#       `tests/structure/coordinator-production-composition.test.ts`,
+#       `tests/structure/dispatch-help-inventory.test.ts`), so none carries a
+#       second literal command inventory.
+#   B15 the root entry is scoped where the new app symbol is consumed: phase 2
+#       gains `packages/core/src/index.ts`, because it re-exports app symbols by
+#       an explicit name list and the CLI may import core only from `.` and the
+#       declared subpaths. The export addition introduces no new subpath.
+#   F5/F6 doc obligations: `doc/00-index.md` joins phase 6, and the
+#       doc-distribution guard — which is NOT part of `pnpm check` — is named as
+#       an explicit command in the phases that add or edit a scanned doc (phase 5
+#       adds the guide marked `redistributable`; phase 6 edits `doc/00-index.md`,
+#       whose marker stays `redistributable`, and adds the feature page marked
+#       `internal` like every other feature spec).
+#
 # One ticket, one PR against main-tools, six delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary: no phase needs
 # a later phase to compile, to assert, or to be meaningful. Extra phase data (goal,
@@ -45,11 +82,15 @@
 # DoR ITERATION-1 REMEDIATIONS AND WHERE EACH IS DISCHARGED:
 #   B3  mount unit atomicity (critical): the mount obligations are ONE phase.
 #       Phase 3 lands, as one indivisible unit: `projects` in
-#       PROMPT_REQUIRED_COMMANDS, the command definition and its composition, the
+#       PROMPT_REQUIRED_COMMANDS, the command definition and its composition in
+#       `packages/cli/src/edge.ts` and `packages/cli/src/production.ts`, the
 #       root/family/verb help entries, the M2 reference page containing `--help`
 #       and `--version`, the coverage-inventory row plus the per-command page root
 #       in BOTH gates, and the three error-table rows with the result-contract
-#       page. Both gates assert set equality with PROMPT_REQUIRED_COMMANDS, so no
+#       page. THREE pins assert the command set: `scripts/checks/help-guide-coverage.ts`
+#       (set equality with the inventory), `tests/checks/reference-page-parity.test.ts`
+#       (set equality with PROMPT_REQUIRED_COMMANDS), and TC-ENTRY-009's literal
+#       expectation in `tests/behaviour/entrypoint-composition.test.ts`. No
 #       intermediate tree is green: no phase enables the prompt set before the
 #       page and rows exist, and no phase asserts prompt-set membership before
 #       the mount unit. TC-PROJ-030 carries the whole unit and is owned by phase
@@ -88,12 +129,16 @@
 #       while `Status: Proposed (M2)` stays, because the pack stays planned until
 #       M2 exit. Phase 3 owns only the mount-critical additions to that page
 #       (`--help`/`--version` and registration), which the parity gate needs.
-#   B9  forbidden-literals registry (critical): the migration guide is a
-#       user-facing doc, so `scripts/checks/forbidden-literals.registry.json`
-#       gains its `registered` row in the SAME phase that adds the guide
-#       (phase 5), and phase 5's done-when runs the literal scan. Without it,
-#       `scripts/checks/forbidden-literals.ts` reds on an unregistered new doc
-#       under `doc/` the moment the guide lands.
+#   B9  forbidden-literals registry (critical): every new document under the
+#       scanned `doc/` roots is registered in the SAME phase that adds it, because
+#       `scripts/checks/forbidden-literals.ts` fails an unregistered new doc and
+#       `tests/checks/forbidden-literals.test.ts` scans the whole root, so
+#       `pnpm check` reds the moment the doc lands. Phase 5 adds the migration
+#       guide to `scripts/checks/forbidden-literals.registry.json` (B9) and phase
+#       6 adds the `feature-projects` page plus its `doc/00-index.md` row (B13);
+#       the registry diff is exactly one addition at phase 5's boundary and
+#       exactly two in the final tree. No seed is removed and no shipped source
+#       file is allowlisted.
 #   B10/B11 evidence and socket site (major): AC-F6-4 is `mutation-verified` by
 #       procedure P8, which reverts the COMPOSING SITE's argument (project root →
 #       host root) and must red the assertion; the plan names that site explicitly
@@ -290,8 +335,10 @@
 #   - No new package, no new external dependency, no new subpath, and no new
 #     hardcoded product or binary literal: every name resolves from the injected
 #     brand identity, marker/index names live in one contracts constant that tests
-#     import rather than spell, and the migration guide is registered in the
-#     forbidden-literals registry rather than exempted (NFR-10, AC-F9-4).
+#     import rather than spell, and every new document under the scanned `doc/`
+#     roots is registered in the forbidden-literals registry in the phase that
+#     adds it rather than exempted (NFR-10, AC-F9-4): the migration guide in
+#     phase 5, the `feature-projects` page in phase 6.
 #   - Boundaries hold in every phase (`.dependency-cruiser.cjs`,
 #     `.ai/rules/typescript.md`): `packages/core/src/domain` imports `contracts`
 #     only; `packages/core/src/app` is the only tier that may import `domain`,
@@ -655,8 +702,17 @@ phases:
   #      (the path does not exist yet; the rule is stated here and asserted by
   #      TC-PROJ-041 in phase 3). Record the legacy-detection exclusions (the index,
   #      the owner-hold marker, the `unbound` scope) as declared data for phase 5.
-  #  2.5 Registration: inventory and executable-allowance rows for the two new
-  #      modules.
+  #  2.5 packages/core/src/index.ts (B15): the root entry re-exports app symbols by
+  #      an explicit name list, and the CLI may import core only from `.` and its
+  #      declared subpaths, so the new app-tier names the production composition
+  #      consumes (the host-index fold and its result/entry types, and the state
+  #      scope policy already exported in phase 1) are added to that list here.
+  #      This is an additive re-export of an existing module: the core package
+  #      manifest's `exports` map gains nothing, so no new subpath exists, and
+  #      `scripts/checks/workspace-entrypoints.ts` plus
+  #      `tests/structure/subpaths.test.ts` stay green.
+  #  2.6 Registration: inventory and executable-allowance rows for the two new
+  #      modules, and the existing row of the root entry if it lists its exports.
   #
   # Test obligations (owning TC; must be green at this boundary):
   #   TC-PROJ-009  pruning is index-only: the vanished-root entry and the
@@ -670,10 +726,12 @@ phases:
   # genuine change and does NOT advance (and no write occurs) when nothing changed;
   # the counter fact shows at most one read and one write per maintaining
   # invocation; pruning never deletes a state root; the DEC-18 guard leaves the
-  # existing entry byte-identical and advances no revision; `tests/structure/
-  # inventory.json` and the executable allowlist are updated;
-  # `pnpm check:boundaries`, `bun run scripts/checks/workspace-entrypoints.ts` and
-  # `biome check` are green.
+  # existing entry byte-identical and advances no revision; the root entry exports
+  # the new app-tier names with `packages/core/package.json` `exports` unchanged;
+  # `tests/structure/inventory.json` and the executable allowlist are updated;
+  # `pnpm typecheck`, `pnpm check:boundaries`,
+  # `bun run scripts/checks/workspace-entrypoints.ts`,
+  # `tests/structure/subpaths.test.ts` and `biome check` are green.
   # Isolation: the index suites run over the phase-1 host-root/home pair and the
   # pre-write guard; no suite writes to the real state directory or the live
   # checkout.
@@ -710,6 +768,7 @@ phases:
         - packages/core/src/contracts/projects.ts
         - packages/core/src/app/host-index.ts
         - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
         - packages/adapters/src/file/host-index-store.ts
         - packages/adapters/src/file/index.ts
         - packages/cli/src/production.ts
@@ -734,10 +793,14 @@ phases:
   #
   # Goal: deliver the host overview — the family's only verb, its contract, its two
   # health projections, its three error identities — and make it reachable in one
-  # step. This phase is the change's largest slice by design: both help gates assert
-  # set equality with PROMPT_REQUIRED_COMMANDS, so the prompt-set entry, the command
-  # definition, the help entries, the reference page, the coverage-inventory row and
-  # the three error rows are green only together (DoR B3, TC-PROJ-030).
+  # step. This phase is the change's largest slice by design: three pins assert the
+  # composed command set (`scripts/checks/help-guide-coverage.ts` set equality with
+  # the inventory, `tests/checks/reference-page-parity.test.ts` set equality with
+  # PROMPT_REQUIRED_COMMANDS, and TC-ENTRY-009's literal expectation in
+  # `tests/behaviour/entrypoint-composition.test.ts`), so the prompt-set entry, the
+  # command definition and its composition, the help entries, the reference page,
+  # the coverage-inventory row and the three error rows are green only together
+  # (DoR B3, B14; TC-PROJ-030).
   #
   # Work:
   #  3.1 packages/core/src/contracts/projects.ts: the `projects list` command
@@ -794,9 +857,17 @@ phases:
   #      tests/checks/reference-page-parity.test.ts learn that page-root mapping so
   #      an M2 page serves an M2 command while every M1 page stays byte-unchanged
   #      (DEC-13), with tests/checks/help-guide-coverage-mutants.test.ts proving the
-  #      map is honoured and that an unregistered page still fails. No intermediate
-  #      tree is green: the prompt set, the inventory, the page and the rows land in
-  #      this one phase.
+  #      map is honoured and that an unregistered page still fails; (f)
+  #      packages/cli/src/edge.ts registers the family — `ConfigProgramOptions`
+  #      gains the `projects` composition option and the `commands` map gains the
+  #      `projects` definition behind its explicit `if (options.projects !==
+  #      undefined)` block — because `selectPromptRequiredProgram` THROWS for a
+  #      prompt-required name the program lacks, and `production.ts` only passes
+  #      options to `createConfigProgram`; (g)
+  #      tests/behaviour/entrypoint-composition.test.ts updates TC-ENTRY-009's
+  #      literal EXPECTED command list (the third pin, B14). No intermediate tree is
+  #      green: the prompt set, the inventory, the page, the rows, the composition
+  #      and the composition expectation land in this one phase.
   #  3.9 Registration: inventory and executable-allowance rows for the new modules
   #      and the new probe export on the existing daemon adapter file.
   #
@@ -826,8 +897,9 @@ phases:
   #                effects
   #   TC-PROJ-030  the mount unit as one indivisible unit: prompt set, help
   #                entries, page with `--help`/`--version`, inventory row and page
-  #                root, error rows and command definition all present in one run;
-  #                both gates green with set equality both ways; the restriction
+  #                root, error rows, the composed command definition and TC-ENTRY-009's
+  #                expectation all present in one run; the coverage gate and the
+  #                parity test green with set equality both ways; the restriction
   #                step keeps `projects`; the mutants still detect a removed row and
   #                a page missing `--version`; the review half records zero changed
   #                paths under the M1 snapshot
@@ -847,7 +919,9 @@ phases:
   # Done when: those twenty-one suites are green; the three codes resolve through
   # `packages/cli/src/classify.ts` (never `fallback.internal`);
   # `pnpm build && bun test tests/behaviour/projects-help.test.ts` passes for the
-  # subprocess cell; `pnpm check:help`, the parity and mutants suites,
+  # subprocess cell; `bun test tests/behaviour/entrypoint-composition.test.ts`
+  # (TC-ENTRY-009) is green with `projects` composed and advertised;
+  # `pnpm check:help`, the parity and mutants suites,
   # `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts`,
   # `bun run scripts/checks/error-table-sync.ts`,
   # `bun run scripts/checks/forbidden-literals.ts`,
@@ -888,12 +962,14 @@ phases:
       `projects.state-unavailable`, a same-basename collision is refused by the
       DEC-18 guard instead of adopting another project's root, the three error
       identities land in one new domain kind with the result-contract page synced
-      and the DEC-16 naming rule implemented exactly, and the same commit adds
-      `projects` to the prompt-required set, the root/family/verb help entries with
-      an example and the shared exit block, the M2 reference page with
+      and the DEC-16 naming rule implemented exactly, and the same commit mounts the
+      family: `projects` in the prompt-required set, its definition composed in the
+      edge's command map so the entrypoint does not throw, the root/family/verb help
+      entries with an example and the shared exit block, the M2 reference page with
       `--help`/`--version`, the coverage-inventory row and the per-command page root
-      in both help gates, because both gates assert set equality and no
-      intermediate tree is green.
+      in both help gates, and the entrypoint composition expectation — because the
+      coverage gate, the parity test and that expectation each pin the command set,
+      so no intermediate tree is green.
     scope:
       files:
         - packages/core/src/contracts/projects.ts
@@ -909,6 +985,7 @@ phases:
         - packages/cli/src/output/projects-text.ts
         - packages/cli/src/output/index.ts
         - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
         - packages/cli/src/help.ts
         - packages/cli/src/help/prompt-required-commands.ts
         - doc/planning/oss-tooling/milestones/m2/commands/projects.md
@@ -931,6 +1008,7 @@ phases:
         - tests/behaviour/projects-daemon-reachability.test.ts
         - tests/behaviour/projects-help.test.ts
         - tests/behaviour/projects-performance.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
       folders:
         - tests/fixtures/projects
     interactions:
@@ -1134,11 +1212,15 @@ phases:
   #                the three identities and the exit set `{0, 2}`
   #
   # Done when: those four suites are green plus
-  # `bash scripts/.tests/test-doc-distribution.sh`,
+  # `bash scripts/.tests/test-doc-distribution.sh` (the guide is a
+  # `redistributable` `doc/guides/*.md` file and that guard is NOT part of
+  # `pnpm check`, so it is run explicitly here and in phase 6),
   # `bun run scripts/checks/forbidden-literals.ts` and
-  # `bun test tests/checks/forbidden-literals.test.ts`; the registry diff is exactly
-  # one addition (the guide) with unchanged scopes and seeds; no product code path
-  # moves or deletes a state file; `biome check` green.
+  # `bun test tests/checks/forbidden-literals.test.ts`; the registry diff at THIS
+  # boundary is exactly one addition (the migration guide) with unchanged scopes
+  # and seeds — the final tree carries two, because the reconciliation phase
+  # registers the `feature-projects` page it adds (B13); no product code path moves
+  # or deletes a state file; `biome check` green.
   # Isolation: the migration fixture is built entirely through the delivered APIs
   # under a per-test host root, moved with plain `rename`, and cleaned in a
   # `finally`; the uncreatable-marker cell is provoked structurally (the marker
@@ -1256,6 +1338,16 @@ phases:
   #      unchanged-state half (zero writes, no revision advance): each procedure
   #      applied, its named assertion red under the configuration that must red,
   #      restored, and re-run green.
+  #  6.7 Registration and indexing (B13, F5): the new
+  #      `doc/spec/features/feature-projects.md` is added to
+  #      `scripts/checks/forbidden-literals.registry.json` `registered` in this
+  #      phase — it is absent at `corpusBaseline` and the doc-class scan fails an
+  #      unregistered new doc, so `pnpm check` would red on the page — and its row
+  #      is added to `doc/00-index.md`, which hand-lists every feature page. The
+  #      page declares `ados_distribution: internal` like every other feature spec;
+  #      `doc/00-index.md` keeps its `redistributable` marker. The registry diff in
+  #      the final tree is exactly two additions (the phase-5 guide and this page),
+  #      with unchanged scopes and seeds and no shipped-source allowlist entry.
   #
   # Test obligations (owning TCs; must be green at this boundary):
   #   TC-PROJ-033  system-spec reconciliation (review-verified)
@@ -1271,8 +1363,18 @@ phases:
   #                it serves the evidence classes of AC-F1-1, AC-F2-1, AC-F2-4,
   #                AC-F2-5, AC-F4-2, AC-F4-3, AC-F6-2, AC-F6-4, AC-F6-5, AC-F8-2)
   #
-  # Done when: every earlier phase's owning TCs are green in one run; the release,
-  # doc-distribution and literal gates are green; the aggregate gate
+  # Done when: every earlier phase's owning TCs are green in one run;
+  # `bun test tests/checks/privacy-release.test.ts` (release shape) is green and the
+  # branch diff for `package.json`, `pnpm-lock.yaml` and
+  # `packages/*/package.json` is empty (the review-verified half of AC-F10-3);
+  # `bun run scripts/checks/forbidden-literals.ts` and
+  # `bun test tests/checks/forbidden-literals.test.ts` are green with the final-tree
+  # registry diff at exactly two additions (the phase-5 guide and the
+  # `feature-projects` page) and unchanged scopes and seeds;
+  # `bash scripts/.tests/test-doc-distribution.sh` is green — run explicitly,
+  # because it is NOT part of `pnpm check` and this phase edits the scanned
+  # `doc/00-index.md` and adds the `internal` feature page; `doc/00-index.md` links
+  # the new feature page; the aggregate gate
   # (`mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`) is green; and
   # `./node_modules/.bin/delivery-os plan validate GH-288 --json` answers valid.
   #
@@ -1302,11 +1404,14 @@ phases:
       than restated; the planning corpus records the delivery with M2-S11 progress
       markers, a status snapshot entry, the registry row marked delivered by this
       change and an entrypoint delta that lists `projects` as mounted while other M2
-      additions stay planned; one added changeset declares all five fixed-group
-      packages at `minor` with pre-existing changesets byte-identical, the
-      no-dependency/no-lockfile clause is review-verified, the P1..P8 execution
-      evidence is recorded, and the aggregate gate is green under a repository-local
-      temporary directory.
+      additions stay planned; the new feature page is registered in the
+      forbidden-literals registry and linked from the documentation index (the
+      second and final registry addition, after the migration guide), one added
+      changeset declares all five fixed-group packages at `minor` with pre-existing
+      changesets byte-identical, the no-dependency/no-lockfile clause is
+      review-verified, the doc-distribution guard is run explicitly because it is
+      not part of the aggregate gate, the P1..P8 execution evidence is recorded, and
+      the aggregate gate is green under a repository-local temporary directory.
     scope:
       files:
         - doc/planning/oss-tooling/milestones/m2/commands/projects.md
@@ -1324,7 +1429,9 @@ phases:
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
         - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/00-index.md
         - .changeset/gh-288-multi-repo-workstations-minor.md
+        - scripts/checks/forbidden-literals.registry.json
         - doc/changes/2026-11/2026-11-11--GH-288--multi-repo-workstations/chg-GH-288-test-plan.md
     interactions:
       - kind: contract-file
