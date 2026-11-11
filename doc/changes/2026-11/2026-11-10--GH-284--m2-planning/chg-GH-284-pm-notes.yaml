@@ -780,3 +780,37 @@ notes:
       daemon mount; readiness closure remains owned by @readiness-reviewer."
     type: "info"
     date: "2026-11-11"
+  - text: "PLAN PHASE P8 CLOSE-OUT: the four blocked predicates were repaired
+      upstream (spec v2.2 DEC-39 gives state.md a bounded body exception; test
+      plan v2.5 adds cli-command-registry.md to P28's allowlist, excludes it
+      from P36's added-line seed scan, classifies state.md's three permitted
+      body regions in P14/P30, and refreshes P11's conforming fixture) and every
+      P8 gate is now green at this close-out commit. Observed: P11
+      reachability_missing=0 fixture_conforming=PASS real_headers=PASS; P14
+      changed_pages=13/13 state_hunks=3 classified=3 state_body_regions_ok=OK;
+      P30 body_identical=13/13 state_body_regions_ok=OK PASS; P28
+      product_files=32 planning_files=31 registry_files=1
+      unexpected_planning_paths=0 total_product_files=35; P36 forbidden_exit=0
+      '5/5 scope classes scanned, 0 violations' seed_hits=0; full sweep P01-P10,
+      P12, P13, P15-P27, P29, P31-P35, P37-P39 green (clause_scan 79/79,
+      scenario_count=40 assert_count=40, retention 0/31/0, m2_targets=12/12,
+      registry rows and boundary OK); P31 guard_exit=0 planning_markers=0; P32
+      default exit 1 with the lone ci-baseline-parity failure and
+      repo_tmpdir_exit=0, gate_verdict=PASS. The landed hash is reported in the
+      phase close-out and PR body: this evidence plus spec v2.2 and test plan
+      v2.5 are one close-out commit."
+    type: "info"
+    date: "2026-11-11"
+  - text: "RETRO (P8): the P8 product work was committed with `git commit -F`
+      and explicit path sets instead of the commit primitive. Reason: the
+      primitive exposes no outcome/why/verification or message input (its help
+      lists only <ref>, --phase, --dry-run, --json/--verbose/--pretty) and
+      falls back to a path-derived template whose subject is truncated with an
+      ellipsis, which the external review board rejects; it also cannot split a
+      phase into the logical units the board requires. Specific subjects and
+      body/footer lines at or under 100 characters were chosen as the stronger
+      constraint. Deviation recorded here so it is not mistaken for a staged or
+      hand-composed lifecycle commit by default; no earlier commit was amended
+      or rewritten."
+    type: "retro"
+    date: "2026-11-11"

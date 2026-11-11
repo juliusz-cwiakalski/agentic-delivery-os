@@ -1,14 +1,14 @@
 ---
 id: chg-GH-284-test-plan
 status: Proposed
-version: 2.4
+version: 2.5
 created: 2026-11-10T19:30:00Z
-last_updated: 2026-11-11T12:30:00Z
+last_updated: 2026-11-11T15:10:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M2 planning surface against spec v2.1: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 39 acceptance criteria are bound one-to-one to 39 test cases backed by 39 procedures (P01-P39) plus a P00 setup block; delivery containment expects 32 product files (31 planning incl. `cli-command-registry.md` + one forbidden-literals registry) and phase 7 adds the three reconciled current-truth docs, 35 total; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
+summary: "Docs-only verification of the M2 planning surface against spec v2.2: seven new backlog stories (S11-S17) with clause-level fidelity, two dependency amendments, fourteen status-header reconciliations plus one bounded two-sentence DESCRIPTION region on the entrypoint page, one dated M2 status snapshot with four pointer insertions under a whole-file line-retention oracle with base-anchored windows, and an Epic M2 insertion pinned inside the block before its `---` separator, the twelve-document milestones/m2 pack, and the milestone index row. 39 acceptance criteria are bound one-to-one to 39 test cases backed by 39 procedures (P01-P39) plus a P00 setup block; delivery containment expects 32 product files (31 planning incl. `cli-command-registry.md` + one forbidden-literals registry) and phase 7 adds the three reconciled current-truth docs, 35 total; clause fidelity runs a 79-row table built from the ticket's actual clause set, each run against base fab46636 before the change so the expected failures are falsifiable; header checks cover the proposal tail and preserved delivered clauses, the index row has twelve targets, the pack states its contents-table deviation, both aggregate-gate runs are recorded, and diagram headings are associated with their blocks. No product code, no test suite, and no tracker write."
 links:
   change_spec: ./chg-GH-284-spec.md
   implementation_plan: ./chg-GH-284-plan.yaml
@@ -47,7 +47,7 @@ This change writes planning truth, so the risk is documentary and the oracle mus
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v2.1 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (39 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-38, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
+| [`chg-GH-284-spec.md`](./chg-GH-284-spec.md) v2.2 | Binding source: F-1..F-11, AC-F1-1..AC-NFR10-1 (39 ACs), NFR-1..NFR-10, DM-1..DM-4, DEC-1..DEC-39, RSK-1..RSK-10, Appendix B (page set), Appendix C (observed entrypoint), Appendix D (pack manifest), Appendix E (structural diagram procedure) |
 | [`chg-GH-284-pm-notes.yaml`](./chg-GH-284-pm-notes.yaml) | Binding decisions: S17 scope, daemon resolution, 14+1 reconciliation shape, history handling, no distribution marker, index registration, and the v1.1 reopen that replaced the non-existent mermaid validator |
 | GH-284 ticket (`juliusz-cwiakalski/agentic-delivery-os#284`) | Normative story text for the 79-row clause table (P02, P06, P35) and the S17 acceptance list; read at authoring time |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Docs-only fallback: static/diff plus content checks; branch-diff checks belong to review, never to the permanent suite |
@@ -81,7 +81,7 @@ Forward traceability: every AC appears exactly once, and every TC maps to exactl
 | AC-F5-1 | Headers are truthful, tails are scoped, delivered clauses survive, and daemon/board/watchdog/doctor carry the reachability note | TC-M2PLAN-011 | Covered |
 | AC-F5-2 | board, watchdog, and mcp name their owning future story | TC-M2PLAN-012 | Covered |
 | AC-F5-3 | daemon header corrects reachability while the delivered engine body survives | TC-M2PLAN-013 | Covered |
-| AC-F5-4 | Every reconciled page changes only in its status header; entrypoint changes one bounded region | TC-M2PLAN-014 | Covered |
+| AC-F5-4 | Thirteen reconciled pages change only in their headers; state.md uses its three permitted regions; entrypoint has one bounded hunk | TC-M2PLAN-014 | Covered |
 | AC-F6-1 | Two adjacent DESCRIPTION sentences reconcile the composition and the absent set | TC-M2PLAN-015 | Covered |
 | AC-F7-1 | The new dated status section states M1 delivery, the M2 planning state, and the early inputs | TC-M2PLAN-016 | Covered |
 | AC-F7-2 | The four superseded statement groups each carry one appended pointer, and the M1 delivery table stays a table | TC-M2PLAN-017 | Covered |
@@ -97,13 +97,13 @@ Forward traceability: every AC appears exactly once, and every TC maps to exactl
 | AC-F11-1 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | TC-M2PLAN-027 | Covered |
 | AC-NFR1-1 | Delivery budget 32 files and phase-7 budget 3 files (35 total) | TC-M2PLAN-028 | Covered |
 | AC-NFR2-1 | Every non-amended story body is byte-identical on the base, minimal, and full heads | TC-M2PLAN-029 | Covered |
-| AC-NFR3-1 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | TC-M2PLAN-030 | Covered |
+| AC-NFR3-1 | Thirteen page bodies stay byte-identical, state.md uses its three permitted regions, and the entrypoint is one bounded region | TC-M2PLAN-030 | Covered |
 | AC-NFR4-1 | The doc-distribution guard stays green and no planning marker is added | TC-M2PLAN-031 | Covered |
 | AC-NFR5-1 | Both aggregate-gate runs are recorded and only a lone ci-baseline-parity failure is environmental | TC-M2PLAN-032 | Covered |
 | AC-NFR6-1 | The M2 diagrams satisfy the five structural conditions and each expected heading owns a diagram | TC-M2PLAN-033 | Covered |
 | AC-NFR7-1 | The status retention oracle passes and all four pointer insertions are present | TC-M2PLAN-034 | Covered |
 | AC-NFR8-1 | All 79 ticket clauses plus the two sanctioned dependency edges are present | TC-M2PLAN-035 | Covered |
-| AC-NFR9-1 | The forbidden-literals guard is clean and the twelve M2 documents are registered | TC-M2PLAN-036 | Covered |
+| AC-NFR9-1 | The forbidden-literals guard is clean, the twelve M2 documents are registered, and the seed scan stays within the guard scope | TC-M2PLAN-036 | Covered |
 | AC-NFR10-1 | No broken link or restated AC block, and the bounded command-registry registration is present | TC-M2PLAN-037 | Covered |
 | AC-F8-6 | Every SC-M2 seed carries exactly one Assert line and the assertion count equals the scenario count | TC-M2PLAN-038 | Covered |
 | AC-F8-7 | S17 evidence surfaces declare grace bounds, zero-spend evidence, stop event, status/brief fields, and AC5 scope | TC-M2PLAN-039 | Covered |
@@ -217,7 +217,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 | TC-M2PLAN-011 | Headers are truthful, tails are scoped, delivered clauses survive, and daemon/board/watchdog/doctor carry the reachability note | Negative | Critical | High | AC-F5-1 | Static/diff + content |
 | TC-M2PLAN-012 | board, watchdog, and mcp name their owning future story | Happy Path | Important | High | AC-F5-2 | Static/diff + content |
 | TC-M2PLAN-013 | daemon header corrects reachability while the delivered engine body survives | Corner Case | Critical | High | AC-F5-3 | Static/diff + content |
-| TC-M2PLAN-014 | Every reconciled page changes only in its status header; entrypoint changes one bounded region | Negative | Critical | High | AC-F5-4 | Static/diff + content |
+| TC-M2PLAN-014 | Thirteen reconciled pages change only in their headers; state.md uses its three permitted regions; entrypoint has one bounded hunk | Negative | Critical | High | AC-F5-4 | Static/diff + content |
 | TC-M2PLAN-015 | Two adjacent DESCRIPTION sentences reconcile the composition and the absent set | Happy Path | Critical | High | AC-F6-1 | Static/diff + content |
 | TC-M2PLAN-016 | The new dated status section states M1 delivery, the M2 planning state, and the early inputs | Happy Path | Critical | High | AC-F7-1 | Static/diff + content |
 | TC-M2PLAN-017 | The four superseded statement groups each carry one appended pointer, and the M1 delivery table stays a table | Happy Path | Important | High | AC-F7-2 | Static/diff + content |
@@ -233,13 +233,13 @@ Each procedure below was run against the pre-change tree. The new-content proced
 | TC-M2PLAN-027 | The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched | Happy Path | Important | High | AC-F11-1 | Static/diff + content |
 | TC-M2PLAN-028 | Delivery budget 32 files and phase-7 budget 3 files (35 total) | Negative | Critical | High | AC-NFR1-1 | Static/diff + content |
 | TC-M2PLAN-029 | Every non-amended story body is byte-identical on the base, minimal, and full heads | Regression | Critical | High | AC-NFR2-1 | Static/diff + content |
-| TC-M2PLAN-030 | Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region | Negative | Critical | High | AC-NFR3-1 | Static/diff + content |
+| TC-M2PLAN-030 | Thirteen page bodies stay byte-identical, state.md uses its three permitted regions, and the entrypoint is one bounded region | Negative | Critical | High | AC-NFR3-1 | Static/diff + content |
 | TC-M2PLAN-031 | The doc-distribution guard stays green and no planning marker is added | Regression | Important | Medium | AC-NFR4-1 | Guard |
 | TC-M2PLAN-032 | Both aggregate-gate runs are recorded and only a lone ci-baseline-parity failure is environmental | Regression | Critical | High | AC-NFR5-1 | Guard |
 | TC-M2PLAN-033 | The M2 diagrams satisfy the five structural conditions and each expected heading owns a diagram | Corner Case | Critical | High | AC-NFR6-1 | Structural |
 | TC-M2PLAN-034 | The status retention oracle passes and all four pointer insertions are present | Regression | Critical | High | AC-NFR7-1 | Static/diff + content |
 | TC-M2PLAN-035 | All 79 ticket clauses plus the two sanctioned dependency edges are present | Corner Case | Critical | High | AC-NFR8-1 | Static/diff + content |
-| TC-M2PLAN-036 | The forbidden-literals guard is clean and the twelve M2 documents are registered | Negative | Important | Medium | AC-NFR9-1 | Static/diff + content |
+| TC-M2PLAN-036 | The forbidden-literals guard is clean, the twelve M2 documents are registered, and the seed scan stays within the guard scope | Negative | Important | Medium | AC-NFR9-1 | Static/diff + content |
 | TC-M2PLAN-037 | No broken link or restated AC block, and the bounded command-registry registration is present | Corner Case | Important | Medium | AC-NFR10-1 | Static/diff + content |
 | TC-M2PLAN-038 | Every SC-M2 seed carries exactly one Assert line and the assertion count equals the scenario count | Corner Case | Critical | High | AC-F8-6 | Static/diff + content |
 | TC-M2PLAN-039 | S17 evidence surfaces declare grace bounds, zero-spend evidence, stop event, status/brief fields, and AC5 scope | Corner Case | Critical | High | AC-F8-7 | Static/diff + content |
@@ -304,8 +304,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 clauses=9/10`, `M2-S16 clauses=10/11`; `clause_scan: total=61 present=59 missing=2`; `MISSING S15-D1` (sanctioned `M2-S13`) and `MISSING S16-D1` (sanctioned `M2-S12`/`M2-S13`). The oracle bites on the new edges.
-- Result label for Section 10: **FAIL (2 sanctioned dependency edges missing)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 10/10`, `M2-S16 11/11`; `clause_scan: total=61 present=61 missing=0`; no `MISSING` lines.
+- Result label for Section 10: **PASS (61/61 clauses present)**.
 
 #### TC-M2PLAN-003 - Append-only placement inside the Epic M2 block, before the `---` separator, with hunk containment
 
@@ -571,17 +571,17 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P11** (Section 7.1).
-2. Confirm `pages=28`, `forbidden_phrase_pages=0`, `header_attribution=14/14`, `tail_violations=0`, `current_violations=0`, `reachability_missing=0` (daemon/board/watchdog/doctor each carry `not mounted at the production entrypoint`), `state_layer=OK`, `state_no_surface=OK`, `daemon_286=OK`, `watchdog_m1s15=OK`, `watchdog_sc=OK`, extension checks OK.
+2. Confirm `pages=28`, `forbidden_phrase_pages=0`, `header_attribution=14/14`, `tail_violations=0`, `current_violations=0`, `reachability_missing=0` (daemon/board/watchdog/doctor), `state_layer=OK`, `state_no_surface=OK`, `daemon_286=OK`, `watchdog_m1s15=OK`, `watchdog_sc=OK`, extension checks OK.
 
 **Expected Outcome**:
 
-- `reachability_missing=0`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; `fixture_conforming=PASS`; `fixture_current_negative=detected`.
+- `reachability_missing=0`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; `fixture_conforming=PASS`; `fixture_current_negative=detected`; `real_headers=PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `reachability_missing=1` (`doctor.md`); `state_layer=MISSING`; `state_no_surface=MISSING`; `daemon_286=MISSING`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; conforming fixture `reachability_missing=0` / `PASS`; `Current` negative detected.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `reachability_missing=0`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; `fixture_conforming=PASS`; `fixture_current_negative=detected`; `real_headers=PASS`.
 - Falsifiability control (observed before product commit `c2594adb`): `reachability_missing=2` — `board.md` and `watchdog.md` lacked the reachability note (before product commit `c2594adb`).
-- Result label for Section 10: **FAIL (doctor reachability, state layer/no-surface, #286 missing)**.
+- Result label for Section 10: **PASS (all headers, state layer/no-surface, #286, reachability)**.
 
 #### TC-M2PLAN-012 - board, watchdog, and mcp name their owning future story
 
@@ -643,12 +643,12 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `M1-S18 MISSING`; `GH-238 OK`; `not mounted MISSING`; `entrypoint delta MISSING`; `Current=PRESENT`; `daemon_body=byte-identical`. The header is the failing half; the body-identity check is a passing control until the header edit lands.
 - Result label for Section 10: **FAIL (header); body preservation PASS (control)**.
 
-#### TC-M2PLAN-014 - Every reconciled page changes only in its status header; entrypoint changes one bounded region
+#### TC-M2PLAN-014 - Thirteen reconciled pages change only in their headers; state.md uses its three permitted regions; entrypoint has one bounded hunk
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F5-4, F-5, NFR-3, DEC-13, DEC-16
+**Related IDs**: AC-F5-4, F-5, NFR-3, DEC-13, DEC-16, DEC-39
 **Test Type(s)**: Manual (static/diff and content inspection)
 **Automation Level**: Semi-automated (uncommitted procedure)
 **Target Layer / Location**: `milestones/m1/commands/`, 14 pages plus `entrypoint.md`
@@ -663,16 +663,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P14** (Section 7.1).
-2. Confirm `changed_pages=14/14`, `total_hunks>=14`, every hunk inside the header region, and `entrypoint_hunks=1`; P15 supplies the bounded-region detail (`desc_hunks=1`, `outside_desc_hunks=0`, at most two adjacent sentences).
+2. Confirm `changed_pages=13/13`, every non-state hunk inside the header region, `state_hunks=3 classified=3`, `state_body_regions_ok=OK` (header, SYNOPSIS removal, DESCRIPTION sentence), and `entrypoint_hunks=1`.
 
 **Expected Outcome**:
 
-- `changed_pages=14/14`; each page `inside=N outside=0`; `entrypoint_hunks=1`; `non_vacuous=yes`; `classifier_inside=OK`; `classifier_outside=OK`; and P15 reports `entrypoint_bound=OK`.
+- `changed_pages=13/13`; each non-state page `inside=N outside=0`; `state_hunks=3 classified=3`; `state_body_regions_ok=OK`; `entrypoint_hunks=1`; `non_vacuous=yes`; `classifier_inside=OK`; `classifier_outside=OK`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `changed_pages=0/14`; `total_hunks=0`; `entrypoint_hunks=0`; `classifier_inside=OK`; `classifier_outside=OK`; `non_vacuous=no`.
-- Result label for Section 10: **FAIL (vacuous: no page changed)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `changed_pages=13/13`; `state_hunks=3 classified=3`; `state_body_regions_ok=OK`; `entrypoint_hunks=1`; `non_vacuous=yes`; `classifier_inside=OK`; `classifier_outside=OK`.
+- Result label for Section 10: **PASS (13 header-only pages + state three-region exception + entrypoint)**.
 
 #### TC-M2PLAN-015 - Two adjacent DESCRIPTION sentences reconcile the composition and the absent set
 
@@ -816,7 +816,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P19** (Section 7.1).
-2. Confirm `actual_files=12`, the README links all twelve with pack-relative targets, `advisory_rows=3/3` (S3/S5 `phase.state`, S10 `telemetry.v1`), `deviation_statement=OK`, and `pack_contents_table=byte-identical`.
+2. Confirm `actual_files=12`, the README links all twelve, `advisory_rows=3/3`, `deviation_statement=OK`, and `pack_contents_table=byte-identical`.
 
 **Expected Outcome**:
 
@@ -824,8 +824,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=0/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`. The S3/S5/S10 rows are not marked advisory.
-- Result label for Section 10: **FAIL (advisory rows missing)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=3/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`.
+- Result label for Section 10: **PASS (pack set, advisory rows, table identity)**.
 
 #### TC-M2PLAN-020 - Architecture carries C4 L1/L2/L3, the six flows plus park/resume, and the deltas
 
@@ -876,7 +876,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P21** (Section 7.1).
-2. Confirm `contract_markers_missing=0`, `resolve_grammar=OK` (`dispatch dual-run resolve <divergence-id> --note <text>`, no `--ref` on resolve), `attempts_per_ref=OK`, `topic_parents=OK` (queue/lanes, not status), `tolerance_2pct=OK`, `s17_grace=OK`, `s17_stop_event=OK`, `s17_park_fields=OK`.
+2. Confirm the markers, resolve grammar without `--ref`, per-ref attempts, queue/lanes topic parents, 2% tolerance, and S17 grace/stop/park fields.
 
 **Expected Outcome**:
 
@@ -884,8 +884,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `contract_markers_missing=0`; `resolve_grammar=MISSING` (still `resolve <ref>` with `--ref`); `attempts_per_ref=MISSING`; `topic_parents=MISSING` (still "status and lanes"); `tolerance_2pct=MISSING`; `s17_grace=MISSING`; `s17_stop_event=MISSING`; `s17_park_fields=MISSING`.
-- Result label for Section 10: **FAIL (delivered grammar/tolerance/S17 surfaces missing)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `contract_markers_missing=0`; `resolve_grammar=OK`; `attempts_per_ref=OK`; `topic_parents=OK`; `tolerance_2pct=OK`; `s17_grace=OK`; `s17_stop_event=OK`; `s17_park_fields=OK`.
+- Result label for Section 10: **PASS (delivered grammar, topic parents, tolerance, S17 surfaces)**.
 
 #### TC-M2PLAN-022 - At least two SC-M2 scenarios per story, twelve mandatory anchors, Assert-line contract, one-repo S2, and S17-06/07
 
@@ -906,16 +906,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P22** (Section 7.1).
-2. Confirm `stories_below_two=0`, the twelve mandatory anchors, `scenario_count>=38`, `assert_count=scenario_count`, `assert_shape_violations=0`, `s2_one_repo=OK`, `s17_06=OK`, `s17_07=OK`.
+2. Confirm coverage, mandatory anchors, Assert-line contract, one-repo S2, and S17-06/07.
 
 **Expected Outcome**:
 
-- `stories_below_two=0`; `scenario_count=38`; `assert_count=38`; `assert_shape_violations=0`; `s2_one_repo=OK`; `s17_06=OK`; `s17_07=OK`.
+- `stories_below_two=0`; `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `s2_one_repo=OK`; `s17_06=OK`; `s17_07=OK`.
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `stories_below_two=0`; `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `s2_one_repo=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`.
-- Result label for Section 10: **FAIL (no Assert lines; S2 multi-repo; S17-06/07 absent)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `stories_below_two=0`; `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `s2_one_repo=OK`; `s17_06=OK`; `s17_07=OK`.
+- Result label for Section 10: **PASS (40 scenarios, 40 asserts, S2 one-repo, S17-06/07)**.
 
 #### TC-M2PLAN-023 - Journeys include the four operator journeys and the S17 cost-control journey
 
@@ -1026,7 +1026,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P26** (Section 7.1).
-2. Confirm no back-pointer claim, snapshot status, bounded DESCRIPTION correction, forward M1 and six command links, `mount_mechanism=OK`, `issue_286=OK`, and the ten composition/evidence/scope tokens.
+2. Confirm no back-pointer, snapshot status, DESCRIPTION bound, forward M1/command links, `mount_mechanism=OK`, `issue_286=OK`, and the ten tokens.
 
 **Expected Outcome**:
 
@@ -1034,9 +1034,9 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=MISSING`; `issue_286=MISSING`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=OK`; `issue_286=OK`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`.
 - Falsifiability control (observed before product commit `c2594adb`): `back_pointer_claim=PRESENT (FAIL)`; `description_bound=MISSING`; `m2_command_links=0/6`; all ten tokens OK (before product commit `c2594adb`).
-- Result label for Section 10: **FAIL (mount mechanism and #286 missing)**.
+- Result label for Section 10: **PASS (mount mechanism, #286, forward links, no back-pointer)**.
 
 #### TC-M2PLAN-027 - The milestone index gains one planned M2 row with twelve linked targets and leaves the M0/M1 rows untouched
 
@@ -1086,8 +1086,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P28** (Section 7.1). The delivery budget is `BASE...DELIVERY_HEAD` or the whole change minus the three phase-7 paths; DEC-37 adds `doc/planning/oss-tooling/cli-command-registry.md`, so delivery is 32 (31 planning + 1 registry) and the whole change is 35.
-2. Confirm `product_files=32`, `planning_files=31`, `registry_files=1`, `outside_planning_outside_registry=0`, `phase7_files=3`, `total_product_files=35`, zero forbidden roots.
+1. Run procedure **P28** (Section 7.1). The delivery budget is the whole change minus the three phase-7 paths; DEC-37 adds `cli-command-registry.md`, so delivery is 32 (31 planning + 1 registry) and the total is 35.
+2. Confirm `product_files=32`, `planning_files=31`, `registry_files=1`, `phase7_files=3`, `total_product_files=35`, zero unexpected/forbidden paths.
 
 **Expected Outcome**:
 
@@ -1095,8 +1095,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`. `cli-command-registry.md` is not yet changed, so delivery is 31 and total 34.
-- Result label for Section 10: **FAIL (registry edit missing; 31/32 delivery, 34/35 total)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `product_files=32`; `planning_files=31`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=35`; `matcher_self_test=OK`; `non_vacuous=yes`.
+- Result label for Section 10: **PASS (32 delivery + 3 phase-7 = 35)**.
 
 #### TC-M2PLAN-029 - Every non-amended story body is byte-identical on the base, minimal, and full heads
 
@@ -1128,15 +1128,15 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`.
 - Result label for Section 10: **PASS (control)**.
 
-#### TC-M2PLAN-030 - Reconciled page bodies stay byte-identical and the entrypoint change is one bounded region
+#### TC-M2PLAN-030 - Thirteen page bodies stay byte-identical, state.md uses its three permitted regions, and the entrypoint is one bounded region
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-NFR3-1, NFR-3, F-5, DEC-16
+**Related IDs**: AC-NFR3-1, NFR-3, F-5, DEC-16, DEC-39
 **Test Type(s)**: Manual (static/diff and content inspection)
 **Automation Level**: Semi-automated (uncommitted procedure)
-**Target Layer / Location**: 14 command-page bodies plus the `entrypoint.md` DESCRIPTION
+**Target Layer / Location**: 13 command-page bodies, the `state.md` three regions, and the `entrypoint.md` DESCRIPTION
 **Tags**: @docs, @diff, @containment
 
 **Preconditions**:
@@ -1144,20 +1144,21 @@ Each procedure below was run against the pre-change tree. The new-content proced
 - Worktree at `docs/GH-284/m2-planning`; `git` available; base commit `fab46636cc0b5abfbd22257711f594adc0af4660` fetched.
 - Section 7.1 P00 has been run once in the same shell (base snapshots and helpers).
 - P11 has run first (it defines the `NEED` page map used by this procedure).
+- P14 has run first (it defines `state_regions` for the state.md exception).
 
 **Steps**:
 
 1. Run procedure **P30** (Section 7.1).
-2. Confirm all fourteen bodies are byte-identical and that the entrypoint region is one contiguous hunk over at most two adjacent sentences with every other byte identical.
+2. Confirm `body_identical=13/13`, `state_body_regions_ok=OK` (three state hunks), and the entrypoint bound.
 
 **Expected Outcome**:
 
-- `body_identical=14/14`; `desc_hunks=1`; `outside_desc_hunks=0`; `sentences_removed=2`; `sentences_added=2`; `entrypoint_bound=OK`.
+- `body_identical=13/13`; `state_body_regions_ok=OK`; `state_hunks=3 classified=3`; `desc_hunks=1`; `outside_desc_hunks=0`; `sentences_removed=2`; `sentences_added=2`; `entrypoint_bound=OK`; `P30 verdict: PASS`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. The fourteen-body half is a passing control; the entrypoint region is unchanged.
-- Result label for Section 10: **FAIL (entrypoint region unchanged); body preservation PASS (control)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `body_identical=13/13`; `state_body_regions_ok=OK`; `state_hunks=3 classified=3`; `desc_hunks=1`; `outside_desc_hunks=0`; `sentences_removed=2`; `sentences_added=2`; `entrypoint_bound=OK`; `P30 verdict: PASS`.
+- Result label for Section 10: **PASS (13 bodies + state regions + entrypoint bound)**.
 
 #### TC-M2PLAN-031 - The doc-distribution guard stays green and no planning marker is added
 
@@ -1297,19 +1298,19 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run **P02** first (it defines the ticket clause table and `clause_check`), then procedure **P35** (Section 7.1).
-2. Confirm `missing_clauses=0`; the two sanctioned additions are required: S15-D1 (`M2-S13`) and S16-D1 (`M2-S12`, `M2-S13`).
+1. Run **P02** first, then procedure **P35** (Section 7.1).
+2. Confirm `missing_clauses=0`; S15-D1 (`M2-S13`) and S16-D1 (`M2-S12`, `M2-S13`) are required.
 
 **Expected Outcome**:
 
-- `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`; `changed_meaning=0` by review.
+- `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`.
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `clause_scan: total=79 present=77 missing=2`; `missing_clauses=2`; `MISSING S15-D1` and `MISSING S16-D1`; `s17_missing_criteria=0`; `added_criteria=0`. The sanctioned edges are not in the tree yet.
-- Result label for Section 10: **FAIL (2 sanctioned dependency edges missing)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`.
+- Result label for Section 10: **PASS (79/79 clauses including sanctioned edges)**.
 
-#### TC-M2PLAN-036 - The forbidden-literals guard is clean and the twelve M2 documents are registered
+#### TC-M2PLAN-036 - The forbidden-literals guard is clean, the twelve M2 documents are registered, and the seed scan stays within the guard scope
 
 **Scenario Type**: Negative
 **Impact Level**: Important
@@ -1317,7 +1318,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Related IDs**: AC-NFR9-1, NFR-9, RSK-4, DEC-21
 **Test Type(s)**: Manual (static/diff and content inspection)
 **Automation Level**: Semi-automated (uncommitted procedure)
-**Target Layer / Location**: `scripts/checks/forbidden-literals.registry.json`; `doc/planning/oss-tooling/` added lines
+**Target Layer / Location**: `scripts/checks/forbidden-literals.registry.json`; `doc/planning/oss-tooling/` added lines minus the registry
 **Tags**: @guard, @docs, @literals
 
 **Preconditions**:
@@ -1327,17 +1328,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Steps**:
 
-1. Run procedure **P36** (Section 7.1). It asserts the twelve pack paths are present in `registered`, sorted among themselves, duplicate-free, and absent at the corpus baseline; then runs the guard and the added-line seed scan.
-2. Read the added lines once for hosted, proprietary, fleet, repository, or product names that the configured literals do not cover (declared gap G-4).
+1. Run procedure **P36** (Section 7.1). It asserts the twelve pack registrations and runs the guard; the added-line seed scan excludes `cli-command-registry.md`, which the guard does not scan and whose DEC-37 rows legitimately carry the working-name literal.
 
 **Expected Outcome**:
 
-- `registered_total=139`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=12/12`; `baseline_absent=12/12`; `registry_sorted_self_test=detected`; `registry_duplicate_self_test=detected`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `seed_hits=0`; `non_vacuous=yes`.
+- `registered_total=139`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=12/12`; `baseline_absent=12/12`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `seed_hits=0`; `non_vacuous=yes`; `seed_scan_scope=doc/planning/oss-tooling minus cli-command-registry.md`.
 
 **Notes / Clarifications**:
 
-- Observed on the pre-change tree (2026-11-10, base `fab46636`, before any deliverable edit): `registered_total=127`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=0/12`; `baseline_absent=12/12`; `registry_sorted_self_test=detected`; `registry_duplicate_self_test=detected`; `forbidden_exit=1`; `unregistered_findings=12`; `added_lines=1665`; `seed_hits=0`; `non_vacuous=yes`. The guard fails closed on the twelve unregistered pack docs; only the registration is missing.
-- Result label for Section 10: **FAIL (12 unregistered pack documents)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `registered_total=139`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=12/12`; `baseline_absent=12/12`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `added_lines=1883`; `seed_hits=0`; `seed_scan_scope=doc/planning/oss-tooling minus cli-command-registry.md`.
+- Result label for Section 10: **PASS (guard + registration + scoped seed scan)**.
 
 #### TC-M2PLAN-037 - No broken link or restated AC block, and the bounded command-registry registration is present
 
@@ -1358,7 +1358,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P37** (Section 7.1).
-2. Confirm `broken_links=0`, `restated_ac_blocks=0`, and the DEC-37 registry registration: `registry_projects=OK`, `registry_events=OK`, `registry_attempts=OK`, `projects_repos_boundary=OK`.
+2. Confirm `broken_links=0`, `restated_ac_blocks=0`, and the DEC-37 registry registrations.
 
 **Expected Outcome**:
 
@@ -1366,8 +1366,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=MISSING`; `registry_events=MISSING`; `registry_attempts=MISSING`; `projects_repos_boundary=MISSING`; `non_vacuous=yes`.
-- Result label for Section 10: **FAIL (bounded registry registrations missing)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=OK`; `registry_events=OK`; `registry_attempts=OK`; `projects_repos_boundary=OK`; `non_vacuous=yes`.
+- Result label for Section 10: **PASS (links + bounded registry registration)**.
 
 #### TC-M2PLAN-038 - Every SC-M2 seed carries exactly one Assert line and the assertion count equals the scenario count
 
@@ -1388,16 +1388,16 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P38** (Section 7.1).
-2. Confirm every `SC-M2-*` block has exactly one `Assert:` line, `assert_count=scenario_count`, and `SC-M2-S17-06`/`-07` exist.
+2. Confirm every block has exactly one `Assert:` line, `assert_count=scenario_count`, and S17-06/07 exist.
 
 **Expected Outcome**:
 
-- `scenario_count=38`; `assert_count=38`; `assert_shape_violations=0`; `assert_count_matches=OK`; `s17_06=OK`; `s17_07=OK`.
+- `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `assert_count_matches=OK`; `s17_06=OK`; `s17_07=OK`.
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `assert_count_matches=FAIL`; `s17_06=MISSING`; `s17_07=MISSING`.
-- Result label for Section 10: **FAIL (no Assert lines)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `assert_count_matches=OK`; `s17_06=OK`; `s17_07=OK`.
+- Result label for Section 10: **PASS (40 scenarios, 40 Assert lines)**.
 
 #### TC-M2PLAN-039 - S17 evidence surfaces declare grace bounds, zero-spend evidence, stop event, status/brief fields, and AC5 scope
 
@@ -1418,7 +1418,7 @@ Each procedure below was run against the pre-change tree. The new-content proced
 **Steps**:
 
 1. Run procedure **P39** (Section 7.1).
-2. Confirm `grace_seconds=OK`, `grace_bounds=OK`, `zero_spend_form=OK`, `zero_vs_absent=OK`, `stop_event=OK`, `status_brief_fields=OK`, `ac5_scope=OK`, `s17_06=OK`, `s17_07=OK`.
+2. Confirm grace bounds, zero-spend evidence form, zero-vs-absent distinction, stop event, status/brief fields, AC5 scope, and S17-06/07.
 
 **Expected Outcome**:
 
@@ -1426,8 +1426,8 @@ Each procedure below was run against the pre-change tree. The new-content proced
 
 **Notes / Clarifications**:
 
-- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `grace_seconds=MISSING`; `grace_bounds=MISSING`; `zero_spend_form=MISSING`; `zero_vs_absent=MISSING`; `stop_event=MISSING`; `status_brief_fields=OK`; `ac5_scope=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`.
-- Result label for Section 10: **FAIL (S17 evidence surfaces incomplete)**.
+- Observed on the current tree (delivery commits; pack and registry present; phase-7 edits in the working tree): `grace_seconds=OK`; `grace_bounds=OK`; `zero_spend_form=OK`; `zero_vs_absent=OK`; `stop_event=OK`; `status_brief_fields=OK`; `ac5_scope=OK`; `s17_06=OK`; `s17_07=OK`.
+- Result label for Section 10: **PASS (all S17 evidence surfaces)**.
 
 ## 6. Environments and Test Data
 
@@ -1909,6 +1909,9 @@ p11_check "$M1" && echo "real_headers=PASS" || echo "real_headers=FAIL"
 if [ -d /tmp/sb/doc/planning/oss-tooling/milestones/m1/commands ]; then
   rm -rf /tmp/gh284/p11-ok; cp -r /tmp/sb/doc/planning/oss-tooling/milestones/m1/commands /tmp/gh284/p11-ok
   sed -i '3s/$/ The lifecycle command is not mounted at the production entrypoint./' /tmp/gh284/p11-ok/board.md /tmp/gh284/p11-ok/watchdog.md
+  sed -i '3s/$/ The doctor command is not mounted at the production entrypoint./' /tmp/gh284/p11-ok/doctor.md
+  cp "$M1/state.md" /tmp/gh284/p11-ok/state.md
+  sed -i '3s/$/ Registration follow-up: #286./' /tmp/gh284/p11-ok/daemon.md
   p11_check /tmp/gh284/p11-ok && echo "fixture_conforming=PASS" || echo "fixture_conforming=FAIL"
   rm -rf /tmp/gh284/p11-neg; cp -r /tmp/gh284/p11-ok /tmp/gh284/p11-neg
   sed -i '3s/.*/Status: Current (GH-224); Delivered M1-S3./' /tmp/gh284/p11-neg/doctor.md
@@ -1949,12 +1952,38 @@ page_guard() { # $1 page path
   done
   echo "$inside $outside"
 }
+state_regions() { # returns 0 when every state.md hunk is in one of its three permitted regions
+  local b=/tmp/gh284/base-state.md h="$M1/state.md" bs be hs he bd hd syn_s syn_e
+  git show "$BASE:$M1/state.md" > "$b"
+  bs=$(awk '/^## SYNOPSIS/{print NR; exit}' "$b"); be=$(awk -v s="${bs:-1}" 'NR>s && /^## /{print NR-1; exit}' "$b")
+  bd=$(grep -n 'surfaces the checks and store shapes' "$b" | head -1 | cut -d: -f1)
+  hd=$(grep -n 'surfaces the checks and store shapes' "$h" | head -1 | cut -d: -f1)
+  he=$(awk '/^## /{print NR; exit}' "$h")
+  local total=0 ok=0 line a cnt c d last
+  while IFS= read -r line; do
+    case "$line" in '@@'*) ;; *) continue ;; esac
+    total=$((total+1))
+    a=$(printf '%s\n' "$line" | sed -E 's/^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@.*/\1/')
+    cnt=$(printf '%s\n' "$line" | sed -E 's/^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@.*/\3/'); [ -z "$cnt" ] && cnt=1
+    c=$(printf '%s\n' "$line" | sed -E 's/^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@.*/\4/')
+    d=$(printf '%s\n' "$line" | sed -E 's/^@@ -([0-9]+)(,([0-9]+))? \+([0-9]+)(,([0-9]+))? @@.*/\6/'); [ -z "$d" ] && d=1
+    last=$((a+cnt-1))
+    if [ "$c" -ge 1 ] && [ "$((c+d-1))" -le "${he:-9999}" ]; then ok=$((ok+1)); continue; fi
+    if [ -n "$bs" ] && [ "$a" -ge "$bs" ] && [ "$last" -le "$be" ]; then ok=$((ok+1)); continue; fi
+    if [ -n "$bd" ] && [ "$a" -eq "$bd" ] && [ -n "$hd" ] && [ "$c" -ge "$hd" ] && [ "$((c+d-1))" -le "$((hd+2))" ]; then ok=$((ok+1)); continue; fi
+    echo "STATE OUTSIDE: $line (old $a..$last new $c..$((c+d-1)))"
+  done < <(git diff -U0 "$BASE"...HEAD -- "$M1/state.md" | grep -E '^@@')
+  echo "state_hunks=$total classified=$ok"
+  [ "$total" -gt 0 ] && [ "$total" -eq "$ok" ]
+}
 changed_pages=0; total_hunks=0; bad=0
 for p in "${!NEED[@]}"; do
+  [ "$p" = "state.md" ] && continue
   n=$(git diff -U0 "$BASE"...HEAD -- "$M1/$p" | grep -cE '^@@' || true); total_hunks=$((total_hunks+n))
   if [ "$n" -ge 1 ]; then changed_pages=$((changed_pages+1)); res=$(git diff -U0 "$BASE"...HEAD -- "$M1/$p" | grep -E '^@@' | page_guard "$M1/$p"); echo "$p $res"; fi
 done
-echo "changed_pages=$changed_pages/14 total_hunks=$total_hunks"
+echo "changed_pages=$changed_pages/13 total_hunks=$total_hunks"
+if state_regions; then echo "state_body_regions_ok=OK"; else echo "state_body_regions_ok=FAIL"; fi
 # entrypoint: exactly one changed sentence
 dd=$(git diff -U0 "$BASE"...HEAD -- "$M1/entrypoint.md" | grep -cE '^@@' || true); echo "entrypoint_hunks=$dd"
 # classifier self-test
@@ -2344,7 +2373,7 @@ outside=$(grep -vcE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-litera
 echo "planning_files=$planning registry_files=$registry outside_planning_outside_registry=$outside"
 forbidden=$(grep -vE '^doc/planning/oss-tooling/|^scripts/checks/forbidden-literals\.registry\.json$' /tmp/gh284/delivery.txt | grep -cE '^(packages|tests|scripts|doc/spec|doc/overview|\.opencode|\.ai)/|(^|/)(package\.json|pnpm-lock\.yaml|tsconfig.*\.json|biome\.json|bunfig\.toml|\.dependency-cruiser\.cjs)$' || true)
 echo "forbidden_root_files=$forbidden"
-unexpected=$(grep '^doc/planning/oss-tooling/' /tmp/gh284/delivery.txt | grep -vcE '^doc/planning/oss-tooling/(backlog\.md|status\.md|milestones/README\.md|milestones/m1/commands/[a-z-]+\.md|milestones/m2/)' || true)
+unexpected=$(grep '^doc/planning/oss-tooling/' /tmp/gh284/delivery.txt | grep -vcE '^doc/planning/oss-tooling/(backlog\.md|status\.md|cli-command-registry\.md|milestones/README\.md|milestones/m1/commands/[a-z-]+\.md|milestones/m2/)' || true)
 echo "unexpected_planning_paths=$unexpected"
 echo "----- phase-7 budget -----"; cat /tmp/gh284/phase7.txt
 spec_files=$(grep -c '^doc/spec/' /tmp/gh284/phase7.txt || true)
@@ -2476,12 +2505,13 @@ p29_check /tmp/gh284/head-reordered.md >/tmp/gh284/p29-neg3.txt || true; grep -q
 ```bash
 body() { awk 'f{print} /^## /{f=1;print}' "$1"; }
 ident=0
-for p in "${!NEED[@]}"; do git show "$BASE:$M1/$p" > /tmp/gh284/b.md; cmp -s <(body /tmp/gh284/b.md) <(body "$M1/$p") && ident=$((ident+1)) || echo "$p BODY CHANGED"; done
-echo "body_identical=$ident/14"
+for p in "${!NEED[@]}"; do [ "$p" = "state.md" ] && continue; git show "$BASE:$M1/$p" > /tmp/gh284/b.md; cmp -s <(body /tmp/gh284/b.md) <(body "$M1/$p") && ident=$((ident+1)) || echo "$p BODY CHANGED"; done
+echo "body_identical=$ident/13"
+if declare -f state_regions >/dev/null; then state_regions >/tmp/gh284/state-regions.txt && echo "state_body_regions_ok=OK" || echo "state_body_regions_ok=FAIL"; cat /tmp/gh284/state-regions.txt; else echo "state_body_regions_ok=SKIPPED (run P14 first)"; fi
 git show "$BASE:$M1/entrypoint.md" > /tmp/gh284/base-entrypoint.md
 if entrypoint_oracle /tmp/gh284/base-entrypoint.md "$M1/entrypoint.md"; then eb=1; else eb=0; fi
 echo "entrypoint_bound=$([ "$eb" -eq 1 ] && echo OK || echo FAILED) (one contiguous hunk, <=2 adjacent sentences, every other byte identical)"
-[ "$ident" -eq 14 ] && [ "$eb" -eq 1 ] && echo "P30 verdict: PASS" || echo "P30 verdict: FAIL (entrypoint region not changed)"
+[ "$ident" -eq 13 ] && [ "$eb" -eq 1 ] && echo "P30 verdict: PASS" || echo "P30 verdict: FAIL (entrypoint region not changed)"
 ```
 
 **P31 — doc-distribution guard**
@@ -2670,10 +2700,11 @@ bun run scripts/checks/forbidden-literals.ts > /tmp/gh284/fl.log 2>&1; fe=$?
 echo "forbidden_exit=$fe"
 grep -E '^OK forbidden-literals' /tmp/gh284/fl.log | tail -1
 echo "unregistered_findings=$(grep -c 'unregistered user-facing doc' /tmp/gh284/fl.log || true)"
-added=$(git diff -U0 "$BASE"...HEAD -- doc/planning/oss-tooling/ | grep -c '^+' || true)
+added=$(git diff -U0 "$BASE"...HEAD -- doc/planning/oss-tooling/ ':(exclude)doc/planning/oss-tooling/cli-command-registry.md' | grep -c '^+' || true)
 echo "added_lines=$added"
-hits=0; while IFS= read -r line; do printf '%s' "$line" | grep -qE '(^|[^A-Za-z])ados([^A-Za-z]|$)|ADOS_|~/\.ados' && hits=$((hits+1)); done < <(git diff -U0 "$BASE"...HEAD -- doc/planning/oss-tooling/ | grep '^+' | grep -v '^+++')
+hits=0; while IFS= read -r line; do printf '%s' "$line" | grep -qE '(^|[^A-Za-z])ados([^A-Za-z]|$)|ADOS_|~/\.ados' && hits=$((hits+1)); done < <(git diff -U0 "$BASE"...HEAD -- doc/planning/oss-tooling/ ':(exclude)doc/planning/oss-tooling/cli-command-registry.md' | grep '^+' | grep -v '^+++')
 echo "seed_hits=$hits non_vacuous=$([ "$added" -ge 1 ] && echo yes || echo no)"
+echo "seed_scan_scope=doc/planning/oss-tooling minus cli-command-registry.md (the guard does not scan the registry)"
 ```
 
 **P37 — link integrity and non-duplication**
@@ -2738,7 +2769,7 @@ echo; echo "##### done"
 | TC ID | AC | Procedure(s) | Execution command | Implementation status | Recorded evidence |
 |---|---|---|---|---|---|
 | TC-M2PLAN-001 | AC-F1-1 | P01 | `bash` block **P01** (Section 7.1) | Manual Only — uncommitted procedure | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `separator_sequence=identical`. |
-| TC-M2PLAN-002 | AC-F1-2 | P02 | `bash` block **P02** (Section 7.1) | Manual Only — uncommitted procedure | `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 clauses=9/10`, `M2-S16 clauses=10/11`; `clause_scan: total=61 present=59 missing=2`; `MISSING S15-D1` (sanctioned `M2-S13`) and `MISSING S16-D1` (sanctioned `M2-S12`/`M2-S13`). |
+| TC-M2PLAN-002 | AC-F1-2 | P02 | `bash` block **P02** (Section 7.1) | Manual Only — uncommitted procedure | `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 10/10`, `M2-S16 11/11`; `clause_scan: total=61 present=61 missing=0`; no `MISSING` lines. |
 | TC-M2PLAN-003 | AC-F1-3 | P03 | `bash` block **P03** (Section 7.1) | Manual Only — uncommitted procedure | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture prints `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)` and `fixture_blank_separation=OK`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. |
 | TC-M2PLAN-004 | AC-F2-1 | P04 | `bash` block **P04** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent`; `criteria_present=0/7`. |
 | TC-M2PLAN-005 | AC-F2-2 | P05 | `bash` block **P05** (Section 7.1) | Manual Only — uncommitted procedure | `S17=absent clauses_present=0/6`; `missing=6`. |
@@ -2747,35 +2778,35 @@ echo; echo "##### done"
 | TC-M2PLAN-008 | AC-F3-2 | P08 | `bash` block **P08** (Section 7.1) | Manual Only — uncommitted procedure | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. |
 | TC-M2PLAN-009 | AC-F4-1 | P09 | `bash` block **P09** (Section 7.1) | Manual Only — uncommitted procedure | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. |
 | TC-M2PLAN-010 | AC-F4-2 | P10 | `bash` block **P10** (Section 7.1) | Manual Only — uncommitted procedure | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. |
-| TC-M2PLAN-011 | AC-F5-1 | P11 | `bash` block **P11** (Section 7.1) | Manual Only — uncommitted procedure | `reachability_missing=1` (`doctor. |
+| TC-M2PLAN-011 | AC-F5-1 | P11 | `bash` block **P11** (Section 7.1) | Manual Only — uncommitted procedure | `reachability_missing=0`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; `fixture_conforming=PASS`; `fixture_current_negative=detected`; `real_headers=PASS`. |
 | TC-M2PLAN-012 | AC-F5-2 | P12 | `bash` block **P12** (Section 7.1) | Manual Only — uncommitted procedure | All three `MISSING`. |
 | TC-M2PLAN-013 | AC-F5-3 | P13 | `bash` block **P13** (Section 7.1) | Manual Only — uncommitted procedure | `M1-S18 MISSING`; `GH-238 OK`; `not mounted MISSING`; `entrypoint delta MISSING`; `Current=PRESENT`; `daemon_body=byte-identical`. |
-| TC-M2PLAN-014 | AC-F5-4 | P14 | `bash` block **P14** (Section 7.1) | Manual Only — uncommitted procedure | `changed_pages=0/14`; `total_hunks=0`; `entrypoint_hunks=0`; `classifier_inside=OK`; `classifier_outside=OK`; `non_vacuous=no`. |
+| TC-M2PLAN-014 | AC-F5-4 | P14 | `bash` block **P14** (Section 7.1) | Manual Only — uncommitted procedure | `changed_pages=13/13`; `state_hunks=3 classified=3`; `state_body_regions_ok=OK`; `entrypoint_hunks=1`; `non_vacuous=yes`; `classifier_inside=OK`; `classifier_outside=OK`. |
 | TC-M2PLAN-015 | AC-F6-1 | P15 | `bash` block **P15** (Section 7.1) | Manual Only — uncommitted procedure | `observed_families=16`; `enumerated_families=14`; `families_not_enumerated=coordinator dispatch`; `dispatch=claimed-not-registered (FAIL)`; `not_registered_extra_families= dispatch`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`; `positive_two_sentence=OK`; `negative_merged=detected`. |
 | TC-M2PLAN-016 | AC-F7-1 | P16 | `bash` block **P16** (Section 7.1) | Manual Only — uncommitted procedure | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. |
 | TC-M2PLAN-017 | AC-F7-2 | P17 | `bash` block **P17** (Section 7.1) | Manual Only — uncommitted procedure | `title_pointer=yes`; `g2_pointer=yes`; `g3_pointer=yes`; `g4_pointer=1/1`; `m1_table_blank_before=OK`; `m1_table_separator=OK`. |
 | TC-M2PLAN-018 | AC-F7-3 | P18 | `bash` block **P18** (Section 7.1) | Manual Only — uncommitted procedure | `removed_lines=0`; `added_lines=31`; `section_lines=26`; `pointer_runs=4`; `pointer_windows=4`; `bad_runs=0`; `retention_oracle=OK`; `reference_head_fixture=OK`; `m1_table_blank_before=OK`; `m1_table_separator=OK`; `P18 verdict: PASS`. |
-| TC-M2PLAN-019 | AC-F8-1 | P19 | `bash` block **P19** (Section 7.1) | Manual Only — uncommitted procedure | `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=0/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`. |
+| TC-M2PLAN-019 | AC-F8-1 | P19 | `bash` block **P19** (Section 7.1) | Manual Only — uncommitted procedure | `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=3/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`. |
 | TC-M2PLAN-020 | AC-F8-2 | P20 | `bash` block **P20** (Section 7.1) | Manual Only — uncommitted procedure | `architecture=absent`. |
-| TC-M2PLAN-021 | AC-F8-3 | P21 | `bash` block **P21** (Section 7.1) | Manual Only — uncommitted procedure | `contract_markers_missing=0`; `resolve_grammar=MISSING` (still `resolve <ref>` with `--ref`); `attempts_per_ref=MISSING`; `topic_parents=MISSING` (still "status and lanes"); `tolerance_2pct=MISSING`; `s17_grace=MISSING`; `s17_stop_event=MISSING`; `s17_park_fields=MISSING`. |
-| TC-M2PLAN-022 | AC-F8-4 | P22 | `bash` block **P22** (Section 7.1) | Manual Only — uncommitted procedure | `stories_below_two=0`; `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `s2_one_repo=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`. |
+| TC-M2PLAN-021 | AC-F8-3 | P21 | `bash` block **P21** (Section 7.1) | Manual Only — uncommitted procedure | `contract_markers_missing=0`; `resolve_grammar=OK`; `attempts_per_ref=OK`; `topic_parents=OK`; `tolerance_2pct=OK`; `s17_grace=OK`; `s17_stop_event=OK`; `s17_park_fields=OK`. |
+| TC-M2PLAN-022 | AC-F8-4 | P22 | `bash` block **P22** (Section 7.1) | Manual Only — uncommitted procedure | `stories_below_two=0`; `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `s2_one_repo=OK`; `s17_06=OK`; `s17_07=OK`. |
 | TC-M2PLAN-023 | AC-F8-5 | P23 | `bash` block **P23** (Section 7.1) | Manual Only — uncommitted procedure | `journeys=absent`. |
 | TC-M2PLAN-024 | AC-F9-1 | P24 | `bash` block **P24** (Section 7.1) | Manual Only — uncommitted procedure | `command_headers=0/6`; all six files absent. |
 | TC-M2PLAN-025 | AC-F9-2 | P25 | `bash` block **P25** (Section 7.1) | Manual Only — uncommitted procedure | All six absent; both relationship checks `MISSING`. |
-| TC-M2PLAN-026 | AC-F10-1 | P26 | `bash` block **P26** (Section 7.1) | Manual Only — uncommitted procedure | `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=MISSING`; `issue_286=MISSING`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`. |
+| TC-M2PLAN-026 | AC-F10-1 | P26 | `bash` block **P26** (Section 7.1) | Manual Only — uncommitted procedure | `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=OK`; `issue_286=OK`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`. |
 | TC-M2PLAN-027 | AC-F11-1 | P27 | `bash` block **P27** (Section 7.1) | Manual Only — uncommitted procedure | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. |
-| TC-M2PLAN-028 | AC-NFR1-1 | P28 | `bash` block **P28** (Section 7.1) | Manual Only — uncommitted procedure | `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`. |
+| TC-M2PLAN-028 | AC-NFR1-1 | P28 | `bash` block **P28** (Section 7.1) | Manual Only — uncommitted procedure | `product_files=32`; `planning_files=31`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=35`; `matcher_self_test=OK`; `non_vacuous=yes`. |
 | TC-M2PLAN-029 | AC-NFR2-1 | P29 | `bash` block **P29** (Section 7.1) | Manual Only — uncommitted procedure | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
-| TC-M2PLAN-030 | AC-NFR3-1 | P30 | `bash` block **P30** (Section 7.1) | Manual Only — uncommitted procedure | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. |
+| TC-M2PLAN-030 | AC-NFR3-1 | P30 | `bash` block **P30** (Section 7.1) | Manual Only — uncommitted procedure | `body_identical=13/13`; `state_body_regions_ok=OK`; `state_hunks=3 classified=3`; `desc_hunks=1`; `outside_desc_hunks=0`; `sentences_removed=2`; `sentences_added=2`; `entrypoint_bound=OK`; `P30 verdict: PASS`. |
 | TC-M2PLAN-031 | AC-NFR4-1 | P31 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary and `exit=0` |
 | TC-M2PLAN-032 | AC-NFR5-1 | P32 | `mkdir -p "$(git rev-parse --show-toplevel)/tmp/tmpdir" && TMPDIR="$(git rev-parse --show-toplevel)/tmp/tmpdir" pnpm check` | Existing guard — no change | `pnpm check` exit code and the last successful stage |
 | TC-M2PLAN-033 | AC-NFR6-1 | P33 | `bash` block **P33** (Section 7.1) | Manual Only — uncommitted procedure | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`; the compliant fixture still reports `fixture_good=OK` / `fixture_good_metrics=3/3,7/7,OK`, and the level-1-without-diagram fixture reports `C4 Level 1 has diagram=MISSING` / `fixture_negative=detected`. |
 | TC-M2PLAN-034 | AC-NFR7-1 | P34 | `bash` block **P34** (Section 7.1) | Manual Only — uncommitted procedure | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. |
-| TC-M2PLAN-035 | AC-NFR8-1 | P35 | `bash` block **P35** (Section 7.1) | Manual Only — uncommitted procedure | `clause_scan: total=79 present=77 missing=2`; `missing_clauses=2`; `MISSING S15-D1` and `MISSING S16-D1`; `s17_missing_criteria=0`; `added_criteria=0`. |
+| TC-M2PLAN-035 | AC-NFR8-1 | P35 | `bash` block **P35** (Section 7.1) | Manual Only — uncommitted procedure | `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`. |
 | TC-M2PLAN-036 | AC-NFR9-1 | P36 | `bun run scripts/checks/forbidden-literals.ts` + added-line scan | Existing guard plus uncommitted scan | `0 violations`, `seed_hits=0` |
-| TC-M2PLAN-037 | AC-NFR10-1 | P37 | `bash` block **P37** (Section 7.1) | Manual Only — uncommitted procedure | `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=MISSING`; `registry_events=MISSING`; `registry_attempts=MISSING`; `projects_repos_boundary=MISSING`; `non_vacuous=yes`. |
-| TC-M2PLAN-038 | AC-F8-6 | P38 | `bash` block **P38** (Section 7.1) | Manual Only — uncommitted procedure | `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `assert_count_matches=FAIL`; `s17_06=MISSING`; `s17_07=MISSING`. |
-| TC-M2PLAN-039 | AC-F8-7 | P39 | `bash` block **P39** (Section 7.1) | Manual Only — uncommitted procedure | `grace_seconds=MISSING`; `grace_bounds=MISSING`; `zero_spend_form=MISSING`; `zero_vs_absent=MISSING`; `stop_event=MISSING`; `status_brief_fields=OK`; `ac5_scope=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`. |
+| TC-M2PLAN-037 | AC-NFR10-1 | P37 | `bash` block **P37** (Section 7.1) | Manual Only — uncommitted procedure | `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=OK`; `registry_events=OK`; `registry_attempts=OK`; `projects_repos_boundary=OK`; `non_vacuous=yes`. |
+| TC-M2PLAN-038 | AC-F8-6 | P38 | `bash` block **P38** (Section 7.1) | Manual Only — uncommitted procedure | `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `assert_count_matches=OK`; `s17_06=OK`; `s17_07=OK`. |
+| TC-M2PLAN-039 | AC-F8-7 | P39 | `bash` block **P39** (Section 7.1) | Manual Only — uncommitted procedure | `grace_seconds=OK`; `grace_bounds=OK`; `zero_spend_form=OK`; `zero_vs_absent=OK`; `stop_event=OK`; `status_brief_fields=OK`; `ac5_scope=OK`; `s17_06=OK`; `s17_07=OK`. |
 
 No test file is created or updated: no permanent-suite change is permitted or needed (NFR-1; testing-strategy invariant rule).
 
@@ -2879,6 +2910,7 @@ None. The spec closed its single open verification (daemon wiring) as DEC-2 with
 | 2.1 | 2026-11-10 | @test-plan-writer | Spec v1.9 AC-F3-1 period fix. P07's exact-line comparison now requires `- Depends on: M1-S5, M1-S17, M2-S11.` (terminal period, per the backlog's convention); TC-007 quotes the same string. Current-tree run: `changed_lines=2 unexpected_lines=0`; `depends=expected`; `M2-S4 shape OK`; goal-mutation self-test `changed_lines=4 unexpected_lines=2`. No other oracle changed; traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 | 2.2 | 2026-11-10 | @test-plan-writer | Review-iter-2 F-1/F-3 refresh. Re-ran P11/P17/P18/P26/P07 at HEAD `a2f45be7`: P11 `reachability_missing=0`, `header_attribution=14/14`, `current_violations=0`; P17/P18 `m1_table_blank_before=OK` / `m1_table_separator=OK`, P18 `added_lines=31`, `removed_lines=0`, `bad_runs=0`, verdict PASS; P26 `back_pointer_claim=ABSENT`, `m1_snapshot=OK`, `description_bound=OK`, `forward_m1_link=OK`, `m2_command_links=6/6`; P07 `depends=expected`. TC-011/017/018/026 now record PASS, with the pre-`c2594adb` values kept as labelled falsifiability controls. `last_updated` restored to `2026-11-10T23:55:00Z` (after `created` 19:30Z). Spec v2.0/DEC-25 terminology absorbed: clause descriptions distinguish lease release (entry stays) from reason-bearing removal (entry leaves), the archive flow label stays `Queue auto-release...`, and the scenario anchor accepts `auto-release|auto-removal`. Traceability stays 37 ACs / 37 TCs / 38 procedure blocks. |
 | 2.4 | 2026-11-11 | @test-plan-writer | Spec v2.1 external-review alignment. Coverage moves to **39 ACs / 39 TCs** with new TC-038 (AC-F8-6, Assert-line contract, P38) and TC-039 (AC-F8-7, S17 evidence surfaces, P39); procedure blocks are P00 + P01-P39 = 40. **Clause table:** S15-D1 now requires sanctioned `M2-S13`, S16-D1 requires `M2-S12`/`M2-S13` (DEC-27); current tree `clause_scan: total=79 present=77 missing=2`, naming both edges. **Containment:** DEC-37 raises delivery to 32 (31 planning incl. `cli-command-registry.md` + 1 registry) and total to 35; current tree observes 31/30/1 and total 34. **New checks:** P11 adds doctor reachability, `state` layer/no-surface, daemon #286 (`reachability_missing=1`, three state/#286 gaps); P19 adds S3/S5/S10 advisory rows (`0/3`); P21 adds resolve grammar/attempts/topic parents/2% tolerance/S17 surfaces (all missing); P22/P38 add Assert-line contract (`0` asserts vs 38 scenarios), one-repo S2, S17-06/07; P26 adds mount mechanism/#286; P37 adds bounded registry registrations (all missing). Gaps and triage updated. |
+| 2.5 | 2026-11-11 | @test-plan-writer | P8 defect fixes. **P28:** allowlist now includes `cli-command-registry.md`; observed `product_files=32`, `planning_files=31`, `registry_files=1`, `total_product_files=35`, `unexpected_planning_paths=0`. **P36:** added-line seed scan excludes `cli-command-registry.md` (the guard does not scan it; DEC-37 rows legitimately name the working name); observed `forbidden_exit=0`, `registry_m2=12/12`, `seed_hits=0`. **P14/P30:** state.md gets the DEC-39 three-region exception — other thirteen pages header-only (`changed_pages=13/13`, `body_identical=13/13`) and `state_hunks=3 classified=3`, `state_body_regions_ok=OK`; observed P14/P30 PASS. **P11:** fixture now patches doctor/state/daemon too; observed `real_headers=PASS`, `fixture_conforming=PASS`. All changed procedures re-run at HEAD `15d50a03`; stale current-tree rows refreshed to PASS. Traceability stays 39 ACs / 39 TCs / 40 procedure blocks. |
 
 ## 10. Test Execution Log
 
@@ -2887,7 +2919,7 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`.
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
 | TC-M2PLAN-001 | 2026-11-10 | FAIL (change absent) | `m2_story_headings=0 new_found=0/7 order=FAIL`; `shape_ok=0/7`; `blank_separation=FAIL (want blank then ### M2-S11; got [] then [---])`; `separator_sequence=identical`. The seven entries do not exist in the base tree. |
-| TC-M2PLAN-002 | 2026-11-10 | FAIL (2 sanctioned dependency edges missing) | `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 clauses=9/10`, `M2-S16 clauses=10/11`; `clause_scan: total=61 present=59 missing=2`; `MISSING S15-D1` (sanctioned `M2-S13`) and `MISSING S16-D1` (sanctioned `M2-S12`/`M2-S13`). The oracle bites on the new edges. |
+| TC-M2PLAN-002 | 2026-11-10 | PASS (61/61 clauses present) | `M2-S11 clauses=9/9`, `M2-S12 8/8`, `M2-S13 11/11`, `M2-S14 12/12`, `M2-S15 10/10`, `M2-S16 11/11`; `clause_scan: total=61 present=61 missing=0`; no `MISSING` lines. |
 | TC-M2PLAN-003 | 2026-11-10 | FAIL (vacuous: no hunk) | `insertion window: start=base M2-S9 last content+1=1167 end=head separator-1=1167 window=1167:1167`; `window_empty=no`; `separator_sequence=identical`; `blank_separation=FAIL (head M2-S9 last non-blank=1166; got [] then [---])`; the conforming fixture prints `blank_separation=OK (head M2-S9 last non-blank=1167, blank=1168, M2-S11=1169)` and `fixture_blank_separation=OK`; `backlog_hunks=0`; `FAIL: no backlog hunk (change absent)`; `non_vacuous=no`; `classifier_self_tests=4/4`; `insertion_below_separator=never (negative fixture at separator+2 outside)`. The blank check now reads the head, so the M2-S6 amendment shift cannot break it. |
 | TC-M2PLAN-004 | 2026-11-10 | FAIL (change absent) | `S17=absent`; `criteria_present=0/7`. No S17 entry exists in the base tree. |
 | TC-M2PLAN-005 | 2026-11-10 | FAIL (change absent) | `S17=absent clauses_present=0/6`; `missing=6`. |
@@ -2896,32 +2928,32 @@ Run date 2026-11-10 against base `fab46636` on branch `docs/GH-284/m2-planning`.
 | TC-M2PLAN-008 | 2026-11-10 | FAIL (no amendment; identity controls pass) | `changed_lines=0`; `tasks_clause=MISSING`; `depends=M2-S14 MISSING`; `heading=identical`; `base_task_lines_missing=0`; `- Goal: identical`; `- AC: identical`; `fixture_task_lines_missing=0`; `fixture_s6_task_lines=3->4`; `fixture_ac_identity=identical`; `fixture_p08=OK`. The identity halves and the conforming-fixture proof pass; the amendment is absent. |
 | TC-M2PLAN-009 | 2026-11-10 | PASS (control) | `base_headings=67 head_headings=67 added=0 removed=0 unexpected=0`; `retirement_note=identical`; `order=OK`; `negative_control=detected`. This is a passing preservation control on the pre-change tree. The separator/`## Epic M3` byte-and-position clause of AC-F4-1 is asserted by P03 (`separator_sequence=identical`); P09 keeps its heading/order/retirement-note oracle unchanged. |
 | TC-M2PLAN-010 | 2026-11-10 | PASS (control) | `fm=byte-identical`; `rg=byte-identical`; `cc=byte-identical`. Passing control. |
-| TC-M2PLAN-011 | 2026-11-10 | FAIL (doctor reachability, state layer/no-surface, #286 missing) | `reachability_missing=1` (`doctor.md`); `state_layer=MISSING`; `state_no_surface=MISSING`; `daemon_286=MISSING`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; conforming fixture `reachability_missing=0` / `PASS`; `Current` negative detected. |
+| TC-M2PLAN-011 | 2026-11-10 | PASS (all headers, state layer/no-surface, #286, reachability) | `reachability_missing=0`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `tail_violations=0`; `current_violations=0`; `header_attribution=14/14`; `fixture_conforming=PASS`; `fixture_current_negative=detected`; `real_headers=PASS`. |
 | TC-M2PLAN-012 | 2026-11-10 | FAIL (change absent) | All three `MISSING`. |
 | TC-M2PLAN-013 | 2026-11-10 | FAIL (header); body preservation PASS (control) | `M1-S18 MISSING`; `GH-238 OK`; `not mounted MISSING`; `entrypoint delta MISSING`; `Current=PRESENT`; `daemon_body=byte-identical`. The header is the failing half; the body-identity check is a passing control until the header edit lands. |
-| TC-M2PLAN-014 | 2026-11-10 | FAIL (vacuous: no page changed) | `changed_pages=0/14`; `total_hunks=0`; `entrypoint_hunks=0`; `classifier_inside=OK`; `classifier_outside=OK`; `non_vacuous=no`. |
+| TC-M2PLAN-014 | 2026-11-10 | PASS (13 header-only pages + state three-region exception + entrypoint) | `changed_pages=13/13`; `state_hunks=3 classified=3`; `state_body_regions_ok=OK`; `entrypoint_hunks=1`; `non_vacuous=yes`; `classifier_inside=OK`; `classifier_outside=OK`. |
 | TC-M2PLAN-015 | 2026-11-10 | FAIL (composition unchanged) | `observed_families=16`; `enumerated_families=14`; `families_not_enumerated=coordinator dispatch`; `dispatch=claimed-not-registered (FAIL)`; `not_registered_extra_families= dispatch`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`; `positive_two_sentence=OK`; `negative_merged=detected`. The two-sentence oracle self-tests fire; the page is still pre-change. |
 | TC-M2PLAN-016 | 2026-11-10 | FAIL (change absent) | `new_sections=0`; `2026-11-10 section=absent`; `alternation_self_test=OK`; verdict FAIL. The self-test proves the fixed `23 of 23\|23/23` alternation matches prose; the pre-change tree has no section to scan. |
 | TC-M2PLAN-017 | 2026-11-10 | PASS (four pointers; table block intact) | `title_pointer=yes`; `g2_pointer=yes`; `g3_pointer=yes`; `g4_pointer=1/1`; `m1_table_blank_before=OK`; `m1_table_separator=OK`. |
 | TC-M2PLAN-018 | 2026-11-10 | PASS (retention + table block) | `removed_lines=0`; `added_lines=31`; `section_lines=26`; `pointer_runs=4`; `pointer_windows=4`; `bad_runs=0`; `retention_oracle=OK`; `reference_head_fixture=OK`; `m1_table_blank_before=OK`; `m1_table_separator=OK`; `P18 verdict: PASS`. |
-| TC-M2PLAN-019 | 2026-11-10 | FAIL (advisory rows missing) | `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=0/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`. The S3/S5/S10 rows are not marked advisory. |
+| TC-M2PLAN-019 | 2026-11-10 | PASS (pack set, advisory rows, table identity) | `pack_files=12/12`; `readme_lists=12/12`; `advisory_rows=3/3`; `deviation_statement=OK`; `pack_contents_table=byte-identical`. |
 | TC-M2PLAN-020 | 2026-11-10 | FAIL (change absent) | `architecture=absent`. |
-| TC-M2PLAN-021 | 2026-11-10 | FAIL (delivered grammar/tolerance/S17 surfaces missing) | `contract_markers_missing=0`; `resolve_grammar=MISSING` (still `resolve <ref>` with `--ref`); `attempts_per_ref=MISSING`; `topic_parents=MISSING` (still "status and lanes"); `tolerance_2pct=MISSING`; `s17_grace=MISSING`; `s17_stop_event=MISSING`; `s17_park_fields=MISSING`. |
-| TC-M2PLAN-022 | 2026-11-10 | FAIL (no Assert lines; S2 multi-repo; S17-06/07 absent) | `stories_below_two=0`; `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `s2_one_repo=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`. |
+| TC-M2PLAN-021 | 2026-11-10 | PASS (delivered grammar, topic parents, tolerance, S17 surfaces) | `contract_markers_missing=0`; `resolve_grammar=OK`; `attempts_per_ref=OK`; `topic_parents=OK`; `tolerance_2pct=OK`; `s17_grace=OK`; `s17_stop_event=OK`; `s17_park_fields=OK`. |
+| TC-M2PLAN-022 | 2026-11-10 | PASS (40 scenarios, 40 asserts, S2 one-repo, S17-06/07) | `stories_below_two=0`; `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `s2_one_repo=OK`; `s17_06=OK`; `s17_07=OK`. |
 | TC-M2PLAN-023 | 2026-11-10 | FAIL (change absent) | `journeys=absent`. |
 | TC-M2PLAN-024 | 2026-11-10 | FAIL (change absent) | `command_headers=0/6`; all six files absent. |
 | TC-M2PLAN-025 | 2026-11-10 | FAIL (change absent) | All six absent; both relationship checks `MISSING`. |
-| TC-M2PLAN-026 | 2026-11-10 | FAIL (mount mechanism and #286 missing) | `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=MISSING`; `issue_286=MISSING`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`. |
+| TC-M2PLAN-026 | 2026-11-10 | PASS (mount mechanism, #286, forward links, no back-pointer) | `back_pointer_claim=ABSENT`; `m1_snapshot=OK`; `description_bound=OK`; `forward_m1_link=OK`; `mount_mechanism=OK`; `issue_286=OK`; `m2_command_links=6/6`; `readme_reachable=OK`; all ten tokens `OK`. |
 | TC-M2PLAN-027 | 2026-11-10 | FAIL (row absent); M0/M1 preservation PASS (control) | `M2 row=absent`; `m2_targets=0/12`; both M0/M1 rows identical. Row absence is the failing half; row preservation is a passing control. |
-| TC-M2PLAN-028 | 2026-11-10 | FAIL (registry edit missing; 31/32 delivery, 34/35 total) | `product_files=31`; `planning_files=30`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=34`; `matcher_self_test=OK`. `cli-command-registry.md` is not yet changed, so delivery is 31 and total 34. |
+| TC-M2PLAN-028 | 2026-11-10 | PASS (32 delivery + 3 phase-7 = 35) | `product_files=32`; `planning_files=31`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=35`; `matcher_self_test=OK`; `non_vacuous=yes`. |
 | TC-M2PLAN-029 | 2026-11-10 | PASS (control) | `-- real head --` `stories_compared=65 identical=65 changed=0 order=OK` / `real_head=PASS`; `-- base control --` `65/65/0 order=OK` / `base_control=PASS`; `-- minimal stories-only head --` `65/65/0 order=OK` / `minimal_head=PASS`; `-- full amendment + stories head --` `65/65/0 order=OK` / `full_head=PASS`; `negative_body=detected`; `negative_removed=detected`; `negative_reordered=detected`. |
-| TC-M2PLAN-030 | 2026-11-10 | FAIL (entrypoint region unchanged); body preservation PASS (control) | `body_identical=14/14`; `desc_hunks=0`; `outside_desc_hunks=0`; `sentences_removed=0`; `sentences_added=0`; `entrypoint_bound=FAILED`. The fourteen-body half is a passing control; the entrypoint region is unchanged. |
+| TC-M2PLAN-030 | 2026-11-10 | PASS (13 bodies + state regions + entrypoint bound) | `body_identical=13/13`; `state_body_regions_ok=OK`; `state_hunks=3 classified=3`; `desc_hunks=1`; `outside_desc_hunks=0`; `sentences_removed=2`; `sentences_added=2`; `entrypoint_bound=OK`; `P30 verdict: PASS`. |
 | TC-M2PLAN-031 | 2026-11-10 | PASS (control) | `guard_exit=0`; `(guard-doc-distribution)[OK] no drift — 82 in-scope docs; install set matches ados_distribution markers`; `planning_markers=0`. Passing control. |
 | TC-M2PLAN-032 | 2026-11-10 | FAIL (registration missing; repo-local gate red) | Pre-change (registration missing): `default_exit=1`; `default_failed_tests=4`; `default_failure_class=delivery`; the four failures are `CI baseline parity (hermetic partial clone)` (cross-device in the default `/tmp`) plus the three forbidden-literals tests (`5/5 scope classes are scanned with 0 violations`; `rename drill document`; `legacy adapter confinement`); `repo_tmpdir_exit=1` (the repaired parity scan still fails on the unregistered pack, plus the three forbidden tests); `gate_verdict=FAIL`. Post-change with the one-file registration: repo-local exits 0, and a default failure is only the lone cross-device parity test, classified environmental. |
 | TC-M2PLAN-033 | 2026-11-10 | FAIL (change absent) | `FAIL: doc/planning/oss-tooling/milestones/m2 absent; mermaid fences=0 (<10); association=absent`; the compliant fixture still reports `fixture_good=OK` / `fixture_good_metrics=3/3,7/7,OK`, and the level-1-without-diagram fixture reports `C4 Level 1 has diagram=MISSING` / `fixture_negative=detected`. |
 | TC-M2PLAN-034 | 2026-11-10 | FAIL (change absent); retention PASS (control) | `retention_oracle=FAILED`; `oracle=whole-file-line-retention (whole-section cmp not used)`; `pointer_groups=0/4`; `sed_line_address_0_errors=0`. Zero removals is a passing retention control; there are no additions or pointers yet, and the title group is addressable without a `sed` line-address-0 error. |
-| TC-M2PLAN-035 | 2026-11-10 | FAIL (2 sanctioned dependency edges missing) | `clause_scan: total=79 present=77 missing=2`; `missing_clauses=2`; `MISSING S15-D1` and `MISSING S16-D1`; `s17_missing_criteria=0`; `added_criteria=0`. The sanctioned edges are not in the tree yet. |
-| TC-M2PLAN-036 | 2026-11-10 | FAIL (12 unregistered pack documents) | `registered_total=127`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=0/12`; `baseline_absent=12/12`; `registry_sorted_self_test=detected`; `registry_duplicate_self_test=detected`; `forbidden_exit=1`; `unregistered_findings=12`; `added_lines=1665`; `seed_hits=0`; `non_vacuous=yes`. The guard fails closed on the twelve unregistered pack docs; only the registration is missing. |
-| TC-M2PLAN-037 | 2026-11-10 | FAIL (bounded registry registrations missing) | `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=MISSING`; `registry_events=MISSING`; `registry_attempts=MISSING`; `projects_repos_boundary=MISSING`; `non_vacuous=yes`. |
-| TC-M2PLAN-038 | 2026-11-10 | FAIL (no Assert lines) | `scenario_count=38`; `assert_count=0`; `assert_shape_violations=38`; `assert_count_matches=FAIL`; `s17_06=MISSING`; `s17_07=MISSING`. |
-| TC-M2PLAN-039 | 2026-11-10 | FAIL (S17 evidence surfaces incomplete) | `grace_seconds=MISSING`; `grace_bounds=MISSING`; `zero_spend_form=MISSING`; `zero_vs_absent=MISSING`; `stop_event=MISSING`; `status_brief_fields=OK`; `ac5_scope=MISSING`; `s17_06=MISSING`; `s17_07=MISSING`. |
+| TC-M2PLAN-035 | 2026-11-10 | PASS (79/79 clauses including sanctioned edges) | `clause_scan: total=79 present=79 missing=0`; `missing_clauses=0`; `s17_missing_criteria=0`; `added_criteria=0`. |
+| TC-M2PLAN-036 | 2026-11-10 | PASS (guard + registration + scoped seed scan) | `registered_total=139`; `m2_registry_sorted=yes`; `m2_registry_duplicates=0`; `registry_m2=12/12`; `baseline_absent=12/12`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `added_lines=1883`; `seed_hits=0`; `seed_scan_scope=doc/planning/oss-tooling minus cli-command-registry.md`. |
+| TC-M2PLAN-037 | 2026-11-10 | PASS (links + bounded registry registration) | `broken_links=0`; `restated_ac_blocks=0`; `registry_projects=OK`; `registry_events=OK`; `registry_attempts=OK`; `projects_repos_boundary=OK`; `non_vacuous=yes`. |
+| TC-M2PLAN-038 | 2026-11-10 | PASS (40 scenarios, 40 Assert lines) | `scenario_count=40`; `assert_count=40`; `assert_shape_violations=0`; `assert_count_matches=OK`; `s17_06=OK`; `s17_07=OK`. |
+| TC-M2PLAN-039 | 2026-11-10 | PASS (all S17 evidence surfaces) | `grace_seconds=OK`; `grace_bounds=OK`; `zero_spend_form=OK`; `zero_vs_absent=OK`; `stop_event=OK`; `status_brief_fields=OK`; `ac5_scope=OK`; `s17_06=OK`; `s17_07=OK`. |

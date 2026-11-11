@@ -334,21 +334,62 @@ Observed at the P8 head:
   `ci-baseline-parity` failure (environmental); repo-local `TMPDIR` exit 0;
   `gate_verdict=PASS`. P31: `guard_exit=0`, `planning_markers=0`.
 
-Four gate expectations remain unmet, all in the gate predicates rather than
-the artifacts:
+### P8 close-out (spec v2.2, DEC-39, test plan v2.5)
 
-1. P28 `unexpected_planning_paths=0`: allowlist needs
-   `cli-command-registry\.md` added to the planning alternation (DEC-37).
-2. P36 `seed_hits=0`: the added-line seed scan needs the DEC-37 registry file
-   excluded, as the forbidden-literals guard already does (it scans registered
-   docs only).
-3. P14/P30 header-only containment for `state.md`: CG-REC-001 requires the
-   synopsis removal, so `state.md` needs the same body exception the
-   entrypoint page has, or the state page must be dropped from the
-   header-only page set.
-4. P11 `fixture_conforming`: the `/tmp/sb` fixture must be refreshed (or the
-   fixture setup extended) for the new doctor/state/daemon checks.
+The four blocked predicates were repaired upstream and the repaired gates are
+green at this close-out head:
+
+| Gate | Observed |
+|---|---|
+| P11 | `pages=28`; `header_attribution=14/14`; `reachability_missing=0`; `doctor_reachability=required (DEC-24)`; `state_layer=OK`; `state_no_surface=OK`; `daemon_286=OK`; `real_headers=PASS`; `fixture_conforming=PASS`; `fixture_current_negative=detected` |
+| P14 | `changed_pages=13/13`; `total_hunks=13`; `state_hunks=3 classified=3`; `state_body_regions_ok=OK`; no OUTSIDE lines |
+| P30 | `body_identical=13/13`; `entrypoint_bound=OK`; `state_body_regions_ok=OK`; `P30 verdict: PASS` |
+| P28 | `product_files=32`; `planning_files=31`; `registry_files=1`; `outside_planning_outside_registry=0`; `forbidden_root_files=0`; `unexpected_planning_paths=0`; `spec_files=2`; `overview_files=1`; `phase7_files=3`; `phase7_extra=0`; `phase7_unknown_paths=0`; `total_product_files=35`; `non_vacuous=yes` |
+| P36 | `registered_total=139`; `registry_m2=12/12`; `forbidden_exit=0`; `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`; `unregistered_findings=0`; `seed_hits=0`; `seed_scan_scope=doc/planning/oss-tooling minus cli-command-registry.md` |
+
+The fixes were predicate-level: DEC-39 gives `state.md` a bounded body
+exception (its three permitted regions are the header, the removed SYNOPSIS
+block, and the adjacent DESCRIPTION sentence); P28's planning allowlist now
+names `cli-command-registry.md`; P36 excludes that file from the added-line
+seed scan because the forbidden-literals guard scans only registered docs;
+and P11's conforming fixture now patches doctor/state/daemon too.
+
+The full sweep is green at the same head: P01, P02 (`61/61`), P03, P04, P05,
+P06, P07 (`depends=expected`), P08, P09, P10, P12, P13, P15, P16, P17
+(`m1_table_blank_before=OK`), P18 (`removed_lines=0 added_lines=31`,
+`pointer_runs=4 pointer_windows=4 bad_runs=0`, `retention_oracle=OK`), P19
+(`advisory_rows=3/3`), P20, P21 (`contract_markers_missing=0`,
+`resolve_grammar=OK`, `attempts_per_ref=OK`, `topic_parents=OK`,
+`tolerance_2pct=OK`, `s17_grace=OK`, `s17_stop_event=OK`,
+`s17_park_fields=OK`), P22/P38 (`scenario_count=40 assert_count=40
+assert_shape_violations=0`), P23, P24, P25, P26 (`mount_mechanism=OK`,
+`issue_286=OK`), P27 (`m2_targets=12/12`), P29
+(`stories_compared=65 identical=65 changed=0 order=OK`), P31 (`guard_exit=0`,
+`planning_markers=0`), P33, P34 (`pointer_groups=4/4`,
+`sed_line_address_0_errors=0`), P35 (`79/79`, `missing_clauses=0`), P37
+(`registry_projects/events/attempts=OK`, `projects_repos_boundary=OK`,
+`broken_links=0`, `restated_ac_blocks=0`), P39 (`grace_seconds=OK`,
+`grace_bounds=OK`, `zero_spend_form=OK`, `zero_vs_absent=OK`,
+`stop_event=OK`, `status_brief_fields=OK`, `ac5_scope=OK`).
+
+Aggregate gate at the close-out head (two-run protocol):
+
+```
+$ pnpm check
+default_exit=1
+default_failed_tests=1
+default_failures=CI baseline parity (hermetic partial clone)
+default_failure_class=environmental (ci-baseline-parity only)
+
+$ mkdir -p "$REPO_ROOT/tmp/tmpdir" && TMPDIR="$REPO_ROOT/tmp/tmpdir" pnpm check
+repo_tmpdir_exit=0
+gate_verdict=PASS
+```
+
+Doc distribution (default `TMPDIR`): `guard_exit=0`,
+`(guard-doc-distribution)[OK] no drift — 82 in-scope docs`,
+`planning_markers=0`.
 
 No product wiring, daemon mount, or tracker action was performed; the
 registry edit is bounded by DEC-37 and changes no naming rule; the readiness
-closure record remains owned by `@readiness-reviewer`.
+closure record is owned by `@readiness-reviewer`.
