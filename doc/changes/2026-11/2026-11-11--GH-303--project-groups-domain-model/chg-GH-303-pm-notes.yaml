@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T20:30:30.775Z }
   delivery_planning: { started: null, completed: 2026-11-11T20:30:46.462Z }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
-  delivery: { started: null, completed: 2026-11-11T18:58:21.419Z }
+  delivery: { started: null, completed: 2026-11-11T22:05:42.949Z }
   system_spec_update: { started: null, completed: 2026-11-11T18:58:28.912Z }
   review_fix: { started: null, completed: 2026-11-11T18:58:37.037Z }
   quality_gates: { started: null, completed: 2026-11-11T18:58:47.189Z }
@@ -909,8 +909,8 @@ notes:
       and leaves the delivered `projects.v1` as the flat payload. Decision B
       keeps `repos list --json` returning `repos.v1` with `data.repos[]` and
       `repoKey`. Decision C states one rename rule with the different token
-      `projects list --flat` as the alias. Decision D fixes the group identity as
-      `groupKey`. No gate, guard, test plan, or spec was weakened."
+      `projects list --flat` as the alias. Decision D fixes the group identity
+      as `groupKey`. No gate, guard, test plan, or spec was weakened."
     type: "decision"
     date: "2026-11-11"
   - text: "Plan phase 1 (backlog) complete at commit f8930adf. Scope:
@@ -922,12 +922,12 @@ notes:
       the alias-payload AC; M2-S19 carries its 11 ticket clauses, the executable
       one-review-flow definition, per-member CI corroboration, and the
       dependency-ordering AC; M2-S4 depends on M2-S18; one Epic M2 context
-      paragraph sits between the retirement note and M2-S2. Gate tokens:
-      P01 PASS (retained_clauses=5/5), P02 PASS, P03 PASS (owned_items=7/7),
-      P04 PASS (clauses_present=12/12), P06 6/6, P07 5/5, P08 7/7, P10 11/11,
-      P11 3/3 + 2/2, P12 3/3, P14 PASS, P15 PASS (paragraph_anchors=7/7), P16
-      PASS (inside/outside confined), P17 PASS, P58 PASS (2 new headings,
-      preserved regions byte-identical)."
+      paragraph sits between the retirement note and M2-S2. Gate tokens: P01
+      PASS (retained_clauses=5/5), P02 PASS, P03 PASS (owned_items=7/7), P04
+      PASS (clauses_present=12/12), P06 6/6, P07 5/5, P08 7/7, P10 11/11, P11
+      3/3 + 2/2, P12 3/3, P14 PASS, P15 PASS (paragraph_anchors=7/7), P16 PASS
+      (inside/outside confined), P17 PASS, P58 PASS (2 new headings, preserved
+      regions byte-identical)."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 2 (architecture + contracts) complete at commit 24714d13.
@@ -946,8 +946,8 @@ notes:
       selector, P28 12/12, P29 9/9, P30 11/11; distribution guard exit 0."
     type: "info"
     date: "2026-11-11"
-  - text: "Plan phase 3 (command pages, seeds, journey, entrypoint delta)
-      complete at commit ac7a7027. Scope: commands/repos.md, commands/projects.md,
+  - text: "Plan phase 3 (command pages, seeds, journey, entrypoint delta) complete
+      at commit ac7a7027. Scope: commands/repos.md, commands/projects.md,
       commands/queue.md, commands/board.md, test-scenarios.md, journeys.md, and
       entrypoint-delta.md. `repos.md` is the flat record-set page with the
       delivered `unbound` scope at exit 0, the delivered `projects.*` error
@@ -960,10 +960,10 @@ notes:
       attribution; the scenario corpus opens with S2 through S19, carries eight
       S18 and five S19 seeds with one Assert each and declared envelopes only,
       the undeclared-clone seed, the CI-corroboration seed, the ordering seed,
-      and the alias-shape seed; the S11 seeds are reconciled. Gate tokens:
-      P26 6/6 + 5/5 + 5/5, P31 11/11, P32 11/11, P33 6/6, P34 PASS, P35 11/11,
-      P36 8/8, P37 PASS, P38 7/7, P40 7/7, P41 5/5, P42 13/13, P43 PASS,
-      P44 alias seed SC-M2-S18-08, P45 PASS, P46 8/8, P47 7/7, P63 control PASS."
+      and the alias-shape seed; the S11 seeds are reconciled. Gate tokens: P26
+      6/6 + 5/5 + 5/5, P31 11/11, P32 11/11, P33 6/6, P34 PASS, P35 11/11, P36
+      8/8, P37 PASS, P38 7/7, P40 7/7, P41 5/5, P42 13/13, P43 PASS, P44 alias
+      seed SC-M2-S18-08, P45 PASS, P46 8/8, P47 7/7, P63 control PASS."
     type: "info"
     date: "2026-11-11"
   - text: "Plan phase 4 (forbidden-literals registration) at commit c1c3b8a5's
@@ -997,43 +997,41 @@ notes:
       P67 PASS, P68 21/21, P69 PASS."
     type: "info"
     date: "2026-11-11"
-  - text: "Plan phase 6 (review remediation closure): every board finding is
-      fixed in the product corpus and no finding remains silent. P6 opened with
-      the recorded verdict and re-ran the owning procedures; the only
-      non-product phase evidence is this pm-notes record. Residuals, none
-      blocking an AC: the commit primitive derives a top-path template subject
-      because six delivery phases carry distinct summaries and the primitive
-      exposes no plan-phase summary input, so the phase subjects name the top
-      path rather than the plan summary; the aggregate gate's default-TMPDIR run
-      is recorded and classified under AC-NFR6-1's carve-out behind the green
-      authoritative repository-local run; and the reference-page move in the
-      shipped CLI help remains pending M2-S18 code work, as the entrypoint delta
-      now states."
+  - text: "Plan phase 6 (review remediation closure): every board finding is fixed
+      in the product corpus and no finding remains silent. P6 opened with the
+      recorded verdict and re-ran the owning procedures; the only non-product
+      phase evidence is this pm-notes record. Residuals, none blocking an AC:
+      the commit primitive derives a top-path template subject because six
+      delivery phases carry distinct summaries and the primitive exposes no
+      plan-phase summary input, so the phase subjects name the top path rather
+      than the plan summary; the aggregate gate's default-TMPDIR run is recorded
+      and classified under AC-NFR6-1's carve-out behind the green authoritative
+      repository-local run; and the reference-page move in the shipped CLI help
+      remains pending M2-S18 code work, as the entrypoint delta now states."
     type: "info"
     date: "2026-11-11"
-  - text: "DOC-SYNC RE-CHECK REMEDIATION (P3-scoped second commit inside the
-      phase): doc-sync found a delivered-semantics contradiction in
+  - text: "DOC-SYNC RE-CHECK REMEDIATION (P3-scoped second commit inside the phase):
+      doc-sync found a delivered-semantics contradiction in
       doc/planning/oss-tooling/milestones/m2/commands/repos.md at the ERRORS
       table (line 128) — it folded a non-work-tree root into
       `projects.identity-unreadable` with `0 for unbound, 2 otherwise`, and the
-      EXIT STATUS row 0 repeated `unbound`, so the page self-contradicted against
-      the SCOPE prose and delivered truth. Fix: `projects.identity-unreadable`
-      is exit `1` and means the invoking checkout's git metadata is unusable or
-      its identity marker is unreadable/inconsistent; `projects.registry-corrupt`
-      is exit `2`; `projects.state-unavailable` is exit `2`; `unbound` now
-      appears only in SCOPE as the declared scope at exit 0 with one bounded
-      warning, and no sentence calls a non-work-tree root a failure; the
-      `repos.*` error-prefix change stays declared as M2-S18 code work and not
-      current truth. The mapping clause, host-root STATE example,
-      PROJECT_KEY_PATTERN key, and --help/--version rows are intact. The
-      test-plan v1.4 P02/P22/P33 oracle corrections that gate these values ride
-      in this same commit. Tokens at the new tree: P22 PASS
-      (repos_v1_fields=11/11, rv_unbound_scope=OK,
+      EXIT STATUS row 0 repeated `unbound`, so the page self-contradicted
+      against the SCOPE prose and delivered truth. Fix:
+      `projects.identity-unreadable` is exit `1` and means the invoking
+      checkout's git metadata is unusable or its identity marker is
+      unreadable/inconsistent; `projects.registry-corrupt` is exit `2`;
+      `projects.state-unavailable` is exit `2`; `unbound` now appears only in
+      SCOPE as the declared scope at exit 0 with one bounded warning, and no
+      sentence calls a non-work-tree root a failure; the `repos.*` error-prefix
+      change stays declared as M2-S18 code work and not current truth. The
+      mapping clause, host-root STATE example, PROJECT_KEY_PATTERN key, and
+      --help/--version rows are intact. The test-plan v1.4 P02/P22/P33 oracle
+      corrections that gate these values ride in this same commit. Tokens at the
+      new tree: P22 PASS (repos_v1_fields=11/11, rv_unbound_scope=OK,
       rv_unbound_error_attachment=0); P33 PASS
       (error_table_identity_unreadable_exit=1,
-      error_table_registry_corrupt_exit=2,
-      error_table_state_unavailable_exit=2, identities=4/4,
-      unbound_in_scope=OK, unbound_as_error_row=0,
+      error_table_registry_corrupt_exit=2, error_table_state_unavailable_exit=2,
+      identities=4/4, unbound_in_scope=OK, unbound_as_error_row=0,
       unbound_error_attachment=0, non_worktree_failure_claim=0,
       mutant_unbound_exit=detected, mutant_nonworktree_error=detected);
       distribution guard exit 0; forbidden-literals exit 0, 5/5 classes, 0
@@ -1043,59 +1041,58 @@ notes:
   - text: "BOARD RE-VERIFICATION REMEDIATION (second round, one commit): all 18
       original findings closed; two new blocking and four should-fix items
       fixed. (1) BLOCKING test-scenarios.md:64 — SC-M2-S4-02 asserted the
-      removed `board --all.data.projects`; it now asserts
-      `board --all.data.repositories`, matching commands/board.md:54 and the
-      example at :81, with prose and one Assert line unchanged. (2) BLOCKING
+      removed `board --all.data.projects`; it now asserts `board
+      --all.data.repositories`, matching commands/board.md:54 and the example at
+      :81, with prose and one Assert line unchanged. (2) BLOCKING
       test-scenarios.md:395 — SC-M2-S18-04 asserted a group-scoped queue/status
       envelope that no contract declares; per TP-10 it now asserts the scoped
       member set through `project-groups.v1` (`data.groups[]`, `groupKey`) plus
-      the exit code, and reads no undeclared `queue.*`/`status.*` envelope.
-      (3) commands/projects.md:148,150 — one input now has one exit code:
+      the exit code, and reads no undeclared `queue.*`/`status.*` envelope. (3)
+      commands/projects.md:148,150 — one input now has one exit code:
       `projects.config-invalid` is schema/content invalidity at exit 1, and an
       unreadable/unavailable configuration document routes to
-      `projects.scope-unavailable` at exit 2, matching contracts.md:131-132.
-      (4) contracts.md:128-131,155-167 — declared the shapes the seeds read:
+      `projects.scope-unavailable` at exit 2, matching contracts.md:131-132. (4)
+      contracts.md:128-131,155-167 — declared the shapes the seeds read:
       `data.partial` and `data.degradedMembers[]` name the degraded member,
       `data.definitionOfDone` is an object (`status` green/blocked/incomplete,
       `members[]` with `gates.ci`, `evidence[]`), and each
-      `plan.data.members[].dependsOn[]` element is a member `repoKey`; the S18-07
-      and S19-02/03/04 asserts were adjusted to those declared paths.
-      (5) commands/projects.md:132 — SCOPE now reads 'Outside the projects family
+      `plan.data.members[].dependsOn[]` element is a member `repoKey`; the
+      S18-07 and S19-02/03/04 asserts were adjusted to those declared paths. (5)
+      commands/projects.md:132 — SCOPE now reads 'Outside the projects family
       itself, only queue and status are group-scoped', consistent with the
-      page's own `projects list --project <groupKey>` grammar.
-      (6) milestones/m2/README.md:62 — the S18 map row lists SC-M2-S18-01..08
-      and names SC-M2-S18-08 as the AC-F8-5 alias-shape assertion. Guards:
+      page's own `projects list --project <groupKey>` grammar. (6)
+      milestones/m2/README.md:62 — the S18 map row lists SC-M2-S18-01..08 and
+      names SC-M2-S18-08 as the AC-F8-5 alias-shape assertion. Guards:
       distribution exit 0; forbidden-literals exit 0, 5/5 classes, 0 violations;
       lint GH-303 exit 0 conforms; plan validate valid. Gate tokens: P38
       board_anchors=7/7 stale/group=0; P40 8 seeds, 7/7 topics; P41 5 seeds, 5/5
       topics; P44 alias seed SC-M2-S18-08; P51 retained=OK; P22 11/11 +
-      rv_unbound_scope=OK; P33 all exit values 1/2/2 and unbound scope-only;
-      P62 PASS (excused: local 7206/4/0, default 7205/4/1 with only the named
-      CI baseline parity failure and a recorded rerun)."
+      rv_unbound_scope=OK; P33 all exit values 1/2/2 and unbound scope-only; P62
+      PASS (excused: local 7206/4/0, default 7205/4/1 with only the named CI
+      baseline parity failure and a recorded rerun)."
     type: "info"
     date: "2026-11-11"
   - text: "N08 REMEDIATION (board re-verification iteration 2, one commit):
       commands/board.md declares the repository list field as `repositories[]`
       (previously the delivered `projects[]`), but the single rename rule in
-      contracts.md enumerated only `projectKey → repoKey` and
-      `data.projects[] → data.repos[]`. Fix: the one normative bold rule
-      sentence in contracts.md:91 is byte-intact (P25 counts it exactly once),
-      and the same rule is extended in its own paragraph at contracts.md:93-96
-      with 'Under that same rule, the board's repository list field becomes
-      `repositories[]` (previously the delivered `projects[]`), so the board
-      names repository keys throughout and never enumerates groups.' No second
-      `**From M2-S18...**` rule exists. board.md:54 keeps `repositories[]` and
-      :56-58 now points at the single rename rule in contracts.md without
-      restating it. test-scenarios.md and backlog.md were checked: no remaining
-      board `projects[]`/`data.projects` repository-meaning occurrence; the
-      delivered `projects.v1` payload `data.projects[]` remains only where it
-      means the flat envelope. Tokens: P25 PASS
-      (rename_rule_occurrences=1, two_shape_sentences=0,
-      alias_paired_with_group=0, alias_occurrences=18); P38 PASS
-      (board_anchors=7/7, stale_claims=0, group_claims=0); P40 PASS (8 seeds,
-      7/7 topics); P41 PASS (5 seeds, 5/5 topics); P54 PASS (0/21 survivors,
-      21 matrix rows, all self-tests detected); distribution guard exit 0;
-      forbidden-literals exit 0, 5/5 classes, 0 violations; lint GH-303 exit 0
-      conforms; plan validate valid."
+      contracts.md enumerated only `projectKey → repoKey` and `data.projects[] →
+      data.repos[]`. Fix: the one normative bold rule sentence in
+      contracts.md:91 is byte-intact (P25 counts it exactly once), and the same
+      rule is extended in its own paragraph at contracts.md:93-96 with 'Under
+      that same rule, the board's repository list field becomes `repositories[]`
+      (previously the delivered `projects[]`), so the board names repository
+      keys throughout and never enumerates groups.' No second `**From
+      M2-S18...**` rule exists. board.md:54 keeps `repositories[]` and :56-58
+      now points at the single rename rule in contracts.md without restating it.
+      test-scenarios.md and backlog.md were checked: no remaining board
+      `projects[]`/`data.projects` repository-meaning occurrence; the delivered
+      `projects.v1` payload `data.projects[]` remains only where it means the
+      flat envelope. Tokens: P25 PASS (rename_rule_occurrences=1,
+      two_shape_sentences=0, alias_paired_with_group=0, alias_occurrences=18);
+      P38 PASS (board_anchors=7/7, stale_claims=0, group_claims=0); P40 PASS (8
+      seeds, 7/7 topics); P41 PASS (5 seeds, 5/5 topics); P54 PASS (0/21
+      survivors, 21 matrix rows, all self-tests detected); distribution guard
+      exit 0; forbidden-literals exit 0, 5/5 classes, 0 violations; lint GH-303
+      exit 0 conforms; plan validate valid."
     type: "info"
     date: "2026-11-11"
