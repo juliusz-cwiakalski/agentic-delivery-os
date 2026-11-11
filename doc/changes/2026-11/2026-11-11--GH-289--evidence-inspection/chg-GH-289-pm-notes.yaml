@@ -2,7 +2,7 @@ change_id: GH-289
 title: "feat(dispatch): attempt history inspection and divergence resolution (M2-S12)"
 delivery_mode: autonomous
 phases:
-  clarify_scope: { started: "2026-11-11T17:20:00Z", completed: 2026-11-11T16:18:24.374Z }
+  clarify_scope: { started: "2026-11-11T17:20:00Z", completed: 2026-11-11T17:32:07.633Z }
   specification: { started: null, completed: 2026-11-11T17:31:06.812Z }
   test_planning: { started: null, completed: 2026-11-11T17:31:16.274Z }
   delivery_planning: { started: null, completed: 2026-11-11T17:31:24.944Z }
