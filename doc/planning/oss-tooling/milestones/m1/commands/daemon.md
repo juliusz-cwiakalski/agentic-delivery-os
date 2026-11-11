@@ -1,9 +1,9 @@
 # daemon(1)
 
-Status: Delivered daemon engine and control protocol (M1-S18, GH-238);
-the lifecycle command is not mounted at the production entrypoint, and its
-registration is tracked in the M2 entrypoint delta note and issue #286
-(M2 daemon mount). Scenarios SC-M1-14..18 and SC-M1-20; full protocol in
+Status: Mounted. The daemon engine and control protocol are delivered
+(M1-S18, GH-238) and the lifecycle command is prompt-required at the production
+entrypoint (GH-286), so `daemon` is reachable from the shipped program.
+Scenarios SC-M1-14..18 and SC-M1-20; full protocol in
 [../architecture.md](../architecture.md).
 
 ## NAME
@@ -118,6 +118,24 @@ $ <binary> daemon start --json
 `daemon.state-recovery-failed`, `daemon.protocol.unsupported`,
 `daemon.socket-unreachable`, `daemon.subscriber-degraded`, and
 `daemon.supervisor-unsupported`.
+
+## HELP
+
+```
+<binary> daemon --help
+<binary> daemon start --help
+<binary> daemon stop --help
+<binary> daemon status --help
+<binary> daemon install --help
+<binary> daemon uninstall --help
+<binary> --help
+<binary> --version
+```
+
+Every invocation above prints its declared help page at exit `0` and performs no
+state, configuration, filesystem, git, or network read. The family appears in
+root `--help` through the delivered family derivation, and `--version` reports
+the binary identity.
 
 ## SEE ALSO
 

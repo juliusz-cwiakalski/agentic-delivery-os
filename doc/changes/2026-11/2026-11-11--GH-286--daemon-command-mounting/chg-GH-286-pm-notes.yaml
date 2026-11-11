@@ -18,6 +18,22 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 5 commit: aa3c5311. Plan phase 6 complete (mount and
+      self-description in one commit): `daemon` joins `PROMPT_REQUIRED_COMMANDS`
+      exactly once (17 families); the help inventory gains the family entry with
+      the daemon page and the man page in its see-also plus one entry per
+      subcommand; the reference page records the mounted status and its `## HELP`
+      section; the coverage inventory gains the command and the page row appended
+      at the end of each array; the doc-conformance page list gains `daemon`; the
+      only delivered-suite edits are the five permitted sites (the two absence
+      loops, the expected family list and the corrected doc comment in
+      entrypoint-composition, the root family list, the coverage enumeration, and
+      the conformance row). Gate: 95/95 tests across the composition, mount-help,
+      entrypoint, guard, and mutant suites; help-guide-coverage zero failures,
+      prompt-conformance clean, `pnpm check:help`, typecheck, lint, and format
+      green; TC-DAEMON-105 re-run through the real binary and recorded."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 4 commit: da51b183. Plan phase 5 complete (degradation per
       projection): `QueueComposition.degraded` is resolved at the schedule read,
       the mutation outcome, the lanes read, the claim and release results, and

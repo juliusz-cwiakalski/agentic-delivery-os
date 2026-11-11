@@ -41,6 +41,7 @@ describe("TC-ENTRY-003 root help", () => {
       "closeout",
       "spend",
       "retro",
+      "daemon",
     ]) {
       expect(run.stdout).toContain(`  ${family}  `);
     }

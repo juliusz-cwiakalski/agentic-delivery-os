@@ -40,6 +40,8 @@ import * as holderNotRemoved from "../fixtures/daemon/mount-mutants/holder-not-r
 import * as fabricatedReachability from "../fixtures/daemon/mount-mutants/fabricated-reachability";
 import * as staleInclusive from "../fixtures/daemon/mount-mutants/stale-inclusive";
 import * as ownerIgnored from "../fixtures/daemon/mount-mutants/owner-ignored";
+import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
+import * as helpComposerInvoked from "../fixtures/daemon/mount-mutants/help-composer-invoked";
 import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import { createMemorySupervisor, createMountClock } from "../fixtures/daemon/mount-harness";
 import { appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
@@ -629,6 +631,62 @@ describe("GH-286 degradation mutation controls", () => {
       expect(mutant.suite.endsWith(".test.ts")).toBe(true);
       expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
       expect(mutant.assertion.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("GH-286 mount mutation controls", () => {
+  const readRepoFile = (relative: string): string =>
+    readFileSync(join(process.cwd(), relative), "utf8");
+
+  test("conditional-registration: the family becomes optional and the mount claim fails", () => {
+    const source = readRepoFile(conditionalRegistration.target);
+    expect(conditionalRegistration.violates(source)).toBe(false);
+    const mutated = conditionalRegistration.apply(source);
+    expect(mutated).not.toBe(source);
+    expect(conditionalRegistration.violates(mutated)).toBe(true);
+    expect(mutated).toContain("facts.daemonEntry === undefined ? {} : { daemon: daemonRuntime }");
+  });
+
+  test("help-composer-invoked: a composing help/version surface is caught", () => {
+    const source = readRepoFile(helpComposerInvoked.target);
+    expect(helpComposerInvoked.violates(0)).toBe(false);
+    expect(helpComposerInvoked.violates(1)).toBe(true);
+    const mutated = helpComposerInvoked.apply(source);
+    expect(mutated).not.toBe(source);
+    expect(mutated).toContain("unreachableVersionText");
+  });
+
+  test("the mutant inventory is exactly the twenty-one declared modules", () => {
+    const modules = [
+      "bare-execstart",
+      "binding-not-last",
+      "captured-degradation",
+      "conditional-registration",
+      "duplicate-terminal-record",
+      "fabricated-reachability",
+      "hardcoded-degradation",
+      "help-composer-invoked",
+      "holder-not-removed",
+      "install-empty-executable",
+      "literal-socket",
+      "owner-ignored",
+      "release-skip-cancellation",
+      "signal-negative-pid",
+      "signal-without-pid-check",
+      "spawn-with-full-env",
+      "spawn-without-forwarded-env",
+      "stale-inclusive",
+      "unit-under-state-dir",
+      "uninstall-broad-delete",
+      "xdg-relative-joined",
+    ];
+    expect(modules).toHaveLength(21);
+    for (const name of modules) {
+      expect(
+        existsSync(join(process.cwd(), `tests/fixtures/daemon/mount-mutants/${name}.ts`)),
+        name,
+      ).toBe(true);
     }
   });
 });

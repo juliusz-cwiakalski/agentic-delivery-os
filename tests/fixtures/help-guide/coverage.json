@@ -20,7 +20,8 @@
     "doc/planning/oss-tooling/milestones/m1/commands/spend.md",
     "doc/planning/oss-tooling/milestones/m1/commands/retro.md",
     "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md",
-    "doc/planning/oss-tooling/milestones/m1/commands/coordinator.md"
+    "doc/planning/oss-tooling/milestones/m1/commands/coordinator.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/daemon.md"
   ],
   "commands": [
     "status",
@@ -38,6 +39,7 @@
     "spend",
     "retro",
     "dispatch",
-    "coordinator"
+    "coordinator",
+    "daemon"
   ]
 }
