@@ -60,9 +60,21 @@ observed invocations above fail with `unknown flag "--help"` and
 `unexpected argument "status"`, both with exit `1`.
 
 Wiring the daemon lifecycle command into the production entrypoint is product
-work outside this change; no plan document can close it. It is recorded here
-so the gap is visible where the blueprint reader looks, and it stays owned by
-the product surface.
+work outside this change; no plan document can close it. Issue #286 tracks the
+daemon mount. The gap is recorded here so the blueprint reader sees it, and it
+stays owned by the product surface. It is also the prerequisite where S13's
+subscribe surface and S17's peak pausing depend on a resident daemon: neither
+can ship a resident path before #286 lands.
+
+## Mounting a new command
+
+The entrypoint composes exactly the prompt-required command set and drops
+extras, so a command definition existing in the edge composition is not
+enough. Mounting `projects`, `events`, or `board` takes a prompt-set change
+plus a help reference page per command; only then does the family appear in
+root `--help`. That is why this note records the M2 additions as planned, not
+as registered: the mount is the story's work, and the help reference page is
+part of it.
 
 ## Where this note is read
 

@@ -1,5 +1,5 @@
 # OSS tooling status: M0 stories delivered, milestone exit pending
-> Superseded for M2 planning: see the 2026-11-10 M2 planning snapshot below for the current M1 delivery and M2 planning state.
+> History pointer: the 2026-11-10 M2 planning snapshot below records the M1 delivery and M2 planning state; this title and the sections below are history, not a live claim.
 
 Date: 2026-11-01. Owner-of-record: CEO agent under user-delegated autonomous
 authority. Source of truth for scope and order: [backlog.md](backlog.md) and
@@ -53,7 +53,7 @@ requires its per-repository two-clean-weeks evidence. The dual-run pilot
 remains the critical path for M0 exit. The M1-S9 half is superseded by the
 2026-11-07 M1-S9 handover amendment below.
 
-Historical note: see the 2026-11-10 M2 planning snapshot below for the current M1 delivery state.
+History pointer: the 2026-11-10 M2 planning snapshot below records the M1 delivery state; the paragraph above is a 2026-11-03 statement kept as history.
 
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
@@ -101,7 +101,7 @@ invariants, never moving-base diffs.
    respecting the per-repo two-clean-weeks rule. M1-S9 handover is now
    governed by the evidence-based clean bar recorded in the 2026-11-07
    amendment below, which supersedes the per-repo rule named here.
-   See the 2026-11-10 M2 planning snapshot below for the current M1 delivery state.
+   History pointer: see the 2026-11-10 M2 planning snapshot below for the recorded M1 delivery state.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.
@@ -149,7 +149,7 @@ degradation marker. The resident daemon and its control protocol (M1-S18),
 story. See [feature-scheduling-engine.md](../../spec/features/feature-scheduling-engine.md)
 and the M1 command pages [queue.md](milestones/m1/commands/queue.md) and
 [lanes.md](milestones/m1/commands/lanes.md).
-See the 2026-11-10 M2 planning snapshot below for the current M1 delivery state.
+History pointer: see the 2026-11-10 M2 planning snapshot below for the recorded M1 delivery state.
 
 ## M1-S9 handover amendment: evidence-based clean bar (2026-11-07, CEO-D-073)
 
