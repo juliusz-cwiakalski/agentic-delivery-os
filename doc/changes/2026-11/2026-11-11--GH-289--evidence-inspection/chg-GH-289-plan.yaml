@@ -1,13 +1,35 @@
-# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.0
-# (2026-11-11). Authored against spec v1.3 and test plan v1.2.
+# GH-289 delivery plan — machine-readable projection (delivery.plan.v1), revision 2.1
+# (2026-11-11). Authored against spec v1.4 and test plan v1.3.
+#
+# REVISION 2.1 — discharges the DoR iteration-2 findings (readiness-iter-2.md):
+#   W1  the delivered forms' refusal cell. TC-ATTEMPT-034 gains cell 7: with
+#       `acceptsAnyFlag: true` in force on the dispatch definition, each of the four
+#       delivered forms — `dispatch <ref>`, `dispatch dual-run summary --repo <repo>`,
+#       `dispatch dual-run resolve <id> --note <text>`, and
+#       `dispatch handover <repo> [--revert]` — refuses an undeclared flag at exit 1
+#       with `fallback.invocation` under `kind: "fallback"` and performs zero store
+#       reads, proven by a store seam whose `read`/`readRecords` throw, in
+#       tests/behaviour/dispatch-additive-stability.test.ts. Cell 7 is therefore
+#       phase 2's own suite cell, phase 2's done-when battery runs that suite, and a
+#       coder who lands the declaration without the handler guard reds a named cell at
+#       the command boundary. Cell 6 is now solely the additive-only diff inspection
+#       against the merge base: review-verified at the review gate, never counted as a
+#       boundary-green cell. No statement in this plan pins the delivered refusal on
+#       cell 6, on a review, or on a diff.
+#   N3  work 1.1 no longer claims TDR-0023 is untracked. The record and its
+#       doc/decisions/00-index.md row are committed on this branch, so phase 1 verifies
+#       presence and index and changes no content; the record stays `Proposed` with
+#       `decision_date: null` and is accepted at the PR review.
 #
 # REVISION 2.0 — discharges the DoR iteration-1 findings (readiness-iter-1.md):
 #   B1  contract-surface fixture: tests/fixtures/ports/v1-contract-inventory.json is
 #       declared in phase 1 and phase 3, both phases state the two-entry same-commit
 #       rule for every name they add, and both boundaries run the inventory suite.
 #   B2  TC ownership arithmetic: TC-ATTEMPT-028 and TC-ATTEMPT-034 are split by cell
-#       (phase 2 owns 028 cells 1-3 and 034 cells 1, 4, 5, 6; phase 3 owns 028 cell 4
-#       and 034 cells 2-3), so the count is 3 + 20 + 10 + 3 + 3 = 39.
+#       (phase 2 owns 028 cells 1-3 and 034 cells 1, 4, 5, 7; phase 3 owns 028 cell 4
+#       and 034 cells 2-3), so the count is 3 + 20 + 10 + 3 + 3 = 39. (The 034 cell
+#       labels are revision 2.1's: cell 7 is the delivered-form refusal suite cell and
+#       cell 6 is the review-verified diff inspection. The TC counts are unchanged.)
 #   B3  residual-risk paragraph: replaced with the verified delivered truth — the
 #       summary's `unresolved` is already exact and store-wide, so nothing moves up
 #       past 20; the change scopes the computation to the repository (count moves
@@ -36,7 +58,7 @@
 # progress is a pm-notes `notes:` entry.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-289-spec.md — v1.3, 36 acceptance criteria
+#   - Spec:      ./chg-GH-289-spec.md — v1.4, 36 acceptance criteria
 #                (AC-F1-1..AC-F9-2), F-1..F-9 with capability detail in §5.1,
 #                DM-1..DM-6 in §8.3, §8.5 backward compatibility (the two declared
 #                additive points and the declared `unresolvedIds` narrowing),
@@ -47,7 +69,7 @@
 #                §18 delivery order, §19 (no migration), Appendices A (traceability),
 #                B (SC-M2-S12-01/02 reconciliation), C (M2 attempts(1) corrections,
 #                items 1-6) and D (normative read-side field set).
-#   - Test plan: ./chg-GH-289-test-plan.md — v1.2, 39 test cases
+#   - Test plan: ./chg-GH-289-test-plan.md — v1.3, 39 test cases
 #                (TC-ATTEMPT-001..039) covering 36/36 ACs; §3.1 AC→TC coverage and
 #                evidence classes, §3.2 interface coverage, §3.3 NFR coverage,
 #                §4 test types and layers, §5.2 scenario details, §6 environments
@@ -127,12 +149,14 @@
 #     observable through the composed command, so the runtime group merges into the
 #     command phase.
 #   TP3 (command branch, flags and renderers) → plan 2 for TC-ATTEMPT-001..005, 023,
-#     025, 026, 034 cells 1, 4, 5, 6 and 039; plan 1 for TC-ATTEMPT-009 and TC-ATTEMPT-010.
+#     025, 026, 034 cells 1, 4, 5, 7 and 039; plan 1 for TC-ATTEMPT-009 and TC-ATTEMPT-010.
 #     Why: 009/010 assert properties of the read use case's own `data` (the page byte
 #     budget and its declaration; ledger retention, its precedence and the foreign
 #     count over the retained window), which plan 1 produces and plan 2 only re-renders;
 #     AC-F2-4 and AC-F2-5 are therefore owned by plan 1. TC-034's cells 2-3 complete in
-#     plan 3 with the shared count rule.
+#     plan 3 with the shared count rule; its cell 6 is the additive-only diff inspection
+#     against the merge base, which is review-verified at the review gate and is never a
+#     boundary-green cell in any phase.
 #   TP4 (resolve enrichment and the shared count rule) → plan 3 for TC-ATTEMPT-018..022,
 #     027, 038, plus 028 cell 4 and 034 cells 2-3. Unmoved.
 #   TP5 (help, inventory and the parity pin as one unit) → plan 4 for TC-ATTEMPT-029..031.
@@ -185,7 +209,8 @@
 #            TC-ATTEMPT-021, TC-ATTEMPT-022, TC-ATTEMPT-027,
 #            TC-ATTEMPT-036, TC-ATTEMPT-038,
 #            TC-ATTEMPT-028 (cells 1-3 green in phase 2, cell 4 here),
-#            TC-ATTEMPT-034 (cells 1, 4, 5, 6 green in phase 2, cells 2-3 here)
+#            TC-ATTEMPT-034 (cells 1, 4, 5, 7 green in phase 2, cells 2-3 here;
+#                            cell 6 review-verified at the review gate)
 #                                                                (10)
 #   phase 4  TC-ATTEMPT-029, TC-ATTEMPT-030, TC-ATTEMPT-031       (3)
 #   phase 5  TC-ATTEMPT-032, TC-ATTEMPT-033, TC-ATTEMPT-035       (3)
@@ -238,8 +263,12 @@
 # and therefore before any store read; and (c) keeps every delivered form's refusal
 # identity by classifying an unknown flag on `dispatch <ref>`,
 # `dual-run summary|resolve`, and `handover` as `fallback.invocation` in the same
-# handler guard, so AC-F9-1 and NG-6 hold (TC-ATTEMPT-034 adds the cell that pins
-# it). The two flags are still declared value-taking flags in the published grammar
+# handler guard, so AC-F9-1 and NG-6 hold. That guard is proven by a named suite
+# cell, not by a review: TC-ATTEMPT-034 cell 7 runs each of the four delivered forms
+# with an undeclared flag through a store seam whose `read`/`readRecords` throw, in
+# tests/behaviour/dispatch-additive-stability.test.ts, so a declaration landed
+# without the guard reds the cell at phase 2's boundary. The two flags are still
+# declared value-taking flags in the published grammar
 # (help entry, synopsis, reference page); `CommandDefinition.requiresValue` is a
 # parser hint, not the published grammar.
 #
@@ -324,7 +353,7 @@
 #     `DispatchDivergenceSummary` type. TC-ATTEMPT-038 pins the single derivation
 #     structurally and TC-ATTEMPT-022 pins the exact numbers behaviourally; P2 is
 #     their negative control.
-#   - What actually moves, stated as the delivered code and spec v1.3 §8.5 / RSK-6 /
+#   - What actually moves, stated as the delivered code and spec v1.4 §8.5 / RSK-6 /
 #     DEC-15 state it — the delivered summary's `unresolved` is ALREADY exact and
 #     store-wide, so nothing moves up past 20 and no delivered count was a capped-list
 #     artefact: `foldEvidenceWindow` keeps every open identifier with no cap,
@@ -376,7 +405,9 @@
 #   - Review-verified (never claimed as suite): AC-F8-3 (TC-ATTEMPT-032), AC-F8-4
 #     (TC-ATTEMPT-033), the side-effect enumeration half of AC-F4-1, the string-absence
 #     half of AC-F4-4 over the M2 page and corpus, the reference-page half of AC-F7-2,
-#     the additive-only half of AC-F9-1, and the lockfile/diff half of AC-F9-2.
+#     the additive-only half of AC-F9-1 (TC-ATTEMPT-034 cell 6, the diff inspection
+#     against the merge base — the delivered forms' refusal is cell 7 and is suite
+#     evidence at phase 2), and the lockfile/diff half of AC-F9-2.
 #   - Not claimed by any phase: cross-platform path/mtime semantics (TR-2), any
 #     performance framework beyond the single in-process p95 cell (TC-ATTEMPT-037).
 #
@@ -479,12 +510,14 @@ phases:
   #
   # Work:
   #  1.1 doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
-  #      is committed here (it is authored and currently untracked in the working
-  #      tree): D-1..D-7 and C-1..C-8 govern every later phase, so the record must not
-  #      arrive after the code it binds. doc/decisions/00-index.md is declared with it;
-  #      its TDR-0023 row is already committed at the next free identifier, and the
-  #      declaration keeps any index correction inside this phase's scope. Do NOT
-  #      restate the record's contents in this plan or in the spec.
+  #      is already committed and indexed on this branch, together with its row at the
+  #      next free identifier in doc/decisions/00-index.md. D-1..D-7 and C-1..C-8 govern
+  #      every later phase, and they must not arrive after the code they bind, so this
+  #      item VERIFIES presence and index and changes no content: no authoring, no
+  #      re-commit, no amend. The record stays `Proposed` with `decision_date: null` —
+  #      the owner accepts it at the PR review, not here. Both paths stay declared so
+  #      that any correction required by this change remains inside this phase's scope.
+  #      Do NOT restate the record's contents in this plan or in the spec.
   #  1.2 packages/core/src/contracts/dispatch.ts: the `attempts.v1` data and
   #      projection types beside the delivered dispatch constants — `DispatchAttemptView`
   #      (the sixteen fields of Appendix D, with `divergenceRef` typed as
@@ -610,9 +643,10 @@ phases:
       performs exactly one verified ledger read, filters each record on its own
       repository while disclosing foreign records as a count over the retained window,
       treats an empty verified read as success, and maps an unreadable store to its own
-      `state.*` identity with no new error row; TDR-0023 is committed with this phase
-      so the rulings bind before the code, and the two new modules are registered in the
-      inventory and the executable allowlist while every added contract name lands in
+      `state.*` identity with no new error row; TDR-0023 is verified committed and
+      indexed on the branch so its rulings bind the code that follows without a
+      re-commit, and the two new modules are registered in the inventory and the
+      executable allowlist while every added contract name lands in
       both entries of the contract-surface fixture.
     scope:
       files:
@@ -642,7 +676,7 @@ phases:
         target: doc/decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-289 in progress; TDR-0023 committed and indexed; phase 1 evidence recorded in pm-notes notes"
+      trackerTransition: "GH-289 in progress; TDR-0023 presence and index verified, no content change; phase 1 evidence recorded in pm-notes notes"
     weightClass: standard
 
   # ---------------------------------------------------------------------------
@@ -662,9 +696,15 @@ phases:
   #      unknown flag, unexpected positional — all `input.value.rejected` before any
   #      runtime call), plus the `acceptsAnyFlag: true` declaration and the guard that
   #      keeps the four delivered forms' unknown-flag refusal at `fallback.invocation`.
-  #      The attempts payload must be discriminated by its `attempts` array in the text
-  #      selector BEFORE the summary and handover branches, and an attempts payload
-  #      projects as a plain success at exit 0 (no `result`, `verdict` or `operation`).
+  #      The guard is not a code-review promise: TC-ATTEMPT-034 cell 7 runs each of the
+  #      four delivered forms with an undeclared flag in
+  #      tests/behaviour/dispatch-additive-stability.test.ts, over
+  #      `createCommandScenario({ store })` with a store seam whose `read` and
+  #      `readRecords` throw, so an invocation that reaches the store fails the cell
+  #      instead of returning an empty store. The attempts payload must be discriminated
+  #      by its `attempts` array in the text selector BEFORE the summary and handover
+  #      branches, and an attempts payload projects as a plain success at exit 0 (no
+  #      `result`, `verdict` or `operation`).
   #  2.2 packages/cli/src/output/dispatch-text.ts: `renderDispatchAttemptsText` — one
   #      summary line `attempts=<n>; repository=<identity>; ref=<ref>; has_more=<true|false>`,
   #      then one row per attempt newest first as
@@ -762,24 +802,39 @@ phases:
   #                   the summary's block key order with `idsTruncated`, its narrowed
   #                   `unresolvedIds` and the matching human line — completes in phase 3
   #                   with the shared count rule and is owned there.
-  #   TC-ATTEMPT-034  CELLS 1, 4, 5, 6 (this phase's green set: the four delivered `data`
-  #                   key sets and order unchanged, the attempts payload discriminated by
-  #                   its `attempts` array against all four text selectors, the attempts
-  #                   payload a plain success at exit 0, and the delivered branches'
-  #                   unknown-flag refusal still `fallback.invocation` — the P1 negative
-  #                   control). Cells 2-3 — the resolve payload's added keys and both
-  #                   blocks' `idsTruncated` — complete in phase 3 and are owned there.
+  #   TC-ATTEMPT-034  CELLS 1, 4, 5, 7 (this phase's green set, all suite cells in
+  #                   tests/behaviour/dispatch-additive-stability.test.ts: the four
+  #                   delivered `data` key sets and order unchanged, the attempts
+  #                   payload a plain success at exit 0 with no `result`/`verdict`/
+  #                   `operation`, the attempts payload discriminated by its `attempts`
+  #                   array against all four text selectors, and — with
+  #                   `acceptsAnyFlag: true` in force on the definition — each of the
+  #                   four delivered forms refusing an undeclared flag at exit 1 with
+  #                   `fallback.invocation` under `kind: "fallback"` and zero store
+  #                   reads, proven by a store seam whose `read`/`readRecords` throw and
+  #                   therefore never entered). CELL 6 IS NOT A GREEN CELL: it is the
+  #                   additive-only diff inspection against the merge base, review-
+  #                   verified at the review gate, and no statement in this plan claims
+  #                   the delivered refusal from it. Cells 2-3 — the resolve payload's
+  #                   added keys and both blocks' `idsTruncated` — complete in phase 3
+  #                   and are owned there.
   #   TC-ATTEMPT-039  grammar refusals: non-canonical ref, unknown flag, unexpected
   #                   positional — exit 1, `input.value.rejected`, zero store reads,
   #                   nothing appended, no `attempts.*` identity
   #
   # Done when: those twenty TCs are green, together with the phase-2 cells of
-  # TC-ATTEMPT-028 (cells 1-3) and TC-ATTEMPT-034 (cells 1, 4, 5, 6) — the split is
-  # stated so this boundary is satisfiable without the count rule of phase 3;
+  # TC-ATTEMPT-028 (cells 1-3) and TC-ATTEMPT-034 (cells 1, 4, 5, 7 — cell 6 is the
+  # review-verified additive-only diff inspection, so it is not a boundary cell) — the
+  # split is stated so this boundary is satisfiable without the count rule of phase 3;
   # the two-run text output is byte-identical
   # and the two machine payloads structurally identical; `readCount === 1` on every
   # successful cell and `0` on every refusal cell; `pnpm build && bun test` for the
-  # subprocess-adjacent cells; `pnpm check:boundaries` green with no new dependency edge;
+  # subprocess-adjacent cells;
+  # `bun test tests/behaviour/dispatch-additive-stability.test.ts` green, with cell 7
+  # asserting each of the four delivered forms' `fallback.invocation` refusal against
+  # the throwing store seam (this is the boundary that proves the guard exists, so the
+  # suite is part of the battery rather than a convenience);
+  # `pnpm check:boundaries` green with no new dependency edge;
   # `bun test tests/checks/error-table-sync.test.ts tests/structure/dispatch-error-identity.test.ts`
   # and `bun run scripts/checks/error-table-sync.ts` green with the registry unchanged;
   # `bun run scripts/checks/forbidden-literals.ts`,
@@ -808,9 +863,11 @@ phases:
       `[1-9][0-9]*` limit bounded to 1..100 with default 20, and an unknown flag or an
       unexpected positional each refuse at exit 1 with `input.value.rejected` before any
       runtime call — while `acceptsAnyFlag` plus a handler guard keep every delivered
-      form's unknown-flag refusal at `fallback.invocation`; the surface resolves the
-      active reference through the delivered local PM context seam when `--ref` is
-      omitted, resolves the checkout identity with persistence disabled and no queue read
+      form's unknown-flag refusal at `fallback.invocation`, proven at this boundary by
+      cell 7 of the stability suite (a throwing store seam, so a guard-less declaration
+      reds the cell instead of shipping green); the surface resolves the active
+      reference through the delivered local PM context seam when `--ref` is omitted,
+      resolves the checkout identity with persistence disabled and no queue read
       so the read performs exactly one verified store read, filters every record on its
       own repository while disclosing foreign records as a count over the retained
       window, names the checkout on an identity refusal, treats an empty verified read as
@@ -867,7 +924,7 @@ phases:
   #      one declared additive key appears on both surfaces, the four delivered fields
   #      keep their names, types and order, and of their meanings only `unresolvedIds`
   #      narrows (to the documented at-most-20 list) while `reported`, `resolved` and
-  #      `unresolved` keep theirs as exact counts (spec v1.3 §8.5). No new executable
+  #      `unresolved` keep theirs as exact counts (spec v1.4 §8.5). No new executable
   #      export, so the contracts allowance is unchanged; the new types go through
   #      packages/core/src/contracts/index.ts, and BOTH of their names are entered in
   #      both entries of tests/fixtures/ports/v1-contract-inventory.json (the
@@ -938,8 +995,10 @@ phases:
   #                   exact count; below the bound every identifier returns with
   #                   `idsTruncated: false`; and the human `unresolved_divergences=` line
   #                   prints exactly the returned identifiers.
-  #   TC-ATTEMPT-034  CELLS 2-3 (owned here; cells 1, 4, 5, 6 were made green in phase 2
-  #                   and are re-run here): the five delivered resolve keys keep their
+  #   TC-ATTEMPT-034  CELLS 2-3 (owned here; cells 1, 4, 5, 7 were made green in phase 2
+  #                   and are re-run here, and cell 6 is the additive-only diff
+  #                   inspection that stays review-verified at the review gate): the five
+  #                   delivered resolve keys keep their
   #                   names, types, meanings and leading order with `mode`, `repository`
   #                   and `divergences` after them, and both blocks — summary and resolve
   #                   result — carry exactly `reported`, `resolved`, `unresolved`,
@@ -1161,7 +1220,7 @@ phases:
   #      repository-scoped counts with `idsTruncated`, and the read bounds.
   #  5.3 The five system-spec reconciliations named in the header's phase-7 handoff:
   #      feature-dispatch-engine (grammar, read-side section, resolve fields, the corrected
-  #      divergence-block statement per spec v1.3 §8.5, error reuse, bounds),
+  #      divergence-block statement per spec v1.4 §8.5, error reuse, bounds),
   #      feature-result-contract (one clarifying sentence, no row change),
   #      feature-cli-entrypoint (`dispatch attempts` in the enumerated subforms),
   #      feature-state-layer (the store-opening read paragraph), feature-projects (the
@@ -1208,7 +1267,9 @@ phases:
   #      configuration that must red, restored, and re-run green. Record the review-verified
   #      rows of §10 (TC-ATTEMPT-014 side-effect enumeration, TC-ATTEMPT-017 M2 page and
   #      corpus string absence, TC-ATTEMPT-029 reference-page half, TC-ATTEMPT-032,
-  #      TC-ATTEMPT-033, TC-ATTEMPT-034 additive-only half, TC-ATTEMPT-035 lockfile half).
+  #      TC-ATTEMPT-033, TC-ATTEMPT-034 cell 6 (the additive-only diff inspection; cells
+  #      1, 4, 5, 7 are the suite cells already green at phase 2 and are recorded with
+  #      that phase's rows), TC-ATTEMPT-035 lockfile half).
   #  5.9 tests/structure/dispatch-attempts-taxonomy.test.ts: add the two `doc/spec/**` scan
   #      targets (`doc/spec/features/feature-dispatch-engine.md`,
   #      `doc/spec/features/feature-result-contract.md`) to the `attempts.*` absence scan in
