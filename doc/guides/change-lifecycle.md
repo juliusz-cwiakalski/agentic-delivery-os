@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268"]
 ---
 
 # Change Lifecycle
@@ -366,6 +366,10 @@ flowchart TD
 **Actions**:
 
 - `@pm` invokes `@runner` to run quality gates per repo conventions (build, test, lint, etc.).
+- `@pm` runs the branch-range commit-message lint `./scripts/lint-commit-range.sh --base <base>` over the change branch's own range. It mirrors the repository's commitlint configuration and reports one verdict: `PASS`, `FAIL`, `SKIP` (no commitlint configuration to mirror), or `ERROR`.
+  - `FAIL`: `@coder` remediates the named commits in the mode the gate reports — `MODE: SURGICAL REWORD` for one or two offending commits, `MODE: CONDENSE-TO-ONE` for three or more — and the gate is re-run.
+  - `ERROR`: the gate could not verify. Resolve the cause it names (fetch the base, install dependencies, pass a resolvable `--base`) and re-run.
+- `@pm` records the passing verdict (outcome, commit count, offending count, mode, resolved binary and origin) as a pm-notes `notes:` entry.
 - If failures occur:
   - `@pm` invokes `@fixer` to diagnose and fix.
   - Re-run quality gates until all pass.
@@ -378,6 +382,7 @@ flowchart TD
 - Tests pass.
 - Lint/format checks pass.
 - Any other repo-specific quality gates pass.
+- The change branch's range lint reports `PASS`, or `SKIP` for a repository that configures no commitlint, and the verdict is recorded in pm-notes. An unresolved `ERROR` verdict is never recorded as a pass and blocks phase completion.
 
 ### 10) dod_check
 

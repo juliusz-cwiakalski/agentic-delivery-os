@@ -205,3 +205,24 @@ notes:
       still carries the conventional-subject instruction after it runs."
     type: info
     date: "2026-11-11"
+  - text: "Plan phase 4 COMPLETE — the range gate reaches adopters. Commit e1998639:
+      scripts/install.sh ADOS_DELIVERY_SCRIPTS gains scripts/lint-commit-range.sh
+      (now seven entries, alongside the pre-existing scripts/lib/dispatch-authority.sh
+      entry), scripts/uninstall.sh adds the gate to its unconditional delivery
+      removal list, test-install.sh seeds the gate in create_mock_ados_source and
+      adds test_local_install_delivery_gate_script (static registration through the
+      sourced array, installed executable, byte-identical to source, and refreshed
+      when the installed copy is locally modified), test-uninstall.sh seeds the gate
+      plus an unrelated user scripts file and adds the removal and dry-run tests.
+      Delivered criterion: AC-F7-1 (TC-DIST-001, TC-DIST-002, TC-DIST-003).
+      Verification observed: test-install.sh 56/56 PASS, test-uninstall.sh 32/32
+      PASS, test-doc-distribution.sh green (82 in-scope docs, no drift),
+      scripts/test-all.sh exit 0 with its own output naming
+      '.tests/test-lint-commit-range.sh' (so -perm -u+x discovery really ran the
+      change's primary suite), and git ls-files -s reports 100755 for the gate, its
+      suite, deliver-ticket.sh and its suite. Carried, not fixed here: the
+      pre-existing omission of scripts/lib/dispatch-authority.sh from uninstall.sh's
+      unconditional list is unchanged (it is a declared docHandoff, not a delivery
+      edit); the gate is registered on both sides as the plan requires."
+    type: info
+    date: "2026-11-11"
