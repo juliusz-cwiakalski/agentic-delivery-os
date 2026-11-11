@@ -31,17 +31,25 @@ readonly MAX_DIAGNOSTIC_LINES=200
 readonly MAX_EXCERPT_CHARS=160
 readonly CONDENSE_THRESHOLD=3
 
-# The configuration filenames mirror scripts/checks/commitlint-authority.ts so
-# the gate consumes the same authority it mirrors rather than inventing one.
+# The configuration filenames mirror commitlint's own cosmiconfig search places
+# at the repository root, so a repository commitlint would enforce is never
+# reported as unconfigured (a false SKIP is a silent pass). A root package.json
+# `commitlint` property is detected separately by _has_package_json_config.
 readonly CONFIG_CANDIDATES=(
   "commitlint.config.js"
   "commitlint.config.cjs"
   "commitlint.config.mjs"
   "commitlint.config.ts"
+  "commitlint.config.cts"
   ".commitlintrc"
   ".commitlintrc.json"
   ".commitlintrc.yaml"
   ".commitlintrc.yml"
+  ".commitlintrc.js"
+  ".commitlintrc.cjs"
+  ".commitlintrc.mjs"
+  ".commitlintrc.ts"
+  ".commitlintrc.cts"
 )
 
 # Runtime state (set by the resolution steps in main()).
@@ -51,6 +59,7 @@ BASE_REQUESTED=""
 BASE_SOURCE=""
 BASE_COMMIT=""
 BASE_DISPLAY=""
+BASE_REF_USED="unresolved"
 MERGE_BASE=""
 HEAD_SHA=""
 REPO_TOP=""
@@ -61,6 +70,11 @@ BINARY_ORIGIN="unavailable"
 
 OFFENDER_COUNT=0
 declare -A RULE_HITS=()
+# Per-offender records, rendered only after the whole range is linted so the
+# diagnostic budget can guarantee one headline per offender (AC-F2-1, NFR-10).
+OFFENDER_SHAS=()
+OFFENDER_MESSAGES=()
+OFFENDER_RULES=()
 DIAGNOSTIC_LINES=()
 DIAGNOSTIC_APPENDED=0
 
@@ -144,11 +158,15 @@ _usage_error() {
 
 # Print the run header. Called once per terminal path; unknown values are
 # reported explicitly so the header never implies work the gate did not do.
+# `ref` is the ref actually used for the base commit (the requested ref, or the
+# preferred refs/remotes/origin/<ref>), so a verdict is auditable to the exact
+# ref rather than only to what the caller asked for (DM-1).
 _print_header() {
   local -r base="${1:-unresolved}" source="${2:-none}" merge_base="${3:-unresolved}"
   local -r head="${4:-unresolved}" commits="${5:-unknown}" binary="${6:-none}" origin="${7:-unavailable}"
-  printf 'RANGE LINT: base=%s source=%s merge-base=%s head=%s commits=%s binary=%s origin=%s\n' \
-    "${base}" "${source}" "${merge_base}" "${head}" "${commits}" "${binary}" "${origin}"
+  local -r ref="${8:-unresolved}"
+  printf 'RANGE LINT: base=%s source=%s merge-base=%s head=%s commits=%s binary=%s origin=%s ref=%s\n' \
+    "${base}" "${source}" "${merge_base}" "${head}" "${commits}" "${binary}" "${origin}" "${ref}"
 }
 
 # Verdict lines are quotable evidence. Failing and error verdicts are mirrored to
@@ -186,7 +204,18 @@ _has_commitlint_config() {
       return 0
     fi
   done
-  return 1
+  _has_package_json_config
+}
+
+# True when the root package.json declares a commitlint configuration object.
+# commitlint's configuration property is an object, while a dependency named
+# commitlint carries a version string, so requiring an object value keeps
+# devDependencies from being mistaken for configuration. A config whose value
+# starts on the next line is accepted too.
+_has_package_json_config() {
+  local -r file="${REPO_TOP}/package.json"
+  [[ -r "${file}" ]] || return 1
+  grep -qE '"commitlint"[[:space:]]*:[[:space:]]*(\{|[[:space:]]*$)' "${file}"
 }
 
 # Resolve the requested base ref in the fixed precedence: explicit override,
@@ -236,6 +265,7 @@ _resolve_base_commit() {
     exit "${EXIT_UNVERIFIABLE}"
   fi
   BASE_DISPLAY="${BASE_REQUESTED}"
+  BASE_REF_USED="${ref}"
 }
 
 # Compute the range start. Failure is a loud error, never an empty range.
@@ -276,12 +306,39 @@ _resolve_lint_binary() {
 # PURE: DIAGNOSTIC DERIVATION (derived from arguments only; no I/O, no state)
 # ============================================================================
 
-# Bounded, single-line excerpt derived from message text (diagnostics only).
-_bounded_excerpt() {
+# Fold tab and carriage return, then strip ANSI escape sequences and control
+# bytes so untrusted commit-message text can never reach a terminal or a log as
+# an active sequence. UTF-8-encoded C1 controls are removed as whole sequences;
+# other multi-byte characters survive unchanged.
+_sanitize_excerpt_text() {
   local text="$1"
   text="${text//$'\t'/ }"
   text="${text//$'\r'/}"
-  printf '%s' "${text}" | cut -c1-"${MAX_EXCERPT_CHARS}"
+  text="$(printf '%s' "${text}" |
+    LC_ALL=C sed -e $'s/\x1b\\[[0-9;?]*[ -\\/]*[@-~]//g' \
+      -e $'s/\x1b\\][^\x07]*\x07//g' \
+      -e $'s/\x1b//g' \
+      -e $'s/\xc2[\x80-\x9f]//g' |
+    LC_ALL=C tr -d '\000-\010\012-\037\177')"
+  printf '%s' "${text}"
+}
+
+# Bounded, single-line excerpt derived from message text (diagnostics only).
+_bounded_excerpt() {
+  _sanitize_excerpt_text "$1" | cut -c1-"${MAX_EXCERPT_CHARS}"
+}
+
+# Print the rule ids commitlint reported as problems, one per line, in the order
+# the authority reported them. Only marker-prefixed problem lines are read, so
+# the echoed `--- input ---` block can never contribute a phantom rule id.
+_extract_problem_rule_ids() {
+  local line
+  while IFS= read -r line; do
+    [[ "${line}" =~ ^[[:space:]]*(✖|⚠)[[:space:]] ]] || continue
+    if [[ "${line}" =~ \[([a-z0-9-]+)\][[:space:]]*$ ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+  done
 }
 
 # Index of the first line of the trailing trailer paragraph, or the line count
@@ -409,37 +466,101 @@ _append_diagnostic() {
   DIAGNOSTIC_APPENDED=$((DIAGNOSTIC_APPENDED + 1))
 }
 
-# Append one commit's diagnostic block. Offenders are counted per commit.
-_append_offender_block() {
-  local -r sha="$1" message="$2"
-  shift 2
-  local -a rules=("$@")
+# Append one offender's headline: the first rule, its attributed line, and a
+# bounded excerpt of that line.
+_append_offender_headline() {
+  local -r index="$1"
+  local -r sha="${OFFENDER_SHAS[index]}" message="${OFFENDER_MESSAGES[index]}"
+  local -a rules=()
+  mapfile -t rules < <(printf '%s\n' "${OFFENDER_RULES[index]}")
 
-  local short_sha
+  local short_sha first_rule first_line first_excerpt
   short_sha="$(git rev-parse --short "${sha}")"
-
-  local first_rule="${rules[0]}"
-  local first_line
+  first_rule="${rules[0]}"
   first_line="$(_line_for_rule "${first_rule}" "${message}")"
-  local first_excerpt
   first_excerpt="$(_excerpt_for_rule "${first_rule}" "${message}" "${first_line}")"
 
   _append_diagnostic "FAIL ${short_sha} (${sha}) · rule=${first_rule} line=${first_line} · ${first_excerpt}"
+}
 
-  local rule_per_commit=1
-  local rule
-  if [[ "${#rules[@]}" -gt 1 ]]; then
-    for rule in "${rules[@]:1}"; do
-      if [[ "${rule_per_commit}" -ge "${MAX_RULE_LINES_PER_COMMIT}" ]]; then
-        break
-      fi
-      local line_number excerpt
-      line_number="$(_line_for_rule "${rule}" "${message}")"
-      excerpt="$(_excerpt_for_rule "${rule}" "${message}" "${line_number}")"
-      _append_diagnostic "  rule=${rule} line=${line_number} · ${excerpt}"
-      rule_per_commit=$((rule_per_commit + 1))
-    done
+# Append the offender's bounded subject excerpt. DM-2 requires the block to name
+# the commit by its subject, not only by the line that broke a rule.
+_append_offender_subject() {
+  local -r index="$1"
+  local subject="${OFFENDER_MESSAGES[index]%%$'\n'*}"
+  _append_diagnostic "  subject · $(_bounded_excerpt "${subject}")"
+}
+
+# The short SHAs of the offenders that did not fit the budget, bounded to 20
+# names plus a count marker so the notice itself stays bounded.
+_remaining_offender_shas() {
+  local -r start="$1"
+  local -i i count=0
+  local -a names=()
+  for ((i = start; i < ${#OFFENDER_SHAS[@]} && count < 20; i++)); do
+    names+=("$(git rev-parse --short "${OFFENDER_SHAS[i]}")")
+    count=$((count + 1))
+  done
+  local joined
+  joined="$(printf '%s ' "${names[@]}")"
+  joined="${joined% }"
+  if [[ $((${#OFFENDER_SHAS[@]} - start)) -gt ${#names[@]} ]]; then
+    printf '%s ...' "${joined}"
+  else
+    printf '%s' "${joined}"
   fi
+}
+
+# Render the diagnostics in two passes so the budget can never drop an offender:
+# every offender's headline (and subject) first, then extra rule lines while the
+# remaining budget lasts. A range too large to name one line per offender emits
+# an explicit truncation notice naming the offenders that were not shown.
+_render_diagnostics() {
+  local -r total="${#OFFENDER_SHAS[@]}"
+  [[ "${total}" -gt 0 ]] || return 0
+
+  # The subject costs one extra line per offender; include it whenever every
+  # offender can still be named within the budget.
+  local -i include_subject=0
+  if [[ $((total * 2)) -le "${MAX_DIAGNOSTIC_LINES}" ]]; then
+    include_subject=1
+  fi
+
+  local -i shown="${total}" dropped=0
+  if [[ "${total}" -ge "${MAX_DIAGNOSTIC_LINES}" ]]; then
+    shown=$((MAX_DIAGNOSTIC_LINES - 1))
+    dropped=$((total - shown))
+  fi
+
+  local -i i
+  for ((i = 0; i < shown; i++)); do
+    _append_offender_headline "${i}"
+    if [[ "${include_subject}" -eq 1 ]]; then
+      _append_offender_subject "${i}"
+    fi
+  done
+
+  if [[ "${dropped}" -gt 0 ]]; then
+    _append_diagnostic "TRUNCATED: ${dropped} further offending commit(s) not shown: $(_remaining_offender_shas "${shown}")"
+  fi
+
+  # Second pass: extra rule lines, round-robin so one chatty commit cannot
+  # starve the others. Rule 1 of each offender is already in its headline.
+  local -a rules=()
+  local -i rule_index
+  for ((rule_index = 1; rule_index < MAX_RULE_LINES_PER_COMMIT; rule_index++)); do
+    for ((i = 0; i < shown; i++)); do
+      [[ "${DIAGNOSTIC_APPENDED}" -lt "${MAX_DIAGNOSTIC_LINES}" ]] || return 0
+      mapfile -t rules < <(printf '%s\n' "${OFFENDER_RULES[i]}")
+      if [[ "${rule_index}" -ge "${#rules[@]}" ]]; then
+        continue
+      fi
+      local rule="${rules[rule_index]}" line_number excerpt
+      line_number="$(_line_for_rule "${rule}" "${OFFENDER_MESSAGES[i]}")"
+      excerpt="$(_excerpt_for_rule "${rule}" "${OFFENDER_MESSAGES[i]}" "${line_number}")"
+      _append_diagnostic "  rule=${rule} line=${line_number} · ${excerpt}"
+    done
+  done
 }
 
 # Lint one commit. Returns 0 for a clean commit, 1 for an offender, and 2 when
@@ -456,7 +577,7 @@ _lint_commit() {
   fi
 
   local -a parsed_rules=()
-  mapfile -t parsed_rules < <(printf '%s\n' "${output}" | grep -oE '\[[a-z0-9-]+\]' | tr -d '[]' || true)
+  mapfile -t parsed_rules < <(_extract_problem_rule_ids <<<"${output}")
 
   if [[ "${status}" -ge 2 || "${#parsed_rules[@]}" -eq 0 ]]; then
     _report_lint_execution_error "${sha}" "${status}"
@@ -474,7 +595,9 @@ _lint_commit() {
     fi
   done
 
-  _append_offender_block "${sha}" "${message}" "${unique_rules[@]}"
+  OFFENDER_SHAS+=("${sha}")
+  OFFENDER_MESSAGES+=("${message}")
+  OFFENDER_RULES+=("$(printf '%s\n' "${unique_rules[@]}")")
   OFFENDER_COUNT=$((OFFENDER_COUNT + 1))
   return 1
 }
@@ -563,7 +686,7 @@ main() {
   # binary state.
   if ! _has_commitlint_config; then
     HEAD_SHA="$(git rev-parse --verify --quiet HEAD^{commit} 2>/dev/null || true)"
-    _print_header "not-required" "none" "not-required" "${HEAD_SHA:-unresolved}" "unknown" "none" "unavailable"
+    _print_header "not-required" "none" "not-required" "${HEAD_SHA:-unresolved}" "unknown" "none" "unavailable" "not-required"
     printf 'Cause: no commitlint configuration was found at the repository root; there is nothing to mirror.\n'
     _print_verdict "SKIP" "no commitlint configuration in this repository; nothing to lint"
     exit "${EXIT_PASS}"
@@ -582,13 +705,24 @@ main() {
   _resolve_base_commit
   _resolve_merge_base
 
+  local commits_raw
+  if ! commits_raw="$(git rev-list --reverse "${MERGE_BASE}..${HEAD_SHA}")"; then
+    _print_header "${BASE_DISPLAY}" "${BASE_SOURCE}" "${MERGE_BASE}" "${HEAD_SHA}" \
+      "unknown" "none" "unavailable" "${BASE_REF_USED}"
+    printf 'Cause: the commit range %s..%s could not be enumerated.\n' "${MERGE_BASE}" "${HEAD_SHA}"
+    printf 'Hint: verify the object database, for example with git fsck, then re-run the gate.\n'
+    _print_verdict "ERROR" "cannot verify: the commit range could not be enumerated"
+    exit "${EXIT_UNVERIFIABLE}"
+  fi
   local -a commits=()
-  mapfile -t commits < <(git rev-list --reverse "${MERGE_BASE}..${HEAD_SHA}")
+  if [[ -n "${commits_raw}" ]]; then
+    mapfile -t commits < <(printf '%s\n' "${commits_raw}")
+  fi
   COMMIT_COUNT="${#commits[@]}"
 
   if ! _resolve_lint_binary; then
     _print_header "${BASE_DISPLAY}" "${BASE_SOURCE}" "${MERGE_BASE}" "${HEAD_SHA}" \
-      "${COMMIT_COUNT}" "none" "unavailable"
+      "${COMMIT_COUNT}" "none" "unavailable" "${BASE_REF_USED}"
     printf 'Cause: the repository has a commitlint configuration, but no usable commitlint binary was found.\n'
     printf 'Hint: install project dependencies so node_modules/.bin/commitlint exists, then re-run.\n'
     _print_verdict "ERROR" "cannot verify: the commitlint binary is unavailable"
@@ -596,7 +730,7 @@ main() {
   fi
 
   _print_header "${BASE_DISPLAY}" "${BASE_SOURCE}" "${MERGE_BASE}" "${HEAD_SHA}" \
-    "${COMMIT_COUNT}" "${BINARY_DISPLAY}" "${BINARY_ORIGIN}"
+    "${COMMIT_COUNT}" "${BINARY_DISPLAY}" "${BINARY_ORIGIN}" "${BASE_REF_USED}"
 
   if [[ "${BINARY_ORIGIN}" == "PATH" ]]; then
     printf 'PARITY RISK: commitlint resolved from outside the repository via PATH (%s); the verdict came from a foreign tool and must be reconciled with the CI authority.\n' \
@@ -613,6 +747,8 @@ main() {
   for sha in "${commits[@]}"; do
     _lint_commit "${sha}" || true
   done
+
+  _render_diagnostics
 
   local line
   if [[ "${#DIAGNOSTIC_LINES[@]}" -gt 0 ]]; then

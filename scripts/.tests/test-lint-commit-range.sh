@@ -531,6 +531,49 @@ test_alt_config_name_is_configured() {
   assert_matches 'subject-empty|type-empty' "${GATE_OUT}"
 }
 
+# F-3: commitlint's own resolution includes .commitlintrc.{js,cjs,mjs,ts}, which
+# the previous fixed list omitted: a configured repository must never be SKIP.
+test_commitlintrc_cjs_is_configured() {
+  local repo
+  repo="$(_new_repo fx-commitlintrc-cjs)"
+  printf '%s\n' 'module.exports = { extends: ["@commitlint/config-conventional"] };' \
+    >"${repo}/.commitlintrc.cjs"
+  _seed_main "${repo}"
+  _branch_from_main "${repo}" "feat/GH-268/commitlintrc-cjs"
+  _commit_msg "${repo}" "${FIXTURES}/msg-wip.txt"
+  _install_local_commitlint "${repo}"
+
+  _run_gate "${repo}" --base main
+
+  assert_exit_code 1 "${GATE_EXIT}" "A .commitlintrc.cjs configuration must not be skipped"
+  assert_not_contains "${GATE_OUT}" "SKIP"
+  assert_matches 'subject-empty|type-empty' "${GATE_OUT}"
+}
+
+# F-3: a root package.json `commitlint` property is a configuration commitlint
+# enforces, so the gate must lint instead of reporting SKIP (a silent pass).
+test_package_json_config_is_configured() {
+  local repo authority=0
+  repo="$(_new_repo fx-package-config)"
+  printf '%s\n' '{"name":"fixture","private":true,"commitlint":{"extends":["@commitlint/config-conventional"]}}' \
+    >"${repo}/package.json"
+  _seed_main "${repo}"
+  _branch_from_main "${repo}" "feat/GH-268/package-config"
+  _commit_msg "${repo}" "${FIXTURES}/msg-wip.txt"
+  _install_local_commitlint "${repo}"
+
+  # Non-vacuity: the committed authority rejects the same message, so a SKIP
+  # here would be a false pass, not an absent configuration.
+  (cd "${repo}" && "${HOST_COMMITLINT}" --color=false <"${FIXTURES}/msg-wip.txt") >/dev/null 2>&1 || authority=$?
+  assert_exit_code 1 "${authority}" "Precondition: the authority rejects the message under this configuration"
+
+  _run_gate "${repo}" --base main
+
+  assert_exit_code 1 "${GATE_EXIT}" "A package.json configuration must not be skipped"
+  assert_not_contains "${GATE_OUT}" "SKIP"
+  assert_matches 'subject-empty|type-empty' "${GATE_OUT}"
+}
+
 # TC-COMMITLINT-008 step 1: absence of any usable binary is loud
 test_error_when_binary_unavailable() {
   local repo
@@ -764,6 +807,7 @@ test_base_override_precedence() {
   assert_exit_code 0 "${GATE_EXIT}"
   assert_matches 'base=main source=(explicit|explicit-override)' "${GATE_OUT}"
   assert_contains "${GATE_OUT}" "merge-base=${expected_mb}"
+  assert_contains "${GATE_OUT}" "ref=main" "The header must name the ref actually used"
 }
 
 test_environment_base_precedence() {
@@ -832,6 +876,8 @@ test_remote_tracking_preferred() {
 
   assert_exit_code 0 "${GATE_EXIT}"
   assert_contains "${GATE_OUT}" "merge-base=${expected_mb}"
+  assert_contains "${GATE_OUT}" "ref=refs/remotes/origin/main" \
+    "The header must name the remote-tracking ref that supplied the base"
   assert_ne "$(git -C "${repo}" merge-base main HEAD)" "${expected_mb}" \
     "Precondition: local main and origin/main give different merge-bases"
 }
@@ -927,6 +973,42 @@ test_shallow_history_errors() {
   assert_contains "${GATE_OUT}" "ERROR"
   assert_matches 'fetch|unshallow|depth' "${GATE_OUT}"
   assert_not_contains "${GATE_OUT}" "VERDICT: PASS"
+}
+
+# F-8: a rev-list failure after a successful merge-base is a loud inability to
+# verify, never a zero-commit PASS (fail closed, NFR-2).
+test_rev_list_failure_is_error() {
+  local repo
+  repo="$(_configured_repo fx-rev-list-failure)"
+  _branch_from_main "${repo}" "feat/GH-268/rev-list-failure"
+  _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
+  _install_local_commitlint "${repo}"
+
+  local real_git shim_dir
+  real_git="$(command -v git)"
+  [[ -n "${real_git}" ]] || {
+    printf '  Precondition failed: git is not on PATH\n' >&2
+    return 1
+  }
+  shim_dir="${_test_tmpdir}/git-shim"
+  mkdir -p "${shim_dir}"
+  {
+    printf '#!/bin/sh\n'
+    printf 'if [ "$1" = "rev-list" ]; then\n'
+    printf '  printf "fatal: simulated rev-list failure\\n" >&2\n'
+    printf '  exit 128\n'
+    printf 'fi\n'
+    printf 'exec "%s" "$@"\n' "${real_git}"
+  } >"${shim_dir}/git"
+  chmod +x "${shim_dir}/git"
+
+  _run_gate_with_path "${repo}" "${shim_dir}:${PATH}" --base main
+
+  assert_exit_code 2 "${GATE_EXIT}" "A rev-list failure must be an ERROR"
+  assert_contains "${GATE_OUT}" "ERROR"
+  assert_contains "${GATE_OUT}" "enumerated"
+  assert_not_contains "${GATE_OUT}" "VERDICT: PASS"
+  assert_not_contains "${GATE_OUT}" "0 commit(s) in range; 0 offending"
 }
 
 # TC-COMMITLINT-012: usage errors, help, version, and the outcome-code contract
@@ -1052,6 +1134,69 @@ test_diagnostics_per_commit_and_ordering() {
   assert_matches 'distinct rule' "${GATE_OUT}"
 }
 
+# F-1: rule ids come only from commitlint's problem lines. A bracketed token in
+# the message is echoed under `--- input ---`; it must never become a rule id,
+# must not inflate the distinct-rule count, and must not move the headline.
+test_rule_ids_ignore_echoed_input() {
+  local repo message
+  repo="$(_configured_repo fx-echoed-token)"
+  _branch_from_main "${repo}" "feat/GH-268/echoed-token"
+  message="${_test_tmpdir}/msg-bracketed-token.txt"
+  {
+    printf 'chore(GH-268): fixture [docs] bracketed token\n\n'
+    printf '%0120d\n' 0 | tr '0' 'X'
+  } >"${message}"
+  _commit_msg "${repo}" "${message}"
+  _install_local_commitlint "${repo}"
+
+  _run_gate "${repo}" --base main
+
+  assert_exit_code 1 "${GATE_EXIT}"
+  assert_contains "${GATE_OUT}" "rule=body-max-line-length" "The real problem rule must be reported"
+  assert_matches 'rule=body-max-line-length line=3' "${GATE_OUT}" "The headline must point at the offending body line"
+  assert_not_matches 'rule=docs' "${GATE_OUT}" "A bracketed token in the echoed input is not a rule id"
+  assert_contains "${GATE_OUT}" "1 distinct rule(s) hit" "The phantom id must not inflate the rule count"
+  assert_contains "${GATE_OUT}" "subject · chore(GH-268): fixture [docs] bracketed token"
+}
+
+# F-4 and F-5: the block carries a bounded subject excerpt, and control bytes or
+# ANSI escape sequences from the untrusted message never reach the log.
+test_subject_excerpt_is_sanitized_and_bounded() {
+  local repo message
+  local -r esc=$'\033' ctrl=$'\001'
+  repo="$(_configured_repo fx-sanitized-excerpt)"
+  _branch_from_main "${repo}" "feat/GH-268/sanitized-excerpt"
+  message="${_test_tmpdir}/msg-control-bytes.txt"
+  {
+    printf 'feat(GH-268): sanitize %s[31mred%s[0m%s excerpt %s\n\n' \
+      "${esc}" "${esc}" "${ctrl}" "$(printf '%0180d\n' 0 | tr '0' 'S')"
+    printf '%0120d\n' 0 | tr '0' 'X'
+  } >"${message}"
+  _commit_msg "${repo}" "${message}"
+  _install_local_commitlint "${repo}"
+
+  _run_gate "${repo}" --base main
+
+  assert_exit_code 1 "${GATE_EXIT}"
+  assert_contains "${GATE_OUT}" "subject · feat(GH-268): sanitize red excerpt S" \
+    "The subject excerpt must keep the printable text"
+  assert_not_contains "${GATE_OUT}" "${esc}" "No ESC byte may reach the output"
+  assert_not_contains "${GATE_OUT}" "${ctrl}" "No C0 control byte may reach the output"
+  assert_not_contains "${GATE_OUT}" "[31m" "The escape sequence body must not reappear as printable text"
+
+  local subject_line excerpt
+  subject_line="$(printf '%s\n' "${GATE_OUT}" | grep -F '  subject · ' | head -n 1)"
+  [[ -n "${subject_line}" ]] || {
+    printf '  The block carried no subject excerpt\n' >&2
+    return 1
+  }
+  excerpt="${subject_line##* · }"
+  [[ "${#excerpt}" -le 160 ]] || {
+    printf '  The subject excerpt exceeded 160 characters: %s\n' "${#excerpt}" >&2
+    return 1
+  }
+}
+
 # TC-COMMITLINT-014: repeated runs are byte-identical
 test_determinism_repeated_runs() {
   local repo
@@ -1119,6 +1264,32 @@ test_output_is_bounded() {
   done <<<"${GATE_OUT}"
 
   assert_contains "${GATE_OUT}" "2 offending commit(s)"
+  assert_matches '([3-9]|[1-9][0-9]) distinct rule' "${GATE_OUT}"
+}
+
+# F-2: the 200-line budget must name every offender. 51 offenders with four
+# rules each is 204 naive lines, so a per-block budget would silently drop one
+# commit; the two-pass budget keeps one headline block per offender.
+test_budget_names_every_offender() {
+  local repo message i
+  repo="$(_configured_repo fx-budget-offenders)"
+  _branch_from_main "${repo}" "feat/GH-268/budget-offenders"
+  message="${_test_tmpdir}/msg-multi-violation.txt"
+  _write_multi_violation_message "${message}"
+  for ((i = 0; i < 51; i++)); do
+    _commit_msg "${repo}" "${message}"
+  done
+  _install_local_commitlint "${repo}"
+
+  _run_gate "${repo}" --base main
+
+  assert_exit_code 1 "${GATE_EXIT}"
+  assert_contains "${GATE_OUT}" "51 commit(s) in range"
+  assert_contains "${GATE_OUT}" "51 offending commit(s)"
+  assert_eq "51" "$(printf '%s\n' "${GATE_OUT}" | grep -cE '^FAIL [0-9a-f]{7,} \(')" \
+    "Every offender must keep its headline block within the budget"
+  assert_not_contains "${GATE_OUT}" "TRUNCATED" \
+    "A range within the naming budget must not truncate"
   assert_matches '([3-9]|[1-9][0-9]) distinct rule' "${GATE_OUT}"
 }
 
@@ -1498,6 +1669,8 @@ main() {
   run_test "TC-COMMITLINT-007 skip is binary-insensitive" test_skip_is_binary_insensitive
   run_test "TC-COMMITLINT-007 skip is base-insensitive" test_skip_is_base_insensitive
   run_test "TC-COMMITLINT-007 alternate config name is configured" test_alt_config_name_is_configured
+  run_test "TC-COMMITLINT-007 .commitlintrc.cjs is configured (F-3)" test_commitlintrc_cjs_is_configured
+  run_test "TC-COMMITLINT-007 package.json config is configured (F-3)" test_package_json_config_is_configured
   run_test "TC-COMMITLINT-008 missing binary is a loud error" test_error_when_binary_unavailable
   run_test "TC-COMMITLINT-008 local binary preferred over PATH" test_local_binary_preferred_over_path
   run_test "TC-COMMITLINT-008 decoy on PATH never executes" test_decoy_path_binary_not_executed
@@ -1513,11 +1686,15 @@ main() {
   run_test "TC-COMMITLINT-010 unresolvable configured base errors" test_unresolvable_configured_base_errors
   run_test "TC-COMMITLINT-011 unrelated history errors" test_unrelated_history_errors
   run_test "TC-COMMITLINT-011 shallow history errors" test_shallow_history_errors
+  run_test "TC-COMMITLINT-011 rev-list failure is an error (F-8)" test_rev_list_failure_is_error
   run_test "TC-COMMITLINT-012 usage errors and exit contract" test_unknown_argument_usage_error
   run_test "TC-COMMITLINT-012 help, version, and outcome codes" test_help_and_version
   run_test "TC-COMMITLINT-013 diagnostics per commit and ordering" test_diagnostics_per_commit_and_ordering
+  run_test "TC-COMMITLINT-013 echo never yields a rule id (F-1)" test_rule_ids_ignore_echoed_input
+  run_test "TC-COMMITLINT-013 subject excerpt sanitized and bounded (F-4, F-5)" test_subject_excerpt_is_sanitized_and_bounded
   run_test "TC-COMMITLINT-014 repeated runs are byte-identical" test_determinism_repeated_runs
   run_test "TC-COMMITLINT-015 diagnostic output is bounded" test_output_is_bounded
+  run_test "TC-COMMITLINT-015 budget names every offender (F-2)" test_budget_names_every_offender
   run_test "TC-COMMITLINT-016 one offender selects surgical reword" test_mode_surgical_one
   run_test "TC-COMMITLINT-016 two offenders select surgical reword" test_mode_surgical_two
   run_test "TC-COMMITLINT-016 three offenders select condense-to-one" test_mode_condense_three

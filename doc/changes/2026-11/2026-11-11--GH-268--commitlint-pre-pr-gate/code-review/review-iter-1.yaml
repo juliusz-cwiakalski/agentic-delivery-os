@@ -1,0 +1,221 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-268
+branch: chore/GH-268/commitlint-pre-pr-gate
+status: FAIL
+summary: >-
+  The change is well-structured and its tests, conformance battery, installer
+  registration, prompt wiring, generated plugin, docs (markers intact) and
+  confinement are all green and verified independently: the gate passes this
+  branch's own 24-commit range, 39/39 gate cases, 136/136 deliver-ticket cases,
+  56/56 install, 32/32 uninstall, prompt/help/doc-distribution/doc-conformance,
+  commitlint-authority, and the regenerated Claude plugin are byte-current. Three
+  reproducible contract defects the suite does not cover block a clean verdict:
+  (1) rule ids are parsed from commitlint's echoed input as well as its problem
+  lines, so a message containing a bracketed lowercase token (e.g. `[docs]`)
+  yields a phantom rule id and a misleading headline line/excerpt; (2) the
+  200-line diagnostic budget silently drops whole offending-commit blocks (55
+  offenders -> 50 blocks) instead of guaranteeing one block per offender, which
+  contradicts AC-F2-1/NFR-10 for ranges within NFR-4's 100-commit scope; and
+  (3) configuration presence is detected from eight fixed filenames only, so a
+  repository that configures commitlint via a root `package.json` `commitlint`
+  field (or `.commitlintrc.js`) is reported SKIP while commitlint itself rejects
+  the same range — a false skip / silent pass for adopters. The four recorded
+  delivery deviations are each acceptable; remediation is appended as plan
+  Phase 6.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 5
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:459
+    message: >-
+      Rule ids are extracted with `grep -oE '\[[a-z0-9-]+\]'` over the entire
+      commitlint output, which includes the echoed input message (`--- input ---`).
+      A failing commit whose message contains a bracketed lowercase token (e.g.
+      `[docs]`, `[wip]`, `[skip-ci]`) therefore yields a phantom rule id: reproduced
+      as `rule=docs line=1` with a subject excerpt while commitlint actually
+      reported only `body-max-line-length`. F-2/DM-2 require the configuration's
+      ids verbatim; the plan's own parse contract says a `[rule-id]` *problem line*
+      parses. The phantom id also inflates the distinct-rule count and, because the
+      echoed input precedes the real problem lines, makes the block headline point
+      at the wrong rule and line.
+    suggestion: >-
+      Parse rule ids only from commitlint's problem lines (lines whose markers are
+      `✖`/`⚠`, e.g. `grep -E '^[[:space:]]*[✖⚠]'` before extracting `\[[a-z0-9-]+\]`,
+      or strip the `--- input ---` echo), and add a suite case with a bracketed token
+      in the subject/body asserting no phantom rule id and a real headline rule/line.
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:404
+    message: >-
+      `_append_diagnostic` stops appending once the 200-line budget is reached, so
+      whole offending-commit blocks are dropped while the offender is still counted.
+      Reproduced with a 55-offender range (4 rules each): the summary reports
+      "55 offending commit(s)" but only 50 `FAIL <sha>` blocks are emitted, so 5
+      offenders are never named. AC-F2-1 requires one block per offending commit and
+      NFR-10 requires naming every offender (100% of failure scenarios); a range of
+      up to 100 commits is in NFR-4 scope and can be represented one line per
+      offender within 200 lines.
+    suggestion: >-
+      Allocate the budget in two passes: emit the per-offender headline line
+      (short/full SHA + first rule + line + excerpt) for every offender first, then
+      spend the remaining budget on extra rule lines up to 20 per commit; if the
+      offender count alone would exceed the cap, emit an explicit truncation notice
+      naming the remaining SHAs. Add a suite case at the 200-line boundary.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: scripts/lint-commit-range.sh:182
+    message: >-
+      Configuration presence is detected only from eight fixed filenames, which is
+      narrower than commitlint's own resolution. A repository that configures
+      commitlint via a root `package.json` `commitlint` field (and `.commitlintrc.js`
+      / `.commitlintrc.cjs` / `.commitlintrc.mjs` are also omitted) is reported
+      `SKIP` (exit 0) even though commitlint enforces the configuration — reproduced:
+      gate SKIP while `commitlint < msg` exited 1 with `[subject-empty]`. For a
+      distributed gate this is a false skip / silent pass (F-3, DM-1.d skip is only
+      for "no commitlint configuration", NFR-2 zero silent passes, F-7 distribution
+      safety), and it contradicts the shipped doc claim that the gate "accepts
+      nothing the authority rejects".
+    suggestion: >-
+      Extend presence detection to commitlint's real resolution set (add
+      `.commitlintrc.js/.cjs/.mjs/.ts` and the root `package.json` `commitlint` key),
+      or probe the resolved binary's configuration offline (e.g. `commitlint
+      --print-config`) to decide presence; keep the skip only when no configuration
+      resolves. Add a suite case for a package.json-configured fixture.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: scripts/lint-commit-range.sh:427
+    message: >-
+      DM-2 specifies each offending-commit block carries "a bounded subject excerpt,
+      and per violated rule ... a bounded line excerpt". The implementation emits
+      only the per-rule offending-line excerpt; for a body/footer-length violation
+      the subject is never shown (the headline excerpt is the offending body/footer
+      line). AC-F2-1 does not require the subject excerpt, so this is a spec-vs-
+      implementation wording gap rather than an acceptance-criteria failure.
+    suggestion: >-
+      Include a bounded subject excerpt in the block header (e.g. `<short-sha>
+      (<full-sha>) · subject · <excerpt>`), or reconcile DM-2 with the pinned block
+      template through the owning spec phase; do not weaken AC-F2-1.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: security
+    location: scripts/lint-commit-range.sh:280
+    message: >-
+      `_bounded_excerpt` strips tabs and carriage returns only; other control and
+      ANSI escape bytes from a commit message are echoed verbatim onto the terminal
+      and into logs. Section 21 treats commit messages as untrusted data echoed as
+      bounded diagnostics; raw escape sequences allow log/terminal injection.
+    suggestion: >-
+      Sanitize the excerpt to printable characters (drop/escape C0/C1 control bytes
+      and ESC) before printing, and add a fixture with an escape sequence asserting
+      a sanitized excerpt.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: medium
+    category: maintainability
+    location: .opencode/agent/committer.md:32
+    message: >-
+      The new `<message_contract>` example hardcodes this change's ticket
+      (`chore(GH-268): add the range gate`). AGENTS.md's current-state prompt rule
+      discourages change-specific ticket references in prompts (generic examples
+      are allowed); a placeholder example keeps the prompt change-agnostic and
+      mirrors `pm.md`'s `<workItemRef>` style.
+    suggestion: >-
+      Replace the concrete ticket with a placeholder (e.g. `chore(<workItemRef>):
+      add the range gate`) and regenerate `.ados-claude/agents/committer.md`.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: scripts/lint-commit-range.sh:238
+    message: >-
+      DM-1 says the verdict record carries "the base ref used and how it was
+      resolved", and F-3 prefers the remote-tracking ref. The header prints the
+      requested ref (`base=main-tools`) and a coarse source, but not that
+      `refs/remotes/origin/main-tools` supplied the base commit; the actual ref used
+      is not disclosed.
+    suggestion: >-
+      Print the ref actually used (requested ref or the preferred
+      `refs/remotes/origin/<ref>`) alongside the source, so a verdict is auditable
+      to the exact ref.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: low
+    category: reliability
+    location: scripts/lint-commit-range.sh:586
+    message: >-
+      `mapfile -t commits < <(git rev-list ...)` does not observe the process-
+      substitution status, so a `git rev-list` failure after a successful merge-base
+      resolution would leave an empty array and be reported as `PASS` with zero
+      commits (DM-1.b) instead of a loud error — a theoretical fail-open against
+      NFR-2. Not reproducible in normal operation but easily hardened.
+    suggestion: >-
+      Compute the range with a checked command (`if ! commits_raw="$(git rev-list
+      ...)"; then ... ERROR ...; fi`) and split on newlines, so a rev-list failure is
+      a loud DM-1-style error rather than a zero-commit PASS.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pr-.../readiness-review/readiness-iter-4.md:46
+    message: >-
+      Readiness iteration 4 left five non-blocking wording/citation residues in
+      `chg-GH-268-plan.yaml` and `chg-GH-268-test-plan.md` (stale "no other exit
+      code" clause, the `130`-in-usage wording, FX-EMPTY/FX-ALT-CONFIG binary rows,
+      the DEC-1..DEC-9 reference, and the `TC-COMMITLINT-013` `FAIL`-token count).
+      They are pre-existing, do not change delivered behaviour, and were waived as
+      non-blocking; recorded here so they are not lost.
+    suggestion: >-
+      Optional cleanup during the next touching of those artifacts; no behaviour
+      change and no re-open of a completed phase required.
+    suppressed: false
+  - id: F-10
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml:135
+    message: >-
+      The four coder-recorded deviations were assessed and are acceptable: (1) the
+      `git stash list` plan literal is unassertable because two pre-existing user
+      stashes exist, but the protected property is proven by the suite's repo digest
+      (which includes `git stash list`) across PASS/FAIL/SKIP/ERROR and before/after
+      runs; (2) the `chore(GH-268): update <top-path>` subjects are conventional,
+      carry the work item ref, and the gate passes this branch's own 24-commit range,
+      so the deviation is from a process pin, not a requirement; (3) the Phase 3
+      non-vacuity probe copies only `deliver-ticket.sh` and evaluates the shared
+      assertion against the built prompt, which isolates the reverted instruction as
+      the sole cause and is stronger evidence than a nested full-suite run; (4) the
+      redaction of a pre-existing absolute user path in `readiness-iter-2.md` is
+      required by the privacy-literal scan (`privacy-literals`: 0 violations) and
+      leaves the finding intact. None of the four weakens an AC.
+    suggestion: >-
+      No action. Record the deviation rationale in the PR description so reviewers
+      see it alongside the diff.
+    suppressed: false
+reviewed_at: 2026-11-11T12:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

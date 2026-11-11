@@ -332,7 +332,7 @@ workItemRef: GH-268
 
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5]
+  phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
     - "a path under .github/workflows/, .husky/, packages/**, or a commitlint configuration file appears in the change diff"
     - "the gate exits with a code outside {0, 1, 2} on a verdict-carrying run (the documented 130 interrupt path carries no verdict and is exempt), or returns PASS without resolving a base commit and a merge-base"
@@ -561,6 +561,56 @@ phases:
       - "bun run scripts/checks/exports-parity.ts && bun test tests/checks || no product-surface drift and no invariant regression"
       - "test ! -e scripts/quality-gates.sh && test -z \"$(grep -n 'lint-commit-range' package.json)\" || the aggregate gate is untouched (NG-5, DEC-8): the script must not exist and the check chain must not reference the range lint"
       - "bash scripts/.tests/test-lint-commit-range.sh && bash scripts/.tests/test-deliver-ticket.sh && bash scripts/.tests/test-install.sh && bash scripts/.tests/test-uninstall.sh || every touched surface's suite is green at the final phase HEAD"
+      - "test -z \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD | grep -vE '^(scripts/lint-commit-range\\.sh|scripts/\\.tests/test-lint-commit-range\\.sh|scripts/\\.tests/fixtures/lint-commit-range/|\\.opencode/agent/(committer|pm)\\.md|\\.ados-claude/agents/(committer|pm)\\.md|scripts/deliver-ticket\\.sh|scripts/\\.tests/test-deliver-ticket\\.sh|scripts/install\\.sh|scripts/uninstall\\.sh|scripts/\\.tests/test-(install|uninstall)\\.sh|AGENTS\\.md|doc/guides/change-lifecycle\\.md|doc/guides/autonomous-batch-delivery\\.md|doc/spec/features/|doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/)')\" || every changed path matches the allowlist regex (declared phase scopes plus .ados-claude/agents/{committer,pm}.md, doc/spec/features/**, doc/guides/autonomous-batch-delivery.md, and this change folder); any path outside it prints and fails, so a CI workflow, hook, commitlint config, package, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh change cannot pass"
+
+  # ---------------------------------------------------------------------------
+  # PHASE 6 — code review remediation (iteration 1)
+  #
+  # Appended by @reviewer after review-iter-1.yaml (Status: FAIL). Linked
+  # findings: F-1 (rule ids parsed from the echoed input -> phantom ids),
+  # F-2 (200-line budget drops whole offender blocks), F-3 (configuration
+  # presence narrower than commitlint resolution -> false SKIP), F-4 (DM-2
+  # subject excerpt), F-5 (control/ANSI not sanitized), F-6 (prompt example
+  # hardcodes GH-268), F-7 (header omits the ref actually used), F-8 (rev-list
+  # status masked). F-9/F-10 are informational and require no delivery edit.
+  # This phase adds no acCoverage entries, so the plan's exactly-once AC
+  # invariant is preserved; it re-satisfies AC-F2-1 and hardens AC-F3-3's
+  # parity/disclosure half.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Code-review remediation: verbatim rule-id parsing, per-offender diagnostic budget, commitlint-native configuration detection, and diagnostic-fidelity cleanups"
+    kind: delivery
+    summary: "chore(GH-268): remediate code review findings"
+    leases:
+      - repo:main-tools
+    weightClass: standard
+    scope:
+      files:
+        - scripts/lint-commit-range.sh
+        - scripts/.tests/test-lint-commit-range.sh
+        - .opencode/agent/committer.md
+        - .ados-claude/agents/committer.md
+      folders:
+        - scripts/.tests/fixtures/lint-commit-range
+    interactions:
+      - kind: contract-file
+        target: scripts/lint-commit-range.sh
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents/committer.md
+        role: consumer
+    verification:
+      - "F-1: parse rule ids only from commitlint problem lines (marker-prefixed `✖`/`⚠`), never from the echoed `--- input ---` block; add a suite case whose failing message contains a bracketed lowercase token (e.g. `[docs]`) asserting the reported rule ids equal the configuration's real ids and the headline rule/line match the actual violation"
+      - "F-2: allocate the 200-line budget so every offending commit gets its headline block before extra rule lines are appended (or emit an explicit truncation notice naming the remaining SHAs); add a suite case at the 200-line boundary asserting one `FAIL <sha>` block per offender and that the summary offender count equals the block count for a range within NFR-4's 100-commit scope"
+      - "F-3: configuration presence matches commitlint's own resolution (add `.commitlintrc.js/.cjs/.mjs/.ts` and a root `package.json` `commitlint` field, or probe `commitlint --print-config` offline); add a fixture repository configured only via package.json that reports FAIL/ERROR, never SKIP"
+      - "F-4: emit a bounded subject excerpt in each offender block (or reconcile DM-2 via the owning spec phase) without weakening AC-F2-1"
+      - "F-5: sanitize excerpts to printable characters (strip C0/C1 control bytes and ESC) and add a fixture asserting a sanitized excerpt"
+      - "F-6: replace the GH-268 example with a placeholder in .opencode/agent/committer.md and regenerate .ados-claude/agents/committer.md"
+      - "F-7: print the ref actually used (requested ref or the preferred refs/remotes/origin/<ref>) in the verdict header; F-8: check git rev-list status so a failure is a loud error, never a zero-commit PASS"
+      - "bash scripts/.tests/test-lint-commit-range.sh || suite green (existing 39/39 plus the new F-1/F-2/F-3/F-5 cases) against the pinned repository-local commitlint"
+      - "bash scripts/build-claude-plugin.sh --verbose && test -z \"$(git status --porcelain .ados-claude)\" || the plugin is regenerated after the committer.md example change and byte-current"
+      - "pnpm check:prompt && bash scripts/.tests/test-doc-distribution.sh || prompt and doc-distribution conformance stay green"
+      - "./scripts/lint-commit-range.sh --base main-tools || PASS over this change's own range, header names the repository-local binary with origin repository-local, and the verdict line is recorded in pm-notes before quality_gates completes"
       - "test -z \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD | grep -vE '^(scripts/lint-commit-range\\.sh|scripts/\\.tests/test-lint-commit-range\\.sh|scripts/\\.tests/fixtures/lint-commit-range/|\\.opencode/agent/(committer|pm)\\.md|\\.ados-claude/agents/(committer|pm)\\.md|scripts/deliver-ticket\\.sh|scripts/\\.tests/test-deliver-ticket\\.sh|scripts/install\\.sh|scripts/uninstall\\.sh|scripts/\\.tests/test-(install|uninstall)\\.sh|AGENTS\\.md|doc/guides/change-lifecycle\\.md|doc/guides/autonomous-batch-delivery\\.md|doc/spec/features/|doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/)')\" || every changed path matches the allowlist regex (declared phase scopes plus .ados-claude/agents/{committer,pm}.md, doc/spec/features/**, doc/guides/autonomous-batch-delivery.md, and this change folder); any path outside it prints and fails, so a CI workflow, hook, commitlint config, package, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh change cannot pass"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
       - "git diff --check || zero whitespace errors and zero conflict markers"

@@ -28,7 +28,7 @@ claude:
 </inputs>
 
 <message_contract>
-<rule>The subject is a conventional header in this repository's convention — `type(scope): summary` — carrying the work item reference, for example `chore(GH-268): add the range gate`.</rule>
+<rule>The subject is a conventional header in this repository's convention — `type(scope): summary` — carrying the work item reference, for example `chore(<workItemRef>): add the range gate`.</rule>
 <rule>Body and footer lines stay within 100 characters each, counting the whole line.</rule>
 <rule>A sync from the delivery branch never leaves a plain `Merge remote-tracking branch ...` subject behind: the sync carries a conventional subject that references the work item, or the branch is integrated without a merge commit.</rule>
 <rule>A failing range is remediated in one of two modes, chosen by the offending-commit count — `MODE: SURGICAL REWORD` for one or two offenders, `MODE: CONDENSE-TO-ONE` for three or more. Offenders are counted per commit, never per violation.</rule>
