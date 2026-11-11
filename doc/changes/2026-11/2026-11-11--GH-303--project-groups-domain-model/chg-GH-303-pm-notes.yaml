@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-11T20:30:46.462Z }
   dor_check: { started: null, completed: 2026-11-11T12:35:27.264Z }
   delivery: { started: null, completed: 2026-11-11T22:31:02.034Z }
-  system_spec_update: { started: null, completed: 2026-11-11T22:16:00.604Z }
+  system_spec_update: { started: null, completed: 2026-11-11T22:42:04.978Z }
   review_fix: { started: null, completed: 2026-11-11T22:16:10.362Z }
   quality_gates: { started: null, completed: 2026-11-11T22:16:19.930Z }
   dod_check: { started: null, completed: 2026-11-11T22:16:32.222Z }
@@ -1094,5 +1094,62 @@ notes:
       survivors, 21 matrix rows, all self-tests detected); distribution guard
       exit 0; forbidden-literals exit 0, 5/5 classes, 0 violations; lint GH-303
       exit 0 conforms; plan validate valid."
+    type: "info"
+    date: "2026-11-11"
+  - text: "SECOND REBASE onto origin/main-tools 3c9f8a59 (GH-286 daemon mounting on
+      top of GH-268): GH-286 advanced main-tools after the remediation push, so
+      the branch was rebased again at 087c146d with one conflicted file,
+      milestones/m2/README.md, resolved as a union — GH-286's delivered fact
+      ('closed daemon registration gap') on the entrypoint-delta row, our new
+      commands/repos.md and group commands/projects.md rows, and every GH-286
+      statement (Seventeen families, daemon lifecycle verbs, closed gap section)
+      preserved byte-identically. Artifacts re-bound: test plan BASE moved from
+      723454e4 to 3c9f8a59 with every base-observed value re-derived, P47's
+      preservation oracle re-anchored from the pre-GH-286 wording to the
+      delivered wording (Seventeen families, daemon mount statements, #286,
+      milestone snapshot) with a fairness proof that the oracle still detects a
+      rewrite of the delivered text, and plan v1.4 re-bound to the same base
+      with its head-observed expectations re-measured (backlog 1531 lines,
+      window 1310:1363, 76 headings, status 252 with 27 additions at 227,
+      registry 142, contracts 15 sections, repos.md 142 lines, 8 S18 + 5 S19
+      seeds). Post-rebase sweep: 69/69 procedures PASS at 087c146d; base control
+      at 3c9f8a59 remains 0/69."
+    type: "info"
+    date: "2026-11-11"
+  - text: "QUALITY GATES (phase 9, re-run after the second rebase) at HEAD f15bdbe2:
+      PASS. Doc guards: test-doc-distribution exit 0 with the default TMPDIR (83
+      in-scope docs, no drift); forbidden-literals exit 0 (5/5 scope classes,
+      142 user-facing docs, 0 violations); plan validate valid and
+      readyForDevelopment; lint GH-303 conforms. Authoritative aggregate gate
+      with TMPDIR=$PWD/tmp/tmpdir: exit 0 — 7360 pass / 4 skip / 0 fail across
+      912 files, with all eight sub-gates green (lint 2250 files, format 2113
+      files, build and typecheck, depcruise 383 modules and 1141 dependencies,
+      ambient-globals 177, workspace-entrypoints, secret-read-boundary 351,
+      prompt-conformance 5, help-guide coverage, exports-parity 5 publishables);
+      head and tree identical before and after. No failure of any class, so no
+      carve-out was needed and no re-run was claimed."
+    type: "info"
+    date: "2026-11-11"
+  - text: "RANGE LINT GATE (phase 9, AGENTS.md supplementary pre-PR gate):
+      ./scripts/lint-commit-range.sh --base 3c9f8a59 at HEAD f15bdbe2 — VERDICT:
+      PASS. 53 commits in range; 0 offending commits; 0 distinct rules hit;
+      binary node_modules/.bin/commitlint, origin=repository-local, merge-base
+      3c9f8a59aa1d38adc0fd5dbefdf8acc71c0f0135. No remediation mode was named
+      because nothing failed."
+    type: "info"
+    date: "2026-11-11"
+  - text: "FINAL DOC-SYNC CHECK after the second rebase at f15bdbe2: no
+      current-truth contradiction and no doc/spec coverage gap, so no
+      current-truth file was edited. GH-286's delivered facts are preserved
+      byte-identically in m2/entrypoint-delta.md (Observed composition 798
+      bytes, closed gap section 761 bytes) and the m2/README.md row; every
+      mention of repos list, project-groups.v1, groupKey, and the projects list
+      --flat alias is time-scoped to M2-S18 or marked not delivered;
+      feature-projects.md and feature-cli-entrypoint.md still describe the
+      shipped flat projects list and are untouched by this branch. Residual
+      owned outside this change: the planning family list still says Seventeen
+      families without the mounted projects family (pre-existing on main-tools
+      after GH-286, contradicted by no current-truth page); it belongs to a
+      separate GH-286/GH-288 planning follow-up, not to GH-303."
     type: "info"
     date: "2026-11-11"
