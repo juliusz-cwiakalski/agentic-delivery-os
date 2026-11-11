@@ -1,0 +1,81 @@
+change_id: GH-286
+title: "feat(cli): mount the daemon lifecycle command in the entrypoint (daemon
+  start/stop/status/install)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-11T00:56:44.216Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: ticket GH-286 open with label `change`, zero comments,
+      no open or merged PR for the branch, local branch
+      feat/GH-286/daemon-command-mounting checked out at origin/main-tools tip
+      (5372dbac) with zero own commits and a clean worktree. This is a fresh
+      delivery, not a resume; no resume sync or review-comment handling
+      applies."
+    type: "info"
+    date: "2026-11-11"
+  - text: "clarify_scope cross-check against the delivered tree: the registration
+      seam already exists (`ConfigProgramOptions.daemon` at
+      packages/cli/src/edge.ts:2997 with registration at 3574-3576) and the
+      lifecycle runtime is delivered (`createDaemonCommandRuntime`,
+      packages/cli/src/daemon-compose.ts:365). What is missing is exactly what
+      the ticket names: `daemon` is absent from `PROMPT_REQUIRED_COMMANDS`
+      (packages/cli/src/help/prompt-required-commands.ts:11-28), production.ts
+      supplies no daemon runtime, and there is no daemon help entry."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Requirement-to-spec contradictions found (all intentional reversals this
+      change must carry into the spec):
+      doc/spec/features/feature-cli-entrypoint.md :65 states the daemon is not
+      prompt-required and the production entrypoint supplies no daemon runtime;
+      doc/spec/features/feature-resident-daemon.md:51-57 states the family is
+      composed only when a runtime is supplied and the production entrypoint
+      supplies none; doc/planning/oss-tooling/milestones/m2/
+      entrypoint-delta.md:54-67 records the registration gap as open product
+      work; doc/planning/oss-tooling/milestones/m1/commands/daemon.md:3-7
+      records the command as not mounted."
+    type: "risk"
+    date: "2026-11-11"
+  - text: "Documentation impacts identified for phase 7: feature-cli-entrypoint.md
+      (composition table + the absent-daemon sentence + summary/links),
+      feature-resident-daemon.md (mount sentence), m2/entrypoint-delta.md (gap
+      closed; mount proven), m1/commands/daemon.md (status line plus the HELP
+      section the help-guide-coverage check requires: the page currently
+      contains no `--help`/`--version` mention), m1/man-page.md and
+      m1/commands/entrypoint.md if the observed listing changes."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Four design choices are inside the ticket's stated intent and are not
+      product-scope ambiguities; they are routed to specification as recorded
+      decisions with explicit tested outcomes: (1) how a detached `daemon start`
+      re-enters the CLI (`daemonEntry`) and whether the resident foreground loop
+      runs; (2) how `queue list`/`lanes` stop reporting `daemon-unreachable`,
+      given the composition currently hardcodes that degradation at
+      packages/cli/src/production.ts:470; (3) plumbing the composing process id
+      so a foreground start records a real pid (DaemonRuntimePorts.pid exists
+      but DaemonComposition exposes no pid, so instance records would carry pid
+      0); (4) the install unit's binary/scope inputs. No human clarification is
+      blocking."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "clarify_scope complete: requirements are complete and testable as
+      written. Scope boundaries declared: mount the lifecycle family and its
+      help and reference coverage; make queue/lanes degradation reflect durable
+      daemon state; do not add a lane executor/dispatch composition to the
+      daemon, do not add `projects`/`events`/`attempts`/`board`, do not change
+      daemon engine semantics or control-protocol shapes beyond additive
+      composition inputs."
+    type: "decision"
+    date: "2026-11-11"
