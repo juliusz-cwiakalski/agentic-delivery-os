@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242", "GH-268"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -34,11 +34,17 @@ These scripts ship with ADOS. There are two install paths:
   # After installing ADOS artifacts into your project
   scripts/install.sh --local
 
-  # The delivery scripts are now available in THIS project:
-  #   scripts/opencode-session.sh   — ticket-scoped session manager
-  #   scripts/deliver-ticket.sh     — single-ticket liveness-monitored delivery
-  #   scripts/batch-deliver.sh      — sequential batch delivery
-  #   tools/clean-merged-branches   — squash-merge-safe branch cleanup
+  # The delivery scripts are available in THIS project after the install. The
+  # set is the one declared by scripts/install.sh (ADOS_DELIVERY_SCRIPTS /
+  # ADOS_DELIVERY_TOOLS):
+  #   scripts/opencode-session.sh       — ticket-scoped session manager
+  #   scripts/deliver-ticket.sh         — single-ticket liveness-monitored delivery
+  #   scripts/lib/dispatch-authority.sh — sourced dispatch-authority read for the wrappers
+  #   scripts/batch-deliver.sh          — sequential batch delivery
+  #   scripts/ceo-loop.sh               — Mode A outer loop (one @ceo session at a time)
+  #   scripts/pm-liveness.sh            — session-tree liveness probe
+  #   scripts/lint-commit-range.sh      — pre-PR branch-range commit-message lint
+  #   tools/clean-merged-branches       — squash-merge-safe branch cleanup
   ```
 
 - **`install.sh --global`** — clones the ADOS repo to `~/.ados/repo/`. The delivery scripts are already present there (it's the full repo), so you can run them directly (e.g. `~/.ados/repo/scripts/deliver-ticket.sh GH-112`). The `--global` mode does **not** copy the scripts into any project — use `--local` for that.

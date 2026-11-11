@@ -945,7 +945,7 @@ Use the project's configured CLI for all issue/PR-MR queries (GitHub or GitLab).
 If the current branch already has commits (i.e., this is a resume, not a fresh start):
 1. Sync with ${base_branch} to catch breaking changes:
     git fetch origin ${base_branch}
-    git merge origin/${base_branch}
+    git merge --no-ff origin/${base_branch} -m "chore(${ticket_ref}): sync with ${base_branch}"
    - If merge conflicts: attempt to resolve them.
       If unresolvable: add ${ADOS_BLOCKED_LABEL:-human-input-needed} label, report "blocked", STOP.
    - If merge brought changes: run quality gates (tests) to verify nothing broke.

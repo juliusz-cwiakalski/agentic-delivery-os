@@ -991,15 +991,72 @@ test_prompt_has_lifecycle() {
 }
 
 # TC-DT-08g: prompt merges the resolved base into the feature branch before resuming work
+# The resume-sync contract (AC-F5-1, TC-PROMPT-004): exactly one merge line, a
+# conventional subject carrying the work item ref, no bare merge left behind,
+# and the fetch preserved. Shared by the positive test and its counterexample
+# probe so the probe exercises these exact assertions rather than a copy of them.
+assert_resume_sync_contract() {
+  local -r prompt="$1" ref="$2" base="$3"
+  local merge_lines
+  merge_lines="$(printf '%s\n' "${prompt}" | grep -E '^[[:space:]]*git merge' || true)"
+
+  assert_eq "1" "$(printf '%s' "${merge_lines}" | grep -c . || true)" \
+    "Exactly one git merge instruction expected in the resume-sync block"
+
+  if ! printf '%s\n' "${merge_lines}" | grep -Eq -- "-m .*[[:space:]]\"?(chore|build|ci)\(${ref}\): sync with "; then
+    printf '  Merge line lacks -m with a conventional sync subject naming %s\n' "${ref}" >&2
+    printf '  Merge line: %s\n' "${merge_lines}" >&2
+    return 1
+  fi
+
+  assert_eq "0" "$(printf '%s\n' "${prompt}" | grep -cE 'git merge[[:space:]]+origin/[^[:space:]]+[[:space:]]*$' || true)" \
+    "No bare git merge origin/<base> instruction may remain"
+  assert_contains "${prompt}" "git fetch origin ${base}" "Fetch of the base branch must be preserved"
+}
+
+# TC-DT-08g (TC-PROMPT-004): the resume-sync merge carries a conventional subject
 test_prompt_merge_main_on_resume() {
   local prompt old_base="${ADOS_BASE_BRANCH:-}"
   ADOS_BASE_BRANCH="main"
-  prompt="$(build_delivery_prompt "GH-112" "feat/test-branch")"
+  prompt="$(build_delivery_prompt "GH-268" "feat/test-branch")"
   ADOS_BASE_BRANCH="${old_base}"
 
-  assert_contains "${prompt}" "git fetch origin main" "Prompt should fetch the base branch before resuming"
-  assert_contains "${prompt}" "git merge origin/main" "Prompt should merge the base branch into the feature branch"
+  assert_resume_sync_contract "${prompt}" "GH-268" "main"
   assert_contains "${prompt}" "--base main" "Prompt should tell the PM to pass the base branch explicitly"
+}
+
+# TC-DT-08g3 (TC-PROMPT-005): the assertion above is not vacuous. Reverting the
+# instruction in a throwaway copy of the script under test must make it fail.
+# Only the script under test is copied: the delivery tree is never mutated, and
+# the probe stays bounded instead of copying the 280 MB dependency tree and
+# re-running the whole suite (which would also re-enter this probe).
+test_resume_sync_assertion_is_non_vacuous() {
+  local -r probe_dir="${_test_tmpdir}/probe"
+  mkdir -p "${probe_dir}"
+  cp "${SCRIPT_DIR}/deliver-ticket.sh" "${probe_dir}/deliver-ticket.sh"
+  sed -i 's#git merge --no-ff origin/.*: sync with .*"#git merge origin/${base_branch}#' \
+    "${probe_dir}/deliver-ticket.sh"
+
+  assert_eq "0" "$(grep -c -- '--no-ff' "${probe_dir}/deliver-ticket.sh" || true)" \
+    "Probe copy must carry the reverted bare merge instruction"
+
+  local probe_prompt
+  probe_prompt="$(
+    # shellcheck source=/dev/null
+    source "${probe_dir}/deliver-ticket.sh"
+    ADOS_BASE_BRANCH="main"
+    build_delivery_prompt "GH-268" "feat/test-branch"
+  )"
+  assert_not_contains "${probe_prompt}" "git merge --no-ff" \
+    "Reverted probe prompt must not carry the conventional-subject instruction"
+
+  if (assert_resume_sync_contract "${probe_prompt}" "GH-268" "main") >/dev/null 2>&1; then
+    printf '  The resume-sync assertion accepted the reverted instruction (vacuous assertion).\n' >&2
+    return 1
+  fi
+
+  assert_eq "1" "$(grep -c 'git merge --no-ff' "${SCRIPT_DIR}/deliver-ticket.sh" || true)" \
+    "Delivery tree must keep the conventional-subject instruction"
 }
 
 # TC-DT-08g2: base branch resolves from project config when env is empty
@@ -3010,6 +3067,7 @@ main() {
   run_test "TC-DT-08d: prompt enforces single ticket" test_prompt_single_ticket
   run_test "TC-DT-08e: prompt references 11-phase lifecycle" test_prompt_has_lifecycle
   run_test "TC-DT-08g: prompt merges the resolved base on resume" test_prompt_merge_main_on_resume
+  run_test "TC-DT-08g3: resume-sync assertion is non-vacuous" test_resume_sync_assertion_is_non_vacuous
   run_test "TC-DT-08g2: base branch resolves from project config" test_base_branch_reads_project_config
   run_test "TC-DT-08h: prompt has Resume Sync section" test_prompt_has_resume_sync_section
   run_test "TC-DT-08i: prompt fetches review comments on resume" test_prompt_fetches_review_comments

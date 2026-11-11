@@ -430,6 +430,7 @@ remove_local_files() {
     "scripts/batch-deliver.sh" \
     "scripts/ceo-loop.sh" \
     "scripts/pm-liveness.sh" \
+    "scripts/lint-commit-range.sh" \
     "scripts/hooks/pre-opencode-iteration-zai.sh" \
     "scripts/hooks/pre-opencode-iteration-owner-hold.sh" \
     "tools/clean-merged-branches"; do

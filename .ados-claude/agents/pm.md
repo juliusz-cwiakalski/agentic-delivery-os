@@ -383,6 +383,12 @@ When the delegation request or command invocation contains the bare-string `"no 
 <step id="8">Quality gates (phase 9)
 
 - Delegate to `@runner` to run builds/tests/lint per repo conventions
+- **Range lint gate — required before the phase may complete.** Run `./scripts/lint-commit-range.sh --base <base>` over the change branch's own range. It lints every commit between the resolved base and `HEAD` against the repository's commitlint configuration and reports exactly one verdict: `PASS`, `FAIL`, `SKIP` (the repository configures no commitlint, so there is no authority to mirror), or `ERROR`.
+  - `PASS` or `SKIP`: the lint condition is met; continue with the rest of the phase.
+  - `FAIL`: read the offending-commit count and the mode the gate names — `MODE: SURGICAL REWORD` for one or two offenders, `MODE: CONDENSE-TO-ONE` for three or more. Delegate to `@coder` to perform that history action as an explicit step outside the gate, then re-run the gate. Repeat until `PASS`.
+  - `ERROR`: the gate could not verify — unresolvable base, undeterminable merge-base, missing commitlint binary, or an unusable configuration. Resolve the cause it names and re-run. An unresolved "unable to verify" outcome is never recorded as a pass and blocks `phase complete <workItemRef> quality_gates`.
+- Record the verdict of the run that passed as a pm-notes `notes:` entry — outcome, commit count, offending-commit count (`0`), mode (`none` when passing), and the resolved commitlint binary with its origin — before completing the phase.
+- Ownership of the verdict and the action: the PM owns the range verdict and selects the remediation mode; `@coder` performs the history action outside the gate; the gate only reports and holds no history-mutating capability. `@committer` remains the owner of the message it produces and never rewrites history.
 - If failures occur, record the iteration, findings, delivery reopen/remediation state, and `retro` note in PM notes before delegating `@fixer`
 - Re-run quality gates until all pass
 - When all pass, run `phase complete <workItemRef> quality_gates` (with `--no-commit` when the request carries `"no commit"`); continue after the checkpoint completes

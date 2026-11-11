@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
-summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the bash delivery scripts (ceo-loop.sh, deliver-ticket.sh, batch-deliver.sh, pm-liveness.sh, opencode-session.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh no longer merges. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
+summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -23,7 +23,7 @@ links:
 
 ## Overview
 
-Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. It is delivered as a set of long-running, deterministic **bash scripts** (`ceo-loop.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `opencode-session.sh`, `tools/clean-merged-branches`) that wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, branch hygiene, and — in Mode B — a human approval gate before merge.
+Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. It is delivered as the deterministic bash scripts and tool that `scripts/install.sh` declares — the `ADOS_DELIVERY_SCRIPTS` set (`opencode-session.sh`, `deliver-ticket.sh`, `lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`, `lint-commit-range.sh`) plus `tools/clean-merged-branches` — which wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, and branch hygiene, carry the pre-PR commit-range lint the lifecycle runs before PR creation, and — in Mode B — gate the merge on human approval.
 
 > **Canonical detail lives in the guide.** The full modes table, component-responsibility matrix, mermaid diagrams, recovery semantics, configuration, and troubleshooting are in [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) (the canonical modes guide) and [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) (canonical for Mode B operations). This spec names the capabilities, invariants, and the merge/liveness contracts; it does not restate the guide tables. Where the two describe the same machinery, they are kept consistent.
 
@@ -132,6 +132,14 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   behavior is unchanged when the platform is GitHub; the `result`-value domain,
   liveness, single-flight + JOIN, branch resolution, resume, and hook machinery
   are untouched.
+- **Resume-sync commit subject (F-10, `deliver-ticket.sh`):** When the
+  delivered branch already carries commits, the prompt's resume-sync step
+  instructs a sync merge with the delivery base whose subject is a conventional
+  header referencing the work item (`chore(<ref>): sync with <base>`), so the
+  sync never leaves a plain `Merge remote-tracking branch ...` subject in the
+  change's range. Merge authority (F-3) is unchanged: `deliver-ticket.sh` still
+  does not merge to the base branch, and conflict handling and the post-merge
+  gate re-run behave as before.
 
 ### Behavioral invariants (INV-DM-1..6)
 
@@ -184,7 +192,9 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | Path | Kind | Responsibility |
 |------|------|----------------|
 | `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal. **Not platform-aware** (OQ-3): delegates delivery to `deliver-ticket.sh` and merges to the `@ceo` agent, so needs no tracker access itself |
-| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; **platform-aware result classification & PR URL resolution** (F-9); writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
+| `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; **platform-aware result classification & PR URL resolution** (F-9); emits a conventional-subject resume-sync merge instruction (F-10); writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
+| `scripts/lib/dispatch-authority.sh` | Sourced shell library | Reads the derived per-repository dispatch authority document (`dispatch-authority.json`) as a plain file with shell built-ins; absent or malformed means `dual-run`, so a missing typed installation never breaks the fallback. Sourced at startup by `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` |
+| `scripts/lint-commit-range.sh` | Script (pre-PR gate) | Lint the change branch's own merge-base range against the root commitlint configuration; per-commit diagnostics (short and full SHA, rule id, line, bounded excerpt) and a remediation mode; verdicts `PASS` / `FAIL` / `SKIP` / `ERROR`; read-only and offline |
 | `scripts/batch-deliver.sh` | Script (Mode B) | Sequential per-ticket delivery; pre-flight skip; rebase-before-merge + green-gate wait for human-approved PRs; **platform-aware Mode B merge** through `.ai/agent/pr-instructions.md` (platform selection with merge-status polling) using the PR title/description as commit message |
 | `scripts/pm-liveness.sh` | Script | Probe opencode session-message traffic across the recursive session tree (the current `message`/`part` store on opencode 1.19.3; `session_message` is legacy and empty); combine with git/worktree activity; degrade gracefully to the git/worktree signal if the session DB is unavailable. The delivered script still queries the legacy `session_message` table, so its session-tree signal is empty on the reference store until the script is reconciled; that is an owner follow-up. |
 | `scripts/opencode-session.sh` | Script | Ticket-scoped opencode session manager (entry point for autonomous sessions; sets `delivery_mode: autonomous`) |
@@ -194,11 +204,14 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | `.opencode/agent/ceo.md` | AI agent | Pick next ticket; merge approved + finalized PRs (INV-DM-4); handle blockers; retrospectives |
 | `.ai/local/delivery/<REF>.pid` | Repo-local state | Single-flight PID tracking (git-ignored; keyed on the working tree) |
 
-> **Install inventory.** `scripts/install.sh` registers `opencode-session.sh`,
-> `deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`, and `pm-liveness.sh`
-> in `ADOS_DELIVERY_SCRIPTS`; `clean-merged-branches` in
-> `ADOS_DELIVERY_TOOLS`; and the inactive Z.AI and owner-hold examples in
-> `ADOS_HOOK_EXAMPLES`. A local install copies both examples to
+> **Install inventory.** `scripts/install.sh` declares the authoritative install
+> set; the lists here mirror it. `ADOS_DELIVERY_SCRIPTS` holds
+> `scripts/opencode-session.sh`, `scripts/deliver-ticket.sh`,
+> `scripts/lib/dispatch-authority.sh`, `scripts/batch-deliver.sh`,
+> `scripts/ceo-loop.sh`, `scripts/pm-liveness.sh`, and
+> `scripts/lint-commit-range.sh`; `ADOS_DELIVERY_TOOLS` holds
+> `tools/clean-merged-branches`; and `ADOS_HOOK_EXAMPLES` holds the inactive Z.AI
+> and owner-hold examples. A local install copies both examples to
 > `scripts/hooks/` but does not activate either.
 > Local uninstall removes those files and any empty `scripts/hooks/`
 > directory.
@@ -216,6 +229,7 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | NFR-3 | Merge safety | `deliver-ticket.sh` never merges; merge requires an approval signal + (Mode A) PM finalization or (Mode B) rebase + green-gate | Zero auto-merges from the per-ticket engine |
 | NFR-4 | No orphans | All delivery scripts propagate SIGTERM/SIGINT → SIGKILL to their AI children | No orphaned opencode instance after a kill |
 | NFR-5 | Durable control | `ceo-loop.sh`'s stop/park signal survives a loop restart; it is not wiped at startup | Stop honored until explicitly cleared |
+| NFR-6 | Commit-range hygiene | Every commit in a delivered change's range satisfies the root commitlint configuration before PR creation, and a delivery-branch sync carries a conventional subject rather than a plain merge subject | 0 commit-message CI failures per change; pre-PR verdict `PASS` or recorded `SKIP` |
 
 ## Quality Assurance Strategy
 
@@ -228,6 +242,8 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | Grep | No-merge contract | `deliver-ticket.sh` must not contain a merge code path; guides/spec must state "does not merge" |
 | Grep | Liveness wording | Docs must describe multi-signal liveness (recursive session-tree traffic from the current `message`/`part` store + git/worktree) with the 10-minute default, and must not name `session_message` as the current message store; the retired 30-minute/file-mtime heuristic is absent |
 | CI guard | Result-tuple doc guard | `scripts/.tests/test-deliver-ticket-result-tuples.sh` derives the canonical `result=<…>` set from `deliver-ticket.sh` and fails when a scanned current-truth enumeration omits a value; `scripts/.tests/test-deliver-ticket-result-tuples-modes.sh` injects each failure mode on a synthetic tree |
+| Grep + suite | Resume-sync commit subject | `scripts/.tests/test-deliver-ticket.sh` asserts that the generated prompt's resume-sync instruction carries a conventional subject referencing the work item; the emitted prompt must contain no plain `Merge remote-tracking branch ...` instruction |
+| Automated | Pre-PR range lint | `bash scripts/.tests/test-lint-commit-range.sh` — the gate the `quality_gates` phase runs over the change branch's range before PR creation |
 | CI guard | Mutation sandbox | `scripts/.tests/test-delivery-mutation-sandbox.sh` breaks the result emission in a temp copy and asserts the harness fails on `TC-DT-SF-12` while the unmutated copy passes and no tracked file changes |
 
 ## Operational & Support
