@@ -1,7 +1,7 @@
 ---
 id: chg-GH-268-test-plan
 status: Updated
-version: 0.3
+version: 0.4
 created: 2026-11-11
 last_updated: 2026-11-11
 owners: ["engineering"]
@@ -74,7 +74,7 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 | AC-F3-2 | Unresolvable base override / configured base / merge-base → "unable to verify" exit, cause + hint, never a pass | TC-COMMITLINT-010, TC-COMMITLINT-011 | Covered |
 | AC-F3-3 | Configured repo without any usable binary → unable-to-verify naming the tool; repository-local `node_modules/.bin/commitlint` preferred over `PATH`, binary + origin named in the verdict header, foreign origin disclosed as a parity risk; no configuration → explicit skip exit 0 | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-DOGFOOD-001 | Covered (amended AC; `TC-COMMITLINT-009` removed — it is DM-1.h/AC-F3-5) |
 | AC-F3-4 | No network; working tree/index/refs/stash unchanged; every outcome maps to exactly one of three exit codes | TC-COMMITLINT-018, TC-COMMITLINT-019, TC-COMMITLINT-020 | Covered |
-| AC-F3-5 | Configured commitlint cannot render a verdict (invalid config / execution failure) → `ERROR` exit 2 with cause + hint; never `FAIL`-with-violations, never `PASS` | TC-COMMITLINT-009 | Covered (assertions extended) |
+| AC-F3-5 | Configured commitlint cannot render a verdict (invalid config / execution failure) → `ERROR` exit 2 with cause + hint; never `FAIL`-with-violations, never `PASS`; both halves proven non-vacuous (local binary for the config failure, self-evidencing `PATH` shim for the execution failure) | TC-COMMITLINT-009, TC-COMMITLINT-020 (row h) | Covered (assertions extended; fixtures split) |
 | AC-F3-6 | Unknown argument / invalid base syntax → exit 2 with usage naming the accepted invocation and the offending argument; no range check | TC-COMMITLINT-012 | Covered (assertions extended) |
 | AC-F4-1 | Committer + PM state subject rule, ≤100-char body/footer, no plain merge subject, both remediation modes, and the ownership split (committer owns the message/never rewrites; PM owns verdict + mode; acting agent acts outside the gate; gate reports only) — constraints, no raw git recipe | TC-PROMPT-001, TC-PROMPT-002, TC-PROMPT-003 | Covered (assertions extended) |
 | AC-F5-1 | Resume-sync emits a conventional-subject sync merge referencing the work item; assertion matches; no other section changes meaning | TC-PROMPT-004, TC-PROMPT-005, TC-PROMPT-006 | Covered |
@@ -395,25 +395,32 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Related IDs**: F-3, AC-F3-5, DM-1.h, NFR-2, DM-1.c distinction
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_invalid_config_is_error`
+**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_invalid_config_is_error`, `test_execution_failure_is_error`
 **Tags**: @bash, @gate, @fail-closed
 
 **Preconditions**:
-- Fixture `FX-BAD-CONFIG`: a temp repository whose `commitlint.config.js` is copied from the committed fixture `commitlint.config.invalid.txt` (invalid JavaScript module text) so the linter cannot render a verdict.
+- Fixture `FX-BAD-CONFIG` (**invalid-configuration half**): a temp repository whose `commitlint.config.js` is copied from the committed fixture `commitlint.config.invalid.txt` (invalid JavaScript module text), **with the fixture-local binary installed** (`node_modules/.bin/commitlint` via `_install_local_commitlint`). No `PATH` shim is used; the outcome must be decided by the repository-local binary.
+- Fixture `FX-BAD-CONFIG-NO-LOCAL` (**execution-failure half**): a temp repository with a valid `commitlint.config.js` and **no `node_modules` tree at all**, run with a self-evidencing execution-failure shim first on `PATH`.
 
 **Steps**:
-1. Run the gate with `--base main`; capture output and exit code.
-2. Assert exit code `2` and that the output contains `ERROR`.
+1. In `FX-BAD-CONFIG`, assert `"${repo}/node_modules/.bin/commitlint"` exists and is executable (precondition guard: the invalid-config half is decided locally), then run the gate with `--base main`; capture stdout, stderr and `$?`.
+2. Assert exit code `2`; assert the output contains `ERROR`; assert the verdict header names the resolved binary as repository-local (origin `repository-local`, or the documented equivalent) — so this outcome cannot be an artifact of an undeclared `PATH` binary.
 3. Assert the output does **not** present the failure as a message violation: no `SURGICAL REWORD` / `CONDENSE-TO-ONE` mode line and no rule-id/line-number diagnostic pair.
 4. Assert the output carries a remediation hint (a match on `config` plus `install`/`fix`/`valid` wording, or the documented equivalent).
 5. Assert the outcome triad of AC-F3-5 explicitly: the output contains no `PASS` token and no `FAIL` violation verdict, only `ERROR` — in both `stdout` and `stderr` (the failing verdict line is mirrored to stderr, spec §10).
-6. Repeat steps 1–5 for the **execution-failure** sub-case of AC-F3-5: prepend a shim directory to `PATH` whose `commitlint` executable exits `3` with a transport-free error message and no parseable problems (`fake-commitlint-exec-failure.sh`); assert the gate still reports `ERROR`/exit `2` with a cause and a remediation hint, never `FAIL` with diagnostics and never `PASS`.
+6. **Execution-failure half, proven non-vacuous**, in `FX-BAD-CONFIG-NO-LOCAL`:
+   a. Assert the local path cannot shadow the shim: `[[ ! -e "${repo}/node_modules/.bin/commitlint" ]]` and `[[ ! -d "${repo}/node_modules" ]]` — otherwise this sub-case would silently re-run the local binary and pass for the invalid/wrong reason (DoR iter-2 finding 1).
+   b. Build the shim directory: copy `fake-commitlint-exec-failure.sh` to `${shim_dir}/commitlint` and make it executable; export `SHIM_MARKER="${_test_tmpdir}/shim-marker"` and remove the marker before the run.
+   c. Run the gate with `PATH="${shim_dir}:${PATH}"`, `--base main`; capture stdout, stderr and `$?`.
+   d. Assert the shim **ran exactly once**: `SHIM_MARKER` exists, has exactly one line, and that line names `${shim_dir}/commitlint`. Optionally, if the implementation surfaces the child's stderr, the shim's distinct token (`SHIM-EXEC-FAILURE`) appears in the gate's captured error context; the marker is the load-bearing evidence, and the cause text must name an execution failure (documented equivalent accepted).
+   e. Assert the verdict header reports the binary origin as `PATH` (proving the local path was not resolved), exit code `2`, `ERROR` with a cause and a remediation hint, and no `PASS` and no `FAIL` violation verdict — on both streams.
 
 **Expected Outcome**:
-- Then an unusable configuration is reported as "unable to verify" with its cause, not as a commit-message defect (DM-1.h): an environment fault must not be mistaken for a violation (RSK-2).
-- Then the `ERROR`-not-`FAIL`-not-`PASS` triad holds on both streams and for both sub-cases — invalid configuration and execution failure (AC-F3-5), so a caller capturing one stream cannot misread the outcome.
+- Then an unusable configuration is reported as "unable to verify" with its cause, not as a commit-message defect (DM-1.h): an environment fault must not be mistaken for a violation (RSK-2), and this half is decided by the declared repository-local binary.
+- Then an **execution failure** of the configured linter is likewise reported as `ERROR`/exit `2` with a cause and a hint, with the shim's marker proving the failing binary actually executed (AC-F3-5 execution-failure half, `DM-1.h`).
+- Then the `ERROR`-not-`FAIL`-not-`PASS` triad holds on both streams for both halves — invalid configuration and execution failure (AC-F3-5) — so a caller capturing one stream cannot misread the outcome.
 
-**Notes / Clarifications**: Covered by AC-F3-5 (added by the specification correction). The invalid config fixture is committed as `.txt` and copied to `commitlint.config.js` inside the temp repo so `biome lint`/`format:check` never parse intentionally broken JavaScript; the execution-failure shim is a `.sh` fixture used only through `PATH`, never installed into the repository's `node_modules/.bin`.
+**Notes / Clarifications**: Covered by AC-F3-5. The invalid config fixture is committed as `.txt` and copied to `commitlint.config.js` inside the temp repo so `biome lint`/`format:check` never parse intentionally broken JavaScript. DoR iter-2 finding 1: under DEC-10's local-first resolution a single `FX-BAD-CONFIG` carrying the helper-installed local binary would satisfy steps 1–5 from the invalid-config path while the `PATH` shim never executed; the fixture is therefore split (local binary for the configuration half, no local tree plus a self-evidencing shim for the execution half) and each half asserts its declared origin.
 
 #### TC-COMMITLINT-010 - Base resolution precedence and unresolvable base error
 
@@ -676,13 +683,16 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Preconditions**: All precondition fixtures from §6.
 
 **Steps**:
-1. Run a table-driven matrix over every DM-1 row and record `actual_exit`: a→`0` (`FX-CLEAN`), b→`0` (`FX-EMPTY`), c→`1` (`FX-BAD-BODY`), d→`0` (`FX-NO-CONFIG`), e→`2` (unresolvable `--base`), f→`2` (`FX-UNRELATED`), g→`2` (`FX-CLEAN-NO-DEPS`: no local binary and scrubbed `PATH`), h→`2` (`FX-BAD-CONFIG`), i→`2` (`--nonsense`).
+1. Run a table-driven matrix over every DM-1 row and record `actual_exit`: a→`0` (`FX-CLEAN`), b→`0` (`FX-EMPTY`), c→`1` (`FX-BAD-BODY`), d→`0` (`FX-NO-CONFIG`), e→`2` (unresolvable `--base`), f→`2` (`FX-UNRELATED`), g→`2` (`FX-CLEAN-NO-DEPS`: no local binary and scrubbed `PATH`), h→`2` in **both** halves (`FX-BAD-CONFIG`: invalid configuration, local binary; `FX-BAD-CONFIG-NO-LOCAL`: execution failure via the self-evidencing `PATH` shim), i→`2` (`--nonsense`).
 2. Assert every row matches and that the collected set of observed codes is exactly `{0,1,2}`.
 3. For the failing and error rows, assert the verdict line appears on **both** stdout and stderr (spec §10: the failing side's signal is on stderr too).
 4. Assert `0` and `2` rows never emit a `FAIL` violation verdict, and `1` rows never emit `PASS`.
+5. Assert **cause attribution** so a row cannot be satisfied by the wrong condition: row `g` names the missing tool and an install hint (not a configuration error); row `h` names a configuration or execution cause (not a missing-binary cause) in both halves, and the execution half additionally proves the shim ran (`SHIM_MARKER` present, header origin `PATH`).
+6. Assert row `e` is reached only with a configuration present (the `FX-` base fixtures carry a config), so `DM-1.e` is not satisfied via `DM-1.d`'s skip.
 
 **Expected Outcome**:
 - Then exactly three codes with fixed meanings are observed, every terminal condition maps to one row, and no outcome is a silent pass (AC-F3-4, DM-1, NFR-2, NFR-7).
+- Then each error row is proven to be the condition it names — `DM-1.g` (no binary), `DM-1.h` (unrenderable verdict, both halves), and `DM-1.e` (unresolvable base) cannot satisfy one another's expectations (DoR iter-2 finding 1).
 
 #### TC-COMMITLINT-021 - Runtime budget for a 20-commit range
 
@@ -923,7 +933,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 3. Assert `ados_distribution: internal` retained (verified at front matter line 5) and `related_changes` gains `GH-268` (today the list is `GH-142 … GH-280`; verified at line 14).
 4. **Appendix C row 9(a) — overview sentence.** Assert the overview paragraph that enumerates the delivered bash scripts (verified today at line 26: `` (`ceo-loop.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `opencode-session.sh`, `tools/clean-merged-branches`) ``) also names `lint-commit-range.sh`, so the sentence stays factually complete.
 5. **Appendix C row 9(b) — Core Components table.** Assert the delivered-file table (verified today: header at line 180, first data row at line 182, body through line 190) gains a row for `scripts/lint-commit-range.sh` with a responsibility cell that states its purpose (pre-PR branch-range commit-message lint, mirror of the CI authority).
-6. **Appendix C row 9(c) — Install inventory blockquote.** Assert the `> **Install inventory.**` blockquote (verified today at lines 193–200) lists `lint-commit-range.sh` **inside the `ADOS_DELIVERY_SCRIPTS` enumeration** (today it names exactly `opencode-session.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`), and that the surrounding sentences about `ADOS_DELIVERY_TOOLS`, `ADOS_HOOK_EXAMPLES`, and local install/uninstall remain true.
+6. **Appendix C row 9(c) — Install inventory blockquote.** Assert the `> **Install inventory.**` blockquote (verified today at lines 193–200) lists `lint-commit-range.sh` **inside the `ADOS_DELIVERY_SCRIPTS` enumeration** (today it names `opencode-session.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh` and does **not** name the registered `scripts/lib/dispatch-authority.sh`). Assert the reconciliation also closes that pre-existing omission: either the enumeration is completed against the array in `scripts/install.sh:123-130` (six entries) or the list is explicitly marked illustrative with `scripts/install.sh` named as the authoritative set — record which choice was taken, and assert the gate is named either way. Assert the surrounding sentences about `ADOS_DELIVERY_TOOLS`, `ADOS_HOOK_EXAMPLES`, and local install/uninstall remain true.
 7. **Appendix C row 10 — batch-delivery guide comment block.** Assert `doc/guides/autonomous-batch-delivery.md`'s `install.sh --local` section comment block (verified today at lines 37–41: `# The delivery scripts are now available in THIS project:` followed by `scripts/opencode-session.sh`, `scripts/deliver-ticket.sh`, `scripts/batch-deliver.sh`, `tools/clean-merged-branches`) is reconciled with the installer set — either the gate is added to the list or the list is explicitly marked as illustrative while naming the installer as the authoritative set; record which choice was made.
 
 **Expected Outcome**:
@@ -1210,7 +1220,8 @@ export LC_ALL=C TZ=UTC
 | `FX-NO-CONFIG` | no recognized commitlint config file; contains a malformed commit | TC-COMMITLINT-007, TC-COMMITLINT-018 (skip), TC-COMMITLINT-020 (row d) |
 | `FX-NO-CONFIG-LOCAL-BIN` | `FX-NO-CONFIG` plus an executable `node_modules/.bin/commitlint` | TC-COMMITLINT-007 (skip is binary-insensitive) |
 | `FX-ALT-CONFIG` | `.commitlintrc.json` + malformed commit | TC-COMMITLINT-007 (non-vacuity), TC-COMMITLINT-020 |
-| `FX-BAD-CONFIG` | `commitlint.config.js` copied from `commitlint.config.invalid.txt` | TC-COMMITLINT-009, TC-COMMITLINT-020 (row h) |
+| `FX-BAD-CONFIG` | `commitlint.config.js` copied from `commitlint.config.invalid.txt`, **with the fixture-local binary installed** (`_install_local_commitlint`) — invalid-configuration half of `DM-1.h` | TC-COMMITLINT-009 steps 1–5, TC-COMMITLINT-020 (row h, config cause) |
+| `FX-BAD-CONFIG-NO-LOCAL` | valid `commitlint.config.js`, **no `node_modules` tree**, run with the self-evidencing `fake-commitlint-exec-failure.sh` shim first on `PATH` — execution-failure half of `DM-1.h` | TC-COMMITLINT-009 step 6, TC-COMMITLINT-020 (row h, execution cause) |
 | `FX-LOCAL-BIN` | `FX-BAD-BODY` + local `node_modules/.bin/commitlint` (repository-local resolution) | TC-COMMITLINT-008 (precedence) |
 | `FX-DECOY-PATH` | `FX-LOCAL-BIN` + a decoy `commitlint` first on `PATH` that exits `0` and appends to `DECOY_MARKER` | TC-COMMITLINT-008 (decoy never wins) |
 | `FX-PATH-FOREIGN` | `FX-CLEAN` without local `node_modules` + a real binary copy in a directory outside the fixture repository, placed on `PATH` | TC-COMMITLINT-008 (foreign-origin disclosure) |
@@ -1236,7 +1247,7 @@ Committed fixture data lives in `scripts/.tests/fixtures/lint-commit-range/`:
 | `msg-wip.txt` | `wip stuff` + over-long body | upstream-dirty and offender fixtures |
 | `commitlint.config.valid.txt` | `export default { extends: ["@commitlint/config-conventional"] };` | copied to `commitlint.config.js` when a fixture needs an explicitly valid config |
 | `commitlint.config.invalid.txt` | syntactically invalid module text | **`.txt` on purpose** — a `.js` here would be parsed by `biome lint`/`format:check` and turn the aggregate gate red |
-| `fake-commitlint-exec-failure.sh` | shim that exits `3` with an error on stderr and no parseable problems | `DM-1.h` execution-failure sub-case of `TC-COMMITLINT-009`; reached only through `PATH`, never installed into `node_modules/.bin` |
+| `fake-commitlint-exec-failure.sh` | self-evidencing shim: writes one line (its own invocation path) to `$SHIM_MARKER`, prints a distinct `SHIM-EXEC-FAILURE` token on stderr, and exits `3` with no parseable problems | `DM-1.h` execution-failure half of `TC-COMMITLINT-009`; reached only through `PATH` in `FX-BAD-CONFIG-NO-LOCAL`, which is asserted to have no local `node_modules/.bin` before the run; never installed into any `node_modules/.bin` |
 
 Binary availability per case (amended AC-F3-3 / DEC-10 precedence):
 
@@ -1246,6 +1257,8 @@ Binary availability per case (amended AC-F3-3 / DEC-10 precedence):
 | PATH fallback / foreign origin (TC-COMMITLINT-008 steps 4–5) | No local `node_modules`; `PATH` prepended with `${_test_tmpdir}/bin` holding a copy of the real binary **outside** the fixture repository; header origin `PATH` plus the parity-risk disclosure |
 | Decoy on `PATH` (TC-COMMITLINT-008 step 3) | Local binary present; decoy directory first on `PATH`; the decoy must never execute (`DECOY_MARKER` absent) |
 | Missing binary (TC-COMMITLINT-008 step 1, TC-COMMITLINT-018 error, TC-COMMITLINT-020 row g) | No local `node_modules`; `PATH` scrubbed to `/usr/local/bin:/usr/bin:/bin` with a precondition guard asserting `command -v commitlint` fails |
+| **`DM-1.h` invalid-configuration half** (TC-COMMITLINT-009 steps 1–5, TC-COMMITLINT-020 row h) | `FX-BAD-CONFIG`: fixture-local `node_modules/.bin/commitlint` (helper symlink), no `PATH` shim; header origin `repository-local` — the config failure must be decided by the declared local binary |
+| **`DM-1.h` execution-failure half** (TC-COMMITLINT-009 step 6, TC-COMMITLINT-020 row h) | `FX-BAD-CONFIG-NO-LOCAL`: **no local `node_modules`** (asserted before the run); `PATH` prepended with the self-evidencing `fake-commitlint-exec-failure.sh` shim (writes `SHIM_MARKER`, prints `SHIM-EXEC-FAILURE`, exits `3`); header origin `PATH`; the marker must exist after the run |
 | Skip (TC-COMMITLINT-007) | No config file; one variant has a local binary, one does not; both must skip identically |
 
 ### 6.3 Isolation and cleanup
@@ -1316,10 +1329,12 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 | TR-9 | Committed fixture files accidentally linted by `biome`/`format:check` | M | Invalid-JS fixture ships as `.txt`; message fixtures are `.txt`; only valid JS may be committed as `.js` |
 | TR-10 | A static assertion quotes repository text that later drifts (the DoR iter-1 `/check`-row case: non-backticked literals that never matched) | M | Every quoted literal is verified against the real file before being pinned (`TC-DOC-001` step 3 states the re-verify requirement); assertions match real content including backticks, never a paraphrase |
 | TR-11 | The amended AC-F3-3 header disclosure is asserted by wording (`repository-local`, `parity`) that implementation may phrase differently | M | Assertions accept documented equivalents and are localized in one helper; the semantic contract is "binary named, origin named, foreign origin disclosed, absence loud" |
+| TR-12 | Assertions that inspect diagnostics or the verdict header depend on wording tokens the plan pins but the implementation may phrase differently | M | Assertions use the plan's pinned contract (parsed `[rule-id]` lines, `repository-local`/`PATH` origins) and accept documented equivalents; format fidelity is proven against the real binary in `TC-COMMITLINT-004` |
 
 ### 8.2 Assumptions
 
 - The gate resolves the commitlint binary in the pinned precedence (AC-F3-3 amended, DEC-10): repository-local `node_modules/.bin/commitlint` when present and executable, then `PATH`. Tests therefore inject the binary by creating a fixture-local `node_modules/.bin` (precedence cases), by copying the real binary outside the fixture and putting it on `PATH` (foreign-origin case), by prepending a decoy shim, or by scrubbing `PATH` (absence case) — never by patching the script.
+- A `PATH` shim is only reachable in a fixture that has **no** local `node_modules/.bin/commitlint`; every fixture that depends on a shim asserts that absence before the run, so the repository-local precedence cannot shadow it (`TC-COMMITLINT-009` step 6a, DoR iter-2 finding 1).
 - The verdict header carries the binary and its origin in every outcome, with `repository-local` and `PATH` as (or as documented equivalents of) the origin tokens, plus a parity-risk disclosure when the origin is outside the repository.
 - Configuration discovery covers at least `commitlint.config.{js,cjs,mjs,ts}` and `.commitlintrc{,.json,.yaml,.yml}`, matching `scripts/checks/commitlint-authority.ts`'s candidate list (`TC-COMMITLINT-007` step 4).
 - The base-branch configuration is the lifecycle's established mechanism: `ADOS_BASE_BRANCH` → `pr-instructions.md` `Default base branch` → default `main` (`scripts/deliver-ticket.sh::detect_base_branch`).
@@ -1332,7 +1347,7 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 
 | ID | Question | Blocks | Owner / note |
 |---|---|---|---|
-| OQ-1 | The spec does not pin **which commitlint output format** the gate consumes nor how it distinguishes `DM-1.c` (violations) from `DM-1.h` (execution/config failure). Tests need that boundary to assert reliably. | Test-fixture fidelity (not the gate's behaviour contract) | `@plan-writer` / delivery planning: pin invocation + parse contract (recommended: run the CLI per commit or over the range with a machine-parseable formatter, and treat non-zero-with-no-parsed-problems as `DM-1.h`). Until then, `TC-COMMITLINT-009` asserts the distinction by observable behaviour only. |
+| OQ-1 | **Resolved by delivery planning.** The parsed-output contract is now pinned: one `commitlint --color=false` invocation per commit over `git rev-list --reverse MERGE_BASE..HEAD`, with the message read via `git log -1 --format=%B SHA`; a commit is an offender iff the invocation exits `1` **and** a `[rule-id]` line parses; exit ≥2, or exit `1` with no parseable problem, is `DM-1.h`. The gate does not consume a range-wide report. | Nothing — resolved | Resolution: `chg-GH-268-plan.yaml` DELIVERY PINS "Lint invocation and parse contract". Any residual wording risk in the assertions is tracked as `TR-12`, not as an open question. `TC-COMMITLINT-009` asserts the resulting `DM-1.c`/`DM-1.h` distinction by observable behaviour. |
 | OQ-2 | The spec says "the project's configured delivery base branch (with the established environment override)" without naming the variable or file. (Binary resolution is no longer open: the amended AC-F3-3 and DEC-10 pin repository-local-first with header disclosure.) | `TC-COMMITLINT-010` exact inputs | Reuse `ADOS_BASE_BRANCH` + `pr-instructions.md` + default `main`; if planning pins a different seam, update only the variable names in that TC. |
 | OQ-3 | The exact diagnostic line template (`FAIL SHORT_SHA (FULL_SHA) · rule=RULE_ID line=N · EXCERPT`) appears only as an example in spec §6 Flow 2, not as a normative grammar. | Nothing (assertions target semantics) | Delivery planning may pin a template; the bounds in `NFR-6` and the fields in `DM-2` are the contract. |
 | OQ-4 | Spec OQ-1 (plain merge subjects as a hard failure) remains open and non-blocking. | Nothing | `TC-COMMITLINT-004` pins today's parity behaviour; if OQ-1 is later decided differently, that TC changes with the configuration, not with the gate. |
@@ -1348,6 +1363,7 @@ Spec `OQ-2` (route the parity principle — DEC-1/DEC-4 — to a durable decisio
 | 0.1 | 2026-11-11 | @test-plan-writer | Initial test plan derived from `chg-GH-268-spec.md` v1.0: 40 TCs covering AC-F1-1…AC-NFR8-1, DM-1.a–i, DM-2, DM-3, NFR-1…NFR-10, fixture matrix, read-only/no-network instrumentation, conformance battery, and the dogfood gate run. |
 | 0.2 | 2026-11-11 | @test-plan-writer | Re-traced against `chg-GH-268-spec.md` v1.1 (19 ACs): mapped the four appended criteria onto the existing TCs (`AC-F3-5` → `TC-COMMITLINT-009`, `AC-F3-6` → `TC-COMMITLINT-012`, `AC-NFR4-1` → `TC-COMMITLINT-021` + `TC-COMMITLINT-019`, `AC-NFR6-1` → `TC-COMMITLINT-015`), extended those four TCs' steps/expected results with the assertions the new criteria add (including the `DM-1.h` execution-failure sub-case via a PATH shim, the no-range-check assertion for usage errors, the second runtime budget, and the summary-informativeness assertion), added `FX-100`, and removed the resolved `OQ-4` traceability item (OQ-5…7 renumbered to OQ-4…6). No TC id was added, removed, or renumbered. |
 | 0.3 | 2026-11-11 | @test-plan-writer | DoR iter-1 remediation against `chg-GH-268-spec.md` v1.3. Finding 2: `TC-DOC-001` step 3 now quotes the real backticked `AGENTS.md:111-112` rows with ERE anchors and states the re-verify requirement. Finding 3: `TC-COMMITLINT-008` re-scoped to the amended `AC-F3-3` (local-first precedence, binary+origin header disclosure, decoy never wins, foreign origin disclosed not failed; `DM-1.g` unchanged), `TC-COMMITLINT-007` gained the no-authority/local-binary case, and `TC-DOGFOOD-001` now uses the published invocation with no `PATH` prefix plus a local-origin assertion. Finding 4 / new assertions: `TC-DOC-003` extended with Appendix C rows 9(a–c) and 10. Non-blocking: `TC-PROMPT-003` steps 2–3 restated as negation-exempt with `pnpm check:prompt` as mechanical evidence; `TC-DIST-001` gained the `100755`/`test -x` discovery assertion; the `AC-F3-3` row dropped the `TC-COMMITLINT-009` over-claim; `TC-PROMPT-001` step 5 and `TC-PROMPT-002` step 7 cite the amended ownership split. Also corrected the stale PATH-only assumption (§8.2), resolved the binary half of `OQ-2`, added fixtures `FX-CLEAN-NO-DEPS`/`FX-LOCAL-BIN`/`FX-DECOY-PATH`/`FX-PATH-FOREIGN`/`FX-NO-CONFIG-LOCAL-BIN`, re-scoped the binary-availability table, and set `implementation_plan`/`version` in the front matter. No TC id added, removed, or renumbered. |
+| 0.4 | 2026-11-11 | @test-plan-writer | DoR iter-2 remediation. Blocking finding 1: the `DM-1.h` fixture is split because DEC-10's local-first resolution made the execution-failure shim unreachable in a fixture carrying the helper-installed local binary — `FX-BAD-CONFIG` (fixture-local binary, invalid configuration) and `FX-BAD-CONFIG-NO-LOCAL` (no `node_modules`, self-evidencing `PATH` shim writing `SHIM_MARKER` and printing `SHIM-EXEC-FAILURE`); `TC-COMMITLINT-009` now names the fixture and declared origin per half, asserts local-path absence before the shim run, and proves the shim executed; `TC-COMMITLINT-020` row h covers both halves and gained cause-attribution assertions so `DM-1.g`/`DM-1.h`/`DM-1.e` cannot satisfy one another. Both fixtures added to §6.2 and to the binary-availability table. Nit finding 5: `OQ-1` marked resolved against the plan's pinned per-commit invocation/parse contract, with residual wording risk tracked as new `TR-12`. Also aligned `TC-DOC-003` step 6 with iter-2 finding 2's test-plan suggestion (drop "exactly", reconcile the enumeration against `scripts/install.sh:123-130`, including the pre-existing `scripts/lib/dispatch-authority.sh` omission). No TC id added, removed, or renumbered. |
 
 ## 10. Test Execution Log
 

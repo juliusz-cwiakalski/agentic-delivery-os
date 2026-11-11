@@ -21,6 +21,28 @@
 #     proven by scripts/test-all.sh discovery in Phase 4.
 #   - Finding 7: the plan cites test plan v0.3, which now links back to this file.
 #
+# Plan revision: v1.2 (2026-11-11), DoR iteration 2 remediation against
+# readiness-review/readiness-iter-2.md, test plan v0.4. Phase ids and declared
+# scope are unchanged; only verification lines, one fixture pin, one handoff note
+# and the source citations were amended:
+#   - Finding 4: the three unfalsifiable verification lines now assert
+#     (expected exit-literal set, empty working-tree/stash, empty porcelain), and
+#     the same anti-pattern was swept plan-wide — every listing command
+#     (ls-files mode, .ados-claude status, changed-path confinement, plugin
+#     idempotence, test-all output, install/uninstall registration) is now a
+#     comparison with a deterministic expected value, and every negative grep is
+#     an explicit test for empty output.
+#   - Finding 6: the Phase 3 bare-merge probe uses TC-PROMPT-004 step 4's
+#     character class, so a hyphenated base branch cannot evade it.
+#   - Iter-2 finding 1 mirror: the execution-failure shim pin now states the
+#     shim is reached only through PATH in a fixture with no local
+#     node_modules/.bin, asserted before the run, with FX-BAD-CONFIG split from
+#     FX-BAD-CONFIG-NO-LOCAL and SHIM_MARKER as the load-bearing evidence.
+#   - Iter-2 finding 2 mirror: the row 9(c) handoff now requires reconciling the
+#     Install inventory enumeration against ADOS_DELIVERY_SCRIPTS (including the
+#     pre-existing scripts/lib/dispatch-authority.sh omission) or marking it
+#     illustrative with install.sh named as authoritative.
+#
 # SOURCES (single source of truth, read before delivery):
 #   - Spec: ./chg-GH-268-spec.md (v1.3; F-1..F-8; 19 ACs AC-F1-1..AC-NFR8-1;
 #     DM-1.a..DM-1.i terminal-condition contract, DM-2 diagnostics, DM-3
@@ -30,16 +52,21 @@
 #     AC-F4-1 (remediation-ownership split); NG-1..NG-7; §7.2 out-of-scope;
 #     §10 telemetry; §12 assumptions; §18 rollout/self-application; Appendix C
 #     rows 1-10)
-#   - Test plan: ./chg-GH-268-test-plan.md (v0.3, which now declares
+#   - Test plan: ./chg-GH-268-test-plan.md (v0.4, which declares
 #     `implementation_plan: ./chg-GH-268-plan.yaml`; 40 TCs:
 #     TC-COMMITLINT-001..021, TC-PROMPT-001..006, TC-DOC-001..007,
 #     TC-DIST-001..003, TC-CONFINE-001..002, TC-DOGFOOD-001; §6.2 fixture matrix
 #     with the amended binary-resolution rows FX-CLEAN-NO-DEPS/FX-LOCAL-BIN/
-#     FX-DECOY-PATH/FX-PATH-FOREIGN/FX-NO-CONFIG-LOCAL-BIN; §6.4
-#     read-only/no-network instrumentation; §7 file mapping; §8.3 OQ-1..OQ-6)
-#   - Readiness review: ./readiness-review/readiness-iter-1.md (findings 1, 2, 3,
-#     4 and 6 are closed here; findings 5, 7, 8, 9 and 10 are spec/test-plan
-#     owned and already landed in spec v1.3 / test plan v0.3)
+#     FX-DECOY-PATH/FX-PATH-FOREIGN/FX-NO-CONFIG-LOCAL-BIN and the split DM-1.h
+#     fixtures FX-BAD-CONFIG (fixture-local binary) / FX-BAD-CONFIG-NO-LOCAL
+#     (no local tree, self-evidencing PATH shim); §6.4 read-only/no-network
+#     instrumentation; §7 file mapping; §8.3 OQ-1 resolved against this plan's
+#     pinned invocation/parse contract)
+#   - Readiness reviews: ./readiness-review/readiness-iter-1.md (findings 1, 2, 3,
+#     4 and 6 closed in plan v1.1) and ./readiness-review/readiness-iter-2.md
+#     (findings 4 and 6 and the execution-failure shim mirror closed here;
+#     findings 1, 2, 3 and 5 are spec/test-plan owned and landed in spec v1.3 and
+#     test plan v0.4)
 #   - PM record: ./chg-GH-268-pm-notes.yaml (three binding decisions: warn-only
 #     hook, resume-sync instruction in scope, repository automation not a CLI
 #     command)
@@ -142,8 +169,20 @@
 #     Advisory text only; the gate rewrites nothing (NFR-5).
 #   - Committed fixtures live in scripts/.tests/fixtures/lint-commit-range/ with
 #     the exact file names of test plan §6.2; the invalid-JS fixture ships as
-#     .txt so biome lint/format never parses it (TR-9), and the execution-failure
-#     shim is reached only through PATH.
+#     .txt so biome lint/format never parses it (TR-9).
+#   - DM-1.h has two declared binary origins (test plan v0.4, iter-2 finding 1):
+#     `FX-BAD-CONFIG` carries the fixture-local `node_modules/.bin/commitlint`
+#     (helper symlink) and is the invalid-configuration half, decided locally with
+#     header origin `repository-local`; `FX-BAD-CONFIG-NO-LOCAL` has no
+#     `node_modules` tree at all and is the execution-failure half, where the
+#     self-evidencing `fake-commitlint-exec-failure.sh` shim is reached only
+#     through `PATH` — the absence of a local `node_modules/.bin` is asserted
+#     before the run, the shim writes `SHIM_MARKER` (exactly one line naming its
+#     own invocation path) and prints the distinct `SHIM-EXEC-FAILURE` token, and
+#     the marker is the load-bearing evidence that the shim ran. A single fixture
+#     would let DEC-10's local-first resolution decide both halves, reporting green
+#     while proving nothing; the shim is never installed into any
+#     `node_modules/.bin`.
 #   - Prompt contract (AC-F4-1, TC-PROMPT-001/003): the committer and PM prompts
 #     state the subject rule, the body/footer 100-character rule, the
 #     no-plain-merge-subject rule, both remediation modes, and the ownership split
@@ -292,15 +331,15 @@ phases:
       - "TC-COMMITLINT-001..021 (all 21 cases: attribution, clean and merge-subject parity, merged-upstream isolation, empty range, skip with and without a local binary, binary resolution and disclosure — local-first preference, decoy never executed, foreign origin disclosed not failed, absence loud — invalid config and execution failure, base precedence and remote-tracking preference, undeterminable merge-base, usage/help/version, ordering, determinism, bounds, mode thresholds, per-commit counting, read-only, no network, exit matrix, runtime budget)"
     verification:
       - "bash -n scripts/lint-commit-range.sh || syntax clean; set -Eeuo pipefail plus traps, usage(), --help, --version, and one-job-per-function sectioning per .ai/rules/bash.md"
-      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary; fixture-local node_modules/.bin/commitlint symlinks exercise the local-first path, absence fixtures carry no node_modules tree, and the suite fails loudly with an install hint when the host binary is missing (never a silent skip)"
+      - "bash scripts/.tests/test-lint-commit-range.sh || all 21 TC-COMMITLINT cases pass against the real pinned @commitlint/cli 21.2.4 binary; fixture-local node_modules/.bin/commitlint symlinks exercise the local-first path, absence fixtures carry no node_modules tree, the DM-1.h halves are split (FX-BAD-CONFIG decides invalid configuration with its local binary; FX-BAD-CONFIG-NO-LOCAL proves the execution-failure shim ran via SHIM_MARKER after asserting no local node_modules/.bin), and the suite fails loudly with an install hint when the host binary is missing (never a silent skip)"
       - "./scripts/lint-commit-range.sh --help >/dev/null && ./scripts/lint-commit-range.sh --version | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+' || help and version exit 0 and the version is semver-shaped"
       - "./scripts/lint-commit-range.sh --nonsense; test $? -eq 2 || usage error names the accepted invocation and the offending argument, and GIT_TRACE shows no rev-list/merge-base/rev-parse/for-each-ref call"
-      - "grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | sort -u || the exit literals are exactly {0, 1, 2}"
-      - "grep -nE 'curl|wget|scp|ssh|nc ' scripts/lint-commit-range.sh || no network helper in command position; any hint text sits inside a quoted string"
+      - "test \"$(grep -oE 'exit [[:digit:]]+' scripts/lint-commit-range.sh | awk '{print $2}' | sort -u | tr '\\n' ' ')\" = \"0 1 2 \" || the exit literals are exactly 0, 1 and 2; a fourth or substituted digit fails the comparison"
+      - "test \"$(grep -cE '^[[:space:]]*(curl|wget|scp|ssh|nc)[[:space:]]' scripts/lint-commit-range.sh)\" = \"0\" && test \"$(grep -cE '^[[:space:]]*git[[:space:]]+(fetch|pull|push|clone|ls-remote)' scripts/lint-commit-range.sh)\" = \"0\" || no network helper and no network git subcommand appears in command position; distribution hints live inside quoted strings and therefore cannot match these line-anchored patterns"
       - "./scripts/lint-commit-range.sh --base main-tools || PASS naming the resolved base, merge-base, HEAD, commit count, and a verdict header whose binary field is node_modules/.bin/commitlint with origin repository-local; no PATH prefix is used, so this also proves the published invocation works on this repository (early smoke; formal dogfood evidence is Phase 5)"
-      - "git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh || both entries are mode 100755, matching the existing 100755 gate/suite convention, so scripts/test-all.sh discovery (-perm -u+x) cannot silently skip the suite"
+      - "test \"$(git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh | awk '{print $1}' | sort -u | tr '\\n' ' ')\" = \"100755 \" || both entries are mode 100755, matching the existing gate/suite convention, so scripts/test-all.sh discovery (-perm -u+x) cannot silently skip the suite; a 100644 entry changes the observed set and fails"
       - "test -x scripts/lint-commit-range.sh && test -x scripts/.tests/test-lint-commit-range.sh || both files are executable on disk as well as in the index"
-      - "git status --porcelain && git stash list || unchanged after every outcome: the suite asserts working-tree, index, ref, file-list, and fsck digests across PASS, FAIL, SKIP, and ERROR"
+      - "test -z \"$(git status --porcelain)\" && test -z \"$(git stash list)\" || the working tree and stash are unchanged after every outcome: a dirty tree or a stash entry makes this fail by name, and the suite separately asserts index, ref, file-list, and fsck digests across PASS, FAIL, SKIP, and ERROR"
 
   # ---------------------------------------------------------------------------
   # PHASE 2 — the stated contract and the phase wiring (prompts as product)
@@ -334,15 +373,15 @@ phases:
     verification:
       - "pnpm check:prompt || prompt conformance green: no raw git write, no plan progress, no hand-edited phase state in the two edited prompts (this is the mechanical evidence for TC-PROMPT-003 step 2, which is negation-exempt by design)"
       - "grep -nF 'Never run `git add`, `git commit`, `git reset`' .opencode/agent/committer.md || the load-bearing prohibition survives byte-identical (today .opencode/agent/committer.md:31); it is the expected and only pre-existing match of the raw-write scan and must never be deleted or reworded"
-      - "grep -nE '\\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md | grep -viE '\\bnever\\b|\\bmust not\\b|\\bdo not\\b|\\bdon.t\\b|\\bno\\b' || empty output: every match (including line 31) sits inside a negation sentence, so a negated match is compliant and the change adds no non-negated occurrence"
-      - "grep -niE 'SURGICAL REWORD' .opencode/agent/committer.md && grep -n 'CONDENSE-TO-ONE' .opencode/agent/committer.md || both remediation modes are stated as artifact constraints"
-      - "grep -n 'Merge remote-tracking branch' .opencode/agent/committer.md && grep -n '100' .opencode/agent/committer.md || the plain merge subject is named in a prohibiting sentence and body/footer lines are bounded at 100 characters"
-      - "grep -nE 'type\\(scope\\)|conventional' .opencode/agent/committer.md || the conventional subject carrying the work item reference is stated"
-      - "grep -niE 'never rewrit|does not rewrit' .opencode/agent/committer.md && grep -niE 'selects? the (mode|remediation)|chooses? the (mode|remediation)|owns the (range )?verdict' .opencode/agent/pm.md || the AC-F4-1 ownership split is stated in full: the committer owns its message and never rewrites history (never the gate, never the acting agent), the PM owns the range verdict and selects the mode, the acting agent performs the history action, the gate only reports"
-      - "grep -n 'lint-commit-range' .opencode/agent/pm.md && grep -n 'phase complete' .opencode/agent/pm.md && grep -nE 'unable to verify|ERROR' .opencode/agent/pm.md || the quality_gates step names the gate, couples it to phase completion, and forbids waiving an unresolved verification"
+      - "test -z \"$(grep -nE '\\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md | grep -viE '\\bnever\\b|\\bmust not\\b|\\bdo not\\b|\\bdon.t\\b|\\bno\\b')\" || empty output is required: every match (including line 31) sits inside a negation sentence, so a negated match is compliant; one non-negated occurrence prints and fails the test"
+      - "grep -niE 'SURGICAL REWORD' .opencode/agent/committer.md && grep -n 'CONDENSE-TO-ONE' .opencode/agent/committer.md || both remediation modes are stated as artifact constraints; either grep exiting 1 fails this line"
+      - "grep -n 'Merge remote-tracking branch' .opencode/agent/committer.md && grep -n '100' .opencode/agent/committer.md || the plain merge subject is named in a prohibiting sentence and body/footer lines are bounded at 100 characters; deleting either statement fails this line"
+      - "grep -nE 'type\\(scope\\)|conventional' .opencode/agent/committer.md || the conventional subject carrying the work item reference is stated; a prompt without the header shape fails this line"
+      - "grep -niE 'never rewrit|does not rewrit' .opencode/agent/committer.md && grep -niE 'selects? the (mode|remediation)|chooses? the (mode|remediation)|owns the (range )?verdict' .opencode/agent/pm.md || the AC-F4-1 ownership split is stated in full: the committer owns its message and never rewrites history (never the gate, never the acting agent), the PM owns the range verdict and selects the mode, the acting agent performs the history action, the gate only reports; the PM half exits 1 until the sentence lands"
+      - "grep -n 'lint-commit-range' .opencode/agent/pm.md && grep -n 'phase complete' .opencode/agent/pm.md && grep -nE 'unable to verify|ERROR' .opencode/agent/pm.md || the quality_gates step names the gate, couples it to phase completion, and forbids waiving an unresolved verification; dropping any of the three statements fails this line"
       - "grep -n 'pm-notes' .opencode/agent/pm.md || the verdict (outcome, commit count, offender count, mode, resolved binary and origin) is recorded as a notes entry"
-      - "scripts/build-claude-plugin.sh --verbose || the Claude Code plugin is regenerated, and a second run produces byte-identical output, so .ados-claude/agents/{committer,pm}.md are current and CI's stale-plugin guard passes"
-      - "git status --porcelain .ados-claude || exactly the two generated agent files are modified; no command, skill, or manifest change"
+      - "scripts/build-claude-plugin.sh --verbose && test -z \"$(git status --porcelain .ados-claude)\" || the plugin is regenerated and the committed files are byte-current with the edited sources: a stale plugin makes the build modify the tree and the porcelain check fails by name (this is CI's stale-plugin guard; run it after the phase commit, the same boundary as the mode and diff-name checks)"
+      - "test \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\" HEAD -- .ados-claude | sort | tr '\\n' ' ')\" = \".ados-claude/agents/committer.md .ados-claude/agents/pm.md \" || exactly the two generated agent files changed since the delivery base, in sorted order; an added command, skill, or manifest path changes the observed set and fails"
 
   # ---------------------------------------------------------------------------
   # PHASE 3 — stop manufacturing the forbidden subject
@@ -367,9 +406,9 @@ phases:
     verification:
       - "bash scripts/.tests/test-deliver-ticket.sh || suite green, including the new merge-line assertion, the zero-bare-merge assertion, and the counterexample probe run inside a cp -a copy"
       - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh && bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh || result classification suites unchanged and green"
-      - "git diff --stat -- scripts/deliver-ticket.sh || the change is confined to build_delivery_prompt's Resume Sync block; no orchestration, single-flight, liveness, or classification hunk"
-      - "git status --porcelain || empty: the strength probe mutated only a throwaway copy, never the delivery tree"
-      - "grep -nE 'git merge[[:space:]]+origin/[^[:space:]-]+[[:space:]]*$' scripts/deliver-ticket.sh || no bare merge instruction remains (grep exits 1 when nothing matches)"
+      - "test \"$(git diff -U0 \"$(git merge-base main-tools HEAD)\" HEAD -- scripts/deliver-ticket.sh | grep -E '^[+-][^+-]' | grep -vcE 'git merge')\" = \"0\" || the change is confined to the merge instruction inside build_delivery_prompt: every added and removed content line since the delivery base mentions git merge, so an orchestration, single-flight, liveness, or classification hunk fails the comparison"
+      - "test -z \"$(git status --porcelain)\" || empty output is required: the strength probe mutated only a copy under the suite's temp directory, so any path here means the delivery tree was touched"
+      - "test \"$(grep -cE 'git merge[[:space:]]+origin/[^[:space:]]+[[:space:]]*$' scripts/deliver-ticket.sh)\" = \"0\" || no bare merge instruction remains, using the same character class as TC-PROMPT-004 step 4 so a hyphenated base branch (git merge origin/feat-x) cannot evade the probe; the suite asserts the same property over the generated prompt"
 
   # ---------------------------------------------------------------------------
   # PHASE 4 — adopters receive the gate
@@ -394,15 +433,15 @@ phases:
       - "TC-DIST-002 (removed by the unconditional delivery list; sibling user files survive; empty-dir cleanup intact; --dry-run reports without removing)"
       - "TC-DIST-003 (both suites green and the marker-derived install-set guard still matches)"
     docHandoffs:
-      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 9 (a) overview sentence listing delivered scripts, (b) Core Components delivered-file table, (c) the Install inventory blockquote naming the ADOS_DELIVERY_SCRIPTS set: registering the gate here makes all three factually incomplete. Reconciled by @doc-syncer in lifecycle phase 7; asserted by TC-DOC-003 steps 4-6. Not a delivery-phase edit."
+      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 9 (a) overview sentence listing delivered scripts, (b) Core Components delivered-file table, (c) the Install inventory blockquote naming the ADOS_DELIVERY_SCRIPTS set: registering the gate here makes all three factually incomplete. Row 9(c) requires reconciling the enumeration against scripts/install.sh's array — either naming every entry (which also closes the pre-existing omission of scripts/lib/dispatch-authority.sh) or marking the list illustrative with scripts/install.sh named as authoritative; adding only the gate leaves the claim still under-inclusive (iter-2 finding 2). Reconciled by @doc-syncer in lifecycle phase 7; asserted by TC-DOC-003 steps 4-6. Not a delivery-phase edit."
       - "doc/guides/autonomous-batch-delivery.md — Appendix C row 10, the install.sh --local comment block enumerating the delivery scripts copied into ./scripts/: reconcile with the installer set (add the gate, or mark the list illustrative and name the installer as authoritative) at system-spec update; asserted by TC-DOC-003 step 7."
     verification:
-      - "grep -n 'scripts/lint-commit-range.sh' scripts/install.sh scripts/uninstall.sh || registered in ADOS_DELIVERY_SCRIPTS and in the unconditional local removal list"
-      - "git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh scripts/deliver-ticket.sh scripts/.tests/test-deliver-ticket.sh || all four agree on mode 100755, so the new pair follows the established convention rather than inventing one and the suite is discoverable"
+      - "test -n \"$(grep -n 'scripts/lint-commit-range.sh' scripts/install.sh)\" && test -n \"$(grep -n 'scripts/lint-commit-range.sh' scripts/uninstall.sh)\" || the gate is registered in ADOS_DELIVERY_SCRIPTS and in the unconditional local removal list; each file is checked separately, so registering one side only fails the line"
+      - "test \"$(git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh scripts/deliver-ticket.sh scripts/.tests/test-deliver-ticket.sh | awk '{print $1}' | sort -u | tr '\\n' ' ')\" = \"100755 \" || all four agree on mode 100755, so the new pair follows the established convention and the suite is discoverable; any 100644 entry changes the observed set and fails"
       - "bash scripts/.tests/test-install.sh || the sandbox install places the gate, marks it executable, keeps it byte-identical, and updates a modified installed copy on re-install"
       - "bash scripts/.tests/test-uninstall.sh || the gate is removed, an unrelated scripts/ file survives, and --dry-run reports it without removal"
       - "bash scripts/.tests/test-doc-distribution.sh || the derived install set still matches the sandbox install (no marker or manifest drift)"
-      - "bash scripts/test-all.sh || the aggregator is green and its output lists test-lint-commit-range.sh, proving -perm -u+x discovery actually ran the change's primary suite instead of silently omitting it"
+      - "out=\"$(bash scripts/test-all.sh 2>&1)\" && printf '%s' \"${out}\" | grep -q 'test-lint-commit-range.sh' || the aggregator is green and its own output names the suite, proving -perm -u+x discovery actually ran the change's primary suite instead of silently omitting it; a green run that never mentions the suite fails the grep"
 
   # ---------------------------------------------------------------------------
   # PHASE 5 — documentation truth, self-application, conformance, release
@@ -441,23 +480,23 @@ phases:
       - "TC-DOC-002, TC-DOC-003, TC-DOC-005 (handoffs: owed by the system_spec_update phase @doc-syncer per Appendix C rows 1-3, row 9's three delivered-set enumerations, and row 10's batch-delivery install block; not a delivery phase and not claimed here)"
     docHandoffs:
       - "doc/spec/features/feature-quality-gates-and-pr.md — Appendix C row 1: range-lint capability and the stated committer contract, including DEC-4's limit (the gate does not reject plain merge subjects)."
-      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 2 (resume-sync instruction shape and its assertion) plus row 9 (overview sentence, Core Components table, Install inventory blockquote)."
+      - "doc/spec/features/feature-autonomous-delivery.md — Appendix C row 2 (resume-sync instruction shape and its assertion) plus row 9 (overview sentence, Core Components table, Install inventory blockquote); row 9(c) is reconciled against ADOS_DELIVERY_SCRIPTS per Phase 4's handoff (enumerate every entry, closing the pre-existing scripts/lib/dispatch-authority.sh omission, or mark the list illustrative with install.sh authoritative)."
       - "doc/spec/features/feature-monorepo-scaffold-toolchain.md — Appendix C row 3: keep 'CI commitlint is the authority', name the local gate as its mirror, and state the DEC-10 binary precedence so the page matches the shipped gate."
       - "doc/guides/autonomous-batch-delivery.md — Appendix C row 10: reconcile the install comment block with the installer's delivery set."
       - "Also registered here so the reconciliation does not lose them: AC-F4-1's ownership split and AC-F3-3's origin disclosure are cited by the quality-gates/PR page and the scaffold toolchain page; no delivery phase edits doc/spec/**."
     verification:
       - "./scripts/lint-commit-range.sh --base main-tools || PASS (exit 0) naming the resolved base, merge-base, HEAD, and commit count with zero offenders, exactly as published with no PATH prefix; the verdict header names node_modules/.bin/commitlint with origin repository-local (a PATH origin must be recorded as a parity risk and investigated before completion, never waived). The verdict line (outcome, commit count, offender count, mode, resolved binary and origin) is recorded verbatim in a pm-notes notes entry before quality_gates completes"
-      - "grep -n 'lint-commit-range' AGENTS.md || the gate is named in the delivery-process and delivery-infrastructure context as a supplementary pre-PR gate"
-      - "grep -cE '^\\| `/check` \\| Run quality gates \\(no fixes\\) \\|$' AGENTS.md && grep -cE '^\\| `/check-fix` \\| Run quality gates and fix failures \\|$' AGENTS.md || each returns 1 (AGENTS.md lines 111-112 today): both backticked rows are byte-unchanged. Re-verify with sed -n '105,115p' AGENTS.md before pinning; if a row legitimately moved, update the literal, never delete the assertion and never strip the backticks"
-      - "grep -n 'scripts/quality-gates.sh' AGENTS.md || no match (grep exits 1), and no new run-all-quality-gates instruction is introduced"
-      - "grep -n 'lint-commit-range' doc/guides/change-lifecycle.md && grep -n 'ados_distribution: redistributable' doc/guides/change-lifecycle.md || section 9 actions and exit criteria name the gate and the guide keeps its marker"
+      - "grep -n 'lint-commit-range' AGENTS.md || the gate is named in the delivery-process and delivery-infrastructure context as a supplementary pre-PR gate; a file with no mention fails this line"
+      - "test \"$(grep -cE '^\\| `/check` \\| Run quality gates \\(no fixes\\) \\|$' AGENTS.md)\" = \"1\" && test \"$(grep -cE '^\\| `/check-fix` \\| Run quality gates and fix failures \\|$' AGENTS.md)\" = \"1\" || each backticked row occurs exactly once (AGENTS.md lines 111-112 today); a count of 0 fails and a duplicated row fails too. Re-verify with sed -n '105,115p' AGENTS.md before pinning; if a row legitimately moved, update the literal, never delete the assertion and never strip the backticks"
+      - "test -z \"$(grep -n 'scripts/quality-gates.sh' AGENTS.md)\" || no match is required: any mention means a run-all-quality-gates instruction was introduced, contrary to NG-5 and DEC-8"
+      - "grep -n 'lint-commit-range' doc/guides/change-lifecycle.md && grep -n 'ados_distribution: redistributable' doc/guides/change-lifecycle.md || section 9 actions and exit criteria name the gate and the guide keeps its marker; losing either statement fails this line"
       - "bun test tests/checks/doc-conformance.test.ts || current-truth phrase table green"
       - "pnpm check:prompt && pnpm check:help || conformance green and the help inventory gains no entry (the gate is not a prompt-required CLI command)"
       - "bash scripts/.tests/test-doc-distribution.sh || doc-distribution guard green with no ::error:: lines"
       - "bun run scripts/checks/commitlint-authority.ts || exactly one root config extending @commitlint/config-conventional, no package override, and the CI ts-commitlint job unchanged"
       - "bun run scripts/checks/exports-parity.ts && bun test tests/checks || no product-surface drift and no invariant regression"
-      - "test ! -e scripts/quality-gates.sh && ! grep -n 'lint-commit-range' package.json || the aggregate gate is untouched (NG-5, DEC-8)"
+      - "test ! -e scripts/quality-gates.sh && test -z \"$(grep -n 'lint-commit-range' package.json)\" || the aggregate gate is untouched (NG-5, DEC-8): the script must not exist and the check chain must not reference the range lint"
       - "bash scripts/.tests/test-lint-commit-range.sh && bash scripts/.tests/test-deliver-ticket.sh && bash scripts/.tests/test-install.sh && bash scripts/.tests/test-uninstall.sh || every touched surface's suite is green at the final phase HEAD"
-      - "git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD || every changed path is inside a declared phase scope, plus .ados-claude/agents/{committer,pm}.md (mandatory generated plugin), doc/spec/features/** and doc/guides/autonomous-batch-delivery.md (system_spec_update handoff), and this change folder; no .github/workflows/**, .husky/**, commitlint.config.js, packages/**, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh"
+      - "test -z \"$(git diff --name-only \"$(git merge-base main-tools HEAD)\"...HEAD | grep -vE '^(scripts/lint-commit-range\\.sh|scripts/\\.tests/test-lint-commit-range\\.sh|scripts/\\.tests/fixtures/lint-commit-range/|\\.opencode/agent/(committer|pm)\\.md|\\.ados-claude/agents/(committer|pm)\\.md|scripts/deliver-ticket\\.sh|scripts/\\.tests/test-deliver-ticket\\.sh|scripts/install\\.sh|scripts/uninstall\\.sh|scripts/\\.tests/test-(install|uninstall)\\.sh|AGENTS\\.md|doc/guides/change-lifecycle\\.md|doc/guides/autonomous-batch-delivery\\.md|doc/spec/features/|doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/)')\" || every changed path matches the allowlist regex (declared phase scopes plus .ados-claude/agents/{committer,pm}.md, doc/spec/features/**, doc/guides/autonomous-batch-delivery.md, and this change folder); any path outside it prints and fails, so a CI workflow, hook, commitlint config, package, package.json, pnpm-workspace.yaml, or scripts/quality-gates.sh change cannot pass"
       - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check || the aggregate local gate is green end to end"
       - "git diff --check || zero whitespace errors and zero conflict markers"
