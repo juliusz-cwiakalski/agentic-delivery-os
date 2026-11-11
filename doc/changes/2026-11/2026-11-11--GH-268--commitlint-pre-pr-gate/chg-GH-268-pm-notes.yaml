@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-11T10:59:10.002Z }
   review_fix: { started: null, completed: 2026-11-11T12:47:40.000Z }
   quality_gates: { started: null, completed: 2026-11-11T13:26:58.059Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-11T13:27:43.068Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Keep `.husky/commit-msg` warn-only (ticket item 3 is explicitly
