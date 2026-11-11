@@ -7,6 +7,9 @@
 # through TC-COMMITLINT-021), and the worker pool's fail-closed, budget and
 # serial/parallel-determinism properties. Fixtures are real temporary git
 # repositories; the lint tool is the repository's pinned commitlint binary.
+# When that binary is absent the host-dependent cases degrade to a bounded,
+# explicit SKIP (the same no-authority posture the gate documents); the static,
+# usage, and no-binary fixtures still execute and assert.
 set -Eeuo pipefail
 set -o errtrace
 shopt -s inherit_errexit 2>/dev/null || true
@@ -19,6 +22,8 @@ readonly TEST_TAG="(test-lint-commit-range)"
 _test_count=0
 _test_passed=0
 _test_failed=0
+_test_skipped=0
+_test_host_required=0
 _test_tmpdir=""
 # Per-test failure flag. Asserts set this so a failing assertion is never masked
 # by a later success: running the test as an `if` condition disables errexit for
@@ -28,9 +33,10 @@ _current_test_failed=0
 if [[ -t 1 ]]; then
   readonly _RED=$'\033[0;31m'
   readonly _GREEN=$'\033[0;32m'
+  readonly _YELLOW=$'\033[0;33m'
   readonly _RESET=$'\033[0m'
 else
-  readonly _RED="" _GREEN="" _RESET=""
+  readonly _RED="" _GREEN="" _YELLOW="" _RESET=""
 fi
 
 _test_setup() {
@@ -47,7 +53,23 @@ trap '_test_teardown' EXIT
 run_test() {
   local -r name="$1"
   local -r func="$2"
+  local -r needs_host="${3:-}"
   _test_count=$((_test_count + 1))
+  if [[ "${needs_host}" == "host" ]]; then
+    _test_host_required=$((_test_host_required + 1))
+  fi
+
+  # Adopter safety: the gate reports SKIP when there is no authority to mirror.
+  # Without the repository-local commitlint this suite has the same no-authority
+  # posture, so a bounded SKIP is the honest verdict; the TS commitlint CI job
+  # remains the enforcement authority. Only cases registered with `host` may
+  # take this path, so no assertion that could run is silently dropped.
+  if [[ "${needs_host}" == "host" && "${HOST_COMMITLINT_AVAILABLE}" != "true" ]]; then
+    _test_skipped=$((_test_skipped + 1))
+    printf '%s[SKIP]%s %s\n' "${_YELLOW}" "${_RESET}" "${name}"
+    printf '  %s\n' "${HOST_BINARY_SKIP_REASON}"
+    return 0
+  fi
 
   _test_setup
   _current_test_failed=0
@@ -141,10 +163,17 @@ assert_exit_code() {
 
 print_summary() {
   printf '\n%s Summary: %d/%d passed' "${TEST_TAG}" "${_test_passed}" "${_test_count}"
+  if [[ "${_test_skipped}" -gt 0 ]]; then
+    printf ', %d skipped (%s)' "${_test_skipped}" "${HOST_BINARY_SKIP_SUMMARY}"
+  fi
   if [[ "${_test_failed}" -gt 0 ]]; then
     printf ' (%s%d failed%s)\n' "${_RED}" "${_test_failed}" "${_RESET}"
     _current_test_failed=1
     return 1
+  fi
+  if [[ "${_test_skipped}" -gt 0 ]]; then
+    printf '\n'
+    return 0
   fi
   printf ' %s(all passed)%s\n' "${_GREEN}" "${_RESET}"
 }
@@ -157,10 +186,22 @@ GATE="${REPO_ROOT}/scripts/lint-commit-range.sh"
 FIXTURES="${REPO_ROOT}/scripts/.tests/fixtures/lint-commit-range"
 HOST_COMMITLINT="${REPO_ROOT}/node_modules/.bin/commitlint"
 
-# The suite fails loudly when the pinned binary is missing; there is no silent
-# skip (TR-3: fail closed, like the gate's own DM-1.g posture).
+# Resolve the host lint binary exactly once, by an executable check on the
+# repository-local shim. PATH is deliberately never consulted: a PATH binary
+# would silently change what this suite proves.
+HOST_COMMITLINT_AVAILABLE=false
+if [[ -x "${HOST_COMMITLINT}" ]]; then
+  HOST_COMMITLINT_AVAILABLE=true
+fi
+readonly HOST_BINARY_SKIP_REASON="repository-local commitlint is missing; run pnpm install"
+readonly HOST_BINARY_SKIP_SUMMARY="${HOST_BINARY_SKIP_REASON}; the TS commitlint CI job remains the enforcement authority"
+
+# Defensive invariant for the host-dependent helpers. A case that installs or
+# drives the pinned binary must be registered with `host`; reaching here without
+# it means the registration is wrong, so fail loudly instead of skipping a case
+# that should have run.
 _require_host_binary() {
-  if [[ ! -x "${HOST_COMMITLINT}" ]]; then
+  if [[ "${HOST_COMMITLINT_AVAILABLE}" != "true" ]]; then
     printf '%s[FAIL] %s the repository-local commitlint is missing; run `pnpm install`\n' \
       "${_RED}" "${TEST_TAG}" >&2
     return 1
@@ -196,7 +237,6 @@ _seed_main() {
 # Standard configured fixture: valid config plus a seeded main.
 _configured_repo() {
   local -r name="$1"
-  _require_host_binary
   local repo
   repo="$(_new_repo "${name}")"
   _add_config "${repo}"
@@ -1102,7 +1142,6 @@ test_unknown_argument_usage_error() {
   repo="$(_configured_repo fx-usage)"
   _branch_from_main "${repo}" "feat/GH-268/usage"
   _commit_msg "${repo}" "${FIXTURES}/msg-valid.txt"
-  _install_local_commitlint "${repo}"
 
   _run_gate "${repo}" --nonsense
   assert_exit_code 2 "${GATE_EXIT}"
@@ -1501,11 +1540,17 @@ test_read_only_all_outcomes() {
   done
 }
 
+# Static no-network guard: no network helper in command position. It needs no
+# host binary, so the suite preflight asserts it even when every lint case SKIPs.
+_network_tool_invocations() {
+  grep -nE '(^|[[:space:];|&(])(curl|wget|nc|ssh|scp|git[[:space:]]+(fetch|pull|push|clone|ls-remote|remote[[:space:]]+update))([[:space:]]|$)' "${GATE}" || true
+}
+
 # TC-COMMITLINT-019: no network access on any path
 test_no_network_access() {
   # Static guard: no network helper in command position.
   local static
-  static="$(grep -nE '(^|[[:space:];|&(])(curl|wget|nc|ssh|scp|git[[:space:]]+(fetch|pull|push|clone|ls-remote|remote[[:space:]]+update))([[:space:]]|$)' "${GATE}" || true)"
+  static="$(_network_tool_invocations)"
   assert_eq "" "${static}" "The gate must not invoke a network tool"
 
   local pass fail error_repo
@@ -1806,13 +1851,15 @@ test_killed_worker_is_error() {
   gate_pid=$!
 
   # The workers are the gate's direct children and keep the gate's argv, so the
-  # victim is the first child whose command line names this script.
+  # victim is the first child whose command line names this script. `ps` truncates
+  # args to COLUMNS even when piped, and the absolute gate path is long enough to
+  # fall past a narrow width, so ask for the unlimited form explicitly.
   local victim="" attempt pid cmd
   for ((attempt = 0; attempt < 200; attempt++)); do
     [[ -z "${victim}" ]] || break
     while IFS= read -r pid; do
       [[ -n "${pid}" ]] || continue
-      cmd="$(ps -o args= -p "${pid}" 2>/dev/null || true)"
+      cmd="$(ps -ww -o args= -p "${pid}" 2>/dev/null || true)"
       case "${cmd}" in
         *lint-commit-range.sh*)
           victim="${pid}"
@@ -1911,56 +1958,76 @@ test_serial_and_parallel_output_identical() {
 main() {
   printf '%s Running commit-range gate tests...\n' "${TEST_TAG}"
 
-  run_test "TC-COMMITLINT-001 malformed commit fails with attribution" test_bad_body_commit_fails
-  run_test "TC-COMMITLINT-002 clean conventional range passes" test_clean_range_passes
-  run_test "TC-COMMITLINT-003 conventional-subject merge commit passes" test_conventional_merge_commit_passes
-  run_test "TC-COMMITLINT-004 plain merge subject passes (parity)" test_plain_merge_subject_passes
-  run_test "TC-COMMITLINT-005 upstream history outside the range ignored" test_upstream_history_outside_range_ignored
-  run_test "TC-COMMITLINT-006 empty range passes with zero commits" test_empty_range_passes_zero_commits
+  # The static no-network assertion never needs the host binary, so assert it up
+  # front: a missing commitlint must not leave the no-network property unchecked.
+  local static_network
+  static_network="$(_network_tool_invocations)"
+  if [[ -n "${static_network}" ]]; then
+    printf '%s[FAIL]%s suite preflight: the gate must not invoke a network tool\n' \
+      "${_RED}" "${_RESET}" >&2
+    printf '%s\n' "${static_network}" >&2
+    return 1
+  fi
+
+  run_test "TC-COMMITLINT-001 malformed commit fails with attribution" test_bad_body_commit_fails host
+  run_test "TC-COMMITLINT-002 clean conventional range passes" test_clean_range_passes host
+  run_test "TC-COMMITLINT-003 conventional-subject merge commit passes" test_conventional_merge_commit_passes host
+  run_test "TC-COMMITLINT-004 plain merge subject passes (parity)" test_plain_merge_subject_passes host
+  run_test "TC-COMMITLINT-005 upstream history outside the range ignored" test_upstream_history_outside_range_ignored host
+  run_test "TC-COMMITLINT-006 empty range passes with zero commits" test_empty_range_passes_zero_commits host
   run_test "TC-COMMITLINT-007 no configuration skips explicitly" test_skip_without_config
-  run_test "TC-COMMITLINT-007 skip is binary-insensitive" test_skip_is_binary_insensitive
+  run_test "TC-COMMITLINT-007 skip is binary-insensitive" test_skip_is_binary_insensitive host
   run_test "TC-COMMITLINT-007 skip is base-insensitive" test_skip_is_base_insensitive
-  run_test "TC-COMMITLINT-007 alternate config name is configured" test_alt_config_name_is_configured
-  run_test "TC-COMMITLINT-007 .commitlintrc.cjs is configured (F-3)" test_commitlintrc_cjs_is_configured
-  run_test "TC-COMMITLINT-007 package.json config is configured (F-3)" test_package_json_config_is_configured
+  run_test "TC-COMMITLINT-007 alternate config name is configured" test_alt_config_name_is_configured host
+  run_test "TC-COMMITLINT-007 .commitlintrc.cjs is configured (F-3)" test_commitlintrc_cjs_is_configured host
+  run_test "TC-COMMITLINT-007 package.json config is configured (F-3)" test_package_json_config_is_configured host
   run_test "TC-COMMITLINT-008 missing binary is a loud error" test_error_when_binary_unavailable
-  run_test "TC-COMMITLINT-008 local binary preferred over PATH" test_local_binary_preferred_over_path
-  run_test "TC-COMMITLINT-008 decoy on PATH never executes" test_decoy_path_binary_not_executed
-  run_test "TC-COMMITLINT-008 foreign origin disclosed, not failed" test_foreign_binary_disclosed
-  run_test "TC-COMMITLINT-008 binary field in every outcome" test_header_binary_field_every_outcome
-  run_test "TC-COMMITLINT-009 invalid configuration is ERROR" test_invalid_config_is_error
+  run_test "TC-COMMITLINT-008 local binary preferred over PATH" test_local_binary_preferred_over_path host
+  run_test "TC-COMMITLINT-008 decoy on PATH never executes" test_decoy_path_binary_not_executed host
+  run_test "TC-COMMITLINT-008 foreign origin disclosed, not failed" test_foreign_binary_disclosed host
+  run_test "TC-COMMITLINT-008 binary field in every outcome" test_header_binary_field_every_outcome host
+  run_test "TC-COMMITLINT-009 invalid configuration is ERROR" test_invalid_config_is_error host
   run_test "TC-COMMITLINT-009 execution failure is ERROR (shim proven)" test_execution_failure_is_error
-  run_test "TC-COMMITLINT-009 status record reports the real exit (F-1)" test_status_record_parse_reports_real_exit
-  run_test "TC-COMMITLINT-010 explicit base override precedence" test_base_override_precedence
-  run_test "TC-COMMITLINT-010 environment base override" test_environment_base_precedence
-  run_test "TC-COMMITLINT-010 configured base resolves" test_configured_base_resolves
-  run_test "TC-COMMITLINT-010 remote-tracking ref preferred" test_remote_tracking_preferred
-  run_test "TC-COMMITLINT-010 unresolvable base override errors" test_unresolvable_base_override_errors
-  run_test "TC-COMMITLINT-010 unresolvable configured base errors" test_unresolvable_configured_base_errors
-  run_test "TC-COMMITLINT-011 unrelated history errors" test_unrelated_history_errors
-  run_test "TC-COMMITLINT-011 shallow history errors" test_shallow_history_errors
-  run_test "TC-COMMITLINT-011 rev-list failure is an error (F-8)" test_rev_list_failure_is_error
+  run_test "TC-COMMITLINT-009 status record reports the real exit (F-1)" test_status_record_parse_reports_real_exit host
+  run_test "TC-COMMITLINT-010 explicit base override precedence" test_base_override_precedence host
+  run_test "TC-COMMITLINT-010 environment base override" test_environment_base_precedence host
+  run_test "TC-COMMITLINT-010 configured base resolves" test_configured_base_resolves host
+  run_test "TC-COMMITLINT-010 remote-tracking ref preferred" test_remote_tracking_preferred host
+  run_test "TC-COMMITLINT-010 unresolvable base override errors" test_unresolvable_base_override_errors host
+  run_test "TC-COMMITLINT-010 unresolvable configured base errors" test_unresolvable_configured_base_errors host
+  run_test "TC-COMMITLINT-011 unrelated history errors" test_unrelated_history_errors host
+  run_test "TC-COMMITLINT-011 shallow history errors" test_shallow_history_errors host
+  run_test "TC-COMMITLINT-011 rev-list failure is an error (F-8)" test_rev_list_failure_is_error host
   run_test "TC-COMMITLINT-012 usage errors and exit contract" test_unknown_argument_usage_error
   run_test "TC-COMMITLINT-012 help, version, and outcome codes" test_help_and_version
-  run_test "TC-COMMITLINT-013 diagnostics per commit and ordering" test_diagnostics_per_commit_and_ordering
-  run_test "TC-COMMITLINT-013 echo never yields a rule id (F-1)" test_rule_ids_ignore_echoed_input
-  run_test "TC-COMMITLINT-013 subject excerpt sanitized and bounded (F-4, F-5)" test_subject_excerpt_is_sanitized_and_bounded
-  run_test "TC-COMMITLINT-014 repeated runs are byte-identical" test_determinism_repeated_runs
-  run_test "TC-COMMITLINT-015 diagnostic output is bounded" test_output_is_bounded
-  run_test "TC-COMMITLINT-015 budget names every offender (F-2)" test_budget_names_every_offender
-  run_test "TC-COMMITLINT-016 one offender selects surgical reword" test_mode_surgical_one
-  run_test "TC-COMMITLINT-016 two offenders select surgical reword" test_mode_surgical_two
-  run_test "TC-COMMITLINT-016 three offenders select condense-to-one" test_mode_condense_three
-  run_test "TC-COMMITLINT-017 offenders counted per commit" test_offender_count_per_commit
-  run_test "TC-COMMITLINT-018 read-only across every outcome" test_read_only_all_outcomes
-  run_test "TC-COMMITLINT-019 no network access" test_no_network_access
-  run_test "TC-COMMITLINT-020 exit-code matrix is exactly 0/1/2" test_exit_code_matrix
-  run_test "TC-COMMITLINT-021 runtime budget for 20 commits" test_runtime_budget_20_commits
-  run_test "TC-COMMITLINT-021 runtime budget for 100 commits" test_runtime_budget_100_commits
-  run_test "worker pool: missing record is ERROR (F-2)" test_missing_worker_record_is_error
-  run_test "worker pool: killed worker is ERROR (F-2)" test_killed_worker_is_error
-  run_test "worker pool: ADOS_LINT_JOBS validation (F-2)" test_lint_jobs_validation
-  run_test "worker pool: serial and parallel output identical (F-2)" test_serial_and_parallel_output_identical
+  run_test "TC-COMMITLINT-013 diagnostics per commit and ordering" test_diagnostics_per_commit_and_ordering host
+  run_test "TC-COMMITLINT-013 echo never yields a rule id (F-1)" test_rule_ids_ignore_echoed_input host
+  run_test "TC-COMMITLINT-013 subject excerpt sanitized and bounded (F-4, F-5)" test_subject_excerpt_is_sanitized_and_bounded host
+  run_test "TC-COMMITLINT-014 repeated runs are byte-identical" test_determinism_repeated_runs host
+  run_test "TC-COMMITLINT-015 diagnostic output is bounded" test_output_is_bounded host
+  run_test "TC-COMMITLINT-015 budget names every offender (F-2)" test_budget_names_every_offender host
+  run_test "TC-COMMITLINT-016 one offender selects surgical reword" test_mode_surgical_one host
+  run_test "TC-COMMITLINT-016 two offenders select surgical reword" test_mode_surgical_two host
+  run_test "TC-COMMITLINT-016 three offenders select condense-to-one" test_mode_condense_three host
+  run_test "TC-COMMITLINT-017 offenders counted per commit" test_offender_count_per_commit host
+  run_test "TC-COMMITLINT-018 read-only across every outcome" test_read_only_all_outcomes host
+  run_test "TC-COMMITLINT-019 no network access" test_no_network_access host
+  run_test "TC-COMMITLINT-020 exit-code matrix is exactly 0/1/2" test_exit_code_matrix host
+  run_test "TC-COMMITLINT-021 runtime budget for 20 commits" test_runtime_budget_20_commits host
+  run_test "TC-COMMITLINT-021 runtime budget for 100 commits" test_runtime_budget_100_commits host
+  run_test "worker pool: missing record is ERROR (F-2)" test_missing_worker_record_is_error host
+  run_test "worker pool: killed worker is ERROR (F-2)" test_killed_worker_is_error host
+  run_test "worker pool: ADOS_LINT_JOBS validation (F-2)" test_lint_jobs_validation host
+  run_test "worker pool: serial and parallel output identical (F-2)" test_serial_and_parallel_output_identical host
+
+  # Keep the skip bounded: the count must equal exactly the cases that declared
+  # a host-binary dependency, so a future edit cannot quietly skip assertions
+  # that could have run.
+  if [[ "${HOST_COMMITLINT_AVAILABLE}" != "true" && "${_test_skipped}" -ne "${_test_host_required}" ]]; then
+    printf '%s[FAIL]%s suite invariant: %d skipped but %d case(s) declared a host-binary dependency\n' \
+      "${_RED}" "${_RESET}" "${_test_skipped}" "${_test_host_required}" >&2
+    return 1
+  fi
 
   print_summary
 }

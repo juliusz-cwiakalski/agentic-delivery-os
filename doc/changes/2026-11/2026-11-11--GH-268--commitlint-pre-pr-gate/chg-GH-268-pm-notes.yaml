@@ -390,3 +390,27 @@ notes:
       the CEO/human."
     type: info
     date: "2026-11-11"
+  - text: "CI fix + rebase, after the first PR run failed 'Bash test suites'.
+      Cause: that job does not provision node_modules, so the suite's host
+      preflight turned a missing dev dependency into 13 FAILs. The suite now
+      resolves the repository-local commitlint once (PATH deliberately not
+      consulted) and, when absent, reports 'N/50 passed, M skipped
+      (repository-local commitlint is missing; run pnpm install; the TS
+      commitlint CI job remains the enforcement authority)' with exit 0; when
+      present every case runs unchanged. A suite invariant fails the run if the
+      skipped count differs from the declared host-binary-dependent count, so
+      assertions cannot be quietly skipped. Isolated proof (clean copy, env -i
+      PATH, no node_modules): 6 passed / 44 skipped / 0 failed, exit 0; in-repo:
+      50/50, 0 skipped. Case-insensitive grep for node_modules in the skip log
+      returns 0. The long-path flake in the killed-worker case was also fixed by
+      `ps -ww`. Rebased onto origin/main-tools 723454e4 (one related_changes
+      conflict, resolved to the union incl. GH-288). Gate outcomes at the rebased
+      head: bash battery 18/18 suites green (0 FAIL); boundaries,
+      prompt-conformance, help-guide-coverage and exports-parity all exit 0;
+      range gate PASS over 32 commits; aggregate 7205 pass / 4 skip / 1 fail,
+      the single fail being cross-test interference (a concurrent test packing
+      an npm tarball into packages/core tripped forbidden-literals'
+      live-status snapshot; 27/27 in isolation), plus the known 5 s bun-timeout
+      flake for spawn-heavy git fixtures at this host's load."
+    type: info
+    date: "2026-11-11"
