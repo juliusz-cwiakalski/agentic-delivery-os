@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -245,10 +245,16 @@ appends `| owner-hold` or `| owner-hold: <reason>` to the existing providers lin
 inside the delivered clamp, read from `providers.evidence.ownerHold`. The nine
 sections, the five states, the ten evidence sources, the twenty-reason set, and
 the schema version are unchanged; no new section, state, source, reason, or
-finding code is added. The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
-marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
-override or store relocation. The CLI and the MCP status runtime compose the same
-reader, so the machine payload is identical.
+finding code is added. The hold is resolved from `<PREFIX>_OWNER_HOLD` and the
+`owner-hold` marker in the production store directory, which is the resolved
+state-directory scope: an absolute `<PREFIX>_STATE_DIR` wins for the store and the
+marker, and otherwise `<home>/<stateDirectoryName>` applies. There is no
+marker-path override, and existing state is never migrated. The CLI composition
+and the MCP status runtime compose the same reader over their own store
+directory, so their machine payloads are identical when no override is set or the
+override equals the home-based default; the MCP runtime resolves the home-based
+directory only, so an absolute override relocates the CLI store and marker
+without relocating the MCP ones.
 
 ### Parked work
 

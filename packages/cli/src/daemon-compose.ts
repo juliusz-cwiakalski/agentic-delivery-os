@@ -215,22 +215,24 @@ const isAcquisition = (record: DaemonInstanceRecord): boolean =>
   record.operation === "acquired" || record.operation === "taken-over";
 
 /**
- * Is the latest instance record a live acquisition? The record's own operation
+ * The live holder evidence for the latest instance record: its own operation
  * must be an acquisition, its heartbeat must belong to it, and the age must be
  * strictly below the composed lock-staleness bound — the same rule `status`,
  * `queue`, and `lanes` apply. An absent, unreadable, foreign-owned, or stale
- * heartbeat is not live.
+ * heartbeat is not live, so no evidence is returned.
  */
-const liveAcquisition = (
+const liveHolder = (
   instance: DaemonInstanceRecord,
   heartbeat: ReturnType<typeof readDaemonHeartbeat>,
   nowMs: number,
   lockStalenessMs: number,
-): boolean => {
-  if (!isAcquisition(instance)) return false;
-  if (!heartbeat.ok || heartbeat.latest === undefined) return false;
-  if (heartbeat.latest.instanceId !== instance.instanceId) return false;
-  return nowMs - Date.parse(heartbeat.latest.beatAt) < lockStalenessMs;
+): { readonly beatAt: string; readonly ageMs: number } | undefined => {
+  if (!isAcquisition(instance)) return undefined;
+  if (!heartbeat.ok || heartbeat.latest === undefined) return undefined;
+  if (heartbeat.latest.instanceId !== instance.instanceId) return undefined;
+  const beatAt = heartbeat.latest.beatAt;
+  const ageMs = nowMs - Date.parse(beatAt);
+  return ageMs < lockStalenessMs ? { beatAt, ageMs } : undefined;
 };
 
 /** A record accepted as this spawn's readiness: a new acquisition at or after the spawn. */
@@ -733,22 +735,23 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         // Read the durable record set BEFORE spawning, so the readiness poll can
         // only accept an acquisition this spawn produced. A live pre-spawn
         // acquisition is refused as `daemon.already-running` with nothing
-        // spawned; a stale one is left for the child's takeover to replace.
+        // spawned, naming the holder's instance, process, acquisition time, and
+        // heartbeat age; a stale one is left for the child's takeover to replace.
         const beforeSpawn = readDaemonInstance(composition.store);
         const previous = beforeSpawn.ok ? beforeSpawn.latest : undefined;
-        if (
-          previous !== undefined &&
-          liveAcquisition(
+        if (previous !== undefined) {
+          const live = liveHolder(
             previous,
             readDaemonHeartbeat(composition.store),
             clock.nowMs(),
             composition.settings.lockStalenessMs,
-          )
-        ) {
-          return failure(
-            "daemon.already-running",
-            `instance=${previous.instanceId} pid=${previous.pid} acquired_at=${previous.acquiredAt}`,
           );
+          if (live !== undefined) {
+            return failure(
+              "daemon.already-running",
+              `instance=${previous.instanceId} pid=${previous.pid} acquired_at=${previous.acquiredAt} heartbeat_at=${live.beatAt} heartbeat_age_ms=${live.ageMs}`,
+            );
+          }
         }
         const spawnMs = clock.nowMs();
         const spawned = processPort.spawnDetached({

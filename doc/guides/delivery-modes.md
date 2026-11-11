@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286"]
   decisions: ["TDR-0002"]
 ---
 
@@ -207,22 +207,27 @@ The hold has two equivalent sources. The environment source is
 `DELIVERY_OS_OWNER_HOLD` (the current default brand's name for the
 brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
 and an empty value is inactive. The marker source is the regular file
-`$HOME/.delivery-os-state/owner-hold` inside the production store directory; its
-first line is the reason and an empty file is an active hold without a reason.
-The environment source wins when both are active. Presence is the hold and
-content is only the reason: an unreadable, non-regular, or stat-failing marker is
-active without a reason (fail closed). Removing the environment value and the
-marker clears the hold; nothing else is repaired or migrated.
+`owner-hold` in the production store directory; its first line is the reason and
+an empty file is an active hold without a reason. The production store directory
+is the resolved state-directory scope: an absolute `<PREFIX>_STATE_DIR` wins and
+relocates the store and the marker together, and otherwise the home-based
+`<home>/<brand.stateDirectoryName>` applies. The environment source wins when
+both are active. Presence is the hold
+and content is only the reason: an unreadable, non-regular, or stat-failing
+marker is active without a reason (fail closed). Removing the environment value
+and the marker clears the hold; nothing else is repaired or migrated, and
+existing state at the home default is never moved.
 
-The marker path is fixed to the production store directory. There is no
-marker-path override and no store relocation for the hold: a shell-only path
-would leave the typed engine unheld. The shipped example defaults to
-`$HOME/.delivery-os-state/owner-hold` for this product; adopters who set a
-different working name edit the example's two setting names and that marker
-default (or use the environment source, which is relocation-safe). Create the
-store directory privately (`mkdir -m 700`): the state store rejects a
-non-private directory with `state.permission.denied` at exit `1` before the hold
-gate is consulted, so a directory created at `0775` never reports the hold.
+There is no marker-path override: the marker follows the store directory the
+typed engine resolves. The shipped hook example reads its own default
+`$HOME/.delivery-os-state/owner-hold` and accepts no marker-path setting, so with
+an override set the environment source is the setting both surfaces share. An
+adopter who sets a different working name, or who wants the example's marker to
+follow a relocated store, edits the example's two setting names and that marker
+default. Create the store directory privately (`mkdir -m 700`): the state store
+rejects a non-private directory with `state.permission.denied` at exit `1` before
+the hold gate is consulted, so a directory created at `0775` never reports the
+hold.
 
 `install.sh --local` installs both inactive examples:
 `scripts/hooks/pre-opencode-iteration-zai.sh` and

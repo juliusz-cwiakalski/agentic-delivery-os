@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -195,8 +195,11 @@ than discovering work by hand.
 
 An owner hold is a global read-only gate, never a park. The scheduling facts gain
 one optional injected fact resolved at the CLI/MCP edge from the brand-derived
-`<PREFIX>_OWNER_HOLD` environment value, the fixed production store directory
-`<home>/<stateDirectoryName>`, and its `owner-hold` marker. Environment wins when
+`<PREFIX>_OWNER_HOLD` environment value, the production store directory, and its
+`owner-hold` marker. The store directory is the resolved state-directory scope:
+an absolute `<PREFIX>_STATE_DIR` wins for the store and the marker, and otherwise
+`<home>/<stateDirectoryName>` applies; there is no marker-path override, and
+existing state is never migrated. Environment wins when
 active; a marker that exists but cannot be read, is not regular, or cannot be
 stat'd is active without a reason (fail closed); only a non-existent path is
 inactive. The reason is one control-free line bounded to 160 characters.

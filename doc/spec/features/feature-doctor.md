@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-three reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery and retro registry store verdicts in the state check, and zero-write execution."
 links:
-  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280"]
+  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280", "GH-286"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/doctor.ts"
@@ -168,9 +168,11 @@ The production composer supplies no `DoctorComposition` today (a pre-existing
 doctor residual), so the production binary does not register `doctor`; in
 production `status` carries the hold in its digest, and `queue list`,
 `queue plan`, `lanes`, and `queue watch` report it on their own surfaces.
-The hold is resolved from `<PREFIX>_OWNER_HOLD` and the fixed production-store
-marker `<home>/<stateDirectoryName>/owner-hold`; there is no marker-path
-override or store relocation.
+The hold is resolved from `<PREFIX>_OWNER_HOLD` and the `owner-hold` marker in
+the production store directory, which is the resolved state-directory scope: an
+absolute `<PREFIX>_STATE_DIR` wins for the store and the marker, and otherwise
+`<home>/<stateDirectoryName>` applies. There is no marker-path override, and
+existing state is never migrated.
 
 ### Evidence model
 

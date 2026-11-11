@@ -154,14 +154,19 @@ derived from durable state at every projection.
 
 - `tests/structure/daemon-production-composition.test.ts` — prompt-required
   membership, unconditional production registration, selection through
-  `runEntrypoint` with no containment throw, and the absence of conditional
-  registration.
+  `runEntrypoint` with no containment throw, the absence of conditional
+  registration, and an acquired but invalid `daemon` configuration branch
+  composing the refusing runtime while `queue` and `lanes` degrade to
+  `daemon-unreachable`.
 - `tests/behaviour/daemon-mount-help.test.ts` — the family and per-subcommand help
   pages, declared flags, see-also targets, bounded output, and the purity half
   (`--help` and `--version` compose nothing and write nothing).
 - `tests/behaviour/daemon-start-detached.test.ts` — the re-entry argv, the
   declared environment with the state-directory binding last, readiness polling
-  and timeout, and the receipt read from durable state.
+  and timeout, the receipt read from durable state, the pre-spawn live refusal
+  (`daemon.already-running`, naming the holder's instance, process, acquisition
+  time, and heartbeat age), acceptance of a legitimate takeover on the first
+  poll, and rejection of a stale record the spawn did not replace.
 - `tests/behaviour/daemon-start-env-stripped.test.ts` — a stripped `PATH` fails
   closed with `daemon.state-recovery-failed`, and no override plus no home makes
   the state directory unresolvable and returns `config.value.invalid` at exit `1`.
@@ -182,7 +187,9 @@ derived from durable state at every projection.
   budget.
 - `tests/behaviour/daemon-install-mount.test.ts` — the brand-derived unit, the
   absolute `ExecStart`, the user configuration root, the environment binding, the
-  unsupported classifier, uninstall scoping, and the no-entry-path refusal.
+  unsupported classifier, uninstall scoping, the no-entry-path refusal, the
+  no-home configuration-root refusal (`config.value.invalid` at exit `1`, before
+  any inspection or write), and the single supervisor inspection per install.
 - `tests/behaviour/daemon-status.test.ts` — the composed control plane, the plain
   versus `--live` split, durable-state reads through a fresh handle, and the
   status p95.

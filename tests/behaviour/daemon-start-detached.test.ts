@@ -160,15 +160,23 @@ describe("TC-DAEMON-030 detached readiness is tied to this spawn", () => {
       appendHeartbeat(harness.store, { instanceId: "instance-live" });
       const before = readDaemonInstance(harness.store);
       expect(before.ok).toBe(true);
-      if (!before.ok) return;
+      if (!before.ok || before.latest === undefined) return;
+      const beat = readDaemonHeartbeat(harness.store);
+      expect(beat.ok).toBe(true);
+      if (!beat.ok || beat.latest === undefined) return;
 
       const runtime = createDaemonCommandRuntime(mountComposition(harness, { daemonEntry: entry }));
       const result = await invoke(runtime, ["start"]);
       expect(isSuccess(result)).toBe(false);
       if (isSuccess(result)) return;
-      const failure = result as { error: { code: string } };
+      const failure = result as { error: { code: string; summary?: string } };
       expect(failure.error.code).toBe("daemon.already-running");
       expect(exitFor("daemon.already-running")).toBe(1);
+      // The remediation hint names the instance, the process, the acquisition
+      // time, and the heartbeat age; the refusal detail carries all four.
+      expect(failure.error.summary).toBe(
+        `instance=instance-live pid=111 acquired_at=${before.latest.acquiredAt} heartbeat_at=${beat.latest.beatAt} heartbeat_age_ms=${harness.clock.nowMs() - Date.parse(beat.latest.beatAt)}`,
+      );
       expect(harness.processPort.spawns).toHaveLength(0);
       // The refusal precedes the poll: no sleep was taken.
       expect(harness.clock.sleeps()).toHaveLength(0);
