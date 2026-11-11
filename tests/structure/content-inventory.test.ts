@@ -268,6 +268,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CONTROL_WIRE_TYPES",
     "controlInteractionClass",
   ],
+  "core/src/contracts/taxonomy.ts": [
+    "EVENT_ENVELOPE_FIELDS",
+    "ORDERING_VALUES",
+    "OVERFLOW_VALUES",
+    "SNAPSHOT_FRAME_FIELDS",
+    "TAXONOMY",
+    "TAXONOMY_LANE_RULES",
+    "TAXONOMY_OVERFLOW",
+    "TAXONOMY_SHAPES",
+    "TAXONOMY_VERSION",
+    "validateTaxonomy",
+  ],
   "core/src/domain/coordinator-lifecycle.ts": ["decideLifecycle", "lifecycleEffect"],
   "core/src/domain/coordinator-evidence.ts": ["boundEvidence", "evaluateStuck", "utf8ByteLength"],
   "core/src/state/coordinator.ts": [

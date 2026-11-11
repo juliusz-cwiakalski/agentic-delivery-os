@@ -201,6 +201,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "projects.identity-unreadable",
   "projects.registry-corrupt",
   "projects.state-unavailable",
+  // GH-290 pins the three events-surface identities exactly; they are
+  // kind-first two-segment codes, so they join the exact allowlist.
+  "events.topic-unknown",
+  "events.verb-unknown",
+  "events.taxonomy-unavailable",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

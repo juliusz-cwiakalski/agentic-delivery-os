@@ -1161,7 +1161,7 @@ const controlHandlers = (
       ? { ok: false as const, code: "queue.entry.unobserved" }
       : { ok: true as const, data: { live: true as const, lane } };
   },
-  subscribe: (payload: { readonly topic: "queue" | "lanes" }) => {
+  subscribe: (payload: { readonly topic: ControlTopic }) => {
     const snapshot = watchState.snapshot(payload.topic);
     if (snapshot === undefined) {
       return { ok: false as const, code: "daemon.state-recovery-failed" };
