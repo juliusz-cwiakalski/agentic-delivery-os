@@ -59,7 +59,13 @@ declared in configuration rather than inferred from a directory or a name. A
 project's clones; it is never required, so a project whose members live in
 unrelated directories behaves identically to one whose members share a
 workspace directory. No member repository is required to live inside a
-workspace, and the workspace adds discovery only.
+workspace, and the workspace adds discovery only. A directory scan only
+locates declared members and never admits an undeclared clone: configuration
+is the sole source of membership.
+
+The discovery workspace root is an optional directory used for discovery; it
+is distinct from the state layer's fixed `default` workspace identifier,
+which is the workspace key inside every per-checkout state root.
 
 ## C4 Level 2: containers
 
@@ -273,9 +279,13 @@ flowchart LR
 
 One lifecycle, one spec and plan, one definition of done: a cross-repository
 change still runs the phases once, and each member repository receives its
-own branch and pull request under per-member gates. A member that fails its
-gates blocks the shared definition of done and is named, so a partly landed
-change never reads as done.
+own branch and pull request under per-member gates. The change holds one
+queue entry per member keyed by that member's ref, with per-member dependency
+edges; release drops each member's lease while the entries stay, removal
+happens per member with the change's reason, and one member's landing removes
+only its entry. One lane per member entry, never a cross-repository lane. A
+member that fails its gates blocks the shared definition of done and is
+named, so a partly landed change never reads as done.
 
 ## Persistence and concurrency deltas
 
@@ -303,12 +313,15 @@ M2 changes where state lives, not only what it contains.
 
 ## Boundary invariants at M2 exit
 
-- The naming boundary holds: `repos` is the flat enumeration of managed
-  checkouts, `projects` is the group surface, and no page gives the two names
-  the same meaning.
-- Membership is declared in configuration. A project's members are the
-  repositories its configuration declares, not the checkouts a directory scan
-  happens to find.
+- The naming boundary holds by reference to the rename rule: `repos` is the
+  flat record set of managed checkouts, `projects` is the group surface, and
+  no page gives the two names the same meaning.
+- Membership is configuration-only and declared in configuration. A project's
+  members are the repositories its configuration declares, not the checkouts
+  a directory scan happens to find.
+- One queue entry per member for a cross-repository change, with per-member
+  dependency edges; release drops each member's lease while the entries stay,
+  and one member's landing removes only its entry.
 - A workspace is optional and never required: it is a discovery root only, and
   a project whose members live in unrelated directories behaves identically.
 - One lifecycle per cross-repository change: one spec and plan, one definition
