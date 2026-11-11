@@ -229,23 +229,24 @@ delivery and stay planned.
 Planning state only: this section records the GH-303 amendment to the M2 plan
 and claims no M2 delivery and no milestone exit.
 
-1. The domain model is now three-level: a repository is one checkout and the
-   delivery unit, a project is a configured group of repositories whose
+1. The domain model is three-level: a repository is one checkout and the
+   delivery unit, a project group is a configured group of repositories whose
    membership is declared in configuration, and a workspace is an optional
-   discovery root that is never required. The model is drawn in
-   milestones/m2/architecture.md.
-2. M2-S11 is amended in place: per-repository state scoping, the host-level
-   index, the migration note, the tests clause and the same-ref collision
-   criterion are unchanged, the flat enumeration is `repos list` with repo
-   key, root, state location, daemon reachability and handover state, and the
-   entry records the deprecation alias: the shipped `projects list` surface
-   is the flat enumeration this change renames to `repos list` (GH-288).
-3. M2-S18 (project groups) and M2-S19 (cross-repository changes) join the
-   Epic M2 story set, depending on M2-S11 and, for M2-S19, on M2-S18 and the
-   delivered M1-S17.
-4. The naming boundary is `repos` for the flat enumeration and `projects` for
-   groups. cli-command-registry.md reconciles `repos`, `projects` and the M3
-   hygiene verbs to that boundary, and the new pack page carries its one
-   registry row.
-5. The entrypoint delta note now lists `repos` and `projects` as two planned
-   root families instead of calling `projects` the host view of checkouts.
+   discovery root that is never required.
+2. The contracts split cleanly: `project-groups.v1` with `data.groups[]` and
+   `groupKey` is the group contract, the delivered `projects.v1` payload
+   (`data.projects[]`, `projectKey`) stays the flat record set, and the
+   planned flat surface is `repos.v1` with `data.repos[]` and `repoKey`. The
+   rename rule and its `projects list --flat` alias are recorded once in the
+   contracts; M2-S18 owns the rename and retires the alias at the M3 boundary.
+3. M2-S18 also owns configuration-only membership, the scoped-read grammar
+   `queue list --project <groupKey>` and `status --project <groupKey>`, and the
+   superseding decision record.
+4. `board --project` stays a repository key; the board is not group-scoped,
+   while queue and status are.
+5. The command registry splits into one delivered `projects` row (M2-S11,
+   shipped in GH-288) and one prospective `repos` row marked Not delivered
+   pending the superseding decision record and code change required by
+   ODR-0003.
+6. M2-S4 depends on M2-S18, so the advisory phrase is removed from the pack
+   map row.
