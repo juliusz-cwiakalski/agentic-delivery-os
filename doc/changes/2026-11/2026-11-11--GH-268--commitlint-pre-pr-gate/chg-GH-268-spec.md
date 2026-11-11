@@ -353,12 +353,16 @@ No other open questions: the planning session closed with no open questions in t
 | AC-F3-2 | **Given** an unresolvable base override, an unresolvable configured base, or an undeterminable merge-base, **when** the gate runs, **then** it exits with the "unable to verify" code, states the cause and a remediation hint, and never reports a pass. | F-3, DM-1.e, DM-1.f, NFR-2 |
 | AC-F3-3 | **Given** a repository that configures commitlint but has no usable commitlint binary, **when** the gate runs, **then** it exits with the "unable to verify" code naming the missing tool; **given** a repository with no commitlint configuration at all, **when** the gate runs, **then** it reports an explicit skip with the reason and exits success — in neither case is a silent pass produced. | F-3, DM-1.d, DM-1.g, NFR-2, DEC-6 |
 | AC-F3-4 | **Given** any invocation, **when** the gate runs, **then** it performs no network access and leaves the working tree, index, refs, and stash unchanged, and every outcome maps to exactly one of the three documented exit codes. | F-3, NFR-4, NFR-5, NFR-7, DEC-7 |
+| AC-F3-5 | **Given** a repository that configures commitlint but whose commitlint invocation cannot render a verdict (invalid configuration or an execution failure), **when** the gate runs, **then** it reports the `ERROR` outcome with exit `2`, names the cause, and prints a remediation hint — it neither reports `FAIL` with violation diagnostics nor reports `PASS`. | F-3, DM-1.h, NFR-2 |
+| AC-F3-6 | **Given** an unknown argument or an invalid base syntax, **when** the gate is invoked, **then** it exits `2` with usage output naming the accepted invocation and the offending argument, and performs no range check. | F-3, DM-1.i, NFR-7 |
 | AC-F4-1 | **Given** the committer and PM instructions, **when** they are read, **then** they state that the subject is a conventional header carrying the work item reference, that body and footer lines stay within 100 characters, that a sync must not leave a plain merge subject behind, and that failures are remediated by surgical reword (one or two offenders) or condense-to-one (many) — stated as constraints with no raw git write recipe. | F-4, G-4, NFR-9 |
 | AC-F5-1 | **Given** the autonomous delivery prompt's resume-sync section, **when** it is generated and its suite runs, **then** the emitted instruction produces a sync merge with a conventional subject referencing the work item rather than a plain merge subject, the assertion test matches the new instruction, and no other prompt section changes meaning. | F-5, G-5, DEC-5 |
 | AC-F6-1 | **Given** the PM `quality_gates` phase, **when** it is executed, **then** the range lint is a required step; a violation is remediated in the named mode and the gate re-run; an unresolved "unable to verify" outcome is never recorded as a pass and blocks phase completion; and the verdict is recorded as gate evidence in the change's PM notes. | F-6, G-1, NFR-2, DEC-8 |
 | AC-F6-2 | **Given** `AGENTS.md` and the `/check` resolution contract, **when** the edited `AGENTS.md` is read, **then** the gate is stated as a supplementary lifecycle pre-PR gate, no new "run all quality gates" instruction is introduced, and `/check` and `/check-fix` behaviour is unchanged. | F-6, F-8, NFR-8, DEC-8 |
 | AC-F7-1 | **Given** an adopting project installed from this repository, **when** the delivery scripts are installed and removed, **then** the gate is present and executable after install, removed on uninstall, and the installer/uninstaller suites pass with the gate registered. | F-7, DEC-6 |
 | AC-F8-1 | **Given** the delivered change, **when** the touched docs and prompts are inspected and the aggregate local gate runs, **then** the quality-gates/PR feature page, the autonomous-delivery feature page, the change-lifecycle `quality_gates` phase, and `AGENTS.md` describe the gate, the contract, and the prompt instruction as delivered; touched docs keep their distribution markers; and no new conformance violation appears. | F-8, NFR-9 |
+| AC-NFR4-1 | **Given** a reference run over a 20-commit range and a 100-commit range on a developer machine, **when** the gate completes, **then** the ≤20-commit run finishes within 10 seconds and the ≤100-commit run within 60 seconds, and the run performs zero network calls; the suite asserts both budgets. | NFR-4, F-1, F-3 |
+| AC-NFR6-1 | **Given** a range whose offending commits break many rules and carry over-long lines, **when** diagnostics are produced, **then** no commit's block exceeds 20 rule lines, every excerpt is at most 160 characters, the total diagnostic output is at most 200 lines, and the summary still reports the offending-commit count and the distinct rules hit. | NFR-6, F-2, DM-2 |
 | AC-NFR8-1 | **Given** the full change diff and a green aggregate gate, **when** the change is reviewed, **then** it contains no CI workflow change, no hook enforcement, no history-rewrite or auto-fix automation, no change to `pnpm check`/`/check`/`/check-fix` semantics, no CLI or MCP surface change, and no change to the commitlint configuration or its rules. | NFR-8, NG-1, NG-2, NG-3, NG-4, NG-5, NG-6 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
@@ -427,7 +431,7 @@ N/A — no persisted data, schema, or seed data is involved. The gate reads hist
 | Instructions for the committer/PM describe the rule and the two remediation modes | AC-F4-1, AC-F2-2, F-4 |
 | Docs-only + script/prompt change; no behavioural change to delivery semantics | AC-NFR8-1, AC-F6-2, AC-F8-1, NFR-8 |
 | Diagnostics name the offending SHA(s) and violated rule(s) so remediation is surgical or explicitly condensed | AC-F2-1, AC-F2-2, DM-2, DM-3 |
-| Gate fails loudly when it cannot verify (base, tool) | AC-F3-2, AC-F3-3, DM-1.e–h |
+| Gate fails loudly when it cannot verify (base, tool) | AC-F3-2, AC-F3-3, AC-F3-5, AC-F3-6, DM-1.e–i |
 
 ### Appendix B — Current-state evidence inventory
 
@@ -471,6 +475,7 @@ N/A — no persisted data, schema, or seed data is involved. The gate reads hist
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-11 | @spec-writer | Initial specification derived from GitHub issue #268 and the phase-1 clarify-scope findings, honouring the three recorded PM decisions. |
+| 1.1 | 2026-11-11 | @spec-writer | Additive correction after the specification phase reopened for a test-plan traceability gap: appended `AC-F3-5`, `AC-F3-6`, `AC-NFR4-1`, and `AC-NFR6-1` covering DM-1.h, DM-1.i, NFR-4, and NFR-6; updated the Appendix A traceability row's DM range. No existing criterion renumbered. |
 
 ---
 
