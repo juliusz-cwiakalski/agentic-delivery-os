@@ -2,24 +2,30 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.2, 2026-11-11):
-#   - Spec:    ./chg-GH-286-spec.md (v1.2; 50 ACs — AC-F1-1..5, AC-F2-1..10,
+# SOURCES (single source of truth; plan revision 1.3, 2026-11-11):
+#   - Spec:    ./chg-GH-286-spec.md (v1.3; 50 ACs — AC-F1-1..5, AC-F2-1..10,
 #              AC-F3-1..5, AC-F4-1..4, AC-F5-1..8, AC-F6-1..3, AC-F7-1..5,
 #              AC-F8-1..4, AC-NFR-1..6; F-1..F-8; DM-1..DM-7; EVT-1..EVT-3;
 #              NFR-1..NFR-12; RSK-1..RSK-13; DEC-1..DEC-18; §16 documentation
 #              impact; Appendix C closed vocabularies; Appendix D mount exit
 #              matrix; Appendix E identity matrix; Appendix F composition
 #              matrix)
-#   - Tests:   ./chg-GH-286-test-plan.md (v1.2; 54 TCs TC-DAEMON-010..124;
-#              50/50 AC coverage; GAP-T1..GAP-T6 verification-method
-#              constraints; §7 is the file/command inventory this plan maps
-#              onto phases)
+#   - Tests:   ./chg-GH-286-test-plan.md (v1.3; 55 TCs TC-DAEMON-010..124
+#              including TC-DAEMON-015; 50/50 AC coverage; GAP-T1..GAP-T6
+#              verification-method constraints; §7 is the file/command
+#              inventory and the per-case invocation shape (`handler` vs
+#              `entrypoint`) this plan maps onto phases)
 #   - Review:  ./readiness-review/readiness-iter-1.md (DoR iteration 1; the
 #              plan-reopen findings RF-2, RF-3, RF-4, RF-7 and advisories A-3,
-#              A-5, A-9 are closed by plan revision 1.1) and
+#              A-5, A-9 are closed by plan revision 1.1),
 #              ./readiness-review/readiness-iter-2.md (DoR iteration 2; the
 #              plan-reopen findings RF2-2, RF2-3, RF2-5, RF2-6 and advisories
-#              A2-2, A2-3 are closed by plan revision 1.2)
+#              A2-2, A2-3 are closed by plan revision 1.2) and
+#              ./readiness-review/readiness-iter-3.md (DoR iteration 3; the
+#              plan-reopen finding RF3-1 is closed by plan revision 1.3 — the
+#              invocation-shape rule below partitions handler proofs from the
+#              single entrypoint-level selection proof — and advisory A3-2 by
+#              using `tests/behaviour/daemon-mount-help.test.ts` throughout)
 #   - Decision: doc/decisions/TDR-0022-daemon-lifecycle-mount-and-degradation-composition.md
 #              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
 #              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
@@ -41,7 +47,32 @@
 #   `doc/decisions/00-index.md` already carries the TDR-0022 row (committed);
 #   it is declared on Phase 1 for completeness only and stages nothing.
 #
-# TC -> PHASE MAP (54/54; no orphan, every TC mapped exactly once; each phase's
+# INVOCATION-SHAPE RULE (RF3-1; binding on every gate and exit criterion below):
+#   `PROMPT_REQUIRED_COMMANDS` holds the delivered 16 commands until the
+#   Phase-6 membership commit (task 6.1), and `selectPromptRequiredProgram`
+#   (`packages/cli/src/entrypoint.ts:134-149`) returns exactly that set and
+#   drops extras, while `runEntrypoint` calls it on every invocation. Any
+#   `daemon` invocation routed through `runEntrypoint` therefore answers
+#   `fallback.internal` at exit 2 until that commit. The phases are partitioned
+#   by invocation shape:
+#     - Phases 2-5 prove HANDLER behaviour only: the composed program's
+#       `daemon` command handler is invoked directly, or `runCli` is called with
+#       that same composed program. No Phase 2-5 gate goes through
+#       `runEntrypoint`, and no Phase 2-5 case asserts
+#       `selectPromptRequiredProgram`, selection, or `fallback.internal`. A
+#       Phase 2-5 case that needs `runEntrypoint` is a PLAN DEFECT: the correct
+#       move is to add the missing assertion to TC-DAEMON-015 (or to move it to
+#       a later phase), never to weaken the assertion or to commit a red
+#       boundary.
+#     - Phase 6 proves SELECTION and CONTAINMENT through `runEntrypoint`, in
+#       TC-DAEMON-015, which supersedes the selection half Phases 2-5 must not
+#       assert. Phase 8 re-runs the same suite inside the full battery.
+#   Terminology is load-bearing: "registered" is true from Phase 2
+#   (`program.commands.daemon` is defined on every composition), while
+#   "selectable"/"selected" is true only from Phase 6. No Phase 2-5 gate or
+#   exit criterion may claim selection or use "selectable" as a gate property.
+#
+# TC -> PHASE MAP (55/55; no orphan, every TC mapped exactly once; each phase's
 # mapped TCs are fully provable at that phase's declared gate):
 #   Phase 1:  (none; the additive contract surface is inert here and is proven by
 #             the gates of the phases it enables and by the additive-contract
@@ -59,11 +90,20 @@
 #             TC-DAEMON-074, TC-DAEMON-075, TC-DAEMON-076, TC-DAEMON-077,
 #             TC-DAEMON-078, TC-DAEMON-112, TC-DAEMON-120
 #   Phase 6:  TC-DAEMON-010, TC-DAEMON-011, TC-DAEMON-012, TC-DAEMON-013,
-#             TC-DAEMON-014, TC-DAEMON-114
+#             TC-DAEMON-014, TC-DAEMON-015, TC-DAEMON-114
 #   Phase 7:  (none; docs-only reconciliation, proven by the help/coverage/
 #             conformance guards at the Phase-7 gate and re-run at the Phase-8
 #             gate)
 #   Phase 8:  TC-DAEMON-110, TC-DAEMON-111, TC-DAEMON-113, TC-DAEMON-123
+#
+#   TC-DAEMON-015 is the only entrypoint-shape case: it asserts selection
+#   (`selectPromptRequiredProgram` selects `daemon`, the selected set equals
+#   `PROMPT_REQUIRED_COMMANDS`), the absence of `fallback.internal` on a
+#   `daemon status` invocation, the nine unresolvable-outcome invocations at
+#   exit `1`, and help/version purity through `runEntrypoint`. It is provable
+#   only at the Phase-6 gate (after task 6.1) and supersedes the selection half
+#   that the Phase 2-5 gates must not assert. Every other case is handler-shape
+#   per the invocation-shape rule.
 #
 #   Phase choice for the added TCs: TC-DAEMON-040 (the re-entry environment is
 #   the declared key set with the state binding last), TC-DAEMON-041 (a
@@ -71,8 +111,9 @@
 #   unresolvable state directory keeps the family mounted over a refusing
 #   runtime and opens nothing) are hermetic composition and start-outcome
 #   proofs over the recording process port, the recording supervisor fact, and
-#   the filesystem, so they are provable at the Phase-2 gate that classifies the
-#   resolution, composes the runtime, and derives the environment. TC-DAEMON-039
+#   the filesystem, so they are provable at the handler-level Phase-2 gate that
+#   classifies the resolution, composes the runtime, and derives the environment.
+#   TC-DAEMON-039
 #   stays in Phase 4 because its single case spawns a
 #   real `daemon start --foreground` child, which only stays alive once the
 #   signal-owned foreground lifetime exists. TC-DAEMON-078 is the ownership
@@ -119,9 +160,12 @@
 #          daemon-degradation-torn.test.ts, daemon-degradation-additivity.test.ts
 #          (TC-070..076, 078, 112)
 #     tests/structure/daemon-production-composition.test.ts
-#       <- the test plan's same-named file (TC-010, 014; not consolidated)
+#       <- the test plan's same-named file (TC-010, 014, 015; not consolidated)
 #   Suites that stay one file per family per the test plan:
-#     daemon-mount-help.test.ts, daemon-foreground-stop-latency.test.ts,
+#     daemon-mount-help.test.ts (A3-2: the help suite ships under this name; the
+#     earlier `daemon-help.test.ts` grouping name is superseded and appears
+#     nowhere in this plan),
+#     daemon-foreground-stop-latency.test.ts,
 #     daemon-degradation-read-cost.test.ts, daemon-degradation-wiring.test.ts,
 #     daemon-start-env-stripped.test.ts (TC-041: the fail-closed stripped-caller
 #     case owns its own directory-listing and restored-environment controls, so it
@@ -236,8 +280,9 @@
 #     that home-based value is kept when a non-absolute override is invalid, with
 #     the invalid value still failing where the resolution edge already reports
 #     it (`config.value.invalid`); (c) otherwise — no override and no home — the
-#     directory is UNRESOLVABLE: the `daemon` family stays registered and
-#     selectable over an unavailable runtime whose every subcommand returns the
+#     directory is UNRESOLVABLE: the `daemon` family stays registered and, once
+#     the Phase-6 membership lands, selectable over an unavailable runtime whose
+#     every subcommand returns the
 #     delivered `config.value.invalid` at exit `1` (`user-validation`), opening no
 #     store, lock, settings, transport, socket path, supervisor scope, entry path,
 #     or pid and never reading, creating, or probing a `/<stateDirectoryName>`
@@ -277,8 +322,11 @@
 # DELIVERY MODEL: one commit per phase on feat/GH-286/daemon-command-mounting;
 # each phase boundary leaves the declared narrow gate green, so the repository is
 # green at every boundary and the final battery only re-runs what each phase
-# already proved. Extra phase data (tasks, verification commands, exit criteria)
-# is carried in YAML comments so the parsed document stays schema-strict: the
+# already proved. The invocation-shape rule above is what keeps the Phase 2-5
+# boundaries green: they are handler-level by construction, so none of them
+# depends on the Phase-6 membership. Extra phase data (tasks, verification
+# commands, exit criteria) is carried in YAML comments so the parsed document
+# stays schema-strict: the
 # plan declares phases and scope only and records no progress.
 
 schemaVersion: delivery.plan.v1
@@ -416,11 +464,15 @@ phases:
   # `fallback.internal`; the program registers the family as soon as the runtime
   # is supplied, so the composition is verifiable now while the help, coverage,
   # and conformance surfaces land in Phase 6. Bare-start re-entry, the readiness
-  # poll, and the cross-process signal path are delivered and become reachable
-  # through the entry path this phase supplies, which is why the detached-start,
-  # re-entry-environment, state-directory, and status TCs are provable here
-  # rather than in Phase 4. The re-entry environment is derived here (task 2.4)
-  # and merged into the spawn request here (task 2.6), because both edits are the
+  # poll, and the cross-process signal path are delivered and consume the
+  # composed executable entry path (`daemonEntry`, not `runEntrypoint`) this
+  # phase supplies, which is why the detached-start,
+  # re-entry-environment, state-directory, and status TCs are provable at this
+  # handler-level gate rather than in Phase 4. Selection through
+  # `selectPromptRequiredProgram` is NOT a Phase-2 claim: TC-DAEMON-015 owns it
+  # at the Phase-6 gate (invocation-shape rule). The re-entry environment is
+  # derived here (task 2.4) and merged into the spawn request here (task 2.6),
+  # because both edits are the
   # one composition contract TC-DAEMON-040 pins and because the delivered spawn
   # otherwise replaces the child environment with a single variable. The hermetic
   # environment cases (TC-DAEMON-040/041) and the unresolvable outcome
@@ -450,8 +502,11 @@ phases:
   #      supervisor scope, entry path, or pid, attempts no spawn, and never reads,
   #      creates, or probes a `/<stateDirectoryName>` path. `daemon` is passed as
   #      a `ConfigProgramOptions` member in every outcome, so the family stays
-  #      registered and selectable over the unavailable runtime (AC-F1-5
-  #      registration half) and a non-daemon command composed in the same program
+  #      registered in every outcome — `program.commands.daemon` is defined and
+  #      its handler is composed — over the unavailable runtime (AC-F1-5
+  #      registration half; the selectable half is TC-DAEMON-015's at the
+  #      Phase-6 gate, never a Phase-2 assertion), and a non-daemon command
+  #      composed in the same program
   #      keeps the delivered home-based template untouched. No second resolution
   #      exists anywhere. Pass the resolved value into the edge so the
   #      composition and the edge report the same string (AC-F3-1).
@@ -474,7 +529,9 @@ phases:
   #      lane/executor/supervision input (supervise-only, DEC-4, DEC-15). Pass
   #      `daemon` as a `ConfigProgramOptions` member so the family is registered
   #      on every composition, including when every optional fact is absent
-  #      (AC-F1-5 registration half, AC-F2-3, AC-F7-5 refusal shape).
+  #      (AC-F1-5 registration half, AC-F2-3, AC-F7-5 refusal shape;
+  #      registration only — selection is proven by TC-DAEMON-015 at the
+  #      Phase-6 gate).
   #      Derive the re-entry environment inside this composer from facts it
   #      already holds — the injected environment record's `PATH`, its `HOME` or
   #      `USERPROFILE`, and the brand working-name variable via the delivered
@@ -532,14 +589,15 @@ phases:
   #      override keeps the command and the home value with no throw and no
   #      partial store, and TC-DAEMON-054 over the unresolvable outcome: with
   #      `homeDirectory = ""`, no `HOME`/`USERPROFILE`, and no override, the
-  #      composition does not throw and the containment branch is not entered, the
-  #      family stays registered and selectable with every other prompt-required
-  #      command still selected, all nine subcommand invocations (`start`,
+  #      composition does not throw and `program.commands.daemon` is defined, the
+  #      family is REGISTERED with every other prompt-required command still
+  #      defined in the same program, all nine subcommand invocations (`start`,
   #      `start --foreground`, `stop`, `stop --mode drain`,
   #      `stop --mode immediate`, `status`, `status --live`, `install`,
-  #      `uninstall`) return `config.value.invalid` with the projected exit 1
-  #      (`user-validation`, no success `data`, never `fallback.internal`, never a
-  #      `daemon.*` row), zero `spawnDetached` calls and no
+  #      `uninstall`) run through the composed handler and return
+  #      `config.value.invalid` with the projected exit 1
+  #      (`user-validation`, no success `data`, never a `daemon.*` row), zero
+  #      `spawnDetached` calls and no
   #      readiness wait, a recording supervisor recording zero write, zero enable,
   #      and zero linger calls, zero signals and zero process probes, a source
   #      scan of the unresolvable branch proving no store/
@@ -593,6 +651,14 @@ phases:
   #      creates it, so no later phase has to reach back into an already-committed
   #      one.
   #
+  # Gate shape (HANDLER-LEVEL, RF3-1): every mapped TC in this phase invokes the
+  # composed program's `daemon` handler directly, or calls `runCli` with that
+  # same composed program. No case here goes through `runEntrypoint`, and none
+  # asserts `selectPromptRequiredProgram`, selection, or `fallback.internal`: the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate. A case
+  # here that would need `runEntrypoint` is a plan defect, not a reason to
+  # weaken the assertion.
+  #
   # Verification:
   #   bun test tests/behaviour/daemon-start-detached.test.ts tests/behaviour/daemon-start-env-stripped.test.ts tests/behaviour/daemon-state-scope.test.ts tests/behaviour/daemon-status.test.ts
   #   bun test tests/golden/daemon-status-matrix.test.ts
@@ -603,12 +669,15 @@ phases:
   #   bun run scripts/checks/ambient-globals.ts
   #   pnpm check:boundaries
   #
-  # Exit: one resolved directory, seven agreeing observers, and a byte-identical
-  # home default; a non-absolute override with a home keeps the command, the home
+  # Exit (handler-level): one resolved directory, seven agreeing observers, and a
+  # byte-identical home default; a non-absolute override with a home keeps the
+  # command, the home
   # value, and the delivered edge's `config.value.invalid` report; with no
-  # override and no home the family stays mounted and selectable over the
-  # unavailable runtime, every subcommand refuses as `config.value.invalid` at the
-  # projected exit 1, nothing is opened, spawned, signalled, or written, no
+  # override and no home the family stays mounted and registered
+  # (`program.commands.daemon` is defined) over the unavailable runtime, every
+  # subcommand invoked through the composed handler refuses as
+  # `config.value.invalid` at the projected exit 1, nothing is opened, spawned,
+  # signalled, or written, no
   # `/<stateDirectoryName>` path is read or created, and non-daemon commands keep
   # the delivered template; the child's environment is exactly the declared
   # re-entry set with the state binding last, and its scope matches the parent's;
@@ -626,7 +695,8 @@ phases:
   # export, or dependency is added; the delivered lifecycle, lock,
   # supervisor-install, state-scope, and daemon-vocabulary suites pass
   # unmodified (the vocabulary gate first runs here, because this phase is where
-  # the daemon family becomes reachable; AC-F8-4 re-runs it at the Phase-8 gate).
+  # the daemon runtime is first composed and its handlers become reachable;
+  # AC-F8-4 re-runs it at the Phase-8 gate).
   # ---------------------------------------------------------------------------
   - id: 2
     title: "Production composition: one state-directory scope with its three outcomes, resolved settings, composed transport, real pid, entry path and re-entry environment, and an unconditional daemon runtime"
@@ -713,7 +783,9 @@ phases:
   #      Linux host with a user systemd manager inside a temp `XDG_CONFIG_HOME`
   #      under `$REPO_ROOT/tmp/`: install, `systemctl --user daemon-reload`,
   #      `systemctl --user status <unit>`, uninstall, reload, and record the host,
-  #      commands, and observed output in the test plan §10 log. No automated
+  #      commands, and observed output in the test plan §10 log. The record is
+  #      handler-level and makes no selection claim; the real-binary re-run after
+  #      membership belongs to the Phase-6 gate. No automated
   #      suite calls `systemctl` (GAP-T4); the procedure never enables login
   #      autostart for the operator's real account.
   #  3.5 Fixture mutants, with their consumer declared here: add `bare-execstart`
@@ -728,14 +800,23 @@ phases:
   #      one case per mutant asserting the named suite and assertion it trips, so
   #      the install-identity claims are non-vacuous inside this commit.
   #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the install/uninstall/start/stop TCs in
+  # this phase invoke the composed program's handlers directly, or call `runCli`
+  # with that same composed program; the manual record in 3.4 runs the composed
+  # handlers too. No case here goes through `runEntrypoint`, and none asserts
+  # `selectPromptRequiredProgram`, selection, or `fallback.internal`; the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate, where the
+  # TC-DAEMON-105 real-binary re-run also happens.
+  #
   # Verification:
   #   bun test tests/behaviour/daemon-install-mount.test.ts tests/golden/daemon-install.test.ts tests/behaviour/daemon-supervisor-install.test.ts
   #   bun test tests/checks/daemon-mutants.test.ts
   #   pnpm typecheck
   #   bun run scripts/checks/ambient-globals.ts
   #
-  # Exit: the unit systemd would read is the unit this composition renders
-  # (absolute executable, brand-derived name, user configuration root, exact
+  # Exit (handler-level): the unit systemd would read is the unit this
+  # composition renders (absolute executable, brand-derived name, user
+  # configuration root, exact
   # environment binding) and the supervisor calls happen in the delivered order;
   # unsupported and linger-failure paths leave nothing behind; uninstall is
   # ownership-scoped and idempotent; with no composed entry path the install
@@ -858,6 +939,13 @@ phases:
   #      tests/checks/daemon-mutants.test.ts (declared in this phase's scope) with
   #      one case per mutant asserting the named suite and assertion it trips.
   #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the lifetime and stop-safety TCs invoke a
+  # directly composed `createDaemonCommandRuntime` (or the composed program's
+  # handler), and the one real child runs `createDaemonMainEntry`, never
+  # `runEntrypoint`. No case here asserts `selectPromptRequiredProgram`,
+  # selection, or `fallback.internal`; the selection/containment proof is
+  # TC-DAEMON-015's at the Phase-6 gate.
+  #
   # Verification:
   #   bun test tests/behaviour/daemon-foreground-lifetime.test.ts tests/behaviour/daemon-stop-safety.test.ts tests/behaviour/daemon-foreground-stop-latency.test.ts
   #   bun test tests/conformance/daemon-mount/real-reentry.test.ts
@@ -866,8 +954,9 @@ phases:
   #   bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-lock-concurrency.test.ts tests/behaviour/daemon-watch-state-changes.test.ts
   #   pnpm typecheck
   #
-  # Exit: a foreground daemon releases its lock and detaches delivering lanes on
-  # SIGTERM and stops immediately on SIGINT; listeners never outlive the
+  # Exit (handler-level): a foreground daemon releases its lock and detaches
+  # delivering lanes on SIGTERM and stops immediately on SIGINT; listeners never
+  # outlive the
   # invocation; a failed release cannot hang or lie; a second signal produces no
   # second stop; the stop is prompt and bounded; `signal` is called zero times
   # for every non-positive, fractional, or torn pid and exactly once with the
@@ -993,6 +1082,12 @@ phases:
   #      (see 2.8, 3.5, 4.4, 6.7), so no phase edits a suite another phase owns
   #      without declaring it.
   #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the degradation TCs invoke the queue/lanes
+  # handlers (or the composed program's handler) and read the store directly. No
+  # case here goes through `runEntrypoint`, and none asserts
+  # `selectPromptRequiredProgram`, selection, or `fallback.internal`; the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate.
+  #
   # Verification:
   #   bun test tests/behaviour/daemon-degradation-projection.test.ts tests/behaviour/daemon-degradation-read-cost.test.ts tests/structure/daemon-degradation-wiring.test.ts
   #   bun test tests/checks/daemon-mutants.test.ts tests/checks/daemon-hermetic.test.ts
@@ -1001,8 +1096,9 @@ phases:
   #   bun run scripts/checks/ambient-globals.ts
   #   pnpm check:boundaries
   #
-  # Exit: the marker disappears for a live fresh instance and returns for
-  # released, immediate-stopped, absent, stale, at-bound, torn, and unreadable
+  # Exit (handler-level): the marker disappears for a live fresh instance and
+  # returns for released, immediate-stopped, absent, stale, at-bound, torn, and
+  # unreadable
   # states, on both reads and inside a watch, within one iteration; the verdict
   # and the status fold share one bound applied with one strict comparison and
   # agree on every owned cell while the unowned family diverges by design and is
@@ -1033,12 +1129,15 @@ phases:
   # Phase 6 — Mount: prompt-required membership, help inventory, reference page
   # help section, and the four guard sites in one commit
   #
-  # Goal: make the composed family prompt-required and self-describing. `daemon`
+  # Goal: make the composed family prompt-required and self-describing, and prove
+  # the selection surface the earlier gates deliberately do not touch. `daemon`
   # joins `PROMPT_REQUIRED_COMMANDS`; the help inventory gains one family entry
   # plus one entry per subcommand; the coverage inventory gains `daemon` in
   # `commands` and the daemon reference page in `referencePages`; the
   # doc-conformance page list gains `daemon`; and the reference page gains the
-  # `## HELP` section naming `--help` and `--version`.
+  # `## HELP` section naming `--help` and `--version`. This is the first and only
+  # gate at which an invocation may go through `runEntrypoint`, because only here
+  # is `daemon` a prompt-required member (invocation-shape rule).
   #
   # Dependency reasoning: the membership, the help entries, the coverage rows,
   # the conformance row, and the page's help section turn four delivered guard
@@ -1053,7 +1152,7 @@ phases:
   # composition fixture derives its program from the prompt-required set, so only
   # its hard-coded family list and the `daemon` absence name change.
   #
-  # Tasks (TC-DAEMON-010, 011, 012, 013, 014, 114):
+  # Tasks (TC-DAEMON-010, 011, 012, 013, 014, 015, 114):
   #  6.1 packages/cli/src/help/prompt-required-commands.ts: add `daemon` exactly
   #      once (17 families) with no reordering of the delivered members (AC-F1-1).
   #  6.2 packages/cli/src/help.ts: add the `daemon` family entry (usage naming
@@ -1137,6 +1236,48 @@ phases:
   #      `help-composer-invoked` trips
   #      tests/behaviour/daemon-mount-help.test.ts), so the unconditional-mount
   #      and help-purity claims are non-vacuous inside this commit.
+  #  6.8 Selection and containment proof through the entrypoint (TC-DAEMON-015;
+  #      the only case permitted to assert the selection surface). In
+  #      tests/structure/daemon-production-composition.test.ts assert step 1:
+  #      `selectPromptRequiredProgram(program)` returns without throwing, the
+  #      selected key set equals `PROMPT_REQUIRED_COMMANDS`, and `daemon` is a
+  #      member exactly once. Through `runEntrypoint` assert:
+  #      (i) `["daemon","status"]` over the full facts (entry path, signal host,
+  #      injected supervisor) is never the containment — a delivered exit digit
+  #      and a `daemon` envelope (success `data` or a delivered `daemon.*` error),
+  #      with no `fallback.internal` identity, no `category: "platform"`
+  #      containment, and no "not part of the composed" summary;
+  #      (ii) all nine unresolvable-outcome invocations over the no-home/
+  #      no-override facts — `start`, `start --foreground`, `stop`,
+  #      `stop --mode drain`, `stop --mode immediate`, `status`, `status --live`,
+  #      `install`, `uninstall` — return `config.value.invalid` at exit `1`
+  #      (`user-validation`) with no success `data`, and none is
+  #      `fallback.internal` at exit `2`. The `install` cell is the one AC-F7-5
+  #      excludes with its "given a resolvable state directory" qualifier: with
+  #      no state directory the refusal is the state-directory identity, not
+  #      `daemon.state-recovery-failed`;
+  #      (iii) help/version purity through the entrypoint: `--help`,
+  #      `daemon --help`, each of the five subcommand `--help` invocations, and
+  #      `--version` exit `0` with zero composer invocations and zero state,
+  #      configuration, filesystem, git, or network reads;
+  #      (iv) the control: one non-daemon prompt-required command still resolves,
+  #      so the equality in step 1 is the delivered 17-family set, not a
+  #      `daemon`-only set.
+  #      Non-vacuity in this commit: the declared `conditional-registration`
+  #      mutant makes (ii) answer the containment, and a CASE-LOCAL temp-copy
+  #      mutation of `packages/cli/src/help/prompt-required-commands.ts` that
+  #      omits `daemon` makes step 1 fail naming `daemon` (applied to a temp copy
+  #      inside the case, adding no module, so the declared mutant inventory
+  #      stays at twenty-one).
+  #      TC-DAEMON-015 SUPERSEDES the selection half Phases 2-5 must not assert:
+  #      it is the only case that asserts `selectPromptRequiredProgram`,
+  #      selection, or `fallback.internal`, and it runs at this gate and again
+  #      inside the Phase-8 full battery.
+  #
+  # Gate shape (ENTRYPOINT-LEVEL, RF3-1): this is the only phase whose gate
+  # asserts selection. `runEntrypoint` is invoked here and nowhere earlier; the
+  # handler-level proofs of Phases 2-5 stay valid because they never depended on
+  # membership.
   #
   # Verification:
   #   bun test tests/structure/daemon-production-composition.test.ts tests/behaviour/daemon-mount-help.test.ts tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-help.test.ts tests/behaviour/entrypoint-help-coverage.test.ts
@@ -1146,11 +1287,16 @@ phases:
   #   bun run scripts/checks/prompt-conformance.ts
   #   pnpm check:help
   #
-  # Exit: `daemon` is prompt-required exactly once and selected without the
-  # containment path; root `--help` lists the family and all five subcommands
+  # Exit (entrypoint-level for the selection half; handler-level for the help and
+  # guard halves): `daemon` is prompt-required exactly once; through
+  # `runEntrypoint`, `selectPromptRequiredProgram` selects it (the selected set
+  # equals `PROMPT_REQUIRED_COMMANDS`), a `daemon status` invocation is never
+  # `fallback.internal`, the nine unresolvable-outcome invocations refuse as
+  # `config.value.invalid` at exit 1, and help/version stay pure;
+  # root `--help` lists the family and all five subcommands
   # answer help at exit 0; `runHelpGuideCoverage()` returns no failures; parity
   # holds and the conformance list covers the mounted family without rewriting
-  # unrelated omissions; help and version stay pure; each mutant created here is
+  # unrelated omissions; each mutant created here is
   # tripped in this commit; the only delivered-suite edits are the five permitted
   # sites derived from the tree — the two membership lists
   # (`entrypoint-composition.test.ts`, `entrypoint-help.test.ts`) together with
@@ -1369,8 +1515,11 @@ phases:
   #   mkdir -p "$PWD/tmp/tmpdir" && TMPDIR="$PWD/tmp/tmpdir" pnpm check
   #   git diff --check
   #
-  # Exit: every gate green under the repo-local TMPDIR; 50/50 ACs and 54/54 TCs
-  # traced to a passing result; the error table, the state schema, the delivered
+  # Exit: every gate green under the repo-local TMPDIR; 50/50 ACs and 55/55 TCs
+  # traced to a passing result (the Phase-6 selection/containment proof
+  # TC-DAEMON-015 is re-run by the full battery without being remapped, so the
+  # map stays at one phase per TC); the error table, the state schema, the
+  # delivered
   # goldens, and `tests/structure/inventory.json` / `EXECUTABLE_ALLOWANCES` are
   # unchanged; the only delivered-suite edits are the five permitted sites
   # derived from the tree; the
