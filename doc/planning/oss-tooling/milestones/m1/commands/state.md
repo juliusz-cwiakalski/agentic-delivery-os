@@ -1,24 +1,21 @@
 # state(1)
 
-Status: Delivered M1-S2 (GH-222). Implemented contract.
+Status: Delivered the state layer by M1-S2 (GH-222): schema validation at
+every read and write boundary. No command surface is registered — the
+`state` family is not composed at the production entrypoint, so this page is
+the state-layer contract, not a command reference.
 
 ## NAME
 
 `state` - validated state admin: schema checks at every boundary.
-
-## SYNOPSIS
-
-```
-<binary> state check [--store <name>]
-<binary> state describe <store>
-```
 
 ## DESCRIPTION
 
 Every state read and write validates against its schema (delivery
 registry, retro registry, ceremony artifacts); torn or unknown reads
 are classified events with repair guidance, never silent zeros.
-`state` surfaces the checks and store shapes for diagnosis.
+The state layer surfaces the checks and store shapes for diagnosis; no
+`state` command is registered, so there is no synopsis to invoke.
 
 ## OUTPUT
 

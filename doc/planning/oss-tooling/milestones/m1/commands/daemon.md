@@ -2,8 +2,8 @@
 
 Status: Delivered daemon engine and control protocol (M1-S18, GH-238);
 the lifecycle command is not mounted at the production entrypoint, and its
-registration is tracked in the M2 entrypoint delta note. Scenarios
-SC-M1-14..18 and SC-M1-20; full protocol in
+registration is tracked in the M2 entrypoint delta note and issue #286
+(M2 daemon mount). Scenarios SC-M1-14..18 and SC-M1-20; full protocol in
 [../architecture.md](../architecture.md).
 
 ## NAME
