@@ -1,6 +1,7 @@
 ---
 id: chg-GH-268-test-plan
 status: Updated
+version: 0.3
 created: 2026-11-11
 last_updated: 2026-11-11
 owners: ["engineering"]
@@ -10,7 +11,7 @@ version_impact: minor
 summary: "Verification plan for the pre-PR branch-range commit-message gate: per-commit diagnostics, remediation-mode aggregation, the nine-row terminal-condition/exit contract, the stated message contract in the committer and PM prompts, the conventional-subject resume-sync instruction, installer distribution, and documentation truth."
 links:
   change_spec: ./chg-GH-268-spec.md
-  implementation_plan: null   # awaited: ./chg-GH-268-plan.yaml
+  implementation_plan: ./chg-GH-268-plan.yaml
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -27,7 +28,7 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 - Read-only (`NFR-5`) and no-network (`NFR-4`) assertions over every terminal outcome.
 - Committer and PM prompt contract statements (F-4, F-6), and the resume-sync instruction plus its assertion in the autonomous delivery prompt (F-5).
 - Installer/uninstaller registration and suites (F-7).
-- Documentation truth: `AGENTS.md`, the change-lifecycle `quality_gates` phase, the quality-gates/PR page, the autonomous-delivery page, the monorepo scaffold toolchain page, and the existing conformance guards (F-8, NFR-9).
+- Documentation truth: `AGENTS.md`, the change-lifecycle `quality_gates` phase, the quality-gates/PR page, the autonomous-delivery page (including its three delivered-script enumerations), the batch-delivery guide's install block, the monorepo scaffold toolchain page, and the existing conformance guards (F-8, NFR-9).
 - The dogfood run: this change's own branch range must pass the gate before `quality_gates` can complete.
 
 ### 1.2 Out of Scope & Known Gaps
@@ -71,16 +72,16 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 | AC-F2-2 | 1–2 offenders → `SURGICAL REWORD`; ≥3 → `CONDENSE-TO-ONE`; per-commit counting; advisory only | TC-COMMITLINT-016, TC-COMMITLINT-017 | Covered |
 | AC-F3-1 | Empty range → pass stating zero commits in range, exit 0 | TC-COMMITLINT-006 | Covered |
 | AC-F3-2 | Unresolvable base override / configured base / merge-base → "unable to verify" exit, cause + hint, never a pass | TC-COMMITLINT-010, TC-COMMITLINT-011 | Covered |
-| AC-F3-3 | Configured repo without usable binary → unable-to-verify naming the tool; no configuration → explicit skip exit 0 | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-COMMITLINT-009 | Covered |
+| AC-F3-3 | Configured repo without any usable binary → unable-to-verify naming the tool; repository-local `node_modules/.bin/commitlint` preferred over `PATH`, binary + origin named in the verdict header, foreign origin disclosed as a parity risk; no configuration → explicit skip exit 0 | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-DOGFOOD-001 | Covered (amended AC; `TC-COMMITLINT-009` removed — it is DM-1.h/AC-F3-5) |
 | AC-F3-4 | No network; working tree/index/refs/stash unchanged; every outcome maps to exactly one of three exit codes | TC-COMMITLINT-018, TC-COMMITLINT-019, TC-COMMITLINT-020 | Covered |
 | AC-F3-5 | Configured commitlint cannot render a verdict (invalid config / execution failure) → `ERROR` exit 2 with cause + hint; never `FAIL`-with-violations, never `PASS` | TC-COMMITLINT-009 | Covered (assertions extended) |
 | AC-F3-6 | Unknown argument / invalid base syntax → exit 2 with usage naming the accepted invocation and the offending argument; no range check | TC-COMMITLINT-012 | Covered (assertions extended) |
-| AC-F4-1 | Committer + PM state subject rule, ≤100-char body/footer, no plain merge subject, both remediation modes — constraints, no raw git recipe | TC-PROMPT-001, TC-PROMPT-002, TC-PROMPT-003 | Covered |
+| AC-F4-1 | Committer + PM state subject rule, ≤100-char body/footer, no plain merge subject, both remediation modes, and the ownership split (committer owns the message/never rewrites; PM owns verdict + mode; acting agent acts outside the gate; gate reports only) — constraints, no raw git recipe | TC-PROMPT-001, TC-PROMPT-002, TC-PROMPT-003 | Covered (assertions extended) |
 | AC-F5-1 | Resume-sync emits a conventional-subject sync merge referencing the work item; assertion matches; no other section changes meaning | TC-PROMPT-004, TC-PROMPT-005, TC-PROMPT-006 | Covered |
 | AC-F6-1 | `quality_gates` requires the range lint; remediation loop; unresolved error never recorded as pass; verdict recorded as PM-notes evidence | TC-PROMPT-002, TC-DOGFOOD-001 | Covered |
-| AC-F6-2 | `AGENTS.md` states the gate as supplementary pre-PR gate; no new "run all quality gates" instruction; `/check` unchanged | TC-DOC-001 | Covered |
-| AC-F7-1 | Gate present + executable after install, removed on uninstall, installer/uninstaller suites green | TC-DIST-001, TC-DIST-002, TC-DIST-003 | Covered |
-| AC-F8-1 | Feature pages, lifecycle guide, `AGENTS.md` describe the delivered gate/contract; markers kept; no new conformance violation | TC-DOC-002, TC-DOC-003, TC-DOC-004, TC-DOC-005, TC-DOC-006, TC-DOC-007 | Covered |
+| AC-F6-2 | `AGENTS.md` states the gate as supplementary pre-PR gate; no new "run all quality gates" instruction; `/check` unchanged | TC-DOC-001 | Covered (assertion corrected to repository truth) |
+| AC-F7-1 | Gate present + executable (mode `100755`, discovered by `test-all.sh`) after install, removed on uninstall, installer/uninstaller suites green | TC-DIST-001, TC-DIST-002, TC-DIST-003 | Covered |
+| AC-F8-1 | Feature pages (incl. the three delivered-script enumerations), lifecycle guide, batch-delivery guide, `AGENTS.md` describe the delivered gate/contract; markers kept; no new conformance violation | TC-DOC-002, TC-DOC-003, TC-DOC-004, TC-DOC-005, TC-DOC-006, TC-DOC-007 | Covered (assertions extended) |
 | AC-NFR4-1 | ≤20-commit run ≤10 s, ≤100-commit run ≤60 s, zero network calls; suite asserts both budgets | TC-COMMITLINT-021, TC-COMMITLINT-019 | Covered (assertions extended) |
 | AC-NFR6-1 | ≤20 rule lines per commit, excerpt ≤160 chars, ≤200 diagnostic lines, summary still reports offender count and distinct rules hit | TC-COMMITLINT-015 | Covered (assertions extended) |
 | AC-NFR8-1 | No CI change, no hook enforcement, no rewrite/auto-fix automation, no change to `pnpm check`, `/check`, or `/check-fix` semantics, no CLI/MCP surface change, no commitlint config/rule change | TC-CONFINE-001, TC-CONFINE-002 | Covered (PR-time + tree invariants) |
@@ -91,7 +92,7 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 
 | DM ID / row | Element | TC ID(s) | Status |
 |---|---|---|---|
-| DM-1 | Verdict record: outcome, exit code, base ref + resolution source, merge-base SHA, `HEAD` SHA, range count, offender count | TC-COMMITLINT-001, TC-COMMITLINT-006, TC-COMMITLINT-010, TC-COMMITLINT-013, TC-COMMITLINT-020 | Covered |
+| DM-1 | Verdict record: outcome, exit code, base ref + resolution source, **commitlint binary + resolution origin** (`repository-local` or `PATH`), merge-base SHA, `HEAD` SHA, range count, offender count | TC-COMMITLINT-001, TC-COMMITLINT-006, TC-COMMITLINT-008, TC-COMMITLINT-010, TC-COMMITLINT-013, TC-COMMITLINT-020 | Covered |
 | DM-1.a | All commits satisfy configuration → PASS, exit 0, counted | TC-COMMITLINT-002 | Covered |
 | DM-1.b | Empty range → PASS, zero commits, exit 0 | TC-COMMITLINT-006 | Covered |
 | DM-1.c | ≥1 offending commit → FAIL, diagnostics + mode, exit 1 | TC-COMMITLINT-001, TC-COMMITLINT-016, TC-COMMITLINT-017 | Covered |
@@ -108,7 +109,7 @@ This plan verifies one additive, read-only quality gate (`scripts/lint-commit-ra
 
 | NFR ID | Threshold | TC ID(s) | Status |
 |---|---|---|---|
-| NFR-1 | 0 variance, stable ordering | TC-COMMITLINT-014 | Covered |
+| NFR-1 | 0 variance, stable ordering; the deciding tool is named so its version is attributable | TC-COMMITLINT-008, TC-COMMITLINT-014 | Covered (AC-F3-3 amended) |
 | NFR-2 | 0 silent passes across precondition scenarios | TC-COMMITLINT-007, TC-COMMITLINT-008, TC-COMMITLINT-009, TC-COMMITLINT-010, TC-COMMITLINT-011, TC-COMMITLINT-020 | Covered |
 | NFR-3 | 0 false failures on valid conventional history | TC-COMMITLINT-002, TC-COMMITLINT-003, TC-COMMITLINT-004, TC-COMMITLINT-005 | Covered |
 | NFR-4 | ≤10 s for ≤20 commits; ≤60 s for ≤100 commits; 0 network calls | TC-COMMITLINT-019, TC-COMMITLINT-021 | Covered (AC-NFR4-1) |
@@ -149,7 +150,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 | TC-COMMITLINT-005 | Merged-upstream offenders outside the range do not fail | Integration | Bash suite | High | AC-F1-2, NFR-3 |
 | TC-COMMITLINT-006 | Empty range passes and states zero commits | Integration | Bash suite | High | AC-F3-1, DM-1.b |
 | TC-COMMITLINT-007 | No commitlint configuration → explicit skip, exit 0 | Integration | Bash suite | Critical | AC-F3-3, DM-1.d |
-| TC-COMMITLINT-008 | Configured repo without commitlint binary → error naming the tool | Integration | Bash suite | Critical | AC-F3-3, DM-1.g, NFR-2 |
+| TC-COMMITLINT-008 | Binary resolution: local-first, origin disclosed, absence loud | Integration | Bash suite | Critical | AC-F3-3, DM-1, DM-1.g, NFR-1, NFR-2 |
 | TC-COMMITLINT-009 | Invalid configuration → error, not a violation verdict | Integration | Bash suite | Important | AC-F3-5, DM-1.h, NFR-2 |
 | TC-COMMITLINT-010 | Base resolution precedence and unresolvable base error | Integration | Bash suite | Critical | AC-F3-2, DM-1.e, DEC-7 |
 | TC-COMMITLINT-011 | Undeterminable merge-base (unrelated and shallow history) errors | Integration | Bash suite | Critical | AC-F3-2, DM-1.f |
@@ -171,7 +172,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 | TC-PROMPT-006 | No other prompt section changes meaning | Regression | Bash suite | Important | AC-F5-1, NFR-8 |
 | TC-DOC-001 | `AGENTS.md` states a supplementary pre-PR gate; `/check` unchanged | Static check | Manual + static | High | AC-F6-2 |
 | TC-DOC-002 | Quality-gates/PR page describes gate and contract | Static check | Manual | High | AC-F8-1 |
-| TC-DOC-003 | Autonomous-delivery page reflects the instruction shape | Static check | Manual | Important | AC-F8-1 |
+| TC-DOC-003 | Autonomous-delivery page: instruction shape + delivered-set enumerations | Static check | Manual | Important | AC-F8-1, AC-F7-1 |
 | TC-DOC-004 | Change-lifecycle `quality_gates` names the range lint | Static check | Manual | High | AC-F8-1 |
 | TC-DOC-005 | Scaffold toolchain page keeps "CI is the authority", adds mirror | Static check | Manual | Important | AC-F8-1 |
 | TC-DOC-006 | Distribution markers kept; doc-distribution guard green | Static check | Automated | Critical | AC-F8-1, NFR-9 |
@@ -181,7 +182,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 | TC-DIST-003 | Installer/uninstaller suites pass with the gate registered | Regression | Bash suite | High | AC-F7-1 |
 | TC-CONFINE-001 | PR-time diff contains only in-scope files | Manual | PR-time review | Critical | AC-NFR8-1 |
 | TC-CONFINE-002 | Unchanged surfaces stay unchanged (tree invariants) | Static check | Automated | Critical | AC-NFR8-1, NFR-8 |
-| TC-DOGFOOD-001 | This change's own branch range passes and the verdict is recorded | Manual | Manual + gate run | Critical | AC-F6-1, AC-F1-1, AC-F3-4 |
+| TC-DOGFOOD-001 | This change's own branch range passes and the verdict is recorded | Manual | Manual + gate run | Critical | AC-F6-1, AC-F1-1, AC-F3-3, AC-F3-4 |
 
 ### 5.2 Scenario Details
 
@@ -200,7 +201,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 - Fixture `FX-BAD-BODY`: temp repository with `commitlint.config.js` extending `@commitlint/config-conventional`, base branch `main` with one seed commit, feature branch `feat/GH-268/fixture` with one commit whose message is a valid conventional subject plus one body line of 140 characters (`msg-bad-body.txt`).
 
 **Steps**:
-1. `cd` into the fixture in a subshell and run `PATH="${REPO_ROOT}/node_modules/.bin:${PATH}" "${REPO_ROOT}/scripts/lint-commit-range.sh" --base main`, capturing stdout, stderr and `$?`.
+1. `cd` into the fixture in a subshell and run `"${REPO_ROOT}/scripts/lint-commit-range.sh" --base main` **exactly as published** (no `PATH` modification), capturing stdout, stderr and `$?`.
 2. Extract the offending commit's short SHA (`git rev-parse --short HEAD`) and full SHA.
 3. Assert exit code `1`; assert stdout contains the short SHA and the full SHA; assert stdout contains `body-max-line-length`.
 4. Assert the violation is reported as `FAIL`, not `ERROR` (`assert_not_contains "${out}" "ERROR"`), and that `SURGICAL REWORD` appears.
@@ -340,41 +341,51 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 
 **Preconditions**:
 - Fixture `FX-NO-CONFIG`: temp repository containing none of the recognized configuration filenames (`commitlint.config.{js,cjs,mjs,ts}`, `.commitlintrc`, `.commitlintrc.json`, `.commitlintrc.yaml`, `.commitlintrc.yml`), with one deliberately malformed commit in range.
+- Fixture `FX-NO-CONFIG-LOCAL-BIN`: the same history and the same absence of configuration, but with an executable `node_modules/.bin/commitlint` present.
 - Fixture `FX-ALT-CONFIG`: same history but with `.commitlintrc.json` containing `{"extends": ["@commitlint/config-conventional"]}`.
 
 **Steps**:
 1. Run the gate in `FX-NO-CONFIG` with `--base main`; assert exit code `0`; assert stdout contains `SKIP`; assert stdout states the reason (a match on `no commitlint configuration` or the documented equivalent); assert stdout contains no `PASS` verdict token.
 2. Repeat with a malformed commit present (already in the fixture) and assert the gate still skips rather than failing — a skip is not a violation.
-3. Run the gate in `FX-ALT-CONFIG`; assert it does **not** skip and exits `1` naming the violated rule (proves the configuration-detection list is not limited to `commitlint.config.js`).
+3. Run the gate in `FX-NO-CONFIG-LOCAL-BIN`; assert it still reports `SKIP` with exit `0` and does **not** become `ERROR`/`DM-1.g` — the configuration check precedes binary resolution, so a usable binary cannot manufacture a verdict where there is no authority to mirror.
+4. Run the gate in `FX-ALT-CONFIG`; assert it does **not** skip and exits `1` naming the violated rule (proves the configuration-detection list is not limited to `commitlint.config.js`).
 
 **Expected Outcome**:
 - Then a project with no commitlint configuration gets an explicit, reasoned skip with exit success (DM-1.d), and a project configured through an alternate filename is treated as configured (AC-F3-3, DEC-6).
+- Then the skip is insensitive to binary availability: a present `node_modules/.bin/commitlint` never converts a no-authority repository into a verdict or an error (AC-F3-3 amended), so the skip stays the single, unambiguous outcome.
 
-**Notes / Clarifications**: Step 3 is the non-vacuity guard for step 1: without it, a gate that always skips would pass this TC.
+**Notes / Clarifications**: Step 4 is the non-vacuity guard for step 1: without it, a gate that always skips would pass this TC. Step 3 is the amended-AC guard for the reverse error: a gate that probes the binary before the configuration would raise `DM-1.g` here.
 
-#### TC-COMMITLINT-008 - Configured repo without commitlint binary → error naming the tool
+#### TC-COMMITLINT-008 - Binary resolution: local-first, origin disclosed, absence loud
 
-**Scenario Type**: Negative
+**Scenario Type**: Negative / Contract
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-3, DM-1.g, NFR-2, RSK-2, DEC-6
+**Related IDs**: F-1, F-3, AC-F3-3, DM-1, DM-1.g, NFR-1, NFR-2, RSK-1, RSK-2, DEC-1, DEC-6, DEC-10
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_error_when_binary_unavailable`
-**Tags**: @bash, @gate, @fail-closed
+**Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_error_when_binary_unavailable`, `test_local_binary_preferred_over_path`, `test_decoy_path_binary_not_executed`, `test_foreign_binary_disclosed`
+**Tags**: @bash, @gate, @fail-closed, @parity
 
 **Preconditions**:
-- Fixture `FX-CLEAN` (configuration present, valid commits).
-- A scrubbed `PATH` containing only the shell builtins' directory and coreutils/git (e.g. `PATH="/usr/local/bin:/usr/bin:/bin"`) with a guard that `command -v commitlint` fails there; no `node_modules/.bin` entry.
+- Fixture `FX-CLEAN-NO-DEPS`: configuration present, valid commits, **no `node_modules` tree** (fixtures never inherit the host repository's dependency tree), run under a scrubbed `PATH` (`PATH="/usr/local/bin:/usr/bin:/bin"`) with a guard that `command -v commitlint` fails there.
+- Fixture `FX-LOCAL-BIN`: configuration present, one deliberately malformed commit in range, and `node_modules/.bin/commitlint` present and executable (a symlink to the repository's real pinned binary) — the shape of a lane after `pnpm install`.
+- Fixture `FX-DECOY-PATH`: `FX-LOCAL-BIN` plus a decoy `commitlint` earlier on `PATH` that exits `0` for every input and appends its invocation to `DECOY_MARKER`.
+- Fixture `FX-PATH-FOREIGN`: configuration present, valid commits, **no local `node_modules`**, and a copy of the real binary in a directory outside the fixture repository (`_test_tmpdir/bin/commitlint`) placed on `PATH`.
 
 **Steps**:
-1. Assert the scrub is effective: `PATH="${scrubbed}" command -v commitlint` exits non-zero (precondition guard).
-2. Run the gate under `PATH="${scrubbed}"`; capture output and exit code.
-3. Assert exit code `2`; assert output contains `ERROR` and the word `commitlint` (the missing tool is named); assert output contains an install remediation hint (a match on `install` or the documented equivalent); assert output contains no `PASS`.
-4. Assert a *configured* repository is never reported as `SKIP` here.
+1. **Absence is loud (DM-1.g, meaning unchanged).** In `FX-CLEAN-NO-DEPS`: assert the scrub is effective (`PATH="${scrubbed}" command -v commitlint` exits non-zero); run the gate; assert exit code `2`, output contains `ERROR` and the word `commitlint`, an install remediation hint (a match on `install` or the documented equivalent), no `PASS`, and no `SKIP`.
+2. **Repository-local preference.** In `FX-LOCAL-BIN` run the gate **exactly as published** (no `PATH` modification). Assert the verdict header names the resolved binary and a path ending in `node_modules/.bin/commitlint`, and states the resolution origin as `repository-local` (or the documented equivalent token).
+3. **A decoy earlier on `PATH` must never win.** In `FX-DECOY-PATH` run with the decoy directory first on `PATH`; assert `DECOY_MARKER` does not exist (the decoy was never executed), assert the header still names the repository-local path, and assert the malformed commit still fails (exit `1`) — the decoy would have passed it, so the FAIL proves the local binary decided the verdict.
+4. **Foreign origin is disclosed, not silently used and not failed.** In `FX-PATH-FOREIGN` run with the outside directory on `PATH`; assert the header names the resolved binary with a `PATH`-origin marker and discloses a parity risk (a match on `parity` or `outside the repository` or the documented equivalent); assert the outcome is the binary's normal verdict (`PASS`, exit `0`) and **not** `ERROR`/exit `2` — a disclosed foreign tool is a risk to reconcile, not a terminal failure.
+5. **The header field exists in every outcome class.** Run the four outcome fixtures (`FX-CLEAN` pass, `FX-BAD-BODY` fail, `FX-NO-CONFIG` skip, `FX-CLEAN-NO-DEPS` error) and assert each header carries a binary field: the resolved path plus origin for pass/fail, an explicit unavailable/none representation for skip and error (documented equivalent accepted).
 
 **Expected Outcome**:
-- Then a configured project with a broken environment fails loudly with the "unable to verify" code and an actionable hint (AC-F3-3, DM-1.g, RSK-2) — never a silent pass.
+- Then a configured project with no usable binary at all fails loudly with the "unable to verify" code and an actionable hint (DM-1.g, AC-F3-3, RSK-2) — never a silent pass.
+- Then the repository-local binary wins over any `PATH` binary, a decoy earlier on `PATH` is never executed, and the verdict header names both the binary and its origin, so a verdict is auditable against the tool that produced it (AC-F3-3 amended, DEC-10).
+- Then a binary resolved from outside the repository is disclosed as a parity risk while still rendering its verdict, so a global install or sibling checkout can never decide parity silently (AC-F3-3, DEC-1, NFR-1, RSK-1).
+
+**Notes / Clarifications**: This TC is the test-side remediation of DoR iter-1 finding 3. The amended AC-F3-3 fixes the precedence (repository-local `node_modules/.bin/commitlint` when present and executable, then `PATH`), the header disclosure, and the unchanged `DM-1.g` meaning. The fixtures must therefore create their own `node_modules/.bin` where a local binary is required, and must never contain one where absence is being tested — an inherited host dependency tree would make step 1 vacuous.
 
 #### TC-COMMITLINT-009 - Invalid configuration → error, not a violation verdict
 
@@ -417,7 +428,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 
 **Preconditions**:
 - Fixture `FX-REMOTE-TRACKING`: local branch `main` at SHA `M1`, and `refs/remotes/origin/main` set with `git update-ref` to a different SHA `M2` (no network, no remote configured). Branch range contains one valid commit and one malformed commit.
-- Fixture `FX-CONFIG-BASE`: `.ai/agent/pr-instructions.md` containing a `- **Default base branch**: \`integration\`` line, with branch `integration` present.
+- Fixture `FX-CONFIG-BASE`: `.ai/agent/pr-instructions.md` containing a ``- **Default base branch**: `integration` `` line, with branch `integration` present.
 - Environment override variable as established by the lifecycle (`ADOS_BASE_BRANCH`).
 
 **Steps**:
@@ -616,7 +627,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Target Layer / Location**: `scripts/.tests/test-lint-commit-range.sh` — `test_read_only_all_outcomes`
 **Tags**: @bash, @gate, @read-only
 
-**Preconditions**: Fixtures for all four outcome classes: `FX-CLEAN` (pass), `FX-BAD-BODY` (fail), `FX-NO-CONFIG` (skip), `FX-CLEAN` with scrubbed `PATH` (error).
+**Preconditions**: Fixtures for all four outcome classes: `FX-CLEAN` (pass), `FX-BAD-BODY` (fail), `FX-NO-CONFIG` (skip), `FX-CLEAN-NO-DEPS` with scrubbed `PATH` (error — no local `node_modules` and no `PATH` binary).
 
 **Steps**:
 1. Implement the snapshot helper in the suite: `_repo_state()` prints, for one repository, (a) `git status --porcelain=v1 -z`, (b) `git for-each-ref --format='%(refname) %(objectname)' | LC_ALL=C sort`, (c) `sha256sum .git/index` (or `git ls-files -s` as a content-level index digest), (d) `git stash list`, (e) `git rev-parse HEAD`, (f) `git diff --stat` — each stage hashed into one digest.
@@ -643,7 +654,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 
 **Steps** (three independent assertions; all three must hold):
 1. **Static guard.** `grep -nE '(^|[[:space:];|&(])(curl|wget|nc|ssh|scp|git[[:space:]]+(fetch|pull|push|clone|ls-remote|remote[[:space:]]+update))([[:space:]]|$)' scripts/lint-commit-range.sh` returns no executable line; any occurrence inside a quoted remediation-hint string is allowed only when the same line is a `printf`/heredoc hint (assert the match is not a command position). Record the exact grep and its output as evidence.
-2. **Poison-path run.** Run the gate with `PATH="${poison_bin}:${REPO_ROOT}/node_modules/.bin:${PATH}"`, `NETWORK_MARKER` pointing at a temp file, `GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS=/bin/false`; assert exit code `0` and that `NETWORK_MARKER` does not exist (no shim executed). Repeat for the fail and error fixtures.
+2. **Poison-path run.** Run the gate with `PATH="${poison_bin}:${PATH}"`, `NETWORK_MARKER` pointing at a temp file, `GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS=/bin/false`; assert exit code `0` and that `NETWORK_MARKER` does not exist (no shim executed). Repeat for the fail and error fixtures.
 3. **Git trace scan.** Run the gate with `GIT_TRACE=1 GIT_TRACE2_EVENT=""`; assert the trace contains no line matching the transport alternation `fetch`, `push`, `ls-remote`, `clone`, or `git-remote-*`.
 
 **Expected Outcome**:
@@ -665,7 +676,7 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Preconditions**: All precondition fixtures from §6.
 
 **Steps**:
-1. Run a table-driven matrix over every DM-1 row and record `actual_exit`: a→`0` (`FX-CLEAN`), b→`0` (`FX-EMPTY`), c→`1` (`FX-BAD-BODY`), d→`0` (`FX-NO-CONFIG`), e→`2` (unresolvable `--base`), f→`2` (`FX-UNRELATED`), g→`2` (scrubbed `PATH`), h→`2` (`FX-BAD-CONFIG`), i→`2` (`--nonsense`).
+1. Run a table-driven matrix over every DM-1 row and record `actual_exit`: a→`0` (`FX-CLEAN`), b→`0` (`FX-EMPTY`), c→`1` (`FX-BAD-BODY`), d→`0` (`FX-NO-CONFIG`), e→`2` (unresolvable `--base`), f→`2` (`FX-UNRELATED`), g→`2` (`FX-CLEAN-NO-DEPS`: no local binary and scrubbed `PATH`), h→`2` (`FX-BAD-CONFIG`), i→`2` (`--nonsense`).
 2. Assert every row matches and that the collected set of observed codes is exactly `{0,1,2}`.
 3. For the failing and error rows, assert the verdict line appears on **both** stdout and stderr (spec §10: the failing side's signal is on stderr too).
 4. Assert `0` and `2` rows never emit a `FAIL` violation verdict, and `1` rows never emit `PASS`.
@@ -718,12 +729,13 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 2. Assert it states the **subject** rule: a conventional header that carries the work item reference (assert text matches a conventional-header shape such as a `type(scope): summary` header and contains the work-item reference requirement).
 3. Assert it states the **line-length** rule: body and footer lines stay within 100 characters (assert a match on `100`).
 4. Assert it states the **merge** rule: a sync must not leave a plain `Merge remote-tracking branch ...` subject; a sync carries a conventional subject or is integrated without a merge commit (assert the literal `Merge remote-tracking branch` appears in a prohibiting sentence).
-5. Assert it states **both remediation modes**: surgical reword for one or two offenders and condense-to-one for many (assert both `SURGICAL REWORD` and `CONDENSE-TO-ONE`, or their prose equivalents, appear).
+5. Assert it states **both remediation modes** and the **ownership split** required by the amended AC-F4-1: surgical reword for one or two offenders and condense-to-one for many (both `SURGICAL REWORD` and `CONDENSE-TO-ONE`, or their prose equivalents), plus an explicit assignment — the **committer owns the message it produces and never rewrites history**, the **PM owns the range verdict and selects the mode**, the **acting agent performs the history action outside the gate**, and the **gate only reports**. Assert the four role clauses appear (tolerant regexes on `committer`/`PM`/`agent`, `owns`, `never`/`not`, `reports`), and that the sentence does not contradict the file's existing non-negotiables (`Never push and never rewrite history.` at `.opencode/agent/committer.md:33`).
 6. Assert the statements are constraints on the artifact, not recipes: no raw write command is taught (see `TC-PROMPT-003`).
 7. Record the four grep commands and their hits as phase evidence.
 
 **Expected Outcome**:
 - Then an agent reading only the committer prompt can comply with the contract before committing (AC-F4-1, G-4).
+- Then the contract is not self-contradicting: the prompt states the constraint it reports and its own "never rewrite" non-negotiable at the same time, with the PM and the acting agent named as the parties that own the verdict, the mode, and the history action (AC-F4-1 amended).
 
 #### TC-PROMPT-002 - PM `quality_gates` requires the gate, loops, and records evidence
 
@@ -745,9 +757,11 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 4. Assert the never-waive rule: an unresolved "unable to verify"/ERROR outcome is never recorded as a pass and blocks phase completion (assert a sentence containing `unable to verify` or `ERROR` together with `never`/`must not`/`blocks`).
 5. Assert the evidence requirement: the verdict (outcome, commit count, offender count, and mode when failing) is recorded as a PM-notes evidence entry (assert a sentence naming `pm-notes` or `notes:`).
 6. Assert the skill/rules aren't contradicted: the step still routes build/test/lint through `@runner` and fixes through `@fixer`, so no delivery-semantics change is implied (NFR-8).
+7. Assert the ownership split required by the amended AC-F4-1 is stated consistently with `TC-PROMPT-001`: the PM owns the range verdict and selects the remediation mode, the acting agent performs the history action outside the gate, and the gate only reports — while the committer remains the message owner that never rewrites history.
 
 **Expected Outcome**:
 - Then the phase cannot complete on an unresolved error, and the completion claim is inspectable later (AC-F6-1, F-6, DEC-8).
+- Then the two prompts assign the same four responsibilities without overlap or contradiction, so a lane knows who rewords, who chooses the mode, and that the gate never acts (AC-F4-1 amended, AC-F6-1).
 
 #### TC-PROMPT-003 - Contract is constraints, not raw git recipes; conformance green
 
@@ -764,8 +778,8 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 
 **Steps**:
 1. Run `bun run scripts/checks/prompt-conformance.ts` (equivalently `pnpm check:prompt`); assert exit `0` and no finding lines on stderr.
-2. Assert the committer inventory entry's forbidden literals still hold: `.opencode/agent/committer.md` contains no `git add` and no `git commit` (the inventory already pins these; a raw-write recipe would fail step 1).
-3. Assert the contract addition itself teaches no write command: `grep -nE '\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md` returns no line outside a negation sentence.
+2. Assert the committer inventory entry's forbidden literals are **negation-exempt**, not absent: `.opencode/agent/committer.md` legitimately contains `git add` and `git commit` today at line 31 (``Never run `git add`, `git commit`, `git reset`, or any other raw git write command.``), and the inventory check that pins them (`tests/fixtures/prompt-inventory/lifecycle.json` → `forbidden`, evaluated through `prompt-conformance.ts`'s sentence-level negation exemption) is satisfied **because** they are negated. The mechanical evidence is `pnpm check:prompt` exit `0`; never assert the raw literal is absent with `grep -c`, and never "fix" a green scan by deleting the prohibition.
+3. Assert the contract addition itself teaches no write command: `grep -nE '\bgit[[:space:]]+(rebase|reset|commit[[:space:]]+--amend|push[[:space:]]+--force|filter-branch|reflog[[:space:]]+delete)' .opencode/agent/committer.md .opencode/agent/pm.md` may match only **negated** sentences. Mechanically: every matching line must also match the negation vocabulary (`never|must not|do not|don't|no`), and the expected, pre-existing match is `.opencode/agent/committer.md:31` (``Never run `git add`, `git commit`, `git reset`, …``); assert that line is the only pre-existing match and that the change adds none. A match on line 31 is **not** a violation — deleting it would remove the load-bearing prohibition the scan depends on.
 4. Assert the PM step does not hand-edit phase state and still uses `phase complete` (assert `phase complete` present, assert no timestamp/`completed_at` edit instruction).
 
 **Expected Outcome**:
@@ -857,12 +871,16 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Steps**:
 1. Assert `AGENTS.md` mentions the gate (`grep -n 'lint-commit-range' AGENTS.md` returns ≥1 line) and that the sentence also qualifies it as a lifecycle/supplementary pre-PR gate (assert the same line or its sentence contains `supplementary`, `pre-PR`, or `lifecycle`).
 2. Assert the gate is placed in the `quality_gates` context, not the general quality-gates command context: the mention must not appear in the `/check` or `/check-fix` row.
-3. Assert `/check` and `/check-fix` rows are unchanged in meaning: `AGENTS.md` still contains `| /check | Run quality gates (no fixes) |` and `| /check-fix | Run quality gates and fix failures |`.
-4. Assert no new "run all quality gates" instruction was introduced: no line instructs running a repository-wide gates script for this purpose (assert no `scripts/quality-gates.sh` mention, and that `pnpm check` is still described as the aggregate working-tree gate).
-5. Assert the distribution-registration note still holds (delivery scripts registered in `ADOS_DELIVERY_SCRIPTS`) and now covers the gate.
+3. Assert `/check` and `/check-fix` rows are unchanged: match the **real** row literals, which include backticks around the command names (verified in the unmodified `AGENTS.md:111-112`):
+   - ``grep -nE '^\| `/check` \| Run quality gates \(no fixes\) \|$' AGENTS.md`` returns exactly line 111;
+   - ``grep -nE '^\| `/check-fix` \| Run quality gates and fix failures \|$' AGENTS.md`` returns exactly line 112.
+
+   Do **not** assert the bare forms `| /check | …` / `| /check-fix | …` — those greps exit `1` against repository truth (DoR iter-1 finding 2), are unsatisfiable, and would tempt an implementer to strip the backticks from a row this change must leave untouched. Before pinning these assertions in the suite, re-verify them against the current `AGENTS.md` content (`sed -n '111,112p' AGENTS.md`); if the rows legitimately change, update the assertion to the new literal rather than deleting it.
+4. Assert no new "run all quality gates" instruction was introduced: no line instructs running a repository-wide gates script for this purpose (assert no `scripts/quality-gates.sh` mention — verified absent today, such a file does not exist — and that `pnpm check` is still described as the aggregate working-tree gate).
+5. Assert the distribution-registration note still holds and now covers the gate: the delivery-infrastructure bullet naming `ADOS_DELIVERY_SCRIPTS` (verified at `AGENTS.md:165`) is unchanged in meaning, and the gate's registration is described consistently with `scripts/install.sh`.
 
 **Expected Outcome**:
-- Then a reader learns the gate's lifecycle placement without any change to `/check`'s resolution contract or behaviour (AC-F6-2, DEC-8).
+- Then a reader learns the gate's lifecycle placement without any change to `/check`'s resolution contract or behaviour (AC-F6-2, DEC-8), and the assertion is satisfiable against repository truth on the first run rather than being a permanent false negative.
 
 #### TC-DOC-002 - Quality-gates/PR page describes gate and contract
 
@@ -891,21 +909,28 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: F-8, F-5, AC-F8-1, Appendix C row 2
+**Related IDs**: F-7, F-8, F-5, AC-F8-1, AC-F7-1, Appendix C rows 2, 9, 10
 **Test Type(s)**: Manual
-**Automation Level**: Manual
-**Target Layer / Location**: `doc/spec/features/feature-autonomous-delivery.md`
-**Tags**: @docs, @spec
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/spec/features/feature-autonomous-delivery.md`; `doc/guides/autonomous-batch-delivery.md`
+**Tags**: @docs, @spec, @installer
 
-**Preconditions**: Prompt change delivered.
+**Preconditions**: Prompt and installer changes delivered (the delivered-set enumerations are only stale once the gate joins `ADOS_DELIVERY_SCRIPTS`).
 
 **Steps**:
 1. Assert the page states that the resume-sync step produces a conventional-subject sync merge referencing the work item (and no longer a plain merge subject).
 2. Assert it still states `deliver-ticket.sh` does not merge to the base branch and that merge authority is unchanged (no contradiction with the existing invariants).
-3. Assert `ados_distribution: internal` retained and `related_changes` gains `GH-268`.
+3. Assert `ados_distribution: internal` retained (verified at front matter line 5) and `related_changes` gains `GH-268` (today the list is `GH-142 … GH-280`; verified at line 14).
+4. **Appendix C row 9(a) — overview sentence.** Assert the overview paragraph that enumerates the delivered bash scripts (verified today at line 26: `` (`ceo-loop.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `opencode-session.sh`, `tools/clean-merged-branches`) ``) also names `lint-commit-range.sh`, so the sentence stays factually complete.
+5. **Appendix C row 9(b) — Core Components table.** Assert the delivered-file table (verified today: header at line 180, first data row at line 182, body through line 190) gains a row for `scripts/lint-commit-range.sh` with a responsibility cell that states its purpose (pre-PR branch-range commit-message lint, mirror of the CI authority).
+6. **Appendix C row 9(c) — Install inventory blockquote.** Assert the `> **Install inventory.**` blockquote (verified today at lines 193–200) lists `lint-commit-range.sh` **inside the `ADOS_DELIVERY_SCRIPTS` enumeration** (today it names exactly `opencode-session.sh`, `deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`), and that the surrounding sentences about `ADOS_DELIVERY_TOOLS`, `ADOS_HOOK_EXAMPLES`, and local install/uninstall remain true.
+7. **Appendix C row 10 — batch-delivery guide comment block.** Assert `doc/guides/autonomous-batch-delivery.md`'s `install.sh --local` section comment block (verified today at lines 37–41: `# The delivery scripts are now available in THIS project:` followed by `scripts/opencode-session.sh`, `scripts/deliver-ticket.sh`, `scripts/batch-deliver.sh`, `tools/clean-merged-branches`) is reconciled with the installer set — either the gate is added to the list or the list is explicitly marked as illustrative while naming the installer as the authoritative set; record which choice was made.
 
 **Expected Outcome**:
 - Then the page's summary of the delivery prompt matches the emitted prompt text verified by `TC-PROMPT-004` (AC-F8-1).
+- Then all three delivered-set enumerations on the autonomous-delivery page plus the batch-delivery guide's install block are factually complete after the gate joins the delivered set, so none of them silently under-reports what an adopter receives (Appendix C rows 9–10, AC-F7-1, AC-F8-1).
+
+**Notes / Clarifications**: DoR iter-1 finding 4 showed the delivered-set enumerations were unregistered drift. The three locations are named here with their present-day line anchors so the doc-syncer reconciliation has concrete targets; line numbers shift as the page grows, so the assertions are written against the quoted text, not the numbers. Every literal in steps 4–7 was verified against the current files (page lines 26, 180/182–190, 193–200; guide lines 37–41) — re-verify before pinning.
 
 #### TC-DOC-004 - Change-lifecycle `quality_gates` names the range lint
 
@@ -1012,13 +1037,16 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Preconditions**: Installer test sandbox source tree (existing `test-install.sh` fixture pattern).
 
 **Steps**:
-1. Static assertion: `ADOS_DELIVERY_SCRIPTS` in `scripts/install.sh` contains `"scripts/lint-commit-range.sh"` (assert the literal inside the array block).
-2. In the suite, run `install_local_files "${source_dir}"` against a temp project and assert `scripts/lint-commit-range.sh` exists and is executable (`[[ -x ... ]]`).
-3. Assert the installed file is byte-identical to the source (`cmp -s`), matching the `copy_updatable_file` (always-track-upstream) contract.
-4. Assert a re-install updates a locally modified installed copy (updatable-file semantics), consistent with the other delivery scripts.
+1. Static assertion: `ADOS_DELIVERY_SCRIPTS` in `scripts/install.sh` contains `"scripts/lint-commit-range.sh"` (assert the literal inside the array block, which today lists `opencode-session.sh`, `deliver-ticket.sh`, `scripts/lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`).
+2. **Executable-bit assertion (suite discovery depends on it).** Assert the committed mode of both new files is `100755`: `git ls-files -s scripts/lint-commit-range.sh scripts/.tests/test-lint-commit-range.sh` must report `100755` for each, and `test -x` must succeed for both. This is load-bearing: `scripts/test-all.sh:88` discovers suites with `find … -name 'test-*.sh' -perm -u+x`, so a `100644` suite is silently omitted and `bash scripts/test-all.sh` would print "all passed" while never running the change's primary suite — the exact silent-skip failure this change exists to eliminate. Note that `bash scripts/.tests/test-lint-commit-range.sh` (the Phase 1 verification command) passes regardless of the bit, so only this mode assertion catches the omission.
+3. Assert the new files match the established convention rather than inventing one: compare their index mode with an existing suite and script (for example `scripts/.tests/test-deliver-ticket.sh` and `scripts/deliver-ticket.sh`) using `git ls-files -s`/`stat -c '%a'`; all must agree on the executable mode.
+4. In the suite, run `install_local_files "${source_dir}"` against a temp project and assert `scripts/lint-commit-range.sh` exists and is executable (`[[ -x ... ]]`).
+5. Assert the installed file is byte-identical to the source (`cmp -s`), matching the `copy_updatable_file` (always-track-upstream) contract.
+6. Assert a re-install updates a locally modified installed copy (updatable-file semantics), consistent with the other delivery scripts.
 
 **Expected Outcome**:
 - Then an adopting project receives the gate with the other delivery scripts and it is runnable (AC-F7-1, F-7).
+- Then both the gate and its suite are committed `100755`, so `scripts/test-all.sh` actually discovers and runs the suite instead of reporting a green run that skipped it (AC-F7-1, NFR-9).
 
 #### TC-DIST-002 - Gate is removed on uninstall
 
@@ -1116,27 +1144,30 @@ Assertion vocabulary: "static check" = an exact-text or exit-code assertion run 
 **Scenario Type**: Happy Path (self-application)
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, AC-F1-1, AC-F3-4, spec §18 (rollout: self-applies), §10 telemetry
+**Related IDs**: F-1, F-3, F-6, F-7, AC-F6-1, AC-F1-1, AC-F3-3, AC-F3-4, spec §18 (rollout: self-applies), §10 telemetry
 **Test Type(s)**: Manual
 **Automation Level**: Semi-automated
-**Target Layer / Location**: This change's branch `chore/GH-268/commitlint-pre-pr-gate`; `doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml`
+**Target Layer / Location**: This change's branch `chore/GH-268/commitlint-pre-pr-gate`; `doc/changes/2026-11/2026-11-11--GH-268-commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml`
 **Tags**: @dogfood, @lifecycle, @evidence
 
 **Preconditions**:
 - The gate script and the PM/committer prompt wiring are delivered (gate exists in the tree before the phase completion claim).
+- The repository's dependencies are installed (`node_modules/.bin/commitlint` present), because the published invocation does not modify `PATH` — it relies on the amended binary resolution (repository-local first, then `PATH`).
 - The delivery base branch is resolvable locally (fetched when the branch was created or synced). If it is not, that is `DM-1.e` — fetch it and re-run, never waive.
 
 **Steps**:
-1. From the repository root run `./scripts/lint-commit-range.sh --base <delivery base>` on the change branch; capture stdout/stderr and `$?`.
+1. From the repository root run `./scripts/lint-commit-range.sh --base main-tools` on the change branch **exactly as published — with no `PATH` prefix**; capture stdout/stderr and `$?`. This step is itself the check that the published invocation contract works on this very repository: a `DM-1.g` here means the resolution precedence is wrong, not that the environment is unusual.
 2. Assert exit code `0` and a `PASS` verdict naming the commit count in range.
-3. If it fails, apply the mode the gate names (`SURGICAL REWORD` for 1–2 offenders, `CONDENSE-TO-ONE` for ≥3), re-run until `PASS` — the phase may not complete on `FAIL` and may not waive `ERROR`.
-4. Record the verdict as a pm-notes evidence entry: outcome, commit count, offender count (`0`), and the mode (`none`), naming the gate. Evidence command: `grep -n 'lint-commit-range' doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml`.
-5. Run `phase complete GH-268 quality_gates` only after step 2/3 reaches `PASS` and step 4 is recorded.
+3. Assert the verdict header names the resolved binary as the repository-local one (`node_modules/.bin/commitlint`, origin `repository-local`). If it instead names a `PATH` binary, record that as a parity risk in the pm-notes evidence (the header discloses it; AC-F3-3 amended) and investigate why the local binary was skipped before completing the phase.
+4. If it fails, apply the mode the gate names (`SURGICAL REWORD` for 1–2 offenders, `CONDENSE-TO-ONE` for ≥3), re-run until `PASS` — the phase may not complete on `FAIL` and may not waive `ERROR`.
+5. Record the verdict as a pm-notes evidence entry: outcome, commit count, offender count (`0`), the mode (`none`), the resolved binary and its origin, naming the gate. Evidence command: `grep -n 'lint-commit-range' doc/changes/2026-11/2026-11-11--GH-268--commitlint-pre-pr-gate/chg-GH-268-pm-notes.yaml`.
+6. Run `phase complete GH-268 quality_gates` only after step 2/4 reaches `PASS` and step 5 is recorded.
 
 **Expected Outcome**:
 - Then the change self-applies: its own history satisfies the configuration before `quality_gates` completes, and the completion claim carries an inspectable verdict (AC-F6-1, AC-F1-1, spec §18).
+- Then the documented invocation reaches `PASS` with no environment workaround, and the evidence records which binary and origin produced the verdict (AC-F3-3 amended, DEC-10).
 
-**Notes / Clarifications**: This is also the parity check against CI: the same range is re-linted by `ts-commitlint` on the PR, so a green dogfood run and a red CI job would be a defect in this change (RSK-1).
+**Notes / Clarifications**: This is also the parity check against CI: the same range is re-linted by `ts-commitlint` on the PR, so a green dogfood run and a red CI job would be a defect in this change (RSK-1). DoR iter-1 finding 3 showed the PATH-only assumption made this TC unsatisfiable on this repository; the amended AC-F3-3 (repository-local first) is what makes step 1 possible with the published command.
 
 ## 6. Environments and Test Data
 
@@ -1166,8 +1197,9 @@ export LC_ALL=C TZ=UTC
 
 | Fixture | Shape | Feeds |
 |---|---|---|
-| `FX-CLEAN` | config + 2 valid conventional commits on a feature branch | TC-COMMITLINT-002, TC-COMMITLINT-008 (precondition), TC-COMMITLINT-018 (pass), TC-COMMITLINT-020 (row a) |
-| `FX-BAD-BODY` | 1 commit: valid subject + 140-char body line | TC-COMMITLINT-001, TC-COMMITLINT-013, TC-COMMITLINT-020 (row c) |
+| `FX-CLEAN` | config + 2 valid conventional commits on a feature branch, with `node_modules/.bin/commitlint` symlinked to the repository's pinned binary | TC-COMMITLINT-002, TC-COMMITLINT-018 (pass), TC-COMMITLINT-020 (row a) |
+| `FX-CLEAN-NO-DEPS` | `FX-CLEAN` with the local `node_modules` tree removed | TC-COMMITLINT-008 (absence), TC-COMMITLINT-018 (error), TC-COMMITLINT-020 (row g) |
+| `FX-BAD-BODY` | 1 commit: valid subject + 140-char body line, local binary installed | TC-COMMITLINT-001, TC-COMMITLINT-013, TC-COMMITLINT-020 (row c) |
 | `FX-BAD-FOOTER` | 1 commit: valid subject + 130-char `Refs:` footer line | TC-COMMITLINT-013 |
 | `FX-MULTI` | branches `one-offender`, `two-offenders`, `three-offenders`, `two-commits-many-violations` | TC-COMMITLINT-013, TC-COMMITLINT-014, TC-COMMITLINT-016, TC-COMMITLINT-017 |
 | `FX-MANY-VIOLATIONS` | 1 commit with 30×200-char body lines + 1 non-conventional commit | TC-COMMITLINT-015 |
@@ -1176,8 +1208,12 @@ export LC_ALL=C TZ=UTC
 | `FX-UPSTREAM-DIRTY` | `main` carries a non-conventional commit with an over-long body; feature merges it and adds valid commits | TC-COMMITLINT-005 |
 | `FX-EMPTY` | branch created at `main` tip, zero extra commits | TC-COMMITLINT-006, TC-COMMITLINT-020 (row b) |
 | `FX-NO-CONFIG` | no recognized commitlint config file; contains a malformed commit | TC-COMMITLINT-007, TC-COMMITLINT-018 (skip), TC-COMMITLINT-020 (row d) |
+| `FX-NO-CONFIG-LOCAL-BIN` | `FX-NO-CONFIG` plus an executable `node_modules/.bin/commitlint` | TC-COMMITLINT-007 (skip is binary-insensitive) |
 | `FX-ALT-CONFIG` | `.commitlintrc.json` + malformed commit | TC-COMMITLINT-007 (non-vacuity), TC-COMMITLINT-020 |
 | `FX-BAD-CONFIG` | `commitlint.config.js` copied from `commitlint.config.invalid.txt` | TC-COMMITLINT-009, TC-COMMITLINT-020 (row h) |
+| `FX-LOCAL-BIN` | `FX-BAD-BODY` + local `node_modules/.bin/commitlint` (repository-local resolution) | TC-COMMITLINT-008 (precedence) |
+| `FX-DECOY-PATH` | `FX-LOCAL-BIN` + a decoy `commitlint` first on `PATH` that exits `0` and appends to `DECOY_MARKER` | TC-COMMITLINT-008 (decoy never wins) |
+| `FX-PATH-FOREIGN` | `FX-CLEAN` without local `node_modules` + a real binary copy in a directory outside the fixture repository, placed on `PATH` | TC-COMMITLINT-008 (foreign-origin disclosure) |
 | `FX-REMOTE-TRACKING` | local `main` at M1, `refs/remotes/origin/main` at M2 via `update-ref` | TC-COMMITLINT-010 |
 | `FX-CONFIG-BASE` | `.ai/agent/pr-instructions.md` with `Default base branch: integration` | TC-COMMITLINT-010 |
 | `FX-UNRELATED` | orphan branch with no common ancestor | TC-COMMITLINT-011, TC-COMMITLINT-020 (row f) |
@@ -1185,6 +1221,8 @@ export LC_ALL=C TZ=UTC
 | `FX-20` | 20 valid conventional commits | TC-COMMITLINT-021 |
 | `FX-100` | 100 valid conventional commits (generated in a loop with `git commit --allow-empty -F`) | TC-COMMITLINT-021 |
 | Poison bin | shims for `curl`, `wget`, `ssh`, `scp`, `nc`, `git-remote-https`, `git-remote-http` writing to `NETWORK_MARKER` | TC-COMMITLINT-019 |
+
+Fixtures that need a working linter get one through a helper (`_install_local_commitlint "${repo}"`) that creates `"${repo}/node_modules/.bin"` and symlinks the repository's pinned `${REPO_ROOT}/node_modules/.bin/commitlint` into it — the same shape a lane has after `pnpm install`. The helper fails loudly ("run `pnpm install`") when the host binary is missing; there is no silent skip. Fixtures that test absence (`FX-CLEAN-NO-DEPS`, `FX-PATH-FOREIGN`, `FX-NO-CONFIG`) are created without that helper, and the suite asserts the absence before running the gate so the case cannot be vacuous.
 
 Committed fixture data lives in `scripts/.tests/fixtures/lint-commit-range/`:
 
@@ -1200,13 +1238,15 @@ Committed fixture data lives in `scripts/.tests/fixtures/lint-commit-range/`:
 | `commitlint.config.invalid.txt` | syntactically invalid module text | **`.txt` on purpose** — a `.js` here would be parsed by `biome lint`/`format:check` and turn the aggregate gate red |
 | `fake-commitlint-exec-failure.sh` | shim that exits `3` with an error on stderr and no parseable problems | `DM-1.h` execution-failure sub-case of `TC-COMMITLINT-009`; reached only through `PATH`, never installed into `node_modules/.bin` |
 
-Binary availability per case:
+Binary availability per case (amended AC-F3-3 / DEC-10 precedence):
 
 | Case | Binary resolution |
 |---|---|
-| Real-binary cases (TC-COMMITLINT-001…005, 013…017, 021) | `PATH="${REPO_ROOT}/node_modules/.bin:${PATH}"`; suite fails loudly with "run `pnpm install`" if `command -v commitlint` fails (never a silent skip) |
-| Missing-binary case (TC-COMMITLINT-008, TC-COMMITLINT-018 error, TC-COMMITLINT-020 row g) | `PATH` scrubbed to `/usr/local/bin:/usr/bin:/bin` with a precondition guard asserting `command -v commitlint` fails |
-| Skip case (TC-COMMITLINT-007) | No config file; binary presence irrelevant |
+| Repository-local — the published invocation (TC-COMMITLINT-001…005, 007 step 3, 008 steps 2–3, 013…017, 021) | Fixture contains `node_modules/.bin/commitlint` (helper symlink to `${REPO_ROOT}/node_modules/.bin/commitlint`); gate invoked with **no `PATH` change**; verdict header origin `repository-local`. The helper fails loudly with "run `pnpm install`" if the host binary is missing (never a silent skip) |
+| PATH fallback / foreign origin (TC-COMMITLINT-008 steps 4–5) | No local `node_modules`; `PATH` prepended with `${_test_tmpdir}/bin` holding a copy of the real binary **outside** the fixture repository; header origin `PATH` plus the parity-risk disclosure |
+| Decoy on `PATH` (TC-COMMITLINT-008 step 3) | Local binary present; decoy directory first on `PATH`; the decoy must never execute (`DECOY_MARKER` absent) |
+| Missing binary (TC-COMMITLINT-008 step 1, TC-COMMITLINT-018 error, TC-COMMITLINT-020 row g) | No local `node_modules`; `PATH` scrubbed to `/usr/local/bin:/usr/bin:/bin` with a precondition guard asserting `command -v commitlint` fails |
+| Skip (TC-COMMITLINT-007) | No config file; one variant has a local binary, one does not; both must skip identically |
 
 ### 6.3 Isolation and cleanup
 
@@ -1241,23 +1281,23 @@ All four outcome classes (pass, fail, skip, error) are exercised for the read-on
 | TC-PROMPT-004, TC-PROMPT-005 | `scripts/deliver-ticket.sh`, `scripts/.tests/test-deliver-ticket.sh` (edited) | `bash scripts/.tests/test-deliver-ticket.sh` | Existing – Update |
 | TC-PROMPT-006 | `scripts/.tests/test-deliver-ticket.sh` (full suite) | `bash scripts/.tests/test-deliver-ticket.sh` | Existing – Update (regression) |
 | TC-DOC-001 | `AGENTS.md` (edited) | `grep -n 'lint-commit-range' AGENTS.md` + reading | To Implement (content) / Manual verify |
-| TC-DOC-002…005 | `doc/spec/features/*` (3 pages), `doc/guides/change-lifecycle.md` (edited) | reading + `grep -n 'lint-commit-range'` | To Implement (content) / Manual verify |
+| TC-DOC-002…005 | `doc/spec/features/*` (3 pages), `doc/guides/change-lifecycle.md`, `doc/guides/autonomous-batch-delivery.md` (edited) | reading + `grep -n 'lint-commit-range'` | To Implement (content) / Manual verify |
 | TC-DOC-006 | markers in touched docs; `scripts/.tests/test-doc-distribution.sh` | `bash scripts/.tests/test-doc-distribution.sh` | Existing – No Change (guard) |
 | TC-DOC-007 | `tests/checks/doc-conformance.test.ts`; `pnpm check` | `bun test tests/checks/doc-conformance.test.ts`, `pnpm check:prompt`, `pnpm check:help`, `pnpm check`, `git diff --check` | Existing – No Change |
 | TC-DIST-001, TC-DIST-002 | `scripts/install.sh` (`ADOS_DELIVERY_SCRIPTS`), `scripts/uninstall.sh` (delivery list), `scripts/.tests/test-install.sh`, `scripts/.tests/test-uninstall.sh` (edited) | `bash scripts/.tests/test-install.sh`, `bash scripts/.tests/test-uninstall.sh` | Existing – Update |
 | TC-DIST-003 | same suites | both commands above | Existing – Update (regression) |
 | TC-CONFINE-001 | PR diff review (`@reviewer`) | `git diff --name-only "$(git merge-base main-tools HEAD)"...HEAD` + greps | Manual Only (PR-time) |
 | TC-CONFINE-002 | `scripts/checks/commitlint-authority.ts`, `.husky/commit-msg`, `package.json`, `scripts/checks/exports-parity.ts`, `tests/checks/**` | `bun run scripts/checks/commitlint-authority.ts`, `bun run scripts/checks/exports-parity.ts`, `bun test tests/checks` | Existing – No Change |
-| TC-DOGFOOD-001 | `chg-GH-268-pm-notes.yaml` evidence | `./scripts/lint-commit-range.sh --base <delivery base>`; then `phase complete GH-268 quality_gates` | Manual + gate run |
+| TC-DOGFOOD-001 | `chg-GH-268-pm-notes.yaml` evidence | `./scripts/lint-commit-range.sh --base main-tools` (no `PATH` prefix); then `phase complete GH-268 quality_gates` | Manual + gate run |
 
 Mocking requirements:
 
 - **No mocking of git.** Every gate scenario uses a real temporary repository; the gate's contract is about real history.
 - **No mocking of commitlint for content assertions.** Real pinned binary for `TC-COMMITLINT-001…005`, `013…017`, `021`; the parity cross-check in `TC-COMMITLINT-004` runs the CLI directly.
-- **PATH poisoning only** is used to simulate a missing binary (`TC-COMMITLINT-008`) and to detect network attempts (`TC-COMMITLINT-019`); the suite never patches the script's internals.
+- **Binary injection only.** The suite never patches the script's internals: it either creates a repository-local `node_modules/.bin/commitlint` (the helper symlink), copies the real binary to a directory outside the fixture and puts it on `PATH` (foreign-origin case), prepends a decoy shim (precedence case), or scrubs `PATH` (absence case). `TC-COMMITLINT-019` uses the same technique for network detection.
 - **No stubbed commitlint output** — if the implementation parses a specific output format, format fidelity must be proven against the real binary (see OQ-1 in §8.3) rather than a hand-written stub.
 
-Failure-injection coverage (does the suite catch a broken gate?): the negative assertions above are the guard — a gate that always passes fails `TC-COMMITLINT-001`; a gate that always fails fails `TC-COMMITLINT-002…006`; a gate that skips unconditionally fails `TC-COMMITLINT-007` step 3; a gate that verifies nothing fails `TC-COMMITLINT-010/011/020`; a gate that mutates fails `TC-COMMITLINT-018`; a gate that fetches fails `TC-COMMITLINT-019`.
+Failure-injection coverage (does the suite catch a broken gate?): the negative assertions above are the guard — a gate that always passes fails `TC-COMMITLINT-001`; a gate that always fails fails `TC-COMMITLINT-002…006`; a gate that skips unconditionally fails `TC-COMMITLINT-007` step 4; a gate that probes the binary before the configuration fails `TC-COMMITLINT-007` step 3; a gate that lets a `PATH` binary win fails `TC-COMMITLINT-008` steps 2–3; a gate that hides a foreign origin fails `TC-COMMITLINT-008` step 4; a gate that verifies nothing fails `TC-COMMITLINT-010/011/020`; a gate that mutates fails `TC-COMMITLINT-018`; a gate that fetches fails `TC-COMMITLINT-019`.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1274,11 +1314,14 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 | TR-7 | `TC-PROMPT-005`'s mutation probe could touch the delivery tree if written carelessly | H | Probe runs only inside `cp -a` under `_test_tmpdir`; step 4 asserts `git status --porcelain` is empty afterwards |
 | TR-8 | Dogfood run blocked by an unfetched base, misread as a gate defect | M | Explicit step: `DM-1.e` means fetch and re-run; never waive (`AC-F6-1`); recorded as the phase's first evidence item |
 | TR-9 | Committed fixture files accidentally linted by `biome`/`format:check` | M | Invalid-JS fixture ships as `.txt`; message fixtures are `.txt`; only valid JS may be committed as `.js` |
+| TR-10 | A static assertion quotes repository text that later drifts (the DoR iter-1 `/check`-row case: non-backticked literals that never matched) | M | Every quoted literal is verified against the real file before being pinned (`TC-DOC-001` step 3 states the re-verify requirement); assertions match real content including backticks, never a paraphrase |
+| TR-11 | The amended AC-F3-3 header disclosure is asserted by wording (`repository-local`, `parity`) that implementation may phrase differently | M | Assertions accept documented equivalents and are localized in one helper; the semantic contract is "binary named, origin named, foreign origin disclosed, absence loud" |
 
 ### 8.2 Assumptions
 
-- The gate resolves the commitlint binary through `PATH` (`command -v`, per `.ai/rules/bash.md` §8), so `PATH` injection selects the binary and PATH scrubbing simulates absence. If the implementation instead hardcodes `./node_modules/.bin/commitlint`, `TC-COMMITLINT-008` and `TC-DIST-*` need the documented override seam (see OQ-2).
-- Configuration discovery covers at least `commitlint.config.{js,cjs,mjs,ts}` and `.commitlintrc{,.json,.yaml,.yml}`, matching `scripts/checks/commitlint-authority.ts`'s candidate list (`TC-COMMITLINT-007` step 3).
+- The gate resolves the commitlint binary in the pinned precedence (AC-F3-3 amended, DEC-10): repository-local `node_modules/.bin/commitlint` when present and executable, then `PATH`. Tests therefore inject the binary by creating a fixture-local `node_modules/.bin` (precedence cases), by copying the real binary outside the fixture and putting it on `PATH` (foreign-origin case), by prepending a decoy shim, or by scrubbing `PATH` (absence case) — never by patching the script.
+- The verdict header carries the binary and its origin in every outcome, with `repository-local` and `PATH` as (or as documented equivalents of) the origin tokens, plus a parity-risk disclosure when the origin is outside the repository.
+- Configuration discovery covers at least `commitlint.config.{js,cjs,mjs,ts}` and `.commitlintrc{,.json,.yaml,.yml}`, matching `scripts/checks/commitlint-authority.ts`'s candidate list (`TC-COMMITLINT-007` step 4).
 - The base-branch configuration is the lifecycle's established mechanism: `ADOS_BASE_BRANCH` → `pr-instructions.md` `Default base branch` → default `main` (`scripts/deliver-ticket.sh::detect_base_branch`).
 - Default (non-verbose) report output carries no timestamps or durations, so determinism (`TC-COMMITLINT-014`) is byte equality rather than a normalized comparison.
 - `commitlint --from MERGE_BASE --to HEAD` is the authority-equivalent range invocation used for the parity oracle (`TC-COMMITLINT-004`).
@@ -1290,11 +1333,13 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 | ID | Question | Blocks | Owner / note |
 |---|---|---|---|
 | OQ-1 | The spec does not pin **which commitlint output format** the gate consumes nor how it distinguishes `DM-1.c` (violations) from `DM-1.h` (execution/config failure). Tests need that boundary to assert reliably. | Test-fixture fidelity (not the gate's behaviour contract) | `@plan-writer` / delivery planning: pin invocation + parse contract (recommended: run the CLI per commit or over the range with a machine-parseable formatter, and treat non-zero-with-no-parsed-problems as `DM-1.h`). Until then, `TC-COMMITLINT-009` asserts the distinction by observable behaviour only. |
-| OQ-2 | The spec says "the project's configured delivery base branch (with the established environment override)" without naming the variable or file; and it does not state the binary-resolution mechanism. | `TC-COMMITLINT-010`, `TC-COMMITLINT-008` exact inputs | Reuse `ADOS_BASE_BRANCH` + `pr-instructions.md` + default `main`, and PATH-based `require_cmd commitlint`; if planning pins a different seam, update only the variable names in those TCs. |
+| OQ-2 | The spec says "the project's configured delivery base branch (with the established environment override)" without naming the variable or file. (Binary resolution is no longer open: the amended AC-F3-3 and DEC-10 pin repository-local-first with header disclosure.) | `TC-COMMITLINT-010` exact inputs | Reuse `ADOS_BASE_BRANCH` + `pr-instructions.md` + default `main`; if planning pins a different seam, update only the variable names in that TC. |
 | OQ-3 | The exact diagnostic line template (`FAIL SHORT_SHA (FULL_SHA) · rule=RULE_ID line=N · EXCERPT`) appears only as an example in spec §6 Flow 2, not as a normative grammar. | Nothing (assertions target semantics) | Delivery planning may pin a template; the bounds in `NFR-6` and the fields in `DM-2` are the contract. |
 | OQ-4 | Spec OQ-1 (plain merge subjects as a hard failure) remains open and non-blocking. | Nothing | `TC-COMMITLINT-004` pins today's parity behaviour; if OQ-1 is later decided differently, that TC changes with the configuration, not with the gate. |
 | OQ-5 | Whether the `/check` resolution contract requires an `AGENTS.md` quality-gates command for adopters. | `TC-DOC-001` step 4 | Spec DEC-8/NG-5 say no; the test asserts the absence of a new "run all quality gates" instruction. |
 | OQ-6 | Does the suite need a documented escape hatch for environments where the real commitlint binary cannot be installed (e.g. offline sandboxes)? | CI ergonomics | Recommendation: no silent skip (fail closed, matching the gate's own philosophy); if an escape hatch is added it must print an explicit `SKIP` and the aggregate gate must not depend on it. |
+
+Spec `OQ-2` (route the parity principle — DEC-1/DEC-4 — to a durable decision record at PR review) is a process deferral with no testable behaviour: it changes no gate outcome, no assertion, and no fixture, so this plan records it as no test obligation rather than adding a TC.
 
 ## 9. Plan Revision Log
 
@@ -1302,6 +1347,7 @@ Failure-injection coverage (does the suite catch a broken gate?): the negative a
 |---|---|---|---|
 | 0.1 | 2026-11-11 | @test-plan-writer | Initial test plan derived from `chg-GH-268-spec.md` v1.0: 40 TCs covering AC-F1-1…AC-NFR8-1, DM-1.a–i, DM-2, DM-3, NFR-1…NFR-10, fixture matrix, read-only/no-network instrumentation, conformance battery, and the dogfood gate run. |
 | 0.2 | 2026-11-11 | @test-plan-writer | Re-traced against `chg-GH-268-spec.md` v1.1 (19 ACs): mapped the four appended criteria onto the existing TCs (`AC-F3-5` → `TC-COMMITLINT-009`, `AC-F3-6` → `TC-COMMITLINT-012`, `AC-NFR4-1` → `TC-COMMITLINT-021` + `TC-COMMITLINT-019`, `AC-NFR6-1` → `TC-COMMITLINT-015`), extended those four TCs' steps/expected results with the assertions the new criteria add (including the `DM-1.h` execution-failure sub-case via a PATH shim, the no-range-check assertion for usage errors, the second runtime budget, and the summary-informativeness assertion), added `FX-100`, and removed the resolved `OQ-4` traceability item (OQ-5…7 renumbered to OQ-4…6). No TC id was added, removed, or renumbered. |
+| 0.3 | 2026-11-11 | @test-plan-writer | DoR iter-1 remediation against `chg-GH-268-spec.md` v1.3. Finding 2: `TC-DOC-001` step 3 now quotes the real backticked `AGENTS.md:111-112` rows with ERE anchors and states the re-verify requirement. Finding 3: `TC-COMMITLINT-008` re-scoped to the amended `AC-F3-3` (local-first precedence, binary+origin header disclosure, decoy never wins, foreign origin disclosed not failed; `DM-1.g` unchanged), `TC-COMMITLINT-007` gained the no-authority/local-binary case, and `TC-DOGFOOD-001` now uses the published invocation with no `PATH` prefix plus a local-origin assertion. Finding 4 / new assertions: `TC-DOC-003` extended with Appendix C rows 9(a–c) and 10. Non-blocking: `TC-PROMPT-003` steps 2–3 restated as negation-exempt with `pnpm check:prompt` as mechanical evidence; `TC-DIST-001` gained the `100755`/`test -x` discovery assertion; the `AC-F3-3` row dropped the `TC-COMMITLINT-009` over-claim; `TC-PROMPT-001` step 5 and `TC-PROMPT-002` step 7 cite the amended ownership split. Also corrected the stale PATH-only assumption (§8.2), resolved the binary half of `OQ-2`, added fixtures `FX-CLEAN-NO-DEPS`/`FX-LOCAL-BIN`/`FX-DECOY-PATH`/`FX-PATH-FOREIGN`/`FX-NO-CONFIG-LOCAL-BIN`, re-scoped the binary-availability table, and set `implementation_plan`/`version` in the front matter. No TC id added, removed, or renumbered. |
 
 ## 10. Test Execution Log
 
@@ -1315,4 +1361,4 @@ Populated during execution (delivery + `quality_gates` + review). One row per TC
 | TC-DIST-001 through TC-DIST-003 | — | Not run | `bash scripts/.tests/test-install.sh`, `bash scripts/.tests/test-uninstall.sh` |
 | TC-CONFINE-001 | — | Not run | PR-time diff review |
 | TC-CONFINE-002 | — | Not run | `bun run scripts/checks/commitlint-authority.ts`, `exports-parity.ts`, `bun test tests/checks` |
-| TC-DOGFOOD-001 | — | Not run | `./scripts/lint-commit-range.sh --base <delivery base>`; verdict recorded in pm-notes |
+| TC-DOGFOOD-001 | — | Not run | `./scripts/lint-commit-range.sh --base main-tools` (no `PATH` prefix); verdict recorded in pm-notes |
