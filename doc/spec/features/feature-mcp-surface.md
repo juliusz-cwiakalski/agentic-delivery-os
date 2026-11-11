@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The minimal read-only MCP surface: a thin Node-hosted stdio JSON-RPC 2.0 server in packages/mcp, exactly three branding-projected tools mirroring the status digest, verify-change, and verify-gates engines, CLI data-shape and error-table payload parity with no envelope or exit-code leakage, single-flight calls, the {0, 1, 2} server lifecycle exit vocabulary owned by the lifecycle module, runtime-neutral composition with the documented serve-root allowances, and untrusted-input plus inert-content handling."
 links:
-  related_changes: ["GH-231", "GH-236", "GH-288"]
+  related_changes: ["GH-231", "GH-236", "GH-286", "GH-288"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/mcp/src/commands/catalog.ts"

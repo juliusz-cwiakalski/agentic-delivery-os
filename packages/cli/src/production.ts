@@ -13,7 +13,7 @@ import {
   createProcessCredentialPort,
   resolveCredentialSourceKey,
 } from "@delivery-os/adapters/credentials";
-import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
+import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
   createHostIndexAccess,
@@ -95,6 +95,8 @@ import {
   projectHandoverState,
   projectListEntry,
   projectStateRoot,
+  readDaemonHeartbeat,
+  readDaemonInstance,
   readDaemonLanes,
   readDispatchHandover,
   readQueueEntries,
@@ -107,6 +109,7 @@ import {
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
+  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
   stateScopeRoots,
@@ -115,10 +118,14 @@ import {
 import {
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type ConfigNodeOrigins,
+  type ConfigValue,
+  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
   type DaemonReachability,
+  type DaemonSettings,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -144,9 +151,11 @@ import {
   type ProjectsListEntry,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type SupervisorPort,
   VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
+  createDaemonLockPort,
   createNodeStateEdge,
   createStateStore,
   ensureEconomicsExhaustionRecord,
@@ -156,8 +165,9 @@ import {
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
+import type { DaemonCommandRuntime } from "./commands/daemon.js";
 import type { ProjectsRuntimeRead } from "./commands/projects.js";
-import { resolveProjectDaemonSettings } from "./daemon-compose.js";
+import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
   type CoordinatorComposition,
@@ -179,6 +189,7 @@ import {
   type DispatchLaneFacts,
 } from "./edge.js";
 import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
+import { workingNameEnvironmentVariable } from "./entrypoint.js";
 import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
 
@@ -194,6 +205,72 @@ const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKEN
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
 
 const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+/** The user configuration root the supervisor adapter writes the unit under. */
+const supervisorConfigDirectoryFor = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly homeDirectory: string;
+}): string | undefined => {
+  const configured = input.environment.XDG_CONFIG_HOME;
+  if (configured !== undefined && configured.length > 0 && configured.startsWith("/")) {
+    return trimTrailingSeparators(configured);
+  }
+  // The home-based root applies only when a home exists; with neither an
+  // absolute override nor a home the root is unresolvable, and `daemon install`
+  // refuses rather than deriving a root-level path (AC-F7-2, DM-6).
+  return input.homeDirectory.length === 0 ? undefined : `${input.homeDirectory}/.config`;
+};
+
+/** The daemon family's delivered `config.value.invalid` refusal identity. */
+const daemonConfigurationRefusal = (): {
+  readonly error: { readonly kind: string; readonly code: string };
+} => ({ error: { kind: "config", code: "config.value.invalid" } });
+
+/**
+ * The durable DM-4 reachability predicate (AC-F5-1..AC-F5-8): reachable iff an
+ * instance record exists, its latest operation is an acquisition, the latest
+ * heartbeat belongs to that instance, and its age is STRICTLY below the
+ * configured lock-staleness bound. Everything else — including an unreadable or
+ * torn read — is unreachable. It performs no socket connect, no process probe,
+ * and no sleep.
+ */
+export const daemonReachable = (input: {
+  readonly store: ReturnType<typeof createStateStore>;
+  readonly nowMs: number;
+  readonly lockStalenessMs: number;
+}): boolean => {
+  try {
+    const instance = readDaemonInstance(input.store);
+    if (!instance.ok || instance.latest === undefined) return false;
+    const latest = instance.latest;
+    if (latest.operation !== "acquired" && latest.operation !== "taken-over") return false;
+    const heartbeat = readDaemonHeartbeat(input.store);
+    if (!heartbeat.ok || heartbeat.latest === undefined) return false;
+    if (heartbeat.latest.instanceId !== latest.instanceId) return false;
+    const ageMs = input.nowMs - Date.parse(heartbeat.latest.beatAt);
+    return ageMs < input.lockStalenessMs;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The unavailable daemon runtime for the unresolvable state-directory outcome.
+ *
+ * It constructs no store, lock, settings, transport, socket path, supervisor
+ * scope, entry path, or pid, attempts no spawn, and answers every subcommand
+ * with the delivered `config.value.invalid` identity at exit `1`.
+ */
+const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
+  const refuse = daemonConfigurationRefusal;
+  return {
+    start: async () => refuse(),
+    stop: async () => refuse(),
+    status: async () => refuse(),
+    install: async () => refuse(),
+    uninstall: async () => refuse(),
+  };
+};
 
 const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code: string }> => ({
   ok: false,
@@ -293,11 +370,20 @@ export type ProductionCompositionFacts = {
   readonly gitChildRunner?: GitChildRunner;
   /** The supervisor's own process id (the bin supplies `process.pid`). */
   readonly processId?: number;
-  /** The process signal subscription seam (the bin supplies the host process). */
+  /**
+   * The process signal subscription seam (the bin supplies the host process).
+   */
   readonly signalHost?: {
     readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
     readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
   };
+  /**
+   * The running entry path (the bin supplies `process.argv[1]`), so the detached
+   * child and the installed unit name the same executable.
+   */
+  readonly daemonEntry?: string;
+  /** A pass-through supervisor seam so install is provable without a live systemd. */
+  readonly supervisor?: SupervisorPort;
   /**
    * The recorded coordinator session facts override. Production derives them
    * from the delivered lane ledger; tests and embedders may inject the same
@@ -407,8 +493,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
     // The two layers (GH-288 F-1, DEC-12): the delivered host root holds
     // host-wide controls only, and the derived project root holds every
-    // delivery artifact of this checkout. One policy resolves both; no inline
-    // home-plus-brand composition survives here.
+    // delivery artifact of this checkout. One policy resolves both — the host
+    // root honours the absolute state-directory environment override and otherwise the
+    // home default — and that same policy is the daemon family's one
+    // state-directory resolution (GH-286 F-3, DM-5): no inline home-plus-brand
+    // composition survives here, and an unresolvable host root is the
+    // classified scope refusal (GH-286 AC-F3-5, GH-288 DEC-17).
     const scope = resolveProjectScope({
       environment,
       environmentPrefix: brand.environmentPrefix,
@@ -425,6 +515,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const roots = stateScopeRoots(scope.value);
     const hostRoot = roots.hostRoot;
     const stateDirectory = roots.projectRoot;
+    const checkoutRoot =
+      scope.value.scope.kind === "project" ? scope.value.scope.checkoutRoot : cwd;
     const changesDirectory = `${cwd}/doc/changes`;
     // One per-pass owner-hold resolution over the injected environment and the
     // host root (GH-280 F-1, D12; GH-288 F-7 keeps the hold host-wide). Never
@@ -534,6 +626,141 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
+
+    /**
+     * Resolve the daemon settings and the lane restart bound over one
+     * configuration acquisition. A missing configuration resolves the same
+     * resolvers over an empty branch, so the shipped defaults apply; a resolved
+     * configuration whose daemon branch is invalid composes the unavailable
+     * runtime instead of a re-derived literal.
+     */
+    const readDaemonConfiguration = (
+      directory: string,
+    ): { readonly settings: DaemonSettings; readonly restartBound: number } | undefined => {
+      const resolveOver = (
+        values: Readonly<Record<string, ConfigValue>>,
+        origins: ConfigNodeOrigins,
+      ): { readonly settings: DaemonSettings; readonly restartBound: number } | undefined => {
+        const settings = resolveProjectDaemonSettings(directory, { values, origins });
+        if (!settings.ok) return undefined;
+        const lane = resolveLaneSettings(values, origins);
+        return {
+          settings: settings.value,
+          restartBound: lane.ok
+            ? lane.value.restartBudget
+            : PRODUCTION_DEFAULTS.lane["restart-budget"],
+        };
+      };
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: localFs,
+      });
+      if (!acquired.ok) return resolveOver({}, {});
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) return resolveOver({}, {});
+      return resolveOver(resolved.value.values, resolved.value.origins);
+    };
+
+    /**
+     * Compose the daemon family's runtime over the one resolved state-directory
+     * scope — the project state root the store, lock, settings, socket, and
+     * supervisor scope all share (GH-286 F-3, GH-288 F-6). The settings-invalid
+     * outcome composes the unavailable runtime, so the family stays registered
+     * while no store, lock, settings, transport, socket path, supervisor scope,
+     * entry path, or pid is constructed.
+     */
+    const daemonDirectory = stateDirectory;
+    const daemonConfiguration = readDaemonConfiguration(daemonDirectory);
+    const daemonRuntime = ((): DaemonCommandRuntime => {
+      if (daemonConfiguration === undefined) {
+        return unavailableDaemonRuntime();
+      }
+      const directory = daemonDirectory;
+      const configuration = daemonConfiguration;
+      const lock = createDaemonLockPort(createNodeStateEdge(), directory);
+      const transport = createUnixTransport({
+        stateDirectory: directory,
+        socketPath: configuration.settings.socketPath,
+        lockOwned: () => lock.read().state === "held",
+      });
+      // The re-entry environment is derived from facts the composer already
+      // holds: the injected environment record and the composed home. No value
+      // is invented, so a stripped `PATH` or home stays stripped, and the home
+      // variable keeps the name it was read from (`HOME`, else `USERPROFILE`).
+      const path = environment.PATH;
+      const homeVariable =
+        environment.HOME !== undefined && environment.HOME.length > 0
+          ? "HOME"
+          : environment.USERPROFILE !== undefined && environment.USERPROFILE.length > 0
+            ? "USERPROFILE"
+            : undefined;
+      const workingNameVariable = workingNameEnvironmentVariable();
+      const workingName = environment[workingNameVariable];
+      const reentryEnvironment: Record<string, string> = {
+        ...(path === undefined ? {} : { PATH: path }),
+        ...(homeVariable === undefined
+          ? {}
+          : { [homeVariable]: environment[homeVariable] as string }),
+        ...(workingName === undefined || workingName.length === 0
+          ? {}
+          : { [workingNameVariable]: workingName }),
+      };
+      const supervisorConfigDirectory = supervisorConfigDirectoryFor({
+        environment,
+        homeDirectory,
+      });
+      const composed = createDaemonCommandRuntime({
+        store,
+        lock,
+        settings: configuration.settings,
+        restartBound: configuration.restartBound,
+        stateDirectory: directory,
+        // The state-directory binding names the host root, so a re-entered
+        // child or the installed unit derives this same project state root from
+        // it instead of nesting a second `projects/` segment under the project
+        // root (GH-288 F-1, GH-286 F-3).
+        stateDirectoryEnvironmentValue: hostRoot,
+        // The unit runs in the checkout when the scope is project-owned, so the
+        // installed process resolves the same project rather than `unbound`.
+        workingDirectory: checkoutRoot,
+        unit: `${brand.binaryName}-daemon.service`,
+        binary: facts.daemonEntry ?? "",
+        environmentName: stateScopeEnvironmentName(brand.environmentPrefix),
+        ...(supervisorConfigDirectory === undefined ? {} : { supervisorConfigDirectory }),
+        ...(facts.processId === undefined ? {} : { pid: facts.processId }),
+        ...(facts.signalHost === undefined ? {} : { signalHost: facts.signalHost }),
+        ...(facts.supervisor === undefined ? {} : { supervisor: facts.supervisor }),
+        ...(facts.daemonEntry === undefined ? {} : { daemonEntry: facts.daemonEntry }),
+        ...(Object.keys(reentryEnvironment).length === 0 ? {} : { reentryEnvironment }),
+        transport,
+        newFenceToken,
+        newLockToken: () => globalThis.crypto.randomUUID(),
+        newInstanceId: () => globalThis.crypto.randomUUID(),
+        nowIso,
+      });
+      // With no absolute `XDG_CONFIG_HOME` and no home the user configuration
+      // root is unresolvable: `install` AND `uninstall` refuse with
+      // `config.value.invalid` before the unsupported and missing-entry-path
+      // refusals, write no unit and no ownership marker, invoke no supervisor
+      // command, create no configuration-root directory, and never search the
+      // state directory (AC-F7-2, DM-6, NF-7). Every other subcommand keeps the
+      // resolved runtime.
+      if (supervisorConfigDirectory !== undefined) return composed;
+      return {
+        ...composed,
+        install: async () => daemonConfigurationRefusal(),
+        uninstall: async () => daemonConfigurationRefusal(),
+      };
+    })();
+
     const credentials = facts.credentials ?? createProcessCredentialPort(brand);
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
     const instance = facts.githubInstance ?? githubInstance();
@@ -676,6 +903,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       close: {},
       deploy: { expectations: {}, verdicts: {} },
     };
+    /**
+     * The durable reachability marker (DM-4, AC-F5-1..AC-F5-8), folded from the
+     * one production predicate over the composed staleness bound. It performs no
+     * socket connect, no process probe, and no sleep.
+     */
+    const daemonReachability = (): readonly QueueDegradationReason[] => {
+      if (daemonConfiguration === undefined) return ["daemon-unreachable"];
+      return daemonReachable({
+        store,
+        nowMs: nowMs(),
+        lockStalenessMs: daemonConfiguration.settings.lockStalenessMs,
+      })
+        ? []
+        : ["daemon-unreachable"];
+    };
+
     const queueComposition = {
       store,
       facts: queueFacts,
@@ -683,7 +926,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowIso,
       nowMs,
       newFenceToken,
-      degraded: ["daemon-unreachable" as const],
+      degraded: daemonReachability,
       readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
       readOwnerHold,
     };
@@ -1936,6 +2179,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       queueReady: statusComposition(),
       queue: queueComposition,
       lanes: queueComposition,
+      daemon: daemonRuntime,
       blockers: {
         store,
         clock: { nowMs, nowIso },

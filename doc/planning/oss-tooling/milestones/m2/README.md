@@ -30,7 +30,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [contracts.md](contracts.md) | Shared contract continuity plus `projects.v1`, `attempts.v1`, event taxonomy v1, `telemetry.v1`, queue lifecycle mutations, `spend` v2, and the provider-profile and peak-window additions |
 | [test-scenarios.md](test-scenarios.md) | `SC-M2-*` scenario seeds for stories S2 through S17, the inherited starting point for each story's test plan |
 | [journeys.md](journeys.md) | Operator journeys: multi-repository morning overview, evidence before handover, retro on telemetry, steering a running delivery, the S17 cost-control journey |
-| [entrypoint-delta.md](entrypoint-delta.md) | Root entry listing delta, the M2-planned additions, and the daemon registration gap with its evidence |
+| [entrypoint-delta.md](entrypoint-delta.md) | Root entry listing delta, the M2-planned additions, and the closed daemon registration gap |
 | [commands/projects.md](commands/projects.md) | Project overview command contract |
 | [commands/attempts.md](commands/attempts.md) | `dispatch attempts` evidence read-side contract |
 | [commands/events.md](commands/events.md) | Subscribe event-taxonomy reference contract |

@@ -554,6 +554,11 @@ export type SupervisorInstallRequest = {
   readonly stateDirectory: string;
   readonly binary: string;
   readonly environmentName: string;
+  /**
+   * The directory the unit runs in when the state root is derived from the
+   * checkout rather than bound outright. Absent keeps the delivered unit shape.
+   */
+  readonly workingDirectory?: string;
   readonly enableLinger: boolean;
 };
 

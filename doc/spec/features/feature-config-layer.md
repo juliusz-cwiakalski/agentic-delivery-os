@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-288"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021"]
 ---
 
@@ -387,7 +387,11 @@ The rule is implemented once, in the app-tier state-scope policy
 resolved directory is the **host root**: the delivery store and every other
 project-owned artifact lives under `<host root>/projects/<project key>`, and
 the owner-hold marker and the host index stay at the host root. The store honours
-the override. The supervisor unit writes
+the override. The daemon composition consumes the same policy: its store, lock,
+settings, socket, and supervisor scope are the project state root, and an
+unresolvable host root — no override and no home — is the classified scope
+refusal, so the mounted family answers `config.value.invalid` instead of deriving
+a root-level path. The supervisor unit writes
 its `Environment=` binding under the same name, so the installed unit and the
 policy agree on the scope. See [Resident Dispatch
 Daemon](feature-resident-daemon.md) and [Projects Host

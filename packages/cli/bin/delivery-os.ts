@@ -30,6 +30,7 @@ const invoke = async (): Promise<number> => {
       workingName: configured,
       processId: process.pid,
       signalHost: process,
+      daemonEntry: process.argv[1],
     }),
   });
 };

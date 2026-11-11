@@ -22,7 +22,6 @@ import {
   detectDaemonEffects,
   encodeControlFrame,
   evaluateRestartBudget,
-  installSupervisor,
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
@@ -37,6 +36,8 @@ import {
 import {
   CONTROL_PROTOCOL_CURRENT,
   type ConfigFailure,
+  type ConfigNodeOrigins,
+  type ConfigValue,
   type ControlTopic,
   type ControlTransport,
   DAEMON_HEARTBEAT_STATES,
@@ -54,6 +55,7 @@ import {
   type DaemonSettings,
   type DaemonStartData,
   type DaemonStartMode,
+  type DaemonStopMode,
   type DaemonSupervisorDescriptor,
   type DaemonSupervisorKind,
   type DaemonWakePort,
@@ -82,6 +84,15 @@ import {
   readEconomicsRecords,
 } from "@delivery-os/core/state";
 /**
+ * The acquired configuration a composing entrypoint resolved for this
+ * invocation, in the shape the delivered settings resolution consumes it.
+ */
+export type ComposedDaemonSettingsInput = {
+  readonly values: Readonly<Record<string, ConfigValue>>;
+  readonly origins: ConfigNodeOrigins;
+};
+
+/**
  * The ONE place that supplies a state directory to the delivered daemon settings
  * resolution (GH-288 F-6, AC-F6-4, DEC-12).
  *
@@ -90,11 +101,18 @@ import {
  * inside-the-state-directory rule keeps refusing an outside path. The settings
  * resolution itself is unchanged and the daemon family stays unmounted (NG-4);
  * reverting this argument to the host root is the mutation AC-F6-4 records.
+ *
+ * A composing entrypoint that acquired configuration for its invocation passes
+ * it here rather than calling the delivered resolver itself, so this stays the
+ * one site that reaches it (GH-286 F-4, GH-288 AC-F6-4).
  */
 export const resolveProjectDaemonSettings = (
   projectStateRoot: string,
+  acquired?: ComposedDaemonSettingsInput,
 ): Result<DaemonSettings, ConfigFailure> =>
-  resolveDaemonSettings({}, {}, { stateDirectory: projectStateRoot });
+  resolveDaemonSettings(acquired?.values ?? {}, acquired?.origins ?? {}, {
+    stateDirectory: projectStateRoot,
+  });
 
 import type { DaemonCommandRuntime as CommandRuntime } from "./commands/daemon.js";
 
@@ -104,6 +122,19 @@ export type DaemonComposition = {
   readonly settings: DaemonSettings;
   readonly restartBound: number;
   readonly stateDirectory: string;
+  /**
+   * The value the `<environmentName>` binding names in the detached child's
+   * environment and in the installed unit. Absent keeps `stateDirectory`, the
+   * delivered one-directory shape; a repository-scoped policy passes the host
+   * root here so the child re-resolves the same project state root from it.
+   */
+  readonly stateDirectoryEnvironmentValue?: string;
+  /**
+   * The directory the installed unit runs in. Absent keeps the delivered unit
+   * shape; a project-scoped state root needs the checkout root so the unit
+   * process resolves the same project rather than the declared `unbound` scope.
+   */
+  readonly workingDirectory?: string;
   readonly unit: string;
   readonly binary: string;
   readonly environmentName: string;
@@ -113,6 +144,19 @@ export type DaemonComposition = {
   readonly transport?: ControlTransport;
   readonly socketPath?: string;
   readonly daemonEntry?: string;
+  /** The composing process id; a positive integer is forwarded to the runtime. */
+  readonly pid?: number;
+  /** The process signal subscription seam the foreground lifetime owns. */
+  readonly signalHost?: {
+    readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+    readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+  };
+  /**
+   * The additional variables the detached child receives. Merged beneath the
+   * authoritative state-directory binding, which is written last; omitting
+   * the input keeps the delivered single-variable spawn.
+   */
+  readonly reentryEnvironment?: Readonly<Record<string, string>>;
   readonly newFenceToken: () => string;
   readonly newLockToken: () => string;
   readonly newInstanceId: () => string;
@@ -210,6 +254,45 @@ const failure = (code: string, summary?: string) => ({
 type WatchSnapshot = { readonly topic: ControlTopic; readonly snapshot: unknown };
 
 const byteLength = (text: string): number => new TextEncoder().encode(text).length;
+
+/** A composing pid is forwarded only when it is a positive integer. */
+const positivePid = (pid: number | undefined): number | undefined =>
+  pid !== undefined && Number.isInteger(pid) && pid > 0 ? pid : undefined;
+
+/** The two instance operations that acquire the single-instance lock. */
+const isAcquisition = (record: DaemonInstanceRecord): boolean =>
+  record.operation === "acquired" || record.operation === "taken-over";
+
+/**
+ * The live holder evidence for the latest instance record: its own operation
+ * must be an acquisition, its heartbeat must belong to it, and the age must be
+ * strictly below the composed lock-staleness bound — the same rule `status`,
+ * `queue`, and `lanes` apply. An absent, unreadable, foreign-owned, or stale
+ * heartbeat is not live, so no evidence is returned.
+ */
+const liveHolder = (
+  instance: DaemonInstanceRecord,
+  heartbeat: ReturnType<typeof readDaemonHeartbeat>,
+  nowMs: number,
+  lockStalenessMs: number,
+): { readonly beatAt: string; readonly ageMs: number } | undefined => {
+  if (!isAcquisition(instance)) return undefined;
+  if (!heartbeat.ok || heartbeat.latest === undefined) return undefined;
+  if (heartbeat.latest.instanceId !== instance.instanceId) return undefined;
+  const beatAt = heartbeat.latest.beatAt;
+  const ageMs = nowMs - Date.parse(beatAt);
+  return ageMs < lockStalenessMs ? { beatAt, ageMs } : undefined;
+};
+
+/** A record accepted as this spawn's readiness: a new acquisition at or after the spawn. */
+const isOwnAcquisition = (
+  record: DaemonInstanceRecord | undefined,
+  previousInstanceId: string | undefined,
+  spawnMs: number,
+): boolean => {
+  if (record === undefined || !isAcquisition(record)) return false;
+  return record.instanceId !== previousInstanceId || Date.parse(record.recordedAt) >= spawnMs;
+};
 
 /** Sort object keys recursively so equal content serializes identically. */
 const canonicalValue = (value: unknown): unknown => {
@@ -383,6 +466,7 @@ export const createBlockerAnswerConsumer = (composition: {
 export const createDaemonCommandRuntime = (composition: DaemonComposition): CommandRuntime => {
   const clock = composition.clock ?? createNodeClock();
   const nowIso = composition.nowIso ?? clock.nowIso;
+  const composingPid = positivePid(composition.pid);
   const processPort = composition.processPort ?? createNodeProcessPort();
   const platform =
     composition.platform ??
@@ -391,6 +475,24 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     composition.supervisorKind ??
     (platform === "linux" ? "systemd-user" : platform === "darwin" ? "launchd" : "windows-service");
   const scope = daemonScopeDigest(composition.stateDirectory);
+  // The value the `<environmentName>` binding names. It is the composition's own
+  // state directory unless a repository-scoped policy passes the host root, so a
+  // re-entered child resolves the same project state root the parent did.
+  const stateDirectoryBinding =
+    composition.stateDirectoryEnvironmentValue ?? composition.stateDirectory;
+  // The unit's working directory: a project-scoped state root is derived from the
+  // checkout, so the unit must run where the checkout identity resolves.
+  const workingDirectory = composition.workingDirectory;
+  /**
+   * The composed platform supervisor. The user configuration root is resolved
+   * ONCE by the composing layer (`production.ts`): an absolute non-empty
+   * `XDG_CONFIG_HOME` wins, else `<home>/.config` only when a home exists, else
+   * the root is unresolvable and BOTH `install` and `uninstall` are replaced by
+   * the delivered `config.value.invalid` refusal there, before any adapter is
+   * constructed (AC-F7-2, GH-286 NF-7). A composition that supplies no
+   * configuration root keeps the delivered adapter construction, which is the
+   * GH-238 composition contract.
+   */
   const composedSupervisor = (): SupervisorPort =>
     composition.supervisor ??
     createSupervisorAdapter({
@@ -399,7 +501,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       unit: composition.unit,
       scope,
       environmentName: composition.environmentName,
-      stateDirectory: composition.stateDirectory,
+      stateDirectory: stateDirectoryBinding,
     });
   const runtimeHolder: { current?: ReturnType<typeof createDaemonRuntime> } = {};
   const recovery = createRecovery(composition);
@@ -521,6 +623,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       newFenceToken: composition.newFenceToken,
       newLockToken: composition.newLockToken,
       newInstanceId: composition.newInstanceId,
+      ...(composingPid === undefined ? {} : { pid: composingPid }),
       ...(composition.wake === undefined ? {} : { wake: composition.wake }),
       ...(composition.executor === undefined ? {} : { executor: composition.executor }),
       ...(supervise === undefined ? {} : { supervision: supervise }),
@@ -686,22 +789,58 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
   return {
     start: async ({ foreground }) => {
       if (!foreground && composition.daemonEntry !== undefined) {
+        // The state binding is written last and stays authoritative: a forwarded
+        // look-alike of the same variable can never win. An absent re-entry input
+        // keeps the delivered single-variable spawn byte-identical.
+        const spawnEnvironment =
+          composition.reentryEnvironment === undefined
+            ? { [composition.environmentName]: stateDirectoryBinding }
+            : {
+                ...composition.reentryEnvironment,
+                [composition.environmentName]: stateDirectoryBinding,
+              };
+        // Read the durable record set BEFORE spawning, so the readiness poll can
+        // only accept an acquisition this spawn produced. A live pre-spawn
+        // acquisition is refused as `daemon.already-running` with nothing
+        // spawned, naming the holder's instance, process, acquisition time, and
+        // heartbeat age; a stale one is left for the child's takeover to replace.
+        const beforeSpawn = readDaemonInstance(composition.store);
+        const previous = beforeSpawn.ok ? beforeSpawn.latest : undefined;
+        if (previous !== undefined) {
+          const live = liveHolder(
+            previous,
+            readDaemonHeartbeat(composition.store),
+            clock.nowMs(),
+            composition.settings.lockStalenessMs,
+          );
+          if (live !== undefined) {
+            return failure(
+              "daemon.already-running",
+              `instance=${previous.instanceId} pid=${previous.pid} acquired_at=${previous.acquiredAt} heartbeat_at=${live.beatAt} heartbeat_age_ms=${live.ageMs}`,
+            );
+          }
+        }
+        const spawnMs = clock.nowMs();
         const spawned = processPort.spawnDetached({
           entry: composition.daemonEntry,
           args: ["daemon", "start", "--foreground"],
-          environment: { [composition.environmentName]: composition.stateDirectory },
+          environment: spawnEnvironment,
         });
         if (spawned.pid === undefined) return failure("daemon.state-recovery-failed");
+        const previousInstanceId = previous?.instanceId;
         for (let attempt = 0; attempt < 20; attempt += 1) {
           await clock.sleep(50, { cancelled: () => false });
           const instance = readDaemonInstance(composition.store);
-          if (instance.ok && instance.latest?.operation === "acquired") {
+          const accepted = instance.ok ? instance.latest : undefined;
+          if (accepted !== undefined && isOwnAcquisition(accepted, previousInstanceId, spawnMs)) {
             const state = runtime.state();
             if (state !== undefined) return { data: startData(state) };
             const heartbeat = readDaemonHeartbeat(composition.store);
             const reports = readDaemonStatus({
               store: composition.store,
               nowMs: clock.nowMs(),
+              heartbeatIntervalMs: composition.settings.heartbeatIntervalMs,
+              lockStalenessMs: composition.settings.lockStalenessMs,
               socket: socket(true),
               supervisor: supervisorDescriptor({
                 kind: supervisorKind,
@@ -720,7 +859,7 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
                   instance: { ...reports.data.instance, mode },
                   reconciliation: reports.data.reconciliation ?? {
                     schema: "delivery.daemon.reconciliation.v1",
-                    instanceId: instance.latest.instanceId,
+                    instanceId: accepted.instanceId,
                     queue: { entries: 0, edges: 0, parks: 0 },
                     lanes: [],
                     duplicates: 0,
@@ -747,9 +886,83 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
         }
         return failure("daemon.state-recovery-failed", "resident-readiness-timeout");
       }
-      const started = await runtime.start({ foreground });
-      if (!started.ok) return failure(started.code, started.detail);
-      return { data: startData(started.state) };
+      const host = composition.signalHost;
+      if (foreground !== true || host === undefined) {
+        const started = await runtime.start({ foreground });
+        if (!started.ok) return failure(started.code, started.detail);
+        return { data: startData(started.state) };
+      }
+      // The signal-owned foreground lifetime (DM-2, AC-F2-4..AC-F2-9, NF3-3):
+      // the readiness snapshot is captured at start and returned at exit; the
+      // first signal selects the stop mode; both listeners are removed in a
+      // `finally`; cancellation precedes the release append because
+      // `runtime.stop` cancels the loop before it appends.
+      //
+      // Both listeners are installed BEFORE `runtime.start` because the durable
+      // `acquired` record it appends is the readiness point a cross-process
+      // `daemon stop` observes: installing them after start left a window in
+      // which an immediate stop hit the default terminate, leaving a stale lock
+      // and no release record. A signal delivered while start is still running
+      // is buffered here (the mode is recorded, no stop is entered) and applied
+      // as soon as the loop is running, so an immediate stop always lands as a
+      // `released`/`draining` outcome.
+      let stopMode: DaemonStopMode | undefined;
+      let stopFailure: { readonly code: string; readonly detail?: string } | undefined;
+      let settle: (() => void) | undefined;
+      const settled = new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+      let startSettled = false;
+      const beginStop = (mode: DaemonStopMode): void => {
+        void runtime.stop(mode).then((outcome) => {
+          if (!outcome.ok) {
+            stopFailure =
+              outcome.detail === undefined
+                ? { code: outcome.code }
+                : { code: outcome.code, detail: outcome.detail };
+          }
+          settle?.();
+        });
+      };
+      const request = (mode: DaemonStopMode): void => {
+        if (stopMode !== undefined) return;
+        stopMode = mode;
+        if (!startSettled) return;
+        beginStop(mode);
+      };
+      const onInterrupt = (): void => request("immediate");
+      const onTerminate = (): void => request("drain");
+      host.once("SIGINT", onInterrupt);
+      host.once("SIGTERM", onTerminate);
+      let started: Awaited<ReturnType<typeof runtime.start>>;
+      try {
+        started = await runtime.start({ foreground });
+      } catch (error) {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+        throw error;
+      }
+      if (!started.ok) {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+        return failure(started.code, started.detail);
+      }
+      const snapshot = startData(started.state);
+      try {
+        // The loop starts before a buffered stop is applied: `runtime.stop`
+        // clears the cancellation flag synchronously, so cancelling first and
+        // starting the loop afterwards would leave the loop uncancelled.
+        const loop = runtime.loop();
+        startSettled = true;
+        if (stopMode !== undefined) beginStop(stopMode);
+        await Promise.race([loop, settled]);
+        await loop;
+      } finally {
+        host.removeListener("SIGINT", onInterrupt);
+        host.removeListener("SIGTERM", onTerminate);
+      }
+      if (stopFailure !== undefined) return failure(stopFailure.code, stopFailure.detail);
+      return { data: snapshot };
     },
     stop: async ({ mode }) => {
       const active = runtime.state();
@@ -777,6 +990,12 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       ) {
         return { data: { result: "noop", instance: null, detachedLanes: [], degraded: [] } };
       }
+      // Fail closed on a record that cannot name a process: only a positive
+      // integer pid is addressed, and a non-integer, zero, or negative value
+      // refuses before any signal call (AC-F6-2, AC-F6-3, NFR-8).
+      if (!Number.isInteger(latest.pid) || latest.pid <= 0) {
+        return failure("daemon.state-recovery-failed", "recorded-pid-invalid");
+      }
       const signalled = processPort.signal(latest.pid, mode === "drain" ? "SIGTERM" : "SIGINT");
       if (!signalled.ok) return failure("daemon.state-recovery-failed", signalled.detail);
       return {
@@ -797,21 +1016,48 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     status: statusOf,
     loop: () => runtime.loop(),
     install: async () => {
-      const installed = installSupervisor(composedSupervisor(), {
+      const supervisor = composedSupervisor();
+      // One inspection per install: the delivered unsupported classification
+      // wins first, and the same inspection is carried into the install call, so
+      // a platform with no adapter never reaches the entry-path guard.
+      const inspection = supervisor.inspect();
+      if (!inspection.supported) {
+        return failure(
+          "daemon.supervisor-unsupported",
+          [inspection.platform, `no ${inspection.kind} adapter`].join(" "),
+        );
+      }
+      // The refusal keys on entry-path absence only: `binary` is a required
+      // composition field, so it can never be the cause. A resolvable state
+      // directory with no composed entry path refuses before any rendering, so
+      // no unit is ever written with an empty `ExecStart` (AC-F7-5).
+      if (composition.daemonEntry === undefined || composition.daemonEntry.length === 0) {
+        return failure("daemon.state-recovery-failed", "entry-path-absent");
+      }
+      const installed = supervisor.install({
         unit: composition.unit,
         scope,
-        stateDirectory: composition.stateDirectory,
+        stateDirectory: stateDirectoryBinding,
         binary: composition.binary,
         environmentName: composition.environmentName,
+        ...(workingDirectory === undefined ? {} : { workingDirectory }),
         enableLinger: true,
       });
-      if (installed.ok) return { data: installed.data };
+      if (installed.ok) {
+        return {
+          data: { result: "installed", supervisor: installed.descriptor, degraded: [] },
+        };
+      }
       const summary = [installed.platform, installed.detail]
         .filter((part) => part !== undefined)
         .join(" ");
       return failure(installed.code, summary.length === 0 ? undefined : summary);
     },
     uninstall: async () => {
+      // The configuration-root decision is the composing layer's: an
+      // unresolvable root replaces this handler with the delivered
+      // `config.value.invalid` refusal, so the state directory is never
+      // substituted for the user configuration root (AC-F7-2, NF-7).
       const removed = uninstallSupervisor(composedSupervisor(), composition.unit);
       return removed.ok ? { data: removed.data } : failure(removed.code, removed.detail);
     },
@@ -943,5 +1189,12 @@ const controlHandlers = (
     void holder.current?.stop("immediate");
     return { ok: true as const, data: { stopping: true as const } };
   },
+  /**
+   * `takeover` stays a constant refusal with its delivered identity. The control
+   * error frame echoes `type: "status"` for a `takeover` request because the
+   * delivered GH-238 transport frame carries that constant; it predates this
+   * change, no assertion here pins it, and it is explicitly OUT OF SCOPE for
+   * GH-286 (NF-8). A future protocol pass owns the echo and the frame shape.
+   */
   takeover: () => ({ ok: false as const, code: "daemon.takeover-refused" }),
 });

@@ -1,10 +1,14 @@
 /**
- * The daemon-owned lock artifact `daemon.lock` (GH-238 F-2, F-3; TDR-0004).
+ * The daemon-owned lock artifact `daemon.lock` (GH-238 F-2, F-3; GH-286 NF-1;
+ * TDR-0004).
  *
  * Over the injected StateRuntimeEdge: exclusive create, 0600 file in a verified
  * 0700 directory, verified classification of torn/unreadable/permission
- * failures, and removal only by the token holder. The state tier imports
- * contracts plus this tier's edge only.
+ * failures, and removal only through a compare-and-delete on the observed
+ * `lockToken`. The removal path is the same one the holder uses at release and
+ * the one the engine uses for a lock its staleness evaluation PROVED dead, so a
+ * lock whose record changed between observation and removal is never deleted.
+ * The state tier imports contracts plus this tier's edge only.
  */
 import type { DaemonLockPort, DaemonLockRead, DaemonLockRecord } from "#contracts";
 import type { StateRuntimeEdge } from "./edge.js";
@@ -62,6 +66,32 @@ export const createDaemonLockPort = (
     }
   };
 
+  /**
+   * Compare-and-delete: remove the record only while its `lockToken` still
+   * equals the observed token. The read is re-taken here, so a record a
+   * concurrent starter replaced after the caller's observation is left in place
+   * and answers the delivered `state.lock.busy` instead of being deleted. The
+   * holder's release and the engine's removal of a lock its staleness
+   * evaluation proved dead share this one path.
+   */
+  const removeIfTokenMatches = (
+    observedToken: string,
+  ):
+    | { readonly ok: true }
+    | { readonly ok: false; readonly code: string; readonly path: string } => {
+    const current = read();
+    if (current.state === "absent") return { ok: true };
+    if (current.state !== "held" || current.record.lockToken !== observedToken) {
+      return { ok: false, code: "state.lock.busy", path };
+    }
+    try {
+      edge.removeFile(path);
+      return { ok: true };
+    } catch {
+      return { ok: false, code: "state.write.failed", path };
+    }
+  };
+
   return {
     read,
     acquire: (record) => {
@@ -88,18 +118,6 @@ export const createDaemonLockPort = (
         return { ok: false, code: "state.write.failed", path };
       }
     },
-    remove: (lockToken) => {
-      const current = read();
-      if (current.state === "absent") return { ok: true };
-      if (current.state !== "held" || current.record.lockToken !== lockToken) {
-        return { ok: false, code: "state.lock.busy", path };
-      }
-      try {
-        edge.removeFile(path);
-        return { ok: true };
-      } catch {
-        return { ok: false, code: "state.write.failed", path };
-      }
-    },
+    remove: (lockToken) => removeIfTokenMatches(lockToken),
   };
 };

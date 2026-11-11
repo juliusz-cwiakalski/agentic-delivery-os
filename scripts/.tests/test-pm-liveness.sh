@@ -83,6 +83,21 @@ assert_not_contains() {
   fi
 }
 
+# assert_in_range: the actual value must be an integer inside [min, max].
+assert_in_range() {
+  local -r min="$1" max="$2" actual="$3" msg="${4:-}"
+  if [[ ! "${actual}" =~ ^[0-9]+$ ]]; then
+    printf '  Not a non-negative integer: %s\n' "${actual}" >&2
+    [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    return 1
+  fi
+  if (( actual < min || actual > max )); then
+    printf '  Expected range: %s..%s\n  Actual:         %s\n' "${min}" "${max}" "${actual}" >&2
+    [[ -n "${msg}" ]] && printf '  Message: %s\n' "${msg}" >&2
+    return 1
+  fi
+}
+
 # ============================================================================
 # SOURCE THE SCRIPT UNDER TEST
 # ============================================================================
@@ -213,7 +228,13 @@ test_healthy_session() {
   capture_main out rc main "ses_healthy001"
 
   assert_eq 0 "${rc}" "healthy session (30s) -> exit 0"
-  assert_contains "${out}" "seconds_since_last_message=30" "should report ~30s since last message"
+  # The probe samples the wall clock again after this fixture seeds its
+  # timestamps, so one or two scheduler seconds can elapse between seeding and
+  # the read. Accept the seeded 30s plus that tight tolerance instead of one
+  # exact integer (a whole-minute or integer-drift regression still fails).
+  local reported
+  reported="$(printf '%s\n' "${out}" | sed -n 's/^seconds_since_last_message=//p')"
+  assert_in_range 30 32 "${reported}" "should report ~30s since last message"
 }
 
 # test_stale_session: last message 20min ago (1200s), threshold 10 -> stalled.

@@ -287,11 +287,19 @@ describe("TC-PROJ-023 the settings resolution has one call site, taking the proj
     expect(body).not.toContain("stateDirectoryName");
   });
 
-  it("the composing site's only caller supplies the policy-derived project root", () => {
+  it("the composing site's callers supply the policy-derived project root", () => {
+    // Two composed invocations reach the one seam, both from the production
+    // composition and nowhere else: the host overview probe resolves the shipped
+    // defaults over a project root, and the mounted family resolves the
+    // configuration its invocation acquired over that same root (GH-286 F-4).
     const callers = countCallSites(listSources(), "resolveProjectDaemonSettings");
-    expect(callers.map((site) => site.file)).toEqual(["packages/cli/src/production.ts"]);
+    expect([...new Set(callers.map((site) => site.file))]).toEqual([
+      "packages/cli/src/production.ts",
+    ]);
+    expect(callers).toHaveLength(2);
     const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
     expect(production).toContain("resolveProjectDaemonSettings(stateLocation)");
+    expect(production).toContain("resolveProjectDaemonSettings(directory, { values, origins })");
     expect(production).toContain(
       "const stateLocation = projectStateRoot(hostRoot, entry.projectKey)",
     );

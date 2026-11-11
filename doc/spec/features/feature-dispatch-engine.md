@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-288"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288"]
   related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
@@ -36,7 +36,7 @@ A repository is either `dual-run` (bash authoritative, dispatch evidence only) o
 
 `dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, and attempt-record ledger serve one-shot dispatches and daemon-driven lanes.
 
-The shipped production composition wires the one-shot run path with its admission preflight, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production daemon entry that supplies that seam is owned by the resident-daemon change.
+The shipped production composition wires the one-shot run path with its admission preflight, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
 
 ## Command grammar
 
@@ -215,7 +215,7 @@ The production composition also resolves the `lane` policy branch and composes t
 
 The daemon lane seam supplies `createLaneLaunchPlanner`: a pure planner that returns the lifecycle prompt and only the declared environment variable names, resolving no secret value and reading no parent environment. It composes `createLaneExecutor` over the selected session port and execution-environment descriptor, so a daemon can claim, start, record, observe, collect, and resume lanes. An unavailable planner or declared capability gap leaves the daemon in honest `supervise-only` mode.
 
-The lane seam is factory-proven: the daemon composition composes it when a lane composition is supplied, and the daemon-lane conformance suite drives the planner, executor, and daemon-path attempt record. The production daemon entry that supplies the lane composition is owned by the resident-daemon change; this feature proves the seam and the daemon-path attempt producer, not a resident production daemon that launches lanes.
+The lane seam is factory-proven: the daemon composition composes it when a lane composition is supplied, and the daemon-lane conformance suite drives the planner, executor, and daemon-path attempt record. The production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238); this feature proves the seam and the daemon-path attempt producer, not a production daemon that launches lanes.
 
 The daemon path hands the same lane observation and collection evidence to `recordDaemonDispatchResult`, which derives the outcome and token through the same shared classifier and truth derivation, builds the same comparison and corroboration records, and appends exactly one attempt record through the same ledger. A daemon-driven attempt therefore agrees with a one-shot dispatch over the same evidence, and a replay or resume of the same attempt appends no second record.
 

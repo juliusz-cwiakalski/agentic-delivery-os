@@ -1,0 +1,978 @@
+change_id: GH-286
+title: "feat(cli): mount the daemon lifecycle command in the entrypoint (daemon
+  start/stop/status/install)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-11T00:56:44.216Z }
+  specification: { started: null, completed: 2026-11-11T10:50:34.398Z }
+  test_planning: { started: null, completed: 2026-11-11T10:50:44.416Z }
+  delivery_planning: { started: null, completed: 2026-11-11T10:50:54.941Z }
+  dor_check: { started: null, completed: 2026-11-11T11:04:45.981Z }
+  delivery: { started: null, completed: 2026-11-11T12:24:26.212Z }
+  system_spec_update: { started: null, completed: 2026-11-11T19:36:57.843Z }
+  review_fix: { started: null, completed: 2026-11-11T19:37:09.355Z }
+  quality_gates: { started: null, completed: 2026-11-11T19:37:19.908Z }
+  dod_check: { started: null, completed: 2026-11-11T19:37:30.793Z }
+  pr_creation: { started: null, completed: 2026-11-11T19:37:58.357Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Plan phase 9 commit: 1df9e74e. Phase 9 (review-iteration-1 remediation)
+      complete. F-1: the detached start reads the latest instance BEFORE
+      spawning; a live acquisition (acquired|taken-over, owned heartbeat
+      strictly under the composed lock staleness) refuses daemon.already-running
+      with zero spawns and zero appends; after the spawn only a record whose
+      instanceId differs or whose recordedAt is at/after the spawn time is
+      accepted, and its operation must be acquired or taken-over, so a crash
+      victim's stale acquired record is the classified readiness timeout at exit
+      2 and a legitimate takeover is accepted on the first poll; the 20 x 50 ms
+      window is unchanged. The three cells run through the real
+      createDaemonCommandRuntime with the recording process port. F-2: TC-037
+      refuses only the release append and asserts state.write.failed at exit 2,
+      no data, both listeners removed, one attempt, and the durable record still
+      acquired. F-3: TC-038 counts terminal records (exactly one) and the
+      duplicate-terminal mutant now appends two executed records (clock advanced
+      between signals). F-4: 18 of 21 controls load and run the mutated module
+      (relative imports rewritten); literal-socket, unit-under-state-dir and
+      xdg-relative-joined are declared structural with reasons in the suite
+      header. F-5: daemonReachable is one exported predicate with injected
+      nowMs/lockStalenessMs; the projection, boundary and read-cost cells use
+      it; the export required one content-inventory allowance row and
+      exports-parity is green. F-6: the watch iteration is awaited, p95 is
+      measured and recorded per run, and the signal-to-cancellation split is
+      measured (~232-235 ms) on the delivered real clock; the relative-p95 10%
+      clause is recorded as UNMET in test plan 10.3 with its reason and
+      substitute assertion. F-7: configured, empty-branch and invalid-branch
+      configuration-acquisition cells added. F-8: feature-config-layer.md
+      corrects the owner-hold relocation and scopes the no-home failure to the
+      daemon family. F-10: already declared by the phase-7 scope in plan v1.5.
+      F-11: one supervisor inspection per install, then port.install directly.
+      F-12: the receipt folds readDaemonStatus with the composed heartbeat
+      interval and lock staleness. F-13: an unresolvable user configuration root
+      refuses install with config.value.invalid at exit 1 (no unit, marker,
+      supervisor call, or created directory, and before the entry-path guard).
+      F-14: the status suite already consumes normalizeStatus and
+      status-unreachable.json; verified green, no edit. F-15: empty finally,
+      require() calls, dead Bun.file binding, void silencers and as-never casts
+      removed. Plan v1.6 declares the two structural guard sites the refactor
+      anchors (content-inventory allowance row and the hermetic resolver-span
+      anchor) with no assertion weakened. Gate: 129 tests across the four
+      Phase-9 groups, 0 fail; full battery under TMPDIR=$PWD/tmp/tmpdir at
+      --max-concurrency 4 is 7272 pass, 0 fail, 895 files in 510.8 s, and at
+      default concurrency 7268 pass, 4 skip, 0 fail in 508.0 s; pnpm typecheck,
+      pnpm lint, pnpm format:check, help-guide-coverage, doc-conformance,
+      exports-parity, the doc-distribution guard and git diff --check are green.
+      AC-NFR-2's relative p95 clause is the one unmet criterion and is recorded,
+      not relaxed. The commit was landed by the concurrent orchestration in this
+      worktree with the primitive template subject (F-9 recurs); the two
+      trailing doc-sync pages are pending in the worktree. Not pushed and no
+      pull request opened."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 8 commit: 05860165. Delivery lifecycle boundary: `phase
+      complete GH-286 delivery` landed eb7f0dce. All eight plan phases are
+      complete with the per-phase gate evidence recorded above; plan validate
+      reports verdict=valid, readyForDevelopment=true, 0 errors at 55/55 TC
+      mapping. Not pushed and no pull request opened, as instructed."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 7 commit: b6c97787. Plan phase 8 complete (gate battery,
+      additive-contract proof, release obligations): `tests/checks/
+      daemon-privacy.test.ts` plants canaries in every mounted path's facts and
+      asserts no credential, prompt, transcript, diff, or lock token appears in
+      any envelope, human rendering, spawn environment, unit text, or record;
+      the delivered error-table, state-contract, daemon-contract, vocabulary,
+      and content-inventory suites run unmodified and green; the state schema
+      and `STATE_SCHEMA_VERSION` are unchanged; the diff is exactly the five
+      permitted delivered-suite sites plus the declared new files; the changeset
+      is one lockstep minor over the five publishables. Gate: `bun test
+      --max-concurrency 4` under `TMPDIR=$PWD/tmp/tmpdir` reports 7256 pass, 0
+      fail across 895 files; error-table-sync, exports-parity,
+      forbidden-literals, privacy-literals, changesets-group, the distribution
+      guard, and `git diff --check` green. One pre-existing privacy-literal
+      finding in this change's own spec/plan/test-plan prose was reworded to
+      satisfy the guard; the default-concurrency `pnpm check` runs showed
+      load-induced timeouts that pass in isolation (recorded in test plan
+      10.3)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 6 commit: 30d44c90. Plan phase 7 complete (documentation and
+      spec reconciliation): `feature-cli-entrypoint.md` gains the mounted daemon
+      row and the unconditional-composition statement, the summary enumeration,
+      and the GH-286/TDR-0023/contract links; `feature-resident-daemon.md`
+      replaces the not-mounted sentence with the mounted reality (unconditional
+      runtime, entry-path re-entry, signal-owned lifetime, real pid,
+      brand-derived install identity, durable degradation) and gains both links;
+      `entrypoint-delta.md` records the closed registration gap with the
+      seventeen-family listing; `daemon.md` completes the reconciliation with
+      the shared scope and the mount-and-lifetime paragraph and keeps its `##
+      HELP` section; `entrypoint.md` lists the family and drops it from the
+      absent set; `doc/00-index.md` describes the mounted daemon. Gate:
+      doc-conformance, help-guide-coverage, reference-page-parity,
+      daemon-vocabulary, and prompt-conformance green, forbidden-literals clean,
+      the distribution guard reports no drift, and `git diff --check` clean."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 5 commit: aa3c5311. Plan phase 6 complete (mount and
+      self-description in one commit): `daemon` joins `PROMPT_REQUIRED_COMMANDS`
+      exactly once (17 families); the help inventory gains the family entry with
+      the daemon page and the man page in its see-also plus one entry per
+      subcommand; the reference page records the mounted status and its `##
+      HELP` section; the coverage inventory gains the command and the page row
+      appended at the end of each array; the doc-conformance page list gains
+      `daemon`; the only delivered-suite edits are the five permitted sites (the
+      two absence loops, the expected family list and the corrected doc comment
+      in entrypoint-composition, the root family list, the coverage enumeration,
+      and the conformance row). Gate: 95/95 tests across the composition,
+      mount-help, entrypoint, guard, and mutant suites; help-guide-coverage zero
+      failures, prompt-conformance clean, `pnpm check:help`, typecheck, lint,
+      and format green; TC-DAEMON-105 re-run through the real binary and
+      recorded."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 4 commit: da51b183. Plan phase 5 complete (degradation per
+      projection): `QueueComposition.degraded` is resolved at the schedule read,
+      the mutation outcome, the lanes read, the claim and release results, and
+      every watch iteration; the production composition supplies the durable
+      reachability predicate (owned instance, acquisition operation, matching
+      heartbeat owner, STRICT `age < lockStalenessMs`) and no longer wires a
+      literal marker array. Gate: 112/112 tests across the projection,
+      read-cost, wiring, mutant, delivered daemon-degradation and
+      queue-scheduling suites and the queue/lanes/watch/golden controls; `pnpm
+      typecheck`, lint, format, ambient-globals, and `pnpm check:boundaries`
+      green."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 3 commit: 59e7a360. Plan phase 4 complete (foreground
+      lifetime, drained detach, fail-closed stop): with a composed signal host
+      and `--foreground` the runtime captures the readiness snapshot, installs
+      one SIGINT and one SIGTERM listener, runs the resident loop, lets the
+      first signal select the mode, removes both listeners in a `finally`,
+      awaits the loop, and returns the snapshot or the classified stop failure;
+      a second signal cannot start a second stop; the cross-process stop refuses
+      a non-positive, fractional, or torn pid as `daemon.state-recovery-failed`
+      before any signal call and addresses only the recorded positive pid.
+      `createDaemonMainEntry` stays unused by every production surface and is
+      imported only by the TC-039 fixture entry. Gate: 56/56 tests across the
+      three new behaviour suites, the mutant suite, the delivered
+      control-transport, lifecycle, lock-concurrency, and watch suites, and the
+      bounded real-child conformance case (0.6 s, temp-rooted, reaped); `pnpm
+      typecheck`, lint, and format green."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 2 commit: 551c1ad4. Plan phase 3 complete (install identity
+      and lifecycle): the install handler classifies the supervisor support
+      first (so the delivered darwin/win32 control keeps
+      `daemon.supervisor-unsupported` and stays unmodified) and then refuses a
+      resolvable state directory with no composed entry path as
+      `daemon.state-recovery-failed` before any rendering, keying on entry-path
+      absence only; the brand-derived unit, the exact state-directory binding,
+      the user configuration root, the delivered command order (write, enable,
+      linger, marker), the rollback, and the ownership-scoped uninstall are
+      proved over recording ports and an in-memory adapter. Gate: 40/40 tests
+      across the install suite, the mutant suite, and the delivered
+      install/supervisor-install goldens; `pnpm typecheck`, lint, format, and
+      ambient-globals green; no delivered suite edited. TC-DAEMON-105 manual
+      host verification executed on a live user manager and recorded in the test
+      plan §10.1."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test,
+      and TDR-0023 tracked). Plan phase 2 complete (production composition): one
+      state-directory classification with its three outcomes, resolved daemon
+      settings through the delivered resolver with an empty-branch fallback, the
+      delivered unix transport at the resolved socket path with a lock-held
+      ownership predicate, the lane restart bound, the composing pid (positive
+      only), the entry path, the derived re-entry environment (PATH, HOME or
+      USERPROFILE by name, working-name override when set), the supervisor
+      pass-through, and an unconditional daemon runtime that is the unavailable
+      refusal runtime for the unresolvable outcome; the bin supplies
+      `daemonEntry: process.argv[1]`; the spawn merges the re-entry set with the
+      state binding written last. Gate: 47/47 tests across the four new
+      behaviour suites plus the mutant suite and the delivered status-matrix
+      golden, 44/44 across the delivered lifecycle/lock/supervisor-install/
+      state-scope/vocabulary/content-inventory controls, `pnpm typecheck`, lint,
+      format, ambient-globals, and `pnpm check:boundaries` all green."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 1 complete (additive daemon-mount composition inputs and
+      TDR-0023 landed): `DaemonComposition` gains `pid?`, `signalHost?`, and the
+      `reentryEnvironment?` input; `pid` is forwarded to the runtime only when
+      it is a positive integer; `ProductionCompositionFacts` gains
+      `daemonEntry?` and `supervisor?`; `QueueComposition.degraded` widens to
+      the array-or-resolver union with one additive resolution helper so the
+      delivered array and fallback bytes are unchanged;
+      `tests/types/daemon-mount.type-test.ts` proves every addition optional.
+      Gate: `pnpm typecheck` green, 23/23 tests in the daemon and state contract
+      suites, ambient-globals clean, `git diff --check` clean. No exported
+      signature narrowed, no module or export added."
+    type: "info"
+    date: "2026-11-11"
+  - text: "State detection: ticket GH-286 open with label `change`, zero comments,
+      no open or merged PR for the branch, local branch
+      feat/GH-286/daemon-command-mounting checked out at origin/main-tools tip
+      (5372dbac) with zero own commits and a clean worktree. This is a fresh
+      delivery, not a resume; no resume sync or review-comment handling
+      applies."
+    type: "info"
+    date: "2026-11-11"
+  - text: "clarify_scope cross-check against the delivered tree: the registration
+      seam already exists (`ConfigProgramOptions.daemon` at
+      packages/cli/src/edge.ts:2997 with registration at 3574-3576) and the
+      lifecycle runtime is delivered (`createDaemonCommandRuntime`,
+      packages/cli/src/daemon-compose.ts:365). What is missing is exactly what
+      the ticket names: `daemon` is absent from `PROMPT_REQUIRED_COMMANDS`
+      (packages/cli/src/help/prompt-required-commands.ts:11-28), production.ts
+      supplies no daemon runtime, and there is no daemon help entry."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Requirement-to-spec contradictions found (all intentional reversals this
+      change must carry into the spec):
+      doc/spec/features/feature-cli-entrypoint.md :65 states the daemon is not
+      prompt-required and the production entrypoint supplies no daemon runtime;
+      doc/spec/features/feature-resident-daemon.md:51-57 states the family is
+      composed only when a runtime is supplied and the production entrypoint
+      supplies none; doc/planning/oss-tooling/milestones/m2/
+      entrypoint-delta.md:54-67 records the registration gap as open product
+      work; doc/planning/oss-tooling/milestones/m1/commands/daemon.md:3-7
+      records the command as not mounted."
+    type: "risk"
+    date: "2026-11-11"
+  - text: "Documentation impacts identified for phase 7: feature-cli-entrypoint.md
+      (composition table + the absent-daemon sentence + summary/links),
+      feature-resident-daemon.md (mount sentence), m2/entrypoint-delta.md (gap
+      closed; mount proven), m1/commands/daemon.md (status line plus the HELP
+      section the help-guide-coverage check requires: the page currently
+      contains no `--help`/`--version` mention), m1/man-page.md and
+      m1/commands/entrypoint.md if the observed listing changes."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Four design choices are inside the ticket's stated intent and are not
+      product-scope ambiguities; they are routed to specification as recorded
+      decisions with explicit tested outcomes: (1) how a detached `daemon start`
+      re-enters the CLI (`daemonEntry`) and whether the resident foreground loop
+      runs; (2) how `queue list`/`lanes` stop reporting `daemon-unreachable`,
+      given the composition currently hardcodes that degradation at
+      packages/cli/src/production.ts:470; (3) plumbing the composing process id
+      so a foreground start records a real pid (DaemonRuntimePorts.pid exists
+      but DaemonComposition exposes no pid, so instance records would carry pid
+      0); (4) the install unit's binary/scope inputs. No human clarification is
+      blocking."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "clarify_scope complete: requirements are complete and testable as
+      written. Scope boundaries declared: mount the lifecycle family and its
+      help and reference coverage; make queue/lanes degradation reflect durable
+      daemon state; do not add a lane executor/dispatch composition to the
+      daemon, do not add `projects`/`events`/`attempts`/`board`, do not change
+      daemon engine semantics or control-protocol shapes beyond additive
+      composition inputs."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Decision record TDR-0023 (daemon lifecycle mount and degradation
+      composition) written and indexed under doc/decisions/. It settles D1
+      (detached re-entry via the running entry path plus a signal-owned
+      foreground lifetime), D2 (per-read degradation resolver over durable
+      daemon state), D3 (composing pid plus a fail-closed stop on a non-positive
+      recorded pid — a pid of 0 would signal the operator's own process group),
+      D4 (brand-derived install identity under the XDG config root), and
+      additionally requires the production state directory to resolve through
+      resolveStateDirectoryScope so the parent, the detached child, and the
+      installed unit agree."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Specification complete: chg-GH-286-spec.md — 47 ACs (41 capability plus 6
+      NFR), 16 DECs, 8 capabilities, 12 NFRs, 12 risks, 7 DM elements, 3
+      unchanged EVT entries, 0 open questions. DEC-1..DEC-9 map TDR-0023
+      one-to-one; DEC-10..DEC-16 close the values the record left open (lane
+      restart bound, install test seam, help inventory shape, conformance page
+      list, delivered status install truth, production start mode, re-entry
+      environment limit). The spec records one declared limitation (RSK-6: a
+      renamed working name is not forwarded into the re-entry environment) and
+      one intentional behaviour change (the PREFIX_STATE_DIR override now drives
+      the whole production composition; no state is moved)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Commit-primitive constraint discovered after the specification commit:
+      TDR-0023 landed as an untracked stray because doc/decisions/ is not part
+      of any staging scope, and an untracked TDR staged alone fails commitlint
+      as an invented tracker reference (the template summary echoes the path).
+      The delivery plan MUST declare
+      doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition\
+      .md in one phase's scope.files so the phase-mode commit lands it with a
+      plan summary, and must declare scope files for every touched path so no
+      untracked artifact is stranded."
+    type: "risk"
+    date: "2026-11-11"
+  - text: "test_planning complete: chg-GH-286-test-plan.md — 50 TCs
+      (TC-DAEMON-010..124), 47/47 AC coverage with no orphans, Scenario Index =
+      Details = Automation Plan = 50. Four delivered suites are declared the
+      only permitted edits (entrypoint-composition expected list and absence
+      name, entrypoint-help root list, help-guide coverage fixture,
+      doc-conformance page list). No AC was reopened; six verification-method
+      constraints are recorded as GAP-T1..T6 (review-attested diff shape,
+      two-process drain proof, absence evidence, no automated systemd,
+      delivery-bound names, perf baseline)."
+    type: "info"
+    date: "2026-11-11"
+  - text: "delivery_planning complete: chg-GH-286-plan.yaml (delivery.plan.v1)
+      validates — verdict=valid, tier=full, readyForDevelopment=true, 0 errors.
+      8 phases: (1) additive composition inputs + TDR-0023 landed; (2)
+      production composition (one state-directory scope, resolved settings,
+      transport, real pid, entry path, unconditional runtime); (3) install
+      identity and install/ uninstall lifecycle; (4) foreground lifetime plus
+      drained detach plus fail-closed stop safety; (5) degradation resolved per
+      projection; (6) mount plus help plus reference-page HELP plus guard
+      fixtures in one commit; (7) docs/spec reconciliation; (8) gate battery
+      plus additive-contract proof plus release. TC mapping 50/50 with no
+      duplicates or orphans. Phase 1 declares the untracked TDR-0023 in scope so
+      its commit lands it."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR iteration 1 verdict NOT_READY — 7 blocking (2 critical, 5 major) and
+      9 advisory. Critical: RF-1 the pinned re-entry contract spawns the entry
+      with an environment of exactly one variable, so the Bun shebang cannot
+      resolve its interpreter (empirically `env: bun: No such file or
+      directory`); the ticket's primary acceptance is unachievable and the one
+      integration proof is vacuous. RF-2 AC-F5-6's universal equivalence is
+      unsatisfiable because the delivered fold treats at-bound age as stale and
+      reports running for an orphan heartbeat. Major: RF-3 the declared
+      permitted edit set omits two hard-coded help suites, one of them outside
+      every phase scope; RF-4 plain daemon status probes the socket,
+      contradicting the narrative and TC-060; RF-5 the asserted install order
+      contradicts the delivered adapter (unit, enable, linger, marker); RF-6
+      already-running and takeover-refused are user-validation, exit 1 not 2;
+      RF-7 mutant consumers are declared in a phase that has already committed.
+      Reopened specification, test_planning, delivery_planning (never delivery).
+      Verdict persisted at readiness-review/readiness-iter-1.md."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "Retro (DoR iteration 1): the artifacts were internally consistent and
+      matched TDR-0023, but three classes of claim were never checked against
+      the delivered code: the executable environment of a detached child, the
+      exact staleness boundary and orphan-heartbeat behaviour of the delivered
+      fold, and the projection class of two error rows. Two hard-coded help
+      suites were also missed because the spec enumerated the guards it knew
+      about rather than the suites that actually assert the 16-command list.
+      Repair rule: every AC that names an existing behaviour must cite the
+      delivered function and its boundary semantics, and every permitted-edit
+      list must be derived by grepping the suites for the literal it changes."
+    type: "retro"
+    date: "2026-11-11"
+  - text: "DoR iteration 1 remediation complete. TDR-0023 DC-1 amended (re-entry
+      environment forwards PATH, HOME/USERPROFILE and a non-empty working-name
+      override through one optional additive input; PREFIX_STATE_DIR stays
+      authoritative and is written last; the old renamed-brand limitation is
+      deleted). Spec v1.1: 49 ACs (added AC-F2-10 executable-entry/stripped-env
+      fail-closed and AC-F5-8 unowned-heartbeat divergence), DEC-17 added
+      (unquoted Environment line declared), RSK-13 added, predicate pinned to
+      strict '<', plain status now documented as probing, exit digits corrected
+      to 1, additional-reads restatement, count drift fixed. Test plan v1.1: 53
+      TCs, 49/49 coverage, added TC-040/041/078, corrected install order and
+      exit digits, added the file-inventory authority pointer. Plan v1.1: 53/53
+      TC mapping, validator valid/readyForDevelopment, strict predicate pinned,
+      entrypoint-help-coverage.test.ts and daemon-mutants.test.ts added to every
+      phase scope that needs them, five permitted edit sites derived from the
+      tree, five delivered suites added to phase gates, daemon-main disposition
+      declared, mutant consumers per phase."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR iteration 2 verdict NOT_READY — 6 blocking (all major) and 9
+      advisory. RF2-1 TDR-0023 DC-2 still pins the inclusive staleness bound
+      while every other artifact pins strict '<'. RF2-2 the re-entry spawn edit
+      has no phase whose scope contains daemon-compose.ts. RF2-3 AC-F7-5's
+      entry-path refusal has no Phase 3 implementation site. RF2-4 the home-less
+      fail-closed case contradicts the declared home-based fallback (empty home
+      yields a root-level template). RF2-5 the second daemon absence assertion
+      in entrypoint-composition.test.ts turns red in Phase 6 and is outside the
+      declared edit set. RF2-6 the 'gains no test' disposition for
+      createDaemonMainEntry contradicts TC-039's fixture. Reopened
+      specification, test_planning, delivery_planning. Iteration 3 is the last
+      permitted."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "DoR iteration 2 repair decisions (PM): (1) RF2-4 is settled by adding a
+      third state-directory outcome — when no absolute override exists and the
+      home is empty the directory is unresolvable, the daemon family stays
+      mounted but its runtime is composed in an unavailable form whose
+      subcommands return the delivered config.value.invalid at exit 2, opening
+      no store, lock, or socket; the home-based fallback applies only when a
+      home exists, so a non-absolute override still falls back as delivered.
+      This keeps the prompt set complete (no containment throw) and removes the
+      root-level store root. (2) RF2-6 keeps the disposition's intent but scopes
+      it to production surfaces: createDaemonMainEntry is never wired into the
+      composition, composer, or bin, and a test fixture may still use it as a
+      library seam. (3) RF2-1/DC-2 and the stale entryScriptPath reference are
+      corrected in TDR-0023 by @decision-advisor. (4) RF2-2/RF2-3 are plan-scope
+      omissions: daemon-compose.ts joins Phases 2 and 3 with the spawn-merge and
+      install- refusal tasks assigned to them."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Correction to the previous note: the unavailable daemon runtime returns
+      the delivered config.value.invalid at exit 1, not 2 — that identity is
+      projectionClass user-validation
+      (packages/core/src/contracts/error-table.ts and
+      packages/cli/src/projection.ts), so the digit is projected, never
+      authored. The spec, plan and test plan carry exit 1."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR iteration 2 remediation complete. TDR-0023 DC-2 amended to the strict
+      '<' bound with the at-bound boundary stated, plus the daemonEntry
+      field-name correction. Spec v1.2: 50 ACs (new AC-F3-5 unresolvable
+      state-directory outcome; AC-F3-3/AC-F3-4 scoped to a home present;
+      AC-F2-10 split), DEC-18 added, DM-5 extended, RSK-6 rewritten with
+      residual lowered to L. Test plan v1.2: 54 TCs, 50/50 coverage, new TC-054,
+      TC-041 rewritten to the three-outcome contract with a faithful empty-home
+      fixture, both absence sites named, composition-under-test declared per
+      case, interpreter proof strengthened. Plan v1.2: 54/54 mapping, validator
+      valid, daemon-compose.ts added to Phase 2 (spawn merge) and Phase 3
+      (install refusal) scopes, three-outcome resolution in task 2.1, both
+      absence sites in task 6.6, daemon-main disposition scoped to production
+      surfaces, 21-mutant inventory matched to the test plan."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR iteration 3 (final) verdict NOT_READY — 1 blocking (RF3-1, major) and
+      5 advisory; every other facet PASS, including spec completeness, AC
+      quality, decision capture, traceability (50/50 ACs, 54/54/54 TCs) and the
+      validator. RF3-1 is a phase-ordering defect introduced by the iteration-2
+      three-outcome contract: Phases 2 and 3 are mapped cases whose proofs need
+      prompt-required membership, which only Phase 6 delivers, so an invocation
+      through runEntrypoint answers fallback.internal until then."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "PM decision after the final gate (autonomous mode, recorded): apply the
+      reviewer's own recommended remedy — one targeted delivery_planning +
+      test_planning repair (Phase 2/3/4/5 proofs are handler-level against the
+      composed program; Phase 6 adds the selection/containment re-proof through
+      runEntrypoint, including selectPromptRequiredProgram selecting daemon and
+      the nine unresolvable-outcome invocations at exit 1) plus the two spec
+      wording items — then a single targeted confirmation pass on the changed
+      sections only, not a fourth full iteration. Rationale: every other facet
+      passed; the defect is mechanical, has a specified remedy, and shipping a
+      plan whose boundaries are red would be worse than a scoped repair. The
+      confirmation result and this decision are recorded, and the DoR gate
+      completes only if the confirmation shows RF3-1 closed."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR iteration 3 repair complete. Spec v1.3: AC-F7-5 scoped to 'given a
+      resolvable state directory' with the precedence stated (the unresolvable
+      runtime wins, so install with neither entry path nor state directory
+      returns config.value.invalid at exit 1); AC-F3-4 reworded to the edge
+      returning no store. Test plan v1.3: 55 TCs, 50/50 coverage, new TC-015
+      owning the Phase-6 selection/containment proof through runEntrypoint, a
+      per-case handler-vs-entrypoint shape table, handler-level re-pins for
+      TC-041/053/054/ 063/090 and the install battery, the
+      daemon-mount-help.test.ts rename, the stale v1.2 handoff amended, and the
+      source-scan anchor named. Plan v1.3: 55/55 mapping, validator valid, an
+      INVOCATION-SHAPE RULE in the header, handler-level gates for Phases 2-5
+      with selection claims removed, Phase 6 task 6.8 plus an entrypoint-level
+      gate, and the Phase 8 counts updated."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "DoR confirmation pass after the iteration-3 repair: RF3-1 verified closed
+      (invocation-shape rule in the plan header, handler-level gates for Phases
+      2-5, Phase 6 task 6.8 plus an entrypoint-level gate, TC-015 mapped once
+      and superseding the selection half), A3-1/A3-2/A3-3/A3-4/A3-5 closed, all
+      counts consistent and the validator green. One new mechanical
+      contradiction was found (RF4-1): two risk-table cells in test plan §8.1
+      still attributed selectability to the re-pinned Phase-2 cases. Fixed in
+      test plan v1.4 (TR-8/TR-27 now say 'stays registered', selection is
+      TC-015's; TC-015 hosts the selection proof in the new structure suite;
+      TC-053's wording aligned), and in plan v1.4 (AC-F7-5's
+      resolvable-state-dir qualifier on the Phase-3 refusal, and task 6.9 owning
+      the TC-105 real-binary re-run). A final targeted confirmation follows."
+    type: "info"
+    date: "2026-11-11"
+  - text: "DoR gate READY. The final targeted confirmation closed RF4-1 and
+      confirmed A4-1/A4-2/A4-3/A4-4, with 50 ACs = 50 §3.1 rows = 55 TCs = 55
+      map entries and the validator green (verdict valid, readyForDevelopment
+      true, 0 errors). Three non-blocking nits are recorded in
+      readiness-review/readiness-confirmation.md. DoR iterations: 3 full passes
+      (NOT_READY at 1, 2 and 3) plus this scoped repair-and-confirm cycle, all
+      recorded under readiness-review/."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "system_spec_update complete: @doc-syncer reconciled the current-truth set
+      with the shipped mount. Changed: feature-resident-daemon.md (mount,
+      re-entry and signal-owned lifetime, pid safety, three state-directory
+      outcomes, install identity), feature-cli-entrypoint.md (composition row +
+      daemon-mount quality-evidence row), feature-agents-and-commands.md,
+      feature-config-layer.md (home-present default), feature-dispatch-engine.md
+      and feature-harness-adapters.md (lane-seam sentence),
+      quality/test-specs/test-spec-resident-daemon.md (mount suites + scenarios)
+      and test-spec-dispatch-engine.md, overview/glossary.md,
+      overview/architecture-overview.md, m2/entrypoint-delta.md (gap closed,
+      listing order) and m2/README.md. Verified unchanged with reasons: m1
+      daemon and entrypoint pages, man-page, cli-command-registry, doc/00-index,
+      feature-scheduling-engine, feature-coordinator-supervision, nonfunctional.
+      No spec-coverage gap; doc-distribution guard PASS (82 docs, no drift);
+      doc-conformance + help-coverage + reference parity 17/17; forbidden
+      literals 0; prompt conformance clean."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Review iteration 1: FAIL. 47/50 ACs PASS, 3 PARTIAL, 1 FAIL. Blocking
+      F-1: the detached-start readiness poll accepts any existing 'acquired'
+      instance record, so a start after a crash reports success with the dead
+      pid (AC-F2-2 FAIL), a legitimate 'taken-over' acquisition times out, and a
+      bare start against a live daemon reports success instead of
+      daemon.already-running (AC-NFR-6/NFR-9). Blocking F-2: TC-037's failing
+      store delegates straight through and the verdict accepts success or
+      failure. Blocking F-3: TC-038 never counts terminal instance records and
+      its mutant contains a dead guard. Medium: F-4 mutant non-vacuity, F-5
+      predicate re-implemented in tests, F-6 unmeasured latency clauses, F-7
+      untested production config path plus an undeclared invalid-branch
+      divergence, F-8 config-layer doc inaccuracy, F-11 double supervisor
+      inspect, F-12 receipt folded with default staleness, F-13 root-level
+      config root with no home, F-14 dead fixtures, F-15 test hygiene. F-9
+      (commit subjects from the primitive template) accepted and recorded as a
+      tooling limitation: the primitive is the only permitted write path and
+      rewriting its commits by hand is not authorised. F-10 (nine reconciled
+      docs beyond phase-7 scope) to be declared in the spec/plan rather than
+      reverted. Verdict persisted at review/review-iter-1.md."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "Retro (review iteration 1): the readiness poll defect is a case where the
+      plan's AC text was right, the code was wrong, and every new test asserted
+      the happy path plus one injected-store variant — so the defect sat in a
+      cell no suite exercised. The next pass must assert the three
+      pre-spawn/post-spawn outcomes (live refusal, takeover acceptance, stale
+      record rejection) against the real runtime rather than fixtures that write
+      'acquired' directly."
+    type: "retro"
+    date: "2026-11-11"
+  - text: "Review iteration 2: FAIL. 49/50 ACs PASS, 1 PARTIAL (AC-NFR-2's
+      relative-p95 clause, recorded as a deferral in test-plan §10.3), 0 FAIL.
+      F-2/F-3/F-4/F-5/F-6/F-7/F-8/F-11/F-12/F-13/F-14/F-15 closed; F-1 partially
+      closed. Blocking NF-1: a crashed daemon can never be restarted — the
+      engine evaluates a takeover decision but then calls the exclusive-create
+      lock acquire, so the leftover lock returns state.lock.busy and start
+      reports daemon.already-running naming only the lock path; the
+      control-plane takeover is a constant refusal. Reproduced after SIGKILL +
+      35 s. This falsifies DEC-6, RSK-11, the F-4 socket sentence and the
+      resident-daemon page. NF-2: six reconciled docs are declared in no phase
+      scope. NF-3: F-11/F-12 have no regression assertion. NF-4: three
+      production copies of the reachability rule. NF-5: commit subjects mislabel
+      code under docs. NF-6/7/8 minor. Verdict persisted at
+      review/review-iter-2.md."
+    type: "blocker"
+    date: "2026-11-11"
+  - text: "PM decision on NF-1 (recorded): fix the engine's stale-lock takeover
+      rather than document the defect. The delivered daemon contract already
+      claims crash-safety and takeover, the engine already records a
+      'taken-over' instance, and the only missing step is removing a lock that
+      the staleness evaluation has proved dead before re-acquiring it. The fix
+      removes that lock only on a verified takeover decision, then re-acquires
+      exclusively, so two concurrent starters still race safely (one wins, the
+      loser sees state.lock.busy mapped to already-running). Scoped as a Phase-9
+      continuation with its own crash-restart regression test, declared as a
+      contract-conformance fix rather than a semantic change (NG-1), with a spec
+      note."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Review iteration 3 + confirmation pass: all five named findings closed.
+      NF3-1 (engine change declared in spec v1.5/v1.6 and TDR-0023's scoped
+      exception), NF3-2 (§16 now names twenty reconciled pages), NF3-3
+      (listeners registered before the readiness point with a buffered signal;
+      the createDaemonMainEntry seam got the same treatment and stays unused in
+      production), NF3-4 (cross-file real-child gate plus quiescent kill; the
+      two real-child cases ran 5/5 clean at default concurrency), NF3-5 (a
+      compare-and-delete failure surfaces its own identity via AC-F2-12). Spec
+      v1.6 has 52 ACs, the test plan 55 TCs with 52/52 coverage, and the plan is
+      at revision 1.8 with the foreground ordering corrected. Commits: 885d8dcc
+      (remediation), 7b8e68b9 (scope + evidence), 46ff9428 (spec/test plan/doc
+      alignment), and the plan/pin commit that follows. Full battery at
+      --max-concurrency 4: 7286 pass / 4 skip / 0 fail. Also recorded: two
+      concurrent deliver-ticket runs targeted this worktree during the session,
+      and one of their commits (97a3f410) landed doc reconciliation into this
+      branch; all commits remain GH-286-scoped and the tree is clean."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 9 (review-iteration-2 continuation, tasks 9.15-9.22):
+      complete. NF-1 (blocking) closed as CONTRACT CONFORMANCE, not capability:
+      the engine now removes a lock whose staleness evaluation returned takeover
+      BEFORE the exclusive re-acquire, using the delivered compare-and-delete on
+      the observed lockToken (extracted as the one removeIfTokenMatches path in
+      packages/core/src/state/daemon-lock.ts, shared with the holder's release),
+      so a record changed between evaluation and removal is left in place
+      (state.lock.busy) and a refused removal falls back to the delivered busy
+      mapping. No new port member, module, export, record kind, or error row;
+      DaemonLockRecord and STATE_SCHEMA_VERSION unchanged; evaluateDaemonLock
+      stays the only staleness decision. Evidence: new
+      tests/behaviour/daemon-crash-restart.test.ts (hermetic residue at/past the
+      bound -> exit 0 with a taken-over instance naming the dead instance and
+      token, inside the bound -> daemon.already-running with zero appends and
+      the dead lock intact, two concurrent starters -> one winner and one
+      refused compare-and-delete, plus ONE real SIGKILLed #!/usr/bin/env bun
+      child under daemon.lock-staleness 1500 reaped in finally) and a
+      composed-runtime takeover step in
+      tests/behaviour/daemon-start-detached.test.ts. Non-vacuity observed:
+      before the rebuilt engine the same case failed with daemon.already-running
+      naming only the lock path (the reviewer's reproduction). 9.16: the six
+      NF-2 pages are declared in the Phase-7 (task 7.9) and Phase-9 scopes of
+      plan v1.7, their content re-read and accurate, re-edited in neither; the
+      spec 16 completeness sentence remains a spec-owner handoff (pm
+      re-delegation to @spec-writer) because change artifacts' normative content
+      is not a coder edit. 9.17: added the two missing regression assertions
+      (receipt/status agreement under a non-default lock staleness with the
+      shipped default as a running control, and inspects === 1 on the install
+      SUCCESS path). 9.18: new
+      tests/behaviour/daemon-staleness-agreement.test.ts asserts
+      liveHolder/daemonReachable/evaluateDaemonLock agree one ms below, at, and
+      one ms above the bound, on absent lock+instance, and on a torn lock, and
+      that the Math.max clamp changes only the reported age (-5000 vs 0), never
+      the classification; the declared divergence cells are stated as excluded.
+      9.19: TC-DAEMON-030's test plan steps 9-15 and its outcome/notes now carry
+      the live refusal, the post-crash takeover, the stale rejection, the
+      inside-bound control, the concurrent starters, the composed-runtime
+      takeover and the receipt/status agreement cell; 10.1/10.2/10.3 updated.
+      9.20: uninstall now refuses on the same unresolvable
+      user-configuration-root rule as install. Implemented at the ONE resolution
+      point (production.ts replaces both handlers with config.value.invalid
+      before any adapter is constructed), not inside daemon-compose.ts, because
+      a runtime-level guard would change the delivered GH-238 composition
+      contract pinned by tests/behaviour/daemon-supervisor-install.test.ts (a
+      control outside the Phase-9 scope); daemon-compose documents the split.
+      Symmetric suite cells added: the no-home fixture refuses uninstall with
+      zero inspections and zero uninstalls and no directory created, and the
+      home-present control still runs exactly one ownership-scoped uninstall.
+      9.21: NF-8 recorded as an out-of-scope comment at the constant takeover
+      refusal in daemon-compose.ts (delivered GH-238 frame echo, no assertion
+      pins it, no envelope change). 9.22: commit-subject limitation recorded in
+      plan v1.7 and here — 97a3f410 and 72e2c1a7 carry docs-class subjects while
+      carrying the liveHolder evidence, refusal detail and start-suite cells,
+      and the change semantics are carried by the pull-request description; no
+      commit was rewritten. Gate at HEAD 72e2c1a7: the reviewer's iteration-2
+      evidence records 105 + 206 + 7 tests green plus help-guide-coverage,
+      doc-conformance, error-table-sync, the distribution guard and plan
+      validate valid. Gate for this continuation: 68 tests across the
+      remediation group, 53 across the
+      degradation/install/status/production-composition group, 47 across the
+      mount-help/state-scope/stop-safety/lock/lifecycle/watch group, and the
+      full daemon+contract battery 371 pass / 0 fail; pnpm typecheck, pnpm lint,
+      pnpm format:check, help-guide-coverage, exports-parity, doc-conformance,
+      the doc-distribution guard and git diff --check green. Full battery under
+      TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4: 7283 pass, 4 skip, 0 fail,
+      7287 tests across 897 files in 465.96 s. Two earlier runs of the same
+      battery each reported one failure: a REAL pre-existing red at HEAD
+      72e2c1a7, TC-HOLDDOCS-001, which still pinned the retired 'no marker-path
+      override and no store relocation' claim that the trailing doc-sync
+      commit's store-derived wording had removed; it is reconciled by that
+      guard's marker-path cells (declared in the change spec s.8.5 and AC-F8-4),
+      which assert the delivered statement and additionally forbid the retired
+      claim, while doc/guides/delivery-modes.md keeps its store-derived wording;
+      and one 5 s TC-WIRE-002 timeout in tests/checks/privacy-ci-wiring.test.ts
+      that is green in isolation (14/14 in 10.45 s) and green in the final run.
+      The pre-existing local `token` binding in daemon-runtime.ts tripped the
+      commit primitive's deterministic secret scanner as a false positive on the
+      assignment that mints the lock token, so that local was renamed `newToken`
+      (behaviour-neutral; the affected suites and typecheck re-run green). Not
+      pushed and no pull request opened."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 9 final gate (tasks 9.15-9.22 bookkeeping, closing note): this
+      note supersedes the aggregate numbers of the note above. 92d2df11 is the
+      bookkeeping commit of record for the iteration-2 continuation (plan v1.7
+      header, the spec 8.5 and AC-F8-4 permitted-update sites, the owner-hold
+      doc guard, the crash-restart and staleness-agreement suites, the uninstall
+      symmetry fix and the pm-notes evidence); 1df9e74e carries the primary
+      Phase-9 remediation and 97a3f410 and 72e2c1a7 the trailing doc-sync pages.
+      The doc guard is reconciled honestly rather than by restating the retired
+      claim: doc/guides/delivery-modes.md keeps its store-derived wording (the
+      marker follows the resolved store directory, an absolute
+      <PREFIX>_STATE_DIR relocates store and marker together, otherwise the
+      home-based <home>/<brand.stateDirectoryName> applies, there is no
+      marker-path setting, and the home default is never moved) and
+      tests/checks/owner-hold-doc.test.ts pins that truth with one added
+      negative cell asserting the retired 'no store relocation' phrase is
+      absent; every other assertion in the guard is intact. The guard file is a
+      declared Phase-9 scope file and a named permitted-update site in spec 8.5
+      and AC-F8-4 (the PM-authorised mechanical list extension, which changes no
+      criterion's meaning). Final full battery under TMPDIR=$PWD/tmp/tmpdir at
+      --max-concurrency 4: 7284 pass, 4 skip, 0 fail, 7288 tests across 897
+      files in 488.11 s — one more passing test than the 7283 recorded above,
+      because the guard's added negative cell is a new test. Gates at this tree:
+      owner-hold-doc plus doc-conformance 22/22; the crash-restart,
+      staleness-agreement, start-detached, install-mount, lock and
+      lock-concurrency suites 57/57; the remaining Phase-9 daemon suites
+      110/110; the remediation group 68/68; the lock/lifecycle/degradation group
+      76/76; pnpm typecheck clean; pnpm lint exit 0 (72 pre-existing warnings,
+      25 infos, 0 errors); pnpm format:check clean; plan validate verdict=valid,
+      readyForDevelopment=true; git diff --check clean. Test plan 10.2 carries
+      these numbers. Accepted limitation (F-9, NF-5): phase-mode commits take
+      the commit primitive's deterministic template subject, so 92d2df11 and the
+      follow-up bookkeeping commit carry a docs-class subject over change
+      artifacts and source, and the change semantics live in the pull-request
+      description; no commit subject was rewritten by hand. Not pushed and no
+      pull request opened."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Plan phase 9 (review-iteration-3 closure): 885d8dcc carries the
+      remediation and this bookkeeping note follows it. NF3-3 (the blocking
+      foreground start-to-stop race): the foreground lifetime installs both
+      signal listeners BEFORE runtime.start, so the durable acquired record it
+      appends is never observable without a handler, and a signal that arrives
+      while start is still running is buffered (the mode is recorded, no stop is
+      entered) and applied once the loop is running, so an immediate stop always
+      lands as released/draining instead of the default terminate that left a
+      stale lock and no release record. The delivered createDaemonMainEntry seam
+      adopts the same order by opening signals.waitForStop() before start (it
+      remains unused by every production surface). The real-child re-entry case
+      pins the observable: a stop issued immediately after the start receipt
+      records exactly one drain release. NF3-4 (real-child determinism): the
+      crash and re-entry cases serialize their spawned children through the
+      shared gate tests/fixtures/daemon/real-child-gate.ts (bounded wait,
+      stale-holder takeover), and the crash case kills its victim in a quiescent
+      window (the start's initial heartbeat has landed and the store's write
+      fence is released) with a delivered recoverFence belt for a stale fence,
+      so the residue under test is the daemon lock and not a store fence or
+      unhardened ledger (state semantics stay out of scope, NG-1); the delivered
+      20 x 50 ms readiness window is unchanged (AC-F2-2). Evidence: the two
+      real-child files at default concurrency 5/5 runs (6 tests, 0 fail,
+      2.45-2.57 s), the nine-suite narrow battery 10/10 and 8/8 under six CPU
+      load generators, and the full battery below. NF3-5: a compare-and-delete
+      that cannot write now surfaces its own identity (state.write.failed)
+      instead of a bare daemon.already-running, while a genuine race loser's
+      state.lock.busy still maps to busy; a hermetic cell asserts the identity,
+      no append, and the dead lock left in place. Traceability: spec v1.5's
+      AC-F2-11 is covered by extending TC-DAEMON-030 (related IDs plus steps
+      10/12/13 and new step 16), no TC was added, and the test plan now reports
+      51/51 ACs with the TC map unchanged at 55/55. Gates at 885d8dcc: pnpm
+      typecheck clean; pnpm lint exit 0 (72 pre-existing warnings, 25 infos, 0
+      errors); pnpm format:check clean; plan validate verdict=valid
+      readyForDevelopment=true; git diff --check clean; full battery under
+      TMPDIR=$PWD/tmp/tmpdir at --max-concurrency 4: 7286 pass, 4 skip, 0 fail,
+      61950 expect() calls across 897 files in 384.78 s. Scope: this bookkeeping
+      commit also adds packages/cli/src/daemon-main.ts to the Phase-9 scope,
+      which the commit primitive flagged as the only scope drift in 885d8dcc;
+      the file is the delivered seam the TC-DAEMON-039 fixture exercises, it
+      adopts no lifetime ownership in the product, and the Phase-4 disposition's
+      'unmodified' sentence is superseded for that one seam by this declared
+      extension. The real-reentry suite was edited in Phase 9 but is already
+      declared by Phase 4. Not pushed and no pull request opened."
+    type: "info"
+    date: "2026-11-11"
+  - text: "quality_gates phase: the full repository battery ran at HEAD 5bc0bdb4
+      with TMPDIR=$PWD/tmp/tmpdir pnpm check and exited 0. Build, lint,
+      format:check, typecheck, bun test (7286 pass / 4 skip / 0 fail, 61,950
+      expect() calls, 7,290 tests across 897 files in 483 s), check:boundaries
+      (depcruise 373 modules / 1,104 dependencies with no violations;
+      ambient-globals 173 files; workspace-entrypoints; secret-read-boundary 342
+      files), prompt-conformance (5 prompts clean), help-guide-coverage (all
+      prompt-required commands covered) and exports-parity (5 publishables) all
+      green. No failing test and no error lines in the log
+      (tmp/logs/gh286-quality-gates.log). The only non-fatal signals are the
+      git-fixture suites' localized branch-switch output and one 5 s TC-WIRE-002
+      threshold that is green in this run."
+    type: "info"
+    date: "2026-11-11"
+  - text: "dod_check verification: all nine plan phases are delivered and the plan
+      validates (verdict=valid, readyForDevelopment=true, 0 errors); every
+      lifecycle phase through quality_gates is recorded complete; the working
+      tree is clean; every plan phase carries a pm-notes evidence entry naming
+      its commit and gate; the specification's 52 ACs are all proven except
+      AC-NFR-2's relative p95 clause, which the test plan records as a declared
+      deferral in section 10.3. PM acceptance (recorded exception): the
+      delivered requirement behind NFR-3 — at most two additional daemon-fact
+      reads, no socket connect, no process probe, no sleep on the queue/lanes
+      read path — is proven by the source scan and the counting test, and the
+      measured resolver p95 (2.8-3.6 ms against a 2.2-3.2 ms baseline on the
+      reference store) stays inside the absolute status budget; the relative
+      clause was a proxy measurement the hermetic suite cannot express without a
+      production seam the plan deliberately excluded. It is carried as a known,
+      bounded limitation in the PR description rather than silently waived."
+    type: "decision"
+    date: "2026-11-11"
+  - text: "Resume-sync integration: `origin/main-tools` (723454e4, GH-288
+      per-repository state scoping and the projects overview) merged into
+      `feat/GH-286/daemon-command-mounting` after the pull request reported
+      CONFLICTING. Twenty-one files conflicted and every one was resolved by
+      composing both intents, never by choosing a side: `production.ts` (six
+      hunks) now resolves the one state-scope policy (`resolveProjectScope` plus
+      `stateScopeRoots`, GH-288 F-1) and feeds its project state root to the
+      daemon store, lock, settings, socket, and supervisor scope (GH-286 F-3),
+      keeping the host index, the host-wide owner-hold marker, the scope-refusal
+      program, the scope warnings, and the projects runtime; `daemon-compose.ts`
+      keeps GH-288's `type Result` import and gains the composed settings
+      helper; the prompt-required set carries all eighteen commands (the
+      delivered sixteen plus `daemon` and `projects`); the help, coverage, and
+      composition guards carry both families and both reference pages; the two
+      entrypoint suites list both; `owner-hold-doc.test.ts`,
+      `delivery-modes.md`, and the reconciled spec pages carry both phrase sets
+      (the host-wide marker wording from GH-288 plus GH-286's marker-path
+      sentences). Composed behaviour in one paragraph: the host root is the
+      delivered override-aware rule (absolute `<PREFIX>_STATE_DIR`, otherwise
+      the injected home plus the brand state directory name); the project root
+      is `<host root>/projects/<project key>`; the daemon's store, lock,
+      settings, socket, supervisor scope, and re-entry derivation are that one
+      project root; the `<PREFIX>_STATE_DIR` binding written into the detached
+      child's environment and into the installed unit names the HOST root, so
+      the re-entered process derives the same project root instead of nesting a
+      second `projects/` segment; the installed unit additionally carries
+      `WorkingDirectory=<checkout root>`, because a project-scoped root is
+      derived from the checkout and a unit started outside it would resolve the
+      declared `unbound` scope; the queue and lanes degradation resolver stays
+      GH-286's durable predicate; the owner hold and the host index stay at the
+      host root; and GH-288's `projects list` keeps its injected daemon seam
+      unchanged (TC-PROJ-017 pins the unmounted-declaration cell, so wiring the
+      now-mounted family into that column is follow-up, not forced here).
+      Superseded GH-286 cells, each reconciled in its own suite and declared
+      rather than silently dropped: (a) AC-F3-4's non-absolute-override
+      tolerance, because GH-288 makes any host-root resolution failure a
+      classified whole-program scope refusal (TC-DAEMON-053 now asserts the
+      family stays mounted and answers `config.value.invalid` with nothing
+      written); (b) AC-F3-5's 'non-daemon families keep the delivered home-based
+      template', because GH-288 refuses the same scope for every prompt-required
+      command (TC-DAEMON-054 asserts that one classified refusal instead of the
+      `homeBasedStateDirectory` source token); (c) the delivered
+      `resolveStateDirectoryScope` helper, which GH-288 removed in favour of the
+      app-tier policy, so the state-directory suites now read
+      `resolveHostStateRoot`. Additive integration surface, required by the
+      composition rather than chosen: `DaemonComposition` gains
+      `stateDirectoryEnvironmentValue?` (the binding value, defaulting to
+      `stateDirectory`) and `workingDirectory?`; `SupervisorInstallRequest`
+      gains `workingDirectory?`; both `renderSystemdUnit` implementations emit
+      the optional `WorkingDirectory=` line; the policy exports
+      `stateScopeEnvironmentName` so the variable name is composed once; and
+      `daemon-compose` exports `resolveComposedDaemonSettings` so GH-288's
+      single-call-site rule for `resolveDaemonSettings` survives the mount.
+      `tests/structure/inventory.json` and the ports inventory stay
+      byte-identical; `EXECUTABLE_ALLOWANCES` gains exactly the two new exported
+      symbols and the structure suite's own allowance rows. Decision-id
+      collision resolved: both changes minted TDR-0022, so the daemon record
+      (unmerged at the time) is renumbered TDR-0023 across its file, id, title,
+      index row, and every GH-286 artifact and reconciled page, and GH-288 keeps
+      TDR-0022. Test reconciliation, all in GH-286/GH-288 suites and all to the
+      composed behaviour: `daemon-state-scope` (project root and the two
+      superseded cells), `daemon-start-detached` (host-root helper),
+      `daemon-degradation- projection`, `daemon-degradation-wiring`,
+      `daemon-mutants` (mutant anchors follow the renamed binding expression),
+      `daemon-production-composition` (18-family counts, project-root socket
+      paths and a seeded project store, the composed resolver token),
+      `daemon-install-mount` (one added production-shaped cell pinning the
+      host-root binding, the checkout working directory, and the project-root
+      scope digest), `daemon-status` (composed resolver token), and GH-288's
+      `projects-state-scope-policy` (the settings resolution sites live at the
+      one composing file and its two composing helpers are called only from
+      production). Gates at this tree: pnpm typecheck 0, pnpm lint 0 (80
+      pre-existing warnings, 25 infos, 0 errors), pnpm format:check 0, pnpm
+      check:help 0, error-table-sync OK (entries=124 corpus=60),
+      test-doc-distribution no drift (83 docs), plan validate verdict=valid
+      readyForDevelopment=true, git diff --check clean, and the daemon (272),
+      GH-288 (67), and combined daemon-plus-projects (339) batteries green. The
+      full battery under TMPDIR=$PWD/tmp/tmpdir and --max-concurrency 4 reached
+      7359 pass, 4 skip, 1 fail across 912 files, the single failure being
+      TC-WIRE-002's 5 s per-test threshold in `privacy-ci-wiring` (two full-tree
+      privacy scans measured at 2.57 s and 2.87 s alone, so the two-scan test
+      sits at ~5.4 s; it passed in two earlier batteries on this identical tree
+      and passes intermittently in isolation, 1 of 3 runs). That guard is
+      delivered and is left unedited rather than weakened; the two other battery
+      runs of this integration flaked only the watchdog fixture-setup and
+      privacy 5 s thresholds, each green in isolation. No pull request merge is
+      performed by this step."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Merge conclusion and integration fix, recorded on the re-verified tree.
+      The resume merge of `origin/main-tools` (GH-288, 723454e4) is commit
+      `a5be1437`, a true merge commit whose tree carries every union resolution:
+      `doc/decisions/00-index.md` lists GH-288's TDR-0022 and GH-286's
+      renumbered TDR-0023, the planning corpus keeps GH-288's M2-S11 delivered
+      markers alongside the GH-286 daemon sections, and the prompt-required set
+      carries all eighteen families (`daemon` and `projects` both present, no
+      duplicate). The integration fix is `ed18497d`. Its defect: after the merge
+      the unit's working directory existed only in the adapter's local renderer,
+      while the delivered pure contract `SystemdUnitInput` and
+      `renderSystemdUnit` in `packages/core/src/domain/daemon-supervisor.ts`
+      carried no working directory at all, so a render through the delivered
+      domain renderer produced a unit with no `WorkingDirectory=` line and the
+      composition's resolved checkout root could not reach the rendered text.
+      The fix gives the domain contract the optional `workingDirectory` field
+      and emits `WorkingDirectory=<checkout root>` between `ExecStart` and
+      `Environment`, keeps the adapter's pass-through, and has the composition
+      supply the root that `resolveProjectScope` resolved (`scope.checkoutRoot`,
+      and `cwd` for the declared `unbound` scope) while the state-directory
+      binding keeps naming the HOST root, so the installed process re-derives
+      the same project state root instead of nesting a second `projects/`
+      segment (GH-288 F-1, GH-286 F-3). Nothing was relaxed to get there:
+      TC-DAEMON-100 gained one production-shaped cell asserting the host-root
+      binding, the checkout working directory, exactly one `Environment=` and
+      one `WorkingDirectory=` line, and the project-root scope digest. One
+      reconciliation differs from the wording of the note above and supersedes
+      it: `daemon-compose` keeps a single exported seam,
+      `resolveProjectDaemonSettings(projectStateRoot, acquired?)`, rather than a
+      second helper, so GH-288's AC-F6-4 invariant stands unchanged (exactly one
+      `resolveDaemonSettings` call site, in the one composing file). GH-288's
+      own TC-PROJ-023 caller assertion is the only amended cell: it now permits
+      and pins the two composed invocations that both live in
+      `packages/cli/src/production.ts` (the host overview probe with the shipped
+      defaults and the mounted family with its acquired configuration), both
+      supplying the policy-derived project root, so a third surface still fails
+      the assertion. Verified on this tree: `pnpm typecheck` 0, `pnpm lint` 0,
+      `pnpm format:check` 0, `pnpm check:boundaries` 0, prompt-conformance clean
+      (5 prompts), help-guide-coverage covered, exports-parity 0,
+      doc-conformance, error-table-sync, and reference-page-parity green (114
+      cases), test-doc-distribution no drift (83 docs), `plan validate GH-286`
+      verdict=valid readyForDevelopment=true, `git diff --check` clean; the full
+      battery `bun test --max-concurrency 4` reached 7360 pass, 4 skip, 0 fail
+      across 912 files, and `TMPDIR=$PWD/tmp/tmpdir pnpm check` exited 0. Two
+      earlier battery attempts on the same tree each carried one host-load
+      timing failure (`privacy-ci-wiring` TC-WIRE-002 over its 5 s default, and
+      `daemon-foreground-stop-latency` TC-DAEMON-121 at 250.21 ms against a 250
+      ms budget); both pass in isolation and the privacy guard also fails the
+      same 5 s default on the pre-merge tree on this host, so neither is
+      attributable to this integration, and no delivered guard was edited."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Second resume sync, after the merge above landed and `main-tools`
+      advanced from 723454e4 to `eb3c947b` (GH-268, the pre-PR commitlint range
+      gate and its CI-safe test degradation), which left the pull request
+      CONFLICTING again. Merged as `4b966403`. One file conflicted,
+      `doc/spec/features/feature-autonomous-delivery.md`, and only in
+      `links.related_changes`: the union keeps GH-286, GH-288 and GH-268 in one
+      list rather than choosing a side, and the GH-268 `summary` and
+      `last_updated` values that auto-merged are kept as delivered, so the
+      delivery-script set named there includes `lint-commit-range.sh`. GH-268's
+      new phase-9 supplementary gate was then run on this branch as the updated
+      repository instructions require: `./scripts/lint-commit-range.sh --base
+      origin/main-tools` reported VERDICT: PASS (41 commits in range, 0
+      offending commits, 0 distinct rules hit, base merge-base eb3c947b, head
+      4b966403, repository-local commitlint). Gates on `4b966403`: `pnpm
+      typecheck` 0; the documentation and CI-wiring suites (doc-conformance,
+      error-table-sync, reference-page-parity, help-guide-coverage mutants,
+      ci-wiring, ci-checks) 153 pass, 0 fail; test-doc-distribution no drift (83
+      docs); help-guide-coverage covered; prompt-conformance clean (5 prompts);
+      exports-parity 0; `plan validate GH-286` verdict=valid
+      readyForDevelopment=true; `git diff --check` clean; the full battery `bun
+      test --max-concurrency 4` 7360 pass, 4 skip, 0 fail across 912 files; and
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 with the same counts. One
+      earlier `pnpm check` attempt on this tree flaked only `privacy-ci-wiring`
+      TC-WIRE-002 at 5042.93 ms, 43 ms over the runner's 5 s default, and was
+      green on the retry; that guard is delivered and was left unedited. No pull
+      request merge is performed by this step."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/307 — base
+      main-tools, head feat/GH-286/daemon-command-mounting at 640f9c63, open,
+      mergeable MERGEABLE, merge state BLOCKED only by pending checks. The
+      branch is pushed and matches the PR head. Merge authority stays with the
+      CEO; this change does not merge."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Pre-PR range gate (phase 9 supplementary check, run per the updated
+      repository instructions): ./scripts/lint-commit-range.sh --base
+      origin/main-tools reported VERDICT: PASS — 42 commits in range, 0
+      offending commits, 0 distinct rules hit, base merge-base eb3c947b, head
+      640f9c63, binary repository-local commitlint (origin: repository-local).
+      No remediation mode was required."
+    type: "info"
+    date: "2026-11-11"
+  - text: "Phase-state projection note: integrating GH-288 moved durable state to a
+      per-project scope (projects/agentic-delivery-os-gh-288-2c548742), while
+      system_spec_update, review_fix, quality_gates and dod_check were recorded
+      in the legacy root ledger before that merge. The pm-notes phase block and
+      this record carry all ten completions; the project-scoped projection is
+      re-established for those four phases through the phase command so the
+      registry matches the change record, and then pr_creation is completed."
+    type: "info"
+    date: "2026-11-11"

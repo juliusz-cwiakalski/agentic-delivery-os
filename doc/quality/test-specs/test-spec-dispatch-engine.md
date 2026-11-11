@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -55,7 +55,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/entrypoint-composition.test.ts`, `entrypoint-help-coverage.test.ts`, `dispatch-help-version.test.ts`, `tests/structure/dispatch-help-inventory.test.ts`, `tests/checks/dispatch-doc-conformance.test.ts` — prompt-required registration, help paths, reference-page coverage, and the stale-ring reconciliation.
 - `tests/behaviour/error-classification.test.ts` — the trusted-refusal marker is required for the bounded credential refusal, while an unmarked config-shaped failure and a marked failure for any other `config.*` code keep the untrusted-config suppression.
 - `scripts/.tests/test-dispatch-bash-fallback.sh` and `tests/structure/dispatch-bash-authority.test.ts` — the twelve-cell fallback matrix (four scripts × dual-run, authoritative, typed-CLI-absent/broken) and the no-typed-CLI source rule.
-- `tests/behaviour/dispatch-daemon-planner.test.ts`, `dispatch-daemonless.test.ts`, `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` — planner output, executor composition, the daemon-path attempt record, and the daemon-less one-shot path. The daemon lane seam is factory-proven here; the production daemon entry that supplies the lane composition is resident-daemon scope.
+- `tests/behaviour/dispatch-daemon-planner.test.ts`, `dispatch-daemonless.test.ts`, `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` — planner output, executor composition, the daemon-path attempt record, and the daemon-less one-shot path. The daemon lane seam is factory-proven here; the production composition mounts the daemon family without a lane composition, so supplying it remains resident-daemon production scope (GH-238).
 
 ### Conformance and controlled proof
 

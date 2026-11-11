@@ -11,7 +11,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-288", "GH-268"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -82,8 +82,8 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   shell example read the same host-wide marker: the engine reads
   `<host root>/owner-hold`, the example reads the fixed default path there, and
   the environment source is the relocation-safe way to hold a host that sets the
-  override. There is no marker-path override, and the hold never narrows to one
-  project. The typed engine enforces the same fact:
+  override. There is no marker-path override, existing state is never migrated,
+  and the hold never narrows to one project. The typed engine enforces the same fact:
   a held pass emits no next action, `owner-hold` is the first blocking reason
   (`lanes` shows it for gated entries that are not active or stuck parks, which
   keep their park reason), claim (with or without a ref, before selection) and

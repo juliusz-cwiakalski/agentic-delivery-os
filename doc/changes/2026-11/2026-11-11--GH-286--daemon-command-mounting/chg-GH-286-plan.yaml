@@ -1,0 +1,2188 @@
+# GH-286 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate` and `plan diff` read it directly.
+#
+# SOURCES (single source of truth; plan revision 1.8, 2026-11-11):
+#   - Spec:    ./chg-GH-286-spec.md (v1.6; 52 ACs — AC-F1-1..5, AC-F2-1..12,
+#              AC-F3-1..5, AC-F4-1..4, AC-F5-1..8, AC-F6-1..3, AC-F7-1..5,
+#              AC-F8-1..4, AC-NFR-1..6; F-1..F-8; DM-1..DM-7; EVT-1..EVT-3;
+#              NFR-1..NFR-12; RSK-1..RSK-13; DEC-1..DEC-19, where DEC-19 is the
+#              invalid-`daemon`-branch divergence and AC-F7-2 carries the
+#              extended no-home user-configuration-root cell; §16 documentation
+#              impact names fourteen pages plus the documentation index, and the
+#              delivery additionally reconciled six pages review iteration 2
+#              names — task 7.9 and the Phase-7/Phase-9 scopes of revision 1.7
+#              declare them and the spec owner adds them to the §16 list, so the
+#              completeness sentence becomes true; Appendix C closed
+#              vocabularies; Appendix D mount exit matrix; Appendix E identity
+#              matrix; Appendix F composition matrix)
+#   - Tests:   ./chg-GH-286-test-plan.md (v1.6; 55 TCs TC-DAEMON-010..124
+#              including TC-DAEMON-015; 52/52 AC coverage; GAP-T1..GAP-T6
+#              verification-method constraints; §7 is the file/command
+#              inventory and the per-case invocation shape (`handler` vs
+#              `entrypoint`) this plan maps onto phases; §10.3 carries the
+#              delivery-populated deviation record)
+#   - Review:  ./readiness-review/readiness-iter-1.md (DoR iteration 1; the
+#              plan-reopen findings RF-2, RF-3, RF-4, RF-7 and advisories A-3,
+#              A-5, A-9 are closed by plan revision 1.1),
+#              ./readiness-review/readiness-iter-2.md (DoR iteration 2; the
+#              plan-reopen findings RF2-2, RF2-3, RF2-5, RF2-6 and advisories
+#              A2-2, A2-3 are closed by plan revision 1.2) and
+#              ./readiness-review/readiness-iter-3.md (DoR iteration 3; the
+#              plan-reopen finding RF3-1 is closed by plan revision 1.3 — the
+#              invocation-shape rule below partitions handler proofs from the
+#              single entrypoint-level selection proof — and advisory A3-2 by
+#              using `tests/behaviour/daemon-mount-help.test.ts` throughout);
+#              the confirmation pass on the changed sections closes its
+#              advisories A4-1 (the AC-F7-5 v1.3 "given a resolvable state
+#              directory" qualifier on the entry-path refusal, in task 3.2 and
+#              the Phase-3 exit) and A4-3 (the TC-DAEMON-105 real-binary re-run
+#              gets a named owner in task 6.9 and the Phase-6 exit) by plan
+#              revision 1.4, and
+#              ./review/review-iter-1.md (local delivery review of the delivered
+#              branch, iteration 1, verdict FAIL; the plan-relevant findings are
+#              closed by plan revisions 1.5 and 1.6 — F-10 extends the Phase-7
+#              scope to
+#              the fourteen pages spec §16 v1.4 lists, F-7 and F-13 declare the
+#              configuration-acquisition and user-configuration-root
+#              remediation, F-1..F-6, F-8 and F-11..F-15 become the Phase-9
+#              remediation tasks, and F-9 — phase-mode commit subjects come from
+#              the commit primitive — is ACCEPTED, not remediated: the branch is
+#              unpushed and the change semantics are carried by the pull-request
+#              description; revision 1.6 declares in the Phase-9 scope the two
+#              structural guard sites the remediation's refactor anchors —
+#              `tests/structure/content-inventory.test.ts` (the executable-export
+#              allowance row the F-5 predicate export requires) and
+#              `tests/checks/daemon-hermetic.test.ts` (the resolver-span anchor
+#              moved to the predicate's one home) — with no assertion weakened),
+#              ./review/review-iter-2.md (local delivery review of the delivered
+#              branch, iteration 2, verdict FAIL; the plan-relevant findings are
+#              closed by plan revision 1.7 — NF-1 becomes task 9.15 with its
+#              crash-restart regression suite and the same-window step in the
+#              start suite, NF-2 declares the six further reconciled pages in the
+#              Phase-7 and Phase-9 scopes (tasks 7.9 and 9.16), NF-3 and NF-4
+#              become the regression tasks 9.17 and 9.18, NF-6 the test-plan
+#              extension 9.19, NF-7 the uninstall-symmetry fix 9.20, NF-8 the
+#              out-of-scope declaration 9.21 and NF-5 the extended commit-subject
+#              note 9.22; the TC map stays 55/55 and Phase 9 still carries none),
+#              ./review/review-confirmation.md (confirmation pass on the
+#              review-iteration-3 remediation; CF-1 and CF-2 are closed by plan
+#              revision 1.8 — CF-1 restates the foreground order in the contract
+#              summary and task 4.1 so both listeners are installed before the
+#              start and a signal racing the start is buffered until the loop
+#              runs, and CF-2 refreshes the spec and test-plan pins; no task
+#              scope and no TC mapping changes)
+#   - Decision: doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md
+#              (Proposed; DC-1..DC-4 amended 2026-11-11 — DC-1 carries the
+#              re-entry environment, DC-2 the STRICT staleness bound, C-1..C-8 —
+#              the binding composition decisions this plan implements)
+#   - Notes:   ./chg-GH-286-pm-notes.yaml (clarify-scope record; the four
+#              routed design choices; the commit-primitive finding that TDR-0023
+#              is untracked and must land inside a declared phase scope)
+#   - Schema:  doc/spec/features/feature-plan-schema.md and
+#              doc/templates/implementation-plan-template.md
+#
+# STAGING CONTRACT (why Phase 1 exists and what it must contain):
+#   `doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md`
+#   is UNTRACKED at plan time (git status: `?? doc/decisions/TDR-0023-...`).
+#   The commit primitive stages only tracked-pending work plus untracked files
+#   inside the declared phase scope, and a standalone staging of the TDR fails
+#   commitlint as a fabricated tracker reference. The supported path is a
+#   phase-mode commit with a plan summary, so Phase 1 declares the TDR in
+#   `scope.files` and lands it together with the additive contract surface.
+#   `doc/decisions/00-index.md` already carries the TDR-0023 row (committed);
+#   it is declared on Phase 1 for completeness only and stages nothing.
+#
+# INVOCATION-SHAPE RULE (RF3-1; binding on every gate and exit criterion below):
+#   `PROMPT_REQUIRED_COMMANDS` holds the delivered 16 commands until the
+#   Phase-6 membership commit (task 6.1), and `selectPromptRequiredProgram`
+#   (`packages/cli/src/entrypoint.ts:134-149`) returns exactly that set and
+#   drops extras, while `runEntrypoint` calls it on every invocation. Any
+#   `daemon` invocation routed through `runEntrypoint` therefore answers
+#   `fallback.internal` at exit 2 until that commit. The phases are partitioned
+#   by invocation shape:
+#     - Phases 2-5 prove HANDLER behaviour only: the composed program's
+#       `daemon` command handler is invoked directly, or `runCli` is called with
+#       that same composed program. No Phase 2-5 gate goes through
+#       `runEntrypoint`, and no Phase 2-5 case asserts
+#       `selectPromptRequiredProgram`, selection, or `fallback.internal`. A
+#       Phase 2-5 case that needs `runEntrypoint` is a PLAN DEFECT: the correct
+#       move is to add the missing assertion to TC-DAEMON-015 (or to move it to
+#       a later phase), never to weaken the assertion or to commit a red
+#       boundary.
+#     - Phase 6 proves SELECTION and CONTAINMENT through `runEntrypoint`, in
+#       TC-DAEMON-015, which supersedes the selection half Phases 2-5 must not
+#       assert. Phase 8 re-runs the same suite inside the full battery.
+#   Terminology is load-bearing: "registered" is true from Phase 2
+#   (`program.commands.daemon` is defined on every composition), while
+#   "selectable"/"selected" is true only from Phase 6. No Phase 2-5 gate or
+#   exit criterion may claim selection or use "selectable" as a gate property.
+#
+# TC -> PHASE MAP (55/55; no orphan, every TC mapped exactly once; each phase's
+# mapped TCs are fully provable at that phase's declared gate):
+#   Phase 1:  (none; the additive contract surface is inert here and is proven by
+#             the gates of the phases it enables and by the additive-contract
+#             case at the Phase-8 gate)
+#   Phase 2:  TC-DAEMON-030, TC-DAEMON-031, TC-DAEMON-032, TC-DAEMON-040,
+#             TC-DAEMON-041, TC-DAEMON-050, TC-DAEMON-051, TC-DAEMON-052,
+#             TC-DAEMON-053, TC-DAEMON-054, TC-DAEMON-060, TC-DAEMON-061,
+#             TC-DAEMON-062, TC-DAEMON-063, TC-DAEMON-090, TC-DAEMON-122
+#   Phase 3:  TC-DAEMON-100, TC-DAEMON-101, TC-DAEMON-102, TC-DAEMON-103,
+#             TC-DAEMON-104, TC-DAEMON-105 (manual; the real-binary form is
+#             re-run at the Phase-6 gate as task 6.9, not remapped), TC-DAEMON-124
+#   Phase 4:  TC-DAEMON-033, TC-DAEMON-034, TC-DAEMON-035, TC-DAEMON-036,
+#             TC-DAEMON-037, TC-DAEMON-038, TC-DAEMON-039, TC-DAEMON-091,
+#             TC-DAEMON-092, TC-DAEMON-121
+#   Phase 5:  TC-DAEMON-070, TC-DAEMON-071, TC-DAEMON-072, TC-DAEMON-073,
+#             TC-DAEMON-074, TC-DAEMON-075, TC-DAEMON-076, TC-DAEMON-077,
+#             TC-DAEMON-078, TC-DAEMON-112, TC-DAEMON-120
+#   Phase 6:  TC-DAEMON-010, TC-DAEMON-011, TC-DAEMON-012, TC-DAEMON-013,
+#             TC-DAEMON-014, TC-DAEMON-015, TC-DAEMON-114
+#   Phase 7:  (none; docs-only reconciliation, proven by the help/coverage/
+#             conformance guards at the Phase-7 gate and re-run at the Phase-8
+#             gate)
+#   Phase 8:  TC-DAEMON-110, TC-DAEMON-111, TC-DAEMON-113, TC-DAEMON-123
+#   Phase 9:  (none; review-remediation of delivered suites and production code.
+#             Phase 9 repairs existing proofs and extends the cells of the TCs it
+#             repairs, so the map stays 55/55 with each TC mapped exactly once and
+#             no TC moves between phases. The readiness cells task 9.1 adds belong
+#             to the Phase-2 start suite, and task 9.19 extends that TC in the
+#             test plan (TC-DAEMON-030) to own the live-refusal, post-crash
+#             takeover and stale-rejection cells that tasks 9.1 and 9.15 drive; the
+#             two critical lifetime bodies that tasks 9.2 and 9.3 harden are the
+#             Phase-4 cases TC-DAEMON-037 and TC-DAEMON-038, read in the place
+#             that already owns them. The crash-restart suite of task 9.15 and the
+#             agreement suite of task 9.18 carry no TC of their own: they execute
+#             cells of the extended TC-DAEMON-030 and the AC-F5-6 agreement claim
+#             in the suites that already own them. No scenario is added to the
+#             plan's TC set and nothing is remapped.)
+#
+#   TC-DAEMON-015 is the only entrypoint-shape case: it asserts selection
+#   (`selectPromptRequiredProgram` selects `daemon`, the selected set equals
+#   `PROMPT_REQUIRED_COMMANDS`), the absence of `fallback.internal` on a
+#   `daemon status` invocation, the nine unresolvable-outcome invocations at
+#   exit `1`, and help/version purity through `runEntrypoint`. It is provable
+#   only at the Phase-6 gate (after task 6.1) and supersedes the selection half
+#   that the Phase 2-5 gates must not assert. Every other case is handler-shape
+#   per the invocation-shape rule.
+#
+#   Phase choice for the added TCs: TC-DAEMON-040 (the re-entry environment is
+#   the declared key set with the state binding last), TC-DAEMON-041 (a
+#   stripped caller fails closed with nothing acquired) and TC-DAEMON-054 (an
+#   unresolvable state directory keeps the family mounted over a refusing
+#   runtime and opens nothing) are hermetic composition and start-outcome
+#   proofs over the recording process port, the recording supervisor fact, and
+#   the filesystem, so they are provable at the handler-level Phase-2 gate that
+#   classifies the resolution, composes the runtime, and derives the environment.
+#   TC-DAEMON-039
+#   stays in Phase 4 because its single case spawns a
+#   real `daemon start --foreground` child, which only stays alive once the
+#   signal-owned foreground lifetime exists. TC-DAEMON-078 is the ownership
+#   divergence between the resolved marker and the status fold, proven by the
+#   Phase-5 degradation suite.
+#
+# TEST-SURFACE CONSOLIDATION (faithful grouping, not coverage reduction):
+#   The test plan names ~34 new test files because it maps one TC at a time;
+#   this plan keeps every TC's scenario, oracle, and absence proof but groups
+#   cases that exercise the same module, the same injection seam, and the same
+#   failure class into one suite, so a phase gate runs one battery per
+#   behaviour family instead of one file per criterion. The grouping is
+#   faithful because each absorbed file's assertions land verbatim as their
+#   own `describe`/`test` blocks inside the consolidated suite, every TC keeps
+#   its own name in that suite's title (e.g. `test("TC-DAEMON-071 ...")`), and
+#   no assertion, counter, fixture, or negative control is dropped. The
+#   consolidated suites and the test-plan files they absorb:
+#     tests/behaviour/daemon-start-detached.test.ts
+#       <- daemon-start-detached.test.ts, daemon-start-readiness-timeout.test.ts,
+#          daemon-start-in-process.test.ts, daemon-instance-pid.test.ts
+#          (TC-030, 031, 032, 040, 090)
+#     tests/behaviour/daemon-state-scope.test.ts
+#       <- daemon-state-scope.test.ts (all five state-directory TCs;
+#          TC-050..054)
+#     tests/behaviour/daemon-status.test.ts
+#       <- daemon-status-durable.test.ts, daemon-status-live.test.ts,
+#          daemon-control-plane-config.test.ts, daemon-status-performance.test.ts
+#          (TC-060, 061, 062, 063, 122)
+#     tests/behaviour/daemon-install-mount.test.ts
+#       <- daemon-install-identity.test.ts, daemon-install-config-root.test.ts,
+#          daemon-install-unsupported.test.ts, daemon-uninstall.test.ts,
+#          daemon-install-no-entry.test.ts, daemon-idempotence.test.ts
+#          (TC-100..104, 124; TC-105 stays a manual procedure with no file)
+#     tests/behaviour/daemon-foreground-lifetime.test.ts
+#       <- daemon-foreground-lifetime.test.ts, daemon-foreground-release-failure.test.ts,
+#          daemon-foreground-double-signal.test.ts
+#          (TC-033, 034, 035, 037, 038)
+#     tests/behaviour/daemon-stop-safety.test.ts
+#       <- daemon-stop-cross-process.test.ts, daemon-stop-pid-refusal.test.ts,
+#          daemon-stop-signal-target.test.ts (TC-036, 091, 092)
+#     tests/behaviour/daemon-degradation-projection.test.ts
+#       <- queue-degradation-derived.test.ts, lanes-degradation-derived.test.ts,
+#          daemon-degradation-watch.test.ts, daemon-degradation-agreement.test.ts,
+#          daemon-degradation-torn.test.ts, daemon-degradation-additivity.test.ts
+#          (TC-070..076, 078, 112)
+#     tests/structure/daemon-production-composition.test.ts
+#       <- the test plan's same-named file (TC-010, 014, 015; not consolidated)
+#   Suites that stay one file per family per the test plan:
+#     daemon-mount-help.test.ts (A3-2: the help suite ships under this name; the
+#     earlier `daemon-help.test.ts` grouping name is superseded and appears
+#     nowhere in this plan),
+#     daemon-foreground-stop-latency.test.ts,
+#     daemon-degradation-read-cost.test.ts, daemon-degradation-wiring.test.ts,
+#     daemon-start-env-stripped.test.ts (TC-041: the fail-closed stripped-caller
+#     case owns its own directory-listing and restored-environment controls, so it
+#     is not folded into the happy-path spawn suite),
+#     tests/conformance/daemon-mount/real-reentry.test.ts,
+#     tests/types/daemon-mount.type-test.ts, tests/checks/daemon-privacy.test.ts.
+#   The delivered suites the test plan marks as controls are executed at the
+#   declared gates WITHOUT a scope declaration: a control that needs an edit is
+#   a defect against AC-F8-4, not a plan amendment (GAP-T1).
+#   Fixture scope is enumerated, not swept: `tests/fixtures/daemon/mount-harness.ts`
+#   and `tests/fixtures/daemon/mount-states.ts` are the only flat fixture modules,
+#   and exactly two subfolders are declared —
+#   `tests/fixtures/daemon/mount-mutants/` (one module per mutant, created in
+#   Phase 2 and extended by each phase that adds a mutant) and
+#   `tests/fixtures/daemon/mount-golden/` (the normalized status matrices this
+#   change introduces, created in Phase 2 with the status family and extended by
+#   a later phase only when that phase introduces a new normalized status case;
+#   the delivered `tests/golden/daemon-{lifecycle,install,status-matrix}.test.ts`
+#   stay read-only controls). An ad-hoc
+#   fixture file in the flat `tests/fixtures/daemon/` directory or a third
+#   subfolder is a plan
+#   deviation, because the commit primitive stages only what a phase declares and
+#   an undeclared fixture would be stranded.
+#   Phase 9 adds two suites that carry no TC of their own —
+#   `tests/behaviour/daemon-crash-restart.test.ts` (the post-crash takeover cell of
+#   the extended TC-DAEMON-030) and
+#   `tests/behaviour/daemon-staleness-agreement.test.ts` (the AC-F5-6 agreement
+#   claim across the three production staleness evaluations) — both declared in
+#   Phase 9's scope, both exercising production code rather than a test-local
+#   mirror.
+#   MUTANT INVENTORY (equal to test plan §6; no more and no fewer): exactly
+#   twenty-one modules, one per declared name —
+#     Phase 2: binding-not-last, spawn-without-forwarded-env, spawn-with-full-env,
+#              literal-socket
+#     Phase 3: bare-execstart, unit-under-state-dir, xdg-relative-joined,
+#              install-empty-executable, uninstall-broad-delete
+#     Phase 4: signal-without-pid-check, signal-negative-pid,
+#              duplicate-terminal-record, release-skip-cancellation,
+#              holder-not-removed
+#     Phase 5: hardcoded-degradation, captured-degradation,
+#              fabricated-reachability, stale-inclusive, owner-ignored
+#     Phase 6: conditional-registration, help-composer-invoked
+#   Each module is created and consumed by `tests/checks/daemon-mutants.test.ts`
+#   inside the one phase that declares both. A mutation a case applies to its own
+#   temp copy (TC-DAEMON-054 step 9's root-level-template mutation) is case-local
+#   and adds no module, so the declared inventory stays at twenty-one.
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - Additive composition only. `DaemonComposition` gains exactly three optional
+#     inputs (`pid?`, `signalHost?`, and one re-entry environment input carrying
+#     the additional variables the detached child receives);
+#     `ProductionCompositionFacts` gains exactly two optional facts (`daemonEntry?`,
+#     `supervisor?`); `QueueComposition.degraded`
+#     widens to `readonly QueueDegradationReason[] | (() => readonly QueueDegradationReason[])`.
+#     No existing field is renamed, retyped, or made required; no exported
+#     signature narrows; the command definition, grammar
+#     (`--foreground`, `--live`, `--mode`), and envelope shapes are unchanged.
+#   - Zero new modules and zero new exported symbols in `packages/**`. Every edit
+#     lands in existing modules (`production.ts`, `bin/delivery-os.ts`,
+#     `daemon-compose.ts`, `edge.ts`, `help.ts`, `help/prompt-required-commands.ts`),
+#     so `tests/structure/inventory.json`, `EXECUTABLE_ALLOWANCES` in
+#     `tests/structure/content-inventory.test.ts`, and
+#     `tests/fixtures/ports/v1-contract-inventory.json` stay byte-identical
+#     controls. A new module or export is an escalation trigger, not a phase edit.
+#   - Stale-lock takeover (NF-1, contract conformance to DEC-6/RSK-11). The
+#     engine classifies the lock through `evaluateDaemonLock` and, on `takeover`
+#     ONLY, removes the lock that evaluation proved dead before the exclusive
+#     re-acquire. The removal is a compare-and-delete keyed on the observed
+#     record's `lockToken`, so a concurrent winner's fresh lock is never removed
+#     and two starters still race to exactly one winner, the loser keeping
+#     `state.lock.busy` mapped to `daemon.already-running`. This is additive: at
+#     most one OPTIONAL `DaemonLockPort` member (every existing fake keeps
+#     satisfying it), one removal path in the lock state module, one call site in
+#     the engine app layer, no new module, no new export, no new record kind, no
+#     new error-table row, `DaemonLockRecord` unchanged, and no second staleness
+#     decision.
+#   - Byte-identical delivered degradation. An array-valued `degraded` produces
+#     the same bytes on `queue list`, `queue plan`, `lanes list`, and every queue
+#     mutation; an omitted `degraded` keeps the `["daemon-unreachable"]` fallback;
+#     the resolver is consulted per projection (schedule, mutation outcome, lanes
+#     read, every watch iteration).
+#   - Re-entry environment (TDR-0023 DC-1, amended): the detached child's
+#     environment is the resolved `<PREFIX>_STATE_DIR` binding (authoritative,
+#     written LAST) plus the composing `PATH`, its `HOME`/`USERPROFILE`, and the
+#     brand working-name override only when set and non-empty — merged through the
+#     one optional composition input, derived from the facts the composer already
+#     holds (no ambient read). Omitting the input keeps the delivered
+#     single-variable spawn. Forwarding is not repair: a caller that stripped
+#     `PATH` or `HOME` is never given one back, and the child fails closed as
+#     `daemon.state-recovery-failed` at exit 2 with nothing acquired and no
+#     root-level state path. The installed unit keeps its single
+#     `Environment=` binding; the re-entry set is a spawn concern only.
+#   - Durable reachability predicate (one rule, one bound): reachable iff an
+#     instance record exists AND its latest operation is `acquired` or
+#     `taken-over` AND the latest heartbeat's `instanceId` equals that instance's
+#     identity AND `now - beatAt < lockStalenessMs` (STRICT; an age equal to the
+#     bound is stale, because the delivered fold at
+#     `packages/core/src/domain/daemon-heartbeat.ts:63` uses
+#     `ageMs >= stalenessMs ? "stale" : "running"`); otherwise exactly
+#     `["daemon-unreachable"]`. Declared divergence: an unowned heartbeat — no
+#     instance record at all, or one naming another instance — yields
+#     `daemon-unreachable` while the delivered fold reports `running` for the same
+#     store and instant. That divergence is intentional (queue/lanes need an owner
+#     because a heartbeat nobody owns can be neither drained, signalled, nor
+#     reconciled) and must never be "harmonised" by dropping the owner rule
+#     (AC-F5-6 over owned-or-heartbeat-less stores, AC-F5-8 over the unowned
+#     family). No socket connect, process probe, or sleep on this read path — the
+#     zero-connect claim is confined to queue/lanes degradation and does NOT
+#     describe plain `daemon status`, which probes the composed transport; a
+#     torn/unreadable daemon read degrades, never throws and never fabricates
+#     reachability; an unreadable queue store keeps its own delivered `state.*`
+#     identity.
+#   - Real pid and fail-closed stop. The composing pid is forwarded only when it
+#     is a positive integer; a durable record whose pid is `0`, negative,
+#     fractional, or torn refuses cross-process `stop` with
+#     `daemon.state-recovery-failed` exit 2 and makes ZERO process-port `signal`
+#     calls. `drain` -> `SIGTERM`, `immediate` -> `SIGINT`, that pid only, never
+#     a group or a name/pattern.
+#   - Foreground lifetime. With a composed signal host and `--foreground`: install
+#     both `SIGINT`/`SIGTERM` listeners, start the daemon and capture the
+#     readiness snapshot, run the resident loop, stop with the mode the first
+#     signal selects, remove both listeners in a `finally`, await the loop,
+#     return the captured snapshot (or the stop failure). A signal that arrives
+#     while the start is still in flight is buffered — its mode is recorded and
+#     no stop is entered — and applied once the loop runs. Cancellation precedes
+#     the release append. One stop and one terminal instance record per
+#     invocation. No signal host -> the delivered in-process readiness return, no
+#     resident loop.
+#   - One state-directory scope with exactly three outcomes (AC-F3-4, AC-F3-5,
+#     AC-F2-10, DM-5, DEC-5, DEC-18). `resolveStateDirectoryScope` is the single
+#     resolution and the composer classifies its input once: (a) an absolute
+#     `<PREFIX>_STATE_DIR` override wins outright; (b) otherwise the home-based
+#     `<home>/<brand.stateDirectoryName>` applies ONLY when a home exists, and
+#     that home-based value is kept when a non-absolute override is invalid, with
+#     the invalid value still failing where the resolution edge already reports
+#     it (`config.value.invalid`); (c) otherwise — no override and no home — the
+#     directory is UNRESOLVABLE: the `daemon` family stays registered and, once
+#     the Phase-6 membership lands, selectable over an unavailable runtime whose
+#     every subcommand returns the
+#     delivered `config.value.invalid` at exit `1` (`user-validation`), opening no
+#     store, lock, settings, transport, socket path, supervisor scope, entry path,
+#     or pid and never reading, creating, or probing a `/<stateDirectoryName>`
+#     path. Non-daemon commands keep the delivered home-based template unchanged.
+#     The resolved value feeds the store, lock, settings, socket, supervisor
+#     scope, re-entry environment, unit binding, and read side. No `--state-dir`
+#     flag and no daemon state-directory configuration key.
+#   - Install identity. `ExecStart=<absolute entry path> daemon start --foreground`;
+#     unit `${brand.binaryName}-daemon.service`; directory `XDG_CONFIG_HOME` when
+#     absolute and non-empty else `<home>/.config`; `Environment=` binds the exact
+#     `<PREFIX>_STATE_DIR` name to the resolved directory; scope is the delivered
+#     digest of that directory. `binary` is a required composition field with no
+#     default, so the refusal guard keys on entry-path absence only: no composed
+#     entry path -> refuse (`daemon.state-recovery-failed`, exit 2) before
+#     rendering any unit, so no unit is ever written with an empty `ExecStart`.
+#   - Unchanged identities and schema. No error-table row added, removed, or
+#     reworded; every reached identity is a delivered row; `STATE_SCHEMA_VERSION`
+#     stays `delivery.state.v1`; no record kind, payload schema, migration, or
+#     backfill; the only record-shape change is the VALUE of `daemon.instance.pid`.
+#     Every path exits only `0`, `1`, or `2`.
+#   - No new package dependency, listener, network egress, credential read, or
+#     ambient environment read outside the injected facts. `--help`/`--version`
+#     stay pure (0 composer invocations, 0 reads, 0 writes).
+#   - Phase 2 registers the daemon runtime; Phase 6 makes it prompt-required.
+#     The order is load-bearing: `selectPromptRequiredProgram` throws when a
+#     prompt-required command has no runtime, so prompt-required membership may
+#     never precede the composition, and the guard surfaces (help entry,
+#     coverage inventory, coverage-suite enumeration, conformance page list) must
+#     land in the same commit as the membership that turns them red.
+#   - The docs phase must not introduce the literals `state command`,
+#     `mcp command`, `dispatch command`, or `daemon command` into any page in
+#     `FULL_PHRASE_PAGES`/`GENERIC_PHRASE_PAGES` of
+#     `tests/checks/doc-conformance.test.ts`; `feature-cli-entrypoint.md` and
+#     `feature-resident-daemon.md` are outside that set, so their reconciliation
+#     is safe, and `feature-agents-and-commands.md` is not edited here.
+#
+# DELIVERY MODEL: one commit per phase on feat/GH-286/daemon-command-mounting;
+# each phase boundary leaves the declared narrow gate green, so the repository is
+# green at every boundary and the final battery only re-runs what each phase
+# already proved. The invocation-shape rule above is what keeps the Phase 2-5
+# boundaries green: they are handler-level by construction, so none of them
+# depends on the Phase-6 membership. Extra phase data (tasks, verification
+# commands, exit criteria) is carried in YAML comments so the parsed document
+# stays schema-strict: the
+# plan declares phases and scope only and records no progress.
+#
+# PHASE 9 (review remediation) is a delivery phase on the same branch: it lands
+# one commit after Phase 8 and repairs the delivered proofs and production code
+# against ./review/review-iter-1.md and ./review/review-iter-2.md. It remaps no
+# TC and changes no pinned contract in this header; F-9 is accepted rather than
+# fixed. NF-1 is a CONTRACT-CONFORMANCE FIX of the delivered engine, not a new
+# capability: the delivered spec (DEC-6, RSK-11, F-4), the resident-daemon page
+# and the composition comment already claim crash-safety and takeover, the
+# engine already records a `taken-over` instance, and the only missing step is
+# removing a lock the staleness evaluation has proved dead before re-acquiring
+# it — no AC is added, no semantic rule changes, and no delivered claim is
+# weakened or reworded.
+#
+# COMMIT-SUBJECT NOTE (F-9 accepted, not remediated; extended by NF-5): in phase
+# mode the commit subject comes from the commit primitive's deterministic
+# template, not from a plan `summary` — `planPhaseForLifecycle` merges every
+# `kind: delivery` phase and keeps a summary only when all summaries are
+# identical, and no model transport is configured in this environment. The
+# primitive is the only permitted write path, the template fallback is its
+# documented behaviour, and the branch is unpushed, so the 25 phase-mode subjects
+# are not rewritten by hand. Two consequences review iteration 2 recorded as
+# NF-5: (a) `1df9e74e`, the commit that carries the primary Phase-9 remediation
+# of `packages/cli/src/daemon-compose.ts`, `production.ts` and the suites,
+# carries a `docs:`-class subject, and `72e2c1a7` — subject
+# `docs(GH-286): update doc/guides/delivery-modes.md` — additionally carries the
+# `liveHolder` evidence, the refusal detail and the start-suite cells; the
+# production-code changes therefore sit under `docs:`-class subjects; (b) the
+# change semantics are carried by the pull-request description, never by the
+# commit subject, and the two trailing commits plus a gate at that HEAD are
+# recorded as pm-notes evidence by task 9.22 so the green gate is attributable to
+# a tree. The limitation is recorded in the test plan §10.3. This is a known
+# property of phase-mode commits in this repository, not a code defect.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-286
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "The mount requires a new module, a new exported symbol, a new package subpath, or a new dependency (inventory.json, EXECUTABLE_ALLOWANCES, or exports parity would have to change)"
+    - "The command grammar, an envelope shape, an error-table row, a record kind, a payload schema, or STATE_SCHEMA_VERSION would have to change to satisfy an AC"
+    - "A prompt-required guard (help-guide-coverage, reference-page parity, doc conformance) can only be made green by relaxing an expectation instead of adding the daemon row and the page's help section"
+    - "The state-directory resolution would have to move or migrate existing state, or a second state-directory resolution would have to remain"
+    - "A delivered suite needs a semantic assertion change beyond the five permitted update sites derived from the tree (AC-F8-4, GAP-T1)"
+    - "A resolver read would have to gain a socket connect, a process probe, a sleep, or more than two additional daemon-fact reads per projection"
+    - "The evidence, spec, or test plan contradicts a pinned contract in this header and the contradiction cannot be resolved inside the phase scope"
+    - "The stale-lock takeover would require a mandatory DaemonLockPort member, a change to DaemonLockRecord, a second staleness decision, or a new error-table row instead of the additive optional removal path this plan pins"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Additive composition inputs and the binding decision record
+  #
+  # Goal: land the additive contract surface every later phase consumes, and
+  # land the untracked TDR-0023 in the first phase-mode commit. Nothing changes
+  # behaviour: no caller supplies the new inputs yet, so the delivered daemon
+  # path is byte-identical and `daemon` is still not reachable from the shipped
+  # program (production composes no runtime until Phase 2).
+  #
+  # Dependency reasoning: a contract-first phase keeps every later phase a pure
+  # consumer; pid forwarding can be proven inert here (no caller), and the union
+  # widening is type-level only until Phase 5 implements per-projection
+  # resolution. The TDR is the only untracked artifact in the change and must
+  # not be stranded, so it shares this commit.
+  #
+  # Tasks:
+  #  1.1 packages/cli/src/daemon-compose.ts: add `pid?: number`, `signalHost?: {
+  #      once(event: "SIGINT" | "SIGTERM", listener: () => void): void;
+  #      removeListener(event, listener): void }`, and one optional re-entry
+  #      environment input carrying the additional child variables (the composing
+  #      `PATH`, its home, and the brand working-name override) to
+  #      `DaemonComposition` (DM-1), and forward `pid` into the delivered
+  #      `createDaemonRuntime` ports so an instance record carries the composing
+  #      pid instead of the engine's `0` fallback (DEC-8). This phase declares the
+  #      re-entry environment field and its shape ONLY: no code path in this phase
+  #      reads it, so the delivered single-variable spawn at
+  #      `packages/cli/src/daemon-compose.ts:671-675` stays byte-identical and
+  #      omitting the input changes nothing. The spawn path that consumes the field
+  #      is edited in Phase 2, which declares `packages/cli/src/daemon-compose.ts`
+  #      in its own `scope.files` (task 2.6); the lifetime path that consumes
+  #      `signalHost` is edited in Phase 4. No other field, default, or code
+  #      path changes.
+  #  1.2 packages/cli/src/production.ts: add `daemonEntry?: string` and
+  #      `supervisor?: SupervisorPort` to `ProductionCompositionFacts` (DM-5).
+  #      Both optional; every existing fact keeps its name, type, and meaning.
+  #  1.3 packages/cli/src/edge.ts: widen `QueueComposition.degraded` to
+  #      `readonly QueueDegradationReason[] | (() => readonly QueueDegradationReason[])`
+  #      (DM-3) without touching any consumer: the delivered capture points keep
+  #      their array semantics until Phase 5 adds per-projection dispatch, so the
+  #      array member and the absent fallback stay byte-identical (AC-F8-3).
+  #  1.4 Create tests/types/daemon-mount.type-test.ts: a literal without
+  #      `pid`/`signalHost`/the re-entry environment and one with all three
+  #      satisfies `DaemonComposition`; a literal without
+  #      `daemonEntry`/`supervisor` and one with them both satisfy
+  #      `ProductionCompositionFacts`; `degraded` accepts an array and a function
+  #      and the array member stays assignable; every added property is optional
+  #      (`undefined` assignable). Type-level only (TC-DAEMON-111 step 6, run at
+  #      the Phase-2/Phase-8 gates through `pnpm typecheck`).
+  #  1.5 Land TDR-0023 unchanged in this commit (untracked artifact; see the
+  #      staging contract above) and keep doc/decisions/00-index.md as the
+  #      already-committed TDR row.
+  #
+  # Verification:
+  #   pnpm typecheck
+  #   bun test tests/structure/daemon-contract.test.ts tests/structure/state-contract.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   git diff --check
+  #
+  # Exit: the three additive surfaces type-check with and without their new
+  # members; no existing field or signature is narrowed; no module or export is
+  # added (inventory.json and EXECUTABLE_ALLOWANCES stay unmodified controls);
+  # the delivered daemon behaviour is unchanged because no caller supplies the
+  # new inputs; TDR-0023 is tracked and the decision index already points at it.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Additive daemon-mount composition inputs and the binding decision record"
+    kind: delivery
+    summary: "feat(cli): declare the additive daemon mount composition inputs and land TDR-0023"
+    scope:
+      files:
+        - doc/decisions/TDR-0023-daemon-lifecycle-mount-and-degradation-composition.md
+        - doc/decisions/00-index.md
+        - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/types/daemon-mount.type-test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/daemon-compose.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Production composition: one state-directory scope with its three
+  # outcomes, resolved settings, composed transport, real pid, entry path and
+  # re-entry environment, unconditional runtime
+  #
+  # Goal: turn the delivered-but-unreachable family into a composed one. The
+  # production composer classifies the state directory through
+  # `resolveStateDirectoryScope` into exactly three outcomes — an absolute
+  # override wins; otherwise the home default applies only when a home exists
+  # (the previous home-based value is kept when a non-absolute override is
+  # invalid); otherwise the directory is unresolvable and the family is mounted
+  # over an unavailable runtime — uses that one value for the store, the daemon
+  # lock, the daemon settings, the control socket, the supervisor scope, the
+  # re-entry binding, and the edge's own
+  # reported directory, resolves daemon settings through `resolveDaemonSettings`
+  # over that directory with an empty-branch fallback, composes the delivered
+  # unix transport at the resolved socket path with an ownership predicate that
+  # reports the lock held by this process, resolves the restart bound from
+  # `lane.restart-budget` (shipped default on failure), and composes a daemon
+  # runtime UNCONDITIONALLY — the full runtime in outcomes (a) and (b), the
+  # unavailable refusal runtime in (c) — with the entry path, the composing pid,
+  # the injected
+  # signal host, the supervisor pass-through, and the merged re-entry
+  # environment.
+  #
+  # Dependency reasoning: registration must precede prompt-required membership,
+  # because `selectPromptRequiredProgram` throws when a prompt-required command
+  # has no runtime and the entrypoint contains that throw as
+  # `fallback.internal`; the program registers the family as soon as the runtime
+  # is supplied, so the composition is verifiable now while the help, coverage,
+  # and conformance surfaces land in Phase 6. Bare-start re-entry, the readiness
+  # poll, and the cross-process signal path are delivered and consume the
+  # composed executable entry path (`daemonEntry`, not `runEntrypoint`) this
+  # phase supplies, which is why the detached-start,
+  # re-entry-environment, state-directory, and status TCs are provable at this
+  # handler-level gate rather than in Phase 4. Selection through
+  # `selectPromptRequiredProgram` is NOT a Phase-2 claim: TC-DAEMON-015 owns it
+  # at the Phase-6 gate (invocation-shape rule). The re-entry environment is
+  # derived here (task 2.4) and merged into the spawn request here (task 2.6),
+  # because both edits are the
+  # one composition contract TC-DAEMON-040 pins and because the delivered spawn
+  # otherwise replaces the child environment with a single variable. The hermetic
+  # environment cases (TC-DAEMON-040/041) and the unresolvable outcome
+  # (TC-DAEMON-054) are pure
+  # composition and start-outcome proofs over the recording process port, the
+  # recording supervisor fact, and the filesystem; the one
+  # real-child case (TC-DAEMON-039) stays in Phase 4 because its
+  # `daemon start --foreground` child only stays alive once the signal-owned
+  # lifetime exists.
+  #
+  # Tasks (TC-DAEMON-030, 031, 032, 040, 041, 050, 051, 052, 053, 054, 060, 061,
+  #        062, 063, 090, 122):
+  #  2.1 Classify and resolve the state directory once, into exactly one of three
+  #      outcomes (DM-5, DEC-5, DEC-18, AC-F3-1, AC-F3-4, AC-F3-5, AC-F2-10):
+  #      (a) an absolute `<PREFIX>_STATE_DIR` override from the injected
+  #      environment record wins outright; (b) otherwise the home-based
+  #      `${homeDirectory}/${brand.stateDirectoryName}` applies ONLY when the
+  #      composed home is non-empty, and that home-based value is kept when a
+  #      non-absolute override fails resolution, so the delivered edge keeps
+  #      reporting the invalid value (`config.value.invalid`) exactly as before;
+  #      (c) otherwise — no override and no home — the directory is unresolvable
+  #      and the composer supplies an **unavailable daemon runtime**: a local,
+  #      non-exported branch in `production.ts` whose `start`/`stop`/`status`/
+  #      `loop`/`install`/`uninstall` handlers all return the delivered
+  #      `config.value.invalid` failure (projected exit `1`, `user-validation`),
+  #      which constructs no store, lock, settings, transport, socket path,
+  #      supervisor scope, entry path, or pid, attempts no spawn, and never reads,
+  #      creates, or probes a `/<stateDirectoryName>` path. `daemon` is passed as
+  #      a `ConfigProgramOptions` member in every outcome, so the family stays
+  #      registered in every outcome — `program.commands.daemon` is defined and
+  #      its handler is composed — over the unavailable runtime (AC-F1-5
+  #      registration half; the selectable half is TC-DAEMON-015's at the
+  #      Phase-6 gate, never a Phase-2 assertion), and a non-daemon command
+  #      composed in the same program
+  #      keeps the delivered home-based template untouched. No second resolution
+  #      exists anywhere. Pass the resolved value into the edge so the
+  #      composition and the edge report the same string (AC-F3-1).
+  #  2.2 Resolve daemon settings through the delivered resolver over the resolved
+  #      directory, and over an empty branch when configuration cannot be
+  #      acquired, so a configured socket path, heartbeat interval, or
+  #      lock-staleness reaches the runtime and no default is re-derived as a
+  #      literal (AC-F4-4). Resolve the restart bound from `lane.restart-budget`
+  #      with the shipped default on failure (DEC-10).
+  #  2.3 Compose the delivered unix transport at the resolved socket path with
+  #      the ownership predicate the engine consults after acquiring the lock in
+  #      the same process, so a leftover socket is replaced rather than wedging a
+  #      restart (AC-F4-2, RSK-11).
+  #  2.4 Compose `createDaemonCommandRuntime` unconditionally with the resolved
+  #      store, lock, settings, restart bound, state directory, unit identity
+  #      placeholder resolved in Phase 3, `environmentName`, entry path,
+  #      composing pid (positive only), signal host, the derived re-entry
+  #      environment, transport, and socket path; supply the supervisor
+  #      pass-through from the facts and omit the wake source and every
+  #      lane/executor/supervision input (supervise-only, DEC-4, DEC-15). Pass
+  #      `daemon` as a `ConfigProgramOptions` member so the family is registered
+  #      on every composition, including when every optional fact is absent
+  #      (AC-F1-5 registration half, AC-F2-3, AC-F7-5 refusal shape;
+  #      registration only — selection is proven by TC-DAEMON-015 at the
+  #      Phase-6 gate).
+  #      Derive the re-entry environment inside this composer from facts it
+  #      already holds — the injected environment record's `PATH`, its `HOME` or
+  #      `USERPROFILE`, and the brand working-name variable via the delivered
+  #      `workingNameEnvironmentVariable()` only when the injected value is set
+  #      and non-empty (`bin/delivery-os.ts` already supplies the environment
+  #      record, so no ambient read is added, NFR-2) — and pass those ADDITIONAL
+  #      variables as the one optional environment input; the composer does not
+  #      assemble the child record itself. The authoritative
+  #      `<PREFIX>_STATE_DIR` binding is written last by the spawn merge in task
+  #      2.6, from the `environmentName` and state-directory values this task
+  #      supplies (AC-F2-1, AC-F2-10,
+  #      AC-F3-2, DEC-16). Omit the whole input when nothing is forwarded, so the
+  #      delivered single-variable spawn is byte-identical. The runtime is composed
+  #      only in outcomes (a) and (b); outcome (c) supplies the unavailable
+  #      runtime from task 2.1 instead.
+  #  2.5 packages/cli/bin/delivery-os.ts: supply `daemonEntry: process.argv[1]`
+  #      beside the existing `processId` and `signalHost` facts (DEC-2), so the
+  #      detached child and the unit name the same executable. The re-entry
+  #      variables come from the already-supplied `environment`, `homeDirectory`,
+  #      and `workingName` facts; the bin adds no new read.
+  #  2.6 packages/cli/src/daemon-compose.ts: replace the delivered
+  #      single-variable spawn — `spawnDetached({ entry, args, environment:
+  #      { [environmentName]: stateDirectory } })` at
+  #      `packages/cli/src/daemon-compose.ts:671-675` — with the composed re-entry
+  #      environment. When the optional environment input is present, spawn with
+  #      that merged record and write the resolved `<PREFIX>_STATE_DIR` binding
+  #      LAST, so a forwarded same-named value can never win (AC-F2-1, AC-F3-2,
+  #      DEC-16); when it is absent, spawn with the delivered single-variable
+  #      record, byte-identical. No value is invented: an absent `PATH` or home is
+  #      forwarded as absent and never synthesised (NFR-2, RSK-2), so the child
+  #      resolves the same state directory, interpreter, and brand prefix as the
+  #      parent when they exist, and fails closed as `daemon.state-recovery-failed`
+  #      at exit 2 with nothing acquired when `PATH` was stripped (AC-F2-10). The
+  #      spawn argument vector and the 20 x 50 ms readiness poll stay delivered
+  #      behaviour; this is the only edit this phase makes in `daemon-compose.ts`.
+  #  2.7 Tests: tests/behaviour/daemon-start-detached.test.ts (spawn request
+  #      entry path, argv, and the declared re-entry environment — key set
+  #      `{ <PREFIX>_STATE_DIR, PATH, HOME }` with `USERPROFILE` substituted for
+  #      an empty home and the working-name variable present only when set, the
+  #      state binding as the LAST own property, and no ambient key; readiness
+  #      from durable state, exactly 20 x 50 ms polls with no 21st attempt,
+  #      classified readiness timeout that appends nothing, in-process return
+  #      with no entry path and zero spawns, instance pid = injected composing
+  #      pid and never `0`; TC-DAEMON-040); tests/behaviour/daemon-start-env-stripped.test.ts
+  #      (TC-DAEMON-041: three stripped-caller fixtures over a temp root, the
+  #      spawn still attempted where a `PATH` remains and no value invented where
+  #      none exists, `daemon.state-recovery-failed` exit 2 with exactly 20 polls
+  #      and no 21st, nothing acquired and nothing appended, no store opened at a
+  #      path whose parent is the filesystem root, unchanged temp-root and cwd
+  #      listings, and a restored-environment control that succeeds at exit 0);
+  #      tests/behaviour/daemon-state-scope.test.ts (seven observers agree,
+  #      child resolves the same value from the authoritative binding with the
+  #      same scope digest, no-override value byte-identical to the previous
+  #      template including trailing-separator normalization, non-absolute
+  #      override keeps the command and the home value with no throw and no
+  #      partial store, and TC-DAEMON-054 over the unresolvable outcome: with
+  #      `homeDirectory = ""`, no `HOME`/`USERPROFILE`, and no override, the
+  #      composition does not throw and `program.commands.daemon` is defined, the
+  #      family is REGISTERED with every other prompt-required command still
+  #      defined in the same program, all nine subcommand invocations (`start`,
+  #      `start --foreground`, `stop`, `stop --mode drain`,
+  #      `stop --mode immediate`, `status`, `status --live`, `install`,
+  #      `uninstall`) run through the composed handler and return
+  #      `config.value.invalid` with the projected exit 1
+  #      (`user-validation`, no success `data`, never a `daemon.*` row), zero
+  #      `spawnDetached` calls and no
+  #      readiness wait, a recording supervisor recording zero write, zero enable,
+  #      and zero linger calls, zero signals and zero process probes, a source
+  #      scan of the unresolvable branch proving no store/
+  #      lock/settings/transport/socket/supervisor-scope/entry-path/pid
+  #      construction, `/<brand.stateDirectoryName>` and the delivered default
+  #      socket path absent before and after, an unchanged temp `cwd` listing and
+  #      `git status --porcelain`, the non-daemon command keeping the delivered
+  #      root-level template without being executed, and the home-present
+  #      full-runtime control where five subcommands reach their handlers and a
+  #      non-daemon command still resolves `<home>/<brand.stateDirectoryName>`);
+  #      tests/behaviour/daemon-status.test.ts (plain status
+  #      probes the composed transport exactly once and REPORTS reachability
+  #      while remaining a degraded success at exit 0 for every not-running
+  #      shape — absent, released, stale, and unreachable — matching the
+  #      delivered `probe()` call at `packages/cli/src/daemon-compose.ts:640-641`
+  #      and the `daemon-unreachable` merge in the status fold; `installed: false`,
+  #      `supervise-only` and `lane-executor-unavailable` distinct from
+  #      `daemon-unreachable`; only `--live` fails closed, with live/unreachable/
+  #      stale classification; configured socket/interval with the empty-branch
+  #      fallback and no literal default; status and live-status p95 within
+  #      1 000 ms / 2 000 ms with bounded output; the new normalized status
+  #      matrices recorded under `tests/fixtures/daemon/mount-golden/` with the
+  #      delivered `tests/golden/daemon-status-matrix.test.ts` kept as a
+  #      read-only control). Fixtures:
+  #      tests/fixtures/daemon/mount-harness.ts (injected
+  #      brand, environment, home, and process identity/signal host/process port/
+  #      supervisor port/clock/transport/config branch/state root plus the
+  #      spawn/signal/listener/connect/supervisor/read/append/isAlive/sleep/
+  #      composer counters and the `failRelease()`/`failSignal()` switches) and
+  #      tests/fixtures/daemon/mount-states.ts (the committed durable-state case
+  #      set with the expected marker array and fold state per case).
+  #  2.8 Fixture mutants, with their consumer declared here: start
+  #      tests/fixtures/daemon/mount-mutants/ with the mutants this phase's claims
+  #      need — `binding-not-last` (the state binding merged first so a forwarded
+  #      look-alike can win), `spawn-without-forwarded-env` (a child spawned with
+  #      the state binding only, so `PATH`/home are not forwarded),
+  #      `spawn-with-full-env` (the spawn passing keys outside the declared
+  #      re-entry set — the whole injected environment or an inherited
+  #      `process.env` — consumed by the exact-key-set assertion in
+  #      `daemon-start-detached.test.ts` (TC-DAEMON-040) and by the child's probe
+  #      key set in the real re-entry case) and
+  #      `literal-socket` (a hardcoded socket name or heartbeat interval in
+  #      `production.ts` instead of the resolver) — applied to temp copies only,
+  #      and extend tests/checks/daemon-mutants.test.ts (declared in this phase's
+  #      scope) with one case per mutant that applies it and asserts it trips the
+  #      named suite and assertion. These four are the Phase-2 share of the
+  #      twenty-one-module inventory declared in this plan's header, which equals
+  #      test plan §6 one name for one name. TC-DAEMON-054's root-level-template
+  #      mutation is applied to a temp copy inside that case and adds no module.
+  #      Each mutant is exercised in the phase that
+  #      creates it, so no later phase has to reach back into an already-committed
+  #      one.
+  #
+  # Gate shape (HANDLER-LEVEL, RF3-1): every mapped TC in this phase invokes the
+  # composed program's `daemon` handler directly, or calls `runCli` with that
+  # same composed program. No case here goes through `runEntrypoint`, and none
+  # asserts `selectPromptRequiredProgram`, selection, or `fallback.internal`: the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate. A case
+  # here that would need `runEntrypoint` is a plan defect, not a reason to
+  # weaken the assertion.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-start-detached.test.ts tests/behaviour/daemon-start-env-stripped.test.ts tests/behaviour/daemon-state-scope.test.ts tests/behaviour/daemon-status.test.ts
+  #   bun test tests/golden/daemon-status-matrix.test.ts
+  #   bun test tests/checks/daemon-mutants.test.ts
+  #   bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-supervisor-install.test.ts tests/behaviour/daemon-lock.test.ts
+  #   bun test tests/structure/state-scope.test.ts tests/structure/daemon-vocabulary.test.ts tests/structure/content-inventory.test.ts
+  #   pnpm typecheck
+  #   bun run scripts/checks/ambient-globals.ts
+  #   pnpm check:boundaries
+  #
+  # Exit (handler-level): one resolved directory, seven agreeing observers, and a
+  # byte-identical home default; a non-absolute override with a home keeps the
+  # command, the home
+  # value, and the delivered edge's `config.value.invalid` report; with no
+  # override and no home the family stays mounted and registered
+  # (`program.commands.daemon` is defined) over the unavailable runtime, every
+  # subcommand invoked through the composed handler refuses as
+  # `config.value.invalid` at the projected exit 1, nothing is opened, spawned,
+  # signalled, or written, no
+  # `/<stateDirectoryName>` path is read or created, and non-daemon commands keep
+  # the delivered template; the child's environment is exactly the declared
+  # re-entry set with the state binding last, and its scope matches the parent's;
+  # a caller that
+  # stripped `PATH` fails closed with nothing acquired and no root-level
+  # state path; the receipt's pid is the composing pid and never `0`; plain
+  # `status` probes, reports reachability, and stays a degraded success at exit 0
+  # while `--live` is the only failing surface; the configured socket path and
+  # interval reach the runtime with one defaults definition; the new status
+  # matrices are recorded under `tests/fixtures/daemon/mount-golden/` while the
+  # delivered status-matrix golden stays a control; the family is
+  # registered even with every optional fact absent; each mutant created here is
+  # tripped by `tests/checks/daemon-mutants.test.ts` in this commit and the
+  # mutant inventory equals test plan §6; no module,
+  # export, or dependency is added; the delivered lifecycle, lock,
+  # supervisor-install, state-scope, and daemon-vocabulary suites pass
+  # unmodified (the vocabulary gate first runs here, because this phase is where
+  # the daemon runtime is first composed and its handlers become reachable;
+  # AC-F8-4 re-runs it at the Phase-8 gate).
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Production composition: one state-directory scope with its three outcomes, resolved settings, composed transport, real pid, entry path and re-entry environment, and an unconditional daemon runtime"
+    kind: delivery
+    summary: "feat(cli): compose the daemon runtime over one resolved state-directory scope and the declared re-entry environment"
+    scope:
+      files:
+        - packages/cli/bin/delivery-os.ts
+        - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/daemon-start-detached.test.ts
+        - tests/behaviour/daemon-start-env-stripped.test.ts
+        - tests/behaviour/daemon-state-scope.test.ts
+        - tests/behaviour/daemon-status.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/fixtures/daemon/mount-harness.ts
+        - tests/fixtures/daemon/mount-states.ts
+      folders:
+        - tests/fixtures/daemon/mount-golden
+        - tests/fixtures/daemon/mount-mutants
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Brand-derived install identity and ownership-scoped lifecycle
+  #
+  # Goal: give `daemon install`/`uninstall` a legible, brand-derived identity and
+  # make the four install shapes provable without a live systemd: the unit under
+  # the user configuration root, the absolute entry path as `ExecStart`, the
+  # exact state-directory environment binding, the classified unsupported and
+  # linger-failure paths with rollback, the ownership-scoped uninstall, and the
+  # refusal when no entry path is composed.
+  #
+  # Dependency reasoning: install consumes composition values (entry path, unit
+  # name, environment name, config root, scope) that Phase 2 supplies, and it
+  # shares no code path with the lifetime or the degradation work, so it is an
+  # independently verifiable boundary. TC-DAEMON-124's start-refusal and
+  # stop-noop halves consume only delivered behaviour that Phases 1-2 make
+  # reachable.
+  #
+  # Tasks (TC-DAEMON-100, 101, 102, 103, 104, 105 manual, 124):
+  #  3.1 Supply the install identity values from the production composition:
+  #      `binary` = the absolute entry path (never a bare binary name),
+  #      `unit` = `${brand.binaryName}-daemon.service`,
+  #      `supervisorConfigDirectory` = `XDG_CONFIG_HOME` when it is absolute and
+  #      non-empty otherwise `${homeDirectory}/.config`, `environmentName` = the
+  #      exact `<PREFIX>_STATE_DIR` the state-directory resolution reads, and the
+  #      delivered digest of the resolved directory as the scope (DM-6, DEC-9).
+  #      `binary` is a REQUIRED `DaemonComposition` field (it has no default),
+  #      so it is always supplied from the composed entry path and is never
+  #      absent in the shape this task hands the runtime.
+  #      The state directory is never used as the unit directory.
+  #  3.2 packages/cli/src/daemon-compose.ts: the install handler refuses before
+  #      rendering. Given a resolvable state directory and no composed entry
+  #      path it returns `daemon.state-recovery-failed` at exit 2 BEFORE calling
+  #      `installSupervisor`/`renderSystemdUnit`, so no unit is ever written with
+  #      an empty `ExecStart` (AC-F7-5). The unresolvable state-directory outcome
+  #      composes the unavailable runtime first (task 2.1), so this entry-path
+  #      guard is UNREACHABLE when no state directory resolves: that invocation
+  #      is the unavailable runtime's `config.value.invalid` at exit 1
+  #      (AC-F3-5), never `daemon.state-recovery-failed`. The guard keys on
+  #      entry-path absence only — never on a missing `binary`, which is a
+  #      required composition field, and never on an absent supervisor, platform,
+  #      or state
+  #      directory — so a refusal cannot be produced by an unrelated absent
+  #      value. An unsupported platform or a linger failure keeps
+  #      `daemon.supervisor-unsupported` at exit 2 with the unit and ownership
+  #      marker rolled back and nothing partial left behind (AC-F7-3). Linger
+  #      stays enabled on success; `uninstall` removes only what this
+  #      installation created and reports `noop` when nothing is installed
+  #      (AC-F7-4). No change to the delivered adapter, the unit renderer, or the
+  #      supervisor commands.
+  #  3.3 Tests: tests/behaviour/daemon-install-mount.test.ts — unit path and
+  #      parsed `ExecStart`/`Environment=` lines, the DELIVERED command order
+  #      (write the unit, `systemctl --user enable` the unit, `loginctl
+  #      enable-linger`, then write the ownership marker — the order
+  #      `packages/adapters/src/daemon/supervisor.ts:192-235` already executes;
+  #      no adapter change), descriptor fields,
+  #      scope digest; the four `XDG_CONFIG_HOME` fixtures including the relative
+  #      value treated as absent and never joined onto the cwd; darwin/win32 and
+  #      linger-failure classification with directory-equality absence proofs and
+  #      the recorded rollback; ownership-scoped uninstall against unrelated unit
+  #      and marker controls plus the absent-install noop; no-entry-path refusal
+  #      with a `renderSystemdUnit` spy at zero calls and a supplied `binary`
+  #      constant, proving the guard keys on entry-path absence only; the idempotence triple
+  #      (second install byte-identical with one unit and one marker, stop against
+  #      a released instance as `noop` with zero signals, a live start as
+  #      `daemon.already-running` at exit 1 — `user-validation` — with an
+  #      unchanged record count).
+  #  3.4 Execute the test plan's TC-DAEMON-105 manual host verification on a
+  #      Linux host with a user systemd manager inside a temp `XDG_CONFIG_HOME`
+  #      under `$REPO_ROOT/tmp/`: install, `systemctl --user daemon-reload`,
+  #      `systemctl --user status <unit>`, uninstall, reload, and record the host,
+  #      commands, and observed output in the test plan §10 log. The record is
+  #      handler-level and makes no selection claim; the real-binary re-run after
+  #      membership is task 6.9 at the Phase-6 gate (it is a re-run of this
+  #      procedure through `runEntrypoint`, not a second TC mapping). No automated
+  #      suite calls `systemctl` (GAP-T4); the procedure never enables login
+  #      autostart for the operator's real account.
+  #  3.5 Fixture mutants, with their consumer declared here: add `bare-execstart`
+  #      (a bare binary name instead of the
+  #      absolute entry path), `unit-under-state-dir` (the state directory used as
+  #      the unit directory), `xdg-relative-joined` (a relative
+  #      `XDG_CONFIG_HOME` joined onto the cwd), `install-empty-executable` (a
+  #      unit rendered with an empty `ExecStart`), and `uninstall-broad-delete`
+  #      (uninstall removing everything under `systemd/user/`) to
+  #      tests/fixtures/daemon/mount-mutants/, and extend
+  #      tests/checks/daemon-mutants.test.ts (declared in this phase's scope) with
+  #      one case per mutant asserting the named suite and assertion it trips, so
+  #      the install-identity claims are non-vacuous inside this commit.
+  #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the install/uninstall/start/stop TCs in
+  # this phase invoke the composed program's handlers directly, or call `runCli`
+  # with that same composed program; the manual record in 3.4 runs the composed
+  # handlers too. No case here goes through `runEntrypoint`, and none asserts
+  # `selectPromptRequiredProgram`, selection, or `fallback.internal`; the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate, where the
+  # TC-DAEMON-105 real-binary re-run also happens as task 6.9.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-install-mount.test.ts tests/golden/daemon-install.test.ts tests/behaviour/daemon-supervisor-install.test.ts
+  #   bun test tests/checks/daemon-mutants.test.ts
+  #   pnpm typecheck
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Exit (handler-level): the unit systemd would read is the unit this
+  # composition renders (absolute executable, brand-derived name, user
+  # configuration root, exact
+  # environment binding) and the supervisor calls happen in the delivered order;
+  # unsupported and linger-failure paths leave nothing behind; uninstall is
+  # ownership-scoped and idempotent; given a resolvable state directory, with no
+  # composed entry path the install
+  # handler refuses as `daemon.state-recovery-failed` at exit 2 before any
+  # rendering and keys on entry-path absence only, while a required `binary` is
+  # always supplied, and the unresolvable state-directory outcome composes the
+  # unavailable runtime first, so that entry-path guard is unreachable when no
+  # state directory resolves (that invocation is the unavailable runtime's
+  # `config.value.invalid` at exit 1); a
+  # repeated live start is `daemon.already-running` at exit 1; the delivered
+  # install golden stays a control; each mutant created here is tripped in this
+  # commit; the manual host verification is recorded.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Brand-derived install identity and ownership-scoped install/uninstall lifecycle"
+    kind: delivery
+    summary: "feat(cli): derive the install identity from the brand and the user config root"
+    scope:
+      files:
+        - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/daemon-install-mount.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/fixtures/daemon/mount-harness.ts
+      folders:
+        - tests/fixtures/daemon/mount-mutants
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Foreground lifetime, drained detach, and fail-closed stop safety
+  #
+  # Goal: make a foreground start own its process lifetime (SIGTERM drains,
+  # SIGINT stops immediately, listeners removed in a `finally`, the readiness
+  # snapshot returned at exit, cancellation before the release append, one stop
+  # per invocation), prove the drained detach from a second store handle, and
+  # make cross-process `stop` incapable of addressing a process group.
+  #
+  # Dependency reasoning: the lifetime path consumes the composed signal host and
+  # pid from Phases 1-2 and the runtime's delivered cancellation-first stop
+  # ordering; it shares state with the delivered instance/lane records, so it
+  # must land after the composition that writes them and before the degradation
+  # resolver that reads them. The stop-safety half is independent of the
+  # lifetime work and shares one suite boundary with it (one process-boundary
+  # suite, one durable-record suite), which is why both land here.
+  #
+  # Tasks (TC-DAEMON-033, 034, 035, 036, 037, 038, 039, 091, 092, 121):
+  #  4.1 Implement the foreground lifetime in packages/cli/src/daemon-compose.ts
+  #      (DM-2): when `signalHost` is composed and `foreground` is true, install
+  #      exactly one `SIGINT` and one `SIGTERM` listener before starting, start
+  #      the runtime and capture the readiness snapshot, run the resident loop,
+  #      let the first signal select the stop mode (`SIGTERM` -> `drain`,
+  #      `SIGINT` -> `immediate`), remove both listeners in a `finally`, await
+  #      the loop, and return the captured snapshot at exit 0 or the stop failure
+  #      at its delivered exit. A signal that arrives while the start is still in
+  #      flight is buffered — its mode is recorded and no stop is entered — and
+  #      applied once the loop runs.
+  #      A failed release still terminates the loop (cancellation precedes the
+  #      append) and returns the delivered state-write identity at exit 2; a
+  #      second signal cannot start a second stop; no handler outlives the
+  #      invocation; with no signal host the delivered readiness return is
+  #      unchanged and no resident loop starts (AC-F2-4..AC-F2-9).
+  #      Disposition of the delivered `packages/cli/src/daemon-main.ts` (DECLARED
+  #      ONCE HERE, binding on every later phase): the command runtime is the one
+  #      owner of the foreground lifetime — it must return the readiness snapshot
+  #      it captured at start and must surface a failed stop — so on PRODUCTION
+  #      SURFACES `createDaemonMainEntry` stays UNUSED and UNMODIFIED: it is never
+  #      wired into the daemon composition, never called by the production
+  #      composer, and never imported by `packages/cli/bin/delivery-os.ts`, and it
+  #      gains no production code path in this change. The one permitted consumer
+  #      is the TC-DAEMON-039 fixture entry script written inside the temp root by
+  #      `tests/conformance/daemon-mount/real-reentry.test.ts`, which imports it
+  #      as a library seam because that case requires the real
+  #      `createDaemonMainEntry` to run as the detached child; a test fixture is
+  #      not a production surface and adopts no lifetime ownership in the shipped
+  #      product. The command runtime therefore remains the only lifetime owner in
+  #      production: a second production owner would produce two
+  #      terminal instance records and would silently swallow a failed stop, which
+  #      is exactly what AC-F2-5/AC-F2-6 forbid.
+  #  4.2 Implement the fail-closed stop guard on the delivered cross-process
+  #      signal path: refuse a durable instance record whose pid is not a
+  #      positive integer (`Number.isInteger(pid) && pid > 0`) with
+  #      `daemon.state-recovery-failed` at exit 2 and ZERO `signal` calls;
+  #      `drain` sends `SIGTERM` and `immediate` sends `SIGINT` to the recorded
+  #      positive pid only; a failed `signal` call is classified rather than
+  #      swallowed; no `isAlive` substitute, no name/pattern kill, no negated
+  #      (group) pid (AC-F6-2, AC-F6-3, NFR-8).
+  #  4.3 Tests: tests/behaviour/daemon-foreground-lifetime.test.ts (SIGTERM
+  #      drain with three advancing heartbeat ordinals, one `released` with
+  #      `releaseReason=drain` and one `detached` per previously delivering lane,
+  #      both listeners installed and removed exactly once, the start snapshot
+  #      returned rather than a post-stop recomputation; SIGINT immediate stop
+  #      with one `immediate-stop`, zero releases, zero detaches, and a later
+  #      stop as `noop` with zero signals from a reopened handle; no signal host
+  #      -> readiness return with zero listener calls and a presence control that
+  #      enters the loop; failed release -> termination, listeners removed,
+  #      exit 2 with the state-write identity, one release attempt, durable truth
+  #      unchanged; double signal -> one stop and one terminal record including
+  #      the mixed SIGTERM-then-SIGINT order); tests/behaviour/daemon-stop-safety.test.ts
+  #      (second-handle drain: exactly one `signal(pid, "SIGTERM")`, `draining`
+  #      at exit 0 with no completed-release claim, no second instance record,
+  #      then the resident release plus lane detach observed from a fresh handle,
+  #      then `noop` with zero further signals; four non-positive/torn pid
+  #      fixtures across both modes with a ZERO signal counter over eight
+  #      invocations, no `isAlive` substitute, a source scan for name/pattern
+  #      kills, and a positive control; positive pid -> one signal of the right
+  #      kind, never `0`, never negative, never `-pid`, one call per invocation,
+  #      and a failed signal classified); tests/behaviour/daemon-foreground-stop-latency.test.ts
+  #      (t1 - t0 <= 250 ms cancellation, t2 - t0 <= 1 000 ms with the release
+  #      present at t2, five samples, record count equal to the iteration count);
+  #      tests/conformance/daemon-mount/real-reentry.test.ts (the single
+  #      integration-marked real detached re-entry inside a temp root: real
+  #      process port, `#!/usr/bin/env bun` fixture entry at mode 0755 whose
+  #      script invokes the delivered `createDaemonMainEntry` as a library seam
+  #      (the one permitted consumer from 4.1), the
+  #      declared re-entry environment (state binding last, forwarded `PATH` and
+  #      home, override only when set) and the interpreter resolution proved from
+  #      the child's own probe file, positive pid, drain, one release
+  #      within a bounded 40 x 50 ms poll, `SIGKILL` reap in `finally`, 20 000 ms
+  #      hard timeout, `git status --porcelain` unchanged).
+  #  4.4 Fixture mutants, with their consumer declared here: add
+  #      `signal-without-pid-check` (a signal path that skips
+  #      the positive-integer refusal), `signal-negative-pid` (the negated group
+  #      form), `duplicate-terminal-record` (a second stop on a double signal),
+  #      `release-skip-cancellation` (a release that blocks termination), and
+  #      `holder-not-removed` (a listener leak) to
+  #      tests/fixtures/daemon/mount-mutants/, and extend
+  #      tests/checks/daemon-mutants.test.ts (declared in this phase's scope) with
+  #      one case per mutant asserting the named suite and assertion it trips.
+  #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the lifetime and stop-safety TCs invoke a
+  # directly composed `createDaemonCommandRuntime` (or the composed program's
+  # handler), and the one real child runs `createDaemonMainEntry`, never
+  # `runEntrypoint`. No case here asserts `selectPromptRequiredProgram`,
+  # selection, or `fallback.internal`; the selection/containment proof is
+  # TC-DAEMON-015's at the Phase-6 gate.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-foreground-lifetime.test.ts tests/behaviour/daemon-stop-safety.test.ts tests/behaviour/daemon-foreground-stop-latency.test.ts
+  #   bun test tests/conformance/daemon-mount/real-reentry.test.ts
+  #   bun test tests/checks/daemon-mutants.test.ts
+  #   bun test tests/behaviour/control-transport.test.ts
+  #   bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-lock-concurrency.test.ts tests/behaviour/daemon-watch-state-changes.test.ts
+  #   pnpm typecheck
+  #
+  # Exit (handler-level): a foreground daemon releases its lock and detaches
+  # delivering lanes on SIGTERM and stops immediately on SIGINT; listeners never
+  # outlive the
+  # invocation; a failed release cannot hang or lie; a second signal produces no
+  # second stop; the stop is prompt and bounded; `signal` is called zero times
+  # for every non-positive, fractional, or torn pid and exactly once with the
+  # right signal for a positive one; the command runtime is the only lifetime
+  # owner in production, `createDaemonMainEntry` is untouched by every production
+  # surface (composition, composer, bin) and imported only by the TC-039 fixture
+  # script; each mutant
+  # created here is tripped in this commit; the delivered lifecycle,
+  # lock-concurrency, watch, and control-transport suites pass unmodified; the
+  # one real-child case is bounded, temp-rooted, and reaped.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Foreground lifetime, drained detach, and fail-closed stop safety over the recorded positive pid"
+    kind: delivery
+    summary: "feat(cli): own the foreground daemon lifetime and fail closed on a non-positive recorded pid"
+    scope:
+      files:
+        - packages/cli/src/daemon-compose.ts
+        - tests/behaviour/daemon-foreground-lifetime.test.ts
+        - tests/behaviour/daemon-foreground-stop-latency.test.ts
+        - tests/behaviour/daemon-stop-safety.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/conformance/daemon-mount/real-reentry.test.ts
+        - tests/fixtures/daemon/mount-harness.ts
+        - tests/fixtures/daemon/mount-states.ts
+      folders:
+        - tests/fixtures/daemon/mount-mutants
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Degradation resolved per projection from durable daemon state
+  #
+  # Goal: replace the hardcoded marker with a derived fact in both directions.
+  # `QueueComposition.degraded` accepts an array or a resolver; the queue
+  # schedule, the mutation outcome, the lanes read, and every watch iteration
+  # resolve it; the production composer supplies the durable predicate; the
+  # array member and the absent fallback stay byte-identical.
+  #
+  # Dependency reasoning: the predicate reads the instance and heartbeat records
+  # that Phases 2-4 make truthful (a real pid and a real release are what make
+  # "reachable" mean anything), and it must use the same configured
+  # lock-staleness bound and the same STRICT comparison the status fold uses,
+  # which Phase 2 already wires. It
+  # is independent of the help/mount work, so it lands before the mount so that
+  # the mount commit does not mix a behaviour change into a registration change.
+  #
+  # Tasks (TC-DAEMON-070, 071, 072, 073, 074, 075, 076, 077, 078, 112, 120):
+  #  5.1 packages/cli/src/edge.ts: resolve `degraded` at every projection instead
+  #      of capturing it: the schedule read, the mutation outcome, the lanes read,
+  #      and each watch iteration call the value when it is a function and use
+  #      the array verbatim when it is an array; an absent value keeps the
+  #      delivered `["daemon-unreachable"]` fallback (DM-3, AC-F8-3). No socket
+  #      connect, process probe, or sleep on this read path.
+  #  5.2 Supply the durable reachability predicate from the production
+  #      composition (DM-4), as the single rule:
+  #        instance exists
+  #        AND operation ∈ {acquired, taken-over}
+  #        AND heartbeat.instanceId === instance.instanceId
+  #        AND (now - beatAt) < lockStalenessMs      <- STRICT
+  #      -> `[]`; otherwise exactly `["daemon-unreachable"]`. The comparison is
+  #      strict because the delivered fold
+  #      (`packages/core/src/domain/daemon-heartbeat.ts:63`) is
+  #      `ageMs >= stalenessMs ? "stale" : "running"`, so an age EQUAL to the
+  #      bound is stale on both surfaces; an inclusive form would make the two
+  #      disagree at exactly that cell. An unowned heartbeat — no instance record,
+  #      or a latest heartbeat naming another instance — degrades while the
+  #      delivered fold reports `running`; that divergence is DELIBERATE and must
+  #      never be harmonised away, because queue/lanes need an owner (a heartbeat
+  #      nobody owns can be neither drained, signalled, nor reconciled) while the
+  #      fold answers a liveness question only (AC-F5-6 over owned-or-heartbeat-
+  #      less stores, AC-F5-8 over the unowned family, DEC-7).
+  #      A torn, unknown, malformed, missing-instance, foreign-instance,
+  #      orphan-heartbeat, or unreadable read degrades instead
+  #      of throwing and never fabricates reachability.
+  #  5.3 Tests: tests/behaviour/daemon-degradation-projection.test.ts (the live
+  #      and taken-over directions on both reads; released and immediate-stop
+  #      with a deliberately fresh
+  #      heartbeat; verified-empty and orphan-heartbeat fixtures at exit 0;
+  #      stale by 1 ms plus the at-bound control (age exactly equal to the
+  #      configured bound lands on the DEGRADED side, matching the fold's
+  #      `stale`) and the doubled-staleness flip
+  #      proving the bound is configuration-driven; the three-iteration watch
+  #      flip in both directions with one resolver call per iteration and no real
+  #      sleep; the 17-cell matrix over the domain AC-F5-6 states — four
+  #      operations × four heartbeat states where the heartbeat is owned or
+  #      absent, plus the no-instance-and-no-heartbeat cell — asserting the
+  #      agreement invariant with the status fold and its doubled-staleness
+  #      re-run, with a cell-set assertion proving the unowned cells are excluded
+  #      rather than omitted; the TC-DAEMON-078 divergence case: an orphan
+  #      heartbeat and a foreign-owner heartbeat, each with a beat strictly inside
+  #      the bound, yield `["daemon-unreachable"]` from both reads while the
+  #      delivered status fold reports `running` for the same store and instant,
+  #      asserted in one body so neither side can be "fixed" silently, and
+  #      re-asserted under doubled staleness so ownership — not freshness — is
+  #      the cause; the
+  #      five corrupt fixtures asserting the marker, no throw, zero
+  #      socket/probe/sleep, no repair, and a permission-denied queue store still
+  #      failing through its own `state.*` identity at exit 2; the additivity
+  #      triple comparing array-valued, omitted, and resolver payloads with the
+  #      recorded baselines, including the "array is not re-resolved" and "union
+  #      dispatches" pair); tests/structure/daemon-degradation-wiring.test.ts
+  #      (production composition yields `[]` on a live store and
+  #      `["daemon-unreachable"]` on a released one, a source scan finds no
+  #      literal array-valued `degraded` in `production.ts` and the value is a
+  #      function, the resolver is not memoized across stores, and the
+  #      `hardcoded-degradation`/`captured-degradation` mutants trip by file and
+  #      name); tests/behaviour/daemon-degradation-read-cost.test.ts (at most two
+  #      ADDITIONAL daemon-fact reads per projection beyond what the projection
+  #      already reads, zero transport connects, zero
+  #      `isAlive`, zero sleeps, a same-run p95 baseline within 10%, and an
+  #      unchanged read count when unrelated records double, for the read, the
+  #      mutation, and one watch iteration, with the environment and iteration
+  #      count recorded).
+  #  5.4 Extend tests/checks/daemon-mutants.test.ts (declared in this phase's
+  #      scope) with the five degradation
+  #      mutants this phase's claims need (`hardcoded-degradation`,
+  #      `captured-degradation`, `fabricated-reachability`, `stale-inclusive` —
+  #      the at-bound cell treated as reachable — and `owner-ignored` — the
+  #      heartbeat's `instanceId` not compared to the instance), and
+  #      extend tests/checks/daemon-hermetic.test.ts to the new composition and
+  #      resolver paths, so every absence claim that carries a source-level mutant
+  #      is tripped by name (GAP-T3). The mutants created in earlier or later
+  #      phases are consumed by the same suite inside the phase that creates them
+  #      (see 2.8, 3.5, 4.4, 6.7), so no phase edits a suite another phase owns
+  #      without declaring it.
+  #
+  # Gate shape (HANDLER-LEVEL, RF3-1): the degradation TCs invoke the queue/lanes
+  # handlers (or the composed program's handler) and read the store directly. No
+  # case here goes through `runEntrypoint`, and none asserts
+  # `selectPromptRequiredProgram`, selection, or `fallback.internal`; the
+  # selection/containment proof is TC-DAEMON-015's at the Phase-6 gate.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-degradation-projection.test.ts tests/behaviour/daemon-degradation-read-cost.test.ts tests/structure/daemon-degradation-wiring.test.ts
+  #   bun test tests/checks/daemon-mutants.test.ts tests/checks/daemon-hermetic.test.ts
+  #   bun test tests/behaviour/daemon-degradation.test.ts tests/structure/queue-scheduling-contract.test.ts
+  #   bun test tests/behaviour/queue-cli.test.ts tests/behaviour/lanes.test.ts tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts tests/golden/queue-list.test.ts tests/golden/lanes-list.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   pnpm check:boundaries
+  #
+  # Exit (handler-level): the marker disappears for a live fresh instance and
+  # returns for released, immediate-stopped, absent, stale, at-bound, torn, and
+  # unreadable
+  # states, on both reads and inside a watch, within one iteration; the verdict
+  # and the status fold share one bound applied with one strict comparison and
+  # agree on every owned cell while the unowned family diverges by design and is
+  # asserted as such; the production wire is a function and its
+  # reintroduction as a constant is caught; array-valued and omitted
+  # compositions are byte-identical to the delivered baselines; the read cost
+  # budget holds; the delivered queue, lanes, watch, golden, daemon-degradation,
+  # and queue-scheduling-contract suites pass unmodified.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Degradation resolved per projection from durable daemon state, with byte-identical array and fallback behaviour"
+    kind: delivery
+    summary: "feat(queue,lanes): resolve daemon degradation from durable state at every projection"
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/daemon-degradation-projection.test.ts
+        - tests/behaviour/daemon-degradation-read-cost.test.ts
+        - tests/checks/daemon-hermetic.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/structure/daemon-degradation-wiring.test.ts
+        - tests/fixtures/daemon/mount-states.ts
+      folders:
+        - tests/fixtures/daemon/mount-mutants
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Mount: prompt-required membership, help inventory, reference page
+  # help section, and the four guard sites in one commit
+  #
+  # Goal: make the composed family prompt-required and self-describing, and prove
+  # the selection surface the earlier gates deliberately do not touch. `daemon`
+  # joins `PROMPT_REQUIRED_COMMANDS`; the help inventory gains one family entry
+  # plus one entry per subcommand; the coverage inventory gains `daemon` in
+  # `commands` and the daemon reference page in `referencePages`; the
+  # doc-conformance page list gains `daemon`; and the reference page gains the
+  # `## HELP` section naming `--help` and `--version`. This is the first and only
+  # gate at which an invocation may go through `runEntrypoint`, because only here
+  # is `daemon` a prompt-required member (invocation-shape rule).
+  #
+  # Dependency reasoning: the membership, the help entries, the coverage rows,
+  # the conformance row, and the page's help section turn four delivered guard
+  # suites red together — the coverage check, the reference-page parity check, the
+  # doc-conformance page list, and the `entrypoint-help-coverage` enumeration that
+  # asserts equality with `coverage.commands` — plus the two hard-coded family
+  # lists in `entrypoint-composition`/`entrypoint-help`; all of them must land in
+  # one commit. The reference page's claim reversals
+  # belong to Phase 7, so this phase lands only the help section and the status
+  # line the guard requires. Membership after registration is mandatory
+  # (`selectPromptRequiredProgram` throws otherwise), and the entrypoint
+  # composition fixture derives its program from the prompt-required set, so only
+  # its hard-coded family list and the `daemon` absence name change.
+  #
+  # Tasks (TC-DAEMON-010, 011, 012, 013, 014, 015, 114; task 6.9 re-runs
+  #        TC-DAEMON-105, which the map keeps at Phase 3):
+  #  6.1 packages/cli/src/help/prompt-required-commands.ts: add `daemon` exactly
+  #      once (17 families) with no reordering of the delivered members (AC-F1-1).
+  #  6.2 packages/cli/src/help.ts: add the `daemon` family entry (usage naming
+  #      `start`, `stop`, `status`, `install`, `uninstall`; options naming
+  #      `--foreground`, `--live`, `--mode`; examples; exit codes; a see-also
+  #      naming the daemon reference page and the man page) plus one entry per
+  #      subcommand with its own usage and its declared flags only, so
+  #      `daemon <sub> --help` resolves instead of refusing an unknown flag and
+  #      the family appears in root `--help` through the delivered derivation
+  #      (AC-F1-2, AC-F1-4, DEC-12). No bespoke listing code; the rendered length
+  #      stays inside the delivered help bounds.
+  #  6.3 doc/planning/oss-tooling/milestones/m1/commands/daemon.md: replace the
+  #      "not mounted" status block with a mounted status and add the `## HELP`
+  #      section documenting `<binary> daemon --help`, the per-subcommand help,
+  #      root `--help`, and `--version`. This is the minimum the coverage and
+  #      conformance checks require; the mount-and-lifetime, state-directory, and
+  #      plain-language claim reversals belong to Phase 7.
+  #  6.4 tests/fixtures/help-guide/coverage.json: add `daemon` to `commands`,
+  #      `doc/planning/oss-tooling/milestones/m1/commands/daemon.md` to
+  #      `referencePages`; append each entry at the end of its array. The
+  #      fixture's order is NOT normative (it is intentionally unsorted today), so
+  #      do not sort it and do not deduplicate it: a sortedness rewrite would be a
+  #      semantic change to a delivered control (AC-F8-4).
+  #  6.5 tests/checks/doc-conformance.test.ts: add `daemon` to
+  #      `PROMPT_REQUIRED_PAGES` and leave the two pre-existing omissions
+  #      (`dispatch`, `coordinator`) exactly as they are (DEC-13).
+  #  6.6 Tests: tests/structure/daemon-production-composition.test.ts (membership
+  #      once with the set grown by exactly one; the registered flag list exactly
+  #      `["--foreground", "--live", "--mode"]` with `requiresValue`
+  #      `["--mode"]`; selection completes without the containment throw and
+  #      `daemon status` reaches the handler with no `unknown flag`/`unexpected
+  #      argument` text; three fact sets — full, entry-only, minimal — all
+  #      register and select with deterministic identical composition; the
+  #      `conditional-registration` mutant trips); tests/behaviour/daemon-mount-help.test.ts
+  #      (root listing row with a one-line summary at zero composer invocations;
+  #      five sections for the family and for each of the five subcommands with
+  #      the declared flags only; six daemon help tuples and a zero-failure
+  #      tuple-derived coverage run; the see-also targets resolving to existing
+  #      files; bounded, ANSI-free output; and the purity half: `--help` and
+  #      `--version` write nothing, read nothing, and never invoke the daemon
+  #      composition, whose factory throws if called). Update the delivered suites
+  #      that hard-code the prompt-required enumeration, each inside this phase's
+  #      declared scope and with every other assertion byte-identical:
+  #      tests/behaviour/entrypoint-composition.test.ts — BOTH daemon-absence
+  #      sites in this one file, because the mount turns both red:
+  #        (i) `:73` the loop `for (const absent of ["state", "mcp", "daemon",
+  #            "config", "doctor"])` inside "extra registrations are dropped,
+  #            not advertised" — drop `daemon`, leaving
+  #            `["state", "mcp", "config", "doctor"]`;
+  #        (ii) `:86` the loop `for (const command of ["state", "mcp", "daemon",
+  #            "frobnicate"])` whose body asserts the `fallback.internal`
+  #            containment at exit 2 — drop `daemon`, leaving
+  #            `["state", "mcp", "frobnicate"]`, which stays non-empty so the
+  #            containment case still proves something;
+  #      plus `daemon` is added to the `EXPECTED` family list in the same file and
+  #      the file's now-false doc comment ("`state`, `mcp`, and the daemon are
+  #      absent while `dispatch` is present") is corrected to name `state` and
+  #      `mcp` as the absent pair with `dispatch` and `daemon` present. Every
+  #      other assertion in the file stays byte-identical, and the resulting
+  #      absence list is exactly the two commands that remain unmounted;
+  #      tests/behaviour/entrypoint-help.test.ts (add `daemon` to the root family
+  #      list only),
+  #      tests/behaviour/entrypoint-help-coverage.test.ts (add `daemon` to the
+  #      hard-coded 16-command enumeration at lines 147-169 that is compared for
+  #      equality with `coverage.commands`; the mount turns this suite red until
+  #      the row is added). Neither absence site is a new file: both live in
+  #      `entrypoint-composition.test.ts`, so the permitted-site count stays five.
+  #      The suite set is derived from the tree, not
+  #      remembered — grep the delivered suites for the literal enumeration and
+  #      for the family list derived from it, then confirm the hits are exactly
+  #      the five permitted sites named in 8.3.
+  #  6.7 Fixture mutants, with their consumer declared here: add
+  #      `conditional-registration` (the family registered
+  #      only when an entry path is present) and `help-composer-invoked` (help or
+  #      version consulting the daemon composition) to
+  #      tests/fixtures/daemon/mount-mutants/, and extend
+  #      tests/checks/daemon-mutants.test.ts (declared in this phase's scope) with
+  #      one case per mutant asserting the named suite and assertion it trips
+  #      (`conditional-registration` trips
+  #      tests/structure/daemon-production-composition.test.ts;
+  #      `help-composer-invoked` trips
+  #      tests/behaviour/daemon-mount-help.test.ts), so the unconditional-mount
+  #      and help-purity claims are non-vacuous inside this commit.
+  #  6.8 Selection and containment proof through the entrypoint (TC-DAEMON-015;
+  #      the only case permitted to assert the selection surface). In
+  #      tests/structure/daemon-production-composition.test.ts assert step 1:
+  #      `selectPromptRequiredProgram(program)` returns without throwing, the
+  #      selected key set equals `PROMPT_REQUIRED_COMMANDS`, and `daemon` is a
+  #      member exactly once. Through `runEntrypoint` assert:
+  #      (i) `["daemon","status"]` over the full facts (entry path, signal host,
+  #      injected supervisor) is never the containment — a delivered exit digit
+  #      and a `daemon` envelope (success `data` or a delivered `daemon.*` error),
+  #      with no `fallback.internal` identity, no `category: "platform"`
+  #      containment, and no "not part of the composed" summary;
+  #      (ii) all nine unresolvable-outcome invocations over the no-home/
+  #      no-override facts — `start`, `start --foreground`, `stop`,
+  #      `stop --mode drain`, `stop --mode immediate`, `status`, `status --live`,
+  #      `install`, `uninstall` — return `config.value.invalid` at exit `1`
+  #      (`user-validation`) with no success `data`, and none is
+  #      `fallback.internal` at exit `2`. The `install` cell is the one AC-F7-5
+  #      excludes with its "given a resolvable state directory" qualifier: with
+  #      no state directory the refusal is the state-directory identity, not
+  #      `daemon.state-recovery-failed`;
+  #      (iii) help/version purity through the entrypoint: `--help`,
+  #      `daemon --help`, each of the five subcommand `--help` invocations, and
+  #      `--version` exit `0` with zero composer invocations and zero state,
+  #      configuration, filesystem, git, or network reads;
+  #      (iv) the control: one non-daemon prompt-required command still resolves,
+  #      so the equality in step 1 is the delivered 17-family set, not a
+  #      `daemon`-only set.
+  #      Non-vacuity in this commit: the declared `conditional-registration`
+  #      mutant makes (ii) answer the containment, and a CASE-LOCAL temp-copy
+  #      mutation of `packages/cli/src/help/prompt-required-commands.ts` that
+  #      omits `daemon` makes step 1 fail naming `daemon` (applied to a temp copy
+  #      inside the case, adding no module, so the declared mutant inventory
+  #      stays at twenty-one).
+  #      TC-DAEMON-015 SUPERSEDES the selection half Phases 2-5 must not assert:
+  #      it is the only case that asserts `selectPromptRequiredProgram`,
+  #      selection, or `fallback.internal`, and it runs at this gate and again
+  #      inside the Phase-8 full battery.
+  #  6.9 Execute the TC-DAEMON-105 real-binary re-run at this gate: the same
+  #      procedure task 3.4 records at handler level, now through the real
+  #      binary after membership. Export `XDG_CONFIG_HOME` to a temp root under
+  #      `$REPO_ROOT/tmp/` and `<PREFIX>_STATE_DIR` to a temp state directory, run
+  #      `<binary> daemon install`, assert the unit path is
+  #      `<temp root>/systemd/user/<binaryName>-daemon.service` and inspect the
+  #      rendered `ExecStart`/`Environment=` lines, run
+  #      `systemctl --user daemon-reload` and `systemctl --user status <unit>`
+  #      (unit known and enabled, not necessarily started), run
+  #      `<binary> daemon uninstall`, reload, and record the host, the commands,
+  #      and the observed output in the test plan §10 log. Invocation shape is
+  #      `entrypoint` — the TC-DAEMON-105 half that needs membership and the
+  #      reason task 3.4 defers it — and this is the run that satisfies AC-F7-1's
+  #      loadability half. It is a RE-RUN of the Phase-3 record, not a second TC
+  #      mapping: the TC→PHASE map stays at one phase per TC, exactly as the
+  #      Phase-8 re-run of TC-DAEMON-015 works. Still no automated `systemctl`
+  #      (GAP-T4), still no write outside the temp root, and still no login
+  #      autostart for the operator's real account.
+  #
+  # Gate shape (ENTRYPOINT-LEVEL, RF3-1): this is the only phase whose gate
+  # asserts selection. `runEntrypoint` is invoked here and nowhere earlier; the
+  # handler-level proofs of Phases 2-5 stay valid because they never depended on
+  # membership.
+  #
+  # Verification:
+  #   bun test tests/structure/daemon-production-composition.test.ts tests/behaviour/daemon-mount-help.test.ts tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-help.test.ts tests/behaviour/entrypoint-help-coverage.test.ts
+  #   bun test tests/checks/daemon-mutants.test.ts
+  #   bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/checks/doc-conformance.test.ts tests/behaviour/entrypoint-help-isolation.test.ts tests/behaviour/entrypoint-version.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun run scripts/checks/prompt-conformance.ts
+  #   pnpm check:help
+  #
+  # Exit (entrypoint-level for the selection half; handler-level for the help and
+  # guard halves): `daemon` is prompt-required exactly once; through
+  # `runEntrypoint`, `selectPromptRequiredProgram` selects it (the selected set
+  # equals `PROMPT_REQUIRED_COMMANDS`), a `daemon status` invocation is never
+  # `fallback.internal`, the nine unresolvable-outcome invocations refuse as
+  # `config.value.invalid` at exit 1, and help/version stay pure;
+  # the TC-DAEMON-105 real-binary re-run is executed through `runEntrypoint` and
+  # recorded in the test plan §10 log with its host, commands, and observed
+  # output (task 6.9), and the temp config root is the only path written;
+  # root `--help` lists the family and all five subcommands
+  # answer help at exit 0; `runHelpGuideCoverage()` returns no failures; parity
+  # holds and the conformance list covers the mounted family without rewriting
+  # unrelated omissions; each mutant created here is
+  # tripped in this commit; the only delivered-suite edits are the five permitted
+  # sites derived from the tree — the two membership lists
+  # (`entrypoint-composition.test.ts`, `entrypoint-help.test.ts`) together with
+  # BOTH daemon absence loops and the corrected doc comment inside
+  # `entrypoint-composition.test.ts`; the
+  # enumeration in `entrypoint-help-coverage.test.ts`; the coverage rows in
+  # `tests/fixtures/help-guide/coverage.json` with their order unchanged; and the
+  # conformance row in `tests/checks/doc-conformance.test.ts` — plus the page's
+  # help section.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Mount: prompt-required membership, help inventory, reference-page help section, and the guard fixtures in one commit"
+    kind: delivery
+    summary: "feat(cli): mount daemon as a prompt-required command with help and reference coverage"
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m1/commands/daemon.md
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - tests/behaviour/daemon-mount-help.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/checks/doc-conformance.test.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/structure/daemon-production-composition.test.ts
+      folders:
+        - tests/fixtures/daemon/mount-mutants
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Documentation and spec reconciliation
+  #
+  # Goal: reverse the claims that now contradict the delivered behaviour, on
+  # exactly the pages spec §16 names. No behaviour and no test changes: this
+  # phase is proven by the guards that read these pages.
+  #
+  # Dependency reasoning: the pages describe the delivered surface, so they must
+  # follow the mount, the lifetime, the degradation resolver, and the install
+  # identity; the doc-conformance and coverage guards read them, so the phase
+  # gate is those guards plus the distribution and literal guards.
+  #
+  # Tasks (docs-only; supports TC-DAEMON-013/114, re-proven at the Phase-8 gate):
+  #  7.1 doc/spec/features/feature-cli-entrypoint.md: add the `daemon` row to the
+  #      composition table with its five subcommands; replace the sentence saying
+  #      the family is composed only when a runtime is supplied and the production
+  #      entrypoint supplies none with the statement that the production composer
+  #      supplies the runtime unconditionally and the family is mounted; add
+  #      `daemon` to the summary's prompt-required enumeration; add `GH-286` to
+  #      `links.related_changes`, `TDR-0023` to `links.related_decisions`, and the
+  #      production composition, executable entry, daemon composition, and help
+  #      modules to `links.contracts`.
+  #  7.2 doc/spec/features/feature-resident-daemon.md: replace the "composed only
+  #      when a runtime is supplied and not mounted at the production entrypoint"
+  #      sentence (and the summary phrase) with the mounted reality: the runtime
+  #      is composed unconditionally, a bare start re-enters the running entry
+  #      path, a foreground start owns its lifetime through the injected signal
+  #      host (`SIGTERM` drains, `SIGINT` stops immediately), the composing pid is
+  #      recorded, install identity is the brand-derived unit under the user
+  #      configuration root, and queue/lanes degradation is derived from durable
+  #      state; add `GH-286` and `TDR-0023` to the link blocks.
+  #  7.3 doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md: replace the
+  #      "The daemon registration gap" section and its `unknown flag "--help"` /
+  #      `unexpected argument "status"` evidence with a closed-gap record (the
+  #      listing carries seventeen families including `daemon`), correct the
+  #      observed-composition family list and count, and change the S13/S17
+  #      prerequisite sentence from "neither can ship a resident path before #286
+  #      lands" to naming the mount as delivered.
+  #  7.4 doc/planning/oss-tooling/milestones/m1/commands/daemon.md: complete the
+  #      reconciliation started in Phase 6 — the status block becomes a mounted
+  #      status; the state-directory paragraph gains the statement that the
+  #      production composition resolves the same scope; and a short
+  #      mount-and-lifetime paragraph records that a bare start re-enters the entry
+  #      path, a foreground start owns its lifetime, `SIGTERM` drains, and `SIGINT`
+  #      stops immediately. The `## HELP` section stays exactly as Phase 6 landed it.
+  #  7.5 doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md: add
+  #      `daemon` to the composed command list and change "`state`, `mcp`, and the
+  #      resident daemon are not registered" to "`state` and `mcp` are not
+  #      registered" with the daemon named among the composed families.
+  #  7.6 doc/00-index.md: update the index for the reconciled pages.
+  #  7.7 Do NOT edit doc/planning/oss-tooling/cli-command-registry.md or
+  #      doc/planning/oss-tooling/milestones/m1/man-page.md (spec §16: no change
+  #      required), do not edit scripts/checks/forbidden-literals.registry.json
+  #      (both planning pages are already registered), and introduce none of the
+  #      literals `state command`, `mcp command`, `dispatch command`, or
+  #      `daemon command` into a phrase-table page.
+  #  7.8 The nine further pages spec §16 v1.4 lists as reconciled belong to this
+  #      phase's scope so the declaration matches the delivered work (review F-10):
+  #      doc/overview/architecture-overview.md (the topology paragraph and the
+  #      CLI module row), doc/overview/glossary.md (the prompt-required term),
+  #      doc/planning/oss-tooling/milestones/m2/README.md (the index row for the
+  #      delta note), doc/quality/test-specs/test-spec-dispatch-engine.md and
+  #      doc/quality/test-specs/test-spec-resident-daemon.md (the daemon-lane
+  #      deferral and the production-mount coverage), and
+  #      doc/spec/features/feature-agents-and-commands.md,
+  #      doc/spec/features/feature-config-layer.md, feature-dispatch-engine.md,
+  #      and feature-harness-adapters.md (the allowed-command enumeration, the
+  #      state-directory default paragraph, and the two daemon-entry deferrals).
+  #      The claims are the ones spec §16 v1.4 names; the pages are reconciled
+  #      once, in this phase, and Phase 9 records that they landed here.
+  #      `doc/spec/features/feature-config-layer.md`'s owner-hold marker
+  #      sentence and its no-home failure qualification are task 9.8, not this
+  #      task, because they are review-iteration-1 corrections.
+  #  7.9 The six further pages the delivery reconciled belong to this phase's
+  #      scope for the same reason as task 7.8, and were declared in no scope
+  #      before review iteration 2 (NF-2): doc/spec/features/
+  #      feature-autonomous-delivery.md, feature-doctor.md, feature-mcp-surface.md,
+  #      feature-scheduling-engine.md, feature-status-digest.md and
+  #      doc/guides/delivery-modes.md — the owner-hold relocation (the
+  #      configuration layer's one-scope resolution), the MCP home-only parity
+  #      statement, and the qualified CLI/MCP parity claim. Their content is
+  #      accurate and is not reverted or re-edited here or in Phase 9; the plan
+  #      declaration was the only gap. The spec §16 sentence that calls its list
+  #      the complete reconciled set is extended with these six by the spec owner
+  #      (pm re-delegation to @spec-writer), because change artifacts' normative
+  #      content is not a coder edit (task 8.6).
+  #
+  # Verification:
+  #   bun test tests/checks/doc-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun run scripts/checks/prompt-conformance.ts
+  #   bun run scripts/checks/forbidden-literals.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #
+  # Exit: every reversed claim named in spec §16 is gone and replaced by the
+  # delivered behaviour; the two pages spec §16 says need no change are untouched;
+  # the help/parity/conformance/literal/distribution guards are green without a
+  # relaxed expectation; no licence header and no `ados_distribution` marker is
+  # added (both planning pages and both feature pages are outside marker scope or
+  # already marked).
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Documentation and spec reconciliation of the entrypoint, resident-daemon, delta, and command pages"
+    kind: delivery
+    summary: "docs(daemon): reconcile the entrypoint, resident-daemon, and command pages with the mount"
+    scope:
+      files:
+        - doc/00-index.md
+        - doc/guides/delivery-modes.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/planning/oss-tooling/milestones/m1/commands/daemon.md
+        - doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+        - doc/quality/test-specs/test-spec-resident-daemon.md
+        - doc/spec/features/feature-agents-and-commands.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-doctor.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-mcp-surface.md
+        - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-status-digest.md
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Gate battery, contract/no-regression proof, and release
+  #
+  # Goal: prove the additive contract and the preserved behaviour on the whole
+  # tree, run the full battery under the repo-local TMPDIR, and declare the
+  # release obligations. Fix only inside the declared change scope.
+  #
+  # Dependency reasoning: TC-DAEMON-110/111/113 are whole-tree claims (the error
+  # table and state schema are unchanged, the delivered suites pass with only the
+  # five permitted updates derived from the tree), and TC-DAEMON-123 spans every
+  # mounted path, so they
+  # are provable only after Phases 1-7 land. The changeset is a release artifact
+  # and belongs to the final phase (spec version_impact: minor; the delivered
+  # lockstep fixed group of five publishables).
+  #
+  # Tasks (TC-DAEMON-110, 111, 113, 123):
+  #  8.1 Create tests/checks/daemon-privacy.test.ts: run every mounted path (start
+  #      receipt, stop result, status, live status, install, uninstall, and every
+  #      help page) with canaries planted in the content-bearing fields, assert no
+  #      canary, token, prompt, transcript, diff, or repository content appears;
+  #      assert the spawn environment carries exactly the declared re-entry set —
+  #      the state-directory binding (the one environment value this change
+  #      introduces into a contract, bound to an absolute temp path) written last,
+  #      plus the composing process's own `PATH`, home, and working-name override
+  #      forwarded unchanged — and no other key, no credential, and no planted
+  #      canary; assert the unit text carries only the
+  #      absolute entry path and the resolved directory as external values and its
+  #      single `Environment=` line; assert
+  #      every record written by the mount carries identities, paths, counts,
+  #      durations, pids, and closed-vocabulary values only; assert the lock token
+  #      is never rendered.
+  #  8.2 Prove the additive contract on the whole tree: run the delivered
+  #      error-table structure/sync/exit-literal suites and the delivered
+  #      state/daemon contract and vocabulary suites UNMODIFIED (their exact
+  #      assertions are the oracle), assert every reached identity
+  #      (`daemon.already-running`, `daemon.takeover-refused`,
+  #      `daemon.heartbeat-stale`, `daemon.state-recovery-failed`,
+  #      `daemon.socket-unreachable`, `daemon.supervisor-unsupported`, and the
+  #      delivered `state.*` family) is a delivered row, that
+  #      `STATE_SCHEMA_VERSION` is still `delivery.state.v1` with no new kind,
+  #      payload schema, migration, or backfill, that the only record-shape change
+  #      is the value of `daemon.instance.pid`, that no `daemon` configuration key
+  #      was added, and that `tests/types/daemon-mount.type-test.ts` (Phase 1)
+  #      still proves every addition optional (three `DaemonComposition` inputs
+  #      and two `ProductionCompositionFacts`).
+  #  8.3 Run the delivered suites named in the test plan §2 and prove the diff
+  #      shape: `git diff --name-only <base>...HEAD` reports exactly the five
+  #      permitted update sites plus the new files this plan declares, and
+  #      `git status --porcelain tests/golden tests/fixtures` shows
+  #      no unexpected golden modification. The five sites are DERIVED from the
+  #      tree, not enumerated from memory: grep the delivered suites for the
+  #      prompt-required enumeration and for the family list derived from it, then
+  #      confirm the hits are exactly
+  #        (1) tests/fixtures/help-guide/coverage.json      (Phase 6 scope),
+  #        (2) tests/behaviour/entrypoint-composition.test.ts (Phase 6 scope —
+  #            both daemon absence loops at `:73` and `:86`, the `EXPECTED`
+  #            family list, and the corrected doc comment),
+  #        (3) tests/behaviour/entrypoint-help.test.ts (Phase 6 scope),
+  #        (4) tests/behaviour/entrypoint-help-coverage.test.ts (Phase 6 scope,
+  #            the hard-coded 16-command enumeration at lines 147-169), and
+  #        (5) tests/checks/doc-conformance.test.ts       (Phase 6 scope).
+  #      Every one of the five is inside a declared phase scope; a sixth hit is a
+  #      missing scope declaration and an escalation, not a silent edit. The
+  #      "only these updates" half is
+  #      review-attested (GAP-T1) and recorded in the test plan §10.
+  #  8.4 Create .changeset/gh-286-daemon-mount-minor.md: one lockstep minor over
+  #      the five publishables (`@delivery-os/core`, `adapters`, `cli`, `mcp`,
+  #      `opencode`) describing the mount, the signal-owned foreground lifetime,
+  #      the real instance pid with the fail-closed stop, the brand-derived
+  #      install identity, the durable-state degradation resolver, and the
+  #      unchanged error table and state schema.
+  #  8.5 Full battery: `mkdir -p "$PWD/tmp/tmpdir"` then
+  #      `TMPDIR="$PWD/tmp/tmpdir" pnpm check` (lint, format:check, typecheck,
+  #      full bun test, boundaries, prompt conformance, help coverage, exports
+  #      parity), plus the invariant scripts, the distribution guard, the
+  #      changeset group check, and `git diff --check`. The repo-local TMPDIR is
+  #      required because `tests/checks/ci-baseline-parity.test.ts` runs
+  #      `git clone --local`, which fails with a cross-device hardlink error on a
+  #      tmpfs TMPDIR; a default-TMPDIR run is classified as environmental ONLY
+  #      when its sole failing test is `CI baseline parity (hermetic partial
+  #      clone)`.
+  #  8.6 Record the run in the delivery-populated execution log of
+  #      ./chg-GH-286-test-plan.md (§10.1 per-TC results, §10.2 aggregate gate
+  #      evidence, §10.3 deviations) and leave the spec and the test plan's
+  #      normative sections unedited (their status and content are owned by their
+  #      authors); report the evidence to @pm. The release doneArtifacts are
+  #      declared on this phase.
+  #
+  # Verification:
+  #   bun test tests/checks/daemon-privacy.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts
+  #   bun test tests/structure/state-contract.test.ts tests/structure/daemon-contract.test.ts tests/structure/daemon-vocabulary.test.ts tests/structure/content-inventory.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bun run scripts/checks/forbidden-literals.ts; bun run scripts/checks/privacy-literals.ts
+  #   bun run scripts/checks/changesets-group.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   mkdir -p "$PWD/tmp/tmpdir" && TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   git diff --check
+  #
+  # Exit: every gate green under the repo-local TMPDIR; 50/50 ACs and 55/55 TCs
+  # traced to a passing result (the Phase-6 selection/containment proof
+  # TC-DAEMON-015 is re-run by the full battery without being remapped, so the
+  # map stays at one phase per TC); the error table, the state schema, the
+  # delivered
+  # goldens, and `tests/structure/inventory.json` / `EXECUTABLE_ALLOWANCES` are
+  # unchanged; the only delivered-suite edits are the five permitted sites
+  # derived from the tree; the
+  # changeset validates against the fixed group; the release obligations are
+  # declared; no secret, prompt, or repository content appears in any new output.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Gate battery, additive-contract and non-regression proof, and release obligations"
+    kind: delivery
+    summary: "chore(release): run the GH-286 gate battery and record the release obligations"
+    scope:
+      files:
+        - .changeset/gh-286-daemon-mount-minor.md
+        - tests/checks/daemon-privacy.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-286--daemon-command-mounting
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-286/daemon-command-mounting targeting main-tools"
+      pipelineId: "CI pipeline for the GH-286 delivery branch"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Review-iteration-1 and -2 remediation
+  #
+  # Goal: close the delivery-review findings recorded in
+  # ./review/review-iter-1.md and ./review/review-iter-2.md against an otherwise
+  # delivered branch. This phase repairs production code and existing proofs; it
+  # introduces no capability, no module, no export, no dependency, no record kind,
+  # and no error-table row, and it changes no pinned contract in this plan's
+  # header. NF-1's engine fix is contract conformance, not new capability: it
+  # makes the delivered takeover — already recorded, documented and claimed —
+  # reachable in production.
+  #
+  # Dependency reasoning: every finding is a claim about delivered behaviour or
+  # about the strength of a delivered proof, so it can only be repaired after the
+  # phases that delivered them. F-1 changes the readiness accept/refuse rule in
+  # the detached start path, F-11 and F-12 change the install inspection and the
+  # start receipt's status fold in the same module, and F-5/F-7/F-13 change the
+  # production composer's reachability, configuration, and configuration-root
+  # behaviour — so the three blocking suites, the degradation suites, the mutant
+  # suite, and the production-composition suite are re-run together at one gate.
+  # NF-1 is the exception to the "cli-only" shape of this phase: its fix lands in
+  # the engine app layer and the lock state module, so the delivered core
+  # lock/lifecycle/concurrency suites and the contract suites join the same gate,
+  # because the removal path sits exactly where the exclusive-create race is
+  # proven. F-10 is satisfied by the Phase-7 scope extension in this same
+  # revision; the nine pages it declares were delivered in Phase 7 and are not
+  # re-edited here, and the six pages NF-2 names are declared in both scopes and
+  # re-edited in neither (the accuracy review iteration 2 verified is the
+  # reason).
+  #
+  # TC MAP: NO TC IS REMAPPED. The map stays 55/55 with each TC mapped exactly
+  # once, and this phase carries none. The findings are repairs to delivered
+  # proofs and production code, and cells of the TCs they repair: task 9.1 adds
+  # cells to the suite that already carries TC-DAEMON-030/031/090 (the readiness
+  # cells), tasks 9.2/9.3 harden the bodies of TC-DAEMON-037/038 in the suite that
+  # owns them, and task 9.19 extends TC-DAEMON-030's own steps in the test plan so
+  # the cells task 9.1 delivers and the post-crash takeover cell task 9.15
+  # delivers are part of a scenario contract rather than suite-local additions.
+  # The test plan is updated in the same phase as the cells it gains, so it never
+  # describes a delivered behaviour it does not carry. A finding that could only
+  # be closed by a new TC is a test-plan change and an escalation, not a Phase-9
+  # edit.
+  #
+  # Finding -> task map (every finding from ./review/review-iter-1.md and
+  # ./review/review-iter-2.md):
+  #   F-1  blocking  -> 9.1  daemon-compose.ts + daemon-start-detached.test.ts
+  #   F-2  blocking  -> 9.2  daemon-foreground-lifetime.test.ts
+  #   F-3  blocking  -> 9.3  daemon-foreground-lifetime.test.ts + mutant suite
+  #   F-4  medium    -> 9.4  tests/checks/daemon-mutants.test.ts
+  #   F-5  medium    -> 9.5  production.ts + the degradation boundary/cost cells
+  #   F-6  medium    -> 9.6  read-cost and stop-latency suites
+  #   F-7  medium    -> 9.7  production.ts + the production-composition suite
+  #   F-8  medium    -> 9.8  doc/spec/features/feature-config-layer.md
+  #   F-9  accepted  -> none (see the commit-subject note in the header; the
+  #                    semantics are carried by the pull-request description)
+  #   F-10 declaration -> 9.9 (Phase-7 scope extension in this revision; the nine
+  #                    pages landed in Phase 7)
+  #   F-11 medium    -> 9.10 daemon-compose.ts
+  #   F-12 medium    -> 9.11 daemon-compose.ts
+  #   F-13 medium    -> 9.12 production.ts + the AC-F7-2 case in the install suite
+  #   F-14 medium    -> 9.13 tests/fixtures/daemon/mount-golden/ + the status suite
+  #   F-15 medium    -> 9.14 the hygiene sites named in that task
+  #   NF-1 blocking  -> 9.15 core/src/state/daemon-lock.ts +
+  #                    core/src/app/daemon-runtime.ts + daemon-crash-restart.test.ts
+  #                    + daemon-start-detached.test.ts
+  #   NF-2 medium    -> 9.16 Phase-7 and Phase-9 scope declarations (tasks 7.9/9.16)
+  #   NF-3 medium    -> 9.17 daemon-start-detached.test.ts + daemon-install-mount.test.ts
+  #   NF-4 medium    -> 9.18 new daemon-staleness-agreement.test.ts
+  #   NF-5 medium    -> 9.22 header note (this revision) + the pm-notes record
+  #   NF-6 low       -> 9.19 chg-GH-286-test-plan.md (updated in this phase)
+  #   NF-7 info      -> 9.20 daemon-compose.ts + the uninstall cell in the
+  #                    install suite
+  #   NF-8 info      -> 9.21 the out-of-scope comment at the control handler
+  #
+  # Tasks (no TC; repairs the suites and code that carry the mapped TCs, and
+  # extends the cells of the TCs it repairs):
+  #  9.1 F-1 [packages/cli/src/daemon-compose.ts + the start suite]: tie the
+  #      detached readiness poll to its own spawn. Read the latest instance
+  #      record BEFORE `spawnDetached`; when that record is a live acquisition —
+  #      operation `acquired` or `taken-over` and not stale under the composed
+  #      heartbeat interval and lock staleness — refuse `daemon.already-running`
+  #      and spawn nothing; after spawning, accept only a record whose
+  #      `instanceId` differs from the pre-spawn one (or whose `recordedAt` is at
+  #      or after the spawn time) AND whose operation is `acquired` or
+  #      `taken-over`; everything else stays the classified readiness timeout.
+  #      The delivered 20 x 50 ms window is unchanged. Add the three cells to
+  #      tests/behaviour/daemon-start-detached.test.ts: (a) a live pre-spawn
+  #      record refuses `daemon.already-running` with zero spawns and zero
+  #      appends, (b) a legitimate `taken-over` acquisition of a NEW instance is
+  #      accepted as success rather than timing out, and (c) a stale pre-spawn
+  #      `acquired` record that no new instance replaces is rejected as the
+  #      readiness timeout at exit 2, never reported as the crash victim's pid.
+  #      AC-F2-2 and AC-NFR-6 become true in the production shape.
+  #  9.2 F-2 [tests/behaviour/daemon-foreground-lifetime.test.ts]: implement
+  #      TC-DAEMON-037 as written — refuse only the terminal instance append (the
+  #      release append), leave every other store edge delegating, and assert the
+  #      delivered state-write identity at exit 2 with no success `data`, both
+  #      listeners removed, the latest durable record still `acquired`, and
+  #      exactly one append attempt. Delete the accept-success-or-failure
+  #      verdict.
+  #  9.3 F-3 [tests/behaviour/daemon-foreground-lifetime.test.ts +
+  #      tests/checks/daemon-mutants.test.ts]: count terminal instance records
+  #      and assert exactly one in TC-DAEMON-038's body, and make
+  #      tests/fixtures/daemon/mount-mutants/duplicate-terminal-record.ts produce
+  #      two EXECUTED terminal records (no dead `? 1 : 1` guard) so the mutant
+  #      actually fails that count when applied.
+  #  9.4 F-4 [tests/checks/daemon-mutants.test.ts]: make every control
+  #      non-vacuous. For each declared mutant, either execute the named
+  #      suite/module against the mutated copy and assert it trips the named
+  #      assertion, or replace the tautological fixture-local scan with a
+  #      production-level assertion over the delivered module. The suite header
+  #      claim is rewritten to state exactly which controls are executed-against-
+  #      mutation and which are structural, and to name any control that could not
+  #      be made real — downgrading the claim, never overstating it.
+  #  9.5 F-5 [packages/cli/src/production.ts + the degradation cells]: extract the
+  #      DM-4 reachability predicate into one module-local function with explicit
+  #      `nowMs` and `lockStalenessMs` parameters, and have the
+  #      boundary/cost/watch cells in
+  #      tests/behaviour/daemon-degradation-projection.test.ts and
+  #      tests/behaviour/daemon-degradation-read-cost.test.ts exercise the
+  #      production function instead of a test-local mirror. The predicate keeps
+  #      its rule, its STRICT bound, and its owned-heartbeat divergence. If the
+  #      only reachable seam requires an export, `bun run
+  #      scripts/checks/exports-parity.ts` runs in the same commit and the
+  #      header's no-new-export trigger is escalated rather than relaxed.
+  #  9.6 F-6 [tests/behaviour/daemon-degradation-read-cost.test.ts,
+  #      tests/behaviour/daemon-foreground-stop-latency.test.ts]: await the watch
+  #      iteration (no floating promise), measure and assert the p95 read clause
+  #      against the reference store with the recorded environment, and state the
+  #      signal-to-cancellation measurement explicitly in the stop-latency case.
+  #      A clause that cannot be measured deterministically is recorded as an
+  #      explicit deferral in chg-GH-286-test-plan.md §10.3 with its reason and
+  #      its substitute assertion; it is never left as an unmeasured claim.
+  #  9.7 F-7 [packages/cli/src/production.ts + the production-composition suite]:
+  #      prove the configuration-acquisition path with three fixture cells over
+  #      an injected home (and the git-root source where the suite's root makes
+  #      one reachable): (a) a configured socket path, heartbeat interval, and
+  #      lock staleness reach the composed runtime; (b) an absent configuration
+  #      resolves the empty branch, so the shipped defaults apply and no default
+  #      is re-derived as a literal; (c) an acquired configuration whose `daemon`
+  #      branch does not resolve composes the unavailable runtime — every
+  #      subcommand returns `config.value.invalid` at exit 1 with no lock,
+  #      transport, socket path, entry path, or supervisor scope — while `queue`
+  #      and `lanes` still report `daemon-unreachable` in that same cell, exactly
+  #      as DEC-19 declares.
+  #  9.8 F-8 [doc/spec/features/feature-config-layer.md]: correct the owner-hold
+  #      marker relocation claim (the one-scope resolution does relocate it) and
+  #      qualify the no-home failure sentence so it is scoped to the
+  #      resolver/daemon family that fails closed, not to every command.
+  #  9.9 F-10 [spec/plan declarations]: the Phase-7 `scope.files` in this
+  #      revision now declares the nine reconciled pages spec §16 v1.4 lists, so
+  #      the declaration matches the delivered work. Record here that those nine
+  #      pages were delivered in Phase 7 and are not re-edited by this phase; the
+  #      plan and spec are not phase-scope artifacts and nothing is re-committed
+  #      for this finding.
+  #  9.10 F-11 [packages/cli/src/daemon-compose.ts]: inspect the supervisor ONCE
+  #      per install and call `port.install` directly with that inspection, while
+  #      keeping the unsupported-before-entry-path precedence (no supported
+  #      supervisor refuses as `daemon.supervisor-unsupported` before the
+  #      entry-path guard; an unresolvable configuration root still precedes
+  #      both, per AC-F7-2/AC-F7-5).
+  #  9.11 F-12 [packages/cli/src/daemon-compose.ts]: pass the composed
+  #      `heartbeatIntervalMs` and `lockStalenessMs` into the detached start
+  #      receipt's `readDaemonStatus`, so a non-default
+  #      `daemon.lock-staleness` cannot make the receipt disagree with `status`,
+  #      `queue`, and `lanes`.
+  #  9.12 F-13 [packages/cli/src/production.ts + the AC-F7-2 case in
+  #      tests/behaviour/daemon-install-mount.test.ts]: implement the
+  #      unresolvable user-configuration-root refusal the spec pins — an absolute
+  #      non-empty `XDG_CONFIG_HOME` wins, otherwise `<home>/.config` applies only
+  #      when a home exists, otherwise `daemon install` refuses with the delivered
+  #      `config.value.invalid` at exit 1, writing no unit and no ownership
+  #      marker, invoking no supervisor command, creating no configuration-root
+  #      directory, and taking precedence over the missing-entry-path refusal.
+  #      Never a root-level configuration path.
+  #  9.13 F-14 [tests/fixtures/daemon/mount-golden/]: WIRE the recorded matrix in,
+  #      do not delete it. tests/behaviour/daemon-status.test.ts normalizes its
+  #      unreachable/not-running status payload with `normalizeStatus` and
+  #      `canonicalJson` from the fixture's `normalize.ts` and asserts it equals
+  #      `status-unreachable.json`, so both fixture files have a live consumer and
+  #      the recorded oracle cannot drift silently.
+  #  9.14 F-15 [test hygiene]: remove the empty `finally` block in
+  #      tests/behaviour/daemon-degradation-projection.test.ts, replace the
+  #      `require()` calls in tests/behaviour/daemon-mount-help.test.ts and
+  #      tests/structure/daemon-production-composition.test.ts with ESM imports,
+  #      drop the unused `Bun.file` binding and the `void x` unused-import
+  #      silencers, and remove the `as never as` casts — by deleting the
+  #      unused imports and moving the value to a typed local, never by adding a
+  #      new silencer.
+  #  9.15 NF-1 [blocking; packages/core/src/state/daemon-lock.ts,
+  #      packages/core/src/app/daemon-runtime.ts, the new crash-restart suite, and
+  #      the start suite]: make the takeover the engine already decides reachable.
+  #      `daemon-runtime.ts:293-307` decides `takeover` for a stale lock and then
+  #      calls the exclusive-create `ports.lock.acquire`, so a crashed daemon's
+  #      leftover `daemon.lock` answers `state.lock.busy` and start reports
+  #      `daemon.already-running` with the lock path as its only detail — no
+  #      acquisition is ever appended and the delivered `taken-over` branch at
+  #      `daemon-runtime.ts:315-321` is dead in production. Add a removal path to
+  #      the lock state module for a lock the staleness evaluation has PROVED dead:
+  #      a compare-and-delete keyed on the observed record's `lockToken`, so it
+  #      removes the file only while the on-disk record is still the one that was
+  #      classified and never removes a fresh lock. Apply it in the engine ONLY
+  #      when `evaluateDaemonLock` returns `takeover` and immediately BEFORE the
+  #      exclusive re-acquire; the acquisition then continues through the
+  #      delivered path, so the appended instance is `taken-over` and carries
+  #      `takeoverEvidence` (`previousInstanceId`, `previousLockToken`,
+  #      `lastHeartbeatAt`, `heartbeatAgeMs`, `takenOverAt`). Two concurrent
+  #      starters stay safe: both may reap the same proved-dead record, the
+  #      exclusive create still admits exactly one, and the loser keeps
+  #      `state.lock.busy` mapped to `daemon.already-running` — never a second
+  #      winner and never a silent overwrite of a live lock. `evaluateDaemonLock`
+  #      stays the only staleness decision, the STRICT bound is unchanged, and a
+  #      removal refused because the record changed under it falls back to the
+  #      delivered busy mapping instead of inventing a new refusal.
+  #      Regression proof — new tests/behaviour/daemon-crash-restart.test.ts, two
+  #      shapes. (a) HERMETIC over the composed runtime with the recording process
+  #      port and the injected clock: a foreground start acquires, that child is
+  #      killed (SIGKILL), the clock advances past the staleness bound, and the
+  #      next `daemon start` acquires at exit 0 with a `taken-over` instance whose
+  #      evidence names the dead instance and token, exactly one lock record, and
+  #      a receipt naming the new holder and never the crash victim's pid. Its
+  #      negative controls are the same sequence INSIDE the bound (refused
+  #      `daemon.already-running`, zero appends, the dead lock left in place) and
+  #      two concurrent starters against one proved-dead lock (exactly one exit 0
+  #      with a `taken-over` record, the other `daemon.already-running` caused by
+  #      `state.lock.busy`, and exactly one acquisition appended). (b) ONE
+  #      real-child case with a short configured `daemon.lock-staleness`
+  #      (`daemon.lock-staleness: 1500`), a real reaped SIGKILL, and a bounded
+  #      wait past the bound, asserting the same `taken-over` evidence — temp
+  #      rooted and reaped like TC-DAEMON-039. Extend
+  #      tests/behaviour/daemon-start-detached.test.ts with one step that drives
+  #      the same window through the composed runtime rather than the fake child
+  #      alone, so the accepted-takeover cell stops being reachable only by a
+  #      fixture. Declared as CONTRACT CONFORMANCE, not a semantic change: spec
+  #      DEC-6, RSK-11, the F-4 paragraph, the resident-daemon page and the
+  #      composition comment already claim crash-safety and takeover, this makes
+  #      the engine match them, it adds no AC, and it remaps no TC — the cell
+  #      belongs to the extended TC-DAEMON-030 of task 9.19. The removal path is
+  #      additive: at most one OPTIONAL `DaemonLockPort` member (every existing
+  #      fake keeps satisfying it), no new module, no new export, no new record
+  #      kind, no new error row, `DaemonLockRecord` unchanged. If a mandatory
+  #      member, a lock-record change, or a new export proves to be the only
+  #      reachable seam, that is the header's escalation trigger — not a widened
+  #      phase.
+  #  9.16 NF-2 [declarations]: six further pages the delivery reconciled appear in
+  #      NO phase scope, while spec §16 and this header now claim their list is
+  #      the complete reconciled set — doc/spec/features/
+  #      feature-autonomous-delivery.md, feature-doctor.md, feature-mcp-surface.md,
+  #      feature-scheduling-engine.md, feature-status-digest.md and
+  #      doc/guides/delivery-modes.md (the owner-hold relocation, the MCP
+  #      home-only parity statement, and the qualified CLI/MCP parity claim).
+  #      Declare them in the Phase-7 scope of this revision (their delivery home,
+  #      task 7.9) and again in this phase's scope, so no reconciled file is
+  #      outside every scope. The content is accurate: it is not reverted and not
+  #      re-edited — this phase re-reads them and commits nothing for them. The
+  #      spec §16 completeness sentence is extended with the six by the spec owner
+  #      in the same review cycle (pm re-delegation to @spec-writer, recorded in
+  #      the pm-notes), because change artifacts' normative content is not a coder
+  #      edit (task 8.6).
+  #  9.17 NF-3 [regression assertions for the F-11 and F-12 repairs]:
+  #      (a) tests/behaviour/daemon-start-detached.test.ts — start over
+  #      `mountSettings` with a NON-DEFAULT `daemon.lock-staleness` (and a
+  #      non-default `daemon.heartbeat-interval`) makes the receipt agree with
+  #      `status` and with the durable record's heartbeat age, so a revert of the
+  #      receipt's `readDaemonStatus` fold to the shipped defaults fails the
+  #      suite. (b) tests/behaviour/daemon-install-mount.test.ts — on the SUCCESS
+  #      path the recording supervisor reports exactly one inspection; today the
+  #      only `inspects === 1` assertion sits on the entry-path refusal path,
+  #      which the previous double inspection also satisfied, so a restored second
+  #      `installSupervisor` call is currently invisible and must not be.
+  #  9.18 NF-4 [new tests/behaviour/daemon-staleness-agreement.test.ts]: the
+  #      reachability rule has three production copies — `liveHolder`
+  #      (`packages/cli/src/daemon-compose.ts:224-248`, module-local and observed
+  #      through the composed start handler), `daemonReachable`
+  #      (`packages/cli/src/production.ts:229-250`, the production predicate) and
+  #      `evaluateDaemonLock` (`packages/core/src/domain/daemon-lock.ts:32-47`,
+  #      which clamps the age with `Math.max(0, …)` and reads the LOCK record).
+  #      Assert the three agree over the boundary matrix — an owned heartbeat and
+  #      matching instance one millisecond below, exactly at, and one
+  #      millisecond above the bound; an absent lock and an absent instance; an
+  #      unreadable/torn lock read — with injected `nowMs` and `lockStalenessMs`,
+  #      so the clamp difference cannot regress silently. The one cell the clamp
+  #      changes is the negative age (a heartbeat timestamped in the future): all
+  #      three still classify it live/not-stale, and the suite asserts that the
+  #      clamp changes the reported age only, never the classification. No
+  #      predicate is merged by this task and no export is added; the suite states
+  #      in its header which cells it deliberately excludes (an unowned or foreign
+  #      heartbeat, where `daemonReachable` degrades and `liveHolder` returns no
+  #      evidence while `evaluateDaemonLock` still reads a fresh lock, so the
+  #      refusal moves to the engine's acquire-then-busy path — the divergence
+  #      this header and AC-F5-8 already declare) and it exercises production
+  #      code, never a test-local mirror.
+  #  9.19 NF-6 [./chg-GH-286-test-plan.md, updated in THIS phase and inside this
+  #      phase's folder scope]: extend TC-DAEMON-030's steps and its scenario
+  #      contract to the cells the delivered suite now carries end-to-end — the
+  #      live pre-spawn refusal (`daemon.already-running`, zero spawns, zero
+  #      appends), the post-crash takeover acceptance (a `taken-over` record from
+  #      a proved-dead lock, task 9.15), and the stale-record rejection as the
+  #      classified readiness timeout at exit 2 — so a reader of the test plan sees
+  #      the readiness tie the code implements. Correct §10.2's aggregate numbers,
+  #      which predate the Phase-9 gate, and record the two new suites' evidence
+  #      in §10.1/§10.2. No TC is added, removed, or moved: TC-DAEMON-030 keeps
+  #      its id and its phase, and the map stays 55/55.
+  #  9.20 NF-7 [packages/cli/src/daemon-compose.ts + the uninstall cell in
+  #      tests/behaviour/daemon-install-mount.test.ts]: `uninstall` must apply the
+  #      same unresolvable user-configuration-root rule as `install`. Today
+  #      `composedSupervisor` defaults the configuration root to
+  #      `composition.stateDirectory` (`daemon-compose.ts:429-438`), so with no
+  #      home, no absolute `XDG_CONFIG_HOME`, and an absolute state override,
+  #      `install` refuses while `uninstall` searches the state directory and
+  #      reports `noop` — asymmetric with AC-F7-2 and undeclared. Resolve the
+  #      configuration root ONCE through the rule `install` already applies (an
+  #      absolute non-empty `XDG_CONFIG_HOME` wins; else `<home>/.config` only
+  #      when a home exists; else UNRESOLVABLE) and make `uninstall` refuse with
+  #      the delivered `config.value.invalid` at exit 1 when it is unresolvable —
+  #      no configuration-root directory created, no supervisor command invoked,
+  #      no ownership marker read from or written to the state directory, and no
+  #      `/.config` or state-directory fallback anywhere. Add the symmetric cell:
+  #      the fixture that pins the install refusal pins the uninstall refusal, and
+  #      the home-present and absolute-XDG controls keep their delivered
+  #      ownership-scoped removal semantics.
+  #  9.21 NF-8 [declaration only]: the control error frame echoes `type:"status"`
+  #      for a `takeover` request. That is delivered GH-238 behaviour in the
+  #      control transport, it predates this change, this change adds and edits no
+  #      assertion that pins it, and it is out of GH-286's scope. Record it as a
+  #      comment at the control handler's constant refusal site in
+  #      `packages/cli/src/daemon-compose.ts` (the `daemon.takeover-refused`
+  #      branch), so a later protocol pass does not read the echo as new. No code,
+  #      no assertion, and no envelope shape changes: `takeover` stays a constant
+  #      refusal with its delivered identity.
+  #  9.22 NF-5 [evidential, extending the header's F-9 note]: record that in phase
+  #      mode the commit subject comes from the commit primitive's template, that
+  #      the production-code changes in `1df9e74e` (the primary Phase-9
+  #      remediation) and `72e2c1a7` (`liveHolder` evidence, refusal detail and the
+  #      start suite) therefore carry `docs:`-class subjects, and that the
+  #      pull-request description carries the change semantics instead. The note
+  #      lives in this plan's header (this revision) and no commit is rewritten by
+  #      hand. Record the two trailing commits (`97a3f410`, `72e2c1a7`) and a gate
+  #      run at that HEAD in ./chg-GH-286-pm-notes.yaml — inside this phase's
+  #      folder scope — so the evidence trail states which tree the green gate
+  #      belongs to and no production change sits outside a recorded gate. The
+  #      same bookkeeping closes the trailing doc-sync guard: the guide's retired
+  #      "no store relocation" claim is replaced by the store-derived marker path
+  #      the one-scope resolution implements, and `tests/checks/owner-hold-doc.test.ts`
+  #      (this phase's scope, and the permitted-update site spec §8.5 and AC-F8-4
+  #      now name) pins the current truth instead of the retired phrase — no other
+  #      assertion of that guard is weakened.
+  #
+  # Verification:
+  #   bun test tests/behaviour/daemon-crash-restart.test.ts tests/behaviour/daemon-staleness-agreement.test.ts
+  #   bun test tests/behaviour/daemon-start-detached.test.ts tests/behaviour/daemon-foreground-lifetime.test.ts tests/checks/daemon-mutants.test.ts
+  #   bun test tests/behaviour/daemon-degradation-projection.test.ts tests/behaviour/daemon-degradation-read-cost.test.ts tests/behaviour/daemon-foreground-stop-latency.test.ts
+  #   bun test tests/behaviour/daemon-install-mount.test.ts tests/behaviour/daemon-status.test.ts tests/structure/daemon-production-composition.test.ts
+  #   bun test tests/behaviour/daemon-mount-help.test.ts tests/behaviour/daemon-state-scope.test.ts tests/behaviour/daemon-stop-safety.test.ts
+  #   bun test tests/behaviour/daemon-lock.test.ts tests/behaviour/daemon-lock-concurrency.test.ts tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-watch-state-changes.test.ts
+  #   bun test tests/structure/daemon-contract.test.ts tests/structure/state-contract.test.ts tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts
+  #   bun test tests/checks/owner-hold-doc.test.ts tests/checks/doc-conformance.test.ts
+  #   pnpm typecheck
+  #   pnpm lint
+  #   pnpm format:check
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun test tests/checks/doc-conformance.test.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #   mkdir -p "$PWD/tmp/tmpdir" && TMPDIR="$PWD/tmp/tmpdir" bun test --max-concurrency 4
+  #
+  # Exit: the three blocking cells are real — a live pre-spawn instance refuses
+  # `daemon.already-running` with zero spawns, a takeover is accepted, a stale
+  # record is rejected as the readiness timeout, TC-037 asserts the state-write
+  # identity with one append attempt, and TC-038 counts exactly one terminal
+  # record; a crashed daemon is restartable — after a SIGKILL and the staleness
+  # bound the next `daemon start` acquires at exit 0 with a `taken-over` record
+  # naming the dead instance, inside the bound it still refuses
+  # `daemon.already-running`, two concurrent starters still produce one winner,
+  # and the real-child case reproduces the same evidence with a short configured
+  # bound; the three staleness evaluations agree over the matrix with the clamp
+  # difference asserted as classification-neutral; every mutant control is either
+  # executed against the mutated copy or restated as a structural claim, with the
+  # header naming which; the DM-4 predicate is exercised as production code with
+  # injected `nowMs` and `lockStalenessMs`; the read-cost watch iteration is
+  # awaited and the p95 and signal-to-cancellation clauses are measured or
+  # explicitly deferred in the test plan §10.3; the configuration fixtures prove
+  # the configured, empty-branch, and DEC-19 invalid-branch cells; the install
+  # refusal for an unresolvable configuration root is asserted with no unit, no
+  # marker, no supervisor call, and no created directory, and `uninstall` refuses
+  # on the same rule instead of falling back to the state directory; the success
+  # path inspects the supervisor exactly once; the receipt agrees with `status`
+  # under a non-default lock staleness; the golden matrix has a consumer; the
+  # hygiene sites are clean; `feature-config-layer.md` no longer asserts the stale
+  # owner-hold relocation and the six pages NF-2 names are declared in both scopes
+  # and re-edited in neither; TC-DAEMON-030's test-plan steps describe the cells
+  # the suite carries; the pm-notes record the post-Phase-9 commits and a gate at
+  # that HEAD; the header's pinned contracts are unbroken (no new module, export,
+  # dependency, record kind, error row, or schema version) and the TC map is still
+  # 55/55 with Phase 9 carrying none; the full battery is green under the
+  # repo-local TMPDIR. Phase 8's `doneArtifacts` are unchanged — this phase
+  # declares none.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Review-iteration-1 and -2 remediation: spawn-tied detached readiness, stale-lock takeover after a crash, non-vacuous negative proofs, and declaration closures"
+    kind: delivery
+    summary: "fix(daemon): close the review findings and make the stale-lock takeover reachable"
+    scope:
+      files:
+        - doc/guides/delivery-modes.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-doctor.md
+        - doc/spec/features/feature-mcp-surface.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-status-digest.md
+        - packages/cli/src/daemon-compose.ts
+        - packages/cli/src/daemon-main.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/daemon-runtime.ts
+        - packages/core/src/state/daemon-lock.ts
+        - tests/behaviour/daemon-crash-restart.test.ts
+        - tests/behaviour/daemon-degradation-projection.test.ts
+        - tests/behaviour/daemon-degradation-read-cost.test.ts
+        - tests/behaviour/daemon-foreground-lifetime.test.ts
+        - tests/behaviour/daemon-foreground-stop-latency.test.ts
+        - tests/behaviour/daemon-install-mount.test.ts
+        - tests/behaviour/daemon-mount-help.test.ts
+        - tests/behaviour/daemon-staleness-agreement.test.ts
+        - tests/behaviour/daemon-start-detached.test.ts
+        - tests/behaviour/daemon-state-scope.test.ts
+        - tests/behaviour/daemon-status.test.ts
+        - tests/behaviour/daemon-stop-safety.test.ts
+        - tests/checks/daemon-hermetic.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/checks/owner-hold-doc.test.ts
+        - tests/fixtures/daemon/real-child-gate.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-286--daemon-command-mounting
+        - tests/fixtures/daemon/mount-golden
+        - tests/fixtures/daemon/mount-mutants
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/daemon-compose.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/state/daemon-lock.ts
+        role: producer

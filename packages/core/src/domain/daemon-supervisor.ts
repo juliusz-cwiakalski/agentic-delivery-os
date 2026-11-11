@@ -3,7 +3,8 @@
  * DEC-17, DEC-18; DM-12; AC-F15-1, AC-F15-2).
  *
  * The unit content is data only: `ExecStart=<binary> daemon start --foreground`,
- * `Type=simple`, `Restart=on-failure`, and the explicit
+ * `Type=simple`, an optional `WorkingDirectory=<checkout root>`,
+ * `Restart=on-failure`, and the explicit
  * `Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>` binding.
  * It carries no secret, no shell-evaluated content, and no hardcoded product
  * token. The default interactive `daemon start` remains spawn-and-return.
@@ -26,6 +27,12 @@ export type SystemdUnitInput = {
   readonly stateDirectory: string;
   readonly environmentName: string;
   readonly unit: string;
+  /**
+   * The unit's working directory. Absent keeps the delivered shape; a
+   * repository-scoped state root supplies the checkout root so the unit process
+   * resolves the same project scope (GH-288 F-1, GH-286 F-3).
+   */
+  readonly workingDirectory?: string;
 };
 
 /** Render the one Linux user unit; argument vectors stay data, never shell. */
@@ -38,6 +45,7 @@ export const renderSystemdUnit = (input: SystemdUnitInput): string =>
     "[Service]",
     `Type=simple`,
     `ExecStart=${input.binary} daemon start --foreground`,
+    ...(input.workingDirectory === undefined ? [] : [`WorkingDirectory=${input.workingDirectory}`]),
     `Environment=${input.environmentName}=${input.stateDirectory}`,
     `Restart=on-failure`,
     "",

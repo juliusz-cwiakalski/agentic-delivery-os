@@ -3,13 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, composed only when a daemon runtime is supplied and not mounted at the production entrypoint, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-288"]
-  related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -50,23 +49,48 @@ record, and the state ledger never carries capsule records.
 
 `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`,
 `daemon status [--live]`, `daemon install`, `daemon uninstall`. The family is
-composed only when a daemon runtime is supplied to the CLI composition; the
-production entrypoint supplies none, so `<binary> daemon ...` reaches no
-lifecycle handler and the invocation is refused at the entrypoint. Mounting the
-family is product work tracked in the
-[M2 entrypoint delta](../../planning/oss-tooling/milestones/m2/entrypoint-delta.md).
-The state directory is selected process-wide by the one state-scope policy: an
-absolute `<PREFIX>_STATE_DIR` when set, otherwise the injected home plus
-`<brand.stateDirectoryName>`, which names the host root. There is no `--state-dir`
-flag and no state-directory configuration key.
+part of the prompt-required composition: the production composer supplies the
+daemon runtime unconditionally, so `daemon start`, `stop`, `status`, `install`,
+and `uninstall` reach their handlers from the shipped binary and the family
+appears in root `--help` ([CLI Entrypoint](feature-cli-entrypoint.md)). An
+absent optional input — the entry path, the signal host, the supervisor seam, a
+re-entry environment — degrades one start, spawn, or install shape and never
+removes the command. A bare `start` re-enters the running entry path as
+`daemon start --foreground` with the declared re-entry environment: the
+state-directory binding written last as the authority, plus the composing
+`PATH`, its `HOME` (or `USERPROFILE` when `HOME` is empty), and a non-empty
+working-name override. A `--foreground` start owns its lifetime through the
+injected signal host: both listeners are registered before the durable readiness
+point the start appends, `SIGTERM` drains, `SIGINT` stops immediately, a signal
+delivered while the start is still running is buffered and applied once the
+resident loop is running, both listeners are removed before the invocation
+returns, and the composing pid is recorded on the instance record so a
+cross-process `stop` refuses a non-positive pid instead of signalling a process
+group. Queue and lanes degradation is derived from durable state at each
+projection, not captured from a hardcoded marker.
 
-The daemon's own state is project-owned. The single composing site that supplies a
-state directory to the delivered settings resolution
-(`resolveProjectDaemonSettings` in `packages/cli/src/daemon-compose.ts`) passes the
-policy-derived **project** state root, so the derived socket path and the
-supervisor `Environment=` binding lie inside `<host root>/projects/<project key>`
-and an explicit socket path outside it is refused. The settings resolution has
-exactly one call site, and the family stays unmounted in this build.
+The state directory is selected by the one state-scope policy
+([Configuration Layer](feature-config-layer.md)): an absolute
+`<PREFIX>_STATE_DIR` when set, otherwise the injected home plus
+`<brand.stateDirectoryName>`, which names the host root; there is no
+`--state-dir` flag and no state-directory configuration key. The daemon's own
+state is project-owned: the production composition supplies the policy-derived
+**project** state root as the one directory for the daemon store, the daemon
+lock, the daemon settings, the control socket, the supervisor scope, and the
+re-entry binding, so the ledger, the lock, and the socket never disagree. The
+`<PREFIX>_STATE_DIR` binding written into the detached child's environment and
+into the installed unit names the **host root**, and the installed unit carries
+`WorkingDirectory=<checkout root>`, so a re-entered or installed process
+re-resolves the same project state root instead of nesting a second `projects/`
+segment or resolving the declared `unbound` scope. With no override and no home
+the host root is unresolvable: the family stays mounted and every subcommand
+returns the delivered `config.value.invalid` identity at exit `1` without
+opening a store, lock, socket, transport, or supervisor path. A configuration
+that is acquired but whose `daemon` branch does not resolve composes the same
+unavailable runtime rather than substituting the shipped defaults; in that cell
+`queue` and `lanes` keep reporting `daemon-unreachable`, because their marker is
+a durable-record read that consumes daemon configuration only for the staleness
+bound.
 
 - `start` acquires the daemon lock, reconciles, appends one instance record,
   appends one reconciliation record, opens the transport, writes the first
@@ -102,8 +126,14 @@ not the state writer fence: the fence is acquired only for each short append.
 A heartbeat age at or beyond `daemon.lock-staleness` is stale and
 takeover-eligible; a live holder refuses `daemon.already-running` with the
 holder's identity, process, acquisition time, and heartbeat age and appends
-nothing. Takeover appends `taken-over` with the previous instance, token, last
-heartbeat, heartbeat age, and takeover time.
+nothing. A takeover decision reaps the record the staleness evaluation proved
+dead — a compare-and-delete keyed on the observed token, immediately before the
+exclusive re-acquire — so a crashed holder never wedges a later start. A lock a
+concurrent starter replaced in the meantime is left in place and the start
+refuses `daemon.already-running`; any other refusal, such as a write failure
+removing the record, fails the start with that identity and the lock path
+instead of a busy-lock report. Takeover appends `taken-over` with the previous
+instance, token, last heartbeat, heartbeat age, and takeover time.
 
 The heartbeat record carries instance identity, a monotone ordinal, beat time,
 uptime, queue depth, lane counts, the current spawn when one exists, and the
@@ -170,17 +200,18 @@ prompt and only the declared execution-environment variable names, and composes
 planned lane starts, records the delivered lane record, observes progress,
 collects the outcome, and resumes through the same executor. The lane seam is
 factory-proven: the daemon composition composes it when a lane composition is
-supplied. The production daemon entry that supplies the lane composition and
-registers the daemon command remains the resident-daemon production scope
-(GH-238); the dispatch engine proves the seam and the daemon-path attempt
-producer, not a resident production daemon that launches lanes.
+supplied. The production composition mounts the daemon family without a lane
+composition, so a production daemon runs the declared `supervise-only` mode;
+supplying the lane composition remains resident-daemon production scope
+(GH-238). The dispatch engine proves the seam and the daemon-path attempt
+producer, not a production daemon that launches lanes.
 
 A supervision cycle that derives its next-action seam from a held scheduling
 pass receives no action, and a claim port that supplies the resolved owner-hold
 fact refuses `queue.precondition.unmet` with reason `owner-hold` before the
 fence. The guarantee is conditional on that composition: the production daemon
-entry is not wired and resolves no owner-hold fact, so the resident-daemon
-residual is unchanged.
+composition supplies no lane composition and resolves no owner-hold fact, so the
+resident-daemon residual is unchanged.
 
 The daemon path hands the same observation and collection evidence to
 `recordDaemonDispatchResult`, which derives the outcome and token through the
@@ -278,16 +309,26 @@ configured rate. A one-shot read carries no resident backoff state.
 > heartbeat-age instance lock; the coordinator's single-instance ownership is its
 > append-only ledger lease and never `daemon.lock`.
 
-The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`,
-`Type=simple`, `Restart=on-failure`, and
-`Environment=<PREFIX>_STATE_DIR=<canonical absolute host root>`, and the socket
-path passed to the composed transport is derived from the project state root. The unit
-and the secret-free ownership marker are written by the composed platform
-supervisor adapter; on Linux the real systemd user adapter is composed by
-default. Linger is enabled and reported. A linger failure removes the unit and
-returns `daemon.supervisor-unsupported` with platform evidence. Uninstall
-removes only what this installation created and disables linger only when it
-enabled it.
+The Linux systemd user unit uses `ExecStart=<binary> daemon start --foreground`
+with `<binary>` the absolute running entry path, `Type=simple`,
+`Restart=on-failure`, `WorkingDirectory=<checkout root>` when the scope is
+project-owned, and
+`Environment=<PREFIX>_STATE_DIR=<canonical absolute host root>`. The unit
+name is the brand-derived `${brand.binaryName}-daemon.service`, and the unit and
+its secret-free ownership marker live under the user configuration root
+(`$XDG_CONFIG_HOME/systemd/user` when `XDG_CONFIG_HOME` is absolute and
+non-empty, otherwise `<home>/.config/systemd/user` when a home exists), the root
+the user systemd manager reads. With neither an absolute `XDG_CONFIG_HOME` nor a
+home the root is unresolvable, and `install` refuses with the delivered
+`config.value.invalid` identity at exit `1` before the unsupported and
+missing-entry-path guards, writing no unit or ownership marker and invoking no
+supervisor command. The unit and the ownership marker are written by the
+composed platform supervisor adapter; on Linux the real systemd user adapter is
+composed by default. With a resolvable configuration root and no composed entry
+path, `install` refuses rather than rendering a unit with an empty executable.
+Linger is enabled and reported. A linger failure removes the unit and returns
+`daemon.supervisor-unsupported` with platform evidence. Uninstall removes only
+what this installation created and disables linger only when it enabled it.
 macOS and Windows return the classified unsupported outcome and write no unit.
 Installation is optional; with no unit every one-shot is identical.
 
@@ -310,7 +351,8 @@ The daemon-side dispatch composition is covered by the
 The dispatch loop, prompt selection, dual-run evidence, per-repo handover, and
 session resume are delivered by the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)).
 The dispatch engine composes the lane seam and proves the daemon-path attempt
-producer; the production daemon entry that supplies the lane composition remains
-resident-daemon production scope (GH-238). launchd and Windows supervisor
-adapters, remote/container transports, status-watch, lane-scoped authorization,
-and the OQ-5 full session-resume remainder are future work.
+producer; the production composition mounts the daemon family without a lane
+composition, so supplying it remains resident-daemon production scope (GH-238).
+launchd and Windows supervisor adapters, remote/container transports,
+status-watch, lane-scoped authorization, and the OQ-5 full session-resume
+remainder are future work.

@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-09
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-288"]
+  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---
@@ -84,7 +84,7 @@ The lifecycle prompts are product code and follow these invariants. They are mac
 - **Phase state.** Phase state is written only through the `phase` family; no prompt writes `started`, `completed`, or `phases.pr_creation.url`. The PR URL is a pm-notes `notes:` entry.
 - **Typed blockers.** Lanes and the coordinator use `blockers publish`/`list`/`answer`; the pm-notes `blockers:` collection is not an agent write target.
 - **Plan progress.** Plans carry no `tasks` key and no progress log; plan-phase progress is a pm-notes `notes:` entry.
-- **Allowed command set.** Prompt-required invocations are the entrypoint's composed set — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`, `dispatch`, and `coordinator` — plus the retained `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh`. The resident daemon is not claimed by the prompts; it ships its own control surface.
+- **Allowed command set.** Prompt-required invocations are the entrypoint's composed set — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`, `dispatch`, `coordinator`, and `daemon` — plus the retained `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh`. The resident daemon is claimed through its mounted lifecycle family.
 - **Self-description.** Every prompt-required command has a `--help` surface and a reference page; see [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md).
 
 ### Prompt and document conformance (F-9)

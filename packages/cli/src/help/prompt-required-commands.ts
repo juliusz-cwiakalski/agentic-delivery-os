@@ -25,6 +25,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "retro",
   "dispatch",
   "coordinator",
+  "daemon",
   "projects",
 ] as const;
 

@@ -1,9 +1,9 @@
 # daemon(1)
 
-Status: Delivered daemon engine and control protocol (M1-S18, GH-238);
-the lifecycle command is not mounted at the production entrypoint, and its
-registration is tracked in the M2 entrypoint delta note and issue #286
-(M2 daemon mount). Scenarios SC-M1-14..18 and SC-M1-20; full protocol in
+Status: Mounted. The daemon engine and control protocol are delivered
+(M1-S18, GH-238) and the lifecycle command is prompt-required at the production
+entrypoint (GH-286), so `daemon` is reachable from the shipped program.
+Scenarios SC-M1-14..18 and SC-M1-20; full protocol in
 [../architecture.md](../architecture.md).
 
 ## NAME
@@ -35,7 +35,24 @@ classes, connection per invocation, and filesystem same-user authorization.
 The state-directory scope is selected process-wide by the brand-derived
 `<PREFIX>_STATE_DIR` environment variable when set and otherwise by
 `<home>/<brand.stateDirectoryName>`; there is no `--state-dir` flag and no
-state-directory configuration key.
+state-directory configuration key. The production composition resolves the same
+scope for the daemon store, the daemon lock, the daemon settings, the control
+socket, the supervisor scope, and the re-entry binding, so the ledger, the lock,
+and the socket never disagree. With no override and no home the directory is
+unresolvable: the family stays mounted and every subcommand returns the
+delivered `config.value.invalid` identity at exit `1` instead of addressing a
+root-level path.
+
+A bare `start` re-enters the running entry path as `daemon start --foreground`
+with the declared re-entry environment (the state-directory binding written
+last, plus the composing `PATH`, its home, and a set working-name override). A
+`--foreground` start owns its lifetime through the injected signal host:
+`SIGTERM` drains, releases the lock, and detaches delivering lanes; `SIGINT`
+stops immediately; both listeners are removed before the invocation returns.
+Cross-process `stop` addresses only a recorded positive pid and refuses anything
+else as `daemon.state-recovery-failed`. Queue and lanes degradation is derived
+from durable state (an owned instance with a heartbeat strictly inside the
+configured staleness bound), not from a hardcoded marker.
 
 ## OUTPUT
 
@@ -118,6 +135,24 @@ $ <binary> daemon start --json
 `daemon.state-recovery-failed`, `daemon.protocol.unsupported`,
 `daemon.socket-unreachable`, `daemon.subscriber-degraded`, and
 `daemon.supervisor-unsupported`.
+
+## HELP
+
+```
+<binary> daemon --help
+<binary> daemon start --help
+<binary> daemon stop --help
+<binary> daemon status --help
+<binary> daemon install --help
+<binary> daemon uninstall --help
+<binary> --help
+<binary> --version
+```
+
+Every invocation above prints its declared help page at exit `0` and performs no
+state, configuration, filesystem, git, or network read. The family appears in
+root `--help` through the delivered family derivation, and `--version` reports
+the binary identity.
 
 ## SEE ALSO
 

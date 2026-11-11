@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-08
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-238"]
+  related_changes: ["GH-238", "GH-286"]
   feature_spec: doc/spec/features/feature-resident-daemon.md
 ---
 
@@ -18,7 +18,8 @@ links:
 The resident-daemon suite protects one property: a resident supervisor is safe
 only when it is optional, single-instance, and reconstructible from state alone.
 The suite fails if two daemons can drive one state directory; if a live lock is
-taken over or a stale takeover lacks evidence; if any command needs the socket to
+taken over or a stale takeover lacks evidence; if a lock proved dead wedges every
+later start; if any command needs the socket to
 complete; if a frame carries a fact that cannot be re-derived from state or a
 secret that should never transit; if a slow subscriber stalls the dispatcher or
 receives another connection's response; if a kill/restart guesses a lane's fate,
@@ -29,6 +30,15 @@ blocks, or claims a false all-clear; if a watch emits a silent empty stream; if
 the resident poller exceeds its configured rate; if `install` silently no-ops on
 an unsupported platform; or if a merge invocation becomes reachable from the
 daemon composition.
+
+The suite also protects the production mount: the family is prompt-required and
+composed unconditionally, so an absent optional input degrades one shape instead
+of removing the command; a detached start re-enters the running entry path over
+one resolved state-directory scope; a foreground start owns its lifetime through
+the injected signal host; the composing pid is recorded and a non-positive
+recorded pid is refused before any signal; install identity is the brand-derived
+unit under the user configuration root; and queue and lanes degradation is
+derived from durable state at every projection.
 
 ## Test Scope
 
@@ -44,19 +54,23 @@ daemon composition.
   `CommitGitPort.logSince` in `packages/adapters/src/git/commit.ts`), the CLI
   daemon surface (`packages/cli/src/commands/daemon.ts`,
   `packages/cli/src/daemon-compose.ts`, `packages/cli/src/daemon-main.ts`, and the
-  additive `--watch`/stream seams in `packages/cli/src/{index,edge,output}`), and
-  the `daemon` and `poll` configuration branches plus the eight `daemon` error
-  rows.
+  additive `--watch`/stream seams in `packages/cli/src/{index,edge,output}`), the
+  production mount (`packages/cli/src/production.ts`,
+  `packages/cli/src/entrypoint.ts`, the prompt-required set in
+  `packages/cli/src/help/prompt-required-commands.ts`, and the help inventory in
+  `packages/cli/src/help.ts`), and the `daemon` and `poll` configuration branches
+  plus the eight `daemon` error rows.
 - Contracts under test: the seven additive record kinds, the nine closed wire
   types and four interaction classes, the eight error rows synchronized with
   [the result contract](../../spec/features/feature-result-contract.md), the
   config branches, the closed degradation-marker and `mergeCodePath` sets, and
   the merge-absence dependency rule.
 - Exclusions: no live tracker, VCS, or CI write; no live systemd/launchd/Windows
-  service manager; no real disk exhaustion; no unbounded sleep; no measured
-  performance budget beyond the deterministic dispatch-latency assertion. The
-  full typed dispatch loop, prompt selection, dual-run evidence, per-repo
-  handover, and full session resume belong to M1-S9.
+  service manager; no real disk exhaustion; no unbounded sleep. Measured budgets
+  are confined to the declared performance cases — the degradation read cost, the
+  foreground stop latency, and the status p95 — over synthetic stores with the
+  environment recorded. The full typed dispatch loop, prompt selection, dual-run
+  evidence, per-repo handover, and full session resume belong to M1-S9.
 
 ## Test Levels
 
@@ -98,6 +112,14 @@ daemon composition.
 - `tests/behaviour/daemon-lock.test.ts`, `daemon-lock-concurrency.test.ts` — live
   lock refusal with holder evidence, stale takeover with full evidence, two-scope
   isolation, 100-contender single acquisition, and the lock/fence separation.
+- `tests/behaviour/daemon-crash-restart.test.ts` — the takeover reap: past the
+  staleness bound a start reaps the proved-dead record and acquires
+  `taken-over` with the dead holder's evidence, inside the bound the same
+  sequence still refuses `daemon.already-running` and appends nothing, two
+  concurrent starters against one proved-dead lock admit exactly one winner
+  without deleting a freshly acquired record, a refused compare-and-delete
+  surfaces its own identity instead of a bare busy, and one real `SIGKILL`ed
+  child is restarted by the next real child.
 - `tests/behaviour/daemon-state-mediation.test.ts` — daemon-down queue and
   blocker intents, the `daemon-unreachable` marker, reconciliation making
   intents effective, and the blocker-answer resume intent recorded only when a
@@ -136,6 +158,61 @@ daemon composition.
   `phase complete` wrapper writing the intent before the commit, the owner's
   redrive-evidence restoration through the delivered convergence row, and the
   post-crash convergence with no second commit.
+
+### Mount, Lifetime, and Degradation Tests
+
+- `tests/structure/daemon-production-composition.test.ts` — prompt-required
+  membership, unconditional production registration, selection through
+  `runEntrypoint` with no containment throw, the absence of conditional
+  registration, and an acquired but invalid `daemon` configuration branch
+  composing the refusing runtime while `queue` and `lanes` degrade to
+  `daemon-unreachable`.
+- `tests/behaviour/daemon-mount-help.test.ts` — the family and per-subcommand help
+  pages, declared flags, see-also targets, bounded output, and the purity half
+  (`--help` and `--version` compose nothing and write nothing).
+- `tests/behaviour/daemon-start-detached.test.ts` — the re-entry argv, the
+  declared environment with the state-directory binding last, readiness polling
+  and timeout, the receipt read from durable state, the pre-spawn live refusal
+  (`daemon.already-running`, naming the holder's instance, process, acquisition
+  time, and heartbeat age), acceptance of a legitimate takeover on the first
+  poll, and rejection of a stale record the spawn did not replace.
+- `tests/behaviour/daemon-start-env-stripped.test.ts` — a stripped `PATH` fails
+  closed with `daemon.state-recovery-failed`, and no override plus no home makes
+  the state directory unresolvable and returns `config.value.invalid` at exit `1`.
+- `tests/behaviour/daemon-state-scope.test.ts` — one resolved directory across the
+  parent, the detached child, the store, the lock, the socket, and the unit
+  binding, including the absolute-override and home-based outcomes.
+- `tests/behaviour/daemon-foreground-lifetime.test.ts`,
+  `daemon-foreground-stop-latency.test.ts` — readiness snapshot, `SIGTERM` drain,
+  `SIGINT` immediate stop, listener removal, exactly one stop and one terminal
+  record for a double signal, a stop delivered at the readiness point buffered
+  and applied once the loop is running (both listeners registered before the
+  acquisition), and the bounded stop latency.
+- `tests/behaviour/daemon-stop-safety.test.ts` — zero signals for a non-positive
+  recorded pid with the classified refusal, and exactly one signal for an
+  addressable record.
+- `tests/behaviour/daemon-degradation-projection.test.ts`,
+  `daemon-degradation-read-cost.test.ts` — the marker resolved per queue and lanes
+  projection in both directions, agreement with the status fold on the shared
+  cells, torn reads degrading instead of throwing, and the read/connect/probe
+  budget.
+- `tests/behaviour/daemon-install-mount.test.ts` — the brand-derived unit, the
+  absolute `ExecStart`, the user configuration root, the environment binding, the
+  unsupported classifier, uninstall scoping, the no-entry-path refusal, the
+  no-home configuration-root refusal (`config.value.invalid` at exit `1`, before
+  any inspection or write), and the single supervisor inspection per install.
+- `tests/behaviour/daemon-status.test.ts` — the composed control plane, the plain
+  versus `--live` split, durable-state reads through a fresh handle, and the
+  status p95.
+- `tests/structure/daemon-degradation-wiring.test.ts` — production supplies the
+  durable resolver and the hardcoded marker cannot return.
+- `tests/checks/daemon-privacy.test.ts` — canary-free envelopes, the declared
+  re-entry environment set, the unit text's two external values, and the lock
+  token absent from every rendered surface.
+- `tests/conformance/daemon-mount/real-reentry.test.ts` — one bounded real
+  detached re-entry of a `#!/usr/bin/env bun` fixture entry, reaped in `finally`.
+- `tests/types/daemon-mount.type-test.ts` — every added composition input is
+  optional and the `degraded` union accepts an array, a resolver, or nothing.
 
 ### Golden Tests
 
@@ -198,8 +275,12 @@ daemon composition.
 - **Then** it refuses `daemon.already-running` at exit `1`, names the holder's
   instance, process, acquisition time, and heartbeat age, and appends nothing,
 - **And** a lock whose heartbeat age is at or beyond `daemon.lock-staleness` is
-  taken over with previous-instance, previous-token, last-heartbeat, heartbeat-age,
-  and takeover-time evidence.
+  reaped by a token-keyed compare-and-delete before the re-acquire and taken over
+  with previous-instance, previous-token, last-heartbeat, heartbeat-age, and
+  takeover-time evidence, so a crashed holder never wedges a restart,
+- **And** two concurrent starters against one proved-dead record admit exactly one
+  winner, the loser refusing `daemon.already-running` without deleting the
+  winner's freshly acquired record.
 
 ### Scenario: Daemon-down one-shot continuity
 
@@ -258,6 +339,53 @@ daemon composition.
 - **And** a tick whose published snapshot is unchanged publishes nothing, so the
   same snapshot is never printed twice.
 
+### Scenario: Prompt-required mount
+
+- **Given** a production composition with no entry path, no signal host, and no
+  injected supervisor,
+- **When** the prompt-required program is selected,
+- **Then** `daemon` is composed and selectable with no containment throw,
+- **And** `<binary> daemon status` reaches its handler, root `--help` lists the
+  family, and every subcommand's `--help` exits `0` without a state or
+  configuration read.
+
+### Scenario: Detached re-entry and one state scope
+
+- **Given** a composed entry path and no live instance,
+- **When** `daemon start` runs without `--foreground`,
+- **Then** it spawns the entry path as `daemon start --foreground` with the
+  state-directory binding written last over the composing `PATH`, `HOME`, and a
+  set working-name override,
+- **And** the child records an `acquired` instance in the same resolved directory,
+  so the parent receipt, the child, the store, the lock, the socket, and the unit
+  binding agree; a stripped `PATH` fails closed and no home plus no override
+  returns `config.value.invalid` with no spawn.
+
+### Scenario: Signal-owned foreground lifetime
+
+- **Given** a composed signal host and a running foreground daemon,
+- **When** `SIGTERM` arrives,
+- **Then** the daemon stops with mode `drain`, appends one `released` instance with
+  `releaseReason=drain`, detaches delivering lanes, removes both listeners, and
+  exits `0` with the snapshot captured at start,
+- **And** `SIGINT` records one `immediate-stop` instead, a second signal runs no
+  second stop, and a release-append failure still terminates with the classified
+  state-write identity,
+- **And** both listeners are registered before the durable readiness point, so a
+  stop delivered while the start is still running is buffered and applied once
+  the loop runs — the command ends through the stop path with one `released` or
+  `immediate-stop` record rather than terminating with a stale lock.
+
+### Scenario: Degradation follows durable state per projection
+
+- **Given** a live owned instance with a heartbeat strictly inside the
+  lock-staleness bound,
+- **When** `queue list` or `lanes list` runs,
+- **Then** the payload carries `degraded: []`,
+- **And** a released, absent, stale, unowned, or unreadable record set carries
+  `["daemon-unreachable"]` at exit `0` with no socket connect, and a watch
+  iteration re-resolves the marker when the daemon starts or releases.
+
 ## Security and Privacy Tests
 
 - No credential value, prompt, message body, transcript, diff, raw provider
@@ -268,6 +396,11 @@ daemon composition.
 - The execution-environment allowlist and the secret-read boundary are covered by
   `tests/checks/privacy-literals.test.ts` and
   `tests/checks/secret-read-boundary.test.ts`.
+- The mount's output surface is covered by `tests/checks/daemon-privacy.test.ts`:
+  canaries planted in the content-bearing facts appear in no envelope, help page,
+  record, spawn environment, or unit text; the spawn environment carries exactly
+  the declared re-entry set; and the unit text carries only the absolute entry
+  path and the resolved state directory as external values.
 - Cross-user socket access is refused through the delivered
   `state.permission.denied`; a socket path outside the state directory is
   `config.value.invalid`.
@@ -276,8 +409,15 @@ daemon composition.
 
 | Capability | Primary suites |
 |---|---|
+| Prompt-required mount and help | `daemon-production-composition`, `daemon-mount-help`, `entrypoint-composition`, `entrypoint-help`, `entrypoint-help-coverage` |
+| Detached re-entry and one state scope | `daemon-start-detached`, `daemon-start-env-stripped`, `daemon-state-scope`, `tests/conformance/daemon-mount/real-reentry` |
+| Signal-owned foreground lifetime | `daemon-foreground-lifetime`, `daemon-foreground-stop-latency` |
+| Real pid and fail-closed stop | `daemon-stop-safety` |
+| Derived degradation | `daemon-degradation-projection`, `daemon-degradation-read-cost`, `daemon-degradation-wiring`, `daemon-state-mediation` |
+| Brand-derived install identity | `daemon-install-mount`, `daemon-supervisor-install`, `daemon-install` golden |
+| Mount privacy and additivity | `daemon-privacy`, `daemon-mount.type-test` |
 | F-1 lifecycle and envelopes | `daemon-lifecycle`, `daemon-status-matrix`, `daemon-install` goldens, `config-resolver` |
-| F-2 single-instance lock | `daemon-lock`, `daemon-lock-concurrency` |
+| F-2 single-instance lock | `daemon-lock`, `daemon-lock-concurrency`, `daemon-crash-restart` |
 | F-3 state-mediated truth | `daemon-state-mediation`, `daemon-degradation` |
 | F-4 protocol v1 | `control-codec`, `control-session`, `control-conformance` |
 | F-5 layered transport | `control-transport`, `daemon-hermetic` |
@@ -318,6 +458,8 @@ bun test tests/behaviour/control-*.test.ts
 bun test tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts tests/behaviour/watch-stream.test.ts
 bun test tests/golden/daemon-*.test.ts tests/golden/*watch*.test.ts
 bun test tests/structure/daemon-*.test.ts tests/checks/daemon-*.test.ts
+bun test tests/conformance/daemon-mount/real-reentry.test.ts
+pnpm typecheck   # includes tests/types/daemon-mount.type-test.ts
 ```
 
 The aggregate gate is `pnpm check`; no suite spawns a live network call, reads a

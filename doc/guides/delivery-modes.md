@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-288"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286", "GH-288"]
   decisions: ["TDR-0002"]
 ---
 
@@ -209,24 +209,27 @@ brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
 and an empty value is inactive. The marker source is the regular file
 `<host root>/owner-hold`, which is `$HOME/.delivery-os-state/owner-hold` at the
 default host root; its first line is the reason and an empty file is an active
-hold without a reason.
-The environment source wins when both are active. Presence is the hold and
-content is only the reason: an unreadable, non-regular, or stat-failing marker is
-active without a reason (fail closed). Removing the environment value and the
-marker clears the hold; nothing else is repaired or migrated.
+hold without a reason. The host root is the resolved state-directory scope: an
+absolute `<PREFIX>_STATE_DIR` wins and relocates the store and the marker
+together, and otherwise the home-based `<home>/<brand.stateDirectoryName>`
+applies. The environment source wins when both are active. Presence is the hold
+and content is only the reason: an unreadable, non-regular, or stat-failing
+marker is active without a reason (fail closed). Removing the environment value
+and the marker clears the hold; nothing else is repaired or migrated, and
+existing state at the home default is never moved.
 
-The marker is host-wide: the typed engine reads it at the host root, which is an
-absolute `<PREFIX>_STATE_DIR` when set and otherwise
-`<home>/<brand.stateDirectoryName>`. There is no marker-path override, and no
-per-project marker narrows the hold. The shipped shell example reads the fixed
-default path `$HOME/.delivery-os-state/owner-hold` for this product, so a host
-that sets the override keeps the typed engine reading the marker at the override
-and uses the environment source there (it is relocation-safe); adopters who set a
-different working name edit the example's two setting names and that marker
-default. A missing project state root is created with mode `0700` on first use;
-a project state root created by hand must be private, because the store rejects a
-non-private state directory with `state.permission.denied` at exit `1` before the
-hold gate is consulted.
+There is no marker-path override, and no per-project marker narrows the hold:
+the marker follows the store directory the typed engine resolves, and the host
+root carries the one host-wide marker, so one hold stops every project on the
+host. The shipped shell example reads the fixed default path
+`$HOME/.delivery-os-state/owner-hold` for this product and accepts no
+marker-path setting, so a host that sets the override keeps the typed engine
+reading the marker at the override and uses the environment source there (it is
+relocation-safe); adopters who set a different working name edit the example's
+two setting names and that marker default. A missing project state root is
+created with mode `0700` on first use; a project state root created by hand must
+be private, because the store rejects a non-private state directory with
+`state.permission.denied` at exit `1` before the hold gate is consulted.
 
 `install.sh --local` installs both inactive examples:
 `scripts/hooks/pre-opencode-iteration-zai.sh` and

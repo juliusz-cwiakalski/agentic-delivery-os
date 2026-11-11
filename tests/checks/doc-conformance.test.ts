@@ -208,6 +208,7 @@ const PROMPT_REQUIRED_PAGES = [
   "closeout",
   "spend",
   "retro",
+  "daemon",
 ] as const;
 
 describe("TC-DOCREC-002 scope: docs guides, man page, and reference pages", () => {

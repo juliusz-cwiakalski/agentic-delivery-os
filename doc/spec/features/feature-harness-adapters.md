@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-10
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286"]
   related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -453,7 +453,7 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
 
 ## GH-238 lane executor
 
-The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner. The daemon composition supplies `createLaneLaunchPlanner`; a missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode. The lane seam is factory-proven; the production daemon entry that supplies the lane composition is resident-daemon production scope (GH-238).
+The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner. The daemon composition supplies `createLaneLaunchPlanner`; a missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode. The lane seam is factory-proven; the production composition mounts the daemon family without a lane composition, so supplying it remains resident-daemon production scope (GH-238).
 
 ## GH-239 dispatch consumer
 

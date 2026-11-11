@@ -3929,7 +3929,12 @@ export type QueueComposition = {
   readonly nowIso: () => string;
   readonly nowMs: () => number;
   readonly newFenceToken: () => string;
-  readonly degraded?: readonly QueueDegradationReason[];
+  /**
+   * The degradation marker set, or a resolver consulted per projection. The
+   * array member keeps the delivered semantics; absence keeps the delivered
+   * `["daemon-unreachable"]` fallback.
+   */
+  readonly degraded?: readonly QueueDegradationReason[] | (() => readonly QueueDegradationReason[]);
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
   readonly readyRuntime?: QueueReadyCommandRuntime;
   /** The per-pass owner-hold reader supplied by the production composition. */
@@ -4287,16 +4292,26 @@ const watchStreamFor = (
     });
 };
 
+/** Resolve the degradation marker set; absence keeps the delivered fallback. */
+const resolveDegraded = (value: QueueComposition["degraded"]): readonly QueueDegradationReason[] =>
+  value === undefined
+    ? (["daemon-unreachable"] as const)
+    : typeof value === "function"
+      ? value()
+      : value;
+
 /** Compose the full queue command runtime from the injected state and facts. */
 export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
-  const degraded = composition.degraded ?? (["daemon-unreachable"] as const);
+  // The markers are resolved per projection (schedule read, mutation outcome,
+  // lanes read, and every watch iteration), never captured once: a captured
+  // value would report a stale verdict for the whole process lifetime.
   const readSchedule = (next: number): QueueRuntimeSchedule => {
     const built = buildQueueFacts(composition, parkContextFor(composition));
     if (!built.ok) return built;
     return {
       ok: true,
       schedule: computeQueueSchedule(built.facts, { next }),
-      degraded,
+      degraded: resolveDegraded(composition.degraded),
     };
   };
   const mutate = (operation: () => QueueIntentResult): QueueRuntimeMutation => {
@@ -4304,7 +4319,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
     if (recovered !== undefined) return recovered;
     const result = operation();
     if (!result.ok) return mapQueueFailure(result);
-    return mutationOutcome(result.value, degraded, composition);
+    return mutationOutcome(result.value, resolveDegraded(composition.degraded), composition);
   };
   return {
     readSchedule,
@@ -4426,7 +4441,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         selectedRef: selected,
         lease: claimLeaseProjection(claimed.value.lease),
         action,
-        degraded,
+        degraded: resolveDegraded(composition.degraded),
       };
     },
     release: (input) => {
@@ -4497,7 +4512,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
                 ...(parkRecord.clearedAt === undefined ? {} : { clearedAt: parkRecord.clearedAt }),
               },
             }),
-        degraded,
+        degraded: resolveDegraded(composition.degraded),
       };
     },
     ...(composition.readyRuntime === undefined
@@ -4526,7 +4541,7 @@ export const createLanesCommandRuntime = (
       data: foldLanes({
         schedule,
         economics: composition.economics ?? {},
-        degraded: composition.degraded ?? (["daemon-unreachable"] as const),
+        degraded: resolveDegraded(composition.degraded),
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
       }),
     };

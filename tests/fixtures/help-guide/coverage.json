@@ -21,6 +21,7 @@
     "doc/planning/oss-tooling/milestones/m1/commands/retro.md",
     "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md",
     "doc/planning/oss-tooling/milestones/m1/commands/coordinator.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/daemon.md",
     "doc/planning/oss-tooling/milestones/m2/commands/projects.md"
   ],
   "commands": [
@@ -40,6 +41,7 @@
     "retro",
     "dispatch",
     "coordinator",
+    "daemon",
     "projects"
   ]
 }
