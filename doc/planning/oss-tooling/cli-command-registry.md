@@ -190,8 +190,9 @@ GitHub, Azure on demand).
 | `ados projects` | The delivered flat record set as `projects list` (GH-288), becoming the group surface under `project-groups.v1`: configured groups with their member repositories, health, and state; group-scoped queue and status reads; the delivered record set stays reachable through the `projects list --flat` alias owned by M2-S18 until the M3 boundary | operator, coordinator | M2-S11 (shipped in GH-288) | M2-S18 (group surface and the `--flat` retirement) |
 | `ados events` | Subscribe event-taxonomy reference: lists the versioned topics (`queue` and `lanes`, extended by `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`) with their kinds, payload shape, ordering guarantee, and overflow-to-repoll rule | sessions, coordinator | M2-S13 | - |
 
-`attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12)
-and not a root family.
+`attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12,
+shipped in GH-289) and not a root family; it adds no prompt-required entry and
+no root-listing row.
 Boundary note: the naming boundary is `repos` = the flat record set of managed checkouts (and, later, its clone/branch/worktree hygiene subcommands) and `projects` = the group surface; the rename rule pins the transition and the two names never carry the same meaning.
 
 ### M3: Surfaces, adapters, validators

@@ -9,7 +9,8 @@ snapshot and stays as written; the M1 man page is
 
 ## Observed composition
 
-Observed from the built workspace at authoring time. The `Commands:` block is
+Observed from the built workspace at authoring time; GH-289 mounted
+`dispatch attempts` as a subfamily, which leaves this family list unchanged. The `Commands:` block is
 abridged to the family list: the real output also prints a title, Usage,
 Options, Examples, Exit codes, and See also, and each family carries a
 description on its own row.
@@ -42,9 +43,11 @@ exit 0
   entrypoint, advertised in root `--help`, and served by the M2 command page
   as its reference page. The rename of that shipped surface to `repos list`,
   with the `projects list --flat` alias, is pending M2-S18 code work; the
-  remaining additions below stay planned.
+  other additions below stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
-  read side.
+  read side. **Mounted by GH-289 (M2-S12):** the subfamily is advertised in the
+  dispatch family `--help` with its own fifth help entry and M2 reference page,
+  and the root listing is unchanged because a subfamily adds no row.
 - `events` joins the subscribe surface as the taxonomy reference; the daemon
   publishes the versioned topics.
 - `spend` gains the v2 breakdowns and the reconciliation disclosure.
@@ -82,8 +85,8 @@ shipped name `projects`: prompt-set entry, edge composition, help entries, the
 M2 reference page, the coverage-inventory row and the per-command page root.
 Carrying that reference page to [commands/repos.md](commands/repos.md) is
 pending M2-S18 code work, not an effect of this change. The remaining M2
-additions (`events`, `board`, `dispatch attempts`, `spend` v2) stay planned
-until their own stories mount them.
+additions (`events`, `board`, `spend` v2) stay planned until their own stories
+mount them.
 
 ## Where this note is read
 

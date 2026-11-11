@@ -1942,55 +1942,85 @@ The previous revision of this plan recorded nine findings (X-1…X-9). **All nin
 
 ## 10. Test Execution Log
 
-Not yet executed: this plan is the phase-3 artefact and no test in it has run. Rows are appended at each phase boundary during delivery; the gate rows below are the record, and a `Pending` row is not evidence.
+Executed during delivery on 2026-11-11. Every row below is a real run; a row is evidence only with its result.
+
+**Suite rows**
+
+| Suite | TCs | Date | Result |
+|-------|-----|------|--------|
+| `tests/behaviour/dispatch-attempts-ref.test.ts` | 001, 002, 003, 004, 039 | 2026-11-11 | 21 pass / 0 fail |
+| `tests/behaviour/dispatch-attempts-contract.test.ts` | 005, 006, 007, 008, 028 (cells 1-3) | 2026-11-11 | 15 pass / 0 fail |
+| `tests/behaviour/dispatch-attempts-bounds.test.ts` | 009, 010, 037 | 2026-11-11 | 10 pass / 0 fail |
+| `tests/behaviour/dispatch-attempts-scope.test.ts` | 011, 012, 013, 014 | 2026-11-11 | 4 pass / 0 fail |
+| `tests/behaviour/dispatch-attempts-refusals.test.ts` | 015, 016 | 2026-11-11 | 5 pass / 0 fail |
+| `tests/behaviour/dispatch-attempts-digest.test.ts` | 023, 024, 025, 026 | 2026-11-11 | 10 pass / 0 fail |
+| `tests/behaviour/dispatch-resolve-result.test.ts` | 018, 020, 021, 027 | 2026-11-11 | 6 pass / 0 fail |
+| `tests/behaviour/dispatch-divergence-count.test.ts` | 022 | 2026-11-11 | 3 pass / 0 fail |
+| `tests/structure/dispatch-attempts-count-rule.test.ts` | 038 | 2026-11-11 | 6 pass / 0 fail |
+| `tests/structure/dispatch-attempts-taxonomy.test.ts` | 017 | 2026-11-11 | 3 pass / 0 fail |
+| `tests/structure/dispatch-attempts-composition.test.ts` | 029 (suite half), 030 | 2026-11-11 | 5 pass / 0 fail |
+| `tests/checks/dispatch-attempts-test-isolation.test.ts` | 036 | 2026-11-11 | 5 pass / 0 fail |
+| `tests/behaviour/dispatch-additive-stability.test.ts` | 034 (cells 1, 4, 5, 7; 2-3) | 2026-11-11 | 12 pass / 0 fail |
+| `tests/structure/dispatch-resolve-composition.test.ts` | 019 | 2026-11-11 | 1 pass / 0 fail |
+| Help suites (`reference-page-parity`, `help-guide-coverage`, `-mutants`, `dispatch-help-inventory`, `dispatch-help-version`, `dispatch-attempts-composition`) | 030, 031 | 2026-11-11 | 23 pass / 0 fail |
+| Delivered dispatch suites (`tests/behaviour/dispatch*`, `tests/conformance/dispatch`, `tests/structure/dispatch*`) | regression | 2026-11-11 | 416 pass / 0 fail |
+| Divergence regression (`dispatch-delivered-evidence-divergence`, `dispatch-dual-run-summary`, `dispatch-gate-evidence`, `dispatch-bounds`) | 022, 028, 034 | 2026-11-11 | 36 pass / 0 fail |
 
 **Gate rows**
 
 | Gate | Command | Date | Result | Notes |
 |------|---------|------|--------|-------|
-| Build | `pnpm build` | — | Pending | Prerequisite for the subprocess help and composition cells. |
-| Package typecheck | `pnpm --filter @delivery-os/core typecheck && pnpm --filter @delivery-os/cli typecheck` | — | Pending | |
-| Aggregate | `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` | — | Pending | lint → format:check → typecheck → test → check:boundaries → prompt-conformance → help-coverage → exports-parity. |
-| Help coverage | `pnpm check:help` | — | Pending | |
-| Reference-page parity | `bun test tests/checks/reference-page-parity.test.ts` | — | Pending | Dispatch pin at five. |
-| Error-table sync | `bun test tests/checks/error-table-sync.test.ts` | — | Pending | 124 entries, 124 documented rows. |
-| Taxonomy closure | `bun test tests/structure/dispatch-attempts-taxonomy.test.ts` | — | Pending | |
-| Test isolation | `bun test tests/checks/dispatch-attempts-test-isolation.test.ts` | — | Pending | |
-| Whitespace | `git diff --check` | — | Pending | |
+| Build | `pnpm build` | 2026-11-11 | pass | Prerequisite for the subprocess and composition cells. |
+| Package typecheck | `pnpm --filter @delivery-os/core typecheck && pnpm --filter @delivery-os/cli typecheck` | 2026-11-11 | pass | |
+| Aggregate (phase 1) | `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` | 2026-11-11 | pass | 7224 pass / 4 skip / 0 fail. |
+| Aggregate (phase 2) | same | 2026-11-11 | pass | 7284 pass / 4 skip / 0 fail. |
+| Aggregate (phase 3) | same | 2026-11-11 | pass | 7306 pass / 4 skip / 0 fail. |
+| Aggregate (final tree) | same | 2026-11-11 | pass | 7312 pass / 4 skip / 0 fail. |
+| Help coverage | `pnpm check:help` | 2026-11-11 | pass | all prompt-required commands covered. |
+| Reference-page parity | `bun test tests/checks/reference-page-parity.test.ts` | 2026-11-11 | pass | Dispatch pin at five. |
+| Error-table sync | `bun test tests/checks/error-table-sync.test.ts` and `bun run scripts/checks/error-table-sync.ts` | 2026-11-11 | pass | entries=124 documented=124. |
+| Taxonomy closure | `bun test tests/structure/dispatch-attempts-taxonomy.test.ts` | 2026-11-11 | pass | 124/124, four dispatch rows, zero `attempts.*`. |
+| Test isolation | `bun test tests/checks/dispatch-attempts-test-isolation.test.ts` | 2026-11-11 | pass | |
+| Boundaries | `pnpm check:boundaries` | 2026-11-11 | pass | no dependency violations (385 modules). |
+| Literal and exit scans | `bun run scripts/checks/forbidden-literals.ts && bun run scripts/checks/privacy-literals.ts && bun test tests/checks/exit-code-literals.test.ts tests/checks/privacy-literals.test.ts` | 2026-11-11 | pass | |
+| Release shape | `bun test tests/checks/privacy-release.test.ts` | 2026-11-11 | pass | one added five-package minor changeset. |
+| Plan validate | `bun packages/cli/bin/delivery-os.ts plan validate GH-289` | 2026-11-11 | pass | verdict valid. |
+| Whitespace | `git diff --check` | 2026-11-11 | pass | |
 
 **Revert / mutation rows**
 
 | Id | Date | Result | Notes |
 |----|------|--------|-------|
-| P1 | — | Pending | |
-| P2 | — | Pending | |
-| P3 | — | Pending | |
-| P4 | — | Pending | |
+| P1 | 2026-11-11 | red, restored, green | Removing the delivered `principal` key from the resolve payload red TC-ATTEMPT-034 (2 cells: the exact-key cell and the leading-five cell); restored and the suite is 12/12. A literal `principal` → `actor` rename was rejected at compile time by the typed payload, which is the same pin at the type level. |
+| P2 | 2026-11-11 | red, restored, green | Reintroducing `unresolved: unresolvedIds.length` / `resolved: folded.length - unresolvedIds.length` in `summarizeRepositoryDivergences` red 3 cells (TC-ATTEMPT-022's 26-open summary, the 25-open agreement cell, and TC-ATTEMPT-038's behavioural 25-open cell, which reports 20); restored and both suites are 9/9. |
+| P3 | 2026-11-11 | red, restored, green | Dropping the logical `repository` filter from `selectAttemptsPage` red TC-ATTEMPT-012 (the migrated root returned 5 rows instead of 3); restored and the suite is 4/4. TC-ATTEMPT-011 stayed green under this mutation by construction: it exercises the physical project root (two separate stores), which the mutation leaves intact; the logical layer is covered by TC-ATTEMPT-012 and the foreign-count cell. |
+| P4 | 2026-11-11 | red, restored, green | Replacing the canonical-limit check with `Number(value)` plus a 1..100 clamp red 7 TC-ATTEMPT-003 cells (`0`, `101`, `-1`, `07`, `+7`, ` 7`, `001`); restored and the suite is 21/21. The mutation did not typecheck (it orphans two imported constants), so the red was observed with the suites, which import the command module source directly. |
 
-**Review rows (review-verified criteria)**
+**Review rows (review-verified criteria — claimed only at the review gate)**
 
-| TC | Criterion | Date | Result | Evidence quoted |
-|----|-----------|------|--------|-----------------|
-| TC-ATTEMPT-014 | AC-F4-1 side-effect enumeration | — | Pending | |
-| TC-ATTEMPT-017 | AC-F4-4 M2 page and corpus string absence | — | Pending | |
-| TC-ATTEMPT-029 | AC-F7-2 reference-page half | — | Pending | |
-| TC-ATTEMPT-032 | AC-F8-3 | — | Pending | |
-| TC-ATTEMPT-033 | AC-F8-4 | — | Pending | |
-| TC-ATTEMPT-034 | AC-F9-1 additive-only half | — | Pending | |
-| TC-ATTEMPT-035 | AC-F9-2 lockfile and manifest diff half | — | Pending | |
+| TC | Criterion | Date | Result | Evidence the reviewer inspects |
+|----|-----------|------|--------|-------------------------------|
+| TC-ATTEMPT-014 | AC-F4-1 side-effect enumeration | 2026-11-11 | Deferred to review | The suite asserts stable evidence bytes, unchanged record counts, and no binding marker; the reviewer enumerates the permitted effects in the diff. |
+| TC-ATTEMPT-017 | AC-F4-4 M2 page and corpus string absence | 2026-11-11 | Deferred to review | The suite scans the code, help, and the two spec pages; the reviewer scans the M2 attempts page and the corpus. |
+| TC-ATTEMPT-029 | AC-F7-2 reference-page half | 2026-11-11 | Deferred to review | The suite asserts the digest pointer and both help surfaces; the reviewer checks the M2 page states the same pointer. |
+| TC-ATTEMPT-032 | AC-F8-3 | 2026-11-11 | Deferred to review | The M2 attempts page is the delivered reference page; the reviewer checks Appendix C items 1-6. |
+| TC-ATTEMPT-033 | AC-F8-4 | 2026-11-11 | Deferred to review | The spec and corpus edits; the reviewer checks they state delivered behaviour. |
+| TC-ATTEMPT-034 | AC-F9-1 additive-only half | 2026-11-11 | Deferred to review | Cells 1, 2-3, 4, 5, 7 are suite evidence; cell 6 is the diff inspection against the merge base. |
+| TC-ATTEMPT-035 | AC-F9-2 lockfile and manifest diff half | 2026-11-11 | Deferred to review | The scans are suite evidence; the reviewer diffs `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, and `packages/*/package.json` against the merge base. |
 
 **Reconciliation notes to `@doc-syncer`**
 
-- X-1, X-3, X-4, X-9: **satisfied by spec v1.1** (`AC-F1-6` added; the foreign count qualified to the retained window in F-3/DM-1/AC-F3-2; `idsTruncated` declared on both divergence blocks in §8.5; `truncation.bound` defined per scope in DM-5). No further spec change is owed; the reconciliation pass should carry the same wording into `feature-dispatch-engine.md` and `contracts.md`.
-- X-2: AC-F1-2 still says "opens no store". Spec v1.1 §8.5/NFR-3 enumerate the inherited store-opening effects, and this plan reads the phrase as "performs no store read"; the reconciliation pass should either adopt that wording in AC-F1-2's mirror in the feature spec or leave it, but should not describe the refusal as effect-free.
-- X-8: the shared count computation's module name is the delivery plan's decision; if the plan names one, this plan's structural target list narrows to it (TC-ATTEMPT-038), and the doc reconciliation should name the same module.
-- B3 (spec v1.3): the delivered summary's `unresolved` and `resolved` were already exact and store-wide, and the capped-list derivation lived only in the uncalled `summarizeDispatchDivergences`. The reconciliation pass must describe this change as repository-scoping the shared computation, adding the block to the resolve result, and narrowing `unresolvedIds` (and the human `unresolved_divergences=` line) to the documented 20 with `idsTruncated`; it must not describe the delivered number as a bounded-list artefact or claim the count moves up past 20 open divergences.
-- B2 (ownership): TC-ATTEMPT-028 cell 4 and TC-ATTEMPT-034 cells 2–3 land with the count rule in delivery plan phase 3, not with the command phase; the §10 rows for those cells are appended at the phase-3 boundary.
-- W1 (spec v1.4): the delivered forms' unknown-flag refusal under `acceptsAnyFlag: true` is TC-ATTEMPT-034 **cell 7**, a suite cell in `tests/behaviour/dispatch-additive-stability.test.ts` that is green at the command phase and recorded with the command-phase TC rows; the additive-only diff review is **cell 6**, stays review-verified, and keeps its row in the review table above at the review gate.
+- X-1, X-3, X-4, X-9: satisfied by spec v1.1 and already carried into the reconciled pages (`AC-F1-6`; the foreign count qualified to the retained window; `idsTruncated` on both blocks; `truncation.bound` per scope).
+- X-2: AC-F1-2 says "opens no store" while the inherited store-opening effects remain. The reconciled pages state the refusal performs no store read and never claim the invocation is effect-free.
+- X-8: the shared count computation is `summarizeRepositoryDivergences` in `packages/core/src/domain/dispatch-gate.ts`; the reconciled pages name it and TC-ATTEMPT-038 pins it.
+- B3: the delivered summary counts were already exact and store-wide; the reconciled pages state the change as repository-scoping the shared computation, adding the block to the resolve result, and narrowing `unresolvedIds` (and the human line) to the documented 20 with `idsTruncated`, with no upward count movement.
+- B2: TC-ATTEMPT-028 cell 4 and TC-ATTEMPT-034 cells 2-3 landed with the count rule in delivery plan phase 3; their rows are in the phase-3 pass counts above.
+- W1: the delivered forms' unknown-flag refusal under `acceptsAnyFlag: true` is TC-ATTEMPT-034 cell 7, green in `tests/behaviour/dispatch-additive-stability.test.ts`; the additive-only review is cell 6.
+- New for `@doc-syncer`: the delivered `state.permission.denied` row projects `user-validation` and exits `1`, not `2`; the attempts store-fault cell asserts the delivered projection, and any page that promises exit `2` for every `state.*` identity must be corrected or qualified.
 
 **Measured values (informational only)**
 
 | Measurement | Date | Value | Budget |
 |---|---|---|---|
-| `dispatch attempts` p95 at the 5,000-record bound | — | Pending | ≤ 5,000 ms |
-| New suites' wall clock (informational) | — | Pending | — |
+| `dispatch attempts` p95 at the 5,000-record bound | 2026-11-11 | 6.3 ms (20 runs; median 4.47 ms, max 7.45 ms) | ≤ 5,000 ms |
+| New suites' wall clock (informational) | 2026-11-11 | 8 new suites in about 6.5 s combined under `bun test` | — |

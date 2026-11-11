@@ -7,7 +7,7 @@ last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -49,6 +49,14 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
 - `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts`, `dispatch-preflight-contract.test.ts`, `dispatch-resolve-composition.test.ts` — no merge path, composition honesty, the optional-preflight contract, the production preflight wiring and ordering, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, rename-invariant identity, and per-repository identity isolation paths.
 - `tests/structure/cli-edge-seam.test.ts`, `entrypoint-bin.test.ts` — the declared truth-read key registered for redaction from injected environment facts (literal and prefixed references) and the entrypoint/bin secret seam.
+- `tests/behaviour/dispatch-attempts-ref.test.ts` — `dispatch attempts` reference resolution (explicit flag and the active-change default), the three unresolvable-context cells, the limit grammar (1 and 100 accepted; `0`, `101`, `-1`, `abc`, `07`, `+7`, ` 7`, `001`, and a missing value refused with zero reads), the total order across identical start instants and two insertion orders, and the request-grammar refusals.
+- `tests/behaviour/dispatch-attempts-contract.test.ts` — the sixteen-field projection (exact key set, singular `divergenceRef` present or explicit `null`, no undeclared key), `endedAt` and stored instants, the comparison projection with its not-applicable null token, `matched`/`hasMore`, and the no-gate-key cells.
+- `tests/behaviour/dispatch-attempts-bounds.test.ts` — the 65,536-byte page declaration, the 5,000-record ledger window with the ledger scope winning, the count-only foreign disclosure over the retained window, exactly one verified store read, and latency at the ledger bound.
+- `tests/behaviour/dispatch-attempts-digest.test.ts` — the declared digest with its reviewed three-row and empty goldens, the seven cells, the closed corroboration derivation, the 40-line/8,192-byte human budget with its declared cut, and repeated-run determinism.
+- `tests/behaviour/dispatch-attempts-scope.test.ts` — two checkouts on one host root, the migrated root's count-only disclosure independent of `--ref`, the non-checkout refusal, and the read-only-with-respect-to-evidence proof (stable evidence bytes, unchanged record counts, no binding marker).
+- `tests/behaviour/dispatch-attempts-refusals.test.ts` — a verified empty history at exit 0, and the torn, unknown, and permission-denied store identities with their delivered projections, never an empty history.
+- `tests/behaviour/dispatch-resolve-result.test.ts`, `tests/behaviour/dispatch-divergence-count.test.ts`, `tests/structure/dispatch-attempts-count-rule.test.ts` — the resolve extension (unconditional mode, subject repository, exact counts), replay idempotency, the blank and long note cells, the one deterministic resolve line, the 25-open shared count with 20 identifiers and `idsTruncated`, and the single-computation structural pin with zero list-length derivation.
+- `tests/structure/dispatch-attempts-taxonomy.test.ts`, `tests/checks/dispatch-attempts-test-isolation.test.ts`, `tests/structure/dispatch-attempts-composition.test.ts`, `tests/behaviour/dispatch-additive-stability.test.ts` — taxonomy closure over the new surfaces, test isolation, the single pointer route from evidence to the gate, and the delivered shapes with the four delivered-form refusals under `acceptsAnyFlag`.
 
 ### Registration, fallback, and daemon tests
 

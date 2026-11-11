@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0023"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -43,6 +43,7 @@ The shipped production composition wires the one-shot run path with its admissio
 | Invocation | Purpose |
 |---|---|
 | `dispatch <ref> [--harness <name>] [--resume-prompt <text>]` | Run one dispatch, or resume the existing lane with operator guidance. |
+| `dispatch attempts [--ref <ref>] [--limit <n>]` | Read one work item's recorded attempts, newest first, as a bounded digest or the `attempts.v1` machine envelope. |
 | `dispatch dual-run summary --repo <repo>` | Report the evidence window, class coverage, divergences, corroboration, and the four-condition verdict. |
 | `dispatch dual-run resolve <divergence-id> --note <text>` | Append a bounded resolution to an open divergence. |
 | `dispatch handover <repo> [--revert]` | Flip one repository to engine-authoritative, or append a reversal back to dual-run. |
@@ -167,12 +168,81 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 
 The watch contributes its observed verdict trail as `liveness:<verdict>` evidence references, so a transient stall remains visible even when the session later classifies normally. A post-spawn collection failure names `harness:collect-failed`; a restart-budget refusal names `economics:exhaustion` when the terminal record landed and `economics:exhaustion-unrecorded` when the append did not land, so an unrecorded exhaustion is never claimed as durable evidence.
 
+### Attempt read side
+
+`dispatch attempts [--ref <ref>] [--limit <n>]` is a subfamily of the dispatch
+family: it does not change the root family listing or the prompt-required set.
+It reads the durable attempt record and adds no record kind, schema version, key
+prefix, fold, configuration key, or error identity. The read side's rulings — the
+closed-taxonomy reuse, the empty-history success, the record-bounded projection
+cardinality, the unconditional evidence mode, the one exact divergence count, and
+the twice-enforced repository scope — are recorded in
+[TDR-0023](../../decisions/TDR-0023-dispatch-attempt-read-side-and-local-evidence-resolve.md).
+
+- **Envelope.** The `attempts.v1` `data` carries eight always-present keys —
+  `repository`, `ref`, `refSource` (`"flag"` or `"active-change"`), `limit`,
+  `matched`, `hasMore`, `attempts[]`, and `excluded.foreignRepository` — plus a
+  single `truncation` object only when a bound binds. The envelope's family token
+  stays `dispatch`.
+- **Projection.** Each row carries exactly sixteen fields: `attemptId`,
+  `repository`, `ref`, `harness`, `evidenceClass`, `outcome`, `token`,
+  `startedAt`, `endedAt` (the consumer name for the recorded finish timestamp),
+  `divergenceRef` (one identifier or explicit `null`), `corroboration`
+  (`pmNotes`, `tracker`, `ci` tri-state), `falseSuccess`, `comparison` (`class`,
+  `token` or `null`, `outcome`), `resumeMode` (or `null`), `evidenceRefs` (at
+  most 16 identifiers), and `recordedAt`. No prompt, transcript, diff,
+  credential, or provider payload is projected.
+- **Order and page.** The order is total: `startedAt` descending, `recordedAt`
+  descending, `attemptId` ascending. `matched` is the number of matching
+  records in the retained ledger window, `hasMore` is true exactly when matching
+  attempts exist beyond the returned array, and the page is bounded by `--limit`
+  (canonical decimal 1..100, default 20, refused rather than clamped).
+- **Bounds.** The ledger read retains the newest 5,000 records; the serialized
+  `data` is bounded to 65,536 UTF-8 bytes; the human digest to 40 lines and 8,192
+  bytes with at most 37 rows beside a truncation line. The single truncation
+  object is `{ scope: "ledger" | "page", bound, omittedRecords }`, with
+  `bound: 5000` for `ledger`, `bound: 65536` for `page`, and the ledger scope
+  taking precedence.
+- **Reference resolution.** A supplied `--ref` must match `[A-Z]+-\d+`. When it
+  is omitted, `active_change.workItemRef` resolves from
+  `.ai/local/pm-context.yaml` through the same seam the spend read side uses. An
+  absent, unparsable, or active-change-less context refuses at exit `1` with
+  `input.value.rejected` and a bounded summary naming the context file and the
+  `--ref` remedy, before any store read.
+- **Repository scope.** The read is scoped twice: physically by the project
+  state root and logically by filtering each record on its own `repository`.
+  Records of another repository in the retained window are excluded from
+  `attempts[]` and counted in `excluded.foreignRepository`, independent of
+  `--ref`, and never named. An unresolvable identity refuses at exit `1` naming
+  the checkout; an invocation outside any checkout never reports the host-scoped
+  `unbound` store as a repository's history. Identity resolves with persistence
+  disabled, so the dispatch repository binding marker is never created,
+  repaired, or re-persisted.
+- **Read-only posture.** Zero attempt, divergence, handover, or authority
+  appends and zero fence acquisitions; the store's delivery-evidence bytes,
+  modes, and mtimes are unchanged. The inherited store-opening effects are the
+  host-index maintenance write (zero when unchanged) and the create-once project
+  checkout identity marker.
+- **Empty history.** A verified read that matches no record is success at exit
+  `0` with `attempts: []`, `matched: 0`, and `hasMore: false`. A torn,
+  unreadable, or permission-denied store keeps its delivered `state.*` identity
+  with `kind: "state"` and that row's projection, and is never reported as an
+  empty history.
+- **Digest.** The human digest prints one summary line, one row per attempt
+  newest first, an optional `truncation=human:bound:<kept>,omitted:<dropped>`
+  line, and the coverage/floor pointer
+  `next: dispatch dual-run summary --repo <repository> (coverage and floor)`.
+  The corroboration cell is the closed three-value derivation
+  (`corroborated`, `uncorroborated`, `vacuous`).
+
 ### Divergence and handover records
 
 - `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains. A delivered-evidence divergence is the one other shape: when the shared classifier outcome is `completed` (evaluated at record time; the persisted attempt outcome is never used), the phase ledger is readable and shows progress or a complete total, and truth is unreadable, at most one open record per `(repository, work-item reference)` carries `comparisonClass: not-applicable`, `engineToken: state-unverified`, `comparisonToken: null`, and evidence references `attempt:<id>` plus `truth:unreadable:<ledger|tracker|artifact|state>`. The divergence is appended before the attempt so the attempt can carry `divergenceRef`; a resume reuses the open record. If the divergence append fails, the attempt lands once with no `divergenceRef` and a bounded `divergence:append-failed` reference, and the underlying state identity is returned. If the attempt append fails after the divergence lands, the orphan stays open, counted, and resolvable, and a later attempt for the same pair reuses it.
 - `dispatch.handover` (`delivery.dispatch.handover.v1`) records one authority operation (`authoritative` or `dual-run`) per repository, with the conditions snapshot at decision time, bounded evidence references, principal, and timestamp. History is append-only; a reversal is a new record, never a deletion.
 
-`dispatch dual-run resolve` works from local evidence only: it resolves no credential, performs no network call, and reads no truth source outside the local state store and the divergence ledger. A genuine store fault keeps its own `state.*` identity under `kind: "state"` with that row's category, retryability, consequence, remediation, and exit, so a store fault is never reported as `dispatch.state-unverified`. An absent divergence identifier is an app-local `divergence-not-found` sentinel, distinct from a genuine `state.keys.missing`, surfaced as `input.value.rejected` with `kind: "input"` and appending nothing. The resolution note is clamped to its declared 240-character bound before the record is built, so an over-long note cannot become a write failure. A successful resolution appends one resolved record, leaves the original open record byte-identical, reports the resolved state and stored note, and is idempotent on replay.
+`dispatch dual-run resolve` works from local evidence only: it resolves no credential, performs no network call, and reads no truth source outside the local state store and the divergence ledger. A genuine store fault keeps its own `state.*` identity under `kind: "state"` with that row's category, retryability, consequence, remediation, and exit, so a store fault is never reported as `dispatch.state-unverified`. An absent divergence identifier is an app-local `divergence-not-found` sentinel, distinct from a genuine `state.keys.missing`, surfaced as `input.value.rejected` with `kind: "input"` and appending nothing. A blank or whitespace-only note is refused with `input.value.rejected` and appends nothing; a note longer than its declared 240-character bound is clamped before the record is built and reported as stored, so an over-long note cannot become a write failure. A successful resolution appends one resolved record, leaves the original open record byte-identical, reports the resolved state and stored note, and is idempotent on replay.
+
+The success data keeps the five delivered keys — `divergenceId`, `state`, `resolved`, `note`, `principal` — and adds three: `mode: "local-evidence"` unconditionally on every success including a replay, because no live-truth branch exists; `repository`, the repository recorded on the resolved divergence; and `divergences`, the shared repository-scoped block `{ reported, resolved, unresolved, unresolvedIds, idsTruncated }`. `unresolved` is the exact folded open count for that repository, `unresolvedIds` lists at most 20 of them, and `idsTruncated` is true exactly when identifiers were dropped. The same computation feeds `dispatch dual-run summary`, so both surfaces agree; the summary's counts are exact and repository-scoped, and its identifier list and human `unresolved_divergences=` line print the same at-most-20 list. No surface derives a count from an identifier list's length. Cross-repository resolution is disclosed by the reported repository rather than prevented.
 
 ### Authority view
 
@@ -246,6 +316,8 @@ The `dispatch` error kind carries four rows, all non-retryable with consequence 
 
 Every dispatch failure resolves by exact code; no kind-only dispatch discriminant is assumed to resolve to one row. Prose is never identity, and no dispatch path exits outside `{0, 1, 2}`.
 
+The read side adds no row either: `dispatch attempts` maps its malformed request, unresolvable active reference, and unresolvable identity to `input.value.rejected` (`kind: "input"`, exit 1), keeps the failing `state.*` identity for an unreadable store (`kind: "state"`, that row's projection), and treats a verified empty history as success. No `attempts.*` identity is declared, emitted, or documented; a document that names one is stale.
+
 The admission refusals and resolve failures add no `dispatch` row. An admission refusal carries an existing `provider`, `config`, or `input` identity (the admission table above); a resolve store failure carries the failing `state` identity with `kind: "state"`; and an absent divergence identifier is `input.value.rejected` with `kind: "input"`. The engine's local result error-kind union admits the existing `provider` and `config` kinds; `DOMAIN_KINDS` and the error-table row count are unchanged.
 
 ## Bounds and configuration
@@ -253,6 +325,8 @@ The admission refusals and resolve failures add no `dispatch` row. An admission 
 | Bound | Value |
 |---|---|
 | Attempt records retained per summary | 5,000 |
+| Attempts page | 20 default, 1 minimum, 100 maximum (`--limit`, canonical decimal) |
+| Attempt rows beside a human truncation line | 37 |
 | Machine `data` | 65,536 UTF-8 bytes |
 | Human output | 40 lines, 8,192 bytes |
 | `last_message` | 512 characters, single line, redacted |

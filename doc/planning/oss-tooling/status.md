@@ -224,6 +224,17 @@ invocations, the one-step migration is documented in
 owner hold stays host-wide. The remaining M2 stories are unaffected by this
 delivery and stay planned.
 
+M2-S12 (evidence inspection and divergence resolution) was delivered by GH-289.
+`dispatch attempts [--ref <ref>] [--limit <n>]` reads one work item's recorded
+attempts newest first as a bounded digest or the `attempts.v1` machine envelope
+(sixteen-field projection, total order, ledger/page/human bounds,
+repository-scoped isolation with count-only foreign disclosure, empty history as
+success, no new error identity), `dispatch dual-run resolve` declares the
+unconditional `local-evidence` mode with the subject repository and the exact
+repository-scoped divergence counts, and the summary keeps coverage and floor
+with its divergence block on the same count rule. The remaining M2 stories are
+unaffected and stay planned.
+
 ## M2 domain-model amendment (2026-11-11)
 
 Planning state only: this section records the GH-303 amendment to the M2 plan
