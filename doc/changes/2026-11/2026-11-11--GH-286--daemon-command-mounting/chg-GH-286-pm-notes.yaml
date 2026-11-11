@@ -18,6 +18,22 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 2 commit: 551c1ad4. Plan phase 3 complete (install identity
+      and lifecycle): the install handler classifies the supervisor support first
+      (so the delivered darwin/win32 control keeps `daemon.supervisor-unsupported`
+      and stays unmodified) and then refuses a resolvable state directory with no
+      composed entry path as `daemon.state-recovery-failed` before any rendering,
+      keying on entry-path absence only; the brand-derived unit, the exact
+      state-directory binding, the user configuration root, the delivered command
+      order (write, enable, linger, marker), the rollback, and the ownership-scoped
+      uninstall are proved over recording ports and an in-memory adapter. Gate:
+      40/40 tests across the install suite, the mutant suite, and the delivered
+      install/supervisor-install goldens; `pnpm typecheck`, lint, format, and
+      ambient-globals green; no delivered suite edited. TC-DAEMON-105 manual host
+      verification executed on a live user manager and recorded in the test plan
+      §10.1."
+    type: "info"
+    date: "2026-11-11"
   - text: "Plan phase 1 commit: 149b272b (additive composition inputs, type test, and TDR-0022 tracked). Plan phase 2 complete (production
       composition): one state-directory classification with its three outcomes,
       resolved daemon settings through the delivered resolver with an

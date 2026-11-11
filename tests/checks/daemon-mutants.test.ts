@@ -27,6 +27,13 @@ import {
 } from "../fixtures/daemon/mount-harness";
 import * as bindingNotLast from "../fixtures/daemon/mount-mutants/binding-not-last";
 import * as literalSocket from "../fixtures/daemon/mount-mutants/literal-socket";
+import * as bareExecstart from "../fixtures/daemon/mount-mutants/bare-execstart";
+import * as unitUnderStateDir from "../fixtures/daemon/mount-mutants/unit-under-state-dir";
+import * as xdgRelativeJoined from "../fixtures/daemon/mount-mutants/xdg-relative-joined";
+import * as installEmptyExecutable from "../fixtures/daemon/mount-mutants/install-empty-executable";
+import * as uninstallBroadDelete from "../fixtures/daemon/mount-mutants/uninstall-broad-delete";
+import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
+import { createMemorySupervisor } from "../fixtures/daemon/mount-harness";
 import * as spawnWithFullEnv from "../fixtures/daemon/mount-mutants/spawn-with-full-env";
 import * as spawnWithoutForwardedEnv from "../fixtures/daemon/mount-mutants/spawn-without-forwarded-env";
 
@@ -243,6 +250,170 @@ describe("GH-286 daemon-mount mutation controls", () => {
       spawnWithoutForwardedEnv,
       spawnWithFullEnv,
       literalSocket,
+    ]) {
+      expect(mutant.suite.endsWith(".test.ts")).toBe(true);
+      expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);
+      expect(mutant.assertion.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("GH-286 install-identity mutation controls", () => {
+  const readRepoFile = (relative: string): string =>
+    readFileSync(join(process.cwd(), relative), "utf8");
+
+  const loadMutatedModule = async <T>(
+    mutant: { readonly name: string; readonly apply: (source: string) => string },
+    target: string,
+    file: string,
+  ): Promise<T> => {
+    const directory = join(process.cwd(), "tmp", "tmpdir", "mutants", mutant.name);
+    mkdirSync(directory, { recursive: true });
+    const path = join(directory, file);
+    writeFileSync(path, mutant.apply(readRepoFile(target)));
+    return (await import(`${path}?mutant=${Date.now()}`)) as T;
+  };
+
+  test("bare-execstart: a bare binary name is not an absolute executable", () => {
+    const source = readRepoFile(bareExecstart.target);
+    expect(bareExecstart.violates("example-product")).toBe(true);
+    expect(bareExecstart.violates("/usr/local/bin/example-product")).toBe(false);
+    const mutated = bareExecstart.apply(source);
+    expect(mutated).toContain("binary: brand.binaryName");
+    expect(mutated).not.toBe(source);
+  });
+
+  test("unit-under-state-dir: the configuration root is never the state directory", () => {
+    const source = readRepoFile(unitUnderStateDir.target);
+    const mutated = unitUnderStateDir.apply(source);
+    expect(unitUnderStateDir.violates("/state", "/state")).toBe(true);
+    expect(unitUnderStateDir.violates("/home/.config", "/state")).toBe(false);
+    expect(mutated).toContain("supervisorConfigDirectory: directory");
+  });
+
+  test("xdg-relative-joined: a relative value must not become the root", () => {
+    const source = readRepoFile(xdgRelativeJoined.target);
+    const mutated = xdgRelativeJoined.apply(source);
+    expect(xdgRelativeJoined.violates("relative/config", "relative/config")).toBe(true);
+    expect(xdgRelativeJoined.violates("/home/.config", "relative/config")).toBe(false);
+    expect(mutated).not.toContain('configured.startsWith("/")');
+  });
+
+  test("install-empty-executable: the mutated handler renders a unit with no executable", async () => {
+    const module = await loadMutatedModule<{
+      createDaemonCommandRuntime: typeof realRuntime;
+    }>(installEmptyExecutable, installEmptyExecutable.target, "daemon-compose.ts");
+    const harness = createMountHarness({ label: "mutant-empty-exec" });
+    try {
+      const requests: { binary: string }[] = [];
+      const runtime = module.createDaemonCommandRuntime(
+        mountComposition(harness, {
+          binary: "",
+          supervisor: {
+            kind: "systemd-user",
+            platform: "linux",
+            inspect: () => ({
+              supported: true,
+              descriptor: {
+                kind: "systemd-user",
+                installed: false,
+                unit: "example-product-daemon.service",
+                scope: "scope",
+                linger: false,
+                commandForm: "foreground",
+                serviceType: "simple",
+                restartPolicy: "on-failure",
+              },
+            }),
+            install: (request: { readonly binary: string }) => {
+              requests.push({ binary: request.binary });
+              return {
+                ok: true as const,
+                descriptor: {
+                  kind: "systemd-user" as const,
+                  installed: true,
+                  unit: "example-product-daemon.service",
+                  scope: "scope",
+                  linger: true,
+                  commandForm: "foreground" as const,
+                  serviceType: "simple" as const,
+                  restartPolicy: "on-failure" as const,
+                },
+              };
+            },
+            uninstall: () => ({ removed: false }),
+          },
+        }),
+      );
+      const result = await createDaemonCommandDefinition(runtime).handler({
+        positionals: ["install"],
+        flags: {},
+        global: {},
+      } as never);
+      // The mutant renders with an empty executable instead of refusing.
+      expect("data" in result).toBe(true);
+      expect(requests[0]?.binary).toBe("");
+      expect(installEmptyExecutable.violates("ExecStart= daemon start --foreground")).toBe(true);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("uninstall-broad-delete: the mutated adapter removes an unowned installation", async () => {
+    const module = await loadMutatedModule<{
+      createSupervisorAdapter: typeof createSupervisorAdapter;
+    }>(uninstallBroadDelete, uninstallBroadDelete.target, "supervisor.ts");
+    const memory = createMemorySupervisor();
+    const adapter = module.createSupervisorAdapter({
+      platform: "linux",
+      configDirectory: "/config",
+      unit: "example-product-daemon.service",
+      scope: "scope",
+      environmentName: "EXAMPLE_PRODUCT_STATE_DIR",
+      stateDirectory: "/state",
+      fs: memory.fs,
+      run: memory.run,
+    });
+    // A marker that names another unit: the delivered adapter refuses it.
+    memory.fs.write(
+      "/config/example-product-daemon.daemon-install.json",
+      `${JSON.stringify({
+        schema: "delivery.daemon.install.v1",
+        unit: "another-product.service",
+        scope: "scope",
+        lingerEnabled: false,
+        installedAt: "2026-11-11T10:00:00Z",
+      })}\n`,
+    );
+    const delivered = createSupervisorAdapter({
+      platform: "linux",
+      configDirectory: "/config",
+      unit: "example-product-daemon.service",
+      scope: "scope",
+      environmentName: "EXAMPLE_PRODUCT_STATE_DIR",
+      stateDirectory: "/state",
+      fs: memory.fs,
+      run: memory.run,
+    });
+    const deliveredOutcome = delivered.uninstall({ unit: "example-product-daemon.service" });
+    expect("removed" in deliveredOutcome && deliveredOutcome.removed).toBe(false);
+    const mutatedOutcome = adapter.uninstall({ unit: "example-product-daemon.service" });
+    expect("removed" in mutatedOutcome && mutatedOutcome.removed).toBe(true);
+    expect(
+      uninstallBroadDelete.violates(
+        "removed" in mutatedOutcome ? mutatedOutcome.removed : false,
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  test("every Phase-3 mutant names a real suite and assertion", () => {
+    for (const mutant of [
+      bareExecstart,
+      unitUnderStateDir,
+      xdgRelativeJoined,
+      installEmptyExecutable,
+      uninstallBroadDelete,
     ]) {
       expect(mutant.suite.endsWith(".test.ts")).toBe(true);
       expect(existsSync(join(process.cwd(), mutant.suite))).toBe(true);

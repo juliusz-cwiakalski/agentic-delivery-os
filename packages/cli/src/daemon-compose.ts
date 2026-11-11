@@ -808,7 +808,24 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     status: statusOf,
     loop: () => runtime.loop(),
     install: async () => {
-      const installed = installSupervisor(composedSupervisor(), {
+      const supervisor = composedSupervisor();
+      // The delivered unsupported classification wins first: a platform with no
+      // adapter never reaches the entry-path guard.
+      const inspection = supervisor.inspect();
+      if (!inspection.supported) {
+        return failure(
+          "daemon.supervisor-unsupported",
+          [inspection.platform, `no ${inspection.kind} adapter`].join(" "),
+        );
+      }
+      // The refusal keys on entry-path absence only: `binary` is a required
+      // composition field, so it can never be the cause. A resolvable state
+      // directory with no composed entry path refuses before any rendering, so
+      // no unit is ever written with an empty `ExecStart` (AC-F7-5).
+      if (composition.daemonEntry === undefined || composition.daemonEntry.length === 0) {
+        return failure("daemon.state-recovery-failed", "entry-path-absent");
+      }
+      const installed = installSupervisor(supervisor, {
         unit: composition.unit,
         scope,
         stateDirectory: composition.stateDirectory,

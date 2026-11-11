@@ -397,3 +397,52 @@ export const openMountStore = (stateDirectory: string): StateStorePort =>
     },
     { driver: "jsonl", edge: createNodeStateEdge() },
   );
+
+/** An in-memory supervisor filesystem + command runner for install proofs. */
+export type MemorySupervisor = {
+  readonly files: Map<string, string>;
+  readonly commands: readonly string[];
+  readonly fs: {
+    readonly exists: (path: string) => boolean;
+    readonly read: (path: string) => string;
+    readonly write: (path: string, text: string) => void;
+    readonly remove: (path: string) => void;
+    readonly ensureDirectory: (path: string) => void;
+  };
+  readonly run: (
+    command: string,
+    args: readonly string[],
+  ) => { readonly status: number; readonly stdout?: string; readonly stderr?: string };
+  /** Fail the named command (by command name) once. */
+  readonly failCommand: (command: string) => void;
+};
+
+export const createMemorySupervisor = (): MemorySupervisor => {
+  const files = new Map<string, string>();
+  const commands: string[] = [];
+  const failing = new Set<string>();
+  return {
+    files,
+    commands,
+    fs: {
+      exists: (path) => files.has(path),
+      read: (path) => files.get(path) ?? "",
+      write: (path, text) => {
+        files.set(path, text);
+        commands.push(`write ${path}`);
+      },
+      remove: (path) => {
+        files.delete(path);
+        commands.push(`remove ${path}`);
+      },
+      ensureDirectory: () => undefined,
+    },
+    run: (command, args) => {
+      commands.push(`${command} ${args.join(" ")}`.trim());
+      return { status: failing.has(command) ? 1 : 0 };
+    },
+    failCommand: (command) => {
+      failing.add(command);
+    },
+  };
+};

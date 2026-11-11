@@ -2269,7 +2269,29 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 
 | TC ID | Run Date | Result | Evidence |
 |---|---|---|---|
-| — | — | Not run | Populated by delivery. |
+| TC-DAEMON-030 | 2026-11-11 | PASS | `tests/behaviour/daemon-start-detached.test.ts` — spawn entry/argv, durable-readiness receipt from durable state, <=20 x 50 ms polls |
+| TC-DAEMON-031 | 2026-11-11 | PASS | same suite — `daemon.state-recovery-failed` with readiness detail, exactly 20 sleeps, no append, truthful status after |
+| TC-DAEMON-032 | 2026-11-11 | PASS | same suite — zero spawns, in-process acquired instance, `lane-executor-unavailable` and never `daemon-unreachable` |
+| TC-DAEMON-040 | 2026-11-11 | PASS | same suite — exact key set, state binding last, `USERPROFILE` substitution, working-name override, purity, ordering mutant |
+| TC-DAEMON-041 | 2026-11-11 | PASS | `tests/behaviour/daemon-start-env-stripped.test.ts` — stripped-`PATH` residual at exit 2, absolute-override variant, no-home refusal at exit 1, source boundary, control success |
+| TC-DAEMON-050 | 2026-11-11 | PASS | `tests/behaviour/daemon-state-scope.test.ts` — one scope for store/lock/socket/supervisor, override digest, home template control |
+| TC-DAEMON-051 | 2026-11-11 | PASS | same suite — child resolution from the authoritative binding, forwarded look-alike cannot win, scope digest agreement |
+| TC-DAEMON-052 | 2026-11-11 | PASS | same suite — byte-identical home default including trailing-separator normalization; delivered state-scope control unmodified |
+| TC-DAEMON-053 | 2026-11-11 | PASS | same suite — command stays mounted, home value kept, edge still reports `config.value.invalid`, no relative-path store |
+| TC-DAEMON-054 | 2026-11-11 | PASS | same suite — nine handler invocations at exit 1, source boundary, root-level absence, control composition |
+| TC-DAEMON-060 | 2026-11-11 | PASS | `tests/behaviour/daemon-status.test.ts` — durable projection, one probe, derived markers, deterministic payload, recorded matrix |
+| TC-DAEMON-061 | 2026-11-11 | PASS | same suite — `--live` at exit 0 with one connect, `running` fold, plain surface parity |
+| TC-DAEMON-062 | 2026-11-11 | PASS | same suite — unreachable socket and stale beat fail closed; plain status degraded success; fresh control |
+| TC-DAEMON-063 | 2026-11-11 | PASS | same suite — configured socket/interval reach the runtime, empty-branch fallback is the same resolver, no literal in the composition |
+| TC-DAEMON-090 | 2026-11-11 | PASS | same suite — composing pid recorded and reported by both surfaces, fallback for 0/absent, deterministic value |
+| TC-DAEMON-122 | 2026-11-11 | PASS | same suite — p95 <= 1 000 ms plain and <= 2 000 ms live over 20 samples, machine bytes <= frame bound, 0 listens |
+| TC-DAEMON-100 | 2026-11-11 | PASS | `tests/behaviour/daemon-install-mount.test.ts` — absolute `ExecStart`, exact `Environment=` binding, descriptor, delivered command order |
+| TC-DAEMON-101 | 2026-11-11 | PASS (structural half) | same suite — four XDG fixtures through the delivered adapter; the production composer's root choice is asserted structurally (see 10.3) |
+| TC-DAEMON-102 | 2026-11-11 | PASS | same suite — darwin/win32 refuse with nothing written; linger failure rolls back unit and marker |
+| TC-DAEMON-103 | 2026-11-11 | PASS | same suite — ownership-scoped uninstall, unrelated artifacts byte-unchanged, noop on repeat and on absent install |
+| TC-DAEMON-104 | 2026-11-11 | PASS | same suite — refusal with zero renders and an empty configuration root, `binary` supplied |
+| TC-DAEMON-105 | 2026-11-11 | PASS (manual) | Host `linux x64`, Bun `1.4.4`, user manager `running`, `XDG_RUNTIME_DIR=/run/user/1000`. Temp `XDG_CONFIG_HOME=$PWD/tmp/gh286-tc105/xdg`, `DELIVERY_OS_STATE_DIR=$PWD/tmp/gh286-tc105/state`, entry path `packages/cli/bin/delivery-os.ts`. `daemon install` (handler) -> `daemon.supervisor-unsupported` / `linux systemctl-enable-failed`: the running manager's unit search path is fixed at its start, so it cannot enable a unit under a temp configuration root; the delivered rollback removed the unit and the marker (empty listing). `systemctl --user daemon-reload` exit 0; `systemctl --user status delivery-os-daemon.service` -> `Unit delivery-os-daemon.service could not be found.`; `daemon uninstall` -> `result=noop` with the descriptor reported and the temp root empty; no login autostart enabled for the operator account. The entrypoint-shaped re-run is task 6.9. |
+| TC-DAEMON-124 | 2026-11-11 | PASS | `tests/behaviour/daemon-install-mount.test.ts` — second install byte-identical with one unit, released stop is `noop` with zero signals, live start refuses with an unchanged record count |
 
 ### 10.2 Aggregate gate evidence
 
