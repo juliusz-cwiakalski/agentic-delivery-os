@@ -54,6 +54,127 @@ const stepFinish = (sessionID: string, reason: string): string =>
     part: { type: "step-finish", reason },
   });
 
+// ---------------------------------------------------------------------------
+// Telemetry v2 token-bearing builders (GH-291 GAP-2; ingest matrices
+// I-01..I-05). Shape-preserving over the committed v2.2.5 capture: every
+// synthetic frame keeps the framing the pinned captures pin (top-level
+// `sessionID`, `part.type` completion marker) while varying only the token,
+// cost, and call payload. Later matrices build through these builders, never
+// through ad-hoc JSON literals scattered through suites.
+// ---------------------------------------------------------------------------
+
+/** The token-bearing capture committed per the stream README (GAP-2). */
+export const TOKEN_BEARING_LINES = pinnedLines("opencode-v2.2.5-tokens.jsonl");
+export const TOKEN_SESSION_ID = pinnedSessionId(TOKEN_BEARING_LINES);
+
+export type TelemetryTokenCounts = {
+  readonly input?: number;
+  readonly output?: number;
+  readonly reasoning?: number;
+  readonly cacheRead?: number;
+  readonly cacheWrite?: number;
+};
+
+export type TokenFrameOptions = {
+  /** Present keys are counted; omitted keys degrade through I-02. */
+  readonly tokens?: TelemetryTokenCounts;
+  /** `undefined` omits cost (I-03); a number counts in harness-reported units. */
+  readonly cost?: number;
+  /** `undefined` omits the explicit call count (I-04). */
+  readonly calls?: number;
+  readonly reason?: string;
+  /** Drift (I-05): unexpected extra part fields beside the known shape. */
+  readonly extraPartFields?: Readonly<Record<string, unknown>>;
+  /** Drift (I-05): a renamed token-class key inside the tokens shape. */
+  readonly renamedTokenClass?: { readonly from: keyof TelemetryTokenCounts; readonly to: string };
+  /** Drift (I-05): an unknown top-level frame type. */
+  readonly frameType?: string;
+  readonly timestamp?: number;
+};
+
+/** Build one shape-preserving token-bearing completion frame. */
+export const tokenStepFinish = (sessionID: string, options: TokenFrameOptions = {}): string => {
+  const { renamedTokenClass, ...rest } = options;
+  const source: TelemetryTokenCounts = rest.tokens ?? {};
+  const tokens: Record<string, number> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (value === undefined) continue;
+    if (renamedTokenClass !== undefined && key === renamedTokenClass.from) {
+      tokens[renamedTokenClass.to] = value;
+      continue;
+    }
+    tokens[key] = value;
+  }
+  const part: Record<string, unknown> = {
+    type: "step-finish",
+    id: "prt_tok",
+    messageID: "msg_tok",
+    reason: rest.reason ?? "stop",
+    ...(Object.keys(tokens).length > 0 ? { tokens } : {}),
+    ...(rest.cost === undefined ? {} : { cost: rest.cost }),
+    ...(rest.calls === undefined ? {} : { calls: rest.calls }),
+    ...(rest.extraPartFields ?? {}),
+  };
+  return JSON.stringify({
+    type: rest.frameType ?? "step_finish",
+    timestamp: rest.timestamp ?? 3,
+    sessionID,
+    part,
+  });
+};
+
+/** I-01 — the complete control: all five classes, cost, and calls counted. */
+export const completeTokenFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 },
+    cost: 0.0125,
+    calls: 1,
+  });
+
+/** I-02 — one token class omitted; the others counted, the class never zeroed. */
+export const omittedClassFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, cacheRead: 40, cacheWrite: 5 },
+    cost: 0.01,
+    calls: 1,
+  });
+
+/** I-03 — cost omitted; token sums intact, cost never synthesized. */
+export const omittedCostFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 },
+    calls: 1,
+  });
+
+/** I-04 — calls omitted; calls excluded from totals, never defaulted. */
+export const omittedCallsFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 },
+    cost: 0.01,
+  });
+
+/** I-05 — known completion shape with unexpected extra fields; known fields count. */
+export const driftedExtraFieldFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 },
+    cost: 0.01,
+    calls: 1,
+    extraPartFields: { providerTokens: { total: 99 } },
+  });
+
+/** I-05 — a renamed token-class key; the drifted class excludes, the rest count. */
+export const driftedRenamedClassFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, {
+    tokens: { input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 },
+    renamedTokenClass: { from: "cacheRead", to: "cache_read" },
+    cost: 0.01,
+    calls: 1,
+  });
+
+/** I-05 — an unknown top-level frame type beside known frames; ingest continues. */
+export const driftedUnknownTypeFrame = (sessionID: string): string =>
+  tokenStepFinish(sessionID, { frameType: "step_flush" });
+
 export type StreamCaseId =
   | "real-three-line"
   | "leading-noise"

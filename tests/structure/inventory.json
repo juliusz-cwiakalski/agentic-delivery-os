@@ -70,6 +70,7 @@
     "src/contracts/spend.ts",
     "src/contracts/state.ts",
     "src/contracts/status.ts",
+    "src/contracts/telemetry.ts",
     "src/contracts/taxonomy.ts",
     "src/contracts/verify-deploy.ts",
     "src/contracts/verify-gates.ts",

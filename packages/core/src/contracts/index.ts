@@ -840,9 +840,9 @@ export {
   DISPATCH_RESUME_MODES,
   DISPATCH_WINDOW_START_REASONS,
   type DispatchAttemptRecord,
-  type DispatchAttemptView,
   type DispatchAttemptsData,
   type DispatchAttemptsTruncation,
+  type DispatchAttemptView,
   type DispatchAuthorityReadPort,
   type DispatchAuthorityView,
   type DispatchComparisonClass,
@@ -1461,7 +1461,6 @@ export {
   PROJECT_STATE_LOCATIONS,
   PROJECT_UNBOUND_SEGMENT,
   PROJECTS_COMMAND_FAMILY,
-  STATE_MIGRATION_NOTE_PATH,
   PROJECTS_CONTAINER_SEGMENT,
   PROJECTS_ENTRY_FIELDS,
   PROJECTS_ERROR_CODES,
@@ -1475,6 +1474,7 @@ export {
   type ProjectsErrorCode,
   type ProjectsListData,
   type ProjectsListEntry,
+  STATE_MIGRATION_NOTE_PATH,
 } from "./projects.js";
 // Provider-engine vocabulary (GH-182 F-1..F-9, DM-1..DM-13): types and the
 // closed sets/allowlists only; the pure policy lives in `./provider`.
@@ -2216,6 +2216,49 @@ export {
   type TaxonomyViolation,
   validateTaxonomy,
 } from "./taxonomy.js";
+// The telemetry v2 vocabulary (GH-291 F-1..F-8, DM-1..DM-6, DEC-2..DEC-6):
+// the storage identity and record shapes, the frame field mapping, the
+// reconciliation and reading-basis vocabularies, the breakdown-field set,
+// the v2 additive data keys, and the ingest sink port.
+export {
+  SPEND_BREAKDOWN_FIELDS,
+  SPEND_V2_DATA_KEYS,
+  type SpendBreakdownField,
+  TELEMETRY_BASELINE_KEY_PREFIX,
+  TELEMETRY_BASELINE_RECORD_KIND,
+  TELEMETRY_BASELINE_SCHEMA_ID,
+  TELEMETRY_FRAME_CALLS_FIELD,
+  TELEMETRY_FRAME_COST_FIELD,
+  TELEMETRY_FRAME_TOKENS_FIELD,
+  TELEMETRY_MIGRATION_RULE,
+  TELEMETRY_READING_BASES,
+  TELEMETRY_RECONCILIATION_TOLERANCE,
+  TELEMETRY_RECONCILIATION_VERDICTS,
+  TELEMETRY_SESSION_COMBINATION_RULE,
+  TELEMETRY_STATE_PRESENT,
+  TELEMETRY_STEP_FINISH_PART_TYPE,
+  TELEMETRY_STEP_FRAME_TYPE,
+  TELEMETRY_STEP_KEY_PREFIX,
+  TELEMETRY_STEP_RECORD_KIND,
+  TELEMETRY_STEP_SCHEMA_ID,
+  TELEMETRY_STORAGE_SCHEMA_VERSION,
+  TELEMETRY_UNATTRIBUTED_DIMENSION_RULE,
+  TELEMETRY_VERDICT_OUTSIDE,
+  TELEMETRY_VERDICT_UNAVAILABLE,
+  TELEMETRY_VERDICT_WITHIN,
+  TELEMETRY_WARNING_REASONS,
+  type TelemetryBaselineRecord,
+  type TelemetryIngestCounts,
+  type TelemetryIngestSink,
+  type TelemetryReadingBasis,
+  type TelemetryReconciliation,
+  type TelemetryReconciliationVerdict,
+  type TelemetryState,
+  type TelemetryStepRecord,
+  type TelemetryStepTokens,
+  type TelemetryWarning,
+  type TelemetryWarningReason,
+} from "./telemetry.js";
 // The `delivery.verify-deploy.v1` vocabulary (GH-225 F-6, DEC-10): the closed
 // verdict/reason enums, the one declared reason-to-identity map, the
 // expectation/trace shapes, and the evidence caps. Data and types only.

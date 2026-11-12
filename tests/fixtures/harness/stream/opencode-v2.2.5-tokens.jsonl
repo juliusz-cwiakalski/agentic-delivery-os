@@ -1,0 +1,6 @@
+{"type":"step_start","timestamp":1762560100000,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"step-start","id":"prt_t1","messageID":"msg_t1"}}
+{"type":"text","timestamp":1762560100100,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"text","id":"prt_t2","messageID":"msg_t1","text":"ok"}}
+{"type":"step_finish","timestamp":1762560100200,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"step-finish","id":"prt_t3","messageID":"msg_t1","reason":"stop","tokens":{"input":120,"output":45,"reasoning":0,"cacheRead":310,"cacheWrite":25},"cost":0.0031}}
+{"type":"step_start","timestamp":1762560100300,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"step-start","id":"prt_t4","messageID":"msg_t2"}}
+{"type":"text","timestamp":1762560100400,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"text","id":"prt_t5","messageID":"msg_t2","text":"done"}}
+{"type":"step_finish","timestamp":1762560100500,"sessionID":"ses_0f1e2d3c4b5a69788796a5b4c3d2e1f0","part":{"type":"step-finish","id":"prt_t6","messageID":"msg_t2","reason":"stop","tokens":{"input":80,"output":60,"reasoning":12,"cacheRead":190,"cacheWrite":0},"cost":0.0024}}
