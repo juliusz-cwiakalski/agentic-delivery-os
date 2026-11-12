@@ -117,7 +117,7 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
-      Plan phase 7 complete (commit {SHA}): cross-cutting conformance and NFR
+      Plan phase 7 complete (commit 4d6e6dc1): cross-cutting conformance and NFR
       battery plus the fixture corpus. Audit first: phases 1-6 already proved
       the fenced mutation truth (P1 seams), refusal purity + guard read cost
       (P2), closeout outcome identity + <=1 fold/2 appends (P3), bounded
