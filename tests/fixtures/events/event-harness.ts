@@ -153,6 +153,21 @@ export type EventHarness = {
   readonly store: StateStorePort;
   readonly clock: HarnessClock;
   readonly subscribeBuffer: number;
+  /** Every `readRecords()` call the composed store has served. */
+  readonly reads: () => number;
+  /**
+   * The same calls classified by the seam that issued them: the one publish
+   * read, the heartbeat's own two folds, and every other delivered read (the
+   * heartbeat append/verify chain).
+   */
+  readonly classifiedReads: () => {
+    readonly publish: number;
+    readonly heartbeatFold: number;
+    readonly other: number;
+  };
+  readonly resetReads: () => void;
+  /** Every `sleep(ms)` the injected clock was asked for. */
+  readonly sleeps: () => number;
   readonly connect: () => Promise<EventClient>;
   readonly step: () => Promise<void>;
   readonly appendEntry: (entry: QueueEntryRecord) => void;
@@ -183,6 +198,8 @@ export type EventHarnessOptions = {
   readonly startIso?: string;
   /** Use the delivered unix-socket transport instead of the in-memory pair. */
   readonly realSocket?: boolean;
+  /** Compose the iteration without the blocker-answer consumer (default true). */
+  readonly processBlockerAnswers?: boolean;
 };
 
 /** The eight declared event-frame `data` keys, in order. */
@@ -207,9 +224,40 @@ export const createEventHarness = async (
   const subscriptionBuffer = options.subscriptionBuffer ?? 256;
   const edge = createTestEdge();
   edge.ensureDirectory(root);
-  const { store } = openStore(makeIdentity(root));
   const lock = createDaemonLockPort(edge, root);
-  const clock = createClock(options.startIso ?? NOW);
+  let readCount = 0;
+  let publishReads = 0;
+  let heartbeatFoldReads = 0;
+  let otherReads = 0;
+  let sleepCount = 0;
+  const rawStore = openStore(makeIdentity(root)).store;
+  const store: StateStorePort = {
+    ...rawStore,
+    readRecords: () => {
+      readCount += 1;
+      const stack = new Error().stack ?? "";
+      if (stack.includes("publishState") || stack.includes("changes")) {
+        publishReads += 1;
+      } else if (
+        stack.includes("writeHeartbeat") &&
+        !stack.includes("append") &&
+        (stack.includes("readQueueEntries") || stack.includes("readDaemonLanes") || stack.includes("readLedger"))
+      ) {
+        heartbeatFoldReads += 1;
+      } else {
+        otherReads += 1;
+      }
+      return rawStore.readRecords();
+    },
+  };
+  const baseClock = createClock(options.startIso ?? NOW);
+  const clock: HarnessClock = {
+    ...baseClock,
+    sleep: async (ms) => {
+      sleepCount += 1;
+      await baseClock.sleep(ms);
+    },
+  };
   const wake = createManualWake();
   const pair = createMemoryTransportPair();
   const socketTransport =
@@ -255,6 +303,7 @@ export const createEventHarness = async (
     newFenceToken: fenceToken,
     newLockToken: () => "lock-gh290",
     newInstanceId: () => `instance-gh290-${options.label ?? "a"}`,
+    ...(options.processBlockerAnswers === false ? { processBlockerAnswers: false } : {}),
   };
   const runtime = createDaemonCommandRuntime(composition);
   const started = await runtime.start({ foreground: true });
@@ -294,6 +343,19 @@ export const createEventHarness = async (
     store,
     clock,
     subscribeBuffer: subscriptionBuffer,
+    reads: () => readCount,
+    classifiedReads: () => ({
+      publish: publishReads,
+      heartbeatFold: heartbeatFoldReads,
+      other: otherReads,
+    }),
+    resetReads: () => {
+      readCount = 0;
+      publishReads = 0;
+      heartbeatFoldReads = 0;
+      otherReads = 0;
+    },
+    sleeps: () => sleepCount,
     connect,
     step: async () => {
       await wake.step();

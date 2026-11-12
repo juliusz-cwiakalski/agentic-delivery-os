@@ -254,3 +254,36 @@ notes:
       not a size ceiling, exactly as TC-EVT-061 declares.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 6 complete (commit 35121fc3): the per-topic contract suites and
+      the single-source proof. `events-subscribe-queue-graph` (TC-EVT-020),
+      `-dispatch` (024), `-phase` (025), and `-blockers` (026) observe their
+      topics through the real server/session over a real store;
+      `events-envelope-conformance` (022) asserts the eight ordered `data` keys,
+      the non-empty lane, the per-topic `ref` rule (explicit `null` only on
+      blockers), the ISO-Z `occurredAt`, the declared payload keys, and the
+      absent cursor across a twelve-frame full-delivery stream;
+      `events-emitted-kinds` (027) proves the emitted set equals the declared
+      emitted set with `remove` never emitted; `events-privacy` and the
+      privacy-literal scan (084) prove no canary, `repositoryRoot`, credential,
+      prompt, transcript, or diff reaches a frame, page, or error;
+      `event-taxonomy-single-source` (006 and 016's union half) moves the
+      declaration once and watches both consumers move, scans the production
+      tree for a second kind list, and pins the derived union;
+      `event-ordering-contract` (031) pins the ordering values and proves no
+      sort/comparison on `occurredAt` and no cursor-derived order;
+      `event-taxonomy-conformance` (002/027/032 page halves) scans the seven v1
+      sections (no S17 name, counts `0/0/4/3/3/3` present, every section
+      non-empty), asserts the `EXTENSION PATH (S17 — not v1)` section is
+      non-empty, placed after ERRORS and before SEE ALSO, and the only place the
+      four names occur, and scans the page's restart/repoll/gap prose;
+      `tests/conformance/events/real-socket-subscribe.test.ts` (021) repeats the
+      `queue.graph` observation over the delivered unix transport with the 0700
+      directory and 0600 socket invariants. Gate: the thirteen-suite Phase-6
+      batch reports 26 pass / 0 fail, the five delivered control suites 21 pass
+      / 0 fail, `exports-parity`, `prompt-conformance`, and `error-table-sync`
+      (127 documented) all OK. Deviations: none in the declared scope; the page
+      token scan excludes only the named extension section, exactly as the spec
+      pins it.
+    type: "info"
+    date: "2026-11-12"

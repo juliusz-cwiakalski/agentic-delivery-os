@@ -76,6 +76,7 @@ import {
   LOCAL_CALLER_PRINCIPAL,
   QUEUE_MAX_ENTRIES,
   type Result,
+  type StateRecord,
   type StateStorePort,
   type SupervisorPort,
 } from "@delivery-os/core/contracts";
@@ -176,6 +177,12 @@ export type DaemonComposition = {
   readonly wake?: DaemonWakePort;
   /** The injected lane executor; absence is the declared supervise-only mode. */
   readonly executor?: LaneExecutorPort;
+  /**
+   * Whether each iteration runs the blocker-answer consumer. Default true. A
+   * false value composes the iteration with that optional consumer absent, which
+   * is the delivered optional-port shape the publish-tick cost case measures.
+   */
+  readonly processBlockerAnswers?: boolean;
   /** The delivered scheduling seam the supervision cycle consumes. */
   readonly supervision?: {
     readonly nextAction: Parameters<typeof runSupervisionCycle>[0]["ports"]["nextAction"];
@@ -338,8 +345,11 @@ const boundedProjection = <T>(
 };
 
 /** The bounded `queue` projection: refs, repositories, and priorities only. */
-const queueWatchSnapshot = (store: StateStorePort): unknown | undefined => {
-  const read = readQueueEntries(store);
+const queueWatchSnapshot = (
+  store: StateStorePort,
+  records: readonly StateRecord[],
+): unknown | undefined => {
+  const read = readQueueEntries(store, records);
   if (!read.ok) return undefined;
   const entries = read.latest.map((entry) => ({
     ref: entry.ref,
@@ -355,8 +365,11 @@ const queueWatchSnapshot = (store: StateStorePort): unknown | undefined => {
 };
 
 /** The bounded `lanes` projection: the latest execution record per ref. */
-const lanesWatchSnapshot = (store: StateStorePort): unknown | undefined => {
-  const read = readDaemonLanes(store);
+const lanesWatchSnapshot = (
+  store: StateStorePort,
+  records: readonly StateRecord[],
+): unknown | undefined => {
+  const read = readDaemonLanes(store, records);
   if (!read.ok) return undefined;
   const latest = new Map<string, DaemonLaneRecord>();
   for (const lane of read.records) latest.set(lane.ref, lane);
@@ -386,14 +399,22 @@ const createWatchState = (store: StateStorePort) => {
   const last = new Map<ControlTopic, string>();
   const baselined = new Set<ControlTopic>();
   const projector = createEventProjector();
+  /** One whole-store view for a publish tick; the subscribe path reads on demand. */
+  const readView = (): readonly StateRecord[] | undefined => {
+    const view = store.readRecords();
+    return view.ok ? view.value.records : undefined;
+  };
   /**
    * A snapshot topic's bounded projection. The four event topics have none: an
    * event subscription carries no synthetic baseline (DEC-H).
    */
   const snapshotOf = (topic: ControlTopic): unknown | undefined => {
-    if (topic === "queue") return queueWatchSnapshot(store);
-    if (topic === "lanes") return lanesWatchSnapshot(store);
-    return undefined;
+    if (topic !== "queue" && topic !== "lanes") return undefined;
+    const records = readView();
+    if (records === undefined) return undefined;
+    return topic === "queue"
+      ? queueWatchSnapshot(store, records)
+      : lanesWatchSnapshot(store, records);
   };
   return {
     snapshot: snapshotOf,
@@ -404,9 +425,16 @@ const createWatchState = (store: StateStorePort) => {
       baselined.add(topic);
     },
     changes: (): readonly WatchSnapshot[] => {
+      // Exactly one whole-store read per publish tick, shared by the snapshot
+      // projection and the event projection (DEC-N, NFR-2).
+      const records = readView();
+      if (records === undefined) return [];
       const changes: WatchSnapshot[] = [];
       for (const topic of ["queue", "lanes"] as const) {
-        const snapshot = snapshotOf(topic);
+        const snapshot =
+          topic === "queue"
+            ? queueWatchSnapshot(store, records)
+            : lanesWatchSnapshot(store, records);
         if (snapshot === undefined) continue;
         const serialized = stableSerialized(snapshot);
         if (!baselined.has(topic)) {
@@ -418,12 +446,8 @@ const createWatchState = (store: StateStorePort) => {
         last.set(topic, serialized);
         changes.push({ topic, snapshot });
       }
-      // The four event topics project observed deltas from the durable ledgers.
-      // This phase may read once per fold; the one-shared-read restructure is a
-      // later declared phase.
-      const view = store.readRecords();
-      if (!view.ok) return changes;
-      for (const event of projector.project(view.value.records)) {
+      // The four event topics project observed deltas from the same view.
+      for (const event of projector.project(records)) {
         changes.push({ topic: event.topic, event });
       }
       return changes;
@@ -651,7 +675,9 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
       ...(composition.livenessIntervalMs === undefined
         ? {}
         : { livenessIntervalMs: composition.livenessIntervalMs }),
-      processBlockerAnswers: blockerAnswers,
+      ...(composition.processBlockerAnswers === false
+        ? {}
+        : { processBlockerAnswers: blockerAnswers }),
       ...(composition.detectEffects === undefined
         ? composition.effects === undefined
           ? {}
