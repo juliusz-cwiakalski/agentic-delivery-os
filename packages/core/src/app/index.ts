@@ -218,6 +218,7 @@ export {
   queueIncidentRecordKey,
   queueLeaseRecordKey,
   queueParkRecordKey,
+  queueRemovalForCloseout,
   queueRemovalRecordKey,
   readActiveLeases,
   readQueueDependencies,

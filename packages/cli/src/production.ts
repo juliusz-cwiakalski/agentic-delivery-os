@@ -961,6 +961,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       git: gitBranches,
       store,
       nowIso,
+      nowMs,
       newFenceToken,
     });
 

@@ -55,6 +55,7 @@ import {
   type CloseoutPlanOutcome,
   type CloseoutPromotionRuntime,
   type CloseoutProviderRuntime,
+  type CloseoutQueueRemovalData,
   type CloseoutReadObservation,
   type CloseoutResidueItem,
   type CloseoutRestoreArguments,
@@ -77,6 +78,7 @@ import {
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
+  type StateFenceHandle,
 } from "#contracts";
 import {
   capsuleDigest,
@@ -1192,6 +1194,18 @@ export type CloseoutRunInput = {
   readonly retro?: CloseoutRetroFacts;
   /** The session-attribution facts (GH-240 F-9). */
   readonly sessions?: CloseoutSessionFacts;
+  /**
+   * The additive non-step queue-removal hook (GH-292 F-2, DM-6). Plan mode
+   * reads and reports; apply mode runs inside the closeout fence handle after
+   * the steps complete. Absent leaves the data block absent, exactly as
+   * delivered.
+   */
+  readonly queueRemoval?: (input: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly handle?: StateFenceHandle;
+  }) => CloseoutQueueRemovalData | undefined;
 };
 
 /** The apply-orchestrator result: bounded data or a classified identity. */
@@ -1973,6 +1987,14 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
       summary: summarizeCloseout(steps),
       ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
       ...(residue.length === 0 ? {} : { residue }),
+      ...(() => {
+        const queueRemoval = input.queueRemoval?.({
+          mode: "plan",
+          workItemRef: input.plan.workItemRef,
+          mergedObserved: input.plan.deliveryRequest !== undefined,
+        });
+        return queueRemoval === undefined ? {} : { queueRemoval };
+      })(),
     };
     return { ok: true, data: boundCloseoutData(data) };
   }
@@ -1994,6 +2016,9 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   let capsuleFailure: { readonly code: string; readonly detail: string } | undefined;
   const capsuleResidue: CloseoutResidueItem[] = [...(input.plan.residue ?? [])];
   const mergedHeadSha = input.plan.deliveryRequest?.headSha;
+  // GH-292 F-2: the additive non-step queue-removal disclosure, assigned
+  // inside the fence and disclosed in the applied data.
+  let queueRemoval: CloseoutQueueRemovalData | undefined;
 
   const append = (record: CloseoutOperationRecord): boolean => {
     const appended = input.state.append(handle, record);
@@ -2251,6 +2276,15 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         failed > 0 ? "failed" : applied > 0 ? "applied" : "satisfied";
       steps.push({ ...step, outcome });
     }
+    // GH-292 F-2: the landed-removal hook runs after the closeout writes and
+    // inside the fence the transaction already holds; it is fail-open and
+    // never changes a step outcome or the exit code.
+    queueRemoval = input.queueRemoval?.({
+      mode: "apply",
+      workItemRef: input.plan.workItemRef,
+      mergedObserved: input.plan.deliveryRequest !== undefined,
+      handle,
+    });
   } finally {
     input.state.releaseFence(handle);
   }
@@ -2284,6 +2318,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
     ...(telemetryCapture === undefined ? {} : { telemetryCapture }),
     ...(capsuleData === undefined ? {} : { capsule: capsuleData }),
     ...(capsuleResidue.length === 0 ? {} : { residue: orderResidue(capsuleResidue) }),
+    ...(queueRemoval === undefined ? {} : { queueRemoval }),
   };
   if (steps.some((step) => step.outcome === "failed")) {
     return {

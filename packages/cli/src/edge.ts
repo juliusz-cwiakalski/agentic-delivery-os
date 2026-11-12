@@ -142,6 +142,7 @@ import {
   type QueueProviderFact,
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
+  queueRemovalForCloseout,
   readActiveLeases,
   readCommandReceipts,
   readDaemonLanes,
@@ -200,6 +201,7 @@ import {
   type CloseoutGitRuntime,
   type CloseoutPromotionRuntime,
   type CloseoutProviderRuntime,
+  type CloseoutQueueRemovalData,
   type CloseoutReadObservation,
   type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
@@ -257,6 +259,7 @@ import {
   type SpendDigestSection,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type StateFenceHandle,
   type StateStorePort,
   type StatusBlockersRead,
   type StatusLocalContextRead,
@@ -1519,6 +1522,16 @@ export type CloseoutComposition = {
   readonly state: CloseoutStateRuntime;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /**
+   * The additive non-step queue-removal hook (GH-292 F-2, DM-6); the
+   * composition wires it over the same store the state runtime fences.
+   */
+  readonly queueRemoval?: (input: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly handle?: StateFenceHandle;
+  }) => CloseoutQueueRemovalData | undefined;
   /** The append-only capsule runtime (GH-240 F-3); absent leaves the step a gap. */
   readonly capsule?: CapsuleFileRuntime;
   /** The expected capsule events derived from durable state (GH-240 F-3). */
@@ -1577,6 +1590,7 @@ export type CloseoutCompositionOptions = {
   readonly git: GitBranchSeam | GitBranchSeamOptions;
   readonly store: StateStorePort;
   readonly nowIso: () => string;
+  readonly nowMs: () => number;
   readonly newFenceToken: () => string;
   readonly dependentsLimit?: number;
   readonly mergedRequestLimit?: number;
@@ -2241,11 +2255,28 @@ export const createCloseoutComposition = (
   };
 
   const telemetry = buildTelemetry();
+  // GH-292 F-2: the closeout's landed-removal hook shares the transaction's
+  // fence; the merged delivery request is the merge truth it discloses on.
+  const queueRemoval = (hook: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly handle?: StateFenceHandle;
+  }) =>
+    queueRemovalForCloseout(options.store, {
+      mode: hook.mode,
+      workItemRef: hook.workItemRef,
+      mergedObserved: hook.mergedObserved,
+      recordedAt: options.nowIso(),
+      nowMs: options.nowMs(),
+      ...(hook.handle === undefined ? {} : { handle: hook.handle }),
+    });
   return {
     planFacts,
     provider,
     git,
     state: createCloseoutStateRuntime(options.store),
+    queueRemoval,
     nowIso: options.nowIso,
     newFenceToken: options.newFenceToken,
     ...(options.capsule === undefined || options.memoryRoot === undefined
@@ -2296,6 +2327,7 @@ export const createCloseoutCommandRuntime = (
         return sessions === undefined ? {} : { sessions };
       })(),
       ...(composition.telemetry === undefined ? {} : { telemetry: composition.telemetry }),
+      ...(composition.queueRemoval === undefined ? {} : { queueRemoval: composition.queueRemoval }),
     });
   };
   return {

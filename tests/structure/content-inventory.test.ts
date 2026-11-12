@@ -1669,6 +1669,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "releaseQueueLease",
     "removeQueueDependency",
     "removeQueueEntry",
+    "removeQueueEntryWithinFence",
+    "queueRemovalForCloseout",
   ],
   "core/src/state/merge.ts": [
     "MERGE_GATE_VERIFICATION_RECORD_KEY_PREFIX",

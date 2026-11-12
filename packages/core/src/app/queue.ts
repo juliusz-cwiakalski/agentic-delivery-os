@@ -11,6 +11,7 @@
  */
 
 import {
+  type CloseoutQueueRemovalData,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   QUEUE_DEFAULT_LEASE_TTL_MS,
@@ -1213,7 +1214,54 @@ export const removeQueueEntry = (
       detail: `reason ${request.reason} is outside the declared removal vocabulary`,
     };
   }
+  const ref = canonicalQueueRef(request.ref);
+  if (ref === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `ref ${request.ref} is not a canonical work-item ref`,
+    };
+  }
+  return withRemovalFence(store, request.fenceToken, (handle) =>
+    removeQueueEntryWithinFence(store, {
+      ref,
+      ...(request.reason === undefined ? {} : { reason: request.reason }),
+      recordedAt: request.recordedAt,
+      nowMs: request.nowMs,
+      handle,
+    }),
+  );
+};
+
+/**
+ * The removal body executed inside a caller-held fence handle: the closeout
+ * hook shares the closeout transaction's fence through this seam (GH-292 F-2,
+ * NFR-3), so no second acquisition exists. The refusal set and the append
+ * order are exactly `removeQueueEntry`'s.
+ */
+export const removeQueueEntryWithinFence = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly reason?: QueueRemovalReason;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly handle: StateFenceHandle;
+  },
+): QueueRemovalMutationResult => {
   const reason = request.reason;
+  if (reason === undefined) {
+    return { ok: false, kind: "queue", code: "queue.reason-missing", ref: request.ref };
+  }
+  if (!(QUEUE_REMOVAL_REASONS as readonly string[]).includes(reason)) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `reason ${reason} is outside the declared removal vocabulary`,
+    };
+  }
   const ref = canonicalQueueRef(request.ref);
   if (ref === undefined) {
     return {
@@ -1230,7 +1278,8 @@ export const removeQueueEntry = (
     return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
   }
   const repository = entry.repository;
-  return withRemovalFence(store, request.fenceToken, (handle) => {
+  return (() => {
+    const handle = request.handle;
     const inside = readQueueFold(store);
     if (!inside.ok) return inside;
     if (entryOf(inside.value, ref) === undefined) {
@@ -1325,7 +1374,65 @@ export const removeQueueEntry = (
       fold: final.value,
       graph: document,
     });
+  })();
+};
+
+/* ------------------- closeout landed removal (GH-292 F-2, DM-6) ------------ */
+
+/**
+ * The closeout queue-removal hook (F-2, DM-6): one total function over the
+ * merge truth and the queue ledgers that never throws and never changes a step
+ * outcome. Plan mode reads and reports `would-remove`; apply mode runs the
+ * removal inside the caller's fence handle (the closeout transaction's own
+ * fence — no second acquisition). `satisfied` covers a re-run over an
+ * already-removed ref and a ref that never entered; `skipped` carries the
+ * closed reason and appends nothing. Cost: at most one fold, at most two
+ * appends, and at most one lease read (NFR-3).
+ */
+export const queueRemovalForCloseout = (
+  store: StateStorePort,
+  input: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly handle?: StateFenceHandle;
+  },
+): CloseoutQueueRemovalData => {
+  const ref = canonicalQueueRef(input.workItemRef);
+  if (ref === undefined) return { outcome: "skipped", skipReason: "ref-not-canonical" };
+  if (!input.mergedObserved) {
+    return { outcome: "skipped", skipReason: "no-merge-truth", ref };
+  }
+  const fold = readQueueFold(store);
+  if (!fold.ok) return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  const entry = entryOf(fold.value, ref);
+  if (entry === undefined) return { outcome: "satisfied", ref };
+  if (entry.repository !== undefined) {
+    const leases = readActiveLeases(store, input.nowMs);
+    if (!leases.ok) return { outcome: "skipped", skipReason: "state-unavailable", ref };
+    const held = leases.active.find((lease) => lease.repository === entry.repository);
+    if (held !== undefined) return { outcome: "skipped", skipReason: "lease-held", ref };
+  }
+  if (input.mode === "plan") return { outcome: "would-remove", ref, reason: "landed" };
+  if (input.handle === undefined) {
+    return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  }
+  const removal = removeQueueEntryWithinFence(store, {
+    ref,
+    reason: "landed",
+    recordedAt: input.recordedAt,
+    nowMs: input.nowMs,
+    handle: input.handle,
   });
+  if (!removal.ok) {
+    if (removal.kind === "queue" && removal.code === "queue.precondition.unmet") {
+      return { outcome: "skipped", skipReason: "lease-held", ref };
+    }
+    return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  }
+  return { outcome: "removed", ref, reason: "landed" };
 };
 
 /* ------------------- dependency-edge removal (GH-292 F-3) ------------------ */

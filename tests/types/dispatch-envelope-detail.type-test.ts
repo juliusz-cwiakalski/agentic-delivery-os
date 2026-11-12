@@ -5,14 +5,15 @@
  *
  * Compiled by `pnpm typecheck` (`tests/types/tsconfig.json`), not run by Bun.
  */
+
 import type {
-  COMMAND_FAILURE_DETAIL_MAX_CHARS,
   CommandResultDetail,
   CommandResultError,
   CommandResultFailure,
   DispatchEnvelopeData,
   DispatchEnvelopeError,
 } from "../../packages/core/src/contracts/index";
+import { COMMAND_FAILURE_DETAIL_MAX_CHARS } from "../../packages/core/src/contracts/index";
 
 /** The delivered six-field shared error, unchanged. */
 const shared: CommandResultError = {

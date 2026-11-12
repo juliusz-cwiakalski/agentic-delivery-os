@@ -197,6 +197,7 @@ export {
   queueIncidentRecordKey,
   queueLeaseRecordKey,
   queueParkRecordKey,
+  queueRemovalForCloseout,
   queueRemovalRecordKey,
   type ResidentPolling,
   type ResidentPollingInput,
