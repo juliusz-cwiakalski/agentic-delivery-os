@@ -117,6 +117,128 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 7 complete (commit {SHA}): cross-cutting conformance and NFR
+      battery plus the fixture corpus. Audit first: phases 1-6 already proved
+      the fenced mutation truth (P1 seams), refusal purity + guard read cost
+      (P2), closeout outcome identity + <=1 fold/2 appends (P3), bounded
+      reconcile output + read budget + goldens (P6), and TC-QLC-075's suite set
+      (error-table-sync both ways since P1; exit-code-literals is a delivered
+      control), so this phase delivered only the four missing declared suites:
+      `queue-remove-atomicity.test.ts` (TC-QLC-080: one fence, verified appends,
+      replace-last at the core seams for removal and dep removal; closeout
+      fence-sharing with zero second acquisition; reconcile removals one
+      fence+one append each; a dropped append caught by post-append
+      verification with zero replaces and a byte-identical ledger; an armed
+      append-before-flush failure leaves `state.write.failed` with the ledger
+      at its pre-run digest and the fold intact; the CLI classifies the state
+      failure at exit 2 with no data and no event disclosure),
+      `queue-lifecycle-convergence.test.ts` (TC-QLC-086: all three retirement
+      paths converge — closeout repeat `satisfied` with zero appends, repeated
+      absent-edge `dep remove` noop with zero appends/events, repeated
+      reconcile `checked` 1 with empty `removed[]` and no already-removed ref
+      re-reported, first-run records and the derived document byte-identical),
+      `queue-lifecycle-privacy.test.ts` (TC-QLC-084: removal payload keys
+      exact and the projected event exactly `ref,reason,recordedAt`; reconcile
+      lists bounded and identifier/count/timestamp only with the declared port
+      receiving refs only and no ambient-echo; `detail.holder` a single
+      <=128-char identifier at the envelope root while the error keeps exactly
+      its six fields and `error.detail` absent; command-line tokens refused as
+      grammar and never echoed; records and the derived document carry no
+      repository content — bounded-pattern scan per GAP-T5),
+      `queue-additivity.test.ts` (TC-QLC-085: zero packages/globs/adapters/dep
+      changes, `STATE_SCHEMA_VERSION` unchanged, record kinds 5 -> 6 and error
+      rows 5 -> 7 exact and two-sided against the record-kinds, references,
+      and state-additivity-baseline fixtures with all 19 queue constants at
+      live values, and the queue command export surface exact). The fixture
+      corpus closed its one open gap: `biome.json` (outside declared
+      scope.files; disclosed scope drift, same remedy pattern as Phase 6)
+      gained the formatter-disabled override for
+      `tests/fixtures/queue/removal/golden/*` so the byte-exact golden stays
+      runtime-identical and `remove-success.json` no longer fails the format
+      scan. Gates: typecheck exit 0 (all packages + tests config Done);
+      the four new suites 23 pass / 0 fail; plan gate pairs — atomicity +
+      convergence 10 pass, privacy + exit-code-literals + queue-bounds 28
+      pass, queue-additivity + event-additivity-inventory 14 pass; boundaries
+      149 pass; error-table structure + sync suites 188 pass;
+      `error-table-sync` check OK at 129/129 both directions;
+      forbidden-literals exit 0; ambient-globals OK (181 files);
+      content-inventory 6 pass (no inventory change — no new modules);
+      golden controls (queue-remove, queue-reconcile) 7 pass; delivered
+      harness-owner controls (remove, dep-remove, reconcile, closeout) 12
+      pass. Disclosed deviations: (1) `biome format .` still reports 13
+      DELIVERED files (committed in phases 1/5/6 — e.g. queue-remove.test.ts,
+      queue-dep-grammar.test.ts, v1-contract-inventory.json) as not
+      formatter-stable; verified pre-existing on their HEAD blobs, outside
+      this phase's declared scope, and left for the quality_gates phase whose
+      full `pnpm check` battery owns the format verdict (reformatting them
+      here would be un-declared drift); (2) CLI-level fence-count deltas
+      include the delivered park-recovery pass (one fence even with no stale
+      park, zero appends) — asserted exactly, not treated as a mutation; (3)
+      the closeout convergence repeat drives the `queueRemovalForCloseout`
+      hook under one fence over the same store rather than a second full
+      `runCloseout` transaction — the full-apply outcome identity is Phase 3's
+      proven control and the repeat proves the hook's zero-append
+      convergence; (4) AC-NFR-4's minutes-scale cap proof ran in Phase 6
+      (declared 600s budget) and re-runs in the Phase 9 full battery; this
+      phase re-proves one-ref-only-read observation through the port call
+      log.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 6 complete (commit 0bd61db0): CLI surface — `queue reconcile
+      [--ref <ref>]` mounted against tracker delivery state. The core sweep
+      reads every examined entry (exactly one bounded tracker read each,
+      sequential, no retry, none past the 100-entry cap) before the first
+      removal, removes only `done`/`canceled` with reason `reconciled` through
+      the ordinary F-1 seam (park withdrawal, one append, one
+      `queue.graph/remove` per ref), retains every open state with its observed
+      alias, retains a not-found item as `unobserved`, converges truthfully on
+      a repeat run (`checked` counts only still-existing entries; zero
+      appends/events), fails closed on the provider's own identity
+      (`provider.outage`/`provider.quota.exceeded` at exit 2,
+      `provider.auth.rejected` at exit 1, no `queue.*` synonym, zero appends),
+      and the payload is exactly the nine declared keys with bounded,
+      identifier-only values. The read rides the existing verified read bridge
+      in `edge.ts` (`readTrackerDeliveryState`) wired by `production.ts` over
+      the closeout client's per-issue observation (no new adapter operation, no
+      ambient credential read, no `status` list read); help gained the family
+      synopsis `reconcile` entry, the verb help path with `--ref`, and the
+      AC-F7-1 four-spellings proof; TC-QLC-058's golden layer landed
+      (`tests/golden/queue-reconcile.test.ts`, three committed goldens,
+      committed `regenerate.ts` writer). Gates: typecheck 12/12 Done; the seven
+      reconcile behaviour suites 14 pass / 0 fail; the TC-QLC-056 cap proof
+      (105 entries, declared 600s budget) 1 pass in ~212s; the read-cost suite
+      incl. the TC-QLC-083 cap proof (declared 600s budget) 9 pass / 0 fail in
+      ~189s; reconcile goldens 3 pass; help lifecycle + hermetic 17 pass;
+      structure cli-edge-seam + content-inventory 34 pass; delivered
+      remove/lease controls 47 pass; error-table-sync OK (129 entries);
+      forbidden-literals, secret-read-boundary (357 files), ambient-globals
+      (181 files) all clean. Disclosed deviations: (1) the core sweep was
+      reworked to read-first — the interrupted session's remove-as-you-go loop
+      could append removals before a mid-sweep unreadable read, violating F-5's
+      no-partial-success rule (AC-F5-4); the mid-sweep unreadable proof now
+      asserts zero removals, a byte-identical ledger, and the stale entry
+      still present; (2) the reconcile harness `seedLease` checked `.ok` on a
+      Promise and always threw; it is now the delivered synchronous claim, and
+      the reconcile path gained the missing live-lease refusal proof
+      (`queue.precondition.unmet`/`lease-held` with the holder named, zero
+      appends, `queue release` clears it); (3) the two production-bridge test
+      fixture issue bodies gained the `title` field `normalizeGithubIssue`
+      requires (titleless bodies decoded `invalid` and truthfully surfaced
+      `provider.outage`); the production mapping itself is unchanged;
+      (4) the two minutes-scale cap proofs declare 600_000 ms per-test budgets
+      because 100 verified F-1 removals over the real store are inherently
+      minutes-scale; (5) `biome.json` sits outside the declared scope (flagged
+      scope-drift by the commit primitive): the byte-exact reconcile golden
+      fixtures carry the delivered formatter-disabled override pattern (seven
+      existing golden dirs) so committed bytes stay runtime-identical; and the
+      same scan exposed a pre-existing latent gap, committed in an earlier
+      phase: `tests/fixtures/queue/removal/golden/remove-success.json` is not
+      biome-stable under `biome format .` — left for the quality_gates phase
+      with the same one-line override as the remedy.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
       Plan phase 5 complete (commit ce2b1da8): CLI surface — `queue remove` with
       `--reason`, the explicit `dep add`/`dep remove` grammar over the delivered
       two-positional add, and the corrected queue help family. The runtime gained
