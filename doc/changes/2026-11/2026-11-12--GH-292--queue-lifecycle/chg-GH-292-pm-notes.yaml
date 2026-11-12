@@ -117,6 +117,20 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 3 complete (commit 35922bc2): closeout automatic landed
+      removal. `queueRemovalForCloseout` + `removeQueueEntryWithinFence` in
+      core (fence-sharing, no second acquisition), the additive non-step
+      `queueRemoval` block on `CloseoutData` with the closed outcome/skip
+      vocabularies, plan-mode `would-remove`, fail-open skips, satisfied
+      convergence. Gates: typecheck 6/6 Done; six new behaviour suites
+      12 pass; delivered closeout controls (capsule-plan 12 steps, goldens,
+      attention-exit) green; full closeout family 26 pass / 0 fail. Disclosed:
+      the no-merge-truth and ref-not-canonical cells are proven at the wired
+      seam because the delivered apply closeout refuses without a merge before
+      any hook runs; the harness composes the hook exactly as production does.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
       Plan phase 2 complete (commit 86b0429e): per-ref single-flight at
       admission, the holder-naming refusal, and the narrowed same-holder
       renewal. TDR-0027 staged with its 00-index row in the one commit; the
