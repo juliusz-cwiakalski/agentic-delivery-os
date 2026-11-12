@@ -27,11 +27,16 @@ links:
 
 The resident daemon publishes delivery-state changes as a versioned event
 taxonomy over its existing local subscribe socket. One authored declaration —
-types and `as const` data in the contracts tier — defines the six closed topics,
+types and `as const` data in the contracts tier — authors the six closed topics,
 each topic's shape, frame field list, lane rule, kind records with their payload
-fields and emission state, the ordering rule, and the overflow policy. The
-daemon's event projection and the `events` reference command both read that same
-declaration, so the wire and the documented surface cannot drift apart.
+fields and emission state, the ordering rule, and the overflow policy, and the
+`events` reference command generates its surface from that declaration. The
+daemon's emission projection is hand-authored and pinned to the declaration:
+its kind-name set is compared bidirectionally against the declared emitted set,
+and every declared kind's emitted payload keys are compared field-for-field
+against the declaration, so drift in either direction fails a named test. The
+ordering rule and the overflow policy are pinned at declaration and surface
+level, because an event frame carries neither value to compare.
 
 `events list [--json]` and `events describe <topic> [--json]` render the
 declaration: no store, configuration, git, network, or filesystem read, and no

@@ -396,9 +396,11 @@ transport, clock, and wake are injected.
   the per-topic keys, the exact 4/3/3/3 kind enumeration, no S17 shape),
   `event-taxonomy-integrity` (the seven integrity violations and the positive
   control), `event-taxonomy-drift` (five drift classes localized per topic),
-  `event-taxonomy-additive` (payload growth without auto-advertising), and
-  `event-taxonomy-single-source` (one declaration moves the surface and the
-  frames; no second kind list in production).
+  `event-taxonomy-additive` (payload growth without auto-advertising, and each
+  declared kind's emitted payload keys compared exactly through the real
+  projector), and `event-taxonomy-single-source` (the surface is generated from
+  the declaration; the hand-authored emission projection is pinned to it by a
+  bidirectional kind-name comparison, with no second kind list in production).
 - **Reference surface.** `events-list`, `events-describe`, `events-errors`,
   `events-purity`, `events-hermetic`, and the `events-reference-page` goldens.
 - **Emission per topic.** `events-subscribe-queue-graph`,

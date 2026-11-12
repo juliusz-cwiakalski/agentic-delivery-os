@@ -69,14 +69,18 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
   `CONTROL_TOPICS` set was `[queue, lanes]` when this pack was written and is now
   the delivered six); `queue.graph` extends `queue`, and
   `status` is a wire type, not a topic.
-- **Event kinds.** Each topic declares its kinds: `queue.graph` publishes
-  entry, dependency-edge, release, and remove kinds; `dispatch.attempt`
-  publishes started, refused, and completed kinds; `phase.state` publishes
-  phase began, phase completed, and phase reopened kinds; `blockers.state`
-  publishes published, updated, and cleared kinds.
+- **Event kinds.** Each topic declares its kinds: `queue.graph` declares
+  entry, dependency-edge, release, and remove kinds; `dispatch.attempt` declares
+  started, refused, and completed kinds; `phase.state` declares phase began,
+  phase completed, and phase reopened kinds; `blockers.state` declares
+  published, updated, and cleared kinds. `queue.graph` publishes every kind
+  except `remove`, which is declared with `emitted: false` so a client can write
+  the case once; no v1 path produces it (entry removal is the M2-S15 lifecycle
+  mutation).
 - **Payload shapes.** Every event carries `topic`, `kind`, `lane`, `ref`,
-  `sequence`, `occurredAt`, and a topic-specific `payload` object. Payload
-  fields are additive within a taxonomy version.
+  `sequence`, `occurredAt`, and a topic-specific `payload` object, plus the
+  `taxonomyVersion` stamp — seven change fields and eight `data` keys in total.
+  Payload fields are additive within a taxonomy version.
 - **Ordering guarantees.** Events are ordered per lane by a monotonic
   `sequence`; a client that observes a gap must repoll rather than infer
   order.
@@ -85,8 +89,10 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
   overflow, and the subscriber re-reads current state. Overflow behavior is
   defined per topic and preserved for every topic.
 - **Versioning.** The taxonomy document carries a version, pinned by
-  contract tests per topic; a client is expected to state the version it
-  speaks.
+  contract tests per topic and stamped on every event frame and degraded frame.
+  No client frame carries a version: the subscribe payload is
+  `{ topic, since? }`, and a client reads the version it speaks from the frame
+  and the reference surface.
 
 ## telemetry.v1
 
