@@ -9,7 +9,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-12T10:04:37.756Z }
   specification: { started: null, completed: 2026-11-12T10:39:33.428Z }
   test_planning: { started: null, completed: 2026-11-12T10:45:16.184Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-12T11:02:00.859Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -160,6 +160,24 @@ notes:
       therefore starts the full 11-phase lifecycle from phase 1. The workspace
       had no build output; `pnpm build` was run before the first lifecycle
       command so the CLI entry could resolve workspace package subpaths.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Delivery plan authored and validated (`plan validate GH-292`
+      verdict=valid, readyForDevelopment=true): 9 phases, 139 declared file
+      entries, 46/46 ACs and 59/59 TCs each mapped exactly once. Phase 2 lands
+      the TDR-0027 command-failure-envelope-detail decision record and its index
+      row; phase 9 lands the untracked TDR-0026 plus the restored index row;
+      both are staged in one phase-mode commit each so no index row ever links
+      an absent record. The plan surfaced one contract decision the spec's DM-7
+      assumes but the delivered envelope type does not carry:
+      `error.detail.holder`. PM decided option (a) — an additive optional
+      command-declared `detail` object on the failure envelope, the shared six
+      `CommandResultError` fields unchanged, bound to 128 single-line identifier
+      characters — and the decision record TDR-0027 is authored before delivery
+      starts. Two extra two-sided pins the spec/test plan did not name are
+      declared: the dispatch-attempts taxonomy registry counts and the two
+      events baseline fixtures.
     type: "info"
     date: "2026-11-12"
   - text: >-
