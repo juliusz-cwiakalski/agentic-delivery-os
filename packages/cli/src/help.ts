@@ -103,7 +103,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ["queue"],
     "Read and mutate the scheduling queue",
     [
-      "<binary> queue <list|plan|add|prioritize|dep|claim|release|remove> [options]",
+      "<binary> queue <list|plan|add|prioritize|dep|claim|release|remove|reconcile> [options]",
       "<binary> queue dep [add|remove] <ref> <on-ref>",
     ],
     [
@@ -114,6 +114,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--park <cause>", "Park a released entry with a condition"],
       ["--until <iso>", "Provider-window expiry for a park"],
       ["--reason <reason>", "Removal reason: landed | abandoned | superseded | reconciled"],
+      ["--ref <ref>", "Reconcile a single entry"],
       ["--watch", "Watch the queue (requires the resident daemon)"],
     ],
     [
@@ -123,6 +124,8 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> queue remove GH-242 --reason abandoned",
       "<binary> queue dep add GH-243 GH-242",
       "<binary> queue dep remove GH-243 GH-242",
+      "<binary> queue reconcile",
+      "<binary> queue reconcile --ref GH-242",
     ],
     "queue",
   ),
@@ -205,6 +208,14 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> queue remove GH-242 --reason abandoned",
       "<binary> queue remove GH-242 --reason landed",
     ],
+    "queue",
+  ),
+  entry(
+    ["queue", "reconcile"],
+    "Remove entries whose tracked work item is done or canceled",
+    ["<binary> queue reconcile [--ref <ref>]"],
+    [["--ref <ref>", "Examine exactly one entry"]],
+    ["<binary> queue reconcile", "<binary> queue reconcile --ref GH-242"],
     "queue",
   ),
   entry(

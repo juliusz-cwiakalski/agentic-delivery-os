@@ -15,6 +15,7 @@
 
 import type { OwnerHoldSource } from "./owner-hold.js";
 import type { CallerPrincipal } from "./principal.js";
+import type { DeliveryStateAlias } from "./ports.js";
 import type { QueueReadyCondition, QueueReadyConditionId } from "./queue-ready.js";
 import type { StateJsonValue } from "./state.js";
 
@@ -706,6 +707,43 @@ export type QueueDependencyMutationResult = (typeof QUEUE_DEPENDENCY_MUTATION_RE
 /** The reconcile result vocabulary (GH-292 F-5). */
 export const QUEUE_RECONCILE_RESULTS = ["removed", "noop"] as const;
 export type QueueReconcileResult = (typeof QUEUE_RECONCILE_RESULTS)[number];
+
+/** The hard sweep cap (GH-292 F-5, NFR-4): at most 100 examined entries. */
+export const QUEUE_RECONCILE_MAX_ENTRIES = 100 as const;
+
+/** The closed stale-state set: the only delivery states a reconcile removes. */
+export const QUEUE_RECONCILE_STALE_STATES = ["done", "canceled"] as const;
+
+/** One tracker delivery-state read observation for reconcile (GH-292 F-5). */
+export type QueueTrackerRead =
+  | { readonly ok: true; readonly kind: "state"; readonly deliveryState: DeliveryStateAlias }
+  | { readonly ok: true; readonly kind: "not-found" }
+  | { readonly ok: false; readonly failureCode: string };
+
+/** One removed entry in the reconcile payload (exactly `ref` and `reason`). */
+export type QueueReconcileRemoved = {
+  readonly ref: string;
+  readonly reason: QueueRemovalReason;
+};
+
+/** One retained entry in the reconcile payload (exactly `ref` and `deliveryState`). */
+export type QueueReconcileRetained = {
+  readonly ref: string;
+  readonly deliveryState: DeliveryStateAlias;
+};
+
+/** The `queue reconcile` payload (GH-292 Appendix C). */
+export type QueueReconcileData = {
+  readonly result: QueueReconcileResult;
+  readonly checked: number;
+  readonly removed: readonly QueueReconcileRemoved[];
+  readonly retained: readonly QueueReconcileRetained[];
+  readonly unobserved: readonly string[];
+  readonly readySet: readonly string[];
+  readonly truncated: boolean;
+  readonly remainder: number;
+  readonly degraded: readonly QueueDegradationReason[];
+};
 
 /**
  * The event disclosure on a mutation payload: topic and kind, never a sequence.

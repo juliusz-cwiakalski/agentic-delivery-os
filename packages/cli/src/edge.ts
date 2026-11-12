@@ -128,10 +128,9 @@ import {
   payloadFieldViolations,
   planDispatchResume,
   prioritizeQueueEntry,
-  removeQueueDependency,
-  removeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
+  type QueueDependencyRemovalResult,
   type QueueDeployExpectation,
   type QueueDeployFacts,
   type QueueGraphFold,
@@ -140,7 +139,6 @@ import {
   type QueueIntentResult,
   type QueueLaneEconomics,
   type QueueLeaseFailure,
-  type QueueDependencyRemovalResult,
   type QueuePlanFact,
   type QueueProviderFact,
   type QueueRemovalMutationResult,
@@ -154,8 +152,11 @@ import {
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
+  reconcileQueueEntries,
   recoverQueueParks,
   releaseQueueLease,
+  removeQueueDependency,
+  removeQueueEntry,
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
@@ -258,6 +259,7 @@ import {
   type ProviderParkRecord,
   type ProviderSleep,
   type QueueDegradationReason,
+  type QueueTrackerRead,
   type QuotaTransport,
   type Result,
   type SpendDigestSection,
@@ -3987,6 +3989,12 @@ export type QueueComposition = {
   readonly readyRuntime?: QueueReadyCommandRuntime;
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
+  /**
+   * The per-item tracker delivery-state read for `queue reconcile` (GH-292
+   * F-5): the verified closeout/verify read bridge wired by the composition.
+   * Absent means the tracker surface is not wired and reconcile refuses.
+   */
+  readonly readTrackerDeliveryState?: (ref: string) => Promise<QueueTrackerRead>;
   /** The additive live-watch seam (GH-238 F-13); absent degrades to polling. */
   readonly watch?: {
     readonly transport?: ControlTransport;
@@ -4264,9 +4272,7 @@ const readySetAfterMutation = (composition: QueueComposition): readonly string[]
   const built = buildQueueFacts(composition, parkContextFor(composition));
   if (!built.ok) return [];
   const schedule = computeQueueSchedule(built.facts, { next: 20 });
-  return schedule.entries
-    .filter((entry) => entry.state === "ready")
-    .map((entry) => entry.ref);
+  return schedule.entries.filter((entry) => entry.state === "ready").map((entry) => entry.ref);
 };
 
 /** The removal outcome projected onto the command runtime (GH-292 F-1). */
@@ -4289,16 +4295,15 @@ const dependencyRemovalOutcome = (
   composition: QueueComposition,
 ): QueueRuntimeDependencyRemoval => {
   const value = result.value;
-  const fallbackEntry =
-    value.fold.entries.find((entry) => entry.ref === value.ref) ?? {
-      ref: value.ref,
-      ...(value.entry.repository === undefined ? {} : { repository: value.entry.repository }),
-      priority: value.entry.priority,
-      edges: value.edges,
-      weightClass: "standard" as const,
-      rankClass: "new-start" as const,
-      recordedAt: value.entry.recordedAt,
-    };
+  const fallbackEntry = value.fold.entries.find((entry) => entry.ref === value.ref) ?? {
+    ref: value.ref,
+    ...(value.entry.repository === undefined ? {} : { repository: value.entry.repository }),
+    priority: value.entry.priority,
+    edges: value.edges,
+    weightClass: "standard" as const,
+    rankClass: "new-start" as const,
+    recordedAt: value.entry.recordedAt,
+  };
   const weight = resolveQueueWeight(composition.facts.plans[value.ref]);
   const built = buildQueueFacts(composition, parkContextFor(composition));
   const projected = built.ok
@@ -4313,12 +4318,11 @@ const dependencyRemovalOutcome = (
       ? { ...fallbackEntry, rankClass: projected.rankClass, weightClass: projected.weightClass }
       : fallbackEntry,
     entryState: projected?.state ?? "not-ready",
-    blocking:
-      projected?.blocking ?? [
-        fallbackEntry.repository === undefined
-          ? { reason: "not-ready" as const, detail: "repository-binding-unresolved" }
-          : { reason: "not-ready" as const, detail: "state-unreadable" },
-      ],
+    blocking: projected?.blocking ?? [
+      fallbackEntry.repository === undefined
+        ? { reason: "not-ready" as const, detail: "repository-binding-unresolved" }
+        : { reason: "not-ready" as const, detail: "state-unreadable" },
+    ],
     weightClass: projected?.weightClass ?? weight.weightClass,
     weightClassSource: projected?.weightClassSource ?? weight.source,
     edges: value.edges,
@@ -4680,6 +4684,42 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
       });
       if (!removed.ok) return mapQueueFailure(removed);
       return dependencyRemovalOutcome(removed, resolveDegraded(composition.degraded), composition);
+    },
+    reconcile: async (input) => {
+      // GH-292 F-5: the tracker read rides the composition's verified read
+      // bridge. Without it the tracker surface is not wired and reconcile
+      // refuses truthfully instead of manufacturing an observation.
+      const port = composition.readTrackerDeliveryState;
+      if (port === undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.precondition.unmet",
+          summary: "reason=tracker-read-unavailable",
+        };
+      }
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      const swept = await reconcileQueueEntries(composition.store, {
+        ...(input.ref === undefined ? {} : { ref: input.ref }),
+        readTracker: port,
+        recordedAt: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken,
+      });
+      if (!swept.ok) {
+        // The provider identity surfaces as-is: no queue synonym (AC-F5-4).
+        if (swept.kind === "provider") {
+          return { ok: false, kind: "provider", code: swept.code };
+        }
+        return mapQueueFailure(swept);
+      }
+      return {
+        ok: true,
+        value: swept.value,
+        readySet: readySetAfterMutation(composition),
+        degraded: resolveDegraded(composition.degraded),
+      };
     },
     ...(composition.readyRuntime === undefined
       ? {}

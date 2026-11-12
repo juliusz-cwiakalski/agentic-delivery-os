@@ -658,7 +658,8 @@ export type QueueHumanData =
   | import("#contracts").QueueClaimData
   | import("#contracts").QueueReleaseData
   | import("#contracts").QueueRemoveData
-  | import("#contracts").QueueDependencyRemovalData;
+  | import("#contracts").QueueDependencyRemovalData
+  | import("#contracts").QueueReconcileData;
 
 const utf8Length = (text: string): number => new TextEncoder().encode(text).length;
 
@@ -771,6 +772,11 @@ export const renderQueueHuman = (data: QueueHumanData): string => {
   }
   // The GH-292 lifecycle payloads carry the recomputed ready set; the readySet
   // member discriminates them from the delivered mutation shapes (TC-QLC-010).
+  if ("readySet" in data && "checked" in data) {
+    return capHuman([
+      `result=${data.result}; checked=${data.checked}; removed=${data.removed.length}; retained=${data.retained.length}; ready=${data.readySet.length}; degraded=${data.degraded.join(",") || "none"}`,
+    ]);
+  }
   if ("readySet" in data && "reason" in data) {
     return capHuman([
       `result=${data.result}; ref=${data.ref}; reason=${data.reason}; ready=${data.readySet.length}; degraded=${data.degraded.join(",") || "none"}`,

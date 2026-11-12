@@ -151,6 +151,7 @@ import {
   PROJECTS_COMMAND_FAMILY,
   type ProjectsListEntry,
   type QueueDegradationReason,
+  type QueueTrackerRead,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type SupervisorPort,
@@ -931,6 +932,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       degraded: daemonReachability,
       readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
       readOwnerHold,
+      // GH-292 F-5: the per-item tracker delivery-state read for `queue
+      // reconcile`, riding the same verified GitHub client the closeout
+      // composition reads with. No ambient credential read: the client uses
+      // the already-injected declared credential port. `provider.not-found`
+      // is a truthful observation (the item is retained and reported
+      // unobserved); an unavailable read surfaces its provider identity and
+      // the sweep stops.
+      readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
+        const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
+        if (issueNumber === undefined) {
+          return { ok: false, failureCode: "provider.payload.invalid" };
+        }
+        const observation = await client.readWorkItemObservation(issueNumber);
+        if (observation.observation === "observed") {
+          return { ok: true, kind: "state", deliveryState: observation.value.status.deliveryState };
+        }
+        if (observation.observation === "not-found") {
+          return { ok: true, kind: "not-found" };
+        }
+        return {
+          ok: false,
+          failureCode:
+            observation.observation === "invalid" && observation.code !== undefined
+              ? observation.code
+              : "provider.outage",
+        };
+      },
     };
 
     const gates = createVerifyGatesCommandRuntime({

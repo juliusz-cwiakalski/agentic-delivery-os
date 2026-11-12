@@ -39,6 +39,8 @@ import {
   QUEUE_PARK_RECORD_KIND,
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
+  QUEUE_RECONCILE_MAX_ENTRIES,
+  QUEUE_RECONCILE_STALE_STATES,
   QUEUE_REMOVAL_KEY_PREFIX,
   QUEUE_REMOVAL_REASONS,
   QUEUE_REMOVAL_RECORD_KIND,
@@ -53,9 +55,13 @@ import {
   type QueueParkCause,
   type QueueParkCondition,
   type QueueParkRecord,
+  type QueueReconcileRemoved,
+  type QueueReconcileResult,
+  type QueueReconcileRetained,
   type QueueRemovalReason,
   type QueueRemovalRecord,
   type QueueRemovalResult,
+  type QueueTrackerRead,
   type QueueWeightClass,
   type StateAppendRequest,
   type StateFailure,
@@ -70,6 +76,7 @@ import {
 } from "#contracts";
 import {
   canonicalQueueRef,
+  compareText,
   detectCycleForEdge,
   foldLatestDependencyRecords,
   foldLatestEntries,
@@ -1551,6 +1558,173 @@ export const removeQueueDependency = (
       fold: final.value,
       graph: document,
     });
+  });
+};
+
+/* ----------------------- reconcile (GH-292 F-5, DM-5) --------------------- */
+
+/** One reconcile sweep outcome: the bounded lists and the removal truth. */
+export type QueueReconcileOutcome = {
+  readonly result: QueueReconcileResult;
+  readonly checked: number;
+  readonly removed: readonly QueueReconcileRemoved[];
+  readonly retained: readonly QueueReconcileRetained[];
+  readonly unobserved: readonly string[];
+  readonly removedRefs: readonly string[];
+  readonly truncated: boolean;
+  readonly remainder: number;
+};
+
+export type QueueReconcileMutationResult =
+  | { readonly ok: true; readonly value: QueueReconcileOutcome }
+  | { readonly ok: false; readonly kind: "provider"; readonly code: string }
+  | QueueLeaseFailure;
+
+/**
+ * Sweep the invoking checkout's queue against tracker delivery state
+ * (GH-292 F-5, DM-1, DM-5). Exactly one bounded tracker read happens per
+ * examined entry — no retry, no pagination, no concurrency — and the sweep
+ * stops at the first unreadable read: nothing is appended on that path and the
+ * failure surfaces the provider's own identity (never a `queue.*` code). A
+ * `done` or `canceled` observation removes the entry through the F-1 removal
+ * seam with reason `reconciled` (one append, one event, park withdrawal, no
+ * cascade); every other observed state is retained and reported with its
+ * observed state; a not-found item is retained and reported `unobserved` —
+ * absence is not evidence that work landed (DEC-11). At most 100 entries are
+ * examined (`truncated` plus an exact `remainder` beyond the cap), and no
+ * entry beyond the cap is read. Every examined entry is read before the first
+ * removal, so an unreadable read always leaves a ledger with zero appended
+ * records and zero removals — there is no partial-success path (AC-F5-4). A
+ * repeat run converges truthfully: `checked` counts only entries that still
+ * exist, so an already-removed ref appears in no list (AC-F5-9).
+ */
+export const reconcileQueueEntries = async (
+  store: StateStorePort,
+  input: {
+    readonly ref?: string;
+    readonly readTracker: (ref: string) => Promise<QueueTrackerRead>;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly fenceToken: () => string;
+  },
+): Promise<QueueReconcileMutationResult> => {
+  const fold = readQueueFold(store);
+  if (!fold.ok) return fold;
+  const existing = [...fold.value.entries]
+    .map((entry) => entry.ref)
+    .sort((left, right) => compareText(left, right));
+  if (input.ref !== undefined) {
+    const ref = canonicalQueueRef(input.ref);
+    if (ref === undefined) {
+      return {
+        ok: false,
+        kind: "input",
+        code: "input.value.rejected",
+        detail: `ref ${input.ref} is not a canonical work-item ref`,
+      };
+    }
+    // A `--ref` naming a ref with no entry examines nothing and reports the
+    // truthful noop (AC-F5-9's narrow-scope form).
+    if (!existing.includes(ref)) {
+      return ok({
+        result: "noop",
+        checked: 0,
+        removed: [],
+        retained: [],
+        unobserved: [],
+        removedRefs: [],
+        truncated: false,
+        remainder: 0,
+      });
+    }
+    return reconcileSweep(store, {
+      refs: [ref],
+      total: 1,
+      readTracker: input.readTracker,
+      recordedAt: input.recordedAt,
+      nowMs: input.nowMs,
+      fenceToken: input.fenceToken,
+    });
+  }
+  const examined = existing.slice(0, QUEUE_RECONCILE_MAX_ENTRIES);
+  const remainder = existing.length - examined.length;
+  return reconcileSweep(store, {
+    refs: examined,
+    total: existing.length,
+    readTracker: input.readTracker,
+    recordedAt: input.recordedAt,
+    nowMs: input.nowMs,
+    fenceToken: input.fenceToken,
+    remainder,
+  });
+};
+
+/**
+ * The bounded sweep body: one read per examined entry, sequential, fail-closed.
+ * The read pass completes for every examined entry before the first removal, so
+ * an unreadable read always finds a ledger with zero appended records (F-5:
+ * readable truth for every examined entry, or the run changes nothing).
+ */
+const reconcileSweep = async (
+  store: StateStorePort,
+  input: {
+    readonly refs: readonly string[];
+    readonly total: number;
+    readonly readTracker: (ref: string) => Promise<QueueTrackerRead>;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly fenceToken: () => string;
+    readonly remainder?: number;
+  },
+): Promise<QueueReconcileMutationResult> => {
+  // Read pass: exactly one bounded read per examined entry, in canonical order,
+  // no retry and no read past the failure. The provider identity surfaces
+  // as-is with nothing appended (AC-F5-4, NFR-4).
+  const observed = new Map<string, Extract<QueueTrackerRead, { ok: true }>>();
+  for (const ref of input.refs) {
+    const read = await input.readTracker(ref);
+    if (!read.ok) {
+      return { ok: false, kind: "provider", code: read.failureCode };
+    }
+    observed.set(ref, read);
+  }
+  // Removal pass: every stale observation goes through the ordinary F-1
+  // removal seam, so the delivered refusal set applies as-is.
+  const removed: QueueReconcileRemoved[] = [];
+  const removedRefs: string[] = [];
+  const retained: QueueReconcileRetained[] = [];
+  const unobserved: string[] = [];
+  for (const ref of input.refs) {
+    const read = observed.get(ref);
+    if (read === undefined) continue;
+    if (read.kind === "not-found") {
+      unobserved.push(ref);
+      continue;
+    }
+    if (!(QUEUE_RECONCILE_STALE_STATES as readonly string[]).includes(read.deliveryState)) {
+      retained.push({ ref, deliveryState: read.deliveryState });
+      continue;
+    }
+    const removal = removeQueueEntry(store, {
+      ref,
+      reason: "reconciled",
+      recordedAt: input.recordedAt,
+      nowMs: input.nowMs,
+      fenceToken: input.fenceToken(),
+    });
+    if (!removal.ok) return removal;
+    removed.push({ ref, reason: "reconciled" });
+    removedRefs.push(ref);
+  }
+  return ok({
+    result: removed.length > 0 ? "removed" : "noop",
+    checked: input.refs.length,
+    removed,
+    retained,
+    unobserved,
+    removedRefs,
+    truncated: (input.remainder ?? 0) > 0,
+    remainder: input.remainder ?? 0,
   });
 };
 

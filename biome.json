@@ -92,6 +92,15 @@
       }
     },
     {
+      "includes": [
+        "tests/fixtures/queue/reconcile/golden/*.json",
+        "tests/fixtures/queue/reconcile/golden/*.txt"
+      ],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/plan/queue-ready/**"],
       "formatter": {
         "enabled": false

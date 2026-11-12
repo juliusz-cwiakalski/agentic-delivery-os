@@ -15,6 +15,7 @@ import {
   boundQueueReadData,
   canonicalQueueRef,
   evaluateQueueReady,
+  type QueueReconcileOutcome,
   type QueueSchedule,
   renderQueueHuman,
   renderQueueReadyHuman,
@@ -32,9 +33,10 @@ import {
   QUEUE_READY_MAX_POSITIONALS,
   QUEUE_READY_MAX_WORK_ITEM_REF_CHARS,
   QUEUE_READY_WORK_ITEM_REF_PATTERN,
+  QUEUE_RECONCILE_RESULTS,
+  QUEUE_RELEASE_RESULTS,
   QUEUE_REMOVAL_REASONS,
   QUEUE_REMOVAL_RESULTS,
-  QUEUE_RELEASE_RESULTS,
   type QueueBlocking,
   type QueueClaimLease,
   type QueueDegradationReason,
@@ -48,6 +50,7 @@ import {
   type QueuePlanData,
   type QueueReadData,
   type QueueReadyPayload,
+  type QueueReconcileData,
   type QueueReleaseData,
   type QueueRemovalReason,
   type QueueRemoveData,
@@ -205,6 +208,16 @@ export type QueueRuntimeDependencyRemoval =
     }
   | QueueRuntimeFailure;
 
+/** A landed reconcile sweep (GH-292 F-5): the core outcome plus the derived surfaces. */
+export type QueueRuntimeReconcile =
+  | {
+      readonly ok: true;
+      readonly value: QueueReconcileOutcome;
+      readonly readySet: readonly string[];
+      readonly degraded: readonly QueueDegradationReason[];
+    }
+  | QueueRuntimeFailure;
+
 /** Everything the full queue command reads or writes, injected at the edge. */
 export type QueueCommandRuntime = {
   readonly readSchedule: (next: number) => QueueRuntimeSchedule;
@@ -236,6 +249,8 @@ export type QueueCommandRuntime = {
     readonly ref: string;
     readonly onRef: string;
   }) => QueueRuntimeDependencyRemoval;
+  /** The tracker-truth reconcile sweep (GH-292 F-5); rides the injected read port. */
+  readonly reconcile: (input: { readonly ref?: string }) => Promise<QueueRuntimeReconcile>;
   /** The delivered ready-only definition, preserved byte-for-byte. */
   readonly readyDefinition?: CommandDefinition;
   /** The additive live watch stream (GH-238 F-13); absent stays truthful. */
@@ -417,7 +432,9 @@ const removalData = (removal: QueueRuntimeRemoval): QueueRemoveData => {
 };
 
 /** The `queue dep remove` payload (GH-292 Appendix C): mutation keys plus two. */
-const dependencyRemovalData = (removal: QueueRuntimeDependencyRemoval): QueueDependencyRemovalData => {
+const dependencyRemovalData = (
+  removal: QueueRuntimeDependencyRemoval,
+): QueueDependencyRemovalData => {
   if (!removal.ok) throw new Error("dependency-removal failure is not data");
   return {
     ref: removal.ref,
@@ -440,6 +457,22 @@ const dependencyRemovalData = (removal: QueueRuntimeDependencyRemoval): QueueDep
   };
 };
 
+/** The `queue reconcile` payload (GH-292 Appendix C): exactly the nine keys. */
+const reconcileData = (swept: QueueRuntimeReconcile): QueueReconcileData => {
+  if (!swept.ok) throw new Error("reconcile failure is not data");
+  return {
+    result: swept.value.result,
+    checked: swept.value.checked,
+    removed: swept.value.removed,
+    retained: swept.value.retained,
+    unobserved: swept.value.unobserved,
+    readySet: swept.readySet,
+    truncated: swept.value.truncated,
+    remainder: swept.value.remainder,
+    degraded: swept.degraded,
+  };
+};
+
 /** Failures print `result=refused` before the classified refusal. */
 const humanFailure = (): string => "result=refused\n";
 
@@ -449,23 +482,47 @@ const humanFailure = (): string => "result=refused\n";
  * bounded untrusted-input validation before any read.
  */
 export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): CommandDefinition => ({
-  flags: ["--next", "--priority", "--dep", "--holder", "--park", "--until", "--reason", "--watch"],
+  flags: [
+    "--next",
+    "--priority",
+    "--dep",
+    "--holder",
+    "--park",
+    "--until",
+    "--reason",
+    "--ref",
+    "--watch",
+  ],
   ...(runtime.watch === undefined
     ? {}
     : {
         stream: (invocation: { readonly flags: Readonly<Record<string, string | true>> }) =>
           invocation.flags["--watch"] !== undefined ? runtime.watch!() : (async function* () {})(),
       }),
-  requiresValue: ["--next", "--priority", "--dep", "--holder", "--park", "--until", "--reason"],
+  requiresValue: [
+    "--next",
+    "--priority",
+    "--dep",
+    "--holder",
+    "--park",
+    "--until",
+    "--reason",
+    "--ref",
+  ],
   positionals: { max: QUEUE_READY_MAX_POSITIONALS },
   humanText: (data: unknown): string => renderQueueHuman(data as never),
   humanFailureText: (): string => humanFailure(),
-  handler: (invocation) => {
+  handler: async (invocation) => {
     if (invocation.flags["--watch"] !== undefined) {
       if (runtime.watch === undefined) return watchRefusal();
       return { data: { watch: true, topic: "queue" } };
     }
     const [subcommand, first, second, ...extra] = invocation.positionals;
+    // `--ref` belongs to `queue reconcile` only (TC-QLC-074); every other verb
+    // refuses it before any read.
+    if (invocation.flags["--ref"] !== undefined && subcommand !== "reconcile") {
+      return fullGrammarRejection("ref-unsupported");
+    }
     if (subcommand === "ready") {
       if (runtime.readyDefinition === undefined) {
         return fullGrammarRejection("ready-unavailable");
@@ -566,6 +623,20 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
       if (!removal.ok) return runtimeFailure(removal);
       return { data: removalData(removal) };
     }
+    if (subcommand === "reconcile") {
+      if (first !== undefined) return fullGrammarRejection("reconcile-positionals");
+      const refFlag = invocation.flags["--ref"];
+      const refCanonical = typeof refFlag === "string" ? canonicalQueueRef(refFlag) : undefined;
+      if (refFlag !== undefined && refCanonical === undefined) {
+        return fullGrammarRejection("ref");
+      }
+      // The sweep is async: the tracker read port resolves per examined entry.
+      const swept = await runtime.reconcile({
+        ...(refCanonical === undefined ? {} : { ref: refCanonical }),
+      });
+      if (!swept.ok) return runtimeFailure(swept);
+      return { data: reconcileData(swept) };
+    }
     if (subcommand === "claim") {
       if (second !== undefined) return fullGrammarRejection("claim-grammar");
       const holderFlag = invocation.flags["--holder"];
@@ -623,5 +694,6 @@ export const QUEUE_CLAIM_RESULT_VALUES = QUEUE_CLAIM_RESULTS;
 export const QUEUE_RELEASE_RESULT_VALUES = QUEUE_RELEASE_RESULTS;
 export const QUEUE_DEPENDENCY_MUTATION_RESULT_VALUES = QUEUE_DEPENDENCY_MUTATION_RESULTS;
 export const QUEUE_REMOVAL_RESULT_VALUES = QUEUE_REMOVAL_RESULTS;
+export const QUEUE_RECONCILE_RESULT_VALUES = QUEUE_RECONCILE_RESULTS;
 export const QUEUE_MAX_NEXT = QUEUE_MAX_NEXT_ACTIONS;
 export const QUEUE_MAX_REFERENCE_CHARS = QUEUE_MAX_REF_CHARS;
