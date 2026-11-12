@@ -23,6 +23,7 @@
     "doc/planning/oss-tooling/milestones/m1/commands/coordinator.md",
     "doc/planning/oss-tooling/milestones/m1/commands/daemon.md",
     "doc/planning/oss-tooling/milestones/m2/commands/projects.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/attempts.md",
     "doc/planning/oss-tooling/milestones/m2/commands/events.md"
   ],
   "commands": [

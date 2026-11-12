@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The published event taxonomy v1 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, and the mount as one prompt-required unit."
 links:
   related_changes: ["GH-290"]
-  related_decisions: ["TDR-0024", "TDR-0005"]
+  related_decisions: ["TDR-0025", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/taxonomy.ts"
     - "packages/core/src/contracts/control.ts"
@@ -47,7 +47,7 @@ fresh baseline".
 The daemon, its control protocol, and its two snapshot topics are described in
 [Resident Dispatch Daemon](feature-resident-daemon.md). The binding decision
 record is
-[TDR-0024](../../decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md);
+[TDR-0025](../../decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md);
 this page states the delivered behaviour.
 
 ## Topics and shapes

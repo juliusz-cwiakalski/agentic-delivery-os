@@ -99,11 +99,16 @@ export {
   summarizeDispatchEvidence,
 } from "./app/dispatch-gate.js";
 export {
+  type DispatchAttemptsReadInput,
+  type DispatchAttemptsReadPorts,
+  type DispatchAttemptsReadResult,
+  readDispatchAttemptHistory,
+} from "./app/dispatch-attempts.js";
+export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,
   type DispatchAppendResult,
-  type DispatchDivergenceSummary,
   type DispatchLedgerRead,
   foldDispatchDivergences,
   isEvidenceClass,
@@ -111,7 +116,6 @@ export {
   readDispatchDivergences,
   readDispatchHandover,
   resolveDispatchDivergence,
-  summarizeDispatchDivergences,
   writeDispatchAuthority,
 } from "./app/dispatch-ledger.js";
 export {

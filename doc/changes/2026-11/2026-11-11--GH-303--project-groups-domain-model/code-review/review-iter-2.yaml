@@ -1,0 +1,112 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-303
+branch: docs/GH-303/project-groups-domain-model
+status: PASS
+summary: >-
+  Iteration-2 re-review at HEAD ad0101d4 (product head d647f47b): all six
+  iteration-1 findings are closed by inspection, not by the coder's claim.
+  F-1: `m2/architecture.md:3-6` now opens on the delivered model ("grouped as
+  configured projects") and the C4 Level 1 engine node at :31 reads
+  "repository plane, queue, dispatch, events, telemetry, handover gate",
+  agreeing with the C4 Level 2 plane at :74; no edited statement in the twelve
+  documents still casts checkouts as "projects" (the only survivors are the
+  declared board deferral and three preserved base lines, below). F-2:
+  `SC-M2-S4-02` reads "repository key"/"per-repository boards" in Given and
+  Assert with exactly one `Assert:` line, and `grep "project key"` over
+  test-scenarios.md returns nothing. F-3: backlog.md:1314-1318 carries five
+  numbered S18 items matching Appendix A S18-A1..A5 with the four-label shape
+  intact (P03 12/12 shape 4/4). F-4: `m2/README.md:29` says "the eight key
+  flows, including the S17 park/resume flow and the cross-repository change
+  flow" and `## Key flows` holds exactly eight `###` headings (P40 8/8). F-5:
+  pm-notes:525-532 discloses the three undeclared P5 touch-ups and 0aba071e's
+  file list matches it. F-6: pm-notes:580-587 names M2-S4 as the deferral
+  owner and checkpoint. A fresh pass re-extracted and re-ran all 46 procedure
+  blocks in fresh shells at HEAD (P01-P45 all PASS, including P10 hunks
+  inside=6 outside=0, P34 product_files=13/13 post_commit_check=identical,
+  P37 140/139, P40 C4 1/1/1 and 8/8, P42 exit 0 with 10/10 planning docs
+  scanned, P45 17/17), plus both guards (forbidden-literals exit 0;
+  test-doc-distribution exit 0, 82 docs, no drift), `./node_modules/.bin/
+  delivery-os plan validate GH-303` = valid and `lint GH-303` = conforms, and
+  a containment check that finds exactly the 13 product files with board.md
+  byte-identical. The change is docs-only: nothing under doc/spec/**,
+  doc/overview/** or the packages changed. The P6 edits introduce no new
+  contradiction: the architecture opening agrees with both C4 diagrams, the
+  S4 seed agrees with the unchanged board envelope it asserts, and the S18
+  split reproduces the ticket's five acceptance clauses. Two non-blocking
+  evidence-accuracy items are recorded below (an overbroad free-text-sweep
+  sentence and an unrecorded phase-7 re-check at the P6 head); neither
+  requires a product edit. Accepted residuals were not re-raised: P09/P10/P11
+  verdict lines, P34 post-commit collation artifact, primitive commit
+  subjects, shipped->landed wording, the board-page deferral (owner M2-S4),
+  and M1-era `projects` wording in preserved base lines / the frozen M1 pack.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: docs-consistency
+    location: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-pm-notes.yaml:673
+    message: >-
+      The P6 free-text sweep record overstates its own result. At :673-676 it
+      states "no `projects`/`projects list` statement in the twelve documents
+      denotes the flat enumeration ... except the declared board deferral",
+      and at :591-593 that "inside the thirteen-file manifest every
+      `projects`/`projects list` mention carries the group meaning", while the
+      same note at :677-679 lists backlog.md:847 ("multiple projects on one
+      host") and :863 ("isolates projects from each other") as surviving
+      M1-era managed-checkout uses inside those twelve documents, so the
+      universal claims contradict the note's own disclosure. The enumeration
+      is also incomplete: backlog.md:1082 ("Projects declare their own
+      ceremonies through the same contract"), an unmodified M2-S3 base line,
+      carries the M1-era managed-checkout sense and is not listed (it re-reads
+      as a group only under the new model, which is why P10/P35 leave it
+      alone). This is an evidence statement, not a product defect: the
+      preserved-base wording is an accepted residual and P32/P45 are green.
+    suggestion: >-
+      Scope both claims to what was edited ("no `projects` statement
+      introduced or changed by this change denotes the flat enumeration") and
+      list every preserved-base site the sweep deliberately leaves alone
+      (847, 863, and 1082 with its group reading under the new model), so the
+      record describes the corpus it was run against. No product edit and no
+      manifest change.
+    suppressed: false
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-pm-notes.yaml:506
+    message: >-
+      The phase-7 (system_spec_update) verdict is recorded against HEAD
+      44889cf4 and the phase registry still shows it completed at
+      2026-11-11T14:13:22.813Z, both before the P6 product commit d647f47b
+      (15:46); `grep -n "doc-syncer"` over pm-notes finds only that entry and
+      the P6 routing decision, so the asserted post-P6 phase-7 re-check is not
+      recorded anywhere in the change artifacts. The verdict's substance is
+      not invalidated by P6 - the product set is still the same thirteen
+      files, nothing under doc/spec/**, doc/overview/** or the packages
+      changed at HEAD, and P36 reports 0 delivery claims - so this is a
+      lifecycle evidence gap, not a current-truth contradiction, and it does
+      not block the review verdict.
+    suggestion: >-
+      Have @doc-syncer record one line at the P6 head (d647f47b) restating the
+      no-op verdict, or reopen and re-complete system_spec_update, so phase 7
+      evidence covers the head this review examined; the PM may also carry it
+      explicitly into the phase-10 DoD check instead of applying it now.
+    suppressed: false
+reviewed_at: 2026-11-11T17:08:00Z
+next_step: >-
+  PROCEED. All six iteration-1 findings are closed and the full battery is
+  green at HEAD; the two recorded items are evidence-precision notes that do
+  not gate delivery (F-1 is a pm-notes wording fix, F-2 a one-line doc-syncer
+  record or an explicit phase-10 carry-over). Phase 9 (quality_gates) re-runs
+  the aggregate gate on this head, then phase 10 verifies the 45 ACs and the
+  six plan phases; the declared residuals stay as recorded.

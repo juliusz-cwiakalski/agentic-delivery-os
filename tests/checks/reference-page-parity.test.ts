@@ -53,9 +53,9 @@ describe("TC-HELP-003 reference-page parity", () => {
     expect([...coverage.commands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
   });
 
-  test("doctor remains unshipped and dispatch keeps exactly four help entries", () => {
+  test("doctor remains unshipped and dispatch keeps exactly five help entries", () => {
     expect(PROMPT_REQUIRED_COMMANDS).not.toContain("doctor");
     expect(coverage.commands).not.toContain("doctor");
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(4);
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(5);
   });
 });

@@ -50,6 +50,7 @@ describe("TC-HELP-002 help and version remain pure", () => {
 
   test("the dispatch subcommand help paths render without composing", async () => {
     for (const argv of [
+      ["dispatch", "attempts", "--help"],
       ["dispatch", "dual-run", "summary", "--help"],
       ["dispatch", "dual-run", "resolve", "--help"],
       ["dispatch", "handover", "--help"],

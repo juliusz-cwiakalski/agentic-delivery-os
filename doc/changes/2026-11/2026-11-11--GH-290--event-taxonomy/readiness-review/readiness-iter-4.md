@@ -3,7 +3,7 @@
 - **Verdict:** READY
 - **Date:** 2026-11-12
 - **Gate:** `@readiness-reviewer` (adversarial Definition of Ready)
-- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.4, 38 ACs), `chg-GH-290-test-plan.md` (v1.3, 45 TCs), `chg-GH-290-plan.yaml` (8 phases, `tier: full`), `chg-GH-290-pm-notes.yaml`, `readiness-review/readiness-iter-{1,2,3}.md`, `doc/decisions/TDR-0024-…` (amended in place, `status: Proposed`, untracked — `git status` `??`), and the delivered tree (`packages/cli/src/{help.ts,entrypoint.ts,help/prompt-required-commands.ts}`, `packages/core/src/{contracts,domain,app,state}`, `tests/behaviour/{daemon-mount-help,entrypoint-help}.test.ts`).
+- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.4, 38 ACs), `chg-GH-290-test-plan.md` (v1.3, 45 TCs), `chg-GH-290-plan.yaml` (8 phases, `tier: full`), `chg-GH-290-pm-notes.yaml`, `readiness-review/readiness-iter-{1,2,3}.md`, `doc/decisions/TDR-0025-…` (amended in place, `status: Proposed`, untracked — `git status` `??`), and the delivered tree (`packages/cli/src/{help.ts,entrypoint.ts,help/prompt-required-commands.ts}`, `packages/core/src/{contracts,domain,app,state}`, `tests/behaviour/{daemon-mount-help,entrypoint-help}.test.ts`).
 - **Plan validation:** `node_modules/.bin/delivery-os plan validate GH-290` → `verdict=valid`, `tier=full`, `readyForDevelopment=true`; `node_modules/.bin/delivery-os lint plan GH-290` → `valid`, 0 errors.
 - **Pause required:** no — no finding is blocking, no human decision is outstanding.
 - **Scope of this iteration:** a narrow re-check of the two blocking findings (RF-14, RF-15) and the five advisories (A-18..A-23) routed by iteration 3, plus the declared regression sweep. Nothing else was re-litigated; iteration-3's "verified sound" set stands.
@@ -17,7 +17,7 @@
 | plan_coverage | PASS | 8 phases cover every requirement and every AC; 45/45 TCs single-owner (re-derived below) |
 | test_traceability | PASS | 38/38 ACs covered, 45/45 TCs indexed and automated, no TODO, five declared substitutes unchanged |
 | cross_artifact_consistency | PASS | RF-14 and RF-15 closed; A-18, A-19, A-20, A-21, A-23 closed; the bound split now matches NFR-1, NFR-5, and the delivered help surfaces |
-| decision_capture | PASS | TDR-0024 amendment/`Proposed`/untracked state unchanged; DEC-A..DEC-O unchanged |
+| decision_capture | PASS | TDR-0025 amendment/`Proposed`/untracked state unchanged; DEC-A..DEC-O unchanged |
 | system_spec_consistency | PASS | The new test-plan bounds were measured against the delivered tree this round (root help, family-page precedent) and agree |
 | plan_doc_update_coverage | PASS | A-21 closed: plan Phase 8 writes `doc/quality/test-specs`, lifecycle phase 7 verifies; §16 says the same |
 | plan_code_area_coverage | PASS | A-22 closed: Phase 7 declares `packages/core/src/state/artifact-boundary.ts` |
@@ -62,7 +62,7 @@ None of N-1..N-3 blocks delivery: each is a citation or wording residue that can
 2. **Root `--help` has no size ceiling at all.** After RF-15 the root page is bounded by content only, so its growth is unchecked by any test; the case records the measured size (45 lines / 1 747 bytes today) as evidence. Accepted because the delivered tree never bounded it and inventing a bound would fail the page before `events` exists.
 3. **The `events` help pages inherit the daemon family-page bound (≤ 120 lines / ≤ 4 000 bytes) rather than an AC-derived bound.** It is a delivered convention, witnessed at `daemon-mount-help.test.ts:181-187`, not a spec threshold; if a future `events` page legitimately exceeds it, that convention — not the AC — is what must move.
 4. **The compact machine-envelope ceiling (≤ 8 192 bytes) is a test-plan derivation**, not a spec NFR threshold (NFR-5 gives 65 536). It is self-imposed and strictly tighter, so it cannot contradict NFR-5, but it is not AC-traced.
-5. **`TDR-0024` stays `Proposed` and untracked** until Phase 8 stages it; the record is accepted or rejected with the PR review. Any process that snapshots the tree before Phase 8 sees no decision record on disk.
+5. **`TDR-0025` stays `Proposed` and untracked** until Phase 8 stages it; the record is accepted or rejected with the PR review. Any process that snapshots the tree before Phase 8 sees no decision record on disk.
 6. **Citation drift is carried, not repaired**, in the plan's `SOURCES` block (N-2) and its Phase-5 "taxonomy tables" phrasing (N-3). Delivery must implement `TC-EVT-002` step 5's range scan and the step-6 non-vacuity control, and must record the measured root-help size rather than the cited 1 677 bytes (N-1).
 
 ## Reopen routing

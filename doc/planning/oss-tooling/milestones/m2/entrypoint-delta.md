@@ -9,7 +9,7 @@ snapshot and stays as written; the M1 man page is
 
 ## Observed composition
 
-Observed from the built workspace on 2026-11-12, after the GH-286, GH-288, and
+Observed from the built workspace on 2026-11-12, after the GH-286, GH-288, GH-289, and
 GH-290 mounts. The `Commands:` block is abridged to the family list: the real
 output also prints a title, Usage, Options, Examples, Exit codes, and See also,
 and each family carries a description on its own row.
@@ -17,15 +17,28 @@ and each family carries a description on its own row.
 ```
 $ <binary> --help
 Commands: status brief queue lanes blockers phase commit lint plan
-          verify merge closeout dispatch spend retro daemon coordinator
+          verify merge closeout spend retro dispatch coordinator daemon
           projects events
 ```
 
 Nineteen families are registered: `status`, `brief`, `queue`, `lanes`,
 `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`,
-`dispatch`, `spend`, `retro`, `daemon`, `coordinator`, `projects`, and `events`.
+`dispatch`, `spend`, `retro`, `coordinator`, `daemon`, `projects`, and `events`.
 `state` and `mcp` are absent from the listing. Root `--help` is bounded by
 content, not by a line or byte ceiling.
+
+The `dispatch` family advertises its read-side subfamily in family help; the
+subfamily adds no root row:
+
+```
+$ <binary> dispatch --help
+Usage:
+  <binary> dispatch <ref> [--harness <name>] [--resume-prompt <text>]
+  <binary> dispatch attempts [--ref <ref>] [--limit <n>]
+  <binary> dispatch dual-run summary --repo <repo>
+  <binary> dispatch dual-run resolve <divergence-id> --note <text>
+  <binary> dispatch handover <repo> [--revert]
+```
 
 ```
 $ <binary> daemon --help
@@ -35,13 +48,20 @@ exit 0
 
 ## M2-planned additions
 
-- `projects` becomes a root family: the host overview of managed checkouts.
-  **Mounted by GH-288 (M2-S11):** `projects list` is in the prompt-required set,
-  composed by the production entrypoint, advertised in root `--help`, and served
-  by the M2 command page as its reference page. The remaining additions below
-  stay planned.
+- `repos` becomes a root family: the flat record set of managed checkouts,
+  owned by M2-S18.
+- `projects` becomes a root family: the group surface with members, their
+  health, and their state, owned by M2-S18.
+- **Mounted by GH-288 (M2-S11):** the shipped `projects list` is the delivered
+  flat surface — in the prompt-required set, composed by the production
+  entrypoint, advertised in root `--help`, and served by the M2 command page
+  as its reference page. The rename of that shipped surface to `repos list`,
+  with the `projects list --flat` alias, is pending M2-S18 code work; the
+  other additions below stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
-  read side.
+  read side. **Mounted by GH-289 (M2-S12):** the subfamily is advertised in the
+  dispatch family `--help` with its own fifth help entry and M2 reference page,
+  and the root listing is unchanged because a subfamily adds no row.
 - `events` was the subscribe-surface taxonomy reference. **Mounted by GH-290
   (M2-S13):** `events list` / `events describe <topic>` is in the prompt-required
   set (nineteen families), composed unconditionally because its runtime is the
@@ -53,8 +73,8 @@ exit 0
   removal on merge and closeout.
 - `board` becomes the full cross-repository board and is mounted by M2-S4.
 
-These additions are planned; the root listing changes only when the owning
-story delivers.
+The remaining additions stay planned; the root listing changes only when the
+owning story delivers.
 
 ## The daemon registration gap (closed)
 
@@ -76,12 +96,19 @@ mounted.
 
 The entrypoint composes exactly the prompt-required command set and drops
 extras, so a command definition existing in the edge composition is not
-enough. Mounting a family takes a prompt-set change plus a help reference page
-per command; only then does the family appear in root `--help`. GH-288 mounted
-`projects` that way — prompt-set entry, edge composition, help entries, the M2
-reference page, the coverage-inventory row and the per-command page root — and
-GH-290 mounted `events` the same way. The remaining M2 additions (`board`,
-`dispatch attempts`, `spend` v2) stay planned until their own stories mount
+enough. Mounting `repos`, `projects`, `events`, or `board` takes a prompt-set
+change plus a help reference page per command; only then does the family
+appear in root `--help`. GH-288 mounted the flat enumeration that way under its
+shipped name `projects`: prompt-set entry, edge composition, help entries, the
+M2 reference page, the coverage-inventory row and the per-command page root.
+Carrying that reference page to [commands/repos.md](commands/repos.md) is
+pending M2-S18 code work, not an effect of this change. GH-290 mounted `events`
+the same way — prompt-set entry, unconditional edge composition, help entries,
+the M2 reference page, the coverage-inventory row and its per-command page
+root. A subfamily mounts with the family prompt-set entry it already has, a
+help entry of its own, and its reference page, which is how `dispatch attempts`
+mounts without a root-listing change; GH-289 did exactly that. The remaining M2
+additions (`board`, `spend` v2) stay planned until their own stories mount
 them.
 
 ## Where this note is read
@@ -96,6 +123,7 @@ The note is reachable from the milestone index, which lists
 index in [README.md](README.md).
 
 Read it with the M2 command contracts it introduces:
+[commands/repos.md](commands/repos.md),
 [commands/projects.md](commands/projects.md),
 [commands/attempts.md](commands/attempts.md),
 [commands/events.md](commands/events.md),

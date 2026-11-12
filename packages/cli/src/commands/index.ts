@@ -33,6 +33,7 @@ export { createDaemonCommandDefinition } from "./daemon.js";
 export type { DbCommandRuntime } from "./db.js";
 export { createDbCommandDefinition } from "./db.js";
 export type {
+  DispatchAttemptsRuntime,
   DispatchCommandRuntime,
   DispatchHandoverRuntime,
   DispatchResolveRuntime,

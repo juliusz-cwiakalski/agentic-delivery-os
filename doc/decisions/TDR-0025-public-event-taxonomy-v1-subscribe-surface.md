@@ -1,5 +1,5 @@
 ---
-id: TDR-0024
+id: TDR-0025
 decision_type: tdr
 status: Proposed
 created: 2026-11-11
@@ -84,7 +84,7 @@ links:
   roadmap_items: ["M2-S13", "M2-S17"]
 ---
 
-# TDR-0024: Public Event Taxonomy v1 for the Daemon Subscribe Surface — Contract-Governed Kind Sets, Per-Lane Sequence Ordering, Preserved Overflow-to-Repoll, Version Pinned by Per-Topic Tests
+# TDR-0025: Public Event Taxonomy v1 for the Daemon Subscribe Surface — Contract-Governed Kind Sets, Per-Lane Sequence Ordering, Preserved Overflow-to-Repoll, Version Pinned by Per-Topic Tests
 
 ## Context
 

@@ -3,7 +3,7 @@
 - **Verdict:** NOT_READY
 - **Date:** 2026-11-12
 - **Gate:** `@readiness-reviewer` (adversarial Definition of Ready)
-- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.1, 38 ACs), `chg-GH-290-test-plan.md` (v1.1, 45 TCs), `chg-GH-290-plan.yaml` (8 phases, `tier: full`; `plan validate` returns `valid` / `readyForDevelopment: true`), `chg-GH-290-pm-notes.yaml`, ticket `juliusz-cwiakalski/agentic-delivery-os#290` (re-read), `doc/decisions/TDR-0024-…` (amended in place, `status: Proposed`, untracked — `git ls-files` empty, `git status` `??`), the M2 planning pack, and the delivered tree under `packages/core/src/{contracts,domain,app,state}`, `packages/cli/src`, `scripts/checks`, `tests/**`.
+- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.1, 38 ACs), `chg-GH-290-test-plan.md` (v1.1, 45 TCs), `chg-GH-290-plan.yaml` (8 phases, `tier: full`; `plan validate` returns `valid` / `readyForDevelopment: true`), `chg-GH-290-pm-notes.yaml`, ticket `juliusz-cwiakalski/agentic-delivery-os#290` (re-read), `doc/decisions/TDR-0025-…` (amended in place, `status: Proposed`, untracked — `git ls-files` empty, `git status` `??`), the M2 planning pack, and the delivered tree under `packages/core/src/{contracts,domain,app,state}`, `packages/cli/src`, `scripts/checks`, `tests/**`.
 - **Pause required:** no — every finding routes to `specification`, `test_planning`, or `delivery_planning`. No human decision is needed to repair them.
 - **Iteration cap:** this is iteration 2 of ~3. RF-1..RF-9 are closed (see closure table). RF-10..RF-13 are new, introduced or exposed by the remediation; a third iteration that repeats any of them is a stalemate and must escalate to the human.
 
@@ -16,7 +16,7 @@
 | plan_coverage | PASS | Every requirement and every AC has an owning phase; 45/45 TCs mapped single-owner; the 8-phase renumbering is internally consistent |
 | test_traceability | PASS | 38/38 ACs covered, 45/45 non-orphan, 5 declared substitutes, no TODO |
 | cross_artifact_consistency | **FAIL** | RF-12 (test plan's delivered-suite role is false), RF-13 (spec §16 page content vs plan Phase 5), A-12 (stale pm-notes phase) |
-| decision_capture | PASS | TDR-0024 amended in place with an Amendments table; change-level decisions in DEC-A..DEC-O; nothing precedent-setting is left only in prose |
+| decision_capture | PASS | TDR-0025 amended in place with an Amendments table; change-level decisions in DEC-A..DEC-O; nothing precedent-setting is left only in prose |
 | system_spec_consistency | **FAIL** | RF-10 (NFR-2/KPI vs `daemon-runtime.ts`), A-17 (`readChangeTransitions` costs two reads, not one) |
 | plan_doc_update_coverage | PASS | Every page spec §16 names is inside a phase scope; RF-13 is a content-specificity gap, not a missing page |
 | plan_code_area_coverage | **FAIL** | RF-11: the new core export the composition needs is in no phase scope |
@@ -113,7 +113,7 @@ Phase 7 says "the composition takes the view once and hands the same view to the
 1. **NFR-2 / AC-NFR-2 / DEC-N over the delivered `StateStorePort`.** Implementable in principle without widening the port: `readRecords()` returns every verified record in sequence order, and the phase-transition "artifact" read is itself a filter over the same view (`state/artifact-boundary.ts:111`), so one view can feed both projections. Two things are not yet implementable as written rather than as intended: the **measured interval** (RF-10) and the **public export** the CLI composition needs (RF-11). No new port method is required; an additive `view?` parameter on the folds is enough and keeps every existing caller compiling.
 2. **Acceptance → refusal (DEC-L).** Correctly declared as a behaviour change with its compatibility consequence in §2.1, §2.2, §8.5, §18, DEC-L, RSK-10, AC-F8-1, TC-EVT-075, TDR DC-4/customer_impact/revisit/Amendments. No artifact still frames it as an identity rename. Closed.
 3. **`kinds: []` vs the reference-surface grammar and the `events.md` page.** The grammar and the `events list` golden are consistent (`kinds=0` on snapshot topics; the machine record carries an empty `kinds[]`). Phase 5's reconciliation **is sufficient for TC-EVT-002 step 5's count assertion** (`0/0/4/3/3/3`) and TC-EVT-032's restart/repoll scan, provided the S17 prose sits outside the scanned section (A-10). It is **not sufficient** for the page's required key set and delivered-status line (RF-13), which no test reads.
-4. **TDR-0024 amendment.** No DC contradicts spec v1.1: DC-1 names the mount phase (plan 5); DC-2 carries non-null `lane`, per-topic `ref`, source-record `occurredAt`, and the process-scoped `sequence`; DC-3 keeps the delivered overflow and the single constant; DC-4 carries the shape split, empty `kinds[]`, the record key set, and the acceptance→refusal with its compatibility note; DC-5 pins nullability and the version boundary. The "seven-field vs eight-field" flag is a **counting convention, not a defect**: seven change fields + the `taxonomyVersion` stamp = the eight `data` fields, and DM-2 states both. Only the terminology is worth a note (A-14).
+4. **TDR-0025 amendment.** No DC contradicts spec v1.1: DC-1 names the mount phase (plan 5); DC-2 carries non-null `lane`, per-topic `ref`, source-record `occurredAt`, and the process-scoped `sequence`; DC-3 keeps the delivered overflow and the single constant; DC-4 carries the shape split, empty `kinds[]`, the record key set, and the acceptance→refusal with its compatibility note; DC-5 pins nullability and the version boundary. The "seven-field vs eight-field" flag is a **counting convention, not a defect**: seven change fields + the `taxonomyVersion` stamp = the eight `data` fields, and DM-2 states both. Only the terminology is worth a note (A-14).
 
 ## Verified sound (do not re-litigate)
 
@@ -125,7 +125,7 @@ Phase 7 says "the composition takes the view once and hands the same view to the
 - **Mount edit set is otherwise complete.** `help-guide-coverage.ts:34-40` has no hard-coded count and needs only the `events` page-root row (declared); `reference-page-parity.test.ts:14-22` has its own map and needs the same row (declared); `coverage.json` is 18 commands / 22 pages; `entrypoint-composition.test.ts` has an `EXPECTED` list (declared); `entrypoint-help.test.ts` and `doc-conformance.test.ts` genuinely need no edit (their hand lists omit `events` by precedent).
 - **`events.md` page state.** Counts 4/3/6/4 today, no `--help`/`--version`, old key table — all Phase-5 work; the page is in Phase 5 scope.
 - **Regressions checked and clean:** no `snapshot` kind residue, no `parkCause` residue, no `truncated` path, no nullable-`lane` residue, no "consumed unchanged" claim, no `queue.park` consumption, no `daemon.state-recovery-failed` used for a topic refusal, and `daemon.ts:22` is the correct citation.
-- **Decision capture.** TDR-0024 is untracked and staged only by Phase 8 (correct for the commit primitive); its index row is already committed; status stays `Proposed` with owner acceptance at the PR, which is the right treatment for an R2 record.
+- **Decision capture.** TDR-0025 is untracked and staged only by Phase 8 (correct for the commit primitive); its index row is already committed; status stays `Proposed` with owner acceptance at the PR, which is the right treatment for an R2 record.
 
 ## Reopen routing
 
@@ -135,6 +135,6 @@ Phase 7 says "the composition takes the view once and hands the same view to the
 | `test_planning` | RF-10 (TC-EVT-081 interval/baseline), RF-12, A-9, A-10, A-11, A-13 |
 | `delivery_planning` | RF-11, RF-12 (MOUNT EDIT SET), RF-13, A-15, A-16 |
 | `@pm` (`pm-notes`) | A-12 |
-| TDR-0024 | none — iteration-1 amendment (RF-2/RF-3/RF-7/RF-8/A-3/A-6) verified closed |
+| TDR-0025 | none — iteration-1 amendment (RF-2/RF-3/RF-7/RF-8/A-3/A-6) verified closed |
 
 No finding targets `delivery`.

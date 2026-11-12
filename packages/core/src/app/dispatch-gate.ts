@@ -10,6 +10,7 @@
 import {
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
   type DispatchHandoverRecord,
+  type DispatchResolveData,
   type DispatchSummaryData,
   type StateStorePort,
 } from "#contracts";
@@ -21,6 +22,7 @@ import {
   evaluateHandoverGate,
   foldEvidenceWindow,
   handoverConditionsSnapshot,
+  summarizeRepositoryDivergences,
   toSummaryData,
 } from "../domain/dispatch-gate.js";
 import {
@@ -86,7 +88,16 @@ export const summarizeDispatchEvidence = (input: {
   return { ok: true, data: toSummaryData(read.window, read.evaluation) };
 };
 
-/** Resolve one divergence append-only. */
+/**
+ * Resolve one divergence append-only from local evidence only (GH-289 F-5).
+ *
+ * A blank or whitespace-only note is refused before anything is read or
+ * written; an over-long note is clamped by the ledger before the record is
+ * built, so it can never become a write failure. The success data keeps the
+ * five delivered keys and adds the unconditional local-evidence mode, the
+ * divergence's own repository, and the shared repository-scoped block computed
+ * over that repository's records after the append.
+ */
 export const resolveDispatchDivergenceEvidence = (input: {
   readonly store: StateStorePort;
   readonly fenceToken: string;
@@ -95,16 +106,25 @@ export const resolveDispatchDivergenceEvidence = (input: {
   readonly principal: string;
   readonly nowIso: string;
 }):
-  | { readonly ok: true; readonly data: Record<string, unknown> }
+  | { readonly ok: true; readonly data: DispatchResolveData }
   | {
       readonly ok: false;
       readonly error: {
         readonly kind: "input" | "state" | "dispatch";
         readonly code: string;
+        readonly summary?: string;
       };
     } => {
-  // Local evidence only: the ledger helper clamps the note before building the
-  // record, so an over-long note can never become a write failure.
+  if (input.note.trim().length === 0) {
+    return {
+      ok: false,
+      error: {
+        kind: "input",
+        code: "input.value.rejected",
+        summary: "a resolution requires a non-blank note",
+      },
+    };
+  }
   const resolved = resolveDispatchDivergence(input.store, input.fenceToken, {
     divergenceId: input.divergenceId,
     note: input.note,
@@ -116,14 +136,22 @@ export const resolveDispatchDivergenceEvidence = (input: {
       ? { ok: false, error: { kind: "input", code: "input.value.rejected" } }
       : { ok: false, error: { kind: "state", code: resolved.code } };
   }
+  const divergences = readDispatchDivergences(input.store);
+  if (!divergences.ok) {
+    return { ok: false, error: { kind: "state", code: divergences.code } };
+  }
+  const record = resolved.record;
   return {
     ok: true,
     data: {
       divergenceId: input.divergenceId,
-      state: resolved.record.state,
+      state: record.state,
       resolved: resolved.appended,
-      note: resolved.record.note,
-      principal: resolved.record.principal,
+      ...(record.note === undefined ? {} : { note: record.note }),
+      ...(record.principal === undefined ? {} : { principal: record.principal }),
+      mode: "local-evidence",
+      repository: record.repository,
+      divergences: summarizeRepositoryDivergences(divergences.records, record.repository),
     },
   };
 };

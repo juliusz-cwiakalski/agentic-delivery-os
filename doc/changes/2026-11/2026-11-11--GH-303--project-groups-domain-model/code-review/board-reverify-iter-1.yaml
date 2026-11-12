@@ -1,0 +1,643 @@
+version: 1
+iteration: 1
+kind: board-reverify
+mode: local
+work_item_ref: GH-303
+branch: docs/GH-303/project-groups-domain-model
+head: 33a7e53c
+current_head: 52775f64
+base: 723454e4
+reviewed_at: 2026-11-11T22:46:28+01:00
+status: FAIL
+current_status: PASS_WITH_SHOULD_FIX
+head_movement_note: >-
+  An external commit (52775f64, 2026-11-11T22:50:05+01:00) landed during the
+  re-verification. The reviewer did not create, stage, or commit it. It applies
+  the six findings recorded below and records the second-round remediation in
+  chg-GH-303-pm-notes.yaml. The FAIL status above is the verdict for the
+  requested head 33a7e53c; current_status is the verdict after re-verifying
+  52775f64 (see post_review_remediation).
+
+summary: >-
+  The board remediation contract was re-verified by inspection and by re-running
+  the 69-procedure battery at HEAD 33a7e53c, not by trusting the coder's
+  summary. All 18 board findings (6 blocking, 10 should-fix, 2 cheap notes) are
+  closed in their stated scope: the contract identity split, the mapping clause,
+  the single rename rule, the repos.md delivered semantics, the board page, the
+  S11/S18 ownership, the help/version rows, member health, the scoped grammar,
+  configuration-only membership, the S19 shape, the queue/lane representation,
+  the classified aggregation, the registry split, the S4 edge, the S2-S19 intro,
+  the discovery-root distinction, and the reference-page move all verify. The
+  re-verification verdict is nevertheless FAIL because the remediation left two
+  new blocking defects and a set of should-fix precision/evidence defects:
+  (1) SC-M2-S4-02 still asserts `board --all.data.projects` although the
+  reconciled board page declares `repositories[]`; (2) SC-M2-S18-04 asserts that
+  the queue and status envelopes name `groupKey`, but no contract declares a
+  group-scoped envelope, the frozen M1 status envelope cannot carry the field,
+  and the test plan's own TP-10 says the seed asserts through
+  `project-groups.v1` instead. Both are exactly the class of defect the board
+  was convened to remove (a repository-meaning `projects` token; an assertion
+  against an undeclared shape), and both are cheap to fix. The aggregate gate is
+  green on the recorded authoritative repository-local run (exit 0, 7206 pass /
+  4 skip / 0 fail, code fingerprint matching HEAD); the test plan's section 10
+  P62 FAIL and several section 10 observations are stale, not current-truth
+  failures.
+  POST-REVIEW: an external commit 52775f64 landed during the re-verification
+  (2026-11-11T22:50:05+01:00) and applied fixes for CG-API-001, CG-API-002,
+  CG-API-003, CG-API-004, CG-DOC-002 and CG-DOC-003. Re-verification at
+  52775f64 is PASS with one open evidence should-fix (CG-DOC-001, the stale
+  test-plan section 6/section 10 record); all 69 procedures pass and the
+  aggregate gate is green. See post_review_remediation.
+
+remediation_contract:
+  decisions:
+    A: "Group contract is project-groups.v1 / data.groups[] / groupKey; projects.v1 keeps the delivered flat record set and is not reused."
+    B: "Flat S18 surface is `repos list --json` -> repos.v1 / data.repos[] / repoKey."
+    C: "One rename rule; the alias token is `projects list --flat`, returning data.projects[], owned by M2-S18, retiring at the M3 boundary."
+    D: "Group identity is groupKey, never projectKey."
+  blocking_findings: 6
+  should_fix_findings: 10
+  cheap_notes: 2
+  total: 18
+
+remediation_status:
+  board_findings_closed: 18
+  phrase: "board verdict FAIL -> remediated; six critics re-verified (for the 18 board findings)"
+  axes_all_pass: false
+  current_head_axes_all_pass: true
+  reason: >-
+    The 18 board findings are closed in their stated scope and the six critics
+    re-verified them. At the requested head 33a7e53c the six axes are not all
+    PASS because the remediation left two new blocking defects (CG-API-001,
+    CG-API-002) and four should-fix precision/evidence defects. The external
+    commit 52775f64 fixes CG-API-001/002/003/004 and CG-DOC-002/003; after
+    re-verification at 52775f64 the six axes are PASS with one open evidence
+    should-fix (CG-DOC-001, the stale test-plan section 6/section 10 record).
+
+axes:
+  - axis: domain-model
+    reviewer: critique-grid-domain-expert
+    verdict: FAIL
+    assigned_findings_closed: "D1-D3 and D5-D11 closed; D4 open on the S4 seed"
+    reason: >-
+      The group/repo/workspace model, groupKey identity, mapping clause,
+      configuration-only membership, queue representation, aggregation, S4 edge
+      and discovery-root distinction all verify. The axis fails on the board
+      seed still naming `data.projects` (D4) and on the S18 scoped-read seed
+      asserting an undeclared `groupKey` on queue/status envelopes.
+  - axis: technical-architecture
+    reviewer: critique-grid-cto
+    verdict: FAIL
+    assigned_findings_closed: "C1-C7 and C9 closed; C8 open on stale evidence, not on a product defect"
+    reason: >-
+      The contract split, rename rule, repos semantics, S19 shape, registry,
+      architecture and 15-file containment verify; the aggregate gate is green
+      on the authoritative recorded run. The axis fails on the two asserted-but-
+      undeclared fields, and on section 6/section 10 observations that no longer
+      describe HEAD.
+  - axis: documentation-consistency
+    reviewer: critique-grid-technical-writer
+    verdict: FAIL
+    assigned_findings_closed: "W1-W10 closed; W11 open"
+    reason: >-
+      The corpus is internally consistent on repos.md, projects.md, queue.md,
+      registry, status.md, entrypoint-delta.md and the architecture. The axis
+      fails because a seed contradicts a command page (W11), the S18 map row
+      lists 5 of 8 seeds, and board.md carries no help/version rows.
+  - axis: product-ownership
+    reviewer: critique-grid-product-manager
+    verdict: FAIL
+    assigned_findings_closed: "P1-P8 closed; P9 open on the projects-page scope sentence"
+    reason: >-
+      The 26 ticket clauses, S11 delivered AC, S18/S19 ownership, the 6 S18 ACs,
+      53 seeds and the S4 edge verify. The axis fails on the S18-04 assertion,
+      the untyped partial result, the story-level `repos list` AC presentation,
+      and the projects page documenting `projects list --project <groupKey>`
+      while its SCOPE says only queue and status are group-scoped.
+  - axis: api-contracts
+    reviewer: critique-grid-api-integration-engineer
+    verdict: FAIL
+    assigned_findings_closed: "A1-A7 and A12 closed; A8, A9, A10, A11 open on the two undeclared-shape defects and the untyped new surfaces"
+    reason: >-
+      The repos.v1, projects.v1 and project-groups.v1 envelopes, the alias, the
+      rename rule, the repos error table, the mapping clause and the board page
+      verify. The axis fails on SC-M2-S4-02's `data.projects`, SC-M2-S18-04's
+      undeclared `groupKey`, the `partial` and `definitionOfDone` shapes, and
+      the config-invalid/scope-unavailable exit collision.
+  - axis: legal-ip-compliance
+    reviewer: critique-grid-legal-counsel
+    verdict: PASS
+    assigned_findings_closed: "L1-L9 all closed"
+    reason: >-
+      The registry split is one Delivery row per name with the repos row marked
+      not delivered; the S18 superseding-record task is present; no private,
+      fleet, host, cloud or proprietary name was added; no license or
+      distribution-marker change; no doc/spec, packages or M1 edits; no privacy
+      exposure. Notes only: ODR-0003 is itself status Proposed, the `--project`
+      token carries three key spaces by design, and the migration-guide update
+      remains an S18 task.
+
+board_findings:
+  - id: B01
+    title: Group envelope split (project-groups.v1 / data.groups[] / groupKey; projects.v1 flat; repos.v1 / data.repos[] / repoKey)
+    status: CLOSED
+    evidence: "contracts.md:22-53,55-69,71-87; projects.md:67-87; repos.md:54-67; backlog.md:1343; status.md:236-240; scenarios.md:369,428"
+  - id: B02
+    title: Repository-vocabulary mapping clause (marker, container, host-index fields, --project-root)
+    status: CLOSED
+    evidence: "contracts.md:44-48; repos.md:85-88; projects.md:136-139"
+  - id: B03
+    title: Exactly one rename rule; no one-spelling-two-shapes text; S18 owns rename and field renames
+    status: CLOSED
+    evidence: "contracts.md:89-95; backlog.md:1323-1329; P25 rename_rule_occurrences=1; P68 mapping_token_violations=0"
+  - id: B04
+    title: repos.md delivered semantics (unbound at exit 0, delivered error identities, STATE example, help/version)
+    status: CLOSED
+    evidence: "repos.md:80-83,92-96,98-104,126-132,46-47"
+  - id: B05
+    title: Board stays on the repository-key boundary; no group-scoped board claim
+    status: CLOSED
+    evidence: "board.md:25-28,41-42,54,88; projects.md:132-134; journeys.md:27-28"
+    residual: "CG-API-001: the S4 seed still asserts a different board envelope field."
+  - id: B06
+    title: S11 keeps the delivered enumeration AC; S18 owns the rename; SC-M2-S11-02 is prospective
+    status: CLOSED
+    evidence: "backlog.md:1203-1205,1323-1336; scenarios.md:184-191; P43 s11_01_assert_projects_list=0, s11_02_rename_asserted=OK"
+    residual: "CG-PM-001 records that the story AC block has no explicit `repos list` item; the surface is carried by AC-F6-1/AC-F7-1."
+  - id: B07
+    title: Help/version no-state-read rows
+    status: CLOSED
+    evidence: "repos.md:46-47; projects.md:59-60"
+    residual: "CG-DOC-004: board.md and queue.md still carry no help/version rows (only repos.md was in the board's finding)."
+  - id: B08
+    title: Member daemon health; no orphan daemonReachable.reason paragraph
+    status: CLOSED
+    evidence: "projects.md:81-87; contracts.md:79-81; P35 group_page_anchors=11/11"
+  - id: B09
+    title: queue list --project <groupKey> and status --project <groupKey> grammar
+    status: CLOSED
+    evidence: "queue.md:19,67; projects.md:29-30; m2/README.md:62; P39 synopsis_grammar=OK options_grammar=OK"
+    residual: "CG-API-002: the S18-04 seed asserts an undeclared groupKey on the queue/status envelopes."
+  - id: B10
+    title: Configuration-only membership with an undeclared-clone seed
+    status: CLOSED
+    evidence: "contracts.md:106-111; architecture.md:62-64; scenarios.md:406-412; P27 config_fields=11/11, P40 topic_anchors=7/7"
+  - id: B11
+    title: S19 per-member CI corroboration, dependency ordering, contracted envelopes, closeout.data.members[], executable review flow
+    status: CLOSED
+    evidence: "contracts.md:149-173; backlog.md:1350-1361; scenarios.md:432-472; P30 plan_shape_behaviour=11/11, P42 assertions=13 declared_envelope=13"
+    residual: "CG-API-004: data.definitionOfDone and dependsOn[] element shapes are named but not typed."
+  - id: B12
+    title: One queue entry per member and the release rule
+    status: CLOSED
+    evidence: "contracts.md:136-147; architecture.md:280-288,322-324; P29 queue_lane_anchors=9/9"
+  - id: B13
+    title: Classified partial aggregation
+    status: CLOSED
+    evidence: "contracts.md:119-134; projects.md:89-94; scenarios.md:414-420; P28 aggregation_anchors=12/12"
+    residual: "CG-API-004: `partial` has no declared path and the degraded-member field is unnamed."
+  - id: B14
+    title: Registry split under the ODR-0003 lock and the S18 decision-record task
+    status: CLOSED
+    evidence: "cli-command-registry.md:189-190,195; backlog.md:1335-1336; P52 odr_lock=OK second_repos_delivery_rows=0"
+    residual: "CG-LEG-001 notes ODR-0003 itself is status Proposed."
+  - id: B15
+    title: M2-S4 depends on M2-S18; the README advisory phrase is removed
+    status: CLOSED
+    evidence: "backlog.md:1122; m2/README.md:48; P17 removed_lines=1 added_lines=1"
+    residual: "CG-DOM-001: the spec's assumption/dependency rationale still says S4 needs the group contract."
+  - id: B16
+    title: Scenario intro reads M2-S2 through M2-S19
+    status: CLOSED
+    evidence: "test-scenarios.md:3; m2/README.md:31,62-63; P45 intro_range=OK m2_s2_present=OK m2_s19_present=OK"
+  - id: B17
+    title: Discovery workspace root distinguished from the state layer's default identifier
+    status: CLOSED
+    evidence: "architecture.md:66-68; P21 distinct_statement=OK collapsed_sentences=0"
+  - id: B18
+    title: Reference-page move phrased as pending S18 code work
+    status: CLOSED
+    evidence: "entrypoint-delta.md:46-49,84-88; P47 delta_anchors=7/7"
+
+new_findings:
+  - id: CG-API-001
+    severity: BLOCKING
+    disposition: CONFIRMED
+    title: S4 seed asserts board.data.projects while the reconciled board page declares repositories[]
+    claim: >-
+      SC-M2-S4-02's Assert reads `board --all.data.projects` even though
+      commands/board.md declares the board envelope as `repositories[]`; the
+      seed and the page therefore describe one board with two different field
+      names, and the token still gives a repository set the name `projects`.
+    evidence:
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:64
+        observation: 'Assert: `board --all.data.projects` holds both repository keys and the row count equals the sum of the per-repository boards.'
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/commands/board.md:54
+        observation: 'Envelope table: | `repositories[]` | Repository keys included in the board |; the example at :81 emits `"repositories": [ "delivery-a-1a2b3c4d" ]`.'
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:981,1000,1209
+        observation: "AC-F14-1 and AC-NFR12-1 require zero flat-meaning `projects` occurrences outside the time-scoped disambiguation and delivered-GH-288 facts; Appendix B's test-scenarios row requires declared envelopes only."
+      - label: DERIVED
+        locator: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:58-64
+        observation: "The scenario is the M2-S4 seed inherited by that story's test plan; an S4 plan written from it must assert a field the page does not declare or fail on a conforming board."
+    consequence: >-
+      The corpus still contains a repository-meaning `projects` token in a
+      touched document, so AC-F14-1/NFR-12's zero-survivor claim is false at
+      HEAD; an S4 test plan inherits an undeclared envelope field and re-creates
+      the ambiguity the change exists to remove.
+    confidence: HIGH
+    reviewers: [critique-grid-domain-expert, critique-grid-cto, critique-grid-technical-writer, critique-grid-api-integration-engineer, critique-grid-legal-counsel]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator read both citations and the P3 diff; the prose was changed to repository keys but the field token was not."
+    action: >-
+      Change the assert to `board --all.data.repositories` (and keep the
+      repository-key prose), then add a page/seed envelope cross-check to P38 or
+      TC-038 so the two cannot drift again. One-line product edit; no manifest
+      change.
+    residual_uncertainty: "Whether `data.projects` was intentionally retained as a delivered board field; no page or contract declares it, so the default is to reconcile it."
+
+  - id: CG-API-002
+    severity: BLOCKING
+    disposition: CONFIRMED
+    title: S18-04 asserts an undeclared groupKey on queue/status envelopes, contradicting TP-10
+    claim: >-
+      SC-M2-S18-04's Assert says both the `queue list --project <groupKey>` and
+      `status --project <groupKey>` envelopes name the same `groupKey`, but no
+      contract declares a group-scoped queue or status envelope or a
+      `groupKey` field on either; the test plan's TP-10 claims the seed asserts
+      through `project-groups.v1` instead.
+    evidence:
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:395
+        observation: 'Assert: both envelopes name the same `groupKey` and omit other groups'' entries.'
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/contracts.md:119-134
+        observation: "The project-scoped aggregation clause defines member order and per-member outcomes; it defines no queue/status envelope and no groupKey field."
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m1/commands/status.md:49-57
+        observation: "The frozen status envelope's `data` is schemaVersion, generatedAt, repository, summary (with per-state counts...), and sections[]; there is no groupKey, and AC-F7-9/NFR-1 forbid editing this page."
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m1/commands/queue.md:44-49,169
+        observation: "The delivered queue envelope `data` is entries[] (ref, repository, state, ...), leases[], weights[], parks[], findings[], degraded[], truncated, counts; no groupKey."
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-test-plan.md:4809
+        observation: "TP-10 says the seed asserts the scoped member set through project-groups.v1 (data.groups[].members[], groupKey) plus the invocation exit code and that no undeclared queue.*/status.* envelope is read, which is the opposite of the committed seed."
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:969
+        observation: "AC-F8-3 restricts every S18/S19 Assert to project-groups.v1, repos.v1, plan.data.members[], closeout.data.members[], or verify gates.data.definitionOfDone/blockingMembers[]."
+    consequence: >-
+      The S18 scoped-read acceptance is unassertable against a declared shape;
+      satisfying the seed literally requires adding groupKey to the frozen M1
+      status envelope, which AC-F7-9 and NFR-1 forbid; AC-F8-3 fails as written.
+      A test-plan author inheriting the seed cannot tell which contract to read.
+    confidence: HIGH
+    reviewers: [critique-grid-domain-expert, critique-grid-cto, critique-grid-technical-writer, critique-grid-product-manager, critique-grid-api-integration-engineer]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator read the seed, TP-10, the aggregation clause, the M1 queue and status envelopes, and AC-F8-3; the contradiction is direct."
+    action: >-
+      Rewrite SC-M2-S18-04's Assert to the TP-10 resolution (assert the scoped
+      member set through `project-groups.v1` plus the invocation exit code), or
+      declare group-scoped queue/status envelopes and amend AC-F8-3. Do not edit
+      the frozen M1 status page.
+    residual_uncertainty: "Whether the intended S18 design adds a groupKey field to the queue/status responses; if so, the contracts and AC-F8-3 must change, not just the seed."
+
+  - id: CG-API-003
+    severity: SHOULD_FIX
+    disposition: CONFIRMED
+    title: projects.config-invalid (exit 1) and projects.scope-unavailable (exit 2) both claim an unreadable configuration document
+    claim: >-
+      `projects.config-invalid` is documented as covering a configuration
+      document that "cannot be read" at exit 1, while
+      `projects.scope-unavailable` and the aggregation clause assign an
+      unreadable configuration document to exit 2; one input has two exit codes.
+    evidence:
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/commands/projects.md:148,150
+        observation: '`projects.config-invalid` | The configuration document cannot be read or contradicts itself | 1; `projects.scope-unavailable` | The configuration document or the invoking scope cannot be read | 2.'
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/contracts.md:131-132
+        observation: "Exit 2 occurs only when the configuration document or the invoking scope cannot be read."
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:963
+        observation: "AC-F7-6 requires the page to carry the exit codes of the aggregation clause."
+    consequence: >-
+      A machine consumer cannot distinguish a retryable platform/state failure
+      from a fix-your-config refusal; the page contradicts the contract it
+      points at.
+    confidence: HIGH
+    reviewers: [critique-grid-product-manager, critique-grid-api-integration-engineer]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator read the error table and the aggregation clause."
+    action: >-
+      Split the meanings: `projects.config-invalid` = parsed but contradictory
+      or semantically invalid (exit 1); `projects.scope-unavailable` = the
+      document or invoking scope cannot be read (exit 2), matching the contract;
+      or align the contract and the page on one meaning.
+    residual_uncertainty: "Whether the intended distinction is syntax/semantic invalidity versus I/O unavailability; the wording must say so."
+
+  - id: CG-API-004
+    severity: SHOULD_FIX
+    disposition: CONFIRMED
+    title: New machine surfaces are named but not typed (partial, definitionOfDone, dependsOn[], per-member outcome)
+    claim: >-
+      The aggregation clause names `partial` true and a "degraded member named"
+      without a path or field; the cross-repository shape names
+      `data.definitionOfDone` without a type; and `plan.data.members[].dependsOn[]`
+      has no declared element identity, while the S18/S19 seeds read each as a
+      specific shape.
+    evidence:
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/contracts.md:128-130,155,160-163
+        observation: "`partial` true and the degraded member are prose-only; `data.definitionOfDone` is named as a verdict; `dependsOn[]` is a field name only."
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/commands/projects.md:89-94
+        observation: "The page repeats `partial` true without a path or a degraded-member field."
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:420,447,455,463,472
+        observation: "The seeds place `partial` inside data.groups[], read data.definitionOfDone as a blocked token, a CI-corroboration record, and a colour, and require dependsOn[] to name a repoKey."
+      - label: DERIVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:955,957
+        observation: "AC-F6-7 and AC-F6-9 require the behaviours but do not fix the field paths or types, so an implementation can satisfy the prose and fail the seed (or vice versa)."
+    consequence: >-
+      S18/S19 implementers can choose different shapes and still claim
+      conformance; the seeds cannot be written deterministically; the
+      classified-partial and shared-DoD invariants are untestable as modelled.
+    confidence: HIGH
+    reviewers: [critique-grid-domain-expert, critique-grid-cto, critique-grid-api-integration-engineer]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator read the contracts, the page and the five seeds; no field table declares the paths/types."
+    action: >-
+      Declare the shapes in contracts.md: `data.partial` / `data.degradedMembers[]`
+      (or the chosen path), `data.definitionOfDone` (verdict token plus member
+      evidence), `plan.data.members[].dependsOn[]` element type, and the
+      per-member outcome field; then update the seeds to match.
+    residual_uncertainty: "The intended shape is a design choice for M2-S18/S19; the contract must make it explicit before delivery."
+
+  - id: CG-DOC-001
+    severity: SHOULD_FIX
+    disposition: CONFIRMED
+    title: Test plan section 6/section 10 observations no longer describe HEAD; P62's default record path is stale
+    claim: >-
+      The test plan records s18_seeds=7, s19_seeds=6, alias_seed=SC-M2-S19-06,
+      status additions=16, a status heading "correction", and a 130-line
+      repos.md, while HEAD has 8 S18 seeds, 5 S19 seeds, alias seed
+      SC-M2-S18-08, 27 status additions, the heading "amendment", and a 142-line
+      repos.md; P62's default record directory holds a red fixture run while the
+      green authoritative record sits in tmp/tmpdir/gh303/p62-record.
+    evidence:
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-test-plan.md:2470,4868-4879
+        observation: "Section 6 records 7 S18 + 6 S19 seeds, 16 status additions, and a 130-line repos.md; section 10 records s18_seeds=7, s19_seeds=6, alias_seed=SC-M2-S19-06, additions=16, heading 'correction'."
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-test-plan.md:4894
+        observation: "TC-M2DOM-062 records FAIL with repo_local_exit=1 and a list of load-induced failures."
+      - label: DERIVED
+        locator: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:362-428; doc/planning/oss-tooling/status.md:227; doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        observation: "Fresh-shell re-runs at HEAD give s18_seeds=8 (P40), s19_seeds=5 (P41), alias_seed=SC-M2-S18-08 (P44), 252 head lines / 27 additions (P51), the heading '## M2 domain-model amendment (2026-11-11)', and 142 repos.md lines."
+      - label: OBSERVED
+        locator: tmp/tmpdir/gh303/p62-record/p62-local.rc and p62-rerun.txt
+        observation: "The authoritative repository-local run is exit 0, 7206 pass / 4 skip / 0 fail; the default run is exit 1 with only the expected ci-baseline-parity failure; the code fingerprint matches HEAD (docs-only diff, empty code fingerprint). P62 passes when pointed at this record."
+    consequence: >-
+      The change's own verification artifact does not describe the head it
+      claims to verify; a reviewer following P62's default record path sees a
+      red gate although the authoritative run is green. The underlying corpus is
+      green (the 68 non-gate procedures re-ran PASS at HEAD), so this is an
+      evidence-accuracy defect, not a product failure.
+    confidence: HIGH
+    reviewers: [critique-grid-cto, critique-grid-api-integration-engineer]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator re-extracted and re-ran P40/P41/P44/P50/P51 at HEAD and ran P62 with P62_RECORD_DIR=$PWD/tmp/tmpdir/gh303/p62-record; the results above are the actual outputs."
+    action: >-
+      Re-measure and update section 6/section 10 (or label the old fixture values
+      as historical), point P62 at the green record
+      (tmp/tmpdir/gh303/p62-record) or copy it to /tmp/gh303/p62-record, and
+      update TC-062 to PASS (excused) with the recorded local 0 / default 1.
+    residual_uncertainty: "A fixed-HEAD gate run would remove the head-movement caveat recorded in p62-rerun.txt; the code tree is identical, so the gate result is unaffected."
+
+  - id: CG-DOC-002
+    severity: SHOULD_FIX
+    disposition: CONFIRMED
+    title: projects.md says only queue and status are group-scoped while documenting projects list --project <groupKey>
+    claim: >-
+      The projects page documents `projects list --project <groupKey>` in its
+      synopsis and OPTIONS, but its SCOPE section says "Only queue and status
+      are group-scoped"; the page contradicts itself and the sentence is false
+      for its own `--project` option.
+    evidence:
+      - label: OBSERVED
+        locator: doc/planning/oss-tooling/milestones/m2/commands/projects.md:14,56,132-134
+        observation: "Synopsis and OPTIONS carry `projects list --project <groupKey>`; SCOPE says 'Only queue and status are group-scoped.'"
+      - label: OBSERVED
+        locator: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:963
+        observation: "AC-F7-6 deliberately requires the `--project` argument to be `<groupKey>`."
+    consequence: >-
+      A reader cannot tell whether `projects list --project` ships in S18 or is a
+      scope addition; the page undermines its own boundary statement. The option
+      is spec-required, so the SCOPE sentence is the defect, not the option.
+    confidence: HIGH
+    reviewers: [critique-grid-product-manager, critique-grid-technical-writer]
+    challenge_result: UPHELD
+    verification_status: VERIFIED
+    verification_detail: "Coordinator read the three page locations and AC-F7-6."
+    action: >-
+      Reword the SCOPE sentence to include the projects family, e.g. "Outside
+      the projects family, only queue and status take a group key; the board
+      stays repository-key scoped."
+    residual_uncertainty: "Whether `projects list --project` was intended by the ticket or only by the spec AC; the ticket's S18-A4 names queue and status, so the spec is the authorising source."
+
+notes:
+  - id: CG-DOM-001
+    location: doc/changes/2026-11/2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-spec.md:827,845
+    note: "The spec's assumption/dependency rationale says S4 needs the group contract / any board work consumes it, while G-6 and board.md keep the board on repository keys; correct the rationale so an S4 implementer does not reintroduce group scope."
+  - id: CG-API-005
+    location: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:56
+    note: "SC-M2-S4-01 asserts `board.data.stateSource`, which board.md:50-58 does not declare. Pre-existing at base; a future S4 test plan must either declare it or assert the shared-source property another way."
+  - id: CG-API-006
+    location: doc/planning/oss-tooling/milestones/m2/commands/repos.md:98-104,80-83
+    note: "The EXIT STATUS table has no `unbound` row; the SCOPE prose says 'keeps its exit code' but never states 0. AC-F7-2's wording is met, but a consumer inferring from the table alone cannot resolve it."
+  - id: CG-DOC-003
+    location: doc/planning/oss-tooling/milestones/m2/README.md:62
+    note: "The new S18 map row lists SC-M2-S18-01..05 while the corpus has 06 (undeclared clone), 07 (partial), and 08 (alias); the S17 row similarly lists 5 of 7 (pre-existing). Update the row or state that the list is illustrative."
+  - id: CG-DOC-004
+    location: doc/planning/oss-tooling/milestones/m2/commands/board.md:13,39-43
+    note: "Board has no `--help`/`--version` synopsis or OPTIONS rows, unlike repos.md and projects.md. Only repos.md was in the board's finding; this is a pack-consistency note."
+  - id: CG-DOC-005
+    location: doc/planning/oss-tooling/milestones/m2/README.md:48
+    note: "The S4 map row still names `projects.v1` as the board's contract surface; board.md points at contracts generally and consumes repository keys/host index, not the projects.v1 alias payload."
+  - id: CG-PM-001
+    location: doc/planning/oss-tooling/backlog.md:1337-1343
+    note: "The S18 story AC block has no explicit `repos list` item; the surface is accepted through AC-F6-1 (contracts) and AC-F7-1 (page). If the board meant a story-level AC, add one item asserting `repos list --json` -> repos.v1/data.repos[]/repoKey."
+  - id: CG-PM-002
+    location: doc/planning/oss-tooling/milestones/m2/test-scenarios.md:182
+    note: "SC-M2-S11-01, a delivered story's seed, says the flat record set comes from `repos list` with no time scope; AC-F8-4 mandates that token, so this is a readability/temporal note, not a contract failure. A parenthetical ('`projects list` today, `repos list` after S18') would remove the ambiguity."
+  - id: CG-PM-003
+    location: doc/planning/oss-tooling/backlog.md:1316-1319,1331-1333
+    note: "The preserved ticket task says 'scan for managed clones inside' while the derived task (e) says a scan only locates declared members and never admits an undeclared clone; a coder must read both. The config-only clause and S18-06 are the intended resolution; consider one explicit pointer."
+  - id: CG-LEG-001
+    location: doc/planning/oss-tooling/cli-command-registry.md:189; doc/decisions/ODR-0003-cli-command-naming-v1-lock.md:4
+    note: "The registry says the split is required by ODR-0003, but ODR-0003 is status Proposed with decision_date null; the lock's authority should be confirmed or the wording softened."
+  - id: CG-LEG-002
+    location: doc/planning/oss-tooling/milestones/m2/commands/board.md:42; projects.md:56; contracts.md:44-47
+    note: "`--project` means a repository key on board, a groupKey on projects/queue/status, and `--project-root` means a checkout. The CEO decision keeps the board boundary, so this is a documented collision, not a defect; a cross-reference in the help text would reduce misrouting."
+  - id: CG-LEG-003
+    location: doc/guides/migrating-to-per-repository-state.md:58,70; backlog.md:1329-1330
+    note: "The shipped guide tells users to read state roots from `projects list --json`, which S18 redefines; the correction is only an S18 task. Accepted residual (NG-5), but it must ship with the rename."
+
+verification_performed:
+  procedure_battery: >-
+    P00-P69 re-extracted from chg-GH-303-test-plan.md section 7.1 and re-run in
+    fresh shells at HEAD 33a7e53c. 68 of 69 PASS; P62 passes when pointed at the
+    authoritative record (P62_RECORD_DIR=$PWD/tmp/tmpdir/gh303/p62-record):
+    repo_local_exit=0 (7206 pass / 4 skip / 0 fail), default_exit=1 with only the
+    excused ci-baseline-parity cross-device failure, code_fingerprint_match=yes.
+    Key tokens: P01-P45 all PASS (P25 rename_rule_occurrences=1, P38
+    board_anchors=7/7, P40 s18_seeds=8, P41 s19_seeds=5, P44 alias_seed=SC-M2-S18-08,
+    P51 head_lines=252 additions=27, P55 disambiguated_pages=6/6, P64
+    board_clauses_covered=32/32), P46-P69 all PASS except the default-path P62
+    invocation described above.
+  guards:
+    forbidden_literals: "exit 0; 5/5 scope classes; 142 user-facing docs; 0 violations."
+    doc_distribution: "exit 0; 83 in-scope docs; no drift; marker self-tests pass."
+  plan_validate: "verdict=valid; artifact=yaml:chg-GH-303-plan.yaml; readyForDevelopment=true."
+  lint: "lint GH-303 conforms."
+  containment: "git diff 723454e4..HEAD -- ':!doc/changes/**' is exactly the 15 product files; no doc/spec, doc/overview, doc/guides, packages, tests, .opencode, .ai, or other scripts change; the M1 status page is byte-identical."
+  aggregate_gate: >-
+    Authoritative repository-local run exit 0 (7206 pass / 4 skip / 0 fail)
+    recorded at d0a87862; the code fingerprint is the empty diff (docs-only
+    change) and matches HEAD 33a7e53c, so the gate applies to the reviewed code
+    tree. Default-TMPDIR run exit 1 with only the expected ci-baseline-parity
+    failure, re-run and excused under AC-NFR6-1(c). Head-movement caveat: the
+    default run started at d0a87862 and ended at 33a7e53c; no source, test, or
+    config file changed.
+
+post_review_remediation:
+  head: 52775f64
+  committed_at: 2026-11-11T22:50:05+01:00
+  provenance: >-
+    External commit; the reviewer did not create, stage, or commit it. It
+    applies the findings from this review and appends the second-round record to
+    chg-GH-303-pm-notes.yaml (PM notes lines 1043-1076).
+  fixed_findings:
+    CG-API-001: >-
+      test-scenarios.md:64 now asserts `board --all.data.repositories`,
+      matching commands/board.md:54/:81. P38 PASS (board_anchors=7/7,
+      stale_claims=0, group_claims=0).
+    CG-API-002: >-
+      SC-M2-S18-04 now asserts the scoped member set through
+      `projects list --json` / project-groups.v1 (`data.groups[]`, `groupKey`)
+      plus both scoped invocations exiting 0, and explicitly reads no undeclared
+      `queue.*`/`status.*` envelope, which is the TP-10 resolution. P40 PASS
+      (s18_seeds=8, topic_anchors=7/7).
+    CG-API-003: >-
+      projects.md:148,150 now split the meanings: `projects.config-invalid` is
+      schema/content invalidity at exit 1; an unreadable configuration document
+      routes to `projects.scope-unavailable` at exit 2, matching
+      contracts.md:131-132. P33 PASS.
+    CG-API-004: >-
+      contracts.md:128-131,155-167 now declare `data.partial`,
+      `data.degradedMembers[]`, the `data.definitionOfDone` object (`status`,
+      `members[]` with `gates.ci`, `evidence[]`), and each `dependsOn[]` element
+      as a member `repoKey`; the S18-07 and S19-02/03/04 asserts use those paths.
+      P28/P30/P42 PASS.
+    CG-DOC-002: >-
+      projects.md:132 now reads "Outside the projects family itself, only queue
+      and status are group-scoped", consistent with its own
+      `projects list --project <groupKey>` grammar. P36 PASS.
+    CG-DOC-003: >-
+      m2/README.md:62 now lists SC-M2-S18-01..08 and names SC-M2-S18-08 as the
+      AC-F8-5 alias-shape assertion. P48 PASS.
+  still_open:
+    CG-DOC-001: >-
+      The test plan's section 6/section 10 observations were not re-measured
+      (the commit does not touch chg-GH-303-test-plan.md): section 6 still
+      records 7 S18 + 6 S19 seeds, 16 status additions and a 130-line repos.md;
+      section 10 still records s18_seeds=7, s19_seeds=6, alias_seed=SC-M2-S19-06,
+      additions=16 and the heading "correction" (HEAD has 8/5, SC-M2-S18-08,
+      27 additions, "amendment", 142 lines). The pm-notes second-round entry
+      records the correct tokens, so the delivery evidence exists, but the test
+      plan still contradicts it. Should-fix; not a product defect.
+  verification_at_current_head:
+    procedures: >-
+      All 69 procedures re-run at 52775f64: 68/69 PASS plus P62 PASS with
+      P62_RECORD_DIR=$PWD/tmp/tmpdir/gh303/p62-record (local 0, default 1
+      excused, fingerprint match). P38/P40/P41/P44/P51/P22/P33/P28/P30/P36/P42
+      all PASS after the fixes. P58 passed on re-run; its first run showed a
+      transient two-story change caused by concurrent activity, not by the
+      commit (the commit does not touch backlog.md; a clean re-run reports
+      stories_kept=72 changed=0 removed=0).
+    aggregate_gate: >-
+      A fresh repository-local `pnpm check` completed exit 0 (7206 pass / 4
+      skip / 0 fail, all eight sub-gates green). It overlapped the external
+      docs-only commit; no source, test, or config file changed, so the result
+      applies to the 52775f64 code tree. The recorded P62 run remains green.
+    guards: >-
+      forbidden-literals exit 0 (142 docs, 0 violations); doc-distribution exit
+      0 (83 docs, no drift); plan validate valid; lint conforms.
+    containment: >-
+      52775f64 changes 6 files: the pm-notes, this review record,
+      m2/README.md, m2/commands/projects.md, m2/contracts.md and
+      m2/test-scenarios.md. No source, package, spec or other script changes;
+      the 15-product-file manifest is unchanged.
+  post_review_axes:
+    domain-model: PASS
+    technical-architecture: PASS
+    documentation-consistency: PASS
+    product-ownership: PASS
+    api-contracts: PASS
+    legal-ip-compliance: PASS
+  verdict: PASS_WITH_SHOULD_FIX
+  verdict_basis: >-
+    The two blocking defects and the four should-fix product defects from the
+    33a7e53c review are closed and verified at 52775f64; the product corpus is
+    coherent and the aggregate gate is green. One evidence should-fix remains:
+    the test plan's section 6/section 10 record is stale and should be refreshed
+    or explicitly marked historical before the PR is merged. This is a
+    documentation-accuracy item, not a product contradiction, and it does not
+    reopen any of the 18 board findings.
+
+residual_risk:
+  accepted_risks:
+    - "The board page was reconciled to repository keys; the S4 test plan must still add the `stateSource` field if it wants to assert the shared-source property (CG-API-005)."
+    - "ODR-0003 is status Proposed; the registry's 'required by ODR-0003' wording assumes a lock whose acceptance is not recorded (CG-LEG-001)."
+    - "The migration guide is updated only by an S18 task; until then the installed guide names the surface S18 redefines (CG-LEG-003)."
+    - "Preserved M1-era `projects`-for-checkouts lines in backlog.md:847,863,1082 and the frozen M1 pack remain as recorded residuals; the change does not edit them."
+  unverified_high_consequence_risks:
+    - "The S18-04 group-scoped envelope design: if the intended design adds groupKey to queue/status responses, the frozen M1 status page and AC-F8-3 must change; the corpus does not decide this."
+    - "The partial/definitionOfDone/dependsOn shapes are implementation choices; the seeds and contracts must agree before S18/S19 delivery."
+  human_decision_required:
+    - "Choose the S18 scoped-read assertion path: rewrite SC-M2-S18-04 to the TP-10 project-groups.v1 resolution (no M1 edit) or declare group-scoped queue/status envelopes and amend AC-F8-3 (M1 edit required)."
+    - "Confirm whether ODR-0003's Proposed status is intended to bind the registry split."
+
+overall_verdict: FAIL
+current_overall_verdict: PASS_WITH_SHOULD_FIX
+confidence: HIGH
+verdict_basis: >-
+  All 18 board findings are closed in their stated scope, but the re-verification
+  at 33a7e53c found two new blocking defects that are direct instances of the
+  board's own concerns: a repository-meaning `projects` field in the S4 seed
+  (AC-F14-1 / NFR-12), and an S18 seed that asserts an undeclared groupKey on
+  the frozen M1 status envelope (AC-F8-3). The remaining items are should-fix
+  precision and evidence-accuracy defects. The authoritative aggregate gate is
+  green; the product corpus is otherwise coherent.
+current_verdict_basis: >-
+  At 52775f64 the external fix commit closes both blocking defects and the four
+  should-fix product defects; all 69 procedures pass, the aggregate gate is
+  green, and the six axes are PASS. One evidence should-fix remains: the test
+  plan's section 6/section 10 record is stale and should be refreshed or marked
+  historical before merge (CG-DOC-001). That is a documentation-accuracy item,
+  not a product contradiction, and it does not reopen any of the 18 board
+  findings.
+next_action: >-
+  Refresh the test plan's section 6/section 10 observations at 52775f64 (or mark
+  the old fixture values as historical), point P62 at
+  tmp/tmpdir/gh303/p62-record, and re-run P40/P41/P44/P51/P62 plus the two
+  guards. No product edit is needed; the 18 board findings and the six new
+  findings from the 33a7e53c review are otherwise closed. Do not commit the
+  review record from this session.

@@ -7,7 +7,7 @@ last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -19,8 +19,8 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 
 ## Test Scope
 
-- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the GitHub work-item read and its received-status stamp (`packages/adapters/src/github/client.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/io/provider-transport.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `index.ts`, `edge.ts`, `production.ts`, `entrypoint.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
-- Contracts under test: the optional `preflight` admission port and its status-keyed refusal identities, the trusted-refusal marker's narrow forwarding rule, the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the delivered-evidence divergence shape and its per-work-item dedupe, the local-only resolve typing, the four-condition handover gate, and the bounded read/output constants.
+- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-attempts`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `dispatch-attempts`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the GitHub work-item read and its received-status stamp (`packages/adapters/src/github/client.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/io/provider-transport.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `index.ts`, `edge.ts`, `production.ts`, `entrypoint.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
+- Contracts under test: the optional `preflight` admission port and its status-keyed refusal identities, the trusted-refusal marker's narrow forwarding rule, the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the delivered-evidence divergence shape and its per-work-item dedupe, the local-only resolve typing, the four-condition handover gate, the `attempts.v1` read-side contract with its sixteen-field projection, total order and declared bounds, the additive resolve result (unconditional `local-evidence` mode, subject repository, shared repository-scoped divergence block), and the bounded read/output constants.
 - Exclusions: no real repository is flipped and no real pilot evidence is accrued; the controlled proof uses the real state store and command path with injected harness, tracker, CI, and VCS ports. No live network, live model, or real merge is exercised. Evidence retention and cross-host authority are out of scope.
 
 ## Test Levels
@@ -49,6 +49,17 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
 - `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts`, `dispatch-preflight-contract.test.ts`, `dispatch-resolve-composition.test.ts` — no merge path, composition honesty, the optional-preflight contract, the production preflight wiring and ordering, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, rename-invariant identity, and per-repository identity isolation paths.
 - `tests/structure/cli-edge-seam.test.ts`, `entrypoint-bin.test.ts` — the declared truth-read key registered for redaction from injected environment facts (literal and prefixed references) and the entrypoint/bin secret seam.
+
+The attempt read side and the extended resolve result (GH-289) are covered by:
+
+- `tests/behaviour/dispatch-attempts-ref.test.ts` — `dispatch attempts` reference resolution (explicit flag and the active-change default), the three unresolvable-context cells, the limit grammar (1 and 100 accepted; `0`, `101`, `-1`, `abc`, `07`, `+7`, ` 7`, `001`, and a missing value refused with zero reads), the total order across identical start instants and two insertion orders, and the request-grammar refusals.
+- `tests/behaviour/dispatch-attempts-contract.test.ts` — the sixteen-field projection (exact key set, singular `divergenceRef` present or explicit `null`, no undeclared key), `endedAt` and stored instants, the comparison projection with its not-applicable null token, `matched`/`hasMore`, and the no-gate-key cells.
+- `tests/behaviour/dispatch-attempts-bounds.test.ts` — the 65,536-byte page declaration, the 5,000-record ledger window with the ledger scope winning, the count-only foreign disclosure over the retained window, exactly one verified store read, and latency at the ledger bound.
+- `tests/behaviour/dispatch-attempts-digest.test.ts` — the declared digest with its reviewed three-row and empty goldens, the seven cells, the closed corroboration derivation, the 40-line/8,192-byte human budget with its declared cut, and repeated-run determinism.
+- `tests/behaviour/dispatch-attempts-scope.test.ts` — two checkouts on one host root, the migrated root's count-only disclosure independent of `--ref`, the non-checkout refusal, and the read-only-with-respect-to-evidence proof (stable evidence bytes, unchanged record counts, no binding marker).
+- `tests/behaviour/dispatch-attempts-refusals.test.ts` — a verified empty history at exit 0, and the torn, unknown, and permission-denied store identities with their delivered projections, never an empty history.
+- `tests/behaviour/dispatch-resolve-result.test.ts`, `tests/behaviour/dispatch-divergence-count.test.ts`, `tests/structure/dispatch-attempts-count-rule.test.ts` — the resolve extension (unconditional mode, subject repository, exact counts), replay idempotency, the blank and long note cells, the one deterministic resolve line, the 25-open shared count with 20 identifiers and `idsTruncated`, and the single-computation structural pin with zero list-length derivation.
+- `tests/structure/dispatch-attempts-taxonomy.test.ts`, `tests/checks/dispatch-attempts-test-isolation.test.ts`, `tests/structure/dispatch-attempts-composition.test.ts`, `tests/behaviour/dispatch-additive-stability.test.ts` — taxonomy closure over the new surfaces, test isolation, the single pointer route from evidence to the gate, and the delivered shapes with the four delivered-form refusals under `acceptsAnyFlag`.
 
 ### Registration, fallback, and daemon tests
 
@@ -125,6 +136,24 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Then** it is the app-local `divergence-not-found` sentinel surfaced as `input.value.rejected` with `kind: "input"` and nothing is appended, never `state.keys.missing`.
 - **And given** a note longer than 240 characters
 - **Then** the resolution lands with the note clamped to at most 240 characters.
+- **And given** a successful resolution or an idempotent replay
+- **Then** the result keeps the five delivered keys and adds `mode: "local-evidence"`, the divergence's own `repository`, and the shared `divergences` block, and the one text line reports the same state, append flag, unresolved count, mode, and repository.
+- **And given** a blank or whitespace-only note
+- **Then** it exits `1` with `input.value.rejected` and appends nothing.
+
+### Scenario: attempt history is a bounded repository-scoped read
+
+- **Given** a repository with attempts on one reference and an active change in the local delivery context
+- **When** `dispatch attempts --ref <ref>` runs
+- **Then** `data.ref` is that reference, `data.refSource` is `"flag"`, and every row carries the sixteen declared fields with `divergenceRef` present or explicit `null`.
+- **And when** `dispatch attempts` runs with no `--ref`
+- **Then** `data.ref` is the active change's reference and `data.refSource` is `"active-change"`; an absent, unparsable, or active-change-less context refuses at exit `1` with `input.value.rejected` and names the context file and the `--ref` remedy.
+- **And given** a page bound, a 65,536-byte `data` budget, and a 5,000-record ledger window
+- **Then** `matched`, `hasMore`, and a single `truncation` object declare every bound that binds, the ledger scope wins, and the human digest declares its own row cut and ends with the coverage/floor pointer.
+- **And given** one project root holding two repositories' records
+- **Then** only the invoking repository's rows are returned, foreign records are counted in `excluded.foreignRepository` and never named, and an invocation outside a checkout refuses instead of reading the `unbound` store.
+- **And given** a verified empty history
+- **Then** it exits `0` with `attempts: []`, `matched: 0`, and `hasMore: false`; a torn, unreadable, or permission-denied store keeps its own `state.*` identity and never reports an empty history, with the exit following that row (`state.permission.denied` is `1`; the platform state rows are `2`).
 
 ### Scenario: unreadable corroboration is unevaluable
 
@@ -159,8 +188,8 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 ### Scenario: production composition surfaces
 
 - **Given** the shipped production composer over an injected store, remote, and harness runner
-- **When** `dispatch dual-run summary`, `dispatch dual-run resolve`, `dispatch handover`, `dispatch handover --revert`, and `dispatch <ref> --resume-prompt` run
-- **Then** each surface runs through the delivered CLI, the resume uses the persisted session, the checkout-scoped first-use identity marker binds the repository, two repositories in one home keep separate bindings, a read-only summary never binds an arbitrary `--repo`, and a renamed remote or changed scheduler key does not re-key history.
+- **When** `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, `dispatch handover`, `dispatch handover --revert`, and `dispatch <ref> --resume-prompt` run
+- **Then** each surface runs through the delivered CLI, the attempt read opens the resolved store against the checkout's repository with persistence disabled, the resume uses the persisted session, the checkout-scoped first-use identity marker binds the repository, two repositories in one home keep separate bindings, a read-only summary never binds an arbitrary `--repo`, and a renamed remote or changed scheduler key does not re-key history.
 - **And given** an unresolvable repository argument
 - **Then** the surface refuses cleanly at exit `1`.
 

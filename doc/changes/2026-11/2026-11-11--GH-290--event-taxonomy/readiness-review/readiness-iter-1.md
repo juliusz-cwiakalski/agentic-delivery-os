@@ -3,8 +3,8 @@
 - **Verdict:** NOT_READY
 - **Date:** 2026-11-11
 - **Gate:** `@readiness-reviewer` (adversarial Definition of Ready)
-- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.0, 38 ACs), `chg-GH-290-test-plan.md` (v1.0, 45 TCs), `chg-GH-290-plan.yaml` (7 phases, `tier: full`), `chg-GH-290-pm-notes.yaml`, ticket `juliusz-cwiakalski/agentic-delivery-os#290`, the M2 planning pack (`backlog.md` M2-S13, `m2/contracts.md` §Event taxonomy v1 and §S17 mapping, `m2/commands/events.md`, `m2/test-scenarios.md` SC-M2-S13-01/02, `m2/entrypoint-delta.md`), `doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` (untracked), `doc/spec/features/feature-resident-daemon.md` §Control protocol v1, and the delivered tree under `packages/core/src/{contracts,domain,app,state}` and `packages/cli/src`.
-- **Pause required:** no — no finding needs a human decision before repair. RF-7 needs a TDR-0024 amendment, which follows the GH-286 RF-1 precedent (route to the record's owner, not a workflow stop).
+- **Artifacts reviewed:** `chg-GH-290-spec.md` (v1.0, 38 ACs), `chg-GH-290-test-plan.md` (v1.0, 45 TCs), `chg-GH-290-plan.yaml` (7 phases, `tier: full`), `chg-GH-290-pm-notes.yaml`, ticket `juliusz-cwiakalski/agentic-delivery-os#290`, the M2 planning pack (`backlog.md` M2-S13, `m2/contracts.md` §Event taxonomy v1 and §S17 mapping, `m2/commands/events.md`, `m2/test-scenarios.md` SC-M2-S13-01/02, `m2/entrypoint-delta.md`), `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` (untracked), `doc/spec/features/feature-resident-daemon.md` §Control protocol v1, and the delivered tree under `packages/core/src/{contracts,domain,app,state}` and `packages/cli/src`.
+- **Pause required:** no — no finding needs a human decision before repair. RF-7 needs a TDR-0025 amendment, which follows the GH-286 RF-1 precedent (route to the record's owner, not a workflow stop).
 
 ## Facet summary
 
@@ -44,7 +44,7 @@
 
 ### RF-2 [critical] — the nullable `lane` contract has no legal witness, and TDR DC-2 contradicts the spec's lane rule
 
-**Artifacts:** spec §5.1 F-1 topic table (line 167), AC-F3-1 (line 564), §23 glossary "Lane" (line 676); test plan TC-EVT-022 step 4 and its precondition bullet; TDR-0024 DC-2 (line 300).
+**Artifacts:** spec §5.1 F-1 topic table (line 167), AC-F3-1 (line 564), §23 glossary "Lane" (line 676); test plan TC-EVT-022 step 4 and its precondition bullet; TDR-0025 DC-2 (line 300).
 
 **Gap:** `AC-F3-1` requires `lane` to be "present and `null` where no lane holds the subject", but none of the four declared lane rules can produce `null`, and the one fixture the test plan relies on cannot exist.
 
@@ -53,7 +53,7 @@
 - `packages/core/src/contracts/blockers.ts:205` — `readonly lane: string` (not nullable); `packages/core/src/state/blockers.ts:66` — `{ name: "lane", type: "string", required: true }`; `:269` — `if (!isNonEmptyString(value.lane)) return fail(...)`.
 - `packages/cli/src/commands/blockers.ts:139-141` — `blockers publish` **requires** `--lane`.
 - TC-EVT-022 precondition: "A blocker question published with no recorded lane (the null-lane cell)"; step 4: "assert the null cell occurs for the lane-less blocker question".
-- TDR-0024 DC-2: "`lane` is `null` when no lane holds the subject (an unleased queue entry)" — which directly contradicts the spec's `queue.graph` rule ("the entry `ref`") and TC-EVT-020 step 4 (`lane === "GH-999"` for an unleased entry).
+- TDR-0025 DC-2: "`lane` is `null` when no lane holds the subject (an unleased queue entry)" — which directly contradicts the spec's `queue.graph` rule ("the entry `ref`") and TC-EVT-020 step 4 (`lane === "GH-999"` for an unleased entry).
 
 **Why it blocks:** the AC's nullable clause is unprovable, TC-EVT-022 step 4 cannot pass against the delivered record shape, and the governing decision record states a different lane rule than the spec it is said to authorise unchanged.
 
@@ -137,9 +137,9 @@
 
 **Reopen:** `specification`, `test_planning`.
 
-### RF-7 [major] — `occurredAt` and sequence durability contradict TDR-0024, which the plan commits unamended
+### RF-7 [major] — `occurredAt` and sequence durability contradict TDR-0025, which the plan commits unamended
 
-**Artifacts:** TDR-0024 DC-2 (line 300) and Implementation Plan item 2 (line 375); spec AC-F3-1, F-3 (line 204), DEC-D (line 487), DEC-I (line 492), Appendix B (line 703), §15 closing paragraph (line 498); test plan TC-EVT-020 steps 4/7, TC-EVT-032, §2 reference row; plan header SOURCES (lines 17-22) and Phase 7 `scope.files` (line 482).
+**Artifacts:** TDR-0025 DC-2 (line 300) and Implementation Plan item 2 (line 375); spec AC-F3-1, F-3 (line 204), DEC-D (line 487), DEC-I (line 492), Appendix B (line 703), §15 closing paragraph (line 498); test plan TC-EVT-020 steps 4/7, TC-EVT-032, §2 reference row; plan header SOURCES (lines 17-22) and Phase 7 `scope.files` (line 482).
 
 **Gap:** the spec and test plan implement a source-record timestamp and a process-scoped counter; the binding record says injected-clock timestamp and "allocated from the durable state revision".
 
@@ -148,13 +148,13 @@
 - Spec §5.1 F-3: "`occurredAt` is the source record's own ISO-8601 UTC timestamp, so a re-observation of the same record yields the same value"; TC-EVT-020 step 4/7 asserts equality with the durable record's `recordedAt` and "not the tick time".
 - TDR Implementation Plan item 2: "a per-(topic, lane) monotonic `sequence` allocated from the durable state revision".
 - Spec DEC-I / AC-F4-3 / TC-EVT-032: process-scoped, "not seeded from a ledger", a restart restarts the counters.
-- Spec §15: "`TDR-0024` … is consumed unchanged"; plan header: the Phase-7 commit "stages it unchanged because it is the only untracked artifact"; Appendix B maps DC-2 to DEC-B/DEC-D/DEC-G without noting either divergence.
+- Spec §15: "`TDR-0025` … is consumed unchanged"; plan header: the Phase-7 commit "stages it unchanged because it is the only untracked artifact"; Appendix B maps DC-2 to DEC-B/DEC-D/DEC-G without noting either divergence.
 
 **Why it blocks:** the change would ship a decision record that contradicts the implementation it governs, in the same commit, and one of the two `occurredAt` readings is directly test-visible. The spec's choice is the better one (stable re-observation); the record is what must move.
 
-**Remediation:** amend TDR-0024 DC-2's `occurredAt` sentence to the source-record timestamp and its Implementation Plan item 2 to a process-scoped, non-durable counter (via `@decision-advisor` with the owner's acceptance at PR review), or change the spec to the record. Add the amendment to Phase 7's scope note so "unchanged" stops being claimed.
+**Remediation:** amend TDR-0025 DC-2's `occurredAt` sentence to the source-record timestamp and its Implementation Plan item 2 to a process-scoped, non-durable counter (via `@decision-advisor` with the owner's acceptance at PR review), or change the spec to the record. Add the amendment to Phase 7's scope note so "unchanged" stops being claimed.
 
-**Reopen:** `specification`, `delivery_planning` (Phase-7 note), TDR-0024 amendment.
+**Reopen:** `specification`, `delivery_planning` (Phase-7 note), TDR-0025 amendment.
 
 ### RF-8 [major] — DEC-L's delivered-behaviour premise is false: an unknown topic is accepted today, not refused
 
@@ -202,7 +202,7 @@
 | A-3 | minor | The M2 page reconciliation is assigned to two different phases: TDR DC-1, spec RSK-1 and test plan §7 (TC-EVT-062 "update, phase 7") say "phase-7 doc sync"; the plan reconciles it in Phase 5 because the Phase-5/6 gates read the page. Pick one and fix the other two. | delivery_planning, test_planning |
 | A-4 | minor | Test plan §7 lists `entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts` and `entrypoint-composition.test.ts` as "(update)" in the TC rows and also in the "Delivered suites used as unmodified controls" paragraph (line 1719). Separately, the plan's TC map omits TC-EVT-016's `event-taxonomy-single-source.test.ts` half, which §7 assigns to Phase 6. One inventory per fact. | test_planning, delivery_planning |
 | A-5 | minor | The watermark is named but not defined. `blockers.state` derives its three kinds from three different ledgers (`blocker.question`, `blocker.answer`, the lane's `resumeIntent`), so a single scalar per `(topic, lane)` cannot separate them, and TC-EVT-082's "entry count ≤ number of lanes" asserts a bound the design may not meet without replay or loss. Declare the watermark's identity (record key or append position per source) and its bound. | specification, test_planning |
-| A-6 | nit | TDR-0024's Problem Framing declares "any new … error identity" out of scope while DC-4 declares the three `events.*` identities; the record is committed unamended, so it ships with the contradiction. | TDR-0024 amendment |
+| A-6 | nit | TDR-0025's Problem Framing declares "any new … error identity" out of scope while DC-4 declares the three `events.*` identities; the record is committed unamended, so it ships with the contradiction. | TDR-0025 amendment |
 | A-7 | nit | Two stale citation/coverage details: `daemon.ts:22` is cited for the subscription buffer but `DAEMON_DEFAULT_SUBSCRIPTION_BUFFER = 256` is at `:23`; EVT-4 lists `queue.park` among consumed records although no declared kind consumes it (see RF-9). | specification |
 | A-8 | nit | Phase 2 edits `tests/structure/inventory.json` and `tests/structure/content-inventory.test.ts` but its gate does not run the inventory guard (Phase 3 and Phase 7 do); Phase 7 also declares `doc/00-index.md`, which spec §16 says needs no change. Harmless, but the gate/scope pair should agree. | delivery_planning |
 
@@ -229,6 +229,6 @@
 | `specification` | RF-2, RF-3, RF-4, RF-5 (NFR-2/AC-NFR-2), RF-6, RF-7 (spec side), RF-8, RF-9, A-1, A-2, A-5, A-7 |
 | `test_planning` | RF-2 (TC-EVT-022), RF-3 (TC-EVT-022), RF-4 (TC-EVT-027/051), RF-5 (TC-EVT-081), RF-6 (TC-EVT-083/022), A-3, A-4, A-5 |
 | `delivery_planning` | RF-1, RF-5 (Phase 4 goal and shared-read restructure), RF-7 (Phase-7 staging note), A-2, A-3, A-4, A-8 |
-| TDR-0024 amendment (via `@decision-advisor`, owner acceptance) | RF-2 (DC-2 lane rule), RF-7 (DC-2 `occurredAt`, Implementation Plan item 2), A-6 |
+| TDR-0025 amendment (via `@decision-advisor`, owner acceptance) | RF-2 (DC-2 lane rule), RF-7 (DC-2 `occurredAt`, Implementation Plan item 2), A-6 |
 
 No finding targets `delivery`.

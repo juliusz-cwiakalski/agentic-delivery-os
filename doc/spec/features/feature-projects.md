@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The projects host overview: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `projects list [--json]` surface with its five-field envelope, deterministic table, exit projection, three contract error identities, handover and daemon projections, and the four state-location outcomes."
 links:
-  related_changes: ["GH-288"]
+  related_changes: ["GH-288", "GH-289"]
   related_decisions: ["TDR-0022"]
 ---
 
@@ -138,6 +138,14 @@ and the conflicting identifier. It never adopts that state root.
   Neither can create, change, or prune an index entry, a phase document, a queue
   record, or any other store content, so the host index and every `projects/`
   entry keep their bytes, modes, and mtimes apart from that removed temp file.
+
+The `dispatch attempts` read is also read-only with respect to delivery evidence:
+it appends no attempt, divergence, handover, or authority record and acquires no
+fence, and it inherits exactly the store-opening effects above — the host-index
+maintenance write (zero when unchanged) and the create-once project checkout
+identity marker. The dispatch repository binding marker
+(`dispatch-identity.json` in the git common directory) is a different artefact
+and is never created, repaired, or re-persisted by a read.
 
 ## Handover projection
 

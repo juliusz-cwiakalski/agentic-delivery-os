@@ -89,7 +89,7 @@ notes:
       delivery must not ship a stale page; (2) root `--help` has no size ceiling
       (measured 45 lines / 1747 bytes); (3) `events` help pages inherit the
       daemon ≤120-line/≤4000-byte bound; (4) compact `--json` ≤8192 bytes is a
-      test-plan derivation, not an NFR (NFR-5 is 65536); (5) TDR-0024 stays
+      test-plan derivation, not an NFR (NFR-5 is 65536); (5) TDR-0025 stays
       Proposed and untracked until plan phase 8 stages it; (6) citation nits
       N-1..N-3 (root-help byte figure, SOURCES versions, Phase-5 "taxonomy
       tables" wording) must be reconciled during delivery.
@@ -113,7 +113,7 @@ notes:
       RF-1..RF-9 recorded in readiness-review/readiness-iter-1.md. Owning
       authors: RF-1 plan-writer (plus a spec rule fix),
       RF-2/RF-3/RF-4/RF-5/RF-6/RF-8/RF-9 spec-writer with test-plan follow-ups,
-      RF-7 spec-writer plus a TDR-0024 DC-2 amendment. Most serious: delivered
+      RF-7 spec-writer plus a TDR-0025 DC-2 amendment. Most serious: delivered
       `daemon-compose.ts` accepts any topic and labels the lanes snapshot with
       it, so DEC-L is acceptance-to-refusal, not an identity rename; the state
       port exposes only a whole-store read so NFR-2's bounded-read claim has no
@@ -169,7 +169,7 @@ notes:
       error-table-sync.ts` gains the three `events` two-segment codes in its
       exact allowlist; no phase declared that file, and the bidirectional sync
       gate cannot pass otherwise. (3) The untracked amended
-      `TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` was held outside
+      `TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` was held outside
       the tree (`tmp/tmpdir/held/`) for this commit only: a standalone `commit
       GH-290` stages the union of every declared plan phase, so the Phase-8
       record would otherwise be swept into Phase 1 with a template subject
@@ -364,7 +364,7 @@ notes:
       Plan phase 8 complete (commit 3090f1c7): documentation reconciliation, the
       amended decision record, the changeset, and the release obligations. The
       AMENDED
-      `doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md`
+      `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md`
       (status `Proposed`, DC-1..DC-5 plus the Amendments table) is staged in
       this phase-mode commit, exactly as the plan's staging contract declares;
       it is never committed unchanged and its acceptance stays with the owner at
@@ -450,5 +450,19 @@ notes:
       delivery lifecycle phase already landed. TC ids: TC-EVT-002 (page half),
       003, 005, 006, 014 and the new TC-EVT-085..092 registered by test plan
       v1.4.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Decision-record identifier renumber: GH-289 merged its record as
+      `TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md`,
+      colliding with this change's drafted `TDR-0024` on the first sync with
+      `main-tools`. This change's record is now
+      `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` —
+      id, title, index row, and every reference in the spec, the test plan, the
+      plan, this ledger, the event-taxonomy and resident-daemon spec pages, the
+      CLI entrypoint page's decision list, and the review artifacts. Content,
+      status (`Proposed`), and the in-place amendments are unchanged; GH-289's
+      `TDR-0024` is untouched. The collision and the renumber are also recorded
+      in the spec's document history (v1.8).
     type: "info"
     date: "2026-11-12"

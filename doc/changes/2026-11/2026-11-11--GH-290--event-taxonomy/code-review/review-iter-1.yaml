@@ -6,7 +6,7 @@ branch: feat/GH-290/event-taxonomy
 status: FAIL
 summary: >-
   First local review of GH-290 (event taxonomy v1) against spec v1.4, test plan
-  v1.3, the 8-phase plan and TDR-0024. The declaration, generated reference
+  v1.3, the 8-phase plan and TDR-0025. The declaration, generated reference
   surface, control-plane widening, unknown-topic refusal, additive degraded-frame
   stamps, mount, error rows, changeset and additivity are implemented and well
   tested; 158 event tests and 228 changed-gate tests pass and every delivered

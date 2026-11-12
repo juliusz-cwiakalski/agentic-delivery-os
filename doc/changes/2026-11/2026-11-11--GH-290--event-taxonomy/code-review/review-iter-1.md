@@ -4,7 +4,7 @@
 - **Date:** 2026-11-12
 - **Reviewer:** `@reviewer` (local ADOS mode)
 - **Branch:** `feat/GH-290/event-taxonomy` vs `main-tools` (`main-tools` = `355ce2d5`, HEAD = `46bfec02`)
-- **Artifacts:** spec v1.4 (38 ACs), test plan v1.3 (45 TCs), plan (8 phases, all complete), pm-notes (8 phase notes), TDR-0024 (`Proposed`, amended in place)
+- **Artifacts:** spec v1.4 (38 ACs), test plan v1.3 (45 TCs), plan (8 phases, all complete), pm-notes (8 phase notes), TDR-0025 (`Proposed`, amended in place)
 - **Scope:** first review. All 38 ACs and 45 TCs audited against the shipped code (not the plan's claims), plus the taxonomy/projection/overflow/mount/additivity/docs axes named in the brief.
 
 ## Summary

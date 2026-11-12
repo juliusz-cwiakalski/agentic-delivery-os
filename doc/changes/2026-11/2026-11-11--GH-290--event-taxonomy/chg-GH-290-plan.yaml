@@ -42,7 +42,7 @@
 #               §7 assigns the M2 reference page to Phase 5 and
 #               the TC-EVT-016 single-source half to the contract phase; this
 #               plan keeps the mount at Phase 5 and owns that half in Phase 6.
-#   - Decision: doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md
+#   - Decision: doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md
 #               (Proposed; untracked at plan time; AMENDED 2026-11-11 at DoR
 #               iteration 1 — DC-1..DC-5 carry the amended text and the record
 #               carries an Amendments table: DC-2's non-null `lane` and
@@ -62,9 +62,9 @@
 #   - Precedent: ./2026-11-11--GH-286--daemon-command-mounting/chg-GH-286-plan.yaml
 #               (phase ceremony, inventory/guard scope, changeset shape).
 #
-# DECISION-RECORD STAGING CONTRACT (why TDR-0024 is declared in Phase 8):
-#   `doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` is
-#   UNTRACKED at plan time (`?? doc/decisions/TDR-0024-...`). The commit
+# DECISION-RECORD STAGING CONTRACT (why TDR-0025 is declared in Phase 8):
+#   `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` is
+#   UNTRACKED at plan time (`?? doc/decisions/TDR-0025-...`). The commit
 #   primitive stages tracked-pending work plus untracked files only inside the
 #   declared phase scope, so the record is declared in Phase 8's `scope.files`
 #   and lands in the final phase-mode commit together with the doc
@@ -290,7 +290,7 @@ tier:
     - "A delivered suite needs a semantic assertion change outside the mount rows this plan declares — the inline prompt-required name list in `tests/behaviour/entrypoint-help-coverage.test.ts` (`:150-171`), `tests/behaviour/entrypoint-composition.test.ts`'s `EXPECTED` list, and `tests/checks/reference-page-parity.test.ts`'s page-root map — the three prompt-required count assertions in `tests/structure/daemon-production-composition.test.ts`, and the inventory registrations; a membership literal or page-root row that only follows the mount is a mount row and does not fire this trigger"
     - "The publish tick would need more than one whole-store `readRecords()` per publish tick, a per-topic or per-subscriber read, an unbounded in-memory event queue, a socket connect, a process probe, or a sleep on the publish path"
     - "A durable sequence, ledger seeding, or per-client version negotiation is required to satisfy an AC"
-    - "The amended TDR-0024 cannot be staged by the final phase, or its amended text (DC-2 `lane`/`ref`/`occurredAt`/`sequence`, DC-4 acceptance-to-refusal) contradicts the spec's DEC-B/DEC-D/DEC-I/DEC-L"
+    - "The amended TDR-0025 cannot be staged by the final phase, or its amended text (DC-2 `lane`/`ref`/`occurredAt`/`sequence`, DC-4 acceptance-to-refusal) contradicts the spec's DEC-B/DEC-D/DEC-I/DEC-L"
     - "The evidence, spec, or test plan contradicts a pinned contract in this header and the contradiction cannot be resolved inside the phase scope"
 defaultLeases:
   - repo:main-tools
@@ -852,7 +852,7 @@ phases:
   # changeset, and the release obligations.
   #
   # Goal: make every page that states the subscribe contract true again, stage
-  # the AMENDED TDR-0024 (it is untracked and this is its only staging path),
+  # the AMENDED TDR-0025 (it is untracked and this is its only staging path),
   # record the delivered story in the planning corpus, and publish one lockstep
   # minor changeset over the five publishables. The pages are the ones spec §16
   # names: the resident-daemon page (six-topic taxonomy, shape split with
@@ -916,7 +916,7 @@ phases:
       files:
         - .changeset/gh-290-event-taxonomy-minor.md
         - doc/00-index.md
-        - doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md
+        - doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md
         - doc/planning/oss-tooling/backlog.md
       folders:
         - doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy
