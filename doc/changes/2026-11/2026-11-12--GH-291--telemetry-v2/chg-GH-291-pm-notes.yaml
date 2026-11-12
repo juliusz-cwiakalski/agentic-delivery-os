@@ -3,7 +3,7 @@ title: "M2-S14: Harness telemetry v2 (M2)"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-12T19:50:18.104Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-12T20:04:01.448Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -18,6 +18,16 @@ decisions:
       by GH-291 per backlog M2-S14 tasks and AC; the milestone-pack line 'spend
       v2 owned by M2-S6' is superseded — backlog is canonical for M2 scope and
       M2-S6's tasks are the alarm/metric layers consuming S14 telemetry."
+    date: "2026-11-12"
+  - text: "OQ-1..OQ-3 adjudicated change-scoped via @decision-advisor, baked into
+      spec as DEC-4..DEC-6: (4) non-opencode deliveries fold closeout-captured
+      v1 records with classified degradation; absence reserved for
+      no-records-of-either-plane; (5) reconciliation baseline = summed harness
+      session totals, one verdict, baseline gaps excluded with warning, no
+      baseline = classified unavailability; (6) payload keeps delivery.spend.v1
+      identity, additions beside the six keys, new identity reserved for
+      semantic breaks. Spec TO-CONFIRM (baseline source per plane) passed to
+      plan-writer."
     date: "2026-11-12"
 open_questions: []
 blockers: []
