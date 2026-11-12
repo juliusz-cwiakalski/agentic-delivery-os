@@ -1,0 +1,108 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-290
+branch: feat/GH-290/event-taxonomy
+status: PASS
+summary: >-
+  Re-review after remediation iteration 1. The blocking B-1 defect is fixed at the
+  correct layer — the began candidate reserves two budget slots and the paired
+  completed charges zero inside that reservation, so a pair consumes two slots for
+  two frames and an unfittable pair is skipped whole before any commit; reproduced
+  independently at cap 2, at 64 with 62 pre-consumed, at 64 with 63 pre-consumed
+  (watermark held, both emitted next tick), and over a 40-pair burst (64 then 16,
+  never a dropped completed). M-1..M-5, L-1..L-6 and I-1 are all closed against the
+  shipped code with real, non-tautological proofs (live surface + live projector
+  drift suite, bidirectional frame comparator, exact per-kind payload-key suite over
+  the real projector, AST kind-group scan, live connect/listen/probe counters,
+  same-connection overflow cell, 256-char evidenceRef proof, reorder revert). Spec
+  v1.6's reworded "single source / cannot drift" claims are accurate and neither
+  AC-F1-3 nor AC-NFR-3 is weakened. Three new non-blocking findings remain: N-1
+  (medium — the new module-local 256-char evidenceRefs cap is undeclared and the
+  spec still says every payload is bounded by delivered-contract caps and "no
+  payload is cut"), N-2 (low — the test plan is still v1.3 while the plan and
+  pm-notes claim test plan v1.4 registers TC-EVT-085..092), and N-3 (info — minor
+  "all thirteen declared kinds" wording overclaim). All gates green: 173 GH-290
+  tests, 40 gate suites, 30 delivered control/watch suites, tsc exit 0, plan
+  validate exit 0.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-13
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/event-projection.ts:46,390-392
+    message: >-
+      The L-6 fix adds a module-local EVIDENCE_REF_MAX_CHARS = 256 and truncates
+      each dispatch.attempt evidenceRefs entry with bounded() (value.slice). That
+      cap is the only thing making the frame bound provable for evidenceRefs, yet
+      DispatchEvidenceReference is a bare string with no declared maximum, so spec
+      §5.1 F-3 ("bounded … by caps the delivered contracts already enforce … no
+      payload is cut"), DEC-O and AC-NFR-4 no longer match the code: an evidence
+      reference over 256 characters is silently shortened, and the
+      events-frame-bound test now proves that cut. Practical impact is low — every
+      shipped producer emits short refs (attempt:<id>, daemon:lane, window:<ts>,
+      handover:<ts>, harness:spawn-failed) — but the bound proof is currently
+      false for that field.
+    suggestion: >-
+      Declare the cap where the bound proof lives: add to §5.1 F-3/DEC-O that the
+      projection bounds each evidenceRefs entry to 256 characters as a defensive,
+      non-contract cap, and reword AC-NFR-4's "no payload is cut" accordingly; or
+      promote the bound into the DispatchEvidenceReference contract as a declared
+      maximum so the proof is true as written.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: testing
+    location: doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy/chg-GH-290-test-plan.md:4
+    message: >-
+      The test plan is still v1.3 (45 TCs) and contains no TC-EVT-085..092, yet
+      the plan header ("… which test plan v1.4 registers") and the Phase-9 pm-notes
+      note ("TC-EVT-085..092 registered by test plan v1.4") present that
+      registration as done. The eight delivered TCs (atomic pair at cap 2; pair at
+      64/62; same-tick delta; exact keys; attempt token; same-connection overflow;
+      connect/probe counters; per-evidenceRef bound) are extra proof cells for
+      already-covered ACs, so AC traceability is not lost, but the canonical
+      test-to-AC artifact is stale and two delivery artifacts assert a version that
+      is not on the branch.
+    suggestion: >-
+      Land the test-plan v1.4 update registering TC-EVT-085..092 and the rewritten
+      002/003/005/006/014 cells before the phase-10 DoD gate, and correct the
+      pm-notes wording from "registered" to "to be registered".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: docs
+    location: doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy/chg-GH-290-spec.md:62
+    message: >-
+      §1, G-7, RSK-9 and DEC-E describe an "exact per-kind emitted-payload-key
+      comparison … for all thirteen declared kinds", but the exact-key suite
+      compares emitted payload keys for the twelve emitted kinds; the thirteenth
+      (queue.graph.remove, emitted:false) has no frame, so only its declared field
+      list is compared. The declaration-vs-CONTRACT_PAYLOAD_FIELDS comparison does
+      cover all thirteen.
+    suggestion: >-
+      Optional wording tightening: "all thirteen declared field lists, and the
+      emitted payload keys of the twelve emitted kinds". No behaviour change.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-12T02:40:00Z
+next_step: >-
+  PROCEED — close N-1 (declare the 256-char evidenceRefs cap and fix "no payload is
+  cut" in §5.1 F-3/DEC-O/AC-NFR-4) and N-2 (land the test-plan v1.4 registration)
+  in this PR before the phase-10 DoD gate; N-3 is optional. No code change and no
+  further re-review of the projection is required.
