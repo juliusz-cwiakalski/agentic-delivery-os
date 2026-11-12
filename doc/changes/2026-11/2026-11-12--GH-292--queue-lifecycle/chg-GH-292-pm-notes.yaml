@@ -7,9 +7,9 @@ milestone: "M2"
 story_code: "M2-S15"
 phases:
   clarify_scope: { started: null, completed: 2026-11-12T10:04:37.756Z }
-  specification: { started: null, completed: 2026-11-12T10:39:33.428Z }
-  test_planning: { started: null, completed: 2026-11-12T10:45:16.184Z }
-  delivery_planning: { started: null, completed: 2026-11-12T11:02:00.859Z }
+  specification: { started: null, completed: 2026-11-12T12:03:05.675Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -83,6 +83,36 @@ decisions:
       the per-ref guard bypassable, so the narrowing is required for AC-F4 and
       is a defect fix, not new scope.
     date: "2026-11-12"
+  - text: >-
+      DoR R-01 policy decided (single-flight vs renewal): the guard is
+      path-specific and holder-aware. Dispatch admission refuses on any live
+      lease whose recorded ref is the requested ref — same or different holder —
+      because the dispatch path claims with the fixed holder `dispatch` and
+      never renews mid-flight, so a live same-ref lease is a second dispatch (a
+      stale lease still takes over). `queue claim` keeps the delivered renewal:
+      a live same-ref lease under the caller's own holder renews, a live
+      same-ref lease under another holder refuses `queue.single-flight` naming
+      the holder, and a live lease on another ref refuses `queue.lease-conflict`
+      (repository exclusivity with renewal narrowed to `(repository, ref,
+      holder)`). This is the only reading that satisfies AC-F4-1, AC-F4-2,
+      AC-F4-5 and keeps the delivered `queue-lease` controls green.
+    date: "2026-11-12"
+  - text: >-
+      DoR R-03 path decided: the additive optional failure `detail` object sits
+      at the envelope root (`detail.holder`), not inside the six-field
+      `CommandResultError` (`error.detail`). Root placement keeps the shared
+      error object's exact key set and the delivered type probe intact; the
+      spec's DM-7/AC-F4-1/AC-F4-2/glossary and the M2 page are reconciled to
+      `detail.holder`. TDR-0027 records the decision; its index row is withheld
+      until the phase that stages the record.
+    date: "2026-11-12"
+  - text: >-
+      DoR R-05 decided: the five delivered queue error rows stay byte-identical.
+      No `queue.precondition.unmet` prose is generalized; the removal-specific
+      `lease-held` reason stays in the bounded summary/detail text of the
+      refusal. TDR-0026's DC-6 prose-rewrite permission is withdrawn and its
+      unresolved questions are closed as resolved.
+    date: "2026-11-12"
 open_questions: []
 blockers: []
 notes:
@@ -114,12 +144,12 @@ notes:
   - text: >-
       Specification scoped and validated: 7 functional capabilities (removal,
       automatic landed removal, dependency edges, per-ref single-flight,
-      reconcile, event publication, mount/help), 45 ACs (39 capability + 6 NFR),
-      decision log DEC-1..DEC-15, two provisional OQs resolved by PM, and the
-      delivered-vs-new contract surface traced to ticket AC and
-      SC-M2-S15-01..04. Contract-shaping decisions (removal record kind,
-      single-flight guard, renewal narrowing, reconcile truth) are routed to a
-      TDR authored before delivery planning.
+      reconcile, event publication, mount/help), 46 ACs (40 capability + 6 NFR)
+      after the AC-F5-9 revision, decision log DEC-1..DEC-15, two provisional
+      OQs resolved by PM, and the delivered-vs-new contract surface traced to
+      ticket AC and SC-M2-S15-01..04. Contract-shaping decisions (removal record
+      kind, single-flight guard, renewal narrowing, reconcile truth) are routed
+      to a TDR authored before delivery planning.
     type: "info"
     date: "2026-11-12"
   - text: >-
@@ -143,14 +173,13 @@ notes:
     type: "info"
     date: "2026-11-12"
   - text: >-
-      Test plan authored: 59 TCs (TC-QLC-001..086 block-structured), 45/45 AC
-      covered with no orphan TC and no untestable AC. Two gaps raised instead of
-      skipped: OQ-T1 (spec NFR-10 requires repeated-reconcile convergence but no
-      AC states it — test plan maps the behaviour to AC-F5-1 and recommends an
-      AC-F5-9) and OQ-T5 (AC-F7-3 classes `queue.single-flight` as
-      user-validation while §5.1 F-7 prose calls it transient; the test pins the
-      AC and records the conflict). Both are resolvable at delivery planning or
-      DoR without a human stop.
+      Test plan authored: 59 TCs (TC-QLC-001..086 block-structured), 46/46 AC
+      covered (after the AC-F5-9 revision) with no orphan TC and no untestable
+      AC. Two gaps raised instead of skipped: OQ-T1 (spec NFR-10 requires
+      repeated-reconcile convergence but no AC states it — AC-F5-9 added on spec
+      revision) and OQ-T5 (AC-F7-3 classes `queue.single-flight` as
+      user-validation while §5.1 F-7 prose called it transient; the prose was
+      corrected on spec revision). Both closed without a human stop.
     type: "info"
     date: "2026-11-12"
   - text: >-
@@ -171,12 +200,12 @@ notes:
       both are staged in one phase-mode commit each so no index row ever links
       an absent record. The plan surfaced one contract decision the spec's DM-7
       assumes but the delivered envelope type does not carry:
-      `error.detail.holder`. PM decided option (a) — an additive optional
-      command-declared `detail` object on the failure envelope, the shared six
-      `CommandResultError` fields unchanged, bound to 128 single-line identifier
-      characters — and the decision record TDR-0027 is authored before delivery
-      starts. Two extra two-sided pins the spec/test plan did not name are
-      declared: the dispatch-attempts taxonomy registry counts and the two
+      `error.detail.holder`. PM decided the additive optional command-declared
+      `detail` object sits at the envelope root (`detail.holder`), with the
+      shared six `CommandResultError` fields unchanged, bound to 128 single-line
+      identifier characters; the decision record TDR-0027 is authored before
+      delivery starts. Two extra two-sided pins the spec/test plan did not name
+      are declared: the dispatch-attempts taxonomy registry counts and the two
       events baseline fixtures.
     type: "info"
     date: "2026-11-12"
@@ -188,5 +217,23 @@ notes:
       it transient — prose is corrected to the AC; the identity is
       user-validation, exit 1, and retryability after the lane ends does not
       change the projection class).
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 1: NOT_READY with 10 blocking findings and 7 advisories
+      (`readiness-review/readiness-iter-1.md`). R-01 same-holder/same-ref
+      single-flight vs renewal contradiction; R-02 presence-rule comparator
+      undefined; R-03 `error.detail` decision unrecorded; R-04 incomplete pin
+      set (`events-emitted-kinds` source scan); R-05 TDR-0026 authorized
+      rewording a pinned row; R-06 falsified current-truth docs omitted
+      (`feature-state-layer` record kinds, M2 contracts/architecture,
+      result-contract line); R-07 closeout fixture undeclared; R-08 Phase-6 help
+      test undeclared; R-09 TDR-0027 index-row staging could land one-sided;
+      R-10 spec §10 contradicted DM-1. Advisories R-11..R-17. Reopened
+      `specification`, `test_planning`, and `delivery_planning` (never
+      `delivery`) and routed each finding to its owning author. The three policy
+      calls are recorded in `decisions`: path-specific single-flight (R-01),
+      envelope-root `detail.holder` (R-03), and the five delivered queue error
+      rows stay byte-identical (R-05).
     type: "retro"
     date: "2026-11-12"

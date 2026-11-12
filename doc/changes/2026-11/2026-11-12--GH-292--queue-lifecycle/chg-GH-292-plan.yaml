@@ -4,33 +4,52 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-292-spec.md (v1.1; 46 ACs — AC-F1-1..8, AC-F2-1..5,
+#   - Spec:     ./chg-GH-292-spec.md (v1.2; 46 ACs — AC-F1-1..8, AC-F2-1..5,
 #               AC-F3-1..5, AC-F4-1..6, AC-F5-1..9, AC-F6-1..4, AC-F7-1..3,
 #               AC-NFR-1..6; F-1..F-7; DM-1..DM-8; EVT-1..EVT-3;
 #               NFR-1..NFR-10; RSK-1..RSK-10; DEC-1..DEC-15; §5.1 capability
-#               details, §6 flows 1-5, §7.1 in-scope list, §8.1 per-verb payload
+#               details (F-4 carries the full path-specific precedence table),
+#               §6 flows 1-5, §7.1 in-scope list, §8.1 per-verb payload
 #               tables, §8.2 event contracts, §8.3 data model, §8.5 compatibility
 #               and the disclosed renewal narrowing, §11 risks, §16 affected
-#               components, §18 rollout ordering and the deliberate pin moves,
-#               Appendix C exit matrix, Appendix D source map, Appendix E closed
-#               vocabularies). Spec v1.1 added AC-F5-9 (repeated-reconcile
-#               convergence) and corrected the `queue.single-flight`
-#               classification prose to the AC; neither changes the phase set.
-#   - Tests:    ./chg-GH-292-test-plan.md (v1.1; 59 TCs TC-QLC-001..086
+#               components with the two-set documentation ownership split, §17.9
+#               Definition of Done, §18 rollout ordering and the deliberate pin
+#               moves, Appendix C exit matrix, Appendix D source map, Appendix E
+#               closed vocabularies). Spec v1.2 is the DoR iteration-1
+#               remediation: the F-4 path-specific precedence replaces the
+#               mutually exclusive same-holder statements (dispatch family
+#               refuses any live same-ref lease, same or different holder;
+#               `queue claim` keeps its holder-aware outcomes), presence is the
+#               ledger append position, the holder is named at the envelope
+#               root (TDR-0027), the five delivered queue rows are byte-identical
+#               field by field, and §16 names the pages each set owns; the phase
+#               set is unchanged.
+#   - Tests:    ./chg-GH-292-test-plan.md (v1.2; 59 TCs TC-QLC-001..086
 #               block-structured — 001..011 removal, 020..025 automatic removal,
 #               030..036 dependency edges, 040..045 single-flight,
 #               050..058 reconcile, 060..066 events, 070..075 mount/help/errors,
 #               080..086 NFRs; 46/46 AC covered, no orphan case, no manual-only
 #               case; §3.5 GAP-T1..GAP-T6; §5.1 scenario index and §5.2 scenario
-#               bodies; §7 file/command inventory; §7.1 the seven deliberate pin
-#               migrations; §7.2 the gate order and the golden policy).
+#               bodies; §7 file/command inventory; §7.1 the canonical pin
+#               migration table — six remove-emission pins (including the
+#               `event-projection.ts` source scan), three registry/baseline
+#               pins, two count pins, one CLI export pin, and the golden rule,
+#               with the R-09 note that no TC asserts the decision index rows;
+#               §7.2 the gate order and the golden policy).
 #   - Decision: doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md
 #               (Proposed; UNTRACKED at plan time — `?? doc/decisions/TDR-0026-…`
-#               — with DC-1..DC-6: the `queue.removal` kind and latest-record
-#               presence rule, admission-time per-ref single-flight over
-#               repository-lease truth, the narrowed same-holder renewal,
-#               non-cascading removal with the live-lease refusal,
-#               tracker-`deliveryState` staleness, and the two-new-identity rule).
+#               — with DC-1..DC-6: the `queue.removal` kind and the
+#               append-position presence rule, the path-specific per-ref
+#               single-flight precedence over repository-lease truth (DC-2) with
+#               the narrowed same-holder renewal (DC-3), non-cascading removal
+#               with the live-lease refusal, tracker-`deliveryState` staleness,
+#               and the two-new-identity rule with the delivered five rows
+#               byte-identical) and
+#               doc/decisions/TDR-0027-command-failure-envelope-detail-slot.md
+#               (Proposed; UNTRACKED at plan time; ALT-3: one additive optional
+#               command-declared `detail` object at the failure-envelope root,
+#               `CommandResultError` keeps exactly its six fields, `error.detail`
+#               is the rejected placement; staged by Phase 2).
 #   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
 #               files/packages/folders; doneArtifacts slots; leases;
 #               weightClass; interactions; tier; no `tasks` key, no progress
@@ -45,26 +64,36 @@
 #               ../2026-11-11--GH-303--project-groups-domain-model/chg-GH-303-plan.yaml
 #               (declared goal/gates/coverage/definitionOfDone phase shape).
 #
-# DECISION-RECORD STAGING CONTRACT (why TDR-0026 and the decision index are
-# declared together in Phase 9):
-#   `doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md` is
-#   UNTRACKED at plan time. The commit primitive stages tracked-pending work plus
-#   untracked files only inside the declared phase scope, so the record is
-#   declared in Phase 9's `scope.files` and lands in the final phase-mode commit.
-#   Its `doc/decisions/00-index.md` row was deliberately reverted from the
-#   working tree so that no earlier commit could land an index entry linking an
-#   absent record; that index row is therefore ALSO undeclared work and
-#   `doc/decisions/00-index.md` is declared in the same phase. Phase 9 restores
-#   the row (immediately after the TDR-0025 row and before the TDR-0027 row,
-#   status `Proposed`, date
-#   2026-11-12, owner Juliusz Ćwiąkalski) with the exact text pinned in
-#   `chg-GH-292-pm-notes.yaml` (`notes[]`: the row begins
+# DECISION-RECORD STAGING CONTRACT (both records, each with its index row in
+# the one phase-mode commit that stages the record):
+#   `doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md` and
+#   `doc/decisions/TDR-0027-command-failure-envelope-detail-slot.md` are both
+#   UNTRACKED at plan time, and `doc/decisions/00-index.md` carries NEITHER row
+#   in the working tree. The commit primitive stages tracked-pending work
+#   unconditionally (scope drift is disclosed, not blocked), so an index row
+#   present in the working tree before its owning phase would ride any earlier
+#   commit and link an absent record — the exact one-sided link this contract
+#   forbids. The rule for both records: the `doc/decisions/00-index.md` row is
+#   withheld from the working tree and added ONLY inside the phase whose commit
+#   also stages the record; never while the record is untracked, never in an
+#   earlier or out-of-order commit. `doc/decisions/00-index.md` is therefore
+#   declared in exactly two scopes — Phase 2 (TDR-0027 plus its row) and Phase 9
+#   (TDR-0026 plus its row).
+#   TDR-0027 (Phase 2): the record that fixes the failure-envelope `detail`
+#   slot lands with the refusal that populates it; its index row is added to
+#   the working tree only in Phase 2 and lands in Phase 2's ONE phase-mode
+#   commit, so no Phase-1 commit can stage a row naming an absent record.
+#   TDR-0026 (Phase 9): the record is declared in Phase 9's `scope.files` and
+#   lands in the final phase-mode commit; Phase 9 restores the row (immediately
+#   after the TDR-0025 row and before the TDR-0027 row landed in Phase 2,
+#   status `Proposed`, date 2026-11-12, owner Juliusz Ćwiąkalski) with the
+#   exact text pinned in `chg-GH-292-pm-notes.yaml` (`notes[]`: the row begins
 #   "| [TDR-0026](TDR-0026-queue-lifecycle-removal-single-flight.md) | TDR |").
-#   The record and the row land in ONE phase-mode commit: the row must not land
-#   without the record, and the record must not land without the row. The record
+#   For each record, record and row land in ONE commit: a row must never link
+#   an absent record, and a record must never land unindexed. Both records'
 #   status stays `Proposed`; human acceptance rides the GH-292 pull-request
-#   review. Neither the plan nor the coder edits the record's decision text; the
-#   decision owner (`@decision-advisor`) owns it.
+#   review. Neither the plan nor the coder edits either record's decision
+#   text; the decision owner (`@decision-advisor`) owns it.
 #
 # COMMIT / PHASE CONTRACT (binding on every phase):
 #   Each phase is one phase-mode commit produced by the `commit` primitive
@@ -78,7 +107,7 @@
 # PHASE SET AND DEPENDENCY ORDER (nine delivery phases):
 #   1. Contracts, fold, error rows, record kinds, and the mutation truth.
 #   2. Admission and per-ref single-flight, with the renewal narrowing and the
-#      TDR-0005-addendum decision for the failure-envelope `detail` slot.
+#      TDR-0027 decision for the failure-envelope `detail` slot.
 #   3. Closeout automatic landed removal.
 #   4. Events: the emitted `remove` producer and the six remove-pin moves.
 #   5. CLI surface: `queue remove`, `queue dep add|remove`, `--reason`, help.
@@ -181,7 +210,10 @@
 #     16. doc/spec/features/feature-result-contract.md — the two machine rows,
 #         the summary sentence (127 -> 129 in both places), the `queue` kind
 #         prose ("exactly the five scheduling identities" -> seven, naming both
-#         new rows and their classes), and the reserved two-segment allowlist
+#         new rows and their classes), the cross-feature scheduling-row
+#         sentence at the Scheduling Engine line ("adds the `queue` kind with
+#         exactly the five scheduling rows" -> seven, naming the two new
+#         identities), and the reserved two-segment allowlist
 #         line (`queue` 4 -> 6 and the declared total to the set's real size 46;
 #         the delivered line is already stale by the three `events` rows and is
 #         reconciled to the set rather than to a second guess).
@@ -224,9 +256,10 @@
 # DELIVERED CONTROLS, NOT EDITS (run in the gate, never declared as scope):
 #   - tests/behaviour/queue-lease.test.ts and
 #     tests/behaviour/queue-lease-concurrency.test.ts re-claim the SAME ref under
-#     the same holder (`GH-320`/`GH-320`), so the narrowed renewal keeps both
-#     green with no assertion change: they are the two-sided proof that only the
-#     different-ref case changed.
+#     the same holder (`GH-320`/`GH-320`) through the direct `claimQueueLease`
+#     seam, so the narrowed renewal keeps both green with no assertion change:
+#     they are the two-sided proof that the seam's same-holder/same-ref renewal
+#     is unchanged and only the different-ref case changed behaviour.
 #   - tests/behaviour/queue-hold-dispatch.test.ts proves the delivered owner-hold
 #     precedence, which the guard must not reorder.
 #   - tests/behaviour/closeout-capsule-plan.test.ts pins twelve closeout steps;
@@ -252,19 +285,35 @@
 # DOCS OWNERSHIP SPLIT:
 #   In-plan documentation edits (because a guard reads them or a delivered page
 #   states the contract this change alters): the M1 queue reference page (the
-#   resolved help page root), the M2 `commands/queue.md` page, the CLI command
-#   registry, `status.md`, the `backlog.md` M2-S15 row, and the overview
-#   glossary. Plus ONE `doc/spec/**` edit that a bidirectional guard forces:
+#   resolved help page root), the M2 `commands/queue.md` page, the M2
+#   `contracts.md` page (§Event taxonomy v1 states `remove` as emitted with
+#   exactly `ref`, `reason`, `recordedAt`; §Queue lifecycle mutations states the
+#   append-position presence rule and the path-specific single-flight policy
+#   instead of "`emitted: false`; no v1 path produces it"), the M2
+#   `architecture.md` page (§Single-flight refusal shows the F-4 precedence — a
+#   refusal appends nothing and publishes no `dispatch.attempt` event; §Queue
+#   auto-release places the `landed` removal after the closeout writes), the CLI
+#   command registry, `status.md`, the `backlog.md` M2-S15 row, and the overview
+#   glossary. Plus TWO `doc/spec/**` edits that `pnpm check` guards read:
 #   `doc/spec/features/feature-result-contract.md` carries the machine-readable
 #   error table that `scripts/checks/error-table-sync.ts` compares both ways, so
-#   the two rows and the counts land with the code in Phase 1 — leaving them to
-#   lifecycle phase 7 would make Phase 1's gate red.
+#   the two rows, the counts, the queue-kind prose, and the cross-feature
+#   scheduling-row sentence (five -> seven rows) land with the code in Phase 1 —
+#   leaving them to lifecycle phase 7 would make Phase 1's gate red — and Phase
+#   2 records the optional envelope-root `detail` member with its bound there;
+#   `doc/spec/features/feature-state-layer.md` states the five-kind queue record
+#   inventory that Phase 1's `QUEUE_RECORD_DECLARATIONS` move (5 -> 6)
+#   falsifies, and `pnpm check` guards read the page
+#   (`tests/behaviour/state-permissions.test.ts` pins its tokens; the
+#   forbidden-literals registry scans it), so its record-kind inventory moves
+#   to six in Phase 1 rather than waiting for lifecycle phase 7.
 #   Everything else under `doc/spec/**` stays with lifecycle phase 7
 #   (`@doc-syncer`): `feature-scheduling-engine.md`, `feature-dispatch-engine.md`,
 #   `feature-closeout.md`, and `feature-event-taxonomy.md` (the last still states
 #   "`remove` is declared and not emitted", which is true until this change lands
-#   and false after it). No plan phase declares them, and no guard reads them for
-#   this change.
+#   and false after it), plus `doc/00-index.md` or any other page stating the
+#   record-kind or error-row count if it carries one. No plan phase declares
+#   them, and no guard reads them for this change.
 #
 # ADDITIVE BOUNDARY (binding on every phase):
 #   0 new packages, 0 new workspace subpaths, 0 new provider adapters, 0
@@ -277,50 +326,37 @@
 #   `tests/fixtures/ports/v1-contract-inventory.json` move in the same phase —
 #   extending the delivered modules is preferred so those rows stay stable.
 #
-# OPEN CONTRACT DECISION — the `error.detail` slot on a FAILURE envelope (blocks
-#   the shape half of AC-F4-1/AC-F4-2; decision owner @decision-advisor, wording
-#   owner @spec-writer):
-#   AC-F4-1 says `dispatch run` refuses with `error.code == "queue.single-flight"`
-#   AND `error.detail.holder`. The delivered failure envelope is
-#   `CommandResultFailure`, whose `error` is `CommandResultError` — exactly the six
-#   table-derived fields, and that six-field shape is pinned by
-#   `tests/types/dispatch-envelope-detail.type-test.ts` (a `@ts-expect-error` cell
-#   asserts `CommandResultError` carries no `detail`) and restated by the delivered
-#   result contract (TDR-0005 and the spec's §2.1, which both keep the error at
-#   six fields). The only delivered additive detail slot is
-#   `DispatchEnvelopeError.detail`, which rides a SUCCESS-shaped attempt envelope
-#   inside `data.error` and is pinned to `kind: "harness" | "config"`. The shared
-#   CLI envelope builder (`packages/cli/src/index.ts`, `toErrorObject`) rebuilds
-#   the error from the table entry plus `summary` and drops every other handler
-#   field, and the delivered precedent for naming a lease holder is
-#   `error.summary` (`holder:…; lease:…; …`). The refusal's `detail` therefore
-#   cannot be delivered without a recorded decision. Candidate resolutions:
-#     (a) RECOMMENDED — widen the failure envelope additively for the two named
-#         command families only: a command-scoped failure type carrying an optional
-#         `detail` (`{ holder }` for this refusal), leaving `CommandResultError`
-#         at six fields. Consequence: `packages/cli/src/index.ts`,
-#         `packages/core/src/contracts/result.ts`, the dispatch/queue failure
-#         types, one type probe, and the result-contract page move.
-#     (b) Add an optional `detail` to `CommandResultError` itself. Consequence:
-#         it widens EVERY command's failure envelope and contradicts the delivered
-#         six-field pin in the type test — the least additive option, not
-#         recommended.
-#     (c) Keep the six-field error and carry the holder only in `summary`.
-#         Consequence: AC-F4-1 as written is not met and the spec owner must amend
-#         it before Phase 2; the refusal identity and purity still ship.
-#   Decision needed: consult `@decision-advisor` for a TDR-0005 addendum (the
-#   repo's own precedent for a result-contract change is TDR-0010, "TDR-0005
-#   Addendum"), filed as `doc/decisions/TDR-0027-command-failure-envelope-detail-slot.md`
-#   — the id and file name are PROVISIONAL until the advisor confirms the next
-#   free number; a different number re-plans Phase 2's two decision paths. The
-#   record and its `doc/decisions/00-index.md` row land in ONE Phase-2 phase-mode
-#   commit under the same one-sided-link rule as Phase 9 (a row must never link an
-#   absent record), and Phase 9 inserts the TDR-0026 row immediately BEFORE the
-#   TDR-0027 row. Phase 2 declares the option-(a) paths so either the decision or
-#   its absence is staged, and it MUST NOT choose silently and MUST NOT relax the
-#   six-field `CommandResultError` pin to make the AC fit. The refusal identity,
-#   the holder value, the zero-mutation purity, and the three-path parity are NOT
-#   blocked: they proceed in Phase 2 whatever the decision says.
+# SETTLED CONTRACT DECISION — the envelope-root `detail` slot on a FAILURE
+#   envelope (TDR-0027, ALT-3; recorded in
+#   doc/decisions/TDR-0027-command-failure-envelope-detail-slot.md — Proposed,
+#   UNTRACKED at plan time, staged by Phase 2 with its index row):
+#   The `queue.single-flight` refusal names the live lease's holder identity
+#   through ONE additive optional command-declared `detail` object at the
+#   FAILURE-ENVELOPE ROOT (`CommandResultFailure.detail?: { holder?: string }`)
+#   — single line, bounded to 128 characters, identifiers only, present only
+#   where a command opts in. `CommandResultError` keeps EXACTLY its six
+#   table-derived fields (`code`, `category`, `retryable`, `consequence`,
+#   `remediationHint`, `summary`), so `error.detail` is the rejected placement
+#   and appears in no shipped surface. The CLI edge reads a record-shaped
+#   detail from the command's returned failure — the same explicit-read pattern
+#   it uses for `summary` and `remediationHint` — and copies it onto the
+#   envelope after `toErrorObject` builds the error (TDR-0027 decision points
+#   1-7); `toErrorObject`, the exit derivation, the success envelope, the
+#   success-shaped dispatch `data.error.detail` slot (`harness | config`), and
+#   MCP's `{ ok, error }` payload are unchanged. The delivered pins move
+#   two-sided in Phase 2's one commit: `tests/types/dispatch-envelope-detail.type-test.ts`
+#   and `tests/structure/dispatch-envelope-detail.test.ts` keep every six-field
+#   `CommandResultError` assertion and `@ts-expect-error` cell on the error
+#   object and gain the positive envelope-root `detail` assertion, and
+#   `packages/testkit/src/result-conformance.ts` with
+#   `tests/fixtures/result/envelope-key-set.json` admit the optional member for
+#   opted-in commands; no cell, exact-key equality, or fixture row is deleted or
+#   relaxed. Phase 2 stages the TDR-0027 record and its `doc/decisions/00-index.md`
+#   row in ONE phase-mode commit, the row added to the working tree only in that
+#   phase (the staging contract above); Phase 9 later inserts the TDR-0026 row
+#   immediately BEFORE the TDR-0027 row. The refusal identity, the holder value,
+#   the zero-mutation purity, and the three-path parity are unconditioned: Phase
+#   2 delivers them against this recorded decision, with no re-planning escape.
 # =============================================================================
 
 schemaVersion: delivery.plan.v1
@@ -337,9 +373,9 @@ tier:
     - "Reconcile would write to the tracker, read an ambient credential, retry, paginate, read concurrently, or read beyond the declared 100-entry cap"
     - "A new `queue.graph` kind, a new event topic, a changed payload field list, a taxonomy version bump, or any `remove`-adjacent pin site (the four §7.1 suites, the emitted-kinds suite, or the describe golden) must be relaxed instead of moved two-sided"
     - "`closeout` would acquire a second fence, add a step to the declared step inventory, or let the queue hook change a step outcome or the exit code"
-    - "The refusal's failure-envelope `detail` slot would have to be delivered by widening the six-field `CommandResultError` or by relaxing the delivered `tests/types/dispatch-envelope-detail.type-test.ts` pin, instead of through the recorded TDR-0005-addendum decision this plan declares"
+    - "The refusal's failure-envelope `detail` slot would have to be delivered by widening the six-field `CommandResultError` (`error.detail`, the placement TDR-0027 rejects) or by relaxing any delivered envelope-detail pin (`tests/types/dispatch-envelope-detail.type-test.ts`, `tests/structure/dispatch-envelope-detail.test.ts`, `packages/testkit/src/result-conformance.ts`, `tests/fixtures/result/envelope-key-set.json`), instead of through the recorded TDR-0027 ALT-3 decision this plan stages in Phase 2"
     - "TC-QLC-042 would need a live production daemon spawn instead of the composed supervision claim port (GAP-T1), or reconcile would need a live tracker read inside `pnpm check` (GAP-T2)"
-    - "TDR-0026 or its `doc/decisions/00-index.md` row cannot be staged by Phase 9, or the record contradicts the spec's DEC-5/DEC-9/DEC-11/DEC-13"
+    - "TDR-0026 or TDR-0027, or either `doc/decisions/00-index.md` row, cannot be staged by its owning phase (Phase 9 for TDR-0026, Phase 2 for TDR-0027) as one record-plus-row commit, or a record contradicts the spec's DEC-5/DEC-9/DEC-11/DEC-13"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -399,13 +435,18 @@ phases:
       from an already-decided stale set). Also: two `queue` error rows
       (`queue.reason-missing` and `queue.single-flight`, both `user-validation`
       at exit 1, the second retryable), `QUEUE_ERROR_CODES` 5 -> 7, and
-      `QUEUE_RECORD_DECLARATIONS` 5 -> 6. No command surface and no event
-      producer in this phase. [F-1, F-3, F-5, DM-1..DM-5, DM-8, DEC-4, DEC-5,
-      DEC-6, DEC-7, DEC-9, DEC-15, NFR-1]
+      `QUEUE_RECORD_DECLARATIONS` 5 -> 6; and the two guard-read `doc/spec/**`
+      pages that state the moved counts — `feature-result-contract.md`'s machine
+      table, counts, queue-kind prose, and cross-feature scheduling-row sentence
+      (five -> seven rows), and `feature-state-layer.md`'s record-kind inventory
+      (five -> six) — reconciled in the same commit. No command surface and no
+      event producer in this phase. [F-1, F-3, F-5, DM-1..DM-5, DM-8, DEC-4,
+      DEC-5, DEC-6, DEC-7, DEC-9, DEC-15, NFR-1]
     dependsOn: []
     scope:
       files:
         - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-state-layer.md
         - packages/core/src/app/index.ts
         - packages/core/src/app/queue.ts
         - packages/core/src/contracts/error-table.ts
@@ -451,6 +492,7 @@ phases:
       - "The live-lease refusal is `queue.precondition.unmet` with blocking reason `lease-held`, names the holder, appends nothing, and does not release the lease."
       - "Removing an absent dependency edge is a `noop` with zero appends; removing a present edge appends one dependency record carrying the folded set and runs no cycle check; removing an unobserved consumer is `queue.entry.unobserved`."
       - "The `queue` error kind carries exactly seven rows in declared order, `QUEUE_ERROR_CODES` equals them, and the documented table, the reserved two-segment allowlist, the captured baselines, and the fixture all equal the tree in both directions (127 -> 129 rows; 44 -> 46 reserved codes)."
+      - "`doc/spec/features/feature-result-contract.md` moves with the code in this commit — the two machine rows, the 127 -> 129 counts, the `queue` kind prose, and the cross-feature scheduling-row sentence (five -> seven rows) — and `doc/spec/features/feature-state-layer.md` states the six-kind queue record inventory (`queue.removal`, `delivery.queue.removal.v1`, `queue.removals:<REF>`) wherever it stated five; both pages are in-plan in this phase because `pnpm check` guards read them (error-table-sync both ways; state-permissions and the forbidden-literals registry)."
       - "`bun packages/cli/bin/delivery-os.ts plan validate GH-292` still reports `valid`, and this phase's commit is one phase-mode `commit` primitive invocation followed by `phase complete GH-292 delivery`."
     risks:
       - "A presence rule that compares timestamps without a total order can resurrect a removed entry; the ordered comparison is proven by the removal, re-declaration, and equal-timestamp cells of TC-QLC-007/009."
@@ -470,53 +512,70 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 2 — Admission and per-ref single-flight.
   #
-  # Objective: refuse a second session for a ref that already has an active lane,
-  # before any lease, spawn, resume, attempt, lane, or queue record, on every path
-  # that claims (dispatch, `queue claim`, and a composed daemon supervision
-  # cycle), and name the holder in the refusal detail. The guard reads the live
-  # lease whose recorded ref equals the requested ref, including when the holder
-  # identity is identical; a lease at or over its TTL is not active and keeps the
-  # delivered stale-takeover path. To make the guard enforceable, same-holder
-  # renewal narrows to one `(repository, ref, holder)`: an identical holder
-  # re-claiming the same ref still renews, and any other combination refuses the
-  # delivered `queue.lease-conflict` so the lease's recorded ref cannot be
+  # Objective: close the duplicate-session defect with the path-specific
+  # precedence of TDR-0026 DC-2/DC-3 (spec v1.2 F-4): the dispatch family —
+  # `dispatch run` and a composed daemon supervision cycle — shares ONE
+  # admission predicate evaluated before any claim, spawn, resume, attempt, or
+  # record, and refuses ANY live lease whose recorded ref equals the requested
+  # ref, same or different holder (the dispatch path claims with the fixed
+  # holder `dispatch` and never renews mid-flight, so a live same-ref lease can
+  # only name a running dispatch), naming the holder in the envelope-root
+  # `detail.holder`; `queue claim` keeps its delivered holder-aware outcomes —
+  # the caller's own holder's same-ref lease renews, another holder's same-ref
+  # lease refuses `queue.single-flight`, any other-ref live lease refuses the
+  # delivered `queue.lease-conflict`; a lease at or over its TTL is not active
+  # on either path and keeps the delivered stale-takeover. To make the guard
+  # enforceable, renewal narrows to one `(repository, ref, holder)`: the direct
+  # `claimQueueLease` seam's same-holder/same-ref renewal is unchanged (the two
+  # delivered lease controls prove it), and a same-holder claim for a different
+  # ref refuses `queue.lease-conflict` so the lease's recorded ref cannot be
   # rewritten to a second ref.
   #
-  # Dependency reasoning: the guard is an admission predicate over lease truth, so
-  # it belongs in the one claim seam every path already crosses — landing it in a
-  # path-specific branch would make one of the three paths refuse differently.
-  # The narrowing must land with the guard: while renewal rewrites `ref`, the
-  # guard is bypassable by claiming another ref under the holding identity, so a
-  # guard-only commit is a false invariant.
+  # Dependency reasoning: the dispatch refusal belongs in the dispatch family's
+  # admission seam, NOT inside the claim primitive — a blanket `(ref, holder)`
+  # predicate would either make `renewed` unreachable through `queue claim` or
+  # leave the second dispatch admitted (AC-F4-1/2/5 hold together only under
+  # the path-specific table). The narrowing must land with the guard: while
+  # renewal rewrites `ref`, the guard is bypassable by claiming another ref
+  # under the holding identity, so a guard-only commit is a false invariant.
+  # The envelope-root `detail` slot rides the recorded TDR-0027 ALT-3 decision
+  # staged in this phase.
   #
   # Risks: refusal precedence against the delivered owner hold and the delivered
   # precheck; the exact-holder controls (`queue-lease`, `queue-lease-concurrency`)
   # must stay green untouched, and the read cost must stay within one additional
-  # whole-store read. The `detail.holder` SHAPE is blocked on the open contract
-  # decision recorded in this file's header (option (a) preferred; the
-  # TDR-0005-addendum record and its index row are declared below and land in one
-  # Phase-2 commit). Deviation policy: any change to the delivered refusal
-  # precedence, TTL, takeover rule, or lease scope — and any silent widening of
-  # `CommandResultError` — is a stop-and-escalate.
+  # whole-store read. The `detail.holder` shape is settled by TDR-0027 ALT-3
+  # (envelope root, command-declared, `CommandResultError` at exactly six
+  # fields; `error.detail` rejected); the record and its index row land in this
+  # phase's one commit under the staging contract. Deviation policy: any change
+  # to the delivered refusal precedence, TTL, takeover rule, or lease scope —
+  # and any widening of `CommandResultError` — is a stop-and-escalate.
   # ---------------------------------------------------------------------------
   - id: 2
     title: "Per-ref single-flight at admission, the holder-naming refusal, and the narrowed same-holder renewal"
     kind: delivery
     summary: "feat(queue): refuse a second dispatch for a ref with an active lane and narrow same-holder renewal"
     goal: >-
-      Add exactly one per-ref admission guard, evaluated where every dispatch path
-      already claims: a live lease for the repository whose recorded ref equals
-      the requested ref refuses with `queue.single-flight` at exit 1, names the
-      live lease's holder identity (single line, bounded) through the failure
-      envelope's additive `detail` slot fixed by the TDR-0005-addendum decision
-      declared in this phase, and appends nothing; a stale lease (heartbeat age at
-      or over its TTL) is not active and keeps the delivered takeover with its
-      incident evidence; a live lease for a different ref under the same holder
-      refuses the delivered `queue.lease-conflict` naming the holder and the lease,
-      leaving the live lease's recorded ref unchanged; an identical holder
-      re-claiming the same ref still returns `renewed`. Wire the refusal through
-      the dispatch claim port and its error envelope without adding a second
-      admission stage, and leave the composed daemon supervision claim port as the
+      Apply the path-specific per-ref single-flight precedence (TDR-0026
+      DC-2/DC-3, spec v1.2 F-4, AC-F4-1/2/5): the dispatch family's ONE
+      admission predicate — `dispatch run` and the composed daemon supervision
+      claim — refuses any live lease whose recorded ref equals the requested
+      ref, same or different holder, with `queue.single-flight` at exit 1,
+      names the live lease's holder identity (single line, bounded) through the
+      additive optional envelope-root `detail` slot fixed by TDR-0027 ALT-3,
+      and appends nothing; a live lease on any other ref refuses the delivered
+      `queue.lease-conflict`; `queue claim` keeps its holder-aware outcomes —
+      the caller's own holder's same-ref lease still returns `renewed` (one
+      record, no session, no `detail`), another holder's same-ref lease refuses
+      `queue.single-flight` with the same envelope-root `detail.holder`, and
+      any other-ref live lease refuses the delivered `queue.lease-conflict`
+      naming the holder and the lease with the recorded ref unchanged — with
+      renewal narrowed to one `(repository, ref, holder)` so the lease's
+      recorded ref is never rewritten; a stale lease (heartbeat age at or over
+      its TTL) is not active on any path and keeps the delivered takeover with
+      its incident evidence. Wire the refusal through the dispatch family's
+      admission seam and its error envelope without adding a second admission
+      stage, and leave the composed daemon supervision claim port as the
       single inherited seam (no new port, no production spawn). [F-4, DM-7,
       DEC-3, DEC-13, RSK-3, NFR-2, EVT-3 unchanged]
     dependsOn: [1]
@@ -539,6 +598,7 @@ phases:
         - packages/core/src/contracts/queue.ts
         - packages/core/src/contracts/result.ts
         - packages/core/src/index.ts
+        - packages/testkit/src/result-conformance.ts
         - tests/behaviour/daemon-single-flight.test.ts
         - tests/behaviour/dispatch-single-flight.test.ts
         - tests/behaviour/queue-claim-single-flight.test.ts
@@ -547,7 +607,9 @@ phases:
         - tests/behaviour/queue-single-flight-purity.test.ts
         - tests/behaviour/queue-single-flight-read-cost.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/result/envelope-key-set.json
         - tests/structure/content-inventory.test.ts
+        - tests/structure/dispatch-envelope-detail.test.ts
         - tests/types/dispatch-envelope-detail.type-test.ts
       folders:
         - tests/fixtures/queue/single-flight
@@ -570,24 +632,26 @@ phases:
         - TC-QLC-081
     gates:
       - "pnpm typecheck"
+      - "bun test tests/structure/dispatch-envelope-detail.test.ts"
       - "bun test tests/behaviour/dispatch-single-flight.test.ts tests/behaviour/queue-claim-single-flight.test.ts tests/behaviour/daemon-single-flight.test.ts"
       - "bun test tests/behaviour/queue-lease-takeover.test.ts tests/behaviour/queue-lease-renewal-narrowing.test.ts tests/behaviour/queue-single-flight-purity.test.ts tests/behaviour/queue-single-flight-read-cost.test.ts"
       - "bun test tests/behaviour/queue-lease.test.ts tests/behaviour/queue-lease-concurrency.test.ts tests/behaviour/queue-hold-dispatch.test.ts"
       - "bun run scripts/checks/ambient-globals.ts"
       - "bun run scripts/checks/workspace-entrypoints.ts"
     definitionOfDone:
-      - "`dispatch run`, `queue claim`, and a composed supervision cycle with a supplied claim port each refuse a ref with an active lane with `queue.single-flight`, the same `detail.holder`, zero sessions, and zero lease/attempt/lane/queue appends; the daemon case uses the injected port and claims no production spawn (GAP-T1)."
-      - "A lease at or over its TTL is not refused by the guard and the delivered stale takeover still appends its incident evidence; a lease for a different ref under the same holder refuses `queue.lease-conflict` and leaves the recorded ref unchanged; the same ref under the same holder still returns `renewed` with no new session."
+      - "Dispatch family: `dispatch run` and a composed supervision cycle with a supplied claim port each refuse ANY live lease whose recorded ref equals the requested ref — same or different holder — with `queue.single-flight`, the envelope-root `detail.holder` naming the live holder, zero sessions, and zero lease/attempt/lane/queue appends; the daemon case uses the injected port and claims no production spawn (GAP-T1)."
+      - "Claim path: the caller's own holder's same-ref lease returns `renewed` (one `renewed` record, no session, no `detail`); another holder's same-ref lease refuses `queue.single-flight` with the same envelope-root `detail.holder`; any other-ref live lease — any holder — refuses the delivered `queue.lease-conflict` naming the holder and the lease with the recorded ref unchanged, as does an other-ref lease on the dispatch family."
+      - "A lease at or over its TTL is not refused by the guard on either path and the delivered stale takeover still appends its incident evidence; every requester/state pair has exactly one outcome per the F-4 precedence table (TDR-0026 DC-2/DC-3) and no case asserts a same-holder/same-ref claim refusal."
       - "A refusal leaves the record count, the derived-document bytes, and the lane set identical (two observations per absence: recording port plus zero counter), and costs at most one additional whole-store read."
-      - "The two delivered exact-holder controls (`queue-lease`, `queue-lease-concurrency`) are green with no assertion change, proving that only the different-ref case changed behaviour."
-      - "The refusal carries no credential, session id, provider payload, or repository content, and the detail is single line and bounded."
-      - "The `error.detail` slot on the failure envelope is the one the TDR-0005-addendum decision records, `CommandResultError` keeps its six fields, and the addendum record plus its `doc/decisions/00-index.md` row landed in this phase's ONE commit (no row links an absent record). If the advisor's decision selects option (c) instead, this phase is re-planned with the spec amendment before it is marked complete."
-      - "`tests/types/dispatch-envelope-detail.type-test.ts` compiles under `pnpm typecheck` with the shared six-field error unchanged and, when option (a) is chosen, with the command-scoped detail slot asserted; a relaxed or deleted cell is a gate failure."
+      - "The two delivered exact-holder controls (`queue-lease`, `queue-lease-concurrency`) are green with no assertion change: they exercise the direct `claimQueueLease` seam's same-holder/same-ref renewal, which stays delivered-unchanged because the per-ref refusal lives in the dispatch family's admission seam, not inside the claim primitive."
+      - "The refusal carries no credential, session id, provider payload, or repository content, and the detail is single line and bounded (128 characters, identifiers only)."
+      - "The refusal's holder value rides the additive optional command-declared envelope-root `detail` object fixed by TDR-0027 ALT-3: `CommandResultError` keeps exactly its six fields, `error.detail` appears in no shipped surface, and the TDR-0027 record plus its `doc/decisions/00-index.md` row land in this phase's ONE phase-mode commit — the row is added to the working tree only in this phase, never while the record is untracked and never in an earlier or out-of-order commit."
+      - "All envelope-detail pins move two-sided in this phase's commit: `tests/types/dispatch-envelope-detail.type-test.ts` and `tests/structure/dispatch-envelope-detail.test.ts` keep every six-field `CommandResultError` assertion and gain the positive envelope-root `detail` assertion, and `packages/testkit/src/result-conformance.ts` with `tests/fixtures/result/envelope-key-set.json` admit the optional member for opted-in commands; a relaxed or deleted cell, exact-key equality, or fixture row is a gate failure."
     risks:
-      - "The failure-envelope detail slot is an OPEN CONTRACT DECISION (this file's header): implementing `detail.holder` by widening `CommandResultError` would break a delivered type pin and every command's failure envelope, so the decision record is a phase obligation, not a nicety."
-      - "Refusal precedence can drift: the owner-hold refusal and the delivered precheck must keep their delivered order (control suite `queue-hold-dispatch`); the guard is an additional predicate, not a replacement."
+      - "The failure-envelope detail slot is settled by TDR-0027 ALT-3: implementing `detail.holder` by widening `CommandResultError` (`error.detail`, the rejected placement) would break a delivered pin and every command's failure envelope, so the record and its index row are a phase obligation staged in this phase's one commit, not a nicety."
+      - "Refusal precedence can drift: the owner-hold refusal and the delivered precheck must keep their delivered order (control suite `queue-hold-dispatch`), and the per-ref refusal must stay in the dispatch family's admission seam — moving it inside the claim primitive would make the claim path's own-holder `renewed` unreachable and break the two delivered lease controls."
       - "The daemon path has no production spawn today; over-claiming it would be dishonest. The case asserts the composition binding and the injected port, and names the gap."
-      - "Deviation policy: a refusal that would need a new error identity, a per-ref lease scope, or a second admission stage is a stop-and-escalate, not a local widening."
+      - "Deviation policy: a refusal that would need a new error identity, a per-ref lease scope, a second admission stage, or a third precedence path is a stop-and-escalate, not a local widening."
     interactions:
       - kind: contract-file
         target: packages/core/src/app/queue.ts
@@ -661,6 +725,7 @@ phases:
         - tests/behaviour/closeout-queue-removal-skips.test.ts
         - tests/behaviour/closeout-queue-removal.test.ts
         - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/closeout/queue-removal.ts
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/content-inventory.test.ts
       folders:
@@ -958,11 +1023,16 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 6 — CLI surface: reconcile against tracker truth.
   #
-  # Objective: mount `queue reconcile [--ref <ref>]` over the delivered tracker
-  # read, with the staleness fact fixed to the normalised `deliveryState` of
-  # `done` or `canceled`, and every other state retained and reported with its
-  # observed state. Scope is the invoking checkout's per-repository queue; with
-  # `--ref` exactly one entry is examined. The read is one bounded call per
+  # Objective: mount `queue reconcile [--ref <ref>]` over the EXISTING VERIFIED
+  # READ BRIDGE in `packages/cli/src/edge.ts` — the closeout/verify provider
+  # read port (the per-item `readWorkItem` bridge the verify/closeout
+  # compositions already inject) — with the staleness fact fixed to the
+  # normalised `deliveryState` of `done` or `canceled`, and every other state
+  # retained and reported with its observed state. No new adapter operation and
+  # no `status` list read stands in for the per-item read: the queue composition
+  # in `packages/cli/src/production.ts` wires the bridge and supplies the
+  # non-degraded read. Scope is the invoking checkout's per-repository queue;
+  # with `--ref` exactly one entry is examined. The read is one bounded call per
   # examined entry through the injected declared credential port — no ambient
   # environment read, no command-line token, no retry, no pagination, no
   # concurrent read — bounded at 100 entries with `truncated` and an exact
@@ -972,7 +1042,10 @@ phases:
   # with reason `reconciled`. The payload is exactly `result`, `checked`,
   # `removed[]`, `retained[]`, `unobserved[]`, `readySet[]`, `truncated`,
   # `remainder`, `degraded[]`. The composition injects the tracker-read port and
-  # the reconcile help entry plus the family line land in the same commit.
+  # the reconcile help entry plus the family line land in the same commit;
+  # `tests/behaviour/queue-help-lifecycle.test.ts` is created in Phase 5 and
+  # extended here with the `reconcile` help assertions (TC-QLC-070's
+  # family-listing half waits for this phase).
   #
   # Dependency reasoning: reconcile composes the removal seam (Phase 1) and the
   # event producer (Phase 4) and adds only the read and the bounded sweep, so it
@@ -991,26 +1064,33 @@ phases:
     summary: "feat(cli): mount queue reconcile against tracker delivery state"
     goal: >-
       Mount `queue reconcile [--ref <ref>]` that reads each examined entry's
-      tracked work item through the injected declared credential port, removes
-      exactly the `done`/`canceled` entries with reason `reconciled` under the
-      F-1 invariants, retains and reports every other observed state, retains and
-      reports a not-found item as `unobserved`, appends nothing and exits on the
-      provider's own projection when the read is unreadable, examines at most 100
-      entries with one bounded read each (`truncated` plus an exact `remainder`
-      beyond the cap), and converges truthfully on a repeat run (`checked` counts
-      only still-existing entries, `removed[]` empty, no already-removed ref
-      reported anywhere). Inject the tracker-read port in the composition, keep
-      the credential path the delivered declared-port path, and add the reconcile
-      help entry plus its family-synopsis line. [F-5, DM-1, DM-5, DEC-11, RSK-4,
-      RSK-8, RSK-10, NFR-4, NFR-8, NFR-10]
+      tracked work item through the existing verified read bridge in
+      `packages/cli/src/edge.ts` — the closeout/verify provider read port (the
+      per-item `readWorkItem` bridge) wired into the queue composition, with the
+      production composition in `packages/cli/src/production.ts` supplying the
+      non-degraded read (no new adapter operation, no `status` list read) —
+      removes exactly the `done`/`canceled` entries with reason `reconciled`
+      under the F-1 invariants, retains and reports every other observed state,
+      retains and reports a not-found item as `unobserved`, appends nothing and
+      exits on the provider's own projection when the read is unreadable,
+      examines at most 100 entries with one bounded read each (`truncated` plus
+      an exact `remainder` beyond the cap), and converges truthfully on a repeat
+      run (`checked` counts only still-existing entries, `removed[]` empty, no
+      already-removed ref reported anywhere). Keep the credential path the
+      delivered declared-port path, and add the reconcile help entry plus its
+      family-synopsis line, extending `tests/behaviour/queue-help-lifecycle.test.ts`
+      (created in Phase 5) with the `reconcile` assertions. [F-5, DM-1, DM-5,
+      DEC-11, RSK-4, RSK-8, RSK-10, NFR-4, NFR-8, NFR-10]
     dependsOn: [1, 4, 5]
     scope:
       files:
         - packages/cli/src/commands/queue.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/help.ts
+        - packages/cli/src/production.ts
         - packages/core/src/app/queue.ts
         - packages/core/src/contracts/queue.ts
+        - tests/behaviour/queue-help-lifecycle.test.ts
         - tests/behaviour/queue-reconcile-bounds.test.ts
         - tests/behaviour/queue-reconcile-invariants.test.ts
         - tests/behaviour/queue-reconcile-payload.test.ts
@@ -1064,7 +1144,7 @@ phases:
       - "An unreadable tracker read appends nothing, reports zero removals, and exits on the provider identity's projection (`provider.outage`/`provider.quota.exceeded` at exit 2, `provider.auth.rejected` at exit 1) with no `queue.*` identity on that path."
       - "`--ref` examines exactly one entry and reports `checked: 1` with the others untouched; a not-found item is retained in `unobserved[]`; beyond the cap at most 100 entries are examined with `truncated: true` and an exact `remainder`, and no entry beyond the cap is read."
       - "Every reconcile removal obeys the F-1 invariants and publishes exactly one `queue.graph/remove` per removed ref; a repeat run exits 0, removes/appends/publishes nothing, and reports the second observation truthfully."
-      - "The read is one bounded call per examined entry through the declared credential port, with zero ambient environment reads, zero command-line tokens, and zero tracker writes; the payload carries identifiers, closed vocabulary values, counts, and timestamps only."
+      - "The read is one bounded call per examined entry, supplied through the existing verified read bridge in `packages/cli/src/edge.ts` (the closeout/verify provider read port, the per-item `readWorkItem` bridge) wired into the queue composition, with zero ambient environment reads, zero command-line tokens, and zero tracker writes; the production composition in `packages/cli/src/production.ts` supplies the non-degraded per-item read (no new adapter operation, and no `status` list read stands in for it); the payload carries identifiers, closed vocabulary values, counts, and timestamps only."
       - "`queue --help` lists `reconcile`, `queue reconcile --help` exits 0 and documents `--ref`, and AC-F7-1's four spellings all exist."
     risks:
       - "A failure path that removes even one entry before the failed read would violate fail-closed; the three provider failure classes each assert zero removals and two absence observations."
@@ -1183,7 +1263,15 @@ phases:
   # `queue.single-flight`, `queue.entry.unobserved`; no `queue.entry-unknown`, no
   # `queue.state-unavailable`), to the delivered `CommandResult` envelope (no
   # top-level `ok` or `command`), and to the declared `queue.graph/remove` spelling;
-  # the CLI command registry row carries the three new semantic additions; the M2
+  # the M2 `contracts.md` planning page states `remove` as emitted with exactly
+  # `ref`, `reason`, `recordedAt` (§Event taxonomy v1) and the append-position
+  # presence rule plus the path-specific single-flight policy (§Queue lifecycle
+  # mutations) instead of "`emitted: false`; no v1 path produces it"; the M2
+  # `architecture.md` planning page shows the F-4 precedence in §Single-flight
+  # refusal (a refusal appends nothing and publishes no `dispatch.attempt` event,
+  # where the page today says it does) and places the `landed` removal after the
+  # closeout writes in §Queue auto-release; the CLI
+  # command registry row carries the three new semantic additions; the M2
   # status snapshot records the delivery and stops attributing removal to a future
   # story; the `backlog.md` M2-S15 row gains the `Ticket`/`Progress` record
   # following the M2-S13 precedent; and the overview glossary distinguishes the
@@ -1213,7 +1301,13 @@ phases:
       vocabulary, the four refusal identities and their exits, the closeout block,
       and the per-pass versus per-ref single-flight distinction), the M2
       `commands/queue.md` page (delivered identity names, delivered envelope
-      shape, `queue.graph/remove` spelling, the reconcile contract), the CLI
+      shape, `queue.graph/remove` spelling, the reconcile contract), the M2
+      `contracts.md` page (§Event taxonomy v1: `remove` emitted with exactly
+      `ref`, `reason`, `recordedAt`; §Queue lifecycle mutations: the
+      append-position presence rule and the path-specific single-flight policy),
+      the M2 `architecture.md` page (§Single-flight refusal: the F-4 precedence,
+      a refusal appends nothing and publishes no `dispatch.attempt` event; §Queue
+      auto-release: the `landed` removal after the closeout writes), the CLI
       command registry row, the M2 status snapshot, the `backlog.md` M2-S15
       `Ticket`/`Progress` record, and the overview glossary. Add the two guard
       suites that pin the required and forbidden tokens on those pages. Change no
@@ -1226,7 +1320,9 @@ phases:
         - doc/planning/oss-tooling/backlog.md
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/architecture.md
         - doc/planning/oss-tooling/milestones/m2/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
         - doc/planning/oss-tooling/status.md
         - tests/checks/m2-queue-page-reconciliation.test.ts
         - tests/checks/queue-reference-page.test.ts
@@ -1247,6 +1343,7 @@ phases:
     definitionOfDone:
       - "The resolved M1 queue page documents every delivered verb including `remove`, `dep add`, `dep remove`, and `reconcile`, carries `--help`, and names the reason vocabulary, the refusal identities, the exit matrix, and the two single-flight meanings."
       - "The M2 page names `queue.reason-missing`, `queue.single-flight`, and `queue.entry.unobserved`, contains no `queue.entry-unknown` or `queue.state-unavailable` row, shows no top-level `ok` or `command` in any example, and spells the kind `remove`."
+      - "The M2 `contracts.md` page states `remove` as emitted with exactly `ref`, `reason`, `recordedAt` and the append-position presence rule with the path-specific single-flight policy (no '`emitted: false`; no v1 path produces it' text remains), and the M2 `architecture.md` page shows the F-4 precedence with no `dispatch.attempt` refusal event and places the `landed` removal after the closeout writes."
       - "Help-guide coverage reports zero failures for the queue family and reference-page parity holds with no new inventory row (the `queue` row and page root already exist)."
       - "The M2 status snapshot records the delivery, the `backlog.md` M2-S15 row carries its `Ticket`/`Progress` record in the M2-S13 shape, and the CLI registry row names the three new semantic additions."
       - "No reconciled page introduces a forbidden seed literal or a private name, and the doc-distribution guard is green."
@@ -1272,10 +1369,13 @@ phases:
   # for a second ref now refuses `queue.lease-conflict` instead of renewing and
   # rewriting the lease's ref) and the three new semantic additions.
   #
-  # Decision-record staging: see the header contract. Both
+  # Decision-record staging: see the header contract. TDR-0027 and its index
+  # row already landed in Phase 2's one commit. Here,
   # `doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md` (untracked)
-  # and `doc/decisions/00-index.md` (row removed from the working tree) are
-  # declared here, land in ONE phase-mode commit, and are never split: the row
+  # and its `doc/decisions/00-index.md` row (withheld from the working tree
+  # until this phase) are declared together, land in ONE phase-mode commit, and
+  # are never split: the row is added only inside this phase — never while the
+  # record is untracked, never in an earlier or out-of-order commit — the row
   # must not link an absent record, and the record must not land unindexed. The
   # row text is the one pinned in `chg-GH-292-pm-notes.yaml`.
   #

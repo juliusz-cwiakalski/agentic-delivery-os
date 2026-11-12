@@ -1,14 +1,14 @@
 ---
 id: chg-GH-292-test-plan
 status: Proposed
-version: 1.1
+version: 1.2
 created: 2026-11-12
 last_updated: 2026-11-12
 owners: [engineering]
 service: delivery-os queue lifecycle (scheduling engine, dispatch admission, closeout, event taxonomy, CLI help)
 labels: [queue, scheduling-engine, dispatch-engine, closeout, events, taxonomy, contracts, cli, help, m2]
 version_impact: minor
-summary: "Prove the queue lifecycle as five mutations and one publication contract, not as prose: reason-bearing `queue remove` appends one `queue.removal` record and the fold's presence rule retires the entry without deleting anything; `closeout --apply` removes the landed ref with reason `landed` through an additive, fail-open `queueRemoval` block; `dep add`/`dep remove` edit exactly one edge while the delivered two-positional add stays byte-identical; a per-ref admission guard refuses a second session with `queue.single-flight` and `detail.holder` on dispatch, claim, and the injected daemon claim port, backed by the narrowed same-holder renewal; `queue reconcile` removes `done`/`canceled` entries with reason `reconciled` under a 100-entry, one-read-per-entry, fail-closed budget and converges truthfully on a repeat run; and `queue.graph/remove` becomes an emitted kind with exactly `ref`, `reason`, `recordedAt`. All 46 acceptance criteria map to 59 named cases; the four remove-unemitted pins, the queue row pin (5 to 7), and the record-kind pin (5 to 6) move as two-sided equalities in the same delivery, never relaxed."
+summary: "Prove the queue lifecycle as five mutations and one publication contract, not as prose: reason-bearing `queue remove` appends one `queue.removal` record and the fold's append-position presence rule retires the entry without deleting anything; `closeout --apply` removes the landed ref with reason `landed` through an additive, fail-open `queueRemoval` block; `dep add`/`dep remove` edit exactly one edge while the delivered two-positional add stays byte-identical; a path-specific per-ref policy refuses the dispatch family's live same-ref lease (same or different holder) with `queue.single-flight` and envelope-root `detail.holder`, keeps `queue claim`'s own-holder same-ref renewal, refuses another holder's same-ref lease with the same identity, and conflicts on any other-ref lease, with renewal narrowed to `(repository, ref, holder)`; `queue reconcile` removes `done`/`canceled` entries with reason `reconciled` under a 100-entry, one-read-per-entry, fail-closed budget and converges truthfully on a repeat run; and `queue.graph/remove` becomes an emitted kind with exactly `ref`, `reason`, `recordedAt`. All 46 acceptance criteria map to 59 named cases; the six remove-emission pins, the three registry/baseline pins, the two count pins, and the one CLI export pin move as two-sided equalities in the same delivery, never relaxed."
 links:
   change_spec: ./chg-GH-292-spec.md
   implementation_plan: ./chg-GH-292-plan.yaml
@@ -19,9 +19,9 @@ links:
 
 ## 1. Scope and Objectives
 
-This change delivers five behaviours on one append-only ledger, so the first risk is not a missing feature but a lifecycle that looks complete while one half is false. **Removal must be an append, never an edit.** The removal record's kind, schema, key prefix, and closed reason vocabulary are pinned, and the fold's presence rule is proven by removal, re-declaration, and a byte-level record-set diff (`TC-QLC-001`, `TC-QLC-007`, `TC-QLC-009`). **No removal may orphan a running lane or a dependent.** A live lease refuses with the delivered `queue.precondition.unmet`/`lease-held` and names the holder; an active park is withdrawn with the delivered `released` record before the removal; and a dependent keeps its edge and is held `dependency-unobserved` (`TC-QLC-005`, `TC-QLC-006`, `TC-QLC-008`). **Automatic removal must converge and must never fail closeout.** Apply mode removes with `landed`, plan mode only discloses `would-remove`, no merge truth or an unreadable store or a live lease skips with a closed reason, and a re-run reports `satisfied` (`TC-QLC-020`..`TC-QLC-025`). **One ref must not run twice on any path.** The guard is proven on `dispatch run`, `queue claim`, and the composed daemon supervision claim, its refusal is inert, and the same-holder renewal narrowing is proven in both directions (`TC-QLC-040`..`TC-QLC-045`). **Reconcile must fail closed and converge.** Only a positive `done`/`canceled` observation removes; an unreadable read removes nothing and returns the provider identity, the run is bounded at 100 entries with one read each, and a repeat over already-reconciled entries reports the second observation truthfully without removing, appending, or publishing anything (`TC-QLC-050`..`TC-QLC-058`).
+This change delivers five behaviours on one append-only ledger, so the first risk is not a missing feature but a lifecycle that looks complete while one half is false. **Removal must be an append, never an edit.** The removal record's kind, schema, key prefix, and closed reason vocabulary are pinned, and the fold's append-position presence rule is proven by removal, re-declaration (including equal-`recordedAt` cells in both append orders), and a byte-level record-set diff (`TC-QLC-001`, `TC-QLC-007`, `TC-QLC-009`). **No removal may orphan a running lane or a dependent.** A live lease refuses with the delivered `queue.precondition.unmet`/`lease-held` and names the holder; an active park is withdrawn with the delivered `released` record before the removal; and a dependent keeps its edge and is held `dependency-unobserved` (`TC-QLC-005`, `TC-QLC-006`, `TC-QLC-008`). **Automatic removal must converge and must never fail closeout.** Apply mode removes with `landed`, plan mode only discloses `would-remove`, no merge truth or an unreadable store or a live lease skips with a closed reason, and a re-run reports `satisfied` (`TC-QLC-020`..`TC-QLC-025`). **One ref must not run twice on any path, and each path has exactly one authored outcome.** The dispatch family (`dispatch run` and the composed daemon claim) refuses any live same-ref lease with `queue.single-flight`, same or different holder; `queue claim` renews the caller's own holder on the same ref, refuses another holder's same-ref lease, and conflicts on any other-ref lease; renewal never crosses a ref (`TC-QLC-040`..`TC-QLC-045`). **Reconcile must fail closed and converge.** Only a positive `done`/`canceled` observation removes; an unreadable read removes nothing and returns the provider identity, the run is bounded at 100 entries with one read each, and a repeat over already-reconciled entries reports the second observation truthfully without removing, appending, or publishing anything (`TC-QLC-050`..`TC-QLC-058`).
 
-The plan is deliberately adversarial about the failure modes the spec names. **A removal that is really a deletion** fails `TC-QLC-009` and `TC-QLC-080`: they compare the complete record-key set and ledger bytes before and after, and require the derived document to be replaced only when intent truth changed. **A guard that only works on the queue path** fails `TC-QLC-040`..`TC-QLC-042`: the same refusal shape is asserted through three seams, and `TC-QLC-045` proves the refusal mutates nothing. **A renewal that silently rewrites the ref** fails `TC-QLC-044`: the lease's recorded ref is read after a same-holder different-ref claim, and the same-ref renewal must still say `renewed`. **A reconcile that removes on a failed read** fails `TC-QLC-053`: three provider failure classes each assert zero removals and the provider's own identity. **A declared kind with no producer** ends here: `TC-QLC-062` and `TC-QLC-064` move the four pins from `["queue.graph/remove"]` to `[]`, and `TC-QLC-063` fails if the emitted payload gains or loses a key.
+The plan is deliberately adversarial about the failure modes the spec names. **A removal that is really a deletion** fails `TC-QLC-009` and `TC-QLC-080`: they compare the complete record-key set and ledger bytes before and after, and require the derived document to be replaced only when intent truth changed. **A guard that ignores the path** fails `TC-QLC-040`..`TC-QLC-042`: the dispatch family refuses any live same-ref lease for the same and a different holder, the daemon path follows it, and `TC-QLC-041` proves the claim path renews the caller's own holder's same-ref lease while refusing another holder's. **A renewal that silently rewrites the ref** fails `TC-QLC-044`: the lease's recorded ref is read after a same-holder different-ref claim, and the same-ref own-holder renewal and the direct seam must still say `renewed`. **A reconcile that removes on a failed read** fails `TC-QLC-053`: three provider failure classes each assert zero removals and the provider's own identity. **A declared kind with no producer** ends here: `TC-QLC-062` and `TC-QLC-064` move the six remove-emission pins from `["queue.graph/remove"]` to `[]`, and `TC-QLC-063` fails if the emitted payload gains or loses a key.
 
 This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Delivery owns module paths, helper names, and injection seams the spec does not pin; where a case needs one, it names the seam and asserts the declared property through the public surface or an injected port. A case that cannot resolve its seam fails naming the missing contract rather than skipping. **All 46 acceptance criteria are covered, there are no TODO rows, and no case is an orphan.** The earlier traceability gap is closed by spec v1.1: AC-F5-9 now states the repeated-reconcile convergence that `TC-QLC-058` and `TC-QLC-086` prove. Four criteria carry a named substitute/boundary assertion in §3.5.
 
@@ -30,12 +30,12 @@ This document is a verification map, not an execution claim: no command was run 
 - Reason-bearing entry removal: the `--reason` grammar, the closed four-value vocabulary, every refusal, the append-only record, the presence rule, park withdrawal, non-cascading removal, re-declaration, payload, human text, and exits (F-1; AC-F1-1..AC-F1-8; DM-1..DM-5).
 - Automatic `landed` removal inside `closeout --apply`: apply versus plan, merge truth, fail-open skips, idempotency, the additive block, and step-inventory invariance (F-2; AC-F2-1..AC-F2-5; DM-6; SC-M2-S15-01).
 - `dep add` / `dep remove` over the delivered two-positional add: equivalence, `removed`/`noop`, ready-set recomputation, the `removed[]` delta, add-only cycle checking, grammar refusals, and unobserved producers (F-3; AC-F3-1..AC-F3-5; EVT-2; SC-M2-S15-04).
-- Per-ref single-flight: dispatch, `queue claim`, the composed daemon claim port, stale-lease takeover, the same-holder renewal narrowing, `detail.holder`, and refusal purity (F-4; AC-F4-1..AC-F4-6; DM-7; SC-M2-S15-02).
+- Per-ref single-flight: the dispatch family's refusal for any live same-ref lease (same or different holder), `queue claim`'s holder-aware renewal/refusal outcomes, the composed daemon claim, stale-lease takeover, envelope-root `detail.holder`, and refusal purity (F-4; AC-F4-1..AC-F4-6; DM-7; SC-M2-S15-02).
 - `queue reconcile`: `done`/`canceled` removal with `reconciled`, retained states, unreadable-tracker fail-closed, `--ref` scoping, not-found retention, the 100-entry cap and remainder, F-1-equivalent removals, and truthful convergence on a repeat run (F-5; AC-F5-1..AC-F5-9; SC-M2-S15-03).
 - `queue.graph` publication: one `remove` event with exactly three keys, the dependency-edge delta with monotonic sequence, the emitted declaration, and the bidirectional payload-key comparison (F-6; AC-F6-1..AC-F6-4; EVT-1, EVT-2).
 - Mount and self-description: help entries, the corrected `queue dep` synopsis, help-guide coverage, reference-page parity, M1 page completeness, M2 page reconciliation, the seven-row queue error kind, and the declared flags (F-7; AC-F7-1..AC-F7-3; DM-8).
 - Measured NFRs: fenced atomicity and refusal purity, the admission read cost, closeout cost and fail-open identity, the reconcile read budget, bounded output and privacy, additivity, and convergence (AC-NFR-1..AC-NFR-6; NFR-1..NFR-10).
-- The deliberate pin migrations: the four `remove`-unemitted pins, the queue error-row pin (5 → 7), the queue record-kind pin (5 → 6), and the derived-document expectations, all updated as two-sided equalities (§7.1).
+- The deliberate pin migrations: the six `remove`-emission pins, the three registry/baseline pins, the two count pins (queue error rows 5 → 7; queue record kinds 5 → 6), the one CLI export pin, and the golden rule, all updated as two-sided equalities (§7.1).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -58,8 +58,10 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-292-spec.md`](./chg-GH-292-spec.md) v1.1 | Binding source: F-1..F-7, **46 ACs** (AC-F1-1..AC-F1-8, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-5, AC-F4-1..AC-F4-6, AC-F5-1..AC-F5-9, AC-F6-1..AC-F6-4, AC-F7-1..AC-F7-3, AC-NFR-1..AC-NFR-6), DEC-1..DEC-15, DM-1..DM-8, EVT-1..EVT-3, NFR-1..NFR-10, RSK-1..RSK-10, OQ-1/OQ-2 (both resolved), §6 flows 1–5, §8 contracts, Appendix C (exit matrix), Appendix D (mutation → record → event), Appendix E (closed vocabularies). |
+| [`chg-GH-292-spec.md`](./chg-GH-292-spec.md) v1.2 | Binding source: F-1..F-7, **46 ACs** (AC-F1-1..AC-F1-8, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-5, AC-F4-1..AC-F4-6, AC-F5-1..AC-F5-9, AC-F6-1..AC-F6-4, AC-F7-1..AC-F7-3, AC-NFR-1..AC-NFR-6), TDR-0026 DC-1..DC-6, TDR-0027 ALT-3, DEC-1..DEC-15, DM-1..DM-8, EVT-1..EVT-3, NFR-1..NFR-10, RSK-1..RSK-10, OQ-1/OQ-2 (both resolved), §6 flows 1–5, §8 contracts, Appendix C (exit matrix), Appendix D (mutation → record → event), Appendix E (closed vocabularies). |
 | [`chg-GH-292-plan.yaml`](./chg-GH-292-plan.yaml) (forthcoming) | Phase ownership and the implementation task map. This test plan is phase-3 output and does not depend on plan phase numbers; §7 maps every case to a suite and gate. |
+| [`TDR-0026`](../../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md) | Binding decision record for the append-position presence rule (DC-1), the path-specific single-flight precedence (DC-2), renewal narrowed to `(repository, ref, holder)` (DC-3), and the byte-identical delivered error rows (DC-6). `TC-QLC-007`/`009`/`040`/`041`/`042`/`044` follow DC-1..DC-3. |
+| [`TDR-0027`](../../../decisions/TDR-0027-command-failure-envelope-detail-slot.md) | Binding decision record for the envelope-root optional `detail` slot (ALT-3): `detail.holder` on `queue.single-flight`, `CommandResultError` still exactly six fields, `error.detail` rejected, exit from the row's projection class. `TC-QLC-040`/`041`/`045` follow it. |
 | `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` SC-M2-S15-01..04 | Mandatory scenario coverage: auto-removal after closeout, single-flight refusal naming the holder, reconciliation without hand editing, and the dependency-edge event. Mapped one-to-one in §3.1 and spec Appendix A. |
 | `doc/planning/oss-tooling/milestones/m2/contracts.md` §Queue lifecycle mutations; §Event taxonomy v1 | Contract authority for the five lifecycle behaviours, the declared `remove` kind, and the dependency delta. |
 | `doc/planning/oss-tooling/milestones/m2/architecture.md` §Queue auto-release after merge and closeout; §Single-flight refusal across dispatch paths; §Persistence and concurrency deltas | Shape authority for the closeout hook, the admission guard, the per-ref rule, and the append-only state discipline. |
@@ -87,7 +89,7 @@ All 46 acceptance criteria map to at least one named case; no case is an orphan.
 | AC-F1-4 | A ref with no entry, including one already removed, exits `1` with `queue.entry.unobserved` and appends zero records | TC-QLC-004, TC-QLC-011 | Covered |
 | AC-F1-5 | A live repository lease refuses with `queue.precondition.unmet`, reason `lease-held`, holder named, zero appends; after `queue release` the same removal succeeds | TC-QLC-005, TC-QLC-011 | Covered |
 | AC-F1-6 | An active park is withdrawn by a `queue.park` `released` record appended before the removal; no park is evaluated afterwards and no park vocabulary is added | TC-QLC-006 | Covered |
-| AC-F1-7 | Re-declaring a removed ref restores the entry; the removal record is neither deleted nor rewritten | TC-QLC-007, TC-QLC-009 | Covered |
+| AC-F1-7 | Re-declaring a removed ref restores the entry — including when the re-declaration's `recordedAt` equals the removal's — because append position decides; the removal record is neither deleted nor rewritten | TC-QLC-007, TC-QLC-009 | Covered |
 | AC-F1-8 | A dependent's edge set is unchanged, it is held `dependency-unobserved`, and the removal appended no record for another entry | TC-QLC-008 | Covered |
 | AC-F2-1 | `closeout --apply` after an observed merge removes the entry with `landed`, reports `queueRemoval.outcome: removed`, and publishes a `remove` event | TC-QLC-020, TC-QLC-025 | Covered |
 | AC-F2-2 | `closeout` without `--apply` appends nothing, leaves the entry, and reports `would-remove` | TC-QLC-021, TC-QLC-025 | Covered |
@@ -99,11 +101,11 @@ All 46 acceptance criteria map to at least one named case; no case is an orphan.
 | AC-F3-3 | Removing an absent edge exits `0` with `noop`, appends zero records, and publishes zero events | TC-QLC-032, TC-QLC-036, TC-QLC-086 | Covered |
 | AC-F3-4 | A cycle-closing add is refused with `queue.dependency-cycle` naming the path and appends nothing; remove runs no cycle check and is never cycle-refused | TC-QLC-033 | Covered |
 | AC-F3-5 | A non-canonical ref yields `input.value.rejected`; an unknown consumer yields `queue.entry.unobserved`; an unobserved producer is accepted and the edge retained | TC-QLC-034 | Covered |
-| AC-F4-1 | `dispatch run` for a ref with an active lane exits `1` with `queue.single-flight`, `detail.holder` names the holder, no session starts, and no attempt/lease/lane/queue record is appended | TC-QLC-040, TC-QLC-045 | Covered |
-| AC-F4-2 | `queue claim` for the same state returns the same identity, the same `detail.holder`, and the same zero-mutation outcome | TC-QLC-041 | Covered |
-| AC-F4-3 | A composed daemon supervision cycle with a supplied claim port reports a `queue.single-flight` refusal and starts no session | TC-QLC-042 | Covered — substitute (GAP-T1) |
-| AC-F4-4 | A lease at or over its TTL is not refused by the guard; the delivered stale-takeover path applies with its incident evidence | TC-QLC-043 | Covered |
-| AC-F4-5 | A live lease for another ref under the same holder refuses `queue.lease-conflict` and keeps the lease's ref; the same ref under the same holder still returns `renewed` with no new session | TC-QLC-044 | Covered |
+| AC-F4-1 | `dispatch run` for a ref whose live lease records that ref — same or different holder — exits `1` with `queue.single-flight`, envelope-root `detail.holder` names the holder, no session starts, no record is appended, and no event is published | TC-QLC-040, TC-QLC-045 | Covered |
+| AC-F4-2 | `queue claim` on a live same-ref lease held by another holder refuses with the same identity and envelope-root `detail.holder` and zero mutation; the caller's own holder on the same ref returns `renewed` with one `renewed` record, no session, and no `detail` | TC-QLC-041, TC-QLC-044 | Covered |
+| AC-F4-3 | A composed daemon supervision cycle with a supplied claim port follows the dispatch family: any live same-ref lease refuses `queue.single-flight` and starts no session | TC-QLC-042 | Covered — substitute (GAP-T1) |
+| AC-F4-4 | A lease at or over its TTL is not refused by the guard; the delivered stale-takeover path applies with its incident evidence on both the dispatch and claim paths | TC-QLC-043 | Covered |
+| AC-F4-5 | A live lease for another ref refuses `queue.lease-conflict` on dispatch and `queue claim` under the same or another holder, keeps the lease's ref, and leaves the delivered direct-claim same-holder/same-ref renewal unchanged | TC-QLC-044 | Covered |
 | AC-F4-6 | After any `queue.single-flight` refusal the record count, derived-document bytes, and lane set are identical | TC-QLC-045 | Covered |
 | AC-F5-1 | A `done` work item leaves the queue with `reason: reconciled`, is listed in `removed[]`, exits `0`, and no state file is written outside the tool | TC-QLC-050, TC-QLC-058, TC-QLC-086 | Covered — port boundary (GAP-T2); the repeat-run half is named by AC-F5-9 |
 | AC-F5-2 | A `canceled` work item is removed with reason `reconciled` | TC-QLC-051 | Covered |
@@ -117,7 +119,7 @@ All 46 acceptance criteria map to at least one named case; no case is an orphan.
 | AC-F6-1 | Exactly one `remove` event appears, its `lane`/`ref` are the entry ref, its payload keys are exactly `ref`, `reason`, `recordedAt`, and `reason` is in the closed vocabulary | TC-QLC-060, TC-QLC-065 | Covered |
 | AC-F6-2 | `dep remove` yields one `dependency-edge` event with `removed[]` naming the edge and a sequence above the lane's previous event; an absent-edge noop and every refused mutation publish zero events | TC-QLC-061, TC-QLC-066 | Covered |
 | AC-F6-3 | `queue.graph/remove` is declared `emitted: true`, no kind is unemitted, version/topics/frames/ordering/overflow are unchanged, and `events describe` reports it as emitted | TC-QLC-062, TC-QLC-064, TC-QLC-066 | Covered |
-| AC-F6-4 | The emitted-payload-key comparison fails on an undeclared key or a missing declared key, and every emitted kind's payload keys equal its declared list | TC-QLC-063 | Covered |
+| AC-F6-4 | The emitted-payload-key comparison fails on an undeclared key or a missing declared key, every emitted kind's payload keys equal its declared list, and the projection source scan allows the one `remove` producer while no other scanned module carries the literal | TC-QLC-063, TC-QLC-064 | Covered |
 | AC-F7-1 | `queue --help` lists `remove`, `dep add`, `dep remove`, and `reconcile`; each verb help exits `0`; `--reason`/`--ref` are documented with vocabularies; the `dep` synopsis is the two-positional grammar | TC-QLC-070, TC-QLC-074 | Covered |
 | AC-F7-2 | Help coverage and reference-page parity report zero failures; the M1 page documents every verb; the M2 page names the three delivered identities, contains neither duplicate identity, and shows no top-level `ok`/`command` | TC-QLC-071, TC-QLC-072 | Covered — substitute for prose truth (GAP-T4) |
 | AC-F7-3 | The queue kind carries exactly seven rows in declared order, the delivered five unchanged plus `queue.reason-missing` and `queue.single-flight`, and every new path resolves to a declared row and its projected exit | TC-QLC-073, TC-QLC-075 | Covered |
@@ -142,12 +144,12 @@ The specification declares no REST/HTTP or MCP surface (API-# is N/A). The inter
 | EVT-2 `queue.graph/dependency-edge` | 030, 031, 035, 036, 061, 066 | One event per applied edge edit; `removed[]` names the dropped edge on `dep remove`, `added[]` names it on add; `sequence` strictly greater than the lane's previous event; noop/refusal publish nothing. |
 | EVT-3 unchanged kinds | 062, 063, 066 | Topic set, frame fields, ordering rule, overflow policy, and taxonomy version are unchanged; `entry`, `dependency-edge`, and `release` keep their declared payloads. |
 | DM-1 removal record | 001, 009, 010, 085 | Kind `queue.removal`, schema `delivery.queue.removal.v1`, key prefix `queue.removals:<REF>`, identity `ref`, fields `schema`, `ref`, `reason`, `recordedAt` plus the additive caller principal; reason in the closed four values. |
-| DM-2 presence rule | 001, 007, 009 | Entry present iff the latest entry record is later than the latest removal record; equal/absent with no removal means present; re-declaration restores; no record is deleted. |
+| DM-2 presence rule | 001, 007, 009 | Entry present iff the latest `queue.entry` append is later than the latest `queue.removal` append in ledger position (`sequence`), never by `recordedAt` text; a tie is impossible, an equal-`recordedAt` later re-declaration restores, and no removal means the entry record exists. No record is deleted. |
 | DM-3 park withdrawal | 006, 057 | A delivered `queue.park` with `recoveryState: "released"` is appended before the removal; no new park field, state, or cause. |
 | DM-4 derived document | 001, 007, 009, 045, 080 | `queue-graph.json` (`delivery.queue.graph.v1`) reflects the fold; replaced atomically only when folded intent truth changed; a refusal leaves its bytes identical; a removal leaves other entries' edges unchanged. |
 | DM-5 mutation payloads | 010, 035, 058 | Removal `data` keys exactly `ref`, `result`, `reason`, `readySet`, `event`, `degraded`; dependency-removal keys `ref`, `entry`, `edges`, `result`, `readySet`, `event`, `degraded`; reconcile keys exactly `result`, `checked`, `removed`, `retained`, `unobserved`, `readySet`, `truncated`, `remainder`, `degraded`. |
 | DM-6 closeout block | 020, 021, 022, 023, 024, 025 | One additive non-step `queueRemoval` block with `outcome` in `removed|would-remove|satisfied|skipped`, `ref`, optional `reason`, optional `skipReason` in the closed four values; the step inventory is identical. |
-| DM-7 refusal detail | 040, 041, 042, 045 | `detail.holder` is the live lease's holder, single line, ≤128 characters, identifiers only; no credential, session id, or payload. |
+| DM-7 refusal detail | 040, 041, 042, 045 | Envelope-root `detail.holder` is the live lease's holder, single line, ≤128 characters, identifiers only; the shared `CommandResultError` remains exactly its six fields and `error.detail` is absent; no credential, session id, or payload. |
 | DM-8 declared inventories | 062, 064, 073, 085 | Record-kind declaration 5 → 6; queue error rows 5 → 7; both fixtures equal the tree in both directions after the additions. |
 | Appendix C exit matrix | 002, 003, 004, 005, 033, 034, 040, 053, 073, 075 | Every refusal resolves to one identity and one exit; `0` success, `1` refusal, `2` platform/state/provider; no other digit and no literal exit outside the projection module. |
 | Appendix D source map | 001, 006, 020, 031, 050, 057, 060, 061, 066 | Each applied mutation maps to exactly its declared durable records and event; a refusal, noop, or skip maps to none. |
@@ -188,7 +190,7 @@ The specification declares no REST/HTTP or MCP surface (API-# is N/A). The inter
 
 | ID | What is asserted, and how | Cases | AC |
 |---|---|---|---|
-| **GAP-T1 — the daemon path is an injected claim port, not a production spawn** | The composed `runSupervisionCycle` receives a claim port; the case asserts the returned refusal identity, `detail.holder`, and zero executor starts. The production daemon composition remains supervise-only (A-6), so no case claims a live spawn. `TC-QLC-042` step 4 asserts the composition supplies exactly the delivered claim port and no second admission stage. | 042 | AC-F4-3 |
+| **GAP-T1 — the daemon path is an injected claim port, not a production spawn** | The composed `runSupervisionCycle` receives a claim port; the case asserts the dispatch-family refusal identity, the envelope-root `detail.holder`, and zero executor starts. The production daemon composition remains supervise-only (A-6), so no case claims a live spawn. `TC-QLC-042` step 6 asserts the composition supplies exactly the delivered claim port and no second admission stage. | 042 | AC-F4-3 |
 | **GAP-T2 — reconcile is verified at the declared tracker port and composition binding** | The default suite injects a recording tracker port with `done`, `canceled`, open states, `not-found`, and three failures. `TC-QLC-084` asserts the declared credential-port use and `TC-QLC-085` asserts no new adapter; a live GitHub read is an opt-in smoke and is excluded from `pnpm check`. "No state file is written outside the tool" is proven by a file-set/digest diff, not by monitoring an editor. | 050–058, 084, 085 | AC-F5-1..AC-F5-7 |
 | **GAP-T3 — resolved by spec v1.1: AC-F5-9 states repeated-reconcile convergence** | `TC-QLC-058` asserts a second reconcile over already-reconciled entries exits `0`, appends zero records, publishes zero events, reports `checked` as the count of still-existing entries, leaves `removed[]` empty, and names no already-removed ref in `removed[]`, `retained[]`, or `unobserved[]`; `TC-QLC-086` re-proves it alongside the other two convergence paths. The earlier traceability gap is closed by the added criterion. | 058, 086 | AC-F5-9; NFR-10 |
 | **GAP-T4 — page prose is token-checked, not semantically proven** | `TC-QLC-071` asserts the M1 page resolves as the page root and names every delivered verb; `TC-QLC-072` asserts the M2 page's required names, forbidden duplicate identities, and absent top-level envelope fields. Sentence-level truth is a review attestation by `@doc-syncer`/`@reviewer`. | 071, 072 | AC-F7-2 |
@@ -217,9 +219,9 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-004 | Unknown and already-removed refs are unobserved refusals | Negative | Critical | Critical | AC-F1-4; F-1; DEC-8 |
 | TC-QLC-005 | A live lease blocks removal until release | Negative | Critical | Critical | AC-F1-5; F-1; DEC-9; NFR-1 |
 | TC-QLC-006 | An active park is withdrawn before the removal | Corner Case | Critical | High | AC-F1-6; F-1; DM-3; DEC-6 |
-| TC-QLC-007 | Re-declaration restores a removed entry without deleting history | Happy Path | Critical | High | AC-F1-7; F-1; DM-2 |
+| TC-QLC-007 | Re-declaration restores a removed entry, including at equal `recordedAt`, without deleting history | Happy Path | Critical | High | AC-F1-7; F-1; DM-2; TDR-0026 DC-1 |
 | TC-QLC-008 | Removal does not cascade and leaves dependents held | Corner Case | Critical | High | AC-F1-8; F-1; DEC-10; RSK-1 |
-| TC-QLC-009 | Removal is append-only and replaces the derived document only on truth change | Regression | Critical | Critical | AC-F1-1, AC-F1-7; F-1; DM-4; NFR-1 |
+| TC-QLC-009 | Removal is append-only, and presence follows append position at equal `recordedAt` | Regression | Critical | Critical | AC-F1-1, AC-F1-7; F-1; DM-2, DM-4; NFR-1 |
 | TC-QLC-010 | The removal payload, human text, and exit projection are exact | Happy Path | Critical | High | AC-F1-1; F-1, F-7; DM-5; NFR-6, NFR-9 |
 | TC-QLC-011 | Every removal refusal is append-free and byte-identical | Negative | Critical | Critical | AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5; NFR-1 |
 | TC-QLC-020 | `closeout --apply` removes the landed ref and publishes `remove` | Happy Path | Critical | Critical | AC-F2-1; F-2, F-6; EVT-1; DM-6; SC-M2-S15-01 |
@@ -235,12 +237,12 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-034 | Dependency grammar refusals hold and an unobserved producer is accepted | Negative | Critical | High | AC-F3-5; F-3; NFR-1 |
 | TC-QLC-035 | Dependency mutation payloads name `readySet` and `event`, never a sequence | Happy Path | Critical | High | AC-F3-2; F-3; DM-5; NFR-6 |
 | TC-QLC-036 | Every dependency edit is one append and preserves folded history | Regression | Critical | High | AC-F3-1, AC-F3-2, AC-F3-3; NFR-1 |
-| TC-QLC-040 | `dispatch run` refuses a second session with `queue.single-flight` | Negative | Critical | Critical | AC-F4-1; F-4; DM-7; SC-M2-S15-02; NFR-2 |
-| TC-QLC-041 | `queue claim` returns the same refusal and mutates nothing | Negative | Critical | Critical | AC-F4-2; F-4; DM-7 |
-| TC-QLC-042 | The composed daemon claim port inherits the per-ref guard | Negative | Critical | High | AC-F4-3; F-4; A-6 |
-| TC-QLC-043 | A stale lease takes over instead of refusing | Corner Case | Critical | High | AC-F4-4; F-4 |
-| TC-QLC-044 | Same-holder different-ref refuses; same-ref still renews | Negative | Critical | Critical | AC-F4-5; F-4; DEC-13; RSK-3 |
-| TC-QLC-045 | A guard refusal is byte-identical and its detail is bounded | Negative | Critical | Critical | AC-F4-6; F-4; DM-7; NFR-2, NFR-6 |
+| TC-QLC-040 | The dispatch family refuses any live same-ref lease, same or different holder | Negative | Critical | Critical | AC-F4-1; F-4; DM-7; SC-M2-S15-02; NFR-2 |
+| TC-QLC-041 | `queue claim` is holder-aware: another holder refuses, the caller's own holder renews | Negative | Critical | Critical | AC-F4-2; F-4; DM-7 |
+| TC-QLC-042 | The composed daemon claim port follows the dispatch family's guard | Negative | Critical | High | AC-F4-3; F-4; A-6 |
+| TC-QLC-043 | A stale lease takes over instead of refusing on either path | Corner Case | Critical | High | AC-F4-4; F-4 |
+| TC-QLC-044 | Other-ref leases conflict; same-ref own-holder renewal and the direct seam are unchanged | Negative | Critical | Critical | AC-F4-5, AC-F4-2; F-4; DEC-13; RSK-3 |
+| TC-QLC-045 | A refusal is byte-identical, its detail is root-scoped and bounded, and the error stays six fields | Negative | Critical | Critical | AC-F4-6; F-4; DM-7; NFR-2, NFR-6 |
 | TC-QLC-050 | A `done` entry is removed with `reconciled` | Happy Path | Critical | Critical | AC-F5-1; F-5; DM-1; SC-M2-S15-03 |
 | TC-QLC-051 | A `canceled` entry is removed with `reconciled` | Happy Path | Critical | High | AC-F5-2; F-5; DEC-11 |
 | TC-QLC-052 | Open delivery states are retained with their observed state | Happy Path | Critical | High | AC-F5-3; F-5; DEC-11 |
@@ -254,13 +256,13 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-061 | The dependency delta carries `removed[]` with a monotonic sequence | Happy Path | Critical | Critical | AC-F6-2; F-6; EVT-2; NFR-5 |
 | TC-QLC-062 | The declaration marks `remove` emitted and the non-emitted set empty | Happy Path | Critical | Critical | AC-F6-3; F-6; DM-8; DEC-14 |
 | TC-QLC-063 | The emitted-payload-key comparison is bidirectional for every kind | Negative | Critical | Critical | AC-F6-4; F-6; NFR-7; RSK-7 |
-| TC-QLC-064 | The four `remove`-unemitted pins move together, two-sided | Regression | Critical | Critical | AC-F6-3; F-6; DEC-14; RSK-7 |
+| TC-QLC-064 | The six `remove`-emission pins move together, two-sided | Regression | Critical | Critical | AC-F6-3, AC-F6-4; F-6; DEC-14; RSK-7 |
 | TC-QLC-065 | Each applied removal is emitted exactly once, in its own lane | Corner Case | Critical | High | AC-F6-1; F-6; NFR-5 |
 | TC-QLC-066 | Refusals, noops, and skips publish zero events | Negative | Critical | Critical | AC-F6-2, AC-F6-3; NFR-5 |
 | TC-QLC-070 | Help lists the new verbs and corrects the `dep` synopsis | Happy Path | Critical | Critical | AC-F7-1; F-7 |
 | TC-QLC-071 | Help coverage, parity, and the M1 page are complete | Happy Path | Critical | Critical | AC-F7-2; F-7 |
 | TC-QLC-072 | The M2 page is reconciled to delivered identities and envelope | Happy Path | Critical | High | AC-F7-2; F-7; DEC-2; GAP-T4 |
-| TC-QLC-073 | The queue error kind is exactly seven rows with the five unchanged | Happy Path | Critical | Critical | AC-F7-3; F-7; NFR-7, NFR-9 |
+| TC-QLC-073 | The queue error kind, registry, and baseline move two-sidedly | Happy Path | Critical | Critical | AC-F7-3; F-7; NFR-7, NFR-9 |
 | TC-QLC-074 | The new flags are declared and malformed values are grammar refusals | Negative | Critical | High | AC-F7-1; F-7; NFR-9 |
 | TC-QLC-075 | Error-table sync and the `{0,1,2}` exit projection hold | Negative | Critical | Critical | AC-F7-3; F-7; NFR-9 |
 | TC-QLC-080 | Every accepted mutation is one fenced, post-verified transaction | Regression | Critical | Critical | AC-NFR-1; NFR-1 |
@@ -268,7 +270,7 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-082 | Closeout outcomes are identical and its appends are bounded | Performance | Critical | Critical | AC-NFR-3; NFR-3 |
 | TC-QLC-083 | Reconcile performs one bounded read per entry and none past the cap | Performance | Critical | Critical | AC-NFR-4; NFR-4 |
 | TC-QLC-084 | Output, records, and events are bounded and carry no secret | Negative | Critical | Critical | AC-NFR-5; NFR-6, NFR-8 |
-| TC-QLC-085 | The additive boundary and both inventories hold | Regression | Critical | Critical | AC-NFR-6; NFR-7; NG-8 |
+| TC-QLC-085 | The additive boundary, state baseline, and CLI export pins hold | Regression | Critical | Critical | AC-NFR-6; NFR-7; NG-8 |
 | TC-QLC-086 | All three mutation paths converge on re-run | Regression | Critical | High | AC-F5-9, AC-F2-5, AC-F3-3, AC-F5-1; NFR-10 |
 
 ### 5.2 Scenario Details
@@ -433,13 +435,13 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 - The withdrawal is appended before the removal, the park pass and lane projection stop seeing the ref, and no park vocabulary moved.
 - The removal still appends exactly one removal record.
 
-#### TC-QLC-007 - Re-declaration restores a removed entry without deleting history
+#### TC-QLC-007 - Re-declaration restores a removed entry, including at equal `recordedAt`, without deleting history
 
-**Objective**: Prove the presence rule is a fold predicate, not a tombstone, so re-declaration needs no special case.
+**Objective**: Prove the presence rule is a fold predicate over ledger append position, not a tombstone or a timestamp comparison, so re-declaration needs no special case — including when its `recordedAt` equals the removal's.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-7, F-1, DM-2
+**Related IDs**: AC-F1-7, F-1, DM-2, TDR-0026 DC-1
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-remove-redeclare.test.ts` (new)
@@ -447,18 +449,21 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 
 **Preconditions**:
 - `GH-241` observed, removed with `abandoned`, and absent from the fold.
+- A second store is seeded with an entry append followed by a removal append, both carrying the same `recordedAt` (the inverse order of the later cell).
 
 **Steps**:
-1. Capture the removal record's bytes and record key.
+1. Capture the removal record's bytes, record key, and ledger `sequence`.
 2. Run `queue add GH-241 --json` with a later `recordedAt`, then `queue list --json`.
 3. Assert `GH-241` is present in the fold and in `queue list`, and `queue ready`/`queue plan` evaluate it again.
-4. Assert the latest `queue.entry` record timestamp is strictly later than the latest `queue.removal` record timestamp and the presence predicate therefore returns true.
+4. Assert the latest `queue.entry` **append position** (`sequence`) is greater than the latest `queue.removal` append position, and that the presence predicate returns true without reading `recordedAt` text.
 5. Assert the original removal record is still present, byte-identical, and no deletion or rewrite occurred.
 6. Assert the derived document again lists `GH-241` with its declared edges.
+7. Remove `GH-241` again, then re-declare it with a `recordedAt` **identical** to the removal's; assert the entry is present because its latest entry append is later in ledger position, its `sequence` is greater, and `queue list` shows it.
+8. In the second store, assert the entry is absent because the removal append is later in ledger position even though the timestamps are equal; assert neither outcome was decided by comparing timestamp text.
 
 **Expected Outcome**:
-- The entry is restored by a normal declaration, the removal record remains durable, and the derived document follows the fold.
-- A store whose latest removal is later than the latest entry remains absent (the converse is asserted in `TC-QLC-001`).
+- A re-declaration restores the entry in both the later-timestamp and equal-`recordedAt` cells because append position decides; the removal record remains durable and the derived document follows the fold.
+- The inverse order with equal timestamps stays absent, proving the comparator is the ledger sequence, never timestamp text.
 
 #### TC-QLC-008 - Removal does not cascade and leaves dependents held
 
@@ -486,13 +491,13 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 - Removal changes only `A`'s presence; `B`'s edges and records are untouched and its held state is visible.
 - The supported remedy is the new `dep remove`, not a cascade.
 
-#### TC-QLC-009 - Removal is append-only and replaces the derived document only on truth change
+#### TC-QLC-009 - Removal is append-only, and presence follows append position at equal `recordedAt`
 
-**Objective**: Prove the ledger is never edited and the derived document is not churned when intent truth is unchanged.
+**Objective**: Prove the ledger is never edited, the derived document is not churned when intent truth is unchanged, and presence is decided by append position rather than `recordedAt` text.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F1-1, AC-F1-7, F-1, DM-4, NFR-1
+**Related IDs**: AC-F1-1, AC-F1-7, F-1, DM-2, DM-4, NFR-1
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-remove-append-only.test.ts` (new); `tests/fixtures/state/harness.ts` (`ledgerBytes`, `ledgerDigest`, `listStoreFiles`)
@@ -506,10 +511,13 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 2. Run an accepted removal for one ref and assert the only changed source file is the append-only ledger (a pure suffix append), every pre-existing record line is a byte-prefix of the new content, and no record key disappeared.
 3. Assert the derived document bytes changed exactly once and now omit the removed ref.
 4. Run a second accepted edge edit whose folded dependency set does not change (a repeat `dep add` on an already-declared edge, which the delivered path reports as `updated` or `noop`), and assert the derived document bytes and content are unchanged while any appended dependency record is verified.
-5. Assert no temporary file, quarantine file, or rewrite artifact appears in the state directory.
+5. Build an equal-`recordedAt` cell: append a removal and a later re-declaration carrying the **same** `recordedAt`; assert the entry is present because the entry append is later in ledger position (`sequence` greater), not because of timestamp text, and that the derived document includes it.
+6. Build the inverse equal-`recordedAt` cell: append the entry first and the removal second with the same timestamp; assert the entry is absent because the removal append is later in ledger position. Assert the two cells differ only in append order and never in compared timestamp values.
+7. Assert no temporary file, quarantine file, or rewrite artifact appears in the state directory.
 
 **Expected Outcome**:
 - Removal is an append; the derived document is replaced only on a real truth change and never on a refusal or noop.
+- The equal-`recordedAt` cells resolve by ledger append position in both orders; timestamp text is never the comparator.
 - The complete durable record set is a superset of the precondition set, with no rewritten record.
 
 #### TC-QLC-010 - The removal payload, human text, and exit projection are exact
@@ -889,9 +897,9 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Expected Outcome**:
 - Each edit is one append; history is durable; the folded edge set is the latest record's set; refusals are inert.
 
-#### TC-QLC-040 - `dispatch run` refuses a second session with `queue.single-flight`
+#### TC-QLC-040 - The dispatch family refuses any live same-ref lease, same or different holder
 
-**Objective**: Prove the ticket's second criterion on the primary dispatch path and that the refusal is pre-session.
+**Objective**: Prove the dispatch-family row of the precedence table: `dispatch run` and a composed daemon claim share one admission predicate that refuses a live lease whose recorded ref is the requested ref, whether the holder matches or not, and never reaches renewal.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
@@ -902,48 +910,53 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Tags**: @backend, @dispatch, @queue, @single-flight
 
 **Preconditions**:
-- A live lease for the repository with holder `lane-1`, ref `GH-241`, heartbeat age below TTL; a dispatch request for `GH-241`.
-- The harness records spawns, resumes, lease claims, attempt records, lane records, and queue appends.
+- Live lease in repository `R`, holder `lane-1`, recorded ref `GH-241`, heartbeat below TTL. The dispatch path claims with the fixed holder `dispatch`, so this is a **different-holder** dispatch case.
+- A second store has the same live lease but holder `dispatch`, making it a **same-holder** dispatch case.
+- The harness records spawns, resumes, lease claims, attempt records, lane records, queue appends, and published events.
 
 **Steps**:
-1. Run the dispatch command through the production admission composition and assert exit `1`.
-2. Assert `error.code === "queue.single-flight"` and `error.detail.holder === "lane-1"`.
-3. Assert spawns `0`, resumes `0`, lease claims `0`, attempt records `0`, lane records `0`, and queue appends `0`.
-4. Assert no session id is allocated and no socket is opened.
-5. Run the same dispatch when the lease ref is a different ref under the same holder and assert the separate `lease-conflict` path (`TC-QLC-044`), not `single-flight`.
+1. Run `dispatch run GH-241` against the `lane-1` lease and assert exit `1`, `error.code === "queue.single-flight"`, and envelope-root `detail.holder === "lane-1"`.
+2. Assert `Object.keys(error)` is exactly the six `CommandResultError` fields (`code`, `category`, `retryable`, `consequence`, `remediationHint`, `summary`), `error.detail` is absent, and the envelope-root `detail` has exactly `["holder"]`.
+3. Run the same dispatch against the `dispatch`-holder store (same holder as the dispatch claimant) and assert the same refusal with envelope-root `detail.holder === "dispatch"`, proving the dispatch family never renews mid-flight.
+4. Assert spawns `0`, resumes `0`, lease claims `0`, attempt records `0`, lane records `0`, queue appends `0`, events `0`, and no session id allocated.
+5. Run a dispatch for `GH-241` when the live lease records `GH-240` (other ref) under holder `lane-1`, and repeat under holder `dispatch`; assert both exit `1` with the delivered `queue.lease-conflict`, zero appends, and the lease's recorded ref still `GH-240` (`TC-QLC-044`).
+6. Run a dispatch for `GH-241` with no live lease and assert the delivered `claimed` outcome and that the dispatch proceeds (control, so the refusal is not vacuous).
 
 **Expected Outcome**:
-- A second dispatch on one ref is refused before any session, with the holder named and zero side effects.
-- The refusal shape is the classified queue identity, not a generic failure.
+- Any live same-ref lease refuses the dispatch family with `queue.single-flight` and envelope-root `detail.holder`, for the same and a different holder, before any session or record.
+- An other-ref lease refuses `queue.lease-conflict`; no live lease admits the dispatch. No dispatch path reaches renewal.
 
-#### TC-QLC-041 - `queue claim` returns the same refusal and mutates nothing
+#### TC-QLC-041 - `queue claim` is holder-aware: another holder refuses, the caller's own holder renews
 
-**Objective**: Prove the second dispatch path inherits the guard through the same lease truth.
+**Objective**: Prove the claim path's two rows: another holder's same-ref lease refuses with the same identity and root detail; the caller's own holder on the same ref returns `renewed` with one record and no `detail`. A same-holder same-ref claim never refuses.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F4-2, F-4, DM-7
+**Related IDs**: AC-F4-2, AC-F4-5, F-4, DM-7
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-claim-single-flight.test.ts` (new); reuse `tests/fixtures/queue/cli/harness.ts` and `tests/fixtures/queue/leases/fence-harness.ts`
 **Tags**: @backend, @queue, @single-flight
 
 **Preconditions**:
-- Same live lease and ref as `TC-QLC-040`; capture the record-key set and lane set.
+- Store 1: live lease repository `R`, holder `lane-1`, ref `GH-241`. Store 2: live lease repository `R`, holder `lane-2`, ref `GH-241`. Capture record keys, ledger digest, derived-document bytes, and lane set for both.
+- Store 3 has a live lease on `GH-240` and no lease on `GH-241`.
 
 **Steps**:
-1. Run `queue claim GH-241 --holder lane-2 --json` and assert exit `1`, `error.code === "queue.single-flight"`, and `error.detail.holder === "lane-1"`.
-2. Assert record-key set, ledger digest, derived-document bytes, and lane set are unchanged.
-3. Assert no `queue.lease` record with operation `acquired` or `renewed` was appended.
-4. Repeat with `--holder lane-1` (the live holder) and assert the same refusal, proving identity does not bypass the per-ref guard.
-5. Assert a claim for a ref with no live lease still returns the delivered `claimed` result.
+1. Run `queue claim GH-241 --holder lane-2` against Store 1 (another holder's same-ref lease) and assert exit `1`, `error.code === "queue.single-flight"`, envelope-root `detail.holder === "lane-1"`, `error.detail` absent, and the error's six fields exactly.
+2. Assert Store 1's record-key set, ledger digest, derived-document bytes, and lane set are unchanged; assert no `queue.lease` record with operation `acquired` or `renewed` was appended and no session started.
+3. Run `queue claim GH-241 --holder lane-2` against Store 2 (the caller's own holder on the same ref) and assert exit `0`, `data.result === "renewed"`, exactly one `queue.lease` record with operation `renewed` and ref `GH-241`, no envelope-root `detail`, and no session started.
+4. Run `queue claim GH-241 --holder lane-2` against Store 3 (live lease on another ref `GH-240`) and assert `queue.lease-conflict`, the lease ref still `GH-240`, zero appends, and zero sessions; repeat under holder `lane-3` and assert the same.
+5. Run a claim for `GH-241` with no live lease and assert `claimed` (one `acquired` record); run against a stale lease and assert `taken-over` with incident evidence.
 
 **Expected Outcome**:
-- `queue claim` refuses with the same identity and detail as dispatch, and a same-holder re-claim of the active ref does not renew into a second admission.
+- Same ref + another holder → `queue.single-flight` with envelope-root `detail.holder` and zero mutation.
+- Same ref + the caller's own holder → `renewed`, exactly one renewed record, no detail, no session. There is no same-holder same-ref refusal.
+- Other ref → `queue.lease-conflict`; no lease → `claimed`; stale → `taken-over`.
 
-#### TC-QLC-042 - The composed daemon claim port inherits the per-ref guard
+#### TC-QLC-042 - The composed daemon claim port follows the dispatch family's guard
 
-**Objective**: Prove the third declared dispatch path gets the guard through the one injected claim port, without a new port.
+**Objective**: Prove the daemon supervision path is the dispatch family, not the claim path: a live same-ref lease refuses for the same or a different holder, an other-ref lease conflicts, and no new port is introduced.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
@@ -954,20 +967,23 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Tags**: @backend, @daemon, @queue, @single-flight
 
 **Preconditions**:
-- A live lease for `GH-241`; a composed `runSupervisionCycle` with an injected claim port that delegates to the delivered `claimQueueLease`, and an executor recorder.
+- A composed `runSupervisionCycle` with an injected claim port that delegates to the delivered `claimQueueLease`, and an executor recorder.
+- Variant A: live lease ref `GH-241`, holder `lane-1`. Variant B: live lease ref `GH-241`, holder `dispatch` (the dispatch family's fixed holder). Variant C: live lease ref `GH-240`.
 
 **Steps**:
-1. Run one supervision cycle whose next action names `GH-241`; assert the cycle returns a claim refusal carrying `queue.single-flight` and `detail.holder`.
-2. Assert executor starts `0`, resumes `0`, and no lane record was appended.
-3. Assert the cycle's other outcomes and exit are unchanged from a control cycle with no active lane.
-4. Assert the composition supplies exactly the delivered claim port (no second admission stage or path branch) by inspecting the composed ports object.
+1. Run one supervision cycle whose next action names `GH-241` in variant A and assert the cycle reports `queue.single-flight` with envelope-root `detail.holder === "lane-1"` and no executor start.
+2. Repeat in variant B (holder `dispatch`, same as the dispatch claimant) and assert the same refusal with `detail.holder === "dispatch"`, proving the daemon path follows the dispatch row rather than the claim renewal.
+3. In variant C, request `GH-241` while the live lease records `GH-240`; assert `queue.lease-conflict` and that the lease's ref is unchanged.
+4. Assert executor starts `0`, resumes `0`, lane records `0`, queue appends `0`, and events `0` for both refusal variants.
+5. Run a control cycle with no live lease and assert the delivered claimed/proceed path, and a stale-lease variant and assert takeover with incident evidence.
+6. Assert the composition supplies exactly the delivered claim port (no second admission stage or path branch) by inspecting the composed ports object.
 
 **Expected Outcome**:
-- The daemon path inherits the same refusal through the same port; no session starts and no new port exists.
+- The daemon path has the dispatch family's outcomes for every holder/ref pair; no session starts and no new port exists. Only the dispatch-family refusal applies to a live same-ref lease.
 
-#### TC-QLC-043 - A stale lease takes over instead of refusing
+#### TC-QLC-043 - A stale lease takes over instead of refusing on either path
 
-**Objective**: Prove the guard uses the delivered liveness predicate, so a crashed session cannot block the ref past its TTL.
+**Objective**: Prove the guard uses the delivered liveness predicate on both the dispatch family and `queue claim`, so a crashed session cannot block the ref past its TTL.
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
@@ -981,43 +997,43 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 - A lease for `GH-241` with heartbeat age exactly at the TTL and one above it; no live holder process.
 
 **Steps**:
-1. Admit a dispatch/claim for `GH-241` and assert it is **not** refused with `queue.single-flight`.
-2. Assert the result is the delivered `taken-over` operation and the lease record names the new holder/ref.
-3. Assert the `lease-stale-takeover` incident evidence is appended exactly as delivered.
-4. Assert exactly one `queue.lease` append and zero removal/queue-entry appends.
-5. Repeat at one millisecond below TTL and assert `queue.single-flight` is returned instead.
+1. Run `dispatch run GH-241` with the at-TTL lease and assert it is **not** refused with `queue.single-flight`; assert `taken-over`, the new lease record, the `lease-stale-takeover` incident evidence, and that the dispatch proceeds.
+2. Run `queue claim GH-241 --holder lane-2` with the at-TTL lease and assert `taken-over` with incident evidence and no session.
+3. Repeat at one millisecond below TTL: dispatch on the same ref → `queue.single-flight`; `queue claim` on the same ref under another holder → `queue.single-flight`; `queue claim` under the caller's own holder → `renewed` (control), proving one liveness predicate and the path split.
+4. Assert exactly one `queue.lease` append per takeover and zero removal/queue-entry appends; assert the incident record is the delivered shape.
 
 **Expected Outcome**:
-- At or over TTL is stale and takes over; below TTL is active and refuses. One liveness definition, no second opinion.
+- At or over TTL is stale and takes over on both paths; below TTL the dispatch family refuses any same-ref lease, the claim path refuses another holder's and renews the caller's own. One liveness definition, no second opinion.
 
-#### TC-QLC-044 - Same-holder different-ref refuses; same-ref still renews
+#### TC-QLC-044 - Other-ref leases conflict; same-ref own-holder renewal and the direct seam are unchanged
 
-**Objective**: Prove the disclosed narrowing in both directions and that a same-holder claim can no longer rewrite the lease's ref.
+**Objective**: Prove AC-F4-5 across both paths and both holders, and preserve the delivered direct-claim same-holder/same-ref renewal and its controls.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F4-5, F-4, DEC-13, RSK-3
+**Related IDs**: AC-F4-5, AC-F4-2, F-4, DEC-13, RSK-3
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-lease-renewal-narrowing.test.ts` (new); reuse `tests/fixtures/queue/leases/fence-harness.ts`
 **Tags**: @backend, @queue, @lease, @regression
 
 **Preconditions**:
-- A live lease for ref `A`, repository `R`, holder `H`, heartbeat below TTL.
+- A live lease for ref `A`, repository `R`, holder `H`, heartbeat below TTL; no lease on ref `B`. Dispatch requests are made as the fixed `dispatch` holder; `queue claim` requests name their holder explicitly.
 
 **Steps**:
-1. Claim ref `B`, repository `R`, holder `H`; assert exit `1` with `error.code === "queue.lease-conflict"`, naming `H` and the lease.
-2. Read the live lease and assert its `ref` is still `A`, its holder is still `H`, and no `renewed` record was appended.
-3. Claim ref `A`, repository `R`, holder `H`; assert result `renewed` and no new session (dispatch) or no second admission (claim).
-4. Assert the renewal record's `ref` is `A` and its `acquiredAt`/`leaseId` are preserved as delivered.
-5. Assert a same-holder claim for the same ref after a release returns `claimed`, not `renewed`.
+1. Run `dispatch run B` with the live lease held by `dispatch` (same holder as the dispatch claimant) and assert exit `1` with `queue.lease-conflict`; repeat with the live lease held by `lane-1` (different from `dispatch`) and assert the same; read the lease and assert its `ref` is still `A` and no `renewed` record was appended.
+2. Run `queue claim B --holder H` (same holder as the live lease) and assert `queue.lease-conflict`; repeat with `--holder lane-2` (different) and assert the same; the live lease still records `A` and no record was appended.
+3. Run `queue claim A --holder H` (same ref, caller's own holder) and assert `renewed`, exactly one `renewed` record with `ref: A`, no envelope-root `detail`, and no session.
+4. Exercise the delivered direct `claimQueueLease` seam for the same `(R, A, H)` and assert the delivered `renewed` result and payload are unchanged; run the two delivered lease controls (`queue-lease`, `queue-lease-concurrency`) unmodified.
+5. After releasing the lease, run `queue claim A --holder H` and assert `claimed`, not `renewed`.
 
 **Expected Outcome**:
-- Renewal is reachable only for the same `(repository, ref, holder)`; any other combination refuses with the delivered conflict identity and leaves the lease naming the running ref.
+- An other-ref live lease refuses with `queue.lease-conflict` on dispatch and claim, under same or different holder, and never rewrites the lease's ref.
+- The same-ref own-holder claim still renews; the direct claim seam and both delivered controls are unchanged; a released lease is claimed anew.
 
-#### TC-QLC-045 - A guard refusal is byte-identical and its detail is bounded
+#### TC-QLC-045 - A refusal is byte-identical, its detail is root-scoped and bounded, and the error stays six fields
 
-**Objective**: Prove AC-F4-6 and DM-7 together: the refusal is inert and the holder evidence is bounded identifiers only.
+**Objective**: Prove AC-F4-6, DM-7 and TDR-0027 together: every refusal is inert; the holder sits in the envelope-root optional `detail`; `CommandResultError` keeps exactly six fields; `error.detail` is absent; an own-holder renewal carries no detail.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1028,17 +1044,20 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Tags**: @backend, @queue, @purity, @privacy
 
 **Preconditions**:
-- A live lease; a recording store and projection; a snapshot of record count, derived-document bytes, lane set, event stream, and socket connections.
+- A live lease for `GH-241`; a recording store and projection; a snapshot of record count, derived-document bytes, lane set, event stream, and socket connections. Variants: dispatch (any holder) and `queue claim` from another holder; a control own-holder claim.
 
 **Steps**:
-1. Refuse a dispatch and a claim; assert both snapshots are identical (record count, document bytes, lane set, event count, socket count).
-2. Assert `detail.holder` length is ≤128 and contains no newline, credential-shaped token, session id, prompt, diff, or repository path.
-3. Assert the detail is a string (single line) and that `Object.keys(detail)` is exactly `["holder"]` where the envelope exposes a detail object; if the delivered shape renders it in the error text, assert the same tokens and bounds.
-4. Assert the remediation hint is present and actionable (names the holder-lane concept).
-5. Assert no attempt, lease, lane, queue, or capsule record was appended.
+1. Refuse a dispatch on `GH-241` (live holder `lane-1`, requester `dispatch`) and a `queue claim GH-241 --holder lane-2` (live holder `lane-1`); assert both snapshots are identical (record count, document bytes, lane set, event count, socket count).
+2. Assert each failure envelope's root has an optional `detail` object whose keys are exactly `["holder"]`, `detail.holder === "lane-1"`, `Object.keys(error)` is exactly the six `CommandResultError` fields, and `error.detail` is `undefined`/absent.
+3. Assert `detail.holder` is ≤128 characters, single line, and contains no credential-shaped token, session id, prompt, diff, repository path, or provider payload.
+4. Assert the exit is `1` from the row's `user-validation` projection and the remediation hint is present.
+5. Run the control `queue claim GH-241 --holder lane-1` (own holder) and assert `renewed`, no envelope-root `detail`, no session, and a snapshot differing only by the one `renewed` record.
+6. Refuse a non-single-flight failure (for example `queue.entry.unobserved`) and assert it has no envelope-root `detail`, proving the slot is opt-in.
+7. Assert no attempt, lane, queue, or capsule record was appended by either refusal.
 
 **Expected Outcome**:
 - The refusal changes nothing observable and leaks nothing beyond the bounded holder identity.
+- The holder is at the envelope root only for `queue.single-flight`; the shared error remains exactly six fields and `error.detail` never exists; the own-holder renewal carries no detail.
 
 #### TC-QLC-050 - A `done` entry is removed with `reconciled`
 
@@ -1369,30 +1388,32 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Expected Outcome**:
 - The comparison is bidirectional and per kind; a hand-written payload that drifts in either direction fails naming the kind and key.
 
-#### TC-QLC-064 - The four `remove`-unemitted pins move together, two-sided
+#### TC-QLC-064 - The six `remove`-emission pins move together, two-sided
 
-**Objective**: Prove RSK-7/DEC-14: the pins are updated as equalities in one delivery, not relaxed or partially moved.
+**Objective**: Prove RSK-7/DEC-14 and R-04: all six remove-emission pins are updated as equalities in one delivery, including the runtime emitted-set and the projection source scan; none is relaxed or partially moved.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F6-3, F-6, DEC-14, RSK-7
+**Related IDs**: AC-F6-3, AC-F6-4, F-6, DEC-14, RSK-7
 **Test Type(s)**: Unit, Contract, Regression
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/event-taxonomy-declaration.test.ts`, `tests/structure/event-taxonomy-additive.test.ts`, `tests/checks/event-taxonomy-conformance.test.ts`, `tests/behaviour/events-describe.test.ts` (all extend)
+**Target Layer / Location**: `tests/structure/event-taxonomy-declaration.test.ts`, `tests/structure/event-taxonomy-additive.test.ts`, `tests/checks/event-taxonomy-conformance.test.ts`, `tests/behaviour/events-describe.test.ts`, `tests/behaviour/events-emitted-kinds.test.ts` (runtime set and source scan; all extend)
 **Tags**: @backend, @contract, @regression, @pins
 
 **Preconditions**:
-- The four delivered pin sites are enumerated in §7.1; each currently asserts the old truth.
+- The six remove-emission pin sites are enumerated in §7.1 rows 1–6; each currently asserts the old truth.
 
 **Steps**:
-1. Declaration pin: assert the non-emitted list deep-equals `[]`; assert `remove.emitted === true`.
-2. Additive pin: assert the emitted `(topic, kind)` set equals every declared kind (`emitted === true` for all) and that a `remove` event *is* observed after a real removal; assert the old `emitted === (kind !== "remove")` predicate is gone.
+1. Declaration pin: assert the non-emitted list deep-equals `[]`; assert `remove.emitted === true` and the declared kind order/payload list are unchanged.
+2. Additive pin: assert `declared.size` is `13` (was `12`) and `scriptedFrames(TAXONOMY).length` is `13` (was `12`); assert the emitted `(topic, kind)` set equals every declared kind (`emitted === true` for all) and that a `remove` event *is* observed exactly once after a real removal; assert the old `emitted === (kind !== "remove")` predicate is gone.
 3. Conformance pin: assert the live surface reports `emitted: true` and the exact payload list; assert no "not emitted" text remains for `remove`.
-4. Describe pin: assert the printed non-emitted list is empty and `remove` renders as an emitted kind.
-5. Assert each pin uses equality (`toEqual`/`deepEqual`) on the full value, not `toContain`, a length check, or a subset; assert no pin is deleted or skipped.
+4. Describe pin: assert the printed non-emitted list deep-equals `[]`, `remove` renders as an emitted kind, and the `events-describe-queue-graph.txt` golden line reads `remove  emitted  payload=ref,reason,recordedAt`.
+5. Runtime emitted-set pin: assert `events-emitted-kinds.test.ts` observes `remove` and that its runtime set equals every declared emitted kind; assert the fixture removal yields exactly one `remove` frame.
+6. Source-scan pin: assert the exact positive form — `event-projection.ts` is the one module that produces the `"remove"` literal, the other scanned modules remain literal-free, and the fixture path yields exactly one `remove` frame; assert the old `not.toContain('"remove"')` assertion is not deleted or narrowed to a broad negative.
+7. Assert each pin uses equality (`toEqual`/`deepEqual`) on the full value or an exact source assertion, not `toContain`, a length check, or a subset; assert no pin is deleted or skipped.
 
 **Expected Outcome**:
-- All four pins move to the same new truth in the same delivery; a partial move or a relaxed assertion fails.
+- All six remove-emission pins move to the same new truth in the same delivery; a partial move, a deleted source scan, or a relaxed assertion fails.
 
 #### TC-QLC-065 - Each applied removal is emitted exactly once, in its own lane
 
@@ -1520,30 +1541,33 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Expected Outcome**:
 - The planning page names only delivered identities and the delivered envelope; the duplicate identities and the old envelope cannot survive.
 
-#### TC-QLC-073 - The queue error kind is exactly seven rows with the five unchanged
+#### TC-QLC-073 - The queue error kind, registry, and baseline move two-sidedly
 
-**Objective**: Move the error-row pin as a two-sided equality and prove the delivered rows did not change meaning.
+**Objective**: Move the queue error-row, registry, and error-table baseline pins as two-sided equalities and prove the delivered rows did not change meaning.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
 **Related IDs**: AC-F7-3, F-7, NFR-7, NFR-9
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/queue-scheduling-contract.test.ts` (extend); `tests/structure/error-table.test.ts` (extend); `tests/fixtures/queue/errors/references.json` (5 → 7)
+**Target Layer / Location**: `tests/structure/queue-scheduling-contract.test.ts` (extend); `tests/structure/error-table.test.ts` (extend); `tests/checks/error-table-sync.test.ts` (extend); `tests/structure/dispatch-attempts-taxonomy.test.ts` (extend registry); `tests/fixtures/queue/errors/references.json` (5 → 7); `tests/fixtures/events/error-table-baseline.json` (127 → 129)
 **Tags**: @backend, @contract, @errors, @pins
 
 **Preconditions**:
-- The delivered five rows captured as literals in the fixture, in declared order.
+- The delivered five rows captured as literals in the fixture, in declared order; the delivered 127-entry registry and baseline captured before the change.
 
 **Steps**:
 1. Assert `ERROR_TABLE.filter(e => e.domainKind === "queue").map(e => e.code)` deep-equals the seven-element fixture array in declared order: the delivered five, then `queue.reason-missing`, then `queue.single-flight`.
 2. Assert `QUEUE_ERROR_CODES` deep-equals the same array.
 3. Assert the five delivered rows' `category`, `projectionClass`, `retryable`, `consequence`, and `remediationHint` are byte-identical to their pre-change values.
-4. Assert `queue.reason-missing` is `user-validation` with exit `1`, and `queue.single-flight` is `user-validation` with exit `1` and `retryable: true`; spec v1.1 confirms retryability after the holding lane ends without changing the projection class, so the row never projects through a platform class to exit `2`.
-5. Assert no other queue row and no other domain row was added or removed.
+4. Assert `queue.reason-missing` is `user-validation` with exit `1`, and `queue.single-flight` is `user-validation` with exit `1` and `retryable: true`; TDR-0027 and spec v1.2 confirm retryability after the holding lane ends without changing the projection class, so the row never projects through a platform class to exit `2`.
+5. Assert the `dispatch-attempts-taxonomy` registry count is exactly `129` (was `127`), both new queue codes are present, and the delivered 127 entries are unchanged and in order.
+6. Assert `tests/fixtures/events/error-table-baseline.json` deep-equals the 129-entry table with the two rows added in declared order; the delivered entries are byte-identical and the comparison fails if either side is missing a row.
+7. Assert no other queue row and no other domain row was added or removed.
 
 **Expected Outcome**:
-- Exactly seven rows in order; the delivered five are unreserved and unrewritten; the two new rows have the declared class and exit.
+- Exactly seven queue rows in order; the delivered five are unreserved and unrewritten; the two new rows have the declared class and exit.
+- The registry and baseline move 127 → 129 with the same two rows; a one-sided move fails.
 
 #### TC-QLC-074 - The new flags are declared and malformed values are grammar refusals
 
@@ -1712,7 +1736,7 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 
 **Steps**:
 1. Assert the removal payload has exactly the three declared event fields and the six declared data keys; assert `reconcile` lists are each ≤100 and carry only refs, delivery-state aliases, counts, and timestamps.
-2. Assert `detail.holder` is ≤128 characters, single line, and matches an identifier pattern; assert no other new detail field exists.
+2. Assert the envelope-root `detail.holder` is ≤128 characters, single line, and matches an identifier pattern; assert `Object.keys(error)` is exactly the six fields and `error.detail` is absent.
 3. Scan the envelopes, records, events, and logs for the seeded secret shapes; assert zero matches and that no repository path, prompt, diff, or provider payload appears.
 4. Assert the reconcile credential is resolved through the declared port and that an ambient-only credential is never read (the port recorder sees the reference, not the token).
 5. Assert a token passed on the command line is refused as grammar, never echoed.
@@ -1720,30 +1744,32 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Expected Outcome**:
 - All new output is bounded and identifier-only; no secret material reaches an output, record, event, or log.
 
-#### TC-QLC-085 - The additive boundary and both inventories hold
+#### TC-QLC-085 - The additive boundary, state baseline, and CLI export pins hold
 
-**Objective**: Prove NG-8 mechanically: no package, subpath, adapter, or schema moved, and exactly two rows were added.
+**Objective**: Prove NG-8 mechanically: no package, subpath, adapter, or schema moved, exactly two rows were added, the record-kind/additivity baseline moves 5 → 6, and the CLI `commands/queue.ts` export pin moves exactly.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
 **Related IDs**: AC-NFR-6, NFR-7, NG-8
 **Test Type(s)**: Unit, Contract, Boundary
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/queue-additivity.test.ts` (new); `tests/structure/event-additivity-inventory.test.ts` (extend baseline); `tests/boundaries/boundaries.test.ts` (run); `tests/structure/queue-scheduling-contract.test.ts` (extend)
+**Target Layer / Location**: `tests/structure/queue-additivity.test.ts` (new); `tests/structure/event-additivity-inventory.test.ts` (extend baseline); `tests/fixtures/events/state-additivity-baseline.json` (record-kind/schema/prefix set); `tests/structure/cli-edge-seam.test.ts` (export list); `tests/boundaries/boundaries.test.ts` (run); `tests/structure/queue-scheduling-contract.test.ts` (extend)
 **Tags**: @backend, @contract, @boundaries, @pins
 
 **Preconditions**:
-- Baseline manifests, `STATE_SCHEMA_VERSION`, and inventory fixtures from the delivered tree.
+- Baseline manifests, `STATE_SCHEMA_VERSION`, the state-additivity baseline, and the CLI export list from the delivered tree.
 
 **Steps**:
 1. Assert package manifests, workspace globs, and declared `workspaceImports` are unchanged; assert zero new package, subpath, or provider adapter.
 2. Assert `STATE_SCHEMA_VERSION === "delivery.state.v1"` and no new record kind beyond the declared `queue.removal` addition; assert the queue record-kind declaration grows 5 → 6 by exact equality and no other kind moves.
-3. Assert the error-row inventory grows 5 → 7 by exact equality and no other row moves.
-4. Assert the export/inventory parity checks and file-set inventory equal the tree in both directions with the new modules/exports.
-5. Run the boundary suite and assert no new cross-package edge or tier violation.
+3. Assert `tests/fixtures/events/state-additivity-baseline.json` carries exactly the six queue record kinds' schema/key-prefix constant set (five delivered plus `queue.removal` / `delivery.queue.removal.v1` / `queue.removals:`) and that every other constant in the baseline is unchanged.
+4. Assert the error-row inventory grows 5 → 7 by exact equality and no other row moves.
+5. Assert `tests/structure/cli-edge-seam.test.ts` compares the exact export list of `packages/cli/src/commands/queue.ts`: the delivered exports plus the new `remove`/`reconcile` command-runtime members and their payload types, with no unrelated export and no subset check.
+6. Assert the export/inventory parity checks and file-set inventory equal the tree in both directions with the new modules/exports.
+7. Run the boundary suite and assert no new cross-package edge or tier violation.
 
 **Expected Outcome**:
-- Additive in every dimension except the two declared inventories and the one new record kind; both inventories are exact in both directions.
+- Additive in every dimension except the two declared inventories, the one new record kind, and the declared command exports; every baseline is exact in both directions.
 
 #### TC-QLC-086 - All three mutation paths converge on re-run
 
@@ -1839,13 +1865,13 @@ Every case has an automated half in `bun:test`. `New` means a new suite under th
 | TC-QLC-061 | `tests/behaviour/events-dependency-delta.test.ts` | `bun test tests/behaviour/events-dependency-delta.test.ts` | Existing – Update |
 | TC-QLC-062 | `tests/structure/event-taxonomy-declaration.test.ts`, `tests/checks/event-taxonomy-conformance.test.ts`, `tests/behaviour/events-describe.test.ts` | `bun test tests/structure/event-taxonomy-declaration.test.ts tests/checks/event-taxonomy-conformance.test.ts tests/behaviour/events-describe.test.ts` | Existing – Update |
 | TC-QLC-063 | `tests/structure/event-taxonomy-additive.test.ts`, `tests/structure/event-taxonomy-drift.test.ts` | `bun test tests/structure/event-taxonomy-additive.test.ts tests/structure/event-taxonomy-drift.test.ts` | Existing – Update |
-| TC-QLC-064 | the four pin files named in §7.1 | `bun test tests/structure/event-taxonomy-declaration.test.ts tests/structure/event-taxonomy-additive.test.ts tests/checks/event-taxonomy-conformance.test.ts tests/behaviour/events-describe.test.ts` | Existing – Update |
+| TC-QLC-064 | the six remove-emission pin sites named in §7.1 rows 1–6 | `bun test tests/structure/event-taxonomy-declaration.test.ts tests/structure/event-taxonomy-additive.test.ts tests/checks/event-taxonomy-conformance.test.ts tests/behaviour/events-describe.test.ts tests/behaviour/events-emitted-kinds.test.ts` | Existing – Update |
 | TC-QLC-065 | `tests/behaviour/events-remove.test.ts` | same as 060 | New |
 | TC-QLC-066 | `tests/behaviour/events-emitted-kinds.test.ts`, `tests/behaviour/events-dependency-delta.test.ts` | `bun test tests/behaviour/events-emitted-kinds.test.ts tests/behaviour/events-dependency-delta.test.ts` | Existing – Update |
 | TC-QLC-070 | `tests/behaviour/queue-help-lifecycle.test.ts`, `tests/behaviour/entrypoint-help.test.ts` | `bun test tests/behaviour/queue-help-lifecycle.test.ts tests/behaviour/entrypoint-help.test.ts` | New |
 | TC-QLC-071 | `tests/checks/queue-reference-page.test.ts` (new), `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/behaviour/entrypoint-help-coverage.test.ts` | `bun test tests/checks/queue-reference-page.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/behaviour/entrypoint-help-coverage.test.ts` | Existing – Update |
 | TC-QLC-072 | `tests/checks/m2-queue-page-reconciliation.test.ts` | `bun test tests/checks/m2-queue-page-reconciliation.test.ts` | New |
-| TC-QLC-073 | `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/fixtures/queue/errors/references.json` | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts` | Existing – Update |
+| TC-QLC-073 | `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/structure/dispatch-attempts-taxonomy.test.ts`, `tests/fixtures/queue/errors/references.json`, `tests/fixtures/events/error-table-baseline.json` | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts` | Existing – Update |
 | TC-QLC-074 | `tests/behaviour/queue-help-lifecycle.test.ts`, `tests/behaviour/queue-remove-refusals.test.ts` | `bun test tests/behaviour/queue-help-lifecycle.test.ts tests/behaviour/queue-remove-refusals.test.ts` | New |
 | TC-QLC-075 | `tests/checks/error-table-sync.test.ts`, `tests/checks/exit-code-literals.test.ts` | `bun test tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts` | Existing – Update |
 | TC-QLC-080 | `tests/behaviour/queue-remove-atomicity.test.ts` | `bun test tests/behaviour/queue-remove-atomicity.test.ts` | New |
@@ -1853,28 +1879,38 @@ Every case has an automated half in `bun:test`. `New` means a new suite under th
 | TC-QLC-082 | `tests/behaviour/closeout-queue-removal-cost.test.ts` | `bun test tests/behaviour/closeout-queue-removal-cost.test.ts` | New |
 | TC-QLC-083 | `tests/behaviour/queue-reconcile-read-cost.test.ts` | `bun test tests/behaviour/queue-reconcile-read-cost.test.ts` | New |
 | TC-QLC-084 | `tests/checks/queue-lifecycle-privacy.test.ts` | `bun test tests/checks/queue-lifecycle-privacy.test.ts` | New |
-| TC-QLC-085 | `tests/structure/queue-additivity.test.ts`, `tests/structure/event-additivity-inventory.test.ts`, `tests/boundaries/boundaries.test.ts` | `bun test tests/structure/queue-additivity.test.ts tests/structure/event-additivity-inventory.test.ts tests/boundaries` | Existing – Update |
+| TC-QLC-085 | `tests/structure/queue-additivity.test.ts`, `tests/structure/event-additivity-inventory.test.ts`, `tests/fixtures/events/state-additivity-baseline.json`, `tests/structure/cli-edge-seam.test.ts`, `tests/boundaries/boundaries.test.ts` | `bun test tests/structure/queue-additivity.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/cli-edge-seam.test.ts tests/boundaries` | Existing – Update |
 | TC-QLC-086 | `tests/behaviour/queue-lifecycle-convergence.test.ts` | `bun test tests/behaviour/queue-lifecycle-convergence.test.ts` | New |
 
-### 7.1 Deliberate pin migrations (two-sided, never relaxed)
+### 7.1 Canonical pin migration table (two-sided, never relaxed)
 
-The following pins fail after the behaviour lands. They are updated in the same delivery, as exact equalities. No pin is deleted, skipped, changed to `toContain`, reduced to a length check, or widened to a subset.
+This is the canonical pin set for GH-292 v1.2. It contains **six `remove`-emission pins**, **three registry/baseline pins**, **two count pins**, **one CLI export pin**, and one golden rule. Every row is a two-sided equality: the old truth is stated, the new truth is stated, and an extra or missing row must fail. No pin is deleted, skipped, changed to `toContain`, reduced to a length check, or widened to a subset. All moves land in the same delivery as the behaviour.
 
-| Pin site | Old assertion | New assertion | Guarded by |
-|---|---|---|---|
-| `tests/structure/event-taxonomy-declaration.test.ts` | `expect(notEmitted).toEqual(["queue.graph/remove"])` | `expect(notEmitted).toEqual([])` and `remove.emitted === true` | TC-QLC-062, TC-QLC-064 |
-| `tests/structure/event-taxonomy-additive.test.ts` | `expect(events.some(e => e.kind === "remove")).toBe(false)`; `expect(kind.emitted).toBe(kind.name !== "remove")` | A real removal's event **is** observed; `expect(kind.emitted).toBe(true)` for every declared kind; the emitted/declared set equality remains `toEqual` in both directions | TC-QLC-063, TC-QLC-064 |
-| `tests/checks/event-taxonomy-conformance.test.ts` | `expect(remove).toEqual({ name: "remove", emitted: false, payloadFields: ["ref","reason","recordedAt"] })`; text contains `not emitted (declared; no v1 producer)` | `emitted: true`; the payload list is unchanged; the text reports it as emitted and the "not emitted" line is absent | TC-QLC-062, TC-QLC-064 |
-| `tests/behaviour/events-describe.test.ts` | `expect(unemitted).toEqual(["remove"])`; the printed non-emitted list contains `remove` | `expect(unemitted).toEqual([])`; the printed non-emitted list is empty; `remove` renders as emitted with its field list | TC-QLC-062, TC-QLC-064 |
-| `tests/fixtures/queue/errors/references.json` + `tests/structure/queue-scheduling-contract.test.ts` | `queueRows` has exactly the delivered five | `queueRows` deep-equals the delivered five **followed by** `queue.reason-missing` and `queue.single-flight`; the delivered five are byte-identical; `QUEUE_ERROR_CODES` equals the same array | TC-QLC-073 |
-| `tests/fixtures/queue/state/kinds/record-kinds.json` + `tests/structure/queue-scheduling-contract.test.ts` | `QUEUE_RECORD_DECLARATIONS` has length 5 and the five kinds in order | Length 6 and the six kinds in declared order with `queue.removal` / `delivery.queue.removal.v1` / `queue.removals:` appended; the delivered five entries are byte-identical; `STATE_SCHEMA_VERSION` and the derived-document schema/name are unchanged | TC-QLC-073, TC-QLC-085 |
-| `tests/golden/queue-{list,plan,ready,envelope}.test.ts` and `tests/fixtures/queue/golden/*` | Delivered golden outputs for a queue with no removals | The no-removal goldens are byte-identical; new removal cases get new golden files (no edit to the delivered ones) | TC-QLC-001, TC-QLC-009, TC-QLC-010 |
+| # | Group / count | Pin site | Old assertion → new assertion | Guarded by |
+|---|---|---|---|---|
+| 1 | remove-emission (6) | `tests/structure/event-taxonomy-declaration.test.ts` | Non-emitted list is exactly `["queue.graph/remove"]` → exactly `[]`; `queue.graph/remove` is declared with `emitted: true`; the four-kind order and payload list are unchanged | TC-QLC-062, TC-QLC-064 |
+| 2 | remove-emission (6) | `tests/structure/event-taxonomy-additive.test.ts` | `declared.size` 12 → 13, `scriptedFrames(TAXONOMY).length` 12 → 13; `events.some(e => e.kind === "remove") === false` → a real removal's event is observed exactly once; `emitted === (kind !== "remove")` → `emitted === true` for every declared kind; the emitted/declared set equality stays `toEqual` in both directions | TC-QLC-063, TC-QLC-064 |
+| 3 | remove-emission (6) | `tests/checks/event-taxonomy-conformance.test.ts` | Live surface pins `remove` with `emitted: false` and the text prints `not emitted (declared; no v1 producer)` → `emitted: true`, `payloadFields` still exactly `["ref","reason","recordedAt"]`, the line reads as emitted, and no "not emitted" line remains | TC-QLC-062, TC-QLC-064 |
+| 4 | remove-emission (6) | `tests/behaviour/events-describe.test.ts` + `tests/fixtures/events/goldens/events-describe-queue-graph.txt` | Printed non-emitted list is exactly `["remove"]` and the golden line reads `remove  not emitted (…)  payload=ref,reason,recordedAt` → exactly `[]`, the printed list is empty, and the golden line reads `remove  emitted  payload=ref,reason,recordedAt`; `remove` renders as emitted with its declared field list | TC-QLC-062, TC-QLC-064 |
+| 5 | remove-emission (6) | `tests/behaviour/events-emitted-kinds.test.ts` (runtime emitted-set) | `expect(data.kind).not.toBe("remove")` and `expect(seen.has("queue.graph/remove")).toBe(false)` → the removal is observed exactly once, the expected set includes it, and the runtime set equals every declared emitted kind (all four `queue.graph` kinds) | TC-QLC-064, TC-QLC-066 |
+| 6 | remove-emission (6) | `tests/behaviour/events-emitted-kinds.test.ts` (source scan) | The scan asserts `packages/core/src/domain/event-projection.ts` never contains `"remove"` → the projection is the one allowed producer (an exact positive assertion on the producing branch), the other scanned production modules remain free of the `"remove"` literal, and the fixture path produces exactly one `remove` frame; the assertion is not deleted or narrowed to a broad `not.toContain` | TC-QLC-064 |
+| 7 | registry/baseline (3) | `tests/structure/dispatch-attempts-taxonomy.test.ts` | Registry count is `127` → exactly `129`, with `queue.reason-missing` and `queue.single-flight` present and the delivered 127 entries unchanged in order; no other row added or removed | TC-QLC-073 |
+| 8 | registry/baseline (3) | `tests/fixtures/events/error-table-baseline.json` | Baseline has 127 entries → exactly 129, with the two new queue rows added in declared order and every delivered row byte-identical; the fixture is compared both ways against the table | TC-QLC-073 |
+| 9 | registry/baseline (3) | `tests/fixtures/events/state-additivity-baseline.json` | Queue record-kind/schema/key-prefix constant set has five kinds → exactly six, adding `queue.removal` / `delivery.queue.removal.v1` / `queue.removals:`; `STATE_SCHEMA_VERSION`, the derived-document schema/name, and every other constant are unchanged | TC-QLC-085 |
+| 10 | count (2) | `tests/checks/error-table-sync.test.ts` | Queue rows are five → exactly seven with the delivered five byte-identical and the two new rows in declared order; `sourceEntries` and `documentedRows` move 127 → 129 and the documented phrase "127 identities" moves to "129 identities"; the documented table and the code table agree in both directions | TC-QLC-073, TC-QLC-075 |
+| 11 | count (2) | `tests/structure/queue-scheduling-contract.test.ts` (+ `tests/fixtures/queue/state/kinds/record-kinds.json`) | `QUEUE_RECORD_DECLARATIONS` has five kinds → exactly six, with `queue.removal` appended; the delivered five declarations are byte-identical and the array is compared as a complete value | TC-QLC-073, TC-QLC-085 |
+| 12 | CLI export (1) | `tests/structure/cli-edge-seam.test.ts` | Exact export list of `packages/cli/src/commands/queue.ts` is unchanged → the same exact list plus the new `remove`/`reconcile` command-runtime members (and their removal payload types); compare the full list as equality, never a subset, and add no unrelated export | TC-QLC-085 |
+| 13 | golden rule (1) | `tests/golden/queue-{list,plan,ready,envelope}.test.ts` + `tests/fixtures/queue/golden/*` | Existing derived-document/list/plan/ready/envelope goldens are byte-identical for a store with no removals → still byte-identical; new removal/reconcile cases get **new** golden files, and no delivered golden file is edited | TC-QLC-001, TC-QLC-007, TC-QLC-009, TC-QLC-010, TC-QLC-058 |
 
-**Rule.** Each moved pin states the new truth as a complete value (`toEqual` on the array/object), so a future addition or removal fails. "Two-sided" means both the expected inventory and the actual tree are compared; an extra row and a missing row both fail, and the delivered rows are compared literally, not by count alone.
+**Counts, stated once:** six remove-emission pins; three registry/baseline pins; two count pins; one CLI export pin; one golden rule. The spec, plan, and this test plan cite the same set.
+
+**R-09 note (decision-record index rows).** No TC in this plan asserts the `doc/decisions/00-index.md` rows, so R-09 is a plan/staging obligation rather than a test assertion. If a future TC is added for the index, it must assert **both** `TDR-0026` and `TDR-0027` appear with their records in the same commit — never one-sided (a record without its row, or a row naming an absent record).
+
+**Rule.** Each moved pin states the new truth as a complete value (`toEqual` on the array/object or an exact source assertion), so a future addition or removal fails. "Two-sided" means both the expected inventory and the actual tree are compared; an extra row and a missing row both fail, and the delivered rows are compared literally, not by count alone.
 
 ### 7.2 Gates and execution order
 
-1. **Narrow structural/contract suites** while iterating: `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-removal-contract.test.ts tests/structure/queue-additivity.test.ts tests/structure/event-taxonomy-declaration.test.ts tests/structure/event-taxonomy-additive.test.ts tests/structure/event-taxonomy-drift.test.ts tests/structure/error-table.test.ts`.
+1. **Narrow structural/contract suites** while iterating: `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/queue-removal-contract.test.ts tests/structure/queue-additivity.test.ts tests/structure/event-taxonomy-declaration.test.ts tests/structure/event-taxonomy-additive.test.ts tests/structure/event-taxonomy-drift.test.ts tests/structure/error-table.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/structure/cli-edge-seam.test.ts`.
 2. **Narrow behaviour suites** for the touched paths: the removal, closeout, dependency, single-flight, reconcile, events, and help suites named in §7.
 3. **Guard and golden suites**: `bun test tests/checks/error-table-sync.test.ts tests/checks/event-taxonomy-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/queue-reference-page.test.ts tests/checks/reference-page-parity.test.ts tests/checks/exit-code-literals.test.ts tests/checks/m2-queue-page-reconciliation.test.ts tests/checks/queue-lifecycle-privacy.test.ts` and `bun test tests/golden/queue-remove.test.ts tests/golden/queue-reconcile.test.ts`.
 4. **Boundary suite**: `bun test tests/boundaries`.
@@ -1912,7 +1948,7 @@ The following pins fail after the behaviour lands. They are updated in the same 
 | ID | Question | Blocking? | Owner | Disposition |
 |---|---|---|---|---|
 | OQ-T1 | NFR-10 requires a repeated reconcile over already-reconciled entries to remove nothing and exit 0; should AC-F5-9 be added? | Resolved | `@spec-writer` | **Resolved by spec v1.1**: AC-F5-9 now states the behaviour verbatim. `TC-QLC-058` (primary) and `TC-QLC-086` (cross-path secondary) prove it; no gap remains. |
-| OQ-T2 | Is the `queue.precondition.unmet` removal refusal's holder evidence rendered in `error.detail` as an object or in the error text (the delivered lease-conflict shape uses a detail string)? | No (delivery-bound) | `@coder` / `@reviewer` | Assert the tokens (`lease-held`, holder) and the bound; do not pin the container beyond `detail.holder` where the spec declares it (DM-7). |
+| OQ-T2 | Where does the failure envelope carry a command-declared holder detail, and does the shared error gain a `detail` field? | Resolved (TDR-0027) | `@decision-advisor` | **Resolved by TDR-0027 ALT-3**: the holder rides an additive optional envelope-root `detail` (`detail.holder`, ≤128 chars, single line); `CommandResultError` keeps exactly its six fields and `error.detail` is rejected. Only `queue.single-flight` opts in; `queue.precondition.unmet`'s `lease-held`/holder evidence stays in its bounded summary text (TDR-0026 C-6). |
 | OQ-T3 | Does the change add a live GitHub smoke for reconcile, or is the port-level proof sufficient for this milestone? | No | `@pm` / `@reviewer` | Default: port-level proof; a live smoke is opt-in and excluded from the aggregate. |
 | OQ-T4 | If OQ-1/OQ-2 in the spec resolve toward "release-and-remove" or "refuse while a dependent exists", do `TC-QLC-005` and `TC-QLC-008` need to change? | Resolved (spec v1.1) | `@decision-advisor` / `@spec-writer` | OQ-1 and OQ-2 are resolved with DEC-9 and DEC-10 adopted as recommended; the plan already follows those decisions, so `TC-QLC-005` and `TC-QLC-008` stand unchanged. |
 | OQ-T5 | The spec's AC-F7-3 says `queue.single-flight` is `user-validation`, while spec §5.1 F-7's bullet said "transient". Which category is authoritative? | Resolved | `@spec-writer` | **Resolved by spec v1.1**: F-7 prose now matches AC-F7-3 — `user-validation`, exit `1`, retryable after the holding lane ends without changing the projection class. `TC-QLC-073` keeps pinning the identity class and exit. |
@@ -1925,6 +1961,7 @@ The following pins fail after the behaviour lands. They are updated in the same 
 |---|---|---|---|
 | 1.0 | 2026-11-12 | `@test-plan-writer` | Initial test plan for GH-292 / M2-S15. 45 acceptance criteria mapped to 59 automated cases across removal, automatic closeout removal, dependency edges, per-ref single-flight, reconciliation, event publication, mount/help/errors, and the six NFR criteria. Declares the four `remove`-unemitted pin migrations, the queue error-row pin (5 → 7), the record-kind pin (5 → 6), the hermetic fixture strategy, the opt-in live-smoke boundary, and the aggregate gate `TMPDIR="$PWD/tmp/tmpdir" pnpm check`. Raises `OQ-T1` (NFR-10's missing repeated-reconcile criterion) and `OQ-T5` (the `queue.single-flight` category wording conflict). |
 | 1.1 | 2026-11-12 | `@test-plan-writer` | Aligned with spec v1.1. Added AC-F5-9 to the F-5 matrix and retargeted `TC-QLC-058` as its primary case (with `TC-QLC-086` as the cross-path secondary), adding the explicit assertions for truthful `checked`, empty `removed[]`, absence from `removed[]`/`retained[]`/`unobserved[]`, zero appends, and zero events. Counts moved 45 → 46 acceptance criteria (39 → 40 capability), F-5 now 9/9, and §3.4 integrity updated. `OQ-T1` is resolved by the added AC; `OQ-T5` is resolved because spec §5.1 F-7 now matches AC-F7-3 (`user-validation`, exit `1`, retryable without a projection-class change), and `TC-QLC-073` keeps pinning that class and exit. `OQ-1`/`OQ-2` are resolved with DEC-9/DEC-10, requiring no case change. All 59 existing TC ids remain stable; no case was added, removed, or renumbered. |
+| 1.2 | 2026-11-12 | `@test-plan-writer` | DoR iteration 1 remediation, aligned to spec v1.2, TDR-0026 DC-1..DC-6, and TDR-0027 ALT-3. **R-01:** replaced the contradictory claim/guard statements with the authored path-specific precedence — the dispatch family (`dispatch run`, composed daemon claim) refuses any live same-ref lease for the same or a different holder with `queue.single-flight`; `queue claim` renews the caller's own holder's same-ref lease (`renewed`, one record, no detail), refuses another holder's same-ref lease with `queue.single-flight`, and refuses any other-ref lease with `queue.lease-conflict`; stale leases take over on both paths. `TC-QLC-040`..`TC-QLC-045` now name the path and holder/ref pair, and no case asserts a same-holder same-ref claim refusal. **R-02:** `TC-QLC-007` and `TC-QLC-009` add the equal-`recordedAt` cells in both append orders; presence is the ledger append position (`sequence`), never timestamp text. **R-03:** every `error.detail.holder` assertion is replaced by envelope-root `detail.holder`; the shared `CommandResultError` keeps exactly six fields and `error.detail` is asserted absent; `OQ-T2` is resolved by TDR-0027. **R-04:** §7.1 is one canonical two-sided pin table with explicit counts — six remove-emission pins (including the runtime emitted-set and the `event-projection.ts` source scan), three registry/baseline pins (`dispatch-attempts-taxonomy` 127→129, `error-table-baseline.json`, `state-additivity-baseline.json`), two count pins (queue error rows 5→7, queue record kinds 5→6), one CLI export pin (`cli-edge-seam`), and the golden rule. **R-09:** no TC asserts the decision-record index rows; §7.1 records that any future such TC must assert both TDR-0026 and TDR-0027 with their records, never one-sided. Counts unchanged: 46/46 ACs, 59 TCs, no orphans. |
 
 ## 10. Test Execution Log
 
