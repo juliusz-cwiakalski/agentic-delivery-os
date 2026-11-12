@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-11T23:31:52.409Z }
   delivery_planning: { started: null, completed: 2026-11-11T23:31:59.083Z }
   dor_check: { started: null, completed: 2026-11-11T23:35:33.421Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-12T00:25:48.682Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -129,12 +129,12 @@ notes:
       exact allowlist; no phase declared that file, and the bidirectional sync
       gate cannot pass otherwise. (3) The untracked amended
       `TDR-0024-public-event-taxonomy-v1-subscribe-surface.md` was held outside
-      the tree (`tmp/tmpdir/held/`) for this commit only: a standalone
-      `commit GH-290` stages the union of every declared plan phase, so the
-      Phase-8 record would otherwise be swept into Phase 1 with a template
-      subject naming it as an invented tracker reference. It is restored before
-      the Phase-8 commit that declares it. Citation nits N-1..N-3 from DoR
-      iteration 4 remain open for their owning phases.
+      the tree (`tmp/tmpdir/held/`) for this commit only: a standalone `commit
+      GH-290` stages the union of every declared plan phase, so the Phase-8
+      record would otherwise be swept into Phase 1 with a template subject
+      naming it as an invented tracker reference. It is restored before the
+      Phase-8 commit that declares it. Citation nits N-1..N-3 from DoR iteration
+      4 remain open for their owning phases.
     type: "info"
     date: "2026-11-12"
   - text: >-
@@ -152,17 +152,17 @@ notes:
       composer supplies it unconditionally (`events: {}`), so the family is
       composed but not yet prompt-required (that is Phase 5). Goldens for the
       table and both representative pages are committed under
-      tests/fixtures/events/goldens with a generation header; TC-EVT-010..016 and
-      TC-EVT-080 are implemented. Gate: `pnpm typecheck` green; the seven-suite
-      Phase-2 batch reports 64 pass / 0 fail (p95 for all four forms 0.02-0.09
-      ms); content-inventory green; exports-parity, workspace-entrypoints, and
-      ambient-globals all OK. Deviations: the delivered `cli-edge-seam` suite's
-      optional-human-text declarer list gains `events.ts` (a membership row that
-      follows the new renderer, no assertion relaxed) and, as recorded for
-      Phase 1, commit subjects come from the primitive's deterministic template
-      over the union scope, so they name the top staged path (the same F-9
-      template-subject limitation GH-286 recorded); staging is otherwise exactly
-      this phase's declared scope.
+      tests/fixtures/events/goldens with a generation header; TC-EVT-010..016
+      and TC-EVT-080 are implemented. Gate: `pnpm typecheck` green; the
+      seven-suite Phase-2 batch reports 64 pass / 0 fail (p95 for all four forms
+      0.02-0.09 ms); content-inventory green; exports-parity,
+      workspace-entrypoints, and ambient-globals all OK. Deviations: the
+      delivered `cli-edge-seam` suite's optional-human-text declarer list gains
+      `events.ts` (a membership row that follows the new renderer, no assertion
+      relaxed) and, as recorded for Phase 1, commit subjects come from the
+      primitive's deterministic template over the union scope, so they name the
+      top staged path (the same F-9 template-subject limitation GH-286
+      recorded); staging is otherwise exactly this phase's declared scope.
     type: "info"
     date: "2026-11-12"
   - text: >-
@@ -245,8 +245,8 @@ notes:
       heading `EXTENSION PATH (S17 — not v1)` after ERRORS and before SEE ALSO
       (the v1 sections name none of the four S17 shapes). TC-EVT-060..064 are
       implemented, with eight mount negative controls plus the unedited-18-name
-      control. Gate: `pnpm typecheck` green; the ten-suite mount batch reports 56
-      pass / 0 fail, and the expanded parity/count batch 29 pass / 0 fail;
+      control. Gate: `pnpm typecheck` green; the ten-suite mount batch reports
+      56 pass / 0 fail, and the expanded parity/count batch 29 pass / 0 fail;
       `help-guide-coverage` all commands covered; `prompt-conformance` 5 prompts
       clean. Measured residual for N-1: root `--help` renders 46 lines / 1821
       bytes on this tree (the DoR note's 45 lines / 1747 bytes predates the
@@ -291,31 +291,70 @@ notes:
       Plan phase 7 complete (commit 2998ea7c): the shared tick read. The
       composition takes exactly one whole-store `readRecords()` view per publish
       tick and hands it to both snapshot folds and to the event projection:
-      `readQueueEntries`/`readDaemonLanes` gained an additive
-      `view?: readonly StateRecord[]` parameter (their own fallback is unchanged,
-      so every delivered caller still compiles), `queueWatchSnapshot`/
+      `readQueueEntries`/`readDaemonLanes` gained an additive `view?: readonly
+      StateRecord[]` parameter (their own fallback is unchanged, so every
+      delivered caller still compiles), `queueWatchSnapshot`/
       `lanesWatchSnapshot` take the view instead of the store, and
       `createWatchState.changes()` reads once and passes it to both projections.
       No port shape, wire type, record kind, schema version, or dependency
-      changed. `tests/behaviour/events-tick-cost.test.ts` (TC-EVT-081) proves one
-      read per publish pass with a fixed clock across 1 vs 5 subscribers and 2 vs
-      4 subscribed event topics, zero sleeps on the publish path, and the
+      changed. `tests/behaviour/events-tick-cost.test.ts` (TC-EVT-081) proves
+      one read per publish pass with a fixed clock across 1 vs 5 subscribers and
+      2 vs 4 subscribed event topics, zero sleeps on the publish path, and the
       advancing-clock control reading exactly 3 for the counted window (one
-      publish read plus the heartbeat's own two folds); the delivered heartbeat's
-      three append/verify reads are reported separately
-      (`publish=1 heartbeat-fold=2 delivered-append=3 total=6`) because NFR-2
-      neither counts nor bounds them. Added publish p95 measured 0.14 ms over 50
-      passes, far inside the 25 ms budget. The scoped source assertion shows the
-      composition is the only `store.readRecords(` seam, the projection never
-      reads, and both folds take the shared view. Gate: `pnpm typecheck`,
-      ambient-globals (179 files), workspace-entrypoints, and content-inventory
-      green; all 37 event suites (154 pass / 0 fail) and the ten delivered
-      control/heartbeat suites (40 pass / 0 fail) green. Deviations: (1) the
-      composition gains an additive `processBlockerAnswers?: boolean` input
-      (default true) so the control can compose the iteration with that optional
-      consumer absent, exactly the optional-port shape TC-EVT-081 names; default
-      behaviour is unchanged. (2) The spec's "two heartbeat reads" figure covers
-      the two ledger folds only; the delivered heartbeat append/verify chain adds
-      three reads that are recorded, not claimed. No gate was relaxed.
+      publish read plus the heartbeat's own two folds); the delivered
+      heartbeat's three append/verify reads are reported separately (`publish=1
+      heartbeat-fold=2 delivered-append=3 total=6`) because NFR-2 neither counts
+      nor bounds them. Added publish p95 measured 0.14 ms over 50 passes, far
+      inside the 25 ms budget. The scoped source assertion shows the composition
+      is the only `store.readRecords(` seam, the projection never reads, and
+      both folds take the shared view. Gate: `pnpm typecheck`, ambient-globals
+      (179 files), workspace-entrypoints, and content-inventory green; all 37
+      event suites (154 pass / 0 fail) and the ten delivered control/heartbeat
+      suites (40 pass / 0 fail) green. Deviations: (1) the composition gains an
+      additive `processBlockerAnswers?: boolean` input (default true) so the
+      control can compose the iteration with that optional consumer absent,
+      exactly the optional-port shape TC-EVT-081 names; default behaviour is
+      unchanged. (2) The spec's "two heartbeat reads" figure covers the two
+      ledger folds only; the delivered heartbeat append/verify chain adds three
+      reads that are recorded, not claimed. No gate was relaxed.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 8 complete (commit 3090f1c7): documentation reconciliation, the
+      amended decision record, the changeset, and the release obligations. The
+      AMENDED
+      `doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md`
+      (status `Proposed`, DC-1..DC-5 plus the Amendments table) is staged in
+      this phase-mode commit, exactly as the plan's staging contract declares;
+      it is never committed unchanged and its acceptance stays with the owner at
+      the pull-request review. The reconciled pages are the resident-daemon page
+      (the six-topic taxonomy, the shape split with `kinds: []`, the eight-field
+      envelope with per-topic `lane`/`ref`, per-lane sequence and gap-to-repoll,
+      the cursor exclusion, the additive overflow stamps, the integrity rule,
+      the acceptance-to-refusal refusal identity, and the one-shared-read tick),
+      the entrypoint and agents-and-commands pages (the `events` composition row
+      and the corrected 19-name allowed set including the previously omitted
+      `projects`), the glossary (taxonomy, envelope, sequence,
+      overflow-to-repoll, and version terms), the architecture overview, the
+      result-contract page's prose and kind enumeration, the M2 entrypoint delta
+      and README, the CLI command registry, the M2-S13 backlog row (`Progress:
+      delivered by GH-290`), and
+      `doc/quality/test-specs/test-spec-resident-daemon.md`, which is authored
+      here so the taxonomy coverage lands with the pages it describes. One
+      lockstep minor changeset covers the five publishables; testkit is excluded
+      and the fixed group validates. Gate: the doc/coverage/parity/
+      decision/error-table-sync suites report 117 pass / 0 fail;
+      `prompt-conformance`, `error-table-sync` (127 documented),
+      `forbidden-literals`, `test-doc-distribution.sh`, and `changesets-group`
+      are green; `TMPDIR=$PWD/tmp/tmpdir pnpm check` passes end to end with
+      **7530 pass, 4 skip, 0 fail, 64689 expect() calls across 7534 tests in 952
+      files**; `./scripts/lint-commit-range.sh --base main-tools` reports PASS
+      over 21 commits with 0 offending; `git diff --check` is clean. Deviations:
+      the delivered count assertions in `tests/checks/error-table-sync.test.ts`
+      moved 124 -> 127 and `BASELINE + 90` -> `BASELINE + 93` (count-only mount
+      rows the plan's §8.5 derived edit set covers), disclosed by the primitive
+      as scope drift; the `projects list` help entry was restored after an
+      editing slip and is verified by the GH-288 suite. No test was weakened.
+      Not pushed and no pull request opened; the PM owns phase 11.
     type: "info"
     date: "2026-11-12"
