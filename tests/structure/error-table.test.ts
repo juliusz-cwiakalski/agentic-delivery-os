@@ -90,6 +90,9 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "queue.lease-conflict",
   "queue.park-condition-stuck",
   "queue.entry.unobserved",
+  // GH-292 pins the two new two-segment queue identities exactly.
+  "queue.reason-missing",
+  "queue.single-flight",
   // GH-238 pins the eight resident-daemon identities exactly.
   "daemon.already-running",
   "daemon.takeover-refused",
@@ -804,7 +807,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(127);
+    expect(entries).toHaveLength(129);
   });
 });
 
@@ -880,7 +883,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(127);
+    expect(entries).toHaveLength(129);
     expect(db).toHaveLength(4);
   });
 
@@ -1114,7 +1117,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(127);
+    expect(entries).toHaveLength(129);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1388,7 +1391,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(44);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(46);
   });
 });
 
@@ -1715,7 +1718,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(127);
+    expect(entries).toHaveLength(129);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1808,7 +1811,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(126);
+    expect(delivered).toHaveLength(128);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1827,7 +1830,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("127 identities");
+    expect(doc).toContain("129 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -1838,11 +1841,12 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 });
 
 /**
- * TC-VOCAB-002 (GH-237): the `queue` kind declares exactly the five Appendix F
- * rows, each synced into the documented table, and the collector-id set grew by
- * exactly one id without touching the family shape.
+ * TC-VOCAB-002 (GH-237): the `queue` kind declares the Appendix F rows, each
+ * synced into the documented table, and the collector-id set grew by exactly
+ * one id without touching the family shape. GH-292 appends the two lifecycle
+ * identities after the delivered five, which stay byte-identical.
  */
-describe("TC-VOCAB-002 the queue kind declares exactly five rows", () => {
+describe("TC-VOCAB-002 the queue kind declares exactly seven rows", () => {
   const QUEUE_ROWS = [
     [
       "queue.dependency-cycle",
@@ -1879,9 +1883,23 @@ describe("TC-VOCAB-002 the queue kind declares exactly five rows", () => {
       "Resolve the named blocking precondition (an operator hold, readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
       "A claim precondition was not met.",
     ],
+    [
+      "queue.reason-missing",
+      "user",
+      false,
+      "Supply `--reason` with one of the declared values (landed, abandoned, superseded, reconciled) and retry; nothing was appended.",
+      "A queue removal requires a declared reason.",
+    ],
+    [
+      "queue.single-flight",
+      "transient",
+      true,
+      "Wait for the named holder's lane to end, then retry; no session, lease record, attempt, or event was created.",
+      "The requested ref already has an active lane.",
+    ],
   ] as const;
 
-  test("the five rows carry their declared classification and round-trip", () => {
+  test("the seven rows carry their declared classification and round-trip", () => {
     expect(DOMAIN_KINDS).toContain("queue");
     const queue = entries.filter((entry) => entry.domainKind === "queue");
     expect(queue.map((entry) => entry.code)).toEqual(QUEUE_ROWS.map(([code]) => code));

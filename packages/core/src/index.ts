@@ -89,6 +89,12 @@ export {
   runDispatch,
 } from "./app/dispatch.js";
 export {
+  type DispatchAttemptsReadInput,
+  type DispatchAttemptsReadPorts,
+  type DispatchAttemptsReadResult,
+  readDispatchAttemptHistory,
+} from "./app/dispatch-attempts.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
@@ -98,12 +104,6 @@ export {
   revertDispatchHandoverEvidence,
   summarizeDispatchEvidence,
 } from "./app/dispatch-gate.js";
-export {
-  type DispatchAttemptsReadInput,
-  type DispatchAttemptsReadPorts,
-  type DispatchAttemptsReadResult,
-  readDispatchAttemptHistory,
-} from "./app/dispatch-attempts.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -173,6 +173,8 @@ export {
   type QueueActiveLeaseRead,
   type QueueClaimOutcome,
   type QueueClaimResult,
+  type QueueDependencyRemovalOutcome,
+  type QueueDependencyRemovalResult,
   type QueueIntentFailure,
   type QueueIntentOutcome,
   type QueueIntentResult,
@@ -184,12 +186,15 @@ export {
   type QueueReadReason,
   type QueueReleaseOutcome,
   type QueueReleaseResult,
+  type QueueRemovalMutationResult,
+  type QueueRemovalOutcome,
   queueDependencyRecordKey,
   queueEntryRecordKey,
   queueGraphDocumentPath,
   queueIncidentRecordKey,
   queueLeaseRecordKey,
   queueParkRecordKey,
+  queueRemovalRecordKey,
   type ResidentPolling,
   type ResidentPollingInput,
   readActiveLeases,
@@ -201,10 +206,13 @@ export {
   readQueueLeases,
   readQueueParkPass,
   readQueueParks,
+  readQueueRemovals,
   readRuntimeHeartbeat,
   readRuntimeInstance,
   recoverQueueParks,
   releaseQueueLease,
+  removeQueueDependency,
+  removeQueueEntry,
 } from "./app/index.js";
 /**
  * The `projects list` projections (GH-288 F-3, F-4, F-5, DEC-6, DEC-7, DEC-8):
@@ -751,6 +759,7 @@ export {
   type QueueParkEvaluationState,
   type QueueParkPass,
   type QueuePlanFact,
+  type QueuePresenceFacts,
   type QueueProviderFact,
   type QueueReadiness,
   type QueueSchedule,
@@ -760,6 +769,8 @@ export {
   type QueueWeightResolution,
   type QueueWorkItemFact,
   queueGraphDocument,
+  queuePresenceFacts,
+  queueRefPresent,
   type RequiredJobEvaluation,
   rankBlockerQuestions,
   rankClassIndex,

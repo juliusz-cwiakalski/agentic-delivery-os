@@ -30,6 +30,7 @@ import {
   QUEUE_DEFAULT_PRIORITY,
   QUEUE_DEGRADATION_REASONS,
   QUEUE_DEPENDENCY_KEY_PREFIX,
+  QUEUE_DEPENDENCY_MUTATION_RESULTS,
   QUEUE_DEPENDENCY_RECORD_KIND,
   QUEUE_DEPENDENCY_SCHEMA,
   QUEUE_ENTRY_KEY_PREFIX,
@@ -74,8 +75,14 @@ import {
   QUEUE_PARK_SCHEMA,
   QUEUE_PRECEDENCE_STEP_IDS,
   QUEUE_RANK_CLASSES,
+  QUEUE_RECONCILE_RESULTS,
   QUEUE_RECORD_DECLARATIONS,
   QUEUE_RELEASE_RESULTS,
+  QUEUE_REMOVAL_KEY_PREFIX,
+  QUEUE_REMOVAL_REASONS,
+  QUEUE_REMOVAL_RECORD_KIND,
+  QUEUE_REMOVAL_RESULTS,
+  QUEUE_REMOVAL_SCHEMA,
   QUEUE_SCHEMA_VERSION,
   QUEUE_STUCK_PARK_FINDING_CODE,
   QUEUE_WEIGHT_CLASS_SOURCES,
@@ -98,6 +105,11 @@ type ClosedSets = {
   parkConditionTypes: string[];
   parkCauses: string[];
   parkPairing: Array<{ cause: string; conditionType: string }>;
+  removalReasons: string[];
+  removalResults: string[];
+  mutationResults: string[];
+  dependencyMutationResults: string[];
+  reconcileResults: string[];
   recoveryStates: string[];
   incidentTypes: string[];
   laneStates: string[];
@@ -270,8 +282,8 @@ describe("TC-VOCAB-005 / TC-HOLDQUEUE-011 / TC-HOLDNEG-002 closed sets are exact
 });
 
 describe("TC-VOCAB-001 record kinds and the derived document", () => {
-  test("exactly five additive kinds plus one derived document, with declared keys", () => {
-    expect(QUEUE_RECORD_DECLARATIONS).toHaveLength(5);
+  test("exactly six additive kinds plus one derived document, with declared keys", () => {
+    expect(QUEUE_RECORD_DECLARATIONS).toHaveLength(6);
     const declared = recordKinds.records;
     for (const expected of declared) {
       const declaration = QUEUE_RECORD_DECLARATIONS.find(
@@ -289,6 +301,7 @@ describe("TC-VOCAB-001 record kinds and the derived document", () => {
       QUEUE_LEASE_RECORD_KIND,
       QUEUE_PARK_RECORD_KIND,
       QUEUE_INCIDENT_RECORD_KIND,
+      QUEUE_REMOVAL_RECORD_KIND,
     ]).toEqual(declared.map((record) => record.kind));
     expect([
       QUEUE_ENTRY_SCHEMA,
@@ -296,6 +309,7 @@ describe("TC-VOCAB-001 record kinds and the derived document", () => {
       QUEUE_LEASE_SCHEMA,
       QUEUE_PARK_SCHEMA,
       QUEUE_INCIDENT_SCHEMA,
+      QUEUE_REMOVAL_SCHEMA,
     ]).toEqual(declared.map((record) => record.payloadSchema));
     expect([
       QUEUE_ENTRY_KEY_PREFIX,
@@ -303,6 +317,7 @@ describe("TC-VOCAB-001 record kinds and the derived document", () => {
       QUEUE_LEASE_KEY_PREFIX,
       QUEUE_PARK_KEY_PREFIX,
       QUEUE_INCIDENT_KEY_PREFIX,
+      QUEUE_REMOVAL_KEY_PREFIX,
     ]).toEqual(declared.map((record) => record.keyPrefix));
     expect(QUEUE_GRAPH_SCHEMA).toBe(recordKinds.derivedDocument.schema);
     expect(QUEUE_GRAPH_DOCUMENT_NAME).toBe(recordKinds.derivedDocument.name);
@@ -321,10 +336,14 @@ describe("TC-VOCAB-001 record kinds and the derived document", () => {
     }
     expect(QUEUE_SCHEMA_VERSION).toBe("delivery.queue.v1");
     expect(QUEUE_LANES_SCHEMA_VERSION).toBe("delivery.lanes.v1");
-    expect([...QUEUE_MUTATION_RESULTS]).toEqual(["added", "updated", "noop"]);
+    expect([...QUEUE_MUTATION_RESULTS]).toEqual(closedSets.mutationResults);
     expect([...QUEUE_CLAIM_RESULTS]).toEqual(["claimed", "renewed", "taken-over"]);
     expect([...QUEUE_RELEASE_RESULTS]).toEqual(["released", "parked", "noop"]);
     expect([...QUEUE_DEGRADATION_REASONS]).toEqual(["daemon-unreachable"]);
+    expect([...QUEUE_REMOVAL_REASONS]).toEqual(closedSets.removalReasons);
+    expect([...QUEUE_REMOVAL_RESULTS]).toEqual(closedSets.removalResults);
+    expect([...QUEUE_DEPENDENCY_MUTATION_RESULTS]).toEqual(closedSets.dependencyMutationResults);
+    expect([...QUEUE_RECONCILE_RESULTS]).toEqual(closedSets.reconcileResults);
   });
 
   test("queue.park carries clearObservedAt and recoveryState from its first write", () => {
@@ -333,10 +352,21 @@ describe("TC-VOCAB-001 record kinds and the derived document", () => {
     expect(park?.fields).toContain("recoveryState");
     expect(park?.vocabularies?.recoveryState).toEqual(closedSets.recoveryStates);
   });
+
+  test("queue.removal declares the reason-bearing tombstone with its closed vocabulary", () => {
+    const removal = QUEUE_RECORD_DECLARATIONS.find((entry) => entry.kind === "queue.removal");
+    expect(removal).toMatchObject({
+      payloadSchema: "delivery.queue.removal.v1",
+      keyPrefix: "queue.removals:",
+      identityField: "ref",
+    });
+    expect(removal?.fields).toEqual(["schema", "ref", "reason", "recordedAt", "callerPrincipal"]);
+    expect(removal?.vocabularies?.reason).toEqual(closedSets.removalReasons);
+  });
 });
 
 describe("TC-VOCAB-002 / TC-VOCAB-003 error identities stay synchronized", () => {
-  test("the machine table carries the five rows and fixtures reference them", () => {
+  test("the machine table carries the seven rows and fixtures reference them", () => {
     const queueRows = ERROR_TABLE.filter((entry) => entry.domainKind === "queue");
     expect(queueRows.map((entry) => entry.code)).toEqual(errorsFixture.queueRows);
     expect([...QUEUE_ERROR_CODES]).toEqual(errorsFixture.queueRows);

@@ -93,6 +93,12 @@ export {
   runDispatch,
 } from "./dispatch.js";
 export {
+  type DispatchAttemptsReadInput,
+  type DispatchAttemptsReadPorts,
+  type DispatchAttemptsReadResult,
+  readDispatchAttemptHistory,
+} from "./dispatch-attempts.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
@@ -102,12 +108,6 @@ export {
   revertDispatchHandoverEvidence,
   summarizeDispatchEvidence,
 } from "./dispatch-gate.js";
-export {
-  type DispatchAttemptsReadInput,
-  type DispatchAttemptsReadPorts,
-  type DispatchAttemptsReadResult,
-  readDispatchAttemptHistory,
-} from "./dispatch-attempts.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -192,6 +192,8 @@ export {
   type QueueActiveLeaseRead,
   type QueueClaimOutcome,
   type QueueClaimResult,
+  type QueueDependencyRemovalOutcome,
+  type QueueDependencyRemovalResult,
   type QueueGraphEdge,
   type QueueGraphFold,
   type QueueIntentFailure,
@@ -205,12 +207,15 @@ export {
   type QueueReadReason,
   type QueueReleaseOutcome,
   type QueueReleaseResult,
+  type QueueRemovalMutationResult,
+  type QueueRemovalOutcome,
   queueDependencyRecordKey,
   queueEntryRecordKey,
   queueGraphDocumentPath,
   queueIncidentRecordKey,
   queueLeaseRecordKey,
   queueParkRecordKey,
+  queueRemovalRecordKey,
   readActiveLeases,
   readQueueDependencies,
   readQueueEntries,
@@ -219,8 +224,11 @@ export {
   readQueueLeases,
   readQueueParkPass,
   readQueueParks,
+  readQueueRemovals,
   recoverQueueParks,
   releaseQueueLease,
+  removeQueueDependency,
+  removeQueueEntry,
 } from "./queue.js";
 /**
  * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
@@ -244,11 +252,11 @@ export {
   projectStateRoot,
   projectsContainerPath,
   resolveHostStateRoot,
-  stateScopeEnvironmentName,
   resolveProjectScope,
   type StateScopeRoots,
   sanitizeProjectBasename,
   serializeProjectIdentityMarker,
+  stateScopeEnvironmentName,
   stateScopeRoots,
   unboundStateRoot,
 } from "./state-scope.js";

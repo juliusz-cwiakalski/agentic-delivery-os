@@ -1233,6 +1233,28 @@ export const ERROR_TABLE = [
     summary: "A claim precondition was not met.",
   },
   {
+    code: "queue.reason-missing",
+    domainKind: "queue",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Supply `--reason` with one of the declared values (landed, abandoned, superseded, reconciled) and retry; nothing was appended.",
+    projectionClass: "user-validation",
+    summary: "A queue removal requires a declared reason.",
+  },
+  {
+    code: "queue.single-flight",
+    domainKind: "queue",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for the named holder's lane to end, then retry; no session, lease record, attempt, or event was created.",
+    projectionClass: "user-validation",
+    summary: "The requested ref already has an active lane.",
+  },
+  {
     code: "blockers.invalid-type",
     domainKind: "blockers",
     category: "user",

@@ -14,6 +14,10 @@ import type {
   QUEUE_LEASE_SCHEMA,
   QUEUE_PARK_SCHEMA,
   QUEUE_RANK_CLASSES,
+  QUEUE_REMOVAL_REASONS,
+  QUEUE_REMOVAL_RECORD_KIND,
+  QUEUE_REMOVAL_RESULTS,
+  QUEUE_REMOVAL_SCHEMA,
   QUEUE_WEIGHT_CLASSES,
   QueueGraphEntry,
   QueueLaneIdleReason,
@@ -24,6 +28,7 @@ import type {
   QueueParkConditionType,
   QueueParkRecoveryState,
   QueueRankClass,
+  QueueRemovalReason,
   QueueWeightClass,
   QueueWeightClassSource,
 } from "../../packages/core/src/contracts/index";
@@ -70,6 +75,17 @@ type EntrySchemaLiteral = Expect<Equal<typeof QUEUE_ENTRY_SCHEMA, "delivery.queu
 type LeaseSchemaLiteral = Expect<Equal<typeof QUEUE_LEASE_SCHEMA, "delivery.queue.lease.v1">>;
 type ParkSchemaLiteral = Expect<Equal<typeof QUEUE_PARK_SCHEMA, "delivery.queue.park.v1">>;
 type GraphSchemaLiteral = Expect<Equal<typeof QUEUE_GRAPH_SCHEMA, "delivery.queue.graph.v1">>;
+type RemovalKindLiteral = Expect<Equal<typeof QUEUE_REMOVAL_RECORD_KIND, "queue.removal">>;
+type RemovalSchemaLiteral = Expect<Equal<typeof QUEUE_REMOVAL_SCHEMA, "delivery.queue.removal.v1">>;
+
+// The GH-292 removal vocabularies stay closed literal unions.
+type RemovalReasonUnion = Expect<
+  Equal<QueueRemovalReason, "landed" | "abandoned" | "superseded" | "reconciled">
+>;
+type RemovalReasonConstants = Expect<
+  Equal<(typeof QUEUE_REMOVAL_REASONS)[number], QueueRemovalReason>
+>;
+type RemovalResultConstants = Expect<Equal<(typeof QUEUE_REMOVAL_RESULTS)[number], "removed">>;
 
 // The derived graph entry folds no repository root.
 type GraphEntryHasNoRoot = Expect<
@@ -109,6 +125,11 @@ export type Probes = [
   LeaseSchemaLiteral,
   ParkSchemaLiteral,
   GraphSchemaLiteral,
+  RemovalKindLiteral,
+  RemovalSchemaLiteral,
+  RemovalReasonUnion,
+  RemovalReasonConstants,
+  RemovalResultConstants,
   GraphEntryHasNoRoot,
   typeof badRank,
   typeof badWeight,
