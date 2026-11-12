@@ -117,6 +117,29 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 2 complete (commit 86b0429e): per-ref single-flight at
+      admission, the holder-naming refusal, and the narrowed same-holder
+      renewal. TDR-0027 staged with its 00-index row in the one commit; the
+      envelope-root `detail.holder` slot delivered through the CLI edge;
+      `dispatchAdmissionRefusal` (dispatch family, one whole-store read) and
+      `claimSingleFlightRefusal` (claim path) in core; renewal narrowed to
+      `(repository, ref, holder)`; the daemon claim port carries the holder.
+      Gates: typecheck 6/6 Done; envelope-detail pins 24 pass; single-flight
+      suites 21 pass; delivered controls (queue-lease, concurrency,
+      hold-dispatch) 27 pass with no assertion change; ambient-globals OK;
+      workspace-entrypoints OK; inventories 17 pass; full suite 7696 pass with
+      TC-RELEASE-001 failing as expected mid-delivery (packages/ committed, the
+      changeset lands in phase 9; PR-time gate). Disclosed deviations: the two
+      delivered CLI-level pins that asserted the old same-ref lease-conflict
+      truth (`queue-cli.test.ts` claim case; `golden/queue-lease-conflict`
+      scenario) moved two-sided to the F-4 table's single-flight truth — the
+      golden scenario now claims an other-ref lease and its committed bytes are
+      unchanged; `daemon-compose.ts` needed no edit (the production composition
+      stays supervise-only); `result-contract.test.ts` gained only the fixture
+      key-set type annotation.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
       Plan phase 1 complete (commit 1a1d2254): contracts, fold, error rows,
       record kinds, and the mutation truth. `queue.removal` declared
       (`delivery.queue.removal.v1`, `queue.removals:<REF>`, closed four-value
