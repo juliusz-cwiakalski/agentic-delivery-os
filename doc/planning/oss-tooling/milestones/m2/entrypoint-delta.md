@@ -40,8 +40,11 @@ exit 0
   stay planned.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
   read side.
-- `events` joins the subscribe surface as the taxonomy reference; the daemon
-  publishes the versioned topics.
+- `events` was the subscribe-surface taxonomy reference. **Mounted by GH-290
+  (M2-S13):** `events list` / `events describe <topic>` is in the prompt-required
+  set (nineteen families), composed unconditionally because its runtime is the
+  compiled declaration, advertised in root `--help`, and served by the M2 events
+  page as its reference page.
 - `spend` gains the v2 breakdowns and the reconciliation disclosure.
 - `queue` keeps the delivered lease release and gains the reason-bearing entry
   removal, the `dep add` and `dep remove` grammar extension, and automatic

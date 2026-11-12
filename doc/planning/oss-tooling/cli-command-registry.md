@@ -187,7 +187,7 @@ GitHub, Azure on demand).
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging; the first message type of the typed message contract (origin, receipt, TTL), extensible to agent-to-agent messaging (concepts/inter-agent-communication.md) | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
 | `ados projects` | Workstation overview of managed checkouts: repo key, root, state location, daemon reachability, handover state; per-repository state scoping from the checkout identity (git common dir marker) with a host-level index. Shipped in GH-288 (M2-S11) | operator, coordinator | M2-S11 (shipped in GH-288) | - |
-| `ados events` | Subscribe event-taxonomy reference: lists the versioned topics (`queue` and `lanes`, extended by `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state`) with their kinds, payload shape, ordering guarantee, and overflow-to-repoll rule | sessions, coordinator | M2-S13 | - |
+| `ados events` | Subscribe event-taxonomy reference: `list` / `describe <topic>` over the six declared topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, `blockers.state` event topics) with their shapes, kinds, payload fields, lane rule, ordering guarantee, and overflow-to-repoll rule. Shipped in GH-290 (M2-S13) | sessions, coordinator | M2-S13 (shipped in GH-290) | - |
 
 `attempts` is a `dispatch` subfamily (the per-ref evidence read side, M2-S12)
 and not a root family.

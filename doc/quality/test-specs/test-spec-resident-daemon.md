@@ -386,6 +386,42 @@ derived from durable state at every projection.
   `["daemon-unreachable"]` at exit `0` with no socket connect, and a watch
   iteration re-resolves the marker when the daemon starts or releases.
 
+## Event Taxonomy v1 (GH-290)
+
+The subscribe surface's published taxonomy is covered by five suite groups, all
+of which drive the delivered server, session, codec, and appenders; only the
+transport, clock, and wake are injected.
+
+- **Declaration and pinning.** `event-taxonomy-declaration` (the six-topic set,
+  the per-topic keys, the exact 4/3/3/3 kind enumeration, no S17 shape),
+  `event-taxonomy-integrity` (the seven integrity violations and the positive
+  control), `event-taxonomy-drift` (five drift classes localized per topic),
+  `event-taxonomy-additive` (payload growth without auto-advertising), and
+  `event-taxonomy-single-source` (one declaration moves the surface and the
+  frames; no second kind list in production).
+- **Reference surface.** `events-list`, `events-describe`, `events-errors`,
+  `events-purity`, `events-hermetic`, and the `events-reference-page` goldens.
+- **Emission per topic.** `events-subscribe-queue-graph`,
+  `events-subscribe-dispatch`, `events-subscribe-phase`,
+  `events-subscribe-blockers`, `events-envelope-conformance`,
+  `events-emitted-kinds`, `events-dependency-delta`, and the bounded real-socket
+  case `tests/conformance/events/real-socket-subscribe`.
+- **Ordering and overflow.** `events-sequence-per-lane`,
+  `events-sequence-restart`, `event-ordering-contract`,
+  `events-overflow-parity`, and `event-overflow-carriage`: per-`(topic, lane)`
+  contiguity shared by two subscribers, the restart discontinuity, overflow
+  parity across six topics with the additive stamps, and the one-constant
+  carriage proof.
+- **Mount, bounds, and the tick cost.** `events-mount-help`,
+  `events-production-composition`, `event-mount-guards`,
+  `event-taxonomy-conformance`, `event-privacy-literals`, `events-privacy`,
+  `events-frame-bound`, `event-projection-bounds`, `events-burst`,
+  `events-tick-cost`, and the count assertions in
+  `daemon-production-composition`. The tick-cost case counts one whole-store
+  `readRecords()` per publish pass through an injected store, with the fixed
+  clock excluding the heartbeat and an advancing-clock control proving the
+  counted window sees the heartbeat's two folds.
+
 ## Security and Privacy Tests
 
 - No credential value, prompt, message body, transcript, diff, raw provider
@@ -434,6 +470,7 @@ derived from durable state at every projection.
 | F-16 vocabulary growth | `daemon-vocabulary`, `daemon-contract`, `error-table-sync` |
 | F-17 merge absence | `daemon-imports`, `tests/boundaries`, dependency-cruiser |
 | NFR-1/9/12/13 bounds, determinism, privacy | `daemon-determinism`, `daemon-bounds`, `privacy-literals` |
+| Event taxonomy v1 (GH-290) | `event-taxonomy-*`, `events-*`, `event-ordering-contract`, `event-overflow-carriage`, `event-taxonomy-conformance`, `event-projection-bounds`, `event-mount-guards`, `event-privacy-literals`, `tests/conformance/events/real-socket-subscribe` |
 
 ## Known Gaps
 
@@ -445,8 +482,9 @@ derived from durable state at every projection.
   configured transport, sending `subscribe`, and consuming bounded deduplicated
   events — is covered through the in-memory control transport in `watch-stream`,
   not a live unix socket from the binary's composition root. The daemon
-  composition's live `stateChanges` snapshot source is also exercised only
-  through the injected control-server test, not end-to-end from the binary.
+  composition's live `stateChanges` source is exercised end to end by the
+  GH-290 event harness over the real composition (in-memory pair, plus one real
+  unix socket case), so the snapshot-only limitation no longer applies.
 - No production tracker-transition or tracker-comment write adapter exists, so
   those effect channels are proven against injected effect ports only.
 
@@ -459,6 +497,8 @@ bun test tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts
 bun test tests/golden/daemon-*.test.ts tests/golden/*watch*.test.ts
 bun test tests/structure/daemon-*.test.ts tests/checks/daemon-*.test.ts
 bun test tests/conformance/daemon-mount/real-reentry.test.ts
+bun test tests/behaviour/events-*.test.ts tests/structure/event-*.test.ts tests/checks/event-*.test.ts
+bun test tests/conformance/events/real-socket-subscribe.test.ts
 pnpm typecheck   # includes tests/types/daemon-mount.type-test.ts
 ```
 

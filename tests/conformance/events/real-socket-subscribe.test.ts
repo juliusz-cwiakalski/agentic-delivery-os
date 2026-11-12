@@ -74,7 +74,7 @@ describe("TC-EVT-021 real unix-socket subscription", () => {
         frames = eventFrames(client.drain());
         expect(frames).toHaveLength(1);
         expect(frames[0]).toMatchObject({ kind: "dependency-edge", sequence: 2 });
-        expect((frames[0]?.payload as { added: string[] }).added).toEqual(["GH-777"]);
+        expect(((frames[0]?.payload ?? {}) as { added: string[] }).added).toEqual(["GH-777"]);
 
         // The delivered transport invariants: a 0700 directory and a 0600 socket.
         expect(statSync(harness.root).mode & 0o777).toBe(0o700);

@@ -1203,6 +1203,15 @@ the gap is deliberate. M2 stories keep their codes.
 - Depends on: M1-S9.
 
 ### M2-S13 Public event taxonomy
+- Ticket: GH-290 (milestone M2)
+- Progress: delivered by GH-290 — event taxonomy v1 over six topics (the two
+  delivered snapshot topics plus `queue.graph`, `dispatch.attempt`,
+  `phase.state`, and `blockers.state`), the eight-field event envelope with a
+  per-`(topic, lane)` process-scoped sequence, the additive
+  `overflow: "repoll"`/`taxonomyVersion` stamps on every degraded frame, the
+  unknown-topic refusal, the generated `events list` / `events describe`
+  reference surface mounted as a prompt-required family, and per-topic contract
+  tests over both the surface and the daemon-emitted frames.
 - Goal: The daemon subscribe surface carries a versioned, documented event
   taxonomy covering delivery state changes, so any client (watch commands,
   scripts) consumes one contract.

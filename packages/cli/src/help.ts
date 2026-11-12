@@ -577,6 +577,14 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
   },
   {
+    path: ["projects", "list"],
+    summary: "List every discovered project with its state and health",
+    usage: ["<binary> projects list [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> projects list", "<binary> projects list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
+  },
+  {
     path: ["events"],
     summary: "Read the subscribe event taxonomy: list topics and describe one",
     usage: ["<binary> events <list|describe <topic>> [options]"],

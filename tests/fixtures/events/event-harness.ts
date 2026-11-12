@@ -241,7 +241,9 @@ export const createEventHarness = async (
       } else if (
         stack.includes("writeHeartbeat") &&
         !stack.includes("append") &&
-        (stack.includes("readQueueEntries") || stack.includes("readDaemonLanes") || stack.includes("readLedger"))
+        (stack.includes("readQueueEntries") ||
+          stack.includes("readDaemonLanes") ||
+          stack.includes("readLedger"))
       ) {
         heartbeatFoldReads += 1;
       } else {

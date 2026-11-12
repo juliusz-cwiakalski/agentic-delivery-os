@@ -93,8 +93,8 @@ describe("TC-EVT-082 projection bounds", () => {
     const withNew = [...records, dependency("GH-999", ["GH-999"])];
     const remainder = projector.project(withNew);
     expect(remainder).toHaveLength(37);
-    expect((remainder[35]?.payload.added as string[])[0]).toBe("GH-799");
-    expect((remainder[36]?.payload.added as string[])[0]).toBe("GH-999");
+    expect(((remainder[35]?.payload.added ?? []) as string[])[0]).toBe("GH-799");
+    expect(((remainder[36]?.payload.added ?? []) as string[])[0]).toBe("GH-999");
   });
 
   test("the watermark holds one entry per (topic, lane, source family), not per record", () => {

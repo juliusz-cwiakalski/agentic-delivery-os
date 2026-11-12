@@ -287,3 +287,35 @@ notes:
       pins it.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 7 complete (commit 2998ea7c): the shared tick read. The
+      composition takes exactly one whole-store `readRecords()` view per publish
+      tick and hands it to both snapshot folds and to the event projection:
+      `readQueueEntries`/`readDaemonLanes` gained an additive
+      `view?: readonly StateRecord[]` parameter (their own fallback is unchanged,
+      so every delivered caller still compiles), `queueWatchSnapshot`/
+      `lanesWatchSnapshot` take the view instead of the store, and
+      `createWatchState.changes()` reads once and passes it to both projections.
+      No port shape, wire type, record kind, schema version, or dependency
+      changed. `tests/behaviour/events-tick-cost.test.ts` (TC-EVT-081) proves one
+      read per publish pass with a fixed clock across 1 vs 5 subscribers and 2 vs
+      4 subscribed event topics, zero sleeps on the publish path, and the
+      advancing-clock control reading exactly 3 for the counted window (one
+      publish read plus the heartbeat's own two folds); the delivered heartbeat's
+      three append/verify reads are reported separately
+      (`publish=1 heartbeat-fold=2 delivered-append=3 total=6`) because NFR-2
+      neither counts nor bounds them. Added publish p95 measured 0.14 ms over 50
+      passes, far inside the 25 ms budget. The scoped source assertion shows the
+      composition is the only `store.readRecords(` seam, the projection never
+      reads, and both folds take the shared view. Gate: `pnpm typecheck`,
+      ambient-globals (179 files), workspace-entrypoints, and content-inventory
+      green; all 37 event suites (154 pass / 0 fail) and the ten delivered
+      control/heartbeat suites (40 pass / 0 fail) green. Deviations: (1) the
+      composition gains an additive `processBlockerAnswers?: boolean` input
+      (default true) so the control can compose the iteration with that optional
+      consumer absent, exactly the optional-port shape TC-EVT-081 names; default
+      behaviour is unchanged. (2) The spec's "two heartbeat reads" figure covers
+      the two ledger folds only; the delivered heartbeat append/verify chain adds
+      three reads that are recorded, not claimed. No gate was relaxed.
+    type: "info"
+    date: "2026-11-12"

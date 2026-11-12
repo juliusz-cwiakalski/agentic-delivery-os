@@ -84,7 +84,7 @@ The lifecycle prompts are product code and follow these invariants. They are mac
 - **Phase state.** Phase state is written only through the `phase` family; no prompt writes `started`, `completed`, or `phases.pr_creation.url`. The PR URL is a pm-notes `notes:` entry.
 - **Typed blockers.** Lanes and the coordinator use `blockers publish`/`list`/`answer`; the pm-notes `blockers:` collection is not an agent write target.
 - **Plan progress.** Plans carry no `tasks` key and no progress log; plan-phase progress is a pm-notes `notes:` entry.
-- **Allowed command set.** Prompt-required invocations are the entrypoint's composed set — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`, `dispatch`, `coordinator`, and `daemon` — plus the retained `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh`. The resident daemon is claimed through its mounted lifecycle family.
+- **Allowed command set.** Prompt-required invocations are the entrypoint's composed set — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, `retro`, `dispatch`, `coordinator`, `daemon`, `projects`, and `events` — plus the retained `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh`. The resident daemon is claimed through its mounted lifecycle family.
 - **Self-description.** Every prompt-required command has a `--help` surface and a reference page; see [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md).
 
 ### Prompt and document conformance (F-9)

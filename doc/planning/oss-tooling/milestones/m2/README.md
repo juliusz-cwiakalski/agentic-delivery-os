@@ -33,7 +33,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [entrypoint-delta.md](entrypoint-delta.md) | Root entry listing delta, the M2-planned additions, and the closed daemon registration gap |
 | [commands/projects.md](commands/projects.md) | Project overview command contract |
 | [commands/attempts.md](commands/attempts.md) | `dispatch attempts` evidence read-side contract |
-| [commands/events.md](commands/events.md) | Subscribe event-taxonomy reference contract |
+| [commands/events.md](commands/events.md) | Delivered subscribe event-taxonomy v1 reference contract (GH-290, M2-S13) |
 | [commands/spend.md](commands/spend.md) | Spend v2 breakdown contract |
 | [commands/queue.md](commands/queue.md) | Queue lifecycle verb contract |
 | [commands/board.md](commands/board.md) | Full M2 board contract |
