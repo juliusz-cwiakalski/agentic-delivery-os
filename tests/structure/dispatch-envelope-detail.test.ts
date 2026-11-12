@@ -10,6 +10,7 @@ import ts from "typescript";
 import type { CliDependencies, CommandDefinition } from "../../packages/cli/src/index";
 import { runCli } from "../../packages/cli/src/index";
 import {
+  COMMAND_FAILURE_DETAIL_MAX_CHARS,
   type CommandResultError,
   DISPATCH_MAX_ERROR_DETAIL_CHARS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
@@ -87,6 +88,60 @@ describe("TC-HDA-029 dispatch-specific additive error detail", () => {
     }
     expect(shared).not.toContain("detail");
     expect(shared).not.toContain("field");
+  });
+
+  test("the failure envelope declares the optional root detail beside the error (TDR-0027)", () => {
+    const failure = typeAliasText(RESULT_CONTRACT, "CommandResultFailure");
+    expect(failure).toBeDefined();
+    expect(failure).toContain("readonly detail?: CommandResultDetail");
+    const detail = typeAliasText(RESULT_CONTRACT, "CommandResultDetail");
+    expect(detail).toBeDefined();
+    expect(detail).toContain("readonly holder?: string");
+    expect(detail).not.toContain("session");
+    expect(COMMAND_FAILURE_DETAIL_MAX_CHARS).toBe(128);
+    const index = sourceOf(CONTRACTS_INDEX);
+    expect(index).toContain("COMMAND_FAILURE_DETAIL_MAX_CHARS");
+    expect(index).toContain("type CommandResultDetail");
+  });
+
+  test("a single-flight refusal projects the holder at the envelope root", async () => {
+    const command: CommandDefinition = {
+      handler: () => ({
+        error: {
+          kind: "queue",
+          code: "queue.single-flight",
+          summary: "holder:lane-1; ref:GH-241",
+          detail: { holder: "lane-1" },
+        },
+      }),
+    };
+    const run = await invoke(command, ["synthetic", "--json"]);
+    expect(run.exit).toBe(1);
+    const envelope = JSON.parse(run.stdout) as {
+      readonly error: CommandResultError & Record<string, unknown>;
+      readonly detail?: { readonly holder?: string };
+    };
+    expect(envelope.error.code).toBe("queue.single-flight");
+    expect(envelope.detail?.holder).toBe("lane-1");
+    expect(Object.keys(envelope.error).sort()).toEqual([...COMMAND_RESULT_ERROR_KEYS]);
+    expect(Object.hasOwn(envelope.error, "detail")).toBe(false);
+  });
+
+  test("a string-valued app detail never reaches the envelope root", async () => {
+    const command: CommandDefinition = {
+      handler: () => ({
+        error: {
+          kind: "queue",
+          code: "queue.lease-conflict",
+          summary: "holder:lane-1; lease:l-1",
+          detail: "holder:lane-1; lease:l-1",
+        },
+      }),
+    };
+    const run = await invoke(command, ["synthetic", "--json"]);
+    expect(run.exit).toBe(1);
+    const envelope = JSON.parse(run.stdout) as { readonly detail?: unknown };
+    expect(Object.hasOwn(envelope, "detail")).toBe(false);
   });
 
   test("the additive surface is re-exported from the contracts entrypoint", () => {

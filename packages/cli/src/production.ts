@@ -77,6 +77,7 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
+  dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   foldDispatchHandover,
   type HandoverEvidence,
@@ -110,9 +111,9 @@ import {
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
-  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeEnvironmentName,
   stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -121,7 +122,6 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
   type ConfigValue,
-  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
@@ -150,6 +150,7 @@ import {
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
   type ProjectsListEntry,
+  type QueueDegradationReason,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type SupervisorPort,
@@ -1562,6 +1563,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               hold.reason === undefined
                 ? `reason=owner-hold; owner hold active (${hold.source})`
                 : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`,
+          };
+        }
+        // GH-292 F-4: the dispatch family's ONE admission predicate, before the
+        // claim, spawn, resume, attempt, or record. The dispatch path claims
+        // with the fixed holder `dispatch` and never renews, so any live
+        // same-ref lease is a running dispatch.
+        const refused = dispatchAdmissionRefusal(store, { ref, nowMs: nowMs() });
+        if (refused !== undefined) {
+          return {
+            ok: false,
+            code: refused.code,
+            ...(refused.summary === undefined ? {} : { summary: refused.summary }),
+            ...(refused.holder === undefined ? {} : { holder: refused.holder }),
           };
         }
         const claimed = claimQueueLease(store, {

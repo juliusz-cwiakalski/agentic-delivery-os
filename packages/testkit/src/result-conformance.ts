@@ -7,7 +7,10 @@
  */
 
 import type { BrandIdentity, ErrorCategory, ErrorConsequence } from "@delivery-os/core/contracts";
-import { RESULT_SCHEMA_VERSION } from "@delivery-os/core/contracts";
+import {
+  COMMAND_FAILURE_DETAIL_MAX_CHARS,
+  RESULT_SCHEMA_VERSION,
+} from "@delivery-os/core/contracts";
 
 export const RULES = [
   { id: "envelope.non-object", description: "the envelope must be a plain object" },
@@ -58,6 +61,8 @@ export type Violation = {
 
 const SUCCESS_KEYS = ["schemaVersion", "runId", "exitCode", "timing", "data"] as const;
 const FAILURE_KEYS = ["schemaVersion", "runId", "exitCode", "timing", "error"] as const;
+/** The optional failure-envelope member (TDR-0027); present only when declared. */
+const FAILURE_OPTIONAL_KEYS = ["detail"] as const;
 const MANDATORY_KEYS = ["schemaVersion", "runId", "exitCode", "timing"] as const;
 const ERROR_REQUIRED_KEYS = [
   "code",
@@ -67,6 +72,8 @@ const ERROR_REQUIRED_KEYS = [
   "remediationHint",
 ] as const;
 const ERROR_ALLOWED_KEYS = [...ERROR_REQUIRED_KEYS, "summary"] as const;
+/** The only declared failure-envelope detail member (TDR-0027). */
+const FAILURE_OPTIONAL_DETAIL_MEMBERS = ["holder"] as const;
 const CATEGORIES: readonly string[] = ["user", "platform", "transient", "permanent"];
 const CONSEQUENCES: readonly string[] = ["landed", "not_landed", "unknown"];
 
@@ -119,9 +126,12 @@ export const assertEnvelopeContract = (parsed: unknown): Violation[] => {
   }
 
   const expectedKeys = hasData ? SUCCESS_KEYS : FAILURE_KEYS;
-  if (!sameKeySet(keys, [...expectedKeys])) {
-    const extra = keys.filter((key) => !expectedKeys.includes(key as never));
-    const missing = expectedKeys.filter((key) => !keys.includes(key));
+  const optionalKeys: readonly string[] = hasData ? [] : FAILURE_OPTIONAL_KEYS;
+  const extra = keys.filter(
+    (key) => !expectedKeys.includes(key as never) && !optionalKeys.includes(key),
+  );
+  const missing = expectedKeys.filter((key) => !keys.includes(key));
+  if (extra.length > 0 || missing.length > 0) {
     violations.push({
       rule: hasData ? "envelope.keys.success" : "envelope.keys.failure",
       field: extra[0] ?? missing[0] ?? "envelope",
@@ -256,6 +266,45 @@ export const assertEnvelopeContract = (parsed: unknown): Violation[] => {
           field: "error.summary",
           message: "error.summary, when present, must be a non-empty string",
         });
+      }
+    }
+  }
+
+  // The optional envelope-root detail (TDR-0027): a closed, bounded contract.
+  // The member is admitted only on a failure envelope; `holder` is single line
+  // and within the declared cap, and no other member exists.
+  if (hasError && Object.hasOwn(parsed, "detail")) {
+    const detail = parsed.detail;
+    if (!isPlainObject(detail)) {
+      violations.push({
+        rule: "envelope.keys.failure",
+        field: "detail",
+        message: "detail, when present, must be a plain object",
+      });
+    } else {
+      for (const key of Object.keys(detail)) {
+        if (!(FAILURE_OPTIONAL_DETAIL_MEMBERS as readonly string[]).includes(key)) {
+          violations.push({
+            rule: "envelope.keys.failure",
+            field: `detail.${key}`,
+            message: `unexpected detail field ${key}`,
+          });
+        }
+      }
+      if (Object.hasOwn(detail, "holder")) {
+        const holder = detail.holder;
+        const invalid =
+          typeof holder !== "string" ||
+          holder.length === 0 ||
+          holder.length > COMMAND_FAILURE_DETAIL_MAX_CHARS ||
+          /[\r\n]/u.test(holder);
+        if (invalid) {
+          violations.push({
+            rule: "envelope.keys.failure",
+            field: "detail.holder",
+            message: `detail.holder must be a non-empty single line of at most ${COMMAND_FAILURE_DETAIL_MAX_CHARS} characters`,
+          });
+        }
       }
     }
   }

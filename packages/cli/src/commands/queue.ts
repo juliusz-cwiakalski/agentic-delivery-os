@@ -119,6 +119,8 @@ export type QueueRuntimeFailure = {
   readonly code: string;
   readonly summary?: string;
   readonly detail?: string;
+  /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
+  readonly holder?: string;
 };
 
 /** A read surface's computed schedule plus truthful degradation. */
@@ -196,9 +198,24 @@ export type QueueCommandRuntime = {
   readonly watch?: () => AsyncIterable<string>;
 };
 
-const runtimeFailure = (failure: QueueRuntimeFailure): { readonly error: QueueRuntimeFailure } => ({
-  error: failure,
-});
+const runtimeFailure = (
+  failure: QueueRuntimeFailure,
+): { readonly error: Record<string, unknown> } => {
+  // TDR-0027: the single-flight holder rides the record-shaped envelope-root
+  // `detail`, never the error object and never the prose `detail` string.
+  if (failure.holder !== undefined) {
+    return {
+      error: {
+        ok: failure.ok,
+        kind: failure.kind,
+        code: failure.code,
+        ...(failure.summary === undefined ? {} : { summary: failure.summary }),
+        detail: { holder: failure.holder },
+      },
+    };
+  }
+  return { error: failure };
+};
 
 const fullGrammarRejection = (reason: string): { readonly error: Record<string, string> } => ({
   error: {

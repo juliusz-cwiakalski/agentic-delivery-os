@@ -682,7 +682,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DELIVERY_RESULT_TAXONOMY",
     "DELIVERY_RESULT_TOKENS",
   ],
-  "core/src/contracts/result.ts": ["RESULT_SCHEMA_VERSION"],
+  "core/src/contracts/result.ts": ["COMMAND_FAILURE_DETAIL_MAX_CHARS", "RESULT_SCHEMA_VERSION"],
   "core/src/contracts/doctor.ts": [
     "DOCTOR_AREAS",
     "DOCTOR_AREA_SOURCES",
@@ -1643,6 +1643,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/app/queue.ts": [
     "addQueueDependency",
     "claimQueueLease",
+    "claimSingleFlightRefusal",
+    "dispatchAdmissionRefusal",
     "declareQueueEntry",
     "leaseRecordHeartbeatAgeMs",
     "normalizedQueueEdges",

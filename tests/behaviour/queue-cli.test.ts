@@ -215,10 +215,30 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
     expect((claim.lease as Record<string, unknown>).holder).toBe("holder-a");
     expect(claim.degraded).toEqual(["daemon-unreachable"]);
 
-    const conflict = await harness.run([
+    // GH-292 F-4 (AC-F4-2): another holder's same-ref lease refuses
+    // `queue.single-flight` naming the live holder at the envelope root.
+    const singleFlight = await harness.run([
       "queue",
       "claim",
       "GH-320",
+      "--holder",
+      "holder-b",
+      "--json",
+    ]);
+    expect(singleFlight.exitCode).toBe(1);
+    const singleFlightEnvelope = JSON.parse(singleFlight.stdout) as {
+      error?: { code?: string };
+      detail?: { holder?: string };
+    };
+    expect(singleFlightEnvelope.error?.code).toBe("queue.single-flight");
+    expect(singleFlightEnvelope.detail?.holder).toBe("holder-a");
+
+    // The delivered other-ref conflict keeps its identity and exit.
+    expect((await harness.run(["queue", "add", "GH-321", "--json"])).exitCode).toBe(0);
+    const conflict = await harness.run([
+      "queue",
+      "claim",
+      "GH-321",
       "--holder",
       "holder-b",
       "--json",

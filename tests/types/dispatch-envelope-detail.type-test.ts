@@ -6,7 +6,10 @@
  * Compiled by `pnpm typecheck` (`tests/types/tsconfig.json`), not run by Bun.
  */
 import type {
+  COMMAND_FAILURE_DETAIL_MAX_CHARS,
+  CommandResultDetail,
   CommandResultError,
+  CommandResultFailure,
   DispatchEnvelopeData,
   DispatchEnvelopeError,
 } from "../../packages/core/src/contracts/index";
@@ -20,6 +23,34 @@ const shared: CommandResultError = {
   remediationHint: "synthetic remediation",
   summary: "synthetic summary",
 };
+
+/** The additive envelope-root detail slot (TDR-0027 ALT-3). */
+const refusalDetail: CommandResultDetail = { holder: "lane-1" };
+
+const failureWithDetail: CommandResultFailure = {
+  schemaVersion: "delivery.result.v1",
+  runId: "run-detail-0001",
+  exitCode: 1,
+  timing: { totalMs: 3 },
+  error: shared,
+  detail: refusalDetail,
+};
+
+/** A failure without the member carries no detail key. */
+const failureWithoutDetail: CommandResultFailure = {
+  schemaVersion: "delivery.result.v1",
+  runId: "run-detail-0002",
+  exitCode: 1,
+  timing: { totalMs: 3 },
+  error: shared,
+};
+
+const rejectedDetailMember: CommandResultDetail = {
+  // @ts-expect-error — the detail contract is closed; `session` is not a member.
+  session: "s1",
+};
+
+const detailBound: number = COMMAND_FAILURE_DETAIL_MAX_CHARS;
 
 /** A dispatch error without detail stays assignable (non-spawn dispatch rows). */
 const withoutDetail: DispatchEnvelopeError = shared;
@@ -87,8 +118,13 @@ const sharedKeys: readonly SharedKeys[] = [
 export {
   asEnvelopeError,
   configDetailNoField,
+  detailBound,
+  failureWithDetail,
+  failureWithoutDetail,
   harnessDetail,
+  refusalDetail,
   rejectedDetailKindType,
+  rejectedDetailMember,
   rejectedKind,
   rejectedSharedField,
   rejectedSharedWidening,

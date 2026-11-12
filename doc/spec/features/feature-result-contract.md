@@ -99,7 +99,7 @@ The authoritative design decision for package placement and tiers is [ADR-0003](
 | `data` | On success; exactly one of `data`/`error` | Success payload; an explicit empty object for void successes. |
 | `error` | On failure; exactly one of `data`/`error` | The envelope error object; no stack traces and no raw diagnostics. |
 
-A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `timing`, and `data`. A failure envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `timing`, and `error`. Extra or missing keys are contract violations.
+A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `timing`, and `data`. A failure envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `timing`, and `error`, plus the additive optional command-declared `detail` object (TDR-0027) whose only v1 member is `holder` — the live lease's holder identity on a `queue.single-flight` refusal, single line, at most 128 characters, identifiers only, projected by the CLI edge only when the command's returned failure carries the record-shaped member (a string-valued app-layer `detail` is never projected), and never on an error object: `CommandResultError` keeps exactly its six delivered fields. Extra or missing keys are contract violations.
 
 The table above describes the full envelope. Scripted machine output is a projection of it, and field presence is mode-dependent:
 

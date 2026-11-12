@@ -92,6 +92,7 @@ import {
   capsulePhaseEventKey,
   catalogPaths,
   claimQueueLease,
+  claimSingleFlightRefusal,
   classifyPruneCandidate,
   collectRetro,
   computeDbCutoffMs,
@@ -4420,6 +4421,24 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         ...(outranking === undefined ? {} : { outrankedBy: outranking.ref }),
         ...(heavyLease === undefined ? {} : { weightHeldBy: heavyLease.ref }),
       });
+      // GH-292 F-4 (TDR-0026 DC-2/DC-3): the claim path's holder-aware
+      // admission refuses another holder's live same-ref lease before the
+      // fence; the own-holder renewal, the other-ref conflict, and the stale
+      // takeover stay the delivered claim-primitive behaviour.
+      const singleFlight = claimSingleFlightRefusal(composition.store, {
+        ref: selected,
+        holder: input.holder,
+        nowMs: composition.nowMs(),
+      });
+      if (singleFlight !== undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: singleFlight.code,
+          ...(singleFlight.summary === undefined ? {} : { summary: singleFlight.summary }),
+          ...(singleFlight.holder === undefined ? {} : { holder: singleFlight.holder }),
+        };
+      }
       const claimed = claimQueueLease(composition.store, {
         ref: selected,
         holder: input.holder,

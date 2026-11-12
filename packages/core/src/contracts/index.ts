@@ -1822,7 +1822,9 @@ export {
 // not replace it (DEC-1). See `./result` for the full contract documentation.
 export {
   type AppErrorCode,
+  COMMAND_FAILURE_DETAIL_MAX_CHARS,
   type CommandResult,
+  type CommandResultDetail,
   type CommandResultError,
   type CommandResultFailure,
   type CommandResultSuccess,

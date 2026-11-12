@@ -1285,6 +1285,7 @@
       "CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS",
       "CLOSEOUT_SCHEMA_ID",
       "CLOSEOUT_STEP_IDS",
+      "COMMAND_FAILURE_DETAIL_MAX_CHARS",
       "COMMAND_RECEIPT_KEY_PREFIX",
       "COMMAND_RECEIPT_PAYLOAD_SCHEMA",
       "COMMAND_RECEIPT_RECORD_KIND",
@@ -1506,6 +1507,7 @@
       "CombinedProviderCondition",
       "CommandReceiptRecord",
       "CommandResult",
+      "CommandResultDetail",
       "CommandResultError",
       "CommandResultFailure",
       "CommandResultSuccess",
@@ -3830,7 +3832,9 @@
     ],
     "result.ts": [
       "AppErrorCode",
+      "COMMAND_FAILURE_DETAIL_MAX_CHARS",
       "CommandResult",
+      "CommandResultDetail",
       "CommandResultError",
       "CommandResultFailure",
       "CommandResultSuccess",
@@ -4346,9 +4350,7 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": [
-    "CredentialPort"
-  ],
+  "credentialPort": ["CredentialPort"],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",

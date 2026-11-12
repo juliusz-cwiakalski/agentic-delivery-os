@@ -428,6 +428,22 @@ const REMOVAL_SPEC = {
   isRecord: isRemovalRecord,
 } as const;
 
+/** The entry-ledger record spec shared by the read seams. */
+const ENTRY_SPEC = {
+  prefix: QUEUE_ENTRY_KEY_PREFIX,
+  kind: QUEUE_ENTRY_RECORD_KIND,
+  schema: QUEUE_ENTRY_SCHEMA,
+  isRecord: isEntryRecord,
+} as const;
+
+/** The lease-ledger record spec shared by the read seams. */
+const LEASE_SPEC = {
+  prefix: QUEUE_LEASE_KEY_PREFIX,
+  kind: QUEUE_LEASE_RECORD_KIND,
+  schema: QUEUE_LEASE_SCHEMA,
+  isRecord: isLeaseRecord,
+} as const;
+
 /** The success variant of a verified ledger read (records plus sequences). */
 type VerifiedLedgerRead<T> = Extract<QueueLedgerRead<T>, { readonly ok: true }>;
 
@@ -466,12 +482,7 @@ export const readQueueEntries = (
   view?: readonly StateRecord[],
 ): QueueLedgerRead<QueueEntryRecord> => {
   const snapshot = verifiedSnapshot(store, view);
-  const read = classifyRecords(snapshot, {
-    prefix: QUEUE_ENTRY_KEY_PREFIX,
-    kind: QUEUE_ENTRY_RECORD_KIND,
-    schema: QUEUE_ENTRY_SCHEMA,
-    isRecord: isEntryRecord,
-  });
+  const read = classifyRecords(snapshot, ENTRY_SPEC);
   if (!read.ok) return read;
   const removals = classifyRecords(snapshot, REMOVAL_SPEC);
   if (!removals.ok) return removals;
@@ -614,12 +625,7 @@ export const readQueueDependencies = (
 
 /** Read every verified queue lease operation record, oldest first. */
 export const readQueueLeases = (store: StateStorePort): QueueLedgerRead<QueueLeaseRecord> =>
-  readRecords(store, {
-    prefix: QUEUE_LEASE_KEY_PREFIX,
-    kind: QUEUE_LEASE_RECORD_KIND,
-    schema: QUEUE_LEASE_SCHEMA,
-    isRecord: isLeaseRecord,
-  });
+  readRecords(store, LEASE_SPEC);
 
 /** Read every verified queue park record, oldest first. */
 export const readQueueParks = (store: StateStorePort): QueueLedgerRead<QueueParkRecord> => {
@@ -1044,6 +1050,108 @@ export const addQueueDependency = (
 
 /** The normalized edge set used when a record is serialized (exported for tests). */
 export const normalizedQueueEdges = normalizeEdges;
+
+/* ------------------ dispatch-family admission (GH-292 F-4) ----------------- */
+
+/** One per-ref admission refusal naming the live lease (TDR-0026 DC-2). */
+export type DispatchAdmissionRefusal = {
+  readonly code: "queue.single-flight" | "queue.lease-conflict";
+  readonly holder?: string;
+  readonly summary?: string;
+};
+
+/**
+ * The dispatch family's ONE admission predicate over live per-ref lease truth
+ * (GH-292 F-4, TDR-0026 DC-2; AC-F4-1/AC-F4-5). The dispatch path claims with
+ * the fixed holder `dispatch` and never renews mid-flight, so a live lease
+ * whose recorded ref equals the requested ref — same or different holder — is
+ * a dispatch already running, and the second dispatch is by definition a
+ * duplicate: it refuses `queue.single-flight` naming the live holder before
+ * any claim, spawn, resume, attempt, or record. A live lease on any other ref
+ * refuses the delivered `queue.lease-conflict` (repository exclusivity stated
+ * as a refusal). A lease at or over its TTL is not active, and no live lease
+ * proceeds: both keep the delivered takeover/claim behaviour.
+ *
+ * One whole-store read: the entry and lease ledgers are classified from the
+ * same verified snapshot. An unreadable or torn ledger is NOT a queue refusal —
+ * the predicate abstains and the claim path classifies the state failure with
+ * the delivered `state.*` identity.
+ */
+export const dispatchAdmissionRefusal = (
+  store: StateStorePort,
+  input: { readonly ref: string; readonly nowMs: number },
+): DispatchAdmissionRefusal | undefined => {
+  const snapshot = verifiedSnapshot(store);
+  const entries = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!entries.ok) return undefined;
+  const leases = classifyRecords(snapshot, LEASE_SPEC);
+  if (!leases.ok) return undefined;
+  const ref = canonicalQueueRef(input.ref);
+  if (ref === undefined) return undefined;
+  const active = foldActiveLeases(leases.records, input.nowMs);
+  if (active === undefined) return undefined;
+  const latestEntry = [...entries.records]
+    .reverse()
+    .find((record) => canonicalQueueRef(record.ref) === ref);
+  const repository = latestEntry?.repository;
+  if (repository === undefined) return undefined;
+  const held = active.find((lease) => lease.repository === repository);
+  if (held === undefined) return undefined;
+  // A lease at or over its TTL is not active on any path: the delivered
+  // stale-takeover applies, so the guard abstains.
+  if (isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) return undefined;
+  if (held.ref === ref) {
+    return {
+      code: "queue.single-flight",
+      holder: held.holder,
+      summary: `holder:${held.holder}; ref:${held.ref}`,
+    };
+  }
+  const conflict = leaseConflict(held);
+  return {
+    code: "queue.lease-conflict",
+    summary: `holder:${conflict.holder}; lease:${conflict.leaseId}; heartbeatAgeMs:${conflict.heartbeatAgeMs}; earliestTakeoverAt:${conflict.earliestTakeoverAt}`,
+  };
+};
+
+/**
+ * The claim path's holder-aware admission (GH-292 F-4, TDR-0026 DC-2/DC-3;
+ * AC-F4-2). Refuses ONLY another holder's live lease on the requested ref with
+ * `queue.single-flight` naming the live holder. The caller's own holder's
+ * same-ref lease falls through to the delivered renewal, any other-ref live
+ * lease falls through to the delivered `queue.lease-conflict`, and a lease at
+ * or over its TTL is not active, so the delivered stale takeover stands. One
+ * whole-store read; an unreadable or torn ledger abstains and the claim path
+ * classifies the state failure with the delivered `state.*` identity.
+ */
+export const claimSingleFlightRefusal = (
+  store: StateStorePort,
+  input: { readonly ref: string; readonly holder: string; readonly nowMs: number },
+): DispatchAdmissionRefusal | undefined => {
+  const snapshot = verifiedSnapshot(store);
+  const entries = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!entries.ok) return undefined;
+  const leases = classifyRecords(snapshot, LEASE_SPEC);
+  if (!leases.ok) return undefined;
+  const ref = canonicalQueueRef(input.ref);
+  if (ref === undefined) return undefined;
+  const active = foldActiveLeases(leases.records, input.nowMs);
+  if (active === undefined) return undefined;
+  const latestEntry = [...entries.records]
+    .reverse()
+    .find((record) => canonicalQueueRef(record.ref) === ref);
+  const repository = latestEntry?.repository;
+  if (repository === undefined) return undefined;
+  const held = active.find((lease) => lease.repository === repository);
+  if (held === undefined || held.ref !== ref || held.holder === input.holder) return undefined;
+  // The liveness predicate is shared: a stale lease takes over as delivered.
+  if (isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) return undefined;
+  return {
+    code: "queue.single-flight",
+    holder: held.holder,
+    summary: `holder:${held.holder}; ref:${held.ref}`,
+  };
+};
 
 /* --------------------------- removal (GH-292 F-1) ------------------------- */
 
@@ -1542,8 +1650,12 @@ const newLeaseRecord = (input: {
  * non-exclusivity readiness conditions); `repo-free` is never part of it. Inside
  * the fence the verified lease history is re-read: a live lease held by another
  * holder refuses `queue.lease-conflict`, a stale lease is taken over with full
- * evidence plus a `lease-stale-takeover` incident, and the caller's own lease is
- * renewed. Every append is verified post-append.
+ * evidence plus a `lease-stale-takeover` incident, and the caller's own lease
+ * is renewed when it already records the requested ref (GH-292 renewal
+ * narrowing: one `(repository, ref, holder)` — the recorded ref is never
+ * rewritten, so an own-holder claim for a different ref refuses
+ * `queue.lease-conflict` like any other holder's). Every append is verified
+ * post-append.
  */
 export const claimQueueLease = (
   store: StateStorePort,
@@ -1647,7 +1759,7 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "claimed", lease: record } };
     }
-    if (existing.holder === request.holder) {
+    if (existing.holder === request.holder && existing.ref === ref) {
       const record = newLeaseRecord({
         operation: "renewed",
         repository,
@@ -1670,6 +1782,11 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "renewed", lease: record } };
     }
+    // GH-292 renewal narrowing (DEC-13, TDR-0026 DC-3): renewal is one
+    // (repository, ref, holder). The delivered renewal rewrote the lease's
+    // recorded ref to the requested one, which let a second ref slip past
+    // repository exclusivity; the recorded ref is never rewritten. The own
+    // holder's other-ref claim refuses exactly like any other holder's.
     if (!isLeaseStale(existing.heartbeatAgeMs, existing.ttlMs)) {
       const conflict = leaseConflict(existing);
       return {
