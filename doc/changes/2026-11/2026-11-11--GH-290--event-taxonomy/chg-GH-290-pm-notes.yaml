@@ -188,3 +188,39 @@ notes:
       states, and the behaviour cases stay with Phase 4/6.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 4 complete (commit 471000f3): subscribe integration. The
+      session gains `publishEvent` (an event-topic frame with no cursor), and
+      every degraded frame — the delivered overflow path for all six topics —
+      now carries `overflow: "repoll"` from `TAXONOMY_OVERFLOW` and
+      `taxonomyVersion` from `TAXONOMY_VERSION`. The server's publish projection
+      is shape-aware: snapshot topics keep per-topic cursor dedupe and event
+      topics publish observed deltas from one tick's batch before any flush, and
+      the subscribe accept tolerates a topic with no snapshot so an event
+      subscription gets no synthetic baseline. The daemon composition widens the
+      subscribe handler to the six topics, refuses an unknown topic with
+      `events.topic-unknown` from the declaration before any store read (the
+      delivered acceptance becomes a refusal), and feeds the four event topics
+      from the Phase-3 projection over the existing ledgers. TC-EVT-023, 030,
+      040, 041, 042, 050, 075, 082 and 083 are implemented, and the TC-EVT-032
+      restart suite is authored here for its Phase-6 ownership. Gate: the
+      fifteen-suite event batch reports 111 pass / 0 fail; the eight delivered
+      control/daemon/queue-watch/lanes-watch suites and the seven
+      composition/help/parity suites pass unmodified (68 pass); `pnpm
+      typecheck`, ambient-globals (179 files), and workspace-entrypoints are
+      green; content-inventory green. Deviations: (1) the delivered server
+      flushes a subscription after every tick, so a subscriber that keeps
+      reading can never accumulate a buffer; overflow parity is therefore proven
+      row-by-row at the delivered session seam (the bound's home, the same seam
+      the delivered control-session suite uses) for all six topics, plus one
+      end-to-end `queue.graph` burst on the wire — the "second subscriber
+      spared" clause holds for the reading subscriber within the same tick and
+      for every bystander topic, and with a buffer smaller than a single-tick
+      burst every subscriber of that topic overflows, which is the delivered
+      semantics. (2) TC-EVT-050's pre-change byte-golden is replaced by exact
+      key-order/shape assertions plus the five delivered control suites, because
+      no pre-change frame golden was captured before this branch started; no
+      assertion is weaker (three exact keys, cursor 0, dedupe, no envelope
+      field, the stamped degraded row).
+    type: "info"
+    date: "2026-11-12"

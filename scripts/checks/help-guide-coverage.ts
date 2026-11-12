@@ -34,6 +34,7 @@ export type CoverageFailure = {
 const pageFor = (command: string): string => {
   if (command === "verify") return `${PAGE_ROOT}/verify-change.md`;
   if (command === "projects") return `${M2_PAGE_ROOT}/projects.md`;
+  if (command === "events") return `${M2_PAGE_ROOT}/events.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 

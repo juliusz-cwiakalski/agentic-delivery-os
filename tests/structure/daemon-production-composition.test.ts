@@ -15,16 +15,16 @@ import {
   runEntrypoint,
   selectPromptRequiredProgram,
 } from "../../packages/cli/src/entrypoint";
-import { createProductionComposer } from "../../packages/cli/src/production";
 import type { CommandProgram } from "../../packages/cli/src/index";
+import { createProductionComposer } from "../../packages/cli/src/production";
 import {
   createMountHarness,
   createRecordingSupervisor,
   openMountStore,
   productionStateRoot,
 } from "../fixtures/daemon/mount-harness";
-import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import { bufferSink } from "../golden/helpers";
 
 const invoke = async (options: {
@@ -66,9 +66,10 @@ const invoke = async (options: {
 describe("TC-DAEMON-010 the family is prompt-required and composed unconditionally", () => {
   test("daemon is a member exactly once and the set grew by one", () => {
     expect(PROMPT_REQUIRED_COMMANDS.filter((command) => command === "daemon")).toHaveLength(1);
-    // The delivered sixteen families, plus the GH-286 mount and the GH-288
-    // `projects` family: one member per prompt-required command, no duplicate.
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(18);
+    // The delivered sixteen families, plus the GH-286 mount, the GH-288
+    // `projects` family, and the GH-290 `events` family: one member per
+    // prompt-required command, no duplicate.
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(19);
   });
 
   test("the composed program registers the declared grammar unchanged", () => {
@@ -118,7 +119,7 @@ describe("TC-DAEMON-010 the family is prompt-required and composed unconditional
       PROMPT_REQUIRED_COMMANDS: readonly string[];
     };
     expect(mutated.PROMPT_REQUIRED_COMMANDS).not.toContain("daemon");
-    expect(mutated.PROMPT_REQUIRED_COMMANDS).toHaveLength(17);
+    expect(mutated.PROMPT_REQUIRED_COMMANDS).toHaveLength(18);
   });
 });
 
@@ -135,7 +136,7 @@ describe("TC-DAEMON-014 a composition with every optional input absent", () => {
       expect(program.commands.daemon).toBeDefined();
       const selected = selectPromptRequiredProgram(program);
       expect(selected.commands.daemon).toBeDefined();
-      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(18);
+      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(19);
     } finally {
       harness.dispose();
     }
