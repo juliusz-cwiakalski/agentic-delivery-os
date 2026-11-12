@@ -470,6 +470,7 @@ export {
   type ControlDedupeKey,
   type ControlDegradedReason,
   type ControlDrainData,
+  type ControlEnvelopeEventData,
   type ControlErrorData,
   type ControlErrorFrame,
   type ControlEventData,
@@ -2191,6 +2192,30 @@ export {
   type StatusTypedQuestionItem,
   type StatusWorkItemRead,
 } from "./status.js";
+// The public event-taxonomy v1 declaration (GH-290 F-1, DM-1, DM-7; DEC-E,
+// DEC-K, DEC-M): the six topics, their shapes, frame fields, lane rules, kind
+// records, derived payload-field unions, ordering, overflow, and the module's
+// one pure integrity validator.
+export {
+  EVENT_ENVELOPE_FIELDS,
+  ORDERING_VALUES,
+  OVERFLOW_VALUES,
+  SNAPSHOT_FRAME_FIELDS,
+  TAXONOMY,
+  TAXONOMY_LANE_RULES,
+  TAXONOMY_OVERFLOW,
+  TAXONOMY_SHAPES,
+  TAXONOMY_VERSION,
+  type TaxonomyDeclaration,
+  type TaxonomyKindDeclaration,
+  type TaxonomyLaneRule,
+  type TaxonomyOrdering,
+  type TaxonomyOverflow,
+  type TaxonomyShape,
+  type TaxonomyTopicDeclaration,
+  type TaxonomyViolation,
+  validateTaxonomy,
+} from "./taxonomy.js";
 // The `delivery.verify-deploy.v1` vocabulary (GH-225 F-6, DEC-10): the closed
 // verdict/reason enums, the one declared reason-to-identity map, the
 // expectation/trace shapes, and the evidence caps. Data and types only.

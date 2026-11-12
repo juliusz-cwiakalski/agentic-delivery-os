@@ -3,17 +3,20 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v1 (two snapshot topics, four event topics, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290"]
+  related_decisions: ["TDR-0025"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
     - "packages/core/src/contracts/effects.ts"
     - "packages/core/src/contracts/principal.ts"
+    - "packages/core/src/contracts/taxonomy.ts"
+    - "packages/core/src/domain/event-projection.ts"
 ---
 
 # Feature: Resident Dispatch Daemon (M1-S18)
@@ -157,6 +160,60 @@ Control actions are at-most-once by (connection identity, frame id, lock token);
 a cross-connection id collision is a distinct request. The lock token appears
 only in the three control payloads and durable lock/instance records.
 
+### Event taxonomy v1
+
+The subscribe surface publishes a versioned taxonomy over six topics. `queue` and
+`lanes` are snapshot topics: their frames stay exactly
+`{topic, cursor, snapshot}`, they declare no kind at all (`kinds: []`,
+`payloadFields: []`), and their ordering value is `snapshot-revision` — the
+delivered cursor, explicitly not an ordering guarantee. `queue.graph` (parent
+`queue`), `dispatch.attempt`, `phase.state`, and `blockers.state` are event
+topics.
+
+Every frame on an event topic carries eight `data` fields in declared order:
+`topic`, `kind`, `lane`, `ref`, `sequence`, `occurredAt`, `payload`,
+`taxonomyVersion`. `lane` is a non-empty string on every event topic. `ref` is a
+non-empty string on `queue.graph`, `dispatch.attempt`, and `phase.state`, and the
+question record's string or explicit `null` on `blockers.state`. `occurredAt` is
+the source record's own timestamp. `sequence` is a positive integer allocated at
+emission per `(topic, lane)`, monotonic by one, shared by every subscriber, and
+process-scoped: a daemon restart is a declared discontinuity that a client
+detects and answers with a repoll. The `cursor` appears on no event frame.
+
+The declared kind sets are `queue.graph` = `entry`, `dependency-edge`, `release`,
+`remove`; `dispatch.attempt` = `started`, `refused`, `completed`; `phase.state` =
+`began`, `completed`, `reopened`; `blockers.state` = `published`, `updated`,
+`cleared`. `queue.graph.remove` is declared and not emitted in v1
+(`emitted: false`): no delivered path removes a queue entry. `phase.state.began`
+is derived from a phase's first completion, because no begin record exists. A
+`dependency-edge` publishes only when its folded edge set differs, and its
+payload carries `added`/`removed`. Subscribing to an event topic produces no
+synthetic baseline: the first frame is the next observed change, and `since`
+carries no event-topic semantics.
+
+A degraded frame keeps the delivered marker and drop behaviour and additively
+carries `overflow: "repoll"` and `taxonomyVersion: "v1"` for all six topics. A
+`subscribe` for a topic outside the six is refused with `events.topic-unknown`
+before any ledger read; the delivered handler accepted such a topic and served the
+`lanes` snapshot under the requested name, so this is an acceptance becoming a
+refusal and it removes a wrong-data path. A broken compiled declaration fails
+closed with `events.taxonomy-unavailable` at exit 2 and renders no page.
+
+One publish tick — one `publishState` invocation — performs exactly one
+whole-store `readRecords()` and folds that single view for the snapshot
+projection and for the event projection; no per-topic and no per-subscriber read
+is issued on the publish path. The heartbeat tick's own reads — its two-ledger
+fold and the durable heartbeat append/verify chain — are outside that count and
+unchanged. The per-`(topic, lane, source family)` emission watermark keeps an
+unemitted delta pending rather than dropped, and the per-topic per-tick cap is
+64. The taxonomy, its emission model, and the reference surface are described in
+[Event Taxonomy v1 and the Events Reference Surface](feature-event-taxonomy.md).
+
+The reference surface is `<binary> events list|describe`, generated from the same
+declaration; the public contract page is
+[the M2 events page](../../planning/oss-tooling/milestones/m2/commands/events.md).
+
+
 ## State-mediated truth and one-shot continuity
 
 Queue intents, blocker answers, `phase complete`, and `commit` land without a
@@ -282,7 +339,9 @@ nothing, and publication never blocks the loop. With no reachable daemon they
 enter declared degraded polling at `daemon.watch-poll-interval`, name
 `daemon-unreachable`, print only changed snapshots, and exit 0. Mid-stream
 overflow drops that subscription to the same polling with a `subscriber-overflow`
-marker. Unreadable state exits 2 with a classified identity, never an all-clear.
+marker and the declared `overflow: "repoll"` stamp; the two snapshot topics'
+frames are unchanged by the taxonomy, and every topic's declaration is readable
+from `events list`. Unreadable state exits 2 with a classified identity, never an all-clear.
 The CLI stream seam is the single serialization/redaction chokepoint.
 
 ## Polling

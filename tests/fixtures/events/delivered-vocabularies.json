@@ -1,0 +1,24 @@
+{
+  "CONTROL_WIRE_TYPES": [
+    "poke",
+    "status",
+    "lane",
+    "subscribe",
+    "drain",
+    "stop",
+    "takeover",
+    "frame",
+    "degraded"
+  ],
+  "CONTROL_FRAME_KINDS": ["request", "response", "event", "error"],
+  "CONTROL_DEGRADED_REASONS": [
+    "subscriber-overflow",
+    "daemon-unreachable",
+    "daemon-heartbeat-stale"
+  ],
+  "CONTROL_STOP_MODES": ["drain", "immediate"],
+  "CONTROL_PROTOCOL_CURRENT": 1,
+  "CONTROL_PROTOCOL_FLOOR": 0,
+  "SUBSCRIPTION_BUFFER_SETTING": "daemon.subscription-buffer",
+  "SUBSCRIPTION_BUFFER_DEFAULT": 256
+}

@@ -1077,8 +1077,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 90) {
-    failures.push(`table length ${live.length} != baseline + 90 (${BASELINE_ROWS.length + 90})`);
+  if (live.length !== BASELINE_ROWS.length + 93) {
+    failures.push(`table length ${live.length} != baseline + 93 (${BASELINE_ROWS.length + 93})`);
   }
   return failures;
 };
@@ -1158,7 +1158,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 90,
+      BASELINE_ROWS.length + 93,
     );
   });
 
@@ -1181,7 +1181,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 90);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 93);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1768,7 +1768,7 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 124, and the corpora are non-vacuous.
+ * documented table, the total is 127, and the corpora are non-vacuous.
  */
 describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
   const COORDINATOR_CODES = [
@@ -1780,11 +1780,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 124 entries and 124 documented rows", async () => {
+  test("the live tree is green at 127 entries and 127 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(124);
-    expect(result.counts.documentedRows).toBe(124);
+    expect(result.counts.sourceEntries).toBe(127);
+    expect(result.counts.documentedRows).toBe(127);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1795,7 +1795,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("124 identities");
+    expect(doc).toContain("127 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {

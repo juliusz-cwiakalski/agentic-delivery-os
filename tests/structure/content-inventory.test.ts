@@ -67,6 +67,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "recordResumeIntent",
     "runSupervisionCycle",
   ],
+  "core/src/domain/event-projection.ts": [
+    "createEventProjector",
+    "EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK",
+    "EVENT_TOPICS",
+  ],
   "core/src/domain/dispatch-authority.ts": [
     "buildDispatchAuthorityView",
     "dualRunAuthority",
@@ -181,6 +186,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchVerboseText",
   ],
   "cli/src/commands/daemon.ts": ["createDaemonCommandDefinition"],
+  "cli/src/commands/events.ts": ["createEventsCommandDefinition", "toTopicRecord"],
+  "cli/src/output/events-text.ts": ["renderEventsDescribeText", "renderEventsListText"],
+
   "cli/src/commands/coordinator.ts": ["createCoordinatorCommandDefinition"],
   "cli/src/commands/coordinator-loop.ts": [
     "createCoordinatorSupervisor",
@@ -271,6 +279,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CONTROL_TOPICS",
     "CONTROL_WIRE_TYPES",
     "controlInteractionClass",
+  ],
+  "core/src/contracts/taxonomy.ts": [
+    "EVENT_ENVELOPE_FIELDS",
+    "ORDERING_VALUES",
+    "OVERFLOW_VALUES",
+    "SNAPSHOT_FRAME_FIELDS",
+    "TAXONOMY",
+    "TAXONOMY_LANE_RULES",
+    "TAXONOMY_OVERFLOW",
+    "TAXONOMY_SHAPES",
+    "TAXONOMY_VERSION",
+    "validateTaxonomy",
   ],
   "core/src/domain/coordinator-lifecycle.ts": ["decideLifecycle", "lifecycleEffect"],
   "core/src/domain/coordinator-evidence.ts": ["boundEvidence", "evaluateStuck", "utf8ByteLength"],

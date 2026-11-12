@@ -1,0 +1,24 @@
+# GH-290 events describe queue.graph reference page (TC-EVT-010/TC-EVT-012).
+# Generated, do not hand-edit: regenerate with `pnpm exec bun run the events renderer` (see tests/fixtures/events/goldens/README.md).
+--- output ---
+example-product events describe queue.graph
+
+topic=queue.graph
+version=v1
+shape=event
+parent=queue
+lane=ref
+ordering=sequence-per-lane
+overflow=repoll
+frame=topic,kind,lane,ref,sequence,occurredAt,payload,taxonomyVersion
+
+kinds:
+  entry  emitted  payload=ref,repository?,priority,recordedAt
+  dependency-edge  emitted  payload=ref,edges[],added[],removed[],recordedAt
+  release  emitted  payload=leaseId,repository,ref,holder,runner,weightClass,operation,recordedAt
+  remove  not emitted (declared; no v1 producer)  payload=ref,reason,recordedAt
+
+payloadFields=ref,repository?,priority,recordedAt,edges[],added[],removed[],leaseId,repository,holder,runner,weightClass,operation,reason
+
+ordering rule: events are ordered per lane by sequence-per-lane; a client's baseline is its first observed value, and a gap or any value at or below the last observed is a discontinuity that requires a repoll; the counter is process-scoped, so a daemon restart is a declared discontinuity.
+overflow policy: overflow=repoll -- repoll current state and continue from a fresh baseline.

@@ -350,6 +350,7 @@ import {
   type DispatchCommandRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
+import { createEventsCommandDefinition, type EventsCommandRuntime } from "./commands/events.js";
 import {
   type CoordinatorCommandRuntime,
   type CoordinatorSupervisorPorts,
@@ -3032,6 +3033,7 @@ export type ConfigProgramOptions = {
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
+  readonly events?: EventsCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -3567,6 +3569,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   // throws for a prompt-required name the program lacks (GH-288 F-9, DEC-13).
   if (options.projects !== undefined) {
     commands.projects = createProjectsCommandDefinition(options.projects);
+  }
+  // The taxonomy reference surface (GH-290 F-2, DEC-F): registered when the edge
+  // is given the runtime, which is the declaration itself.
+  if (options.events !== undefined) {
+    commands.events = createEventsCommandDefinition(options.events);
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);

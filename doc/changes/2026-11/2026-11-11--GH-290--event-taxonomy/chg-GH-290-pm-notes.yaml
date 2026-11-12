@@ -1,0 +1,512 @@
+change_id: GH-290
+title: "feat(daemon): public versioned event taxonomy for the subscribe surface
+  (M2-S13)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-11T21:58:37.302Z }
+  specification: { started: null, completed: 2026-11-11T23:31:45.576Z }
+  test_planning: { started: null, completed: 2026-11-11T23:31:52.409Z }
+  delivery_planning: { started: null, completed: 2026-11-11T23:31:59.083Z }
+  dor_check: { started: null, completed: 2026-11-11T23:35:33.421Z }
+  delivery: { started: null, completed: 2026-11-12T00:25:48.682Z }
+  system_spec_update: { started: null, completed: 2026-11-12T00:36:24.206Z }
+  review_fix: { started: null, completed: 2026-11-12T01:38:23.894Z }
+  quality_gates: { started: null, completed: 2026-11-12T01:45:22.957Z }
+  dod_check: { started: null, completed: 2026-11-12T01:46:02.204Z }
+  pr_creation: { started: null, completed: 2026-11-12T02:27:48.111Z }
+decisions:
+  - text: >-
+      Event-taxonomy kind-set authority: the M2 contract section
+      `doc/planning/oss-tooling/milestones/m2/contracts.md` §Event taxonomy v1
+      enumerates the kinds owned by S13 (queue.graph entry/dependency-edge/
+      release/remove; dispatch.attempt started/refused/completed; phase.state
+      began/completed/reopened; blockers.state published/updated/cleared). The
+      `m2/commands/events.md` example kind counts (6/4) and its mention of
+      stop/parked/resumed kinds are illustrative planning text that predates the
+      contracts section; the stop/park/resume shapes belong to M2-S17
+      (contracts.md §S17 mapping). The change spec pins the contract-section
+      kinds and records the S17 shapes as the declared extension path; the
+      planning page is reconciled with the mount (plan phase 5, before any
+      page-token guard reads it).
+    date: "2026-11-11"
+  - text: >-
+      The taxonomy is published as a versioned document (`taxonomyVersion: v1`)
+      with a machine-readable reference surface (`events list` / `events
+      describe <topic>`), so "the taxonomy document version is pinned by tests"
+      is satisfied by per-topic contract tests over that surface and over the
+      daemon-emitted events, not by prose alone.
+    date: "2026-11-11"
+open_questions: []
+blockers: []
+notes:
+  - text: >-
+      Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/312 (base
+      `main-tools`, head `16f79a63`, state OPEN, mergeable CLEAN). Branch was
+      synced with `origin/main-tools` (GH-303, GH-289 merged) — merge commit
+      0902a43c, 10 documentation conflicts resolved as unions, and this change's
+      decision record renumbered TDR-0024 → TDR-0025 after GH-289 merged its own
+      TDR-0024. Post-merge gates: `pnpm check` 7,666 pass / 4 skip / 0 fail (965
+      files), range lint PASS over 34 commits, error-table-sync 127/127,
+      doc-distribution no drift, plan validate valid. Merge authority and issue
+      closure remain with the CEO/human flow.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Quality gates: PASS. `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 — 7,547
+      pass / 4 skip / 0 fail across 952 files; boundaries (387 modules), ambient
+      globals (179 files), workspace entrypoints, secret-read boundary (355
+      files), prompt conformance (5 prompts), help coverage, exports parity all
+      green. Range lint gate: VERDICT PASS — base `main-tools` (merge-base
+      3c9f8a59), head c09ac609, 30 commits in range, 0 offending commits, mode
+      none, 0 distinct rules hit; commitlint binary
+      `node_modules/.bin/commitlint` (origin: repository-local), ref
+      `refs/remotes/origin/main-tools`.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Code review iteration 2: PASS. B-1 and M-1..M-5, L-1..L-6, I-1 all
+      verified closed against the code (pair budget unit reproduced at cap 2 and
+      64/62/63; dependency delta staged per entering order; bidirectional kind
+      pin plus exact per-kind payload-key comparison; docs corrected).
+      Remediation commits: 351ee285 (plan phase 9 code/tests), 10878764 (spec
+      v1.6 + M-3/M-4 docs), 34953b72 (review-iter-2, test plan v1.4 registering
+      TC-EVT-085..092, spec v1.7 declaring the 256-char evidenceRefs
+      presentation bound). Residuals accepted at PASS: L-2 privacy rests on the
+      producer-typed DeliveryResultToken (no runtime check), and the N-3
+      kind-count wording is now precise. One commit was refused once by the
+      secret scan on a test-plan canary literal (false positive, reworded).
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Code review iteration 1: FAIL. Blocking B-1 (event-projection budgets the
+      began/completed pair as 3 slots for 2 frames, so at the frame bound
+      `completed` is dropped without a watermark commit — reproduced); medium
+      M-1 (projection hand-codes kinds/payloads so "single source cannot drift"
+      is unproven), M-2 (same-tick dependency delta diffs against tick start),
+      M-3 (spec page repeats the drift claim), M-4 (planning contracts.md still
+      says `remove` publishes and states a seven-field envelope), M-5 (the new
+      feature spec page and doc/00-index row are undeclared in spec §16 and plan
+      scope). Low L-1..L-6 and one info I-1. Remediation: plan phase 9 for the
+      code/tests, spec §16/AC-F2-4/NFR-10 alignment, doc-syncer for the two
+      planning/spec pages. Review retained in
+      code-review/review-iter-1.{md,yaml}.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 4 (narrow confirmation): READY. RF-14, RF-15, A-18..A-23 all
+      verified closed; 45 TCs unique, 38/38 AC covered, plan map
+      8/9/0/9/5/13/1/0, plan validate valid and lint clean. Accepted residual
+      risks: (1) the M2 page's reference-record key set and `Delivered (M2-S13)`
+      line are review-attested only (owners @doc-syncer + @reviewer, GAP-T6) —
+      delivery must not ship a stale page; (2) root `--help` has no size ceiling
+      (measured 45 lines / 1747 bytes); (3) `events` help pages inherit the
+      daemon ≤120-line/≤4000-byte bound; (4) compact `--json` ≤8192 bytes is a
+      test-plan derivation, not an NFR (NFR-5 is 65536); (5) TDR-0025 stays
+      Proposed and untracked until plan phase 8 stages it; (6) citation nits
+      N-1..N-3 (root-help byte figure, SOURCES versions, Phase-5 "taxonomy
+      tables" wording) must be reconciled during delivery.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 2: NOT_READY at 6/10 facets. All nine iteration-1 findings
+      verified closed in the text/code. Four new blocking findings: RF-10 (NFR-2
+      says "per daemon tick" but heartbeat ticks do three store reads; AC says
+      publish tick — spec+KPI, TC-081 interval, plan runtime scope), RF-11 (the
+      event projection's consumer needs packages/core/src/index.ts, in no phase
+      scope), RF-12 (entrypoint-help-coverage.test.ts hard-codes the
+      prompt-required names and the test plan calls it a no-edit control), RF-13
+      (Phase 5 does not reconcile the M2 page's key set/status line). Advisories
+      A-9..A-17. Remediating all four plus the cheap advisories before iteration
+      3.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 1: NOT_READY at 6/10 facets. Nine blocking findings
+      RF-1..RF-9 recorded in readiness-review/readiness-iter-1.md. Owning
+      authors: RF-1 plan-writer (plus a spec rule fix),
+      RF-2/RF-3/RF-4/RF-5/RF-6/RF-8/RF-9 spec-writer with test-plan follow-ups,
+      RF-7 spec-writer plus a TDR-0025 DC-2 amendment. Most serious: delivered
+      `daemon-compose.ts` accepts any topic and labels the lanes snapshot with
+      it, so DEC-L is acceptance-to-refusal, not an identity rename; the state
+      port exposes only a whole-store read so NFR-2's bounded-read claim has no
+      seam; and tests/structure/daemon-production-composition.test.ts pins
+      prompt-required counts that no phase declares. Reopening specification,
+      test_planning and delivery_planning for remediation iteration 1.
+    type: "retro"
+    date: "2026-11-11"
+  - text: >-
+      Clarify-scope review covered the ticket (M2-S13), the M2 planning pack
+      (backlog story, m2/contracts.md event taxonomy v1, m2/commands/events.md,
+      m2/test-scenarios SC-M2-S13-01/02, m2/entrypoint-delta.md), and the
+      delivered system behaviour: `CONTROL_TOPICS = [queue, lanes]` in
+      packages/core/src/contracts/control.ts, the snapshot-only publish path in
+      packages/core/src/app/control-server.ts and daemon-compose.ts, the
+      overflow behaviour in control-session.ts, and
+      doc/spec/features/feature-resident-daemon.md §Control protocol v1.
+    type: "info"
+    date: "2026-11-11"
+  - text: >-
+      Gap found and resolved without a human stop: events.md's kind counts do
+      not reconcile with the enumerated kind sets in contracts.md, and its
+      dispatch.attempt prose names S17's stop/parked/resumed kinds. Resolution
+      recorded in `decisions` (contracts.md is authoritative for S13). No
+      ticket-level ambiguity about the ACs themselves was found.
+    type: "info"
+    date: "2026-11-11"
+  - text: >-
+      Repository state at intake: `feat/GH-290/event-taxonomy` existed with zero
+      commits at main-tools tip 3c9f8a59, worktree clean, no PR in any state,
+      issue open with label `change`. This run therefore starts the full
+      11-phase lifecycle from phase 1.
+    type: "info"
+    date: "2026-11-11"
+  - text: >-
+      Plan phase 1 complete (commit 319bed9f): the one authored declaration
+      `packages/core/src/contracts/taxonomy.ts` (six topics, 0/0/4/3/3/3 kinds,
+      per-kind payload lists, derived unions, closed shape/lane/ordering/
+      overflow values, and the module's one pure `validateTaxonomy`), the
+      `CONTROL_TOPICS` widening to six, the additive `ControlEnvelopeEventData`
+      member plus the `overflow`/`taxonomyVersion` stamps on the degraded body,
+      the new `events` domain kind with exactly three rows, the contract-index
+      re-export, and the three documented result-contract rows (124 -> 127).
+      Gate: `pnpm typecheck` green; the eleven-suite Phase-1 batch reports 162
+      pass / 0 fail; `error-table-sync` entries=127 documented=127 OK;
+      exports-parity 5/5 publishables OK; ambient-globals 178 files clean.
+      Deviations, all disclosed by the primitive as scope drift or resolved
+      outside the tree: (1) `packages/cli/src/daemon-compose.ts` is edited in
+      this phase with a one-line handler parameter type widening (declared only
+      in plan Phase 4) because widening `ControlTopic` otherwise breaks the
+      Phase-1 build; the edit is type-only and the delivered queue/lanes
+      resolution is untouched until Phase 4. (2) `scripts/checks/
+      error-table-sync.ts` gains the three `events` two-segment codes in its
+      exact allowlist; no phase declared that file, and the bidirectional sync
+      gate cannot pass otherwise. (3) The untracked amended
+      `TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` was held outside
+      the tree (`tmp/tmpdir/held/`) for this commit only: a standalone `commit
+      GH-290` stages the union of every declared plan phase, so the Phase-8
+      record would otherwise be swept into Phase 1 with a template subject
+      naming it as an invented tracker reference. It is restored before the
+      Phase-8 commit that declares it. Citation nits N-1..N-3 from DoR iteration
+      4 remain open for their owning phases.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 2 complete (commit 2d0399bb): the generated reference surface.
+      `packages/cli/src/commands/events.ts` renders `events list` / `events
+      describe <topic>` from the declaration alone (machine record keys exactly
+      name/version/shape/frame/lane/kinds/payloadFields/ordering/overflow plus
+      the single `parent` on queue.graph; derived first-seen payload union;
+      `{0,1,2}` exit projection with `events.verb-unknown` and
+      `events.topic-unknown` refusals and the injected-invalid-declaration
+      `events.taxonomy-unavailable` at exit 2 rendering no page), and
+      `packages/cli/src/output/events-text.ts` renders the six-row table and the
+      per-topic page inside the 40-line / 8 192-byte human bound. The edge
+      registers `events` when its runtime is supplied and the production
+      composer supplies it unconditionally (`events: {}`), so the family is
+      composed but not yet prompt-required (that is Phase 5). Goldens for the
+      table and both representative pages are committed under
+      tests/fixtures/events/goldens with a generation header; TC-EVT-010..016
+      and TC-EVT-080 are implemented. Gate: `pnpm typecheck` green; the
+      seven-suite Phase-2 batch reports 64 pass / 0 fail (p95 for all four forms
+      0.02-0.09 ms); content-inventory green; exports-parity,
+      workspace-entrypoints, and ambient-globals all OK. Deviations: the
+      delivered `cli-edge-seam` suite's optional-human-text declarer list gains
+      `events.ts` (a membership row that follows the new renderer, no assertion
+      relaxed) and, as recorded for Phase 1, commit subjects come from the
+      primitive's deterministic template over the union scope, so they name the
+      top staged path (the same F-9 template-subject limitation GH-286
+      recorded); staging is otherwise exactly this phase's declared scope.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 3 complete (commit deb3155f): the pure event projection
+      `packages/core/src/domain/event-projection.ts` derives the four event
+      topics from one `StateRecord` view it is handed — per-kind source mapping,
+      the eight-field envelope with `occurredAt` from the source record, the
+      non-empty `lane` and per-topic `ref` rules, the delta-only
+      `dependency-edge`, the derived `began` emitted together with the first
+      `completed` (two frames, ascending sequence), the per-`(topic, lane)`
+      process-scoped sequence allocator, the 64-per-topic per-tick cap with the
+      remainder pending, and the per-`(topic, lane, source family)` DM-9
+      watermark whose `phase.state` entry is a position inside the change's
+      cumulative artifact. No read, write, clock, or I/O: `project(view)` is the
+      only input. The module is registered in the file-set inventory and the
+      executable allowance, and re-exported from `domain/index.ts`.
+      `tests/structure/event-projection-bounds.test.ts` (TC-EVT-082's structural
+      half) proves the cap, the pending remainder, the contiguous 1..100
+      sequence series, the one-entry-per-pair watermark, and the cumulative
+      artifact's single position. Gate: `pnpm typecheck` green; the bounds suite
+      reports 7 pass / 0 fail; content-inventory green. Deviations: none in the
+      declared scope; TC ids owned by this phase remain zero, as the plan's map
+      states, and the behaviour cases stay with Phase 4/6.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 4 complete (commit 471000f3): subscribe integration. The
+      session gains `publishEvent` (an event-topic frame with no cursor), and
+      every degraded frame — the delivered overflow path for all six topics —
+      now carries `overflow: "repoll"` from `TAXONOMY_OVERFLOW` and
+      `taxonomyVersion` from `TAXONOMY_VERSION`. The server's publish projection
+      is shape-aware: snapshot topics keep per-topic cursor dedupe and event
+      topics publish observed deltas from one tick's batch before any flush, and
+      the subscribe accept tolerates a topic with no snapshot so an event
+      subscription gets no synthetic baseline. The daemon composition widens the
+      subscribe handler to the six topics, refuses an unknown topic with
+      `events.topic-unknown` from the declaration before any store read (the
+      delivered acceptance becomes a refusal), and feeds the four event topics
+      from the Phase-3 projection over the existing ledgers. TC-EVT-023, 030,
+      040, 041, 042, 050, 075, 082 and 083 are implemented, and the TC-EVT-032
+      restart suite is authored here for its Phase-6 ownership. Gate: the
+      fifteen-suite event batch reports 111 pass / 0 fail; the eight delivered
+      control/daemon/queue-watch/lanes-watch suites and the seven
+      composition/help/parity suites pass unmodified (68 pass); `pnpm
+      typecheck`, ambient-globals (179 files), and workspace-entrypoints are
+      green; content-inventory green. Deviations: (1) the delivered server
+      flushes a subscription after every tick, so a subscriber that keeps
+      reading can never accumulate a buffer; overflow parity is therefore proven
+      row-by-row at the delivered session seam (the bound's home, the same seam
+      the delivered control-session suite uses) for all six topics, plus one
+      end-to-end `queue.graph` burst on the wire — the "second subscriber
+      spared" clause holds for the reading subscriber within the same tick and
+      for every bystander topic, and with a buffer smaller than a single-tick
+      burst every subscriber of that topic overflows, which is the delivered
+      semantics. (2) TC-EVT-050's pre-change byte-golden is replaced by exact
+      key-order/shape assertions plus the five delivered control suites, because
+      no pre-change frame golden was captured before this branch started; no
+      assertion is weaker (three exact keys, cursor 0, dedupe, no envelope
+      field, the stamped degraded row).
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 5 complete (commit 300988bd): the mount as one unit. `events`
+      joins `PROMPT_REQUIRED_COMMANDS` (18 -> 19), the help inventory gains the
+      family and both verb entries pointing at
+      `doc/planning/oss-tooling/milestones/m2/commands/events.md` through the M2
+      page root, the coverage fixture gains the `commands` and `referencePages`
+      rows, both page-root resolvers (the check and the parity suite) gain the
+      `events` row, root `--help` lists nineteen families, and the three
+      prompt-required count assertions in
+      `tests/structure/daemon-production-composition.test.ts` become 19/19/18
+      with the inline 18-name list in `entrypoint-help-coverage.test.ts` at 19
+      and the `EXPECTED` hand list carrying `events`. The M2 page is reconciled
+      here: `Delivered (M2-S13)`, the reference-record key set (`name`,
+      `version`, `shape`, `parent?`, `frame`, `lane`, `kinds[]` with per-kind
+      `emitted`/`payloadFields[]`, the derived `payloadFields[]`, `ordering`,
+      `overflow`), the snapshot/event split with `kinds: []` on `queue`/`lanes`,
+      the printed counts `0/0/4/3/3/3`, the corrected text example, the HELP
+      section carrying `--help`/`--version`, and the S17 prose confined to the
+      heading `EXTENSION PATH (S17 — not v1)` after ERRORS and before SEE ALSO
+      (the v1 sections name none of the four S17 shapes). TC-EVT-060..064 are
+      implemented, with eight mount negative controls plus the unedited-18-name
+      control. Gate: `pnpm typecheck` green; the ten-suite mount batch reports
+      56 pass / 0 fail, and the expanded parity/count batch 29 pass / 0 fail;
+      `help-guide-coverage` all commands covered; `prompt-conformance` 5 prompts
+      clean. Measured residual for N-1: root `--help` renders 46 lines / 1821
+      bytes on this tree (the DoR note's 45 lines / 1747 bytes predates the
+      nineteenth row); the suite records the measurement and asserts content,
+      not a size ceiling, exactly as TC-EVT-061 declares.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 6 complete (commit 35121fc3): the per-topic contract suites and
+      the single-source proof. `events-subscribe-queue-graph` (TC-EVT-020),
+      `-dispatch` (024), `-phase` (025), and `-blockers` (026) observe their
+      topics through the real server/session over a real store;
+      `events-envelope-conformance` (022) asserts the eight ordered `data` keys,
+      the non-empty lane, the per-topic `ref` rule (explicit `null` only on
+      blockers), the ISO-Z `occurredAt`, the declared payload keys, and the
+      absent cursor across a twelve-frame full-delivery stream;
+      `events-emitted-kinds` (027) proves the emitted set equals the declared
+      emitted set with `remove` never emitted; `events-privacy` and the
+      privacy-literal scan (084) prove no canary, `repositoryRoot`, credential,
+      prompt, transcript, or diff reaches a frame, page, or error;
+      `event-taxonomy-single-source` (006 and 016's union half) moves the
+      declaration once and watches both consumers move, scans the production
+      tree for a second kind list, and pins the derived union;
+      `event-ordering-contract` (031) pins the ordering values and proves no
+      sort/comparison on `occurredAt` and no cursor-derived order;
+      `event-taxonomy-conformance` (002/027/032 page halves) scans the seven v1
+      sections (no S17 name, counts `0/0/4/3/3/3` present, every section
+      non-empty), asserts the `EXTENSION PATH (S17 — not v1)` section is
+      non-empty, placed after ERRORS and before SEE ALSO, and the only place the
+      four names occur, and scans the page's restart/repoll/gap prose;
+      `tests/conformance/events/real-socket-subscribe.test.ts` (021) repeats the
+      `queue.graph` observation over the delivered unix transport with the 0700
+      directory and 0600 socket invariants. Gate: the thirteen-suite Phase-6
+      batch reports 26 pass / 0 fail, the five delivered control suites 21 pass
+      / 0 fail, `exports-parity`, `prompt-conformance`, and `error-table-sync`
+      (127 documented) all OK. Deviations: none in the declared scope; the page
+      token scan excludes only the named extension section, exactly as the spec
+      pins it.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 7 complete (commit 2998ea7c): the shared tick read. The
+      composition takes exactly one whole-store `readRecords()` view per publish
+      tick and hands it to both snapshot folds and to the event projection:
+      `readQueueEntries`/`readDaemonLanes` gained an additive `view?: readonly
+      StateRecord[]` parameter (their own fallback is unchanged, so every
+      delivered caller still compiles), `queueWatchSnapshot`/
+      `lanesWatchSnapshot` take the view instead of the store, and
+      `createWatchState.changes()` reads once and passes it to both projections.
+      No port shape, wire type, record kind, schema version, or dependency
+      changed. `tests/behaviour/events-tick-cost.test.ts` (TC-EVT-081) proves
+      one read per publish pass with a fixed clock across 1 vs 5 subscribers and
+      2 vs 4 subscribed event topics, zero sleeps on the publish path, and the
+      advancing-clock control reading exactly 3 for the counted window (one
+      publish read plus the heartbeat's own two folds); the delivered
+      heartbeat's three append/verify reads are reported separately (`publish=1
+      heartbeat-fold=2 delivered-append=3 total=6`) because NFR-2 neither counts
+      nor bounds them. Added publish p95 measured 0.14 ms over 50 passes, far
+      inside the 25 ms budget. The scoped source assertion shows the composition
+      is the only `store.readRecords(` seam, the projection never reads, and
+      both folds take the shared view. Gate: `pnpm typecheck`, ambient-globals
+      (179 files), workspace-entrypoints, and content-inventory green; all 37
+      event suites (154 pass / 0 fail) and the ten delivered control/heartbeat
+      suites (40 pass / 0 fail) green. Deviations: (1) the composition gains an
+      additive `processBlockerAnswers?: boolean` input (default true) so the
+      control can compose the iteration with that optional consumer absent,
+      exactly the optional-port shape TC-EVT-081 names; default behaviour is
+      unchanged. (2) The spec's "two heartbeat reads" figure covers the two
+      ledger folds only; the delivered heartbeat append/verify chain adds three
+      reads that are recorded, not claimed. No gate was relaxed.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 8 complete (commit 3090f1c7): documentation reconciliation, the
+      amended decision record, the changeset, and the release obligations. The
+      AMENDED
+      `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md`
+      (status `Proposed`, DC-1..DC-5 plus the Amendments table) is staged in
+      this phase-mode commit, exactly as the plan's staging contract declares;
+      it is never committed unchanged and its acceptance stays with the owner at
+      the pull-request review. The reconciled pages are the resident-daemon page
+      (the six-topic taxonomy, the shape split with `kinds: []`, the eight-field
+      envelope with per-topic `lane`/`ref`, per-lane sequence and gap-to-repoll,
+      the cursor exclusion, the additive overflow stamps, the integrity rule,
+      the acceptance-to-refusal refusal identity, and the one-shared-read tick),
+      the entrypoint and agents-and-commands pages (the `events` composition row
+      and the corrected 19-name allowed set including the previously omitted
+      `projects`), the glossary (taxonomy, envelope, sequence,
+      overflow-to-repoll, and version terms), the architecture overview, the
+      result-contract page's prose and kind enumeration, the M2 entrypoint delta
+      and README, the CLI command registry, the M2-S13 backlog row (`Progress:
+      delivered by GH-290`), and
+      `doc/quality/test-specs/test-spec-resident-daemon.md`, which is authored
+      here so the taxonomy coverage lands with the pages it describes. One
+      lockstep minor changeset covers the five publishables; testkit is excluded
+      and the fixed group validates. Gate: the doc/coverage/parity/
+      decision/error-table-sync suites report 117 pass / 0 fail;
+      `prompt-conformance`, `error-table-sync` (127 documented),
+      `forbidden-literals`, `test-doc-distribution.sh`, and `changesets-group`
+      are green; `TMPDIR=$PWD/tmp/tmpdir pnpm check` passes end to end with
+      **7530 pass, 4 skip, 0 fail, 64689 expect() calls across 7534 tests in 952
+      files**; `./scripts/lint-commit-range.sh --base main-tools` reports PASS
+      over 21 commits with 0 offending; `git diff --check` is clean. Deviations:
+      the delivered count assertions in `tests/checks/error-table-sync.test.ts`
+      moved 124 -> 127 and `BASELINE + 90` -> `BASELINE + 93` (count-only mount
+      rows the plan's §8.5 derived edit set covers), disclosed by the primitive
+      as scope drift; the `projects list` help entry was restored after an
+      editing slip and is verified by the GH-288 suite. No test was weakened.
+      Not pushed and no pull request opened; the PM owns phase 11.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 9 complete (commit 351ee285ac25e676cdc39f8fb169309a05daac1d):
+      code-review iteration-1 remediation. B-1 is fixed in the projection — the
+      `began`/`completed` pair is one budget unit (`began` reserves two slots,
+      the paired `completed` charges `groupSize: 0`), so an unfittable pair is
+      skipped whole without advancing the watermark; proven at
+      `maxPerTopicPerTick: 2` (both-or-neither, one pair per tick), at the 64
+      cap with 62 pre-consumed (the pair exactly fills the cap and emits both),
+      at 63 pre-consumed (neither frame, watermark held, both emitted on the
+      next tick), and over a 40-pair burst (64 frames then 16, never 42). M-2 is
+      fixed — dependency deltas diff against the previous record in the same
+      view via a per-call staged edge map, committed only by `commit` — proven
+      by a two-records-in-one-view cell (`["GH-1"]` then `["GH-2"]` yields
+      `removed: ["GH-1"]`). M-1 is proven in both directions: a new exact-key
+      suite drives the REAL projector through all 13 declared kinds and compares
+      each emitted payload key set against `CONTRACT_PAYLOAD_FIELDS` (undeclared
+      key fails, missing required key fails), the frame comparator is now
+      bidirectional, the drift suite feeds the live `events list --json` surface
+      and the live projector, and the single-source scan is AST-based (kind
+      properties, array groups, object maps) with the projection's kind literals
+      pinned bidirectionally to the 11 distinct declared emitted names. L-2 is
+      tested against spec v1.5: the attempt `token` is projected from the closed
+      delivery-result vocabulary and the nested comparison record's token (a
+      credential-shaped canary) never reaches a frame. L-3 refuses `describe`
+      with no topic (`missing-topic`, names `<topic>`) and `list <extra>`
+      (`unexpected-argument`, names the positional) under the delivered
+      `events.verb-unknown` identity, so the table stays 127 rows. L-4 adds
+      connect/listen/probe counters to the harness and asserts 0/0/0 on a
+      counted publish pass (live-counter controls included); L-5 adds a
+      same-connection two-subscription overflow cell (only the overflowing
+      subscription is stamped and dropped, the sibling keeps receiving); L-6
+      bounds each `evidenceRefs` entry to 256 chars inside the projection with a
+      non-exported cap, proven over a 4096-char worst-case ref. Weak tests: the
+      additive suite is de-tautologised, the drift suite consumes live
+      consumers, the conformance guard parses the M2 page's per-kind table
+      (read-only; the page already names the declared kinds, no page edit made),
+      and the hermetic suite now walks the surface's resolved relative-import
+      closure with the runner boundary stated by name. I-1 reverted the five
+      alphabetical reorderings (domain/contracts indexes, production, queue,
+      daemon) to their base order with only this change's rows and additions
+      kept; no guard requires sorted order. Gate: `TMPDIR=$PWD/tmp/tmpdir pnpm
+      check` passes end to end with **7547 pass, 4 skip, 0 fail, 65180 expect()
+      calls across 7551 tests in 952 files**; the phase's declared suites run
+      173 pass / 0 fail, and `content-inventory` + `error-table` (98 pass),
+      `exports-parity`, `error-table-sync` (127 documented),
+      `workspace-entrypoints`, and `prompt-conformance` are green. No test was
+      weakened and no assertion was relaxed. Disclosed, not pushed, no pull
+      request opened; `phase complete delivery` was not re-run because the
+      delivery lifecycle phase already landed. TC ids: TC-EVT-002 (page half),
+      003, 005, 006, 014 and the new TC-EVT-085..092 registered by test plan
+      v1.4.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Decision-record identifier renumber: GH-289 merged its record as
+      `TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md`,
+      colliding with this change's drafted `TDR-0024` on the first sync with
+      `main-tools`. This change's record is now
+      `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` —
+      id, title, index row, and every reference in the spec, the test plan, the
+      plan, this ledger, the event-taxonomy and resident-daemon spec pages, the
+      CLI entrypoint page's decision list, and the review artifacts. Content,
+      status (`Proposed`), and the in-place amendments are unchanged; GH-289's
+      `TDR-0024` is untouched. The collision and the renumber are also recorded
+      in the spec's document history (v1.8).
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Sync with `main-tools` resolved: merge commit `0902a43c` merged `355ce2d5`
+      (GH-289) and `a1b6b074` (GH-303) into `feat/GH-290/event-taxonomy`. Ten
+      paths conflicted and every one kept both sides' delivered facts:
+      `doc/decisions/00-index.md`, `doc/overview/architecture-overview.md`,
+      `doc/overview/glossary.md`,
+      `doc/planning/oss-tooling/cli-command-registry.md`,
+      `doc/planning/oss-tooling/milestones/m2/contracts.md`,
+      `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md`,
+      `doc/planning/oss-tooling/status.md`,
+      `doc/spec/features/feature-cli-entrypoint.md`,
+      `doc/spec/features/feature-result-contract.md`, and
+      `tests/fixtures/help-guide/coverage.json`. GH-303's project-groups domain
+      model and GH-289's dispatch-attempts read side survive beside this
+      change's event-taxonomy rows. The decision record is renumbered to
+      `TDR-0025` (GH-289's `TDR-0024` stands) with every reference updated, and
+      the two GH-289 guards that pinned pre-change counts moved exactly rather
+      than loosely: root families 18 -> 19 and error-table identities 124 ->
+      127. Gates after the merge: `pnpm check` exit 0 — 7,666 pass / 4 skip / 0
+      fail, 65,849 `expect()` calls across 7,670 tests in 965 files, with
+      boundaries (389 modules), ambient globals, workspace entrypoints,
+      secret-read boundary, prompt conformance (5 prompts), help coverage, and
+      exports parity green; `./scripts/lint-commit-range.sh --base main-tools`
+      PASS; `bash scripts/.tests/test-doc-distribution.sh` OK (83 in-scope
+      docs); `bun run scripts/checks/error-table-sync.ts` OK (127 documented =
+      127 source); `bun run scripts/checks/forbidden-literals.ts` 5/5 scope
+      classes, 0 violations; `delivery-os plan validate GH-290` verdict=valid,
+      readyForDevelopment=true. No test was weakened. Not pushed, no pull
+      request merged, issue not closed.
+    type: "info"
+    date: "2026-11-12"

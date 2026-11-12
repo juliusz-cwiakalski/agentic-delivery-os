@@ -27,6 +27,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "coordinator",
   "daemon",
   "projects",
+  "events",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

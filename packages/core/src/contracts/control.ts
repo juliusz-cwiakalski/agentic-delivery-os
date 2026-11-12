@@ -35,8 +35,15 @@ export const CONTROL_WIRE_TYPES = [
 ] as const;
 export type ControlWireType = (typeof CONTROL_WIRE_TYPES)[number];
 
-/** The closed subscription topics. */
-export const CONTROL_TOPICS = ["queue", "lanes"] as const;
+/** The closed subscription topics: two delivered snapshot topics plus four event topics. */
+export const CONTROL_TOPICS = [
+  "queue",
+  "lanes",
+  "queue.graph",
+  "dispatch.attempt",
+  "phase.state",
+  "blockers.state",
+] as const;
 export type ControlTopic = (typeof CONTROL_TOPICS)[number];
 
 /** The closed degraded-event reasons. */
@@ -97,10 +104,28 @@ export type ControlDrainData = { readonly draining: true; readonly lanes: readon
 export type ControlStopData = { readonly stopping: true };
 export type ControlTakeoverData = { readonly takenOver: true };
 
+/** One event-topic frame body: the eight declared `data` fields, in order (DM-2, EVT-1). */
+export type ControlEnvelopeEventData = {
+  readonly topic: ControlTopic;
+  readonly kind: string;
+  readonly lane: string;
+  readonly ref: string | null;
+  readonly sequence: number;
+  readonly occurredAt: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+  readonly taxonomyVersion: string;
+};
+
 /** One unsolicited event body. */
 export type ControlEventData =
   | { readonly topic: ControlTopic; readonly cursor: number; readonly snapshot?: unknown }
-  | { readonly degraded: ControlDegradedReason; readonly topic?: ControlTopic };
+  | ControlEnvelopeEventData
+  | {
+      readonly degraded: ControlDegradedReason;
+      readonly topic?: ControlTopic;
+      readonly overflow?: "repoll";
+      readonly taxonomyVersion?: string;
+    };
 
 /** The delivered error-object field set carried by an error frame. */
 export type ControlErrorData = Pick<

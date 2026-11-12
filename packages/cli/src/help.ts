@@ -604,6 +604,37 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     examples: ["<binary> projects list", "<binary> projects list --json"],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
   },
+  {
+    path: ["events"],
+    summary: "Read the subscribe event taxonomy: list topics and describe one",
+    usage: ["<binary> events <list|describe <topic>> [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: [
+      "<binary> events list",
+      "<binary> events describe queue.graph",
+      "<binary> events list --json",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "events")],
+  },
+  {
+    path: ["events", "list"],
+    summary: "List the declared topics, their shapes, kinds, ordering, and overflow",
+    usage: ["<binary> events list [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> events list", "<binary> events list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "events")],
+  },
+  {
+    path: ["events", "describe"],
+    summary: "Describe one topic's kinds, payload fields, lane, ordering, and frame",
+    usage: ["<binary> events describe <topic> [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: [
+      "<binary> events describe queue.graph",
+      "<binary> events describe queue.graph --json",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "events")],
+  },
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

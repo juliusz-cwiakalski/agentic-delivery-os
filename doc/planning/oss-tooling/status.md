@@ -261,3 +261,21 @@ and claims no M2 delivery and no milestone exit.
    ODR-0003.
 6. M2-S4 depends on M2-S18, so the advisory phrase is removed from the pack
    map row.
+
+## M2 delivery snapshot (2026-11-12)
+
+M2-S13 (public event taxonomy) was delivered by GH-290. The daemon's subscribe
+surface publishes event taxonomy v1 over six topics: `queue` and `lanes` keep
+their delivered snapshot frames, and `queue.graph`, `dispatch.attempt`,
+`phase.state`, and `blockers.state` carry the eight-field change envelope with a
+process-scoped `sequence` ordered per `(topic, lane)`. A degraded frame keeps the
+delivered `subscriber-overflow` marker and drop behaviour and additively carries
+`overflow: "repoll"` and `taxonomyVersion: "v1"`; a subscription for a topic
+outside the six is refused with `events.topic-unknown` before any ledger read;
+and the generated `events list` / `events describe <topic>` reference surface is
+a prompt-required family. Every emitted kind reads an existing durable record;
+`queue.graph.remove` is declared with `emitted: false` because no delivered path
+removes a queue entry. M2-S15 owns entry removal, M2-S16 and M2-S4 consume the
+declared taxonomy, and M2-S17's stop, parked, resumed, and park-edge shapes
+arrive as a future taxonomy version. M2 has not exited: the remaining M2 stories
+stay planned.

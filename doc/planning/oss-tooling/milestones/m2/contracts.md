@@ -12,10 +12,11 @@ M1 contracts remain valid: the machine envelope shape, the error taxonomy, the
 exit-code meaning, the state-layer validation rules, and the audit ledger are
 unchanged. M2 surfaces extend them additively:
 
-- The machine envelope stays the standard five-field `CommandResult`
-  (`schemaVersion`, `runId`, `exitCode`, `timing`, and `data`, plus `error` on a
-  failure); new commands add keys under `data`, never new top-level keys, and no
-  `ok` or `command` field exists on the envelope.
+- The machine envelope stays the delivered `delivery.result.v1` shape — the
+  standard five-field `CommandResult` (`schemaVersion`, `runId`, `exitCode`,
+  `timing`, and `data`, plus `error` on a failure); new commands add keys under
+  `data`, never new top-level keys, and no `ok` or `command` field exists on the
+  envelope.
 - Exit codes keep their meaning: `0` declared verdict, `1` refused or negative
   verdict, `2` platform, state, or provider failure.
 - Every surface that reads or mutates state validates at the boundary and
@@ -229,17 +230,22 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
 The subscribe contract, owned by M2-S13 and published by the resident daemon.
 
 - **Topics.** `queue.graph`, `dispatch.attempt`, `phase.state`, and
-  `blockers.state` extend the delivered `queue` and `lanes` topics
-  (`CONTROL_TOPICS = [queue, lanes]`); `queue.graph` extends `queue`, and
+  `blockers.state` extend the two delivered `queue` and `lanes` topics (the
+  `CONTROL_TOPICS` set was `[queue, lanes]` when this pack was written and is now
+  the delivered six); `queue.graph` extends `queue`, and
   `status` is a wire type, not a topic.
-- **Event kinds.** Each topic declares its kinds: `queue.graph` publishes
-  entry, dependency-edge, release, and remove kinds; `dispatch.attempt`
-  publishes started, refused, and completed kinds; `phase.state` publishes
-  phase began, phase completed, and phase reopened kinds; `blockers.state`
-  publishes published, updated, and cleared kinds.
+- **Event kinds.** Each topic declares its kinds: `queue.graph` declares
+  entry, dependency-edge, release, and remove kinds; `dispatch.attempt` declares
+  started, refused, and completed kinds; `phase.state` declares phase began,
+  phase completed, and phase reopened kinds; `blockers.state` declares
+  published, updated, and cleared kinds. `queue.graph` publishes every kind
+  except `remove`, which is declared with `emitted: false` so a client can write
+  the case once; no v1 path produces it (entry removal is the M2-S15 lifecycle
+  mutation).
 - **Payload shapes.** Every event carries `topic`, `kind`, `lane`, `ref`,
-  `sequence`, `occurredAt`, and a topic-specific `payload` object. Payload
-  fields are additive within a taxonomy version.
+  `sequence`, `occurredAt`, and a topic-specific `payload` object, plus the
+  `taxonomyVersion` stamp — seven change fields and eight `data` keys in total.
+  Payload fields are additive within a taxonomy version.
 - **Ordering guarantees.** Events are ordered per lane by a monotonic
   `sequence`; a client that observes a gap must repoll rather than infer
   order.
@@ -248,8 +254,10 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
   overflow, and the subscriber re-reads current state. Overflow behavior is
   defined per topic and preserved for every topic.
 - **Versioning.** The taxonomy document carries a version, pinned by
-  contract tests per topic; a client is expected to state the version it
-  speaks.
+  contract tests per topic and stamped on every event frame and degraded frame.
+  No client frame carries a version: the subscribe payload is
+  `{ topic, since? }`, and a client reads the version it speaks from the frame
+  and the reference surface.
 
 ## telemetry.v1
 

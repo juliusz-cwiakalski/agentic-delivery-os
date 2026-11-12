@@ -55,6 +55,7 @@ import {
   type StateFenceHandle,
   type StateJsonValue,
   type StateReadEvidence,
+  type StateRecord,
   type StateSafeLocation,
   type StateStoreIdentity,
   type StateStorePort,
@@ -406,8 +407,26 @@ type RecordSpec<T> = {
   readonly isRecord: (value: unknown) => value is T;
 };
 
-const readRecords = <T>(store: StateStorePort, spec: RecordSpec<T>): QueueLedgerRead<T> => {
-  const verified = store.readRecords();
+const readRecords = <T>(
+  store: StateStorePort,
+  spec: RecordSpec<T>,
+  view?: readonly StateRecord[],
+): QueueLedgerRead<T> => {
+  const verified =
+    view === undefined
+      ? store.readRecords()
+      : {
+          ok: true as const,
+          value: {
+            records: view,
+            evidence: {
+              storePath: store.identity.stateDirectory,
+              verification: [],
+              verifiedEmpty: view.length === 0,
+              recordCount: view.length,
+            },
+          },
+        };
   if (!verified.ok) {
     return {
       ok: false,
@@ -443,13 +462,20 @@ const readRecords = <T>(store: StateStorePort, spec: RecordSpec<T>): QueueLedger
 };
 
 /** Read every verified queue entry record, oldest first (latest folded). */
-export const readQueueEntries = (store: StateStorePort): QueueLedgerRead<QueueEntryRecord> => {
-  const read = readRecords(store, {
-    prefix: QUEUE_ENTRY_KEY_PREFIX,
-    kind: QUEUE_ENTRY_RECORD_KIND,
-    schema: QUEUE_ENTRY_SCHEMA,
-    isRecord: isEntryRecord,
-  });
+export const readQueueEntries = (
+  store: StateStorePort,
+  view?: readonly StateRecord[],
+): QueueLedgerRead<QueueEntryRecord> => {
+  const read = readRecords(
+    store,
+    {
+      prefix: QUEUE_ENTRY_KEY_PREFIX,
+      kind: QUEUE_ENTRY_RECORD_KIND,
+      schema: QUEUE_ENTRY_SCHEMA,
+      isRecord: isEntryRecord,
+    },
+    view,
+  );
   if (!read.ok) return read;
   return { ...read, latest: foldLatestEntries(read.records) };
 };

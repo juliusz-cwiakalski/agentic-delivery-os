@@ -1,7 +1,8 @@
 /**
- * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry stays at 124 identities
- * with exactly four `dispatch` rows, and no `attempts.*` identity exists in the
- * code, the help surface, the result-contract page, or the rendered output.
+ * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry stays at 127 identities
+ * (124 at GH-289 plus GH-290's three `events.*` rows) with exactly four
+ * `dispatch` rows, and no `attempts.*` identity exists in the code, the help
+ * surface, the result-contract page, or the rendered output.
  *
  * The string scan looks for a quoted attempts-code literal and for the three
  * proposed identities by name; a member access such as `data.attempts.length`
@@ -42,9 +43,9 @@ const SCAN_TARGETS = [
 ] as const;
 
 describe("TC-ATTEMPT-017 taxonomy closure", () => {
-  test("the registry holds exactly 124 identities and four dispatch rows", () => {
+  test("the registry holds exactly 127 identities and four dispatch rows", () => {
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries).toHaveLength(124);
+    expect(entries).toHaveLength(127);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.some((entry) => entry.code.startsWith("attempts."))).toBe(false);
   });

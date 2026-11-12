@@ -13,6 +13,7 @@ import {
   CONTROL_PROTOCOL_CURRENT,
   type ControlConnection,
   type ControlDrainData,
+  type ControlEnvelopeEventData,
   type ControlErrorFrame,
   type ControlLaneData,
   type ControlLanePayload,
@@ -39,8 +40,9 @@ export type ControlHandlerResult<T> =
 
 export type ControlSubscribeAccept = {
   readonly topic: ControlTopic;
-  readonly snapshot: unknown;
-  readonly cursor: number;
+  /** A snapshot topic's baseline; absent on an event topic (DEC-H). */
+  readonly snapshot?: unknown;
+  readonly cursor?: number;
 };
 
 export type ControlServerHandlers = {
@@ -75,10 +77,9 @@ export type ControlServerOptions = {
   readonly stateChanges?: () => readonly ControlStateSnapshot[];
 };
 
-export type ControlStateSnapshot = {
-  readonly topic: ControlTopic;
-  readonly snapshot: unknown;
-};
+export type ControlStateSnapshot =
+  | { readonly topic: ControlTopic; readonly snapshot: unknown }
+  | { readonly topic: ControlTopic; readonly event: ControlEnvelopeEventData };
 
 export type ControlServer = {
   readonly start: () => Promise<{ readonly close: () => void | Promise<void> }>;
@@ -244,12 +245,17 @@ export const createControlServer = (options: ControlServerOptions): ControlServe
           return;
         }
         send(connection, session.respond(request, { ok: true, subscriptionId: subscribed.id }));
-        const events = session.publish(
-          accepted.data.topic,
-          accepted.data.snapshot,
-          accepted.data.cursor,
-        );
-        for (const event of events) send(connection, event);
+        // An event topic carries no synthetic baseline: its first frame is the
+        // next observed change (DEC-H). A snapshot topic keeps the delivered
+        // cursor-0 baseline frame.
+        if (accepted.data.snapshot !== undefined) {
+          const events = session.publish(
+            accepted.data.topic,
+            accepted.data.snapshot,
+            accepted.data.cursor ?? 0,
+          );
+          for (const event of events) send(connection, event);
+        }
         for (const event of session.flush(subscribed.id)) send(connection, event);
         return;
       }
@@ -316,7 +322,22 @@ export const createControlServer = (options: ControlServerOptions): ControlServe
     },
     publishState: () => {
       if (options.stateChanges === undefined) return;
+      const eventTopics = new Set<ControlTopic>();
       for (const change of options.stateChanges()) {
+        if ("event" in change) {
+          // Event topics publish observed deltas; no dedupe and no cursor. The
+          // whole tick's events land in the bounded subscription buffers before
+          // any flush, so a burst can overflow exactly as a snapshot can.
+          eventTopics.add(change.topic);
+          for (const [connectionId, session] of sessions) {
+            const connection = connections.get(connectionId);
+            if (connection === undefined) continue;
+            for (const frame of session.publishEvent(change.topic, change.event)) {
+              send(connection, frame);
+            }
+          }
+          continue;
+        }
         const serialized = digestOf(change.snapshot);
         const prior = lastPublished.get(change.topic);
         if (prior !== undefined && prior.serialized === serialized) continue;
@@ -332,6 +353,15 @@ export const createControlServer = (options: ControlServerOptions): ControlServe
             if (view.topic !== change.topic) continue;
             for (const frame of session.flush(view.id)) send(connection, frame);
           }
+        }
+      }
+      if (eventTopics.size === 0) return;
+      for (const [connectionId, session] of sessions) {
+        const connection = connections.get(connectionId);
+        if (connection === undefined) continue;
+        for (const view of session.subscriptions()) {
+          if (!eventTopics.has(view.topic)) continue;
+          for (const frame of session.flush(view.id)) send(connection, frame);
         }
       }
     },

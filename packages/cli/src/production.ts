@@ -2230,6 +2230,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       coordinator: createProductionCoordinatorComposition(),
       projects: { readProjects },
+      // The taxonomy reference surface needs nothing: the runtime is the
+      // compiled declaration, so the production composer supplies it
+      // unconditionally (GH-290 F-2, DEC-F).
+      events: {},
     };
 
     const program = createConfigProgram(configured);

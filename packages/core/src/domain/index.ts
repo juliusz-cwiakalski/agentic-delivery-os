@@ -758,3 +758,13 @@ export {
   projectCoordinatorObservation,
   type CoordinatorObservationFacts,
 } from "./coordinator-observe.js";
+export {
+  createEventProjector,
+  EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK,
+  EVENT_TOPICS,
+  type EventProjector,
+  type EventProjectorOptions,
+  type EventTopic,
+  type ProjectedEvent,
+  type ProjectionWatermarkEntry,
+} from "./event-projection.js";

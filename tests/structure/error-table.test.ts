@@ -108,6 +108,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "projects.identity-unreadable",
   "projects.registry-corrupt",
   "projects.state-unavailable",
+  // GH-290 pins the three events-surface identities exactly; they are
+  // kind-first two-segment codes.
+  "events.topic-unknown",
+  "events.verb-unknown",
+  "events.taxonomy-unavailable",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -799,7 +804,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(124);
+    expect(entries).toHaveLength(127);
   });
 });
 
@@ -875,7 +880,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(124);
+    expect(entries).toHaveLength(127);
     expect(db).toHaveLength(4);
   });
 
@@ -1109,7 +1114,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(124);
+    expect(entries).toHaveLength(127);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1383,7 +1388,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(41);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(44);
   });
 });
 
@@ -1611,10 +1616,11 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   test("dispatch is a declared kind with exactly the four pinned identities in order", () => {
     expect(DOMAIN_KINDS).toContain("dispatch");
     // GH-241 appends the coordinator kind after daemon; dispatch itself is unchanged.
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("dispatch");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("daemon");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("coordinator");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("projects");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 5]).toBe("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("daemon");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("coordinator");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("projects");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("events");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
     expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
     for (const [
@@ -1709,7 +1715,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(124);
+    expect(entries).toHaveLength(127);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1802,7 +1808,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(123);
+    expect(delivered).toHaveLength(126);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1821,7 +1827,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("124 identities");
+    expect(doc).toContain("127 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2038,5 +2044,90 @@ describe("TC-PROJ-031 the projects kind declares exactly three rows", () => {
     expect(exitOf("projects.identity-unreadable")).toBe(1);
     expect(exitOf("projects.registry-corrupt")).toBe(2);
     expect(exitOf("projects.state-unavailable")).toBe(2);
+  });
+});
+
+/**
+ * TC-EVT-072 (GH-290) — the error-table delta is exactly +3 rows in one new
+ * `events` kind, no delivered row is touched, and the kind resolves by code.
+ */
+describe("TC-EVT-072 the events kind and its three identities", () => {
+  const baseline = JSON.parse(
+    readFileSync(join(ROOT, "tests/fixtures/events/error-table-baseline.json"), "utf8"),
+  ) as { readonly rows: readonly string[] };
+  const events = entries.filter((entry) => entry.domainKind === "events");
+  const rowOf = (code: string): ErrorTableEntry => {
+    const entry = events.find((candidate) => candidate.code === code);
+    if (entry === undefined) throw new Error(`missing events row ${code}`);
+    return entry;
+  };
+  const exitOf = (code: string): number => {
+    const resolution = resolveAppErrorCode(code);
+    if (!resolution.ok) throw new Error(`${code} did not resolve`);
+    return resolution.entry.projectionClass === "user-validation"
+      ? 1
+      : resolution.entry.projectionClass === "platform-provider"
+        ? 2
+        : 0;
+  };
+
+  test("the events kind carries exactly the three declared rows", () => {
+    expect(events.map((entry) => entry.code).sort()).toEqual([
+      "events.taxonomy-unavailable",
+      "events.topic-unknown",
+      "events.verb-unknown",
+    ]);
+    expect(DOMAIN_KINDS).toContain("events");
+  });
+
+  test("each row carries its declared class and projection", () => {
+    expect(rowOf("events.topic-unknown")).toMatchObject({
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+    });
+    expect(rowOf("events.verb-unknown")).toMatchObject({
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+    });
+    expect(rowOf("events.taxonomy-unavailable")).toMatchObject({
+      category: "platform",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+    });
+    expect(exitOf("events.topic-unknown")).toBe(1);
+    expect(exitOf("events.verb-unknown")).toBe(1);
+    expect(exitOf("events.taxonomy-unavailable")).toBe(2);
+  });
+
+  test("the delivered rows are byte-identical to the captured baseline", () => {
+    const delivered = entries
+      .filter((entry) => entry.domainKind !== "events")
+      .sort((left, right) => (left.code < right.code ? -1 : 1));
+    const captured = baseline.rows
+      .map((row) => JSON.parse(row) as Record<string, unknown>)
+      .sort((left, right) => (String(left.code) < String(right.code) ? -1 : 1));
+    expect(delivered).toEqual(captured);
+  });
+
+  test("kind-only events lookup finds the three rows and contains on classification", () => {
+    const viaKind = entries.filter((entry) => entry.domainKind === "events");
+    expect(viaKind).toHaveLength(3);
+    expect(classifyThrown({ kind: "events" }).code).toBe(FALLBACK_INTERNAL_CODE);
+  });
+
+  test("a delivered identity outside events keeps its own class", () => {
+    expect(exitOf("projects.registry-corrupt")).toBe(2);
+    expect(exitOf("queue.entry.unobserved")).toBe(1);
+    expect(exitOf("state.store.torn")).toBe(2);
+  });
+
+  test("the documented table lists each events row exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of events) expect(doc.split(`| ${entry.code} |`).length - 1).toBe(1);
   });
 });

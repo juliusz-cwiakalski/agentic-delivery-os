@@ -34,6 +34,7 @@ export const DOMAIN_KINDS = [
   "daemon",
   "coordinator",
   "projects",
+  "events",
 ] as const;
 
 /**
@@ -1461,5 +1462,37 @@ export const ERROR_TABLE = [
       "Repair the named project state location or the named identity marker path and retry; the overview answers honestly or fails, and never fabricates a row or a handover state.",
     projectionClass: "platform-provider",
     summary: "A project state location cannot be established or read.",
+  },
+  {
+    code: "events.topic-unknown",
+    domainKind: "events",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      'Request one of the six declared topics: "queue", "lanes", "queue.graph", "dispatch.attempt", "phase.state", or "blockers.state".',
+    projectionClass: "user-validation",
+    summary: "The requested topic is not part of the declared taxonomy.",
+  },
+  {
+    code: "events.verb-unknown",
+    domainKind: "events",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: 'Use "events list" or "events describe <topic>".',
+    projectionClass: "user-validation",
+    summary: "The requested events verb is absent or unknown.",
+  },
+  {
+    code: "events.taxonomy-unavailable",
+    domainKind: "events",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "The compiled taxonomy declaration failed its own integrity check; repair the declaration and rebuild before serving any page.",
+    projectionClass: "platform-provider",
+    summary: "The taxonomy declaration failed its integrity check.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

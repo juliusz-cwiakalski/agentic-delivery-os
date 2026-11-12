@@ -32,6 +32,7 @@ import {
   type StateFailureCode,
   type StateJsonValue,
   type StateReadEvidence,
+  type StateRecord,
   type StateStorePort,
 } from "#contracts";
 
@@ -116,8 +117,26 @@ const isPreemptionRecord = (value: unknown): value is DaemonPreemptionRecord =>
   isInstant(value.requestedAt) &&
   isInstant(value.recordedAt);
 
-const readLedger = <T>(store: StateStorePort, spec: RecordSpec<T>): DaemonLedgerRead<T> => {
-  const read = store.readRecords();
+const readLedger = <T>(
+  store: StateStorePort,
+  spec: RecordSpec<T>,
+  view?: readonly StateRecord[],
+): DaemonLedgerRead<T> => {
+  const read =
+    view === undefined
+      ? store.readRecords()
+      : {
+          ok: true as const,
+          value: {
+            records: view,
+            evidence: {
+              storePath: store.identity.stateDirectory,
+              verification: [],
+              verifiedEmpty: view.length === 0,
+              recordCount: view.length,
+            },
+          },
+        };
   if (!read.ok) {
     return {
       ok: false,
@@ -259,13 +278,20 @@ export const appendDaemonHeartbeat = (
   );
 };
 
-export const readDaemonLanes = (store: StateStorePort): DaemonLedgerRead<DaemonLaneRecord> =>
-  readLedger(store, {
-    kind: DAEMON_LANE_RECORD_KIND,
-    schema: DAEMON_LANE_PAYLOAD_SCHEMA,
-    keyPrefix: DAEMON_LANE_KEY_PREFIX,
-    isRecord: isLaneRecord,
-  });
+export const readDaemonLanes = (
+  store: StateStorePort,
+  view?: readonly StateRecord[],
+): DaemonLedgerRead<DaemonLaneRecord> =>
+  readLedger(
+    store,
+    {
+      kind: DAEMON_LANE_RECORD_KIND,
+      schema: DAEMON_LANE_PAYLOAD_SCHEMA,
+      keyPrefix: DAEMON_LANE_KEY_PREFIX,
+      isRecord: isLaneRecord,
+    },
+    view,
+  );
 
 export const appendDaemonLane = (
   store: StateStorePort,

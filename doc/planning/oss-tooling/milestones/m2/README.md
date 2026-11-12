@@ -10,9 +10,10 @@ conventions are in [../README.md](../README.md); the M1 snapshot stays in
 
 Everything in this pack is **planned until M2 exit**: it records the intended
 end state, not delivered behaviour. Command pages carry the pack status header
-`Status: Proposed (M2)`, and a page or section becomes a snapshot only when the
-milestone exits. Refinements land in the pack, not in ticket comments, so the
-owner can review the planned shape in one place.
+`Status: Proposed (M2)`; a page whose story has delivered may carry a
+`Delivered (<story>)` header instead. A page or section becomes a milestone
+snapshot only when the milestone exits. Refinements land in the pack, not in
+ticket comments, so the owner can review the planned shape in one place.
 
 ## Pack contents
 
@@ -34,7 +35,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [commands/repos.md](commands/repos.md) | Flat record set owned by M2-S18: the five reported fields, `repos.v1`, and the `repos list` surface |
 | [commands/projects.md](commands/projects.md) | Group command contract: `project-groups.v1` with `groupKey`, configured groups with members, health, state, and group-scoped reads |
 | [commands/attempts.md](commands/attempts.md) | `dispatch attempts` evidence read-side contract |
-| [commands/events.md](commands/events.md) | Subscribe event-taxonomy reference contract |
+| [commands/events.md](commands/events.md) | Delivered subscribe event-taxonomy v1 reference contract (GH-290, M2-S13) |
 | [commands/spend.md](commands/spend.md) | Spend v2 breakdown contract |
 | [commands/queue.md](commands/queue.md) | Queue lifecycle verb contract |
 | [commands/board.md](commands/board.md) | Full M2 board contract |

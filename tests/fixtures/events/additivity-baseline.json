@@ -1,0 +1,83 @@
+{
+  "capsuleEventKinds": [
+    "capsule.opened",
+    "phase.transition",
+    "commit.landed",
+    "gate.outcome",
+    "review.verdict",
+    "closeout.step",
+    "capsule.promotion",
+    "capsule.retro-coverage",
+    "capsule.compaction-checkpoint",
+    "capsule.backfill-gap",
+    "capsule.closed"
+  ],
+  "dependencies": {
+    "@delivery-os/adapters": {
+      "@delivery-os/core": "workspace:*",
+      "yaml": "2.9.1"
+    },
+    "@delivery-os/cli": {
+      "@delivery-os/adapters": "workspace:*",
+      "@delivery-os/core": "workspace:*"
+    },
+    "@delivery-os/core": {
+      "ajv": "8.20.0"
+    },
+    "@delivery-os/mcp": {
+      "@delivery-os/adapters": "workspace:*",
+      "@delivery-os/core": "workspace:*"
+    },
+    "@delivery-os/opencode": {
+      "@delivery-os/adapters": "workspace:*",
+      "@delivery-os/core": "workspace:*"
+    },
+    "@delivery-os/testkit": {
+      "@delivery-os/adapters": "workspace:*",
+      "@delivery-os/core": "workspace:*"
+    },
+    "delivery-os": {
+      "@arethetypeswrong/cli": "0.18.5",
+      "@biomejs/biome": "2.6.4",
+      "@changesets/cli": "3.0.3",
+      "@commitlint/cli": "21.2.4",
+      "@commitlint/config-conventional": "21.2.4",
+      "@delivery-os/adapters": "workspace:*",
+      "@delivery-os/cli": "workspace:*",
+      "@delivery-os/core": "workspace:*",
+      "@delivery-os/mcp": "workspace:*",
+      "@delivery-os/opencode": "workspace:*",
+      "@delivery-os/testkit": "workspace:*",
+      "@types/bun": "1.4.4",
+      "dependency-cruiser": "18.7.0",
+      "husky": "9.1.7",
+      "publint": "0.3.25",
+      "typescript": "6.0.3",
+      "yaml": "2.9.1"
+    }
+  },
+  "effectKinds": ["tracker-transition", "tracker-comment", "commit"],
+  "lockfileSha256": "63871da9d9ad7a21e57844b300e007ffea317f969342cf18fae19e902feaa3e4",
+  "stateFiles": [
+    "artifact-boundary.ts",
+    "audit.ts",
+    "blockers.ts",
+    "closeout.ts",
+    "commit-telemetry.ts",
+    "coordinator.ts",
+    "daemon-lock.ts",
+    "economics.ts",
+    "edge.ts",
+    "harness-telemetry.ts",
+    "index.ts",
+    "ledger.ts",
+    "merge.ts",
+    "owner-gate-sla.ts",
+    "registry.ts",
+    "retro-registry.ts",
+    "retro-sidecar.ts",
+    "spend-reads.ts",
+    "storage-error.ts"
+  ],
+  "writableRoots": ["<project state directory>", "<host root>"]
+}

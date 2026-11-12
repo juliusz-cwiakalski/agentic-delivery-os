@@ -33,6 +33,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "coordinator",
   "daemon",
   "projects",
+  "events",
 ];
 
 const withExtras = (): CommandProgram => {

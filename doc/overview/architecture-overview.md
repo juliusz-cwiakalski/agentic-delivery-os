@@ -3,12 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
+  related_changes: ["GH-290"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -446,7 +447,7 @@ Phase 6 report; no fresh runtime/pilot result is claimed by this reconstruction.
 
 ## Resident dispatch daemon (GH-238)
 
-The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The production composition mounts the daemon family without a lane composition, so a production daemon runs the declared `supervise-only` mode; the lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path, and supplying that lane composition remains resident-daemon production scope (GH-238).
+The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. Its subscribe control plane publishes event taxonomy v1: six topics, the four event topics `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` carrying the eight-field change envelope, the two delivered snapshot topics byte-stable, one shared whole-store read per publish tick, and overflow-to-repoll declared per topic. The `events` reference surface renders the same declaration (GH-290). See [event taxonomy](../spec/features/feature-event-taxonomy.md). It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The production composition mounts the daemon family without a lane composition, so a production daemon runs the declared `supervise-only` mode; the lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path, and supplying that lane composition remains resident-daemon production scope (GH-238).
 
 ## Typed dispatch engine (GH-239)
 

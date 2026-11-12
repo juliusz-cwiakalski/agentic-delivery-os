@@ -1,0 +1,1095 @@
+# GH-290 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly.
+#
+# SOURCES (single source of truth):
+#   - Spec:     ./chg-GH-290-spec.md (v1.2, 38 ACs — AC-F1-1..5, AC-F2-1..5,
+#               AC-F3-1..7, AC-F4-1..3, AC-F5-1..3, AC-F6-1..2, AC-F7-1..4,
+#               AC-F8-1..4, AC-NFR-1..5; F-1..F-8; DM-1..DM-9 (nine data-model
+#               elements); EVT-1..EVT-5; NFR-1..NFR-10; DEC-A..DEC-O (fifteen
+#               decisions); §5.1 topic/kind/payload tables; §6 flows 1-7;
+#               §7.1 in-scope list (which names the one-shared-read
+#               restructure); §8.5 compatibility, guard list, and the
+#               count-assertion edit set; §9 NFR-2 and its counting seam; §16
+#               documentation impact; §18 rollout ordering; Appendix D exit
+#               matrix; Appendix E kind-to-record source map; Appendix F frame
+#               matrix). Spec v1.1 fixed `lane` as a non-empty string on every
+#               event topic, `ref` nullable only on `blockers.state`, snapshot
+#               topics with `kinds: []`, one shared whole-store read per publish
+#               tick (DEC-N), `occurredAt` from the source record, a
+#               process-scoped `sequence` (DEC-I), no truncation marker (DEC-O),
+#               the acceptance-to-refusal unknown-topic change (DEC-L), DM-9 as
+#               the emission watermark, and the amended-decision-record
+#               obligation.
+#               Spec v1.2 (DoR iteration 2) counts NFR-2 per PUBLISH tick — one
+#               `publishState`/`stateChanges()` invocation, with the loop's
+#               heartbeat fold excluded from the count and a negative control
+#               proving the exclusion — states DM-9 as one watermark entry per
+#               `(topic, lane, source family)` position, including the
+#               cumulative `phase.state` artifact's transition ordinal, and pins
+#               the M2 page's scan boundary at the `EXTENSION PATH (S17 — not
+#               v1)` heading. None of the three changes the phase set.
+#   - Tests:    ./chg-GH-290-test-plan.md (v1.2, 45 TCs TC-EVT-001..084;
+#               38/38 AC coverage; §5.2 scenarios; §6 determinism rules; §7
+#               file/command inventory with one role per mount-touched suite;
+#               §6.3 deliberate non-goals). TC ids are unchanged from v1.0
+#               through v1.2 (45); several cases were rewritten (022, 026, 051,
+#               002, 027, 081, 082, 083, 075), and v1.2 reclassifies
+#               `tests/behaviour/entrypoint-help-coverage.test.ts`'s inline
+#               prompt-required name list as a mount edit (18 -> 19) and scopes
+#               the page token scan to the v1 sections.
+#               §7 assigns the M2 reference page to Phase 5 and
+#               the TC-EVT-016 single-source half to the contract phase; this
+#               plan keeps the mount at Phase 5 and owns that half in Phase 6.
+#   - Decision: doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md
+#               (Proposed; untracked at plan time; AMENDED 2026-11-11 at DoR
+#               iteration 1 — DC-1..DC-5 carry the amended text and the record
+#               carries an Amendments table: DC-2's non-null `lane` and
+#               per-topic `ref`, the source-record `occurredAt`, the
+#               process-scoped `sequence`, the acceptance-to-refusal wording,
+#               the additivity restatement, the reference-record key set, and
+#               the mount-phase page reconciliation). The record is edited in
+#               place by its owner through `@decision-advisor`, status stays
+#               `Proposed` pending owner acceptance at the GH-290 pull-request
+#               review, and Phase 8 stages the AMENDED file. Neither this plan
+#               nor the spec describes the record as "consumed unchanged".
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/packages/folders, doneArtifacts slots
+#               mergeRequestUrl/pipelineId/deployedEnvironment/trackerTransition,
+#               leases, weightClass, interactions, tier; no tasks key, no
+#               progress log).
+#   - Precedent: ./2026-11-11--GH-286--daemon-command-mounting/chg-GH-286-plan.yaml
+#               (phase ceremony, inventory/guard scope, changeset shape).
+#
+# DECISION-RECORD STAGING CONTRACT (why TDR-0025 is declared in Phase 8):
+#   `doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md` is
+#   UNTRACKED at plan time (`?? doc/decisions/TDR-0025-...`). The commit
+#   primitive stages tracked-pending work plus untracked files only inside the
+#   declared phase scope, so the record is declared in Phase 8's `scope.files`
+#   and lands in the final phase-mode commit together with the doc
+#   reconciliation and the changeset. The file staged is the amended record
+#   (DC-1..DC-5 plus the Amendments table), not the pre-amendment draft. Its
+#   `doc/decisions/00-index.md` row is already committed, matches the record's
+#   Proposed status, and is not edited, so the index is not declared.
+#
+# SHARED-READ PHASE (DEC-N, spec §7.1, §9, §18; plan Phase 7):
+#   Spec §9 states the bound over the delivered port: exactly one whole-store
+#   `readRecords()` per publish tick — one `publishState`/`stateChanges()`
+#   invocation, with the loop's heartbeat fold explicitly outside the count —
+#   serves all six topics and all subscribers;
+#   `stateChanges()` today calls `readQueueEntries` and `readDaemonLanes`, each
+#   of which reads the whole store on its own, and `readChangeTransitions` is
+#   keyed by `changeRef`, so a per-change loop would be one whole-store read per
+#   change. The plan therefore declares the restructure as its own phase: the
+#   tick takes one `readRecords()` view, folds it once for the snapshot
+#   projection (`queue`, `lanes`) and once for the event projection (the four
+#   event topics), no fold performs its own read, and the tick-cost proof counts
+#   the calls through an injected `StateStorePort`. The phase is placed after
+#   the subscribe carriage because `TC-EVT-081` steps 2-3 vary the subscriber
+#   count and the number of subscribed event topics, which only exists once
+#   Phase 4 accepts event-topic subscriptions; it is placed before the
+#   documentation phase so the resident-daemon page states the delivered cost
+#   model rather than a planned one.
+#
+# INVOCATION-SHAPE RULE (binding on every phase gate):
+#   `PROMPT_REQUIRED_COMMANDS` holds the delivered 18 commands until Phase 5's
+#   membership commit. `selectPromptRequiredProgram` returns exactly that set
+#   and drops extras, and `runEntrypoint` calls it on every invocation, so no
+#   `events` invocation routed through `runEntrypoint` can be selected before
+#   Phase 5. The phases are partitioned by invocation shape:
+#     - Phases 1-4 prove DECLARATION, SURFACE, PROJECTION, and SUBSCRIBE
+#       behaviour only: the composed program's `events` handler is invoked
+#       directly, `runCli` is called with that same composed program, or the
+#       delivered `createControlServer` + `createControlSession` are composed
+#       over a real store. No Phase 1-4 gate asserts selection,
+#       `PROMPT_REQUIRED_COMMANDS` membership, or `fallback.internal`.
+#     - Phase 5 proves SELECTION and CONTAINMENT through the prompt-required
+#       membership and the help/coverage/parity guards.
+#     - Phases 6 and 7 drive the real server/session directly and do not depend
+#       on entrypoint selection.
+#   "Registered" (the runtime is composed and the command is on the program)
+#   is true from Phase 2; "selectable"/"selected" is true only from Phase 5.
+#
+# PHASE ORDERING AND TESTABILITY:
+#   Each phase is one commit on `feat/GH-290/event-taxonomy` whose declared
+#   narrow gate is green at the boundary. Phase 1 lands the one authored
+#   declaration and the additive contract surface every later phase consumes.
+#   Phase 2 generates the reference surface from that declaration. Phase 3 adds
+#   the pure event projection and its ordering, cap, watermark, and bound rules,
+#   with the structural bound suite; the projection's emission behaviour is
+#   proven end to end in Phase 4, because every case that observes a frame
+#   drives the real server/session. Phase 4 wires projection and envelope into
+#   the delivered session/server and the daemon composition without touching the
+#   two snapshot topics' frame bytes, and feeds the four event topics from the
+#   existing ledgers (the tick may still read once per fold in this phase;
+#   nothing asserts the read count here). Phase 5 mounts the family as one unit,
+#   with the reference page and every guard row, and lands the reconciled page
+#   before any page-token scan reads it. Phase 6 pins the taxonomy per topic on
+#   both the surface and the emitted frames and proves the single source by
+#   mutation. Phase 7 restructures the publish tick to the one-shared-read cost
+#   model and proves it by counting. Phase 8 reconciles the pages, stages the
+#   amended binding decision record, and adds the lockstep minor changeset.
+#
+# EARLY DOC EDIT (Phase 1): `doc/spec/features/feature-result-contract.md`
+#   carries the machine-readable error table that `scripts/checks/error-table-sync.ts`
+#   compares bidirectionally against the code. Adding the three `events` rows in
+#   Phase 1 without the documented rows would leave Phase 1's gate red, so the
+#   three rows (and `tests/structure/error-table.test.ts`'s 124/123 counts,
+#   which become 127/126) land with the code. Phase 8 owns the remaining prose,
+#   summary, and link reconciliation of that page and of every other page spec
+#   §16 names.
+#
+# SCOPE CONVENTION: concrete files are exact paths; folders are declared by
+#   every phase that writes a new file inside them (the commit primitive stages
+#   only the declared phase scope); packages globs are not used because every
+#   path in this change is known. A file edited in two phases is declared in
+#   both phases; `plan diff` reports the first covering phase.
+#
+# MOUNT EDIT SET (spec §8.5; RF-1, RF-12): the mount turns the prompt-required
+#   set from 18 to 19, so every literal count of that set is in the edit set, not
+#   only the command-name lists:
+#     - tests/structure/daemon-production-composition.test.ts asserts the
+#       prompt-required length three times — `:71` (full set) 18 -> 19,
+#       `:138` (composition with every optional input absent) 18 -> 19, and
+#       `:121` (the daemon-omission mutant) 17 -> 18. The suite is declared in
+#       Phase 5 and its post-mount values are named in the Phase-5 gate.
+#     - tests/behaviour/entrypoint-help-coverage.test.ts hard-codes the delivered
+#       18 prompt-required names in an inline array (`:150-171`) and compares it
+#       to the coverage fixture's `commands`, so the same commit adds `events`
+#       (18 -> 19) and its `syntheticPromptProgram` key equality (`:174-176`)
+#       follows. This is a mount row, not a semantic assertion change: the
+#       assertion (the fixture equals the prompt-required set) is unchanged and
+#       only the literal membership list follows the mount.
+#     - tests/behaviour/entrypoint-composition.test.ts gains `events` in its
+#       `EXPECTED` hand list (Phase 5).
+#     - tests/checks/reference-page-parity.test.ts resolves each coverage
+#       command to a page with its own page-root map, so it gains the `events`
+#       row (the M2 page) in the same commit as
+#       `scripts/checks/help-guide-coverage.ts`; without it the Phase-5 parity
+#       gate looks for `doc/planning/oss-tooling/milestones/m1/commands/events.md`
+#       and fails.
+#     - tests/fixtures/help-guide/coverage.json gains the `commands` and
+#       `referencePages` rows; tests/structure/error-table.test.ts keeps its
+#       row counts; tests/structure/inventory.json and
+#       tests/fixtures/ports/v1-contract-inventory.json gain the new modules and
+#       exports.
+#
+# DECLARED CONTROLS, NOT EDITS (A-16): three delivered suites run in Phase 5's
+#   gate and are NOT edited, so none of them is declared in a phase scope and no
+#   diff is staged for them; the test plan's §7 role table says "No edit" for
+#   each:
+#     - tests/behaviour/entrypoint-help.test.ts — its family loop (`:29-47`)
+#       asserts containment of 15 names (it omits `dispatch`, `coordinator`, and
+#       `projects` by the same precedent) and asserts no count, so the mount
+#       leaves every assertion true.
+#     - tests/checks/help-guide-coverage-mutants.test.ts — its three mutants
+#       rewrite M1 pages and its temp root copies both `m1/commands` and
+#       `m2/commands` (`:19-25`), so the new M2 page and the fixture row change
+#       none of its outcomes; the `events` mount mutants live in the new
+#       `tests/checks/event-mount-guards.test.ts`.
+#     - tests/checks/doc-conformance.test.ts — its page hand list already omits
+#       `dispatch`, `coordinator`, and `projects`, and `events`' `--help`/
+#       `--version` coverage is carried by the help-coverage guard.
+#   Scope and gate therefore agree: a control that needs no edit is run, not
+#   declared, exactly as `tests/checks/help-guide-coverage.test.ts` (delivered,
+#   no edit) is already run without being declared.
+#
+# TC -> PHASE MAP (53 ids = the 45 test-plan-v1.3 ids plus TC-EVT-085..092,
+#   which test plan v1.4 registers; every id is owned by exactly one phase — the
+#   phase which first makes its complete suite set green. A suite proven in an
+#   earlier phase is named in that phase's gate and its `Suites left green`
+#   line, without a second TC row. Phase 9 moves the five TCs whose OWN
+#   assertions the remediation rewrites (002 page half, 003, 005, 006, 014) and
+#   owns the eight new ids; every earlier phase keeps the cases it historically
+#   proved, and the total is 45 + 8 = 53):
+#   Phase 1 declaration (6): TC-EVT-001, TC-EVT-070, TC-EVT-071, TC-EVT-072,
+#            TC-EVT-073, TC-EVT-074
+#   Phase 2 surface (8): TC-EVT-004, TC-EVT-010, TC-EVT-011, TC-EVT-012,
+#            TC-EVT-013, TC-EVT-015, TC-EVT-051, TC-EVT-080
+#   Phase 3 projection (0): none (the projection module and its structural bound
+#            suite land here; every behaviour case that exercises the projection
+#            drives the real server/session and is owned by Phase 4 or 6)
+#   Phase 4 subscribe (9): TC-EVT-023, TC-EVT-030, TC-EVT-040, TC-EVT-041,
+#            TC-EVT-042, TC-EVT-050, TC-EVT-075, TC-EVT-082, TC-EVT-083
+#   Phase 5 mount (5): TC-EVT-060, TC-EVT-061, TC-EVT-062, TC-EVT-063,
+#            TC-EVT-064
+#   Phase 6 contract (11): TC-EVT-016, TC-EVT-020, TC-EVT-021, TC-EVT-022,
+#            TC-EVT-024, TC-EVT-025, TC-EVT-026, TC-EVT-027, TC-EVT-031,
+#            TC-EVT-032, TC-EVT-084
+#   Phase 7 shared read (1): TC-EVT-081
+#   Phase 8 docs/release (0): none (docs, amended decision, changeset; proven by
+#            the doc, coverage, parity, distribution, and changeset guards)
+#   Phase 9 review remediation (13): TC-EVT-002 (page kind table), TC-EVT-003
+#            (drift suite over the live surface/projection), TC-EVT-005
+#            (additive suite over the real projection), TC-EVT-006
+#            (object-literal kind scan), TC-EVT-014 (describe/list usage
+#            refusals), TC-EVT-085 (pair atomic at cap 2), TC-EVT-086 (pair at
+#            64/62 with the watermark held), TC-EVT-087 (same-tick dependency
+#            delta), TC-EVT-088 (exact per-kind payload keys, 13 kinds),
+#            TC-EVT-089 (attempt token vs credential tokens), TC-EVT-090
+#            (same-connection overflow isolation), TC-EVT-091 (connect/probe
+#            counters), TC-EVT-092 (per-evidenceRef length bound)
+#   Suite halves proven before their owner: TC-EVT-002's declaration suite and
+#   TC-EVT-003's/005's/006's earlier cells run in Phase 1 (and Phase 2 for 016),
+#   TC-EVT-004's declaration-integrity half runs in the Phase-1 gate
+#   (`event-taxonomy-integrity`) while its surface half is owned by Phase 2,
+#   TC-EVT-016's surface suite in Phase 2, TC-EVT-014's error rows in Phase 2,
+#   and TC-EVT-031's/032's behaviour suites in Phase 4; each TC is owned once,
+#   in the phase that makes its whole set green after remediation.
+#
+# REVIEW REMEDIATION (Phase 9; review-iter-1 status FAIL):
+#   The code review reproduced one correctness/data-loss defect plus contract-
+#   honesty and weak-test gaps. Phase 9 is the single remediation phase and is
+#   last. Its findings split by artifact:
+#     - CODE/TEST half (Phase 9, this plan): B-1 (atomic `began`/`completed`
+#       pair), M-2 (same-tick dependency delta), M-1's code/test half (exact
+#       per-kind payload keys, a bidirectional comparator, and an object-literal
+#       kind scan), L-2's test half (the delivered attempt token permitted,
+#       credential/secret tokens excluded), L-3 (`events describe` without a
+#       topic; `events list <extra>`), L-4 (connect/probe counters), L-5
+#       (same-connection multi-subscription overflow), L-6 (per-evidenceRef
+#       length bound), the weak-test replacements (002 page half, 003, 005, 006),
+#       and I-1 (revert the unrelated reorderings).
+#     - DOC/SPEC half (Phase 8, unchanged ownership): M-3
+#       (`feature-event-taxonomy.md` "cannot drift apart" sentence), M-4
+#       (`doc/planning/oss-tooling/milestones/m2/contracts.md` kind/envelope/
+#       client-version statements), M-5 (the new page and its `doc/00-index.md`
+#       row are declared through Phase 8's `doc/spec/features` folder and the
+#       added `doc/00-index.md` file row), L-1 (AC-F2-4's envelope shape), and
+#       L-2's spec wording. No doc, decision-record, or changeset path is moved
+#       into Phase 9.
+#   Phase 9 changes no wire type, frame kind, protocol version, record kind,
+#   schema version, dependency, or error identity: the three events error rows
+#   stay three, and the tick still performs one `readRecords()` per publish tick.
+#
+# DECLARATION-ONLY PHASE-1 SCANS: the Phase-1 suites scan the declaration and
+#   the code's closed vocabularies only. They must NOT token-scan
+#   `doc/planning/oss-tooling/milestones/m2/commands/events.md`, because that
+#   page still carries the pre-contract example counts and S17 prose until
+#   Phase 5 reconciles it. The page token scan is part of the Phase-6
+#   conformance and ordering suites, which run after Phase 5.
+#
+# RELEASE: one lockstep minor changeset over the five publishables
+#   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
+#   GH-286/GH-289 precedent. No new package dependency, no migration, no
+#   schema version change.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-290
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "The contract needs a new wire type, frame kind, protocol version, codec rule, subscription-buffer semantic, or a field outside `data` to satisfy an AC"
+    - "A new state record kind, payload schema, key prefix, migration, backfill, seed, or STATE_SCHEMA_VERSION change would be required (including a recorded phase begin), or the DM-9 watermark would have to persist in the store"
+    - "A second authored copy of the topic or kind sets is needed beside `packages/core/src/contracts/taxonomy.ts` (surface rendering or projection consuming a hand-written list)"
+    - "An S17 shape (`stop`, `parked`, `resumed`, `park-edge`) or any kind outside the contract section's 4/3/3/3 enumeration is added to v1"
+    - "Any `queue` or `lanes` frame byte changes, or an envelope field is added to a snapshot topic"
+    - "A prompt-required, help, coverage, parity, inventory, or export guard can only be made green by relaxing an expectation instead of adding the declared `events` row (including any literal count of the prompt-required set)"
+    - "A delivered suite needs a semantic assertion change outside the mount rows this plan declares — the inline prompt-required name list in `tests/behaviour/entrypoint-help-coverage.test.ts` (`:150-171`), `tests/behaviour/entrypoint-composition.test.ts`'s `EXPECTED` list, and `tests/checks/reference-page-parity.test.ts`'s page-root map — the three prompt-required count assertions in `tests/structure/daemon-production-composition.test.ts`, and the inventory registrations; a membership literal or page-root row that only follows the mount is a mount row and does not fire this trigger"
+    - "The publish tick would need more than one whole-store `readRecords()` per publish tick, a per-topic or per-subscriber read, an unbounded in-memory event queue, a socket connect, a process probe, or a sleep on the publish path"
+    - "A durable sequence, ledger seeding, or per-client version negotiation is required to satisfy an AC"
+    - "The amended TDR-0025 cannot be staged by the final phase, or its amended text (DC-2 `lane`/`ref`/`occurredAt`/`sequence`, DC-4 acceptance-to-refusal) contradicts the spec's DEC-B/DEC-D/DEC-I/DEC-L"
+    - "The evidence, spec, or test plan contradicts a pinned contract in this header and the contradiction cannot be resolved inside the phase scope"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — The one authored declaration and the additive contract surface.
+  #
+  # Goal: make the taxonomy a compiled, runtime-neutral declaration and widen the
+  # delivered contracts additively: six `CONTROL_TOPICS`, the eight-field
+  # event-envelope member in `ControlEventData`, and the new `events` error kind
+  # with exactly three rows. No behaviour changes in this phase: no frame
+  # carries the envelope yet, no topic outside `queue`/`lanes` is served, and no
+  # command exists.
+  #
+  # Dependency reasoning: every later phase consumes the declaration, the widened
+  # union, or the error identities, so they land first. The declaration-level
+  # suites (topic/kind/payload/ordering/overflow pins, integrity matrix, drift
+  # mutants, additivity baselines) are provable here because they import the
+  # declaration and pure comparators only. The result-contract page's
+  # machine-readable table and `tests/structure/error-table.test.ts`'s row
+  # counts (124/123 -> 127/126) are edited here because the sync guard is
+  # bidirectional.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/event-{taxonomy-declaration,taxonomy-integrity,taxonomy-drift,taxonomy-additive,control-vocabulary,state-additivity,additivity-inventory}.test.ts
+  #   bun test tests/behaviour/events-decode-additive.test.ts
+  #   bun test tests/structure/{error-table,content-inventory,port-contract-inventory}.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Suites left green: event-taxonomy-declaration, event-taxonomy-integrity,
+  #   event-taxonomy-drift, event-taxonomy-additive, event-control-vocabulary,
+  #   event-state-additivity, event-additivity-inventory,
+  #   events-decode-additive, error-table, content-inventory,
+  #   port-contract-inventory, error-table-sync.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Event taxonomy v1 declaration, control vocabulary, error rows, and inventory registration"
+    kind: delivery
+    summary: "feat(contracts): declare event taxonomy v1, widen the control topic union, and add the events error rows"
+    scope:
+      files:
+        - doc/spec/features/feature-result-contract.md
+        - packages/core/src/contracts/control.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/contracts/taxonomy.ts
+        - tests/behaviour/events-decode-additive.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/event-additivity-inventory.test.ts
+        - tests/structure/event-control-vocabulary.test.ts
+        - tests/structure/event-state-additivity.test.ts
+        - tests/structure/event-taxonomy-additive.test.ts
+        - tests/structure/event-taxonomy-declaration.test.ts
+        - tests/structure/event-taxonomy-drift.test.ts
+        - tests/structure/event-taxonomy-integrity.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/taxonomy.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/control.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The reference surface generated from the declaration.
+  #
+  # Goal: mount `events list [--json]` and `events describe <topic> [--json]` as
+  # pure data rendering over the declaration: the machine envelope, the
+  # six-topic table, the eight-field `envelope[]`, the per-topic record with
+  # `shape`/`parent?`/`frame`/`lane`/`kinds[]` (records with `name`, `emitted`,
+  # `payloadFields`) / `payloadFields[]` / `ordering` / `overflow`, the three
+  # error identities, and the `{0,1,2}` projection. The command is registered by
+  # the edge when the runtime is supplied and by the production composer
+  # unconditionally, but `events` is not prompt-required yet, so no Phase-2 gate
+  # asserts selection.
+  #
+  # Dependency reasoning: the surface is a pure function of the declaration and
+  # the envelope/error contracts from Phase 1, so it can land before the publish
+  # path exists. Its golden and purity cases need no store, no daemon, and no
+  # transport, so they are green at this boundary. The new command/output modules
+  # are registered in the same commit or the inventory and export-allowance
+  # guards fail in the opposite direction.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/events-{list,describe,errors,purity}.test.ts tests/checks/events-hermetic.test.ts
+  #   bun test tests/golden/events-reference-page.test.ts
+  #   bun test tests/structure/{cli-edge-seam,content-inventory}.test.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bun run scripts/checks/workspace-entrypoints.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Suites left green: events-list, events-describe, events-errors,
+  #   events-purity, events-hermetic, events-reference-page, cli-edge-seam,
+  #   content-inventory, exports-parity, workspace-entrypoints,
+  #   ambient-globals.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Reference surface: events list and events describe <topic> generated from the declaration"
+    kind: delivery
+    summary: "feat(cli): mount the events reference surface over the taxonomy declaration"
+    scope:
+      files:
+        - packages/cli/src/commands/events.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/output/events-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/events-describe.test.ts
+        - tests/behaviour/events-errors.test.ts
+        - tests/behaviour/events-list.test.ts
+        - tests/behaviour/events-purity.test.ts
+        - tests/checks/events-hermetic.test.ts
+        - tests/golden/events-reference-page.test.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: generated-code
+        target: packages/cli/src/commands/events.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The event projection and its ordering rule.
+  #
+  # Goal: make the four event topics derivable from the existing durable records:
+  # the per-kind source map, the eight-field envelope with `occurredAt` taken
+  # from the source record, `lane` selection (a non-empty string on every event
+  # topic) and the per-topic `ref` rule (`ref` nullable only on
+  # `blockers.state`), the derived `began`, the `emitted: false` remove, the
+  # per-(topic, lane) process-scoped sequence allocator, the per-topic per-tick
+  # cap with the DM-9 watermark (per `(topic, lane, source family)`) that keeps
+  # the remainder pending, and the bounded payloads that need no truncation
+  # marker (DEC-O). This phase is pure: it consumes one store view as an
+  # argument and returns projected events plus counters; it does not read and it
+  # does not yet publish.
+  #
+  # Dependency reasoning: the projection is the single input to both the session
+  # carriage (Phase 4), the tick restructure (Phase 7), and the per-topic
+  # contract suites (Phase 6); landing it first with injected fixtures keeps
+  # every later assertion independent of transport timing. The module is
+  # inventory- and allowance-registered in the same commit. The projection's
+  # emission behaviour is proven end to end in Phase 4 (the test plan's cases
+  # drive the real server/session, not the pure function), so this phase owns
+  # the structural bound proof and adds no behaviour case of its own.
+  #
+  # Consumer and root export (RF-11): the projection is consumed by the CLI
+  # composition, `packages/cli/src/daemon-compose.ts`, and the CLI reaches core
+  # through the package root only — `@delivery-os/core` exposes no `./domain`
+  # subpath (`packages/core/package.json` `exports`: `.`, `./contracts`,
+  # `./state`, `./branding`, `./provider`) and the CLI's allowance is exactly
+  # those (`scripts/checks/workspace-entrypoints.ts:28-34`). The root entry
+  # `packages/core/src/index.ts` closes a HAND-LISTED
+  # `export { ... } from "./domain/index.js"` (no `export *`, `:842`), so a name
+  # added to `domain/index.ts` alone changes nothing public. No new subpath is
+  # declared (that would require a `package.json` `exports` edit, an
+  # `exports-discipline`-visible surface, and a new entrypoint allowance), so the
+  # projection's row in the root's hand list lands in Phase 4 with its first
+  # consumer and that file is declared there. The inventory consequences are
+  # already declared here: `tests/structure/inventory.json` gains the new
+  # module's file row (the root entry's row exists and is unchanged) and
+  # `tests/structure/content-inventory.test.ts` gains the executable-allowance
+  # row naming the module's exported projection functions; the root entry needs
+  # no allowance row because its only executable declaration is the body-less
+  # `createRuntime` (`:22-27`) and re-export statements are permitted.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/event-projection-bounds.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #
+  # Suites left green: event-projection-bounds, content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Event projection and ordering core: per-kind derivation, envelope, sequence, lane/ref rules, and the DM-9 watermark"
+    kind: delivery
+    summary: "feat(core): project the four event topics from durable records with a per-(topic, lane) sequence"
+    scope:
+      files:
+        - packages/core/src/domain/event-projection.ts
+        - packages/core/src/domain/index.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/event-projection-bounds.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: generated-code
+        target: packages/core/src/domain/event-projection.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Subscribe integration: envelopes on event topics, the additive
+  # overflow stamp on every topic, the unknown-topic refusal, and byte-stable
+  # snapshot topics.
+  #
+  # Goal: publish what Phase 3 projects. The session carries an event-topic frame
+  # with no cursor and stamps every degraded frame with `overflow: "repoll"` and
+  # `taxonomyVersion: "v1"` from the declaration constant; the server's publish
+  # projection becomes shape-aware (snapshot dedupe stays per topic, event topics
+  # publish observed deltas); the daemon composition widens the subscribe handler
+  # to the six topics, refuses an unknown topic with `events.topic-unknown`
+  # before any store read (an acceptance becomes a refusal, DEC-L), and feeds the
+  # four event topics from the existing ledgers. Subscribing to an event topic
+  # produces no synthetic baseline. The tick in this phase may still read once
+  # per fold; the one-shared-read restructure is Phase 7 and no gate here
+  # asserts the read count.
+  #
+  # Package-root export (RF-11; the phase that first CONSUMES the projection):
+  # this phase makes `packages/cli/src/daemon-compose.ts` import the Phase-3
+  # projection from `@delivery-os/core`, and the CLI may import only the root and
+  # `./contracts`/`./state`/`./branding`/`./provider`
+  # (`scripts/checks/workspace-entrypoints.ts:28-34`; no `./domain` subpath exists
+  # in `packages/core/package.json` `exports`). So this commit also adds the
+  # projection's row to `packages/core/src/index.ts`'s hand-listed
+  # `export { ... } from "./domain/index.js"` block (`:842`, no `export *`), and
+  # that file is declared here as the package-root contract surface. No other
+  # registration is needed: the root entry is already in
+  # `tests/structure/inventory.json`, already permitted for the CLI, and needs no
+  # `content-inventory` executable-allowance row (it declares no executable
+  # function beyond the body-less `createRuntime`). No `package.json` `exports`
+  # row, no `workspace-entrypoints.ts` allowance row, and no `exports-discipline`
+  # surface changes: the subpath set is untouched.
+  #
+  # Dependency reasoning: TC-EVT-040/041 depend on the same constant the
+  # reference surface renders, so the overflow proof can only be green after
+  # Phases 1-3. TC-EVT-050 proves the two delivered snapshot topics' frames and
+  # baselines are unchanged in the same commit that touches the publish path,
+  # because a regression there is only observable once the path is edited.
+  # TC-EVT-075 proves the refusal replaces the delivered wrong-label acceptance.
+  # TC-EVT-023/082/083 observe the projection's delta, watermark, and frame-bound
+  # rules through the real server/session, so their suites are green here and
+  # not at the pure projection boundary.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/events-{overflow-parity,sequence-per-lane,sequence-restart,snapshot-preserved,subscribe-refusal}.test.ts
+  #   bun test tests/behaviour/events-{dependency-delta,frame-bound,burst}.test.ts
+  #   bun test tests/structure/event-overflow-carriage.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #   bun test tests/behaviour/control-{codec,conformance,session,connection,transport}.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Suites left green: events-overflow-parity, events-sequence-per-lane,
+  #   events-sequence-restart, events-snapshot-preserved,
+  #   events-subscribe-refusal, events-dependency-delta, events-frame-bound,
+  #   events-burst, event-overflow-carriage, content-inventory, control-codec,
+  #   control-conformance, control-session, control-connection,
+  #   control-transport.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Subscribe integration: event-frame carriage, overflow-to-repoll on every topic, unknown-topic refusal, and snapshot preservation"
+    kind: delivery
+    summary: "feat(daemon): carry event frames and the additive overflow stamp on the subscribe surface"
+    scope:
+      files:
+        - packages/cli/src/daemon-compose.ts
+        - packages/core/src/app/control-server.ts
+        - packages/core/src/domain/control-session.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/events-burst.test.ts
+        - tests/behaviour/events-dependency-delta.test.ts
+        - tests/behaviour/events-frame-bound.test.ts
+        - tests/behaviour/events-overflow-parity.test.ts
+        - tests/behaviour/events-sequence-per-lane.test.ts
+        - tests/behaviour/events-sequence-restart.test.ts
+        - tests/behaviour/events-snapshot-preserved.test.ts
+        - tests/behaviour/events-subscribe-refusal.test.ts
+        - tests/structure/event-overflow-carriage.test.ts
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/control-session.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/app/control-server.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/index.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — The mount as one unit.
+  #
+  # Goal: make `events` prompt-required (18 -> 19) and complete every surface the
+  # guards read in both directions: the help family entry and both verb entries
+  # pointing at the M2 page through the page-root mapping, the coverage
+  # inventory's `commands` and `referencePages` rows, the `events` page-root row
+  # in both resolvers (the check and the parity suite), root `--help` listing
+  # nineteen families, and the production-composition membership. The M2
+  # reference page is reconciled to the contract section in this commit —
+  # 4/3/3/3 kinds, `queue`/`lanes` as snapshot topics with `kinds: []`, the
+  # snapshot/event shape split, the `emitted` flag, the overflow carriage, the
+  # ordering and restart-discontinuity sentences, the S17 extension path, and the
+  # `--help`/`--version` section — so the Phase-6 page token scans run against
+  # the delivered page rather than the pre-contract planning text. Every literal
+  # count the mount changes is corrected here, including
+  # `tests/structure/daemon-production-composition.test.ts`'s three
+  # prompt-required length assertions (18/18/17 -> 19/19/18), the inline
+  # prompt-required name array in
+  # `tests/behaviour/entrypoint-help-coverage.test.ts` (`:150-171`, 18 -> 19),
+  # and the `EXPECTED` hand list in
+  # `tests/behaviour/entrypoint-composition.test.ts`. The guard-negative
+  # mutants remove each piece and require a named failure.
+  #
+  # Page content obligations (RF-13; spec §16). The reconciled page must carry,
+  # and this phase owns, four statements beyond the counts:
+  #   1. the reference-record key set the machine record declares — `name`,
+  #      `version`, `shape`, `parent` (`queue.graph` only), `frame`, `lane`,
+  #      `kinds[]` with each kind's `emitted` and `payloadFields[]`, the derived
+  #      top-level `payloadFields[]`, `ordering`, and `overflow` — replacing the
+  #      page's current `topics[]`-era key table;
+  #   2. the `snapshot`/`event` shape split and the empty `kinds: []` /
+  #      `payloadFields: []` on the two snapshot topics (already in the count
+  #      enumeration above);
+  #   3. a `Delivered (M2-S13)` status line replacing today's `Status: Proposed
+  #      (M2)` / not-yet-registered-at-the-root-listing claim;
+  #   4. the S17 prose confined to one heading named exactly
+  #      `EXTENSION PATH (S17 — not v1)`, placed after `ERRORS` and before
+  #      `SEE ALSO`, stating that those shapes are a future taxonomy version —
+  #      spec §16's pinned scan boundary, so the required extension prose cannot
+  #      trip the v1-section scan.
+  #   Guard binding for those statements, named rather than implied:
+  #   `tests/checks/event-taxonomy-conformance.test.ts` (Phase 6, TC-EVT-002
+  #   steps 5-6 and TC-EVT-032 step 6) reads the page's taxonomy tables
+  #   (`0/0/4/3/3/3`), asserts the four S17 kind names absent there, asserts the
+  #   `EXTENSION PATH (S17 — not v1)` subsection present and non-empty, and reads
+  #   the ordering section's `restart`/`repoll` tokens; `tests/checks/help-guide-coverage.ts`
+  #   and `tests/checks/reference-page-parity.test.ts` (this phase, TC-EVT-062)
+  #   read the page's existence and its `--help`/`--version` section. The
+  #   reference-record key set and the `Delivered (M2-S13)` status line have no
+  #   token scan anywhere: the test plan records that prose truth as
+  #   review-attested (TC-EVT-002 Notes, GAP-T6), so they are page obligations of
+  #   this phase and a review item, declared here instead of left implicit.
+  #
+  # Declared controls, not edits (A-16): `tests/behaviour/entrypoint-help.test.ts`
+  # (containment of 15 family names at `:29-47`, no count) and
+  # `tests/checks/help-guide-coverage-mutants.test.ts` (three M1-page mutants over
+  # a temp root that copies both `m1/commands` and `m2/commands`, `:19-25`) need
+  # no edit, so neither is declared in this phase's scope; the gate runs both as
+  # delivered controls. Correcting one of them would be the semantic assertion
+  # change the escalation trigger reserves.
+  #
+  # Note on doc/00-index.md: spec §16 marks it (and doc/spec/00-index.md) as
+  # needing no change, so it is NOT declared in any phase; this phase and the
+  # documentation phase create no spec page.
+  #
+  # Dependency reasoning: program selection is strict, so membership, help,
+  # coverage, page root, page, and the count assertions must land in one commit;
+  # any subset turns a named guard red. This is the first phase in which
+  # `events` is selectable through `runEntrypoint`.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/events-mount-help.test.ts tests/structure/events-production-composition.test.ts
+  #   bun test tests/structure/daemon-production-composition.test.ts
+  #   bun test tests/behaviour/{entrypoint-help,entrypoint-help-coverage,entrypoint-composition}.test.ts
+  #   bun test tests/checks/{help-guide-coverage,help-guide-coverage-mutants,event-mount-guards,reference-page-parity}.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun run scripts/checks/prompt-conformance.ts
+  #
+  # Suites left green: events-mount-help, events-production-composition,
+  #   daemon-production-composition (19/19/18), entrypoint-help,
+  #   entrypoint-help-coverage, entrypoint-composition, help-guide-coverage,
+  #   help-guide-coverage-mutants, event-mount-guards, reference-page-parity,
+  #   prompt-conformance.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Mount: prompt-required membership, help family and verb entries, coverage inventory, page root, count assertions, and the reconciled reference page"
+    kind: delivery
+    summary: "feat(cli): mount events as a prompt-required command with help and reference coverage"
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m2/commands/events.md
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - scripts/checks/help-guide-coverage.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/behaviour/events-mount-help.test.ts
+        - tests/checks/event-mount-guards.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/fixtures/events/mount-mutants.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/structure/events-production-composition.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Per-topic contract suites and end-to-end subscribe cases.
+  #
+  # Goal: pin the published taxonomy as a comparison a test runs, on both sides.
+  # The four per-topic subscribe suites observe `entry`/`dependency-edge`,
+  # `started`/`refused`/`completed`, `began`/`completed`/`reopened`, and
+  # `published`/`updated`/`cleared` through the real server and session over a
+  # real store, with the bounded real-unix-socket case. The conformance suite
+  # compares the reference surface, the daemon-emitted frames, and the M2 page
+  # against the one declaration; the single-source suite mutates the declaration
+  # once and asserts both consumers move, and owns the union half of
+  # TC-EVT-016; the privacy suites scan emitted frames, pages, and payloads for
+  # content that must never leave the process. The envelope suite asserts
+  # `lane` is a non-empty string on every event-topic frame, `ref` is nullable
+  # only on `blockers.state` (a CLI-published question records `null`), and no
+  # frame carries `cursor` or a truncation marker.
+  #
+  # Dependency reasoning: every case here spans the declaration (Phase 1), the
+  # surface (Phase 2), the projection (Phase 3), the subscribe path (Phase 4),
+  # and the mounted page (Phase 5), so it is provable only after all five. This
+  # phase adds tests and fixtures only and changes no production behaviour.
+  #
+  # Gate:
+  #   bun test tests/behaviour/events-subscribe-*.test.ts tests/behaviour/events-{envelope-conformance,privacy}.test.ts
+  #   bun test tests/structure/{event-taxonomy-single-source,event-ordering-contract}.test.ts
+  #   bun test tests/checks/event-{taxonomy-conformance,privacy-literals}.test.ts
+  #   bun test tests/conformance/events/real-socket-subscribe.test.ts
+  #   bun run scripts/checks/{exports-parity,prompt-conformance,error-table-sync}.ts
+  #
+  # Suites left green: events-subscribe-queue-graph, events-subscribe-dispatch,
+  #   events-subscribe-phase, events-subscribe-blockers,
+  #   events-envelope-conformance, events-emitted-kinds, events-privacy,
+  #   event-taxonomy-conformance, event-privacy-literals,
+  #   event-taxonomy-single-source, event-ordering-contract,
+  #   real-socket-subscribe.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Per-topic contract suites, end-to-end subscribe cases, and single-source conformance proofs"
+    kind: delivery
+    summary: "test(events): pin the taxonomy per topic on the reference surface and on the emitted frames"
+    scope:
+      files:
+        - tests/behaviour/events-emitted-kinds.test.ts
+        - tests/behaviour/events-envelope-conformance.test.ts
+        - tests/behaviour/events-privacy.test.ts
+        - tests/behaviour/events-subscribe-blockers.test.ts
+        - tests/behaviour/events-subscribe-dispatch.test.ts
+        - tests/behaviour/events-subscribe-phase.test.ts
+        - tests/behaviour/events-subscribe-queue-graph.test.ts
+        - tests/checks/event-privacy-literals.test.ts
+        - tests/checks/event-taxonomy-conformance.test.ts
+        - tests/conformance/events/real-socket-subscribe.test.ts
+        - tests/structure/event-ordering-contract.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
+      folders:
+        - tests/fixtures/events
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — The shared tick read (spec DEC-N, §7.1, §9, §18).
+  #
+  # Goal: restructure the delivered publish tick from one whole-store read per
+  # fold to exactly one whole-store `readRecords()` per publish tick — one
+  # `publishState`/`stateChanges()` invocation, the interval NFR-2 counts
+  # (spec v1.2); the loop's heartbeat fold is outside that interval and is
+  # neither moved nor bounded here. The composition takes the view once and hands
+  # the same view to the snapshot projection (`queue`, `lanes`) and to the event
+  # projection (the four event topics); the
+  # folds that today read on their own (`readQueueEntries`, `readDaemonLanes`,
+  # and the `changeRef`-keyed phase-transition read) accept the shared view
+  # instead of performing their own read; the snapshot dedupe and the event
+  # watermark stay per topic; and the publish path exposes the counting seam the
+  # test asserts — an injected `StateStorePort` whose `readRecords()` is wrapped
+  # by a counter, so one publish tick counts exactly one call whatever the
+  # subscriber count or the number of subscribed event topics. No port shape,
+  # wire type, record kind, schema version, or dependency changes: the port keeps
+  # its single whole-store read and the restructure moves the read, it does not
+  # widen it.
+  #
+  # Phase-transition read — two legal shapes, both in scope (A-22): the
+  # view-taking read can be expressed inside `state/registry.ts` (the fold takes
+  # the view and derives the phase transitions from it, deleting the
+  # `store.read({ requiredKeys: [] })` probe at `:292`), or as a view-taking read
+  # on the boundary in `state/artifact-boundary.ts` (`:108-112`, whose `read()`
+  # currently calls `store.readRecords()` at `:111`). Both files are declared in
+  # this phase's `scope.files` so either implementation is staged; the cheaper
+  # shape edits only `registry.ts`. The bound is identical either way and is what
+  # the phase must preserve: one whole-store `readRecords()` per publish tick, no
+  # per-change probe, no per-topic or per-subscriber read, and no new port
+  # method.
+  #
+  # Dependency reasoning: the projection (Phase 3) already consumes a view as an
+  # argument, and the subscribe carriage (Phase 4) is what makes TC-EVT-081's
+  # 1-vs-N subscriber and 2-vs-4 subscribed-topic matrices observable, so this
+  # phase follows both. The projection already reached the CLI through the
+  # package root in Phase 4 (`packages/core/src/index.ts`), so this phase adds no
+  # export row and no entrypoint allowance; its gate re-runs
+  # `workspace-entrypoints` to prove the CLI still imports only the declared
+  # subpaths. It precedes the documentation phase so the
+  # resident-daemon page records the delivered read model and its cost bound. The
+  # publish path is the highest-traffic seam in the change, so this phase's gate
+  # re-runs the snapshot-preservation, overflow-parity, sequence, burst, and
+  # end-to-end subscribe suites that the publish path serves, not only the cost
+  # suite.
+  #
+  # Regression controls (not edits): every suite in this gate except
+  # `tests/behaviour/events-tick-cost.test.ts` is a delivered or earlier-phase
+  # suite re-run to prove the restructure moved the read rather than the
+  # behaviour — `events-snapshot-preserved`, `events-overflow-parity`,
+  # `events-sequence-per-lane`, and `events-burst` (Phase 4),
+  # `events-subscribe-queue-graph` (Phase 6), `control-session`/`-connection`/
+  # `-conformance` (Phase 4), and `daemon-watch-state-changes` (delivered,
+  # unchanged and therefore undeclared in any scope). Only the tick-cost suite is
+  # authored here.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/events-tick-cost.test.ts
+  #   bun test tests/behaviour/events-{snapshot-preserved,overflow-parity,sequence-per-lane,burst}.test.ts
+  #   bun test tests/behaviour/events-subscribe-queue-graph.test.ts
+  #   bun test tests/behaviour/control-{session,connection,conformance}.test.ts tests/behaviour/daemon-watch-state-changes.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/workspace-entrypoints.ts
+  #
+  # Suites left green: events-tick-cost (one `readRecords()` per publish tick),
+  #   events-snapshot-preserved, events-overflow-parity,
+  #   events-sequence-per-lane, events-burst,
+  #   events-subscribe-queue-graph, control-session, control-connection,
+  #   control-conformance, daemon-watch-state-changes, ambient-globals,
+  #   workspace-entrypoints.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Shared tick read: one whole-store read per publish tick folded for the snapshot and event projections, with the tick-cost proof"
+    kind: delivery
+    summary: "refactor(daemon): take one store read per publish tick and share it across both projections"
+    scope:
+      files:
+        - packages/cli/src/daemon-compose.ts
+        - packages/core/src/app/control-server.ts
+        - packages/core/src/app/daemon.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/domain/event-projection.ts
+        - packages/core/src/state/artifact-boundary.ts
+        - packages/core/src/state/registry.ts
+        - tests/behaviour/events-tick-cost.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/daemon-compose.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Documentation reconciliation, the amended decision record, the
+  # changeset, and the release obligations.
+  #
+  # Goal: make every page that states the subscribe contract true again, stage
+  # the AMENDED TDR-0025 (it is untracked and this is its only staging path),
+  # record the delivered story in the planning corpus, and publish one lockstep
+  # minor changeset over the five publishables. The pages are the ones spec §16
+  # names: the resident-daemon page (six-topic taxonomy, shape split with
+  # `kinds: []` on the snapshot topics, the eight-field envelope with the
+  # per-topic `lane`/`ref` rule, per-lane sequence and gap-to-repoll, cursor
+  # exclusion, overflow carriage, integrity rule, the acceptance-to-refusal
+  # refusal identity, and the one-shared-read tick and its cost model), the
+  # entrypoint and agents-and-commands pages, the result-contract page's prose,
+  # the glossary and architecture overview, the M2 entrypoint delta and milestone
+  # index, the CLI command registry, the resident-daemon test spec, and the
+  # `doc/planning/oss-tooling/backlog.md` M2-S13 row (delivered marker plus a
+  # "Progress: delivered by GH-290" line, following the M2-S11 precedent). The M2
+  # reference page is NOT reconciled here: Phase 5 landed that reconciliation
+  # together with the mount, and this phase only keeps it true. The decision
+  # record is staged with its amended DC-1..DC-5 and Amendments table; its status
+  # stays `Proposed` and the owner's acceptance rides the pull-request review.
+  # This phase changes no production code and adds no test assertion; it is
+  # proven by the doc, coverage, parity, distribution, and changeset guards.
+  #
+  # Test-spec ownership (A-21): `doc/quality/test-specs/test-spec-resident-daemon.md`
+  #   is written HERE, inside this delivery phase, so the taxonomy coverage
+  #   (per-topic contract suites, envelope, ordering, overflow parity, and mount
+  #   proofs) lands in the same commit as the pages it describes and is staged by
+  #   the same phase-mode commit. Lifecycle phase 7 (`system_spec_update`) then
+  #   VERIFIES that file against the delivered suites; it does not add it. That
+  #   ownership split is why `doc/quality/test-specs` is declared in this phase's
+  #   `scope.folders` and why no later lifecycle step needs a scope declaration.
+  #
+  # Doc scope that M-3/M-4/M-5 resolve (review-iter-1): the new
+  # `doc/spec/features/feature-event-taxonomy.md` is staged through this phase's
+  # `doc/spec/features` folder (M-3's "cannot drift apart" sentence is corrected
+  # there), `doc/planning/oss-tooling/milestones/m2/contracts.md` through the
+  # `doc/planning/oss-tooling` folder (M-4: `remove` is `emitted:false`, the
+  # eight-field envelope, and no client version negotiation), and
+  # `doc/00-index.md` is added to this phase's `scope.files` for its new page row
+  # (M-5). The spec owner's v1.4 wording edits (AC-F2-4 over the delivered
+  # `CommandResult`, L-1; NFR-10/AC-NFR-5's attempt-token carve-out, L-2) ride
+  # this phase's `doc/changes/...` folder scope. Phase 8 therefore owns every
+  # doc/spec/decision/changeset path; no such path is declared in Phase 9.
+  #
+  # Gate:
+  #   bun test tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,decision-record}.test.ts
+  #   bun run scripts/checks/{prompt-conformance,error-table-sync,forbidden-literals}.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   git diff --check
+  #
+  # Exit: every AC is met and every declared phase is complete; the two
+  # snapshot topics still publish byte-identical frames; the taxonomy adds no
+  # record, migration, or dependency; the tick performs one store read; the
+  # changeset validates against the fixed group; the release obligations are
+  # declared.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Documentation reconciliation, the amended decision record, the changeset, and the release obligations"
+    kind: delivery
+    summary: "docs(events): reconcile the system pages and planning corpus with event taxonomy v1"
+    scope:
+      files:
+        - .changeset/gh-290-event-taxonomy-minor.md
+        - doc/00-index.md
+        - doc/decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md
+        - doc/planning/oss-tooling/backlog.md
+      folders:
+        - doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy
+        - doc/overview
+        - doc/planning/oss-tooling
+        - doc/quality/test-specs
+        - doc/spec/features
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-290/event-taxonomy targeting main-tools"
+      pipelineId: "CI pipeline for the GH-290 delivery branch"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Code-review iteration-1 remediation (review-iter-1: FAIL).
+  #
+  # Goal: close every code/test finding of `code-review/review-iter-1.{md,yaml}`
+  # without widening the contract. No wire type, frame kind, protocol version,
+  # record kind, schema version, dependency, port method, error identity, or
+  # command membership changes; the three `events` error rows stay three (127
+  # documented rows), and the publish tick still performs one `readRecords()` per
+  # publish tick. The doc/spec/decision/changeset findings stay in Phase 8.
+  #
+  # B-1 (high, blocking; event-projection.ts). The `began` candidate reserves
+  # two slots (`groupSize: 2`) but the paired `completed` is emitted as its own
+  # unit, so one first-completion charges 3 slots for 2 frames: at `used = 62`
+  # the `began` commits the watermark and the `completed` fails `64 + 1 > 64`,
+  # is skipped without commit, and is never re-considered — a permanent drop.
+  # The pair becomes ONE budget unit: the `completed` candidate carries
+  # `groupSize: 0` inside the `began` reservation, and a pair that cannot fit is
+  # skipped whole before any `commit()` runs, so no watermark advance covers an
+  # unemitted transition. Two boundary cells prove it: `maxPerTopicPerTick: 2`
+  # over two first-completions (both frames or neither, never `began` alone) and
+  # the default 64 with 62 pre-consumed (the pair fits exactly, and the next
+  # pair is deferred with the watermark held at its last emitted position).
+  #
+  # M-2 (medium; event-projection.ts). `lastEdges` is read while candidates are
+  # built and written only at emission, so two `queue.dependency` records for one
+  # lane in one view both diff against tick-start; the second `removed` is `[]`
+  # where it must name the edge the first record removed. The delta is computed
+  # against the previous record in the same view: a working copy of `lastEdges`
+  # is advanced inside the entering-order loop as each dependency candidate is
+  # built and restored when the candidate is suppressed or left pending, so the
+  # committed set always matches the last emitted or pending record. The
+  # two-records-in-one-view cell (`["GH-1"]` then `["GH-2"]`) asserts the second
+  # delta is `added: ["GH-2"]`, `removed: ["GH-1"]`, one `dependency-edge` per
+  # observed change, and no duplicate on an idempotent re-write.
+  #
+  # M-1 (medium; code/test half). `event-projection.ts` imports only
+  # `TAXONOMY_VERSION` and hand-codes 11 kind names and every payload, and the
+  # guards cannot see it: the single-source scan flags only flat arrays of three
+  # or more declared names, `compareFrames`/`scriptedFrames` compare the
+  # declaration with itself and reject only undeclared payload keys, and the
+  # envelope suite asserts the emitted payload is a SUBSET of the declared
+  # fields. Driving the projection from the declaration is NOT feasible inside
+  # this phase: the declaration carries names, ordering, overflow, and payload
+  # field lists, but no source-field map (which record family feeds which kind
+  # and payload), so a data-driven projector needs a new declarative source map —
+  # a contract/data-model change the tier's escalation triggers reserve. The
+  # proof therefore is the exact-key test: every emitted payload's key set is
+  # asserted EXACTLY (both directions) against `CONTRACT_PAYLOAD_FIELDS` for all
+  # 13 kinds through the real projector, the comparator rejects a MISSING
+  # declared field as well as an undeclared one, and the single-source scan walks
+  # object literals and nested arrays in `packages/*/src` for the declared kind
+  # tokens. The accurate relationship (surface generated; projection
+  # hand-authored and contract-tested) is stated in Phase 8's page fix (M-3).
+  #
+  # L-2 (low; test half). The spec owner aligns NFR-10/AC-NFR-5 in spec v1.4 to
+  # permit the delivered attempt correlation `token` while still excluding
+  # credentials and secrets; this phase tests the delivered rule: the
+  # `dispatch.attempt` `refused`/`completed` payloads carry `token`, no
+  # credential- or secret-named field or credential-shaped value appears on any
+  # frame, and the privacy canary set does not trip on the attempt token.
+  #
+  # L-3 (low). `events describe` with no topic currently reports
+  # `"describe" is not an events verb`, and `events list status` silently ignores
+  # the extra positional. Both refusals use the existing `events.verb-unknown`
+  # identity with a message naming what is missing (`describe` requires a topic;
+  # `list` takes no topic), so no error row is added and the exit projection
+  # stays `{0,1,2}`.
+  #
+  # L-4/L-5/L-6 (low). The tick-cost harness counts client connects, server
+  # listens, and executor probe calls, and the counted publish pass asserts zero
+  # on all three (AC-NFR-2's "no socket, no process probe"); the overflow parity
+  # suite adds a same-connection cell with two subscriptions of one topic, where
+  # only the overflowing subscription is stamped and dropped and the sibling on
+  # that connection keeps receiving; and the projection bounds each
+  # `evidenceRefs` entry with a non-exported per-ref cap (no contract widening),
+  # which the frame-size proof asserts over a worst-case ref.
+  #
+  # Weak tests. `event-taxonomy-additive.test.ts:26-34` stops inspecting
+  # `scriptedFrames(TAXONOMY)` and asserts the real projector's emitted keys;
+  # the drift suite feeds the live surface and the live projector (the mutants
+  # stay as oracle controls); the conformance guard pins the M2 page's per-kind
+  # table (kind names per topic), not just the `0/0/4/3/3/3` counts string.
+  #
+  # I-1 (info). The five unrelated alphabetical reorderings revert to their base
+  # order with only this change's rows kept: `domain/index.ts`,
+  # `contracts/index.ts`, `production.ts`, `queue.ts`, `daemon.ts`. No export,
+  # inventory, or allowance guard requires sorted order (`content-inventory`
+  # sorts its own comparisons), so all five revert; if a row must stay, the phase
+  # note names the guard that requires it.
+  #
+  # TC ownership (see the header map): Phase 9 owns the five TCs whose own
+  # assertions are rewritten (002 page kind table, 003, 005, 006, 014) and the
+  # eight new ids TC-EVT-085..092 that test plan v1.4 registers; the total is
+  # 45 + 8 = 53. The test-plan owner registers the new ids; this plan does not
+  # edit the test plan.
+  #
+  # Dependency reasoning: every defect is in the delivered projection, the
+  # delivered `events` handler, the harness, or the suites that prove them, so
+  # the phase needs no earlier phase reopened. It runs after Phase 8 because the
+  # review followed the documentation commit and a remediation commit must land
+  # last on the branch.
+  #
+  # Tier triggers (inert data, checked here for honesty): no new second copy of
+  # the topic or kind sets is introduced — the remediation proves the existing
+  # projection against `CONTRACT_PAYLOAD_FIELDS` instead — so that trigger does
+  # not fire; and the suites whose assertions change are this change's own
+  # Phase-1..7 suites (`event-taxonomy-*`, `events-*`), not delivered pre-change
+  # suites, so the "delivered suite" trigger does not fire either.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/event-{projection-bounds,taxonomy-additive,taxonomy-drift,taxonomy-single-source}.test.ts
+  #   bun test tests/behaviour/events-{dependency-delta,envelope-conformance,errors,frame-bound,overflow-parity,privacy,tick-cost}.test.ts
+  #   bun test tests/checks/event-taxonomy-conformance.test.ts
+  #   bun test tests/structure/{content-inventory,error-table}.test.ts
+  #   bun test tests/behaviour/events-{subscribe-queue-graph,subscribe-dispatch,subscribe-phase,subscribe-blockers,sequence-per-lane,burst,snapshot-preserved}.test.ts
+  #   bun run scripts/checks/{exports-parity,error-table-sync,workspace-entrypoints,prompt-conformance}.ts
+  #   pnpm lint
+  #
+  # Suites left green: event-projection-bounds (pair atomic at 2 and 64/62, no
+  #   watermark advance), event-taxonomy-additive (real projector),
+  #   event-taxonomy-drift (live surface/projection), event-taxonomy-single-source
+  #   (object-literal scan), events-dependency-delta (same-tick delta),
+  #   events-envelope-conformance (exact per-kind keys, 13 kinds), events-errors
+  #   (describe/list refusals), events-frame-bound (per-evidenceRef cap),
+  #   events-overflow-parity (same-connection cell), events-privacy (attempt-token
+  #   rule), events-tick-cost (connect/probe counters), event-taxonomy-conformance
+  #   (page kind table), content-inventory, error-table, the four per-topic
+  #   subscribe suites, sequence-per-lane, burst, snapshot-preserved,
+  #   exports-parity, error-table-sync, workspace-entrypoints, prompt-conformance.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code-review iteration-1 remediation: atomic began/completed budget, same-tick deltas, exact per-kind payload proof, token and usage rules, counter/overflow/bound cells, and reorder revert"
+    kind: delivery
+    summary: "fix(events): make `began`+`completed` one budget unit so no `completed` can be dropped (B-1: `completed` charges `groupSize: 0` inside the `began` reservation of 2, an unfittable pair skips without advancing the watermark, and boundary cells at `maxPerTopicPerTick: 2` and 64 with 62 pre-consumed assert both-or-neither), diff same-tick dependency records against the previous record in the view (M-2: a working `lastEdges` advanced in the entering-order loop and restored on suppression/pending, plus a two-records-in-one-view cell), and prove payloads exactly per kind against `CONTRACT_PAYLOAD_FIELDS` for all 13 kinds with a bidirectional comparator and an object-literal kind scan (M-1: the declaration carries no source-field map, so driving the projection would be a contract change and the exact-key test is the proof); allow the delivered attempt correlation `token` while excluding credential/secret tokens (L-2, aligned to spec v1.4 wording); refuse `describe` without a topic and `list` with an extra positional with messages naming the missing/extra argument (L-3, no new error identity so the table stays 127 rows); count connects and probes in the tick-cost harness (L-4); add the same-connection multi-subscription overflow cell (L-5); cap each `evidenceRefs` entry inside the projection and prove it in the frame-size test (L-6); de-tautologise the additive suite, feed the drift suite the live surface/projection, and pin the page kind table (weak tests, TC-EVT-002/003/005/006); and revert the five unrelated alphabetical reorderings (I-1, no export/allowance guard requires sorted order). Doc findings M-3/M-4/M-5 and L-1 stay in Phase 8."
+    scope:
+      files:
+        - packages/cli/src/commands/events.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/daemon.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/event-projection.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/events-dependency-delta.test.ts
+        - tests/behaviour/events-envelope-conformance.test.ts
+        - tests/behaviour/events-errors.test.ts
+        - tests/behaviour/events-frame-bound.test.ts
+        - tests/behaviour/events-overflow-parity.test.ts
+        - tests/behaviour/events-privacy.test.ts
+        - tests/behaviour/events-tick-cost.test.ts
+        - tests/checks/event-taxonomy-conformance.test.ts
+        - tests/fixtures/events/drift-mutants.ts
+        - tests/fixtures/events/event-harness.ts
+        - tests/structure/event-projection-bounds.test.ts
+        - tests/structure/event-taxonomy-additive.test.ts
+        - tests/structure/event-taxonomy-drift.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/event-projection.ts
+        role: producer

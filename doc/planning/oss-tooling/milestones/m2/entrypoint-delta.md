@@ -9,22 +9,23 @@ snapshot and stays as written; the M1 man page is
 
 ## Observed composition
 
-Observed from the built CLI. The root `Commands:` block is abridged to the
-family list: the real output also prints a title, Usage, Options, Examples,
-Exit codes, and See also, and each family carries a description on its own
-row.
+Observed from the built workspace on 2026-11-12, after the GH-286, GH-288, GH-289, and
+GH-290 mounts. The `Commands:` block is abridged to the family list: the real
+output also prints a title, Usage, Options, Examples, Exit codes, and See also,
+and each family carries a description on its own row.
 
 ```
 $ <binary> --help
 Commands: status brief queue lanes blockers phase commit lint plan
-          verify merge closeout dispatch spend retro coordinator daemon
-          projects
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects events
 ```
 
-Eighteen families are registered: `status`, `brief`, `queue`, `lanes`,
+Nineteen families are registered: `status`, `brief`, `queue`, `lanes`,
 `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`,
-`dispatch`, `spend`, `retro`, `coordinator`, `daemon`, and `projects`.
-`state` and `mcp` are absent from the listing.
+`dispatch`, `spend`, `retro`, `coordinator`, `daemon`, `projects`, and `events`.
+`state` and `mcp` are absent from the listing. Root `--help` is bounded by
+content, not by a line or byte ceiling.
 
 The `dispatch` family advertises its read-side subfamily in family help; the
 subfamily adds no root row:
@@ -61,8 +62,11 @@ exit 0
   read side. **Mounted by GH-289 (M2-S12):** the subfamily is advertised in the
   dispatch family `--help` with its own fifth help entry and M2 reference page,
   and the root listing is unchanged because a subfamily adds no row.
-- `events` joins the subscribe surface as the taxonomy reference; the daemon
-  publishes the versioned topics.
+- `events` was the subscribe-surface taxonomy reference. **Mounted by GH-290
+  (M2-S13):** `events list` / `events describe <topic>` is in the prompt-required
+  set (nineteen families), composed unconditionally because its runtime is the
+  compiled declaration, advertised in root `--help`, and served by the M2 events
+  page as its reference page.
 - `spend` gains the v2 breakdowns and the reconciliation disclosure.
 - `queue` keeps the delivered lease release and gains the reason-bearing entry
   removal, the `dep add` and `dep remove` grammar extension, and automatic
@@ -83,9 +87,10 @@ handlers. Issue #286 delivered the mount, and the gap is recorded here as
 closed so the blueprint reader sees the current state rather than a stale
 prerequisite.
 
-The mount also unblocks the S13 subscribe surface and S17 peak pausing: both
-depend on a resident daemon, and the resident path is delivered now that the
-family is mounted.
+The mount also unblocked the S13 subscribe surface, delivered by GH-290 as event
+taxonomy v1, and is the prerequisite for S17 peak pausing: both depend on a
+resident daemon, and the resident path is delivered now that the family is
+mounted.
 
 ## Mounting a new command
 
@@ -97,11 +102,14 @@ appear in root `--help`. GH-288 mounted the flat enumeration that way under its
 shipped name `projects`: prompt-set entry, edge composition, help entries, the
 M2 reference page, the coverage-inventory row and the per-command page root.
 Carrying that reference page to [commands/repos.md](commands/repos.md) is
-pending M2-S18 code work, not an effect of this change. A subfamily mounts with
-the family prompt-set entry it already has, a help entry of its own, and its
-reference page, which is how `dispatch attempts` mounts without a root-listing
-change. The remaining M2 additions (`events`, `board`, `spend` v2) stay planned
-until their own stories mount them.
+pending M2-S18 code work, not an effect of this change. GH-290 mounted `events`
+the same way — prompt-set entry, unconditional edge composition, help entries,
+the M2 reference page, the coverage-inventory row and its per-command page
+root. A subfamily mounts with the family prompt-set entry it already has, a
+help entry of its own, and its reference page, which is how `dispatch attempts`
+mounts without a root-listing change; GH-289 did exactly that. The remaining M2
+additions (`board`, `spend` v2) stay planned until their own stories mount
+them.
 
 ## Where this note is read
 
