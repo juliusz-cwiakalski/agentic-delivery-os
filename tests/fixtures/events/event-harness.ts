@@ -9,6 +9,7 @@
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { createUnixTransport } from "../../../packages/adapters/src/daemon/unix";
 import {
   createDaemonCommandRuntime,
   type DaemonComposition,
@@ -180,6 +181,8 @@ export type EventHarnessOptions = {
   /** Reuse a previous incarnation's root (a restart over the same store). */
   readonly root?: string;
   readonly startIso?: string;
+  /** Use the delivered unix-socket transport instead of the in-memory pair. */
+  readonly realSocket?: boolean;
 };
 
 /** The eight declared event-frame `data` keys, in order. */
@@ -209,6 +212,16 @@ export const createEventHarness = async (
   const clock = createClock(options.startIso ?? NOW);
   const wake = createManualWake();
   const pair = createMemoryTransportPair();
+  const socketTransport =
+    options.realSocket === true
+      ? createUnixTransport({
+          stateDirectory: root,
+          socketPath: `${root}/daemon.sock`,
+          lockOwned: () => true,
+        })
+      : undefined;
+  const serverTransport = socketTransport ?? pair.server;
+  const clientTransport = socketTransport ?? pair.client;
   let fence = 0;
   let laneOrdinal = 0;
   const fenceToken = (): string => {
@@ -237,7 +250,7 @@ export const createEventHarness = async (
     environmentName: "ADOS_STATE_DIR",
     clock,
     executor: executor(),
-    transport: pair.server,
+    transport: serverTransport,
     wake: wake.port,
     newFenceToken: fenceToken,
     newLockToken: () => "lock-gh290",
@@ -248,7 +261,7 @@ export const createEventHarness = async (
   if (!("data" in started)) throw new Error("daemon runtime failed to start");
 
   const connect = async (): Promise<EventClient> => {
-    const connection = await pair.client.connect();
+    const connection = await clientTransport.connect();
     const frames: ControlFrame[] = [];
     connection.onLine((line) => {
       const decoded = decodeControlLine(line);

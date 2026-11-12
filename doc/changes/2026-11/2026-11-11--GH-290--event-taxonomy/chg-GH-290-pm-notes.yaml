@@ -224,3 +224,33 @@ notes:
       field, the stamped degraded row).
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 5 complete (commit 300988bd): the mount as one unit. `events`
+      joins `PROMPT_REQUIRED_COMMANDS` (18 -> 19), the help inventory gains the
+      family and both verb entries pointing at
+      `doc/planning/oss-tooling/milestones/m2/commands/events.md` through the M2
+      page root, the coverage fixture gains the `commands` and `referencePages`
+      rows, both page-root resolvers (the check and the parity suite) gain the
+      `events` row, root `--help` lists nineteen families, and the three
+      prompt-required count assertions in
+      `tests/structure/daemon-production-composition.test.ts` become 19/19/18
+      with the inline 18-name list in `entrypoint-help-coverage.test.ts` at 19
+      and the `EXPECTED` hand list carrying `events`. The M2 page is reconciled
+      here: `Delivered (M2-S13)`, the reference-record key set (`name`,
+      `version`, `shape`, `parent?`, `frame`, `lane`, `kinds[]` with per-kind
+      `emitted`/`payloadFields[]`, the derived `payloadFields[]`, `ordering`,
+      `overflow`), the snapshot/event split with `kinds: []` on `queue`/`lanes`,
+      the printed counts `0/0/4/3/3/3`, the corrected text example, the HELP
+      section carrying `--help`/`--version`, and the S17 prose confined to the
+      heading `EXTENSION PATH (S17 — not v1)` after ERRORS and before SEE ALSO
+      (the v1 sections name none of the four S17 shapes). TC-EVT-060..064 are
+      implemented, with eight mount negative controls plus the unedited-18-name
+      control. Gate: `pnpm typecheck` green; the ten-suite mount batch reports 56
+      pass / 0 fail, and the expanded parity/count batch 29 pass / 0 fail;
+      `help-guide-coverage` all commands covered; `prompt-conformance` 5 prompts
+      clean. Measured residual for N-1: root `--help` renders 46 lines / 1821
+      bytes on this tree (the DoR note's 45 lines / 1747 bytes predates the
+      nineteenth row); the suite records the measurement and asserts content,
+      not a size ceiling, exactly as TC-EVT-061 declares.
+    type: "info"
+    date: "2026-11-12"
