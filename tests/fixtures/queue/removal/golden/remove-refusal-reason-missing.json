@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 10
+  },
+  "error": {
+    "code": "queue.reason-missing",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Supply `--reason` with one of the declared values (landed, abandoned, superseded, reconciled) and retry; nothing was appended.",
+    "summary": "queue.reason-missing"
+  }
+}

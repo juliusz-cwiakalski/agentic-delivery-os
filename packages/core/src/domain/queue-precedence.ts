@@ -656,7 +656,9 @@ export type QueueHumanData =
   | import("#contracts").QueuePlanData
   | import("#contracts").QueueMutationData
   | import("#contracts").QueueClaimData
-  | import("#contracts").QueueReleaseData;
+  | import("#contracts").QueueReleaseData
+  | import("#contracts").QueueRemoveData
+  | import("#contracts").QueueDependencyRemovalData;
 
 const utf8Length = (text: string): number => new TextEncoder().encode(text).length;
 
@@ -765,6 +767,20 @@ export const renderQueueHuman = (data: QueueHumanData): string => {
   if ("selectedRef" in data) {
     return capHuman([
       `result=${data.result}; ref=${data.selectedRef}; lease=${data.lease.leaseId}; degraded=${data.degraded.join(",") || "none"}`,
+    ]);
+  }
+  // The GH-292 lifecycle payloads carry the recomputed ready set; the readySet
+  // member discriminates them from the delivered mutation shapes (TC-QLC-010).
+  if ("readySet" in data && "reason" in data) {
+    return capHuman([
+      `result=${data.result}; ref=${data.ref}; reason=${data.reason}; ready=${data.readySet.length}; degraded=${data.degraded.join(",") || "none"}`,
+      ...(data.readySet.length > 0 ? [data.readySet.join(", ")] : []),
+    ]);
+  }
+  if ("readySet" in data && "edges" in data) {
+    return capHuman([
+      `result=${data.result}; ref=${data.ref}; edges=${data.edges.join(",") || "none"}; ready=${data.readySet.length}; degraded=${data.degraded.join(",") || "none"}`,
+      ...(data.readySet.length > 0 ? [data.readySet.join(", ")] : []),
     ]);
   }
   if ("ref" in data) {

@@ -102,7 +102,10 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   entry(
     ["queue"],
     "Read and mutate the scheduling queue",
-    ["<binary> queue <list|plan|add|prioritize|dep|claim|release> [options]"],
+    [
+      "<binary> queue <list|plan|add|prioritize|dep|claim|release|remove> [options]",
+      "<binary> queue dep [add|remove] <ref> <on-ref>",
+    ],
     [
       ["--next <n>", "Limit the planned next actions"],
       ["--priority <n>", "Set or filter entry priority"],
@@ -110,9 +113,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--holder <id>", "Claim or release holder identity"],
       ["--park <cause>", "Park a released entry with a condition"],
       ["--until <iso>", "Provider-window expiry for a park"],
+      ["--reason <reason>", "Removal reason: landed | abandoned | superseded | reconciled"],
       ["--watch", "Watch the queue (requires the resident daemon)"],
     ],
-    ["<binary> queue list", "<binary> queue plan --next 3", "<binary> queue add GH-242"],
+    [
+      "<binary> queue list",
+      "<binary> queue plan --next 3",
+      "<binary> queue add GH-242",
+      "<binary> queue remove GH-242 --reason abandoned",
+      "<binary> queue dep add GH-243 GH-242",
+      "<binary> queue dep remove GH-243 GH-242",
+    ],
     "queue",
   ),
   entry(
@@ -152,10 +163,18 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   entry(
     ["queue", "dep"],
-    "Declare a dependency edge",
-    ["<binary> queue dep <ref> --on <ref>"],
-    [["--dep <ref>", "The dependency target"]],
-    ["<binary> queue dep GH-243 --dep GH-242"],
+    "Declare or remove a dependency edge",
+    [
+      "<binary> queue dep <ref> <on-ref>",
+      "<binary> queue dep add <ref> <on-ref>",
+      "<binary> queue dep remove <ref> <on-ref>",
+    ],
+    [],
+    [
+      "<binary> queue dep GH-243 GH-242",
+      "<binary> queue dep add GH-243 GH-242",
+      "<binary> queue dep remove GH-243 GH-242",
+    ],
     "queue",
   ),
   entry(
@@ -175,6 +194,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--until <iso>", "Provider-window expiry"],
     ],
     ["<binary> queue release GH-242", "<binary> queue release GH-242 --park merge-conflict"],
+    "queue",
+  ),
+  entry(
+    ["queue", "remove"],
+    "Remove a queue entry with a recorded reason",
+    ["<binary> queue remove <ref> --reason <landed|abandoned|superseded|reconciled>"],
+    [["--reason <reason>", "Removal reason: landed | abandoned | superseded | reconciled"]],
+    [
+      "<binary> queue remove GH-242 --reason abandoned",
+      "<binary> queue remove GH-242 --reason landed",
+    ],
     "queue",
   ),
   entry(
@@ -642,8 +672,20 @@ const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];
 const pathKey = (path: readonly string[]): string => path.join(" ");
 
 /** Resolve the help entry for a command path, or `undefined`. */
-export const helpEntryFor = (path: readonly string[]): HelpEntry | undefined =>
-  ALL_HELP.find((candidate) => pathKey(candidate.path) === pathKey(path));
+export const helpEntryFor = (path: readonly string[]): HelpEntry | undefined => {
+  const key = pathKey(path);
+  const exact = ALL_HELP.find((candidate) => pathKey(candidate.path) === key);
+  if (exact !== undefined) return exact;
+  // A deeper spelling of a documented entry renders that entry: the `dep`
+  // grammar's `add`/`remove` spellings have no separate help path (GH-292
+  // F-7), so `queue dep add --help` shows the `queue dep` page that documents
+  // all three accepted spellings.
+  for (let end = path.length - 1; end > 0; end -= 1) {
+    const parent = helpEntryFor(path.slice(0, end));
+    if (parent !== undefined) return parent;
+  }
+  return undefined;
+};
 
 /** Every help entry, root first. */
 export const allHelpEntries = (): readonly HelpEntry[] => ALL_HELP;

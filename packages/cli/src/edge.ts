@@ -128,6 +128,8 @@ import {
   payloadFieldViolations,
   planDispatchResume,
   prioritizeQueueEntry,
+  removeQueueDependency,
+  removeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
   type QueueDeployExpectation,
@@ -138,8 +140,10 @@ import {
   type QueueIntentResult,
   type QueueLaneEconomics,
   type QueueLeaseFailure,
+  type QueueDependencyRemovalResult,
   type QueuePlanFact,
   type QueueProviderFact,
+  type QueueRemovalMutationResult,
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
   queueRemovalForCloseout,
@@ -389,8 +393,10 @@ import {
   createQueueReadyCommandDefinition,
   type QueueCommandRuntime,
   type QueueReadyCommandRuntime,
+  type QueueRuntimeDependencyRemoval,
   type QueueRuntimeFailure,
   type QueueRuntimeMutation,
+  type QueueRuntimeRemoval,
   type QueueRuntimeSchedule,
   toQueueReadData,
 } from "./commands/queue.js";
@@ -4253,6 +4259,75 @@ const claimLeaseProjection = (lease: {
   ...(lease.takeover === undefined ? {} : { takeoverOf: lease.takeover.leaseId }),
 });
 
+/** The recomputed ready set (ready refs in schedule order) after a mutation. */
+const readySetAfterMutation = (composition: QueueComposition): readonly string[] => {
+  const built = buildQueueFacts(composition, parkContextFor(composition));
+  if (!built.ok) return [];
+  const schedule = computeQueueSchedule(built.facts, { next: 20 });
+  return schedule.entries
+    .filter((entry) => entry.state === "ready")
+    .map((entry) => entry.ref);
+};
+
+/** The removal outcome projected onto the command runtime (GH-292 F-1). */
+const removalOutcome = (
+  result: Extract<QueueRemovalMutationResult, { ok: true }>,
+  degraded: readonly QueueDegradationReason[],
+  composition: QueueComposition,
+): QueueRuntimeRemoval => ({
+  ok: true,
+  ref: result.value.ref,
+  reason: result.value.reason,
+  readySet: readySetAfterMutation(composition),
+  degraded,
+});
+
+/** The dependency-removal outcome projected onto the command runtime (GH-292 F-3). */
+const dependencyRemovalOutcome = (
+  result: Extract<QueueDependencyRemovalResult, { ok: true }>,
+  degraded: readonly QueueDegradationReason[],
+  composition: QueueComposition,
+): QueueRuntimeDependencyRemoval => {
+  const value = result.value;
+  const fallbackEntry =
+    value.fold.entries.find((entry) => entry.ref === value.ref) ?? {
+      ref: value.ref,
+      ...(value.entry.repository === undefined ? {} : { repository: value.entry.repository }),
+      priority: value.entry.priority,
+      edges: value.edges,
+      weightClass: "standard" as const,
+      rankClass: "new-start" as const,
+      recordedAt: value.entry.recordedAt,
+    };
+  const weight = resolveQueueWeight(composition.facts.plans[value.ref]);
+  const built = buildQueueFacts(composition, parkContextFor(composition));
+  const projected = built.ok
+    ? computeQueueSchedule(built.facts, { next: 20 }).entries.find(
+        (entry) => entry.ref === value.ref,
+      )
+    : undefined;
+  return {
+    ok: true,
+    ref: value.ref,
+    entry: projected
+      ? { ...fallbackEntry, rankClass: projected.rankClass, weightClass: projected.weightClass }
+      : fallbackEntry,
+    entryState: projected?.state ?? "not-ready",
+    blocking:
+      projected?.blocking ?? [
+        fallbackEntry.repository === undefined
+          ? { reason: "not-ready" as const, detail: "repository-binding-unresolved" }
+          : { reason: "not-ready" as const, detail: "state-unreadable" },
+      ],
+    weightClass: projected?.weightClass ?? weight.weightClass,
+    weightClassSource: projected?.weightClassSource ?? weight.source,
+    edges: value.edges,
+    result: value.result,
+    readySet: readySetAfterMutation(composition),
+    degraded,
+  };
+};
+
 const mutationOutcome = (
   result: QueueIntentOutcome,
   degraded: readonly QueueDegradationReason[],
@@ -4574,6 +4649,37 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
             }),
         degraded: resolveDegraded(composition.degraded),
       };
+    },
+    remove: (input) => {
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      // GH-292 F-1: the removal seam owns the pre-append refusal set. A
+      // missing reason arrives as the queue identity; an out-of-vocabulary
+      // value is refused by the command grammar before this seam runs.
+      const removed = removeQueueEntry(composition.store, {
+        ref: input.ref,
+        ...(input.reason === undefined ? {} : { reason: input.reason }),
+        recordedAt: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken(),
+      });
+      if (!removed.ok) return mapQueueFailure(removed);
+      return removalOutcome(removed, resolveDegraded(composition.degraded), composition);
+    },
+    depRemove: (input) => {
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      // GH-292 F-3: an absent edge is a noop at exit 0 with zero appends and
+      // zero events; a present edge appends one dependency record and runs no
+      // cycle check (removal cannot close a cycle).
+      const removed = removeQueueDependency(composition.store, {
+        ref: input.ref,
+        onRef: input.onRef,
+        recordedAt: composition.nowIso(),
+        fenceToken: composition.newFenceToken(),
+      });
+      if (!removed.ok) return mapQueueFailure(removed);
+      return dependencyRemovalOutcome(removed, resolveDegraded(composition.degraded), composition);
     },
     ...(composition.readyRuntime === undefined
       ? {}
