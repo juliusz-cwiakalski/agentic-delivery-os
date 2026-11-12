@@ -372,3 +372,55 @@ notes:
       Not pushed and no pull request opened; the PM owns phase 11.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 9 complete (commit 351ee285ac25e676cdc39f8fb169309a05daac1d):
+      code-review iteration-1 remediation. B-1 is fixed in the projection — the
+      `began`/`completed` pair is one budget unit (`began` reserves two slots,
+      the paired `completed` charges `groupSize: 0`), so an unfittable pair is
+      skipped whole without advancing the watermark; proven at
+      `maxPerTopicPerTick: 2` (both-or-neither, one pair per tick), at the 64 cap
+      with 62 pre-consumed (the pair exactly fills the cap and emits both), at 63
+      pre-consumed (neither frame, watermark held, both emitted on the next
+      tick), and over a 40-pair burst (64 frames then 16, never 42). M-2 is
+      fixed — dependency deltas diff against the previous record in the same view
+      via a per-call staged edge map, committed only by `commit` — proven by a
+      two-records-in-one-view cell (`["GH-1"]` then `["GH-2"]` yields
+      `removed: ["GH-1"]`). M-1 is proven in both directions: a new exact-key
+      suite drives the REAL projector through all 13 declared kinds and compares
+      each emitted payload key set against `CONTRACT_PAYLOAD_FIELDS`
+      (undeclared key fails, missing required key fails), the frame comparator
+      is now bidirectional, the drift suite feeds the live `events list --json`
+      surface and the live projector, and the single-source scan is AST-based
+      (kind properties, array groups, object maps) with the projection's kind
+      literals pinned bidirectionally to the 11 distinct declared emitted names.
+      L-2 is tested against spec v1.5: the attempt `token` is projected from the
+      closed delivery-result vocabulary and the nested comparison record's token
+      (a credential-shaped canary) never reaches a frame. L-3 refuses `describe`
+      with no topic (`missing-topic`, names `<topic>`) and `list <extra>`
+      (`unexpected-argument`, names the positional) under the delivered
+      `events.verb-unknown` identity, so the table stays 127 rows. L-4 adds
+      connect/listen/probe counters to the harness and asserts 0/0/0 on a counted
+      publish pass (live-counter controls included); L-5 adds a same-connection
+      two-subscription overflow cell (only the overflowing subscription is
+      stamped and dropped, the sibling keeps receiving); L-6 bounds each
+      `evidenceRefs` entry to 256 chars inside the projection with a non-exported
+      cap, proven over a 4096-char worst-case ref. Weak tests: the additive suite
+      is de-tautologised, the drift suite consumes live consumers, the
+      conformance guard parses the M2 page's per-kind table (read-only; the page
+      already names the declared kinds, no page edit made), and the hermetic
+      suite now walks the surface's resolved relative-import closure with the
+      runner boundary stated by name. I-1 reverted the five alphabetical
+      reorderings (domain/contracts indexes, production, queue, daemon) to their
+      base order with only this change's rows and additions kept; no guard
+      requires sorted order. Gate: `TMPDIR=$PWD/tmp/tmpdir pnpm check` passes end
+      to end with **7547 pass, 4 skip, 0 fail, 65180 expect() calls across 7551
+      tests in 952 files**; the phase's declared suites run 173 pass / 0 fail, and
+      `content-inventory` + `error-table` (98 pass), `exports-parity`,
+      `error-table-sync` (127 documented), `workspace-entrypoints`, and
+      `prompt-conformance` are green. No test was weakened and no assertion was
+      relaxed. Disclosed, not pushed, no pull request opened; `phase complete
+      delivery` was not re-run because the delivery lifecycle phase already
+      landed. TC ids: TC-EVT-002 (page half), 003, 005, 006, 014 and the new
+      TC-EVT-085..092 registered by test plan v1.4.
+    type: "info"
+    date: "2026-11-12"
