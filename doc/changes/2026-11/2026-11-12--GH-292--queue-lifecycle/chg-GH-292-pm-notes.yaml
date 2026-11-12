@@ -117,6 +117,21 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 4 complete (commit 4f32d16a): queue.graph/remove emitted with
+      exactly the declared payload. Taxonomy `emitted: true` (non-emitted set
+      []), the projection's removal source family (one record -> one event, per
+      lane), all six pin sites moved two-sided (declaration, additive 12->13
+      with the once-observed inversion, conformance page pin, describe
+      unemitted [] + golden line `remove  emitted`, emitted-kinds runtime set
+      with the projection source-scan positive form, describe json pin), the
+      case fixture gained the durable removal record, and TC-QLC-065's
+      exactly-once behaviour is proven at the harness. Gates: typecheck 6/6;
+      event family 70 pass / 0 fail; exports-parity OK. Disclosed: the
+      describe golden fixture line moved as the plan pins (delivered-document
+      goldens are untouched).
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
       Plan phase 3 complete (commit 35922bc2): closeout automatic landed
       removal. `queueRemovalForCloseout` + `removeQueueEntryWithinFence` in
       core (fence-sharing, no second acquisition), the additive non-step
