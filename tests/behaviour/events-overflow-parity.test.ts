@@ -92,6 +92,42 @@ describe("TC-EVT-042 the single capacity bound is unchanged", () => {
 });
 
 describe("TC-EVT-040 overflow parity across the six topics", () => {
+  test("two subscriptions of one topic on one connection: only the overflowing one is dropped", () => {
+    const session = createControlSession({
+      connectionId: "shared-connection",
+      clock: clock(),
+      subscriptionBuffer: OVERFLOW_BUFFER,
+      responseTimeoutMs: 1_000,
+    });
+    session.receive(request("a"));
+    const slow = session.subscribe("queue.graph");
+    const sibling = session.subscribe("queue.graph");
+    expect(slow.ok && sibling.ok).toBe(true);
+    if (!slow.ok || !sibling.ok) throw new Error("subscribe refused");
+
+    const degraded: Record<string, unknown>[] = [];
+    const siblingFrames: ControlFrame[] = [];
+    for (const sequence of [1, 2, 3]) {
+      degraded.push(...degradedFrames(publishRow(session, "queue.graph", sequence)));
+      // Only the sibling drains; the other subscription keeps buffering.
+      siblingFrames.push(...session.flush(sibling.id));
+    }
+
+    expect(degraded).toHaveLength(1);
+    expect(degraded[0]).toMatchObject({
+      degraded: "subscriber-overflow",
+      topic: "queue.graph",
+      overflow: TAXONOMY_OVERFLOW,
+      taxonomyVersion: "v1",
+    });
+    // Same connection, same topic: the dropping is per subscription.
+    expect(session.subscriptions().map((entry) => entry.id)).toEqual([sibling.id]);
+    expect(siblingFrames).toHaveLength(3);
+    // The surviving sibling keeps receiving after the overflow.
+    expect(publishRow(session, "queue.graph", 4)).toEqual([]);
+    expect(session.flush(sibling.id)).toHaveLength(1);
+  });
+
   test("each topic yields one identical stamped row and drops only the non-draining subscription", () => {
     const rows = OVERFLOW_TOPICS.map((topic) => {
       const slow = createControlSession({

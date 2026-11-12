@@ -60,6 +60,45 @@ describe("TC-EVT-002 the page carries the v1 taxonomy", () => {
     }
   });
 
+  test("the DESCRIPTION kind table names exactly the declared kinds, per topic and in order", () => {
+    const description = sectionOf(page(), "DESCRIPTION", [...V1_SECTIONS, EXTENSION]) ?? "";
+    // The table rows: `| \`topic\` | shape | parent | kinds |`.
+    const rows = description
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("| `"))
+      .map((line) =>
+        line
+          .slice(1, -1)
+          .split("|")
+          .map((cell) => cell.trim()),
+      );
+    expect(rows).toHaveLength(TAXONOMY.topics.length);
+
+    const rendered = new Map(
+      rows.map((cells) => {
+        const topic = (cells[0] ?? "").replaceAll("`", "");
+        const shape = cells[1] ?? "";
+        const parent = (cells[2] ?? "").replaceAll("`", "");
+        const kindCell = cells[3] ?? "";
+        const kinds = [...kindCell.matchAll(/`([^`]+)`/gu)].map((match) => match[1] as string);
+        return [topic, { shape, parent, kinds }];
+      }),
+    );
+
+    for (const topic of TAXONOMY.topics) {
+      const row = rendered.get(topic.name);
+      expect(row, `the page renders no row for ${topic.name}`).toBeDefined();
+      if (row === undefined) continue;
+      // Shape and parent.
+      expect(row.shape, topic.name).toBe(topic.shape);
+      expect(row.parent === "-" ? undefined : row.parent, topic.name).toBe(topic.parent);
+      // The kind set and its declared order: a renamed kind with the same counts
+      // fails here, which the `0/0/4/3/3/3` counts string alone cannot catch.
+      expect(row.kinds, topic.name).toEqual(topic.kinds.map((kind) => kind.name));
+    }
+  });
+
   test("no S17 shape name appears in the v1 sections and the counts do", () => {
     const v1 = v1Range(page());
     for (const forbidden of S17_KIND_NAMES) {

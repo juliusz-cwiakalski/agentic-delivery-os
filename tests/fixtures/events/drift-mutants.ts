@@ -348,6 +348,21 @@ export const compareFrames = (
         );
       }
     }
+    // The comparator is bidirectional: a declared required field that the frame
+    // omits is drift too, so dropping a payload field cannot hide behind a
+    // subset check. An optional field (`?`) may legitimately be absent.
+    for (const field of kind.payloadFields) {
+      if (field.endsWith("?")) continue;
+      const key = payloadKey(field);
+      if (!Object.hasOwn(payload, key)) {
+        push(
+          violations,
+          topicName,
+          "payloadFields",
+          `the frame's payload omits declared field "${key}" of kind "${kindName}"`,
+        );
+      }
+    }
     if (data.taxonomyVersion !== declaration.version) {
       push(
         violations,
@@ -361,8 +376,9 @@ export const compareFrames = (
 };
 
 /** The five drift mutants (TC-EVT-003 steps 2-6). */
-export const driftMutants = (): Readonly<Record<string, readonly SurfaceRecord[]>> => {
-  const baseline = scriptedRecords(cloneTaxonomy());
+export const driftMutants = (
+  baseline: readonly SurfaceRecord[] = scriptedRecords(cloneTaxonomy()),
+): Readonly<Record<string, readonly SurfaceRecord[]>> => {
   const edit = (
     topic: string,
     change: (record: SurfaceRecord) => SurfaceRecord,

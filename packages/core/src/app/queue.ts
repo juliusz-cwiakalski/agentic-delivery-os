@@ -11,8 +11,6 @@
  */
 
 import {
-  LOCAL_CALLER_PRINCIPAL,
-  type OwnerHoldFact,
   QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_DEFAULT_PRIORITY,
   QUEUE_DEPENDENCY_KEY_PREFIX,
@@ -39,7 +37,9 @@ import {
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
   QUEUE_WEIGHT_CLASSES,
+  LOCAL_CALLER_PRINCIPAL,
   type QueueActiveLease,
+  type OwnerHoldFact,
   type QueueDependencyRecord,
   type QueueEntryRecord,
   type QueueGraphDocument,
@@ -77,7 +77,6 @@ const ownerHoldDetail = (hold: Extract<OwnerHoldFact, { readonly active: true }>
   hold.reason === undefined
     ? `owner hold active (${hold.source})`
     : `owner hold active (${hold.source}): ${hold.reason}`;
-
 import {
   claimScope,
   earliestTakeoverAtIso,

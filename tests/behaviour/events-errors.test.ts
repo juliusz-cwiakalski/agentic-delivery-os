@@ -51,6 +51,32 @@ describe("TC-EVT-014 exit matrix and identities", () => {
     }
   });
 
+  test("`events describe` with no topic names the missing argument and adds no identity", async () => {
+    const run = await probe.run(["events", "describe", "--json"]);
+    expect(run.exitCode).toBe(1);
+    const error = run.envelope?.error as Record<string, unknown>;
+    expect(error.code).toBe("events.verb-unknown");
+    const summary = String(error.summary);
+    expect(summary).toContain("missing-topic");
+    expect(summary).toContain("<topic>");
+    expect(summary).not.toContain("is not an events verb");
+    // The rejection names `describe` as a valid verb, not the offending one.
+    expect(summary).toContain("describe");
+  });
+
+  test("`events list <extra>` refuses the extra positional by name", async () => {
+    const run = await probe.run(["events", "list", "status", "--json"]);
+    expect(run.exitCode).toBe(1);
+    const error = run.envelope?.error as Record<string, unknown>;
+    expect(error.code).toBe("events.verb-unknown");
+    const summary = String(error.summary);
+    expect(summary).toContain("unexpected-argument");
+    expect(summary).toContain("status");
+    expect(summary).not.toContain("topic-unknown");
+    // The refusal carries no data, so a stray positional never renders a list.
+    expect(run.envelope).not.toHaveProperty("data");
+  });
+
   test("a broken declaration exits 2 with events.taxonomy-unavailable and renders nothing", async () => {
     const broken = JSON.parse(JSON.stringify(TAXONOMY)) as {
       topics: { name: string; kinds: unknown[]; payloadFields: unknown[] }[];

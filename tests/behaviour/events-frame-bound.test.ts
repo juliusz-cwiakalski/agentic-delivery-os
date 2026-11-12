@@ -28,6 +28,15 @@ import {
 const eventsOf = (frames: readonly ControlFrame[]): Record<string, unknown>[] =>
   frames.filter((frame) => frame.kind === "event").map(dataOf);
 
+/**
+ * The projection's per-entry `evidenceRefs` bound (`event-projection.ts`), stated
+ * here so an oversize ref is proven bounded rather than assumed.
+ */
+const EVIDENCE_REF_MAX_CHARS = 256;
+
+/** A single evidence reference well past the projection's per-entry bound. */
+const EVIDENCE_REF_OVERSIZE = 4_096;
+
 const payloadKeys = (kind: string, topic: string): readonly string[] => {
   const declared = TAXONOMY.topics
     .find((candidate) => candidate.name === topic)
@@ -77,6 +86,15 @@ describe("TC-EVT-083 frame bound and bounded payloads", () => {
       harness.store.releaseFence(acquired.value.handle);
 
       harness.appendAttempt(attemptRecord("GH-999", "refused", NOW));
+      // One worst-case evidence reference and one over-count list: the projection
+      // caps the count and each entry, so neither can grow the frame without bound.
+      harness.appendAttempt({
+        ...attemptRecord("GH-998", "refused", NOW),
+        evidenceRefs: Array.from(
+          { length: DISPATCH_MAX_EVIDENCE_REFS },
+          (_, index) => `evidence-${index}-${"e".repeat(EVIDENCE_REF_OVERSIZE)}`,
+        ),
+      });
       const question = questionRecord("Q-WORST", "GH-290");
       harness.appendQuestion({
         ...question,
@@ -132,6 +150,21 @@ describe("TC-EVT-083 frame bound and bounded payloads", () => {
       expect(
         ((refused?.payload ?? {}) as { evidenceRefs: string[] }).evidenceRefs.length,
       ).toBeLessThanOrEqual(DISPATCH_MAX_EVIDENCE_REFS);
+
+      // The oversize-ref attempt: the count is capped and every entry is bounded,
+      // so one reference can neither blow the frame bound nor be silently absent.
+      const boundedRefs = frames
+        .filter((frame) => frame.kind === "refused" && frame.ref === "GH-998")
+        .flatMap(
+          (frame) => ((frame.payload ?? {}) as { evidenceRefs?: string[] }).evidenceRefs ?? [],
+        );
+      expect(boundedRefs.length).toBe(DISPATCH_MAX_EVIDENCE_REFS);
+      for (const evidenceRef of boundedRefs) {
+        expect(evidenceRef.length).toBeLessThanOrEqual(EVIDENCE_REF_MAX_CHARS);
+      }
+      expect(boundedRefs[0]).toBe(
+        `evidence-0-${"e".repeat(EVIDENCE_REF_OVERSIZE)}`.slice(0, EVIDENCE_REF_MAX_CHARS),
+      );
 
       const published = frames.find((frame) => frame.kind === "published");
       expect(Object.keys((published?.payload ?? {}) as Record<string, unknown>).sort()).toEqual(

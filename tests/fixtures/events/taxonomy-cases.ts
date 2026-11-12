@@ -109,6 +109,7 @@ export const ERROR_DECISION_TABLE: readonly ErrorCase[] = [
     names: ["nope"],
   },
   { argv: ["events", "describe"], exit: 1, code: "events.verb-unknown" },
+  { argv: ["events", "list", "status"], exit: 1, code: "events.verb-unknown" },
   { argv: ["events", "frobnicate"], exit: 1, code: "events.verb-unknown" },
   { argv: ["events"], exit: 1, code: "events.verb-unknown" },
 ];

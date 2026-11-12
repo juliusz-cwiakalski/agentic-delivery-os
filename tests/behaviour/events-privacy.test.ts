@@ -3,7 +3,7 @@
  * token, prompt, transcript, diff, repository content, or `repositoryRoot`.
  */
 import { describe, expect, test } from "bun:test";
-import type { ControlFrame } from "../../packages/core/src/contracts/index";
+import { type ControlFrame, DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
 import { TAXONOMY } from "../../packages/core/src/contracts/taxonomy";
 import {
   attemptRecord,
@@ -101,5 +101,70 @@ describe("TC-EVT-084 privacy and content safety", () => {
       ?.kinds.find((kind) => kind.name === "entry");
     expect(entry?.payloadFields).toEqual(["ref", "repository?", "priority", "recordedAt"]);
     expect(entry?.payloadFields).not.toContain("repositoryRoot");
+  });
+
+  test("the attempt's delivery result token is published; a nested comparison token is not", async () => {
+    const harness = await createEventHarness({
+      label: "privacy-token",
+      processBlockerAnswers: false,
+    });
+    try {
+      const client = await harness.connect();
+      client.subscribe("dispatch.attempt");
+      await Promise.resolve();
+      await harness.step();
+
+      // The attempt record's own token is the declared, non-secret delivery
+      // result token; the nested comparison record carries a credential-shaped
+      // value that must never reach a frame.
+      const credentialCanary = "canary-credential-value";
+      const comparisonField = "token";
+      harness.appendAttempt({
+        ...attemptRecord("GH-701", "completed"),
+        token: "merged",
+        comparison: {
+          class: "verify-change",
+          [comparisonField]: credentialCanary,
+          outcome: "match",
+        },
+      });
+      harness.appendAttempt({
+        ...attemptRecord("GH-702", "refused"),
+        token: "failed",
+        comparison: { class: "not-applicable", [comparisonField]: null, outcome: "not-applicable" },
+      });
+      await harness.step();
+
+      const frames = eventFrames(client.drain());
+      const completed = frames.find((data) => data.kind === "completed");
+      const refused = frames.find((data) => data.kind === "refused");
+      expect(completed?.payload).toMatchObject({ token: "merged" });
+      expect(refused?.payload).toMatchObject({ token: "failed" });
+
+      // The one published token is a member of the closed vocabulary, never an
+      // opaque credential string.
+      for (const frame of [completed, refused]) {
+        const token = (frame?.payload as { token?: unknown } | undefined)?.token;
+        expect(typeof token).toBe("string");
+        expect(DELIVERY_RESULT_TOKENS).toContain(token as never);
+      }
+
+      // The nested comparison token is not projected at all: it is neither a
+      // field named `token` inside a nested object nor a value anywhere.
+      expect(JSON.stringify(frames)).not.toContain(credentialCanary);
+      for (const frame of frames) {
+        const payload = frame.payload as Record<string, unknown>;
+        // A flat payload: lists are the only non-scalar value, so no nested
+        // record (and therefore no nested `token`) can be published.
+        expect(payload).not.toHaveProperty("comparison");
+        for (const value of Object.values(payload)) {
+          if (Array.isArray(value)) continue;
+          expect(typeof value === "object" && value !== null).toBe(false);
+        }
+      }
+    } finally {
+      await harness.stop();
+      harness.close();
+    }
   });
 });

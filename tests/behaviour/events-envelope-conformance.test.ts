@@ -6,6 +6,8 @@
 import { describe, expect, test } from "bun:test";
 import type { ControlFrame } from "../../packages/core/src/contracts/index";
 import { TAXONOMY } from "../../packages/core/src/contracts/taxonomy";
+import { compareFrames } from "../fixtures/events/drift-mutants";
+import { requiredFields } from "../fixtures/events/projection-cases";
 import {
   answerRecord,
   attemptRecord,
@@ -126,8 +128,12 @@ describe("TC-EVT-022 envelope conformance across a full-delivery stream", () => 
         expect(data.taxonomyVersion).toBe("v1");
         expect(String(data.occurredAt)).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/u);
         const payload = data.payload as Record<string, unknown>;
-        const declaredFields = new Set((declared?.payloadFields ?? []).map(payloadKey));
-        for (const key of Object.keys(payload)) expect(declaredFields.has(key), key).toBe(true);
+        const declaredFields = (declared?.payloadFields ?? []).map(payloadKey);
+        // Bidirectional: no undeclared key, and every declared required field.
+        for (const key of Object.keys(payload)) expect(declaredFields, key).toContain(key);
+        for (const field of requiredFields(declared?.payloadFields ?? [])) {
+          expect(Object.keys(payload), `${topic}/${kind}:${field}`).toContain(field);
+        }
 
         if (topic === "blockers.state") {
           expect(data.ref === null || typeof data.ref === "string").toBe(true);
@@ -166,6 +172,15 @@ describe("TC-EVT-022 envelope conformance across a full-delivery stream", () => 
         expect(payload).not.toHaveProperty("truncated");
         expect(payload).not.toHaveProperty("truncationReason");
       }
+
+      // The whole delivered stream satisfies the declaration's frame comparator,
+      // payload keys included, in both directions.
+      expect(
+        compareFrames(
+          TAXONOMY,
+          collected.map((data) => ({ kind: "event" as const, data })),
+        ),
+      ).toEqual([]);
     } finally {
       await harness.stop();
       harness.close();

@@ -93,6 +93,36 @@ describe("TC-EVT-081 publish-tick cost", () => {
     }
   });
 
+  test("a counted publish pass opens no socket, listens on none, and probes no process", async () => {
+    const harness = await createEventHarness({
+      label: "tick-cost-transport",
+      processBlockerAnswers: false,
+    });
+    try {
+      await subscribeAll(harness, ["queue.graph", "dispatch.attempt"]);
+      await harness.step();
+      // The counters are live: startup listened once and probed the executor.
+      expect(harness.listens()).toBeGreaterThanOrEqual(1);
+      expect(harness.probes()).toBeGreaterThanOrEqual(1);
+      // The subscription and startup work is outside the counted interval; only
+      // the publish pass is measured (AC-NFR-2's scoping).
+      harness.resetReads();
+      harness.resetTransportCounts();
+      await harness.step();
+      expect(harness.reads()).toBe(1);
+      expect(harness.connects()).toBe(0);
+      expect(harness.listens()).toBe(0);
+      expect(harness.probes()).toBe(0);
+      expect(harness.sleeps()).toBe(0);
+      // The counters are live, not inert: a connect and a probe are both observed.
+      await harness.connect();
+      expect(harness.connects()).toBe(1);
+    } finally {
+      await harness.stop();
+      harness.close();
+    }
+  });
+
   test("the publish path's one shared view is the only store read in its modules", () => {
     const text = (file: string): string => readFileSync(join(ROOT, file), "utf8");
     // The composition takes the view exactly once per tick.

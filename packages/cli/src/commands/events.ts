@@ -103,6 +103,25 @@ const verbRefusal = (verb: string | undefined): { readonly error: Record<string,
   },
 });
 
+/**
+ * Refuse a missing or unexpected positional on a valid verb.
+ *
+ * The delivered identity set carries no argument-arity code, so both refuse with
+ * `events.verb-unknown` (the row that already covers how a verb may be invoked)
+ * and the message names the argument that is missing or extra.
+ */
+const argumentRefusal = (summary: string): { readonly error: Record<string, string> } => ({
+  error: {
+    kind: "events",
+    code: "events.verb-unknown",
+    summary: `result=refused; ${summary}`,
+  },
+});
+
+/** The one wording for a `describe` with no topic, shared by both guards. */
+const MISSING_TOPIC_REFUSAL =
+  "reason=missing-topic; the describe verb requires a <topic> argument; expected `events describe <topic>` (use `events list` for every topic)";
+
 const topicRefusal = (
   requested: string,
   names: readonly string[],
@@ -143,6 +162,14 @@ export const createEventsCommandDefinition = (
       if (verb === undefined || !(VERBS as readonly string[]).includes(verb) || extra.length > 0) {
         return verbRefusal(verb);
       }
+      if (verb === "list" && topic !== undefined) {
+        return argumentRefusal(
+          `reason=unexpected-argument; "list" takes no topic argument, but "${topic}" was given; expected \`events list\` (or \`events describe <topic>\`)`,
+        );
+      }
+      if (verb === "describe" && (topic === undefined || topic.length === 0)) {
+        return argumentRefusal(MISSING_TOPIC_REFUSAL);
+      }
       const names = topicNames(taxonomy);
       const envelope = [...EVENT_ENVELOPE_FIELDS];
       if (verb === "list") {
@@ -155,7 +182,9 @@ export const createEventsCommandDefinition = (
           } satisfies EventsData,
         };
       }
-      if (topic === undefined || topic.length === 0) return verbRefusal(verb);
+      if (topic === undefined || topic.length === 0) {
+        return argumentRefusal(MISSING_TOPIC_REFUSAL);
+      }
       if (!names.includes(topic)) return topicRefusal(topic, names);
       const declared = taxonomy.topics.find((candidate) => candidate.name === topic);
       if (declared === undefined) return topicRefusal(topic, names);

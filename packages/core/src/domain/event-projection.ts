@@ -6,8 +6,10 @@
  * I/O. Sequence values are allocated once per emitted event per `(topic, lane)`
  * by this process, so a restart is a declared discontinuity. A per-
  * `(topic, lane, source family)` watermark keeps an unemitted delta pending
- * rather than dropped or buffered, and the `phase.state` family's identity is a
- * position inside the change's cumulative verified artifact.
+ * rather than dropped or buffered, the per-topic per-tick cap charges a
+ * `began`/`completed` pair as one unit of two so the cap can never split it, and
+ * the `phase.state` family's identity is a position inside the change's
+ * cumulative verified artifact.
  */
 import {
   BLOCKER_MAX_ANSWER_CHARS,
@@ -32,6 +34,16 @@ export type EventTopic = (typeof EVENT_TOPICS)[number];
 
 /** The declared per-topic per-publish-tick cap (NFR-3). */
 export const EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK = 64;
+
+/**
+ * The per-entry cap the projection applies to each `dispatch.attempt`
+ * `evidenceRefs` string (NFR-4, AC-NFR-4, DEC-O).
+ *
+ * Module-local by design: it bounds the projection's own payload copy and
+ * widens no contract, so the declared `evidenceRefs[]` field keeps its
+ * identifier shape while no single reference can grow the frame without bound.
+ */
+const EVIDENCE_REF_MAX_CHARS = 256;
 
 /** One projected event: exactly the eight declared frame fields, in order. */
 export type ProjectedEvent = {
@@ -99,7 +111,11 @@ type Candidate = {
   readonly ref: string | null;
   readonly occurredAt: string;
   readonly payload: Readonly<Record<string, unknown>>;
-  /** How many frames this unit emits atomically (a phase pair emits two). */
+  /**
+   * Budget slots this candidate charges. A first-completion `began` reserves two
+   * (its own frame and its paired `completed`), and that `completed` charges none
+   * because it rides the reservation; every other frame charges one.
+   */
   readonly groupSize?: number;
   /** Applied only when the candidate is emitted or deliberately skipped. */
   readonly commit: () => void;
@@ -182,6 +198,15 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
         }
       }
 
+      // Per-call staging of the folded dependency edge set. A delta is computed
+      // against the previous record observed in this same view, not against the
+      // tick-start set: the committed `lastEdges` entry still holds the last
+      // emitted record while the candidates are being built, so two records for
+      // one ref in one view would otherwise both diff against tick-start.
+      const stagedEdges = new Map<string, readonly string[]>();
+      const edgeBase = (lane: string): readonly string[] =>
+        stagedEdges.get(lane) ?? lastEdges.get(lane) ?? [];
+
       const entering: Candidate[] = [];
       for (const record of records) {
         const address = (topic: EventTopic, family: string, lane: string): Family => ({
@@ -227,11 +252,16 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
             bounded(edge, QUEUE_MAX_REF_CHARS),
           );
           const family = address("queue.graph", "queue.dependency", lane);
-          const prior = lastEdges.get(lane) ?? [];
-          const previous = [...prior];
+          const previous = [...edgeBase(lane)];
           const added = edges.filter((edge) => !previous.includes(edge));
           const removed = previous.filter((edge) => !edges.includes(edge));
           const unchanged = sameEdgeSet(edges, previous);
+          // Stage the folded set immediately so the next record for this lane in
+          // the same view diffs against this one. Only `commit` promotes the
+          // staged value to the committed set, so a suppressed (identical) or
+          // pending (over-cap) candidate leaves `lastEdges` on the last emitted
+          // record and the next tick recomputes from there.
+          stagedEdges.set(lane, edges);
           entering.push({
             order: record.sequence,
             sub: 1,
@@ -357,7 +387,9 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
           if (lane.length === 0) continue;
           const family = address("dispatch.attempt", "dispatch.attempt", lane);
           const refused = payload.outcome === "refused";
-          const evidenceRefs = strings(payload.evidenceRefs, DISPATCH_MAX_EVIDENCE_REFS);
+          const evidenceRefs = strings(payload.evidenceRefs, DISPATCH_MAX_EVIDENCE_REFS).map(
+            (evidenceRef) => bounded(evidenceRef, EVIDENCE_REF_MAX_CHARS),
+          );
           const comparison = isRecord(payload.comparison) ? payload.comparison : {};
           entering.push({
             order: record.sequence,
@@ -473,6 +505,13 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
                   : { commitSha: optionalStr(transition.commitSha) }),
                 timestamp,
               },
+              // The pair is one budget unit: `began` reserves two slots and its
+              // `completed` charges nothing inside that reservation, so the cap
+              // can never emit the first frame of a pair and drop the second. An
+              // unfittable pair fails on `began`, which does not commit, so the
+              // watermark holds below both transitions. A later completion of the
+              // same phase has no `began` to ride and charges one frame.
+              groupSize: firstCompletion ? 0 : 1,
               commit,
             });
           }

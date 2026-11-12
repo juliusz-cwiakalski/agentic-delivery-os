@@ -1,0 +1,263 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-290
+branch: feat/GH-290/event-taxonomy
+status: FAIL
+summary: >-
+  First local review of GH-290 (event taxonomy v1) against spec v1.4, test plan
+  v1.3, the 8-phase plan and TDR-0024. The declaration, generated reference
+  surface, control-plane widening, unknown-topic refusal, additive degraded-frame
+  stamps, mount, error rows, changeset and additivity are implemented and well
+  tested; 158 event tests and 228 changed-gate tests pass and every delivered
+  control/watch/heartbeat suite is green. The change fails on one reproduced
+  correctness defect: the projection's per-topic per-tick budget treats the
+  `began`/`completed` pair as three units, so at used=62 the `began` commits the
+  watermark and the `completed` is permanently dropped (violates AC-NFR-3/NFR-3
+  and AC-F3-5). The load-bearing "one authored source / a second copy cannot
+  drift" claim is also false for the emission projection, which imports only the
+  version constant and hand-codes every kind/payload; the single-source scan
+  cannot see it, the drift tests feed fixture-built frames, and a shipped Current
+  page states "cannot drift apart". A new system spec page and a doc/00-index.md
+  row were added although spec §16 and the plan say no new page exists and the
+  index needs no change, and they are undeclared/undisclosed. Narrower defects:
+  same-tick dependency deltas computed against tick-start, AC-F2-4's stale
+  envelope shape, the `token` wording contradiction, and several weak tests.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 5
+  low: 5
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/event-projection.ts:594-610
+    message: >-
+      The began/completed pair is not atomic. The began candidate has groupSize 2
+      (line 449) but the paired completed candidate is processed with the default
+      groupSize 1, so one first-completion consumes 3 budget slots for 2 frames.
+      With used=62 and maxPerTopic=64 the began fits and commits the watermark
+      (advancing past the transition index), then completed fails 64+1>64 and is
+      skipped without commit, so it is never reconsidered and is lost. This
+      violates AC-NFR-3/NFR-3 ("no event is dropped") and AC-F3-5 ("began then
+      completed"). Reproduced with createEventProjector({maxPerTopicPerTick:2})
+      over one change with two first-completions: each tick emits began only and
+      every completed is dropped.
+    suggestion: >-
+      Treat the pair as one unit: give the completed candidate groupSize 0 (or
+      compute began+completed together and advance the budget by 2), and skip the
+      whole pair without commit when it cannot fit. Add boundary tests at
+      maxPerTopicPerTick 2 and at 64 with 62 pre-consumed, asserting both frames
+      or neither and that the watermark never advances past an unemitted
+      transition.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/event-projection.ts:12-22
+    message: >-
+      The emission projection imports only TAXONOMY_VERSION and hand-codes every
+      kind name, lane/ref rule and payload, so the declaration is not the single
+      source for the frames. The guards do not close the gap:
+      event-taxonomy-single-source.test.ts:97-126 flags only flat arrays of >=3
+      kind names (event-projection.ts carries 11 kind names in object literals and
+      is not flagged), drift-mutants.ts builds frames from the declaration so
+      compareFrames(TAXONOMY, scriptedFrames(TAXONOMY)) is a tautology and only
+      rejects undeclared keys, and events-envelope-conformance.test.ts:129-130
+      checks the emitted payload is a subset of declared fields, so a dropped
+      declared field is undetected. DM-1/spec §1 promise one source for the
+      frames and per-topic comparison of emitted frames against the declaration.
+    suggestion: >-
+      Either drive the projection's kind/payload mapping from the declaration, or
+      add an exact emitted-payload-key test per kind against CONTRACT_PAYLOAD_FIELDS
+      for all 13 kinds (not a subset), strengthen the single-source scan to catch
+      object/array copies, and make the drift suite feed the real surface and
+      projection rather than scripted fixtures.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: docs
+    location: doc/spec/features/feature-event-taxonomy.md:31-34
+    message: >-
+      The shipped Current page states "The daemon's event projection and the
+      `events` reference command both read that same declaration, so the wire and
+      the documented surface cannot drift apart." The projection does not read the
+      declaration, so this is false.
+    suggestion: >-
+      State the accurate relationship (surface generated from the declaration;
+      projection hand-authored and contract-tested), or implement F-2 and then the
+      claim becomes true.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: docs
+    location: doc/planning/oss-tooling/milestones/m2/contracts.md:72-73
+    message: >-
+      The M2 "authority" page says queue.graph publishes remove (it is
+      emitted:false and no v1 path emits it), states a seven-field envelope
+      omitting taxonomyVersion (the frame has eight), and says a client states the
+      version it speaks (no client frame carries one). Spec §16:575 claims this
+      page needs no change and is implemented verbatim, which is false.
+    suggestion: >-
+      Reconcile contracts.md (remove emitted:false; eight-field envelope; client
+      version statement) or amend spec §16's "verbatim/no change" claim and route
+      the page to a documentation phase.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/00-index.md:34
+    message: >-
+      The change adds doc/spec/features/feature-event-taxonomy.md (absent on base)
+      and edits doc/00-index.md, but spec §16:579 says no new spec page is created
+      and doc/00-index.md needs no change, and the plan (chg-GH-290-plan.yaml:845-847)
+      repeats that it is undeclared. doc/00-index.md is in no phase scope and
+      neither the page nor the index row is disclosed in the pm-notes. The page
+      content itself is accurate.
+    suggestion: >-
+      Resolve the contradiction: either remove the new page and index row, or
+      amend spec §16 and the plan note to declare them, add doc/00-index.md to a
+      phase scope, and record the decision in the pm-notes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/event-projection.ts:229-260
+    message: >-
+      Same-tick dependency deltas are computed against the previous tick's edge
+      set, not the previous record in the view: candidates are built before any
+      commit(), and commit() updates lastEdges only during emission. Two
+      queue.dependency records for one ref in one view therefore produce a second
+      event whose added/removed are relative to tick-start; reproduced with
+      ["GH-1"] then ["GH-2"], the second removed is [] where the delta is
+      ["GH-1"]. A same-tick idempotent rewrite can also emit a duplicate.
+    suggestion: >-
+      Compute the delta sequentially as candidates are built (updating and, on
+      suppression/pending, restoring lastEdges), or defer payload construction to
+      emission. Add a two-records-one-view test.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy/chg-GH-290-spec.md:600
+    message: >-
+      AC-F2-4 requires the machine envelope to match { ok, command, data, error?,
+      warnings? }, but the delivered CommandResult is { schemaVersion, runId,
+      exitCode, timing, data|error } (packages/cli/src/index.ts:310-323;
+      feature-result-contract.md:24,102). The command identity lives in
+      data.command, not a top-level command.
+    suggestion: >-
+      Restate AC-F2-4 over the delivered envelope keys and data.command (the
+      purity and identity clauses already hold).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: docs
+    location: doc/changes/2026-11/2026-11-11--GH-290--event-taxonomy/chg-GH-290-spec.md:454
+    message: >-
+      NFR-10 and AC-NFR-5 say no payload carries a "token", but the declared
+      dispatch.attempt refused/completed payloads carry the attempt record's token
+      (event-projection.ts:380,388), which spec §5.1 F-3 itself declares. The value
+      is an evidence/correlation token, not a credential, and the privacy test does
+      not assert the bare field.
+    suggestion: >-
+      Distinguish credential tokens from the attempt token in NFR-10/AC-NFR-5, or
+      remove the field from the payload; add a test for whichever rule is chosen.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/events.ts:158-159
+    message: >-
+      `events describe` with no topic (or an empty topic) routes through
+      verbRefusal and reports `"describe" is not an events verb`, which is
+      misleading because describe is valid. Separately, `events list status` exits
+      0 and returns the full list, silently ignoring the extra positional.
+    suggestion: >-
+      Return a usage/verb-unknown message that names the missing topic, and refuse
+      an extra positional on list.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/structure/event-taxonomy-additive.test.ts:26-34
+    message: >-
+      The test titled "the projection emits only declared payload keys, never a
+      source spread" inspects scriptedFrames(TAXONOMY), which is built from the
+      declaration, and checks keys against the same declaration; it cannot fail and
+      does not touch the projection. Related weak cells: the drift suite only
+      exercises fixture comparators (event-taxonomy-drift.test.ts:22-85), the page
+      half pins only the counts string (event-taxonomy-conformance.test.ts:63-70),
+      and events-hermetic.test.ts:26-44 scans only direct imports.
+    suggestion: >-
+      Replace the tautology with a real projection assertion (or delete it), feed
+      the drift suite the live surface/projection, pin the page's kind table
+      against the declaration, and either narrow the hermetic "reachable" claim or
+      scan transitively.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: scripts/checks/error-table-sync.ts:201-210
+    message: >-
+      The events allowlist rows and the 124->127 / BASELINE+90->+93 count rows in
+      tests/checks/error-table-sync.test.ts are edited by a phase that declares
+      neither file. The delivery discloses both in the pm-notes, so this is an
+      honest but unregistered scope deviation.
+    suggestion: >-
+      Add both files to the Phase-1 scope (or a remediation phase) so plan diff
+      reports no undeclared edit; no code change otherwise.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: maintainability
+    location: packages/core/src/domain/index.ts:704-770
+    message: >-
+      Large alphabetical import/export reorderings in domain/index.ts,
+      contracts/index.ts, production.ts, queue.ts and daemon.ts are unrelated to
+      the change and widen the review surface.
+    suggestion: >-
+      Keep unrelated reorderings out of feature diffs in future changes.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-12T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

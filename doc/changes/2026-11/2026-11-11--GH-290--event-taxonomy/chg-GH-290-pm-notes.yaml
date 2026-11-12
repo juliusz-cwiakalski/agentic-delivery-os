@@ -40,6 +40,20 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Code review iteration 1: FAIL. Blocking B-1 (event-projection budgets the
+      began/completed pair as 3 slots for 2 frames, so at the frame bound
+      `completed` is dropped without a watermark commit — reproduced); medium
+      M-1 (projection hand-codes kinds/payloads so "single source cannot drift"
+      is unproven), M-2 (same-tick dependency delta diffs against tick start),
+      M-3 (spec page repeats the drift claim), M-4 (planning contracts.md still
+      says `remove` publishes and states a seven-field envelope), M-5 (the new
+      feature spec page and doc/00-index row are undeclared in spec §16 and plan
+      scope). Low L-1..L-6 and one info I-1. Remediation: plan phase 9 for the
+      code/tests, spec §16/AC-F2-4/NFR-10 alignment, doc-syncer for the two
+      planning/spec pages. Review retained in code-review/review-iter-1.{md,yaml}.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
       DoR iteration 4 (narrow confirmation): READY. RF-14, RF-15, A-18..A-23 all
       verified closed; 45 TCs unique, 38/38 AC covered, plan map
       8/9/0/9/5/13/1/0, plan validate valid and lint clean. Accepted residual

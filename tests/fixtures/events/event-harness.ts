@@ -30,6 +30,7 @@ import {
   type ControlConnection,
   type ControlFrame,
   type ControlRequestFrame,
+  type ControlTransport,
   DAEMON_LANE_PAYLOAD_SCHEMA,
   type DaemonClockPort,
   type DaemonLaneRecord,
@@ -124,6 +125,22 @@ const executor = (): LaneExecutorPort => ({
   resume: async () => true,
 });
 
+/**
+ * The lane-executor probe as a counted double: an `availability()` call is the
+ * runtime's one process probe, so counting it makes AC-NFR-2's "no process is
+ * probed" an assertion instead of an inference.
+ */
+const countingExecutor = (onProbe: () => void): LaneExecutorPort => {
+  const base = executor();
+  return {
+    ...base,
+    availability: () => {
+      onProbe();
+      return base.availability();
+    },
+  };
+};
+
 const settings = (root: string, subscriptionBuffer: number): DaemonSettings => ({
   heartbeatIntervalMs: 5_000,
   heartbeatCycleMs: 60_000,
@@ -168,6 +185,14 @@ export type EventHarness = {
   readonly resetReads: () => void;
   /** Every `sleep(ms)` the injected clock was asked for. */
   readonly sleeps: () => number;
+  /** Every client transport `connect()` the harness issued. */
+  readonly connects: () => number;
+  /** Every server transport `listen()` the runtime requested. */
+  readonly listens: () => number;
+  /** Every executor `availability()` probe the runtime issued. */
+  readonly probes: () => number;
+  /** Reset the transport/probe counters so one pass can be counted alone. */
+  readonly resetTransportCounts: () => void;
   readonly connect: () => Promise<EventClient>;
   readonly step: () => Promise<void>;
   readonly appendEntry: (entry: QueueEntryRecord) => void;
@@ -230,6 +255,9 @@ export const createEventHarness = async (
   let heartbeatFoldReads = 0;
   let otherReads = 0;
   let sleepCount = 0;
+  let connectCount = 0;
+  let listenCount = 0;
+  let probeCount = 0;
   const rawStore = openStore(makeIdentity(root)).store;
   const store: StateStorePort = {
     ...rawStore,
@@ -270,8 +298,22 @@ export const createEventHarness = async (
           lockOwned: () => true,
         })
       : undefined;
-  const serverTransport = socketTransport ?? pair.server;
-  const clientTransport = socketTransport ?? pair.client;
+  const serverBase = socketTransport ?? pair.server;
+  const clientBase = socketTransport ?? pair.client;
+  const serverTransport: ControlTransport = {
+    listen: (onConnection) => {
+      listenCount += 1;
+      return serverBase.listen(onConnection);
+    },
+    connect: () => serverBase.connect(),
+  };
+  const clientTransport: ControlTransport = {
+    listen: (onConnection) => clientBase.listen(onConnection),
+    connect: () => {
+      connectCount += 1;
+      return clientBase.connect();
+    },
+  };
   let fence = 0;
   let laneOrdinal = 0;
   const fenceToken = (): string => {
@@ -299,7 +341,9 @@ export const createEventHarness = async (
     binary: "ados",
     environmentName: "ADOS_STATE_DIR",
     clock,
-    executor: executor(),
+    executor: countingExecutor(() => {
+      probeCount += 1;
+    }),
     transport: serverTransport,
     wake: wake.port,
     newFenceToken: fenceToken,
@@ -358,6 +402,14 @@ export const createEventHarness = async (
       otherReads = 0;
     },
     sleeps: () => sleepCount,
+    connects: () => connectCount,
+    listens: () => listenCount,
+    probes: () => probeCount,
+    resetTransportCounts: () => {
+      connectCount = 0;
+      listenCount = 0;
+      probeCount = 0;
+    },
     connect,
     step: async () => {
       await wake.step();

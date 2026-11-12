@@ -195,15 +195,18 @@
 #   declared, exactly as `tests/checks/help-guide-coverage.test.ts` (delivered,
 #   no edit) is already run without being declared.
 #
-# TC -> PHASE MAP (45/45: every TC is owned by exactly one phase — the phase
-#   which first makes its complete suite set green. A suite proven in an
+# TC -> PHASE MAP (53 ids = the 45 test-plan-v1.3 ids plus TC-EVT-085..092,
+#   which test plan v1.4 registers; every id is owned by exactly one phase — the
+#   phase which first makes its complete suite set green. A suite proven in an
 #   earlier phase is named in that phase's gate and its `Suites left green`
-#   line, without a second TC row; the eight map lines below hold 45 ids and
-#   list each id once):
-#   Phase 1 declaration (8): TC-EVT-001, TC-EVT-003, TC-EVT-005,
-#            TC-EVT-070, TC-EVT-071, TC-EVT-072, TC-EVT-073, TC-EVT-074
-#   Phase 2 surface (9): TC-EVT-004, TC-EVT-010, TC-EVT-011, TC-EVT-012,
-#            TC-EVT-013, TC-EVT-014, TC-EVT-015, TC-EVT-051, TC-EVT-080
+#   line, without a second TC row. Phase 9 moves the five TCs whose OWN
+#   assertions the remediation rewrites (002 page half, 003, 005, 006, 014) and
+#   owns the eight new ids; every earlier phase keeps the cases it historically
+#   proved, and the total is 45 + 8 = 53):
+#   Phase 1 declaration (6): TC-EVT-001, TC-EVT-070, TC-EVT-071, TC-EVT-072,
+#            TC-EVT-073, TC-EVT-074
+#   Phase 2 surface (8): TC-EVT-004, TC-EVT-010, TC-EVT-011, TC-EVT-012,
+#            TC-EVT-013, TC-EVT-015, TC-EVT-051, TC-EVT-080
 #   Phase 3 projection (0): none (the projection module and its structural bound
 #            suite land here; every behaviour case that exercises the projection
 #            drives the real server/session and is owned by Phase 4 or 6)
@@ -211,18 +214,54 @@
 #            TC-EVT-042, TC-EVT-050, TC-EVT-075, TC-EVT-082, TC-EVT-083
 #   Phase 5 mount (5): TC-EVT-060, TC-EVT-061, TC-EVT-062, TC-EVT-063,
 #            TC-EVT-064
-#   Phase 6 contract (13): TC-EVT-002, TC-EVT-006, TC-EVT-016, TC-EVT-020,
-#            TC-EVT-021, TC-EVT-022, TC-EVT-024, TC-EVT-025, TC-EVT-026,
-#            TC-EVT-027, TC-EVT-031, TC-EVT-032, TC-EVT-084
+#   Phase 6 contract (11): TC-EVT-016, TC-EVT-020, TC-EVT-021, TC-EVT-022,
+#            TC-EVT-024, TC-EVT-025, TC-EVT-026, TC-EVT-027, TC-EVT-031,
+#            TC-EVT-032, TC-EVT-084
 #   Phase 7 shared read (1): TC-EVT-081
 #   Phase 8 docs/release (0): none (docs, amended decision, changeset; proven by
 #            the doc, coverage, parity, distribution, and changeset guards)
-#   Suite halves proven before their owner: TC-EVT-002's declaration suite runs
-#   in Phase 1, TC-EVT-004's declaration-integrity half runs in the Phase-1 gate
+#   Phase 9 review remediation (13): TC-EVT-002 (page kind table), TC-EVT-003
+#            (drift suite over the live surface/projection), TC-EVT-005
+#            (additive suite over the real projection), TC-EVT-006
+#            (object-literal kind scan), TC-EVT-014 (describe/list usage
+#            refusals), TC-EVT-085 (pair atomic at cap 2), TC-EVT-086 (pair at
+#            64/62 with the watermark held), TC-EVT-087 (same-tick dependency
+#            delta), TC-EVT-088 (exact per-kind payload keys, 13 kinds),
+#            TC-EVT-089 (attempt token vs credential tokens), TC-EVT-090
+#            (same-connection overflow isolation), TC-EVT-091 (connect/probe
+#            counters), TC-EVT-092 (per-evidenceRef length bound)
+#   Suite halves proven before their owner: TC-EVT-002's declaration suite and
+#   TC-EVT-003's/005's/006's earlier cells run in Phase 1 (and Phase 2 for 016),
+#   TC-EVT-004's declaration-integrity half runs in the Phase-1 gate
 #   (`event-taxonomy-integrity`) while its surface half is owned by Phase 2,
-#   TC-EVT-016's surface suite in Phase 2, and TC-EVT-031's/032's behaviour
-#   suites in Phase 4; each TC is owned once, in the phase that makes its whole
-#   set green.
+#   TC-EVT-016's surface suite in Phase 2, TC-EVT-014's error rows in Phase 2,
+#   and TC-EVT-031's/032's behaviour suites in Phase 4; each TC is owned once,
+#   in the phase that makes its whole set green after remediation.
+#
+# REVIEW REMEDIATION (Phase 9; review-iter-1 status FAIL):
+#   The code review reproduced one correctness/data-loss defect plus contract-
+#   honesty and weak-test gaps. Phase 9 is the single remediation phase and is
+#   last. Its findings split by artifact:
+#     - CODE/TEST half (Phase 9, this plan): B-1 (atomic `began`/`completed`
+#       pair), M-2 (same-tick dependency delta), M-1's code/test half (exact
+#       per-kind payload keys, a bidirectional comparator, and an object-literal
+#       kind scan), L-2's test half (the delivered attempt token permitted,
+#       credential/secret tokens excluded), L-3 (`events describe` without a
+#       topic; `events list <extra>`), L-4 (connect/probe counters), L-5
+#       (same-connection multi-subscription overflow), L-6 (per-evidenceRef
+#       length bound), the weak-test replacements (002 page half, 003, 005, 006),
+#       and I-1 (revert the unrelated reorderings).
+#     - DOC/SPEC half (Phase 8, unchanged ownership): M-3
+#       (`feature-event-taxonomy.md` "cannot drift apart" sentence), M-4
+#       (`doc/planning/oss-tooling/milestones/m2/contracts.md` kind/envelope/
+#       client-version statements), M-5 (the new page and its `doc/00-index.md`
+#       row are declared through Phase 8's `doc/spec/features` folder and the
+#       added `doc/00-index.md` file row), L-1 (AC-F2-4's envelope shape), and
+#       L-2's spec wording. No doc, decision-record, or changeset path is moved
+#       into Phase 9.
+#   Phase 9 changes no wire type, frame kind, protocol version, record kind,
+#   schema version, dependency, or error identity: the three events error rows
+#   stay three, and the tick still performs one `readRecords()` per publish tick.
 #
 # DECLARATION-ONLY PHASE-1 SCANS: the Phase-1 suites scan the declaration and
 #   the code's closed vocabularies only. They must NOT token-scan
@@ -240,7 +279,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-290
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - "The contract needs a new wire type, frame kind, protocol version, codec rule, subscription-buffer semantic, or a field outside `data` to satisfy an AC"
     - "A new state record kind, payload schema, key prefix, migration, backfill, seed, or STATE_SCHEMA_VERSION change would be required (including a recorded phase begin), or the DM-9 watermark would have to persist in the store"
@@ -842,9 +881,17 @@ phases:
   #   ownership split is why `doc/quality/test-specs` is declared in this phase's
   #   `scope.folders` and why no later lifecycle step needs a scope declaration.
   #
-  # Note on doc/00-index.md: spec §16 marks it unchanged (no spec page is
-  # created), so it is not declared and no `undeclared-missing` is intended; the
-  # same holds for doc/spec/00-index.md.
+  # Doc scope that M-3/M-4/M-5 resolve (review-iter-1): the new
+  # `doc/spec/features/feature-event-taxonomy.md` is staged through this phase's
+  # `doc/spec/features` folder (M-3's "cannot drift apart" sentence is corrected
+  # there), `doc/planning/oss-tooling/milestones/m2/contracts.md` through the
+  # `doc/planning/oss-tooling` folder (M-4: `remove` is `emitted:false`, the
+  # eight-field envelope, and no client version negotiation), and
+  # `doc/00-index.md` is added to this phase's `scope.files` for its new page row
+  # (M-5). The spec owner's v1.4 wording edits (AC-F2-4 over the delivered
+  # `CommandResult`, L-1; NFR-10/AC-NFR-5's attempt-token carve-out, L-2) ride
+  # this phase's `doc/changes/...` folder scope. Phase 8 therefore owns every
+  # doc/spec/decision/changeset path; no such path is declared in Phase 9.
   #
   # Gate:
   #   bun test tests/checks/{doc-conformance,reference-page-parity,help-guide-coverage,error-table-sync,decision-record}.test.ts
@@ -868,6 +915,7 @@ phases:
     scope:
       files:
         - .changeset/gh-290-event-taxonomy-minor.md
+        - doc/00-index.md
         - doc/decisions/TDR-0024-public-event-taxonomy-v1-subscribe-surface.md
         - doc/planning/oss-tooling/backlog.md
       folders:
@@ -880,3 +928,168 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-290/event-taxonomy targeting main-tools"
       pipelineId: "CI pipeline for the GH-290 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Code-review iteration-1 remediation (review-iter-1: FAIL).
+  #
+  # Goal: close every code/test finding of `code-review/review-iter-1.{md,yaml}`
+  # without widening the contract. No wire type, frame kind, protocol version,
+  # record kind, schema version, dependency, port method, error identity, or
+  # command membership changes; the three `events` error rows stay three (127
+  # documented rows), and the publish tick still performs one `readRecords()` per
+  # publish tick. The doc/spec/decision/changeset findings stay in Phase 8.
+  #
+  # B-1 (high, blocking; event-projection.ts). The `began` candidate reserves
+  # two slots (`groupSize: 2`) but the paired `completed` is emitted as its own
+  # unit, so one first-completion charges 3 slots for 2 frames: at `used = 62`
+  # the `began` commits the watermark and the `completed` fails `64 + 1 > 64`,
+  # is skipped without commit, and is never re-considered — a permanent drop.
+  # The pair becomes ONE budget unit: the `completed` candidate carries
+  # `groupSize: 0` inside the `began` reservation, and a pair that cannot fit is
+  # skipped whole before any `commit()` runs, so no watermark advance covers an
+  # unemitted transition. Two boundary cells prove it: `maxPerTopicPerTick: 2`
+  # over two first-completions (both frames or neither, never `began` alone) and
+  # the default 64 with 62 pre-consumed (the pair fits exactly, and the next
+  # pair is deferred with the watermark held at its last emitted position).
+  #
+  # M-2 (medium; event-projection.ts). `lastEdges` is read while candidates are
+  # built and written only at emission, so two `queue.dependency` records for one
+  # lane in one view both diff against tick-start; the second `removed` is `[]`
+  # where it must name the edge the first record removed. The delta is computed
+  # against the previous record in the same view: a working copy of `lastEdges`
+  # is advanced inside the entering-order loop as each dependency candidate is
+  # built and restored when the candidate is suppressed or left pending, so the
+  # committed set always matches the last emitted or pending record. The
+  # two-records-in-one-view cell (`["GH-1"]` then `["GH-2"]`) asserts the second
+  # delta is `added: ["GH-2"]`, `removed: ["GH-1"]`, one `dependency-edge` per
+  # observed change, and no duplicate on an idempotent re-write.
+  #
+  # M-1 (medium; code/test half). `event-projection.ts` imports only
+  # `TAXONOMY_VERSION` and hand-codes 11 kind names and every payload, and the
+  # guards cannot see it: the single-source scan flags only flat arrays of three
+  # or more declared names, `compareFrames`/`scriptedFrames` compare the
+  # declaration with itself and reject only undeclared payload keys, and the
+  # envelope suite asserts the emitted payload is a SUBSET of the declared
+  # fields. Driving the projection from the declaration is NOT feasible inside
+  # this phase: the declaration carries names, ordering, overflow, and payload
+  # field lists, but no source-field map (which record family feeds which kind
+  # and payload), so a data-driven projector needs a new declarative source map —
+  # a contract/data-model change the tier's escalation triggers reserve. The
+  # proof therefore is the exact-key test: every emitted payload's key set is
+  # asserted EXACTLY (both directions) against `CONTRACT_PAYLOAD_FIELDS` for all
+  # 13 kinds through the real projector, the comparator rejects a MISSING
+  # declared field as well as an undeclared one, and the single-source scan walks
+  # object literals and nested arrays in `packages/*/src` for the declared kind
+  # tokens. The accurate relationship (surface generated; projection
+  # hand-authored and contract-tested) is stated in Phase 8's page fix (M-3).
+  #
+  # L-2 (low; test half). The spec owner aligns NFR-10/AC-NFR-5 in spec v1.4 to
+  # permit the delivered attempt correlation `token` while still excluding
+  # credentials and secrets; this phase tests the delivered rule: the
+  # `dispatch.attempt` `refused`/`completed` payloads carry `token`, no
+  # credential- or secret-named field or credential-shaped value appears on any
+  # frame, and the privacy canary set does not trip on the attempt token.
+  #
+  # L-3 (low). `events describe` with no topic currently reports
+  # `"describe" is not an events verb`, and `events list status` silently ignores
+  # the extra positional. Both refusals use the existing `events.verb-unknown`
+  # identity with a message naming what is missing (`describe` requires a topic;
+  # `list` takes no topic), so no error row is added and the exit projection
+  # stays `{0,1,2}`.
+  #
+  # L-4/L-5/L-6 (low). The tick-cost harness counts client connects, server
+  # listens, and executor probe calls, and the counted publish pass asserts zero
+  # on all three (AC-NFR-2's "no socket, no process probe"); the overflow parity
+  # suite adds a same-connection cell with two subscriptions of one topic, where
+  # only the overflowing subscription is stamped and dropped and the sibling on
+  # that connection keeps receiving; and the projection bounds each
+  # `evidenceRefs` entry with a non-exported per-ref cap (no contract widening),
+  # which the frame-size proof asserts over a worst-case ref.
+  #
+  # Weak tests. `event-taxonomy-additive.test.ts:26-34` stops inspecting
+  # `scriptedFrames(TAXONOMY)` and asserts the real projector's emitted keys;
+  # the drift suite feeds the live surface and the live projector (the mutants
+  # stay as oracle controls); the conformance guard pins the M2 page's per-kind
+  # table (kind names per topic), not just the `0/0/4/3/3/3` counts string.
+  #
+  # I-1 (info). The five unrelated alphabetical reorderings revert to their base
+  # order with only this change's rows kept: `domain/index.ts`,
+  # `contracts/index.ts`, `production.ts`, `queue.ts`, `daemon.ts`. No export,
+  # inventory, or allowance guard requires sorted order (`content-inventory`
+  # sorts its own comparisons), so all five revert; if a row must stay, the phase
+  # note names the guard that requires it.
+  #
+  # TC ownership (see the header map): Phase 9 owns the five TCs whose own
+  # assertions are rewritten (002 page kind table, 003, 005, 006, 014) and the
+  # eight new ids TC-EVT-085..092 that test plan v1.4 registers; the total is
+  # 45 + 8 = 53. The test-plan owner registers the new ids; this plan does not
+  # edit the test plan.
+  #
+  # Dependency reasoning: every defect is in the delivered projection, the
+  # delivered `events` handler, the harness, or the suites that prove them, so
+  # the phase needs no earlier phase reopened. It runs after Phase 8 because the
+  # review followed the documentation commit and a remediation commit must land
+  # last on the branch.
+  #
+  # Tier triggers (inert data, checked here for honesty): no new second copy of
+  # the topic or kind sets is introduced — the remediation proves the existing
+  # projection against `CONTRACT_PAYLOAD_FIELDS` instead — so that trigger does
+  # not fire; and the suites whose assertions change are this change's own
+  # Phase-1..7 suites (`event-taxonomy-*`, `events-*`), not delivered pre-change
+  # suites, so the "delivered suite" trigger does not fire either.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/event-{projection-bounds,taxonomy-additive,taxonomy-drift,taxonomy-single-source}.test.ts
+  #   bun test tests/behaviour/events-{dependency-delta,envelope-conformance,errors,frame-bound,overflow-parity,privacy,tick-cost}.test.ts
+  #   bun test tests/checks/event-taxonomy-conformance.test.ts
+  #   bun test tests/structure/{content-inventory,error-table}.test.ts
+  #   bun test tests/behaviour/events-{subscribe-queue-graph,subscribe-dispatch,subscribe-phase,subscribe-blockers,sequence-per-lane,burst,snapshot-preserved}.test.ts
+  #   bun run scripts/checks/{exports-parity,error-table-sync,workspace-entrypoints,prompt-conformance}.ts
+  #   pnpm lint
+  #
+  # Suites left green: event-projection-bounds (pair atomic at 2 and 64/62, no
+  #   watermark advance), event-taxonomy-additive (real projector),
+  #   event-taxonomy-drift (live surface/projection), event-taxonomy-single-source
+  #   (object-literal scan), events-dependency-delta (same-tick delta),
+  #   events-envelope-conformance (exact per-kind keys, 13 kinds), events-errors
+  #   (describe/list refusals), events-frame-bound (per-evidenceRef cap),
+  #   events-overflow-parity (same-connection cell), events-privacy (attempt-token
+  #   rule), events-tick-cost (connect/probe counters), event-taxonomy-conformance
+  #   (page kind table), content-inventory, error-table, the four per-topic
+  #   subscribe suites, sequence-per-lane, burst, snapshot-preserved,
+  #   exports-parity, error-table-sync, workspace-entrypoints, prompt-conformance.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code-review iteration-1 remediation: atomic began/completed budget, same-tick deltas, exact per-kind payload proof, token and usage rules, counter/overflow/bound cells, and reorder revert"
+    kind: delivery
+    summary: "fix(events): make `began`+`completed` one budget unit so no `completed` can be dropped (B-1: `completed` charges `groupSize: 0` inside the `began` reservation of 2, an unfittable pair skips without advancing the watermark, and boundary cells at `maxPerTopicPerTick: 2` and 64 with 62 pre-consumed assert both-or-neither), diff same-tick dependency records against the previous record in the view (M-2: a working `lastEdges` advanced in the entering-order loop and restored on suppression/pending, plus a two-records-in-one-view cell), and prove payloads exactly per kind against `CONTRACT_PAYLOAD_FIELDS` for all 13 kinds with a bidirectional comparator and an object-literal kind scan (M-1: the declaration carries no source-field map, so driving the projection would be a contract change and the exact-key test is the proof); allow the delivered attempt correlation `token` while excluding credential/secret tokens (L-2, aligned to spec v1.4 wording); refuse `describe` without a topic and `list` with an extra positional with messages naming the missing/extra argument (L-3, no new error identity so the table stays 127 rows); count connects and probes in the tick-cost harness (L-4); add the same-connection multi-subscription overflow cell (L-5); cap each `evidenceRefs` entry inside the projection and prove it in the frame-size test (L-6); de-tautologise the additive suite, feed the drift suite the live surface/projection, and pin the page kind table (weak tests, TC-EVT-002/003/005/006); and revert the five unrelated alphabetical reorderings (I-1, no export/allowance guard requires sorted order). Doc findings M-3/M-4/M-5 and L-1 stay in Phase 8."
+    scope:
+      files:
+        - packages/cli/src/commands/events.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/daemon.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/event-projection.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/events-dependency-delta.test.ts
+        - tests/behaviour/events-envelope-conformance.test.ts
+        - tests/behaviour/events-errors.test.ts
+        - tests/behaviour/events-frame-bound.test.ts
+        - tests/behaviour/events-overflow-parity.test.ts
+        - tests/behaviour/events-privacy.test.ts
+        - tests/behaviour/events-tick-cost.test.ts
+        - tests/checks/event-taxonomy-conformance.test.ts
+        - tests/fixtures/events/drift-mutants.ts
+        - tests/fixtures/events/event-harness.ts
+        - tests/structure/event-projection-bounds.test.ts
+        - tests/structure/event-taxonomy-additive.test.ts
+        - tests/structure/event-taxonomy-drift.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/event-projection.ts
+        role: producer

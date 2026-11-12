@@ -1450,6 +1450,7 @@ export {
   PROJECT_STATE_LOCATIONS,
   PROJECT_UNBOUND_SEGMENT,
   PROJECTS_COMMAND_FAMILY,
+  STATE_MIGRATION_NOTE_PATH,
   PROJECTS_CONTAINER_SEGMENT,
   PROJECTS_ENTRY_FIELDS,
   PROJECTS_ERROR_CODES,
@@ -1463,7 +1464,6 @@ export {
   type ProjectsErrorCode,
   type ProjectsListData,
   type ProjectsListEntry,
-  STATE_MIGRATION_NOTE_PATH,
 } from "./projects.js";
 // Provider-engine vocabulary (GH-182 F-1..F-9, DM-1..DM-13): types and the
 // closed sets/allowlists only; the pure policy lives in `./provider`.
