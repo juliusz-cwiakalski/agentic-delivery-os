@@ -466,3 +466,34 @@ notes:
       in the spec's document history (v1.8).
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Sync with `main-tools` resolved: merge commit `0902a43c` merged
+      `355ce2d5` (GH-289) and `a1b6b074` (GH-303) into
+      `feat/GH-290/event-taxonomy`. Ten paths conflicted and every one kept both
+      sides' delivered facts: `doc/decisions/00-index.md`,
+      `doc/overview/architecture-overview.md`, `doc/overview/glossary.md`,
+      `doc/planning/oss-tooling/cli-command-registry.md`,
+      `doc/planning/oss-tooling/milestones/m2/contracts.md`,
+      `doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md`,
+      `doc/planning/oss-tooling/status.md`,
+      `doc/spec/features/feature-cli-entrypoint.md`,
+      `doc/spec/features/feature-result-contract.md`, and
+      `tests/fixtures/help-guide/coverage.json`. GH-303's project-groups domain
+      model and GH-289's dispatch-attempts read side survive beside this change's
+      event-taxonomy rows. The decision record is renumbered to `TDR-0025`
+      (GH-289's `TDR-0024` stands) with every reference updated, and the two
+      GH-289 guards that pinned pre-change counts moved exactly rather than
+      loosely: root families 18 -> 19 and error-table identities 124 -> 127.
+      Gates after the merge: `pnpm check` exit 0 — 7,666 pass / 4 skip / 0 fail,
+      65,849 `expect()` calls across 7,670 tests in 965 files, with boundaries
+      (389 modules), ambient globals, workspace entrypoints, secret-read
+      boundary, prompt conformance (5 prompts), help coverage, and exports
+      parity green; `./scripts/lint-commit-range.sh --base main-tools` PASS;
+      `bash scripts/.tests/test-doc-distribution.sh` OK (83 in-scope docs);
+      `bun run scripts/checks/error-table-sync.ts` OK (127 documented = 127
+      source); `bun run scripts/checks/forbidden-literals.ts` 5/5 scope classes,
+      0 violations; `delivery-os plan validate GH-290` verdict=valid,
+      readyForDevelopment=true. No test was weakened. Not pushed, no pull
+      request merged, issue not closed.
+    type: "info"
+    date: "2026-11-12"

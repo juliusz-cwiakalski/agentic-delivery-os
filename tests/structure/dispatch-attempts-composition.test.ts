@@ -86,7 +86,7 @@ describe("TC-ATTEMPT-030 the attempts help page is reachable and pure", () => {
     expect(text).toContain("Exit codes:");
   });
 
-  test("the root listing still names eighteen families and no attempts row", async () => {
+  test("the root listing still names nineteen families and no attempts row", async () => {
     const { ROOT_HELP, renderRootHelp } = await import("../../packages/cli/src/help");
     const { resolveBrandIdentity } = await import("../../packages/core/src/branding/index");
     const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
@@ -94,7 +94,7 @@ describe("TC-ATTEMPT-030 the attempts help page is reachable and pure", () => {
     expect(ROOT_HELP.usage).toHaveLength(1);
     const text = renderRootHelp(resolved.value);
     const commands = text.split("Commands:\n")[1]?.trimEnd().split("\n") ?? [];
-    expect(commands).toHaveLength(18);
+    expect(commands).toHaveLength(19);
     expect(commands.some((line) => line.trimStart().startsWith("attempts"))).toBe(false);
   });
 });
