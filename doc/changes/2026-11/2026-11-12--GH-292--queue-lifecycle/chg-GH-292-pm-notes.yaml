@@ -517,3 +517,67 @@ notes:
       spec-history row ordering nits.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 8 complete (commit fe663c55): documentation reconciliation and
+      the planning corpus. All eight declared pages edited, no production
+      behaviour touched, and the two declared guard suites created:
+      `tests/checks/queue-reference-page.test.ts` (TC-QLC-071: the M1 page
+      root resolves through the coverage inventory and reports zero
+      queue-family failures; all ten verbs plus the three dependency forms in
+      the synopsis; the closed reason vocabulary; the refusal identities with
+      the exit matrix and the {0,1,2} bound; `detail.holder` at the envelope
+      root with the 128-character bound and `error.detail` rejected; the
+      per-ref single-flight precedence table with the per-pass distinction,
+      stale takeover, and refusal purity; the reconcile contract bounded at
+      100 with fail-closed provider identities; the closeout `queueRemoval`
+      outcome/skip vocabularies; release never described as removal) and
+      `tests/checks/m2-queue-page-reconciliation.test.ts` (TC-QLC-072: nine
+      sections resolve to non-empty spans; the three delivered identities
+      named; `queue.entry-unknown`/`queue.state-unavailable` absent anywhere;
+      every example envelope parses as `delivery.result.v1` with only
+      {schemaVersion, runId, exitCode, timing, data|error, detail} top-level
+      keys and no `ok`/`command` key at any depth; the single-flight example
+      carries root `detail.holder` and no `data`; `queue.graph/remove`
+      spelled, `queue.graph/removed` absent; reconcile keys and the 100-entry
+      cap; the closeout outcome/skip vocabularies; the dep grammar over the
+      preserved two-positional add). Page content: the M1 page gains the
+      GH-292 shipped contract (verbs, vocabulary, presence rule, closeout
+      block, reconcile contract, the nine-row precedence table, envelope-root
+      holder, exit matrix), per-verb lifecycle payloads, and the two new
+      identities in ERRORS; the M2 commands page is reconciled to delivered
+      identities, per-verb `data` payloads, and delivered-shape examples; the
+      M2 contracts page states `remove` as emitted with exactly `ref`,
+      `reason`, `recordedAt` and the append-position presence rule with the
+      path-specific single-flight policy; the M2 architecture page replaces
+      the generic refusal prose with the F-4 precedence (a refusal appends
+      nothing and publishes no `dispatch.attempt` event; the started event
+      stays on the admitted path) and places the `landed` removal after the
+      closeout writes inside the held fence naming the hook and the emitted
+      `queue.graph/remove`; the registry `queue` row names the three new
+      semantic additions (Delivery M1-S17 / Extended GH-292); status.md gains
+      a dated M2-S15 snapshot superseding the `emitted: false` attribution;
+      backlog M2-S15 gains its `Ticket`/`Progress` record in the M2-S13
+      shape; the glossary adds removal record, presence rule, per-ref
+      single-flight, reconcile, and holder lane, and the delivered
+      Single-flight entry now names the distinction. Gates: the two new
+      suites 23 pass / 0 fail (180 assertions); coverage + parity +
+      entrypoint-help controls 11 pass; doc-conformance 11 pass;
+      `help-guide-coverage` check OK (exit 0); `forbidden-literals` exit 0;
+      doc-distribution guard OK (83 in-scope docs, no drift, no new
+      frontmatter needed — all edited pages keep their existing markers);
+      `pnpm typecheck` exit 0 (6 packages + tests config, builds clean);
+      biome check exit 0 on both new files. Deviations: (1) the evidence note
+      lands in a follow-up pm-notes commit because it names the work commit's
+      sha (the phases 1-7 pattern); (2) both suites normalize whitespace
+      before containment so a prose token never fails on a line wrap —
+      presence/absence semantics unchanged; (3) the M2 example parser
+      extracts the JSON portion after the `$` command line, matching the
+      page's existing example shape; (4) the M2 page keeps its S17/S18
+      planned markers (`--park` S17 additions, `--project` S18) with the
+      planned wording made explicit; (5) the old dated M2-S13 status
+      paragraph stays as a historical record with the new snapshot explicitly
+      superseding it. Ceremony: TDR-0026 verified absent from the tree before
+      committing (sole copy `./tmp/tmpdir/held/`); lifecycle `delivery` stays
+      OPEN — no `phase complete` from this phase.
+    type: "info"
+    date: "2026-11-12"
