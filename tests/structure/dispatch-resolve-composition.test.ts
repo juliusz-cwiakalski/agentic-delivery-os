@@ -49,6 +49,22 @@ describe("TC-RESOLVE-001 resolve is local-only", () => {
       expect(JSON.stringify(after.records[0])).toBe(original);
       expect(after.records[1]?.state).toBe("resolved");
       expect(after.records[1]?.note).toBe("tracker was stale; PR reopened");
+
+      // GH-289 TC-ATTEMPT-019: the unconditional mode and the subject
+      // repository are declared on every successful resolution, including a
+      // run against an unreachable tracker configuration.
+      const data = observed.envelope?.data as
+        | {
+            readonly mode?: string;
+            readonly repository?: string;
+            readonly divergences?: { readonly unresolved?: number };
+          }
+        | undefined;
+      expect(data?.mode).toBe("local-evidence");
+      expect(data?.repository).toBe("github.com/owner/repo");
+      expect(data?.divergences?.unresolved).toBe(0);
+      expect(observed.spawns).toBe(0);
+      expect(observed.requests).toEqual([]);
     } finally {
       harness.dispose();
     }

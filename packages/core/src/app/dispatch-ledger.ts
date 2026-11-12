@@ -19,7 +19,6 @@ import {
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
   DISPATCH_HANDOVER_RECORD_KIND,
   DISPATCH_MAX_ATTEMPT_RECORDS,
-  DISPATCH_MAX_DIVERGENCE_IDS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_NOTE_CHARS,
   type DispatchAttemptRecord,
@@ -269,31 +268,6 @@ export const foldDispatchDivergences = (
   const latest = new Map<string, DispatchDivergenceRecord>();
   for (const record of records) latest.set(record.divergenceId, record);
   return [...latest.values()];
-};
-
-/** A compact divergence summary for the gate and summary surfaces. */
-export type DispatchDivergenceSummary = {
-  readonly reported: number;
-  readonly resolved: number;
-  readonly unresolved: number;
-  readonly unresolvedIds: readonly string[];
-};
-
-export const summarizeDispatchDivergences = (
-  records: readonly DispatchDivergenceRecord[],
-): DispatchDivergenceSummary => {
-  const folded = foldDispatchDivergences(records);
-  const unresolvedIds = folded
-    .filter((record) => record.state === "open")
-    .map((record) => record.divergenceId)
-    .slice(0, DISPATCH_MAX_DIVERGENCE_IDS);
-  const resolved = folded.length - unresolvedIds.length;
-  return {
-    reported: folded.length,
-    resolved,
-    unresolved: unresolvedIds.length,
-    unresolvedIds,
-  };
 };
 
 /** Append one divergence open record. */

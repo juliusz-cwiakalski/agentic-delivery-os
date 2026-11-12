@@ -1206,6 +1206,16 @@ the project family separately.
 - Depends on: M0-S5, M1-S17.
 
 ### M2-S12 Evidence inspection and divergence resolution
+- Ticket: GH-289 (milestone M2)
+- Progress: delivered by GH-289 — the `dispatch attempts [--ref <ref>]
+  [--limit <n>]` read side with its `attempts.v1` envelope (sixteen-field
+  projection, total order, ledger/page/human bounds, repository-scoped
+  isolation with count-only foreign disclosure, empty history as success), the
+  local-evidence resolve result with `mode`, `repository`, and the divergence
+  block, the single shared exact repository-scoped divergence count with
+  `idsTruncated` behind the resolve and summary blocks, the bounded digest with
+  its coverage/floor pointer, and the fifth `dispatch attempts` help entry with
+  the M2 reference page registered.
 - Goal: The dual-run evidence ledger is inspectable and actionable from the
   CLI, so handover decisions and retros rest on readable evidence, not file
   spelunking.

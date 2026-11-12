@@ -5,7 +5,9 @@
 
 export { renderCommitHuman } from "./commit-text.js";
 export {
+  renderDispatchAttemptsText,
   renderDispatchHandoverText,
+  renderDispatchResolveText,
   renderDispatchSummaryText,
   renderDispatchText,
 } from "./dispatch-text.js";

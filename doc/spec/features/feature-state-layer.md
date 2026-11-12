@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATE-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-09
+last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
 summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the five additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, the six additive coordinator iteration, restart, stuck, exhaustion, wake, and fence record kinds with coordinator-scoped key prefixes and ledger-sequence folds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288", "GH-289"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -133,6 +133,10 @@ Status acquires no fence, appends no record, replaces no derived document, and n
 The spend read side is a read-only consumer of the state layer. `readSpendLedger` performs three verified reads in a fixed order — the ref's `harness.telemetry` session-group records, its capture-outcome records, and its `phase.transition` history — through the same public port. Each read is presence-tolerant: an absent per-ref family or an absent store is explicit verified-empty evidence, while a torn, schema-mismatched, wrong-kind, malformed, or permission-denied read keeps the classified `state.*` identity and its delivered projection.
 
 The consumer adds no record kind, payload schema, key prefix, append path, schema-version bump, migration, or derived projection. It acquires no fence, appends no record, replaces no document, and never repairs or salvages. Only when both telemetry families are empty for the ref does it report the verified-empty evidence the spend fold classifies as `spend.telemetry-absent`. The command and the status digest section 8 consume this same read and fold. The consumer contract is specified in [Spend Read Side](feature-spend.md).
+
+### Dispatch attempts consumer
+
+The `dispatch attempts` read side is a read-only consumer of the state layer. It performs exactly one verified ledger read of the retained `dispatch.attempt` records through the same public port. A torn, unreadable, wrong-kind, malformed, or permission-denied read keeps the classified `state.*` identity and its delivered projection, and is never reported as an empty history; an absent or empty attempt family is verified-empty evidence and a successful exit-0 read. The consumer adds no record kind, payload schema, key prefix, append path, schema-version bump, migration, or derived projection. It acquires no fence and appends no delivery evidence; because it opens a store it inherits only the host-index maintenance write (zero when unchanged) and the create-once project checkout identity marker. The dispatch repository binding marker is a different artefact and is never created, repaired, or re-persisted by the read.
 
 ### Queue-ready consumer
 

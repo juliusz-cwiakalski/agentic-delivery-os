@@ -6,10 +6,10 @@ created: 2026-11-08
 last_updated: 2026-11-11
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -36,13 +36,14 @@ A repository is either `dual-run` (bash authoritative, dispatch evidence only) o
 
 `dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, and attempt-record ledger serve one-shot dispatches and daemon-driven lanes.
 
-The shipped production composition wires the one-shot run path with its admission preflight, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
+The shipped production composition wires the one-shot run path with its admission preflight, the attempt read side, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
 
 ## Command grammar
 
 | Invocation | Purpose |
 |---|---|
 | `dispatch <ref> [--harness <name>] [--resume-prompt <text>]` | Run one dispatch, or resume the existing lane with operator guidance. |
+| `dispatch attempts [--ref <ref>] [--limit <n>]` | Read one work item's recorded attempts, newest first, as a bounded digest or the `attempts.v1` machine envelope. |
 | `dispatch dual-run summary --repo <repo>` | Report the evidence window, class coverage, divergences, corroboration, and the four-condition verdict. |
 | `dispatch dual-run resolve <divergence-id> --note <text>` | Append a bounded resolution to an open divergence. |
 | `dispatch handover <repo> [--revert]` | Flip one repository to engine-authoritative, or append a reversal back to dual-run. |
@@ -167,12 +168,89 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 
 The watch contributes its observed verdict trail as `liveness:<verdict>` evidence references, so a transient stall remains visible even when the session later classifies normally. A post-spawn collection failure names `harness:collect-failed`; a restart-budget refusal names `economics:exhaustion` when the terminal record landed and `economics:exhaustion-unrecorded` when the append did not land, so an unrecorded exhaustion is never claimed as durable evidence.
 
+### Attempt read side
+
+`dispatch attempts [--ref <ref>] [--limit <n>]` is a subfamily of the dispatch
+family: it does not change the root family listing or the prompt-required set.
+It reads the durable attempt record and adds no record kind, schema version, key
+prefix, fold, configuration key, or error identity. The static help inventory
+carries five `dispatch` entries — the family plus `attempts`,
+`dual-run summary`, `dual-run resolve`, and `handover` — and both
+reference-page parity pins assert that count. The read side's rulings — the
+closed-taxonomy reuse, the empty-history success, the record-bounded projection
+cardinality, the unconditional evidence mode, the one exact divergence count, and
+the twice-enforced repository scope — are recorded in
+[TDR-0024](../../decisions/TDR-0024-dispatch-attempt-read-side-and-local-evidence-resolve.md).
+
+- **Envelope.** The `attempts.v1` `data` carries eight always-present keys —
+  `repository`, `ref`, `refSource` (`"flag"` or `"active-change"`), `limit`,
+  `matched`, `hasMore`, `attempts[]`, and `excluded.foreignRepository` — plus a
+  single `truncation` object only when a bound binds. The envelope is the
+  standard five-field `CommandResult` (`schemaVersion`, `runId`, `exitCode`,
+  `timing`, and `data`, plus `error` on a failure); it carries no `ok` and no
+  `command` field, and the invocation is recorded in the command audit ledger
+  under the family token `dispatch`.
+- **Projection.** Each row carries exactly sixteen fields: `attemptId`,
+  `repository`, `ref`, `harness`, `evidenceClass`, `outcome`, `token`,
+  `startedAt`, `endedAt` (the consumer name for the recorded finish timestamp),
+  `divergenceRef` (one identifier or explicit `null`), `corroboration`
+  (`pmNotes`, `tracker`, `ci` tri-state), `falseSuccess`, `comparison` (`class`,
+  `token` or `null`, `outcome`), `resumeMode` (or `null`), `evidenceRefs` (at
+  most 16 identifiers), and `recordedAt`. No prompt, transcript, diff,
+  credential, or provider payload is projected.
+- **Order and page.** The order is total: `startedAt` descending, `recordedAt`
+  descending, `attemptId` ascending. `matched` is the number of matching
+  records in the retained ledger window, `hasMore` is true exactly when matching
+  attempts exist beyond the returned array, and the page is bounded by `--limit`
+  (canonical decimal 1..100, default 20, refused rather than clamped).
+- **Bounds.** The ledger read retains the newest 5,000 records; the serialized
+  `data` is bounded to 65,536 UTF-8 bytes; the human digest to 40 lines and 8,192
+  bytes with at most 37 rows beside a truncation line. The single truncation
+  object is `{ scope: "ledger" | "page", bound, omittedRecords }`, with
+  `bound: 5000` for `ledger`, `bound: 65536` for `page`, and the ledger scope
+  taking precedence.
+- **Reference resolution.** A supplied `--ref` must match `[A-Z]+-\d+`. When it
+  is omitted, `active_change.workItemRef` resolves from
+  `.ai/local/pm-context.yaml` through the same seam the spend read side uses. An
+  absent, unparsable, or active-change-less context refuses at exit `1` with
+  `input.value.rejected` and a bounded summary naming the context file and the
+  `--ref` remedy, before any store read.
+- **Repository scope.** The read is scoped twice: physically by the project
+  state root and logically by filtering each record on its own `repository`.
+  Records of another repository in the retained window are excluded from
+  `attempts[]` and counted in `excluded.foreignRepository`, independent of
+  `--ref`, and never named. An unresolvable identity refuses at exit `1` naming
+  the checkout; an invocation outside any checkout never reports the host-scoped
+  `unbound` store as a repository's history. Identity resolves with persistence
+  disabled, so the dispatch repository binding marker is never created,
+  repaired, or re-persisted.
+- **Read-only posture.** Zero attempt, divergence, handover, or authority
+  appends and zero fence acquisitions; the store's delivery-evidence bytes,
+  modes, and mtimes are unchanged. The inherited store-opening effects are the
+  host-index maintenance write (zero when unchanged) and the create-once project
+  checkout identity marker.
+- **Empty history.** A verified read that matches no record is success at exit
+  `0` with `attempts: []`, `matched: 0`, and `hasMore: false`. A torn,
+  unreadable, or permission-denied store keeps its delivered `state.*` identity
+  with `kind: "state"` and that row's projection, and is never reported as an
+  empty history; the exit follows the row (`state.permission.denied` projects
+  `user-validation` at exit `1`, while the platform state rows project exit
+  `2`).
+- **Digest.** The human digest prints one summary line, one row per attempt
+  newest first, an optional `truncation=human:bound:<kept>,omitted:<dropped>`
+  line, and the coverage/floor pointer
+  `next: dispatch dual-run summary --repo <repository> (coverage and floor)`.
+  The corroboration cell is the closed three-value derivation
+  (`corroborated`, `uncorroborated`, `vacuous`).
+
 ### Divergence and handover records
 
 - `dispatch.divergence` (`delivery.dispatch.divergence.v1`) opens on a comparison mismatch and folds latest-per-divergence. A resolution appends a second record with `state: resolved`, a bounded note, the recording principal, and the timestamp; the original open record remains. A delivered-evidence divergence is the one other shape: when the shared classifier outcome is `completed` (evaluated at record time; the persisted attempt outcome is never used), the phase ledger is readable and shows progress or a complete total, and truth is unreadable, at most one open record per `(repository, work-item reference)` carries `comparisonClass: not-applicable`, `engineToken: state-unverified`, `comparisonToken: null`, and evidence references `attempt:<id>` plus `truth:unreadable:<ledger|tracker|artifact|state>`. The divergence is appended before the attempt so the attempt can carry `divergenceRef`; a resume reuses the open record. If the divergence append fails, the attempt lands once with no `divergenceRef` and a bounded `divergence:append-failed` reference, and the underlying state identity is returned. If the attempt append fails after the divergence lands, the orphan stays open, counted, and resolvable, and a later attempt for the same pair reuses it.
 - `dispatch.handover` (`delivery.dispatch.handover.v1`) records one authority operation (`authoritative` or `dual-run`) per repository, with the conditions snapshot at decision time, bounded evidence references, principal, and timestamp. History is append-only; a reversal is a new record, never a deletion.
 
-`dispatch dual-run resolve` works from local evidence only: it resolves no credential, performs no network call, and reads no truth source outside the local state store and the divergence ledger. A genuine store fault keeps its own `state.*` identity under `kind: "state"` with that row's category, retryability, consequence, remediation, and exit, so a store fault is never reported as `dispatch.state-unverified`. An absent divergence identifier is an app-local `divergence-not-found` sentinel, distinct from a genuine `state.keys.missing`, surfaced as `input.value.rejected` with `kind: "input"` and appending nothing. The resolution note is clamped to its declared 240-character bound before the record is built, so an over-long note cannot become a write failure. A successful resolution appends one resolved record, leaves the original open record byte-identical, reports the resolved state and stored note, and is idempotent on replay.
+`dispatch dual-run resolve` works from local evidence only: it resolves no credential, performs no network call, and reads no truth source outside the local state store and the divergence ledger. A genuine store fault keeps its own `state.*` identity under `kind: "state"` with that row's category, retryability, consequence, remediation, and exit, so a store fault is never reported as `dispatch.state-unverified`. An absent divergence identifier is an app-local `divergence-not-found` sentinel, distinct from a genuine `state.keys.missing`, surfaced as `input.value.rejected` with `kind: "input"` and appending nothing. A blank or whitespace-only note is refused with `input.value.rejected` and appends nothing; a note longer than its declared 240-character bound is clamped before the record is built and reported as stored, so an over-long note cannot become a write failure. A successful resolution appends one resolved record, leaves the original open record byte-identical, reports the resolved state and stored note, and is idempotent on replay.
+
+The success data keeps the five delivered keys — `divergenceId`, `state`, `resolved`, `note`, `principal` — and adds three: `mode: "local-evidence"` unconditionally on every success including a replay, because no live-truth branch exists; `repository`, the repository recorded on the resolved divergence; and `divergences`, the shared repository-scoped block `{ reported, resolved, unresolved, unresolvedIds, idsTruncated }`. `unresolved` is the exact folded open count for that repository, `unresolvedIds` lists at most 20 of them, and `idsTruncated` is true exactly when identifiers were dropped. The same computation feeds `dispatch dual-run summary`, so both surfaces agree; the summary's counts are exact and repository-scoped, and its identifier list and human `unresolved_divergences=` line print the same at-most-20 list. The shared computation is `summarizeRepositoryDivergences` in the dispatch gate domain; every surface that reports divergence counts consumes it, and no surface or helper derives a count from an identifier list's length. Cross-repository resolution is disclosed by the reported repository rather than prevented.
 
 ### Authority view
 
@@ -199,19 +277,19 @@ Eligibility for a repository is the conjunction of four separated facts over the
 3. **Floor (floor-only).** At least 20 counted dispatches or at least 7 consecutive UTC dates with at least one counted dispatch, whichever comes first. The floor never substitutes for truth, coverage, or corroboration.
 4. **Corroboration (success claims only).** Every counted success-claimed token has the evidence its outcome family requires. A `merged` claim needs the pushed head, CI on that head, tracker state, and completed phases; a tracker-derived claim needs the tracker fact; `finished` needs the completed phase ledger; `noop-lane-nothing-to-do` needs the ledger or queue fact that no work remains. Non-success tokens satisfy corroboration vacuously.
 
-`dispatch dual-run summary --repo <repo>` reports the window and reason, elapsed day count, counted deliveries, counted and excluded evidence classes, incidents, divergences (reported, resolved, unresolved, identifiers), coverage present and missing, corroboration satisfaction, the floor, the verdict (`eligible`, `ineligible`, `unverifiable`), and every unmet condition. A readable summary exits `0` even when ineligible.
+`dispatch dual-run summary --repo <repo>` reports the window and reason, elapsed day count, counted deliveries, counted and excluded evidence classes, incidents, divergences (the shared repository-scoped block: exact `reported`, `resolved`, `unresolved`, at most 20 `unresolvedIds`, and `idsTruncated` when identifiers are omitted), coverage present and missing, corroboration satisfaction, the floor, the verdict (`eligible`, `ineligible`, `unverifiable`), and every unmet condition. A readable summary exits `0` even when ineligible.
 
 `dispatch handover <repo>` evaluates the same predicate. A readable but unmet bar is a clean refusal at exit `1` that names every unmet condition and appends no authority-changing record. An unreadable or torn evidence read refuses at exit `2` with the classified identity and appends no authority-changing record. A met bar appends one handover record, flips only the resolved repository identity to `authoritative`, refreshes the authority view atomically, and reports the flip as recorded and reversible. Other repositories stay in `dual-run`.
 
 `dispatch handover <repo> --revert` appends a reversal record and restores `dual-run` while preserving history. Reverting a repository already in `dual-run` is an idempotent noop at exit `0`. Replaying the same handover or reversal record appends no duplicate record.
 
-Repository identity is rename-invariant and scoped to the checkout. The first successful resolution binds a first-use marker stored with the checkout inside its git common directory (`<git-common-dir>/dispatch-identity.json`); the marker is created once and never overwritten, so it travels with the checkout across a working-directory rename and is shared by every linked worktree of that repository. Creation writes a synced sibling file and links it into place, so an interrupted write cannot leave a torn marker, and a marker that nevertheless carries no binding is replaced by the next persisting dispatch instead of remaining permanently unreadable. Two repositories in one home therefore never share or overwrite each other's binding, and a rename, remote change, or scheduler re-key never re-keys history. Only a dispatch operating on the current checkout creates or repairs the marker: the read-only `dual-run summary`, `dual-run resolve`, and `handover` surfaces read the binding when present and never persist one from an arbitrary `--repo` argument. Without a marker, the scheduling engine's normalized `repository` key is tried first, then the checkout's configured VCS remote normalized to `host/owner/name`. A checkout-path digest is never presented as identity. An unresolvable identity is a clean refusal at exit `1`.
+Repository identity is rename-invariant and scoped to the checkout. The first successful resolution binds a first-use marker stored with the checkout inside its git common directory (`<git-common-dir>/dispatch-identity.json`); the marker is created once and never overwritten, so it travels with the checkout across a working-directory rename and is shared by every linked worktree of that repository. Creation writes a synced sibling file and links it into place, so an interrupted write cannot leave a torn marker, and a marker that nevertheless carries no binding is replaced by the next persisting dispatch instead of remaining permanently unreadable. Two repositories in one home therefore never share or overwrite each other's binding, and a rename, remote change, or scheduler re-key never re-keys history. Only a dispatch operating on the current checkout creates or repairs the marker: the read-only `dispatch attempts`, `dual-run summary`, `dual-run resolve`, and `handover` surfaces read the binding when present and never persist one from an arbitrary `--repo` argument. Without a marker, the scheduling engine's normalized `repository` key is tried first, then the checkout's configured VCS remote normalized to `host/owner/name`. A checkout-path digest is never presented as identity. An unresolvable identity is a clean refusal at exit `1`.
 
 ## Harness and daemon composition
 
 The production composition supplies the real harness session port for the configured kind. It builds opencode over the host streaming spawn starter for spawn, resume, and deliver and the host one-shot runner for read-only session listing, with the deny-by-default environment builder and the shared classifier/liveness assembly; the Claude Code adapter supplies its declared spawn and collect capabilities over the one-shot runner. A healthy opencode spawn or resume returns its session handle as soon as the first identified stream line arrives, so the watch observes liveness and progress while the session is still running and collection resolves at process close. No default whole-session process cap applies to an opencode spawn or resume; the one-shot runner's bounded listing timeout is listing-only, and a handle-acquisition bound (60 s by default) refuses an opencode spawn or resume that never identifies its session. Dispatch spawns through the port and never branches on harness kind outside the adapter.
 
-The production composition also resolves the `lane` policy branch and composes the resume path: the latest resumable daemon lane record supplies the existing session handle, the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, and the verified economics records supply the restart count. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
+The production composition also resolves the `lane` policy branch and composes the resume path: the latest resumable daemon lane record supplies the existing session handle, the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, and the verified economics records supply the restart count. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
 
 The daemon lane seam supplies `createLaneLaunchPlanner`: a pure planner that returns the lifecycle prompt and only the declared environment variable names, resolving no secret value and reading no parent environment. It composes `createLaneExecutor` over the selected session port and execution-environment descriptor, so a daemon can claim, start, record, observe, collect, and resume lanes. An unavailable planner or declared capability gap leaves the daemon in honest `supervise-only` mode.
 
@@ -246,13 +324,17 @@ The `dispatch` error kind carries four rows, all non-retryable with consequence 
 
 Every dispatch failure resolves by exact code; no kind-only dispatch discriminant is assumed to resolve to one row. Prose is never identity, and no dispatch path exits outside `{0, 1, 2}`.
 
+The read side adds no row either: `dispatch attempts` maps its malformed request, unresolvable active reference, and unresolvable identity to `input.value.rejected` (`kind: "input"`, exit 1), keeps the failing `state.*` identity for an unreadable store (`kind: "state"`, that row's projection), and treats a verified empty history as success. The exit always follows the row: `state.permission.denied` projects `user-validation` at exit `1`, and the platform state rows project exit `2`. No `attempts.*` identity is declared, emitted, or documented; a document that names one is stale.
+
 The admission refusals and resolve failures add no `dispatch` row. An admission refusal carries an existing `provider`, `config`, or `input` identity (the admission table above); a resolve store failure carries the failing `state` identity with `kind: "state"`; and an absent divergence identifier is `input.value.rejected` with `kind: "input"`. The engine's local result error-kind union admits the existing `provider` and `config` kinds; `DOMAIN_KINDS` and the error-table row count are unchanged.
 
 ## Bounds and configuration
 
 | Bound | Value |
 |---|---|
-| Attempt records retained per summary | 5,000 |
+| Attempt records retained per verified read | 5,000 |
+| Attempts page | 20 default, 1 minimum, 100 maximum (`--limit`, canonical decimal) |
+| Attempt rows beside a human truncation line | 37 |
 | Machine `data` | 65,536 UTF-8 bytes |
 | Human output | 40 lines, 8,192 bytes |
 | `last_message` | 512 characters, single line, redacted |
@@ -269,7 +351,7 @@ The delivered state read verifies the JSONL ledger once. The attempt fold retain
 
 ## Quality evidence
 
-The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites under `tests/behaviour/`, `tests/structure/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces.
+The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
 
 ## Related
 
@@ -281,6 +363,7 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the restart-budget gate and resume-economics admission.
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) — the delivery-result vocabulary and the verify-change comparison baseline.
 - [Dispatch reference page](../../planning/oss-tooling/milestones/m1/commands/dispatch.md)
+- [Attempt read-side reference page](../../planning/oss-tooling/milestones/m2/commands/attempts.md)
 - [Tracker Credential Provisioning](../../guides/tracker-credential-provisioning.md) — the supported truth-read key, the explicit `gh` export bridge, and rotation guidance.
 - [TDR-0015 — Dispatch handover gate operational semantics](../../decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md)
 - [TDR-0019 — Dispatch admission credential preflight](../../decisions/TDR-0019-dispatch-admission-credential-preflight.md)
@@ -290,4 +373,4 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [ADR-0008 — Harness adapter contract](../../decisions/ADR-0008-harness-adapter-contract.md)
 - [TDR-0016 — Additive harness streaming spawn seam](../../decisions/TDR-0016-harness-streaming-spawn-seam.md)
 
-**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine) and `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence).
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), and `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result).

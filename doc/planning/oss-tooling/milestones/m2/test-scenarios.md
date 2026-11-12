@@ -199,16 +199,16 @@ Given a recorded divergence and unreachable tracker truth, when
 it resolves from local evidence, declares `local-evidence` mode in the
 envelope, and reports unresolved counts.
 
-Assert: `data.mode == "local-evidence"` and `data.unresolved` decreases by one after the resolve.
+Assert: `data.mode == "local-evidence"` and `data.divergences.unresolved` decreases by exactly one after the resolve, with at most 20 identifiers and `idsTruncated` declaring any omission.
 
 ### SC-M2-S12-02 Attempt history retrievable as a machine envelope with unresolved counts
 
 Given a repository with several dispatch attempts, when
 `<binary> dispatch attempts --ref --limit` runs, then each attempt carries its
-token, corroboration triple, divergence refs, timestamps, and harness, and the
-envelope reports whether more attempts remain.
+token, corroboration triple, singular divergence reference, timestamps, and
+harness, and the envelope reports whether more attempts remain.
 
-Assert: every `data.attempts[]` entry carries `token`, `corroboration`, `divergenceRefs`, `startedAt`, `endedAt`, and `harness`, with a boolean `hasMore`.
+Assert: every `data.attempts[]` entry carries `token`, `corroboration`, `divergenceRef` (identifier or explicit `null`), `startedAt`, `endedAt`, and `harness`, with a boolean `hasMore`.
 
 ## M2-S13 Public event taxonomy
 

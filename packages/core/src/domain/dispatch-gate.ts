@@ -11,8 +11,10 @@ import {
   DELIVERY_RESULT_TOKENS,
   DISPATCH_FLOOR_CONSECUTIVE_DATES,
   DISPATCH_FLOOR_DISPATCHES,
+  DISPATCH_MAX_DIVERGENCE_IDS,
   type DeliveryResultToken,
   type DispatchAttemptRecord,
+  type DispatchDivergenceBlock,
   type DispatchDivergenceRecord,
   type DispatchEvidenceClass,
   type DispatchExcludedEvidenceClass,
@@ -57,6 +59,37 @@ export const longestConsecutiveRun = (dates: readonly string[]): number => {
   return best;
 };
 
+/**
+ * The one exact divergence-count computation (GH-289 DEC-15, TDR-0024 C-5).
+ *
+ * Folds latest-per-identifier over the records of ONE repository, reports the
+ * exact open count, and returns the first at most 20 open identifiers with
+ * `idsTruncated` true exactly when identifiers were omitted. The count never
+ * comes from the truncated list's length, so a 25-open repository reports 25.
+ */
+export const summarizeRepositoryDivergences = (
+  records: readonly DispatchDivergenceRecord[],
+  repository: string,
+): DispatchDivergenceBlock => {
+  const latest = new Map<string, DispatchDivergenceRecord>();
+  for (const record of records) {
+    if (record.repository !== repository) continue;
+    latest.set(record.divergenceId, record);
+  }
+  const folded = [...latest.values()];
+  const openIds = folded
+    .filter((record) => record.state === "open")
+    .map((record) => record.divergenceId);
+  const unresolvedIds = openIds.slice(0, DISPATCH_MAX_DIVERGENCE_IDS);
+  return {
+    reported: folded.length,
+    resolved: folded.length - openIds.length,
+    unresolved: openIds.length,
+    unresolvedIds,
+    idsTruncated: openIds.length > unresolvedIds.length,
+  };
+};
+
 /** The folded evidence window (DM-6). */
 export type DispatchEvidenceWindow = {
   readonly repository: string;
@@ -71,12 +104,7 @@ export type DispatchEvidenceWindow = {
   readonly incidentAt?: string;
   readonly dayCount: number;
   readonly consecutiveDates: number;
-  readonly divergences: {
-    readonly reported: number;
-    readonly resolved: number;
-    readonly unresolved: number;
-    readonly unresolvedIds: readonly string[];
-  };
+  readonly divergences: DispatchDivergenceBlock;
   readonly coverage: {
     readonly present: readonly DeliveryResultToken[];
     readonly missing: readonly DeliveryResultToken[];
@@ -138,20 +166,7 @@ export const foldEvidenceWindow = (input: {
     (attempt) => attempt.repository === input.repository && attempt.evidenceClass === countedClass,
   );
 
-  const foldedDivergences = (() => {
-    const latest = new Map<string, DispatchDivergenceRecord>();
-    for (const record of input.divergences) latest.set(record.divergenceId, record);
-    return [...latest.values()];
-  })();
-  const unresolvedIds = foldedDivergences
-    .filter((record) => record.state === "open")
-    .map((record) => record.divergenceId);
-  const divergences = {
-    reported: foldedDivergences.length,
-    resolved: foldedDivergences.length - unresolvedIds.length,
-    unresolved: unresolvedIds.length,
-    unresolvedIds,
-  };
+  const divergences = summarizeRepositoryDivergences(input.divergences, input.repository);
 
   const base = {
     repository: input.repository,
