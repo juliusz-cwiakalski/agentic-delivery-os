@@ -117,6 +117,38 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 1 complete (commit 1a1d2254): contracts, fold, error rows,
+      record kinds, and the mutation truth. `queue.removal` declared
+      (`delivery.queue.removal.v1`, `queue.removals:<REF>`, closed four-value
+      reason vocabulary), `QUEUE_RECORD_DECLARATIONS` 5 -> 6, the DM-2
+      append-position presence rule in `foldQueueGraph` and every read,
+      `removeQueueEntry`/`removeQueueDependency` seams, two error rows
+      (`queue.reason-missing`, `queue.single-flight`), `QUEUE_ERROR_CODES`
+      5 -> 7, and the two guard-read spec pages reconciled. Gates: typecheck 6/6
+      packages Done; structure suites 125 pass / 0 fail; error-table-sync suite
+      96 pass / 0 fail; `error-table-sync` check OK at 129/129;
+      event-state-additivity 4 pass; exports-parity OK; ambient-globals OK;
+      inventories 17 pass / 0 fail; full `bun test` 7672 pass / 3
+      environmental fails (TMPDIR cross-device, all green under
+      `TMPDIR=$PWD/tmp/tmpdir`). Deviation: `pnpm check` full battery deferred
+      to phase 9 per plan.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Commit-ceremony deviation (disclosed): the delivered commit primitive's
+      CLI grammar rejects numeric plan-phase ids (`input.value.rejected`), and
+      `commit --phase delivery` would atomically complete the lifecycle
+      `delivery` phase, which this run reserves to the PM. Each plan phase is
+      therefore committed with one standalone `commit GH-292` invocation (one
+      commit per phase, no lifecycle write), and the two untracked decision
+      records are held in `./tmp/tmpdir/held/` out of the working tree during
+      every commit that must not land them — the same ceremony the pm-notes
+      retro records from the planning phases — so the plan-union scope can never
+      sweep a record into an out-of-order commit. TDR-0027 is restored (with its
+      index row) only for phase 2's commit; TDR-0026 only for phase 9's.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
       Clarify-scope review covered the ticket (M2-S15, planned by #284), the M2
       planning pack (backlog story, contracts.md §Queue lifecycle mutations,
       commands/queue.md, architecture.md auto-release/single-flight/persistence
