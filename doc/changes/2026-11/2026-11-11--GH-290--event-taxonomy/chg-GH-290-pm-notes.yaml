@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-12T00:36:24.206Z }
   review_fix: { started: null, completed: 2026-11-12T01:38:23.894Z }
   quality_gates: { started: null, completed: 2026-11-12T01:45:22.957Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-12T01:46:02.204Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: >-
