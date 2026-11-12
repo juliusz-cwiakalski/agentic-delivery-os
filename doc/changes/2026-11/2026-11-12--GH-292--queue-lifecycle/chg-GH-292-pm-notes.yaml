@@ -1,0 +1,99 @@
+change_id: GH-292
+title: "feat(queue): queue lifecycle completion — reason-bearing removal,
+  auto-release after closeout, dependency edges, per-ref single-flight, and
+  stale reconciliation (M2-S15)"
+delivery_mode: autonomous
+milestone: "M2"
+story_code: "M2-S15"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-12T10:04:37.756Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: >-
+      Scope authority for this change is the M2 planning pack (ticket M2-S15,
+      `doc/planning/oss-tooling/backlog.md` §M2-S15,
+      `milestones/m2/contracts.md` §Queue lifecycle mutations,
+      `milestones/m2/commands/queue.md`, `milestones/m2/architecture.md` §Queue
+      auto-release / §Single-flight / §Persistence and concurrency deltas,
+      `milestones/m2/test-scenarios.md` SC-M2-S15-01..04). The change delivers
+      five behaviours: reason-bearing `queue remove`; automatic `landed` removal
+      from `closeout --apply`; `queue dep add` / `dep remove` with the delivered
+      two-positional add preserved; per-ref single-flight across dispatch paths
+      with `queue.single-flight` naming the holder; and `queue reconcile`
+      against tracker truth with reason `reconciled`. `queue release` keeps its
+      delivered lease-release meaning and never removes an entry. No scope is
+      added beyond these five behaviours.
+    date: "2026-11-12"
+  - text: >-
+      Error identities are unique rows, so the change adds exactly two
+      identities — `queue.reason-missing` (removal without a reason, exit 1) and
+      `queue.single-flight` (second dispatch/claim against a ref with an active
+      lane, naming the holder, exit 1) — and reuses the delivered
+      `queue.entry.unobserved` for an unknown ref instead of adding the M2
+      queue(1) page's `queue.entry-unknown` synonym. Delivered `state.*`
+      identities cover unreadable state; the page's `queue.state-unavailable` is
+      not added. The M2 `commands/queue.md` page is reconciled to the delivered
+      identity names during the change rather than carrying a duplicate
+      identity.
+    date: "2026-11-12"
+  - text: >-
+      Single-flight is enforced at dispatch admission, not by widening the lease
+      scope: the delivered lease stays repository-exclusive (one lane per
+      repository, per the scheduling-engine spec) and the refusal is a separate
+      per-ref guard that reads active lane/lease truth and names the holder.
+      This matches the M2 evidence (a dual-run observed a second concurrent
+      session on one ref) without rewriting the delivered lease contract.
+    date: "2026-11-12"
+  - text: >-
+      Entry removal is append-only state truth: a removal record (with the
+      reason and `landed`/`abandoned`/`superseded`/`reconciled` vocabulary)
+      lands in the queue ledger and the fold drops the entry; no state file is
+      edited or deleted by hand, and the derived graph document is replaced
+      atomically only when intent truth changes. Automatic removal runs inside
+      `closeout --apply` after the closeout writes succeed, because the merge
+      itself is outside this tool's write surface.
+    date: "2026-11-12"
+open_questions: []
+blockers: []
+notes:
+  - text: >-
+      Clarify-scope review covered the ticket (M2-S15, planned by #284), the M2
+      planning pack (backlog story, contracts.md §Queue lifecycle mutations,
+      commands/queue.md, architecture.md auto-release/single-flight/persistence
+      deltas, test-scenarios SC-M2-S15-01..04), and the delivered system
+      behaviour: `packages/cli/src/commands/queue.ts` (ready/list/plan/add/
+      prioritize/dep/claim/release, no remove/reconcile, `dep` add-only),
+      `packages/core/src/app/queue.ts` (append-only entry/dependency/lease/park/
+      incident ledgers, repo-exclusive lease claim/release),
+      `packages/core/src/app/dispatch.ts` + `dispatch-gate.ts` (dispatch
+      admission), `packages/cli/src/commands/closeout.ts` (no queue hook), the
+      event taxonomy (`queue.graph.remove` declared `emitted: false`), and the
+      error table's five delivered `queue.*` rows.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      No ticket-level ambiguity required a human stop: the M2 planning pack
+      disambiguates the ticket's "entry removal/release with reasons" wording by
+      keeping `release` as lease release and adding `remove` with a reason. The
+      one planning-page inconsistency found (the queue(1) page's
+      `queue.entry-unknown` / `queue.state-unavailable` names against the
+      delivered identity set) is resolved in `decisions` and reconciled as a
+      documentation edit, not a new duplicate identity.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Repository state at intake: `feat/GH-292/queue-lifecycle` existed at
+      main-tools tip aa64a226 with zero commits ahead, worktree clean, no remote
+      branch, no PR in any state, issue open with label `change`. This run
+      therefore starts the full 11-phase lifecycle from phase 1.
+    type: "info"
+    date: "2026-11-12"
