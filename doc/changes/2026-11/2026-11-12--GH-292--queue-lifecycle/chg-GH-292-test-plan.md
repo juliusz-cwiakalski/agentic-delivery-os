@@ -1,14 +1,14 @@
 ---
 id: chg-GH-292-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-12
 last_updated: 2026-11-12
 owners: [engineering]
 service: delivery-os queue lifecycle (scheduling engine, dispatch admission, closeout, event taxonomy, CLI help)
 labels: [queue, scheduling-engine, dispatch-engine, closeout, events, taxonomy, contracts, cli, help, m2]
 version_impact: minor
-summary: "Prove the queue lifecycle as five mutations and one publication contract, not as prose: reason-bearing `queue remove` appends one `queue.removal` record and the fold's presence rule retires the entry without deleting anything; `closeout --apply` removes the landed ref with reason `landed` through an additive, fail-open `queueRemoval` block; `dep add`/`dep remove` edit exactly one edge while the delivered two-positional add stays byte-identical; a per-ref admission guard refuses a second session with `queue.single-flight` and `detail.holder` on dispatch, claim, and the injected daemon claim port, backed by the narrowed same-holder renewal; `queue reconcile` removes `done`/`canceled` entries with reason `reconciled` under a 100-entry, one-read-per-entry, fail-closed budget; and `queue.graph/remove` becomes an emitted kind with exactly `ref`, `reason`, `recordedAt`. All 45 acceptance criteria map to 59 named cases; the four remove-unemitted pins, the queue row pin (5 to 7), and the record-kind pin (5 to 6) move as two-sided equalities in the same delivery, never relaxed."
+summary: "Prove the queue lifecycle as five mutations and one publication contract, not as prose: reason-bearing `queue remove` appends one `queue.removal` record and the fold's presence rule retires the entry without deleting anything; `closeout --apply` removes the landed ref with reason `landed` through an additive, fail-open `queueRemoval` block; `dep add`/`dep remove` edit exactly one edge while the delivered two-positional add stays byte-identical; a per-ref admission guard refuses a second session with `queue.single-flight` and `detail.holder` on dispatch, claim, and the injected daemon claim port, backed by the narrowed same-holder renewal; `queue reconcile` removes `done`/`canceled` entries with reason `reconciled` under a 100-entry, one-read-per-entry, fail-closed budget and converges truthfully on a repeat run; and `queue.graph/remove` becomes an emitted kind with exactly `ref`, `reason`, `recordedAt`. All 46 acceptance criteria map to 59 named cases; the four remove-unemitted pins, the queue row pin (5 to 7), and the record-kind pin (5 to 6) move as two-sided equalities in the same delivery, never relaxed."
 links:
   change_spec: ./chg-GH-292-spec.md
   implementation_plan: ./chg-GH-292-plan.yaml
@@ -19,11 +19,11 @@ links:
 
 ## 1. Scope and Objectives
 
-This change delivers five behaviours on one append-only ledger, so the first risk is not a missing feature but a lifecycle that looks complete while one half is false. **Removal must be an append, never an edit.** The removal record's kind, schema, key prefix, and closed reason vocabulary are pinned, and the fold's presence rule is proven by removal, re-declaration, and a byte-level record-set diff (`TC-QLC-001`, `TC-QLC-007`, `TC-QLC-009`). **No removal may orphan a running lane or a dependent.** A live lease refuses with the delivered `queue.precondition.unmet`/`lease-held` and names the holder; an active park is withdrawn with the delivered `released` record before the removal; and a dependent keeps its edge and is held `dependency-unobserved` (`TC-QLC-005`, `TC-QLC-006`, `TC-QLC-008`). **Automatic removal must converge and must never fail closeout.** Apply mode removes with `landed`, plan mode only discloses `would-remove`, no merge truth or an unreadable store or a live lease skips with a closed reason, and a re-run reports `satisfied` (`TC-QLC-020`..`TC-QLC-025`). **One ref must not run twice on any path.** The guard is proven on `dispatch run`, `queue claim`, and the composed daemon supervision claim, its refusal is inert, and the same-holder renewal narrowing is proven in both directions (`TC-QLC-040`..`TC-QLC-045`). **Reconcile must fail closed.** Only a positive `done`/`canceled` observation removes; an unreadable read removes nothing and returns the provider identity, and the run is bounded at 100 entries with one read each (`TC-QLC-050`..`TC-QLC-058`).
+This change delivers five behaviours on one append-only ledger, so the first risk is not a missing feature but a lifecycle that looks complete while one half is false. **Removal must be an append, never an edit.** The removal record's kind, schema, key prefix, and closed reason vocabulary are pinned, and the fold's presence rule is proven by removal, re-declaration, and a byte-level record-set diff (`TC-QLC-001`, `TC-QLC-007`, `TC-QLC-009`). **No removal may orphan a running lane or a dependent.** A live lease refuses with the delivered `queue.precondition.unmet`/`lease-held` and names the holder; an active park is withdrawn with the delivered `released` record before the removal; and a dependent keeps its edge and is held `dependency-unobserved` (`TC-QLC-005`, `TC-QLC-006`, `TC-QLC-008`). **Automatic removal must converge and must never fail closeout.** Apply mode removes with `landed`, plan mode only discloses `would-remove`, no merge truth or an unreadable store or a live lease skips with a closed reason, and a re-run reports `satisfied` (`TC-QLC-020`..`TC-QLC-025`). **One ref must not run twice on any path.** The guard is proven on `dispatch run`, `queue claim`, and the composed daemon supervision claim, its refusal is inert, and the same-holder renewal narrowing is proven in both directions (`TC-QLC-040`..`TC-QLC-045`). **Reconcile must fail closed and converge.** Only a positive `done`/`canceled` observation removes; an unreadable read removes nothing and returns the provider identity, the run is bounded at 100 entries with one read each, and a repeat over already-reconciled entries reports the second observation truthfully without removing, appending, or publishing anything (`TC-QLC-050`..`TC-QLC-058`).
 
 The plan is deliberately adversarial about the failure modes the spec names. **A removal that is really a deletion** fails `TC-QLC-009` and `TC-QLC-080`: they compare the complete record-key set and ledger bytes before and after, and require the derived document to be replaced only when intent truth changed. **A guard that only works on the queue path** fails `TC-QLC-040`..`TC-QLC-042`: the same refusal shape is asserted through three seams, and `TC-QLC-045` proves the refusal mutates nothing. **A renewal that silently rewrites the ref** fails `TC-QLC-044`: the lease's recorded ref is read after a same-holder different-ref claim, and the same-ref renewal must still say `renewed`. **A reconcile that removes on a failed read** fails `TC-QLC-053`: three provider failure classes each assert zero removals and the provider's own identity. **A declared kind with no producer** ends here: `TC-QLC-062` and `TC-QLC-064` move the four pins from `["queue.graph/remove"]` to `[]`, and `TC-QLC-063` fails if the emitted payload gains or loses a key.
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Delivery owns module paths, helper names, and injection seams the spec does not pin; where a case needs one, it names the seam and asserts the declared property through the public surface or an injected port. A case that cannot resolve its seam fails naming the missing contract rather than skipping. **All 45 acceptance criteria are covered, there are no TODO rows, and no case is an orphan.** One traceability gap is recorded rather than smoothed over: NFR-10's repeated-reconcile convergence has no dedicated acceptance criterion, so `TC-QLC-058` maps it to AC-F5-1 and §8.3 raises it as `OQ-T1`. Four criteria carry a named substitute/boundary assertion in §3.5.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Delivery owns module paths, helper names, and injection seams the spec does not pin; where a case needs one, it names the seam and asserts the declared property through the public surface or an injected port. A case that cannot resolve its seam fails naming the missing contract rather than skipping. **All 46 acceptance criteria are covered, there are no TODO rows, and no case is an orphan.** The earlier traceability gap is closed by spec v1.1: AC-F5-9 now states the repeated-reconcile convergence that `TC-QLC-058` and `TC-QLC-086` prove. Four criteria carry a named substitute/boundary assertion in §3.5.
 
 ### 1.1 In Scope
 
@@ -31,7 +31,7 @@ This document is a verification map, not an execution claim: no command was run 
 - Automatic `landed` removal inside `closeout --apply`: apply versus plan, merge truth, fail-open skips, idempotency, the additive block, and step-inventory invariance (F-2; AC-F2-1..AC-F2-5; DM-6; SC-M2-S15-01).
 - `dep add` / `dep remove` over the delivered two-positional add: equivalence, `removed`/`noop`, ready-set recomputation, the `removed[]` delta, add-only cycle checking, grammar refusals, and unobserved producers (F-3; AC-F3-1..AC-F3-5; EVT-2; SC-M2-S15-04).
 - Per-ref single-flight: dispatch, `queue claim`, the composed daemon claim port, stale-lease takeover, the same-holder renewal narrowing, `detail.holder`, and refusal purity (F-4; AC-F4-1..AC-F4-6; DM-7; SC-M2-S15-02).
-- `queue reconcile`: `done`/`canceled` removal with `reconciled`, retained states, unreadable-tracker fail-closed, `--ref` scoping, not-found retention, the 100-entry cap and remainder, and F-1-equivalent removals (F-5; AC-F5-1..AC-F5-8; SC-M2-S15-03).
+- `queue reconcile`: `done`/`canceled` removal with `reconciled`, retained states, unreadable-tracker fail-closed, `--ref` scoping, not-found retention, the 100-entry cap and remainder, F-1-equivalent removals, and truthful convergence on a repeat run (F-5; AC-F5-1..AC-F5-9; SC-M2-S15-03).
 - `queue.graph` publication: one `remove` event with exactly three keys, the dependency-edge delta with monotonic sequence, the emitted declaration, and the bidirectional payload-key comparison (F-6; AC-F6-1..AC-F6-4; EVT-1, EVT-2).
 - Mount and self-description: help entries, the corrected `queue dep` synopsis, help-guide coverage, reference-page parity, M1 page completeness, M2 page reconciliation, the seven-row queue error kind, and the declared flags (F-7; AC-F7-1..AC-F7-3; DM-8).
 - Measured NFRs: fenced atomicity and refusal purity, the admission read cost, closeout cost and fail-open identity, the reconcile read budget, bounded output and privacy, additivity, and convergence (AC-NFR-1..AC-NFR-6; NFR-1..NFR-10).
@@ -49,7 +49,7 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] A `queue graph` read verb, a removal-history read, or a reason-filtered listing (D-1, D-5; spec §7.2).
 - [GAP-T1 — the daemon path is proven through the injected claim port, not a live production spawn] The production resident-daemon composition is supervise-only today (spec A-6). `TC-QLC-042` composes the delivered `runSupervisionCycle` with a supplied claim port and asserts the refusal shape and zero session; it does not claim a production daemon spawn exists. Owner: `@reviewer` confirms the composition binding at phase 8.
 - [GAP-T2 — reconcile is proven at the declared tracker port plus the composition binding, not against live GitHub in the default suite] `TC-QLC-050`..`TC-QLC-056` inject a tracker read port with recorded observations and failures; `TC-QLC-084` asserts the declared credential-port use and `TC-QLC-085` asserts no new adapter/package is introduced. A live read is an opt-in smoke (`tests/conformance/live/run-live.ts` pattern), never part of `pnpm check`. The ticket criterion "without editing state files" is proven by the file-set/digest assertions (`TC-QLC-050`), not by watching an external editor.
-- [GAP-T3 — NFR-10's repeated-reconcile convergence has no dedicated AC] AC-F2-5 covers repeated closeout, AC-F3-3 covers repeated `dep remove`, and no criterion states "a repeated reconcile over an already-reconciled ref removes nothing and exits 0". `TC-QLC-058` proves the behaviour and maps it to AC-F5-1; §8.3 records `OQ-T1` for the spec owner. This is a traceability gap, not a silently skipped requirement.
+- [GAP-T3 — resolved by spec v1.1: AC-F5-9 now states repeated-reconcile convergence] The specification adds AC-F5-9 — a second `queue reconcile` over already-reconciled entries exits `0`, removes nothing further, appends zero records, publishes zero events, counts only existing entries in `checked`, leaves `removed[]` empty, and reports no already-removed ref in `removed[]`, `retained[]`, or `unobserved[]`. `TC-QLC-058` is the primary convergence case and `TC-QLC-086` re-proves it across all three mutation paths; no gap remains.
 - [GAP-T4 — page prose is checked by required and forbidden tokens, not by semantic truth] `TC-QLC-071` and `TC-QLC-072` prove the presence of the delivered names, the absence of the duplicate identities and the old envelope, and the page-root resolution; sentence-level truth remains a review attestation by `@doc-syncer` and `@reviewer`.
 - [GAP-T5 — absence claims need two observations] "No record appended", "no event published", "no session started", and "no derived document replaced" are each proven by (i) a recording fake or armed guard, (ii) a zero counter, and (iii) an unchanged record-key set, ledger digest, lane set, or event stream. A single passing assertion is never accepted as proof of an absence.
 - [GAP-T6 — delivery-bound names] Removal record module, reconcile port name, closeout block seam, and projection helper names are delivery-bound. Kind `remove`, schema `delivery.queue.removal.v1`, key prefix `queue.removals:`, reason vocabulary, result vocabularies, error codes, exits, payload key sets, and AC traceability are not.
@@ -58,7 +58,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-292-spec.md`](./chg-GH-292-spec.md) v1.0 | Binding source: F-1..F-7, **45 ACs** (AC-F1-1..AC-F1-8, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-5, AC-F4-1..AC-F4-6, AC-F5-1..AC-F5-8, AC-F6-1..AC-F6-4, AC-F7-1..AC-F7-3, AC-NFR-1..AC-NFR-6), DEC-1..DEC-15, DM-1..DM-8, EVT-1..EVT-3, NFR-1..NFR-10, RSK-1..RSK-10, OQ-1/OQ-2, §6 flows 1–5, §8 contracts, Appendix C (exit matrix), Appendix D (mutation → record → event), Appendix E (closed vocabularies). |
+| [`chg-GH-292-spec.md`](./chg-GH-292-spec.md) v1.1 | Binding source: F-1..F-7, **46 ACs** (AC-F1-1..AC-F1-8, AC-F2-1..AC-F2-5, AC-F3-1..AC-F3-5, AC-F4-1..AC-F4-6, AC-F5-1..AC-F5-9, AC-F6-1..AC-F6-4, AC-F7-1..AC-F7-3, AC-NFR-1..AC-NFR-6), DEC-1..DEC-15, DM-1..DM-8, EVT-1..EVT-3, NFR-1..NFR-10, RSK-1..RSK-10, OQ-1/OQ-2 (both resolved), §6 flows 1–5, §8 contracts, Appendix C (exit matrix), Appendix D (mutation → record → event), Appendix E (closed vocabularies). |
 | [`chg-GH-292-plan.yaml`](./chg-GH-292-plan.yaml) (forthcoming) | Phase ownership and the implementation task map. This test plan is phase-3 output and does not depend on plan phase numbers; §7 maps every case to a suite and gate. |
 | `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` SC-M2-S15-01..04 | Mandatory scenario coverage: auto-removal after closeout, single-flight refusal naming the holder, reconciliation without hand editing, and the dependency-edge event. Mapped one-to-one in §3.1 and spec Appendix A. |
 | `doc/planning/oss-tooling/milestones/m2/contracts.md` §Queue lifecycle mutations; §Event taxonomy v1 | Contract authority for the five lifecycle behaviours, the declared `remove` kind, and the dependency delta. |
@@ -75,7 +75,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 ## 3. Coverage Overview
 
-All 45 acceptance criteria map to at least one named case; no case is an orphan. The plan carries **59 cases**, block-structured by capability: `001`–`011` removal, `020`–`025` automatic removal, `030`–`036` dependency edges, `040`–`045` single-flight, `050`–`058` reconcile, `060`–`066` events, `070`–`075` mount/help/errors, `080`–`086` NFRs. A criterion whose wording spans two independent observables is covered by more than one case (AC-F1-1 by the mutation, append-only, and payload cases; AC-F4-1 by the dispatch case and the purity case; AC-F5-1 by the reconcile mutation, payload, and convergence cases). Six boundary classes are recorded in §3.5; four criteria carry a named substitute assertion and are counted as covered with the substitution stated.
+All 46 acceptance criteria map to at least one named case; no case is an orphan. The plan carries **59 cases**, block-structured by capability: `001`–`011` removal, `020`–`025` automatic removal, `030`–`036` dependency edges, `040`–`045` single-flight, `050`–`058` reconcile, `060`–`066` events, `070`–`075` mount/help/errors, `080`–`086` NFRs. A criterion whose wording spans two independent observables is covered by more than one case (AC-F1-1 by the mutation, append-only, and payload cases; AC-F4-1 by the dispatch case and the purity case; AC-F5-1 and AC-F5-9 by the reconcile mutation, payload, and convergence cases). Six boundary classes are recorded in §3.5, with GAP-T3 now resolved by spec v1.1; four criteria carry a named substitute assertion and are counted as covered with the substitution stated.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
@@ -105,7 +105,7 @@ All 45 acceptance criteria map to at least one named case; no case is an orphan.
 | AC-F4-4 | A lease at or over its TTL is not refused by the guard; the delivered stale-takeover path applies with its incident evidence | TC-QLC-043 | Covered |
 | AC-F4-5 | A live lease for another ref under the same holder refuses `queue.lease-conflict` and keeps the lease's ref; the same ref under the same holder still returns `renewed` with no new session | TC-QLC-044 | Covered |
 | AC-F4-6 | After any `queue.single-flight` refusal the record count, derived-document bytes, and lane set are identical | TC-QLC-045 | Covered |
-| AC-F5-1 | A `done` work item leaves the queue with `reason: reconciled`, is listed in `removed[]`, exits `0`, and no state file is written outside the tool | TC-QLC-050, TC-QLC-058, TC-QLC-086 | Covered — port boundary (GAP-T2); repeated-reconcile note (GAP-T3) |
+| AC-F5-1 | A `done` work item leaves the queue with `reason: reconciled`, is listed in `removed[]`, exits `0`, and no state file is written outside the tool | TC-QLC-050, TC-QLC-058, TC-QLC-086 | Covered — port boundary (GAP-T2); the repeat-run half is named by AC-F5-9 |
 | AC-F5-2 | A `canceled` work item is removed with reason `reconciled` | TC-QLC-051 | Covered |
 | AC-F5-3 | `backlog`, `ready`, `in-progress`, and `in-review` entries are retained, listed with their `deliveryState`, and append zero removal records | TC-QLC-052 | Covered |
 | AC-F5-4 | An unreadable tracker read appends nothing, reports zero removals, and exits on the provider identity's projection with no `queue.*` identity | TC-QLC-053 | Covered |
@@ -113,6 +113,7 @@ All 45 acceptance criteria map to at least one named case; no case is an orphan.
 | AC-F5-6 | A work item the tracker does not have is retained in `unobserved[]` and appends zero records | TC-QLC-055 | Covered |
 | AC-F5-7 | Beyond the cap, at most 100 entries are examined, `truncated` is true, `remainder` is exact, and no entry beyond the cap is read or removed | TC-QLC-056 | Covered |
 | AC-F5-8 | Every reconcile removal obeys the F-1 invariants and publishes exactly one `remove` event per removed ref | TC-QLC-057 | Covered |
+| AC-F5-9 | A repeated reconcile over already-reconciled entries exits `0`, removes/appends/publishes nothing, counts only still-existing entries in `checked`, leaves `removed[]` empty, and reports no already-removed ref in `removed[]`, `retained[]`, or `unobserved[]` | TC-QLC-058, TC-QLC-086 | Covered |
 | AC-F6-1 | Exactly one `remove` event appears, its `lane`/`ref` are the entry ref, its payload keys are exactly `ref`, `reason`, `recordedAt`, and `reason` is in the closed vocabulary | TC-QLC-060, TC-QLC-065 | Covered |
 | AC-F6-2 | `dep remove` yields one `dependency-edge` event with `removed[]` naming the edge and a sequence above the lane's previous event; an absent-edge noop and every refused mutation publish zero events | TC-QLC-061, TC-QLC-066 | Covered |
 | AC-F6-3 | `queue.graph/remove` is declared `emitted: true`, no kind is unemitted, version/topics/frames/ordering/overflow are unchanged, and `events describe` reports it as emitted | TC-QLC-062, TC-QLC-064, TC-QLC-066 | Covered |
@@ -165,14 +166,14 @@ The specification declares no REST/HTTP or MCP surface (API-# is N/A). The inter
 | NFR-7 | Additive boundary: 0 new packages/subpaths/adapters, 0 schema-version changes, 2 new error rows; inventories equal the tree both ways | TC-QLC-073, TC-QLC-085 | Covered |
 | NFR-8 | Credential/privacy: declared credential port only, 0 ambient reads, 0 command-line tokens; no credential, token, provider payload, prompt, diff, or repository content in any output/event/record/log | TC-QLC-084 | Covered — bounded scan (GAP-T5) |
 | NFR-9 | Failure classification: every new failure resolves to one declared row and its projected exit; only `{0,1,2}`; no literal exit outside the projection | TC-QLC-075, TC-QLC-002, TC-QLC-003, TC-QLC-033, TC-QLC-053, TC-QLC-073 | Covered |
-| NFR-10 | Convergence/idempotency: repeated closeout apply exits 0; repeated `dep remove` is noop; repeated reconcile removes nothing and exits 0 | TC-QLC-086, TC-QLC-024, TC-QLC-032, TC-QLC-058 | Covered — repeated-reconcile half mapped to AC-F5-1; `OQ-T1` records the missing AC |
+| NFR-10 | Convergence/idempotency: repeated closeout apply exits 0; repeated `dep remove` is noop; repeated reconcile removes nothing and exits 0 | TC-QLC-086, TC-QLC-024, TC-QLC-032, TC-QLC-058 | Covered — AC-F5-9 now states the repeated-reconcile half (`TC-QLC-058`, `TC-QLC-086`); no gap remains |
 
 ### 3.4 Coverage-Matrix Integrity
 
 | Check | Value | Verdict |
 |---|---|---|
-| Acceptance criteria in the specification | 45 (39 capability + 6 non-functional) | — |
-| Acceptance criteria with at least one case | 45 | Pass |
+| Acceptance criteria in the specification | 46 (40 capability + 6 non-functional) | — |
+| Acceptance criteria with at least one case | 46 | Pass |
 | Acceptance criteria uncovered / TODO | 0 | Pass |
 | Cases in this plan | 59 (`TC-QLC-001`..`TC-QLC-086`, block-structured) | — |
 | Cases naming at least one AC (no orphans) | 59 | Pass |
@@ -189,7 +190,7 @@ The specification declares no REST/HTTP or MCP surface (API-# is N/A). The inter
 |---|---|---|---|
 | **GAP-T1 — the daemon path is an injected claim port, not a production spawn** | The composed `runSupervisionCycle` receives a claim port; the case asserts the returned refusal identity, `detail.holder`, and zero executor starts. The production daemon composition remains supervise-only (A-6), so no case claims a live spawn. `TC-QLC-042` step 4 asserts the composition supplies exactly the delivered claim port and no second admission stage. | 042 | AC-F4-3 |
 | **GAP-T2 — reconcile is verified at the declared tracker port and composition binding** | The default suite injects a recording tracker port with `done`, `canceled`, open states, `not-found`, and three failures. `TC-QLC-084` asserts the declared credential-port use and `TC-QLC-085` asserts no new adapter; a live GitHub read is an opt-in smoke and is excluded from `pnpm check`. "No state file is written outside the tool" is proven by a file-set/digest diff, not by monitoring an editor. | 050–058, 084, 085 | AC-F5-1..AC-F5-7 |
-| **GAP-T3 — no dedicated AC for repeated-reconcile convergence (NFR-10)** | `TC-QLC-058` asserts a second reconcile over an already-reconciled ref reports `noop`, appends zero records, and exits `0`; it maps the behaviour to AC-F5-1 and records `OQ-T1` for the spec owner. This is raised, not hidden. | 058 | AC-F5-1; NFR-10 |
+| **GAP-T3 — resolved by spec v1.1: AC-F5-9 states repeated-reconcile convergence** | `TC-QLC-058` asserts a second reconcile over already-reconciled entries exits `0`, appends zero records, publishes zero events, reports `checked` as the count of still-existing entries, leaves `removed[]` empty, and names no already-removed ref in `removed[]`, `retained[]`, or `unobserved[]`; `TC-QLC-086` re-proves it alongside the other two convergence paths. The earlier traceability gap is closed by the added criterion. | 058, 086 | AC-F5-9; NFR-10 |
 | **GAP-T4 — page prose is token-checked, not semantically proven** | `TC-QLC-071` asserts the M1 page resolves as the page root and names every delivered verb; `TC-QLC-072` asserts the M2 page's required names, forbidden duplicate identities, and absent top-level envelope fields. Sentence-level truth is a review attestation by `@doc-syncer`/`@reviewer`. | 071, 072 | AC-F7-2 |
 | **GAP-T5 — absences need two observations** | Every "no append", "no event", "no session", "no replace", and "no read" assertion pairs a recording port or armed guard with a zero counter and an unchanged durable digest/record-key set. `TC-QLC-084` additionally scans outputs and records for secret-shaped and repository-content literals; it is a bounded-pattern scan, not a proof over arbitrary bytes. | 009, 011, 032, 036, 045, 066, 080, 084 | AC-NFR-1, AC-NFR-2, AC-NFR-5 |
 | **GAP-T6 — delivery-bound names** | Removal module, reconcile port, closeout block seam, and projection helper names are delivery-bound. Contract values (kind, schema, key prefix, reason/result vocabularies, error codes, exits, payload key sets, event fields) are not. A case that cannot resolve a seam fails naming the missing contract; it never skips. | all | all |
@@ -248,7 +249,7 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-055 | A not-found work item is unobserved and retained | Edge Case | Critical | High | AC-F5-6; F-5; DEC-11 |
 | TC-QLC-056 | The 100-entry cap reports `truncated` and an exact remainder | Corner Case | Critical | Critical | AC-F5-7; F-5; DM-5; NFR-4 |
 | TC-QLC-057 | Reconcile removals obey every F-1 invariant and emit one event per ref | Regression | Critical | Critical | AC-F5-8; F-1, F-6; EVT-1 |
-| TC-QLC-058 | The reconcile payload is exact and a repeated run is a noop | Edge Case | Critical | High | AC-F5-1; F-5; DM-5; NFR-10; GAP-T3 |
+| TC-QLC-058 | The reconcile payload is exact and a repeated run reports truthfully | Edge Case | Critical | High | AC-F5-9; AC-F5-1; F-5; DM-5; NFR-10 |
 | TC-QLC-060 | One removal publishes one `remove` event with exactly three keys | Happy Path | Critical | Critical | AC-F6-1; F-6; EVT-1; DM-8; NFR-5 |
 | TC-QLC-061 | The dependency delta carries `removed[]` with a monotonic sequence | Happy Path | Critical | Critical | AC-F6-2; F-6; EVT-2; NFR-5 |
 | TC-QLC-062 | The declaration marks `remove` emitted and the non-emitted set empty | Happy Path | Critical | Critical | AC-F6-3; F-6; DM-8; DEC-14 |
@@ -268,7 +269,7 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 | TC-QLC-083 | Reconcile performs one bounded read per entry and none past the cap | Performance | Critical | Critical | AC-NFR-4; NFR-4 |
 | TC-QLC-084 | Output, records, and events are bounded and carry no secret | Negative | Critical | Critical | AC-NFR-5; NFR-6, NFR-8 |
 | TC-QLC-085 | The additive boundary and both inventories hold | Regression | Critical | Critical | AC-NFR-6; NFR-7; NG-8 |
-| TC-QLC-086 | All three mutation paths converge on re-run | Regression | Critical | High | AC-F2-5, AC-F3-3, AC-F5-1; NFR-10 |
+| TC-QLC-086 | All three mutation paths converge on re-run | Regression | Critical | High | AC-F5-9, AC-F2-5, AC-F3-3, AC-F5-1; NFR-10 |
 
 ### 5.2 Scenario Details
 
@@ -1239,31 +1240,33 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 **Expected Outcome**:
 - Reconcile removals are ordinary F-1 removals: park withdrawal, no cascade, one append, one event per ref.
 
-#### TC-QLC-058 - The reconcile payload is exact and a repeated run is a noop
+#### TC-QLC-058 - The reconcile payload is exact and a repeated run reports truthfully
 
-**Objective**: Pin the reconcile result shape and record the NFR-10 convergence gap explicitly.
+**Objective**: Pin the reconcile result shape and prove AC-F5-9's truthful second observation: the repeat removes, appends, and publishes nothing, counts only the entries that still exist, and never re-reports an already-removed ref.
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F5-1, F-5, DM-5, NFR-10, GAP-T3
+**Related IDs**: AC-F5-9, AC-F5-1, F-5, DM-5, NFR-10
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-reconcile-payload.test.ts` (new); `tests/golden/queue-reconcile.test.ts` (new)
 **Tags**: @backend, @queue, @reconcile, @golden
 
 **Preconditions**:
-- A mixed fixture: one `done`, one `canceled`, one `ready`, one not-found; deterministic ordering and clock.
+- A mixed fixture: `GH-241` `done`, `GH-242` `canceled`, `GH-243` `ready`, `GH-244` not-found; deterministic ordering and clock. First run removes `GH-241` and `GH-242`; `GH-243` is retained and `GH-244` is unobserved.
 
 **Steps**:
 1. Assert `Object.keys(data)` equals exactly `["result","checked","removed","retained","unobserved","readySet","truncated","remainder","degraded"]`.
 2. Assert `removed[]` elements have exactly `ref` and `reason`; `retained[]` elements have exactly `ref` and `deliveryState`; `readySet[]` is derived and sorted deterministically.
-3. Assert `result` is `removed` and the `noop` case (no stale entry) has an empty `removed[]`, `truncated: false`, `remainder: 0`.
-4. Run a second reconcile over the already-reconciled refs and assert `result: "noop"`, zero removal records, and exit `0`.
-5. Compare both envelopes to their goldens.
+3. Assert the first run reports `result: "removed"`, `checked: 4`, and `removed` deep-equals `[{ref:"GH-241",reason:"reconciled"},{ref:"GH-242",reason:"reconciled"}]`.
+4. Run a second reconcile over the same scope and assert exit `0`, `result: "noop"`, zero appended records (whole-store append count delta `0`), and zero `queue.graph` events from a projection pass.
+5. Assert `checked === 2` — only `GH-243` (retained) and `GH-244` (unobserved) still exist — and `removed` deep-equals `[]`.
+6. Assert neither `GH-241` nor `GH-242` appears in `removed[]`, `retained[]`, or `unobserved[]`; assert `retained` names only `GH-243` with `deliveryState: "ready"` and `unobserved` names only `GH-244`.
+7. Assert the second run appends no removal record and the first run's removal records are byte-identical afterwards; compare both envelopes to their goldens.
 
 **Expected Outcome**:
-- The payload is exact and bounded; a repeated run converges to a noop at exit `0`.
-- `OQ-T1` records that NFR-10's repeated-reconcile half has no dedicated AC.
+- The payload is exact and bounded; the repeated run converges to a noop at exit `0` with zero appends and zero events.
+- `checked` counts only the entries that still exist; `removed[]` is empty; no already-removed ref is reported in `removed[]`, `retained[]`, or `unobserved[]`. This is AC-F5-9's primary case; `TC-QLC-086` re-proves it across all three convergence paths.
 
 #### TC-QLC-060 - One removal publishes one `remove` event with exactly three keys
 
@@ -1536,7 +1539,7 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 1. Assert `ERROR_TABLE.filter(e => e.domainKind === "queue").map(e => e.code)` deep-equals the seven-element fixture array in declared order: the delivered five, then `queue.reason-missing`, then `queue.single-flight`.
 2. Assert `QUEUE_ERROR_CODES` deep-equals the same array.
 3. Assert the five delivered rows' `category`, `projectionClass`, `retryable`, `consequence`, and `remediationHint` are byte-identical to their pre-change values.
-4. Assert `queue.reason-missing` is `user-validation` with exit `1`, and `queue.single-flight` is `user-validation` with exit `1` and `retryable: true` (the AC-F7-3 wording; spec §5.1 F-7's "transient" label is recorded as `OQ-T5` and the AC governs until reconciled).
+4. Assert `queue.reason-missing` is `user-validation` with exit `1`, and `queue.single-flight` is `user-validation` with exit `1` and `retryable: true`; spec v1.1 confirms retryability after the holding lane ends without changing the projection class, so the row never projects through a platform class to exit `2`.
 5. Assert no other queue row and no other domain row was added or removed.
 
 **Expected Outcome**:
@@ -1744,28 +1747,28 @@ TC IDs use the `QLC` feature prefix and follow the capability blocks: `001`–`0
 
 #### TC-QLC-086 - All three mutation paths converge on re-run
 
-**Objective**: Close the convergence contract where the spec gives it and flag where it does not.
+**Objective**: Prove every mutation path converges and that the reconcile repeat satisfies AC-F5-9's truthful second observation.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F2-5, AC-F3-3, AC-F5-1, NFR-10
+**Related IDs**: AC-F5-9, AC-F2-5, AC-F3-3, AC-F5-1, NFR-10
 **Test Type(s)**: Integration, Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-lifecycle-convergence.test.ts` (new)
 **Tags**: @backend, @queue, @regression, @idempotency
 
 **Preconditions**:
-- A removed ref, an absent dependency edge, and an already-reconciled ref; one never-entered ref for closeout.
+- A removed ref for closeout, an absent dependency edge, one never-entered ref for closeout, and a reconcile fixture where a first run removes `GH-241` (`done`) and `GH-242` (`canceled`) while `GH-243` (`ready`) remains.
 
 **Steps**:
 1. Repeat `closeout --apply` and assert exit `0`, zero removal appends, `satisfied`.
 2. Repeat `dep remove` and assert exit `0`, `noop`, zero appends, zero events.
-3. Repeat `reconcile` and assert exit `0`, `noop`, zero removals, zero appends, zero events.
+3. Repeat `reconcile` and assert exit `0`, `noop`, zero removals, zero appends, zero events; assert `checked === 1` (only `GH-243` still exists), `removed[]` is empty, and neither `GH-241` nor `GH-242` appears in `removed[]`, `retained[]`, or `unobserved[]`.
 4. Assert each first-run record is byte-identical after the repeat and the derived document did not churn.
-5. Record the `OQ-T1` note that step 3 maps to AC-F5-1 because no dedicated AC exists.
+5. Assert `TC-QLC-058` is AC-F5-9's primary payload/convergence case and this case is its cross-path secondary proof.
 
 **Expected Outcome**:
-- Every re-run converges without a second record or event; the one traceability gap is raised, not omitted.
+- Every re-run converges without a second record or event; the reconcile repeat reports only the entries that still exist, with an empty `removed[]` and no already-removed ref re-reported. AC-F5-9 is covered by this case and `TC-QLC-058`.
 
 ## 6. Environments and Test Data
 
@@ -1908,19 +1911,20 @@ The following pins fail after the behaviour lands. They are updated in the same 
 
 | ID | Question | Blocking? | Owner | Disposition |
 |---|---|---|---|---|
-| OQ-T1 | NFR-10 states "a repeated reconcile over an already-reconciled ref removes nothing and exits 0", but no AC-F5-* criterion states it. Should AC-F5-9 be added, or is AC-F5-1 + NFR-10 sufficient? | No | `@spec-writer` / `@pm` | `TC-QLC-058` and `TC-QLC-086` prove the behaviour and map it to AC-F5-1; the gap is raised, not silently treated as covered. Recommendation: add a criterion at the next spec revision. |
+| OQ-T1 | NFR-10 requires a repeated reconcile over already-reconciled entries to remove nothing and exit 0; should AC-F5-9 be added? | Resolved | `@spec-writer` | **Resolved by spec v1.1**: AC-F5-9 now states the behaviour verbatim. `TC-QLC-058` (primary) and `TC-QLC-086` (cross-path secondary) prove it; no gap remains. |
 | OQ-T2 | Is the `queue.precondition.unmet` removal refusal's holder evidence rendered in `error.detail` as an object or in the error text (the delivered lease-conflict shape uses a detail string)? | No (delivery-bound) | `@coder` / `@reviewer` | Assert the tokens (`lease-held`, holder) and the bound; do not pin the container beyond `detail.holder` where the spec declares it (DM-7). |
 | OQ-T3 | Does the change add a live GitHub smoke for reconcile, or is the port-level proof sufficient for this milestone? | No | `@pm` / `@reviewer` | Default: port-level proof; a live smoke is opt-in and excluded from the aggregate. |
-| OQ-T4 | If OQ-1/OQ-2 in the spec resolve toward "release-and-remove" or "refuse while a dependent exists", do `TC-QLC-005` and `TC-QLC-008` need to change? | Conditional | `@decision-advisor` / `@spec-writer` | The plan follows the recorded DEC-9/DEC-10 recommendations; a decision change reopens those two cases and this plan's revision log. |
-| OQ-T5 | The spec's AC-F7-3 says `queue.single-flight` is `user-validation`, while spec §5.1 F-7's bullet says "transient". Which category is authoritative? | No | `@spec-writer` / `@pm` | `TC-QLC-073` pins the AC (`user-validation`, exit `1`, retryable `true`) and this question records the inconsistency; a spec correction reopens the pin. |
+| OQ-T4 | If OQ-1/OQ-2 in the spec resolve toward "release-and-remove" or "refuse while a dependent exists", do `TC-QLC-005` and `TC-QLC-008` need to change? | Resolved (spec v1.1) | `@decision-advisor` / `@spec-writer` | OQ-1 and OQ-2 are resolved with DEC-9 and DEC-10 adopted as recommended; the plan already follows those decisions, so `TC-QLC-005` and `TC-QLC-008` stand unchanged. |
+| OQ-T5 | The spec's AC-F7-3 says `queue.single-flight` is `user-validation`, while spec §5.1 F-7's bullet said "transient". Which category is authoritative? | Resolved | `@spec-writer` | **Resolved by spec v1.1**: F-7 prose now matches AC-F7-3 — `user-validation`, exit `1`, retryable after the holding lane ends without changing the projection class. `TC-QLC-073` keeps pinning the identity class and exit. |
 
-**AC that cannot be tested:** none. Every AC has at least one observable assertion. The nearest boundaries are GAP-T1 (daemon proven at the injected port, not a production spawn), GAP-T2 (tracker proven at the declared port, with an opt-in live smoke), GAP-T3 (repeated-reconcile convergence has no dedicated AC), and GAP-T4 (page prose is token-checked with review attestation). These are recorded as boundaries and traceability gaps, not skipped criteria.
+**AC that cannot be tested:** none. All 46 ACs have at least one observable assertion, including the new AC-F5-9. The nearest boundaries are GAP-T1 (daemon proven at the injected port, not a production spawn), GAP-T2 (tracker proven at the declared port, with an opt-in live smoke), and GAP-T4 (page prose is token-checked with review attestation). GAP-T3 is closed by spec v1.1's AC-F5-9.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-12 | `@test-plan-writer` | Initial test plan for GH-292 / M2-S15. 45 acceptance criteria mapped to 59 automated cases across removal, automatic closeout removal, dependency edges, per-ref single-flight, reconciliation, event publication, mount/help/errors, and the six NFR criteria. Declares the four `remove`-unemitted pin migrations, the queue error-row pin (5 → 7), the record-kind pin (5 → 6), the hermetic fixture strategy, the opt-in live-smoke boundary, and the aggregate gate `TMPDIR="$PWD/tmp/tmpdir" pnpm check`. Raises `OQ-T1` (NFR-10's missing repeated-reconcile criterion) and `OQ-T5` (the `queue.single-flight` category wording conflict). |
+| 1.1 | 2026-11-12 | `@test-plan-writer` | Aligned with spec v1.1. Added AC-F5-9 to the F-5 matrix and retargeted `TC-QLC-058` as its primary case (with `TC-QLC-086` as the cross-path secondary), adding the explicit assertions for truthful `checked`, empty `removed[]`, absence from `removed[]`/`retained[]`/`unobserved[]`, zero appends, and zero events. Counts moved 45 → 46 acceptance criteria (39 → 40 capability), F-5 now 9/9, and §3.4 integrity updated. `OQ-T1` is resolved by the added AC; `OQ-T5` is resolved because spec §5.1 F-7 now matches AC-F7-3 (`user-validation`, exit `1`, retryable without a projection-class change), and `TC-QLC-073` keeps pinning that class and exit. `OQ-1`/`OQ-2` are resolved with DEC-9/DEC-10, requiring no case change. All 59 existing TC ids remain stable; no case was added, removed, or renumbered. |
 
 ## 10. Test Execution Log
 
