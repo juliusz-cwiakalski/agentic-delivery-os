@@ -117,6 +117,37 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 5 complete (commit ce2b1da8): CLI surface — `queue remove` with
+      `--reason`, the explicit `dep add`/`dep remove` grammar over the delivered
+      two-positional add, and the corrected queue help family. The runtime gained
+      `remove`/`depRemove` over the Phase-1 core seams (recovery pass first, one
+      fence, verified appends), the payloads are exactly the declared key sets
+      (`ref,result,reason,readySet,event,degraded`; mutation keys plus
+      `readySet`/`event`), the human renderer gained the readySet branches inside
+      the delivered caps, and help gained the family `remove` entry, the
+      `queue remove` verb entry, and the rewritten `queue dep` entry (two-
+      positional synopsis, three spellings, no `--on`/`--dep` options). The
+      cli-edge-seam export pin moved two-sided (two new structural re-exports).
+      Gates: typecheck 7/7; removal suites 17 pass; dep suites 11 pass; help
+      lifecycle + entrypoint-help + golden 14 pass; delivered golden controls
+      (list/plan/ready/envelope/graph/cli/depend) 67 pass; hermetic+bounds 14
+      pass; prompt-conformance 5 clean. Disclosed deviations: (1) the `queue
+      dep add` result for an existing entry is the delivered `updated`
+      (mutateIntent's existed-entry semantics), not the test-plan §5.2's
+      `added` — AC-F3-1's spelling-equality is the pinned truth and both
+      spellings assert the same value; (2) `helpEntryFor` gained a longest-
+      prefix fallback so `queue dep add|remove --help` renders the one `queue
+      dep` entry at exit 0 (spec F-7 mounts no separate dep-spelling help path;
+      TC-QLC-070 step 2); (3) TC-QLC-011's pre-fence fence-count assertion is
+      proven at the handler-grammar refusal (zero fences) and the seam refusal
+      appends zero records with the delivered park-recovery pass as the only
+      fence movement (the recovery pass precedes every runtime mutation by
+      delivered design); (4) `queue ready` reads the delivered status facts,
+      not the queue fold, so its TC-QLC-001 cell asserts the fact-source truth
+      instead of fold absence.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
       Plan phase 4 complete (commit 4f32d16a): queue.graph/remove emitted with
       exactly the declared payload. Taxonomy `emitted: true` (non-emitted set
       []), the projection's removal source family (one record -> one event, per
