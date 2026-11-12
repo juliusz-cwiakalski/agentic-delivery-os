@@ -10,7 +10,6 @@
  * that the projection drops fails here too.
  */
 import { describe, expect, test } from "bun:test";
-import { CONTRACT_KINDS, CONTRACT_PAYLOAD_FIELDS } from "../fixtures/events/taxonomy-cases";
 import { TAXONOMY } from "../../packages/core/src/contracts/taxonomy";
 import {
   compareFrames,
@@ -25,6 +24,7 @@ import {
   projectionCaseRecords,
   requiredFields,
 } from "../fixtures/events/projection-cases";
+import { CONTRACT_KINDS, CONTRACT_PAYLOAD_FIELDS } from "../fixtures/events/taxonomy-cases";
 
 const graph = TAXONOMY.topics.find((topic) => topic.name === "queue.graph");
 const entry = graph?.kinds.find((kind) => kind.name === "entry");
@@ -106,10 +106,13 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
         topic.kinds.filter((kind) => kind.emitted).map((kind) => `${topic.name}/${kind.name}`),
       ),
     );
-    expect(declared.size).toBe(12);
+    expect(declared.size).toBe(13);
     expect([...emitted].sort()).toEqual([...declared].sort());
-    // `remove` is declared and has no v1 producer, so it is never emitted.
-    expect(events.some((event) => event.kind === "remove")).toBe(false);
+    // GH-292 F-6: `remove` is emitted; the case view's durable removal record
+    // is observed exactly once.
+    expect(
+      events.filter((event) => event.kind === "remove").map((event) => event.payload.ref),
+    ).toEqual(["GH-700"]);
   });
 
   test("each of the thirteen declared kinds matches the contract field list exactly", () => {
@@ -127,8 +130,8 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
           | undefined;
         // The declaration and the contract fixture agree field-for-field, in order.
         expect(kind.payloadFields, `${topic.name}/${kind.name}`).toEqual(contract as string[]);
-        // Only `queue.graph.remove` is declared without a v1 producer.
-        expect(kind.emitted, `${topic.name}/${kind.name}`).toBe(kind.name !== "remove");
+        // Every declared kind has a v1 producer (GH-292 F-6).
+        expect(kind.emitted, `${topic.name}/${kind.name}`).toBe(true);
 
         const frame = byKind.get(`${topic.name}/${kind.name}`);
         if (!kind.emitted) {
@@ -154,7 +157,7 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
 
   test("the real projected frames satisfy the declaration, payload keys included", () => {
     expect(compareFrames(TAXONOMY, realFrames())).toEqual([]);
-    expect(scriptedFrames(TAXONOMY).length).toBe(12);
+    expect(scriptedFrames(TAXONOMY).length).toBe(13);
     expect(projectionCaseRecords().length).toBeGreaterThanOrEqual(10);
   });
 });

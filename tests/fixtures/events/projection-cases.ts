@@ -86,6 +86,12 @@ export const projectionCaseRecords = (): readonly StateRecord[] => {
       operation: "released",
       recordedAt: RECORDED_AT,
     }),
+    record("queue.removal", "queue.removals:GH-700", {
+      schema: "delivery.queue.removal.v1",
+      ref: "GH-700",
+      reason: "landed",
+      recordedAt: RECORDED_AT,
+    }),
     record("daemon.lane", "daemon.lanes:GH-700", {
       schema: "delivery.daemon.lane.v1",
       ref: "GH-700",

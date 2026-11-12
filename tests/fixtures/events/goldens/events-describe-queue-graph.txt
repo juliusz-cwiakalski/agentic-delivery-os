@@ -16,7 +16,7 @@ kinds:
   entry  emitted  payload=ref,repository?,priority,recordedAt
   dependency-edge  emitted  payload=ref,edges[],added[],removed[],recordedAt
   release  emitted  payload=leaseId,repository,ref,holder,runner,weightClass,operation,recordedAt
-  remove  not emitted (declared; no v1 producer)  payload=ref,reason,recordedAt
+  remove  emitted  payload=ref,reason,recordedAt
 
 payloadFields=ref,repository?,priority,recordedAt,edges[],added[],removed[],leaseId,repository,holder,runner,weightClass,operation,reason
 
