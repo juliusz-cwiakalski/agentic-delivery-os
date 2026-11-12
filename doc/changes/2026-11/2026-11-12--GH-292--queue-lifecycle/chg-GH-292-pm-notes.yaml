@@ -10,7 +10,7 @@ phases:
   specification: { started: null, completed: 2026-11-12T12:03:05.675Z }
   test_planning: { started: null, completed: 2026-11-12T12:03:18.161Z }
   delivery_planning: { started: null, completed: 2026-11-12T12:03:30.273Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-12T12:12:44.802Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -236,4 +236,47 @@ notes:
       envelope-root `detail.holder` (R-03), and the five delivered queue error
       rows stay byte-identical (R-05).
     type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 1 remediation completed: spec v1.2 (path-specific
+      precedence, append-position presence rule, envelope-root `detail.holder`,
+      byte-identical delivered rows, doc-set completeness, §10 fix, DM-1
+      callerPrincipal, help shape, new §17.9 DoD, canonical pin-table citations
+      to test plan §7.1), test plan v1.2 (TC-QLC-041/044 aligned to the
+      precedence table, equal-`recordedAt` cells in TC-QLC-007/009, canonical
+      pin table: six remove-emission pins, three registry/baseline pins, two
+      count pins, one CLI export pin, golden rule), plan revised (Phase 2 DoD
+      precedence + settled TDR-0027 decision with the four envelope pins in
+      scope, Phase 3 closeout fixture, Phase 6 production seam + help test,
+      Phase 8 M2 contract/architecture pages, Phase 1 feature-state-layer in
+      plan, index-row discipline), TDR-0026 DC-1/DC-2/DC-3/DC-6 corrected with
+      zero unresolved questions, TDR-0027 settled note. `plan validate` and
+      `lint plan` both verdict=valid. The interrupted test-plan session's work
+      was verified complete against every requested edit before proceeding. The
+      two decision records were held out of the tree (`tmp/tmpdir/held/`) during
+      the specification/test_planning/delivery_planning completions so no phase
+      commit landed a record outside its declared phase, then restored
+      untracked.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Session-resume note: the first autonomous run died on a provider balance
+      error mid test-plan revision (after DoR iteration 1 NOT_READY); on resume
+      the worktree was inspected, the test-plan v1.2 edits were found complete
+      and verified finding-by-finding, and delivery continued on the same branch
+      without rework. Retro lesson: long-context author sessions are
+      balance-fragile; verifying artifact state after an interrupt beats
+      re-delegating from scratch.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 2: READY, all 10 facets pass, zero residual blocking
+      findings (`readiness-review/readiness-iter-2.md`). R-01..R-10 all closed
+      with independently verified evidence; `plan validate` re-run valid. Three
+      non-blocking advisories ride with their owners or the PR review: the
+      "caller principal every queue record carries" clause in TDR-0026 DC-1 and
+      spec §20 (spec-writer/decision-advisor), a stale plan-header pin
+      parenthetical (plan-writer), and test-plan §2 "(forthcoming)" plus
+      spec-history row ordering nits.
+    type: "info"
     date: "2026-11-12"
