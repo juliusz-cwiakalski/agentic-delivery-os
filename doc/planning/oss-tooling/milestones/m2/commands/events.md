@@ -76,8 +76,11 @@ outside the six is refused with `events.topic-unknown`.
 Text: a topic table with the version, shape, kind count, parent, ordering, and
 overflow policy, or a single topic's reference page.
 
-Envelope `data` carries `taxonomyVersion`, `envelope[]` (the eight event-frame
-fields in order), and `topics[]`. A topic record carries exactly:
+The result is the delivered `delivery.result.v1` envelope
+`{schemaVersion, runId, exitCode, timing, data}` on success and
+`{schemaVersion, runId, exitCode, timing, error}` on refusal. `data` carries
+`command`, `taxonomyVersion`, `envelope[]` (the eight event-frame fields in
+order), and `topics[]`. A topic record carries exactly:
 
 | Key | Contract |
 |---|---|
@@ -117,7 +120,7 @@ the four event topics declare four, three, three, and three.
 
 ```
 $ <binary> events describe queue.graph --json
-{ "data": { "taxonomyVersion": "v1", "envelope": ["topic", "kind", "lane", "ref", "sequence", "occurredAt", "payload", "taxonomyVersion"], "topics": [ { "name": "queue.graph", "shape": "event", "kinds": ["..."] } ] } }
+{ "data": { "command": "events describe", "taxonomyVersion": "v1", "envelope": ["topic", "kind", "lane", "ref", "sequence", "occurredAt", "payload", "taxonomyVersion"], "topics": [ { "name": "queue.graph", "shape": "event", "kinds": ["..."] } ] } }
 ```
 
 ## ERRORS

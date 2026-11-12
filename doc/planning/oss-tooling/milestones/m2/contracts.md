@@ -12,8 +12,9 @@ M1 contracts remain valid: the machine envelope shape, the error taxonomy, the
 exit-code meaning, the state-layer validation rules, and the audit ledger are
 unchanged. M2 surfaces extend them additively:
 
-- The machine envelope stays `{ ok, command, data, error?, warnings? }`; new
-  commands add keys under `data`, never new top-level keys.
+- The machine envelope stays the delivered `delivery.result.v1` shape
+  `{ schemaVersion, runId, exitCode, timing, data | error }`; new commands add
+  keys under `data`, never new top-level keys.
 - Exit codes keep their meaning: `0` declared verdict, `1` refused or negative
   verdict, `2` platform, state, or provider failure.
 - Every surface that reads or mutates state validates at the boundary and
@@ -64,8 +65,9 @@ The evidence read-side contract, owned by M2-S12 and consumed by M2-S16.
 The subscribe contract, owned by M2-S13 and published by the resident daemon.
 
 - **Topics.** `queue.graph`, `dispatch.attempt`, `phase.state`, and
-  `blockers.state` extend the delivered `queue` and `lanes` topics
-  (`CONTROL_TOPICS = [queue, lanes]`); `queue.graph` extends `queue`, and
+  `blockers.state` extend the two delivered `queue` and `lanes` topics (the
+  `CONTROL_TOPICS` set was `[queue, lanes]` when this pack was written and is now
+  the delivered six); `queue.graph` extends `queue`, and
   `status` is a wire type, not a topic.
 - **Event kinds.** Each topic declares its kinds: `queue.graph` publishes
   entry, dependency-edge, release, and remove kinds; `dispatch.attempt`

@@ -6,7 +6,7 @@ created: 2026-11-08
 last_updated: 2026-11-12
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v1 (two snapshot topics, four event topics, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
   related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290"]
   related_decisions: ["TDR-0024"]
@@ -159,6 +159,7 @@ routed only to the asking connection.
 Control actions are at-most-once by (connection identity, frame id, lock token);
 a cross-connection id collision is a distinct request. The lock token appears
 only in the three control payloads and durable lock/instance records.
+
 ### Event taxonomy v1
 
 The subscribe surface publishes a versioned taxonomy over six topics. `queue` and
@@ -186,7 +187,9 @@ The declared kind sets are `queue.graph` = `entry`, `dependency-edge`, `release`
 (`emitted: false`): no delivered path removes a queue entry. `phase.state.began`
 is derived from a phase's first completion, because no begin record exists. A
 `dependency-edge` publishes only when its folded edge set differs, and its
-payload carries `added`/`removed`.
+payload carries `added`/`removed`. Subscribing to an event topic produces no
+synthetic baseline: the first frame is the next observed change, and `since`
+carries no event-topic semantics.
 
 A degraded frame keeps the delivered marker and drop behaviour and additively
 carries `overflow: "repoll"` and `taxonomyVersion: "v1"` for all six topics. A
@@ -199,10 +202,12 @@ closed with `events.taxonomy-unavailable` at exit 2 and renders no page.
 One publish tick — one `publishState` invocation — performs exactly one
 whole-store `readRecords()` and folds that single view for the snapshot
 projection and for the event projection; no per-topic and no per-subscriber read
-is issued on the publish path. The heartbeat's own two-ledger fold is outside
-that count and unchanged. The per-`(topic, lane, source family)` emission
-watermark keeps an unemitted delta pending rather than dropped, and the
-per-topic per-tick cap is 64.
+is issued on the publish path. The heartbeat tick's own reads — its two-ledger
+fold and the durable heartbeat append/verify chain — are outside that count and
+unchanged. The per-`(topic, lane, source family)` emission watermark keeps an
+unemitted delta pending rather than dropped, and the per-topic per-tick cap is
+64. The taxonomy, its emission model, and the reference surface are described in
+[Event Taxonomy v1 and the Events Reference Surface](feature-event-taxonomy.md).
 
 The reference surface is `<binary> events list|describe`, generated from the same
 declaration; the public contract page is

@@ -178,6 +178,7 @@
     "doc/spec/features/feature-config-layer.md",
     "doc/spec/features/feature-dispatch-engine.md",
     "doc/spec/features/feature-doctor.md",
+    "doc/spec/features/feature-event-taxonomy.md",
     "doc/spec/features/feature-harness-adapters.md",
     "doc/spec/features/feature-mcp-surface.md",
     "doc/spec/features/feature-measurement-baseline.md",

@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-238", "GH-286"]
+  related_changes: ["GH-238", "GH-286", "GH-290"]
   feature_spec: doc/spec/features/feature-resident-daemon.md
 ---
 
@@ -411,7 +411,16 @@ transport, clock, and wake are injected.
   `events-overflow-parity`, and `event-overflow-carriage`: per-`(topic, lane)`
   contiguity shared by two subscribers, the restart discontinuity, overflow
   parity across six topics with the additive stamps, and the one-constant
-  carriage proof.
+  carriage proof. Parity is proven at the delivered session seam for all six
+  topics, plus one end-to-end `queue.graph` burst; a subscriber that keeps
+  reading cannot accumulate a buffer because the server flushes on each publish
+  tick.
+- **Snapshot preservation.** `events-snapshot-preserved` proves the delivered
+  `queue` and `lanes` frames field-for-field — key order and shape, the
+  `cursor: 0` baseline, change-only cursor advancement, and dedupe — together
+  with the frozen delivered snapshot expectations, rather than against a
+  pre-change byte golden. The delivered control, session, and watch suites stay
+  unmodified controls.
 - **Mount, bounds, and the tick cost.** `events-mount-help`,
   `events-production-composition`, `event-mount-guards`,
   `event-taxonomy-conformance`, `event-privacy-literals`, `events-privacy`,
@@ -420,7 +429,9 @@ transport, clock, and wake are injected.
   `daemon-production-composition`. The tick-cost case counts one whole-store
   `readRecords()` per publish pass through an injected store, with the fixed
   clock excluding the heartbeat and an advancing-clock control proving the
-  counted window sees the heartbeat's two folds.
+  counted window sees the heartbeat's two ledger folds; the heartbeat's own
+  durable append/verify reads are reported separately and are outside the
+  counted window.
 
 ## Security and Privacy Tests
 

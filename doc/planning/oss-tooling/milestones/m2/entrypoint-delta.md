@@ -9,21 +9,23 @@ snapshot and stays as written; the M1 man page is
 
 ## Observed composition
 
-Observed from the built workspace at authoring time. The `Commands:` block is
-abridged to the family list: the real output also prints a title, Usage,
-Options, Examples, Exit codes, and See also, and each family carries a
-description on its own row.
+Observed from the built workspace on 2026-11-12, after the GH-286, GH-288, and
+GH-290 mounts. The `Commands:` block is abridged to the family list: the real
+output also prints a title, Usage, Options, Examples, Exit codes, and See also,
+and each family carries a description on its own row.
 
 ```
 $ <binary> --help
 Commands: status brief queue lanes blockers phase commit lint plan
           verify merge closeout dispatch spend retro daemon coordinator
+          projects events
 ```
 
-Seventeen families are registered: `status`, `brief`, `queue`, `lanes`,
+Nineteen families are registered: `status`, `brief`, `queue`, `lanes`,
 `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`,
-`dispatch`, `spend`, `retro`, `daemon`, and `coordinator`. `state` and `mcp`
-are absent from the listing.
+`dispatch`, `spend`, `retro`, `daemon`, `coordinator`, `projects`, and `events`.
+`state` and `mcp` are absent from the listing. Root `--help` is bounded by
+content, not by a line or byte ceiling.
 
 ```
 $ <binary> daemon --help
@@ -65,9 +67,10 @@ handlers. Issue #286 delivered the mount, and the gap is recorded here as
 closed so the blueprint reader sees the current state rather than a stale
 prerequisite.
 
-The mount also unblocks the S13 subscribe surface and S17 peak pausing: both
-depend on a resident daemon, and the resident path is delivered now that the
-family is mounted.
+The mount also unblocked the S13 subscribe surface, delivered by GH-290 as event
+taxonomy v1, and is the prerequisite for S17 peak pausing: both depend on a
+resident daemon, and the resident path is delivered now that the family is
+mounted.
 
 ## Mounting a new command
 
@@ -76,9 +79,10 @@ extras, so a command definition existing in the edge composition is not
 enough. Mounting a family takes a prompt-set change plus a help reference page
 per command; only then does the family appear in root `--help`. GH-288 mounted
 `projects` that way — prompt-set entry, edge composition, help entries, the M2
-reference page, the coverage-inventory row and the per-command page root. The
-remaining M2 additions (`events`, `board`, `dispatch attempts`, `spend` v2)
-stay planned until their own stories mount them.
+reference page, the coverage-inventory row and the per-command page root — and
+GH-290 mounted `events` the same way. The remaining M2 additions (`board`,
+`dispatch attempts`, `spend` v2) stay planned until their own stories mount
+them.
 
 ## Where this note is read
 
