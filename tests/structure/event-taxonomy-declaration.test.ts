@@ -1,7 +1,7 @@
 /**
  * TC-EVT-001 and the declaration half of TC-EVT-002 — the closed six-topic set,
- * the per-topic required keys, the exact kind enumeration, and the absence of
- * every S17 shape.
+ * the per-topic required keys, the exact kind enumeration under v2, and the
+ * four peak-pause kinds' declared placement (GH-294 TDR-0029 D2).
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -18,7 +18,12 @@ import {
   TAXONOMY_SHAPES,
   TAXONOMY_VERSION,
 } from "../../packages/core/src/contracts/taxonomy";
-import { CONTRACT_KINDS, S17_KIND_NAMES, TOPIC_NAMES } from "../fixtures/events/taxonomy-cases";
+import {
+  CONTRACT_KINDS,
+  CONTRACT_PAYLOAD_FIELDS,
+  S17_KIND_NAMES,
+  TOPIC_NAMES,
+} from "../fixtures/events/taxonomy-cases";
 
 const ROOT = process.cwd();
 const MODULE = "packages/core/src/contracts/taxonomy.ts";
@@ -31,8 +36,8 @@ describe("TC-EVT-001 the declared topic set", () => {
     expect(topics.map((topic) => topic.name)).toEqual([...TOPIC_NAMES]);
     expect(topics).toHaveLength(6);
     expect(topics.some((topic) => topic.name === "status")).toBe(false);
-    expect(TAXONOMY.version).toBe("v1");
-    expect(topics.every((topic) => topic.version === "v1")).toBe(true);
+    expect(TAXONOMY.version).toBe("v2");
+    expect(topics.every((topic) => topic.version === "v2")).toBe(true);
   });
 
   test("queue.graph is the only topic with a parent, and its parent is queue", () => {
@@ -120,32 +125,42 @@ describe("TC-EVT-002 the declared kind enumeration", () => {
     expect(byName("lanes")?.payloadFields).toEqual([]);
   });
 
-  test("kind counts are exactly 4/3/3/3 and no topic declares more than four", () => {
+  test("kind counts are exactly 5/6/3/3 and the peak-pause additions ride their declared topics", () => {
     const counts = (
       ["queue.graph", "dispatch.attempt", "phase.state", "blockers.state"] as const
     ).map((topic) => byName(topic)?.kinds.length);
-    expect(counts).toEqual([4, 3, 3, 3]);
-    for (const topic of topics) expect(topic.kinds.length).toBeLessThanOrEqual(4);
+    expect(counts).toEqual([5, 6, 3, 3]);
+    for (const topic of topics) expect(topic.kinds.length).toBeLessThanOrEqual(6);
   });
 
-  test("no S17 kind name is declared as a kind or a payload field", () => {
-    const tokens = new Set<string>();
-    for (const topic of topics) {
-      for (const kind of topic.kinds) {
-        tokens.add(kind.name);
-        for (const field of kind.payloadFields) tokens.add(field.replace(/[?[\]]/gu, ""));
+  test("the four S17 kinds are declared under v2 on their contracted topics, in declared order", () => {
+    expect(
+      byName("dispatch.attempt")
+        ?.kinds.map((kind) => kind.name)
+        .slice(3),
+    ).toEqual(["stop", "parked", "resumed"]);
+    expect(
+      byName("queue.graph")
+        ?.kinds.map((kind) => kind.name)
+        .at(-1),
+    ).toBe("park-edge");
+  });
+
+  test("every declared v1 kind keeps its declared payload list byte-identical under v2", () => {
+    for (const [topic, kinds] of Object.entries(CONTRACT_PAYLOAD_FIELDS)) {
+      for (const [name, fields] of Object.entries(kinds)) {
+        if (S17_KIND_NAMES.includes(name as never)) continue;
+        const declared = byName(topic)?.kinds.find((kind) => kind.name === name);
+        expect(declared?.payloadFields, `${topic}/${name}`).toEqual([...fields]);
       }
     }
-    for (const forbidden of S17_KIND_NAMES) {
-      expect(tokens.has(forbidden), `S17 shape ${forbidden} declared`).toBe(false);
-    }
   });
 
-  test("v1 declares exactly one non-emitted kind: queue.graph.remove", () => {
+  test("v2 declares no non-emitted kind", () => {
     const notEmitted = topics.flatMap((topic) =>
       topic.kinds.filter((kind) => !kind.emitted).map((kind) => `${topic.name}/${kind.name}`),
     );
     expect(notEmitted).toEqual([]);
-    expect(TAXONOMY_VERSION).toBe("v1");
+    expect(TAXONOMY_VERSION).toBe("v2");
   });
 });

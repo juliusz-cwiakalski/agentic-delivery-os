@@ -84,6 +84,18 @@ const NON_TAXONOMY_GROUPS: Readonly<Record<string, KindGroupAllowance>> = {
     reason: "queue.graph event producers",
     kindValues: ["dependency-edge", "remove"],
   },
+  // The provider chain fold's condition-status discriminant: a park evaluation
+  // verdict, not an event kind (GH-294: "parked" joined the declared kind set).
+  "packages/core/src/provider/chain.ts": {
+    reason: "provider condition status discriminant",
+    kindValues: ["parked"],
+  },
+  // The coordinator loop's cycle-exit discriminant: a loop verb, not an event
+  // kind (GH-294: "stop" joined the declared kind set).
+  "packages/cli/src/commands/coordinator-loop.ts": {
+    reason: "coordinator loop exit discriminant",
+    kindValues: ["stop"],
+  },
 };
 
 const declaredKindNames = (): ReadonlySet<string> =>
@@ -256,8 +268,9 @@ describe("TC-EVT-006 one declaration, two consumers", () => {
     const declared = declaredKindNames();
     const emitted = declaredEmittedNames();
     // `completed` is declared on two topics, so the distinct emitted NAME set
-    // is 12: the eleven delivered names plus queue.graph's `remove`.
-    expect(emitted.size).toBe(12);
+    // is 16 under v2: the twelve delivered names plus the four peak-pause
+    // additions (GH-294 TDR-0029 D2).
+    expect(emitted.size).toBe(16);
     const projection = evidenceOf(PROJECTION_MODULE, declared);
     // Bidirectional: a kind the projection emits but the declaration does not
     // own fails, and a declared emitted kind the projection has no literal for

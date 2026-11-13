@@ -574,6 +574,121 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
           continue;
         }
 
+        if (record.kind === "queue.park") {
+          // Peak-pause episode emission (GH-294 EVT-1..EVT-4, TDR-0029 D2):
+          // the durable park record is the episode's source of truth, appended
+          // once per state. The parked-state record emits the stop (grace
+          // deadline), the parked frame (reason, profile, until, preservation),
+          // and the queue-graph park-edge, exactly once per episode; the
+          // recovered record emits the resumed frame with the session-state
+          // reference, the same branch, and the no-re-dispatch fact. An
+          // `owner-hold` park emits only the park-edge, with `until` a declared
+          // classified absence. Delivered causes emit nothing, so every
+          // v1-visible behavior is unchanged.
+          const lane = bounded(str(payload.ref), QUEUE_MAX_REF_CHARS);
+          if (lane.length === 0) continue;
+          const cause = str(payload.cause);
+          if (cause !== "peak-window" && cause !== "owner-hold") continue;
+          const attemptFamily = address("dispatch.attempt", "queue.park", lane);
+          const graphFamily = address("queue.graph", "queue.park", lane);
+          const profile = optionalStr(payload.providerProfile);
+          const episodeId = str(payload.episodeId);
+          const until = optionalStr(payload.until);
+          const recordedAt = str(payload.recordedAt);
+          const recoveredAt = optionalStr(payload.recoveredAt);
+          if (cause === "peak-window" && recoveredAt === undefined) {
+            entering.push({
+              order: record.sequence,
+              sub: 9,
+              topic: "dispatch.attempt",
+              family: "queue.park",
+              lane,
+              key: record.key,
+              position: record.sequence,
+              kind: "stop",
+              ref: lane,
+              occurredAt: recordedAt,
+              payload: {
+                ref: lane,
+                graceDeadline: str(payload.graceDeadline),
+                providerProfile: str(profile),
+                windowEnd: str(payload.windowEnd),
+                stoppedAt: str(payload.stoppedAt),
+                episodeId,
+              },
+              commit: () => remember(attemptFamily, record.key, record.sequence),
+            });
+            entering.push({
+              order: record.sequence,
+              sub: 10,
+              topic: "dispatch.attempt",
+              family: "queue.park",
+              lane,
+              key: record.key,
+              position: record.sequence,
+              kind: "parked",
+              ref: lane,
+              occurredAt: recordedAt,
+              payload: {
+                ref: lane,
+                reason: "peak-window",
+                providerProfile: str(profile),
+                until: str(until),
+                preservation: str(payload.preservation),
+                recordedAt,
+                episodeId,
+              },
+              commit: () => remember(attemptFamily, record.key, record.sequence),
+            });
+          }
+          if (cause === "peak-window" && recoveredAt !== undefined) {
+            entering.push({
+              order: record.sequence,
+              sub: 11,
+              topic: "dispatch.attempt",
+              family: "queue.park",
+              lane,
+              key: record.key,
+              position: record.sequence,
+              kind: "resumed",
+              ref: lane,
+              occurredAt: recoveredAt,
+              payload: {
+                ref: lane,
+                sessionRef: str(payload.sessionRef),
+                branch: str(payload.branch),
+                reDispatched: false,
+                resumedAt: recoveredAt,
+                episodeId,
+              },
+              commit: () => remember(attemptFamily, record.key, record.sequence),
+            });
+          }
+          if (recoveredAt === undefined) {
+            entering.push({
+              order: record.sequence,
+              sub: 12,
+              topic: "queue.graph",
+              family: "queue.park",
+              lane,
+              key: record.key,
+              position: record.sequence,
+              kind: "park-edge",
+              ref: lane,
+              occurredAt: recordedAt,
+              payload: {
+                ref: lane,
+                cause,
+                ...(until === undefined ? {} : { until }),
+                episodeId,
+                recordedAt,
+              },
+              commit: () => remember(graphFamily, record.key, record.sequence),
+            });
+          }
+          continue;
+        }
+
         if (record.kind === "blocker.answer") {
           const question = questions.get(str(payload.questionId));
           if (question === undefined) continue;

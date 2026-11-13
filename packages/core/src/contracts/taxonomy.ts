@@ -1,5 +1,6 @@
 /**
- * The public event-taxonomy v1 declaration (GH-290 F-1, DM-1, DM-7; DEC-E, DEC-K, DEC-M).
+ * The public event-taxonomy v2 declaration (GH-290 F-1, DM-1, DM-7; GH-294
+ * EVT-1..EVT-4, DEC-3, DEC-10; TDR-0029 D1..D7).
  *
  * One authored source for six topics: the delivered `queue` and `lanes`
  * snapshot topics (which declare no kind), and the four event topics
@@ -8,6 +9,13 @@
  * `emitted` flag and payload fields, the derived payload-field union, the
  * ordering rule, and the overflow policy.
  *
+ * v2 supersedes v1 as the single spoken version (TDR-0029 D5): the four
+ * peak-pause kinds join — `stop`, `parked`, and `resumed` on
+ * `dispatch.attempt`, `park-edge` on `queue.graph` — with every v1 kind and
+ * payload byte-identical, the envelope, per-`(topic, lane)` sequence, and
+ * overflow model unchanged, and the stamp rendered from this module's one
+ * version constant.
+ *
  * Runtime-neutral by construction: types and `as const` data only. The module's
  * one executable export is the pure integrity validator below; it reads no
  * clock, environment, I/O, or module-scope call expression.
@@ -15,7 +23,7 @@
 import type { ControlTopic } from "./control.js";
 
 /** The served taxonomy version. A kind, ordering, overflow, envelope, or parentage change is a new version. */
-export const TAXONOMY_VERSION = "v1" as const;
+export const TAXONOMY_VERSION = "v2" as const;
 
 /** The closed topic shapes (DEC-B). */
 export const TAXONOMY_SHAPES = ["snapshot", "event"] as const;
@@ -148,6 +156,11 @@ export const TAXONOMY = {
           emitted: true,
           payloadFields: ["ref", "reason", "recordedAt"],
         },
+        {
+          name: "park-edge",
+          emitted: true,
+          payloadFields: ["ref", "cause", "until?", "episodeId", "recordedAt"],
+        },
       ],
       payloadFields: [
         "ref",
@@ -164,6 +177,9 @@ export const TAXONOMY = {
         "weightClass",
         "operation",
         "reason",
+        "cause",
+        "until?",
+        "episodeId",
       ],
       ordering: "sequence-per-lane",
       overflow: TAXONOMY_OVERFLOW,
@@ -210,6 +226,36 @@ export const TAXONOMY = {
             "finishedAt",
           ],
         },
+        {
+          name: "stop",
+          emitted: true,
+          payloadFields: [
+            "ref",
+            "graceDeadline",
+            "providerProfile",
+            "windowEnd",
+            "stoppedAt",
+            "episodeId",
+          ],
+        },
+        {
+          name: "parked",
+          emitted: true,
+          payloadFields: [
+            "ref",
+            "reason",
+            "providerProfile",
+            "until",
+            "preservation",
+            "recordedAt",
+            "episodeId",
+          ],
+        },
+        {
+          name: "resumed",
+          emitted: true,
+          payloadFields: ["ref", "sessionRef", "branch", "reDispatched", "resumedAt", "episodeId"],
+        },
       ],
       payloadFields: [
         "ref",
@@ -230,6 +276,18 @@ export const TAXONOMY = {
         "comparisonClass",
         "falseSuccess",
         "divergenceRef?",
+        "graceDeadline",
+        "providerProfile",
+        "windowEnd",
+        "stoppedAt",
+        "episodeId",
+        "reason",
+        "until",
+        "preservation",
+        "sessionRef",
+        "branch",
+        "reDispatched",
+        "resumedAt",
       ],
       ordering: "sequence-per-lane",
       overflow: TAXONOMY_OVERFLOW,

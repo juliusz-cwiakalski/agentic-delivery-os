@@ -42,8 +42,11 @@ export const optionalFields = (fields: readonly string[]): readonly string[] =>
 export const RECORDED_AT = "2026-11-12T10:00:00.000Z";
 
 /**
- * One record per declared source family, in one view, covering all twelve emitted
- * kinds. `remove` has no producer in v1, so no record here can emit it (DEC-J).
+ * One record per declared source family, in one view, covering all sixteen
+ * emitted kinds under v2. `remove` has no producer in v1, so no record here can
+ * emit it (DEC-J). The peak-pause kinds project from seeded `queue.park`
+ * episode records (GH-294): a parked-state peak-window record and its recovered
+ * record, plus an owner-hold park for the classified-absence edge.
  */
 export const projectionCaseRecords = (): readonly StateRecord[] => {
   ordinal = 0;
@@ -178,6 +181,68 @@ export const projectionCaseRecords = (): readonly StateRecord[] => {
       resumeIntent: { questionId: "Q-1", mode: "boundary-note" },
       recordedAt: RECORDED_AT,
     }),
+    // GH-294 seeded episode records: the parked-state peak-window park emits
+    // stop + parked + park-edge; the recovered record emits resumed.
+    record("queue.park", "queue.parks:GH-700:peak", {
+      schema: "delivery.queue.park.v1",
+      ref: "GH-700",
+      repository: "github.com/example/repo",
+      cause: "peak-window",
+      conditionType: "provider-window",
+      condition: { kind: "peak-window", detail: "provider-a peak window active" },
+      recheckMs: 60_000,
+      evaluatedAt: RECORDED_AT,
+      recoveryState: "parked",
+      providerProfile: "profile-a",
+      until: "2026-11-12T11:00:00.000Z",
+      graceDeadline: "2026-11-12T10:05:00.000Z",
+      windowEnd: "2026-11-12T11:00:00.000Z",
+      stoppedAt: RECORDED_AT,
+      preservation: "preserved",
+      episodeId: "episode-700",
+      recordedAt: RECORDED_AT,
+    }),
+    record("queue.park", "queue.parks:GH-701:hold", {
+      schema: "delivery.queue.park.v1",
+      ref: "GH-701",
+      repository: "github.com/example/repo",
+      cause: "owner-hold",
+      conditionType: "preemption",
+      condition: { kind: "owner-hold", detail: "owner hold active" },
+      recheckMs: 60_000,
+      evaluatedAt: RECORDED_AT,
+      recoveryState: "parked",
+      episodeId: "episode-701",
+      recordedAt: RECORDED_AT,
+    }),
+  ];
+};
+
+/** The recovered peak-window park record: one view delta that emits `resumed`. */
+export const recoveredParkRecord = (): readonly StateRecord[] => {
+  // The ordinal continues from the case view (no reset): a park record's
+  // recovery must carry a higher sequence than the parked-state record it
+  // recovers, or the projection watermark would keep it pending.
+  return [
+    record("queue.park", "queue.parks:GH-700:peak", {
+      schema: "delivery.queue.park.v1",
+      ref: "GH-700",
+      repository: "github.com/example/repo",
+      cause: "peak-window",
+      conditionType: "provider-window",
+      condition: { kind: "peak-window", detail: "provider-a peak window active" },
+      recheckMs: 60_000,
+      evaluatedAt: RECORDED_AT,
+      recoveryState: "recovered",
+      recoveredAt: "2026-11-12T11:00:01.000Z",
+      providerProfile: "profile-a",
+      until: "2026-11-12T11:00:00.000Z",
+      preservation: "preserved",
+      sessionRef: "session-gh700",
+      branch: "feat/GH-294/provider-peak-pausing",
+      episodeId: "episode-700",
+      recordedAt: RECORDED_AT,
+    }),
   ];
 };
 
@@ -185,7 +250,11 @@ export const projectionCaseRecords = (): readonly StateRecord[] => {
 export const projectCaseEvents = (): readonly ProjectedEvent[] => {
   const projector = createEventProjector();
   projector.project([]);
-  return projector.project(projectionCaseRecords());
+  const first = projector.project(projectionCaseRecords());
+  // The peak-pause episode's resumed frame projects from the recovered park
+  // record in a second observation (the delivered watermark discipline).
+  const second = projector.project(recoveredParkRecord());
+  return [...first, ...second];
 };
 
 /** Index emitted events by `topic/kind`, keeping the first frame of each. */

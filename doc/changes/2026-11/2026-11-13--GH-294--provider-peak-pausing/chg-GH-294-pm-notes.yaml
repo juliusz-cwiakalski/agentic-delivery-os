@@ -134,8 +134,7 @@ notes:
       control 5/5 PASS."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 2 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): provider profile nomination at
+  - text: "Plan phase 2 complete (commit 088f6fb7d): provider profile nomination at
       dispatch admission — providerProfile recorded at admission on the
       dispatch attempt record family (delivery.dispatch.attempt.v1, additive
       field, rendered as null classified absence on pre-change records by the
@@ -154,5 +153,30 @@ notes:
       dispatch-attempts-taxonomy + content-inventory 42/42 PASS;
       daemon-lane-supervision + dispatch-resume + dispatch-admission-preflight
       20/20 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 3 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): taxonomy v2 declared as the single
+      spoken version (TAXONOMY_VERSION v2; stop/parked/resumed join
+      dispatch.attempt, park-edge joins queue.graph with pinned payload lists —
+      episodeId as the episode identity; every v1 kind and payload
+      byte-identical; retired-version literal kept out of the contract surface),
+      emission projection extended to the four kinds over durable queue.park
+      episode records (parked-state record emits stop+parked+park-edge exactly
+      once, recovered record emits resumed with the no-re-dispatch fact,
+      owner-hold park emits park-edge with until as classified absence,
+      delivered causes emit nothing), reference surface + M2 events page
+      reconciled to v2 with the six-point compatibility statement (conformance
+      page half), goldens regenerated deliberately once with version-bearing +
+      additive deltas only (BYTE-P1), new event-taxonomy-v2-compat suite over
+      the in-memory pair plus the bounded unix-socket variant (TC-PAUSE-063).
+      Delivered-suite disclosures (mechanical, TDR-0029 D2/D4 whole-taxonomy
+      move, no semantic assertion change): events-emitted-kinds fixture gained
+      the episode records covering the new declared kinds; events-overflow-parity
+      stamp literals moved v1→v2. Test result at boundary: pnpm typecheck green;
+      the 18-suite taxonomy battery 98/98 PASS (declaration, drift, integrity,
+      single-source, additive, conformance, v2-compat, events list/describe,
+      golden reference page, emitted-kinds, overflow-parity, sequence, burst,
+      subscribe, dependency-delta, frame-bound)."
     type: "info"
     date: "2026-11-13"

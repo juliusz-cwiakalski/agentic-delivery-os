@@ -106,7 +106,7 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
         topic.kinds.filter((kind) => kind.emitted).map((kind) => `${topic.name}/${kind.name}`),
       ),
     );
-    expect(declared.size).toBe(13);
+    expect(declared.size).toBe(17);
     expect([...emitted].sort()).toEqual([...declared].sort());
     // GH-292 F-6: `remove` is emitted; the case view's durable removal record
     // is observed exactly once.
@@ -115,7 +115,7 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
     ).toEqual(["GH-700"]);
   });
 
-  test("each of the thirteen declared kinds matches the contract field list exactly", () => {
+  test("each of the seventeen declared kinds matches the contract field list exactly", () => {
     const byKind = eventsByKind(projectCaseEvents());
     const covered: string[] = [];
     for (const topic of TAXONOMY.topics) {
@@ -152,12 +152,12 @@ describe("TC-EVT-088 exact emitted payload keys for all declared kinds", () => {
         }
       }
     }
-    expect(covered).toHaveLength(13);
+    expect(covered).toHaveLength(17);
   });
 
   test("the real projected frames satisfy the declaration, payload keys included", () => {
     expect(compareFrames(TAXONOMY, realFrames())).toEqual([]);
-    expect(scriptedFrames(TAXONOMY).length).toBe(13);
+    expect(scriptedFrames(TAXONOMY).length).toBe(17);
     expect(projectionCaseRecords().length).toBeGreaterThanOrEqual(10);
   });
 });

@@ -8,15 +8,15 @@
  * (lines 62-88) and the specification's §5.1 F-3 table.
  */
 
-/** The declared kind order per event topic (DEC-A). */
+/** The declared kind order per event topic (DEC-A; GH-294 TDR-0029 D2 for v2). */
 export const CONTRACT_KINDS = {
-  "queue.graph": ["entry", "dependency-edge", "release", "remove"],
-  "dispatch.attempt": ["started", "refused", "completed"],
+  "queue.graph": ["entry", "dependency-edge", "release", "remove", "park-edge"],
+  "dispatch.attempt": ["started", "refused", "completed", "stop", "parked", "resumed"],
   "phase.state": ["began", "completed", "reopened"],
   "blockers.state": ["published", "updated", "cleared"],
 } as const;
 
-/** The per-kind payload field list per topic, verbatim from §5.1 F-3. */
+/** The per-kind payload field list per topic, verbatim from §5.1 F-3 and §8.2 (v2 adds the peak-pause kinds). */
 export const CONTRACT_PAYLOAD_FIELDS: Readonly<Record<string, Readonly<Record<string, string[]>>>> =
   {
     "queue.graph": {
@@ -33,6 +33,7 @@ export const CONTRACT_PAYLOAD_FIELDS: Readonly<Record<string, Readonly<Record<st
         "recordedAt",
       ],
       remove: ["ref", "reason", "recordedAt"],
+      "park-edge": ["ref", "cause", "until?", "episodeId", "recordedAt"],
     },
     "dispatch.attempt": {
       started: ["ref", "spawnOrdinal", "sessionId?", "harnessKind?", "recordedAt"],
@@ -58,6 +59,17 @@ export const CONTRACT_PAYLOAD_FIELDS: Readonly<Record<string, Readonly<Record<st
         "divergenceRef?",
         "finishedAt",
       ],
+      stop: ["ref", "graceDeadline", "providerProfile", "windowEnd", "stoppedAt", "episodeId"],
+      parked: [
+        "ref",
+        "reason",
+        "providerProfile",
+        "until",
+        "preservation",
+        "recordedAt",
+        "episodeId",
+      ],
+      resumed: ["ref", "sessionRef", "branch", "reDispatched", "resumedAt", "episodeId"],
     },
     "phase.state": {
       began: ["changeRef", "phaseId", "timestamp"],
@@ -78,7 +90,7 @@ export const CONTRACT_PAYLOAD_FIELDS: Readonly<Record<string, Readonly<Record<st
     },
   };
 
-/** The four S17 shapes that must never be declared as v1 kinds (DEC-A, NG-2). */
+/** The four S17 shapes, declared under taxonomy v2 (GH-294 DEC-3, TDR-0029 D2). */
 export const S17_KIND_NAMES = ["stop", "parked", "resumed", "park-edge"] as const;
 
 /** One surface invocation in the exit decision table (TC-EVT-014). */
