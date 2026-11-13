@@ -32,9 +32,9 @@ The capture path is non-gating: a decode failure is counted and an append failur
 Every stored step carries five attribution dimensions: `ticket`, `repository`, `lane`, `agentRole`, and `model`.
 
 - `ticket` is the work-item ref the capture runs for; `repository` resolves from the checkout identity.
-- `lane` and `agentRole` come from the command-audit claimed identity for the session.
+- `lane` and `agentRole` come from the command-audit claimed identity for the session: the delivered production composition joins the same substrates the ledger records, answering from a completed run's recorded claim and, failing that, from the invoking process's own claimed identity. An unreported `lane` stays unattributed and disclosed.
 - `model` comes from the decoded step frame.
-- `runId` and `sessionId` join the delivered session-economics identity; `treeRoot` records the checkout.
+- `runId` and `sessionId` join the delivered session-economics identity; `treeRoot` records the checkout. The sink's run identity is the invoking command's audit run id, so every stored step record joins the command-audit ledger by that value; a composition that carries no invocation run id records the declared `run-unavailable` marker instead of inventing one.
 
 An absent dimension is stored as `null` and the record carries the closed `unattributable-step` warning naming the field. A dimension is never defaulted, guessed, or borrowed from another session.
 
@@ -49,9 +49,11 @@ An absent dimension is stored as `null` and the record carries the closed `unatt
 | Missing cost | `cost-missing`; the report discloses sparsity. |
 | Unrecognised frame type or unexpected part shape | Degrades with the closed `version-drift` warning; ingest continues. |
 | Non-object frame | Counted as a failed frame; ingest continues. |
+| Numeric stamp beyond the representable date range | Stored as `null` with `non-numeric-value` naming the field; excluded from timing, never thrown. |
+| Frame arriving before its session is known | Counted degraded under `unattributable-session`; it can never be attributed to a session. |
 | Session-total read unavailable | No baseline record lands; the session appears as an excluded baseline session. No figure is fabricated. |
 
-The sink maintains `captured`, `degraded`, and `failed` counts plus per-reason counts. Ingest failure never changes the delivery outcome, report, or exit.
+The sink maintains `captured`, `degraded`, and `failed` counts plus per-reason counts, exposes them through a live accounting read on the sink contract, and writes them at session close as one durable ingest-accounting record. A step whose storage append does not land is counted `failed` under the closed `capture-append-failed` reason, never `captured`; a failed session-total read is counted `failed` under the delivered `session-capture-failed` reason. Ingest failure never changes the delivery outcome, report, or exit.
 
 ## 4. Storage
 
@@ -61,8 +63,9 @@ The storage identity is the brand-neutral `delivery.telemetry.storage.v1`; a ver
 |---|---|---|
 | `harness.telemetry.step` | `delivery.harness.telemetry.step.v1` | `harness.telemetry.step:` |
 | `harness.telemetry.baseline` | `delivery.harness.telemetry.baseline.v1` | `harness.telemetry.baseline:` |
+| `harness.telemetry.capture` | `delivery.telemetry.capture.v1` | `harness.telemetry.capture:` |
 
-Appends run through the delivered fenced append path. A step append is one framed, checksummed, fsynced record with no per-step whole-ledger re-read, so ingest stays bounded and constant-memory on a long session; a baseline append is idempotent by (run, session) and reads back before success. Strict payload validation classifies a torn or shape-invalid record as the delivered `state.store.torn`; an unsupported version is `state.schema.mismatch`; an unknown store condition is `state.store.unknown`. Growth is linear in records: one bounded append per captured step and one per session close, no compaction, no backfill, no derived document.
+Appends run through the delivered fenced append path. A step append is one framed, checksummed, fsynced record with no per-step whole-ledger re-read, so ingest stays bounded and constant-memory on a long session; a baseline append is idempotent by (run, session), and the idempotency read runs inside the acquired fence so two concurrent captures of one session cannot both append. One ingest-accounting record is appended per session close over the same fenced path, so a degradation that never produced a step record still leaves a counted trace. Strict payload validation classifies a torn or shape-invalid record as the delivered `state.store.torn`; an unsupported version is `state.schema.mismatch`; an unknown store condition is `state.store.unknown`. Growth is linear in records: one bounded append per captured step, plus one or two per session close (always the accounting record, and the baseline when the session's totals were read), no compaction, no backfill, no derived document.
 
 Telemetry records are state-ledger records and never enter the memory change capsule.
 

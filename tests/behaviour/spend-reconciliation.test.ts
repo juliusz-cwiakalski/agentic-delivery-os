@@ -22,9 +22,9 @@ import {
   makeBaselineRecord,
   makeStepRecord,
   makeV1Record,
-  removeRoot,
   RUN_A,
   RUN_B,
+  removeRoot,
   SESSION_A,
   SESSION_B,
   T1,
@@ -166,6 +166,71 @@ describe("TC-TELEMETRY-020 over-tolerance deviation renders the outside verdict"
         baselines: [baseline({ sessionId: SESSION_A, runId: RUN_A, input: 100 })],
       },
       "r03-control",
+    );
+    expect(control.fold.data.reconciliation.verdict).toBe(TELEMETRY_VERDICT_WITHIN);
+  });
+});
+
+describe("TC-TELEMETRY-020 zero-base divergence rides one token class (RSK-1)", () => {
+  test("a baseline-zero class the observed steps carry renders the outside verdict", () => {
+    const seeded = folded(
+      {
+        steps: [
+          makeStepRecord({
+            sessionId: SESSION_A,
+            runId: RUN_A,
+            tokens: tokens({ input: 100, cacheWrite: 50 }),
+            calls: 1,
+            cost: 0.01,
+            finishedAt: T1,
+          }),
+        ],
+        baselines: [
+          makeBaselineRecord({
+            sessionId: SESSION_A,
+            runId: RUN_A,
+            tokens: tokens({ input: 100 }),
+            calls: 1,
+            cost: 0.01,
+          }),
+        ],
+      },
+      "r-zero-base",
+    );
+    const reconciliation = seeded.fold.data.reconciliation;
+    // Hand sums: the matched input class alone would read within; the whole
+    // headline divergence rides the baseline-zero cacheWrite class
+    // (observed 50, harness 0) — schema drift, not a tolerance-shaped gap.
+    expect(reconciliation.observedTotals.cacheWrite).toBe(50);
+    expect(reconciliation.harnessTotals?.cacheWrite).toBe(0);
+    expect(reconciliation.verdict).toBe(TELEMETRY_VERDICT_OUTSIDE);
+    expect(reconciliation.tolerance).toBe(TELEMETRY_RECONCILIATION_TOLERANCE);
+  });
+
+  test("the matched-classes control renders within (non-vacuity)", () => {
+    const control = folded(
+      {
+        steps: [
+          makeStepRecord({
+            sessionId: SESSION_A,
+            runId: RUN_A,
+            tokens: tokens({ input: 100, cacheWrite: 50 }),
+            calls: 1,
+            cost: 0.01,
+            finishedAt: T1,
+          }),
+        ],
+        baselines: [
+          makeBaselineRecord({
+            sessionId: SESSION_A,
+            runId: RUN_A,
+            tokens: tokens({ input: 100, cacheWrite: 50 }),
+            calls: 1,
+            cost: 0.01,
+          }),
+        ],
+      },
+      "r-zero-base-control",
     );
     expect(control.fold.data.reconciliation.verdict).toBe(TELEMETRY_VERDICT_WITHIN);
   });

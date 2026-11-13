@@ -116,6 +116,9 @@ import {
   serializeIdentityMarker,
   stateScopeEnvironmentName,
   stateScopeRoots,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionTotalsReader,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
@@ -154,7 +157,10 @@ import {
   type QueueDegradationReason,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type StateStorePort,
   type SupervisorPort,
+  TELEMETRY_RUN_ID_UNAVAILABLE,
+  type TelemetryIngestSink,
   VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
@@ -163,6 +169,7 @@ import {
   createStateStore,
   ensureEconomicsExhaustionRecord,
   foldPhaseState,
+  readAuditLedger,
   readChangeTransitionsTolerant,
   readEconomicsRecords,
   STATE_SCHEMA_VERSION,
@@ -191,6 +198,7 @@ import {
   type DispatchCommandRuntime,
   type DispatchComposition,
   type DispatchLaneFacts,
+  resolveAgentIdentity,
 } from "./edge.js";
 import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
 import { workingNameEnvironmentVariable } from "./entrypoint.js";
@@ -479,6 +487,92 @@ const scopeRefusalProgram = (
   const commands: Record<string, CommandDefinition> = {};
   for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definition;
   return { commands };
+};
+
+/**
+ * The bounded audit-ledger read the claimed-identity substrate performs.
+ *
+ * The read is one verified, filtered pass over the delivered ledger with a
+ * declared limit; a claim absent from the read window answers nothing, so the
+ * invoking process's own claim decides instead of an invented value.
+ */
+const TELEMETRY_AUDIT_READ_LIMIT = 64;
+
+/** The injected facts one production ingest sink composes over (GH-291 F-1, F-2). */
+export type ProductionTelemetrySinkInput = {
+  readonly store: StateStorePort;
+  readonly workItemRef: string;
+  /** The invoking command's audit run id: the correlation key of every step. */
+  readonly runId: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+  readonly treeRoot: string | null;
+  readonly repository: string | null;
+  readonly harnessVersion?: string | null;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly sessionTotals?: TelemetrySessionTotalsReader;
+};
+
+/**
+ * Compose one harness session's telemetry ingest sink over the delivered
+ * substrates (GH-291 F-1, F-2; AC-F2-1).
+ *
+ * The claimed agent identity is read from the same injected-environment claim
+ * the delivered command-audit ledger records, and the run identity is the
+ * invoking command's own audit run id — so a real delivery's steps carry the
+ * claimed role and a run id that joins the audit ledger, instead of a random
+ * id that joins nothing. The attribution ports answer from the delivered
+ * session economics (session/run identity) and the delivered command-audit
+ * ledger (a completed run's claimed identity).
+ *
+ * The delivered claim is one per-lane-unique value with no declared role/lane
+ * split, so it is recorded as the claimed agent role; the lane dimension stays
+ * unattributable and disclosed (`unattributable-step`) rather than guessed.
+ */
+export const createProductionTelemetrySink = (
+  input: ProductionTelemetrySinkInput,
+): TelemetryIngestSink => {
+  const resolved = resolveAgentIdentity(input.environment, input.environmentPrefix);
+  const invocationClaim: TelemetryClaimedIdentity = {
+    agentRole: resolved?.value ?? null,
+    lane: null,
+  };
+  const recordedClaim = (runId: string): TelemetryClaimedIdentity | undefined => {
+    const ledger = readAuditLedger(input.store, { limit: TELEMETRY_AUDIT_READ_LIMIT });
+    if (!ledger.ok) return undefined;
+    const record = ledger.value.records.find((candidate) => candidate.runId === runId);
+    const value = record?.agentIdentity?.value;
+    if (value === undefined || value.trim().length === 0) return undefined;
+    return { agentRole: value, lane: null };
+  };
+  const attribution: TelemetryAttributionSubstrates = {
+    readSessionIdentity: (sessionId) => {
+      const records = readEconomicsRecords(input.store, input.workItemRef);
+      if (!records.ok) return undefined;
+      const recorded = records.restarts.find((entry) => entry.sessionId === sessionId);
+      return recorded === undefined ? undefined : { sessionId, runId: recorded.runId };
+    },
+    // A finished run's recorded claim wins; the invoking process's own claim
+    // answers otherwise. One sink serves one spawned session, so that claim is
+    // this session's claimed identity — never a value borrowed from elsewhere.
+    readClaimedIdentity: (runId) => recordedClaim(runId) ?? invocationClaim,
+  };
+  return createTelemetryIngestSink({
+    store: input.store,
+    workItemRef: input.workItemRef,
+    runId: input.runId,
+    harnessKind: "opencode",
+    harnessVersion: input.harnessVersion ?? null,
+    treeRoot: input.treeRoot,
+    repository: input.repository,
+    claimed: invocationClaim,
+    attribution,
+    model: null,
+    nowIso: input.nowIso,
+    newFenceToken: input.newFenceToken,
+    ...(input.sessionTotals === undefined ? {} : { sessionTotals: input.sessionTotals }),
+  });
 };
 
 /**
@@ -1016,11 +1110,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             telemetrySinkFor: ({ workItemRef }) => {
               const resolution = resolveProductionHarnessSettings();
               if (!resolution.ok) return undefined;
-              return createTelemetryIngestSink({
+              return createProductionTelemetrySink({
                 store,
                 workItemRef,
-                runId: `run-${globalThis.crypto.randomUUID()}`,
-                harnessKind: "opencode",
+                // The invoking command's audit run id: every step record joins
+                // the audit ledger instead of carrying an invented identity.
+                runId: invocation?.runId ?? TELEMETRY_RUN_ID_UNAVAILABLE,
+                environment,
+                environmentPrefix: brand.environmentPrefix,
                 treeRoot: cwd,
                 repository: cwd,
                 nowIso,

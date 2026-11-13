@@ -52,7 +52,17 @@ export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
  * read-only `projects list` surface must not run store-opening maintenance. No
  * other behaviour may branch on it.
  */
-export type EntrypointInvocationFact = { readonly command: string };
+/**
+ * The invoking command's facts, resolved before the composition runs.
+ *
+ * `runId` is the invocation's one run identity: the composer wires it into
+ * capture paths that must join the command-audit ledger, and `runCli` records
+ * the same value on the envelope and the audit invocation.
+ */
+export type EntrypointInvocationFact = {
+  readonly command: string;
+  readonly runId?: string;
+};
 
 /** Composes the prompt-required program; help/version never calls it. */
 export type EntrypointComposer = (
@@ -196,10 +206,13 @@ const dependenciesFor = (
   options: EntrypointOptions,
   entrypoint: Entrypoint,
   program: CommandProgram,
+  runId: string,
 ): CliDependencies => ({
   brand: entrypoint.brand,
   clock: options.clock ?? { now: () => Date.now() },
-  newRunId: options.newRunId ?? (() => globalThis.crypto.randomUUID()),
+  // The invocation's one run identity: generated once here so the composed
+  // capture paths and the audit record share it.
+  newRunId: () => runId,
   secrets: entrypointSecrets(options, entrypoint.brand),
   program,
   ...(options.mode === undefined ? {} : { mode: options.mode }),
@@ -268,9 +281,14 @@ export const runEntrypoint = async (
   }
 
   const command = first;
+  // One run identity per invocation, generated before composition so capture
+  // paths composed for this command can join the audit ledger's record.
+  const runId = (options.newRunId ?? (() => globalThis.crypto.randomUUID()))();
   const composed = (() => {
     try {
-      return selectPromptRequiredProgram(entrypoint.composeProgram(entrypoint.brand, { command }));
+      return selectPromptRequiredProgram(
+        entrypoint.composeProgram(entrypoint.brand, { command, runId }),
+      );
     } catch {
       // A composition gap is reported as the containment identity, never as a
       // silent success or an unclassified crash.
@@ -282,7 +300,7 @@ export const runEntrypoint = async (
     ? { commands: { [command]: uncomposedDefinition(command) } }
     : composed;
 
-  return runCli(argv, options.streams, dependenciesFor(options, entrypoint, program));
+  return runCli(argv, options.streams, dependenciesFor(options, entrypoint, program, runId));
 };
 
 /** The help inventory rendered for the current brand (used by coverage checks). */

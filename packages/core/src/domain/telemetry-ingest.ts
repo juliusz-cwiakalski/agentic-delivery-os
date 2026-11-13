@@ -24,7 +24,7 @@ import {
   TELEMETRY_STEP_SCHEMA_ID,
   TELEMETRY_STORAGE_SCHEMA_VERSION,
   TELEMETRY_WARNING_REASONS,
-  type TelemetryIngestCounts,
+  type TelemetryIngestAccounting,
   type TelemetryStepRecord,
   type TelemetryStepTokens,
   type TelemetryWarning,
@@ -90,10 +90,7 @@ export type TelemetryFrameOutcome =
   | { readonly kind: "failed" };
 
 /** The accounting every ingest run discloses (§10): counts plus per-reason counts. */
-export type TelemetryIngestTally = {
-  readonly counts: TelemetryIngestCounts;
-  readonly byReason: Readonly<Record<TelemetryWarningReason, number>>;
-};
+export type TelemetryIngestTally = TelemetryIngestAccounting;
 
 /** The zero tally: nothing captured, nothing degraded, nothing failed. */
 export const emptyIngestTally = (): TelemetryIngestTally => ({
@@ -188,20 +185,38 @@ const decodeCost = (part: Record<string, unknown>, warnings: TelemetryWarning[])
 const stringOrNull = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
 
-/** The frame's own instant as an ISO stamp; an absent stamp stays null. */
-const stampOf = (value: unknown): string | null =>
-  typeof value === "number" && Number.isFinite(value)
-    ? new Date(value).toISOString()
-    : stringOrNull(value);
+/** The largest finite epoch-millisecond value a `Date` can represent (±8.64e15). */
+const MAX_EPOCH_MS = 8.64e15;
+
+/**
+ * The frame's own instant as an ISO stamp; an absent stamp stays null.
+ *
+ * A finite numeric stamp outside the representable range is a `non-numeric-value`
+ * degradation naming its field: the value is unusable as an instant, so it is
+ * excluded and counted rather than thrown from the adapter's drain.
+ */
+const stampOf = (value: unknown, field: string, warnings: TelemetryWarning[]): string | null => {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Math.abs(value) > MAX_EPOCH_MS) {
+      warnings.push({ reason: "non-numeric-value", field });
+      return null;
+    }
+    return new Date(value).toISOString();
+  }
+  return stringOrNull(value);
+};
 
 /** The step timing the frame reports: explicit `part.time` first, then the stamp. */
 const timingOf = (
   part: Record<string, unknown>,
   frame: Record<string, unknown>,
+  warnings: TelemetryWarning[],
 ): { readonly startedAt: string | null; readonly finishedAt: string | null } => {
   const time = isRecord(part.time) ? part.time : undefined;
-  const finishedAt = stampOf(time?.end) ?? stampOf(frame.timestamp);
-  return { startedAt: stampOf(time?.start), finishedAt };
+  const finishedAt =
+    stampOf(time?.end, "part.time.end", warnings) ??
+    stampOf(frame.timestamp, "frame.timestamp", warnings);
+  return { startedAt: stampOf(time?.start, "part.time.start", warnings), finishedAt };
 };
 
 /**
@@ -239,7 +254,7 @@ export const decodeTelemetryStepFrame = (
   const tokens = decodeTokens(part[TELEMETRY_FRAME_TOKENS_FIELD], warnings);
   const calls = decodeCalls(part, warnings);
   const cost = decodeCost(part, warnings);
-  const { startedAt, finishedAt } = timingOf(part, frame);
+  const { startedAt, finishedAt } = timingOf(part, frame, warnings);
   const model = stringOrNull(part.model) ?? context.model;
   const attribution = attributeStep({
     workItemRef: context.workItemRef,
@@ -314,6 +329,31 @@ export const tallyFrame = (
       captured: tally.counts.captured,
       degraded: tally.counts.degraded,
       failed: tally.counts.failed + 1,
+    },
+    byReason,
+  };
+};
+
+/**
+ * Fold one degradation that produced no step record into the tally (§10).
+ *
+ * Drift frames, undecodable frames, frames arriving before their session is
+ * known, a storage append that did not land, and an unreadable session basis
+ * are all disclosed this way: one closed reason, one count, never a silent
+ * drop. A `failed` degradation is a capture that did not happen; anything else
+ * is a capture that happened with a disclosed omission.
+ */
+export const tallyIngestDegradation = (
+  tally: TelemetryIngestTally,
+  degradation: { readonly reason: TelemetryWarningReason; readonly failed: boolean },
+): TelemetryIngestTally => {
+  const byReason = { ...tally.byReason };
+  byReason[degradation.reason] += 1;
+  return {
+    counts: {
+      captured: tally.counts.captured,
+      degraded: tally.counts.degraded + (degradation.failed ? 0 : 1),
+      failed: tally.counts.failed + (degradation.failed ? 1 : 0),
     },
     byReason,
   };

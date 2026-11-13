@@ -97,17 +97,20 @@ describe("telemetry v2 contract declaration", () => {
       expect(reasons.includes(reason)).toBe(true);
     }
     // The five degradation classes: omission, drift, unattributable,
-    // baseline-exclusion, truncation — each has its closed reason.
+    // baseline-exclusion, truncation — each has its closed reason. A step
+    // whose storage append did not land is disclosed as
+    // `capture-append-failed`, never silently counted as captured.
     for (const reason of [
       "optional-field-absent",
       "version-drift",
       "unattributable-step",
       "baseline-session-excluded",
       "truncated",
+      "capture-append-failed",
     ]) {
       expect(reasons.includes(reason)).toBe(true);
     }
-    expect(reasons.length).toBe(HARNESS_WARNING_REASONS.length + 2);
+    expect(reasons.length).toBe(HARNESS_WARNING_REASONS.length + 3);
   });
 
   test("the breakdown-field set is exactly the five declared dimensions", () => {

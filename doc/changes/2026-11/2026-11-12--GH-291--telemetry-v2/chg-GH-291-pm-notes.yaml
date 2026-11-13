@@ -445,3 +445,72 @@ notes:
       remediation + re-review iteration.
     type: retro
     date: "2026-11-13"
+  - text: >-
+      Review remediation complete (review-iter-1 F-1..F-6; F-7/F-8 no action
+      per review). Resumed from the interrupted lane's uncommitted work
+      (verified stable, no live writer), assessed it per finding, and
+      completed the gaps. F-1 fixed-by-dirty-work + test-by-this-session:
+      `createProductionTelemetrySink` (packages/cli/src/production.ts) joins
+      the delivered substrates — `readSessionIdentity` over session-economics
+      records, `readClaimedIdentity` over a bounded 64-record command-audit
+      read with the invoking process's claimed identity as fallback — and
+      `telemetrySinkFor` passes the invocation's audit run id (entrypoint.ts
+      generates one runId per invocation, shared by the audit record and the
+      capture paths; absence records the declared `run-unavailable` marker);
+      edge.ts `createTelemetryIngestSink` accepts the attribution ports and
+      joins them per session through `joinAttributionSubstrates`. Demanded
+      composition test added (tests/behaviour/telemetry-attribution.test.ts):
+      a ledger claim + audit-correlated runId reach a stored step record, lane
+      stays disclosed-null, session close lands the capture record; plus the
+      env-claim fallback test. F-2 fixed-by-dirty-work + tests-by-this-
+      session: tally surfaced via `TelemetryIngestAccounting` + sink
+      `accounting()`; new `harness.telemetry.capture` family
+      (delivery.telemetry.capture.v1) appended at session close over the
+      fenced path (appendTelemetryCaptureOutcome/readTelemetryCaptureOutcomes);
+      append failures counted `failed` under the new closed
+      `capture-append-failed` reason (vocabulary +3), pre-session frames
+      degraded `unattributable-session`, failed session-total reads
+      `session-capture-failed`; `tallyIngestDegradation` folds no-record
+      degradations. Four accounting tests added
+      (tests/behaviour/telemetry-ingest.test.ts). F-3 fixed-by-dirty-work +
+      demanded regression test-by-this-session: `deviationOf` treats a
+      baseline-zero class with observed > 0 as an immediate full deviation,
+      so zero-base schema drift renders `outside`
+      (tests/behaviour/spend-reconciliation.test.ts, outside + matched
+      within-control). F-4 fixed-by-dirty-work: `stampOf` range-guards finite
+      numerics at ±8.64e15 ms; out-of-range classifies `non-numeric-value`
+      naming the field, never thrown. F-5 fixed-by-dirty-work: baseline
+      idempotency read moved inside the acquired fence, released on every
+      early return. F-6 fixed-by-dirty-work: orphaned doc block reattached
+      above `boundReport`. Ripple obligations of the contract additions (same
+      class as the disclosed phase-3/8 inventory ripples): v1-contract-
+      inventory.json (+6 export names in both sections), content-inventory
+      executable allowances, telemetry-contract warning-vocabulary pin (+3),
+      error-table-sync reserved record-kind literal
+      (`harness.telemetry.capture` — schema name, not an error code),
+      state-additivity baseline (+3 capture constants), biome formatting.
+      Gates: `pnpm typecheck` green; telemetry+spend battery 115 pass / 0
+      fail across 13 suites; full `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 —
+      7837 pass / 4 skip / 0 fail across 987 files; boundaries, prompt
+      conformance, help-guide coverage, exports parity all green. Docs
+      updated truthfully and minimally: feature-telemetry-v2.md (attribution
+      substrate join + run-id correlation, ingest rows for stamp range/
+      pre-session/append-failure + accounting disclosure, capture record
+      family + in-fence idempotency + growth), feature-spend.md
+      (reconciliation: zero-base class counts as immediate full deviation).
+      Declared deviations: the remediation is post-plan work committed under
+      the plan-union rule; the commit envelope disclosed six files outside the
+      union of declared phase scope files — packages/cli/src/entrypoint.ts and
+      packages/cli/src/production.ts (the F-1 invocation runId threading and
+      production sink composition), packages/core/src/index.ts (barrel
+      re-export of the new domain export), scripts/checks/error-table-sync.ts,
+      tests/fixtures/events/state-additivity-baseline.json, and
+      tests/fixtures/ports/v1-contract-inventory.json (the ripple
+      registrations the contract additions require) — all remediation or
+      ripple obligations of review-iter-1, disclosed here and in the envelope.
+      Transport note: the first commit attempt was refused because the
+      commitlint probe's bare binary was not on PATH (ENOENT surfaced as the
+      generic rejection); retried with node_modules/.bin on PATH, no code
+      change. Doc-syncer re-verification and re-review at iteration 2 follow.
+    type: "info"
+    date: "2026-11-13"

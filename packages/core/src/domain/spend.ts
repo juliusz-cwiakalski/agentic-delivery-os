@@ -20,22 +20,17 @@ import {
   CANONICAL_PHASE_IDS,
   HARNESS_TOKEN_CLASSES,
   HARNESS_WARNING_REASONS,
-  SPEND_AMPLIFICATION_CAUSES,
-  SPEND_BREAKDOWN_FIELDS,
-  SPEND_MAX_MACHINE_BYTES,
-  SPEND_PHASE_UNKNOWN,
-  SPEND_TRUNCATION_MARKER,
-  TELEMETRY_RECONCILIATION_TOLERANCE,
-  TELEMETRY_STATE_PRESENT,
-  TELEMETRY_VERDICT_OUTSIDE,
-  TELEMETRY_VERDICT_UNAVAILABLE,
-  TELEMETRY_VERDICT_WITHIN,
   type HarnessCaptureOutcomeRecord,
   type HarnessTelemetryRecord,
   type HarnessTokenClass,
   type HarnessTokenCounts,
   type HarnessWarningReason,
   type PhaseTransitionRecord,
+  SPEND_AMPLIFICATION_CAUSES,
+  SPEND_BREAKDOWN_FIELDS,
+  SPEND_MAX_MACHINE_BYTES,
+  SPEND_PHASE_UNKNOWN,
+  SPEND_TRUNCATION_MARKER,
   type SpendAgentEntry,
   type SpendAmplification,
   type SpendAmplificationEvent,
@@ -53,10 +48,15 @@ import {
   type SpendReport,
   type SpendSelection,
   type SpendTruncation,
+  TELEMETRY_RECONCILIATION_TOLERANCE,
+  TELEMETRY_STATE_PRESENT,
+  TELEMETRY_VERDICT_OUTSIDE,
+  TELEMETRY_VERDICT_UNAVAILABLE,
+  TELEMETRY_VERDICT_WITHIN,
   type TelemetryBaselineRecord,
+  type TelemetryReadingBasis,
   type TelemetryReconciliation,
   type TelemetryReconciliationVerdict,
-  type TelemetryReadingBasis,
   type TelemetryStepRecord,
   type TelemetryStepTokens,
 } from "#contracts";
@@ -272,7 +272,15 @@ const stepTokensOf = (totals: Record<HarnessTokenClass, number>): TelemetryStepT
   cacheWrite: totals.cacheWrite,
 });
 
-/** The maximum per-class deviation from the baseline; 0 when no class has a base. */
+/**
+ * The maximum per-class deviation from the baseline; 0 when no class has a base.
+ *
+ * A class the baseline reports as zero while the observed steps carry it is
+ * schema drift, not a tolerance-shaped difference: it counts as an immediate
+ * full deviation, exactly as an all-zero baseline does. Skipping it would let
+ * headline totals diverge arbitrarily through a zero-base class while the
+ * verdict still rendered `within`.
+ */
 const deviationOf = (
   observed: Record<HarnessTokenClass, number>,
   baseline: Record<HarnessTokenClass, number>,
@@ -280,8 +288,11 @@ const deviationOf = (
   let worst = 0;
   for (const tokenClass of HARNESS_TOKEN_CLASSES) {
     const base = baseline[tokenClass];
-    if (base <= 0) continue;
     const observedValue = observed[tokenClass];
+    if (base <= 0) {
+      if (observedValue > 0) worst = 1;
+      continue;
+    }
     const deviation = Math.abs(observedValue - base) / base;
     if (deviation > worst) worst = deviation;
   }
@@ -671,12 +682,6 @@ const breakdownCount = (breakdowns: SpendBreakdowns): number =>
   SPEND_BREAKDOWN_FIELDS.reduce((sum, field) => sum + (breakdowns[field]?.length ?? 0), 0);
 
 /**
- * Bound the machine payload (PIN-2, PIN-3, DM-6): drop trailing `perAgent[]`
- * entries first, then trailing breakdown rows, then trailing `perPhase[]`
- * entries, then trailing amplification events, and record the dropped counts.
- * The totals, restarts, ratio, and the reconciliation block are never cut.
- */
-/**
  * The largest prefix of `entries` whose rebuilt report fits the byte bound.
  *
  * Size is monotonic in the retained count, so a binary search needs only
@@ -698,6 +703,12 @@ const largestFitting = <T>(
   return entries.slice(0, low);
 };
 
+/**
+ * Bound the machine payload (PIN-2, PIN-3, DM-6): drop trailing `perAgent[]`
+ * entries first, then trailing breakdown rows, then trailing `perPhase[]`
+ * entries, then trailing amplification events, and record the dropped counts.
+ * The totals, restarts, ratio, and the reconciliation block are never cut.
+ */
 const boundReport = (
   report: SpendReport,
 ): { readonly report: SpendReport; readonly truncation: SpendTruncation } => {

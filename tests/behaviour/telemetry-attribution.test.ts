@@ -1,12 +1,24 @@
 /**
  * TC-TELEMETRY-006..008 — the five attribution dimensions on every stored step,
- * the no-misattribution rule for unattributable steps, and the substrate join
- * over the delivered economics and command-audit identity.
+ * the no-misattribution rule for unattributable steps, the substrate join over
+ * the delivered economics and command-audit identity, and the production
+ * composition that carries a claimed identity and the audit-correlated run id
+ * into the stored record (AC-F2-1).
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { TELEMETRY_UNATTRIBUTED_DIMENSION_RULE } from "../../packages/core/src/contracts/index";
+import { createProductionTelemetrySink } from "../../packages/cli/src/production";
+import {
+  RESULT_SCHEMA_VERSION,
+  TELEMETRY_UNATTRIBUTED_DIMENSION_RULE,
+} from "../../packages/core/src/contracts/index";
 import { joinAttributionSubstrates } from "../../packages/core/src/domain/telemetry-attribution";
 import { decodeTelemetryStepFrame } from "../../packages/core/src/domain/telemetry-ingest";
+import {
+  appendAuditInvocation,
+  readAuditLedger,
+  readTelemetryCaptureOutcomes,
+  readTelemetrySteps,
+} from "../../packages/core/src/state/index";
 import { completeTokenFrame } from "../fixtures/harness/scenarios/stream";
 import {
   AGENT_ROLE,
@@ -15,6 +27,7 @@ import {
   LANE,
   MODEL_A,
   MODEL_B,
+  makeRestartRecord,
   makeStepRecord,
   makeTelemetryStore,
   REPOSITORY,
@@ -24,7 +37,10 @@ import {
   removeRoot,
   SESSION_A,
   SESSION_B,
+  seedRestarts,
   T1,
+  TELEMETRY_NOW_ISO,
+  TELEMETRY_NOW_MS,
   TELEMETRY_REF,
   type TelemetryStoreFixture,
   tallyLines,
@@ -196,5 +212,99 @@ describe("TC-TELEMETRY-008 attribution joins the delivered substrates", () => {
     expect(decoded.record.finishedAt).toBe(new Date(3).toISOString());
     expect(decoded.record.startedAt).toBeNull();
     expect(makeStepRecord({ finishedAt: T1 }).finishedAt).toBe(T1);
+  });
+});
+
+describe("TC-TELEMETRY-008 the production composition joins the delivered substrates", () => {
+  test("the audit-ledger claim and the audit-correlated run id reach the stored step record", () => {
+    const fixture = store("production-compose");
+    const audited = appendAuditInvocation(fixture.store, {
+      runId: RUN_A,
+      command: "spend",
+      arguments: ["spend", "--ref", TELEMETRY_REF],
+      exitCode: 0,
+      timing: { totalMs: 1 },
+      resultSchemaVersion: RESULT_SCHEMA_VERSION,
+      outcomeClass: "success",
+      scope: "workspace-a",
+      startedAt: TELEMETRY_NOW_MS,
+      agentIdentity: { kind: "claimed", value: "coder-ledger" },
+    });
+    if (!audited.ok) throw new Error(audited.error.code);
+    seedRestarts(fixture.store, [
+      makeRestartRecord({ ordinal: 1, sessionId: SESSION_A, runId: RUN_A }),
+    ]);
+
+    const sink = createProductionTelemetrySink({
+      store: fixture.store,
+      workItemRef: TELEMETRY_REF,
+      runId: RUN_A,
+      environment: {},
+      environmentPrefix: "TEST_",
+      treeRoot: REPOSITORY,
+      repository: REPOSITORY,
+      harnessVersion: "2.2.5",
+      nowIso: () => TELEMETRY_NOW_ISO,
+      newFenceToken: () => "production-compose-fence",
+    });
+    const frame: unknown = JSON.parse(completeTokenFrame(SESSION_A));
+    sink.onFrame(frame, { sessionId: SESSION_A });
+
+    const steps = readTelemetrySteps(fixture.store, TELEMETRY_REF);
+    if (!steps.ok) throw new Error(steps.error.code);
+    expect(steps.value.records).toHaveLength(1);
+    const record = steps.value.records[0];
+    // The claimed role is the audit ledger's recorded claim for this run —
+    // not an invented default and not another run's value.
+    expect(record?.agentRole).toBe("coder-ledger");
+    // The stored run id is the invocation's audit run id, and it joins the
+    // command-audit ledger by exactly that value.
+    expect(record?.runId).toBe(RUN_A);
+    const ledger = readAuditLedger(fixture.store, { limit: 8 });
+    if (!ledger.ok) throw new Error(ledger.error.code);
+    expect(ledger.value.records.some((entry) => entry.runId === record?.runId)).toBe(true);
+    // The lane dimension stays unattributed and disclosed, never guessed.
+    expect(record?.lane).toBeNull();
+    expect(
+      record?.warnings.some(
+        (warning) => warning.reason === "unattributable-step" && warning.field === "lane",
+      ),
+    ).toBe(true);
+    expect(sink.accounting().counts.captured).toBe(1);
+
+    // Session close lands the durable ingest-accounting record (§10).
+    sink.onSessionClose(SESSION_A);
+    const captures = readTelemetryCaptureOutcomes(fixture.store, TELEMETRY_REF);
+    if (!captures.ok) throw new Error(captures.error.code);
+    expect(captures.value.records).toHaveLength(1);
+    const capture = captures.value.records[0];
+    expect(capture?.runId).toBe(RUN_A);
+    expect(capture?.sessionId).toBe(SESSION_A);
+    expect(capture?.counts.captured).toBe(1);
+    expect(capture?.counts.failed).toBe(0);
+    expect(capture?.byReason["unattributable-step"]).toBe(2);
+  });
+
+  test("without a ledger record, the invoking process's own claimed identity answers", () => {
+    const fixture = store("production-compose-env");
+    seedRestarts(fixture.store, [
+      makeRestartRecord({ ordinal: 1, sessionId: SESSION_A, runId: RUN_A }),
+    ]);
+    const sink = createProductionTelemetrySink({
+      store: fixture.store,
+      workItemRef: TELEMETRY_REF,
+      runId: RUN_A,
+      environment: { TEST_AGENT_IDENTITY: "coder-invocation" },
+      environmentPrefix: "TEST_",
+      treeRoot: REPOSITORY,
+      repository: REPOSITORY,
+      nowIso: () => TELEMETRY_NOW_ISO,
+      newFenceToken: () => "production-compose-fence",
+    });
+    sink.onFrame(JSON.parse(completeTokenFrame(SESSION_A)), { sessionId: SESSION_A });
+    const steps = readTelemetrySteps(fixture.store, TELEMETRY_REF);
+    if (!steps.ok) throw new Error(steps.error.code);
+    expect(steps.value.records[0]?.agentRole).toBe("coder-invocation");
+    expect(steps.value.records[0]?.runId).toBe(RUN_A);
   });
 });

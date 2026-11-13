@@ -226,6 +226,7 @@ const ADAPTER_LOCAL_CODES = new Set(["provider.payload.invalid"]);
 const RESERVED_RECORD_KIND_LITERALS = new Set([
   "harness.telemetry.step",
   "harness.telemetry.baseline",
+  "harness.telemetry.capture",
 ]);
 const CODE_FORMAT = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";

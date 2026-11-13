@@ -177,9 +177,11 @@ export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
 export { readSpendLedger } from "./spend-reads.js";
 export {
   appendTelemetryBaseline,
+  appendTelemetryCaptureOutcome,
   appendTelemetryStep,
   captureTelemetryBaseline,
   readTelemetryBaselines,
+  readTelemetryCaptureOutcomes,
   readTelemetryFamilies,
   readTelemetrySteps,
   readTelemetryStepsAtVersion,
@@ -190,6 +192,7 @@ export {
   type TelemetryStepRecordAtVersion,
   type TelemetryStorageReadVersion,
   telemetryBaselineKey,
+  telemetryCaptureKey,
   telemetryStepAtVersion,
   telemetryStepKey,
 } from "./telemetry.js";

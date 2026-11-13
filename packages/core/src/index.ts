@@ -908,6 +908,7 @@ export {
   decodeTelemetryStepFrame,
   emptyIngestTally,
   tallyFrame,
+  tallyIngestDegradation,
   type TelemetryFrameContext,
   type TelemetryFrameOutcome,
   type TelemetryIngestTally,

@@ -120,6 +120,7 @@ import {
   handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
+  joinAttributionSubstrates,
   type MergeTransactionPorts,
   newestWaiverByGate,
   normalizeStagedPaths,
@@ -171,10 +172,12 @@ import {
   spendDigestSection,
   stateScopeRoots,
   summarizeDispatchEvidence,
+  type TelemetryAttributionSubstrates,
   type TelemetryClaimedIdentity,
   type TelemetryFrameContext,
   type TelemetrySessionTotalsReader,
   tallyFrame,
+  tallyIngestDegradation,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -271,6 +274,9 @@ import {
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
+  TELEMETRY_CAPTURE_SCHEMA_ID,
+  TELEMETRY_STORAGE_SCHEMA_VERSION,
+  type TelemetryIngestCaptureRecord,
   type TelemetryIngestSink,
   VERIFY_GATES_FAILURE_CLASSES,
   type WatchdogGitPort,
@@ -306,6 +312,7 @@ import {
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  appendTelemetryCaptureOutcome,
   appendTelemetryStep,
   captureTelemetryBaseline,
   createNodeRetroSidecarIo,
@@ -3897,10 +3904,12 @@ export const readRetroRegistryState = (store: StateStorePort): DoctorStateStores
  * The telemetry ingest composition (GH-291 F-1, F-2, F-4; OQ-T2 §1).
  *
  * The dispatch spawn seam builds one sink per harness session from the
- * delivery's work-item ref. Every decoded frame is counted and, when it is a
- * step, stored; at stream close the session's harness-reported totals are
- * captured through the injected read-only totals reader. The sink is
- * non-gating: storage faults are swallowed here and never change the delivery.
+ * delivery's work-item ref and the invocation's run identity. Every decoded
+ * frame is counted and, when it is a step, attributed through the injected
+ * substrate ports and stored; at stream close the session's harness-reported
+ * totals are captured through the injected read-only totals reader and the
+ * session's ingest accounting lands as one durable record. The sink is
+ * non-gating: storage faults are counted here and never change the delivery.
  */
 export type TelemetryIngestComposition = {
   readonly store: StateStorePort;
@@ -3911,6 +3920,12 @@ export type TelemetryIngestComposition = {
   readonly treeRoot?: string | null;
   readonly repository?: string | null;
   readonly claimed?: TelemetryClaimedIdentity;
+  /**
+   * The delivered attribution substrates: the economics session identity and
+   * the command-audit claimed identity. When supplied, every step's role and
+   * lane are joined from them instead of the static `claimed` value.
+   */
+  readonly attribution?: TelemetryAttributionSubstrates;
   readonly model?: string | null;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
@@ -3922,6 +3937,21 @@ export const createTelemetryIngestSink = (
   input: TelemetryIngestComposition,
 ): TelemetryIngestSink => {
   let tally = emptyIngestTally();
+  const claimedFor = (sessionId: string): TelemetryClaimedIdentity => {
+    const attribution = input.attribution;
+    if (attribution === undefined) return input.claimed ?? { agentRole: null, lane: null };
+    const joined = joinAttributionSubstrates(
+      {
+        workItemRef: input.workItemRef,
+        runId: input.runId,
+        sessionId,
+        repository: input.repository ?? null,
+        model: input.model ?? null,
+      },
+      attribution,
+    );
+    return { agentRole: joined.agentRole, lane: joined.lane };
+  };
   const context = (sessionId: string): TelemetryFrameContext => ({
     workItemRef: input.workItemRef,
     runId: input.runId,
@@ -3931,38 +3961,72 @@ export const createTelemetryIngestSink = (
     treeRoot: input.treeRoot ?? null,
     repository: input.repository ?? null,
     model: input.model ?? null,
-    claimed: input.claimed ?? { agentRole: null, lane: null },
+    claimed: claimedFor(sessionId),
     capturedAt: input.nowIso(),
   });
   return {
     onFrame: (frame, frameContext) => {
       const sessionId = frameContext.sessionId;
-      if (sessionId === undefined) return;
+      if (sessionId === undefined) {
+        // A frame that arrived before its session is known is disclosed, not
+        // dropped: it can never be attributed to a session.
+        tally = tallyIngestDegradation(tally, {
+          reason: "unattributable-session",
+          failed: false,
+        });
+        return;
+      }
       const outcome = decodeTelemetryStepFrame(frame, context(sessionId));
-      tally = tallyFrame(tally, outcome);
-      if (outcome.kind !== "captured") return;
+      if (outcome.kind !== "captured") {
+        tally = tallyFrame(tally, outcome);
+        return;
+      }
       try {
         appendTelemetryStep(input.store, input.newFenceToken(), outcome.record);
       } catch {
-        // Classified by the state tier; ingest is non-gating by contract.
+        // The state tier classifies the failure; ingest only counts it. A step
+        // whose record did not land is failed, never captured.
+        tally = tallyIngestDegradation(tally, { reason: "capture-append-failed", failed: true });
+        return;
       }
+      tally = tallyFrame(tally, outcome);
     },
     onSessionClose: (sessionId) => {
-      if (input.sessionTotals === undefined) return;
+      if (input.sessionTotals !== undefined) {
+        try {
+          captureTelemetryBaseline({
+            store: input.store,
+            fenceToken: input.newFenceToken(),
+            workItemRef: input.workItemRef,
+            runId: input.runId,
+            sessionId,
+            capturedAt: input.nowIso(),
+            readTotals: input.sessionTotals,
+          });
+        } catch {
+          // A failed baseline read lands no record and fabricates no figure; the
+          // degradation is counted under the delivered session-capture reason.
+          tally = tallyIngestDegradation(tally, { reason: "session-capture-failed", failed: true });
+        }
+      }
+      const record: TelemetryIngestCaptureRecord = {
+        schemaId: TELEMETRY_CAPTURE_SCHEMA_ID,
+        storageVersion: TELEMETRY_STORAGE_SCHEMA_VERSION,
+        workItemRef: input.workItemRef,
+        runId: input.runId,
+        sessionId,
+        counts: tally.counts,
+        byReason: tally.byReason,
+        capturedAt: input.nowIso(),
+      };
       try {
-        captureTelemetryBaseline({
-          store: input.store,
-          fenceToken: input.newFenceToken(),
-          workItemRef: input.workItemRef,
-          runId: input.runId,
-          sessionId,
-          capturedAt: input.nowIso(),
-          readTotals: input.sessionTotals,
-        });
+        appendTelemetryCaptureOutcome(input.store, input.newFenceToken(), record);
       } catch {
-        // A failed baseline read lands no record and fabricates no figure.
+        // The accounting record is the durable disclosure, never a gate: a
+        // failed append here cannot change the delivery or the drain.
       }
     },
+    accounting: () => ({ counts: tally.counts, byReason: tally.byReason }),
   };
 };
 

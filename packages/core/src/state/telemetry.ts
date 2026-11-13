@@ -35,15 +35,21 @@ import {
   TELEMETRY_BASELINE_KEY_PREFIX,
   TELEMETRY_BASELINE_RECORD_KIND,
   TELEMETRY_BASELINE_SCHEMA_ID,
+  TELEMETRY_CAPTURE_KEY_PREFIX,
+  TELEMETRY_CAPTURE_RECORD_KIND,
+  TELEMETRY_CAPTURE_SCHEMA_ID,
   TELEMETRY_STEP_KEY_PREFIX,
   TELEMETRY_STEP_RECORD_KIND,
   TELEMETRY_STEP_SCHEMA_ID,
   TELEMETRY_STORAGE_SCHEMA_VERSION,
   TELEMETRY_WARNING_REASONS,
   type TelemetryBaselineRecord,
+  type TelemetryIngestCaptureRecord,
+  type TelemetryIngestCounts,
   type TelemetryStepRecord,
   type TelemetryStepTokens,
   type TelemetryWarning,
+  type TelemetryWarningReason,
 } from "#contracts";
 import {
   parseHarnessCaptureOutcomePayload,
@@ -78,6 +84,10 @@ export const telemetryStepKey = (workItemRef: string): string =>
 /** The store-scoped key carrying one delivery's session baseline records. */
 export const telemetryBaselineKey = (workItemRef: string): string =>
   `${TELEMETRY_BASELINE_KEY_PREFIX}${workItemRef}`;
+
+/** The store-scoped key carrying one delivery's ingest-accounting records (§10). */
+export const telemetryCaptureKey = (workItemRef: string): string =>
+  `${TELEMETRY_CAPTURE_KEY_PREFIX}${workItemRef}`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -293,6 +303,87 @@ const baselineFrom = (
   });
 };
 
+/** A whole non-negative count; a fractional or negative count is malformed. */
+const isWholeCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
+
+/** Validate the three disclosed counts. */
+const countsFrom = (value: unknown): TelemetryIngestCounts | undefined => {
+  if (!isRecord(value)) return undefined;
+  const keys = Object.keys(value);
+  if (keys.length !== 3) return undefined;
+  for (const key of ["captured", "degraded", "failed"] as const) {
+    if (!Object.hasOwn(value, key) || !isWholeCount(value[key])) return undefined;
+  }
+  return {
+    captured: value.captured as number,
+    degraded: value.degraded as number,
+    failed: value.failed as number,
+  };
+};
+
+/** Validate the per-reason counts: exactly the closed vocabulary, nothing else. */
+const byReasonFrom = (
+  value: unknown,
+): Readonly<Record<TelemetryWarningReason, number>> | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (Object.keys(value).length !== TELEMETRY_WARNING_REASONS.length) return undefined;
+  const counts: Record<string, number> = {};
+  for (const reason of TELEMETRY_WARNING_REASONS) {
+    const count = value[reason];
+    if (!isWholeCount(count)) return undefined;
+    counts[reason] = count;
+  }
+  return counts as Readonly<Record<TelemetryWarningReason, number>>;
+};
+
+const capturePayload = (record: TelemetryIngestCaptureRecord): StateJsonValue => ({
+  schemaId: record.schemaId,
+  storageVersion: record.storageVersion,
+  workItemRef: record.workItemRef,
+  runId: record.runId,
+  sessionId: record.sessionId,
+  counts: {
+    captured: record.counts.captured,
+    degraded: record.counts.degraded,
+    failed: record.counts.failed,
+  },
+  byReason: Object.fromEntries(
+    TELEMETRY_WARNING_REASONS.map((reason) => [reason, record.byReason[reason] ?? 0]),
+  ),
+  capturedAt: record.capturedAt,
+});
+
+const captureFrom = (
+  value: unknown,
+  location: StateSafeLocation,
+): StateResult<TelemetryIngestCaptureRecord> => {
+  if (!isRecord(value)) return torn(location);
+  if (value.schemaId !== TELEMETRY_CAPTURE_SCHEMA_ID) return torn(location);
+  if (
+    !(TELEMETRY_STORAGE_READ_VERSIONS as readonly string[]).includes(String(value.storageVersion))
+  ) {
+    return torn(location);
+  }
+  if (!isNonEmptyString(value.workItemRef) || !isNonEmptyString(value.runId)) return torn(location);
+  if (!isNonEmptyString(value.sessionId)) return torn(location);
+  const counts = countsFrom(value.counts);
+  if (counts === undefined) return torn(location);
+  const byReason = byReasonFrom(value.byReason);
+  if (byReason === undefined) return torn(location);
+  if (!isNonEmptyString(value.capturedAt)) return torn(location);
+  return ok({
+    schemaId: TELEMETRY_CAPTURE_SCHEMA_ID,
+    storageVersion: TELEMETRY_STORAGE_SCHEMA_VERSION,
+    workItemRef: value.workItemRef,
+    runId: value.runId,
+    sessionId: value.sessionId,
+    counts,
+    byReason,
+    capturedAt: value.capturedAt,
+  });
+};
+
 /** Read one delivery's verified step records under the exact step key. */
 export const readTelemetrySteps = (
   store: StateStorePort,
@@ -430,18 +521,24 @@ export const appendTelemetryBaseline = (
   fenceToken: string,
   record: TelemetryBaselineRecord,
 ): StateResult<{ readonly appended: boolean; readonly append?: StateAppendOutcome }> => {
+  const acquired = store.acquireFence(fenceToken);
+  if (!acquired.ok) return acquired;
+  const handle = acquired.value.handle;
+  // The idempotency read runs inside the fence: two concurrent captures of one
+  // (run, session) can no longer both observe absence and both append.
   const existing = readTelemetryBaselines(store, record.workItemRef);
-  if (!existing.ok) return existing;
+  if (!existing.ok) {
+    const released = store.releaseFence(handle);
+    return released.ok ? existing : released;
+  }
   if (
     existing.value.records.some(
       (candidate) => candidate.runId === record.runId && candidate.sessionId === record.sessionId,
     )
   ) {
-    return ok({ appended: false });
+    const released = store.releaseFence(handle);
+    return released.ok ? ok({ appended: false }) : released;
   }
-  const acquired = store.acquireFence(fenceToken);
-  if (!acquired.ok) return acquired;
-  const handle = acquired.value.handle;
   const appended = store.append(handle, {
     kind: TELEMETRY_BASELINE_RECORD_KIND,
     recordKey: telemetryBaselineKey(record.workItemRef),
@@ -460,6 +557,69 @@ export const appendTelemetryBaseline = (
     return torn({ path: appended.value.path, record: appended.value.sequence });
   }
   return ok({ appended: true, append: appended.value });
+};
+
+/**
+ * Append one session's ingest accounting record (§10).
+ *
+ * One fenced, verified append per session close under the delivery's capture
+ * key: a degradation that never produced a step record (a drift frame, an
+ * undecodable frame, a failed storage append) still leaves a counted trace.
+ * The write is additive beside the step and baseline families and uses the same
+ * delivered append path.
+ */
+export const appendTelemetryCaptureOutcome = (
+  store: StateStorePort,
+  fenceToken: string,
+  record: TelemetryIngestCaptureRecord,
+): StateResult<{ readonly appended: boolean; readonly append?: StateAppendOutcome }> => {
+  const acquired = store.acquireFence(fenceToken);
+  if (!acquired.ok) return acquired;
+  const handle = acquired.value.handle;
+  const appended = store.append(handle, {
+    kind: TELEMETRY_CAPTURE_RECORD_KIND,
+    recordKey: telemetryCaptureKey(record.workItemRef),
+    payload: capturePayload(record),
+  });
+  const released = store.releaseFence(handle);
+  if (!appended.ok) return appended;
+  if (!released.ok) return released;
+  return ok({ appended: true, append: appended.value });
+};
+
+/** Read one delivery's verified ingest-accounting records under the exact key. */
+export const readTelemetryCaptureOutcomes = (
+  store: StateStorePort,
+  workItemRef: string,
+): StateResult<{
+  readonly records: readonly TelemetryIngestCaptureRecord[];
+  readonly verifiedEmpty: boolean;
+  readonly evidence: { readonly storePath: string };
+}> => {
+  const verified = store.readRecords();
+  if (!verified.ok) return verified;
+  const key = telemetryCaptureKey(workItemRef);
+  const path = verified.value.evidence.storePath;
+  const records: TelemetryIngestCaptureRecord[] = [];
+  for (const ledgerRecord of verified.value.records) {
+    if (ledgerRecord.key !== key) {
+      if (ledgerRecord.key.startsWith(TELEMETRY_CAPTURE_KEY_PREFIX)) {
+        return torn({ path, record: ledgerRecord.sequence });
+      }
+      continue;
+    }
+    if (ledgerRecord.kind !== TELEMETRY_CAPTURE_RECORD_KIND) {
+      return torn({ path, record: ledgerRecord.sequence });
+    }
+    const parsed = captureFrom(ledgerRecord.payload, { path, record: ledgerRecord.sequence });
+    if (!parsed.ok) return parsed;
+    records.push(parsed.value);
+  }
+  return ok({
+    records,
+    verifiedEmpty: verified.value.evidence.verifiedEmpty,
+    evidence: { storePath: path },
+  });
 };
 
 /** The per-session totals read the adapter supplies at stream close (OQ-T2 §1). */

@@ -8,6 +8,11 @@
  * sink, so the seam is exercised end to end and offline.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import type { StateStorePort } from "../../packages/core/src/contracts/index";
+import {
+  readTelemetryCaptureOutcomes,
+  readTelemetrySteps,
+} from "../../packages/core/src/state/index";
 import {
   completeTokenFrame,
   driftedExtraFieldFrame,
@@ -23,6 +28,7 @@ import {
   TOOL_ERROR_LINES,
 } from "../fixtures/harness/scenarios/stream";
 import {
+  ingestSinkOver,
   makeTelemetryStore,
   reasonCount,
   removeRoot,
@@ -287,5 +293,65 @@ describe("TC-TELEMETRY-005 ingest failure accounting never changes the delivery 
     expect(run.records[0]?.tokens).toEqual(
       tokens({ input: 10, output: 20, reasoning: 3, cacheRead: 40, cacheWrite: 5 }),
     );
+  });
+});
+
+describe("TC-TELEMETRY-005 the ingest accounting discloses every degradation", () => {
+  const storeWhoseFenceFails = (fixture: TelemetryStoreFixture): StateStorePort => ({
+    ...fixture.store,
+    acquireFence: () => {
+      throw new Error("fence unavailable");
+    },
+  });
+
+  test("a storage append that does not land is counted failed, never captured", () => {
+    const fixture = store("append-failure");
+    const sink = ingestSinkOver(storeWhoseFenceFails(fixture));
+    sink.onFrame(JSON.parse(completeTokenFrame("ses_append_fail")), {
+      sessionId: "ses_append_fail",
+    });
+    const accounting = sink.accounting();
+    expect(accounting.counts).toEqual({ captured: 0, degraded: 0, failed: 1 });
+    expect(reasonCount(accounting, "capture-append-failed")).toBe(1);
+    // The failed step left no stored record behind.
+    const steps = readTelemetrySteps(fixture.store, TELEMETRY_REF);
+    if (!steps.ok) throw new Error(steps.error.code);
+    expect(steps.value.records).toHaveLength(0);
+  });
+
+  test("a session-close baseline capture that does not land is counted failed", () => {
+    const fixture = store("close-failure");
+    const sink = ingestSinkOver(storeWhoseFenceFails(fixture), {
+      sessionTotals: () => ({ tokens: tokens({ input: 1 }), calls: 1, cost: 0.01 }),
+    });
+    sink.onSessionClose("ses_close_fail");
+    const accounting = sink.accounting();
+    expect(accounting.counts.failed).toBe(1);
+    expect(accounting.counts.captured).toBe(0);
+    expect(reasonCount(accounting, "session-capture-failed")).toBe(1);
+  });
+
+  test("a frame that arrives before its session is known is degraded, never dropped", () => {
+    const fixture = store("pre-session");
+    const sink = ingestSinkOver(fixture.store);
+    sink.onFrame(JSON.parse(completeTokenFrame("ses_early")), {});
+    const accounting = sink.accounting();
+    expect(accounting.counts).toEqual({ captured: 0, degraded: 1, failed: 0 });
+    expect(reasonCount(accounting, "unattributable-session")).toBe(1);
+  });
+
+  test("the session-close accounting record carries the live counts durably", () => {
+    const fixture = store("capture-record");
+    const sink = ingestSinkOver(fixture.store);
+    sink.onFrame(JSON.parse(completeTokenFrame("ses_accounted")), { sessionId: "ses_accounted" });
+    sink.onSessionClose("ses_accounted");
+    const captures = readTelemetryCaptureOutcomes(fixture.store, TELEMETRY_REF);
+    if (!captures.ok) throw new Error(captures.error.code);
+    expect(captures.value.records).toHaveLength(1);
+    const capture = captures.value.records[0];
+    expect(capture?.counts).toEqual({ captured: 1, degraded: 0, failed: 0 });
+    expect(capture?.byReason["capture-append-failed"]).toBe(0);
+    // The durable record and the live accessor report the same accounting.
+    expect(capture?.byReason).toEqual(sink.accounting().byReason);
   });
 });
