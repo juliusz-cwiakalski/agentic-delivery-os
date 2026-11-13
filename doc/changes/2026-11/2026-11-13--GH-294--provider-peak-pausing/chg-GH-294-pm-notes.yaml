@@ -278,8 +278,7 @@ notes:
       lanes-list + golden brief)."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 8 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): the declared daemon-absent
+  - text: "Plan phase 8 complete (commit 658ffad9e): the declared daemon-absent
       degradation — foldLanes gains peakEnforcement
       (QUEUE_PEAK_ENFORCEMENT_MODES closed set; default
       iteration-start-gating + parkClaimed false; resident daemon composes
@@ -299,5 +298,28 @@ notes:
       daemon-degradation + projection + read-cost + dispatch-daemonless +
       provider-peak-window + lanes + lanes-watch + golden lanes-list/show
       44/44 PASS; content-inventory 6/6 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 9 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): the cross-cutting battery —
+      peak-window-utc-clock (TC-PAUSE-090: the boundary matrix flips exactly at
+      start-minus-buffer open and effective-end close; the DST-zone matrix
+      equals the UTC baseline; the injected clock's sleep counter is the only
+      wait; OQ-TP-1 evaluation half — every evaluated window carries only the
+      UTC designation), peak-pause-determinism (TC-PAUSE-091: paired park
+      decisions, park records, resume decisions, recovery admissions, and
+      schema parsings byte-for-value identical), peak-pause-hermetic
+      (TC-PAUSE-092: armed fetch guard observes zero calls over a full watch
+      pass with a firing canary; watched modules carry no credential, harness
+      store, $HOME, process.env, setTimeout, setInterval, Date.now, or Bun.sleep
+      markers), and the additivity half (TC-PAUSE-094: state-contract +
+      event-state-additivity controls green — STATE_SCHEMA_VERSION unchanged,
+      no new suffixed record constants, no migration modules — plus the
+      queue-park-causes-s17 writer enumeration: the hold writes none, the
+      resume modules write no owner-hold park, the invoked release command is
+      the one writer, the owner-hold record carries the classified absence).
+      Test result at boundary: pnpm typecheck green; the battery 38/38 PASS
+      (three new suites + state-contract + event-state-additivity +
+      queue-park-causes-s17)."
     type: "info"
     date: "2026-11-13"
