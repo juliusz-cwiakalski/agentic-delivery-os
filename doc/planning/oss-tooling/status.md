@@ -334,5 +334,5 @@ rather than `within`. The retro evidence pass and the brief cite the same
 figures through the delivered append seam; telemetry absence stays a classified
 outcome and never a zero report. The delivery runs from commit `eb739f19`
 through the phase-8 documentation commit on `feat/GH-291/telemetry-v2`; M2 has
-not exited, and the remaining M2 stories (S2–S10, S15–S19) are unaffected by
-this delivery and stay planned.
+not exited, and the remaining M2 stories (S2–S10, S16–S19; S15 was delivered by
+GH-292 in the snapshot above) are unaffected by this delivery and stay planned.

@@ -9,7 +9,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-12T20:35:53.961Z }
   delivery: { started: null, completed: 2026-11-13T10:28:07.902Z }
   system_spec_update: { started: null, completed: 2026-11-13T10:49:49.164Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-13T13:53:47.273Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -414,125 +414,121 @@ notes:
     date: "2026-11-13"
   - text: >-
       Review iteration 1: FAIL (review/review-iter-1.md). 8 findings — 0
-      critical / 1 high / 2 medium / 4 low / 1 info. F-1 (HIGH): the
-      production ingest composition never wires the attribution substrates —
-      every real delivery would record lane/agentRole as null with
-      unattributable-step warnings and a random runId that never joins the
-      command-audit ledger; the five-dimension attribution passed only on
-      injected fixtures. F-2 (MED): the ingest tally is never surfaced —
-      drift/failure frames leave no durable trace and an append failure is
-      tallied captured. F-3 (MED): zero-base token classes are skipped in the
-      tolerance arithmetic, so schema drift can render verdict within.
-      F-4/F-5/F-6 low (stamp range guard, baseline idempotency outside the
-      fence, orphaned doc block); F-7 info design note (phase-scoped
-      reconciliation basis), no action; F-8 plan-scope omission,
-      self-disclosed. Pinned scenarios SC-M2-S14-01/02 VERIFIED; DEC-4 and
-      DEC-6 HOLD; DEC-5 holds with the F-3 exception. Remediation delegated
-      to @coder (F-1, F-2, F-3 mandatory; F-4..F-6 included), then
-      doc-syncer re-run (code changes touch documented behavior) and
-      re-review at iteration 2.
+      critical / 1 high / 2 medium / 4 low / 1 info. F-1 (HIGH): the production
+      ingest composition never wires the attribution substrates — every real
+      delivery would record lane/agentRole as null with unattributable-step
+      warnings and a random runId that never joins the command-audit ledger; the
+      five-dimension attribution passed only on injected fixtures. F-2 (MED):
+      the ingest tally is never surfaced — drift/failure frames leave no durable
+      trace and an append failure is tallied captured. F-3 (MED): zero-base
+      token classes are skipped in the tolerance arithmetic, so schema drift can
+      render verdict within. F-4/F-5/F-6 low (stamp range guard, baseline
+      idempotency outside the fence, orphaned doc block); F-7 info design note
+      (phase-scoped reconciliation basis), no action; F-8 plan-scope omission,
+      self-disclosed. Pinned scenarios SC-M2-S14-01/02 VERIFIED; DEC-4 and DEC-6
+      HOLD; DEC-5 holds with the F-3 exception. Remediation delegated to @coder
+      (F-1, F-2, F-3 mandatory; F-4..F-6 included), then doc-syncer re-run (code
+      changes touch documented behavior) and re-review at iteration 2.
     type: "info"
     date: "2026-11-13"
   - text: >-
-      Retro: the review gate caught a real integration gap the per-phase
-      narrow gates structurally could not — every phase-level suite passed
-      because F-1's missing wiring lives only in the production composition
+      Retro: the review gate caught a real integration gap the per-phase narrow
+      gates structurally could not — every phase-level suite passed because
+      F-1's missing wiring lives only in the production composition
       (packages/cli/src/production.ts), which no plan phase's declared tests
       exercised with real substrates. Lesson: when a capability depends on
       composition-level wiring (ports joined at the edge), at least one
-      delivered test must construct the production composition or the
-      review's integration heuristics become the only net. Cost: one
-      remediation + re-review iteration.
+      delivered test must construct the production composition or the review's
+      integration heuristics become the only net. Cost: one remediation +
+      re-review iteration.
     type: retro
     date: "2026-11-13"
   - text: >-
-      Review remediation complete (review-iter-1 F-1..F-6; F-7/F-8 no action
-      per review). Resumed from the interrupted lane's uncommitted work
-      (verified stable, no live writer), assessed it per finding, and
-      completed the gaps. F-1 fixed-by-dirty-work + test-by-this-session:
-      `createProductionTelemetrySink` (packages/cli/src/production.ts) joins
-      the delivered substrates — `readSessionIdentity` over session-economics
-      records, `readClaimedIdentity` over a bounded 64-record command-audit
-      read with the invoking process's claimed identity as fallback — and
+      Review remediation complete (review-iter-1 F-1..F-6; F-7/F-8 no action per
+      review). Resumed from the interrupted lane's uncommitted work (verified
+      stable, no live writer), assessed it per finding, and completed the gaps.
+      F-1 fixed-by-dirty-work + test-by-this-session:
+      `createProductionTelemetrySink` (packages/cli/src/production.ts) joins the
+      delivered substrates — `readSessionIdentity` over session-economics
+      records, `readClaimedIdentity` over a bounded 64-record command-audit read
+      with the invoking process's claimed identity as fallback — and
       `telemetrySinkFor` passes the invocation's audit run id (entrypoint.ts
       generates one runId per invocation, shared by the audit record and the
       capture paths; absence records the declared `run-unavailable` marker);
       edge.ts `createTelemetryIngestSink` accepts the attribution ports and
       joins them per session through `joinAttributionSubstrates`. Demanded
-      composition test added (tests/behaviour/telemetry-attribution.test.ts):
-      a ledger claim + audit-correlated runId reach a stored step record, lane
+      composition test added (tests/behaviour/telemetry-attribution.test.ts): a
+      ledger claim + audit-correlated runId reach a stored step record, lane
       stays disclosed-null, session close lands the capture record; plus the
-      env-claim fallback test. F-2 fixed-by-dirty-work + tests-by-this-
-      session: tally surfaced via `TelemetryIngestAccounting` + sink
-      `accounting()`; new `harness.telemetry.capture` family
-      (delivery.telemetry.capture.v1) appended at session close over the
-      fenced path (appendTelemetryCaptureOutcome/readTelemetryCaptureOutcomes);
-      append failures counted `failed` under the new closed
-      `capture-append-failed` reason (vocabulary +3), pre-session frames
-      degraded `unattributable-session`, failed session-total reads
+      env-claim fallback test. F-2 fixed-by-dirty-work + tests-by-this- session:
+      tally surfaced via `TelemetryIngestAccounting` + sink `accounting()`; new
+      `harness.telemetry.capture` family (delivery.telemetry.capture.v1)
+      appended at session close over the fenced path
+      (appendTelemetryCaptureOutcome/readTelemetryCaptureOutcomes); append
+      failures counted `failed` under the new closed `capture-append-failed`
+      reason (vocabulary +3), pre-session frames degraded
+      `unattributable-session`, failed session-total reads
       `session-capture-failed`; `tallyIngestDegradation` folds no-record
       degradations. Four accounting tests added
       (tests/behaviour/telemetry-ingest.test.ts). F-3 fixed-by-dirty-work +
       demanded regression test-by-this-session: `deviationOf` treats a
-      baseline-zero class with observed > 0 as an immediate full deviation,
-      so zero-base schema drift renders `outside`
+      baseline-zero class with observed > 0 as an immediate full deviation, so
+      zero-base schema drift renders `outside`
       (tests/behaviour/spend-reconciliation.test.ts, outside + matched
       within-control). F-4 fixed-by-dirty-work: `stampOf` range-guards finite
       numerics at ±8.64e15 ms; out-of-range classifies `non-numeric-value`
       naming the field, never thrown. F-5 fixed-by-dirty-work: baseline
-      idempotency read moved inside the acquired fence, released on every
-      early return. F-6 fixed-by-dirty-work: orphaned doc block reattached
-      above `boundReport`. Ripple obligations of the contract additions (same
-      class as the disclosed phase-3/8 inventory ripples): v1-contract-
-      inventory.json (+6 export names in both sections), content-inventory
-      executable allowances, telemetry-contract warning-vocabulary pin (+3),
-      error-table-sync reserved record-kind literal
-      (`harness.telemetry.capture` — schema name, not an error code),
-      state-additivity baseline (+3 capture constants), biome formatting.
-      Gates: `pnpm typecheck` green; telemetry+spend battery 115 pass / 0
-      fail across 13 suites; full `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 —
-      7837 pass / 4 skip / 0 fail across 987 files; boundaries, prompt
-      conformance, help-guide coverage, exports parity all green. Docs
-      updated truthfully and minimally: feature-telemetry-v2.md (attribution
-      substrate join + run-id correlation, ingest rows for stamp range/
-      pre-session/append-failure + accounting disclosure, capture record
-      family + in-fence idempotency + growth), feature-spend.md
-      (reconciliation: zero-base class counts as immediate full deviation).
-      Declared deviations: the remediation is post-plan work committed under
-      the plan-union rule; the commit envelope disclosed six files outside the
-      union of declared phase scope files — packages/cli/src/entrypoint.ts and
-      packages/cli/src/production.ts (the F-1 invocation runId threading and
-      production sink composition), packages/core/src/index.ts (barrel
-      re-export of the new domain export), scripts/checks/error-table-sync.ts,
+      idempotency read moved inside the acquired fence, released on every early
+      return. F-6 fixed-by-dirty-work: orphaned doc block reattached above
+      `boundReport`. Ripple obligations of the contract additions (same class as
+      the disclosed phase-3/8 inventory ripples): v1-contract- inventory.json
+      (+6 export names in both sections), content-inventory executable
+      allowances, telemetry-contract warning-vocabulary pin (+3),
+      error-table-sync reserved record-kind literal (`harness.telemetry.capture`
+      — schema name, not an error code), state-additivity baseline (+3 capture
+      constants), biome formatting. Gates: `pnpm typecheck` green;
+      telemetry+spend battery 115 pass / 0 fail across 13 suites; full
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 — 7837 pass / 4 skip / 0 fail
+      across 987 files; boundaries, prompt conformance, help-guide coverage,
+      exports parity all green. Docs updated truthfully and minimally:
+      feature-telemetry-v2.md (attribution substrate join + run-id correlation,
+      ingest rows for stamp range/ pre-session/append-failure + accounting
+      disclosure, capture record family + in-fence idempotency + growth),
+      feature-spend.md (reconciliation: zero-base class counts as immediate full
+      deviation). Declared deviations: the remediation is post-plan work
+      committed under the plan-union rule; the commit envelope disclosed six
+      files outside the union of declared phase scope files —
+      packages/cli/src/entrypoint.ts and packages/cli/src/production.ts (the F-1
+      invocation runId threading and production sink composition),
+      packages/core/src/index.ts (barrel re-export of the new domain export),
+      scripts/checks/error-table-sync.ts,
       tests/fixtures/events/state-additivity-baseline.json, and
-      tests/fixtures/ports/v1-contract-inventory.json (the ripple
-      registrations the contract additions require) — all remediation or
-      ripple obligations of review-iter-1, disclosed here and in the envelope.
-      Transport note: the first commit attempt was refused because the
-      commitlint probe's bare binary was not on PATH (ENOENT surfaced as the
-      generic rejection); retried with node_modules/.bin on PATH, no code
-      change. Remediation commit recorded: 10b5d880 (22 files, +872/−77).
-      Doc-syncer re-verification and re-review at iteration 2 follow. Before
-      those, the branch syncs with the moved integration line:
-      origin/main-tools advanced to bf5783ed (GH-292 queue lifecycle, PR
-      #314) while this branch was in review; the merge resolves the 18
-      overlapping files (barrels, production/edge composition, fixtures,
-      planning/index docs) as unions keeping both sides, per the operator's
-      keep-both-sides rule.
+      tests/fixtures/ports/v1-contract-inventory.json (the ripple registrations
+      the contract additions require) — all remediation or ripple obligations of
+      review-iter-1, disclosed here and in the envelope. Transport note: the
+      first commit attempt was refused because the commitlint probe's bare
+      binary was not on PATH (ENOENT surfaced as the generic rejection); retried
+      with node_modules/.bin on PATH, no code change. Remediation commit
+      recorded: 10b5d880 (22 files, +872/−77). Doc-syncer re-verification and
+      re-review at iteration 2 follow. Before those, the branch syncs with the
+      moved integration line: origin/main-tools advanced to bf5783ed (GH-292
+      queue lifecycle, PR #314) while this branch was in review; the merge
+      resolves the 18 overlapping files (barrels, production/edge composition,
+      fixtures, planning/index docs) as unions keeping both sides, per the
+      operator's keep-both-sides rule.
     type: "info"
     date: "2026-11-13"
   - text: "Branch sync with the moved integration line: merged origin/main-tools
       bf5783ed (GH-292 queue lifecycle, PR #314; ~148 files, +17,013/−553) into
-      feat/GH-291/telemetry-v2 as merge commit b6181727
-      (chore(GH-291): sync with main-tools), parents 19f173f2 + bf5783ed.
-      Git auto-merged 11 of the 18 overlapping files; 7 true conflicts were
-      resolved as unions per the operator's keep-both-sides rule:
-      packages/cli/src/production.ts (unioned contract imports, adding
-      QueueTrackerRead; body already carries both the telemetry sink
-      composition and the queue lifecycle wiring),
+      feat/GH-291/telemetry-v2 as merge commit b6181727 (chore(GH-291): sync
+      with main-tools), parents 19f173f2 + bf5783ed. Git auto-merged 11 of the
+      18 overlapping files; 7 true conflicts were resolved as unions per the
+      operator's keep-both-sides rule: packages/cli/src/production.ts (unioned
+      contract imports, adding QueueTrackerRead; body already carries both the
+      telemetry sink composition and the queue lifecycle wiring),
       doc/00-index.md (Harness Adapters row kept our per-step ingest sink
-      clause; Dispatch Engine row gained GH-292's single-flight refusal
-      clause), doc/overview/architecture-overview.md and doc/overview/glossary.md
+      clause; Dispatch Engine row gained GH-292's single-flight refusal clause),
+      doc/overview/architecture-overview.md and doc/overview/glossary.md
       (related_changes unions: GH-290, GH-291, GH-292),
       doc/planning/oss-tooling/status.md (both M2 delivery snapshots kept —
       2026-11-12 queue lifecycle then 2026-11-13 harness telemetry v2),
@@ -544,25 +540,37 @@ notes:
       body's queue.removal kind; related_changes union). Auto-merged union
       integrity verified in edge.ts, help.ts, error-table-sync.ts (both
       harness.telemetry.capture and the queue literals), both fixtures
-      (telemetry + queue entries), content-inventory.test.ts, all three
-      barrels, backlog.md (M2-S14 and M2-S15 both delivered) and
+      (telemetry + queue entries), content-inventory.test.ts, all three barrels,
+      backlog.md (M2-S14 and M2-S15 both delivered) and
       milestones/m2/contracts.md. Gate verdicts on the merged tree: pnpm
-      typecheck PASS (6 packages + tests/types); targeted behaviour tests
-      PASS 72/0 across both lanes (spend-reconciliation, telemetry
+      typecheck PASS (6 packages + tests/types); targeted behaviour tests PASS
+      72/0 across both lanes (spend-reconciliation, telemetry
       attribution/ingest/disclosure, queue-remove, queue-claim-single-flight,
       queue-reconcile, events-remove, events-emitted-kinds) plus
-      content-inventory; scripts/.tests/test-doc-distribution.sh PASS (no
-      drift, 83 in-scope docs); scripts/lint-commit-range.sh --base
-      main-tools PASS (19 commits incl. the merge, 0 offending); full
-      TMPDIR=$PWD/tmp/tmpdir pnpm check battery EXIT=0 with 8008 pass /
-      4 skip / 0 fail across 1031 files, boundaries/prompt-conformance/
-      help-guide-coverage/exports-parity all green. No integration fixes
-      were required: the union typechecked and passed the full battery on
-      the first run. Declared deviations: none — all seven conflict files
-      were predicted overlaps, resolutions stayed inside the operator's
-      keep-both-sides rule, and no phase lifecycle commands were run
-      (sync-only task). Branch is 19 ahead of / 0 behind origin/main-tools
+      content-inventory; scripts/.tests/test-doc-distribution.sh PASS (no drift,
+      83 in-scope docs); scripts/lint-commit-range.sh --base main-tools PASS (19
+      commits incl. the merge, 0 offending); full TMPDIR=$PWD/tmp/tmpdir pnpm
+      check battery EXIT=0 with 8008 pass / 4 skip / 0 fail across 1031 files,
+      boundaries/prompt-conformance/ help-guide-coverage/exports-parity all
+      green. No integration fixes were required: the union typechecked and
+      passed the full battery on the first run. Declared deviations: none — all
+      seven conflict files were predicted overlaps, resolutions stayed inside
+      the operator's keep-both-sides rule, and no phase lifecycle commands were
+      run (sync-only task). Branch is 19 ahead of / 0 behind origin/main-tools
       before the pm-notes commit; doc/decisions/00-index.md needed no manual
       conflict resolution (auto-merged)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review iteration 2: PASS (review/review-iter-2.md). All 8 iteration-1
+      findings resolved or accepted — F-1..F-6 FIXED (verified with file:line
+      anchors), F-7/F-8 accepted as disclosed. New findings: NF-1 (LOW,
+      optional) stampOf range-guard lacks a dedicated regression test — recorded
+      as a non-blocking follow-up; INFO bounded per-frame ledger reads
+      documented in-code. Pinned scenarios SC-M2-S14-01/02 VERIFIED post-merge;
+      DEC-4 HOLDS, DEC-5 HOLDS WITHOUT EXCEPTION (F-3 fix eliminates the
+      zero-base caveat), DEC-6 HOLDS. Merged-tree union verified coherent for
+      both lanes. Spot-run 99 tests / 0 fail across 12 suites; battery evidence:
+      8008/0 at 42eca96a. Review gate: cleared at iteration 2 of 3.
     type: "info"
     date: "2026-11-13"
