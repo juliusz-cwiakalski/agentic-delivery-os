@@ -1,148 +1,175 @@
 spend
 tokens     input 6000 | output 0 | reasoning 0 | cacheRead 0 | cacheWrite 0
 calls      600
+telemetry  present
+cost       none reported (harness-reported units; sparse, never repaired)
+reconcile  within (tolerance 0.02, basis closeout-capture; observed 6000 / harness 6000)
 agents
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00000/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00001/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00002/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00003/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00004/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00005/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00006/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00007/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00008/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00009/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00010/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00011/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00012/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00013/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00014/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00015/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00016/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00017/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00018/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00019/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00020/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00021/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00022/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00023/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00024/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00025/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00026/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00027/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00028/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00029/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00030/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00031/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00032/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00033/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00034/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00035/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00036/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00037/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00038/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00039/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00040/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00041/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00042/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00043/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00044/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00045/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00046/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00047/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00048/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00049/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00050/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00051/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00052/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00053/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00054/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00055/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00056/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00057/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00058/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00059/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00060/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00061/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00062/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00063/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00064/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00065/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00066/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00067/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00068/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00069/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00070/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00071/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00072/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00073/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00074/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00075/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00076/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00077/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00078/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00079/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00080/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00081/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00082/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00083/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00084/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00085/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00086/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00087/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00088/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00089/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00090/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00091/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00092/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00093/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00094/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00095/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00096/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00097/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00098/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00099/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00100/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00101/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00102/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00103/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00104/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00105/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00106/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00107/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00108/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00109/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00110/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00111/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00112/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00113/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00114/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00115/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00116/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00117/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00118/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00119/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00120/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00121/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00122/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00123/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00124/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00125/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00126/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00127/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00128/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00129/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00130/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00131/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00132/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00133/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00134/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00135/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00136/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00137/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
-- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00138/model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 1 calls, 10 tokens
+breakdown  role
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00000: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00001: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00002: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00003: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00004: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00005: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00006: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00007: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00008: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00009: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00010: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00011: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00012: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00013: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00014: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00015: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00016: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00017: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00018: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00019: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00020: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00021: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00022: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00023: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00024: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00025: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00026: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00027: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00028: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00029: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00030: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00031: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00032: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00033: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00034: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00035: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00036: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00037: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00038: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00039: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00040: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00041: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00042: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00043: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00044: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00045: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00046: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00047: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00048: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00049: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00050: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00051: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00052: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00053: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00054: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00055: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00056: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00057: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00058: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00059: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00060: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00061: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00062: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00063: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00064: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00065: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00066: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00067: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00068: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00069: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00070: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00071: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00072: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00073: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00074: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00075: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00076: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00077: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00078: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00079: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00080: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00081: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00082: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00083: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00084: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00085: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00086: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00087: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00088: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00089: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00090: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00091: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00092: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00093: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00094: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00095: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00096: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00097: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00098: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00099: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00100: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00101: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00102: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00103: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00104: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00105: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00106: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00107: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00108: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00109: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00110: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00111: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00112: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00113: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00114: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00115: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00116: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00117: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00118: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00119: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00120: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00121: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00122: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00123: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00124: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00125: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00126: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00127: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00128: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00129: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00130: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00131: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00132: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00133: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00134: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00135: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00136: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00137: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00138: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00139: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00140: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00141: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00142: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00143: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00144: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00145: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00146: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00147: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00148: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00149: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00150: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00151: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00152: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00153: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00154: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00155: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00156: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00157: 1 calls, 10 tokens, cost none reported
+- agent-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-00158: 1 calls, 10 tokens, cost none reported
+breakdown  model
+- model-mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm: 600 calls, 6000 tokens, cost none reported
 phases     capture-time windows (phase.transition)
 - unknown: 600 calls, 6000 tokens (100%) (no phase evidence; attribution fallback)
+timing     per-phase summaries (phase.transition + economics)
 restarts   0 (runs that reached closeout capture)
 limits
 - run duplication is proven; semantic duplication is not
@@ -152,4 +179,4 @@ limits
 ratio      1 (paid 6000 / progress 6000)
 events     none (no superseded record-bearing run)
 degradation 0 record(s) with warnings
-truncated  perAgent 346 entries omitted, perPhase 0 entries omitted, events 0 omitted
+truncated  perAgent 600 entries omitted, breakdowns 441 entries omitted, perPhase 0 entries omitted, events 0 omitted

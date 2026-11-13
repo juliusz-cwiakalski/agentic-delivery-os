@@ -366,6 +366,28 @@ export {
   renderHarnessTelemetryHuman,
 } from "./harness-telemetry.js";
 export {
+  attributeStep,
+  attributedValue,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  tallyFrame,
+  tallyIngestDegradation,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+} from "./telemetry-ingest.js";
+export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,
   planLaneLaunch,

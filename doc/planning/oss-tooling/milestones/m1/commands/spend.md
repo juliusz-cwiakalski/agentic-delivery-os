@@ -10,7 +10,7 @@ resume-amplification metric from the event log.
 ## SYNOPSIS
 
 ```
-<binary> spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]
+<binary> spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]
 ```
 
 ## DESCRIPTION
@@ -31,8 +31,24 @@ machine envelope always carries the amplification block. `--json` is the
 global machine-output switch.
 
 Telemetry-absent is a classified outcome (`spend.telemetry-absent`,
-exit 1), not an empty success or a zero report. Token counts only: cost is
-never aggregated. Alarms, burn rates, and quota snapshots arrive in M2-S6.
+exit 1), not an empty success or a zero report. The six v1 keys aggregate
+tokens only: cost is never converted, priced, or currency-rendered. Alarms,
+burn rates, and quota snapshots arrive in M2-S6.
+
+### v2 addendum (M2-S14, GH-291)
+
+The delivered grammar grew exactly one flag: `--breakdown <field>` leads the
+human digest with one of the five declared dimensions (`ticket`, `repository`,
+`lane`, `role`, `model`); every machine report always carries all five. The
+report payload keeps the `delivery.spend.v1` identity and the six v1 keys with
+their names and semantics, and gains five declared additive keys beside them:
+`costTotals`, `breakdowns`, `phaseTiming`, `telemetryState`, and
+`reconciliation`. Cost now appears in harness-reported units in the additive
+block (never converted, never zero-filled), and every summary states the
+telemetry state and the reconciliation tolerance. A breakdown value outside the
+five declared fields is refused with `input.value.rejected` before any read.
+See [spend v2](../../m2/commands/spend.md) and
+[telemetry.v1 and spend v2](../../m2/contracts.md).
 
 ## OUTPUT
 

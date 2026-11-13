@@ -1981,7 +1981,11 @@ const spendHumanLine = (section: StatusSection): string => {
   }
   const totals = projection.tokensByClass;
   const ratio = projection.ratio === null ? "null" : formatShareRatio(projection.ratio);
-  return `spend      observed  input ${String(totals.input)} | output ${String(totals.output)} | reasoning ${String(totals.reasoning)} | cacheRead ${String(totals.cacheRead)} | cacheWrite ${String(totals.cacheWrite)} | restarts ${String(projection.restarts)} | amplification ${ratio}`;
+  const disclosure =
+    projection.reconciliation === undefined
+      ? ""
+      : ` | reconcile ${projection.reconciliation.verdict} (tolerance ${String(projection.reconciliation.tolerance)}, basis ${projection.reconciliation.basis})`;
+  return `spend      observed  input ${String(totals.input)} | output ${String(totals.output)} | reasoning ${String(totals.reasoning)} | cacheRead ${String(totals.cacheRead)} | cacheWrite ${String(totals.cacheWrite)} | restarts ${String(projection.restarts)} | amplification ${ratio}${disclosure}`;
 };
 
 /** Render the deterministic human digest from the digest and injected brand. */

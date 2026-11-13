@@ -59,10 +59,15 @@ describe("TC-SPEND-023 privacy of output", () => {
       if (fold === undefined || !fold.ok) throw new Error("fold failed");
       expect(Object.keys(fold.data).sort()).toEqual([
         "amplification",
+        "breakdowns",
+        "costTotals",
         "degradation",
         "perAgent",
         "perPhase",
+        "phaseTiming",
+        "reconciliation",
         "restarts",
+        "telemetryState",
         "tokensByClass",
       ]);
       const rendered = JSON.stringify(fold.data);
@@ -104,7 +109,7 @@ describe("TC-SPEND-023 privacy of output", () => {
       const human = renderSpendHuman(fold.data, { brand: SYNTHETIC_BRAND, amplification: true });
       for (const line of human.split("\n").filter((entry) => entry !== "")) {
         expect(
-          /^(spend|tokens|calls|agents|phases|restarts|limits|ratio|events|degradation|truncated|- )/.test(
+          /^(spend|tokens|calls|telemetry|cost|reconcile|agents|breakdown|phases|timing|restarts|limits|ratio|events|degradation|truncated|- )/.test(
             line,
           ),
           line,

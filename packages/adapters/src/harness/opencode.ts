@@ -37,6 +37,7 @@ import {
   type HarnessSpawnStream,
   type HarnessSpawnStreamOptions,
   type HarnessVersionWarning,
+  type TelemetryIngestSink,
 } from "@delivery-os/core/contracts";
 
 /** The opencode capability declaration (F-1, DM-4). */
@@ -82,6 +83,17 @@ export type OpencodeHarnessOptions = {
   /** Injected sourced-signal facts (GH-235 D-3); read-only, never re-queried. */
   readonly sourcedSignals?: readonly EconomicsSourcedSignalReading[];
   readonly capabilities?: HarnessCapabilityDeclaration;
+  /**
+   * The per-session telemetry ingest seam (GH-291 F-1, NFR-5).
+   *
+   * Built once per spawn from the delivery's work-item ref. Ingest observes the
+   * decoded frames beside the delivered drain; an absent sink keeps the
+   * delivered stream behavior exactly. Ingest never blocks the drain, and an
+   * ingest failure never changes the delivery's outcome.
+   */
+  readonly telemetrySinkFor?: (input: {
+    readonly workItemRef: string;
+  }) => TelemetryIngestSink | undefined;
 };
 
 const DEFAULT_TIMEOUT_MS = 300_000;
@@ -220,10 +232,15 @@ type AcquisitionOutcome =
  * Decode the stream and acquire the first identified session line (GH-275 F-1,
  * F-2, DEC-4). On acquisition it returns immediately with a completion promise
  * that keeps draining the stream and resolves only when the process closes.
+ *
+ * The optional ingest sink observes every decoded frame beside the drain and
+ * once at stream close. Its work is non-gating: a throwing sink is swallowed so
+ * handle acquisition, drain, and completion evidence stay exactly delivered.
  */
 const acquireFromStream = async (
   stream: HarnessSpawnStream,
   accept: (sessionId: string) => boolean,
+  ingest?: TelemetryIngestSink,
 ): Promise<AcquisitionOutcome> => {
   const facts = emptyFacts();
   let observedId: string | undefined;
@@ -238,14 +255,24 @@ const acquireFromStream = async (
     resolveAcquisition?.();
   };
 
+  const observeFrame = (parsed: Record<string, unknown>, sessionId: string | undefined): void => {
+    if (ingest === undefined) return;
+    try {
+      ingest.onFrame(parsed, { sessionId });
+    } catch {
+      // Telemetry is non-gating: an ingest fault never disturbs the drain.
+    }
+  };
+
   const pump = (async (): Promise<void> => {
     try {
       for await (const line of stream.lines) {
         const parsed = decodeLine(line);
         if (parsed === undefined) continue;
         accumulate(facts, parsed);
-        if (observedId !== undefined) continue;
         const candidate = sessionIdOf(parsed);
+        observeFrame(parsed, observedId ?? candidate);
+        if (observedId !== undefined) continue;
         if (candidate === undefined) continue;
         observedId = candidate;
         settleAcquisition();
@@ -254,6 +281,13 @@ const acquireFromStream = async (
       }
     } finally {
       settleAcquisition();
+      if (ingest !== undefined && observedId !== undefined) {
+        try {
+          ingest.onSessionClose(observedId);
+        } catch {
+          // Baseline capture is best effort and never changes the outcome.
+        }
+      }
     }
   })();
 
@@ -310,7 +344,8 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       args,
       streamOptions(input.descriptor.workDirectory, environment.value, stdin),
     );
-    const outcome = await acquireFromStream(stream, () => true);
+    const sink = options.telemetrySinkFor?.({ workItemRef: input.workItemRef });
+    const outcome = await acquireFromStream(stream, () => true, sink);
     if (outcome.kind !== "acquired") {
       stream.kill();
       const result = outcome.kind === "absent" ? outcome.result : undefined;
@@ -373,6 +408,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     const outcome = await acquireFromStream(
       stream,
       (sessionId) => sessionId === input.handle.sessionId,
+      options.telemetrySinkFor?.({ workItemRef: input.handle.workItemRef }),
     );
     if (outcome.kind === "mismatch") {
       stream.kill();

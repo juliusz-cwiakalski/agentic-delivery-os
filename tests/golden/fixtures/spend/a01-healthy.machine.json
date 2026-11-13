@@ -47,5 +47,104 @@
       "unattributable-session": 0,
       "invalid-session-identity": 0
     }
+  },
+  "costTotals": {
+    "total": null,
+    "models": [
+      {
+        "model": "opus",
+        "cost": null
+      },
+      {
+        "model": "sonnet",
+        "cost": null
+      }
+    ],
+    "sparse": true
+  },
+  "breakdowns": {
+    "ticket": [
+      {
+        "value": "GH-236",
+        "calls": 4,
+        "tokens": 185,
+        "cost": null
+      }
+    ],
+    "repository": [
+      {
+        "value": null,
+        "calls": 4,
+        "tokens": 185,
+        "cost": null
+      }
+    ],
+    "lane": [
+      {
+        "value": null,
+        "calls": 4,
+        "tokens": 185,
+        "cost": null
+      }
+    ],
+    "role": [
+      {
+        "value": "planner",
+        "calls": 3,
+        "tokens": 153,
+        "cost": null
+      },
+      {
+        "value": "coder",
+        "calls": 1,
+        "tokens": 32,
+        "cost": null
+      }
+    ],
+    "model": [
+      {
+        "value": "sonnet",
+        "calls": 3,
+        "tokens": 153,
+        "cost": null
+      },
+      {
+        "value": "opus",
+        "calls": 1,
+        "tokens": 32,
+        "cost": null
+      }
+    ]
+  },
+  "phaseTiming": [
+    {
+      "phase": "clarify_scope",
+      "start": "2026-11-01T10:00:00.000Z",
+      "end": null,
+      "durationMs": null,
+      "stalls": 0,
+      "restarts": 0
+    }
+  ],
+  "telemetryState": "present",
+  "reconciliation": {
+    "basis": "closeout-capture",
+    "harnessTotals": {
+      "input": 123,
+      "output": 52,
+      "reasoning": 7,
+      "cacheRead": 2,
+      "cacheWrite": 1
+    },
+    "observedTotals": {
+      "input": 123,
+      "output": 52,
+      "reasoning": 7,
+      "cacheRead": 2,
+      "cacheWrite": 1
+    },
+    "tolerance": 0.02,
+    "verdict": "within",
+    "excludedBaselineSessions": 0
   }
 }

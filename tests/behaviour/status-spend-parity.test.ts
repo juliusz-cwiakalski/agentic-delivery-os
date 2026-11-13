@@ -142,3 +142,76 @@ describe("TC-SPEND-030 one fold, two surfaces", () => {
     }
   });
 });
+
+describe("TC-TELEMETRY-030 v2 digest parity from the same fold", () => {
+  test("command and digest agree on totals, breakdown figures, state, and disclosure", async () => {
+    const {
+      foldTelemetryStore,
+      makeBaselineRecord,
+      makeStepRecord,
+      removeRoot,
+      tokens: v2tokens,
+    } = await import("../fixtures/telemetry");
+    const fixture = foldTelemetryStore(
+      {
+        steps: [
+          makeStepRecord({
+            sessionId: "ses_parity_a",
+            agentRole: "coder",
+            model: "model-alpha",
+            tokens: v2tokens({ input: 40, output: 10 }),
+            calls: 1,
+            cost: 0.01,
+            finishedAt: T1,
+          }),
+          makeStepRecord({
+            sessionId: "ses_parity_b",
+            agentRole: "planner",
+            model: "model-beta",
+            tokens: v2tokens({ input: 20 }),
+            calls: 1,
+            cost: 0.02,
+            finishedAt: T2,
+          }),
+        ],
+        baselines: [
+          makeBaselineRecord({
+            sessionId: "ses_parity_a",
+            runId: "run-parity-a",
+            tokens: v2tokens({ input: 40, output: 10 }),
+          }),
+          makeBaselineRecord({
+            sessionId: "ses_parity_b",
+            runId: "run-parity-b",
+            tokens: v2tokens({ input: 20 }),
+          }),
+        ],
+      },
+      "parity-v2",
+    );
+    try {
+      const read = readSpendLedger(fixture.store, "GH-291");
+      if (!read.ok) throw new Error("read failed");
+      const projection = spendDigestSection(read.value);
+      if (projection.state !== "observed" || !projection.captured) {
+        throw new Error("projection is not captured");
+      }
+      const command = await runSpendCli(
+        ["--json", "spend", "--ref", "GH-291"],
+        spendRuntimeOver(fixture.store),
+      );
+      expect(command.exitCode).toBe(0);
+      const envelope = JSON.parse(command.stdout) as unknown;
+      if (!isRecord(envelope) || !isRecord(envelope.data)) throw new Error("data missing");
+      const data = envelope.data;
+      expect(data.tokensByClass).toEqual(projection.tokensByClass);
+      expect(data.telemetryState).toBe(projection.telemetryState);
+      expect(data.reconciliation).toEqual(projection.reconciliation);
+      expect(data.breakdowns).toMatchObject({ role: projection.byRole, model: projection.byModel });
+      expect(projection.telemetryState).toBe("present");
+      expect(projection.reconciliation?.tolerance).toBe(0.02);
+    } finally {
+      removeRoot(fixture.root);
+    }
+  });
+});

@@ -203,7 +203,7 @@ questions  <state>  <n|?> open[ (<reason>)]
 
 ### Brief integration
 
-The brief keeps exactly nine render surfaces: the seven digest sections, including `typed-questions`, plus the two named placeholders `gate-sla-states` and `lane-queue-engine`. The `typed-questions` surface is a digest-section mirror rather than a placeholder: it copies the section's `state`, `counts`, `truncated` flag, and first evidence reason, and it carries a fixed payload title.
+The brief keeps exactly ten render surfaces: the eight digest sections, including `typed-questions` and `spend`, plus the two named placeholders `gate-sla-states` and `lane-queue-engine`. The `typed-questions` surface is a digest-section mirror rather than a placeholder: it copies the section's `state`, `counts`, `truncated` flag, and first evidence reason, and it carries a fixed payload title.
 
 The payload's `anchors` array carries three ranked groups in decision-first order: `ready-to-merge`, `blocker-questions`, `owner-gate-ages`. The `blocker-questions` group is a real ranked group mirroring the digest items: its state is the `typed-questions` section state, its items are one action per rendered open question with `identity` equal to the question id, and its evidence is `{ kind: "blocker-question", type, audience, lane, rank }`; its `truncated` and `omitted` values mirror the section. The placeholder catalog holds exactly two entries, `gate-sla-states` (owning story M1-S5) and `lane-queue-engine` (owning story M1-S17), both `not-delivered`.
 
@@ -257,7 +257,7 @@ The v0 production composition supplies no adapter capability fact, so a real pub
 | `packages/cli/src/classify.ts` | Resolves the reserved `fallback` namespace returned by a handler for grammar-level refusals. |
 | `packages/core/src/contracts/status.ts` | The ninth section id and title, the `blockers` evidence source, and the typed-question item and read types. |
 | `packages/core/src/domain/status.ts` | Derives the bounded `typed-questions` section from the verified read through the shared ranking and renders the human question line. |
-| `packages/core/src/contracts/brief.ts` | The nine-id surface order, the two-entry placeholder catalog, the three anchor-group ids, and the `blocker-question` action evidence type. |
+| `packages/core/src/contracts/brief.ts` | The ten-id surface order, the two-entry placeholder catalog, the three anchor-group ids, and the `blocker-question` action evidence type. |
 | `packages/core/src/domain/brief.ts` | Mirrors the digest section into the `typed-questions` surface and projects the ranked `blocker-questions` anchor. |
 | `packages/core/src/contracts/error-table.ts` | The `blockers` domain kind and its four documented rows. |
 
@@ -371,7 +371,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, validated artifact boundaries, verified reads and verified-empty evidence, fences, and torn/unknown classification that carry both record kinds.
 - **Depends on** the owner-gate SLA ([feature-owner-gate-sla.md](feature-owner-gate-sla.md)) for the `owner` | `coordinator` audience dimension, the policy-as-data and deterministic rank-key precedents, and the bounded-truncation discipline.
 - **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the fixed-section vocabulary, the five-value section state, the closed reason set, the counts and bounds model, and the section-failures-are-payload-data rule the ninth section follows.
-- **Depends on** the brief ([feature-brief.md](feature-brief.md)) for the nine-surface totality, the closed placeholder catalog, and the anchored-action model the mirrored surface and ranked group extend.
+- **Depends on** the brief ([feature-brief.md](feature-brief.md)) for the ten-surface totality, the closed placeholder catalog, and the anchored-action model the mirrored surface and ranked group extend.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `blockers` domain kind and its four rows, the `{0, 1, 2}` projection, and the registered-secrets record layer 1 consumes.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for the injected binary name and the environment-prefix naming discipline.
 - **Depends on** lane contracts ([feature-watchdog-lane-contracts.md](feature-watchdog-lane-contracts.md)) for the lane vocabulary behind `--lane`; lane-registry existence is not verified here.

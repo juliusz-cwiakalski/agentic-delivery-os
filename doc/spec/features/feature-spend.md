@@ -3,15 +3,16 @@ ados_distribution: internal
 id: SPEC-SPEND
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-07
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records plus phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the closed degradation disclosure, bounded deterministic human and machine output, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
+summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
-  related_changes: ["GH-236", "GH-240"]
+  related_changes: ["GH-236", "GH-240", "GH-291"]
   related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
+    - "packages/core/src/contracts/telemetry.ts"
     - "packages/core/src/contracts/harness-telemetry.ts"
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/contracts/status.ts"
@@ -21,11 +22,11 @@ links:
 
 ## Overview
 
-The spend read side is the Learn-family `spend` command. Its surface is exactly `<binary> spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]`: a deterministic, read-only fold over the closeout-captured event log. It reports per-ticket and per-phase tokens by class, calls, per-agent/model roll-ups, per-delivery restart counts, and the resume-amplification metric with amplification events flagged by name. Every figure derives from verified state-ledger reads of the two `harness.telemetry` record families for one work-item ref plus that ref's `phase.transition` history; the command never opens a harness store, reads a session database, queries a provider, or writes state.
+The spend read side is the Learn-family `spend` command. Its surface is exactly `<binary> spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]`: a deterministic, read-only fold over the event log. It reports per-ticket and per-phase tokens by class, calls, per-agent/model roll-ups, per-delivery restart counts, and the resume-amplification metric with amplification events flagged by name. Every figure derives from verified state-ledger reads of the telemetry record families for one work-item ref plus that ref's `phase.transition` history; the command never opens a harness store, reads a session database, queries a provider, or writes state.
 
-The success payload is the standard `CommandResult` envelope whose `data` carries schema identity `delivery.spend.v1` with exactly six keys: `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification`, and `degradation`. The schema identity is a declared contract constant, not a `data` key. `--amplification` adds the amplification section to the human digest; the machine envelope always carries the full amplification block. `--json` is the global machine-output switch.
+The success payload is the standard `CommandResult` envelope whose `data` carries schema identity `delivery.spend.v1` with the delivered six keys — `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification`, and `degradation` — plus exactly five additive v2 keys: `costTotals`, `breakdowns`, `phaseTiming`, `telemetryState`, and `reconciliation`. The additions sit beside the six keys under the unchanged identity; no v1 key is renamed, removed, or re-semanted (DEC-6). The schema identity is a declared contract constant, not a `data` key. `--amplification` adds the amplification section to the human digest; the machine envelope always carries the full amplification block. `--breakdown <field>` selects the human-emphasis breakdown dimension and changes no machine figure. `--json` is the global machine-output switch.
 
-Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, exit 1) rather than an empty success or a zero report. Store damage keeps the delivered `state.*` identities and their own projections. The status digest's section 8 is fed by the same read-side fold, so the digest and the command report identical totals, restarts, and ratio from the same store.
+Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, exit 1) rather than an empty success or a zero report. Store damage keeps the delivered `state.*` identities and their own projections. The status digest's section 8 is fed by the same read-side fold, so the digest and the command report identical totals, restarts, ratio, breakdowns, telemetry state, and reconciliation disclosure from the same store. The brief and the retro evidence pass cite the same numbers.
 
 ## Business Context
 
@@ -39,10 +40,12 @@ Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, 
 
 - Report a per-ticket and per-phase breakdown from the event log alone, with zero harness-store reads.
 - Attribute records to delivery phases from the timestamped transition history already in the ledger.
-- Count delivery-run restarts over the union of run identities in both telemetry families.
+- Report cost totals in harness-reported units, five-dimension breakdowns (ticket, repository, lane, agent role, model), and per-phase timing summaries with stall and restart intervals joined from the delivered economics records.
+- Count delivery-run restarts over the union of run identities in the selected records of both telemetry planes and the capture-outcome records.
 - Report the resume-amplification metric — tokens paid versus unique progress, approximately 1 for a healthy delivery — and flag amplification events by name.
+- Reconcile observed totals against summed harness-reported session totals at the stated tolerance, disclosing the verdict, the basis, and excluded sessions.
 - Classify telemetry-absent explicitly and reuse delivered state identities for store damage.
-- Report spend evidence in the status digest's section 8 from the same fold.
+- Report spend evidence in the status digest's section 8 from the same fold, and cite the same figures from the brief and the retro evidence pass.
 
 ## User Experience & Functionality
 
@@ -52,12 +55,15 @@ The handler owns the value grammar before any read and performs no stream write 
 
 | Invocation | Behavior |
 |---|---|
-| `spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` | Reports the selection's spend. |
+| `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]` | Reports the selection's spend. |
 | `--ref` omitted | Resolves the active change ref from the local delivery context without touching the state store. |
 | `--ref` with an unresolvable active context | Refuses `input.value.rejected` (exit 1) before any read. |
 | `--ref <ref>` | Matches the canonical uppercase ref grammar (`^[A-Z][A-Z0-9]*-[0-9]+$`), case-sensitive with no folding. A malformed shape refuses `input.value.rejected` before any read. |
 | `--phase <phase>` | Selects one canonical delivery phase; scopes the whole report (tokens, calls, `perAgent[]`, `perPhase[]`, restarts, and amplification) to the phase-attributed records. |
 | `--phase` outside the eleven canonical phase ids | Refuses `input.value.rejected` (exit 1) before any read, naming the canonical vocabulary. |
+| `--breakdown <field>` | Selects the human-emphasis breakdown dimension; the five declared fields are `ticket`, `repository`, `lane`, `role`, and `model`. The machine payload always carries all five. |
+| `--breakdown` outside the five declared fields (typo or case variant) | Refuses `input.value.rejected` (exit 1) before any record read, naming the declared fields. |
+| `--breakdown` with no value | Refuses `input.value.rejected` (exit 1). |
 | `--phase` naming a canonical phase whose window holds no records | Returns the scoped `spend.telemetry-absent`, naming the phase. |
 | `--amplification` | Adds the amplification section to the human digest. The machine envelope always carries `amplification`. |
 | Missing flag value or unexpected positional | Refuses `input.value.rejected` (exit 1). |
@@ -103,13 +109,29 @@ A restart loop reports a ratio above 1 and one `restart-loop prefill re-pay` eve
 
 ### Spend breakdown
 
-`tokensByClass` carries exactly the five delivered token classes — `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite` — as non-negative integers summed across the selected captured session-group records. A token class absent at capture is excluded from every sum and never fabricated to zero. Calls are reported in the human digest total and in every `perAgent[]` and `perPhase[]` entry; the six-key machine payload carries no separate top-level calls key.
+`tokensByClass` carries exactly the five delivered token classes — `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite` — as non-negative integers summed across the selected captured records: a session present in the v2 step plane contributes its step sums, otherwise its closeout session-group records contribute. A token class absent at capture is excluded from every sum and never fabricated to zero. Calls are reported in the human digest total and in every `perAgent[]`, `perPhase[]`, and breakdown entry; the machine payload carries no separate top-level calls key.
 
 `perAgent[]` groups records by (agent, model) with `calls` and `tokens`. It orders by tokens descending, then agent ascending, then model ascending.
 
-`degradation` discloses records with any null-when-missing token class, any closed-vocabulary warning, or a capture-outcome warning. It carries `records` (the count of affected records and outcomes) and `byReason` over the closed harness warning vocabulary: `optional-field-absent`, `non-numeric-value`, `cost-missing`, `version-drift`, `malformed-line`, `truncated`, `session-capture-failed`, `unattributable-session`, and `invalid-session-identity`. A capture-outcome warning is never dropped.
+`degradation` discloses records with any null-when-missing token class, any closed-vocabulary warning, or a capture-outcome warning. It carries `records` (the count of affected records and outcomes) and `byReason` over the closed harness warning vocabulary: `optional-field-absent`, `non-numeric-value`, `cost-missing`, `version-drift`, `malformed-line`, `truncated`, `session-capture-failed`, `unattributable-session`, and `invalid-session-identity`. A capture-outcome warning is never dropped. The two v2-only reasons are disclosed on their own channels: `unattributable-step` rides the step record and its `value: null` breakdown row, and `baseline-session-excluded` rides the report's warning channel with the named excluded count.
 
-Cost is not aggregated and never rendered. A record's cost stays null-when-missing and token counts alone constitute the breakdown.
+Cost is reported only in v2: `costTotals` aggregates the harness-reported per-record cost in harness-reported units, never converted or re-priced, and discloses sparsity (`sparse: true`) when any contributing record's cost is null. A null cost contributes nothing; it is never zero-filled or estimated.
+
+### Breakdown dimensions
+
+`breakdowns` carries one array per declared dimension — `ticket`, `repository`, `lane`, `role`, and `model` — whose entries are `{ value, calls, tokens, cost }`. Each array's `tokens` sum equals the corresponding total exactly, so the breakdown never disagrees with `tokensByClass`. A record with an unattributed dimension contributes a `value: null` row and the closed `unattributable-step` warning; it is never defaulted into another dimension. Entries order by tokens descending, then value ascending, with the null row last. `--breakdown` changes only which section the human digest leads with.
+
+### Phase timing summaries
+
+`phaseTiming` carries one entry per transitioned phase: `phase`, `start`, `end`, `durationMs`, `stalls`, and `restarts`. Values derive from the ordered `phase.transition` history; a phase window is start-inclusive and end-exclusive, and stall and restart intervals join the delivered economics records rather than being re-estimated. An open phase (no completing transition) reports `end: null` and `durationMs: null`. The fold never synthesizes a duration.
+
+### Telemetry state and fold basis
+
+`telemetryState` is the DM-4 disclosure: `present` when any telemetry record of either capture plane exists for the selection. `reconciliation.basis` is the declared reading basis — `stream-ingest` when only per-step v2 records feed the selection's figures, `closeout-capture` when only the delivered v1 session-group records do, and `combined` when records of both planes exist and the OQ-T4 session-dedup rule selects each session's step figures while its closeout sums corroborate the baseline. Absence keys off telemetry records of either plane: a baseline-only store is still `spend.telemetry-absent`, never a zero report.
+
+### Reconciliation disclosure
+
+`reconciliation` is present on every report: `{ basis, harnessTotals, observedTotals, tolerance, verdict, excludedBaselineSessions }`. `harnessTotals` is the summed harness-reported per-session baseline (captured baseline records first, else the session's delivered v1 group sums); `observedTotals` is the fold's selected figures; `tolerance` is the declared contract constant `0.02`, stated — never silent; `verdict` is exactly one of `within`, `outside`, or `unavailable`. The deviation is the largest per-class relative difference between the observed and harness figures; a class the harness baseline reports as zero while the observed figures carry it counts as an immediate full deviation, and an all-zero baseline is compared on summed totals. A deviation beyond tolerance renders `outside` at exit 0 with both figures. A session with no harness-reported total is excluded from the sum with the closed `baseline-session-excluded` warning and the named `excludedBaselineSessions` count, never counted as zero. When no baseline contribution exists at all, the verdict is the classified `unavailable` — never `within` — while the tolerance is still stated. One verdict is computed per report; there is no per-session verdict fork.
 
 ### Per-phase attribution
 
@@ -125,7 +147,7 @@ Telemetry records carry no phase field; attribution is derived. The fold orders 
 
 ### Restarts
 
-`restarts` is `max(0, N − 1)` where `N` is the size of the union of run identities across captured session-group records and capture-outcome records for the selection. Both families contribute identity, so a capture-outcome-only run is counted. The count is over runs that reached closeout capture; runs aborted before capture are invisible, and that evidence basis is disclosed in the report's own terms.
+`restarts` is `max(0, N − 1)` where `N` is the size of the union of run identities across the selected records of both telemetry planes and the capture-outcome records for the selection. Both planes contribute identity, so a run captured only as v2 steps and a capture-outcome-only run are both counted. The count is over runs that reached capture; runs aborted before any capture are invisible, and that evidence basis is disclosed in the report's own terms.
 
 ### Resume amplification
 
@@ -147,14 +169,14 @@ The report renders these honesty-limit declarations verbatim:
 
 ### Output contract and bounds
 
-The machine payload is the standard `CommandResult` envelope whose `data` is the six-key `delivery.spend.v1` report. The human digest is a deterministic, bounded rendering of the same data. `--amplification` controls only the human amplification section; the envelope always carries the full block.
+The machine payload is the standard `CommandResult` envelope whose `data` is the eleven-key `delivery.spend.v1` report (six delivered plus five additive). The human digest is a deterministic, bounded rendering of the same data. `--amplification` controls only the human amplification section; the envelope always carries the full block.
 
 | Bound | Value |
 |---|---|
 | Machine payload | ≤ 65 536 UTF-8 bytes |
 | Human digest | ≤ 16 384 UTF-8 bytes and ≤ 200 lines |
 
-The machine bound drops trailing `perAgent[]` entries first, then trailing `perPhase[]` entries, then trailing amplification events, recording the dropped counts in the warning channel and a deterministic `truncated` marker. The human renderer applies the same tail order and records the same marker. Token totals, `restarts`, `ratio`, and the `progressRun` identity are never truncated. All bounds are measured in UTF-8 bytes.
+The machine bound drops trailing `perAgent[]` entries first, then trailing breakdown rows across the five dimensions, then trailing `perPhase[]` entries, then trailing amplification events, recording the dropped counts in the warning channel and a deterministic `truncated` marker. The human renderer applies the same tail order and records the same marker. Token totals, `costTotals`, `restarts`, `ratio`, `progressRun`, the telemetry-state line, and the reconciliation block (verdict, stated tolerance, basis, and both figures) are never truncated. All bounds are measured in UTF-8 bytes.
 
 ### Error identity and exits
 
@@ -164,7 +186,7 @@ One new domain kind, `spend`, carries exactly one row: `spend.telemetry-absent` 
 |---|---|---|
 | Report rendered (including the degenerate all-zero report and a capture-outcome-only success) | — | 0 |
 | No captured telemetry for the selection (including a canonical phase with an empty window) | `spend.telemetry-absent` | 1 |
-| Malformed ref, unresolvable active context, out-of-vocabulary phase, missing value, unexpected positional | `input.value.rejected` | 1 |
+| Malformed ref, unresolvable active context, out-of-vocabulary phase or breakdown field, missing value, unexpected positional | `input.value.rejected` | 1 |
 | Undeclared flag | `fallback.invocation` | 1 |
 | Permission violation on the store read | `state.permission.denied` (delivered `user-validation`) | 1 |
 | Torn store, wrong record kind, malformed payload | `state.store.torn` | 2 |
@@ -180,12 +202,12 @@ Status digest section 8 `spend` is a collector section fed by the same `readSpen
 
 | Store outcome | Section state | Evidence |
 |---|---|---|
-| Captured telemetry | `observed` with token-class totals, `restarts`, and the amplification ratio | source `state-log`, outcome `read`, reason `observed` |
+| Captured telemetry | `observed` with token-class totals, `restarts`, and the amplification ratio, plus the additive `telemetryState`, `reconciliation`, `byRole`, `byModel`, and `phaseTiming` fields from the same fold | source `state-log`, outcome `read`, reason `observed` |
 | Verified-empty telemetry | `observed` with zero counts and the human line `no captured telemetry (absence of capture)` — never a zero-spend claim | source `state-log`, outcome `observed-empty`, reason `observed-empty` |
 | Failed store read | `unknown` with the `state-unreadable` reason and the state failure code; the digest still renders all nine sections and exits 0 | source `state-log`, outcome `failed`, `failureCode` |
 | No resolvable active change ref | `unknown` with reason `local-context-missing` and its code | source `state-log`, outcome `failed`, `failureCode` |
 
-The digest carries the spend projection as the section's `spend` field. The section contributes zero to `actionable`; `placeholderSectionCount` is exactly 0 (no section is a placeholder after the typed-questions and spend deliveries). No spend placeholder line renders. The brief carries no spend surface.
+The digest carries the spend projection as the section's `spend` field. The section contributes zero to `actionable`; `placeholderSectionCount` is exactly 0 (no section is a placeholder after the typed-questions and spend deliveries). No spend placeholder line renders. The command and the digest render identical totals, breakdown figures, telemetry state, and reconciliation disclosure from the same fold. The brief carries one declared spend surface and the retro evidence pass carries one declared `spend-telemetry` source, both citing the same figures.
 
 ## Technical Architecture & Codebase Map
 
@@ -193,13 +215,17 @@ The digest carries the spend projection as the section's `spend` field. The sect
 
 | Path | Component | Responsibility |
 |---|---|---|
-| `packages/core/src/contracts/spend.ts` | Spend vocabulary | The `delivery.spend.v1` schema constant, six data keys, amplification keys and closed cause, five-class totals, bounds, truncation targets and marker, ordering keys, disclosure statements, ref grammar, the one error code, report/read/selection/digest types, and the injected command runtime type. Types and `as const` data only. |
+| `packages/core/src/contracts/spend.ts` | Spend vocabulary | The `delivery.spend.v1` schema constant, six data keys and the five additive v2 keys (DEC-6), amplification keys and closed cause, five-class totals, cost totals, breakdown rows/set, phase timing, the truncation targets and marker, bounds, ordering keys, disclosure statements, ref grammar, the one error code, report/read/selection/digest types, and the injected command runtime type. Types and `as const` data only. |
+| `packages/core/src/contracts/telemetry.ts` | Telemetry v2 vocabulary | The storage identity and re-read migration rule, the step and baseline record families with key prefixes and schema ids, the five attribution dimensions, the reading-basis and verdict vocabularies, the 0.02 tolerance, the warning-reason additions, and the OQ-T4 combination rule. |
 | `packages/core/src/contracts/harness-telemetry.ts` | Telemetry vocabulary | The `harness.telemetry` record kind, payload schemas, key prefixes, five token classes, and closed warning vocabulary the fold reuses by reference. |
 | `packages/core/src/contracts/registry.ts` | Transition vocabulary | The `phase.transition` payload and history-read semantics the phase windows fold. |
 | `packages/core/src/contracts/error-table.ts` | Error table | The `spend` domain kind, its one `spend.telemetry-absent` row, and the exact-code-only kind declaration. |
-| `packages/core/src/state/spend-reads.ts` | Read consumer | One classified, verified, ref-scoped read composing both telemetry families and the ref's transition history over the injected state port; no append, fence, salvage, harness, session, or provider access. |
-| `packages/core/src/domain/spend.ts` | Pure fold | Five-class sums with null exclusion, degradation accounting, per-agent roll-ups, capture-time phase attribution, restart counts, the TDR-0011 amplification formula, bounding, and the status-digest projection. Zero I/O, clock, or randomness. |
-| `packages/core/src/domain/spend-text.ts` | Human renderer | The bounded deterministic human digest, disclosure lines, amplification emphasis section, and truncation marker. |
+| `packages/core/src/state/telemetry.ts` | Telemetry v2 storage | Fenced step and baseline families, strict payload validation classifying damage as `state.store.torn`, the re-read migration reader, session-close baseline capture, and the verified multi-family read. |
+| `packages/core/src/state/spend-reads.ts` | Read consumer | One classified, verified, ref-scoped read composing both telemetry planes, the v2 step and baseline families, and the ref's transition history over the injected state port; no append, fence, salvage, harness, session, or provider access. |
+| `packages/core/src/domain/telemetry-ingest.ts` | Pure ingest | Frame decode with present-zero distinguished from omitted, cost/calls null-when-missing, drift disclosed, and per-reason ingest tally. |
+| `packages/core/src/domain/telemetry-attribution.ts` | Pure attribution | Five-dimension attribution from the injected economics and audit identity; absent dimensions excluded with `unattributable-step`, never defaulted. |
+| `packages/core/src/domain/spend.ts` | Pure fold | Five-class sums with null exclusion, degradation accounting, per-agent roll-ups, capture-time phase attribution, restart counts, the TDR-0011 amplification formula, the v2 breakdown/cost/timing/telemetry-state/reconciliation additions, bounding, and the status-digest projection. Zero I/O, clock, or randomness. |
+| `packages/core/src/domain/spend-text.ts` | Human renderer | The bounded deterministic human digest, telemetry-state and reconciliation lines, breakdown sections, disclosure lines, amplification emphasis section, and truncation marker. |
 | `packages/cli/src/commands/spend.ts` | Command definition | The locked grammar, value validation before any read, default-ref resolution, human render and failure hooks. No stream write and no exit choice. |
 | `packages/cli/src/edge.ts` | CLI edge | Composition of the read-only state and local-context seams, the command runtime, and the status digest's spend projection over the same fold. |
 
@@ -216,22 +242,23 @@ function createSpendCommandRuntime(options: SpendCompositionOptions): SpendComma
 
 ### Data architecture
 
-- **No new record kind.** The command consumes `harness.telemetry` session-group records (`delivery.harness.telemetry.v1` under `harness.telemetry:<workItemRef>`), capture-outcome records (`delivery.harness.telemetry.capture.v1` under `harness-telemetry-capture:<workItemRef>:<runId>`), and the ref's `phase.transition` history. No payload schema, key prefix, append path, projection, or schema-version bump changes.
-- **One classified read.** The three verified reads run in a fixed order — session telemetry, capture outcomes, transition history — so the failure identity is deterministic. Every failure is the delivered `state.*` result, never a partial or zeroed read.
-- **Presence tolerance.** An absent store or an absent per-ref record family is explicit verified-empty evidence. When both telemetry families hold no records for the ref, the read is `verifiedEmpty` and the fold classifies `spend.telemetry-absent` (or the scoped phase absence).
-- **Evidence.** The read carries the store path and a transition record count for diagnostics only; output carries statistics and identity references only.
+- **Additive record families.** The command consumes the delivered `harness.telemetry` session-group records (`delivery.harness.telemetry.v1` under `harness.telemetry:<workItemRef>`), capture-outcome records (`delivery.harness.telemetry.capture.v1` under `harness-telemetry-capture:<workItemRef>:<runId>`), the v2 per-step records (`harness.telemetry.step` under `harness.telemetry.step:<workItemRef>`), the v2 session baselines (`harness.telemetry.baseline` under `harness.telemetry.baseline:<workItemRef>`), and the ref's `phase.transition` history. The v2 families declare their own storage identity `delivery.telemetry.storage.v1`; the state layer's schema version and every delivered v1 payload are unchanged.
+- **One classified read pass.** The verified reads run in a fixed order with one read per record family (constant in population size) so the failure identity is deterministic. Every failure is the delivered `state.*` result, never a partial or zeroed read.
+- **Presence tolerance.** An absent store or an absent per-ref record family is explicit verified-empty evidence. When neither telemetry plane holds a record for the ref, the read is `verifiedEmpty` and the fold classifies `spend.telemetry-absent` (or the scoped phase absence). A baseline record alone never fabricates presence.
+- **Evidence.** The read carries the store path and a record count for diagnostics only; output carries aggregates, identity references, and time windows only.
 
 ### API and interface contracts
 
 - `SpendCommandRuntime` exposes `resolveActiveRef()` and `report(selection)`; the CLI command definition consumes it and returns `data`, `warnings`, or a classified `error`.
 - `SpendCommandFailure` is either the one `spend` code or an existing `state` code with `not_landed` and a safe location.
-- `SpendDigestSection` is the digest projection: `{ state: "observed", captured: true, tokensByClass, restarts, ratio }`, `{ state: "observed", captured: false }`, or `{ state: "unknown", reason: "state-unreadable" | "local-context-missing", failureCode }`.
+- `SpendDigestSection` is the digest projection: `{ state: "observed", captured: true, tokensByClass, restarts, ratio, telemetryState?, reconciliation?, byRole?, byModel?, phaseTiming? }`, `{ state: "observed", captured: false }`, or `{ state: "unknown", reason: "state-unreadable" | "local-context-missing", failureCode }`.
 
 ### Invariants and gates
 
 - **Read-only by construction.** No append, fence, salvage, spawn, network, credential, or harness call is reachable on any invocation path; the read consumer imports no adapter, session reader, or provider client. Byte-snapshot tests prove the store is unchanged.
-- **Deterministic render.** Identical store content, injected clock, and injected run-id render byte-identical output; the render path performs zero model calls and reads no ambient clock or randomness.
-- **Contract exactness.** The six `data` keys, the three amplification keys, the closed single-entry cause vocabulary, and the five reused token classes are asserted from the contract module.
+- **Deterministic render.** Identical store content, injected clock, and injected run-id render byte-identical output, including shuffled-append permutations; the render path performs zero model calls and reads no ambient clock or randomness.
+- **Contract exactness.** The six delivered `data` keys keep their names and order and the five v2 keys sit beside them under the unchanged identity (DEC-6); the three amplification keys, the closed single-entry cause vocabulary, and the five reused token classes are asserted from the contract module.
+- **Honesty rules are load-bearing.** Disabling mutants — absent-to-zeros, sum-null-as-zero, clamp-outside-to-within, omit-reconciliation, truncate-totals, and the rest of the declared set — each produce their prohibited observable while the real modules produce none.
 - **Error-table binding.** The one `spend` row round-trips with the documented table and resolves by exact code only; no exit literal lives outside the CLI projection module.
 - **Composition-only registration.** The command registry carries a spend entry only when the spend composition supplies it.
 
@@ -269,6 +296,10 @@ Behaviour suites live under `tests/behaviour/spend-*.test.ts` and `tests/behavio
 | Behaviour — restarts and amplification | `spend-restarts`, `spend-run-substrate`, `spend-amplification-healthy`, `spend-amplification-events`, `spend-amplification-determinism`, `spend-amplification-null`, `spend-disclosure` | Union-of-runs counting, exact-1 healthy anchor, one named event per superseded positive-spend run, tie-break and permutation invariance, zero-progress and no-record-bearing-run cases, and the disclosure text. |
 | Behaviour — surface and bounds | `spend-envelope`, `spend-bounds`, `spend-determinism`, `spend-privacy`, `spend-grammar`, `spend-ref-resolution`, `spend-readonly` | Envelope shape, mode emphasis, byte/line bounds, byte-identical replay, privacy canaries, locked grammar, default-ref resolution, and the read-only proof. |
 | Behaviour — digest flip | `status-spend-section`, `status-spend-degraded`, `status-spend-parity` | Section 8 observed/unknown projections, absence-of-capture line, `state-log` evidence, placeholder retirement, and command/digest parity. |
+| Behaviour — v2 read side | `spend-v2-breakdown`, `spend-v2-fold-basis`, `spend-v2-v1-compat`, `spend-v2-refusals`, `spend-reconciliation` | Five-dimension breakdowns summing to the totals, the reading-basis matrix (stream ingest, closeout capture, combined), the unchanged six v1 keys, the pre-read `--breakdown` refusal, and the R-01..R-08 reconciliation matrix with the stated tolerance and one verdict. |
+| Behaviour — consumer citation | `brief-spend-citation`, `retro-telemetry-evidence` | The declared brief spend surface and the declared `spend-telemetry` retro source, including the classified absence. |
+| Behaviour — cross-cutting honesty | `telemetry-disclosure`, `telemetry-determinism`, `telemetry-privacy`, `telemetry-audit-compose` | State and tolerance on every render path, byte-identical repeats with zero model calls, aggregate-only records and reports, and the invocation audit with a failing-write control. |
+| Checks — hermeticity, conformance, mutants | `tests/checks/telemetry-hermetic`, `telemetry-mutants`, `privacy-literals`; `tests/structure/telemetry-contract`, `telemetry-imports` | Offline posture across every new suite, the ten disabling honesty mutants, brand neutrality, record-kind and schema patterns, error-table sync, and the live exit-code and forbidden-literal scans. |
 | Golden | `tests/golden/spend` | Healthy, restart-loop, degraded, and over-cap machine and human bytes, never rewritten by the suite. |
 | Performance | `spend-performance` | Bounded fold latency and read counts at 1 000 and 10 000 records. |
 | Mutant and invariant | `tests/checks/spend-mutants` | Every pinned formula, ordering, bound, and read-only rule fails when disabled. |
@@ -292,7 +323,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 
 ## Dependencies & Risks
 
-- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point. The production closeout composition constructs the capture from resolved harness settings and appends `harness.telemetry` to the state log, so a real closeout is no longer telemetry-absent; a store without capture for the selected ref remains the classified telemetry-absent outcome.
+- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point, and on the telemetry v2 capture and storage contract ([feature-telemetry-v2.md](feature-telemetry-v2.md)) for the per-step and baseline families, attribution dimensions, storage version, and the OQ-T2 baseline sourcing. The production closeout composition constructs the capture from resolved harness settings and appends `harness.telemetry` to the state log, so a real closeout is telemetry-present; a store without any capture for the selected ref remains the classified telemetry-absent outcome.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, presence tolerance, and classified `state.*` failures.
 - **Depends on** the delivery registry ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for timestamped `phase.transition` history.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, error table, exact-code classification, exit projection, and redaction chokepoint.
@@ -306,7 +337,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 
 | Term | Definition |
 |---|---|
-| Spend read side | The read-only fold over closeout-captured telemetry that produces the spend report; never a harness re-query. |
+| Spend read side | The read-only fold over the delivered closeout capture and the v2 per-step and session-baseline telemetry families that produces the spend report; never a harness re-query. |
 | Token class | One of the five delivered classes: `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite`. |
 | Phase window | An interval derived from `phase.transition` timestamps within which a record's captured-at stamp selects its phase attribution. |
 | Capture-time attribution | The v0 basis assigning each record to the phase selected at its captured-at stamp. |

@@ -151,6 +151,7 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
 
     // 6. The composed program carries the definition and the restriction keeps it.
     //    The checkout is temporary: composition must never run in this repository.
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const checkout = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-help-compose-"));
     const home = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-help-home-"));
     mkdirSync(join(checkout, ".git"), { recursive: true });
@@ -174,6 +175,7 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
 
   test("the mutants still detect a removed inventory row and a page missing --version", () => {
     const copy = (): string => {
+      mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
       const root = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-help-mutants-"));
       cpSync(join(ROOT, M1_COMMANDS), join(root, M1_COMMANDS), { recursive: true });
       cpSync(join(ROOT, M2_COMMANDS), join(root, M2_COMMANDS), { recursive: true });

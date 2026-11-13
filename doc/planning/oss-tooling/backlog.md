@@ -1254,6 +1254,13 @@ the project family separately.
 - Depends on: M1-S18.
 
 ### M2-S14 Harness telemetry v2
+- Progress: delivered by GH-291 — per-step ingest of the opencode v2.x.y stream
+  with per-step model cost and five token classes, five-dimension attribution
+  joined from session economics and command-audit identity, phase/stall/restart
+  timing, schema-versioned additive step and baseline storage with re-read
+  migration, the spend v2 breakdowns and timing summaries with the declared
+  `0.02` reconciliation tolerance, retro and brief citation of the same
+  figures, and classified telemetry absence rather than zeros.
 - Goal: Token, cost, and timing telemetry captured per ticket, repository,
   lane, agent role, and model from the opencode v2.x.y stream, so spend,
   metrics, and retro state facts instead of estimates.

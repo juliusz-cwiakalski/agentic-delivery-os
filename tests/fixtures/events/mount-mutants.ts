@@ -126,6 +126,7 @@ export const allowanceRows = (root = ROOT): { taxonomy: boolean; projection: boo
 
 /** Mutant 7/8: a temp root whose inventory/allowance text lacks the rows. */
 export const strippedInventory = (): readonly string[] => {
+  mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
   const root = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh290-inventory-"));
   try {
     mkdirSync(join(root, "tests/structure"), { recursive: true });

@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-292"]
+  related_changes: ["GH-290", "GH-291", "GH-292"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -98,9 +98,9 @@ production composes no lane executor, so a resident daemon runs the declared
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, capsule event rules and candidate promotion, merged-diff marker classification, thread-authorship policy, worktree safety, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, the coordinator supervision domain (lifecycle decision, artifact-evidence verdict, restart admission, wake evaluation, escalation and reserved-slot projection, instance-lease fold, regime descriptor, and observation projection), and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, telemetry frame decode and five-dimension attribution, capsule event rules and candidate promotion, merged-diff marker classification, thread-authorship policy, worktree safety, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification, cost totals, five-dimension breakdowns, phase timing, and the reconciliation disclosure), the session lifecycle economics budget/resume/view/evidence folds, the coordinator supervision domain (lifecycle decision, artifact-evidence verdict, restart admission, wake evaluation, escalation and reserved-slot projection, instance-lease fold, regime descriptor, and observation projection), and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
-| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the coordinator record consumer and folds, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
+| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the coordinator record consumer and folds, the telemetry v2 step and baseline families with re-read migration, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier: the runtime-neutral state-scope policy (host root, project identity, host index) and the `projects` projections; the dispatch engine, handover ledger, and dispatch gate; the queue, polling, and watch folds; the daemon runtime, control server, dispatch-result, status, supervision, reconcile, and preemption behaviour. `createRuntime` remains an `export declare` composition signature, not a callable implementation. |
 | `cli/bin/`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts` | Executable surface: the non-installed Bun bin, working-name resolution, root/command help and version, the prompt-required composition, and fail-closed containment for an uncomposed invocation. Help and version read no state, network, git, or configuration. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, the mounted daemon lifecycle family, and bounded status collectors. |
@@ -110,7 +110,7 @@ production composes no lane executor, so a resident daemon runs the declared
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
-| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, the review-deferral record, and the read-only SQLite session-store loader. |
+| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and store-scoped orphan disclosure, the opencode per-step stream ingest sink with session-close baseline capture, harness-store session attribution, the review-deferral record, and the read-only SQLite session-store loader. |
 | `adapters/src/host/` | The harness seam's single child-process module, a pinned entry in the exact repository-wide `node:child_process` allowlist, exposing the one-shot runner (listing and Claude Code) and the streaming spawn starter (opencode spawn, resume, deliver): both receive the constructed environment as data and read no ambient environment. |
 | `adapters/src/azure/`, `ci/`, `registry/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
 | `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
@@ -207,13 +207,19 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   other declared levels refuse with their owning story. A no-eligible-target
   collect is an explicit exit-0 success; export is a bounded library surface with
   no CLI verb. See the [retro evidence pipeline](../spec/features/feature-retro-pipeline.md).
-- `spend [--ref <ref>] [--phase <phase>] [--amplification]` is the read-only
-  learning-plane spend fold over closeout-captured `harness.telemetry` records and
+- `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification]` is the read-only
+  learning-plane spend fold over the delivered closeout-captured `harness.telemetry`
+  records, the v2 per-step and session-baseline telemetry families, and
   `phase.transition` history. It reports five-class token totals, calls,
-  per-agent/model roll-ups, capture-time per-phase attribution, restart counts, and
-  the resume-amplification block with named `restart-loop prefill re-pay` events;
-  telemetry-absent is `spend.telemetry-absent` (exit 1). No harness re-query, no
-  state writes, no cost aggregation. See the [spend read side](../spec/features/feature-spend.md).
+  per-agent/model roll-ups, capture-time per-phase attribution, restart counts,
+  cost totals in harness-reported units, five-dimension breakdowns, per-phase
+  timing summaries, and the resume-amplification block with named
+  `restart-loop prefill re-pay` events; it reconciles observed totals against
+  summed harness-reported session totals at the stated `0.02` tolerance and
+  discloses the verdict, basis, and excluded sessions. Telemetry-absent is
+  `spend.telemetry-absent` (exit 1). No harness re-query, no state writes. See the
+  [spend read side](../spec/features/feature-spend.md) and
+  [harness telemetry v2](../spec/features/feature-telemetry-v2.md).
 - [Closeout](../spec/features/feature-closeout.md) is integrated: twelve-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. The steps cover the tracker, review-thread authorship policy from

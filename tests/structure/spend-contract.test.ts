@@ -19,6 +19,7 @@ import {
   SPEND_DATA_KEYS,
   SPEND_DATA_SCHEMA_ID,
   SPEND_TELEMETRY_ABSENT_CODE,
+  SPEND_V2_DATA_KEYS,
 } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
@@ -81,9 +82,9 @@ describe("TC-SPEND-001 declaration-only spend contract", () => {
     expect(source.includes("function ")).toBe(false);
   });
 
-  test("the data contract carries exactly the six pinned keys", () => {
+  test("the data contract carries the six v1 keys plus the five declared v2 keys", () => {
     const dataKeys = membersOf("SpendReport").map((member) => member.name);
-    expect(dataKeys.sort()).toEqual([...SPEND_DATA_KEYS].sort());
+    // The six v1 keys keep their names and semantics (DEC-6).
     expect(SPEND_DATA_KEYS).toEqual([
       "tokensByClass",
       "perPhase",
@@ -92,11 +93,22 @@ describe("TC-SPEND-001 declaration-only spend contract", () => {
       "amplification",
       "degradation",
     ]);
+    for (const key of SPEND_DATA_KEYS) expect(dataKeys, key).toContain(key);
+    // The v2 additions are exactly the declared set, beside the six.
+    for (const key of SPEND_V2_DATA_KEYS) expect(dataKeys, key).toContain(key);
+    expect(dataKeys.sort()).toEqual([...SPEND_DATA_KEYS, ...SPEND_V2_DATA_KEYS].sort());
+    expect(new Set(dataKeys).size).toBe(dataKeys.length);
     expect(dataKeys).not.toContain("schemaVersion");
-    expect(dataKeys).not.toContain("cost");
     expect(dataKeys).not.toContain("currency");
     expect(dataKeys).not.toContain("paid");
     expect(dataKeys).not.toContain("progress");
+    expect(SPEND_V2_DATA_KEYS).toEqual([
+      "costTotals",
+      "breakdowns",
+      "phaseTiming",
+      "telemetryState",
+      "reconciliation",
+    ]);
   });
 
   test("the schema id is a declared constant, never a data field", () => {

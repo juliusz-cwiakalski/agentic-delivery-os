@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-11
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291"]
   related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -65,6 +65,13 @@ harness-neutral statistics shape and appended to the state ledger as additive
 `harness.telemetry` records. Capture is idempotent, fenced and verified, and
 non-gating: failure is classified and disclosed with counts and warnings, and
 never changes a closeout step, summary, or verdict.
+
+During an opencode stream, the adapter also offers an optional per-step ingest
+sink: each decoded `step_finish` frame becomes one attributed
+`harness.telemetry.step` record while the drain continues, and one bounded
+read-only per-session totals query at stream close lands one
+`harness.telemetry.baseline` record. Ingest is non-gating, and an absent sink
+keeps the delivered stream behavior unchanged.
 
 Liveness carries two vocabularies. The delivered liveness-kind union stays
 exactly `session-traffic`, `worktree-activity`, and `process`. Heartbeat age and
@@ -287,6 +294,15 @@ session identities as `store:invalid-identity=<n>`; they are never fabricated as
 the capturing delivery's failed sessions. A session that is attributed to the
 capturing delivery but cannot be parsed is a classified failed capture with no
 fabricated record. Conversation content never enters the output.
+
+Beside the one-shot extractors, the opencode streaming spawn carries an optional
+per-step ingest sink: each decoded step frame is decoded, attributed, and stored
+as a `harness.telemetry.step` record while the drain continues, and one bounded
+read-only per-session totals query at stream close captures that session's
+`harness.telemetry.baseline`. The capture is non-gating and an absent sink keeps
+the delivered stream behavior unchanged. The record families, attribution
+dimensions, storage version, and reading bases are specified in
+[Harness Telemetry v2](feature-telemetry-v2.md).
 
 ## 6. Closeout capture
 

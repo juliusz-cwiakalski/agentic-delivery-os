@@ -67,19 +67,21 @@ describe("TC-EVT-074 additivity inventory", () => {
     expect([...CAPSULE_EVENT_KINDS]).toEqual([...baseline.capsuleEventKinds]);
   });
 
-  test("no outbox effect kind or telemetry sink was added", () => {
+  test("no outbox effect kind was added; the declared telemetry contract files are exactly the two", () => {
     expect([...EFFECT_KINDS]).toEqual([...baseline.effectKinds]);
     const telemetry = readdirSync(join(ROOT, "packages/core/src/contracts")).filter((file) =>
       /telemetry|metric|trace/iu.test(file),
     );
-    expect(telemetry).toEqual(["harness-telemetry.ts"]);
+    // GH-291 declares the telemetry v2 contract beside the delivered harness one.
+    expect(telemetry.sort()).toEqual(["harness-telemetry.ts", "telemetry.ts"]);
   });
 
-  test("the state tier's file set adds no writer location", () => {
+  test("the state tier's file set adds only the declared telemetry storage", () => {
     const files = readdirSync(join(ROOT, "packages/core/src/state"))
       .filter((file) => file.endsWith(".ts"))
       .sort();
-    expect(files).toEqual([...baseline.stateFiles]);
+    // GH-291 adds exactly one state-tier module beside the delivered set.
+    expect(files).toEqual([...baseline.stateFiles, "telemetry.ts"].sort());
     expect(files.filter((file) => /event|taxonomy/iu.test(file))).toEqual([]);
   });
 

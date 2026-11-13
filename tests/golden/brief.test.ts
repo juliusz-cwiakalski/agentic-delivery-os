@@ -115,7 +115,9 @@ describe("TC-BRIEF-015 golden machine envelope", () => {
     expect(Buffer.byteLength(JSON.stringify(data), "utf8")).toBeLessThanOrEqual(65536);
     expect(data.schemaVersion).toBe("delivery.brief.v1");
     expect(data.generatedAt).toBe("2026-10-31T00:00:00Z");
-    expect(Array.isArray(data.surfaces) && data.surfaces.length).toBe(9);
+    // Eight digest surfaces (including the declared spend surface) plus two
+    // placeholders: the closed catalog grows only by this change's surface.
+    expect(Array.isArray(data.surfaces) && data.surfaces.length).toBe(10);
     expect(Array.isArray(data.placeholders) && data.placeholders.length).toBe(2);
     expect(Array.isArray(data.truncation) && data.truncation.length).toBeGreaterThan(0);
   });

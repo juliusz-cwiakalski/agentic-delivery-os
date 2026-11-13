@@ -219,6 +219,19 @@ const FALLBACK_PATTERN = /\bfallback\.[a-z][a-z0-9]*\b/g;
 // explicit not-found has its own `closeout` identity), so the scan recognizes it
 // without demanding a documented row.
 const ADAPTER_LOCAL_CODES = new Set(["provider.payload.invalid"]);
+
+/**
+ * Declared record-kind identities that share the error-code shape.
+ *
+ * Telemetry record kinds are schema names carried in the state ledger, not
+ * failure identities; they take the reserved-schema-name path (ignored and
+ * counted) exactly as the header says, never an error-table row.
+ */
+const RESERVED_RECORD_KIND_LITERALS = new Set([
+  "harness.telemetry.step",
+  "harness.telemetry.baseline",
+  "harness.telemetry.capture",
+]);
 const CODE_FORMAT = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";
 
@@ -600,6 +613,10 @@ const validateScan = (
         continue;
       }
       recognizedCount += 1;
+      if (RESERVED_RECORD_KIND_LITERALS.has(reference.code)) {
+        ignored += 1;
+        continue;
+      }
       if (!codes.has(reference.code) && !ADAPTER_LOCAL_CODES.has(reference.code)) {
         const collectorFamily =
           isDeclaredCollectorFamilyCode(reference.code) ||

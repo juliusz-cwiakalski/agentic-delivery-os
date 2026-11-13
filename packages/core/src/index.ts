@@ -913,6 +913,28 @@ export {
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
 export {
+  attributeStep,
+  attributedValue,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./domain/telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  tallyFrame,
+  tallyIngestDegradation,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+} from "./domain/telemetry-ingest.js";
+export {
   boundWatchLine,
   createWatchProjection,
   type WatchLine,

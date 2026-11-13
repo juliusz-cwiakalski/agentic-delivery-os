@@ -79,6 +79,40 @@ const reportHuman = (data: RetroReportData): string => {
   for (const entry of data.followThrough) {
     lines.push(`- ${entry.action}: ${entry.verdict}`);
   }
+  const spendCitation = data.spend;
+  if (spendCitation !== undefined) {
+    if (spendCitation.state === "absent") {
+      lines.push("spend: absent (spend.telemetry-absent; no captured telemetry)");
+    } else {
+      const total =
+        spendCitation.tokensByClass.input +
+        spendCitation.tokensByClass.output +
+        spendCitation.tokensByClass.reasoning +
+        spendCitation.tokensByClass.cacheRead +
+        spendCitation.tokensByClass.cacheWrite;
+      const roles = spendCitation.roles
+        .map((entry) => `${entry.role}:${String(entry.tokens)}`)
+        .join(", ");
+      const models = spendCitation.models
+        .map((entry) => `${entry.model}:${String(entry.tokens)}`)
+        .join(", ");
+      const timing = spendCitation.timing
+        .map(
+          (entry) =>
+            `${entry.phase}:${entry.durationMs === null ? "open" : `${String(entry.durationMs)}ms`}`,
+        )
+        .join(", ");
+      lines.push(`spend: present total ${String(total)} tokens`);
+      lines.push(`- roles ${roles || "none"}`);
+      lines.push(`- models ${models || "none"}`);
+      lines.push(`- timing ${timing || "none"}`);
+      lines.push(
+        spendCitation.reconciliation === undefined
+          ? "- reconcile unavailable"
+          : `- reconcile ${spendCitation.reconciliation.verdict} (tolerance ${String(spendCitation.reconciliation.tolerance)}, basis ${spendCitation.reconciliation.basis})`,
+      );
+    }
+  }
   lines.push(`evidence: ${data.evidenceRefs.join(", ")}`);
   return `${lines.join("\n")}\n`;
 };

@@ -1,0 +1,636 @@
+change_id: GH-291
+title: "M2-S14: Harness telemetry v2 (M2)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-12T19:50:18.104Z }
+  specification: { started: null, completed: 2026-11-12T20:04:01.448Z }
+  test_planning: { started: null, completed: 2026-11-12T20:14:58.871Z }
+  delivery_planning: { started: null, completed: 2026-11-12T20:28:30.525Z }
+  dor_check: { started: null, completed: 2026-11-12T20:35:53.961Z }
+  delivery: { started: null, completed: 2026-11-13T10:28:07.902Z }
+  system_spec_update: { started: null, completed: 2026-11-13T10:49:49.164Z }
+  review_fix: { started: null, completed: 2026-11-13T13:53:47.273Z }
+  quality_gates: { started: null, completed: 2026-11-13T14:12:52.219Z }
+  dod_check: { started: null, completed: 2026-11-13T14:14:47.728Z }
+  pr_creation: { started: null, completed: 2026-11-13T14:19:33.963Z }
+decisions:
+  - text: "Spend read-side extension (v2 breakdowns + reconciliation) is delivered
+      by GH-291 per backlog M2-S14 tasks and AC; the milestone-pack line 'spend
+      v2 owned by M2-S6' is superseded — backlog is canonical for M2 scope and
+      M2-S6's tasks are the alarm/metric layers consuming S14 telemetry."
+    date: "2026-11-12"
+  - text: "OQ-1..OQ-3 adjudicated change-scoped via @decision-advisor, baked into
+      spec as DEC-4..DEC-6: (4) non-opencode deliveries fold closeout-captured
+      v1 records with classified degradation; absence reserved for
+      no-records-of-either-plane; (5) reconciliation baseline = summed harness
+      session totals, one verdict, baseline gaps excluded with warning, no
+      baseline = classified unavailability; (6) payload keeps delivery.spend.v1
+      identity, additions beside the six keys, new identity reserved for
+      semantic breaks. Spec TO-CONFIRM (baseline source per plane) passed to
+      plan-writer."
+    date: "2026-11-12"
+  - text: "DoR gate iteration 1: READY — all 10 facets PASS, 0 critical/major, 2
+      minor + 2 nit non-blocking findings recorded as remediation targets (plan
+      COMMIT DISCIPLINE line wording; unrecorded DEC row for reusing delivered
+      error identities over proposed spend.* names; test-plan GAP-1 status flip;
+      spec contradiction-list completeness). Verdict artifact:
+      readiness-review/readiness-iter-1.md. None block delivery."
+    type: info
+    date: "2026-11-12"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope source: ticket body (planned by #284) + backlog.md M2-S14 +
+      milestone pack m2/ (contracts.md telemetry.v1, commands/spend.md,
+      test-scenarios.md SC-M2-S14-01/02, README.md row: deliverables
+      telemetry.v1 + spend v2)."
+    type: info
+    date: "2026-11-12"
+  - text: "Cross-check vs system spec: current truth has feature-spend.md (spend v1
+      read side folding closeout-captured harness.telemetry + phase.transition
+      records; delivery.spend.v1 envelope with six keys; spend.telemetry-absent
+      classified outcome), feature-harness-adapters.md (read-only extractors),
+      feature-session-lifecycle-economics.md (economics records under
+      economics/<ref>), feature-closeout.md (harness telemetry capture at
+      closeout). Change must extend without breaking the v1 shape (additive
+      contract per m2/contracts.md 'spend v2')."
+    type: info
+    date: "2026-11-12"
+  - text: "Key contract constraints from m2/contracts.md telemetry.v1: attribution
+      fields ticket/repository/lane/agentRole/model/phaseTiming; counting of
+      input, output, reasoning, cache-read, cache-write tokens, calls, cost per
+      model; reconciliation tolerance default <=2% stated with every summary
+      (S14 plan must adopt default or declare different tolerance with
+      justification); absence is classified outcome; schema-versioned local
+      event storage."
+    type: info
+    date: "2026-11-12"
+  - text: "Test scenarios pinned: SC-M2-S14-01 (reconciliation verdict==within,
+      tolerance<=0.02), SC-M2-S14-02 (absence -> exit 1,
+      error.code==spend.telemetry-absent, no zero-valued report)."
+    type: info
+    date: "2026-11-12"
+  - text: "Delivery conventions from ticket: full 11-phase; plan phases in
+      plan.yaml; commits through commit primitive, conventional subjects,
+      body/footer lines <=100 chars; quality gate 'TMPDIR=$PWD/tmp/tmpdir pnpm
+      check' green before PR; PR targets main-tools; maintain
+      doc/planning/oss-tooling/ (backlog markers, status) per convention."
+    type: info
+    date: "2026-11-12"
+  - text: "Doc impacts anticipated for phase 7: doc/spec/features/feature-spend.md
+      (v2 breakdowns/reconciliation), new-or-extended telemetry feature spec
+      (ingest/storage/attribution), feature-session-lifecycle-economics.md
+      (attribution linkage), feature-retro-pipeline.md + feature-brief.md
+      (consume telemetry numbers), doc/planning/oss-tooling/backlog.md markers +
+      status.md snapshot per maintenance convention."
+    type: risk
+    date: "2026-11-12"
+  - text: "Retro: initial pm-notes authoring used a bare date for
+      phases.clarify_scope.started; the phase primitive's lint rejected it
+      (lint.notes.malformed, no partial state — atomic refusal before staging).
+      Conforming shape: started must be null or a full ISO datetime; the
+      primitive owns the completed timestamp. Cost: one extra runner
+      round-trip."
+    type: retro
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 1 complete (commit eb739f19): the GAP-2 token-bearing capture
+      `tests/fixtures/harness/stream/opencode-v2.2.5-tokens.jsonl` (real v2.2.5
+      completion-frame shape, synthetic redacted content, README provenance row,
+      no explicit calls field — omission degrades, never fabricates) and the
+      telemetry v2 contract declaration
+      `packages/core/src/contracts/telemetry.ts` re-exported through
+      `contracts/index.ts`: the brand-neutral storage identity
+      `delivery.telemetry.storage.v1` with the re-read migration rule
+      (GAP-7/DM-5), the `harness.telemetry.step` and
+      `harness.telemetry.baseline` record families with pinned schema ids and
+      key prefixes (OQ-T2 §1), the frame vocabulary resolved by the capture
+      (OQ-T1), the 0.02 tolerance (DEC-2), the within/outside/unavailable
+      verdict set (GAP-5/DEC-5), the stream-ingest/closeout-capture/combined
+      reading bases, the additive warning additions `unattributable-step` and
+      `baseline-session-excluded` spread over the delivered vocabulary (GAP-4),
+      the exactly-five breakdown fields, the five v2 data keys beside the
+      untouched six (DEC-6), the exclude-and-disclose unattributed-dimension
+      rule, the OQ-T4 session-dedup combination constant, and the ingest sink
+      port. Scenario module gains the token-bearing/omission/drift builders for
+      matrices I-01..I-05. Gate: `pnpm typecheck` green; telemetry-contract +
+      telemetry-imports 18 pass / 0 fail; content-inventory + spend-contract 19
+      pass / 0 fail; fixture-privacy 3 pass; exports-parity 5/5 publishables OK;
+      ambient-globals 182 neutral-set files clean. Inventory and executable
+      allowance registered for the new contract module.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 2 complete: the capture pipeline end to end. Pure counting and
+      attribution landed as `packages/core/src/domain/telemetry-ingest.ts`
+      (frame decode over the committed v2.x.y framing, five token classes with
+      present-zero distinguished from omitted, cost/calls null-when-missing,
+      drift disclosed as version-drift, per-reason ingest tally) and
+      `telemetry-attribution.ts` (five dimensions joined from the injected
+      economics session identity and claimed audit identity, absent dimensions
+      excluded with unattributable-step, never defaulted). Storage landed as
+      `packages/core/src/state/telemetry.ts`: fenced step and session-baseline
+      families under the declared record kinds and key prefixes, strict payload
+      validation that classifies damage as `state.store.torn`, the re-read
+      migration reader at the declared next version, session-close baseline
+      capture through the injected read-only totals read, and one verified
+      multi-family read for the spend side. The adapter attaches ingest beside
+      the delivered drain through an injected per-spawn sink (frames observed
+      non-gatingly, session close captured best effort; drain, handle
+      acquisition, and completion evidence unchanged); the opencode totals
+      reader performs one bounded read-only SUM query per session; the edge
+      composes the sink and production wires it into the opencode port; the new
+      `tests/fixtures/telemetry/` builder seeds steps, baselines, v1 records,
+      economics restarts, transitions, and recording substrates. Owning TCs:
+      TC-TELEMETRY-001..008, 010, 012, 013. Narrow gate: `pnpm typecheck` green;
+      telemetry-ingest/attribution/storage-migration/storage-damage/
+      storage-growth 38 pass / 0 fail; harness-opencode-stream and
+      harness-stream-hygiene controls green; telemetry-imports and
+      content-inventory green (inventory and executable allowances registered);
+      ambient-globals 184 files clean; workspace-entrypoints green.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 2 commit: 245aed33 (capture pipeline)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 3 complete: the extended read-side fold. `contracts/spend.ts`
+      keeps the exactly-six `SPEND_DATA_KEYS` and adds the declared v2 types
+      (breakdown rows/set, cost totals, phase timing,
+      `SPEND_V2_TRUNCATION_TARGETS`) beside them under the kept
+      `delivery.spend.v1` identity (DEC-6). `domain/spend.ts` folds both capture
+      planes: the six v1 keys keep their names and semantics on v1-only stores,
+      and the five v2 keys land additively — five-dimension breakdowns over the
+      includes-null rows (sums equal the totals), cost-bearing totals in
+      harness-reported units with sparsity disclosed, per-phase timing summaries
+      derived from `phase.transition` with stall/restart intervals joined from
+      the delivered economics records, `telemetryState: present`, and the
+      declared-tolerance reconciliation block (observed vs summed harness
+      baseline, one verdict, excluded-session count with the closed warning,
+      unavailable when no baseline exists — never `within`). The OQ-T4
+      session-dedup arithmetic is the single selection rule; absence keys off
+      telemetry records of either plane, so a baseline-only store is still
+      `spend.telemetry-absent` (S-06). Bounds extend to the breakdown arrays
+      with a binary-search tail drop; totals and the reconciliation block are
+      never truncated. `state/spend-reads.ts` composes every telemetry family in
+      one verified pass plus transitions and economics restarts (three reads,
+      constant with population). Owning TCs: TC-TELEMETRY-009, 011, 014, 015,
+      017, 018, 025, 026. Goldens regenerated deliberately with `bun run
+      tmp/tmpdir/regen-spend-goldens.ts` (machine payloads gain the five v2
+      keys; over-cap human golden states the declared machine truncation).
+      Narrow gate: `pnpm typecheck` green; telemetry-timing,
+      telemetry-storage-coexistence, spend-v2-*, spend-absent,
+      spend-store-damage, spend-contract, telemetry-contract, error-table,
+      golden spend 170 pass / 0 fail; error-table-sync OK (telemetry record-kind
+      literals are reserved schema names, not error codes — scanner false
+      positive fixed by declaring them); full suite 7754 pass with only the
+      phase-7 bounds assertion and the phase-8 changeset assertion open by
+      design. Unavoidable shared-file edits (all flagged for plan diff): the
+      four delivered suites that pinned the exact six-key payload now pin
+      six-plus-five (additive assertions only); the events additivity
+      inventories (state file set, contract constant set, contract surface
+      fixture) gained exactly the declared telemetry additions; three v1 mutant
+      anchors moved with the fold's renamed locals, keeping each mutant's
+      prohibited observable intact.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 3 commit: fa825bfb (extended read-side fold)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 4 complete: the reconciliation disclosure proven against the
+      full matrix. `tests/behaviour/spend-reconciliation.test.ts` covers
+      R-01..R-08 with hand-summed fixtures: the pinned SC-M2-S14-01 within case
+      through the CLI envelope (`verdict == "within"`, `tolerance == 0.02`
+      stated), the 1% within case, the 5% declared outside verdict at exit 0
+      with both figures, the summed multi-session baseline with exactly one
+      verdict and the declared six-field block (no per-session verdict fork)
+      plus a shuffled-append byte-identity control, the excluded baseline
+      session with its named count and the closed `baseline-session-excluded`
+      warning (never a fabricated zero), the classified unavailability when no
+      baseline contribution exists (never `within`, tolerance still stated), the
+      OQ-T4 combination arithmetic asserted through
+      `TELEMETRY_SESSION_COMBINATION_RULE` with same-session double counting
+      contributing once and genuine inflation surfacing the outside verdict, and
+      cost sparsity disclosed with no cost invented. The folded behavior needed
+      no refinement beyond phase 3: `contracts/spend.ts` and `domain/spend.ts`
+      are declared-and-untouched this phase. Narrow gate: `pnpm typecheck`
+      green; spend-reconciliation, spend-v2-fold-basis, spend-v2-v1-compat, and
+      golden spend 31 pass / 0 fail.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 4 commit: c19ab504 (reconciliation disclosure)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 5 complete: the CLI surface and both reference pages.
+      `SPEND_FLAGS` grew exactly one entry — `--breakdown` — declared as
+      `SPEND_BREAKDOWN_FLAG`; the handler validates the value against the five
+      declared dimensions before any read and refuses anything else with
+      `input.value.rejected` (typo, case-variant, and missing-value probes leave
+      the recording seam with zero reads), while the missing-value and
+      undeclared-flag paths keep their delivered classifications. The human
+      digest gained the telemetry-state line, the cost line in harness-reported
+      units with sparsity disclosed, the reconciliation line (verdict, stated
+      tolerance, basis, observed/harness figures, excluded count), the breakdown
+      sections (role+model by default, the selected dimension led when
+      `--breakdown` is passed), per-phase timing lines, and breakdown-aware
+      tail-ordered truncation implemented as a binary-search fit so the 600-row
+      and 10k-row suites stay fast; totals, telemetry state, and the
+      reconciliation line are never dropped. The command runtime forwards the
+      fold's declared truncation to the render. Both reference pages reconciled:
+      the M1 page gains the v2 addendum and the one-flag grammar delta, and the
+      M2 page is rewritten to the delivered contract — Delivered (M2-S14,
+      GH-291), the real 11-key `delivery.spend.v1` payload, the real help and
+      envelope examples (the nonstandard `ok`/`command` example and the invented
+      `spend.breakdown-unknown` / `spend.ledger-unavailable` identities are
+      gone), the delivered error identities, and the ownership line pointing at
+      backlog M2-S14 with M2-S6 owning alarms/metrics. `help.ts` documents the
+      flag. Owning TC: TC-TELEMETRY-016 plus the CLI halves of 015 and 017.
+      Goldens regenerated with `bun run tmp/tmpdir/regen-spend-goldens.ts`.
+      Narrow gate: `pnpm typecheck` green; spend-v2-refusals,
+      spend-v2-breakdown, spend-v2-v1-compat, spend-grammar, golden spend,
+      spend-contract, spend-imports, content-inventory, help-guide-coverage,
+      reference-page-parity 72 pass / 0 fail; help-guide-coverage check OK.
+      Flagged drift: `packages/cli/src/help.ts`,
+      `tests/behaviour/spend-grammar.test.ts` (flag set assertion now pins the
+      v1 prefix plus the one declared flag),
+      `tests/behaviour/spend-bounds.test.ts` (agent-row count includes the v2
+      role rows), `tests/behaviour/spend-privacy.test.ts` (declared prose-line
+      prefixes grew by the five new lines), and the contract inventory fixtures.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 5 commit: 20170ced (CLI surface and reference pages)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 6 complete: consumer citation. The status digest's spend
+      section now carries the v2 disclosure from the same fold
+      (`telemetryState`, `reconciliation`, `byRole`, `byModel`, `phaseTiming` on
+      the additive section fields), and the digest human line states the
+      verdict, tolerance, and basis beside the totals. The brief's closed
+      surface catalog grows by exactly the declared `spend` surface (now ten
+      ids: eight digest surfaces plus the two delivered placeholders) and the
+      payload gains the declared `spend` citation: present renders the total,
+      per-role and per-model figures, timing, and the reconciliation line;
+      absent renders `spend.telemetry-absent`, never zeros and never silence.
+      The retro evidence source set grows additively with `spend-telemetry`; the
+      collector drafts the figures, role/model numbers, timing summaries, and
+      the verdict/tolerance/basis as collector-truth evidence through the
+      delivered append seam, and the report reconstructs and cites them (absent
+      is the classified absence). The edge composes the retro `readSpend` seam
+      from the same verified read and fold the command consumes; an unreadable
+      store yields no evidence instead of a false absence. Owning TCs:
+      TC-TELEMETRY-027..030. Brief goldens regenerated with `bun run
+      tests/fixtures/brief/golden/regenerate.ts`; status-digest goldens
+      unchanged. Narrow gate: `pnpm typecheck` green; retro-telemetry-evidence,
+      brief-spend-citation, status-spend-section/parity/degraded, golden brief,
+      golden status-digest, and retro-malformed 65 pass / 0 fail. Flagged drift:
+      `packages/cli/src/commands/retro.ts` (report human citation lines),
+      `tests/structure/brief-contract.test.ts` and `tests/golden/brief.test.ts`
+      (the catalog assertion is ten ids with the one declared surface).
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 6 commit: 76231769 (consumer citation)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 7 complete: the cross-cutting honesty battery, resumed from the
+      uncommitted work left by the interrupted lane and executed for the first
+      time here. Owning TCs: TC-TELEMETRY-031..039. `telemetry-disclosure`
+      states the telemetry state and the stated tolerance across command (human
+      + `--json`), digest projection, brief citation, and retro citation for
+      present, absent, and unavailable-baseline stores, with no claim rendered
+      without `0.02` (031). `telemetry-determinism` proves byte-identical repeat
+      renders, shuffled-append permutation invariance, and zero network opens
+      through a throwing fetch seam (032). TC-033's bounds obligations were
+      completed in `spend-bounds` with an over-cap v2 fixture: the declared
+      machine bound holds, the breakdown tail drop is declared in the truncation
+      metadata, retained role rows are the head of the declared ordering, and
+      the totals plus the reconciliation verdict/tolerance/ harness total
+      survive truncation. `spend-performance` re-asserts the bounded-work oracle
+      at 1,000 and 10,000 records with the read count constant and no
+      adapter/composer calls (034). `telemetry-privacy` proves prompt-like frame
+      content never reaches a stored record or any render and pins the
+      aggregate-only record key set (035). `telemetry-hermetic` scans every new
+      suite for sockets, spawned processes, credential resolution, and `$HOME`
+      reads and pins the temp-root discipline (036). `telemetry-audit-compose`
+      proves one audit record per spend invocation (present, absent) and that an
+      audit-write failure changes neither the report nor the exit (037).
+      `telemetry-mutants` runs the ten declared disabling mutants against temp
+      copies with the real module as the paired control (038).
+      `telemetry-contract` gains the conformance half — brand neutrality over
+      the five new modules, record-kind/schema patterns, and the live exit-code
+      and forbidden-literal scans — plus the error-table family check (039).
+      Narrow gate: `pnpm typecheck` green; the 13-suite phase gate 115 pass / 0
+      fail; error-table-sync OK (127/127); exit-code-literals 348 files clean;
+      forbidden-literals 5/5 scope classes clean. Plan-scope note flagged for
+      `plan diff`: `tests/structure/telemetry-contract.test.ts` is TC-039's
+      declared home and is named in this phase's gate but was omitted from the
+      phase-7 `scope.files` list — a plan defect, not a scope extension; the
+      commit primitive staged it under the plan-union scope. The uncommitted
+      `packages/cli/src/commands/retro.ts` rename was cosmetic drift outside
+      phase-7 scope and was reverted before the commit.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 7 commit: 3fdf9172 (cross-cutting honesty battery)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 8 complete (final plan phase): documentation reconciliation,
+      planning maintenance, the changeset, and the release obligations. New spec
+      page `doc/spec/features/feature-telemetry-v2.md` (internal distribution)
+      states the ingest rules, the five-dimension attribution, the
+      `delivery.telemetry.storage.v1` step and baseline families with re-read
+      migration and classified damage, the three reading bases with the declared
+      session-dedup combination rule, and the privacy and boundary posture.
+      Reconciled spec pages: spend (the five additive v2 keys under the kept
+      `delivery.spend.v1` identity, `--breakdown`, breakdown-aware truncation,
+      telemetry state, the DEC-5 reconciliation block, and the changed component
+      map), brief (ten surfaces, the spend citation, DEC-5 restated so spend is
+      a render surface and not an anchor), blockers (ten-surface brief
+      integration), closeout (two telemetry planes with one counted session),
+      harness-adapters (the per-step ingest sink and session-close baseline
+      beside the unchanged closeout capture), retro-pipeline (the seventh
+      `spend-telemetry` source, its payload schema, and the five-key report
+      data), session-lifecycle-economics (the attribution link), and
+      status-digest (the additive section fields and the reconciliation suffix).
+      `doc/00-index.md` registers the new page, and the planning pages mark
+      M2-S14 delivered: the backlog progress line, the status snapshot, the M2
+      README rows, and the contract ownership lines. The changeset
+      `.changeset/gh-291-telemetry-v2-minor.md` declares one minor for the five
+      publishables. Verdicts: `plan validate` valid (tier full,
+      readyForDevelopment true); `plan phase 8` scope executed; the targeted
+      brief/blockers suites 38 pass / 0 fail; `test-doc-distribution` no drift
+      over 83 in-scope docs; `changesets-group` exactly one fixed group of five
+      with testkit excluded; `git diff --check` clean; `lint-commit-range --base
+      main-tools` PASS over 12 commits, 0 offending; `pnpm check` exit 0 — lint,
+      format, typecheck, build, boundaries, prompt conformance, help-guide
+      coverage, and exports parity green, 7829 pass / 4 skip / 0 fail across 987
+      files (7833 assertions). The first full battery exposed 14 failures the
+      narrow phase gates could not see; all are completed here as ripple and
+      infrastructure obligations of this change rather than new scope: the brief
+      envelope and placeholder suites still asserted nine surfaces and the
+      retired DEC-5 axis (now ten surfaces, with spend asserted as a render
+      surface that is neither placeholder nor anchor); `retro-contract` carried
+      the four-key report data (now five keys with `spend`), and the retro page
+      documents the fifth key; the v1 contract inventory lacked the four new
+      exports (`BriefSpendCitation`, `BriefSpendReconciliation`,
+      `BriefSpendTiming`, `RetroSpendEvidence`) in `brief.ts`, `retro.ts`, and
+      `index.ts`; the new page required registration in the forbidden-literals
+      registry's baseline-anchored docs scope, which also clears the
+      rename-drill, telemetry-contract, and legacy-confinement scans; and
+      `telemetry-mutants` collided with the delivered `spend-mutants` suite on
+      the shared `.mutant-<id>.ts` temp filename in `packages/core/src/domain`,
+      so the new suite writes `.mutant-telemetry-<id>.ts`. Stray classification:
+      `packages/cli/src/commands/retro.ts` keeps the cosmetic
+      `spend`→`spendCitation` local rename from the phase-6 citation work (no
+      behavior, payload, or exit change; kept rather than reverted, and its
+      capture-time drift is disclosed as plan-union scope drift). The
+      ten-surface ripple edits in `blockers-brief`, `blockers-nonregression`,
+      `brief-performance`, the brief mutant catalog, the harness stream README,
+      and the contract-inventory formatting are required by the delivered
+      contract and retained. Queue commands and tests and
+      `doc/decisions/00-index.md` were left untouched (GH-292 lane).
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      system_spec_update (@doc-syncer): verification pass over the in-phase
+      reconciliation found and fixed 21+ contradictions across 12 files —
+      cross-cutting surfaces the delivery-phase reconciliation had not covered
+      (doc/overview/architecture-overview.md, doc/overview/glossary.md,
+      doc/spec/nonfunctional.md,
+      doc/quality/test-specs/test-spec-state-layer.md, plus corrections in
+      feature-spend.md, feature-telemetry-v2.md, feature-closeout.md,
+      feature-state-layer.md, feature-brief.md, feature-harness-adapters.md,
+      feature-status-digest.md, doc/00-index.md). Payload documented as eleven
+      keys (six v1 + five v2). Validation: test-doc-distribution OK (83 docs, no
+      drift); doc-conformance 11 pass / 0 fail; git diff --check clean; GH-291
+      in related_changes on every traceable edited page. Residual gaps: NONE.
+      The four cross-cutting files are outside plan phase-8 declared scope and
+      stage as scope drift under the plan-union rule — attributed to this
+      documentation phase.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review iteration 1: FAIL (review/review-iter-1.md). 8 findings — 0
+      critical / 1 high / 2 medium / 4 low / 1 info. F-1 (HIGH): the production
+      ingest composition never wires the attribution substrates — every real
+      delivery would record lane/agentRole as null with unattributable-step
+      warnings and a random runId that never joins the command-audit ledger; the
+      five-dimension attribution passed only on injected fixtures. F-2 (MED):
+      the ingest tally is never surfaced — drift/failure frames leave no durable
+      trace and an append failure is tallied captured. F-3 (MED): zero-base
+      token classes are skipped in the tolerance arithmetic, so schema drift can
+      render verdict within. F-4/F-5/F-6 low (stamp range guard, baseline
+      idempotency outside the fence, orphaned doc block); F-7 info design note
+      (phase-scoped reconciliation basis), no action; F-8 plan-scope omission,
+      self-disclosed. Pinned scenarios SC-M2-S14-01/02 VERIFIED; DEC-4 and DEC-6
+      HOLD; DEC-5 holds with the F-3 exception. Remediation delegated to @coder
+      (F-1, F-2, F-3 mandatory; F-4..F-6 included), then doc-syncer re-run (code
+      changes touch documented behavior) and re-review at iteration 2.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Retro: the review gate caught a real integration gap the per-phase narrow
+      gates structurally could not — every phase-level suite passed because
+      F-1's missing wiring lives only in the production composition
+      (packages/cli/src/production.ts), which no plan phase's declared tests
+      exercised with real substrates. Lesson: when a capability depends on
+      composition-level wiring (ports joined at the edge), at least one
+      delivered test must construct the production composition or the review's
+      integration heuristics become the only net. Cost: one remediation +
+      re-review iteration.
+    type: retro
+    date: "2026-11-13"
+  - text: >-
+      Review remediation complete (review-iter-1 F-1..F-6; F-7/F-8 no action per
+      review). Resumed from the interrupted lane's uncommitted work (verified
+      stable, no live writer), assessed it per finding, and completed the gaps.
+      F-1 fixed-by-dirty-work + test-by-this-session:
+      `createProductionTelemetrySink` (packages/cli/src/production.ts) joins the
+      delivered substrates — `readSessionIdentity` over session-economics
+      records, `readClaimedIdentity` over a bounded 64-record command-audit read
+      with the invoking process's claimed identity as fallback — and
+      `telemetrySinkFor` passes the invocation's audit run id (entrypoint.ts
+      generates one runId per invocation, shared by the audit record and the
+      capture paths; absence records the declared `run-unavailable` marker);
+      edge.ts `createTelemetryIngestSink` accepts the attribution ports and
+      joins them per session through `joinAttributionSubstrates`. Demanded
+      composition test added (tests/behaviour/telemetry-attribution.test.ts): a
+      ledger claim + audit-correlated runId reach a stored step record, lane
+      stays disclosed-null, session close lands the capture record; plus the
+      env-claim fallback test. F-2 fixed-by-dirty-work + tests-by-this- session:
+      tally surfaced via `TelemetryIngestAccounting` + sink `accounting()`; new
+      `harness.telemetry.capture` family (delivery.telemetry.capture.v1)
+      appended at session close over the fenced path
+      (appendTelemetryCaptureOutcome/readTelemetryCaptureOutcomes); append
+      failures counted `failed` under the new closed `capture-append-failed`
+      reason (vocabulary +3), pre-session frames degraded
+      `unattributable-session`, failed session-total reads
+      `session-capture-failed`; `tallyIngestDegradation` folds no-record
+      degradations. Four accounting tests added
+      (tests/behaviour/telemetry-ingest.test.ts). F-3 fixed-by-dirty-work +
+      demanded regression test-by-this-session: `deviationOf` treats a
+      baseline-zero class with observed > 0 as an immediate full deviation, so
+      zero-base schema drift renders `outside`
+      (tests/behaviour/spend-reconciliation.test.ts, outside + matched
+      within-control). F-4 fixed-by-dirty-work: `stampOf` range-guards finite
+      numerics at ±8.64e15 ms; out-of-range classifies `non-numeric-value`
+      naming the field, never thrown. F-5 fixed-by-dirty-work: baseline
+      idempotency read moved inside the acquired fence, released on every early
+      return. F-6 fixed-by-dirty-work: orphaned doc block reattached above
+      `boundReport`. Ripple obligations of the contract additions (same class as
+      the disclosed phase-3/8 inventory ripples): v1-contract- inventory.json
+      (+6 export names in both sections), content-inventory executable
+      allowances, telemetry-contract warning-vocabulary pin (+3),
+      error-table-sync reserved record-kind literal (`harness.telemetry.capture`
+      — schema name, not an error code), state-additivity baseline (+3 capture
+      constants), biome formatting. Gates: `pnpm typecheck` green;
+      telemetry+spend battery 115 pass / 0 fail across 13 suites; full
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 — 7837 pass / 4 skip / 0 fail
+      across 987 files; boundaries, prompt conformance, help-guide coverage,
+      exports parity all green. Docs updated truthfully and minimally:
+      feature-telemetry-v2.md (attribution substrate join + run-id correlation,
+      ingest rows for stamp range/ pre-session/append-failure + accounting
+      disclosure, capture record family + in-fence idempotency + growth),
+      feature-spend.md (reconciliation: zero-base class counts as immediate full
+      deviation). Declared deviations: the remediation is post-plan work
+      committed under the plan-union rule; the commit envelope disclosed six
+      files outside the union of declared phase scope files —
+      packages/cli/src/entrypoint.ts and packages/cli/src/production.ts (the F-1
+      invocation runId threading and production sink composition),
+      packages/core/src/index.ts (barrel re-export of the new domain export),
+      scripts/checks/error-table-sync.ts,
+      tests/fixtures/events/state-additivity-baseline.json, and
+      tests/fixtures/ports/v1-contract-inventory.json (the ripple registrations
+      the contract additions require) — all remediation or ripple obligations of
+      review-iter-1, disclosed here and in the envelope. Transport note: the
+      first commit attempt was refused because the commitlint probe's bare
+      binary was not on PATH (ENOENT surfaced as the generic rejection); retried
+      with node_modules/.bin on PATH, no code change. Remediation commit
+      recorded: 10b5d880 (22 files, +872/−77). Doc-syncer re-verification and
+      re-review at iteration 2 follow. Before those, the branch syncs with the
+      moved integration line: origin/main-tools advanced to bf5783ed (GH-292
+      queue lifecycle, PR #314) while this branch was in review; the merge
+      resolves the 18 overlapping files (barrels, production/edge composition,
+      fixtures, planning/index docs) as unions keeping both sides, per the
+      operator's keep-both-sides rule.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Branch sync with the moved integration line: merged origin/main-tools
+      bf5783ed (GH-292 queue lifecycle, PR #314; ~148 files, +17,013/−553) into
+      feat/GH-291/telemetry-v2 as merge commit b6181727 (chore(GH-291): sync
+      with main-tools), parents 19f173f2 + bf5783ed. Git auto-merged 11 of the
+      18 overlapping files; 7 true conflicts were resolved as unions per the
+      operator's keep-both-sides rule: packages/cli/src/production.ts (unioned
+      contract imports, adding QueueTrackerRead; body already carries both the
+      telemetry sink composition and the queue lifecycle wiring),
+      doc/00-index.md (Harness Adapters row kept our per-step ingest sink
+      clause; Dispatch Engine row gained GH-292's single-flight refusal clause),
+      doc/overview/architecture-overview.md and doc/overview/glossary.md
+      (related_changes unions: GH-290, GH-291, GH-292),
+      doc/planning/oss-tooling/status.md (both M2 delivery snapshots kept —
+      2026-11-12 queue lifecycle then 2026-11-13 harness telemetry v2),
+      doc/spec/features/feature-closeout.md (related_changes and
+      related_decisions unions incl. TDR-0026),
+      doc/spec/features/feature-state-layer.md (summary union: our
+      harness.telemetry.step/baseline families clause plus GH-292's
+      six-additive-queue-scheduling-kinds count, verified against the merged
+      body's queue.removal kind; related_changes union). Auto-merged union
+      integrity verified in edge.ts, help.ts, error-table-sync.ts (both
+      harness.telemetry.capture and the queue literals), both fixtures
+      (telemetry + queue entries), content-inventory.test.ts, all three barrels,
+      backlog.md (M2-S14 and M2-S15 both delivered) and
+      milestones/m2/contracts.md. Gate verdicts on the merged tree: pnpm
+      typecheck PASS (6 packages + tests/types); targeted behaviour tests PASS
+      72/0 across both lanes (spend-reconciliation, telemetry
+      attribution/ingest/disclosure, queue-remove, queue-claim-single-flight,
+      queue-reconcile, events-remove, events-emitted-kinds) plus
+      content-inventory; scripts/.tests/test-doc-distribution.sh PASS (no drift,
+      83 in-scope docs); scripts/lint-commit-range.sh --base main-tools PASS (19
+      commits incl. the merge, 0 offending); full TMPDIR=$PWD/tmp/tmpdir pnpm
+      check battery EXIT=0 with 8008 pass / 4 skip / 0 fail across 1031 files,
+      boundaries/prompt-conformance/ help-guide-coverage/exports-parity all
+      green. No integration fixes were required: the union typechecked and
+      passed the full battery on the first run. Declared deviations: none — all
+      seven conflict files were predicted overlaps, resolutions stayed inside
+      the operator's keep-both-sides rule, and no phase lifecycle commands were
+      run (sync-only task). Branch is 19 ahead of / 0 behind origin/main-tools
+      before the pm-notes commit; doc/decisions/00-index.md needed no manual
+      conflict resolution (auto-merged)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review iteration 2: PASS (review/review-iter-2.md). All 8 iteration-1
+      findings resolved or accepted — F-1..F-6 FIXED (verified with file:line
+      anchors), F-7/F-8 accepted as disclosed. New findings: NF-1 (LOW,
+      optional) stampOf range-guard lacks a dedicated regression test — recorded
+      as a non-blocking follow-up; INFO bounded per-frame ledger reads
+      documented in-code. Pinned scenarios SC-M2-S14-01/02 VERIFIED post-merge;
+      DEC-4 HOLDS, DEC-5 HOLDS WITHOUT EXCEPTION (F-3 fix eliminates the
+      zero-base caveat), DEC-6 HOLDS. Merged-tree union verified coherent for
+      both lanes. Spot-run 99 tests / 0 fail across 12 suites; battery evidence:
+      8008/0 at 42eca96a. Review gate: cleared at iteration 2 of 3.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Quality gates: PASS at final HEAD 0050a3c9. Range lint gate VERDICT PASS —
+      base main-tools, 21 commits in range, 0 offending, mode none; commitlint
+      resolved from repository-local node_modules/.bin/commitlint. Full battery
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 — 8008 pass / 4 skip / 0 fail
+      across 1031 files, 68,638 expect calls; depcruise boundaries (394 modules,
+      no violations), ambient-globals (184 files), secret-read-boundary (362
+      files), prompt-conformance (5 clean), help-guide-coverage, exports-parity
+      (5 publishables) all green. `plan validate GH-291` valid,
+      readyForDevelopment true. Working tree clean. Transport retro: one `phase
+      complete review_fix` attempt failed `commit.commitlint-failed` because the
+      workspace commitlint binary was not on PATH; retry with node_modules/.bin
+      prepended landed atomically — runners must use
+      PATH="$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH" for lifecycle commands
+      on this host.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 8 commit: 90e5c75c (documentation reconciliation, planning
+      maintenance, changeset, release obligations). Gates recorded in the
+      phase-8 completion entry above: plan validate valid, targeted brief/
+      blockers suites 38 pass / 0 fail, test-doc-distribution no drift,
+      changesets-group one fixed group of five, lint-commit-range PASS, pnpm
+      check 7829 pass / 4 skip / 0 fail. Pointer added at dod_check so every
+      declared plan phase (1-8) carries id + commit hash + test result."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/315 (base
+      main-tools, head feat/GH-291/telemetry-v2 at 77456e86, state OPEN). Issue
+      #291 labels synced to change + review (issue left open); merge authority
+      reserved for the owner/CEO flow — PR left open, no merge performed.
+      Lifecycle complete: 11 of 11 phases.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      CI post-PR remediation (run 131941479229, job "TS exports, publint,
+      attw"): the job failed inside `bun test tests/structure` before the
+      publint/attw steps ran — 1164 pass / 2 fail, both ENOENT from
+      `mkdtempSync` probes under the gitignored `tmp/tmpdir/` parent
+      (projects-state-scope-policy.test.ts:309/322, the GH-288 negative
+      controls). `mkdtempSync` creates only the last path component and a
+      fresh checkout has no `tmp/` at all; local gate runs masked the gap
+      because they populate the directory. Fixed with the repo's recursive
+      mkdir-ensure idiom immediately before each repo-relative probe, plus
+      the same-class sweep: dispatch-bash-authority.test.ts (2 sites — it
+      passed in CI only because session-admin-imports' ensure happened to
+      run first), projects-help.test.ts (3 sites), commit-safety.test.ts
+      (1), state-fence.test.ts (1, + mkdirSync import),
+      daemon-watch-state-changes.test.ts (1, + import),
+      daemon-supervisor-install.test.ts (1, + import), and
+      fixtures/events/mount-mutants.ts strippedInventory (1). All remaining
+      repo-relative probes already ensure the parent and os.tmpdir() probes
+      are unaffected. Verified with tmp/tmpdir quarantined: the fixed file
+      12 pass / 0 fail, dispatch-bash-authority 7/0, full tests/structure
+      1166 pass / 0 fail, pnpm typecheck green, biome clean on the eight
+      edited files. publint/attw verdicts were never reached and remain to
+      be observed on the CI re-run.
+    type: "retro"
+    date: "2026-11-13"

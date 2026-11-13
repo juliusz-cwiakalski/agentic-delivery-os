@@ -1,11 +1,21 @@
 spend
 tokens     input 140 | output 20 | reasoning 0 | cacheRead 0 | cacheWrite 0
 calls      3
+telemetry  present
+cost       none reported (harness-reported units; sparse, never repaired)
+reconcile  within (tolerance 0.02, basis closeout-capture; observed 160 / harness 160)
 agents
 - planner/sonnet: 2 calls, 120 tokens
 - coder/opus: 1 calls, 40 tokens
+breakdown  role
+- planner: 2 calls, 120 tokens, cost none reported
+- coder: 1 calls, 40 tokens, cost none reported
+breakdown  model
+- sonnet: 2 calls, 120 tokens, cost none reported
+- opus: 1 calls, 40 tokens, cost none reported
 phases     capture-time windows (phase.transition)
 - unknown: 3 calls, 160 tokens (100%) (no phase evidence; attribution fallback)
+timing     per-phase summaries (phase.transition + economics)
 restarts   0 (runs that reached closeout capture)
 limits
 - run duplication is proven; semantic duplication is not

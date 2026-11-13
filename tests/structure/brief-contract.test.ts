@@ -62,7 +62,7 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
     expect(BRIEF_SCHEMA_VERSION).toBe("delivery.brief.v1");
   });
 
-  test("the payload declares the seven DM-1 members", () => {
+  test("the payload declares the seven DM-1 members plus the declared spend citation", () => {
     expect(payloadMembers()).toEqual([
       "schemaVersion",
       "generatedAt",
@@ -71,13 +71,27 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
       "anchors",
       "placeholders",
       "truncation",
+      "spend",
     ]);
   });
 
-  test("the closed surface set is exactly the nine DM-5 ids", () => {
-    expect(BRIEF_SURFACE_ORDER).toEqual(EXPECTED_SURFACES);
-    expect(new Set(BRIEF_SURFACE_ORDER).size).toBe(9);
-    for (const id of EXPECTED_SURFACES) {
+  test("the closed surface set is the nine DM-5 ids plus the declared spend surface", () => {
+    // GH-291 adds exactly the one declared spend surface (F-8, RSK-6), placed
+    // after the digest surfaces and before the two placeholders.
+    expect(BRIEF_SURFACE_ORDER).toEqual([
+      "tracker",
+      "changes-and-prs",
+      "ci",
+      "lanes-or-queue",
+      "providers",
+      "parked-work",
+      "typed-questions",
+      "spend",
+      "gate-sla-states",
+      "lane-queue-engine",
+    ]);
+    expect(new Set(BRIEF_SURFACE_ORDER).size).toBe(10);
+    for (const id of [...EXPECTED_SURFACES, "spend"]) {
       expect(BRIEF_SURFACE_ORDER).toContain(id);
     }
   });

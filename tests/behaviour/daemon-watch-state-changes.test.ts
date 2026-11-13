@@ -4,7 +4,7 @@
  * not, and never republishes unchanged content.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   createDaemonCommandRuntime,
@@ -40,7 +40,10 @@ import { createTestEdge, makeIdentity, openStore } from "../fixtures/state/harne
 const NOW = "2026-11-08T10:00:00Z";
 const LATER = "2026-11-08T10:00:05Z";
 
-const temp = (): string => mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "gh238-watch-state-"));
+const temp = (): string => {
+  mkdirSync(join(process.cwd(), "tmp", "tmpdir"), { recursive: true });
+  return mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "gh238-watch-state-"));
+};
 
 const clock = (): DaemonClockPort => ({
   nowMs: () => Date.parse(NOW),

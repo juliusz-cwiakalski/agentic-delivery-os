@@ -10,6 +10,7 @@
 import type { AuditReadOutcome, AuditReadQuery, AuditReadResult } from "./audit.js";
 import type { Result } from "./index.js";
 import type { PhaseTransitionRecord } from "./registry.js";
+import type { SpendTokenTotals } from "./spend.js";
 import type {
   StateAppendOutcome,
   StateArtifactBoundaryDeclaration,
@@ -177,6 +178,8 @@ export const RETRO_EVIDENCE_SOURCES = [
   "commit-telemetry",
   "pm-notes",
   "memory-audit",
+  // GH-291: the spend telemetry figures join as collected evidence.
+  "spend-telemetry",
 ] as const;
 
 export type RetroEvidenceSource = (typeof RETRO_EVIDENCE_SOURCES)[number];
@@ -269,6 +272,7 @@ export const RETRO_PAYLOAD_SCHEMAS = {
   auditChain: "delivery.retro.audit-chain.v1",
   followThrough: "delivery.retro.follow-through.v1",
   memoryAudit: "delivery.retro.memory-audit.v1",
+  spendTelemetry: "delivery.retro.spend-telemetry.v1",
 } as const;
 
 /** The declared payload schema ids an evidence record may carry (E-02). */
@@ -578,6 +582,8 @@ export type RetroReportData = {
   readonly findings: readonly RetroFinding[];
   readonly followThrough: readonly RetroFollowThroughEntry[];
   readonly evidenceRefs: readonly string[];
+  /** The cited spend figures and disclosure (GH-291 AC-F8-1). */
+  readonly spend?: RetroSpendEvidence;
 };
 
 /** The bounded export bundle (DM-7). */
@@ -684,6 +690,28 @@ export type RetroNotesRead = {
   readonly retroNotes: readonly string[];
 };
 
+/**
+ * The spend telemetry evidence one collection cites (GH-291 AC-F8-1).
+ *
+ * `present` carries the collector-truth figures: totals, per-role and per-model
+ * numbers, timing summaries, and the reconciliation disclosure. `absent` is the
+ * classified absence — never zeros.
+ */
+export type RetroSpendEvidence =
+  | {
+      readonly state: "present";
+      readonly tokensByClass: SpendTokenTotals;
+      readonly roles: readonly { readonly role: string; readonly tokens: number }[];
+      readonly models: readonly { readonly model: string; readonly tokens: number }[];
+      readonly timing: readonly { readonly phase: string; readonly durationMs: number | null }[];
+      readonly reconciliation?: {
+        readonly verdict: string;
+        readonly tolerance: number;
+        readonly basis: string;
+      };
+    }
+  | { readonly state: "absent" };
+
 /** A state-family read result: values or a classified failure. */
 export type RetroStateFamiliesRead =
   | { readonly ok: true; readonly value: RetroStateFamilies }
@@ -699,6 +727,12 @@ export type RetroCollectorRead = {
   readAuditLedger(query: AuditReadQuery): AuditReadResult<AuditReadOutcome>;
   readStateFamilies(changeRef: string): RetroStateFamiliesRead;
   readNotes(changeRef: string): RetroNotesReadResult;
+  /**
+   * The additive spend telemetry read (GH-291). `undefined` means no evidence
+   * could be produced (an unreadable store); absence is the explicit
+   * `{ state: "absent" }` value, never a damage re-projection.
+   */
+  readSpend?(changeRef: string): RetroSpendEvidence | undefined;
 };
 
 /** A completed-change fact used for automatic target selection (DEC-5). */

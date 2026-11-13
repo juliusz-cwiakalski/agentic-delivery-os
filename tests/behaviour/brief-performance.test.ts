@@ -41,7 +41,7 @@ describe("TC-BRIEF-020 projection performance", () => {
 
   test("the measurement is non-vacuous: every surface and both anchor groups exist", () => {
     const brief = projectBrief(capSizedFacts());
-    expect(brief.surfaces).toHaveLength(9);
+    expect(brief.surfaces).toHaveLength(10);
     expect(brief.placeholders).toHaveLength(2);
     expect(brief.anchors).toHaveLength(3);
     expect(brief.anchors.flatMap((anchor) => anchor.items).length).toBeGreaterThan(0);

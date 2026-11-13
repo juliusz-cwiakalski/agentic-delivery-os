@@ -21,6 +21,7 @@ import {
   type BriefPayload,
   type BriefPlaceholderEntry,
   type BriefPlaceholderSurfaceId,
+  type BriefSpendCitation,
   type BriefSurface,
   type BriefSurfaceId,
   type BriefSurfaceState,
@@ -91,6 +92,31 @@ const placeholderSurface = (entry: BriefPlaceholderEntry): BriefSurface => ({
   counts: { observed: 0, unknown: 0, total: 0, omitted: 0 },
   truncated: false,
 });
+
+/** The spend citation: figures plus the reconciliation disclosure, or absence. */
+const spendCitationOf = (spend: StatusFacts["spend"]): BriefSpendCitation => {
+  if (spend.state === "unknown") return { state: "absent", code: "spend.telemetry-absent" };
+  if (!spend.captured) return { state: "absent", code: "spend.telemetry-absent" };
+  return {
+    state: "present",
+    tokensByClass: spend.tokensByClass,
+    roles: spend.byRole ?? [],
+    models: spend.byModel ?? [],
+    timing: (spend.phaseTiming ?? []).map((entry) => ({
+      phase: entry.phase,
+      durationMs: entry.durationMs,
+    })),
+    ...(spend.reconciliation === undefined
+      ? {}
+      : {
+          reconciliation: {
+            verdict: spend.reconciliation.verdict,
+            tolerance: spend.reconciliation.tolerance,
+            basis: spend.reconciliation.basis,
+          },
+        }),
+  };
+};
 
 const buildSurfaces = (digest: StatusDigest): readonly BriefSurface[] =>
   BRIEF_SURFACE_ORDER.map((id) => {
@@ -286,6 +312,7 @@ export const projectBrief = (facts: StatusFacts): BriefPayload => {
     anchors,
     placeholders: BRIEF_PLACEHOLDER_CATALOG,
     truncation: buildTruncation(surfaces, anchors),
+    spend: spendCitationOf(facts.spend),
   };
 };
 
@@ -312,6 +339,28 @@ const bindingText = (brief: BriefPayload): string =>
   brief.repository.state === "observed"
     ? `${brief.repository.owner}/${brief.repository.name}`
     : `repository unavailable (${brief.repository.reason})`;
+
+/** The spend citation line: figures and the disclosure, or the classified absence. */
+const spendLine = (brief: BriefPayload): string => {
+  const citation = brief.spend;
+  if (citation === undefined || citation.state === "absent") {
+    return "spend  absent  spend.telemetry-absent (no captured telemetry)";
+  }
+  const tokens = citation.tokensByClass;
+  const total =
+    tokens.input + tokens.output + tokens.reasoning + tokens.cacheRead + tokens.cacheWrite;
+  const roles = citation.roles
+    .map((entry) => `${entry.value ?? "(unattributed)"}:${String(entry.tokens)}`)
+    .join(", ");
+  const models = citation.models
+    .map((entry) => `${entry.value ?? "(unattributed)"}:${String(entry.tokens)}`)
+    .join(", ");
+  const reconciliation =
+    citation.reconciliation === undefined
+      ? "reconcile unavailable"
+      : `reconcile ${citation.reconciliation.verdict} (tolerance ${String(citation.reconciliation.tolerance)}, basis ${citation.reconciliation.basis})`;
+  return `spend  present  total ${String(total)} tokens  roles ${roles || "none"}  models ${models || "none"}  ${reconciliation}`;
+};
 
 const anchorLine = (
   brief: BriefPayload,
@@ -401,6 +450,7 @@ export const renderBriefHuman = (brief: BriefPayload, brand: BrandIdentity): str
     "lanes-or-queue",
     "providers",
     "parked-work",
+    "spend",
   ] as const) {
     const surface = surfaceOf(brief, id);
     if (surface === undefined) continue;
@@ -408,6 +458,8 @@ export const renderBriefHuman = (brief: BriefPayload, brand: BrandIdentity): str
       lines.push(
         `lanes-or-queue  ${stateWord(surface.state, surface.reason)}  ${laneQueue.capability} (${laneQueue.owningStory})`,
       );
+    } else if (id === "spend") {
+      lines.push(spendLine(brief));
     } else {
       lines.push(contextLine(surface));
     }

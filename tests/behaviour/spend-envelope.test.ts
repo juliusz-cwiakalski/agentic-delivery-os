@@ -63,10 +63,15 @@ describe("TC-SPEND-020 envelope and mode emphasis", () => {
       if (!isRecord(data)) throw new Error("data is not an object");
       expect(Object.keys(data).sort()).toEqual([
         "amplification",
+        "breakdowns",
+        "costTotals",
         "degradation",
         "perAgent",
         "perPhase",
+        "phaseTiming",
+        "reconciliation",
         "restarts",
+        "telemetryState",
         "tokensByClass",
       ]);
       expect(JSON.stringify(data)).not.toContain(SPEND_DATA_SCHEMA_ID);

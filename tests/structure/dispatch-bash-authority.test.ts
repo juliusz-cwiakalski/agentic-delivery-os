@@ -178,6 +178,7 @@ describe("TC-PROJ-024 the resolver reads the project root and refuses to compens
   const key = "fixture-repo-0123abcd";
 
   it("reads the migrated layout, never the old host-root location", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const root = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-bash-authority-"));
     try {
       const checkout = join(root, "checkout");
@@ -217,6 +218,7 @@ describe("TC-PROJ-024 the resolver reads the project root and refuses to compens
   });
 
   it("the repository-local default still wins when no override is set", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const root = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-bash-default-"));
     try {
       const checkout = join(root, "checkout");

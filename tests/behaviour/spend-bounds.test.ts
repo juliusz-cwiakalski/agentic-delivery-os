@@ -10,9 +10,15 @@ import {
   SPEND_MAX_HUMAN_LINES,
   SPEND_MAX_MACHINE_BYTES,
   type SpendLedgerRead,
+  TELEMETRY_RECONCILIATION_TOLERANCE,
 } from "../../packages/core/src/contracts/index";
 import { computeSpendReport, renderSpendHuman } from "../../packages/core/src/domain/index";
 import { makeSessionRecord, SYNTHETIC_BRAND, tokens } from "../fixtures/spend/harness";
+import {
+  makeBaselineRecord,
+  makeStepRecord,
+  tokens as telemetryTokens,
+} from "../fixtures/telemetry";
 
 const utf8 = (text: string): number => Buffer.byteLength(text, "utf8");
 
@@ -52,6 +58,45 @@ const manyRuns = (count: number): readonly HarnessTelemetryRecord[] =>
     }),
   );
 
+const roleValue = (index: number, rolePad = 200): string =>
+  `role-${"r".repeat(rolePad)}-${String(index).padStart(5, "0")}`;
+
+const v2Steps = (count: number, rolePad = 40) =>
+  Array.from({ length: count }, (_, index) =>
+    makeStepRecord({
+      ref: "GH-236",
+      runId: "run-v2-bounds",
+      sessionId: `ses-${String(index)}`,
+      agentRole: roleValue(index, rolePad),
+      model: `model-${"m".repeat(30)}-${String(index % 8)}`,
+      tokens: telemetryTokens({ input: 10 }),
+      cost: null,
+    }),
+  );
+
+const v2Read = (
+  steps: ReturnType<typeof v2Steps>,
+  baselines: ReturnType<typeof makeBaselineRecord>[],
+): SpendLedgerRead => ({
+  workItemRef: "GH-236",
+  records: [],
+  outcomes: [],
+  transitions: [],
+  transitionsPresent: false,
+  verifiedEmpty: false,
+  evidence: { storePath: "fixture://ledger", recordCount: steps.length },
+  steps,
+  baselines,
+});
+
+const baselineOf = (step: ReturnType<typeof makeStepRecord>) =>
+  makeBaselineRecord({
+    ref: "GH-236",
+    runId: step.runId,
+    sessionId: step.sessionId,
+    tokens: step.tokens,
+  });
+
 describe("TC-SPEND-021 bounded output and declared truncation", () => {
   test("an under-cap report is untruncated and inside both bounds", () => {
     const fold = computeSpendReport(readWith(manyAgents(5)));
@@ -67,8 +112,9 @@ describe("TC-SPEND-021 bounded output and declared truncation", () => {
     );
     expect(utf8(human)).toBeLessThanOrEqual(SPEND_MAX_HUMAN_BYTES);
     expect(human).not.toContain("truncated");
-    // Every agent line survives under the cap.
-    expect(human.split("- agent-").length - 1).toBe(5);
+    // Every agent line survives under the cap: five `perAgent[]` rows plus the
+    // five role-breakdown rows that name the same agents (v2, DM-6).
+    expect(human.split("- agent-").length - 1).toBe(10);
   });
 
   test("an over-cap report stays bounded, declares the drop and keeps the totals", () => {
@@ -151,5 +197,36 @@ describe("TC-SPEND-021 bounded output and declared truncation", () => {
     if (!fold.ok) throw new Error("fold failed");
     const human = renderSpendHuman(fold.data, { brand: SYNTHETIC_BRAND, amplification: false });
     expect(human).toContain("degradation 0 record(s) with warnings");
+  });
+
+  test("v2 breakdown truncation drops the declared tail and keeps totals and the verdict", () => {
+    const steps = v2Steps(600, 200);
+    const bounded = computeSpendReport(
+      v2Read(
+        steps,
+        steps.map((step) => baselineOf(step)),
+      ),
+    );
+    if (!bounded.ok) throw new Error("fold failed");
+    // Bounded payload stays inside the declared machine bound and says so.
+    expect(utf8(JSON.stringify(bounded.data))).toBeLessThanOrEqual(SPEND_MAX_MACHINE_BYTES);
+    expect(bounded.warnings.some((line) => line.includes("truncated"))).toBe(true);
+    // The breakdown tail drop is declared in the truncation metadata.
+    expect(bounded.truncation?.breakdowns ?? 0).toBeGreaterThan(0);
+    // Totals survive truncation exactly (600 steps x 10 input tokens).
+    expect(bounded.data.tokensByClass.input).toBe(6000);
+    // The reconciliation block and its verdict are never truncated or altered.
+    expect(bounded.data.reconciliation?.verdict).toBe("within");
+    expect(bounded.data.reconciliation?.tolerance).toBe(TELEMETRY_RECONCILIATION_TOLERANCE);
+    expect(bounded.data.reconciliation?.harnessTotals.input).toBe(6000);
+    // Breakdown rows drop from the tail only: the retained roles are the head
+    // of the declared ordering (equal tokens, so ascending value order).
+    const boundedRoles = bounded.data.breakdowns.role ?? [];
+    expect(boundedRoles.length).toBeGreaterThan(0);
+    expect(boundedRoles.length).toBeLessThan(600);
+    const expectedHead = Array.from({ length: boundedRoles.length }, (_, index) =>
+      roleValue(index),
+    );
+    expect(boundedRoles.map((entry) => entry.value)).toEqual(expectedHead);
   });
 });

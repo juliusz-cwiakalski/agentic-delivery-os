@@ -176,6 +176,27 @@ export {
 export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
 export { readSpendLedger } from "./spend-reads.js";
 export {
+  appendTelemetryBaseline,
+  appendTelemetryCaptureOutcome,
+  appendTelemetryStep,
+  captureTelemetryBaseline,
+  readTelemetryBaselines,
+  readTelemetryCaptureOutcomes,
+  readTelemetryFamilies,
+  readTelemetrySteps,
+  readTelemetryStepsAtVersion,
+  type TelemetryFamiliesRead,
+  type TelemetrySessionTotalsRead,
+  TELEMETRY_STORAGE_NEXT_VERSION,
+  TELEMETRY_STORAGE_READ_VERSIONS,
+  type TelemetryStepRecordAtVersion,
+  type TelemetryStorageReadVersion,
+  telemetryBaselineKey,
+  telemetryCaptureKey,
+  telemetryStepAtVersion,
+  telemetryStepKey,
+} from "./telemetry.js";
+export {
   appendCoordinatorExhaustion,
   appendCoordinatorFence,
   appendCoordinatorIteration,

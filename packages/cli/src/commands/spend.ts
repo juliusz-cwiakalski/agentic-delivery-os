@@ -1,9 +1,11 @@
 /**
- * The `spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]`
- * command definition (GH-236 F-6, PIN-11; DEC-6, DEC-9).
+ * The `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>]
+ * [--amplification] [--json]` command definition (GH-236 F-6, PIN-11; GH-291
+ * F-5, AC-F5-3).
  *
  * The handler owns the value grammar before any read: a malformed ref shape, an
- * out-of-vocabulary phase, a missing value, or an unexpected positional is
+ * out-of-vocabulary phase, a breakdown value outside the five declared
+ * dimensions, a missing value, or an unexpected positional is
  * `input.value.rejected`; an undeclared flag is the shared parser's
  * `fallback.invocation`. The handler performs no stream write and chooses no
  * exit code. `--json` is a global flag the handler never inspects.
@@ -13,12 +15,16 @@ import {
   type BrandIdentity,
   CANONICAL_PHASE_IDS,
   type PmNotesPhaseId,
+  SPEND_BREAKDOWN_FIELDS,
+  SPEND_BREAKDOWN_FLAG,
   SPEND_FLAGS,
   SPEND_HUMAN_AMPLIFICATION_FLAG,
   SPEND_WORK_ITEM_REF_PATTERN,
+  type SpendBreakdownField,
   type SpendCommandRuntime,
   type SpendReport,
   type SpendSelection,
+  type SpendTruncation,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
@@ -26,12 +32,22 @@ export type { SpendCommandRuntime } from "@delivery-os/core/contracts";
 
 const REF_PATTERN = new RegExp(SPEND_WORK_ITEM_REF_PATTERN);
 const CANONICAL = new Set<string>(CANONICAL_PHASE_IDS);
+const BREAKDOWN_FIELDS = new Set<string>(SPEND_BREAKDOWN_FIELDS);
 
-/** The human-emphasis hint channel: keyed on the returned data object only. */
+/** Human-emphasis hints: keyed on the returned data object only. */
 const HUMAN_AMPLIFICATION: unique symbol = Symbol("spend human amplification hint");
-type HumanAnnotatedReport = SpendReport & { readonly [HUMAN_AMPLIFICATION]?: boolean };
+const HUMAN_BREAKDOWN: unique symbol = Symbol("spend human breakdown hint");
+const HUMAN_TRUNCATION: unique symbol = Symbol("spend human truncation hint");
+type HumanAnnotatedReport = SpendReport & {
+  readonly [HUMAN_AMPLIFICATION]?: boolean;
+  readonly [HUMAN_BREAKDOWN]?: SpendBreakdownField;
+  readonly [HUMAN_TRUNCATION]?: SpendTruncation;
+};
 
 const isCanonicalPhase = (value: string): value is PmNotesPhaseId => CANONICAL.has(value);
+
+const isBreakdownField = (value: string): value is SpendBreakdownField =>
+  BREAKDOWN_FIELDS.has(value);
 
 const reject = (detail: string): { readonly error: unknown } => ({
   error: { kind: "input", code: "input.value.rejected", summary: `spend: ${detail}` },
@@ -39,9 +55,11 @@ const reject = (detail: string): { readonly error: unknown } => ({
 
 /** The selection summary the classified absence names. */
 const selectionText = (selection: SpendSelection): string =>
-  selection.phase === undefined
-    ? `ref ${selection.workItemRef}`
-    : `ref ${selection.workItemRef}, phase ${selection.phase}`;
+  [
+    `ref ${selection.workItemRef}`,
+    ...(selection.phase === undefined ? [] : [`phase ${selection.phase}`]),
+    ...(selection.breakdown === undefined ? [] : [`breakdown ${selection.breakdown}`]),
+  ].join(", ");
 
 const renderFailure = (error: unknown, brand: BrandIdentity): string | undefined => {
   if (typeof error !== "object" || error === null) return undefined;
@@ -73,6 +91,8 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
     return renderSpendHuman(report, {
       brand,
       amplification: report[HUMAN_AMPLIFICATION] === true,
+      ...(report[HUMAN_BREAKDOWN] === undefined ? {} : { breakdown: report[HUMAN_BREAKDOWN] }),
+      ...(report[HUMAN_TRUNCATION] === undefined ? {} : { truncation: report[HUMAN_TRUNCATION] }),
     });
   },
   humanFailureText: (error: unknown, brand: BrandIdentity): string | undefined =>
@@ -81,6 +101,7 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
     const tokens = invocation.argv;
     let ref: string | undefined;
     let phase: PmNotesPhaseId | undefined;
+    let breakdown: SpendBreakdownField | undefined;
     let amplification = false;
     for (let index = 1; index < tokens.length; index += 1) {
       const token = tokens[index];
@@ -89,7 +110,7 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
         amplification = true;
         continue;
       }
-      if (token !== "--ref" && token !== "--phase") {
+      if (token !== "--ref" && token !== "--phase" && token !== SPEND_BREAKDOWN_FLAG) {
         return reject(`unexpected positional "${token}"`);
       }
       const value = tokens[index + 1];
@@ -104,12 +125,22 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
         ref = value;
         continue;
       }
-      if (!isCanonicalPhase(value)) {
+      if (token === "--phase") {
+        if (!isCanonicalPhase(value)) {
+          return reject(
+            `unknown phase "${value}"; declared phases: ${CANONICAL_PHASE_IDS.join(", ")}`,
+          );
+        }
+        phase = value;
+        continue;
+      }
+      // The breakdown value is validated here, before any record read (AC-F5-3).
+      if (!isBreakdownField(value)) {
         return reject(
-          `unknown phase "${value}"; declared phases: ${CANONICAL_PHASE_IDS.join(", ")}`,
+          `unknown breakdown "${value}"; declared fields: ${SPEND_BREAKDOWN_FIELDS.join(", ")}`,
         );
       }
-      phase = value;
+      breakdown = value;
     }
     let resolvedRef = ref;
     if (resolvedRef === undefined) {
@@ -119,8 +150,11 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
       }
       resolvedRef = active.ref;
     }
-    const selection: SpendSelection =
-      phase === undefined ? { workItemRef: resolvedRef } : { workItemRef: resolvedRef, phase };
+    const selection: SpendSelection = {
+      workItemRef: resolvedRef,
+      ...(phase === undefined ? {} : { phase }),
+      ...(breakdown === undefined ? {} : { breakdown }),
+    };
     const outcome = runtime.report(selection);
     if (!outcome.ok) {
       const error = outcome.error;
@@ -138,6 +172,8 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
     const data: HumanAnnotatedReport = {
       ...outcome.data,
       [HUMAN_AMPLIFICATION]: amplification,
+      ...(breakdown === undefined ? {} : { [HUMAN_BREAKDOWN]: breakdown }),
+      ...(outcome.truncation === undefined ? {} : { [HUMAN_TRUNCATION]: outcome.truncation }),
     };
     return outcome.warnings === undefined ? { data } : { data, warnings: outcome.warnings };
   },
