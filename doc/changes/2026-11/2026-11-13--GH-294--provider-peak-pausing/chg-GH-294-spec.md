@@ -5,7 +5,7 @@ change:
   status: Proposed
   slug: provider-peak-pausing
   title: "M2-S17: Provider-aware peak pausing"
-  version: "1.1"
+  version: "1.2"
   owners: ["engineering"]
   service: delivery-os
   labels:
@@ -222,7 +222,7 @@ Flow 4: Owner hold and window overlap
 - Stop, parked, and resumed kinds on `dispatch.attempt` and the park-edge kind on `queue.graph`, joining the declared taxonomy as version **v2** with declared payload fields and every v1 kind and payload byte-identical.
 - Status digest and brief carrying lane park fields (parked count, reason, `until`) for open episodes.
 - Declared daemon-absent degradation to iteration-start gating, with the difference documented and no false park claims.
-- Documentation updates: provider-profiles (lane-level peak park), resident-daemon (window watching, park/resume), dispatch-engine (nomination at admission), telemetry-v2 (zero-spend assertion and absence classification), event-taxonomy (S17 kinds), status-digest and brief (park fields), and the `doc/planning/oss-tooling/` backlog markers and status.
+- Documentation updates: provider-profiles (lane-level peak park), resident-daemon (window watching, park/resume), dispatch-engine (nomination at admission), telemetry-v2 (zero-spend assertion and absence classification), event-taxonomy (S17 kinds), status-digest and brief (park fields), scheduling-engine (park-cause vocabulary reconciliation — DEC-2's mapping supersedes the delivered paired cause/condition and hold-adds-no-park-cause statements), spend (window-scoped zero-spend evidence and `telemetryState` semantics), and the `doc/planning/oss-tooling/` backlog markers and status.
 
 ### 7.2 Out of Scope
 
@@ -382,7 +382,7 @@ None new. Peak windows are declared configuration evaluated locally against the 
 | Status digest | Updated — lane park fields (parked count, reason, `until`, preservation classification) |
 | Brief | Updated — the same park fields projected with zero added reads |
 | Spend read side / telemetry | Updated — window-scoped zero-spend evidence with classified absence (F-6, DM-5) |
-| System specification pages | Updated — provider-profiles, resident-daemon, dispatch-engine, telemetry-v2, event-taxonomy, status-digest, brief; possible new canonical page for peak pausing (phase 7 reconciliation) |
+| System specification pages | Updated — provider-profiles, resident-daemon, dispatch-engine, telemetry-v2, event-taxonomy, status-digest, brief, scheduling-engine (canonical home of the park-cause vocabulary; DEC-2's `peak-window`-onto-`provider-window` mapping supersedes its delivered paired one-to-one cause/condition and hold-adds-no-park-cause statements, and TDR-0030 names it), spend (home of DM-5's window-scoped zero-spend evidence semantics; the billable-call count and `telemetryState` touch its delivered read-side contract); possible new canonical page for peak pausing (phase 7 reconciliation) |
 | Planning backlog | Updated — `doc/planning/oss-tooling/` M2-S17 markers and status |
 
 ## 17. ACCEPTANCE CRITERIA
@@ -473,6 +473,7 @@ No new personal or credential data. Park reasons, window boundaries, grace deadl
 |---------|------|--------|---------|
 | 1.0 | 2026-11-13 | @spec-writer | Initial specification |
 | 1.1 | 2026-11-13 | @spec-writer | Resolved OQ-1..OQ-3 per TDR-0028/0029/0030; decision log (DEC-9..DEC-11), capabilities, ACs, and compatibility statements aligned |
+| 1.2 | 2026-11-13 | @spec-writer | Added scheduling-engine and spend to affected-pages enumeration per DoR iter-1 |
 
 ---
 
