@@ -1,0 +1,886 @@
+# GH-294 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly.
+#
+# SOURCES (single source of truth):
+#   - Spec:     ./chg-GH-294-spec.md (v1.1, 7 ACs — AC-F1-1, AC-F3-2, AC-F4-3,
+#               AC-F5-4, AC-F6-5, AC-F7-6, AC-F8-7; F-1..F-8; DM-1..DM-6;
+#               NFR-1..NFR-10; EVT-1..EVT-4; DEC-1..DEC-11; OQ-1..OQ-3 all
+#               resolved by TDR-0028/0029/0030; §5.1 capability details;
+#               §6 flows 1-4; §7 scope; §8.5 compatibility; §16 affected
+#               components; Appendix A vocabulary mapping; Appendix B anchors).
+#   - Tests:    ./chg-GH-294-test-plan.md (v1.0, 41 TCs TC-PAUSE-001..094 in
+#               ten blocks; 7/7 AC coverage; §3.5 substitute assertions
+#               AMB-P1..P4, BYTE-P1, LIT-P1; §4 layers; §7 automation map with
+#               planned suite locations; §8.3 OQ-TP-1..6 — the delivery-time
+#               pins this plan places below; R-TP-1..R-TP-6). No TC id, oracle,
+#               identity, exit, bound, or AC/NFR mapping is reshaped by this
+#               plan; phase ownership of every id is declared in the TC -> PHASE
+#               MAP.
+#   - Decisions: doc/decisions/TDR-0028-no-nomination-classified-admission-
+#               refusal.md, TDR-0029-event-taxonomy-v2-peak-pause-kinds.md,
+#               TDR-0030-park-preservation-failure-classification.md (all
+#               status Proposed, untracked working-tree files; binding D1..D7
+#               clauses consumed as pinned; their unresolved questions are the
+#               OQ-TP rows this plan resolves or places).
+#   - PM record: ./chg-GH-294-pm-notes.yaml (TDR staging requirement — the
+#               three records MUST land in the coder's first plan-phase commit
+#               because their doc/decisions/00-index.md rows are already
+#               committed in b15af174; delivery conventions — commit
+#               primitive, conventional subjects, body/footer lines <=100
+#               chars, TMPDIR-qualified `pnpm check`, PR targets main-tools,
+#               backlog+status markers).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/packages/folders, doneArtifacts slots, leases,
+#               weightClass, interactions, tier; no tasks key, no progress
+#               log).
+#   - Precedent: ./2026-11-12--GH-291--telemetry-v2/chg-GH-291-plan.yaml and
+#               ./2026-11-11--GH-290--event-taxonomy/chg-GH-290-plan.yaml
+#               (phase ceremony, declaration-first ordering, decision-record
+#               staging contract, inventory/guard scope, changeset shape).
+#
+# DECISION-RECORD STAGING CONTRACT (why the three TDRs are Phase 1's scope):
+#   `doc/decisions/TDR-0028-*.md`, `TDR-0029-*.md`, and `TDR-0030-*.md` are
+#   UNTRACKED at plan time. The commit primitive stages tracked-pending work
+#   plus untracked files only inside the declared phase scope, and the PM
+#   record requires the records to land in the FIRST plan-phase commit: their
+#   `doc/decisions/00-index.md` rows are already committed (b15af174) and must
+#   not dangle at PR time. They are therefore declared in Phase 1's
+#   `scope.files` and land together with the peak-window rule schema (the one
+#   contract surface no later phase may invent). The records are staged as
+#   authored (status Proposed; owner acceptance is the GH-294 PR review, per
+#   each record's governance block); the index rows are already correct and
+#   are not edited, so the index is not declared.
+#
+# OQ-TP RESOLUTIONS (test plan §8.3; each pin is placed in a named phase and
+# asserted by the named TC — a pin that cannot hold fails its TC, never skips):
+#
+#   OQ-TP-1 (non-UTC zone literal: validate or refuse) — pinned in PHASE 1.
+#     The time-zone declaration is validated fail-closed: only a UTC
+#     designation validates; any non-UTC literal is a classified validation
+#     refusal naming the field. Rationale: NG-4 models no non-UTC evaluation,
+#     DEC-1 pins the UTC basis, and the provider-profiles discipline is
+#     fail-closed — a field that parses but can never be honored would be a
+#     silent-degradation channel. TC-PAUSE-011 gains the pinned fixture
+#     (non-UTC literal refuses); TC-PAUSE-090 keeps asserting evaluation
+#     regardless (TZ matrix unchanged).
+#
+#   OQ-TP-2 (overlapping-window validation set) — pinned in PHASE 1.
+#     The declared validation set ships as: (i) every window individually
+#     well-formed (end after start, non-negative buffers, valid instants);
+#     (ii) an exact-duplicate window (same start AND end) on one profile
+#     refuses as ambiguous; (iii) distinct overlapping windows VALIDATE
+#     without arbitration — enforcement unions the intervals, multipliers are
+#     declared rule data (A-4) and are never reconciled at validation or
+#     enforcement time. Spec §7.3's deferred arbitration stays deferred;
+#     TC-PAUSE-011's fixtures gain the duplicate-refuses and
+#     overlap-validates rows alongside the spec-pinned classes.
+#
+#   OQ-TP-3 (does a `session-state-not-preserved` recovery emit `resumed`?) —
+#     pinned in PHASE 5 (implementation) and asserted in PHASE 7 (TC-PAUSE-064
+#     step 5) plus TC-PAUSE-041 step 5. Pin: NO. EVT-3 `resumed` is the
+#     session-resume transition's event and always carries a real preserved
+#     session-state reference; a not-preserved lane's ledger-position recovery
+#     is a different transition (a restart admission under the delivered
+#     interrupted-lane machinery) and emits no `resumed` frame. The episode's
+#     ledger truth is exactly one `stop` + one `parked` (carrying the failure
+#     classification); its resumption stays observable through the delivered
+#     restart/phase records. This keeps EVT-3's payload contract non-nullable,
+#     gives the auditor an unambiguous reconstruction, and adds no forked
+#     reference semantics beside the declared payload list.
+#
+#   OQ-TP-4 (admission-stage ordering of the nomination refusal) — resolved
+#     HERE, by this plan (the owner §8.3 names), binding on PHASE 2.
+#     The nomination gate runs immediately after input validation and BEFORE
+#     the credential preflight, the owner-hold gate, and the lease/single-
+#     flight predicates. Rationale: the resolve is a pure local configuration
+#     read (zero credential reads, zero lock interactions), so it is the
+#     cheapest gate and therefore the first; failing it first keeps the
+#     pre-session discipline true by construction (no lease, no attempt, no
+#     lane, no queue record, no event, no spawn); and an unmasked resolve
+#     identity is the classification AC-F1-1 requires — a later gate's
+#     failure must never substitute its identity for the resolve's. The
+#     refusal fixtures are ordering-agnostic by construction (§8.2), so the
+#     pin cannot break TC-PAUSE-002..004; TDR-0028's D2 identity/exit mapping
+#     is untouched.
+#
+#   OQ-TP-5 (exact payload field lists for the four kinds) — pinned in
+#     PHASE 3. The v2 declaration declares the per-kind lists from the M2
+#     contracts content and spec §8.2: `stop` — grace deadline (bounded),
+#     profile, window end, recorded stop instant; `parked` — reason
+#     `peak-window`, profile, `until`, preservation classification
+#     (`preserved | session-state-not-preserved`); `resumed` — session-state
+#     reference, branch, no-re-dispatch fact; `park-edge` — the park lifecycle
+#     edge fields (ref, cause, until, episode identity). TC-PAUSE-060 pins the
+#     declared lists against the declaration; the drift suite guards them
+#     (rename/drop/add mutants fail by name); every list stays within NFR-6
+#     (<=20 payload fields, <=1024 bytes evidence, asserted by TC-PAUSE-093).
+#     Exact field naming inside those semantics is authored in the declaration
+#     constant and pinned by the same tests — never a second copy.
+#
+#   OQ-TP-6 (the exact surface carrying the daemon-absent machine read) —
+#     pinned in PHASE 8. The `lanes` machine read (`lanes --json`) carries a
+#     `peakEnforcement` object: `mode` (`window-watch` with a resident daemon,
+#     `iteration-start-gating` without one) and `parkClaimed` (boolean; always
+#     false when no park record exists). Lanes is the lane-level surface and
+#     park claims are lane-level facts; `status` projects the same collector
+#     facts into its sections (no second read, NFR-8). TC-PAUSE-080 asserts
+#     both values on that machine read and fails naming the missing surface if
+#     delivery exposes none (AMB-P4); TC-PAUSE-081 scans every other surface
+#     for false claims.
+#
+# SUBSTITUTE ASSERTIONS (§3.5) — honored, never smoothed over:
+#   AMB-P1 (wake-cycle bound, not wall clock) -> Phase 4 gate (TC-PAUSE-023);
+#   AMB-P2 (automaticity asserted negatively via command counters) -> Phase 5
+#     (TC-PAUSE-040/041); AMB-P3 (classification rendered truthfully with
+#     value agreement, placement delivery-bound) -> Phases 4 and 7
+#     (TC-PAUSE-021/025/070/071); AMB-P4 (machine-read surface fails naming
+#     the missing surface) -> Phase 8 (TC-PAUSE-080); BYTE-P1 (per-kind
+#     bidirectional comparisons + one deliberate golden regeneration at the
+#     version bump, version-bearing deltas only) -> Phase 3 (TC-PAUSE-060/
+#     061); LIT-P1 (exactly the two-member value set across every carrier) ->
+#     Phase 4 (TC-PAUSE-021/025).
+#
+# PHASE ORDERING AND TESTABILITY:
+#   Each phase is one commit on `feat/GH-294/provider-peak-pausing` whose
+#   declared narrow gate is green at the boundary. Phase 1 lands the three
+#   decision records and the rule schema every park decision reads. Phase 2
+#   lands the nomination invariant (the enforcement key on both record
+#   families and both admission paths) — nothing later can work without it.
+#   Phase 3 lands taxonomy v2 (declaration, emission projection, reference
+#     surface, goldens, v1-consumer compatibility) BEFORE any enforcement
+#     exists, so the daemon never emits an undeclared kind and the drift
+#     suite never goes red mid-change; its emission cases drive the real
+#     projection over seeded episode records (the delivered GH-290
+#     "real projector over case views" pattern). Phase 4 lands the window
+#   watch and in-flight parking; Phase 5 lands window-end resume (both
+#     classification routes) and cross-profile isolation-through-resume;
+#   Phase 6 lands the zero-spend evidence; Phase 7 lands the vocabulary,
+#   status/brief surfaces, and the exactly-once episode-event evidence over
+#   real episodes; Phase 8 lands the daemon-absent degradation; Phase 9 is
+#   the cross-cutting battery (UTC matrix, determinism, hermeticity,
+#   additivity); Phase 10 is planning-doc maintenance, the changeset, and
+#   the release obligations. The final gate runs `plan validate GH-294` and
+#   the full TMPDIR-qualified battery.
+#
+# TC -> PHASE MAP (41 ids = TC-PAUSE-001..094; every id is owned by exactly
+#   one phase — the phase which first makes its complete suite set green.
+#   Two ids live outside their authoring block for sequencing reasons and
+#   are noted: 064 and 093 need REAL episodes (Phase 5 output), so they are
+#   owned by Phase 7 where their suite is created):
+#   Phase 1 peak rules as data (2): TC-PAUSE-010, 011
+#   Phase 2 nomination at admission (6): TC-PAUSE-001, 002, 003, 004, 005,
+#            006
+#   Phase 3 taxonomy v2 (4): TC-PAUSE-060, 061, 062, 063
+#   Phase 4 window watch and parking (8): TC-PAUSE-012, 020, 021, 022, 023,
+#            024, 025, 026
+#   Phase 5 resume and isolation (7): TC-PAUSE-030, 031, 040, 041, 042, 043,
+#            044
+#   Phase 6 zero-spend assertion (3): TC-PAUSE-050, 051, 052
+#   Phase 7 surfaces and episode evidence (5): TC-PAUSE-064, 070, 071, 072,
+#            093
+#   Phase 8 daemon-absent degradation (2): TC-PAUSE-080, 081
+#   Phase 9 cross-cutting invariants (4): TC-PAUSE-090, 091, 092, 094
+#   Phase 10 docs/release (0): none (planning corpus, changeset; proven by
+#            the doc, coverage, distribution, and changeset guards)
+#
+# COMPOSITION NOTE (R-TP-1 / RSK-8, binding on Phases 4, 5, and 8): peak
+#   pausing is daemon-supervision behavior. The behaviour suites compose the
+#   daemon WITH the lane composition through the delivered seam — the exact
+#   composition the daemon family already proves at the seam and the one the
+#   spec states (§16, §12). The delivered production composition remains
+#   supervise-only (GH-238 residual): the plan does not flip it; the residual
+#   is a documentation obligation flagged for @doc-syncer (lifecycle phase 7)
+#   and @reviewer (phase 8), per the test plan's R-TP-1 mitigation.
+#
+# SCOPE CONVENTION: concrete files are exact paths; folders are declared by
+#   every phase that writes a new file inside them (the commit primitive
+#   stages only the declared phase scope). A file edited in two phases is
+#   declared in both phases; `plan diff` reports the first covering phase.
+#   Conditional rows (adapters session-port seam, MCP parity, delivered
+#   suites that MIGHT need an additive row) are declared so the likely edit
+#   is always staged; an untouched declared file is only a `plan diff`
+#   observation, never a gate failure.
+#
+# DECLARED CONTROLS, NOT EDITS: the delivered regression suites below are
+#   re-run in phase gates as controls and are NOT edited, so none is declared
+#   in a phase scope: `daemon-lane-supervision`, `daemon-preemption`,
+#   `daemon-watch-state-changes`, `daemon-reconciliation`,
+#   `daemon-crash-restart`, `daemon-degradation*`, `daemon-single-flight`,
+#   `dispatch-admission-preflight`, `dispatch-attempts-refusals`,
+#   `dispatch-resume*`, `dispatch-restart-budget`, `dispatch-single-flight`,
+#   `dispatch-daemonless`, `provider-peak-window`, `provider-profile-*`,
+#   `provider-parks`, `queue-park`, `queue-hold-*`, `queue-precedence`,
+#   `spend-v2-*`, `spend-absent`, `telemetry-attribution`,
+#   `telemetry-ingest`, `status-parked-conditions`,
+#   `status-providers-parked`, `status-owner-hold`, `events-frame-bound`,
+#   `events-sequence-*`, `events-overflow-parity`, and the delivered
+#   `events-*` family's unlisted suites. A semantic assertion change in any
+#   delivered suite is the escalation trigger the tier reserves. Golden
+#   regenerations (Phase 3 frame goldens, Phase 7 lanes/brief goldens) are
+#   deliberate, once, by explicit command, with version-bearing/additive
+#   deltas only (BYTE-P1).
+#
+# DOC BOUNDARY (PM instruction, binding on every phase): reconciliation of
+#   `doc/spec/**` current-truth pages (provider-profiles, resident-daemon,
+#   dispatch-engine, telemetry-v2, event-taxonomy, status-digest, brief, and
+#   any new canonical peak-pausing page) is lifecycle phase 7
+#   (`system_spec_update`, @doc-syncer) — it is NOT plan scope and no phase
+#   below declares `doc/spec/**`. The only documentation this plan delivers
+#   is Phase 10's planning-corpus maintenance (backlog M2-S17 marker, status
+#   snapshot) plus the M2 events reference page in Phase 3, which is a
+#   conformance-guarded taxonomy page (TC-PAUSE-060's page half), not a
+#   current-truth spec page.
+#
+# RELEASE: one lockstep minor changeset over the five publishables
+#   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
+#   GH-286..GH-291 precedent. No new package dependency; no data migration;
+#   `STATE_SCHEMA_VERSION` does not change (all record fields are additive on
+#   delivered families, DM-6); no backfill or seed (§19).
+#
+# COMMIT DISCIPLINE (pm-notes delivery conventions): conventional subjects
+#   <= 72 chars; body and footer lines <= 100 chars; commits through the
+#   commit primitive against this plan's phase scope; quality gate
+#   `TMPDIR="$PWD/tmp/tmpdir" pnpm check` before the PR; PR targets
+#   `main-tools`.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-294
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  escalationTriggers:
+    - "A delivered vocabulary member is renamed, removed, or re-semanted (queue park causes, taxonomy v1 kinds or payloads, provider resolve identities), or a fourth park-cause vocabulary appears beside the delivered three plus the two S17 additions (DEC-2, G-9)"
+    - "Taxonomy v1 is edited in place, v1 is served concurrently beside v2, or a second taxonomy version constant exists beside the one declaration (TDR-0029 C-1/C-4/C-6)"
+    - "A dispatch-owned no-nomination identity or error-table row appears, or an admission proceeds without a recorded nomination (TDR-0028 C-1/C-2)"
+    - "The applied grace exceeds the window buffer at runtime, the grace bound moves from validation-time to a runtime clamp, or a preservation failure extends grace (NFR-1, DEC-6, TDR-0030 D5)"
+    - "A zero-spend reading reports zero on classified telemetry absence, loses its park-timestamp-through-window-end scoping, or stops being falsifiable (DEC-4, RSK-4, R-TP-4)"
+    - "A park is refused for a preservation failure, a recovery path fresh re-dispatches, or a recovery bypasses the restart budget and resume economics (TDR-0030 C-1/C-2/C-4)"
+    - "A new signal, kill, or termination primitive appears beyond the delivered supervision seam, or window evaluation reads a wall clock or leaves the UTC basis (NG-6, NFR-3, DEC-1)"
+    - "A nomination is backfilled or migrated, STATE_SCHEMA_VERSION is bumped, or a delivered record payload schema is re-versioned (NG-8, DM-6, §19)"
+    - "Any surface claims a park, stop, or resume that did not happen, or the daemon-absent machine read loses `mode`/`parkClaimed` (DEC-7, NFR-7)"
+    - "`doc/spec/**` reconciliation is pulled into a plan phase instead of lifecycle phase 7 (@doc-syncer), or the three TDRs have not landed with Phase 1's commit (their index rows in b15af174 would dangle at PR time)"
+    - "A delivering suite needs live network, live credential reads, real sleeps, or the live tree/$HOME as state (NFR-10, R-TP-2)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Decision records + peak-window rules as data (F-2, DM-3).
+  #
+  # Goal: land TDR-0028/0029/0030 (the PM staging contract — index rows in
+  # b15af174 must not dangle) and the per-provider peak-window rule schema
+  # every later park decision reads: window list (start, end, time-zone
+  # declaration), multiplier per window, buffers before/after each window,
+  # and `graceSeconds` with a declared default and a maximum DERIVED as
+  # bounded by the window buffer (the bound is exposed on the parsed value —
+  # data-derived, not asserted downstream only). Validation is fail-closed
+  # and classified, matching the provider-profiles discipline; no window
+  # declared means no enforcement and the delivered behavior (§19). OQ-TP-1
+  # and OQ-TP-2 are pinned HERE (see header): only a UTC designation
+  # validates; exact-duplicate windows refuse, distinct overlaps validate
+  # without arbitration. The schema module is data-only (no clock, no
+  # environment, no I/O — TC-PAUSE-010 step 5); evaluation happens against
+  # the injected clock at watch time (Phase 4). The delivered `provider/
+  # peak.ts` evaluation gains the buffer-inclusive open/effective-end
+  # boundary helpers the profile-level F-6 gate and the lane-level watcher
+  # share — one boundary truth, two consumers.
+  #
+  # AC/TC coverage: F-2, DM-3, NFR-1's validation tail (TC-PAUSE-010,
+  # TC-PAUSE-011 incl. the two pinned OQ-TP fixtures); declares the rule
+  # vocabulary Phases 4, 5, and 9 assert through.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/provider-peak-rules-schema.test.ts
+  #   bun test tests/structure/{provider-profile-contract,content-inventory}.test.ts
+  #   bun run scripts/checks/{ambient-globals,exports-parity}.ts
+  #
+  # Suites left green: provider-peak-rules-schema (round-trip, derived grace
+  #   bound, fail-closed matrix incl. OQ-TP-1/2 pins),
+  #   provider-profile-contract (additive branch shapes),
+  #   content-inventory, ambient-globals, exports-parity.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Decision records and the peak-window rule schema as versioned per-profile data"
+    kind: delivery
+    summary: "feat(provider): declare peak-window rules as data and land TDR-0028..0030"
+    scope:
+      files:
+        - doc/decisions/TDR-0028-no-nomination-classified-admission-refusal.md
+        - doc/decisions/TDR-0029-event-taxonomy-v2-peak-pause-kinds.md
+        - doc/decisions/TDR-0030-park-preservation-failure-classification.md
+        - packages/core/src/provider/peak-rules.ts
+        - packages/core/src/provider/peak.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/provider/index.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/contracts/provider-profile.ts
+        - tests/structure/provider-peak-rules-schema.test.ts
+        - tests/structure/provider-profile-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/provider-profile.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Provider profile nomination at dispatch admission (F-1, DM-1,
+  # DM-2; TDR-0028; OQ-TP-4 resolved by this plan — see header).
+  #
+  # Goal: make the nomination the structural enforcement key. Every admitted
+  # delivery records `providerProfile` as a stored additive field on the
+  # attempt record family (`delivery.dispatch.attempt.v1`) and on the daemon
+  # lane record, on BOTH admission paths (one-shot dispatch and the composed
+  # daemon supervision claim — TDR-0028 D3's one admission family); the
+  # attempt-history read, the lanes read, and the records agree three-way.
+  # The nomination gate sits immediately after input validation, BEFORE the
+  # credential preflight, owner-hold gate, and lease/single-flight
+  # predicates (OQ-TP-4 pin): a delivery that cannot nominate is refused
+  # pre-session with the resolve identity for its exact shape
+  # (`provider.profile.absent`/`invalid`/`capability-denied` exit 1,
+  # `provider.profile.unavailable` exit 2 with the eligibility list) — no
+  # lease, attempt, lane, or queue record, no event, no spawn, no new
+  # `dispatch.*` identity or error-table row. Pre-change lanes resume on a
+  # classified absence (resumes never re-nominate, nothing backfills), and
+  # no read surface defaults, guesses, or borrows a nomination.
+  #
+  # AC/TC coverage: AC-F1-1 complete (TC-PAUSE-001..006); DEC-9; DM-1, DM-2.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/provider-nomination-admission.test.ts
+  #   bun test tests/behaviour/{dispatch-attempts-refusals,dispatch-single-flight}.test.ts
+  #   bun test tests/behaviour/{provider-profile-selection,provider-peak-window}.test.ts
+  #   bun test tests/structure/{dispatch-attempts-taxonomy,content-inventory}.test.ts
+  #
+  # Suites left green: provider-nomination-admission (records agreement,
+  #   four refusal identities at delivered exits, claim parity, empty-branch
+  #   preservation, pre-change absence, no-default/no-guess/no-borrow),
+  #   dispatch-attempts-refusals + dispatch-single-flight +
+  #   provider-profile-selection + provider-peak-window (delivered
+  #   controls), dispatch-attempts-taxonomy, content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Nomination at admission: providerProfile on lane and attempt records with classified no-nomination refusal"
+    kind: delivery
+    summary: "feat(dispatch): nominate the provider profile at admission or refuse pre-session"
+    scope:
+      files:
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/dispatch-attempts.ts
+        - packages/core/src/domain/dispatch-attempts.ts
+        - packages/core/src/domain/daemon-lane.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/daemon.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/commands/lanes.ts
+        - tests/behaviour/provider-nomination-admission.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Taxonomy v2: the four kinds declared, emitted by the
+  # projection, and compatibly consumed (EVT-1..EVT-4; TDR-0029; OQ-TP-5
+  # pinned here; BYTE-P1 honored).
+  #
+  # Goal: land the whole taxonomy version BEFORE any enforcement exists, so
+  # the daemon never emits an undeclared kind. `TAXONOMY_VERSION` moves to
+  # "v2" as one declaration constant rendering the stamp on event frames,
+  # degraded frames, and the `events` reference surface (one constant, three
+  # consumers, zero divergence); `dispatch.attempt` declares
+  # started|refused|completed|stop|parked|resumed and `queue.graph` declares
+  # entry|dependency-edge|release|remove|park-edge with per-kind payload
+  # field lists per the OQ-TP-5 pin; every v1 kind and payload stays
+  # byte-identical and the envelope, per-(topic, lane) sequence,
+  # overflow-to-repoll, and emission model are untouched; v2 is the single
+  # spoken version (v1 retired, never served concurrently). The emission
+  # projection extends to the four kinds from the durable episode records;
+  # Phase 3's cases drive the real projector over SEEDED episode records
+  # (the delivered GH-290 case-view pattern), so TC-PAUSE-063's v1-pinned
+  # consumer proves the six-point compatibility statement (ignore-and-
+  # continue on new kinds, contiguous sequence, stamp-drift = signal not
+  # error, repoll reserved for discontinuity/overflow) end to end over the
+  # in-memory transport pair plus the one bounded unix-socket variant. The
+  # M2 events reference page reconciles to v2 with the compatibility
+  # statement (the conformance page half); frame goldens regenerate
+  # deliberately, once, showing only version-bearing deltas.
+  #
+  # AC/TC coverage: AC-F7-6 declaration half + RSK-6 (TC-PAUSE-060, 061,
+  # 062, 063); DEC-3, DEC-10; NFR-6's declaration tail.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/event-taxonomy-{declaration,drift,integrity,single-source}.test.ts
+  #   bun test tests/checks/event-taxonomy-conformance.test.ts
+  #   bun test tests/behaviour/event-taxonomy-v2-compat.test.ts
+  #   bun test tests/behaviour/events-{list,describe}.test.ts
+  #   bun test tests/golden/events-reference-page.test.ts
+  #
+  # Suites left green: event-taxonomy-declaration (v2 kind sets, pinned
+  #   payload lists, OQ-TP-5), event-taxonomy-drift (new-kind mutants fail
+  #   by name; bidirectional comparisons under v2), event-taxonomy-integrity,
+  #   event-taxonomy-single-source (one stamp constant; v1 retired),
+  #   event-taxonomy-conformance (page half), event-taxonomy-v2-compat
+  #   (six-point statement), events-list/events-describe (reference surface
+  #   v2), golden events-reference-page.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Taxonomy v2 declaration, emission projection, reference surface, and v1-consumer compatibility"
+    kind: delivery
+    summary: "feat(events): declare taxonomy v2 with stop/parked/resumed/park-edge kinds"
+    scope:
+      files:
+        - packages/core/src/contracts/taxonomy.ts
+        - packages/core/src/domain/event-projection.ts
+        - packages/cli/src/commands/events.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/events.md
+        - tests/structure/event-taxonomy-declaration.test.ts
+        - tests/structure/event-taxonomy-drift.test.ts
+        - tests/structure/event-taxonomy-integrity.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
+        - tests/structure/event-taxonomy-additive.test.ts
+        - tests/checks/event-taxonomy-conformance.test.ts
+        - tests/behaviour/event-taxonomy-v2-compat.test.ts
+        - tests/behaviour/events-list.test.ts
+        - tests/behaviour/events-describe.test.ts
+        - tests/golden/events-reference-page.test.ts
+      folders:
+        - tests/fixtures/events
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/taxonomy.ts
+        role: producer
+      - kind: generated-code
+        target: packages/core/src/domain/event-projection.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The daemon's window watch and in-flight lane parking (F-3;
+  # TDR-0030; AMB-P1, AMB-P3, LIT-P1 honored here).
+  #
+  # Goal: close the uncontrolled in-flight path. The supervision cycle gains
+  # the profile-window watch over the declared rules (Phase 1) and each
+  # lane's recorded nomination (Phase 2): when a profile's window opens
+  # (buffer included), every in-flight lane nominated to it receives a
+  # bounded-grace stop whose deadline is recorded, and lands parked with
+  # reason `peak-window`, the profile named, `until` at the effective window
+  # end, and the additive closed-value preservation classification
+  # (`preserved | session-state-not-preserved`) — appended under one fence,
+  # exactly once per episode, with read-time expiry and no in-place record
+  # mutation. A preservation failure NEVER refuses the park and NEVER
+  # extends the grace (TDR-0030 D1/D5); the applied grace is bounded by the
+  # window buffer in every matrix cell; the park lands within one OBSERVED
+  # supervision cycle (AMB-P1 wake-cycle bound, printed counts, zero real
+  # sleeps); the lane stays parked until the window ends (no early resume,
+  # no re-dispatch); the stop composes with the delivered supervision,
+  # liveness, and safe-boundary contracts and adds no kill path (delivered
+  # suites re-run as controls + source scan). `peak-window` and `owner-hold`
+  # join the queue park-cause set mapped onto the existing condition types
+  # (DEC-2) — the CLI/vocabulary surfaces are asserted in Phase 7; here the
+  # park record family carries the fields. The suite composes the daemon
+  # WITH the lane composition (COMPOSITION NOTE). Adapters rows are
+  # conditional: only if the delivered session port needs an explicit
+  # preservation seam; tests script preservation refusal on the fake
+  # regardless.
+  #
+  # AC/TC coverage: AC-F3-2 complete (TC-PAUSE-012, 020, 021, 022, 023, 024,
+  # 025, 026); F-2/F-3 runtime halves; NFR-1, NFR-2 (substitute AMB-P1);
+  # DEC-11's park half; EVT-1/EVT-2 emission over real episodes.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/daemon-peak-window-park.test.ts
+  #   bun test tests/behaviour/{daemon-lane-supervision,daemon-preemption}.test.ts
+  #   bun test tests/behaviour/{provider-peak-window,queue-park}.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #
+  # Suites left green: daemon-peak-window-park (no-window default, window
+  #   open + stop deadline, park record under one fence, grace-bound matrix,
+  #   cycle-bound, stay-parked, preservation-failure, composition scan),
+  #   daemon-lane-supervision + daemon-preemption + provider-peak-window +
+  #   queue-park (delivered controls), content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Window watch and in-flight parking: bounded-grace stop, classified park record, grace and cycle bounds"
+    kind: delivery
+    summary: "feat(daemon): watch profile windows and park in-flight lanes with bounded grace"
+    scope:
+      files:
+        - packages/core/src/domain/daemon-peak-pause.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/domain/queue-park.ts
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/daemon.ts
+        - packages/core/src/contracts/harness.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/adapters/src/harness/claude.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/daemon-peak-window-park.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/daemon
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: producer
+      - kind: generated-code
+        target: packages/core/src/domain/daemon-peak-pause.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Window-end resume (both classification routes) and
+  # cross-profile isolation (F-4, F-5; TDR-0030 D3/D4; OQ-TP-3 pinned here;
+  # AMB-P2 honored).
+  #
+  # Goal: cost control must not cost work. At the effective window end
+  # (buffer included) the supervision path resumes every lane parked for
+  # that window — automatically per AMB-P2 (zero operator commands, zero
+  # dispatch invocations; the decision derives solely from the window-end
+  # observation): a `preserved` lane resumes through the delivered session
+  # resume path on the same branch (attach-and-continue, no restart
+  # ordinal, no fresh spawn); a `session-state-not-preserved` lane routes to
+  # the delivered interrupted-lane recovery (ledger position, same branch,
+  # exactly one restart ordinal under the restart budget and resume
+  # economics), with budget exhaustion escalating verbatim (terminal
+  # exhaustion record + typed question, never silent requeue, never fresh
+  # re-dispatch). Per the OQ-TP-3 pin, the recovery emits NO `resumed`
+  # frame — EVT-3 fires only on the session resume path (asserted
+  # negatively here, positively in Phase 7's TC-PAUSE-064). No branch,
+  # artifact, or queue state is lost or duplicated; single-flight holds the
+  # ref through the parked interval; completed phases skip idempotently.
+  # Isolation is per profile: lanes on other providers keep running for the
+  # whole window AND only the parked profile's lanes resume at end — the
+  # park decision reads only the recorded nomination and that profile's
+  # window state (set equality across the four-fixture matrix, incl. the
+  # model-string borrow bait). The delivered owner-hold precedence applies
+  # unchanged in all three orderings, including at window end (DEC-8).
+  #
+  # AC/TC coverage: AC-F5-4 complete (TC-PAUSE-040..044); AC-F4-3 complete
+  # (TC-PAUSE-030, 031); NFR-5; DEC-5, DEC-8, DEC-11's resume half.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/daemon-peak-window-{isolation,resume}.test.ts
+  #   bun test tests/behaviour/{dispatch-resume,dispatch-restart-budget}.test.ts
+  #   bun test tests/behaviour/{queue-hold-park-resume,queue-hold-dispatch}.test.ts
+  #   bun test tests/behaviour/daemon-peak-window-park.test.ts
+  #
+  # Suites left green: daemon-peak-window-isolation (isolation + park-key
+  #   matrix), daemon-peak-window-resume (preserved resume, not-preserved
+  #   recovery, exhaustion, state fidelity, hold precedence),
+  #   dispatch-resume + dispatch-restart-budget + queue-hold-park-resume +
+  #   queue-hold-dispatch (delivered controls), daemon-peak-window-park
+  #   (still green).
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Window-end resume (session path and budget-governed recovery) with cross-profile isolation"
+    kind: delivery
+    summary: "feat(daemon): resume parked lanes at window end and keep other providers untouched"
+    scope:
+      files:
+        - packages/core/src/domain/daemon-peak-pause.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/domain/economics-resume.ts
+        - packages/core/src/domain/queue-precedence.ts
+        - packages/core/src/domain/owner-hold.ts
+        - tests/behaviour/daemon-peak-window-isolation.test.ts
+        - tests/behaviour/daemon-peak-window-resume.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/daemon
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — The window-scoped zero-spend assertion (F-6, DM-5; DEC-4).
+  #
+  # Goal: make the cost-control claim provable and honest. The spend read
+  # side gains the window-scoped evidence over the telemetry v2 attribution
+  # join (lane and model dimensions, `delivery.telemetry.storage.v1`
+  # identity): the count of billable model calls attributable to the parked
+  # lane from the park timestamp through the window end, emitted with an
+  # explicit `telemetryState`. Zero is a positive reading backed by a NAMED
+  # attribution read; telemetry absence is a classified outcome and never
+  # renders as zero (mutually exclusive renderings, asserted in both
+  # directions with the present-zero control in the same run); boundary
+  # scoping excludes pre-park and post-window calls (positions visible in
+  # the scope disclosure) and a seeded mid-window breach reads non-zero —
+  # the assertion can fail, so it is a count and not a constant. The `spend`
+  # CLI surfaces the evidence; the reading performs no harness-store query
+  # of its own (GH-291's capture-time-only rule).
+  #
+  # AC/TC coverage: AC-F6-5 complete (TC-PAUSE-050, 051, 052); NFR-4; DM-5;
+  # RSK-4/R-TP-4 mitigations.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/spend-zero-window.test.ts
+  #   bun test tests/behaviour/{spend-v2-breakdown,spend-absent}.test.ts
+  #   bun test tests/behaviour/telemetry-attribution.test.ts
+  #   bun test tests/golden/spend.test.ts
+  #
+  # Suites left green: spend-zero-window (present-zero, absence-classified,
+  #   boundary + breach falsifiability), spend-v2-breakdown + spend-absent +
+  #   telemetry-attribution (delivered controls), golden spend (regenerated
+  #   deliberately only if the evidence render changes it).
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Window-scoped zero-spend evidence over telemetry v2 with classified absence"
+    kind: delivery
+    summary: "feat(spend): prove zero billable calls per parked lane through the window"
+    scope:
+      files:
+        - packages/core/src/domain/spend.ts
+        - packages/core/src/contracts/spend.ts
+        - packages/core/src/state/spend-reads.ts
+        - packages/core/src/domain/telemetry-attribution.ts
+        - packages/cli/src/commands/spend.ts
+        - tests/behaviour/spend-zero-window.test.ts
+        - tests/golden/spend.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/telemetry
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/spend.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Park vocabulary, status/brief surfaces, and exactly-once
+  # episode evidence (F-7; DEC-2; AMB-P3's surface half; TC-PAUSE-064 and
+  # 093 owned here — they need Phase 5's real episodes).
+  #
+  # Goal: make the episode visible and auditable. The lanes `parked:<cause>`
+  # projection gains `peak-window` and `owner-hold` with the delivered three
+  # unchanged (closed-set equality both directions; deliberate golden
+  # extension showing only additive values); `queue release --park` accepts
+  # the new causes with the delivered `--until <iso>` requirement, and
+  # `owner-hold` parks carry the hold's expiry (DM-4). Status digest and
+  # brief carry the lane park fields for open episodes — parked count,
+  # reason, `until`, and the preservation classification rendered truthfully
+  # with value agreement to the park record (AMB-P3: placement
+  # delivery-bound) — projected from the SAME collector pass with the brief
+  # adding zero reads of its own (read-counting wrapper + record-field
+  # mutant control); fields clear after the episode closes and the empty
+  # state stays honest. Over real episodes (both variants), exactly one
+  # `stop`, `parked`, `resumed`, and `park-edge` lands per episode across
+  # many supervision ticks, payloads reconstruct the episode from the ledger
+  # alone, and the four kinds hold the NFR-6 evidence bounds (<=20 payload
+  # fields, <=1024 bytes, measured and printed) — with no `resumed` frame
+  # carrying a session-state reference for a not-preserved lane (OQ-TP-3's
+  # negative half). The MCP status row is conditional (parity rides the
+  # shared core fold).
+  #
+  # AC/TC coverage: AC-F7-6 complete (TC-PAUSE-064, 070, 071, 072) + NFR-6
+  # (TC-PAUSE-093); NFR-8; DEC-2.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/{status-brief-park-fields,queue-park-causes-s17}.test.ts
+  #   bun test tests/behaviour/pause-episode-events.test.ts
+  #   bun test tests/golden/{lanes-list,brief}.test.ts
+  #   bun test tests/behaviour/{status-parked-conditions,status-owner-hold}.test.ts
+  #
+  # Suites left green: status-brief-park-fields (status half + brief
+  #   zero-added-reads), queue-park-causes-s17 (vocabulary + `--until`),
+  #   pause-episode-events (exactly-once, reconstruction, bounds),
+  #   golden lanes-list + brief (deliberate additive regeneration),
+  #   status-parked-conditions + status-owner-hold (delivered controls).
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Park vocabulary, status/brief park fields, and exactly-once episode event evidence"
+    kind: delivery
+    summary: "feat(status,brief,lanes,queue): surface park episodes and pin exactly-once events"
+    scope:
+      files:
+        - packages/core/src/domain/status.ts
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/domain/brief.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/commands/brief.ts
+        - packages/cli/src/commands/lanes.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/mcp/src/commands/status.ts
+        - tests/behaviour/status-brief-park-fields.test.ts
+        - tests/behaviour/queue-park-causes-s17.test.ts
+        - tests/behaviour/pause-episode-events.test.ts
+        - tests/golden/lanes-list.test.ts
+        - tests/golden/brief.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/daemon
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
+      - kind: generated-code
+        target: packages/core/src/domain/brief.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Daemon-absent degradation, declared (F-8; DEC-7; OQ-TP-6
+  # pinned here; AMB-P4 honored).
+  #
+  # Goal: state what the system did not do. Without a resident daemon there
+  # is no window watcher and no mid-flight park: behavior degrades to the
+  # delivered iteration-start gating (profiles in window ineligible for new
+  # dispatches at admission, delivered F-6 identity/exit, window-conditional
+  # control), a delivery already running outside the daemon proceeds to
+  # completion with zero park/stop/resume artifacts, and the degradation is
+  # DECLARED in the machine read: per the OQ-TP-6 pin, `lanes --json`
+  # carries `peakEnforcement: { mode: "iteration-start-gating",
+  # parkClaimed: false }` (mode `window-watch` when the daemon is resident),
+  # with status projecting the same collector facts. The full surface scan
+  # proves zero enforcement claims anywhere (status, brief, lanes, board,
+  # dispatch attempts, events reference/frames) and zero park-family records
+  # for the window interval; no window-scoped zero-spend episode reading is
+  # synthesized for a park that never happened. The machine-read case fails
+  # naming the missing surface if delivery exposes none (AMB-P4).
+  #
+  # AC/TC coverage: AC-F8-7 complete (TC-PAUSE-080, 081); NFR-7; DEC-7;
+  # RSK-7's mitigation.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/daemon-absent-degradation.test.ts
+  #   bun test tests/behaviour/{daemon-degradation,dispatch-daemonless}.test.ts
+  #   bun test tests/behaviour/provider-peak-window.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #
+  # Suites left green: daemon-absent-degradation (mode-declared +
+  #   no-false-claims), daemon-degradation + dispatch-daemonless +
+  #   provider-peak-window (delivered controls — the admission gating did
+  #   not move), content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Daemon-absent degradation to iteration-start gating with a declared, truthful machine read"
+    kind: delivery
+    summary: "feat(lanes): declare iteration-start-gating mode and parkClaimed=false without a daemon"
+    scope:
+      files:
+        - packages/core/src/domain/queue-lanes.ts
+        - packages/cli/src/commands/lanes.ts
+        - tests/behaviour/daemon-absent-degradation.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — The cross-cutting invariants battery (NFR-3, NFR-9, NFR-10,
+  # DM-6/G-9; TC-PAUSE-090..094).
+  #
+  # Goal: pin the rules that span paths. UTC-only window evaluation on the
+  # injected clock: the boundary matrix flips exactly at the declared UTC
+  # instants (start-buffer open, effective-end resume), the TZ matrix
+  # (including a DST-observing zone crossing the window) is identical to the
+  # UTC baseline, and no wall-clock read participates (sleep counter zero) —
+  # with a declared non-UTC zone literal the evaluation instants stay UTC
+  # (OQ-TP-1's evaluation half). Determinism: identical declarations,
+  # provider facts, records, and clock schedule produce byte-for-value
+  # identical park/resume/event decisions across paired runs, both variants.
+  # Hermeticity: the delivering suites run with zero live network, zero
+  # credential reads, zero real sleeps, and temp-dir state only — counters
+  # armed with a canary so the guard cannot pass vacuously. Additivity:
+  # STATE_SCHEMA_VERSION unchanged; every new field is additive on the
+  # delivered families; pre-change records stay valid; appends fenced; no
+  # delivered record mutated in place; no new `dispatch` error-table row
+  # (TDR-0028 C-2). Tests and fixtures only — production rows are
+  # conditional (a UTC or determinism failure escalates rather than being
+  # patched silently).
+  #
+  # AC/TC coverage: NFR-3 (TC-PAUSE-090), NFR-9 (TC-PAUSE-091), NFR-10
+  # (TC-PAUSE-092), DM-4 owner-hold half + DM-6/G-9 (TC-PAUSE-094).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/peak-window-utc-clock.test.ts
+  #   bun test tests/behaviour/peak-pause-determinism.test.ts
+  #   bun test tests/checks/peak-pause-hermetic.test.ts
+  #   bun test tests/structure/state-contract.test.ts
+  #   bun test tests/behaviour/queue-park-causes-s17.test.ts --filter additivity
+  #
+  # Suites left green: peak-window-utc-clock, peak-pause-determinism,
+  #   peak-pause-hermetic (counters + canary), state-contract (additivity
+  #   inventory extended to the new fields), queue-park-causes-s17
+  #   additivity filter.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Cross-cutting battery: UTC boundary matrix, determinism, hermeticity, and additive record discipline"
+    kind: delivery
+    summary: "test(pause): pin UTC-only, deterministic, hermetic, additive invariants"
+    scope:
+      files:
+        - packages/core/src/provider/peak.ts
+        - packages/core/src/provider/peak-rules.ts
+        - tests/behaviour/peak-window-utc-clock.test.ts
+        - tests/behaviour/peak-pause-determinism.test.ts
+        - tests/checks/peak-pause-hermetic.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/structure/event-state-additivity.test.ts
+        - tests/behaviour/queue-park-causes-s17.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/daemon
+        - tests/fixtures/events
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Planning-doc maintenance, the changeset, and the release
+  # obligations.
+  #
+  # Goal: record the delivered story in the planning corpus per the ticket's
+  # delivery conventions and declare the release. The backlog M2-S17 row
+  # gains its delivered marker ("Progress: delivered by GH-294 — ...",
+  # following the M2-S13/S14 precedent); the status snapshot records the
+  # delivery. One lockstep minor changeset over the five publishables.
+  # `doc/spec/**` reconciliation is deliberately NOT here — it is lifecycle
+  # phase 7 (`system_spec_update`, @doc-syncer); see the DOC BOUNDARY note.
+  # The change folder (this plan, the spec, the test plan, pm-notes, and the
+  # capsule) rides the delivery commits and is declared here so the final
+  # phase-mode commit stages any residue. The final gate runs the full
+  # battery, the branch-range commit lint, the changeset guard, and
+  # `plan validate GH-294`.
+  #
+  # Gate:
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-294
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   bun run scripts/checks/changesets-group.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #
+  # Exit: every AC is met and every declared phase complete (AC-F1-1..
+  # AC-F8-7 mapped per the TC -> PHASE MAP); the delivered vocabularies are
+  # extended, never edited; taxonomy v1 payloads are byte-identical under
+  # v2; no migration, backfill, or STATE_SCHEMA_VERSION bump; the three
+  # TDRs landed with Phase 1's commit; the changeset validates against the
+  # fixed group; the release obligations are declared and the PR targets
+  # `main-tools`.
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Planning-doc maintenance, changeset, and release obligations"
+    kind: delivery
+    summary: "docs(planning): mark M2-S17 delivered and declare the release"
+    scope:
+      files:
+        - .changeset/gh-294-provider-peak-pausing-minor.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+      folders:
+        - doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-294/provider-peak-pausing targeting main-tools"
+      pipelineId: "CI pipeline for the GH-294 delivery branch"
+      trackerTransition: "in-review"
