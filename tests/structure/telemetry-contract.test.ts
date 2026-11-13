@@ -9,6 +9,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  ERROR_TABLE,
+  type ErrorTableEntry,
   HARNESS_TOKEN_CLASSES,
   HARNESS_WARNING_REASONS,
   SPEND_BREAKDOWN_FIELDS,
@@ -179,5 +181,57 @@ describe("telemetry v2 contract declaration", () => {
       // it never fabricates (the README's declared reality).
       expect(finish.calls).toBeUndefined();
     }
+  });
+});
+
+describe("TC-TELEMETRY-039 conformance and naming", () => {
+  const NEW_MODULES = [
+    "packages/core/src/contracts/telemetry.ts",
+    "packages/core/src/domain/telemetry-ingest.ts",
+    "packages/core/src/domain/telemetry-attribution.ts",
+    "packages/core/src/state/telemetry.ts",
+    "packages/adapters/src/harness/telemetry-session-totals.ts",
+  ] as const;
+
+  test("no user-facing surface hardcodes a product or binary name", () => {
+    for (const module of NEW_MODULES) {
+      const source = readFileSync(join(process.cwd(), module), "utf8");
+      for (const literal of ["ados", "ADOS_", "~/.ados"]) {
+        expect(source.toLowerCase().includes(literal.toLowerCase()), module).toBe(false);
+      }
+    }
+  });
+
+  test("record kinds and schema identities follow the brand-neutral delivery pattern", () => {
+    expect(TELEMETRY_STEP_RECORD_KIND).toBe("harness.telemetry.step");
+    expect(TELEMETRY_BASELINE_RECORD_KIND).toBe("harness.telemetry.baseline");
+    expect(TELEMETRY_STEP_SCHEMA_ID.startsWith("delivery.")).toBe(true);
+    expect(TELEMETRY_BASELINE_SCHEMA_ID.startsWith("delivery.")).toBe(true);
+    expect(TELEMETRY_STORAGE_SCHEMA_VERSION).toBe("delivery.telemetry.storage.v1");
+  });
+
+  test("the exit-code literal invariant stays green over the new modules", async () => {
+    const { scanRoot } = await import("../../scripts/checks/exit-code-literals");
+    const report = scanRoot(process.cwd());
+    expect(report.failures).toEqual([]);
+    expect(report.scannedFiles).toBeGreaterThan(0);
+  });
+
+  test("the forbidden-literal scan stays green over the new modules", async () => {
+    const { scan } = await import("../../scripts/checks/forbidden-literals");
+    const outcome = scan(process.cwd());
+    expect(outcome.failures).toEqual([]);
+  });
+
+  test("the error-table families are unchanged by the telemetry addition", () => {
+    const spendRows = (ERROR_TABLE as readonly ErrorTableEntry[]).filter(
+      (entry) => entry.domainKind === "spend",
+    );
+    expect(spendRows).toHaveLength(1);
+    expect(spendRows[0]?.code).toBe("spend.telemetry-absent");
+    const telemetryRows = (ERROR_TABLE as readonly ErrorTableEntry[]).filter(
+      (entry) => entry.domainKind === "telemetry",
+    );
+    expect(telemetryRows).toEqual([]);
   });
 });
