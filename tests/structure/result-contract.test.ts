@@ -23,6 +23,8 @@ const KEY_SET = JSON.parse(
   schemaVersion: string;
   successKeys: string[];
   failureKeys: string[];
+  failureOptionalKeys: string[];
+  failureDetailMembers: string[];
   errorKeys: string[];
   scriptedSuccessKeys: string[];
   scriptedFailureKeys: string[];

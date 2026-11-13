@@ -3,9 +3,12 @@
  * injected temp state store, fact source, clock, and fence tokens.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { QueueComposition, QueueFactSource } from "../../../../packages/cli/src/edge";
 import { createConfigProgram } from "../../../../packages/cli/src/edge";
 import { runCli } from "../../../../packages/cli/src/index";
+import { queueGraphDocumentPath } from "../../../../packages/core/src/app/queue";
 import type { StateStorePort } from "../../../../packages/core/src/contracts/index";
 import { bufferSink } from "../../../golden/helpers";
 import { baseFacts, queueRuntime } from "../../queue-ready/harness";
@@ -97,11 +100,17 @@ export type QueueEdgeHarness = {
   readonly advance: (ms: number) => void;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
+  /** The write log when `countWrites` is set (removal purity, TC-QLC-011). */
+  readonly writeLog?: StoreWriteLog;
+  /** The derived queue-graph document bytes, when one was written. */
+  readonly graphDocument: () => string | undefined;
 };
 
 export type QueueEdgeHarnessOptions = {
   /** Wrap the injected store (for write-counting read-purity tests). */
   readonly wrapStore?: (store: StateStorePort) => StateStorePort;
+  /** Count every write seam on the injected store (GH-292 removal purity). */
+  readonly countWrites?: boolean;
   /** Composition overrides (for example the producer-root deploy port). */
   readonly overrides?: Partial<QueueComposition>;
 };
@@ -115,7 +124,15 @@ export const createQueueEdgeHarness = (
   let now = NOW_MS;
   let fence = 0;
   const factSource = queueFactSource();
-  const store = options.wrapStore?.(fixture.store) ?? fixture.store;
+  let writeLog: StoreWriteLog | undefined;
+  const store =
+    options.countWrites === true
+      ? (() => {
+          const tracked = trackingStore(fixture.store);
+          writeLog = tracked.log;
+          return tracked.store;
+        })()
+      : (options.wrapStore?.(fixture.store) ?? fixture.store);
   const composition: QueueComposition = {
     store,
     facts: factSource,
@@ -187,6 +204,14 @@ export const createQueueEdgeHarness = (
     },
     nowIso: () => new Date(now).toISOString(),
     nowMs: () => now,
+    ...(writeLog === undefined ? {} : { writeLog }),
+    graphDocument: (): string | undefined => {
+      try {
+        return readFileSync(queueGraphDocumentPath(fixture.store.identity), "utf8");
+      } catch {
+        return undefined;
+      }
+    },
   };
 };
 

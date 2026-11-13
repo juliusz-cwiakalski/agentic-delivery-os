@@ -1,8 +1,8 @@
 # queue(1)
 
 Status: `queue ready` M0 shipped (M0-S7); full queue shipped by GH-237
-(M1-S17). Examples reconcile the M1-S17 delivery; scenarios SC-M1-08..11,
-SC-M1-17.
+(M1-S17); lifecycle completion shipped by GH-292 (M2-S15). Examples
+reconcile the delivered surface; scenarios SC-M1-08..11, SC-M1-17.
 
 ## NAME
 
@@ -18,8 +18,12 @@ scheduling with single-flight and weight classes.
 <binary> queue add <ref> [--priority <n>] [--dep <ref>]
 <binary> queue prioritize <ref> <n>
 <binary> queue dep <ref> <on-ref>
+<binary> queue dep add <ref> <on-ref>
+<binary> queue dep remove <ref> <on-ref>
 <binary> queue claim [<ref>] [--holder <id>]
 <binary> queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]
+<binary> queue remove <ref> --reason <landed|abandoned|superseded|reconciled>
+<binary> queue reconcile [--ref <ref>]
 ```
 
 ## DESCRIPTION
@@ -38,6 +42,20 @@ socket is required, and every successful queue/lanes payload carries
 reachable and degrades to bounded state polling at `daemon.watch-poll-interval`
 when it is not.
 
+The lifecycle is complete (GH-292): entries leave the queue when their work
+lands, is abandoned, or is superseded — by hand through `queue remove` with a
+required reason, automatically through `closeout --apply` with reason `landed`,
+or through `queue reconcile` against tracker truth with reason `reconciled`.
+Dependency edges are edited one edge per invocation with the explicit
+`queue dep add <ref> <on-ref>` / `queue dep remove <ref> <on-ref>` grammar;
+the delivered two-positional `queue dep <ref> <on-ref>` add stays valid and
+behaves identically to `dep add`. Removal is append-only: an entry is present
+iff its latest `queue.entry` append is later than its latest `queue.removal`
+append in ledger position, so a removed entry disappears from every read
+without any record being deleted, and a later re-declaration restores it.
+`queue release` is unchanged: it drops the lane's lease and never removes an
+entry.
+
 ## OUTPUT
 
 Text: one bounded summary plus one line per entry or action; `queue
@@ -49,6 +67,22 @@ and, for `plan`, `nextActions[]` with `ref`, `repository`, `rankClass`,
 `reason`, `priority`, `weightClass`, `weightClassSource`, `lease`,
 `blocking[]`, optional `deploy`, and optional `preemption`.
 
+Lifecycle payloads are additive per verb, each carrying the delivered
+`degraded[]`:
+
+- `remove` → `ref`, `result` (`removed`), `reason`, `readySet[]`, `event`
+  (`{ topic: "queue.graph", kind: "remove" }`), `degraded[]`.
+- `dep add` (either spelling) → the delivered `add | prioritize | dep` payload.
+- `dep remove` → the delivered mutation keys plus `readySet[]` and `event`
+  (`{ topic: "queue.graph", kind: "dependency-edge" }`); an absent edge is
+  `result: "noop"` at exit 0 with zero appends and zero events.
+- `reconcile` → `result` (`removed` | `noop`), `checked`, `removed[]`,
+  `retained[]` (each retained ref with its observed `deliveryState`),
+  `unobserved[]` (not-found items, retained), `readySet[]`, `truncated`,
+  `remainder`, `degraded[]`. A run examines at most 100 entries with one
+  bounded tracker read per examined entry and reports `truncated` with the
+  exact `remainder` beyond the cap.
+
 ## EXIT STATUS
 
 0 read, landed mutation, observed-empty queue, or report-only stuck-park
@@ -56,6 +90,24 @@ finding; 1 invocation rejection (such as an unknown park cause), dependency
 cycle, lease conflict, unmet claim precondition, stuck-park claim refusal, or
 unobserved entry; 2 platform or state read failure, including
 `list`/`plan` over unreadable, torn, or unknown-kind history.
+
+Exit matrix for the lifecycle mutations (no exit outside {0, 1, 2} is ever
+produced):
+
+| Outcome | Identity | Exit |
+|---|---|---|
+| Removal applied | — (success `data`) | 0 |
+| `dep remove` / `reconcile` with no work | — (success `data`, result `noop`) | 0 |
+| Removal without a reason | `queue.reason-missing` | 1 |
+| Second dispatch against a ref with an active lane | `queue.single-flight` | 1 |
+| Removal of a ref with no entry | `queue.entry.unobserved` | 1 |
+| Removal or claim blocked by a precondition (`lease-held`, owner hold) | `queue.precondition.unmet` | 1 |
+| Claim for another ref while a live lease is held in one repository | `queue.lease-conflict` | 1 |
+| Out-of-vocabulary reason, non-canonical ref, malformed grammar | `input.value.rejected` | 1 |
+| Cycle-closing add | `queue.dependency-cycle` | 1 |
+| Tracker credential rejected during reconcile | `provider.auth.rejected` | 1 |
+| Tracker unreadable or quota-exhausted during reconcile | `provider.outage`, `provider.quota.exceeded` | 2 |
+| Queue state unreadable or torn | delivered `state.*` row | 2 |
 
 ## EXAMPLES
 
@@ -127,13 +179,62 @@ $ <binary> queue dep GH-306 GH-307 --json
 }
 ```
 
+Reason-bearing removal applied (exactly one `queue.graph/remove` event later
+observable in the ref's lane):
+
+```
+$ <binary> queue remove GH-310 --reason abandoned --json
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-example",
+  "exitCode": 0,
+  "timing": { "totalMs": 10 },
+  "data": {
+    "ref": "GH-310",
+    "result": "removed",
+    "reason": "abandoned",
+    "readySet": [],
+    "event": { "topic": "queue.graph", "kind": "remove" },
+    "degraded": []
+  }
+}
+```
+
+Single-flight refusal naming the holder at the envelope root (zero records,
+zero events):
+
+```
+$ <binary> queue claim GH-310 --holder lane-2 --json
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-example",
+  "exitCode": 1,
+  "timing": { "totalMs": 10 },
+  "detail": { "holder": "lane-1" },
+  "error": {
+    "code": "queue.single-flight",
+    "category": "transient",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Wait for the named holder's lane to end, then retry; no session, lease record, attempt, or event was created.",
+    "summary": "The requested ref already has an active lane."
+  }
+}
+```
+
 ## ERRORS
 
 `queue.dependency-cycle`, `queue.lease-conflict`,
 `queue.park-condition-stuck`, `queue.entry.unobserved`,
-`queue.precondition.unmet`. An invocation rejection such as an
-unknown park cause reuses `fallback.invocation` at exit 1; unreadable lease,
-park, or entry history reuses the delivered `state.*` identities at exit 2.
+`queue.precondition.unmet`, `queue.reason-missing`,
+`queue.single-flight` (seven queue identities). An invocation rejection
+such as an unknown park cause reuses `fallback.invocation` at exit 1; an
+out-of-vocabulary `--reason` value, a non-canonical ref, or a malformed
+grammar token is `input.value.rejected` at exit 1; a reconcile over an
+unreadable or quota-exhausted tracker exits 2 with the provider's own
+`provider.outage` / `provider.quota.exceeded` identity and a rejected
+credential exits 1 with `provider.auth.rejected`; unreadable lease, park,
+or entry history reuses the delivered `state.*` identities at exit 2.
 A watch over unreadable state exits 2 with the delivered `state.*` identity.
 
 ## SEE ALSO
@@ -144,7 +245,9 @@ A watch over unreadable state exits 2 with the delivered `state.*` identity.
 ## Shipped contract (GH-237)
 
 The full family ships as `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
-`claim`, and `release`. `ready` is unchanged.
+`claim`, and `release`. `ready` is unchanged; GH-292 extends the family with
+`remove`, the `dep add`/`dep remove` grammar, and `reconcile`
+([Shipped contract (GH-292)](#shipped-contract-gh-292)).
 
 ```
 <binary> queue list
@@ -201,6 +304,85 @@ command returns the classified state failure. `--until <iso>` supplies the
 absolute window expiry for `--park provider-window`, where it is required; a
 missing `--until` or an `--until` paired with another park cause is refused
 through `fallback.invocation` at exit 1 and appends nothing.
+
+## Shipped contract (GH-292)
+
+The lifecycle completion ships `queue remove`, the explicit
+`queue dep add` / `queue dep remove` grammar over the preserved
+two-positional add, and `queue reconcile`:
+
+```
+<binary> queue remove <ref> --reason <landed|abandoned|superseded|reconciled>
+<binary> queue dep add <ref> <on-ref>
+<binary> queue dep remove <ref> <on-ref>
+<binary> queue reconcile [--ref <ref>]
+```
+
+Removal reasons are a closed four-value vocabulary: `landed`, `abandoned`,
+`superseded`, `reconciled`. `--reason` is required on `remove`: a missing
+flag is `queue.reason-missing` at exit 1 and an out-of-vocabulary value is
+`input.value.rejected`; both append nothing. An accepted removal appends the
+delivered park-withdrawal record first when a park is active, then one
+`queue.removal` record, inside one fenced transaction, and replaces the
+derived document only after verification; no record is ever deleted, edited,
+or re-keyed. Removing a ref with no entry is `queue.entry.unobserved`; a
+removal blocked by a live lease is `queue.precondition.unmet` with blocking
+reason `lease-held`, naming the holder, releasing nothing. Removal is
+non-cascading: a dependent keeps its edge and is held
+`dependency-unobserved`, with no record appended for it. Re-declaring a
+removed ref restores the entry (the presence rule is ledger position, not
+`recordedAt` text).
+
+Automatic removal: after a squash merge and an observed merged delivery
+request, `closeout --apply` appends the `landed` removal inside the fence
+closeout already holds, after the closeout writes. It is a non-step data
+block: `queueRemoval` reports `removed` / `would-remove` (plan mode) /
+`satisfied` (re-run over a removed or never-entered ref, exit 0) /
+`skipped` with the closed skip reasons `no-merge-truth`, `lease-held`,
+`state-unavailable`, `ref-not-canonical`. The hook never changes a step
+outcome or closeout's exit code.
+
+Reconcile: `queue reconcile [--ref <ref>]` reads each examined entry's
+tracked work item through the injected tracker read and removes exactly the
+stale entries — normalized `deliveryState` `done` or `canceled` — with
+reason `reconciled`, under the same F-1 invariants as a manual removal. Open
+states (`backlog`, `ready`, `in-progress`, `in-review`) are retained with
+their observed state; a not-found item is retained and reported
+`unobserved`; an unreadable tracker appends nothing, removes nothing, and
+exits on the provider's own identity. The read is one bounded call per
+examined entry,
+sequential, no retry, no pagination, capped at 100 entries with `truncated`
+and an exact `remainder`; a repeat run over reconciled entries exits 0 and
+reports the second observation truthfully.
+
+Per-ref single-flight precedence (distinct from the scheduling engine's
+per-pass single-flight — one action per repository per pass — and from the
+repository-exclusive lease, both unchanged). Every requester/live-lease pair
+has exactly one outcome:
+
+| Path | Live lease state | Outcome |
+|---|---|---|
+| dispatch family (`dispatch run`, composed daemon supervision claim) | recorded ref = requested ref, any holder | refused `queue.single-flight` at exit 1, envelope-root `detail.holder` names the holder; zero records, zero events |
+| dispatch family | recorded ref ≠ requested ref, any holder | refused `queue.lease-conflict` at exit 1 |
+| dispatch family | no live lease | `claimed` (one `acquired` record) |
+| dispatch family | stale lease (heartbeat age ≥ TTL) | `taken-over` + incident evidence |
+| `queue claim` | same ref, caller's own holder | `renewed` (one record, no session, no `detail`) |
+| `queue claim` | same ref, another holder | refused `queue.single-flight` at exit 1, envelope-root `detail.holder` |
+| `queue claim` | other ref, any holder | refused `queue.lease-conflict` at exit 1, the lease's recorded ref unchanged |
+| `queue claim` | no live lease | `claimed` (one `acquired` record) |
+| `queue claim` | stale lease | `taken-over` + incident evidence |
+
+A refusal appends nothing and publishes no event; it happens before any
+claim, spawn, resume, attempt, or record. The holder is named through the
+additive optional command-declared `detail` object on the failure-envelope
+root (`detail.holder`, single line, ≤ 128 characters, identifiers only);
+`CommandResultError` keeps exactly its six fields, and `error.detail` is not
+a placement (TDR-0027). Stale means heartbeat age at or over the lease TTL,
+so a crashed session keeps the delivered stale takeover on every path
+instead of refusing. Renewal is narrowed to one (repository, ref, holder): a
+same-holder claim for a different ref refuses `queue.lease-conflict`, and
+the lease's recorded ref is never rewritten. The direct
+`claimQueueLease` seam keeps its delivered same-holder/same-ref renewal.
 
 ## HELP
 

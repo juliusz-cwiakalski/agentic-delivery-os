@@ -238,10 +238,12 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
   entry, dependency-edge, release, and remove kinds; `dispatch.attempt` declares
   started, refused, and completed kinds; `phase.state` declares phase began,
   phase completed, and phase reopened kinds; `blockers.state` declares
-  published, updated, and cleared kinds. `queue.graph` publishes every kind
-  except `remove`, which is declared with `emitted: false` so a client can write
-  the case once; no v1 path produces it (entry removal is the M2-S15 lifecycle
-  mutation).
+  published, updated, and cleared kinds. Every declared `queue.graph` kind is
+  emitted: `remove` (GH-292, M2-S15) is produced by one applied removal with
+  exactly the payload fields `ref`, `reason`, and `recordedAt`, in the
+  removed entry's lane — the kind is `remove`, never `removed`. A refused
+  mutation, a `noop` dependency removal, and a skipped automatic removal
+  publish nothing.
 - **Payload shapes.** Every event carries `topic`, `kind`, `lane`, `ref`,
   `sequence`, `occurredAt`, and a topic-specific `payload` object, plus the
   `taxonomyVersion` stamp — seven change fields and eight `data` keys in total.
@@ -282,27 +284,62 @@ The attribution contract, delivered by M2-S14 (GH-291) and consumed by M2-S6 and
 
 ## Queue lifecycle mutations
 
-Owned by M2-S15.
+Owned by M2-S15; delivered by GH-292. The bullets below state the delivered
+contract.
 
 - **Lease release stays.** `queue release` keeps its delivered meaning: the
   lane's lease is dropped, the entry stays in the queue, and it may be parked
   with a delivered park cause and an `until` timestamp. Release takes no
   removal reason.
-- **Entry removal carries a reason.** The M2 `queue remove` verb takes an
-  entry out of the queue with a reason: `landed`, `abandoned`, `superseded`,
-  or `reconciled`. Removal carries a reason; an unqualified removal is
-  refused with `queue.reason-missing`.
-- **Automatic removal.** A squash merge followed by closeout removes the
-  ref's entry without manual action, with reason `landed`.
+- **Entry removal carries a reason.** The delivered `queue remove` verb takes
+  an entry out of the queue with a reason from the closed four-value
+  vocabulary: `landed`, `abandoned`, `superseded`, or `reconciled`. Removal
+  carries a reason; an unqualified removal is refused with
+  `queue.reason-missing`. A removal of a ref with no entry is
+  `queue.entry.unobserved`; a removal blocked by a live lease is
+  `queue.precondition.unmet` with blocking reason `lease-held`. Removal is
+  non-cascading: a dependent keeps its edge and is held
+  `dependency-unobserved`.
+- **Presence is the ledger's append position.** One `queue.removal` record
+  (`delivery.queue.removal.v1`, key prefix `queue.removals:<REF>`) states
+  that a ref left the queue. An entry is present iff its latest `queue.entry`
+  append is later than its latest `queue.removal` append in ledger position
+  (the delivered monotonic record `sequence`), never by `recordedAt` text; a
+  tie is impossible, and a later re-declaration restores the entry. No record
+  is deleted, edited, or re-keyed.
+- **Automatic removal.** A squash merge followed by `closeout --apply` with an
+  observed merged delivery request removes the ref's entry without manual
+  action, with reason `landed`, inside the fence closeout already holds and
+  after the closeout writes. It is fail-open: the additive non-step
+  `queueRemoval` block reports `removed` / `would-remove` / `satisfied` /
+  `skipped` (skip reasons `no-merge-truth`, `lease-held`,
+  `state-unavailable`, `ref-not-canonical`) and never changes a step outcome
+  or the exit code.
 - **Dependency edges.** `queue dep <ref> <on-ref>` stays the delivered
   two-positional add; `dep add` and `dep remove` are its explicit grammar
-  extension, and either form edits one dependency edge. The ready set is
-  recomputed from the graph, and a dependent becomes ready only when its
-  edges clear.
-- **Single-flight.** One active lane per ref across every dispatch path; a
-  second dispatch is refused with a classified error naming the holder.
-- **Stale reconciliation.** Stale entries reconcile against tracker truth
-  without editing state files.
+  extension, and either form edits one dependency edge with the recomputed
+  ready set reported. `dep remove` extends the dependency result vocabulary
+  with `removed`; an absent edge is a `noop` at exit 0 with zero appends and
+  zero events. The delivered `queue add` result set is unchanged.
+- **Per-ref single-flight is path-specific.** The dispatch family
+  (`dispatch run`, composed daemon supervision claim) refuses any live lease
+  whose recorded ref equals the requested ref — same or different holder —
+  with `queue.single-flight`, naming the holder at the failure-envelope root
+  (`detail.holder`); `queue claim` renews the caller's own holder's same-ref
+  lease, refuses another holder's same-ref lease with the same identity, and
+  refuses any other-ref live lease with the delivered `queue.lease-conflict`.
+  A refusal appends nothing and publishes no event. A lease at or over its
+  TTL is not active and keeps the delivered stale takeover on every path.
+  This admission policy is distinct from the scheduler's per-pass
+  single-flight (one action per repository per pass), which is unchanged.
+- **Stale reconciliation.** Stale entries — normalized tracker
+  `deliveryState` `done` or `canceled` — reconcile against tracker truth
+  without editing state files: `queue reconcile [--ref <ref>]` removes them
+  with reason `reconciled` under the same removal invariants, retains open
+  states with their observed state, retains a not-found item as
+  `unobserved`, removes nothing on an unreadable tracker (the provider's own
+  identity projects the exit), examines at most 100 entries with one bounded
+  read each, and converges truthfully on a repeat run.
 
 ## spend v2
 

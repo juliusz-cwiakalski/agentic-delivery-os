@@ -127,6 +127,53 @@ export const foldLatestDependencies = (
   return latest;
 };
 
+/**
+ * The append-position facts behind the presence rule (GH-292 DM-2): per
+ * canonical ref, the ledger `sequence` of the latest `queue.entry` append and
+ * of the latest `queue.removal` append. Both maps are final-state (latest
+ * append per ref); a ref missing from the entry map was never declared or its
+ * whole history predates nothing — absence means "no entry append known".
+ */
+export type QueuePresenceFacts = {
+  readonly entrySequences: ReadonlyMap<string, number>;
+  readonly removalSequences: ReadonlyMap<string, number>;
+};
+
+/**
+ * The single presence predicate (DM-2, TDR-0026 DC-1): a ref is present iff its
+ * latest entry append exists and is later than its latest removal append. The
+ * comparison is over ledger append positions (`sequence`), never over
+ * `recordedAt` text, so equal timestamps decide by position alone.
+ */
+export const queueRefPresent = (facts: QueuePresenceFacts, ref: string): boolean => {
+  const entry = facts.entrySequences.get(ref);
+  if (entry === undefined) return false;
+  const removal = facts.removalSequences.get(ref);
+  return removal === undefined || entry > removal;
+};
+
+/** Build the presence facts from append-ordered `(ref, sequence)` observations. */
+export const queuePresenceFacts = (
+  entries: readonly { readonly ref: string; readonly sequence: number }[],
+  removals: readonly { readonly ref: string; readonly sequence: number }[],
+): QueuePresenceFacts => {
+  const latestOf = (
+    observations: readonly { readonly ref: string; readonly sequence: number }[],
+  ): Map<string, number> => {
+    const latest = new Map<string, number>();
+    for (const observation of observations) {
+      const ref = canonicalQueueRef(observation.ref);
+      if (ref === undefined) continue;
+      const current = latest.get(ref);
+      if (current === undefined || observation.sequence > current) {
+        latest.set(ref, observation.sequence);
+      }
+    }
+    return latest;
+  };
+  return { entrySequences: latestOf(entries), removalSequences: latestOf(removals) };
+};
+
 /** Canonicalize, deduplicate, bound, and deterministically sort an edge set. */
 export const normalizeEdges = (edges: readonly string[]): readonly string[] => {
   const canonical = new Set<string>();
@@ -222,20 +269,39 @@ const edgesOf = (
  * canonical, deduplicated, sorted, and bounded; entries are sorted by ref. The
  * effective weight and rank classes are the declaration defaults here and are
  * re-resolved per pass from artifacts.
+ *
+ * The optional `presence` argument carries the append-position facts of the two
+ * presence-bearing ledgers (GH-292 DM-2): the latest `queue.entry` append
+ * sequence and the latest `queue.removal` append sequence per canonical ref.
+ * A ref whose latest removal append is later than its latest entry append — or
+ * that has a removal and no entry at all — is absent from the fold, from every
+ * projection it feeds, and from the derived document; a re-declared ref is
+ * present again with no special case. Presence is decided by ledger `sequence`,
+ * never by `recordedAt` text. Absent or removal-free facts are the identity, so
+ * a store with no removal records folds exactly as before.
  */
 export const foldQueueGraph = (
   entryRecords: readonly QueueEntryRecord[],
   dependencyRecords: readonly QueueDependencyRecord[],
+  presence?: QueuePresenceFacts,
 ): QueueGraphFold => {
-  const latestEntries = foldLatestEntries(entryRecords);
-  const latestDependencyRecords = foldLatestDependencyRecords(dependencyRecords);
+  const latestEntriesAll = foldLatestEntries(entryRecords);
+  const presentEntries =
+    presence === undefined
+      ? latestEntriesAll
+      : latestEntriesAll.filter((entry) => queueRefPresent(presence, entry.ref));
+  const latestDependencyRecordsAll = foldLatestDependencyRecords(dependencyRecords);
+  const latestDependencyRecords =
+    presence === undefined
+      ? latestDependencyRecordsAll
+      : new Map([...latestDependencyRecordsAll].filter(([ref]) => queueRefPresent(presence, ref)));
   const latestDependencies = new Map<string, readonly string[]>();
   for (const [ref, record] of latestDependencyRecords) {
     latestDependencies.set(ref, normalizeEdges(record.edges));
   }
-  const byRef = new Map(latestEntries.map((entry) => [entry.ref, entry]));
+  const byRef = new Map(presentEntries.map((entry) => [entry.ref, entry]));
   const edges = edgesOf(byRef, latestDependencies);
-  const entries: QueueGraphEntry[] = latestEntries.map((entry) => ({
+  const entries: QueueGraphEntry[] = presentEntries.map((entry) => ({
     ref: entry.ref,
     ...(entry.repository === undefined ? {} : { repository: entry.repository }),
     priority: entry.priority,
@@ -247,7 +313,7 @@ export const foldQueueGraph = (
   return {
     entries,
     edges,
-    entryRecords: latestEntries,
+    entryRecords: presentEntries,
     dependencyRecords: [...latestDependencyRecords.values()].sort((left, right) =>
       compareText(left.ref, right.ref),
     ),

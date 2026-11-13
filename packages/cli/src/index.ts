@@ -11,7 +11,9 @@ import {
   type AuditAgentIdentity,
   type AuditInvocationFacts,
   type BrandIdentity,
+  COMMAND_FAILURE_DETAIL_MAX_CHARS,
   type CommandResult,
+  type CommandResultDetail,
   type CommandResultError,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
@@ -136,6 +138,8 @@ type Outcome =
       readonly summary?: string;
       readonly message?: string;
       readonly value?: unknown;
+      /** The record-shaped envelope detail (TDR-0027); projected only when declared. */
+      readonly detail?: CommandResultDetail;
       /** Safe structured notices; emitted once each on stderr in every mode. */
       readonly warnings?: readonly string[];
     };
@@ -172,6 +176,26 @@ const explicitRemediationHint = (value: unknown): string | undefined => {
 };
 
 /**
+ * The record-shaped failure-envelope `detail` member (TDR-0027 DP-3): read
+ * explicitly from the command's returned failure, the same pattern as
+ * `summary` and `remediationHint`. Only the declared bounded member is
+ * honoured — `holder`, single line, within the declared character cap — and a
+ * malformed or over-bound value is never projected. A string-valued app-layer
+ * `detail` (lease-conflict evidence prose) is not record-shaped and never
+ * reaches the envelope.
+ */
+const explicitDetail = (value: unknown): CommandResultDetail | undefined => {
+  if (!isRecord(value) || !isRecord(value.detail)) return undefined;
+  const raw = value.detail;
+  const holder = raw.holder;
+  if (holder === undefined) return undefined;
+  if (typeof holder !== "string" || holder.length === 0) return undefined;
+  if (holder.length > COMMAND_FAILURE_DETAIL_MAX_CHARS) return undefined;
+  if (/[\r\n\u0080-\u009f]/.test(holder)) return undefined;
+  return { holder };
+};
+
+/**
  * The narrow trusted-refusal marker the dispatch engine sets on its bounded
  * credential refusal. It is honoured only for `config.credential.missing`; any
  * other config-shaped failure stays suppressed.
@@ -192,9 +216,14 @@ const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
   const summary = suppressed ? undefined : explicitSummary(value);
   const hint = suppressed ? undefined : explicitRemediationHint(value);
   const resolved = hint === undefined ? entry : { ...entry, remediationHint: hint };
-  return summary === undefined
-    ? { type: "failure", entry: resolved, ...(value === undefined ? {} : { value }) }
-    : { type: "failure", entry: resolved, summary, ...(value === undefined ? {} : { value }) };
+  const detail = explicitDetail(value);
+  return {
+    type: "failure",
+    entry: resolved,
+    ...(summary === undefined ? {} : { summary }),
+    ...(detail === undefined ? {} : { detail }),
+    ...(value === undefined ? {} : { value }),
+  };
 };
 
 const invocationFailure = (reason: string): Outcome => ({
@@ -323,6 +352,9 @@ const buildEnvelope = (
     exitCode: projectExitCode(outcome.entry.projectionClass),
     timing,
     error: toErrorObject(outcome.entry, outcome.summary),
+    // TDR-0027 DP-3: the record-shaped detail is copied onto the envelope after
+    // the error object is built; `toErrorObject` is untouched.
+    ...(outcome.detail === undefined ? {} : { detail: outcome.detail }),
   };
 };
 

@@ -34,7 +34,7 @@ export type SupervisionPorts = {
     action: SupervisionAction,
   ) =>
     | { readonly ok: true; readonly leaseId: string }
-    | { readonly ok: false; readonly code: string };
+    | { readonly ok: false; readonly code: string; readonly holder?: string };
   readonly release: (
     action: SupervisionAction,
     cause: "completed" | "failed" | "preempted",
@@ -83,7 +83,12 @@ export type SupervisionResult =
       readonly lane: DaemonLaneRecord;
       readonly admission?: StallRestartAdmission;
     }
-  | { readonly mode: "claim-refused"; readonly code: string }
+  | {
+      readonly mode: "claim-refused";
+      readonly code: string;
+      /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
+      readonly holder?: string;
+    }
   | { readonly mode: "executor-refused"; readonly action: SupervisionAction };
 
 export type SupervisionInput = {
@@ -109,7 +114,13 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
   const action = input.ports.nextAction();
   if (action === undefined) return { mode: "idle" };
   const claimed = input.ports.claim(action);
-  if (!claimed.ok) return { mode: "claim-refused", code: claimed.code };
+  if (!claimed.ok) {
+    return {
+      mode: "claim-refused",
+      code: claimed.code,
+      ...(claimed.holder === undefined ? {} : { holder: claimed.holder }),
+    };
+  }
   const started = await input.ports.executor.start({
     ref: action.ref,
     repository: action.repository,

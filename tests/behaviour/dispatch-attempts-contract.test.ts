@@ -362,6 +362,8 @@ describe("TC-ATTEMPT-028 cells 1-3 the read side carries no gate key", () => {
     }
   });
 
+  // Builds a 100-record ledger with maximal evidence refs through the CLI
+  // harness; real filesystem I/O can exceed Bun's 5s default under full-suite load.
   test("a bound-binding read adds exactly `truncation` and no other key", async () => {
     const harness = createAttemptsHarness({
       label: "envelope-bound",
@@ -386,7 +388,7 @@ describe("TC-ATTEMPT-028 cells 1-3 the read side carries no gate key", () => {
     } finally {
       harness.dispose();
     }
-  });
+  }, 60_000);
 
   test("no coverage, floor, verdict, eligibility or unmetConditions key at any depth", async () => {
     const harness = createAttemptsHarness({ label: "contract-gate-keys", records: ledgerOf(4) });

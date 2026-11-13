@@ -140,12 +140,12 @@ describe("TC-EVT-027 the surface reports the declared emission gap", () => {
     const remove = json.data?.topics[0]?.kinds.find((kind) => kind.name === "remove");
     expect(remove).toEqual({
       name: "remove",
-      emitted: false,
+      emitted: true,
       payloadFields: ["ref", "reason", "recordedAt"],
     });
     const text = await createSurfaceHarness().run(["events", "describe", "queue.graph"]);
     expect(text.stdout).toContain("remove");
-    expect(text.stdout).toContain("not emitted (declared; no v1 producer)");
+    expect(text.stdout).not.toContain("not emitted (declared; no v1 producer)");
   });
 
   test("no declared kind is missing and no extra kind is present", async () => {

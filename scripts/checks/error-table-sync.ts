@@ -182,6 +182,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "queue.lease-conflict",
   "queue.park-condition-stuck",
   "queue.entry.unobserved",
+  // GH-292 pins the two new two-segment queue identities exactly; the
+  // `queue.*` family stays an exact allowlist with no wildcard widening.
+  "queue.reason-missing",
+  "queue.single-flight",
   // GH-238 pins the eight resident-daemon identities exactly.
   "daemon.already-running",
   "daemon.takeover-refused",

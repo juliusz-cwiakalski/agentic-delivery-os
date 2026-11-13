@@ -701,9 +701,10 @@ const ROW_VERIFY =
  * the GH-224 doctor row, the nine harness-primitive rows, the four retro
  * evidence rows, the GH-236 spend read-side row, the two dispatch economics
  * rows, the five GH-237 queue rows, the four GH-230 blocker-channel rows, and
- * the eight GH-238 resident-daemon rows,
- * so the frozen baseline plus those eighty-one later rows equals the live table;
- * a changed baseline row fails naming it.
+ * the eight GH-238 resident-daemon rows, GH-290's three events-surface rows, and
+ * GH-292's two queue lifecycle rows (`queue.reason-missing`, `queue.single-flight`),
+ * so the frozen baseline plus those later rows equals the live table; a changed
+ * baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
   readonly [string, string, string, boolean, string, string, string, string]
@@ -1077,8 +1078,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 93) {
-    failures.push(`table length ${live.length} != baseline + 93 (${BASELINE_ROWS.length + 93})`);
+  if (live.length !== BASELINE_ROWS.length + 95) {
+    failures.push(`table length ${live.length} != baseline + 95 (${BASELINE_ROWS.length + 95})`);
   }
   return failures;
 };
@@ -1109,7 +1110,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       merge: 7,
       harness: 9,
       spend: 1,
-      queue: 5,
+      queue: 7,
       dispatch: 4,
     });
   });
@@ -1158,7 +1159,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 93,
+      BASELINE_ROWS.length + 95,
     );
   });
 
@@ -1181,7 +1182,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 93);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 95);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1768,7 +1769,8 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 127, and the corpora are non-vacuous.
+ * documented table, the total is 129 (GH-292 added the two queue lifecycle
+ * identities), and the corpora are non-vacuous.
  */
 describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
   const COORDINATOR_CODES = [
@@ -1780,11 +1782,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 127 entries and 127 documented rows", async () => {
+  test("the live tree is green at 129 entries and 129 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(127);
-    expect(result.counts.documentedRows).toBe(127);
+    expect(result.counts.sourceEntries).toBe(129);
+    expect(result.counts.documentedRows).toBe(129);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1795,7 +1797,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("127 identities");
+    expect(doc).toContain("129 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {

@@ -11,6 +11,9 @@
  */
 
 import {
+  type CloseoutQueueRemovalData,
+  LOCAL_CALLER_PRINCIPAL,
+  type OwnerHoldFact,
   QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_DEFAULT_PRIORITY,
   QUEUE_DEPENDENCY_KEY_PREFIX,
@@ -36,10 +39,14 @@ import {
   QUEUE_PARK_RECORD_KIND,
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
+  QUEUE_RECONCILE_MAX_ENTRIES,
+  QUEUE_RECONCILE_STALE_STATES,
+  QUEUE_REMOVAL_KEY_PREFIX,
+  QUEUE_REMOVAL_REASONS,
+  QUEUE_REMOVAL_RECORD_KIND,
+  QUEUE_REMOVAL_SCHEMA,
   QUEUE_WEIGHT_CLASSES,
-  LOCAL_CALLER_PRINCIPAL,
   type QueueActiveLease,
-  type OwnerHoldFact,
   type QueueDependencyRecord,
   type QueueEntryRecord,
   type QueueGraphDocument,
@@ -48,6 +55,13 @@ import {
   type QueueParkCause,
   type QueueParkCondition,
   type QueueParkRecord,
+  type QueueReconcileRemoved,
+  type QueueReconcileResult,
+  type QueueReconcileRetained,
+  type QueueRemovalReason,
+  type QueueRemovalRecord,
+  type QueueRemovalResult,
+  type QueueTrackerRead,
   type QueueWeightClass,
   type StateAppendRequest,
   type StateFailure,
@@ -62,6 +76,7 @@ import {
 } from "#contracts";
 import {
   canonicalQueueRef,
+  compareText,
   detectCycleForEdge,
   foldLatestDependencyRecords,
   foldLatestEntries,
@@ -69,7 +84,10 @@ import {
   mergeEdges,
   normalizeEdges,
   type QueueGraphFold,
+  type QueuePresenceFacts,
   queueGraphDocument,
+  queuePresenceFacts,
+  queueRefPresent,
 } from "../domain/queue-graph.js";
 
 /** The bounded detail naming the source and optional reason, separate from the token. */
@@ -77,6 +95,7 @@ const ownerHoldDetail = (hold: Extract<OwnerHoldFact, { readonly active: true }>
   hold.reason === undefined
     ? `owner hold active (${hold.source})`
     : `owner hold active (${hold.source}): ${hold.reason}`;
+
 import {
   claimScope,
   earliestTakeoverAtIso,
@@ -95,6 +114,7 @@ import {
   defaultParkRecheckMs,
   evaluateParkPass,
   hasDuplicateActiveParks,
+  latestParkRecords,
   observationGapMs,
   type QueueParkContext,
   type QueueParkPass,
@@ -116,6 +136,8 @@ export type QueueLedgerRead<T> =
   | {
       readonly ok: true;
       readonly records: readonly T[];
+      /** The store `sequence` of each record, parallel to `records` (DM-2). */
+      readonly sequences: readonly number[];
       readonly latest: readonly T[];
       readonly verifiedEmpty: boolean;
       readonly evidence: StateReadEvidence;
@@ -145,6 +167,12 @@ export type QueueIntentFailure =
       readonly ok: false;
       readonly kind: "queue";
       readonly code: "queue.entry.unobserved";
+      readonly ref: string;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: "queue";
+      readonly code: "queue.reason-missing";
       readonly ref: string;
     }
   | {
@@ -236,6 +264,7 @@ const PARK_KEYS = [
   "recordedAt",
 ] as const;
 const INCIDENT_KEYS = ["schema", "type", "ref", "repository", "evidence", "recordedAt"] as const;
+const REMOVAL_KEYS = ["schema", "ref", "reason", "recordedAt", "callerPrincipal"] as const;
 
 const isEntryRecord = (value: unknown): value is QueueEntryRecord => {
   if (!isPlainRecord(value) || !hasOnlyKeys(value, ENTRY_KEYS)) return false;
@@ -362,6 +391,19 @@ const isIncidentRecord = (value: unknown): value is QueueIncidentRecord => {
   return isNonEmptyString(value.recordedAt);
 };
 
+const isRemovalRecord = (value: unknown): value is QueueRemovalRecord => {
+  if (!isPlainRecord(value) || !hasOnlyKeys(value, REMOVAL_KEYS)) return false;
+  if (value.schema !== QUEUE_REMOVAL_SCHEMA) return false;
+  if (typeof value.ref !== "string" || canonicalQueueRef(value.ref) !== value.ref) return false;
+  if (
+    typeof value.reason !== "string" ||
+    !(QUEUE_REMOVAL_REASONS as readonly string[]).includes(value.reason)
+  ) {
+    return false;
+  }
+  return isNonEmptyString(value.recordedAt);
+};
+
 /** The declared store-scoped key for one entry history. */
 export const queueEntryRecordKey = (ref: string): string =>
   `${QUEUE_ENTRY_KEY_PREFIX}${canonicalQueueRef(ref) ?? ref}`;
@@ -381,6 +423,121 @@ export const queueParkRecordKey = (ref: string): string =>
 /** The declared store-scoped key for one incident history. */
 export const queueIncidentRecordKey = (identity: string): string =>
   `${QUEUE_INCIDENT_KEY_PREFIX}${identity}`;
+
+/** The declared store-scoped key for one ref's removal history (GH-292 DM-1). */
+export const queueRemovalRecordKey = (ref: string): string =>
+  `${QUEUE_REMOVAL_KEY_PREFIX}${canonicalQueueRef(ref) ?? ref}`;
+
+/** The removal-ledger record spec shared by the read seams. */
+const REMOVAL_SPEC = {
+  prefix: QUEUE_REMOVAL_KEY_PREFIX,
+  kind: QUEUE_REMOVAL_RECORD_KIND,
+  schema: QUEUE_REMOVAL_SCHEMA,
+  isRecord: isRemovalRecord,
+} as const;
+
+/** The entry-ledger record spec shared by the read seams. */
+const ENTRY_SPEC = {
+  prefix: QUEUE_ENTRY_KEY_PREFIX,
+  kind: QUEUE_ENTRY_RECORD_KIND,
+  schema: QUEUE_ENTRY_SCHEMA,
+  isRecord: isEntryRecord,
+} as const;
+
+/** The lease-ledger record spec shared by the read seams. */
+const LEASE_SPEC = {
+  prefix: QUEUE_LEASE_KEY_PREFIX,
+  kind: QUEUE_LEASE_RECORD_KIND,
+  schema: QUEUE_LEASE_SCHEMA,
+  isRecord: isLeaseRecord,
+} as const;
+
+/** The success variant of a verified ledger read (records plus sequences). */
+type VerifiedLedgerRead<T> = Extract<QueueLedgerRead<T>, { readonly ok: true }>;
+
+/**
+ * The presence facts over the two presence-bearing ledgers (DM-2): latest entry
+ * append and latest removal append per canonical ref, from one shared snapshot
+ * when a view is supplied or from two verified reads otherwise.
+ */
+const presenceFacts = (
+  entries: VerifiedLedgerRead<QueueEntryRecord>,
+  removals: VerifiedLedgerRead<QueueRemovalRecord>,
+): QueuePresenceFacts =>
+  queuePresenceFacts(
+    entries.records.map((record, index) => ({
+      ref: record.ref,
+      sequence: entries.sequences[index] ?? 0,
+    })),
+    removals.records.map((record, index) => ({
+      ref: record.ref,
+      sequence: removals.sequences[index] ?? 0,
+    })),
+  );
+
+/**
+ * The one snapshot read shared by the entry read and the fold (NFR-3,
+ * review-iter-1 F-2): the entry and removal ledgers are classified from the
+ * same verified snapshot, so the fold reuses the removals it already
+ * classified instead of scanning the ledger a second time.
+ */
+type QueueEntriesAndRemovals =
+  | {
+      readonly ok: true;
+      readonly entries: VerifiedLedgerRead<QueueEntryRecord>;
+      readonly removals: VerifiedLedgerRead<QueueRemovalRecord>;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: QueueReadReason;
+      readonly code: StateFailureCode;
+    };
+
+const readQueueEntriesAndRemovals = (
+  store: StateStorePort,
+  view?: readonly StateRecord[],
+): QueueEntriesAndRemovals => {
+  const snapshot = verifiedSnapshot(store, view);
+  const read = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!read.ok) return read;
+  const removals = classifyRecords(snapshot, REMOVAL_SPEC);
+  if (!removals.ok) return removals;
+  if (removals.records.length === 0) {
+    return { ok: true, entries: { ...read, latest: foldLatestEntries(read.records) }, removals };
+  }
+  const facts = presenceFacts(read, removals);
+  const present = read.records.filter((record) => {
+    const ref = canonicalQueueRef(record.ref);
+    return ref !== undefined && queueRefPresent(facts, ref);
+  });
+  return {
+    ok: true,
+    entries: { ...read, records: present, latest: foldLatestEntries(present) },
+    removals,
+  };
+};
+
+/**
+ * Read every verified queue entry record, oldest first, with the presence rule
+ * applied (GH-292 DM-2): a ref whose latest removal append is later than its
+ * latest entry append contributes no record and no latest projection, so every
+ * consumer of this read — the lane fold, the snapshot topic, the scheduler key
+ * resolution — observes the entry as absent. A store with no removal records
+ * reads exactly as before, in exactly one whole-store read: both ledgers are
+ * classified from the same verified snapshot, and a supplied ledger view is
+ * shared the same way.
+ */
+export const readQueueEntries = (
+  store: StateStorePort,
+  view?: readonly StateRecord[],
+): QueueLedgerRead<QueueEntryRecord> => {
+  const read = readQueueEntriesAndRemovals(store, view);
+  return read.ok ? read.entries : read;
+};
+
+/** Read every verified queue removal record, oldest first (GH-292 DM-1). */
+export const readQueueRemovals = (store: StateStorePort): QueueLedgerRead<QueueRemovalRecord> =>
+  readRecords(store, REMOVAL_SPEC);
 
 /** The derived graph document's path in the store layout (tests and diagnostics). */
 export const queueGraphDocumentPath = (identity: StateStoreIdentity): string =>
@@ -407,35 +564,53 @@ type RecordSpec<T> = {
   readonly isRecord: (value: unknown) => value is T;
 };
 
-const readRecords = <T>(
+type VerifiedSnapshot =
+  | {
+      readonly ok: true;
+      readonly value: {
+        readonly records: readonly StateRecord[];
+        readonly evidence: StateReadEvidence;
+      };
+    }
+  | {
+      readonly ok: false;
+      readonly error: StateFailure;
+    };
+
+/** One whole-store read (or a supplied view) every ledger classification shares. */
+const verifiedSnapshot = (
   store: StateStorePort,
-  spec: RecordSpec<T>,
   view?: readonly StateRecord[],
-): QueueLedgerRead<T> => {
-  const verified =
-    view === undefined
-      ? store.readRecords()
-      : {
-          ok: true as const,
-          value: {
-            records: view,
-            evidence: {
-              storePath: store.identity.stateDirectory,
-              verification: [],
-              verifiedEmpty: view.length === 0,
-              recordCount: view.length,
-            },
+): VerifiedSnapshot =>
+  view === undefined
+    ? store.readRecords()
+    : {
+        ok: true,
+        value: {
+          records: view,
+          evidence: {
+            storePath: store.identity.stateDirectory,
+            verification: [],
+            verifiedEmpty: view.length === 0,
+            recordCount: view.length,
           },
-        };
-  if (!verified.ok) {
+        },
+      };
+
+const classifyRecords = <T>(
+  snapshot: VerifiedSnapshot,
+  spec: RecordSpec<T>,
+): QueueLedgerRead<T> => {
+  if (!snapshot.ok) {
     return {
       ok: false,
-      reason: reasonFor(verified.error.code),
-      code: verified.error.code,
+      reason: reasonFor(snapshot.error.code),
+      code: snapshot.error.code,
     };
   }
   const records: T[] = [];
-  for (const ledgerRecord of verified.value.records) {
+  const sequences: number[] = [];
+  for (const ledgerRecord of snapshot.value.records) {
     if (!ledgerRecord.key.startsWith(spec.prefix)) continue;
     if (ledgerRecord.kind !== spec.kind) {
       return { ok: false, reason: "torn", code: "state.store.torn" };
@@ -451,34 +626,23 @@ const readRecords = <T>(
       return { ok: false, reason: "torn", code: "state.store.torn" };
     }
     records.push(payload);
+    sequences.push(ledgerRecord.sequence);
   }
   return {
     ok: true,
     records,
+    sequences,
     latest: records,
     verifiedEmpty: records.length === 0,
-    evidence: verified.value.evidence,
+    evidence: snapshot.value.evidence,
   };
 };
 
-/** Read every verified queue entry record, oldest first (latest folded). */
-export const readQueueEntries = (
+const readRecords = <T>(
   store: StateStorePort,
+  spec: RecordSpec<T>,
   view?: readonly StateRecord[],
-): QueueLedgerRead<QueueEntryRecord> => {
-  const read = readRecords(
-    store,
-    {
-      prefix: QUEUE_ENTRY_KEY_PREFIX,
-      kind: QUEUE_ENTRY_RECORD_KIND,
-      schema: QUEUE_ENTRY_SCHEMA,
-      isRecord: isEntryRecord,
-    },
-    view,
-  );
-  if (!read.ok) return read;
-  return { ...read, latest: foldLatestEntries(read.records) };
-};
+): QueueLedgerRead<T> => classifyRecords(verifiedSnapshot(store, view), spec);
 
 /** Read every verified queue dependency record, oldest first (latest folded). */
 export const readQueueDependencies = (
@@ -499,12 +663,7 @@ export const readQueueDependencies = (
 
 /** Read every verified queue lease operation record, oldest first. */
 export const readQueueLeases = (store: StateStorePort): QueueLedgerRead<QueueLeaseRecord> =>
-  readRecords(store, {
-    prefix: QUEUE_LEASE_KEY_PREFIX,
-    kind: QUEUE_LEASE_RECORD_KIND,
-    schema: QUEUE_LEASE_SCHEMA,
-    isRecord: isLeaseRecord,
-  });
+  readRecords(store, LEASE_SPEC);
 
 /** Read every verified queue park record, oldest first. */
 export const readQueueParks = (store: StateStorePort): QueueLedgerRead<QueueParkRecord> => {
@@ -537,16 +696,17 @@ export const readQueueIncidents = (store: StateStorePort): QueueLedgerRead<Queue
 export const readQueueFold = (
   store: StateStorePort,
 ): { readonly ok: true; readonly value: QueueGraphFold } | QueueIntentFailure => {
-  const entries = readQueueEntries(store);
-  if (!entries.ok) {
+  const entriesRead = readQueueEntriesAndRemovals(store);
+  if (!entriesRead.ok) {
     return {
       ok: false,
       kind: "state",
-      code: entries.code,
+      code: entriesRead.code,
       location: { path: store.identity.stateDirectory },
-      reason: entries.reason,
+      reason: entriesRead.reason,
     };
   }
+  const entries = entriesRead.entries;
   const dependencies = readQueueDependencies(store);
   if (!dependencies.ok) {
     return {
@@ -557,7 +717,13 @@ export const readQueueFold = (
       reason: dependencies.reason,
     };
   }
-  return ok(foldQueueGraph(entries.records, dependencies.records));
+  return ok(
+    foldQueueGraph(
+      entries.records,
+      dependencies.records,
+      presenceFacts(entries, entriesRead.removals),
+    ),
+  );
 };
 
 const entryOf = (fold: QueueGraphFold, ref: string): QueueEntryRecord | undefined =>
@@ -725,11 +891,11 @@ const verifyAppends = (
   return undefined;
 };
 
-const withIntentFence = (
+const withIntentFence = <T>(
   store: StateStorePort,
   fenceToken: string,
-  body: (handle: StateFenceHandle) => QueueIntentResult,
-): QueueIntentResult => {
+  body: (handle: StateFenceHandle) => { readonly ok: true; readonly value: T } | QueueIntentFailure,
+): { readonly ok: true; readonly value: T } | QueueIntentFailure => {
   const acquired = store.acquireFence(fenceToken);
   if (!acquired.ok) return stateFailureOf(acquired.error);
   try {
@@ -918,6 +1084,681 @@ export const addQueueDependency = (
 /** The normalized edge set used when a record is serialized (exported for tests). */
 export const normalizedQueueEdges = normalizeEdges;
 
+/* ------------------ dispatch-family admission (GH-292 F-4) ----------------- */
+
+/** One per-ref admission refusal naming the live lease (TDR-0026 DC-2). */
+export type DispatchAdmissionRefusal = {
+  readonly code: "queue.single-flight" | "queue.lease-conflict";
+  readonly holder?: string;
+  readonly summary?: string;
+};
+
+/**
+ * The dispatch family's ONE admission predicate over live per-ref lease truth
+ * (GH-292 F-4, TDR-0026 DC-2; AC-F4-1/AC-F4-5). The dispatch path claims with
+ * the fixed holder `dispatch` and never renews mid-flight, so a live lease
+ * whose recorded ref equals the requested ref — same or different holder — is
+ * a dispatch already running, and the second dispatch is by definition a
+ * duplicate: it refuses `queue.single-flight` naming the live holder before
+ * any claim, spawn, resume, attempt, or record. A live lease on any other ref
+ * refuses the delivered `queue.lease-conflict` (repository exclusivity stated
+ * as a refusal). A lease at or over its TTL is not active, and no live lease
+ * proceeds: both keep the delivered takeover/claim behaviour.
+ *
+ * One whole-store read: the entry and lease ledgers are classified from the
+ * same verified snapshot. An unreadable or torn ledger is NOT a queue refusal —
+ * the predicate abstains and the claim path classifies the state failure with
+ * the delivered `state.*` identity.
+ */
+export const dispatchAdmissionRefusal = (
+  store: StateStorePort,
+  input: { readonly ref: string; readonly nowMs: number },
+): DispatchAdmissionRefusal | undefined => {
+  const snapshot = verifiedSnapshot(store);
+  const entries = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!entries.ok) return undefined;
+  const leases = classifyRecords(snapshot, LEASE_SPEC);
+  if (!leases.ok) return undefined;
+  const ref = canonicalQueueRef(input.ref);
+  if (ref === undefined) return undefined;
+  const active = foldActiveLeases(leases.records, input.nowMs);
+  if (active === undefined) return undefined;
+  const latestEntry = [...entries.records]
+    .reverse()
+    .find((record) => canonicalQueueRef(record.ref) === ref);
+  const repository = latestEntry?.repository;
+  if (repository === undefined) return undefined;
+  const held = active.find((lease) => lease.repository === repository);
+  if (held === undefined) return undefined;
+  // A lease at or over its TTL is not active on any path: the delivered
+  // stale-takeover applies, so the guard abstains.
+  if (isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) return undefined;
+  if (held.ref === ref) {
+    return {
+      code: "queue.single-flight",
+      holder: held.holder,
+      summary: `holder:${held.holder}; ref:${held.ref}`,
+    };
+  }
+  const conflict = leaseConflict(held);
+  return {
+    code: "queue.lease-conflict",
+    summary: `holder:${conflict.holder}; lease:${conflict.leaseId}; heartbeatAgeMs:${conflict.heartbeatAgeMs}; earliestTakeoverAt:${conflict.earliestTakeoverAt}`,
+  };
+};
+
+/**
+ * The claim path's holder-aware admission (GH-292 F-4, TDR-0026 DC-2/DC-3;
+ * AC-F4-2). Refuses ONLY another holder's live lease on the requested ref with
+ * `queue.single-flight` naming the live holder. The caller's own holder's
+ * same-ref lease falls through to the delivered renewal, any other-ref live
+ * lease falls through to the delivered `queue.lease-conflict`, and a lease at
+ * or over its TTL is not active, so the delivered stale takeover stands. One
+ * whole-store read; an unreadable or torn ledger abstains and the claim path
+ * classifies the state failure with the delivered `state.*` identity.
+ */
+export const claimSingleFlightRefusal = (
+  store: StateStorePort,
+  input: { readonly ref: string; readonly holder: string; readonly nowMs: number },
+): DispatchAdmissionRefusal | undefined => {
+  const snapshot = verifiedSnapshot(store);
+  const entries = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!entries.ok) return undefined;
+  const leases = classifyRecords(snapshot, LEASE_SPEC);
+  if (!leases.ok) return undefined;
+  const ref = canonicalQueueRef(input.ref);
+  if (ref === undefined) return undefined;
+  const active = foldActiveLeases(leases.records, input.nowMs);
+  if (active === undefined) return undefined;
+  const latestEntry = [...entries.records]
+    .reverse()
+    .find((record) => canonicalQueueRef(record.ref) === ref);
+  const repository = latestEntry?.repository;
+  if (repository === undefined) return undefined;
+  const held = active.find((lease) => lease.repository === repository);
+  if (held === undefined || held.ref !== ref || held.holder === input.holder) return undefined;
+  // The liveness predicate is shared: a stale lease takes over as delivered.
+  if (isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) return undefined;
+  return {
+    code: "queue.single-flight",
+    holder: held.holder,
+    summary: `holder:${held.holder}; ref:${held.ref}`,
+  };
+};
+
+/* --------------------------- removal (GH-292 F-1) ------------------------- */
+
+/** One landed removal: the durable record, the withdrawn park when one existed. */
+export type QueueRemovalOutcome = {
+  readonly result: QueueRemovalResult;
+  readonly ref: string;
+  readonly reason: QueueRemovalReason;
+  readonly removal: QueueRemovalRecord;
+  readonly parkWithdrawn?: QueueParkRecord;
+  readonly fold: QueueGraphFold;
+  readonly graph: QueueGraphDocument;
+};
+
+export type QueueRemovalMutationResult =
+  | { readonly ok: true; readonly value: QueueRemovalOutcome }
+  | QueueLeaseFailure;
+
+const removalPayload = (record: QueueRemovalRecord): StateJsonValue =>
+  record as unknown as StateJsonValue;
+
+const sameDocument = (left: QueueGraphDocument, right: QueueGraphDocument): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+/**
+ * Remove one queue entry with a recorded reason (GH-292 F-1, DM-1..DM-4).
+ *
+ * The refusal set is exact and pre-append: a missing reason is
+ * `queue.reason-missing`, a reason outside the closed vocabulary or a
+ * non-canonical ref is `input.value.rejected`, an unobserved (or already
+ * removed) ref is `queue.entry.unobserved`, and a live lease on the entry's
+ * repository is the delivered `queue.precondition.unmet` with blocking reason
+ * `lease-held` naming the holder — nothing is appended and no lease is
+ * released. A lease at or over its TTL is not live (the delivered TTL
+ * predicate, spec §5.1 F-1) and does not refuse. An accepted removal appends
+ * the delivered park-withdrawal record
+ * (`recoveryState: "released"`) first when an active park exists, then the
+ * removal record, both inside one fenced transaction and verified
+ * post-append; the derived document is replaced only when the folded intent
+ * truth changed. Presence follows append position (DM-2), so re-declaring the
+ * ref later restores the entry with no record deleted, rewritten, or re-keyed.
+ */
+export const removeQueueEntry = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly reason?: QueueRemovalReason;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly fenceToken: string;
+  },
+): QueueRemovalMutationResult => {
+  if (request.reason === undefined) {
+    return { ok: false, kind: "queue", code: "queue.reason-missing", ref: request.ref };
+  }
+  if (!(QUEUE_REMOVAL_REASONS as readonly string[]).includes(request.reason)) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `reason ${request.reason} is outside the declared removal vocabulary`,
+    };
+  }
+  const ref = canonicalQueueRef(request.ref);
+  if (ref === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `ref ${request.ref} is not a canonical work-item ref`,
+    };
+  }
+  return withRemovalFence(store, request.fenceToken, (handle) =>
+    removeQueueEntryWithinFence(store, {
+      ref,
+      ...(request.reason === undefined ? {} : { reason: request.reason }),
+      recordedAt: request.recordedAt,
+      nowMs: request.nowMs,
+      handle,
+    }),
+  );
+};
+
+/**
+ * The removal body executed inside a caller-held fence handle: the closeout
+ * hook shares the closeout transaction's fence through this seam (GH-292 F-2,
+ * NFR-3), so no second acquisition exists. The refusal set and the append
+ * order are exactly `removeQueueEntry`'s.
+ */
+export const removeQueueEntryWithinFence = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly reason?: QueueRemovalReason;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly handle: StateFenceHandle;
+  },
+): QueueRemovalMutationResult => {
+  const reason = request.reason;
+  if (reason === undefined) {
+    return { ok: false, kind: "queue", code: "queue.reason-missing", ref: request.ref };
+  }
+  if (!(QUEUE_REMOVAL_REASONS as readonly string[]).includes(reason)) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `reason ${reason} is outside the declared removal vocabulary`,
+    };
+  }
+  const ref = canonicalQueueRef(request.ref);
+  if (ref === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `ref ${request.ref} is not a canonical work-item ref`,
+    };
+  }
+  const pre = readQueueFold(store);
+  if (!pre.ok) return pre;
+  const entry = entryOf(pre.value, ref);
+  if (entry === undefined) {
+    return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+  }
+  const repository = entry.repository;
+  return (() => {
+    const handle = request.handle;
+    const inside = readQueueFold(store);
+    if (!inside.ok) return inside;
+    if (entryOf(inside.value, ref) === undefined) {
+      return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+    }
+    if (repository !== undefined) {
+      const activeRead = readActiveLeases(store, request.nowMs);
+      if (!activeRead.ok) {
+        return stateFailureOf({
+          ...activeRead,
+          kind: "state",
+          consequence: "not_landed",
+          location: { path: store.identity.stateDirectory },
+        });
+      }
+      const held = activeRead.active.find((lease) => lease.repository === repository);
+      if (held !== undefined && !isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.precondition.unmet",
+          reason: "lease-held",
+          detail: `holder:${held.holder}; lease:${held.leaseId}`,
+        };
+      }
+    }
+    const parkRead = readQueueParks(store);
+    if (!parkRead.ok) {
+      return stateFailureOf({
+        ...parkRead,
+        kind: "state",
+        consequence: "not_landed",
+        location: { path: store.identity.stateDirectory },
+      });
+    }
+    const activePark = latestParkRecords(parkRead.records).find(
+      (park) => park.ref === ref && park.recoveryState === "parked",
+    );
+    const removal: QueueRemovalRecord = {
+      schema: QUEUE_REMOVAL_SCHEMA,
+      ref,
+      reason,
+      recordedAt: request.recordedAt,
+      callerPrincipal: LOCAL_CALLER_PRINCIPAL,
+    };
+    const appends: StateAppendRequest[] = [];
+    let parkWithdrawn: QueueParkRecord | undefined;
+    if (activePark !== undefined) {
+      parkWithdrawn = releasedParkRecord(activePark, { nowIso: request.recordedAt });
+      appends.push({
+        kind: QUEUE_PARK_RECORD_KIND,
+        recordKey: queueParkRecordKey(ref),
+        payload: parkWithdrawn as unknown as StateJsonValue,
+      });
+    }
+    appends.push({
+      kind: QUEUE_REMOVAL_RECORD_KIND,
+      recordKey: queueRemovalRecordKey(ref),
+      payload: removalPayload(removal),
+    });
+    const before = store.readRecords();
+    if (!before.ok) return stateFailureOf(before.error);
+    const appended: { readonly sequence: number }[] = [];
+    for (const append of appends) {
+      const outcome = store.append(handle, append);
+      if (!outcome.ok) return stateFailureOf(outcome.error);
+      appended.push(outcome.value);
+    }
+    const verification = verifyAppends(
+      store,
+      before.value.records,
+      appended,
+      appends.map((append) => ({ kind: append.kind, recordKey: append.recordKey })),
+    );
+    if (verification !== undefined) return verification;
+    const final = readQueueFold(store);
+    if (!final.ok) return final;
+    const document = queueGraphDocument(final.value);
+    if (!sameDocument(queueGraphDocument(inside.value), document)) {
+      const replaced = store.replaceDocument(handle, {
+        name: QUEUE_GRAPH_DOCUMENT_NAME,
+        content: document as unknown as StateJsonValue,
+      });
+      if (!replaced.ok) return stateFailureOf(replaced.error);
+    }
+    return ok({
+      result: "removed",
+      ref,
+      reason,
+      removal,
+      ...(parkWithdrawn === undefined ? {} : { parkWithdrawn }),
+      fold: final.value,
+      graph: document,
+    });
+  })();
+};
+
+/* ------------------- closeout landed removal (GH-292 F-2, DM-6) ------------ */
+
+/**
+ * The closeout queue-removal hook (F-2, DM-6): one total function over the
+ * merge truth and the queue ledgers that never throws and never changes a step
+ * outcome. Plan mode reads and reports `would-remove`; apply mode runs the
+ * removal inside the caller's fence handle (the closeout transaction's own
+ * fence — no second acquisition). `satisfied` covers a re-run over an
+ * already-removed ref and a ref that never entered; `skipped` carries the
+ * closed reason and appends nothing. Cost: at most one fold, at most two
+ * appends, and at most one lease read (NFR-3).
+ */
+export const queueRemovalForCloseout = (
+  store: StateStorePort,
+  input: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly handle?: StateFenceHandle;
+  },
+): CloseoutQueueRemovalData => {
+  const ref = canonicalQueueRef(input.workItemRef);
+  if (ref === undefined) return { outcome: "skipped", skipReason: "ref-not-canonical" };
+  if (!input.mergedObserved) {
+    return { outcome: "skipped", skipReason: "no-merge-truth", ref };
+  }
+  const fold = readQueueFold(store);
+  if (!fold.ok) return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  const entry = entryOf(fold.value, ref);
+  if (entry === undefined) return { outcome: "satisfied", ref };
+  if (entry.repository !== undefined) {
+    const leases = readActiveLeases(store, input.nowMs);
+    if (!leases.ok) return { outcome: "skipped", skipReason: "state-unavailable", ref };
+    const held = leases.active.find((lease) => lease.repository === entry.repository);
+    // A lease at or over its TTL is not live: the closeout removal proceeds
+    // instead of reporting `lease-held` (spec §5.1 F-1, RSK-2).
+    if (held !== undefined && !isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) {
+      return { outcome: "skipped", skipReason: "lease-held", ref };
+    }
+  }
+  if (input.mode === "plan") return { outcome: "would-remove", ref, reason: "landed" };
+  if (input.handle === undefined) {
+    return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  }
+  const removal = removeQueueEntryWithinFence(store, {
+    ref,
+    reason: "landed",
+    recordedAt: input.recordedAt,
+    nowMs: input.nowMs,
+    handle: input.handle,
+  });
+  if (!removal.ok) {
+    if (removal.kind === "queue" && removal.code === "queue.precondition.unmet") {
+      return { outcome: "skipped", skipReason: "lease-held", ref };
+    }
+    return { outcome: "skipped", skipReason: "state-unavailable", ref };
+  }
+  return { outcome: "removed", ref, reason: "landed" };
+};
+
+/* ------------------- dependency-edge removal (GH-292 F-3) ------------------ */
+
+/** One dependency-edge edit outcome: the removed (or absent) edge. */
+export type QueueDependencyRemovalOutcome = {
+  readonly result: "removed" | "noop";
+  readonly ref: string;
+  readonly entry: QueueEntryRecord;
+  readonly edges: readonly string[];
+  readonly removedEdge?: string;
+  readonly fold: QueueGraphFold;
+  readonly graph: QueueGraphDocument;
+};
+
+export type QueueDependencyRemovalResult =
+  | { readonly ok: true; readonly value: QueueDependencyRemovalOutcome }
+  | QueueIntentFailure;
+
+/**
+ * Remove exactly one consumer-to-producer edge (GH-292 F-3). Removing an edge
+ * that is not declared is a `noop` with zero appends and zero events; removing
+ * a declared edge appends one dependency record carrying the resulting folded
+ * edge set, runs no cycle check (removal cannot close a cycle), and replaces
+ * the derived document when the folded truth changed. The producer may be
+ * unobserved; a consumer with no entry is `queue.entry.unobserved`.
+ */
+export const removeQueueDependency = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly onRef: string;
+    readonly recordedAt: string;
+    readonly fenceToken: string;
+  },
+): QueueDependencyRemovalResult => {
+  const ref = canonicalQueueRef(request.ref);
+  const onRef = canonicalQueueRef(request.onRef);
+  if (ref === undefined || onRef === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: "both the consumer and producer must be canonical work-item refs",
+    };
+  }
+  const noopOutcome = (fold: QueueGraphFold): QueueDependencyRemovalResult => {
+    const entry = entryOf(fold, ref);
+    if (entry === undefined) {
+      return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+    }
+    return ok({
+      result: "noop",
+      ref,
+      entry,
+      edges: edgesOf(fold, ref),
+      fold,
+      graph: queueGraphDocument(fold),
+    });
+  };
+  const pre = readQueueFold(store);
+  if (!pre.ok) return pre;
+  if (entryOf(pre.value, ref) === undefined) {
+    return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+  }
+  if (!edgesOf(pre.value, ref).includes(onRef)) return noopOutcome(pre.value);
+  return withIntentFence(store, request.fenceToken, (handle) => {
+    const inside = readQueueFold(store);
+    if (!inside.ok) return inside;
+    const entry = entryOf(inside.value, ref);
+    if (entry === undefined) {
+      return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+    }
+    const current = edgesOf(inside.value, ref);
+    if (!current.includes(onRef)) return noopOutcome(inside.value);
+    const edges = current.filter((edge) => edge !== onRef);
+    const record: QueueDependencyRecord = {
+      schema: QUEUE_DEPENDENCY_SCHEMA,
+      ref,
+      edges,
+      recordedAt: request.recordedAt,
+      callerPrincipal: LOCAL_CALLER_PRINCIPAL,
+    };
+    const before = store.readRecords();
+    if (!before.ok) return stateFailureOf(before.error);
+    const append: StateAppendRequest = {
+      kind: QUEUE_DEPENDENCY_RECORD_KIND,
+      recordKey: queueDependencyRecordKey(ref),
+      payload: record as unknown as StateJsonValue,
+    };
+    const outcome = store.append(handle, append);
+    if (!outcome.ok) return stateFailureOf(outcome.error);
+    const verification = verifyAppends(
+      store,
+      before.value.records,
+      [outcome.value],
+      [{ kind: append.kind, recordKey: append.recordKey }],
+    );
+    if (verification !== undefined) return verification;
+    const final = readQueueFold(store);
+    if (!final.ok) return final;
+    const document = queueGraphDocument(final.value);
+    if (!sameDocument(queueGraphDocument(inside.value), document)) {
+      const replaced = store.replaceDocument(handle, {
+        name: QUEUE_GRAPH_DOCUMENT_NAME,
+        content: document as unknown as StateJsonValue,
+      });
+      if (!replaced.ok) return stateFailureOf(replaced.error);
+    }
+    return ok({
+      result: "removed",
+      ref,
+      entry,
+      edges,
+      removedEdge: onRef,
+      fold: final.value,
+      graph: document,
+    });
+  });
+};
+
+/* ----------------------- reconcile (GH-292 F-5, DM-5) --------------------- */
+
+/** One reconcile sweep outcome: the bounded lists and the removal truth. */
+export type QueueReconcileOutcome = {
+  readonly result: QueueReconcileResult;
+  readonly checked: number;
+  readonly removed: readonly QueueReconcileRemoved[];
+  readonly retained: readonly QueueReconcileRetained[];
+  readonly unobserved: readonly string[];
+  readonly removedRefs: readonly string[];
+  readonly truncated: boolean;
+  readonly remainder: number;
+};
+
+export type QueueReconcileMutationResult =
+  | { readonly ok: true; readonly value: QueueReconcileOutcome }
+  | { readonly ok: false; readonly kind: "provider"; readonly code: string }
+  | QueueLeaseFailure;
+
+/**
+ * Sweep the invoking checkout's queue against tracker delivery state
+ * (GH-292 F-5, DM-1, DM-5). Exactly one bounded tracker read happens per
+ * examined entry — no retry, no pagination, no concurrency — and the sweep
+ * stops at the first unreadable read: nothing is appended on that path and the
+ * failure surfaces the provider's own identity (never a `queue.*` code). A
+ * `done` or `canceled` observation removes the entry through the F-1 removal
+ * seam with reason `reconciled` (one append, one event, park withdrawal, no
+ * cascade); every other observed state is retained and reported with its
+ * observed state; a not-found item is retained and reported `unobserved` —
+ * absence is not evidence that work landed (DEC-11). At most 100 entries are
+ * examined (`truncated` plus an exact `remainder` beyond the cap), and no
+ * entry beyond the cap is read. Every examined entry is read before the first
+ * removal, so an unreadable read always leaves a ledger with zero appended
+ * records and zero removals — there is no partial-success path (AC-F5-4). A
+ * repeat run converges truthfully: `checked` counts only entries that still
+ * exist, so an already-removed ref appears in no list (AC-F5-9).
+ */
+export const reconcileQueueEntries = async (
+  store: StateStorePort,
+  input: {
+    readonly ref?: string;
+    readonly readTracker: (ref: string) => Promise<QueueTrackerRead>;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly fenceToken: () => string;
+  },
+): Promise<QueueReconcileMutationResult> => {
+  const fold = readQueueFold(store);
+  if (!fold.ok) return fold;
+  const existing = [...fold.value.entries]
+    .map((entry) => entry.ref)
+    .sort((left, right) => compareText(left, right));
+  if (input.ref !== undefined) {
+    const ref = canonicalQueueRef(input.ref);
+    if (ref === undefined) {
+      return {
+        ok: false,
+        kind: "input",
+        code: "input.value.rejected",
+        detail: `ref ${input.ref} is not a canonical work-item ref`,
+      };
+    }
+    // A `--ref` naming a ref with no entry examines nothing and reports the
+    // truthful noop (AC-F5-9's narrow-scope form).
+    if (!existing.includes(ref)) {
+      return ok({
+        result: "noop",
+        checked: 0,
+        removed: [],
+        retained: [],
+        unobserved: [],
+        removedRefs: [],
+        truncated: false,
+        remainder: 0,
+      });
+    }
+    return reconcileSweep(store, {
+      refs: [ref],
+      total: 1,
+      readTracker: input.readTracker,
+      recordedAt: input.recordedAt,
+      nowMs: input.nowMs,
+      fenceToken: input.fenceToken,
+    });
+  }
+  const examined = existing.slice(0, QUEUE_RECONCILE_MAX_ENTRIES);
+  const remainder = existing.length - examined.length;
+  return reconcileSweep(store, {
+    refs: examined,
+    total: existing.length,
+    readTracker: input.readTracker,
+    recordedAt: input.recordedAt,
+    nowMs: input.nowMs,
+    fenceToken: input.fenceToken,
+    remainder,
+  });
+};
+
+/**
+ * The bounded sweep body: one read per examined entry, sequential, fail-closed.
+ * The read pass completes for every examined entry before the first removal, so
+ * an unreadable read always finds a ledger with zero appended records (F-5:
+ * readable truth for every examined entry, or the run changes nothing).
+ */
+const reconcileSweep = async (
+  store: StateStorePort,
+  input: {
+    readonly refs: readonly string[];
+    readonly total: number;
+    readonly readTracker: (ref: string) => Promise<QueueTrackerRead>;
+    readonly recordedAt: string;
+    readonly nowMs: number;
+    readonly fenceToken: () => string;
+    readonly remainder?: number;
+  },
+): Promise<QueueReconcileMutationResult> => {
+  // Read pass: exactly one bounded read per examined entry, in canonical order,
+  // no retry and no read past the failure. The provider identity surfaces
+  // as-is with nothing appended (AC-F5-4, NFR-4).
+  const observed = new Map<string, Extract<QueueTrackerRead, { ok: true }>>();
+  for (const ref of input.refs) {
+    const read = await input.readTracker(ref);
+    if (!read.ok) {
+      return { ok: false, kind: "provider", code: read.failureCode };
+    }
+    observed.set(ref, read);
+  }
+  // Removal pass: every stale observation goes through the ordinary F-1
+  // removal seam, so the delivered refusal set applies as-is.
+  const removed: QueueReconcileRemoved[] = [];
+  const removedRefs: string[] = [];
+  const retained: QueueReconcileRetained[] = [];
+  const unobserved: string[] = [];
+  for (const ref of input.refs) {
+    const read = observed.get(ref);
+    if (read === undefined) continue;
+    if (read.kind === "not-found") {
+      unobserved.push(ref);
+      continue;
+    }
+    if (!(QUEUE_RECONCILE_STALE_STATES as readonly string[]).includes(read.deliveryState)) {
+      retained.push({ ref, deliveryState: read.deliveryState });
+      continue;
+    }
+    const removal = removeQueueEntry(store, {
+      ref,
+      reason: "reconciled",
+      recordedAt: input.recordedAt,
+      nowMs: input.nowMs,
+      fenceToken: input.fenceToken(),
+    });
+    if (!removal.ok) return removal;
+    removed.push({ ref, reason: "reconciled" });
+    removedRefs.push(ref);
+  }
+  return ok({
+    result: removed.length > 0 ? "removed" : "noop",
+    checked: input.refs.length,
+    removed,
+    retained,
+    unobserved,
+    removedRefs,
+    truncated: (input.remainder ?? 0) > 0,
+    remainder: input.remainder ?? 0,
+  });
+};
+
 /* ------------------------------ lease ledger ------------------------------ */
 
 /** One verified active-lease read: the folded live holders plus the raw history. */
@@ -1033,6 +1874,21 @@ const runClaimFence = (
   }
 };
 
+/** The generic fenced body for the removal-family results (GH-292). */
+const withRemovalFence = <T>(
+  store: StateStorePort,
+  fenceToken: string,
+  body: (handle: StateFenceHandle) => { readonly ok: true; readonly value: T } | QueueLeaseFailure,
+): { readonly ok: true; readonly value: T } | QueueLeaseFailure => {
+  const acquired = store.acquireFence(fenceToken);
+  if (!acquired.ok) return stateFailureOf(acquired.error);
+  try {
+    return body(acquired.value.handle);
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
 const runReleaseFence = (
   store: StateStorePort,
   fenceToken: string,
@@ -1106,8 +1962,12 @@ const newLeaseRecord = (input: {
  * non-exclusivity readiness conditions); `repo-free` is never part of it. Inside
  * the fence the verified lease history is re-read: a live lease held by another
  * holder refuses `queue.lease-conflict`, a stale lease is taken over with full
- * evidence plus a `lease-stale-takeover` incident, and the caller's own lease is
- * renewed. Every append is verified post-append.
+ * evidence plus a `lease-stale-takeover` incident, and the caller's own lease
+ * is renewed when it already records the requested ref (GH-292 renewal
+ * narrowing: one `(repository, ref, holder)` — the recorded ref is never
+ * rewritten, so an own-holder claim for a different ref refuses
+ * `queue.lease-conflict` like any other holder's). Every append is verified
+ * post-append.
  */
 export const claimQueueLease = (
   store: StateStorePort,
@@ -1211,7 +2071,7 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "claimed", lease: record } };
     }
-    if (existing.holder === request.holder) {
+    if (existing.holder === request.holder && existing.ref === ref) {
       const record = newLeaseRecord({
         operation: "renewed",
         repository,
@@ -1234,6 +2094,11 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "renewed", lease: record } };
     }
+    // GH-292 renewal narrowing (DEC-13, TDR-0026 DC-3): renewal is one
+    // (repository, ref, holder). The delivered renewal rewrote the lease's
+    // recorded ref to the requested one, which let a second ref slip past
+    // repository exclusivity; the recorded ref is never rewritten. The own
+    // holder's other-ref claim refuses exactly like any other holder's.
     if (!isLeaseStale(existing.heartbeatAgeMs, existing.ttlMs)) {
       const conflict = leaseConflict(existing);
       return {

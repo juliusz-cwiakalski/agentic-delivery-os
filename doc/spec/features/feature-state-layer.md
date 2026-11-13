@@ -6,9 +6,9 @@ created: 2026-10-30
 last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive harness.telemetry.step and harness.telemetry.baseline families under the delivery.telemetry.storage.v1 storage identity with re-read migration, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the five additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, the six additive coordinator iteration, restart, stuck, exhaustion, wake, and fence record kinds with coordinator-scoped key prefixes and ledger-sequence folds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
+summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive harness.telemetry.step and harness.telemetry.baseline families under the delivery.telemetry.storage.v1 storage identity with re-read migration, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the six additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, the six additive coordinator iteration, restart, stuck, exhaustion, wake, and fence record kinds with coordinator-scoped key prefixes and ledger-sequence folds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288", "GH-289", "GH-291"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288", "GH-289", "GH-291", "GH-292"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -290,7 +290,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Harness Telemetry v2](feature-telemetry-v2.md) — the per-step and session-baseline record kinds, their storage identity and re-read migration, and the reading bases.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Session lifecycle economics](feature-session-lifecycle-economics.md) — the `economics.restart` and `economics.budget-exhaustion` record kinds and the per-delivery economics fold.
-- [Scheduling engine](feature-scheduling-engine.md) — the five `queue.*` record kinds, the derived queue graph, and the claim/release ledgers over this port.
+- [Scheduling engine](feature-scheduling-engine.md) — the six `queue.*` record kinds, the derived queue graph, and the claim/release/removal ledgers over this port.
 - [Resident dispatch daemon](feature-resident-daemon.md) — the seven additive daemon and external-effect record kinds, the daemon lock artifact, and the DM-18 redrive detection.
 - [Coordinator supervision](feature-coordinator-supervision.md) — the six coordinator record kinds, the append-only instance lease, and the per-epoch restart fold.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
@@ -356,7 +356,7 @@ never a fabricated count. See
 
 ## Scheduling-engine record kinds
 
-Five additive record kinds and one derived document join `delivery.state.v1`
+Six additive record kinds and one derived document join `delivery.state.v1`
 with no schema-version bump, migration, backfill, or compatibility path.
 
 | Kind | Payload schema | Store-scoped key | Writer | Consumer |
@@ -366,18 +366,23 @@ with no schema-version bump, migration, backfill, or compatibility path.
 | `queue.lease` | `delivery.queue.lease.v1` | `queue.leases:<repoKey>` | Claim, renewal, release, and stale takeover | Readiness `repo-free`, the claim pipeline, the lane fold |
 | `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal) and the mutating park pass | The park pass, precedence, the lane fold |
 | `queue.incident` | `delivery.queue.incident.v1` | `queue.incidents:<REF or repoKey>` | Stale takeover and park auto-recovery | Incident history evidence |
+| `queue.removal` | `delivery.queue.removal.v1` | `queue.removals:<REF>` | `queue remove`, the closeout `landed` hook, and `queue reconcile`, under the state fence | The graph fold's append-position presence rule |
 | Derived queue graph | `delivery.queue.graph.v1` | `queue-graph.json` | Every intent mutation, under the same fence | Diagnostics and tests; never served as truth |
 
 Every `queue.park` record carries `clearObservedAt` and `recoveryState` from
 its first write; the durable clear-observed marker is another record of that
-same kind, not a sixth kind. The release+park path appends the park first and,
-when the lease-release append fails, appends a compensating `queue.park` record
-with `recoveryState: released` for the same ref, so the fold observes no active
-park while the lease remains held. The lease kind carries the closed operation set
-`{acquired, renewed, released, taken-over}`, the implemented scope
+same kind, not a separate kind. The release+park path appends the park first
+and, when the lease-release append fails, appends a compensating `queue.park`
+record with `recoveryState: released` for the same ref, so the fold observes no
+active park while the lease remains held. The lease kind carries the closed
+operation set `{acquired, renewed, released, taken-over}`, the implemented scope
 `repo-exclusive`, and the always-recorded takeover evidence. The incident kind
 carries the closed type set `{park-auto-recovery, lease-stale-takeover}` and
-bounded `{key, value}` evidence pairs, never free-form prose.
+bounded `{key, value}` evidence pairs, never free-form prose. The removal kind
+carries the closed reason set `{landed, abandoned, superseded, reconciled}` and
+decides presence by ledger append position: an entry is absent from the fold
+when its latest `queue.removal` append is later than its latest `queue.entry`
+append, and a re-declaration restores it, with no record deleted or rewritten.
 
 An identical replay appends nothing, the latest record per identity governs,
 and a wrong kind, malformed payload, duplicate acquisition,

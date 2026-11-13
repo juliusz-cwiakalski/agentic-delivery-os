@@ -1,0 +1,1 @@
+result=removed; ref=GH-241; reason=abandoned; ready=0; degraded=daemon-unreachable

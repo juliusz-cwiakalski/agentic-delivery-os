@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-291"]
+  related_changes: ["GH-290", "GH-291", "GH-292"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -133,11 +133,19 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   truncation.
 - `queue ready` is a bounded read-only tri-state ready-set with ranked resumption,
   at most eight candidates; it remains read-only and never claims ownership. The
-  scheduling engine ships beside it as `queue list|plan|add|prioritize|dep|claim|release`
+  scheduling engine ships beside it as
+  `queue list|plan|add|prioritize|dep|claim|release|remove|reconcile`
   and `lanes list|show`: a daemon-free one-shot queue graph with repo-exclusive
   fence-token leases and stale takeover, per-runner build-weight classes,
   producer-before-consumer deploy gating, close-first ranking, and parks that
-  resume when their condition clears. The resident daemon (GH-238) is its
+  resume when their condition clears. The ledger only grows: an entry leaves the
+  fold by an appended `queue.removal` record whose ledger position against the
+  entry record decides presence, dependency edges are added and removed one at a
+  time, and
+  `queue reconcile` retires entries whose tracker work item is closed. A second
+  session for one ref is refused at dispatch admission with `queue.single-flight`
+  naming the holder, while the lease stays repository-exclusive. The resident
+  daemon (GH-238) is its
   production composition root and provides bounded live `queue`/`lanes` watch;
   the typed dispatch engine (GH-239) claims and releases the same repository
   lease for one-shot delivery. See [status](../spec/features/feature-status-digest.md),
@@ -453,11 +461,11 @@ Phase 6 report; no fresh runtime/pilot result is claimed by this reconstruction.
 
 ## Resident dispatch daemon (GH-238)
 
-The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. Its subscribe control plane publishes event taxonomy v1: six topics, the four event topics `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` carrying the eight-field change envelope, the two delivered snapshot topics byte-stable, one shared whole-store read per publish tick, and overflow-to-repoll declared per topic. The `events` reference surface renders the same declaration (GH-290). See [event taxonomy](../spec/features/feature-event-taxonomy.md). It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The production composition mounts the daemon family without a lane composition, so a production daemon runs the declared `supervise-only` mode; the lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path, and supplying that lane composition remains resident-daemon production scope (GH-238).
+The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. Its subscribe control plane publishes event taxonomy v1: six topics, the four event topics `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` carrying the eight-field change envelope, the two delivered snapshot topics byte-stable, every declared kind emitted (including `queue.graph/remove`, which projects the queue-removal ledger), one shared whole-store read per publish tick, and overflow-to-repoll declared per topic. The `events` reference surface renders the same declaration (GH-290). See [event taxonomy](../spec/features/feature-event-taxonomy.md). It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. The production composition mounts the daemon family without a lane composition, so a production daemon runs the declared `supervise-only` mode; the lane-launch planner and lane executor seam over the harness session port is factory-proven and records the same dispatch attempt as the one-shot path, and supplying that lane composition remains resident-daemon production scope (GH-238).
 
 ## Typed dispatch engine (GH-239)
 
-The `dispatch` family is the typed per-ticket delivery path. One-shot dispatch resolves a harness, claims the repository queue lease, spawns or resumes through the harness session port, watches with progress-based liveness at the `lane.liveness-interval` cadence, classifies through the shared classifier, and derives the final token from artifact, tracker, ledger, and CI truth. Every dispatch that reaches classification appends one durable dual-run attempt record; a comparison mismatch appends a divergence, and a readable contradiction of a success claim is recorded as a false-success incident. An unreadable corroboration source blocks the claim without resetting the window, and a post-spawn collection failure records an unevaluable attempt at exit `2`. `dispatch attempts [--ref <ref>] [--limit <n>]` reads that record back as a bounded, repository-scoped digest or the `attempts.v1` machine envelope; coverage and floor stay on `dispatch dual-run summary`, which the read side names as the next step.
+The `dispatch` family is the typed per-ticket delivery path. One-shot dispatch resolves a harness, applies the per-ref single-flight admission predicate, claims the repository queue lease, spawns or resumes through the harness session port, watches with progress-based liveness at the `lane.liveness-interval` cadence, classifies through the shared classifier, and derives the final token from artifact, tracker, ledger, and CI truth. A live lease that already records the requested ref refuses `queue.single-flight` before any session, naming the holder at the failure-envelope root; a live lease on another ref refuses `queue.lease-conflict`; neither appends a record, publishes an event, or starts a session. Every dispatch that reaches classification appends one durable dual-run attempt record; a comparison mismatch appends a divergence, and a readable contradiction of a success claim is recorded as a false-success incident. An unreadable corroboration source blocks the claim without resetting the window, and a post-spawn collection failure records an unevaluable attempt at exit `2`. `dispatch attempts [--ref <ref>] [--limit <n>]` reads that record back as a bounded, repository-scoped digest or the `attempts.v1` machine envelope; coverage and floor stay on `dispatch dual-run summary`, which the read side names as the next step.
 
 Authority is per repository and defaults to `dual-run`, where the bash stack remains authoritative and dispatch records evidence only. The four-condition evidence gate (truth, class coverage as exposure, the exposure floor, and corroboration of success claims) governs `dispatch handover`; a met bar appends a handover record and the derived, atomically replaced authority view, and `--revert` restores `dual-run` without deleting history. The shipped production composition wires the run path, the attempt read side, the evidence-gate runtime, the resume lane and restart-budget facts, and the rename-invariant identity resolver with its checkout-scoped first-use marker, so the attempts, summary, resolution, handover, and resume surfaces run in the delivered CLI. The four bash entry points read the authority view as a plain file and keep running when the typed CLI is absent. See [dispatch engine](../spec/features/feature-dispatch-engine.md).
 

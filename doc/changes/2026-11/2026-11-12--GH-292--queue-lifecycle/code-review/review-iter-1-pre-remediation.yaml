@@ -1,0 +1,168 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-292
+branch: feat/GH-292/queue-lifecycle
+status: PASS
+summary: >-
+  The GH-292 delivery implements spec v1.2 faithfully across all seven
+  capabilities: the append-only `queue.removal` kind with the DM-2
+  append-position presence rule applied at the read seam (one call site feeds
+  every fold consumer), the exact F-4 path-specific precedence table with the
+  DEC-13 renewal narrowing and the TDR-0027 envelope-root `detail.holder`
+  bounded and enforced at the envelope seam, the fail-open in-fence closeout
+  hook, the read-pass-before-removal bounded reconcile over the injected
+  verified tracker bridge, and the two-sided `remove`-emission pin moves with
+  no relaxed assertion found. All 13 rows of the test plan §7.1 pin table
+  moved as declared; the disclosed pm-notes deviations were each verified
+  legitimate. Docs are reconciled with no stale claims. Six findings, none
+  above low: one undisclosed plan-scope gap (`daemon-supervision.ts`), and
+  five informational notes.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/core/src/app/daemon-supervision.ts:87
+    message: >-
+      The supervision-cycle holder threading (the additive `holder?: string` on
+      the claim port and `claim-refused` result) is outside every declared
+      phase `scope.files` entry. Phase 2 declares `packages/cli/src/daemon-compose.ts`
+      (which ended up untouched) but not `daemon-supervision.ts`; the change is
+      spec-declared (spec §16 "Daemon lane seam and supervision cycle —
+      Updated") and covered by Phase 2's goal prose and by
+      `tests/behaviour/daemon-single-flight.test.ts`, but the pm-notes phase-2
+      entry discloses the inverse (daemon-compose needed no edit) without
+      naming this drift. The plan's own contract says an out-of-scope touch
+      stops and escalates; the escalation record is missing even though the
+      behavior is conformant.
+    suggestion: >-
+      Record the drift in pm-notes (one sentence naming
+      `daemon-supervision.ts` as a Phase-2 scope-list omission covered by the
+      phase goal and spec §16) so the evidence chain matches the diff; no code
+      change is required. Owning phase: 2 (evidence only).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: biome.json:1
+    message: >-
+      Eight changed files sit outside the declared plan scopes: `biome.json`,
+      `tests/behaviour/queue-cli.test.ts`, `tests/golden/queue-lease-conflict.test.ts`,
+      `tests/structure/result-contract.test.ts`,
+      `tests/structure/event-taxonomy-single-source.test.ts`,
+      `tests/checks/privacy-ci-wiring.test.ts`,
+      `tests/behaviour/closeout-composition-facts.test.ts`, and
+      `tests/behaviour/closeout-integration.test.ts`. Every one is individually
+      disclosed in pm-notes (phases 2, 6, 7, 9) with its two-sided remedy, and
+      each verified move strengthens rather than weakens its pin; the plan
+      artifact itself was not reopened to declare them.
+    suggestion: >-
+      No action required; the disclosures are the escalation record the tier
+      anticipated. If a follow-up tidies the plan, add the eight paths to the
+      owning phases' scope lists.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: repo-rules
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-pm-notes.yaml:339
+    message: >-
+      Commit subjects are per-file template subjects ("update <path>") rather
+      than the plan's phase-summary subjects, three carry the template's
+      literal `…` truncation, and each phase landed as standalone `commit
+      GH-292` invocations instead of `commit --phase <n>` because the delivered
+      primitive's CLI rejects numeric phase ids. The ceremony deviation is
+      disclosed in a pm-notes retro; range lint PASSes on the branch.
+    suggestion: >-
+      Known template artifact; no action. The primitive's phase-id grammar and
+      subject templating are candidates for a future tooling change, not this
+      change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-spec.md:162
+    message: >-
+      Spec F-1's prose lists `queue ready` among the surfaces that "derive from
+      the folded graph" after a removal, but the delivered `ready` verb
+      evaluates the six-condition readiness model over status facts and never
+      read the queue fold. AC-F1-1 does not name `ready`, so no AC is
+      violated; the phase-5 deviation is disclosed and the TC-QLC-001 cell
+      asserts the fact-source truth.
+    suggestion: >-
+      Optionally tighten the F-1 prose in a future doc pass; no behavior
+      change warranted.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/queue.ts:1704
+    message: >-
+      The reconcile removal pass applies F-1 removals sequentially after the
+      read pass; a refusal that arises only mid-sweep (e.g. a lease acquired on
+      an examined ref between the read pass and its removal, or a concurrent
+      removal) returns the classified error with earlier removals already
+      applied. This is not the AC-F5-4 fail-closed case (that covers unreadable
+      reads, which are proven to append zero records), each applied removal is
+      a legitimate F-1 append, and a re-run converges truthfully per AC-F5-9,
+      so the behavior is defensible — noted because the spec's
+      "no partial-success envelope" wording could be read more broadly.
+    suggestion: >-
+      No action required. If operators report confusion, a future change could
+      report per-ref skip reasons in the reconcile payload; that is new
+      contract surface, not a fix.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/queue.ts:1440
+    message: >-
+      `queueRemovalForCloseout` maps a missing apply-mode fence handle to
+      `skipReason: "state-unavailable"` — the nearest value of the closed
+      four-value vocabulary for an internal wiring error rather than an
+      unreadable store. Unreachable in the production wiring (the closeout
+      transaction always passes its handle) and fail-open by design, so the
+      closeout result stands either way.
+    suggestion: >-
+      No action required; note for future maintainers that this skipReason can
+      also mean "hook mis-wired", not only "store unreadable".
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-13T04:36:04Z
+next_step: PROCEED

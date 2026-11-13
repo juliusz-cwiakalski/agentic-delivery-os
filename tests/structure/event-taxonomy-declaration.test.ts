@@ -145,7 +145,7 @@ describe("TC-EVT-002 the declared kind enumeration", () => {
     const notEmitted = topics.flatMap((topic) =>
       topic.kinds.filter((kind) => !kind.emitted).map((kind) => `${topic.name}/${kind.name}`),
     );
-    expect(notEmitted).toEqual(["queue.graph/remove"]);
+    expect(notEmitted).toEqual([]);
     expect(TAXONOMY_VERSION).toBe("v1");
   });
 });

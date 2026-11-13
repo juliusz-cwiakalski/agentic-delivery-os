@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "result": "noop",
+    "checked": 2,
+    "removed": [],
+    "retained": [
+      {
+        "ref": "GH-243",
+        "deliveryState": "ready"
+      }
+    ],
+    "unobserved": [
+      "GH-244"
+    ],
+    "readySet": [],
+    "truncated": false,
+    "remainder": 0,
+    "degraded": [
+      "daemon-unreachable"
+    ]
+  }
+}

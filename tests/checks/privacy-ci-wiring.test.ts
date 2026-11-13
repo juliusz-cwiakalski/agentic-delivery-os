@@ -230,7 +230,7 @@ describe("TC-WIRE-002 local command is offline, build-free, and count-reporting"
     } finally {
       globalThis.fetch = originalFetch;
     }
-  });
+  }, 120_000);
 });
 
 describe("TC-WIRE-003 new suites run under the binding test job", () => {

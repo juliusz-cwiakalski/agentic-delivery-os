@@ -145,7 +145,7 @@ export const TAXONOMY = {
         },
         {
           name: "remove",
-          emitted: false,
+          emitted: true,
           payloadFields: ["ref", "reason", "recordedAt"],
         },
       ],

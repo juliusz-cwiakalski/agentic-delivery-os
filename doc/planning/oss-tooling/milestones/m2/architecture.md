@@ -203,24 +203,55 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[merge transaction lands] --> B[closeout completes]
-    B --> C[remove the ref's queue entry<br/>reason: landed]
+    A[merge transaction lands] --> B[closeout --apply completes<br/>its writes]
+    B --> C[queue-removal hook inside the held fence<br/>reason: landed]
     C --> D{dependency edges}
     D -->|dependents now ready| E[ready set recomputed]
     D -->|no dependents| F[queue unchanged]
-    E --> G[event: queue.graph]
+    E --> G[event: queue.graph/remove]
+    C --> H[skip with a closed reason:<br/>fail-open, step outcomes unchanged]
 ```
+
+The hook runs inside the fence closeout already holds, after the closeout
+writes, and only when the merged delivery request is observed: it appends the
+park withdrawal when a park is active, then one `queue.removal` record with
+reason `landed`, and exactly one `queue.graph/remove` event is later
+observable in the ref's lane. Plan mode removes nothing and reports
+`would-remove`; no merge truth, a live lease, unreadable queue state, or a
+non-canonical ref reports `skipped` with the closed reason; a re-run over an
+already-removed ref, and a ref that never had an entry, report `satisfied`
+at exit 0. The hook never changes a step outcome or closeout's exit code
+and adds no step to the declared inventory.
 
 ### Single-flight refusal across dispatch paths
 
 ```mermaid
 flowchart LR
-    A[dispatch request for ref R] --> B{single-flight guard}
-    B -->|no active lane| C[claim lane and proceed]
-    B -->|active lane exists| D[refuse with classified error<br/>naming the holder]
-    D --> E[event: dispatch.attempt refused]
-    C --> F[event: dispatch.attempt started]
+    A[dispatch request for ref R] --> B{per-ref single-flight guard<br/>at admission}
+    B -->|live same-ref lease, any holder| C[refuse queue.single-flight<br/>detail.holder names the holder]
+    B -->|live other-ref lease| D[refuse queue.lease-conflict]
+    B -->|no live lease| E[claim the lane and proceed]
+    B -->|stale lease: heartbeat age >= TTL| F[take over + incident evidence]
+    C --> G[zero records, zero events]
+    D --> G
+    E --> H[event: dispatch.attempt started]
 ```
+
+The guard is path-specific (TDR-0026 DC-2/DC-3): the dispatch family —
+`dispatch run` and a composed daemon supervision claim — refuses any live
+same-ref lease regardless of holder, because the dispatch path claims with
+the fixed holder `dispatch` and never renews mid-flight, so a live same-ref
+lease can only name a dispatch that is already running. `queue claim` keeps
+its holder-aware outcomes: the caller's own holder's same-ref lease returns
+`renewed` (one record, no session), another holder's same-ref lease refuses
+`queue.single-flight`, and any other-ref live lease refuses the delivered
+`queue.lease-conflict`. A refusal appends nothing and publishes no event —
+no lease record, no attempt record, and no `dispatch.attempt` refused event;
+it happens before the fence. A lease at or over its TTL is not active on any
+path and keeps the delivered stale takeover. Renewal is narrowed to one
+(repository, ref, holder), so a same-holder claim for a different ref
+refuses `queue.lease-conflict` and the lease's recorded ref is never
+rewritten.
 
 ### Handover-gate evaluation
 

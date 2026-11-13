@@ -280,6 +280,38 @@ declared taxonomy, and M2-S17's stop, parked, resumed, and park-edge shapes
 arrive as a future taxonomy version. M2 has not exited: the remaining M2 stories
 stay planned.
 
+## M2 delivery snapshot (2026-11-12, queue lifecycle)
+
+M2-S15 (queue lifecycle completion) was delivered by GH-292, superseding the
+removal attribution in the snapshot above: entry removal is delivered, and
+`remove` is now an emitted `queue.graph` kind — all four declared kinds are
+emitted, each one `remove` event per applied removal carrying exactly `ref`,
+`reason`, `recordedAt` in the removed entry's lane. The delivered surface:
+`queue remove <ref> --reason <landed|abandoned|superseded|reconciled>` over the
+append-only removal record, where presence is the ledger's append position
+(latest `queue.entry` append later than the latest `queue.removal` append) and
+no record is ever deleted; automatic `landed` removal inside `closeout --apply`
+through the fail-open non-step `queueRemoval` block (`removed`,
+`would-remove`, `satisfied`, `skipped` with closed skip reasons), after the
+closeout writes inside the held fence; the explicit `queue dep add` /
+`queue dep remove` grammar over the preserved two-positional add (`removed`
+joins the dependency result vocabulary; an absent edge is a `noop` with zero
+appends and zero events); and `queue reconcile [--ref]` against tracker
+delivery state (`done`/`canceled` are stale and removed with reason
+`reconciled`; open states are retained; a not-found item is retained and
+reported `unobserved`; unreadable truth removes nothing and exits on the
+provider's own identity; at most 100 examined entries with one bounded read
+each). Single-flight is now a per-ref admission policy: the dispatch family
+refuses any live same-ref lease regardless of holder with
+`queue.single-flight` naming the holder at the failure-envelope root
+(`detail.holder`); `queue claim` renews the caller's own holder's same-ref
+lease and refuses another holder's same-ref lease with the same identity;
+any other-ref live lease refuses the delivered `queue.lease-conflict`; a
+lease at or over its TTL keeps the delivered stale takeover; renewal is
+narrowed to one (repository, ref, holder). The scheduling engine's per-pass
+single-flight is unchanged. M2 has not exited: the remaining M2 stories stay
+planned.
+
 ## M2 delivery snapshot (2026-11-13)
 
 M2-S14 (harness telemetry v2) was delivered by GH-291. The opencode adapter now

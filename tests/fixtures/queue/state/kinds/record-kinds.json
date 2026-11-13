@@ -29,6 +29,12 @@
       "payloadSchema": "delivery.queue.incident.v1",
       "keyPrefix": "queue.incidents:",
       "identityField": "type"
+    },
+    {
+      "kind": "queue.removal",
+      "payloadSchema": "delivery.queue.removal.v1",
+      "keyPrefix": "queue.removals:",
+      "identityField": "ref"
     }
   ],
   "derivedDocument": {

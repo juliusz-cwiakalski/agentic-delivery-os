@@ -1278,6 +1278,24 @@ the project family separately.
 - Depends on: M1-S11, M1-S15, M1-S19, M1-S22.
 
 ### M2-S15 Queue lifecycle completion
+- Ticket: GH-292 (milestone M2)
+- Progress: delivered by GH-292 — reason-bearing `queue remove` with the
+  closed `landed`/`abandoned`/`superseded`/`reconciled` vocabulary and the
+  append-position presence rule over the append-only `queue.removal` record
+  (no record deleted, a re-declaration restores the entry); automatic `landed`
+  removal inside `closeout --apply` through the fail-open non-step
+  `queueRemoval` block after the closeout writes; the explicit
+  `queue dep add`/`queue dep remove` grammar over the preserved two-positional
+  add (`removed` joins the dependency result vocabulary, an absent edge is a
+  `noop`); per-ref single-flight admission — the dispatch family refuses any
+  live same-ref lease regardless of holder with `queue.single-flight` naming
+  the holder at the failure-envelope root (`detail.holder`), `queue claim`
+  keeps the own-holder same-ref renewal with renewal narrowed to one
+  (repository, ref, holder), and any other-ref live lease refuses the
+  delivered `queue.lease-conflict`; `queue reconcile` against tracker delivery
+  state, bounded at 100 examined entries and fail-closed on unreadable truth;
+  and the `queue.graph` `remove` kind emitted with exactly `ref`, `reason`,
+  `recordedAt`.
 - Goal: Queue hygiene is complete: entries leave the queue when their
   work lands or is abandoned, dependencies are manageable, and one ref
   cannot run twice at once regardless of entry path.
