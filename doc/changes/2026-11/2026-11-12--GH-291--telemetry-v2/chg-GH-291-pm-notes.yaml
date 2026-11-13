@@ -511,6 +511,13 @@ notes:
       Transport note: the first commit attempt was refused because the
       commitlint probe's bare binary was not on PATH (ENOENT surfaced as the
       generic rejection); retried with node_modules/.bin on PATH, no code
-      change. Doc-syncer re-verification and re-review at iteration 2 follow.
+      change. Remediation commit recorded: 10b5d880 (22 files, +872/−77).
+      Doc-syncer re-verification and re-review at iteration 2 follow. Before
+      those, the branch syncs with the moved integration line:
+      origin/main-tools advanced to bf5783ed (GH-292 queue lifecycle, PR
+      #314) while this branch was in review; the merge resolves the 18
+      overlapping files (barrels, production/edge composition, fixtures,
+      planning/index docs) as unions keeping both sides, per the operator's
+      keep-both-sides rule.
     type: "info"
     date: "2026-11-13"
