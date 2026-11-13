@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-PROVIDER-PROFILES
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-08
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
+summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, optional per-profile peak-window rules, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
 links:
-  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242"]
-  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
+  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294"]
+  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "TDR-0028"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
     - "packages/core/src/contracts/provider.ts"
@@ -35,13 +35,13 @@ Dispatch-daemon integration, the audit ledger, and spend reporting are out of sc
 The `provider.profiles` branch is a typed record-map branch (GH-234 F-1, DM-1..DM-5):
 
 - `tiers`: a dynamic-name map of named responsibility groups.
-- `profiles`: a dynamic-name map; each profile declares `tier`, `providers`, `seats`, and optional `agentOverrides`. A seat declares `model`, `pacingClass` (`judgment` | `execution`), `capability` (`vision-capable` | `text-only`), and an optional explicit `envName`.
+- `profiles`: a dynamic-name map; each profile declares `tier`, `providers`, `seats`, and optional `agentOverrides`. A seat declares `model`, `pacingClass` (`judgment` | `execution`), `capability` (`vision-capable` | `text-only`), and an optional explicit `envName`. A profile may also declare optional `peakWindows` rules: a window list (UTC designation, start/end seconds-of-day, a multiplier per window, and non-negative buffers before and after each window) with a required `graceSeconds` default whose maximum is derived as the smallest declared buffer, versioned with the profile; with no branch declared, the profile has no peak enforcement. These rules drive both the admission gating below and the daemon's lane-level peak pausing ([Provider Peak Pausing](feature-peak-pausing.md)).
 - `preferenceChain`: `base` plus ordered `fallbacks`; the effective order is base-first.
 - `pacing`: an ordered `goalPriorities` list, a `tailThresholdPercent`, and a dynamic-name map of `rungs` (each with `thresholdPercent` and `executionModel`).
 - `watch`: a dynamic-name map keyed by provider name; each target declares a mapping kind, an HTTPS endpoint, a credential reference, and optional floor and threshold. Watch targets live only under `provider.profiles.watch`; `provider.entries` carries no watch data.
 - `envRecord`: optional grammar overrides (header, name pattern, byte/line/record limits).
 
-Record maps merge by child name, lists replace whole, and a reset removes inherited values, matching the catalog rules. Validation is fail-closed and classified: unknown tiers, profiles, providers, credentials, or seats; a profile, provider-reference, or seat name longer than 64 characters; duplicate chain entries; duplicate goal priorities; a closed-value violation; an `envRecord.header` containing LF, CR, or NUL; or a malformed threshold names the offending field and returns no partial decision. `config debug` and `config get --show-origin` expose the winning layer and source of every effective value.
+Record maps merge by child name, lists replace whole, and a reset removes inherited values, matching the catalog rules. Validation is fail-closed and classified: unknown tiers, profiles, providers, credentials, or seats; a profile, provider-reference, or seat name longer than 64 characters; duplicate chain entries; duplicate goal priorities; a closed-value violation; an `envRecord.header` containing LF, CR, or NUL; a malformed threshold; or a malformed `peakWindows` branch — only the `UTC` zone designation validates, an exact-duplicate window on one profile refuses as ambiguous, distinct overlapping windows validate without arbitration, and a `graceSeconds` default above the derived buffer bound is a validation error — names the offending field and returns no partial decision. `config debug` and `config get --show-origin` expose the winning layer and source of every effective value.
 
 The branch ships empty (`provider.profiles: {}`): no tier, profile, chain, rung, goal priority, or threshold is invented. This empty default is fail-closed: until a preference chain is declared, resolution refuses with the classified `provider.profile.absent` identity rather than inventing a model.
 
@@ -58,7 +58,7 @@ The branch ships empty (`provider.profiles: {}`): no tier, profile, chain, rung,
 ## Park, Switch, and Revert
 
 - **Production resolve path:** every `provider profile resolve` invocation, with or without `--for-spawn`, runs the lifecycle: select the profile, read the persisted target, evaluate the switch/revert decision, and persist the target when it changed. The `switched` and `reverted` outcomes, their events, and the target record are produced by the shipped CLI surface, not only by engine internals.
-- **Expensive windows (F-6, DM-10):** a declared UTC peak window parks with the engine's `peak-window` cause and an absolute expiry at the effective window end. Profiles using the provider are ineligible with the park named as a blocker; the next resolution after expiry observes clear with no timer.
+- **Expensive windows (F-6, DM-10):** a declared UTC peak window parks with the engine's `peak-window` cause and an absolute expiry at the effective window end. Profiles using the provider are ineligible with the park named as a blocker; the next resolution after expiry observes clear with no timer. Profile-level `peakWindows` rules share the same UTC basis, buffer-inclusive boundaries, and `peak-window` cause, and additionally drive the daemon's lane-level pausing of in-flight work ([Provider Peak Pausing](feature-peak-pausing.md)); admission gating is unchanged by that enforcement layer.
 - **Switch-not-park (EVT-1):** an unavailable provider condition makes every profile using it ineligible; the chain selects the next eligible profile and the target switches. The switch event carries the previous target, the new target, the unavailable provider, and the revert condition. The synchronous CLI probe reports a provider available only when it is declared and enabled and outside its UTC peak window; quota-exhaustion conditions reach the same seam through the M1-S9 dispatch daemon, never through a quota fetch on the CLI probe.
 - **Persisted target (EVT-4):** one additive state record kind `provider.profile-target` with payload schema `delivery.provider.profile-target.v1` and store-scoped key `provider.profile-target`. Appends are fenced, latest-wins, verified by a post-append read, and only occur on change. There is no schema-version bump or migration.
 - **Revert-on-recovery (EVT-2):** when the preferred profile is selected again, the target reverts and exactly one revert event is recorded per episode. The event names the recovering provider and the recorded revert condition; an unchanged target appends nothing. Flapping is bounded by the memoized probes, the recorded revert condition, and identity dedupe.
@@ -109,7 +109,7 @@ The engine's closed, guarded sets carry these members:
 
 - Events: `profile.selected`, `profile.switched`, `profile.reverted`, `profile.ineligible`, `profile.rung-changed`.
 - State record kind: `provider.profile-target` (schema `delivery.provider.profile-target.v1`).
-- Error identities: `provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied`, `provider.profile.unavailable`, `provider.env-record.unauthorized`, `provider.env-record.duplicate`, `provider.env-record.malformed`, `provider.env-record.oversized`.
+- Error identities: `provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied`, `provider.profile.unavailable`, `provider.env-record.unauthorized`, `provider.env-record.duplicate`, `provider.env-record.malformed`, `provider.env-record.oversized`. The four profile resolve identities are also the classified dispatch-admission refusal identities when a delivery cannot nominate a profile ([Provider Peak Pausing](feature-peak-pausing.md)).
 - Watch mapping kinds: `coding-plan-windows`, `deepseek-balance`, `openai-usage-windows`.
 
 The provider-engine rows, condition kinds, parks, announcements, and schema identifiers documented in [Provider Engine](feature-provider-engine.md) remain part of the same closed sets. Error identities are synchronized in both directions with the documented table, and classification is exact-code with `fallback.internal` containment.
@@ -148,6 +148,7 @@ All declared windows and expiries are evaluated on the provider engine's UTC bas
 ## Related Documents
 
 - [Provider Engine](feature-provider-engine.md) — the delivered availability engine this feature composes.
+- [Provider Peak Pausing](feature-peak-pausing.md) — the lane-level enforcement the `peakWindows` rules and the resolve identities feed.
 - [Configuration Layer and Inspection](feature-config-layer.md) — layered merge, reset, and provenance.
 - [State Layer](feature-state-layer.md) — additive record kinds and fenced appends.
 - [Result Contract and Error Table](feature-result-contract.md) — envelopes, exits, and error identities.

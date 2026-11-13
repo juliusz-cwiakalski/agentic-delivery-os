@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-238", "GH-286", "GH-290"]
+  related_changes: ["GH-238", "GH-286", "GH-290", "GH-294"]
   feature_spec: doc/spec/features/feature-resident-daemon.md
 ---
 
@@ -386,14 +386,15 @@ derived from durable state at every projection.
   `["daemon-unreachable"]` at exit `0` with no socket connect, and a watch
   iteration re-resolves the marker when the daemon starts or releases.
 
-## Event Taxonomy v1 (GH-290)
+## Event taxonomy v2 (GH-290, GH-294)
 
 The subscribe surface's published taxonomy is covered by five suite groups, all
 of which drive the delivered server, session, codec, and appenders; only the
 transport, clock, and wake are injected.
 
 - **Declaration and pinning.** `event-taxonomy-declaration` (the six-topic set,
-  the per-topic keys, the exact 4/3/3/3 kind enumeration, no S17 shape),
+  the per-topic keys, the exact 5/6/3/3 kind enumeration including the
+  peak-pause kinds with their pinned payload lists,
   `event-taxonomy-integrity` (the seven integrity violations and the positive
   control), `event-taxonomy-drift` (five drift classes localized per topic),
   `event-taxonomy-additive` (payload growth without auto-advertising, and each
@@ -406,7 +407,11 @@ transport, clock, and wake are injected.
 - **Emission per topic.** `events-subscribe-queue-graph`,
   `events-subscribe-dispatch`, `events-subscribe-phase`,
   `events-subscribe-blockers`, `events-envelope-conformance`,
-  `events-emitted-kinds`, `events-dependency-delta`, and the bounded real-socket
+  `events-emitted-kinds`, `events-dependency-delta`, `pause-episode-events`
+  (exactly one `stop`, `parked`, `resumed`, and `park-edge` per real episode,
+  reconstructed from the ledger alone), `event-taxonomy-v2-compat` (the six-point
+  v1-consumer compatibility statement over the in-memory pair plus the bounded
+  unix-socket variant), and the bounded real-socket
   case `tests/conformance/events/real-socket-subscribe`.
 - **Ordering and overflow.** `events-sequence-per-lane`,
   `events-sequence-restart`, `event-ordering-contract`,
@@ -483,7 +488,7 @@ transport, clock, and wake are injected.
 | F-16 vocabulary growth | `daemon-vocabulary`, `daemon-contract`, `error-table-sync` |
 | F-17 merge absence | `daemon-imports`, `tests/boundaries`, dependency-cruiser |
 | NFR-1/9/12/13 bounds, determinism, privacy | `daemon-determinism`, `daemon-bounds`, `privacy-literals` |
-| Event taxonomy v1 (GH-290) | `event-taxonomy-*`, `events-*`, `event-ordering-contract`, `event-overflow-carriage`, `event-taxonomy-conformance`, `event-projection-bounds`, `event-mount-guards`, `event-privacy-literals`, `tests/conformance/events/real-socket-subscribe` |
+| Event taxonomy v2 (GH-290, GH-294) | `event-taxonomy-*`, `events-*`, `event-ordering-contract`, `event-overflow-carriage`, `event-taxonomy-conformance`, `event-projection-bounds`, `event-mount-guards`, `event-privacy-literals`, `pause-episode-events`, `event-taxonomy-v2-compat`, `tests/conformance/events/real-socket-subscribe` |
 
 ## Known Gaps
 

@@ -6,10 +6,10 @@ created: 2026-11-07
 last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed five-cause park vocabulary (`peak-window` and `owner-hold` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292"]
-  related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294"]
+  related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
     - "packages/core/src/contracts/queue-ready.ts"
@@ -127,13 +127,21 @@ than discovering work by hand.
   the explicit `queue release --park`.
 - **Parks with exact resume.** Condition types are `provider-window`,
   `provider-quota`, and `preemption`; causes are `provider-window`,
-  `provider-quota`, and `preempted-for-close-item`, paired one-to-one. A window
-  clears at its absolute expiry, quota clears when the provider is observed
-  available, and preemption clears when the repository is observed with no held
-  lease and the entry is ready again. An active park is re-evaluated only once
+  `provider-quota`, `preempted-for-close-item`, `peak-window`, and
+  `owner-hold`, mapped onto the condition types by the declared cause-to-type
+  pairs — `peak-window` rides the existing `provider-window` condition type and
+  `owner-hold` rides the read-time `preemption` type, so `provider-window` and
+  `preemption` each carry two causes and the pairing is not injective
+  (no duplicate cause, no silent rename). A window clears at its absolute expiry,
+  quota clears when the provider is observed
+  available, preemption clears when the repository is observed with no held
+  lease and the entry is ready again, and a `peak-window` park clears at its
+  recorded expiry — the daemon's window-end resume supervision reads the same
+  read-time expiry to resume the parked lanes ([Provider Peak Pausing](feature-peak-pausing.md)). An active park is re-evaluated only once
   the recheck interval recorded on that park has elapsed since the last
   evaluation; the interval is resolved from
-  `queue.park-recheck.<condition-type>` when the park is created. A not-yet-due
+  `queue.park-recheck.<condition-type>` when the park is created, so a
+  `peak-window` park rechecks on the `provider-window` cadence. A not-yet-due
   park stays active with its interval and last evaluation, so tuning the key
   changes resume timing for parks created afterwards with no code change. A
   mutating pass that observes a clear condition appends the durable
@@ -144,10 +152,15 @@ than discovering work by hand.
   and a `queue.park-condition-stuck` refusal on a claim at exit 1. A park that was
   simply not evaluated while no process ran carries no marker, is never stuck on
   the first pass after the gap, and recovers with an incident naming the gap.
-  `queue release --park provider-window --until <iso>` records the supplied
-  absolute window expiry; `--until` is required for that cause and refused for
+  `queue release --park provider-window --until <iso>` and
+  `queue release --park peak-window --until <iso>` record the supplied
+  absolute expiry; `--until` is required for both window causes and refused for
   the other park causes through `fallback.invocation`. An absent `--until`, or
-  an `--until` paired with another cause, is refused and appends nothing.
+  an `--until` paired with a cause that carries no expiry, is refused and
+  appends nothing. An `owner-hold` park's expiry is a declared classified
+  absence: the hold is a read-time gate with no expiry, the record carries no
+  `until`, and the invoked `queue release --park owner-hold` command is the one
+  writer of an owner-hold park record — the hold itself writes none.
 - **One declared total order.** Hard exclusions (readiness, dependency/deploy,
   parks, per-pass single-flight, weight) remove candidates; ordering applies rank
   class,
@@ -192,13 +205,19 @@ than discovering work by hand.
   the canonical work-item ref, and no lane record kind or stored lane state
   exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
   `merge-ready`, `in-review`, `failed`; an idle lane always carries a declared
-  reason token, and a parked lane carries `parked:<cause>` over the closed cause
-  set. A ready unleased lane carries `new-start`, or `resume-parked` when its
+  reason token, and a parked lane carries `parked:<cause>` over the closed
+  five-cause set (`provider-window`, `provider-quota`,
+  `preempted-for-close-item`, `peak-window`, `owner-hold`). A ready unleased lane carries `new-start`, or `resume-parked` when its
   rank class is `resume-parked`; a not-ready lane carries its first declared
   blocking reason. A lane carries its lease identity and scope when held, its
   weight class, and the delivered economics fold's restart count and
   amplification, which are `null` with an `economics-underivable` warning
   rather than a fabricated zero.
+  The `lanes --json` machine read carries the additive `peakEnforcement` block —
+  `mode` (`window-watch` with a resident daemon,
+  `iteration-start-gating` without one) and `parkClaimed` (read from the
+  durable park records, false when none exists) — so the read declares which
+  peak enforcement is active and never claims a park that did not happen.
   `failed` is reserved for a delivery past its restart budget and carries
   `restart-budget-exhausted`. The fold is capped at 200 lanes and sets
   `truncated` on any drop; `lanes show <ref>` selects one lane or refuses
@@ -265,10 +284,19 @@ and resume paths run against the state captured at hold entry. `queue add`,
 `queue remove`, and `queue reconcile` remain available operator bookkeeping;
 none of them consults the hold.
 
-Explicit denials: the hold adds **no** park cause, park condition type, recovery
-state, state record kind, or seventh queue-ready condition. It adds exactly one
-lane/blocking reason, `owner-hold`, pinned by exact two-way ordered equality
-against the closed-set fixture. The production resident daemon entry is not a
+Explicit boundaries: the hold is a read-time gate and appends no record of its
+own — no recovery state, no park condition type, no state record kind, and no
+seventh queue-ready condition. The `owner-hold` **park cause** exists for the operator-invoked
+`queue release --park owner-hold`: its record carries no `until` (a declared
+classified absence, because the hold has no expiry), and the invoked command is
+its one writer — the hold never writes a park record, and neither the
+peak-window watcher nor the window-end resume path creates a synthetic
+owner-hold park; while the hold is active, resume admission refuses
+`queue.precondition.unmet` with reason `owner-hold` and appends nothing. The
+gate adds exactly one lane/blocking reason, `owner-hold`, pinned by exact
+two-way ordered equality against the closed-set fixture, and the lanes
+`parked:<cause>` projection renders `parked:owner-hold` for the command-written
+records. The production resident daemon entry is not a
 claim source; a composed supervision cycle whose next-action seam derives from
 the held pass receives no action, and the resident-daemon residual is unchanged.
 
@@ -483,9 +511,12 @@ caused by the serialized byte cap also sets `truncationReason:
   graph read verb.
 - Removing a producer does not cascade: a dependent stays held
   `dependency-unobserved` until its edge is edited with `queue dep remove`.
-- `queue release --park provider-window` requires an explicit `--until <iso>`
-  window expiry. A provider-engine-generated window is expected from the
-  provider engine's own park records.
+- `queue release --park provider-window` and `queue release --park peak-window`
+  require an explicit `--until <iso>` expiry; `--park owner-hold` refuses
+  `--until` because the hold has no expiry. A provider-engine-generated window is
+  expected from the
+  provider engine's own park records; an in-flight peak pause is expected from
+  the resident daemon's window watch ([Provider Peak Pausing](feature-peak-pausing.md)).
 - Deploy gating resolves from facts injected at the CLI edge: the caller
   supplies the plan, work-item, CI, provider, close, and deploy facts, and the
   shipped edge reads the producer repository's configuration and the delivered
@@ -532,7 +563,7 @@ CI-slot key exists or is reserved.
 | `queue.entry` | `delivery.queue.entry.v1` | `queue.entries:<REF>` | `queue add`, `queue prioritize`, a re-declaration after removal | Graph fold, presence rule, precedence, claim |
 | `queue.dependency` | `delivery.queue.dependency.v1` | `queue.deps:<REF>` | `queue add --dep`, `queue dep`, `queue dep remove` | Graph fold, readiness, deploy gating |
 | `queue.lease` | `delivery.queue.lease.v1` | `queue.leases:<repoKey>` | `queue claim`, `queue release`, stale takeover | Readiness `repo-free`, claim, lane fold |
-| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal), park recovery, removal's park withdrawal | Park pass, precedence, lane fold |
+| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal), the resident daemon's peak-window watch and resume records, park recovery, removal's park withdrawal | Park pass, precedence, lane fold, the peak-pause episode projection |
 | `queue.incident` | `delivery.queue.incident.v1` | `queue.incidents:<REF or repoKey>` | Stale takeover, park auto-recovery | Incidents are read as history evidence |
 | `queue.removal` | `delivery.queue.removal.v1` | `queue.removals:<REF>` | `queue remove`, closeout's `landed` removal, `queue reconcile` | Graph fold's append-position presence rule |
 | Derived: queue graph | `delivery.queue.graph.v1` | derived document `queue-graph.json` | Intent mutations under the fence | Diagnostics and tests only; never truth |
@@ -557,7 +588,12 @@ Payload fields are closed and validated at the ledger boundary:
   `released`; `released` is the withdrawn-park marker written when the
   release+park path appends the park and the lease-release append then fails, so
   the fold observes no active park while the lease remains held, and when a
-  removal withdraws an active park), `recordedAt`.
+  removal withdraws an active park), `recordedAt`, plus the additive peak-episode
+  fields ([Provider Peak Pausing](feature-peak-pausing.md)): optional
+  `providerProfile`, `until` (present on both window causes; a declared
+  classified absence on an `owner-hold` park), `graceDeadline`, `windowEnd`,
+  `stoppedAt`, `preservation` (`preserved | session-state-not-preserved`),
+  `episodeId`, and, recorded at recovery, `sessionRef` and `branch`.
 - `queue.incident` — `schema`, `type` (`park-auto-recovery`,
   `lease-stale-takeover`), optional `ref`, optional `repository`, non-empty
   bounded `evidence[]` of `{key, value}` pairs, `recordedAt`.
@@ -675,6 +711,9 @@ pointers remain a declared gap of the digest, not of this engine.
   rows, the envelope-root `detail` member, and the lanes collector row.
 - [Status Digest](feature-status-digest.md) — the `lanes-or-queue` section and
   why it remains a declared gap of the digest collector.
+- [Provider Peak Pausing](feature-peak-pausing.md) — the lane-level peak-window
+  enforcement that parks and resumes through this engine's park family, cause
+  vocabulary, and lanes surfaces.
 - [TDR-0026](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md) —
   the binding decision for the removal kind, the presence rule, the path-specific
   per-ref policy, and the renewal narrowing.
