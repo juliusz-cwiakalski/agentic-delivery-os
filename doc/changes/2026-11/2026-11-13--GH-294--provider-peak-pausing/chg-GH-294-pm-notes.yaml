@@ -368,3 +368,19 @@ notes:
       landing the page; coder executes it before the review phase."
     type: "retro"
     date: "2026-11-13"
+  - text: "Plan phase 11 (post-DoR amendment landing) complete: the canonical
+      peak-pausing spec page doc/spec/features/feature-peak-pausing.md — content
+      authored by @doc-syncer at lifecycle phase 7 (system_spec_update) — landed
+      byte-identical through the commit primitive, remediating the scope gap
+      (the DOC BOUNDARY had named the possible new page in prose only, never in
+      machine scope.files, so the phase-7 commit staged the reconciled pages but
+      excluded the untracked page, leaving the committed spec tree
+      cross-referencing a file absent from the repo). No content edits, no other
+      production files; no TC owned here — the page is proven by the doc guards
+      and its content was attested at lifecycle phases 7-8. Gate results at
+      boundary: delivery-os lint GH-294 pm-notes variant full class=conforms;
+      plan validate GH-294 verdict=valid tier=full readyForDevelopment=true; bun
+      test tests/checks/doc-conformance.test.ts 11 pass / 0 fail; bun test
+      tests/structure/content-inventory.test.ts 6 pass / 0 fail."
+    type: "info"
+    date: "2026-11-13"
