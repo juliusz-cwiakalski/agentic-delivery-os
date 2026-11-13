@@ -641,7 +641,15 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
               commit: () => remember(attemptFamily, record.key, record.sequence),
             });
           }
-          if (cause === "peak-window" && recoveredAt !== undefined) {
+          if (
+            cause === "peak-window" &&
+            recoveredAt !== undefined &&
+            // The OQ-TP-3 pin (GH-294): a not-preserved lane's ledger-position
+            // recovery is a restart admission under the delivered
+            // interrupted-lane machinery and emits no `resumed` frame — EVT-3
+            // fires only on the session resume path of a preserved lane.
+            payload.preservation === "preserved"
+          ) {
             entering.push({
               order: record.sequence,
               sub: 11,

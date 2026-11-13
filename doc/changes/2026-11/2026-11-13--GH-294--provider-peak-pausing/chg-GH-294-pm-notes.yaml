@@ -179,8 +179,7 @@ notes:
       subscribe, dependency-delta, frame-bound)."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 4 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): the daemon's profile-window watch and
+  - text: "Plan phase 4 complete (commit 8928a9f53): the daemon's profile-window watch and
       in-flight lane parking — new pure module domain/daemon-peak-pause.ts
       (decidePeakStops over the recorded nomination and that profile's window
       state only; runPeakWatch appending exactly one park record per episode
@@ -202,5 +201,31 @@ notes:
       supervision + daemon-preemption + provider-peak-window + queue-park +
       daemon-single-flight 41/41 PASS; content-inventory 6/6 PASS; ambient-
       globals OK (186 files); exports-parity OK."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 5 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): window-end resume (both
+      classification routes) with cross-profile isolation — decidePeakResumes
+      (read-time expiry at the effective end; preserved → session-resume,
+      not-preserved → interrupted-recovery; hold-active → refusal per episode),
+      recoverInterruptedLane (delivered planDispatchResume + admitDispatchRestart
+      + resume-economics gates; exactly one restart ordinal; exhaustion
+      escalates verbatim terminal, uneconomical leaves parked for re-eval),
+      runPeakResume (session path attach-and-continue same branch no ordinal;
+      recovery record appended once per episode; owner hold refuses
+      queue.precondition.unmet/owner-hold appending nothing, park record
+      byte-unchanged; resumes once the hold clears; watcher still parks under
+      hold), supervision peakPause ports gained the resume half. OQ-TP-3 pin
+      enforced in the projection: resumed fires only for preserved episodes.
+      Isolation: decidePeakStops set-equality matrix (unused-profile window,
+      independent windows, model-string bait, pre-change lane never borrows).
+      Scope disclosure: domain/event-projection.ts gained the
+      preservation-guard on the resumed emission (mechanical enforcement of the
+      binding OQ-TP-3 pin on this change's own Phase 3 code). Test result at
+      boundary: pnpm typecheck green; daemon-peak-window-isolation +
+      daemon-peak-window-resume 14/14 PASS; delivered controls dispatch-resume +
+      dispatch-restart-budget + queue-hold-park-resume + queue-hold-dispatch +
+      daemon-peak-window-park 23/23 PASS; content-inventory 6/6 PASS; taxonomy
+      suites still green after the projection guard."
     type: "info"
     date: "2026-11-13"

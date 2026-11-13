@@ -19,7 +19,7 @@ import type {
   StateStorePort,
 } from "#contracts";
 import { classifyLaneProgress, nextSpawnOrdinal, shapeDaemonLane } from "../domain/daemon-lane.js";
-import { type PeakRulesLookup, runPeakWatch } from "../domain/daemon-peak-pause.js";
+import { type PeakRulesLookup, runPeakResume, runPeakWatch } from "../domain/daemon-peak-pause.js";
 import { appendDaemonLane, readDaemonLanes } from "./daemon.js";
 import type { DispatchNomination, DispatchNominationRefusal } from "./dispatch.js";
 
@@ -59,6 +59,32 @@ export type SupervisionPorts = {
     readonly appendPark: (record: QueueParkRecord) => boolean;
     readonly newEpisodeId: () => string;
     readonly repository?: string;
+    /**
+     * The window-end resume half (GH-294 F-5): the latest peak-window park
+     * records (read-time expiry already applied by the caller), the owner-hold
+     * gate, and the delivered resume seams. Absent keeps the park-only watch.
+     */
+    readonly expiredPeakParks?: () => readonly QueueParkRecord[];
+    readonly holdActive?: () => boolean;
+    readonly sessionRefOf?: (ref: string) => string | undefined;
+    readonly branchOf?: () => string;
+    readonly restartCountOf?: (ref: string) => number;
+    readonly restartBound?: () => number;
+    readonly economicsOf?: (ref: string) => {
+      readonly prefillCost: number | null;
+      readonly uniqueProgress: number | null;
+    };
+    readonly appendRecovery?: (record: QueueParkRecord) => boolean;
+    readonly resumeSession?: (input: {
+      readonly ref: string;
+      readonly sessionRef: string;
+      readonly branch: string;
+    }) => Promise<boolean>;
+    readonly reenterLane?: (input: {
+      readonly ref: string;
+      readonly ordinal: number;
+    }) => Promise<boolean>;
+    readonly escalateExhaustion?: (input: { readonly ref: string; readonly code: string }) => void;
   };
   readonly claim: (
     action: SupervisionAction,
@@ -178,6 +204,40 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
           ? {}
           : { repository: input.ports.peakPause.repository }),
       });
+      // Window-end resume (GH-294 F-5): every expired peak-window episode
+      // resumes through its delivered route in the same observation, guarded
+      // by the owner-hold gate (DEC-8/DEC-12). Absent half-ports keep the
+      // park-only watch.
+      const peak = input.ports.peakPause;
+      if (
+        peak.expiredPeakParks !== undefined &&
+        peak.holdActive !== undefined &&
+        peak.appendRecovery !== undefined &&
+        peak.resumeSession !== undefined &&
+        peak.reenterLane !== undefined &&
+        peak.escalateExhaustion !== undefined &&
+        peak.sessionRefOf !== undefined &&
+        peak.branchOf !== undefined &&
+        peak.restartCountOf !== undefined &&
+        peak.restartBound !== undefined &&
+        peak.economicsOf !== undefined
+      ) {
+        await runPeakResume({
+          parks: peak.expiredPeakParks(),
+          nowMs: peak.nowMs(),
+          nowIso: peak.nowIso,
+          holdActive: peak.holdActive(),
+          sessionRefOf: peak.sessionRefOf,
+          branchOf: peak.branchOf,
+          restartCountOf: peak.restartCountOf,
+          restartBound: peak.restartBound,
+          economicsOf: peak.economicsOf,
+          appendRecovery: peak.appendRecovery,
+          resumeSession: peak.resumeSession,
+          reenterLane: peak.reenterLane,
+          escalateExhaustion: peak.escalateExhaustion,
+        });
+      }
     }
   }
   const action = input.ports.nextAction();

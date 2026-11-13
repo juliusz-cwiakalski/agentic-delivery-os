@@ -176,13 +176,24 @@ export {
   takeoverEvidence,
 } from "./daemon-lock.js";
 export {
+  decidePeakResumes,
   decidePeakStops,
+  type InterruptedRecoveryAdmission,
   type PeakEpisodeIdFactory,
+  type PeakExhaustionPort,
+  type PeakRecoveryAppendPort,
+  type PeakReentryPort,
+  type PeakResumeDecision,
+  type PeakResumeRefusal,
+  type PeakResumeRoute,
   type PeakRulesLookup,
+  type PeakSessionResumePort,
   type PeakStopDecision,
   type PeakStopPort,
   type PeakWatchLane,
   peakWindowOpenAt,
+  recoverInterruptedLane,
+  runPeakResume,
   runPeakWatch,
 } from "./daemon-peak-pause.js";
 export {
