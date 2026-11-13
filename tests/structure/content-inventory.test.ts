@@ -2041,6 +2041,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createProfileProbePort",
     "createProviderEngine",
     "createProviderFactsProbe",
+    "nominateProviderProfile",
   ],
   "core/src/provider/conditions.ts": ["combineProviderConditions"],
   "core/src/provider/parks.ts": [

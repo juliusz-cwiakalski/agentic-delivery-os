@@ -118,8 +118,7 @@ notes:
       iteration 3 of 3."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 1 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): decision records TDR-0028/0029/0030
+  - text: "Plan phase 1 complete (commit de9863253): decision records TDR-0028/0029/0030
       landed with the peak-window rule schema as versioned per-profile data
       (provider.profiles.<profile>.peakWindows: window list, multiplier,
       bufferBefore/After, required graceSeconds default, derived
@@ -133,5 +132,27 @@ notes:
       content-inventory 16/16 PASS; ambient-globals OK (185 files clean);
       exports-parity OK (5 publishables); delivered provider-peak-window
       control 5/5 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 2 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): provider profile nomination at
+      dispatch admission — providerProfile recorded at admission on the
+      dispatch attempt record family (delivery.dispatch.attempt.v1, additive
+      field, rendered as null classified absence on pre-change records by the
+      attempt-history read) and on the daemon lane record family via
+      shapeDaemonLane; nomination gate runs FIRST in runDispatch (before
+      credential preflight, owner-hold, lease/single-flight) and before the
+      claim in runSupervisionCycle (mode nomination-refused); shared predicate
+      nominateProviderProfile over the delivered selectProfile seam reuses the
+      resolve identities (absent/invalid/capability-denied exit 1, unavailable
+      exit 2 with the eligibility list in the refusal detail); no new
+      dispatch.* identity; resumes never re-nominate; no read defaults, guesses,
+      or borrows. Test result at boundary: pnpm typecheck green;
+      provider-nomination-admission 11/11 PASS; delivered controls
+      dispatch-attempts-refusals + dispatch-single-flight +
+      provider-profile-selection + provider-peak-window +
+      dispatch-attempts-taxonomy + content-inventory 42/42 PASS;
+      daemon-lane-supervision + dispatch-resume + dispatch-admission-preflight
+      20/20 PASS."
     type: "info"
     date: "2026-11-13"

@@ -10,13 +10,13 @@
  */
 import {
   ATTEMPTS_DEFAULT_LIMIT,
+  type AttemptsRefSource,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_MACHINE_BYTES,
-  type AttemptsRefSource,
   type DispatchAttemptRecord,
-  type DispatchAttemptView,
   type DispatchAttemptsData,
   type DispatchAttemptsTruncation,
+  type DispatchAttemptView,
 } from "#contracts";
 
 /** One page-selection input: the retained ledger window plus the query. */
@@ -70,6 +70,10 @@ export const projectAttempt = (record: DispatchAttemptRecord): DispatchAttemptVi
     falseSuccess: record.falseSuccess,
     comparison: { class: cmpClass, token: cmpToken ?? null, outcome: cmpOutcome },
     resumeMode: record.resumeMode ?? null,
+    // Classified absence: a pre-change record legitimately lacks the
+    // nomination; the read renders null and never defaults or borrows (GH-294
+    // DM-1, TDR-0028 C-4).
+    providerProfile: record.providerProfile ?? null,
     evidenceRefs: record.evidenceRefs.slice(0, DISPATCH_MAX_EVIDENCE_REFS),
     recordedAt: record.recordedAt,
   };

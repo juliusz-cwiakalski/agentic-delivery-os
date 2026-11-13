@@ -19,6 +19,7 @@ import type {
 } from "#contracts";
 import { classifyLaneProgress, nextSpawnOrdinal, shapeDaemonLane } from "../domain/daemon-lane.js";
 import { appendDaemonLane, readDaemonLanes } from "./daemon.js";
+import type { DispatchNomination, DispatchNominationRefusal } from "./dispatch.js";
 
 export type SupervisionAction = {
   readonly ref: string;
@@ -30,6 +31,12 @@ export type SupervisionAction = {
 export type SupervisionPorts = {
   readonly executor: LaneExecutorPort;
   readonly nextAction: () => SupervisionAction | undefined;
+  /**
+   * The nomination gate (GH-294 F-1, TDR-0028 D3): the claim path's first
+   * admission predicate, running before the lease claim and identical to the
+   * one-shot path's refusal identities. Absent keeps the delivered behavior.
+   */
+  readonly nominate?: (action: SupervisionAction) => DispatchNomination;
   readonly claim: (
     action: SupervisionAction,
   ) =>
@@ -89,7 +96,13 @@ export type SupervisionResult =
       /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
       readonly holder?: string;
     }
-  | { readonly mode: "executor-refused"; readonly action: SupervisionAction };
+  | { readonly mode: "executor-refused"; readonly action: SupervisionAction }
+  | {
+      readonly mode: "nomination-refused";
+      /** The resolve identity carried for the no-nomination shape (TDR-0028 D2). */
+      readonly code: DispatchNominationRefusal["code"];
+      readonly summary?: string;
+    };
 
 export type SupervisionInput = {
   readonly store: StateStorePort;
@@ -113,6 +126,21 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
   }
   const action = input.ports.nextAction();
   if (action === undefined) return { mode: "idle" };
+  // Nomination gate (GH-294, TDR-0028 D3): before the lease claim, with the
+  // same resolve identities and recordless discipline as the one-shot path —
+  // no lease, lane, or attempt record, no event, no executor start.
+  let nominatedProfile: string | undefined;
+  if (input.ports.nominate !== undefined) {
+    const nominated = input.ports.nominate(action);
+    if (!nominated.ok) {
+      return {
+        mode: "nomination-refused",
+        code: nominated.refusal.code,
+        ...(nominated.refusal.summary === undefined ? {} : { summary: nominated.refusal.summary }),
+      };
+    }
+    nominatedProfile = nominated.profile;
+  }
   const claimed = input.ports.claim(action);
   if (!claimed.ok) {
     return {
@@ -142,6 +170,11 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
     ...(previous?.ledgerPosition === undefined ? {} : { ledgerPosition: previous.ledgerPosition }),
     spawnOrdinal: nextSpawnOrdinal(previous),
     ...(previous?.resumeIntent === undefined ? {} : { resumeIntent: previous.resumeIntent }),
+    ...(previous?.providerProfile !== undefined
+      ? { providerProfile: previous.providerProfile }
+      : nominatedProfile === undefined
+        ? {}
+        : { providerProfile: nominatedProfile }),
     recordedAt: nowIso,
   });
   const recorded = appendDaemonLane(input.store, input.fenceToken, delivering);

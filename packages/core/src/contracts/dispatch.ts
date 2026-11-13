@@ -206,6 +206,8 @@ export type DispatchAttemptRecord = {
   readonly corroboration: DispatchCorroborationRecord;
   readonly resumeMode?: DispatchResumeMode;
   readonly prefillCostAcknowledged?: boolean;
+  /** The nominated provider profile recorded at admission (GH-294 DM-1); classified absence on pre-change records. */
+  readonly providerProfile?: string;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];
   readonly recordedAt: string;
 };
@@ -423,6 +425,8 @@ export type DispatchAttemptView = {
     readonly outcome: DispatchComparisonOutcome;
   };
   readonly resumeMode: DispatchResumeMode | null;
+  /** The nominated provider profile, or null classified absence for pre-change records (GH-294 DM-1). */
+  readonly providerProfile: string | null;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];
   readonly recordedAt: string;
 };
