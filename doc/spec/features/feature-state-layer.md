@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATE-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
 summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the six additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, the six additive coordinator iteration, restart, stuck, exhaustion, wake, and fence record kinds with coordinator-scoped key prefixes and ledger-sequence folds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288", "GH-289"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-241", "GH-288", "GH-289", "GH-292"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -285,7 +285,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Spend read side](feature-spend.md) — the verified read-only consumer over the `harness.telemetry` families and transition history.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Session lifecycle economics](feature-session-lifecycle-economics.md) — the `economics.restart` and `economics.budget-exhaustion` record kinds and the per-delivery economics fold.
-- [Scheduling engine](feature-scheduling-engine.md) — the five `queue.*` record kinds, the derived queue graph, and the claim/release ledgers over this port.
+- [Scheduling engine](feature-scheduling-engine.md) — the six `queue.*` record kinds, the derived queue graph, and the claim/release/removal ledgers over this port.
 - [Resident dispatch daemon](feature-resident-daemon.md) — the seven additive daemon and external-effect record kinds, the daemon lock artifact, and the DM-18 redrive detection.
 - [Coordinator supervision](feature-coordinator-supervision.md) — the six coordinator record kinds, the append-only instance lease, and the per-epoch restart fold.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.

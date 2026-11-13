@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-EVENT-TAXONOMY
 status: Current
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The published event taxonomy v1 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, and the mount as one prompt-required unit."
+summary: "The published event taxonomy v1 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
 links:
-  related_changes: ["GH-290"]
+  related_changes: ["GH-290", "GH-292"]
   related_decisions: ["TDR-0025", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/taxonomy.ts"
@@ -109,13 +109,16 @@ identity of a change class is the pair `(topic, kind)`.
 
 Each kind's payload carries exactly its declared fields. A field suffixed `?` is
 optional; a field suffixed `[]` is a list. `repositoryRoot` is never projected.
+Every emitted kind, `remove` included, is covered by the emitted-payload-key
+comparison, so an event that omits a declared key or carries an undeclared one
+fails a named test.
 
 | Topic | Kind | Emitted | Payload fields | Durable source |
 |---|---|---|---|---|
 | `queue.graph` | `entry` | yes | `ref`, `repository?`, `priority`, `recordedAt` | `queue.entry` |
 | `queue.graph` | `dependency-edge` | yes | `ref`, `edges[]`, `added[]`, `removed[]`, `recordedAt` | `queue.dependency`, folded against the previous record for the same ref |
 | `queue.graph` | `release` | yes | `leaseId`, `repository`, `ref`, `holder`, `runner`, `weightClass`, `operation`, `recordedAt` | `queue.lease` with `operation: released` |
-| `queue.graph` | `remove` | no | `ref`, `reason`, `recordedAt` | none in v1 |
+| `queue.graph` | `remove` | yes | `ref`, `reason`, `recordedAt` | `queue.removal` |
 | `dispatch.attempt` | `started` | yes | `ref`, `spawnOrdinal`, `sessionId?`, `harnessKind?`, `recordedAt` | `daemon.lane` in state `delivering` |
 | `dispatch.attempt` | `refused` | yes | `attemptId`, `ref`, `repository`, `harness`, `evidenceClass`, `token`, `startedAt`, `finishedAt`, `evidenceRefs[]` | `dispatch.attempt` with `outcome: refused` |
 | `dispatch.attempt` | `completed` | yes | `attemptId`, `ref`, `token`, `outcome`, `handoverState`, `comparisonClass`, `falseSuccess`, `divergenceRef?`, `finishedAt` | `dispatch.attempt` with any other outcome |
@@ -134,20 +137,30 @@ Three emission facts are declared rather than inferred:
 - **`began` is derived.** No begin record is written. `began` is emitted in the
   same observation as a phase's first `completed`, with the lower `sequence` on
   the same lane.
-- **`remove` is declared and not emitted.** No delivered path removes a queue
-  entry, so the kind carries `emitted: false` on the reference surface and no v1
-  path produces it. A client can write the case once.
+- **Every declared kind has a producer.** The four `queue.graph` kinds are all
+  emitted; `remove` derives from the `queue.removal` ledger, one event per applied
+  removal, with exactly its declared payload fields `ref`, `reason`, and
+  `recordedAt`. The `reason` is a member of the closed four-value vocabulary
+  `landed | abandoned | superseded | reconciled`, and the lane is the entry ref.
+  There is no declared-only kind and no non-emitted set.
 
 A `dependency-edge` event is emitted only when the folded edge set differs from
 the previous record for the same ref; a rewritten identical record publishes
-nothing. A `queue release --park` writes a separate `queue.park` record that no
-v1 kind consumes: the `release` payload carries no park cause.
+nothing, and a `dep remove` of an absent edge publishes nothing. A `queue release
+--park` writes a separate `queue.park` record that no v1 kind consumes: the
+`release` payload carries no park cause, and the park withdrawal a removal appends
+for the same reason publishes nothing.
 
 ## Emission model
 
 The publish tick takes one `readRecords()` view and folds it once for the
 snapshot projection and once for the event projection. The event projection
-performs no store read of its own.
+performs no store read of its own. Its source families are `queue.entry`
+(`entry`), `queue.dependency` (`dependency-edge`), `queue.lease` with
+`operation: released` (`release`), `queue.removal` (`remove`), the `daemon.lane`
+and `dispatch.attempt` ledgers (`dispatch.attempt`), `phase.transition`
+(`phase.state`), and the blocker question and answer ledgers
+(`blockers.state`).
 
 - **Watermark.** Per observed `(topic, lane, source family)` the projection keeps
   the identity of the last emitted source record, so an unemitted delta stays
@@ -261,8 +274,10 @@ coverage inventory carries the command row and the page row.
 
 ## Boundaries
 
-- The taxonomy observes; it never writes. No queue or lane mutation, state
-  record kind, payload schema version, migration, backfill, or seed is added.
+- The taxonomy observes; it never writes. The declaration adds no state record
+  kind of its own: the `remove` producer reads the scheduling engine's
+  `queue.removal` ledger, and no taxonomy path appends a queue or lane mutation,
+  changes a payload schema version, or introduces a migration, backfill, or seed.
 - No new control wire type, frame field outside `data`, codec rule, protocol
   version, subscription-buffer semantics, or at-most-once behaviour is added.
 - Provider-aware peak-pausing shapes (stop, parked, resumed, and park-edge) are
@@ -279,8 +294,8 @@ coverage inventory carries the command row and the page row.
 - [Result Contract and Error Table](feature-result-contract.md) — the
   `delivery.result.v1` envelope, the `events` error kind, and the `{0, 1, 2}`
   exit projection.
-- [Scheduling Engine](feature-scheduling-engine.md) — the queue, lease, and
-  dependency ledgers the `queue.graph` topics project.
+- [Scheduling Engine](feature-scheduling-engine.md) — the queue, lease,
+  dependency, and removal ledgers the `queue.graph` kinds project.
 - [Dispatch Engine](feature-dispatch-engine.md) — the attempt ledger and lane
   records the `dispatch.attempt` topic projects.
 - [Typed Blocker and Question Channel](feature-blockers.md) — the question and

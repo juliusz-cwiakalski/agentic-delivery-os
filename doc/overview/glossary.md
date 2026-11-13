@@ -3,7 +3,7 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
@@ -388,6 +388,8 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Presence rule | An entry is present iff its latest `queue.entry` append is later than its latest `queue.removal` append in ledger position (the delivered monotonic record `sequence`), never by `recordedAt` text; a tie is impossible, and a later re-declaration restores the entry. The fold's only presence predicate: every read — `queue list`, `queue plan`, `queue ready`, lanes, the derived document, the snapshot topic — follows it. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Per-ref single-flight | The path-specific admission policy (GH-292) that stops a second session for a ref that already has an active lane, naming the holder: the dispatch family refuses any live same-ref lease regardless of holder with `queue.single-flight`, while `queue claim` renews the caller's own holder's same-ref lease and refuses another holder's; a live lease on any other ref refuses the delivered `queue.lease-conflict`. A refusal appends nothing and publishes no event. Distinct from the scheduler's per-pass single-flight and from the repository-exclusive lease. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Reconcile | The operator invocation `queue reconcile [--ref]` that compares queue entries with tracker delivery state and removes the stale ones (`done`/`canceled`) with reason `reconciled`; bounded at 100 examined entries with one bounded read each, per-repository, and fail-closed on unreadable truth. A not-found item is retained and reported `unobserved`. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Landed removal | The automatic queue removal `closeout --apply` appends with reason `landed` after its writes, inside the fence it already holds, when the merged delivery request is observed; it is idempotent (`satisfied` on a re-run or a ref that never entered) and fail-open (`skipped` with a closed reason), and it never changes a step outcome or the exit code. | Closeout | [Closeout Transaction](../spec/features/feature-closeout.md) |
+| Queue removal block | The additive non-step `queueRemoval` closeout `data` block: `outcome` (`removed`, `would-remove`, `satisfied`, `skipped`), the ref, the reason where recorded, and the skip reason where skipped. | Closeout | [Closeout Transaction](../spec/features/feature-closeout.md) |
 | Holder lane | The live lease's holder identity, named in the envelope-root `detail.holder` on a `queue.single-flight` refusal. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Weight class | `standard` or `heavy`; a per-runner resource class, never a lane cap. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Rank class | `merge-ready`, `in-review`, `resume-parked`, `new-start`, in that order. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |

@@ -57,8 +57,9 @@ Overflow: a subscription's bounded buffer overflowing yields exactly one
 `degraded` event carrying `degraded: "subscriber-overflow"`, `overflow: "repoll"`,
 and `taxonomyVersion: "v1"`; only that subscription is dropped and every other
 subscription keeps receiving. The declared remedy and the wire remedy are the same
-value. `queue.graph` kind `remove` is declared and not emitted in v1: no delivered
-path removes a queue entry, so its record carries `emitted: false`.
+value. Every declared `queue.graph` kind is emitted in v1: `remove` projects
+the delivered `queue.removal` ledger with the payload `ref`, `reason`,
+`recordedAt`.
 
 `status` is a wire type, not a topic. A subscription or a `describe` for a topic
 outside the six is refused with `events.topic-unknown`.
