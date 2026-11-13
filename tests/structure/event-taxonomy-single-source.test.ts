@@ -72,6 +72,18 @@ const NON_TAXONOMY_GROUPS: Readonly<Record<string, KindGroupAllowance>> = {
     reason: "merge-transaction result discriminant",
     kindValues: ["refused"],
   },
+  // The queue command runtime's verb-to-handler map: `release` and `remove`
+  // are verb names, not a kind group.
+  "packages/cli/src/edge.ts": {
+    reason: "queue command runtime verb map",
+    objects: [["release", "remove"]],
+  },
+  // The command's declared queue.graph event producers (TDR-0026 C-7): the
+  // removal event and the dependency-edge removal event.
+  "packages/cli/src/commands/queue.ts": {
+    reason: "queue.graph event producers",
+    kindValues: ["dependency-edge", "remove"],
+  },
 };
 
 const declaredKindNames = (): ReadonlySet<string> =>
@@ -243,8 +255,9 @@ describe("TC-EVT-006 one declaration, two consumers", () => {
   test("the projection's kind literals are exactly the declared emitted kind set", () => {
     const declared = declaredKindNames();
     const emitted = declaredEmittedNames();
-    // `completed` is declared on two topics, so the distinct emitted NAME set is 11.
-    expect(emitted.size).toBe(11);
+    // `completed` is declared on two topics, so the distinct emitted NAME set
+    // is 12: the eleven delivered names plus queue.graph's `remove`.
+    expect(emitted.size).toBe(12);
     const projection = evidenceOf(PROJECTION_MODULE, declared);
     // Bidirectional: a kind the projection emits but the declaration does not
     // own fails, and a declared emitted kind the projection has no literal for

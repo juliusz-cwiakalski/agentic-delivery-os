@@ -5,10 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readQueueParks } from "../../packages/core/src/app/queue";
-import {
-  QUEUE_PARK_CAUSES,
-  QUEUE_PARK_RECORD_KIND,
-} from "../../packages/core/src/contracts/index";
+import { QUEUE_PARK_CAUSES, QUEUE_PARK_RECORD_KIND } from "../../packages/core/src/contracts/index";
 import { REMOVAL_REF } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
 

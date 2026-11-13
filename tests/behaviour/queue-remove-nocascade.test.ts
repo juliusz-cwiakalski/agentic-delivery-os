@@ -61,14 +61,7 @@ describe("TC-QLC-008 removal does not cascade", () => {
     expect(removals[0]?.ref).toBe(REMOVAL_REF);
 
     // The supported remedy: dep remove clears the edge and recomputes readiness.
-    const remedy = await harness.run([
-      "queue",
-      "dep",
-      "remove",
-      CONSUMER,
-      REMOVAL_REF,
-      "--json",
-    ]);
+    const remedy = await harness.run(["queue", "dep", "remove", CONSUMER, REMOVAL_REF, "--json"]);
     expect(remedy.exitCode).toBe(0);
     const remedyData = json(remedy.stdout).data as Record<string, unknown>;
     expect(remedyData.result).toBe("removed");

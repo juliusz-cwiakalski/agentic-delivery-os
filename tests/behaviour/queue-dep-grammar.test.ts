@@ -44,7 +44,10 @@ describe("TC-QLC-030 dep add equals the two-positional add", () => {
 describe("TC-QLC-034 dependency grammar refusals", () => {
   test("non-canonical refs refuse in both spellings with zero appends", async () => {
     for (const bad of NON_CANONICAL_REFS) {
-      for (const form of [["dep", bad, PRODUCER_REF], ["dep", "add", bad, PRODUCER_REF]]) {
+      for (const form of [
+        ["dep", bad, PRODUCER_REF],
+        ["dep", "add", bad, PRODUCER_REF],
+      ]) {
         const harness = createRemovalHarness(`dep-bad-${bad}-${form.length}`);
         harness.seedEntry({ ref: CONSUMER_REF });
         harness.seedEntry({ ref: PRODUCER_REF });

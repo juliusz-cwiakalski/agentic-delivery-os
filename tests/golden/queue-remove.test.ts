@@ -68,8 +68,22 @@ describe("queue remove golden", () => {
   test("every exit is a projected class digit", async () => {
     const harness = createRemovalHarness("golden-remove-exits");
     harness.seedEntry({ ref: "GH-241" });
-    const applied = await harness.run(["queue", "remove", "GH-241", "--reason", "landed", "--json"]);
-    const refused = await harness.run(["queue", "remove", "GH-241", "--reason", "landed", "--json"]);
+    const applied = await harness.run([
+      "queue",
+      "remove",
+      "GH-241",
+      "--reason",
+      "landed",
+      "--json",
+    ]);
+    const refused = await harness.run([
+      "queue",
+      "remove",
+      "GH-241",
+      "--reason",
+      "landed",
+      "--json",
+    ]);
     for (const run of [applied, refused]) {
       const envelope = json(run.stdout) as { exitCode: number };
       expect([0, 1, 2]).toContain(envelope.exitCode);

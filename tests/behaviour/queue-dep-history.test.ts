@@ -37,7 +37,14 @@ describe("TC-QLC-036 each edit is one append with durable history", () => {
     expect(records).toHaveLength(2);
 
     // Remove B: exactly one more dependency record; the first is byte-identical.
-    const removeB = await harness.run(["queue", "dep", "remove", CONSUMER_REF, PRODUCER_REF, "--json"]);
+    const removeB = await harness.run([
+      "queue",
+      "dep",
+      "remove",
+      CONSUMER_REF,
+      PRODUCER_REF,
+      "--json",
+    ]);
     expect(removeB.exitCode).toBe(0);
     const afterRemove = store.readRecords();
     if (!afterRemove.ok) throw new Error("read failed");
@@ -69,7 +76,14 @@ describe("TC-QLC-036 each edit is one append with durable history", () => {
     const store = harness.composition.store;
     const digestBefore = ledgerDigest(store.identity);
     const bytesBefore = ledgerText(store.identity);
-    const refused = await harness.run(["queue", "dep", "add", CONSUMER_REF, PRODUCER_REF, "--json"]);
+    const refused = await harness.run([
+      "queue",
+      "dep",
+      "add",
+      CONSUMER_REF,
+      PRODUCER_REF,
+      "--json",
+    ]);
     expect(refused.exitCode).toBe(1);
     expect(ledgerDigest(store.identity)).toBe(digestBefore);
     expect(ledgerText(store.identity)).toBe(bytesBefore);

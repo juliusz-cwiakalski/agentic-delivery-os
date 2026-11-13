@@ -152,7 +152,10 @@ export type ProductionQueueHarnessOptions = {
    * Programmable `/issues/<id>` answer for the reconcile read bridge (GH-292
    * TC-QLC-083). Absent keeps the delivered default: one 200 open issue.
    */
-  readonly issueAnswer?: (issueNumber: string) => { readonly status: number; readonly body: Record<string, unknown> };
+  readonly issueAnswer?: (issueNumber: string) => {
+    readonly status: number;
+    readonly body: Record<string, unknown>;
+  };
 };
 
 const resolvingCredentials: CredentialPort = {
@@ -228,9 +231,7 @@ export const createProductionQueueHarness = (
             };
           }
           const asked = /\/issues\/([^/?]+)(\/|$)/.exec(request.url)?.[1];
-          const answer = options.issueAnswer(
-            asked === undefined ? "" : decodeURIComponent(asked),
-          );
+          const answer = options.issueAnswer(asked === undefined ? "" : decodeURIComponent(asked));
           return { status: answer.status, body: answer.body };
         }
         throw new Error("the queue path must not call the provider transport");

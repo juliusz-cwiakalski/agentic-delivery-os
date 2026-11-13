@@ -28,14 +28,7 @@ describe("TC-QLC-031 dep remove drops the edge", () => {
   test("the edge is gone, readiness is recomputed, and the payload is additive", async () => {
     const harness = createRemovalHarness("dep-remove-happy");
     seedPair(harness);
-    const run = await harness.run([
-      "queue",
-      "dep",
-      "remove",
-      CONSUMER_REF,
-      PRODUCER_REF,
-      "--json",
-    ]);
+    const run = await harness.run(["queue", "dep", "remove", CONSUMER_REF, PRODUCER_REF, "--json"]);
     expect(run.exitCode).toBe(0);
     const data = json(run.stdout).data as Record<string, unknown>;
     expect(Object.keys(data)).toEqual(REMOVE_PAYLOAD_KEYS);
@@ -61,14 +54,7 @@ describe("TC-QLC-032 an absent edge is a noop", () => {
     harness.seedEntry({ ref: CONSUMER_REF });
     harness.factSource.workItems[CONSUMER_REF] = observed();
     const digestBefore = ledgerDigestOf(harness);
-    const run = await harness.run([
-      "queue",
-      "dep",
-      "remove",
-      CONSUMER_REF,
-      PRODUCER_REF,
-      "--json",
-    ]);
+    const run = await harness.run(["queue", "dep", "remove", CONSUMER_REF, PRODUCER_REF, "--json"]);
     expect(run.exitCode).toBe(0);
     const data = json(run.stdout).data as Record<string, unknown>;
     expect(data.result).toBe("noop");

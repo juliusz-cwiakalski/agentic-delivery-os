@@ -41,9 +41,7 @@ describe("TC-QLC-050 a done entry is removed with reconciled", () => {
     expect(document).toBeDefined();
 
     // The file set changed only by the append-only ledger and the document.
-    expect(listStoreFiles(harness.composition.store.identity.stateDirectory)).toEqual(
-      filesBefore,
-    );
+    expect(listStoreFiles(harness.composition.store.identity.stateDirectory)).toEqual(filesBefore);
 
     // The read surfaces no longer show the entry.
     const list = await harness.run(["queue", "list", "--json"]);

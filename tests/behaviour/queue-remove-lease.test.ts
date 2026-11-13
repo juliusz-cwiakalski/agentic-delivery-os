@@ -68,8 +68,8 @@ describe("TC-QLC-005 a live lease blocks removal until release", () => {
     const final = harness.composition.store.readRecords();
     if (!final.ok) throw new Error("read failed");
     const leaseKeys = final.value.records.filter((record) => record.kind === "queue.lease");
-    expect(leaseKeys.at(-1)).toEqual(afterRelease.value.records.filter(
-      (record) => record.kind === "queue.lease",
-    ).at(-1));
+    expect(leaseKeys.at(-1)).toEqual(
+      afterRelease.value.records.filter((record) => record.kind === "queue.lease").at(-1),
+    );
   });
 });

@@ -4,10 +4,7 @@
  * with its observed alias.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  OPEN_DELIVERY_STATES,
-  RECONCILE_REFS,
-} from "../fixtures/queue/reconcile/cases";
+import { OPEN_DELIVERY_STATES, RECONCILE_REFS } from "../fixtures/queue/reconcile/cases";
 import { createReconcileHarness } from "../fixtures/queue/reconcile/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
@@ -34,9 +31,7 @@ describe("TC-QLC-052 open delivery states are retained", () => {
     expect(data.removed).toEqual([]);
     // Deterministic order: the canonical ref sort; aliases observed as-is.
     expect(data.retained.map((entry) => entry.ref)).toEqual(refs);
-    expect(data.retained.map((entry) => entry.deliveryState)).toEqual([
-      ...OPEN_DELIVERY_STATES,
-    ]);
+    expect(data.retained.map((entry) => entry.deliveryState)).toEqual([...OPEN_DELIVERY_STATES]);
     expect(harness.removalRecords()).toHaveLength(0);
 
     // All four entries are still present in the fold and in `queue list`.

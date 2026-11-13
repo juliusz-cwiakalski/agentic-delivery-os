@@ -167,6 +167,7 @@ const makeFixture = (options: {
     git: { cwd: repo.directory, timeoutMs: 30_000 },
     store,
     nowIso: () => "2026-11-07T00:00:00Z",
+    nowMs: () => Date.parse("2026-11-07T00:00:00Z"),
     newFenceToken: (() => {
       let counter = 0;
       return () => {

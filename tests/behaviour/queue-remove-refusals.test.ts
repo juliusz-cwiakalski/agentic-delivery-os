@@ -73,7 +73,14 @@ describe("TC-QLC-003 the reason vocabulary is closed", () => {
 describe("TC-QLC-004 unknown and already-removed refs are unobserved refusals", () => {
   test("an absent ref and a re-removal both refuse with queue.entry.unobserved", async () => {
     const harness = createRemovalHarness("remove-unobserved");
-    const first = await harness.run(["queue", "remove", UNKNOWN_REF, "--reason", "landed", "--json"]);
+    const first = await harness.run([
+      "queue",
+      "remove",
+      UNKNOWN_REF,
+      "--reason",
+      "landed",
+      "--json",
+    ]);
     expect(first.exitCode).toBe(1);
     expect(errorOf(first.stdout).code).toBe("queue.entry.unobserved");
     expect(harness.removalRecords()).toHaveLength(0);
@@ -88,11 +95,10 @@ describe("TC-QLC-004 unknown and already-removed refs are unobserved refusals", 
       "--json",
     ]);
     expect(applied.exitCode).toBe(0);
-    const keysAfter = harness.composition.store
-      .readRecords()
-      .ok === true
-      ? harness.composition.store.readRecords().value?.records.length
-      : undefined;
+    const keysAfter =
+      harness.composition.store.readRecords().ok === true
+        ? harness.composition.store.readRecords().value?.records.length
+        : undefined;
     const second = await harness.run([
       "queue",
       "remove",

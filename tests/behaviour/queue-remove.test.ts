@@ -6,11 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readQueueFold } from "../../packages/core/src/app/queue";
 import { QUEUE_REMOVAL_RECORD_KIND } from "../../packages/core/src/contracts/index";
-import {
-  ACCEPTED_REASONS,
-  REPO_A,
-  REMOVAL_REF,
-} from "../fixtures/queue/removal/cases";
+import { ACCEPTED_REASONS, REPO_A, REMOVAL_REF } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
@@ -26,10 +22,23 @@ describe("TC-QLC-001 reasoned removal retires the entry", () => {
     );
     expect(entryBefore).toBeDefined();
 
-    const run = await harness.run(["queue", "remove", REMOVAL_REF, "--reason", "abandoned", "--json"]);
+    const run = await harness.run([
+      "queue",
+      "remove",
+      REMOVAL_REF,
+      "--reason",
+      "abandoned",
+      "--json",
+    ]);
     expect(run.exitCode).toBe(0);
     const envelope = json(run.stdout);
-    expect(Object.keys(envelope).sort()).toEqual(["data", "exitCode", "runId", "schemaVersion", "timing"]);
+    expect(Object.keys(envelope).sort()).toEqual([
+      "data",
+      "exitCode",
+      "runId",
+      "schemaVersion",
+      "timing",
+    ]);
     const data = envelope.data as Record<string, unknown>;
     expect(data.result).toBe("removed");
     expect(data.reason).toBe("abandoned");
@@ -105,7 +114,14 @@ describe("TC-QLC-001 reasoned removal retires the entry", () => {
   test("the degraded marker stays the delivered set on the removal payload", async () => {
     const harness = createRemovalHarness("remove-degraded");
     harness.seedEntry({ ref: REMOVAL_REF });
-    const run = await harness.run(["queue", "remove", REMOVAL_REF, "--reason", "abandoned", "--json"]);
+    const run = await harness.run([
+      "queue",
+      "remove",
+      REMOVAL_REF,
+      "--reason",
+      "abandoned",
+      "--json",
+    ]);
     expect(run.exitCode).toBe(0);
     const data = json(run.stdout).data as { degraded: readonly string[] };
     expect(data.degraded).toEqual(["daemon-unreachable"]);
