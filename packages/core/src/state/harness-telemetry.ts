@@ -260,6 +260,23 @@ const recordFromCapture = (
   location: StateSafeLocation,
 ): StateResult<HarnessCaptureOutcomeRecord> => captureFrom(value, location);
 
+/**
+ * Validate one `harness.telemetry` session payload (single authored copy).
+ *
+ * Exposed so a composed read over several telemetry families validates every
+ * record through the same rules the delivered session reader uses.
+ */
+export const parseHarnessTelemetryPayload = (
+  value: unknown,
+  location: StateSafeLocation,
+): StateResult<HarnessTelemetryRecord> => recordFrom(value, location);
+
+/** Validate one capture-outcome payload through the delivered rules. */
+export const parseHarnessCaptureOutcomePayload = (
+  value: unknown,
+  location: StateSafeLocation,
+): StateResult<HarnessCaptureOutcomeRecord> => recordFromCapture(value, location);
+
 const capturePayload = (record: HarnessCaptureOutcomeRecord): StateJsonValue => ({
   schemaId: record.schemaId,
   workItemRef: record.workItemRef,

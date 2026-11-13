@@ -93,3 +93,60 @@ notes:
       round-trip."
     type: retro
     date: "2026-11-12"
+  - text: >-
+      Plan phase 1 complete (commit eb739f19): the GAP-2 token-bearing capture
+      `tests/fixtures/harness/stream/opencode-v2.2.5-tokens.jsonl` (real
+      v2.2.5 completion-frame shape, synthetic redacted content, README
+      provenance row, no explicit calls field — omission degrades, never
+      fabricates) and the telemetry v2 contract declaration
+      `packages/core/src/contracts/telemetry.ts` re-exported through
+      `contracts/index.ts`: the brand-neutral storage identity
+      `delivery.telemetry.storage.v1` with the re-read migration rule
+      (GAP-7/DM-5), the `harness.telemetry.step` and `harness.telemetry.baseline`
+      record families with pinned schema ids and key prefixes (OQ-T2 §1), the
+      frame vocabulary resolved by the capture (OQ-T1), the 0.02 tolerance
+      (DEC-2), the within/outside/unavailable verdict set (GAP-5/DEC-5), the
+      stream-ingest/closeout-capture/combined reading bases, the additive
+      warning additions `unattributable-step` and
+      `baseline-session-excluded` spread over the delivered vocabulary (GAP-4),
+      the exactly-five breakdown fields, the five v2 data keys beside the
+      untouched six (DEC-6), the exclude-and-disclose unattributed-dimension
+      rule, the OQ-T4 session-dedup combination constant, and the ingest sink
+      port. Scenario module gains the token-bearing/omission/drift builders for
+      matrices I-01..I-05. Gate: `pnpm typecheck` green; telemetry-contract +
+      telemetry-imports 18 pass / 0 fail; content-inventory + spend-contract
+      19 pass / 0 fail; fixture-privacy 3 pass; exports-parity 5/5 publishables
+      OK; ambient-globals 182 neutral-set files clean. Inventory and executable
+      allowance registered for the new contract module.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 2 complete: the capture pipeline end to end. Pure counting and
+      attribution landed as `packages/core/src/domain/telemetry-ingest.ts`
+      (frame decode over the committed v2.x.y framing, five token classes with
+      present-zero distinguished from omitted, cost/calls null-when-missing,
+      drift disclosed as version-drift, per-reason ingest tally) and
+      `telemetry-attribution.ts` (five dimensions joined from the injected
+      economics session identity and claimed audit identity, absent dimensions
+      excluded with unattributable-step, never defaulted). Storage landed as
+      `packages/core/src/state/telemetry.ts`: fenced step and session-baseline
+      families under the declared record kinds and key prefixes, strict payload
+      validation that classifies damage as `state.store.torn`, the re-read
+      migration reader at the declared next version, session-close baseline
+      capture through the injected read-only totals read, and one verified
+      multi-family read for the spend side. The adapter attaches ingest beside
+      the delivered drain through an injected per-spawn sink (frames observed
+      non-gatingly, session close captured best effort; drain, handle
+      acquisition, and completion evidence unchanged); the opencode totals
+      reader performs one bounded read-only SUM query per session; the edge
+      composes the sink and production wires it into the opencode port; the new
+      `tests/fixtures/telemetry/` builder seeds steps, baselines, v1 records,
+      economics restarts, transitions, and recording substrates. Owning TCs:
+      TC-TELEMETRY-001..008, 010, 012, 013. Narrow gate: `pnpm typecheck` green;
+      telemetry-ingest/attribution/storage-migration/storage-damage/
+      storage-growth 38 pass / 0 fail; harness-opencode-stream and
+      harness-stream-hygiene controls green; telemetry-imports and
+      content-inventory green (inventory and executable allowances registered);
+      ambient-globals 184 files clean; workspace-entrypoints green.
+    type: "info"
+    date: "2026-11-13"

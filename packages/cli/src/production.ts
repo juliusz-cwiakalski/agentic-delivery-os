@@ -46,8 +46,10 @@ import {
 import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
 import {
   CLAUDE_CAPABILITIES,
+  createBunSqliteStoreOpener,
   createClaudeSession,
   createOpencodeSession,
+  createOpencodeSessionTotalsReader,
   mapCoordinatorNewTurn,
 } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
@@ -110,9 +112,9 @@ import {
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
-  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeEnvironmentName,
   stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -121,7 +123,6 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
   type ConfigValue,
-  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
@@ -150,6 +151,7 @@ import {
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
   type ProjectsListEntry,
+  type QueueDegradationReason,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type SupervisorPort,
@@ -182,6 +184,7 @@ import {
   createPlanCommandRuntime,
   createProductionCommitRuntimeOptions,
   createStatusCommandRuntime,
+  createTelemetryIngestSink,
   createVerifyCommandRuntime,
   createVerifyDeployCommandRuntime,
   createVerifyGatesCommandRuntime,
@@ -1010,6 +1013,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             spawnArgs: ["run", "--format", "json"],
             resumeArgs: ["run", "--format", "json", "--session"],
             listArgs: ["session", "list", "--format", "json"],
+            telemetrySinkFor: ({ workItemRef }) => {
+              const resolution = resolveProductionHarnessSettings();
+              if (!resolution.ok) return undefined;
+              return createTelemetryIngestSink({
+                store,
+                workItemRef,
+                runId: `run-${globalThis.crypto.randomUUID()}`,
+                harnessKind: "opencode",
+                treeRoot: cwd,
+                repository: cwd,
+                nowIso,
+                newFenceToken,
+                sessionTotals: createOpencodeSessionTotalsReader({
+                  opener: createBunSqliteStoreOpener(),
+                  storePath: resolution.settings.opencodeDatabasePath,
+                }),
+              });
+            },
           })
         : createClaudeSession({
             ...common,

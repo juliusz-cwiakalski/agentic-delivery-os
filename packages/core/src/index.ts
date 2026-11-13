@@ -89,6 +89,12 @@ export {
   runDispatch,
 } from "./app/dispatch.js";
 export {
+  type DispatchAttemptsReadInput,
+  type DispatchAttemptsReadPorts,
+  type DispatchAttemptsReadResult,
+  readDispatchAttemptHistory,
+} from "./app/dispatch-attempts.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
@@ -98,12 +104,6 @@ export {
   revertDispatchHandoverEvidence,
   summarizeDispatchEvidence,
 } from "./app/dispatch-gate.js";
-export {
-  type DispatchAttemptsReadInput,
-  type DispatchAttemptsReadPorts,
-  type DispatchAttemptsReadResult,
-  readDispatchAttemptHistory,
-} from "./app/dispatch-attempts.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -894,6 +894,27 @@ export {
   spendTruncationWarning,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
+export {
+  attributedValue,
+  attributeStep,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./domain/telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+  tallyFrame,
+} from "./domain/telemetry-ingest.js";
 export {
   boundWatchLine,
   createWatchProjection,

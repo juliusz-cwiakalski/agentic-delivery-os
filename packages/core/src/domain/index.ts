@@ -442,6 +442,7 @@ export {
   toBoardData,
   validateOwnerGateSlaPolicy,
 } from "./owner-gate-sla.js";
+export type { OwnerHoldMarkerOutcome, OwnerHoldResolutionInput } from "./owner-hold.js";
 // The pure owner-hold resolver (GH-280 F-1, DM-1, D12): one injected fact over
 // an injected environment record, production store directory, and marker
 // outcome; no ambient environment or filesystem access.
@@ -450,7 +451,6 @@ export {
   resolveOwnerHoldFact,
   sanitizeOwnerHoldReason,
 } from "./owner-hold.js";
-export type { OwnerHoldMarkerOutcome, OwnerHoldResolutionInput } from "./owner-hold.js";
 export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
 export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
@@ -637,6 +637,27 @@ export {
 export { renderSpendHuman, type SpendHumanOptions } from "./spend-text.js";
 export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
 export {
+  attributedValue,
+  attributeStep,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+  tallyFrame,
+} from "./telemetry-ingest.js";
+export {
   classifyVerifyChange,
   classifyVerifyDocument,
   EvaluateVerifyChange,
@@ -705,12 +726,20 @@ export {
 /* ---------------------- coordinator supervision (GH-241) ----------------- */
 
 export {
-  type CoordinatorLifecycleDecision,
-  type CoordinatorLifecycleFacts,
-  type CoordinatorPriorSession,
-  decideLifecycle,
-  lifecycleEffect,
-} from "./coordinator-lifecycle.js";
+  type CoordinatorRestartAdmission,
+  evaluateCoordinatorRestartAdmission,
+  nextRestartOrdinal,
+} from "./coordinator-admission.js";
+export {
+  type CoordinatorEscalationPayload,
+  type CoordinatorQuestionSlice,
+  escalationOptions,
+  isCoordinatorEscalationRef,
+  isEscalationState,
+  isReservedEscalationQuestion,
+  projectEscalationState,
+  projectReservedSlotQuestions,
+} from "./coordinator-escalation.js";
 export {
   boundEvidence,
   type CoordinatorEvidenceFacts,
@@ -719,45 +748,37 @@ export {
   utf8ByteLength,
 } from "./coordinator-evidence.js";
 export {
-  type CoordinatorRestartAdmission,
-  evaluateCoordinatorRestartAdmission,
-  nextRestartOrdinal,
-} from "./coordinator-admission.js";
-export {
-  evaluateWake,
-  wakeKeyFor,
-  type CoordinatorWakeEvaluation,
-  type CoordinatorWakeFacts,
-  type CoordinatorWakeHead,
-  type CoordinatorWakeKey,
-} from "./coordinator-wake.js";
-export {
-  escalationOptions,
-  isCoordinatorEscalationRef,
-  isEscalationState,
-  isReservedEscalationQuestion,
-  projectEscalationState,
-  projectReservedSlotQuestions,
-  type CoordinatorEscalationPayload,
-  type CoordinatorQuestionSlice,
-} from "./coordinator-escalation.js";
-export {
   ageFallbackBoundMs,
-  decideCoordinatorClaim,
-  foldCoordinatorLease,
-  leaseAgeMs,
   type CoordinatorClaimDecision,
   type CoordinatorClaimFacts,
   type CoordinatorLease,
   type CoordinatorLeaseFoldInput,
+  decideCoordinatorClaim,
+  foldCoordinatorLease,
+  leaseAgeMs,
 } from "./coordinator-fence.js";
-export { coordinatorUnitIdentity, projectCoordinatorRegime } from "./coordinator-regime.js";
 export {
+  type CoordinatorLifecycleDecision,
+  type CoordinatorLifecycleFacts,
+  type CoordinatorPriorSession,
+  decideLifecycle,
+  lifecycleEffect,
+} from "./coordinator-lifecycle.js";
+export {
+  type CoordinatorObservationFacts,
   persistedTickVerdict,
   progressingTickVerdict,
   projectCoordinatorObservation,
-  type CoordinatorObservationFacts,
 } from "./coordinator-observe.js";
+export { coordinatorUnitIdentity, projectCoordinatorRegime } from "./coordinator-regime.js";
+export {
+  type CoordinatorWakeEvaluation,
+  type CoordinatorWakeFacts,
+  type CoordinatorWakeHead,
+  type CoordinatorWakeKey,
+  evaluateWake,
+  wakeKeyFor,
+} from "./coordinator-wake.js";
 export {
   createEventProjector,
   EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK,

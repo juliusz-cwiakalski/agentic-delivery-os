@@ -107,8 +107,10 @@ import {
   type DispatchRepositoryScope,
   type DispatchTruthReads,
   declareQueueEntry,
+  decodeTelemetryStepFrame,
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
+  emptyIngestTally,
   evaluateClaimPreconditions,
   evaluateDiffSweep,
   evaluateDispatchResumeEconomics,
@@ -169,6 +171,10 @@ import {
   spendDigestSection,
   stateScopeRoots,
   summarizeDispatchEvidence,
+  type TelemetryClaimedIdentity,
+  type TelemetryFrameContext,
+  type TelemetrySessionTotalsReader,
+  tallyFrame,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -264,6 +270,7 @@ import {
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
+  type TelemetryIngestSink,
   VERIFY_GATES_FAILURE_CLASSES,
   type WatchdogGitPort,
   type WatchdogLaneRead,
@@ -298,6 +305,8 @@ import {
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  appendTelemetryStep,
+  captureTelemetryBaseline,
   createNodeRetroSidecarIo,
   createNodeStateEdge,
   createRetroSidecar,
@@ -3885,6 +3894,81 @@ export const createSpendCommandRuntime = (
       : { ok: true, data: folded.data, warnings: folded.warnings };
   },
 });
+
+/* ------------------------- telemetry ingest edge ------------------------- */
+
+/**
+ * The telemetry ingest composition (GH-291 F-1, F-2, F-4; OQ-T2 §1).
+ *
+ * The dispatch spawn seam builds one sink per harness session from the
+ * delivery's work-item ref. Every decoded frame is counted and, when it is a
+ * step, stored; at stream close the session's harness-reported totals are
+ * captured through the injected read-only totals reader. The sink is
+ * non-gating: storage faults are swallowed here and never change the delivery.
+ */
+export type TelemetryIngestComposition = {
+  readonly store: StateStorePort;
+  readonly workItemRef: string;
+  readonly runId: string;
+  readonly harnessKind: HarnessKind;
+  readonly harnessVersion?: string | null;
+  readonly treeRoot?: string | null;
+  readonly repository?: string | null;
+  readonly claimed?: TelemetryClaimedIdentity;
+  readonly model?: string | null;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly sessionTotals?: TelemetrySessionTotalsReader;
+};
+
+/** Compose the per-session ingest sink over the injected state seam. */
+export const createTelemetryIngestSink = (
+  input: TelemetryIngestComposition,
+): TelemetryIngestSink => {
+  let tally = emptyIngestTally();
+  const context = (sessionId: string): TelemetryFrameContext => ({
+    workItemRef: input.workItemRef,
+    runId: input.runId,
+    sessionId,
+    harnessKind: input.harnessKind,
+    harnessVersion: input.harnessVersion ?? null,
+    treeRoot: input.treeRoot ?? null,
+    repository: input.repository ?? null,
+    model: input.model ?? null,
+    claimed: input.claimed ?? { agentRole: null, lane: null },
+    capturedAt: input.nowIso(),
+  });
+  return {
+    onFrame: (frame, frameContext) => {
+      const sessionId = frameContext.sessionId;
+      if (sessionId === undefined) return;
+      const outcome = decodeTelemetryStepFrame(frame, context(sessionId));
+      tally = tallyFrame(tally, outcome);
+      if (outcome.kind !== "captured") return;
+      try {
+        appendTelemetryStep(input.store, input.newFenceToken(), outcome.record);
+      } catch {
+        // Classified by the state tier; ingest is non-gating by contract.
+      }
+    },
+    onSessionClose: (sessionId) => {
+      if (input.sessionTotals === undefined) return;
+      try {
+        captureTelemetryBaseline({
+          store: input.store,
+          fenceToken: input.newFenceToken(),
+          workItemRef: input.workItemRef,
+          runId: input.runId,
+          sessionId,
+          capturedAt: input.nowIso(),
+          readTotals: input.sessionTotals,
+        });
+      } catch {
+        // A failed baseline read lands no record and fabricates no figure.
+      }
+    },
+  };
+};
 
 /* ------------------------- scheduling engine edge ------------------------- */
 

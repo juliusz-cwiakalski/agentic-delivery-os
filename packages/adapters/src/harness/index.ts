@@ -14,19 +14,19 @@ export {
   createClaudeSession,
 } from "./claude.js";
 export {
+  type CoordinatorTurnFacts,
+  mapCoordinatorNewTurn,
+} from "./liveness.js";
+export {
   createOpencodeInstance,
   createOpencodeSession,
   OPENCODE_CAPABILITIES,
   type OpencodeHarnessOptions,
 } from "./opencode.js";
 export {
-  type HarnessReviewDeferral,
   HARNESS_REVIEW_DEFERRALS,
+  type HarnessReviewDeferral,
 } from "./review-deferrals.js";
-export {
-  type CoordinatorTurnFacts,
-  mapCoordinatorNewTurn,
-} from "./liveness.js";
 export {
   attemptWrite,
   createBunSqliteStoreOpener,
@@ -49,3 +49,9 @@ export {
   type OpencodeTelemetryExtractor,
   type OpencodeTelemetryOptions,
 } from "./telemetry-opencode.js";
+export {
+  createOpencodeSessionTotalsReader,
+  type OpencodeSessionTotalsOptions,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+} from "./telemetry-session-totals.js";
