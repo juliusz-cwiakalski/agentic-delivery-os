@@ -476,6 +476,48 @@ const presenceFacts = (
   );
 
 /**
+ * The one snapshot read shared by the entry read and the fold (NFR-3,
+ * review-iter-1 F-2): the entry and removal ledgers are classified from the
+ * same verified snapshot, so the fold reuses the removals it already
+ * classified instead of scanning the ledger a second time.
+ */
+type QueueEntriesAndRemovals =
+  | {
+      readonly ok: true;
+      readonly entries: VerifiedLedgerRead<QueueEntryRecord>;
+      readonly removals: VerifiedLedgerRead<QueueRemovalRecord>;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: QueueReadReason;
+      readonly code: StateFailureCode;
+    };
+
+const readQueueEntriesAndRemovals = (
+  store: StateStorePort,
+  view?: readonly StateRecord[],
+): QueueEntriesAndRemovals => {
+  const snapshot = verifiedSnapshot(store, view);
+  const read = classifyRecords(snapshot, ENTRY_SPEC);
+  if (!read.ok) return read;
+  const removals = classifyRecords(snapshot, REMOVAL_SPEC);
+  if (!removals.ok) return removals;
+  if (removals.records.length === 0) {
+    return { ok: true, entries: { ...read, latest: foldLatestEntries(read.records) }, removals };
+  }
+  const facts = presenceFacts(read, removals);
+  const present = read.records.filter((record) => {
+    const ref = canonicalQueueRef(record.ref);
+    return ref !== undefined && queueRefPresent(facts, ref);
+  });
+  return {
+    ok: true,
+    entries: { ...read, records: present, latest: foldLatestEntries(present) },
+    removals,
+  };
+};
+
+/**
  * Read every verified queue entry record, oldest first, with the presence rule
  * applied (GH-292 DM-2): a ref whose latest removal append is later than its
  * latest entry append contributes no record and no latest projection, so every
@@ -489,20 +531,8 @@ export const readQueueEntries = (
   store: StateStorePort,
   view?: readonly StateRecord[],
 ): QueueLedgerRead<QueueEntryRecord> => {
-  const snapshot = verifiedSnapshot(store, view);
-  const read = classifyRecords(snapshot, ENTRY_SPEC);
-  if (!read.ok) return read;
-  const removals = classifyRecords(snapshot, REMOVAL_SPEC);
-  if (!removals.ok) return removals;
-  if (removals.records.length === 0) {
-    return { ...read, latest: foldLatestEntries(read.records) };
-  }
-  const facts = presenceFacts(read, removals);
-  const present = read.records.filter((record) => {
-    const ref = canonicalQueueRef(record.ref);
-    return ref !== undefined && queueRefPresent(facts, ref);
-  });
-  return { ...read, records: present, latest: foldLatestEntries(present) };
+  const read = readQueueEntriesAndRemovals(store, view);
+  return read.ok ? read.entries : read;
 };
 
 /** Read every verified queue removal record, oldest first (GH-292 DM-1). */
@@ -666,16 +696,17 @@ export const readQueueIncidents = (store: StateStorePort): QueueLedgerRead<Queue
 export const readQueueFold = (
   store: StateStorePort,
 ): { readonly ok: true; readonly value: QueueGraphFold } | QueueIntentFailure => {
-  const entries = readQueueEntries(store);
-  if (!entries.ok) {
+  const entriesRead = readQueueEntriesAndRemovals(store);
+  if (!entriesRead.ok) {
     return {
       ok: false,
       kind: "state",
-      code: entries.code,
+      code: entriesRead.code,
       location: { path: store.identity.stateDirectory },
-      reason: entries.reason,
+      reason: entriesRead.reason,
     };
   }
+  const entries = entriesRead.entries;
   const dependencies = readQueueDependencies(store);
   if (!dependencies.ok) {
     return {
@@ -686,18 +717,12 @@ export const readQueueFold = (
       reason: dependencies.reason,
     };
   }
-  const removals = readQueueRemovals(store);
-  if (!removals.ok) {
-    return {
-      ok: false,
-      kind: "state",
-      code: removals.code,
-      location: { path: store.identity.stateDirectory },
-      reason: removals.reason,
-    };
-  }
   return ok(
-    foldQueueGraph(entries.records, dependencies.records, presenceFacts(entries, removals)),
+    foldQueueGraph(
+      entries.records,
+      dependencies.records,
+      presenceFacts(entries, entriesRead.removals),
+    ),
   );
 };
 
@@ -1193,7 +1218,9 @@ const sameDocument = (left: QueueGraphDocument, right: QueueGraphDocument): bool
  * removed) ref is `queue.entry.unobserved`, and a live lease on the entry's
  * repository is the delivered `queue.precondition.unmet` with blocking reason
  * `lease-held` naming the holder — nothing is appended and no lease is
- * released. An accepted removal appends the delivered park-withdrawal record
+ * released. A lease at or over its TTL is not live (the delivered TTL
+ * predicate, spec §5.1 F-1) and does not refuse. An accepted removal appends
+ * the delivered park-withdrawal record
  * (`recoveryState: "released"`) first when an active park exists, then the
  * removal record, both inside one fenced transaction and verified
  * post-append; the derived document is replaced only when the folded intent
@@ -1303,7 +1330,7 @@ export const removeQueueEntryWithinFence = (
         });
       }
       const held = activeRead.active.find((lease) => lease.repository === repository);
-      if (held !== undefined) {
+      if (held !== undefined && !isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) {
         return {
           ok: false,
           kind: "queue",
@@ -1420,7 +1447,11 @@ export const queueRemovalForCloseout = (
     const leases = readActiveLeases(store, input.nowMs);
     if (!leases.ok) return { outcome: "skipped", skipReason: "state-unavailable", ref };
     const held = leases.active.find((lease) => lease.repository === entry.repository);
-    if (held !== undefined) return { outcome: "skipped", skipReason: "lease-held", ref };
+    // A lease at or over its TTL is not live: the closeout removal proceeds
+    // instead of reporting `lease-held` (spec §5.1 F-1, RSK-2).
+    if (held !== undefined && !isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) {
+      return { outcome: "skipped", skipReason: "lease-held", ref };
+    }
   }
   if (input.mode === "plan") return { outcome: "would-remove", ref, reason: "landed" };
   if (input.handle === undefined) {

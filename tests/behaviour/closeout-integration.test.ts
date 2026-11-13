@@ -214,7 +214,6 @@ describe("TC-CLOSE-010/011 production composition over the real git seam", () =>
         git: { cwd: repo.directory, timeoutMs: 10_000 },
         store,
         nowIso: () => CLOSEOUT_TIMESTAMP,
-        nowMs: () => Date.parse(CLOSEOUT_TIMESTAMP),
         newFenceToken: () => "fence-production",
         retro: { available: true, collected: false },
         sessions: { available: true, sessionIds: [] },

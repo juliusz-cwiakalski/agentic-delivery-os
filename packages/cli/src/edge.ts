@@ -1598,7 +1598,11 @@ export type CloseoutCompositionOptions = {
   readonly git: GitBranchSeam | GitBranchSeamOptions;
   readonly store: StateStorePort;
   readonly nowIso: () => string;
-  readonly nowMs: () => number;
+  /**
+   * The integer-millisecond clock. Optional: it defaults to `nowIso()` parsed,
+   * so a caller that supplies only the ISO clock keeps one time source.
+   */
+  readonly nowMs?: () => number;
   readonly newFenceToken: () => string;
   readonly dependentsLimit?: number;
   readonly mergedRequestLimit?: number;
@@ -1981,6 +1985,7 @@ export const createCloseoutComposition = (
       },
     );
   const git = gitSeamFor(options.git);
+  const closeoutNowMs = options.nowMs ?? (() => Date.parse(options.nowIso()));
   const extractor =
     options.harness === undefined
       ? undefined
@@ -2276,7 +2281,7 @@ export const createCloseoutComposition = (
       workItemRef: hook.workItemRef,
       mergedObserved: hook.mergedObserved,
       recordedAt: options.nowIso(),
-      nowMs: options.nowMs(),
+      nowMs: closeoutNowMs(),
       ...(hook.handle === undefined ? {} : { handle: hook.handle }),
     });
   return {

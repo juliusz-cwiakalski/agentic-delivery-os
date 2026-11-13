@@ -293,7 +293,10 @@ by an edit or a deletion.
   non-canonical ref refuses the delivered `input.value.rejected`; a ref with no
   entry, including a ref already removed, refuses `queue.entry.unobserved`; and a
   live lease on the entry's repository refuses `queue.precondition.unmet` with
-  the delivered blocking reason `lease-held` naming the holder. Every refusal
+  the delivered blocking reason `lease-held` naming the holder — live means
+  heartbeat age below the lease TTL (the delivered `isLeaseStale` predicate every
+  lease path shares), so a lease at or beyond its TTL is not live and does not
+  refuse. Every refusal
   appends nothing, releases no lease, and leaves the entry exactly as it was. The
   explicit verb is therefore not idempotent: a repeat removal after success is an
   unobserved ref, and `queue release` remains the delivered verb for dropping a

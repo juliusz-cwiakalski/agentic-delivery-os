@@ -143,4 +143,26 @@ describe("TC-QLC-057 reconcile removals obey every F-1 invariant", () => {
     expect(data.removed).toEqual([{ ref: RECONCILE_REFS.done, reason: "reconciled" }]);
     expect(harness.removalRecords()).toEqual([{ ref: RECONCILE_REFS.done, reason: "reconciled" }]);
   });
+
+  test("a lease at or over its TTL is not live: reconcile removes the entry", async () => {
+    const harness = createReconcileHarness("reconcile-stale-lease");
+    harness.seedEntry({ ref: RECONCILE_REFS.done, priority: 1 });
+    harness.seedLease({ ref: RECONCILE_REFS.done, holder: "lane-1" });
+    harness.program(RECONCILE_REFS.done, { deliveryState: "done" });
+    // The seed heartbeat is the harness clock; one full 90s TTL makes it stale
+    // (the delivered bound is inclusive), so the sweep must remove, not refuse.
+    harness.advance(90_000);
+
+    const run = await harness.run(["queue", "reconcile", "--json"]);
+    expect(run.exitCode).toBe(0);
+    const data = json(run.stdout).data as {
+      readonly removed: readonly { readonly ref: string; readonly reason: string }[];
+    };
+    expect(data.removed).toEqual([{ ref: RECONCILE_REFS.done, reason: "reconciled" }]);
+    expect(harness.removalRecords()).toEqual([{ ref: RECONCILE_REFS.done, reason: "reconciled" }]);
+    // The stale lease is not live but is not released by the removal.
+    const fold = readQueueFold(harness.composition.store);
+    if (!fold.ok) throw new Error("fold read failed");
+    expect(fold.value.entries.some((entry) => entry.ref === RECONCILE_REFS.done)).toBe(false);
+  });
 });
