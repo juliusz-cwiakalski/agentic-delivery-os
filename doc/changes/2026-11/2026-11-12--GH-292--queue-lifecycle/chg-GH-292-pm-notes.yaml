@@ -631,3 +631,65 @@ notes:
       code; the F-7 wording rides the next spec revision.
     type: "retro"
     date: "2026-11-13"
+  - text: >-
+      Remediation phase 10 complete (commit 7bc93867fed4f017aa039483d0f2503c280e33a4):
+      code-review iteration 1 remediation delivered on
+      feat/GH-292/queue-lifecycle, executing the PM-decided behavior-fix path —
+      the spec governs, so no spec wording was amended for F-1. F-1 (high):
+      every removal lease check now applies the delivered liveness predicate
+      `isLeaseStale(held.heartbeatAgeMs, held.ttlMs)` — in
+      `removeQueueEntryWithinFence` (reconcile inherits through the ordinary
+      F-1 seam) and in the closeout hook `queueRemovalForCloseout` pre-check —
+      so a lease at or over its TTL no longer refuses `queue remove`, no longer
+      reports closeout skip `lease-held`, and no longer retains a reconcile
+      entry; a genuinely live lease refuses exactly as delivered, and the
+      delivered takeover/release/renewal controls and the F-4 precedence table
+      are untouched (no assertion change). Three new two-sided cells: explicit
+      verb (live at TTL−1 ms refuses with zero appends, at the inclusive TTL
+      bound removes, the lease is not released) in
+      tests/behaviour/queue-remove-lease.test.ts; closeout apply removes over a
+      stale lease with the removal record verified (no `lease-held` skip) in
+      tests/behaviour/closeout-queue-removal-skips.test.ts; reconcile removes
+      over a stale lease in tests/behaviour/queue-reconcile-invariants.test.ts.
+      F-2 (medium): `readQueueFold` no longer rescans the removals ledger —
+      `readQueueEntriesAndRemovals` classifies the entry and removal ledgers
+      from one shared verified snapshot and the fold reuses the classified
+      removals; `readQueueEntries` keeps its exported signature. Counting-store
+      pins added in tests/behaviour/closeout-queue-removal-cost.test.ts: one
+      fold = 2 whole-store reads, no-entry closeout = 2, plan-with-entry = 3
+      (fold 2 + lease read 1), closeout apply-with-removal = 13 (hook fold 2 +
+      hook lease 1 + removal body 10); direct measurements with the same
+      counting wrapper over the real composition: explicit `removeQueueEntry`
+      = 10, reconcile over one stale ref = 12 (fold 2 + removal 10). NFR-3's
+      spec row now states this delivered, pinned observable (≤1 fold / ≤2
+      appends kept; exactly 2 whole-store reads per fold; exactly 2 reads on
+      the no-entry path, pinned by TC-QLC-082), document history row v1.3
+      added; no acceptance criterion or other spec section changed.
+      F-3 (low): spec §5.1 F-5 documents the unwired-tracker-port composition
+      refusal (`queue.precondition.unmet`, blocking reason
+      `tracker-read-unavailable`) as a composition precondition distinct from
+      provider-side identities. F-4 (low): `CloseoutCompositionOptions.nowMs`
+      is optional with the derived default `() => Date.parse(nowIso())`, and
+      the two delivered-fixture `nowMs` additions from 741b0d2a are reverted so
+      the delivered fixtures are untouched again; both suites green. Feature
+      pages state the same stale-lease rule
+      (doc/spec/features/feature-scheduling-engine.md removal refusal set;
+      doc/spec/features/feature-closeout.md when-it-runs and fail-open
+      bullets). Gates: `pnpm typecheck` OK (6 packages + tests tsconfig);
+      `bun run scripts/checks/error-table-sync.ts` OK (entries=129
+      documented=129 — the five delivered queue error rows byte-identical,
+      precedence table unchanged); targeted suites 105 pass / 0 fail / 0 skip
+      across 25 files (queue-remove + closeout-removal batch 9 files 32 pass;
+      lease + single-flight batch 10 files 48 pass; closeout-capsule + goldens
+      batch 6 files 25 pass); doc-conformance 11 pass / 0 fail; log at
+      .ai/local/logs/gh292-phase10-gate-batch1.log. Deviations: F-4 touches
+      packages/cli/src/edge.ts and reverts the two fixture test files — outside
+      plan phase-10 scope.files, extended by explicit PM instruction (the
+      commit primitive's scope-drift disclosure lists them); the
+      code-review/review-iter-1 files at the referenced path hold the earlier
+      lifecycle PASS verdict, so this phase's governing finding record is the
+      pm-notes retro plus plan phase 10; the full `pnpm check` battery was not
+      run in this phase per PM instruction — quality_gates owns it on the
+      final tree.
+    type: "info"
+    date: "2026-11-13"
