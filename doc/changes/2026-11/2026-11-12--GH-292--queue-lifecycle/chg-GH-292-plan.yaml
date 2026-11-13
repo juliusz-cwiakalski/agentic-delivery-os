@@ -1442,3 +1442,71 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-292/queue-lifecycle targeting main-tools"
       pipelineId: "CI pipeline for the GH-292 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Code Review Remediation (Iteration 1).
+  #
+  # Appended by @reviewer (review-iter-1, FAIL: 1 high / 1 medium / 2 low /
+  # 3 info). Scope is the two actionable findings; F-3/F-4 are optional
+  # cleanups inside the same phase; F-5..F-7 are informational only (no code).
+  # The tier's phases list stays [1..9]; this remediation phase follows the
+  # review_fix lifecycle convention (coder executes, reviewer re-reviews as
+  # iteration 2).
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Code Review Remediation (Iteration 1): stale-lease removal liveness and the NFR-3 read budget"
+    kind: delivery
+    summary: "fix(queue): removal liveness follows the delivered TTL predicate and the read budget is pinned"
+    goal: >-
+      Close review-iter-1 F-1 and F-2. F-1: the removal lease check on all
+      three removal paths (`removeQueueEntryWithinFence`, the closeout
+      `queueRemovalForCloseout` hook, and reconcile's F-1 seam) must apply the
+      delivered liveness predicate — a lease at or over its TTL is not live and
+      does not refuse `queue remove`, does not skip the closeout removal, and
+      does not retain a reconcile entry — matching spec §5.1 F-1 ("live
+      (heartbeat age below the lease TTL)"), RSK-2's TTL-bounded residual, and
+      F-4's one-liveness-definition principle; add the missing stale-lease
+      removal cells (explicit verb, closeout apply, reconcile). If the owner
+      instead prefers the stricter any-unreleased-lease refusal, amend the spec
+      F-1/AC-F1-5/RSK-2 wording and the reconciled feature pages via the spec
+      owner — one of the two, never both silent. F-2: remove the duplicate
+      removals scan in `readQueueFold` (reuse the snapshot-classified removals
+      from `readQueueEntries`), and either meet NFR-3's "at most 1 read when no
+      entry exists" observable or reconcile NFR-3/TC-QLC-082 wording and add
+      the counting-store read assertion so the budget is pinned two-sided.
+      [review-iter-1 F-1, F-2; optional F-3 identity documentation, F-4
+      `nowMs` optional-with-default or accepted-drift note]
+    dependsOn: [9]
+    scope:
+      files:
+        - packages/core/src/app/queue.ts
+        - tests/behaviour/queue-remove-lease.test.ts
+        - tests/behaviour/closeout-queue-removal-skips.test.ts
+        - tests/behaviour/queue-reconcile-invariants.test.ts
+        - tests/behaviour/closeout-queue-removal-cost.test.ts
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-closeout.md
+        - doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-spec.md
+    coverage:
+      acceptanceCriteria:
+        - AC-F1-5
+        - AC-F2-4
+        - AC-NFR-3
+      testCases: []
+    gates:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-remove-lease.test.ts tests/behaviour/closeout-queue-removal-skips.test.ts tests/behaviour/queue-reconcile-invariants.test.ts tests/behaviour/closeout-queue-removal-cost.test.ts"
+      - "bun test tests/behaviour/queue-remove.test.ts tests/behaviour/queue-remove-atomicity.test.ts tests/behaviour/queue-lifecycle-convergence.test.ts tests/behaviour/closeout-queue-removal.test.ts"
+      - "TMPDIR=\"$PWD/tmp/tmpdir\" pnpm check"
+    definitionOfDone:
+      - "A lease at or over its TTL never refuses `queue remove`, never reports closeout skip `lease-held`, and never retains a reconcile entry; a live lease keeps refusing on all three paths; the stale-lease cells exist for the explicit verb, closeout apply, and reconcile and are two-sided (refusal identity, zero appends on the live path, removal on the stale path)."
+      - "The delivered lease-conflict, takeover, and single-flight controls stay green with no assertion change; the F-4 table's rows are unchanged."
+      - "`readQueueFold` no longer re-reads the removals ledger it already classified from the shared snapshot, and either the no-entry closeout path performs one read or NFR-3/TC-QLC-082 wording is reconciled to the delivered observable with the counting-store assertion added."
+      - "The choice between the behavior fix and the spec amendment for F-1 is recorded in pm-notes with its owner; feature pages and the spec state the same rule."
+    risks:
+      - "Loosening the lease check must not orphan a genuinely running lane: the stale predicate is the delivered TTL rule the claim path already uses, and a live lease still refuses."
+      - "Read-path refactoring must keep the presence rule identical on a no-removal store (delivered goldens byte-identical)."
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer

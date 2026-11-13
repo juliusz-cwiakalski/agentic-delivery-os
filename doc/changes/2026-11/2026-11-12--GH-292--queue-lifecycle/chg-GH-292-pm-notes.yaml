@@ -610,3 +610,24 @@ notes:
       for the PM's `phase complete`.
     type: "info"
     date: "2026-11-13"
+  - text: >-
+      Review-fix iteration 1: FAIL with 1 high / 1 medium / 2 low / 3 info
+      (`code-review/review-iter-1.yaml`; plan_compliance PASS, spec_compliance
+      FAIL; the reviewer appended remediation Phase 10 to the plan and
+      `plan validate` remains verdict=valid). F-1 (high): every removal path
+      refuses `lease-held` on a STALE lease, contradicting spec F-1's
+      live-equals-below-TTL definition and the one-liveness principle —
+      remediation adopts the spec behaviour (apply the delivered
+      `isLeaseStale` predicate so a stale lease does not refuse) plus the three
+      missing stale-lease cells, never a silent spec amendment. F-2 (medium):
+      NFR-3's read budget is neither held nor pinned — `readQueueFold` scans
+      the removals ledger twice; remediation deduplicates the scan and pins the
+      delivered read observable with a counting-store assertion, reconciling
+      NFR-3/TC-QLC-082 wording via the spec owner. F-3 (low): document the
+      unwired-tracker-port composition refusal in spec F-5; F-4 (low): make
+      `nowMs` optional-with-default on `CloseoutCompositionOptions` and revert
+      the two delivered-fixture edits. F-5..F-7 are informational (flag
+      asymmetry, help prefix fallback, `queue ready` fact-source wording) — no
+      code; the F-7 wording rides the next spec revision.
+    type: "retro"
+    date: "2026-11-13"
