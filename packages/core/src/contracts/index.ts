@@ -2059,6 +2059,14 @@ export {
   type SpendSelection,
   type SpendTokenTotals,
   type SpendTruncation,
+  type SpendWindowEvidence,
+  type SpendWindowEvidenceOutcome,
+  type SpendWindowEvidenceRequest,
+  type SpendWindowExclusion,
+  SPEND_WINDOW_BASIS,
+  SPEND_WINDOW_EVIDENCE_FLAG,
+  SPEND_WINDOW_FROM_FLAG,
+  SPEND_WINDOW_THROUGH_FLAG,
 } from "./spend.js";
 // The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5;
 // GH-222 adds salvage and artifact-boundary declarations).

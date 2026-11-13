@@ -909,6 +909,7 @@ export {
   type SpendAbsence,
   type SpendFoldOutcome,
   spendDigestSection,
+  windowSpendEvidence,
   spendTruncationWarning,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";

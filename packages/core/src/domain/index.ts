@@ -657,6 +657,7 @@ export {
   type SpendFoldOutcome,
   spendDigestSection,
   spendTruncationWarning,
+  windowSpendEvidence,
 } from "./spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./spend-text.js";
 export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";

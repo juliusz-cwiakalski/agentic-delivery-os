@@ -122,6 +122,7 @@ import {
   handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
+  windowSpendEvidence,
   joinAttributionSubstrates,
   type MergeTransactionPorts,
   newestWaiverByGate,
@@ -156,6 +157,7 @@ import {
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
+  readQueueParks,
   reconcileQueueEntries,
   recoverQueueParks,
   releaseQueueLease,
@@ -344,6 +346,7 @@ import {
   readRetroRegistry,
   readRetroRuns,
   readSpendLedger,
+  readTelemetrySteps,
   recordRetroRun,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
@@ -4121,6 +4124,46 @@ export const createSpendCommandRuntime = (
       data: folded.data,
       ...(folded.warnings.length === 0 ? {} : { warnings: folded.warnings }),
       ...(folded.truncation === undefined ? {} : { truncation: folded.truncation }),
+    };
+  },
+  windowEvidence: (request) => {
+    // The telemetry v2 storage identity read: the only source the window-
+    // scoped reading consumes (no harness-store query of its own, GH-291).
+    const read = readTelemetrySteps(options.store, request.ref);
+    if (!read.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "state",
+          code: read.error.code,
+          consequence: read.error.consequence,
+          location: read.error.location,
+        },
+      };
+    }
+    // The profile names the episode's recorded nomination, read from the
+    // latest peak-window park record — never re-derived from a model string.
+    const parks = readQueueParks(options.store);
+    const profile =
+      parks.ok
+        ? [...parks.records]
+            .reverse()
+            .find(
+              (record) =>
+                record.ref === request.ref &&
+                record.cause === "peak-window" &&
+                record.providerProfile !== undefined,
+            )?.providerProfile
+        : undefined;
+    return {
+      ok: true,
+      data: windowSpendEvidence({
+        steps: read.value.records,
+        ref: request.ref,
+        providerProfile: profile ?? "",
+        from: request.from,
+        through: request.through,
+      }),
     };
   },
 });

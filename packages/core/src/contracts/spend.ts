@@ -15,15 +15,15 @@ import type {
   HarnessWarningReason,
 } from "./harness-telemetry.js";
 import type { PmNotesPhaseId } from "./pm-notes.js";
+import type { PhaseTransitionRecord } from "./registry.js";
+import type { StateFailure, StateSafeLocation } from "./state.js";
 import type {
+  SpendBreakdownField,
   TelemetryBaselineRecord,
   TelemetryReconciliation,
   TelemetryState,
   TelemetryStepRecord,
-  SpendBreakdownField,
 } from "./telemetry.js";
-import type { PhaseTransitionRecord } from "./registry.js";
-import type { StateFailure, StateSafeLocation } from "./state.js";
 
 /** The only home of the spend report data schema identifier (PIN-1, TP-DEC-9). */
 export const SPEND_DATA_SCHEMA_ID = "delivery.spend.v1" as const;
@@ -334,6 +334,8 @@ export type SpendCommandOutcome =
 export type SpendCommandRuntime = {
   readonly resolveActiveRef: () => { readonly ref: string } | { readonly ref: null };
   readonly report: (selection: SpendSelection) => SpendCommandOutcome;
+  /** The window-scoped zero-spend read (GH-294 F-6); required for the `--window-evidence` form. */
+  readonly windowEvidence?: (request: SpendWindowEvidenceRequest) => SpendWindowEvidenceOutcome;
 };
 
 /** The declared `--amplification` human-emphasis flag name. */
@@ -342,10 +344,76 @@ export const SPEND_HUMAN_AMPLIFICATION_FLAG = "--amplification" as const;
 /** The declared breakdown selection flag (GH-291 F-5, AC-F5-3). */
 export const SPEND_BREAKDOWN_FLAG = "--breakdown" as const;
 
-/** The declared spend flag set, in the locked grammar order (PIN-11, F-5). */
+/** The window-scoped zero-spend evidence marker (GH-294 F-6, DM-5). */
+export const SPEND_WINDOW_EVIDENCE_FLAG = "--window-evidence" as const;
+
+/** The evidence scope's inclusive lower bound flag: the park timestamp. */
+export const SPEND_WINDOW_FROM_FLAG = "--from" as const;
+
+/** The evidence scope's inclusive upper bound flag: the window end. */
+export const SPEND_WINDOW_THROUGH_FLAG = "--through" as const;
+
+/** The declared spend flag set, in the locked grammar order (PIN-11, F-5; GH-294 adds the window-evidence flags). */
 export const SPEND_FLAGS = [
   "--ref",
   "--phase",
   SPEND_HUMAN_AMPLIFICATION_FLAG,
   SPEND_BREAKDOWN_FLAG,
+  SPEND_WINDOW_EVIDENCE_FLAG,
+  SPEND_WINDOW_FROM_FLAG,
+  SPEND_WINDOW_THROUGH_FLAG,
 ] as const;
+
+/**
+ * One window-scoped zero-spend reading (GH-294 DM-5, DEC-4): the count of
+ * billable model calls attributable to the parked lane from the park timestamp
+ * through the window end, both boundary instants included, over the telemetry
+ * v2 storage identity (`delivery.telemetry.storage.v1`).
+ *
+ * `telemetryState` distinguishes a present reading from a classified absence:
+ * zero is a positive reading backed by the named attribution read and is
+ * **never** reported while telemetry is absent — the count is then absent with
+ * it, never fabricated. The scope disclosure carries the interval and the
+ * matched step positions, so boundary scoping is visible, not implied.
+ */
+export type SpendWindowEvidence = {
+  /** The parked lane's ref: the attribution join's lane dimension. */
+  readonly ref: string;
+  /** The parked profile the evidence names (the episode's recorded nomination). */
+  readonly providerProfile: string;
+  /** The inclusive scope start: the park timestamp. */
+  readonly from: string;
+  /** The inclusive scope end: the window end. */
+  readonly through: string;
+  /** Present telemetry backs the count; a classified absence never renders zero. */
+  readonly telemetryState: TelemetryState;
+  /** The billable-call count, present only over present telemetry. */
+  readonly billableCalls?: number;
+  /** The named attribution read backing a present reading (the storage identity). */
+  readonly basis?: typeof SPEND_WINDOW_BASIS;
+  /** The steps the scope matched, by their storage positions (boundary visibility). */
+  readonly matchedPositions?: readonly number[];
+  /** The steps the scope excluded, with the boundary reason (pre-park / post-window). */
+  readonly excluded?: readonly SpendWindowExclusion[];
+};
+
+/** The one declared attribution-read basis naming the telemetry storage identity. */
+export const SPEND_WINDOW_BASIS = "delivery.telemetry.storage.v1" as const;
+
+/** One excluded step in the scope disclosure, with the boundary reason. */
+export type SpendWindowExclusion = {
+  readonly position: number;
+  readonly reason: "pre-park" | "post-window";
+};
+
+/** The window-evidence request the injected spend runtime answers. */
+export type SpendWindowEvidenceRequest = {
+  readonly ref: string;
+  readonly from: string;
+  readonly through: string;
+};
+
+/** The outcome the injected spend runtime returns for a window-evidence read. */
+export type SpendWindowEvidenceOutcome =
+  | { readonly ok: true; readonly data: SpendWindowEvidence }
+  | { readonly ok: false; readonly error: SpendCommandFailure };

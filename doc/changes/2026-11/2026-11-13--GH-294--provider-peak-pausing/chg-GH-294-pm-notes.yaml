@@ -203,8 +203,7 @@ notes:
       globals OK (186 files); exports-parity OK."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 5 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): window-end resume (both
+  - text: "Plan phase 5 complete (commit ecd457b4f): window-end resume (both
       classification routes) with cross-profile isolation — decidePeakResumes
       (read-time expiry at the effective end; preserved → session-resume,
       not-preserved → interrupted-recovery; hold-active → refusal per episode),
@@ -227,5 +226,31 @@ notes:
       dispatch-restart-budget + queue-hold-park-resume + queue-hold-dispatch +
       daemon-peak-window-park 23/23 PASS; content-inventory 6/6 PASS; taxonomy
       suites still green after the projection guard."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 6 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): the window-scoped zero-spend
+      assertion — windowSpendEvidence over the telemetry v2 storage records
+      (inclusive both boundary instants; only strictly pre-park excluded, every
+      exclusion named with its boundary reason; lane-dimension join; zero is a
+      positive reading over present telemetry with the named
+      delivery.telemetry.storage.v1 basis; an empty read is the classified
+      absence and the count is absent with it, never fabricated zero;
+      falsifiable by a seeded mid-window call), SpendWindowEvidence type +
+      telemetryState disclosure in contracts/spend.ts, the spend CLI surfaces
+      it via the additive --window-evidence --from/--through form with its own
+      human render (absence renders never-zero, present renders the count and
+      basis), edge composition wires the read (readTelemetrySteps + the
+      profile read from the latest peak-window park record — never re-derived
+      from a model string). Scope disclosures (mechanical): contracts/index.ts
+      + domain/index.ts + index.ts barrel lines for the new symbols (CLI
+      imports ride package subpaths), cli/edge.ts spend runtime composition
+      (the wiring), spend-grammar.test.ts locked flag-set pin gained the three
+      window-evidence flags (same category as the Phase 3 stamp moves — the
+      assertion's meaning, the declared flag vocabulary, extended). Test
+      result at boundary: pnpm typecheck green; spend-zero-window 6/6 PASS;
+      delivered controls spend-grammar + spend-absent + spend-v2-breakdown +
+      telemetry-attribution + golden spend 49/49 PASS; content-inventory 6/6
+      PASS."
     type: "info"
     date: "2026-11-13"

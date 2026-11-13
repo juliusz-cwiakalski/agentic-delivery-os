@@ -1591,6 +1591,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "computeSpendReport",
     "spendDigestSection",
     "spendTruncationWarning",
+    "windowSpendEvidence",
   ],
   "core/src/domain/spend-text.ts": ["renderSpendHuman"],
   "core/src/domain/telemetry-attribution.ts": [
@@ -1643,6 +1644,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "SPEND_TRUNCATION_TARGETS",
     "SPEND_V2_TRUNCATION_TARGETS",
     "SPEND_WORK_ITEM_REF_PATTERN",
+    "SPEND_WINDOW_BASIS",
+    "SPEND_WINDOW_EVIDENCE_FLAG",
+    "SPEND_WINDOW_FROM_FLAG",
+    "SPEND_WINDOW_THROUGH_FLAG",
   ],
   "core/src/contracts/telemetry.ts": [
     "SPEND_BREAKDOWN_FIELDS",
