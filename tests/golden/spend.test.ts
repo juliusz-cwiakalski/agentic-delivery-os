@@ -123,7 +123,13 @@ describe("spend goldens", () => {
       evidence: { storePath: "fixture://ledger", recordCount: overCapRecords.length },
     });
     if (!fold.ok) throw new Error("fold failed");
-    const human = renderSpendHuman(fold.data, { brand: SYNTHETIC_BRAND, amplification: true });
+    // The human renderer states the machine truncation the fold declared, then
+    // drops its own tail under the human bounds (NFR-2).
+    const human = renderSpendHuman(fold.data, {
+      brand: SYNTHETIC_BRAND,
+      amplification: true,
+      ...(fold.truncation === undefined ? {} : { truncation: fold.truncation }),
+    });
     expect(human).toBe(golden("over-cap.human.txt"));
     expect(human).toContain("truncated");
     expect(human.split("\n").filter((line) => line !== "").length).toBeLessThanOrEqual(200);

@@ -58,19 +58,6 @@ export {
 } from "#contracts";
 export { createArtifactBoundary, type StateArtifactBoundary } from "./artifact-boundary.js";
 export {
-  type AuditAppendOutcome,
-  appendAuditInvocation,
-  assembleAuditInvocation,
-  assembleAuditReservation,
-  auditChainValue,
-  createAuditBoundary,
-  ensureAuditChainKey,
-  readAuditChainKey,
-  readAuditLedger,
-  readAuditRecords,
-  verifyAuditChain,
-} from "./audit.js";
-export {
   appendBlockerAnswer,
   appendBlockerQuestion,
   BLOCKER_ANSWER_RECORD_KEY_PREFIX,
@@ -84,6 +71,19 @@ export {
   readBlockerLedger,
 } from "./blockers.js";
 export {
+  type AuditAppendOutcome,
+  appendAuditInvocation,
+  assembleAuditInvocation,
+  assembleAuditReservation,
+  auditChainValue,
+  createAuditBoundary,
+  ensureAuditChainKey,
+  readAuditChainKey,
+  readAuditLedger,
+  readAuditRecords,
+  verifyAuditChain,
+} from "./audit.js";
+export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
   closeoutOperationRecordKey,
@@ -95,29 +95,6 @@ export {
   commitTelemetryRecordKey,
   readCommitTelemetry,
 } from "./commit-telemetry.js";
-export {
-  appendCoordinatorExhaustion,
-  appendCoordinatorFence,
-  appendCoordinatorIteration,
-  appendCoordinatorPayload,
-  appendCoordinatorRestart,
-  appendCoordinatorStuck,
-  appendCoordinatorWake,
-  COORDINATOR_STATE_ERROR_IDENTITIES,
-  type CoordinatorAppendOutcome,
-  type CoordinatorRecordsRead,
-  coordinatorExhaustionKey,
-  coordinatorFenceKey,
-  coordinatorIterationKey,
-  coordinatorKeyFor,
-  coordinatorRestartKey,
-  coordinatorStuckKey,
-  coordinatorWakeKey,
-  foldCoordinatorDecision,
-  foldCoordinatorStuck,
-  foldCoordinatorWake,
-  readCoordinatorRecords,
-} from "./coordinator.js";
 export { createNodeRetroSidecarIo, createNodeStateEdge } from "./driver/runtime-edge.js";
 export {
   appendEconomicsRestartEvent,
@@ -206,16 +183,39 @@ export {
   readTelemetryFamilies,
   readTelemetrySteps,
   readTelemetryStepsAtVersion,
-  TELEMETRY_STORAGE_NEXT_VERSION,
-  TELEMETRY_STORAGE_READ_VERSIONS,
   type TelemetryFamiliesRead,
   type TelemetrySessionTotalsRead,
+  TELEMETRY_STORAGE_NEXT_VERSION,
+  TELEMETRY_STORAGE_READ_VERSIONS,
   type TelemetryStepRecordAtVersion,
   type TelemetryStorageReadVersion,
   telemetryBaselineKey,
   telemetryStepAtVersion,
   telemetryStepKey,
 } from "./telemetry.js";
+export {
+  appendCoordinatorExhaustion,
+  appendCoordinatorFence,
+  appendCoordinatorIteration,
+  appendCoordinatorPayload,
+  appendCoordinatorRestart,
+  appendCoordinatorStuck,
+  appendCoordinatorWake,
+  coordinatorExhaustionKey,
+  coordinatorFenceKey,
+  coordinatorIterationKey,
+  coordinatorKeyFor,
+  coordinatorRestartKey,
+  coordinatorStuckKey,
+  coordinatorWakeKey,
+  type CoordinatorAppendOutcome,
+  type CoordinatorRecordsRead,
+  COORDINATOR_STATE_ERROR_IDENTITIES,
+  foldCoordinatorDecision,
+  foldCoordinatorStuck,
+  foldCoordinatorWake,
+  readCoordinatorRecords,
+} from "./coordinator.js";
 
 /** Options for opening a store: the driver kind and the injected edge. */
 export type StateStoreOptions = {

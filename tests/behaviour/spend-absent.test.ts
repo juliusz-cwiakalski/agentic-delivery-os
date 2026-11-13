@@ -1,7 +1,9 @@
 /**
- * TC-SPEND-007 — telemetry-absent is a first-class classified outcome: named,
- * scoped, exit 1, with capture-prerequisite remediation, and never an empty
- * success, a zero report, or an unclassified error.
+ * TC-SPEND-007 / TC-TELEMETRY-025 — telemetry-absent is a first-class
+ * classified outcome: named, scoped, exit 1, with capture-prerequisite
+ * remediation, and never an empty success, a zero report, or an unclassified
+ * error. Absence keys off telemetry records of either plane, never harness
+ * totals (S-06) and never another ref's records (S-09).
  */
 import { describe, expect, test } from "bun:test";
 import { A05 } from "../fixtures/spend/cases";
@@ -19,6 +21,19 @@ import {
   spendRuntimeOver,
   tokens,
 } from "../fixtures/spend/harness";
+import {
+  AGENT_ROLE,
+  LANE,
+  makeBaselineRecord,
+  makeStepRecord,
+  MODEL_A,
+  REPOSITORY,
+  RUN_A,
+  seedBaselines,
+  SESSION_A,
+  TELEMETRY_REF,
+  tokens as telemetryTokens,
+} from "../fixtures/telemetry";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -126,6 +141,61 @@ describe("TC-SPEND-007 telemetry-absent", () => {
     }
   });
 
+  test("harness totals present but no telemetry records is still absence (S-06)", async () => {
+    const { root, store } = emptyStore();
+    try {
+      seedBaselines(store, [
+        makeBaselineRecord({
+          ref: TELEMETRY_REF,
+          runId: RUN_A,
+          sessionId: SESSION_A,
+          tokens: telemetryTokens({ input: 500 }),
+        }),
+      ]);
+      const machine = await runSpendCli(
+        ["--json", "spend", "--ref", TELEMETRY_REF],
+        spendRuntimeOver(store),
+      );
+      expect(machine.exitCode).toBe(1);
+      const envelope = parse(machine.stdout);
+      const error = envelope.error;
+      if (!isRecord(error)) throw new Error("error missing");
+      expect(error.code).toBe("spend.telemetry-absent");
+      // No zero-valued report and no reconciliation against only a baseline.
+      expect(JSON.stringify(envelope)).not.toContain("tokensByClass");
+      expect(JSON.stringify(envelope)).not.toContain("500");
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("v2 step records for another ref never satisfy this selection (S-09)", async () => {
+    const { root, store } = emptyStore();
+    try {
+      seedSpend(store, {
+        records: [
+          makeSessionRecord({
+            ref: OTHER_REF,
+            runId: "run-other",
+            tokens: tokens({ input: 999 }),
+          }),
+        ],
+      });
+      const machine = await runSpendCli(
+        ["--json", "spend", "--ref", TELEMETRY_REF],
+        spendRuntimeOver(store),
+      );
+      expect(machine.exitCode).toBe(1);
+      const envelope = parse(machine.stdout);
+      const error = envelope.error;
+      if (!isRecord(error)) throw new Error("error missing");
+      expect(error.code).toBe("spend.telemetry-absent");
+      expect(JSON.stringify(envelope)).not.toContain("999");
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("the positive control renders a report, so absence is not a blanket refusal", async () => {
     const { root, store } = emptyStore();
     try {
@@ -139,6 +209,36 @@ describe("TC-SPEND-007 telemetry-absent", () => {
       );
       expect(machine.exitCode).toBe(0);
       expect(Object.hasOwn(parse(machine.stdout), "data")).toBe(true);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a v2 step record renders a full report, never absence", async () => {
+    const { root, store } = emptyStore();
+    try {
+      seedSpend(store, {});
+      const step = makeStepRecord({
+        ref: TELEMETRY_REF,
+        runId: RUN_A,
+        sessionId: SESSION_A,
+        agentRole: AGENT_ROLE,
+        lane: LANE,
+        repository: REPOSITORY,
+        model: MODEL_A,
+        tokens: telemetryTokens({ input: 12 }),
+      });
+      const { seedSteps } = await import("../fixtures/telemetry");
+      seedSteps(store, [step]);
+      const machine = await runSpendCli(
+        ["--json", "spend", "--ref", TELEMETRY_REF],
+        spendRuntimeOver(store),
+      );
+      expect(machine.exitCode).toBe(0);
+      const data = parse(machine.stdout).data;
+      if (!isRecord(data)) throw new Error("data missing");
+      expect((data.tokensByClass as Record<string, number>).input).toBe(12);
+      expect(data.telemetryState).toBe("present");
     } finally {
       removeRoot(root);
     }

@@ -186,8 +186,8 @@ describe("TC-SPEND-034 mutant sensitivity", () => {
       "m01",
       [
         [
-          "const degraded = record.warnings.length > 0 || hasNullClass(record.tokens);",
-          "const degraded = record.warnings.length > 0;",
+          "const degraded = record.warningReasons.length > 0 || hasNullClass(record.tokens);",
+          "const degraded = record.warningReasons.length > 0;",
         ],
       ],
       (module) => {
@@ -209,11 +209,11 @@ describe("TC-SPEND-034 mutant sensitivity", () => {
       "m02",
       [
         [
-          `  const runIdentities = new Set<string>(readsRunIdSet(records));
+          `  const runIdentities = new Set<string>(selected.map((record) => record.runId));
   if (selection.phase === undefined) {
     for (const outcome of read.outcomes) runIdentities.add(outcome.runId);
   }`,
-          "  const runIdentities = new Set<string>(readsRunIdSet(records));",
+          "  const runIdentities = new Set<string>(selected.map((record) => record.runId));",
         ],
       ],
       (module) => {
@@ -358,13 +358,16 @@ describe("TC-SPEND-034 mutant sensitivity", () => {
       "m08",
       [
         [
-          `  const warnings =
-    bounded.truncation.agents === 0 &&
-    bounded.truncation.phases === 0 &&
-    bounded.truncation.events === 0
-      ? []
-      : [spendTruncationWarning(bounded.truncation)];`,
-          "  const warnings: readonly string[] = [];",
+          `  const warnings: string[] = [];
+  if (
+    bounded.truncation.agents !== 0 ||
+    bounded.truncation.breakdowns !== 0 ||
+    bounded.truncation.phases !== 0 ||
+    bounded.truncation.events !== 0
+  ) {
+    warnings.push(spendTruncationWarning(bounded.truncation));
+  }`,
+          "  const warnings: string[] = [];",
         ],
       ],
       (module) => {

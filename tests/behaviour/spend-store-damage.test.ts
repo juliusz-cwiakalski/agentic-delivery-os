@@ -31,6 +31,12 @@ import {
   withinFence,
 } from "../fixtures/spend/harness";
 import { T0 } from "../fixtures/spend/transitions";
+import {
+  makeStepRecord as makeStepRecordFor,
+  seedSteps,
+  TELEMETRY_REF,
+  tokens as telemetryTokens,
+} from "../fixtures/telemetry";
 
 const POSIX = process.platform !== "win32";
 const CANARY = "planted-spend-payload-canary";
@@ -57,6 +63,18 @@ const rewriteLedger = (path: string, edit: (lines: LedgerRecord[]) => LedgerReco
 };
 
 const headerPath = (root: string): string => `${root}/header.workspace-a.json`;
+
+/** Seed one v2 step record through the delivered append path. */
+const seedStepsFor = (store: ReturnType<typeof openStore>["store"]): void => {
+  seedSteps(store, [
+    makeStepRecordFor({
+      ref: TELEMETRY_REF,
+      runId: "run-v2-damage",
+      sessionId: "ses_v2_damage",
+      tokens: telemetryTokens({ input: 11 }),
+    }),
+  ]);
+};
 
 const withSeeded = (label: string, body: (context: ReturnType<typeof seed>) => void): void => {
   const context = seed(label);
@@ -208,6 +226,68 @@ describe("TC-SPEND-008 store damage at the read seam", () => {
       writeFileSync(ledgerPath(identity), intake);
       expect(readSpendLedger(openStore(identity).store, SPEND_REF).ok).toBe(true);
     });
+  });
+});
+
+describe("TC-TELEMETRY-026 v2 telemetry damage keeps the delivered identities", () => {
+  test("a torn v2 step family classifies as state.store.torn, never absence", () => {
+    const root = makeTempRoot("gh291-v2-damage-torn");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedStepsFor(store);
+      const intake = readFileSync(ledgerPath(identity), "utf8");
+      writeFileSync(ledgerPath(identity), "{not-framed\n");
+      const torn = readSpendLedger(openStore(identity).store, TELEMETRY_REF);
+      expectClassified(torn, "state.store.torn", "platform-provider");
+      if (!torn.ok) expect(torn.error.code).not.toBe("spend.telemetry-absent");
+      writeFileSync(ledgerPath(identity), intake);
+      expect(readSpendLedger(openStore(identity).store, TELEMETRY_REF).ok).toBe(true);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("an unknown kind under the v2 step key is damage, never absence", () => {
+    const root = makeTempRoot("gh291-v2-damage-kind");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedStepsFor(store);
+      withinFence(store, "writer", (handle) => {
+        const appended = store.append(handle, {
+          kind: "mystery.kind",
+          recordKey: `harness.telemetry.step:${TELEMETRY_REF}`,
+          payload: { note: CANARY },
+        });
+        expect(appended.ok).toBe(true);
+      });
+      const read = readSpendLedger(openStore(identity).store, TELEMETRY_REF);
+      expectClassified(read, "state.store.torn", "platform-provider");
+      expect(JSON.stringify(read.ok ? {} : read.error)).not.toContain(CANARY);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a malformed v2 step payload never renders a partial truth", () => {
+    const root = makeTempRoot("gh291-v2-damage-malformed");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      withinFence(store, "writer", (handle) => {
+        const appended = store.append(handle, {
+          kind: "harness.telemetry.step",
+          recordKey: `harness.telemetry.step:${TELEMETRY_REF}`,
+          payload: { schemaId: "delivery.harness.telemetry.step.v1" },
+        });
+        expect(appended.ok).toBe(true);
+      });
+      const read = readSpendLedger(openStore(identity).store, TELEMETRY_REF);
+      expectClassified(read, "state.store.torn", "platform-provider");
+    } finally {
+      removeRoot(root);
+    }
   });
 });
 

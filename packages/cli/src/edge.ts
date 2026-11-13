@@ -3850,51 +3850,6 @@ export const readRetroRegistryState = (store: StateStorePort): DoctorStateStores
   };
 };
 
-/**
- * The spend composition seams (GH-236 F-6): the delivery state store and the
- * local PM context. The command is read-only: no fence, no append, no spawn,
- * no credential resolution is composed here.
- */
-export type SpendCompositionOptions = {
-  readonly store: StateStorePort;
-  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
-};
-
-/** Compose the spend command runtime from the injected read-only seams. */
-export const createSpendCommandRuntime = (
-  options: SpendCompositionOptions,
-): SpendCommandRuntime => ({
-  resolveActiveRef: () => {
-    const context = readLocalPmContext({
-      path: options.localContext.path,
-      fs: options.localContext.fs,
-    });
-    const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
-    return ref === undefined ? { ref: null } : { ref };
-  },
-  report: (selection) => {
-    const read = readSpendLedger(options.store, selection.workItemRef);
-    if (!read.ok) {
-      return {
-        ok: false,
-        error: {
-          kind: "state",
-          code: read.error.code,
-          consequence: read.error.consequence,
-          location: read.error.location,
-        },
-      };
-    }
-    const folded = computeSpendReport(read.value, selection);
-    if (!folded.ok) {
-      return { ok: false, error: { kind: "spend", code: folded.absence.code } };
-    }
-    return folded.warnings.length === 0
-      ? { ok: true, data: folded.data }
-      : { ok: true, data: folded.data, warnings: folded.warnings };
-  },
-});
-
 /* ------------------------- telemetry ingest edge ------------------------- */
 
 /**
@@ -3969,6 +3924,51 @@ export const createTelemetryIngestSink = (
     },
   };
 };
+
+/**
+ * The spend composition seams (GH-236 F-6): the delivery state store and the
+ * local PM context. The command is read-only: no fence, no append, no spawn,
+ * no credential resolution is composed here.
+ */
+export type SpendCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+};
+
+/** Compose the spend command runtime from the injected read-only seams. */
+export const createSpendCommandRuntime = (
+  options: SpendCompositionOptions,
+): SpendCommandRuntime => ({
+  resolveActiveRef: () => {
+    const context = readLocalPmContext({
+      path: options.localContext.path,
+      fs: options.localContext.fs,
+    });
+    const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+    return ref === undefined ? { ref: null } : { ref };
+  },
+  report: (selection) => {
+    const read = readSpendLedger(options.store, selection.workItemRef);
+    if (!read.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "state",
+          code: read.error.code,
+          consequence: read.error.consequence,
+          location: read.error.location,
+        },
+      };
+    }
+    const folded = computeSpendReport(read.value, selection);
+    if (!folded.ok) {
+      return { ok: false, error: { kind: "spend", code: folded.absence.code } };
+    }
+    return folded.warnings.length === 0
+      ? { ok: true, data: folded.data }
+      : { ok: true, data: folded.data, warnings: folded.warnings };
+  },
+});
 
 /* ------------------------- scheduling engine edge ------------------------- */
 

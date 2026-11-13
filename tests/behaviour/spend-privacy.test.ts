@@ -59,10 +59,15 @@ describe("TC-SPEND-023 privacy of output", () => {
       if (fold === undefined || !fold.ok) throw new Error("fold failed");
       expect(Object.keys(fold.data).sort()).toEqual([
         "amplification",
+        "breakdowns",
+        "costTotals",
         "degradation",
         "perAgent",
         "perPhase",
+        "phaseTiming",
+        "reconciliation",
         "restarts",
+        "telemetryState",
         "tokensByClass",
       ]);
       const rendered = JSON.stringify(fold.data);

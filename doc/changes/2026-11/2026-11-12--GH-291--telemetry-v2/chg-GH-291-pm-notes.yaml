@@ -150,3 +150,45 @@ notes:
       ambient-globals 184 files clean; workspace-entrypoints green.
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 2 commit: 245aed33 (capture pipeline)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 3 complete: the extended read-side fold. `contracts/spend.ts`
+      keeps the exactly-six `SPEND_DATA_KEYS` and adds the declared v2 types
+      (breakdown rows/set, cost totals, phase timing, `SPEND_V2_TRUNCATION_TARGETS`)
+      beside them under the kept `delivery.spend.v1` identity (DEC-6).
+      `domain/spend.ts` folds both capture planes: the six v1 keys keep their
+      names and semantics on v1-only stores, and the five v2 keys land additively
+      — five-dimension breakdowns over the includes-null rows (sums equal the
+      totals), cost-bearing totals in harness-reported units with sparsity
+      disclosed, per-phase timing summaries derived from `phase.transition` with
+      stall/restart intervals joined from the delivered economics records,
+      `telemetryState: present`, and the declared-tolerance reconciliation block
+      (observed vs summed harness baseline, one verdict, excluded-session count
+      with the closed warning, unavailable when no baseline exists — never
+      `within`). The OQ-T4 session-dedup arithmetic is the single selection rule;
+      absence keys off telemetry records of either plane, so a baseline-only
+      store is still `spend.telemetry-absent` (S-06). Bounds extend to the
+      breakdown arrays with a binary-search tail drop; totals and the
+      reconciliation block are never truncated. `state/spend-reads.ts` composes
+      every telemetry family in one verified pass plus transitions and economics
+      restarts (three reads, constant with population). Owning TCs:
+      TC-TELEMETRY-009, 011, 014, 015, 017, 018, 025, 026. Goldens regenerated
+      deliberately with `bun run tmp/tmpdir/regen-spend-goldens.ts` (machine
+      payloads gain the five v2 keys; over-cap human golden states the declared
+      machine truncation). Narrow gate: `pnpm typecheck` green; telemetry-timing,
+      telemetry-storage-coexistence, spend-v2-*, spend-absent, spend-store-damage,
+      spend-contract, telemetry-contract, error-table, golden spend 170 pass / 0
+      fail; error-table-sync OK (telemetry record-kind literals are reserved
+      schema names, not error codes — scanner false positive fixed by declaring
+      them); full suite 7754 pass with only the phase-7 bounds assertion and the
+      phase-8 changeset assertion open by design.
+      Unavoidable shared-file edits (all flagged for plan diff): the four
+      delivered suites that pinned the exact six-key payload now pin six-plus-five
+      (additive assertions only); the events additivity inventories (state file
+      set, contract constant set, contract surface fixture) gained exactly the
+      declared telemetry additions; three v1 mutant anchors moved with the fold's
+      renamed locals, keeping each mutant's prohibited observable intact.
+    type: "info"
+    date: "2026-11-13"

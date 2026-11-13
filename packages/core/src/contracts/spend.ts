@@ -15,6 +15,13 @@ import type {
   HarnessWarningReason,
 } from "./harness-telemetry.js";
 import type { PmNotesPhaseId } from "./pm-notes.js";
+import type {
+  TelemetryBaselineRecord,
+  TelemetryReconciliation,
+  TelemetryState,
+  TelemetryStepRecord,
+  SpendBreakdownField,
+} from "./telemetry.js";
 import type { PhaseTransitionRecord } from "./registry.js";
 import type { StateFailure, StateSafeLocation } from "./state.js";
 
@@ -139,7 +146,51 @@ export type SpendDegradation = {
   readonly byReason: Readonly<Record<HarnessWarningReason, number>>;
 };
 
-/** The `delivery.spend.v1` report data carried inside the result envelope. */
+/** One breakdown row over one dimension value (DM-6). */
+export type SpendBreakdownEntry = {
+  /** The dimension value; `null` when no value was attributable. */
+  readonly value: string | null;
+  readonly calls: number;
+  readonly tokens: number;
+  readonly cost: number | null;
+};
+
+/** The five-dimension breakdown set; all five are always present (F-5). */
+export type SpendBreakdowns = Readonly<Record<SpendBreakdownField, readonly SpendBreakdownEntry[]>>;
+
+/** One model's cost in harness-reported units; a missing cost stays null. */
+export type SpendModelCost = {
+  readonly model: string | null;
+  readonly cost: number | null;
+};
+
+/** The cost-bearing totals beside the six v1 keys (DM-6, RSK-7). */
+export type SpendCostTotals = {
+  readonly total: number | null;
+  readonly models: readonly SpendModelCost[];
+  /** True when at least one measured record reported no cost (never repaired). */
+  readonly sparse: boolean;
+};
+
+/** One per-phase timing summary derived from the delivered history (DM-2). */
+export type SpendPhaseTiming = {
+  readonly phase: SpendPhaseId;
+  readonly start: string | null;
+  readonly end: string | null;
+  readonly durationMs: number | null;
+  /** Corroborated stall intervals joined from the delivered economics records. */
+  readonly stalls: number;
+  /** Restart intervals joined from the delivered economics records. */
+  readonly restarts: number;
+};
+
+/**
+ * The `delivery.spend.v1` report data carried inside the result envelope.
+ *
+ * The six v1 keys keep their names and semantics; the five v2 keys below them
+ * are the declared additive set (DEC-6). A consumer branching on the six keys
+ * reads exactly what it read before.
+ */
 export type SpendReport = {
   readonly tokensByClass: SpendTokenTotals;
   readonly perPhase: readonly SpendPhaseEntry[];
@@ -147,14 +198,32 @@ export type SpendReport = {
   readonly restarts: number;
   readonly amplification: SpendAmplification;
   readonly degradation: SpendDegradation;
+  readonly costTotals: SpendCostTotals;
+  readonly breakdowns: SpendBreakdowns;
+  readonly phaseTiming: readonly SpendPhaseTiming[];
+  readonly telemetryState: TelemetryState;
+  readonly reconciliation: TelemetryReconciliation;
 };
 
-/** The counts dropped from each truncation tail (PIN-3). */
+/** The counts dropped from each truncation tail (PIN-3, DM-6). */
 export type SpendTruncation = {
   readonly agents: number;
+  readonly breakdowns: number;
   readonly phases: number;
   readonly events: number;
 };
+
+/**
+ * The declared v2 truncation tail order: the five breakdown arrays drop after
+ * `perAgent[]` and before `perPhase[]`. Totals and the reconciliation block are
+ * never truncated (NFR-2).
+ */
+export const SPEND_V2_TRUNCATION_TARGETS = [
+  "perAgent",
+  "breakdowns",
+  "perPhase",
+  "events",
+] as const;
 
 /** The verified-ledger evidence a spend read carries (store path and position). */
 export type SpendLedgerEvidence = {
@@ -175,6 +244,15 @@ export type SpendLedgerRead = {
   readonly transitionsPresent: boolean;
   readonly verifiedEmpty: boolean;
   readonly evidence: SpendLedgerEvidence;
+  /** The v2 stream-ingested step records (additive, optional for v1 callers). */
+  readonly steps?: readonly TelemetryStepRecord[];
+  /** The captured per-session harness baselines (additive, OQ-T2 §1). */
+  readonly baselines?: readonly TelemetryBaselineRecord[];
+  /** The delivered economics restarts feeding the timing summaries (DM-2). */
+  readonly restarts?: readonly {
+    readonly reason: string;
+    readonly recordedAt: string;
+  }[];
 };
 
 /** The resolved selection one fold consumes (PIN-6). */

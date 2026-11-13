@@ -1601,6 +1601,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "SPEND_TELEMETRY_ABSENT_CODE",
     "SPEND_TRUNCATION_MARKER",
     "SPEND_TRUNCATION_TARGETS",
+    "SPEND_V2_TRUNCATION_TARGETS",
     "SPEND_WORK_ITEM_REF_PATTERN",
   ],
   "core/src/contracts/telemetry.ts": [

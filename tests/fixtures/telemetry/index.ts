@@ -36,12 +36,14 @@ import {
   type TelemetryFrameContext,
   tallyFrame,
 } from "../../../packages/core/src/domain/telemetry-ingest";
+import { computeSpendReport } from "../../../packages/core/src/domain/spend";
 import {
   appendEconomicsRestartEvent,
   appendHarnessTelemetry,
   appendPhaseTransition,
   appendTelemetryBaseline,
   appendTelemetryStep,
+  readSpendLedger,
   readTelemetryBaselines,
   readTelemetrySteps,
   STATE_SCHEMA_VERSION,
@@ -485,4 +487,32 @@ export const runIngest = async (
       exitStatus: collected.value.exitStatus,
     },
   };
+};
+
+/** One seeded and folded telemetry case (the v2 read side). */
+export type TelemetryFoldSeed = {
+  readonly steps?: readonly TelemetryStepRecord[];
+  readonly baselines?: readonly TelemetryBaselineRecord[];
+  readonly v1?: readonly HarnessTelemetryRecord[];
+  readonly transitions?: readonly {
+    readonly phaseId: string;
+    readonly operation: "complete" | "reopen";
+    readonly timestamp: string;
+  }[];
+  readonly restarts?: readonly EconomicsRestartRecord[];
+  readonly ref?: string;
+};
+
+/** Seed a fresh temp store through the delivered paths, then read and fold. */
+export const foldTelemetryStore = (seed: TelemetryFoldSeed, label = "fold") => {
+  const fixture = makeTelemetryStore(label);
+  seedSteps(fixture.store, seed.steps ?? []);
+  seedBaselines(fixture.store, seed.baselines ?? []);
+  seedV1Records(fixture.store, seed.v1 ?? []);
+  seedTransitions(fixture.store, seed.transitions ?? [], seed.ref ?? TELEMETRY_REF);
+  seedRestarts(fixture.store, seed.restarts ?? []);
+  const ref = seed.ref ?? TELEMETRY_REF;
+  const read = readSpendLedger(fixture.store, ref);
+  const fold = read.ok ? computeSpendReport(read.value, { workItemRef: ref }) : undefined;
+  return { root: fixture.root, store: fixture.store, read, fold };
 };

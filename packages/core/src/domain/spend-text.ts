@@ -110,6 +110,7 @@ export const renderSpendHuman = (report: SpendReport, options: SpendHumanOptions
     const declared = options.truncation;
     const merged: SpendTruncation = {
       agents: report.perAgent.length - agents.length + (declared?.agents ?? 0),
+      breakdowns: declared?.breakdowns ?? 0,
       phases: report.perPhase.length - phases.length + (declared?.phases ?? 0),
       events: report.amplification.events.length - events.length + (declared?.events ?? 0),
     };

@@ -1,6 +1,8 @@
 /**
- * TC-SPEND-005 — cost is never aggregated and never rendered: token counts
- * alone constitute the breakdown, and a null cost is a disclosed degradation.
+ * TC-SPEND-005 — cost never enters a token sum and is never converted, priced,
+ * or currency-rendered: token counts alone constitute the token breakdown, a
+ * null cost is a disclosed degradation, and (v2, DEC-6) a reported cost is
+ * carried only in the additive cost-bearing block in harness-reported units.
  */
 import { describe, expect, test } from "bun:test";
 import { renderSpendHuman } from "../../packages/core/src/domain/index";
@@ -26,7 +28,7 @@ const withNullCost: SpendSeed = { records: [session(null)] };
 const withNumericCost: SpendSeed = { records: [session(987_654.321)] };
 
 describe("TC-SPEND-005 cost omission", () => {
-  test("a numeric cost enters no sum and renders no currency", () => {
+  test("a numeric cost enters no token sum and renders no currency", () => {
     const nullCase = foldSeed(withNullCost, "cost-null");
     const numericCase = foldSeed(withNumericCost, "cost-numeric");
     try {
@@ -36,17 +38,25 @@ describe("TC-SPEND-005 cost omission", () => {
       expect(numericCase.fold.data.perAgent).toEqual(nullCase.fold.data.perAgent);
       expect(numericCase.fold.data.amplification).toEqual(nullCase.fold.data.amplification);
       expect(Object.hasOwn(numericCase.fold.data, "cost")).toBe(false);
+      // v2: the additive cost-bearing fields carry the harness-reported figure
+      // as-is; every token figure stays cost-independent.
+      expect(numericCase.fold.data.costTotals.total).toBe(987_654.321);
+      const tokenOnly = JSON.stringify({
+        tokensByClass: numericCase.fold.data.tokensByClass,
+        perAgent: numericCase.fold.data.perAgent,
+        perPhase: numericCase.fold.data.perPhase,
+        amplification: numericCase.fold.data.amplification,
+      });
+      expect(tokenOnly).not.toContain("987654");
       const rendered = JSON.stringify(numericCase.fold.data);
-      expect(rendered).not.toContain("987654");
-      expect(rendered).not.toContain('"cost":');
       expect(rendered).not.toContain("$");
+      expect(rendered).not.toContain("USD");
       const human = renderSpendHuman(numericCase.fold.data, {
         brand: SYNTHETIC_BRAND,
         amplification: false,
       });
       expect(human).not.toContain("$");
       expect(human).not.toContain("USD");
-      expect(human).not.toContain("987654");
     } finally {
       removeRoot(nullCase.root);
       removeRoot(numericCase.root);

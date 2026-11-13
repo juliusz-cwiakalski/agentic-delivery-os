@@ -48,12 +48,18 @@ describe("TC-SPEND-003 per-ticket breakdown", () => {
     try {
       expect(fold?.ok).toBe(true);
       if (fold === undefined || !fold.ok) return;
+      // The six v1 keys keep their names; the five v2 keys sit beside them (DEC-6).
       expect(Object.keys(fold.data).sort()).toEqual([
         "amplification",
+        "breakdowns",
+        "costTotals",
         "degradation",
         "perAgent",
         "perPhase",
+        "phaseTiming",
+        "reconciliation",
         "restarts",
+        "telemetryState",
         "tokensByClass",
       ]);
       expect(fold.data.tokensByClass).toEqual(EXPECTED_TOKENS);

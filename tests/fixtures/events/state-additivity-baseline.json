@@ -127,6 +127,12 @@
     "spend.ts:SPEND_DATA_SCHEMA_ID": "delivery.spend.v1",
     "state.ts:STATE_SALVAGE_PAYLOAD_SCHEMA": "delivery.state.salvage.v1",
     "state.ts:STATE_SALVAGE_RECORD_KIND": "state.salvage",
-    "state.ts:STATE_SCHEMA_VERSION": "delivery.state.v1"
+    "state.ts:STATE_SCHEMA_VERSION": "delivery.state.v1",
+    "telemetry.ts:TELEMETRY_BASELINE_KEY_PREFIX": "harness.telemetry.baseline:",
+    "telemetry.ts:TELEMETRY_BASELINE_RECORD_KIND": "harness.telemetry.baseline",
+    "telemetry.ts:TELEMETRY_BASELINE_SCHEMA_ID": "delivery.harness.telemetry.baseline.v1",
+    "telemetry.ts:TELEMETRY_STEP_KEY_PREFIX": "harness.telemetry.step:",
+    "telemetry.ts:TELEMETRY_STEP_RECORD_KIND": "harness.telemetry.step",
+    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1"
   }
 }
