@@ -521,3 +521,48 @@ notes:
       keep-both-sides rule.
     type: "info"
     date: "2026-11-13"
+  - text: "Branch sync with the moved integration line: merged origin/main-tools
+      bf5783ed (GH-292 queue lifecycle, PR #314; ~148 files, +17,013/−553) into
+      feat/GH-291/telemetry-v2 as merge commit b6181727
+      (chore(GH-291): sync with main-tools), parents 19f173f2 + bf5783ed.
+      Git auto-merged 11 of the 18 overlapping files; 7 true conflicts were
+      resolved as unions per the operator's keep-both-sides rule:
+      packages/cli/src/production.ts (unioned contract imports, adding
+      QueueTrackerRead; body already carries both the telemetry sink
+      composition and the queue lifecycle wiring),
+      doc/00-index.md (Harness Adapters row kept our per-step ingest sink
+      clause; Dispatch Engine row gained GH-292's single-flight refusal
+      clause), doc/overview/architecture-overview.md and doc/overview/glossary.md
+      (related_changes unions: GH-290, GH-291, GH-292),
+      doc/planning/oss-tooling/status.md (both M2 delivery snapshots kept —
+      2026-11-12 queue lifecycle then 2026-11-13 harness telemetry v2),
+      doc/spec/features/feature-closeout.md (related_changes and
+      related_decisions unions incl. TDR-0026),
+      doc/spec/features/feature-state-layer.md (summary union: our
+      harness.telemetry.step/baseline families clause plus GH-292's
+      six-additive-queue-scheduling-kinds count, verified against the merged
+      body's queue.removal kind; related_changes union). Auto-merged union
+      integrity verified in edge.ts, help.ts, error-table-sync.ts (both
+      harness.telemetry.capture and the queue literals), both fixtures
+      (telemetry + queue entries), content-inventory.test.ts, all three
+      barrels, backlog.md (M2-S14 and M2-S15 both delivered) and
+      milestones/m2/contracts.md. Gate verdicts on the merged tree: pnpm
+      typecheck PASS (6 packages + tests/types); targeted behaviour tests
+      PASS 72/0 across both lanes (spend-reconciliation, telemetry
+      attribution/ingest/disclosure, queue-remove, queue-claim-single-flight,
+      queue-reconcile, events-remove, events-emitted-kinds) plus
+      content-inventory; scripts/.tests/test-doc-distribution.sh PASS (no
+      drift, 83 in-scope docs); scripts/lint-commit-range.sh --base
+      main-tools PASS (19 commits incl. the merge, 0 offending); full
+      TMPDIR=$PWD/tmp/tmpdir pnpm check battery EXIT=0 with 8008 pass /
+      4 skip / 0 fail across 1031 files, boundaries/prompt-conformance/
+      help-guide-coverage/exports-parity all green. No integration fixes
+      were required: the union typechecked and passed the full battery on
+      the first run. Declared deviations: none — all seven conflict files
+      were predicted overlaps, resolutions stayed inside the operator's
+      keep-both-sides rule, and no phase lifecycle commands were run
+      (sync-only task). Branch is 19 ahead of / 0 behind origin/main-tools
+      before the pm-notes commit; doc/decisions/00-index.md needed no manual
+      conflict resolution (auto-merged)."
+    type: "info"
+    date: "2026-11-13"
