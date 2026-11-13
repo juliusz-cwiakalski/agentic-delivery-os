@@ -1,7 +1,7 @@
 ---
 id: chg-GH-294-test-plan
 status: Proposed
-version: 1.1
+version: 1.2
 created: 2026-11-13
 last_updated: 2026-11-13
 owners: [engineering]
@@ -33,12 +33,12 @@ This document is a verification map, not an execution claim: no command was run 
 - Peak-window rules as data: the per-profile versioned schema (window list with start, end, and time-zone declaration, multiplier per window, buffers before/after, `graceSeconds` default and maximum bounded by the window buffer), fail-closed classified validation, and the no-window-means-no-enforcement default (F-2; DM-3; DEC-6; NFR-1).
 - The resident daemon's profile-window watch: buffer-inclusive window-start parking of every in-flight lane of the profile, the bounded-grace stop with recorded deadline, the park record (reason, profile, `until`, preservation classification) appended under one fence, the one-supervision-cycle bound, stay-parked-until-end, and composition with the delivered supervision/liveness/safe-boundary contracts without a new kill path (F-3; AC-F3-2; DM-4; NFR-1, NFR-2; DEC-11/TDR-0030 D1/D5).
 - Cross-profile isolation: only lanes nominated to the in-window profile are parked; the park decision reads the recorded nomination only (F-4; AC-F4-3; RSK-3).
-- Window-end resume: automatic resume from preserved session state on the same branch for `preserved` lanes; delivered interrupted-lane recovery (ledger position, same branch, one restart ordinal, restart-budget and resume-economics governed) for `session-state-not-preserved` lanes; delivered exhaustion escalation (terminal record + typed question); no loss or duplication of branch, artifact, or queue state; single-flight interplay; owner-hold precedence including at window end (F-5; AC-F5-4; DEC-5, DEC-8, DEC-11; NFR-5).
+- Window-end resume: automatic resume from preserved session state on the same branch for `preserved` lanes; delivered interrupted-lane recovery (ledger position, same branch, one restart ordinal, restart-budget and resume-economics governed) for `session-state-not-preserved` lanes; delivered exhaustion escalation (terminal record + typed question); no loss or duplication of branch, artifact, or queue state; single-flight interplay; owner-hold precedence at window end via resume-admission refusal (`queue.precondition.unmet`, reason `owner-hold`) with no synthetic owner-hold park record — the lane stays parked under its existing park record (F-5; AC-F5-4; DM-4; DEC-5, DEC-8, DEC-11, DEC-12; NFR-5).
 - The window-scoped zero-spend assertion: billable-call count over the telemetry v2 attribution join for the parked lane from park timestamp through window end — inclusive of both boundary instants, with only calls strictly before the park timestamp excluded — `telemetryState` distinguishing present zero from classified absence, and falsifiability (F-6; AC-F6-5; DM-5; DEC-4; NFR-4).
 - Taxonomy v2: the four new kinds with declared payload field lists, v1 kind/payload byte-identity, one stamp constant across frames/degraded frames/reference surface, v1 retired as the single spoken version, the six-point v1-consumer compatibility, and exactly-once episode emission with ledger-reconstructable payloads (EVT-1..EVT-4; AC-F7-6 ledger half; DEC-3, DEC-10/TDR-0029; NFR-6).
 - Status digest and brief park fields: parked count, reason, `until`, and the preservation classification for open episodes, projected from the same collector facts with zero added reads; the lanes `parked:<cause>` projection gains `peak-window` and `owner-hold` with the delivered three unchanged; `queue release --park` accepts the new causes with the delivered `--until` requirement (F-7; AC-F7-6 surface half; DEC-2; NFR-8).
 - Daemon-absent degradation: iteration-start gating at admission unchanged, the declared mode and `parkClaimed == false` in the machine read, and zero enforcement claims on any surface (F-8; AC-F8-7; DEC-7; NFR-7).
-- Cross-cutting invariants: UTC-only window evaluation on the injected clock with TZ-independence, determinism of park/resume/event decisions, suite hermeticity (zero live network, zero live credential reads, zero real sleeps), event evidence bounds, additive record discipline (no schema bump, no migration, fenced appends), and the owner-hold park expiry field (DM-4 owner-hold half, DM-6; DEC-1; NFR-3, NFR-6, NFR-9, NFR-10).
+- Cross-cutting invariants: UTC-only window evaluation on the injected clock with TZ-independence, determinism of park/resume/event decisions, suite hermeticity (zero live network, zero live credential reads, zero real sleeps), event evidence bounds, additive record discipline (no schema bump, no migration, fenced appends), and the owner-hold park's `until` classified absence with the named park writers (DM-4 owner-hold half, DM-6; DEC-1, DEC-12; NFR-3, NFR-6, NFR-9, NFR-10).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -63,7 +63,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-294-spec.md`](./chg-GH-294-spec.md) v1.1 | Binding source: F-1..F-8, **7 ACs** (AC-F1-1, AC-F3-2, AC-F4-3, AC-F5-4, AC-F6-5, AC-F7-6, AC-F8-7), NFR-1..NFR-10, EVT-1..EVT-4, DM-1..DM-6, DEC-1..DEC-11, OQ-1..OQ-3 (resolved), §5.1 capability details, §6 flows 1–4, §7 scope boundaries, Appendix A (vocabulary mapping), Appendix B (source anchors). |
+| [`chg-GH-294-spec.md`](./chg-GH-294-spec.md) v1.3 | Binding source: F-1..F-8, **7 ACs** (AC-F1-1, AC-F3-2, AC-F4-3, AC-F5-4, AC-F6-5, AC-F7-6, AC-F8-7), NFR-1..NFR-10, EVT-1..EVT-4, DM-1..DM-6, DEC-1..DEC-12 (v1.3's DEC-12 names the owner-hold park writers and its `until` classified absence), OQ-1..OQ-3 (resolved), §5.1 capability details, §6 flows 1–4, §7 scope boundaries, Appendix A (vocabulary mapping), Appendix B (source anchors). |
 | [`TDR-0028-no-nomination-classified-admission-refusal.md`](../../../decisions/TDR-0028-no-nomination-classified-admission-refusal.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record for AC-F1-1's refusal half: D1 refuse at admission (recordless, eventless pre-session), D2 carry the resolve identity per shape at its delivered exit (absent/invalid/capability-denied exit 1, unavailable exit 2 with the eligibility list), D3 one admission family (one-shot dispatch and the composed supervision claim), D4 resumes never re-nominate (classified absence, no backfill), D5 no dispatch-default concept; C-4 reads never default/guess/borrow, C-5 empty-branch refusal preserved. |
 | [`TDR-0029-event-taxonomy-v2-peak-pause-kinds.md`](../../../decisions/TDR-0029-event-taxonomy-v2-peak-pause-kinds.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record for the taxonomy half: D1 version `v2` whole-taxonomy, D2 declaration content (kind sets, v1 payloads byte-identical), D3 wire unchanged, D4 the stamp moves from one constant, D5 single spoken version (v1 retired), D6 the six-point v1-consumer compatibility statement, D7 drift/contract/reference-surface tests extend to v2. Its "exact payload field lists" unresolved question is delivery-pinned and asserted against the M2 contracts content (OQ-TP-5). |
 | [`TDR-0030-park-preservation-failure-classification.md`](../../../decisions/TDR-0030-park-preservation-failure-classification.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record for the preservation classification: D1 the park is never refused, D2 the classification is carried on the park record, the `parked` event, and status/brief (exactly one `parked` event per episode), D3 resume admission reads the classification (session resume vs delivered interrupted-lane recovery, one restart ordinal), D4 exhaustion escalates as delivered (terminal record + typed question, never silent requeue, never fresh re-dispatch), D5 grace untouched. Its two unresolved questions (classification literal/field placement; status/brief rendering shape) are logged as OQ-TP-3/§8.3 and asserted at the closed-value level. |
@@ -95,7 +95,7 @@ All 7 acceptance criteria map to at least one named case, and no case is an orph
 
 **Capability coverage** (every F-# has at least one TC): F-1 → 001, 002, 003, 004, 005, 006; F-2 → 010, 011, 012, 022; F-3 → 020, 021, 022, 023, 024, 025, 026; F-4 → 030, 031; F-5 → 040, 041, 042, 043, 044; F-6 → 050, 051, 052; F-7 → 060, 061, 062, 063, 064, 070, 071, 072; F-8 → 080, 081.
 
-**Decision coverage**: DEC-1 → 090; DEC-2 → 072, 094; DEC-3 → 060; DEC-4 → 050, 051, 052; DEC-5 → 040, 024; DEC-6 → 010, 011, 022; DEC-7 → 080, 081; DEC-8 → 044; DEC-9 (TDR-0028) → 002, 003, 004, 005, 006, 001; DEC-10 (TDR-0029) → 060, 061, 062, 063; DEC-11 (TDR-0030) → 021, 025, 041, 042.
+**Decision coverage**: DEC-1 → 090; DEC-2 → 072, 094; DEC-3 → 060; DEC-4 → 050, 051, 052; DEC-5 → 040, 024; DEC-6 → 010, 011, 022; DEC-7 → 080, 081; DEC-8 → 044, 072; DEC-9 (TDR-0028) → 002, 003, 004, 005, 006, 001; DEC-10 (TDR-0029) → 060, 061, 062, 063; DEC-11 (TDR-0030) → 021, 025, 041, 042; DEC-12 → 044, 072, 094.
 
 **Ticket-scenario coverage** (milestone SC-M2-S17-01..07, per spec §17 traceability): SC-M2-S17-01 (park at peak start) → 020, 021, 023, 024; SC-M2-S17-02 (other-provider isolation) → 030; SC-M2-S17-03 (resume without state loss) → 040, 043; SC-M2-S17-04 (zero-spend assertion) → 050, 051; SC-M2-S17-05 (daemon-absent degradation) → 080, 081; SC-M2-S17-06 (nomination on records) → 001; SC-M2-S17-07 (stop/park/resume visible) → 064, 070, 071.
 
@@ -112,7 +112,7 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no external in
 | DM-1 Nomination on attempt records | 001, 006, 094 | `providerProfile` present at admission as an additive field on `delivery.dispatch.attempt.v1`; read paths return the stored value; pre-change records valid without it (classified absence); no schema bump. |
 | DM-2 Nomination on lane records | 001, 005, 006 | `providerProfile` on the daemon lane record family, recorded at admission, agreeing with the attempt record for the same delivery. |
 | DM-3 Peak-window rule schema | 010, 011, 012, 090 | Per-profile versioned data: window list (start, end, time-zone declaration), multiplier per window, buffers before/after, `graceSeconds` default and max bounded by the window buffer; fail-closed classified validation; no window → no enforcement. |
-| DM-4 Park reason record fields | 021, 044, 072, 094 | `peak-window` parks name the profile, carry `until`, and carry the closed-value preservation classification; `owner-hold` parks carry the hold's expiry; appends under one fence; read-time expiry semantics. |
+| DM-4 Park reason record fields | 021, 044, 072, 094 | `peak-window` parks name the profile, carry `until`, and carry the closed-value preservation classification; `owner-hold` parks carry `until` as a declared classified absence (absent/null — the hold is a read-time gate with no expiry), written only by the operator-invoked `queue release --park owner-hold` command (the hold and the window-end resume path write none); appends under one fence; read-time expiry semantics. |
 | DM-5 Window-scoped zero-spend evidence | 050, 051, 052 | Billable-call count over the telemetry v2 storage identity for the parked lane from park timestamp through window end — inclusive of both boundary instants; only calls strictly before the park timestamp are excluded; `telemetryState` distinguishes present from classified absence; falsifiable (a seeded mid-window call reads non-zero). |
 | DM-6 Additive record discipline | 005, 094 | Additive, schema-versioned, fenced-append records; no in-place mutation, no schema bump of delivered payloads, no migration/backfill/seed. |
 | §8.1 CLI surfaces | 001, 002, 072, 080 | `dispatch`/`dispatch attempts` (nomination, refusal identities), `lanes` (nomination, parked state, `parked:<cause>` gains `peak-window`/`owner-hold`), `queue release --park` (new causes, `--until` requirement), `status`/`brief` (park fields), `spend` (window-scoped evidence), `events` (v2 reference surface). |
@@ -146,7 +146,7 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no external in
 | Capabilities covered | F-1..F-8 (8/8) | Pass |
 | NFRs covered | NFR-1..NFR-10 (10/10) | Pass |
 | Interfaces covered | EVT-1..EVT-4 (4/4), DM-1..DM-6 (6/6) | Pass |
-| Decisions covered | DEC-1..DEC-11 (11/11) | Pass |
+| Decisions covered | DEC-1..DEC-12 (12/12) | Pass |
 | AC → TC direction present | §3.1 | Pass |
 | TC → AC direction present | §5.1 index and every §5.2 header | Pass |
 | Cases appearing in the Automation Plan (§7) | 41 of 41 | Pass |
@@ -202,7 +202,7 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 | TC-PAUSE-041 | A not-preserved lane routes to the delivered interrupted-lane recovery: ledger position, same branch, one restart ordinal | Corner Case | Critical | Critical | AC-F5-4; F-5; NFR-5; DEC-11; AMB-P2 |
 | TC-PAUSE-042 | Budget exhaustion escalates as delivered: terminal record + typed question, never silent requeue, never fresh re-dispatch | Negative | Critical | Critical | AC-F5-4; F-5; DEC-11 |
 | TC-PAUSE-043 | No state lost or duplicated: branch, artifacts, queue, and single-flight intact across the episode | Corner Case | Critical | Critical | AC-F5-4; F-5; NFR-5; SC-M2-S17-03 |
-| TC-PAUSE-044 | An active owner hold outranks the window, including at window end | Corner Case | Critical | High | AC-F5-4; F-5; DM-4; DEC-8 |
+| TC-PAUSE-044 | An active owner hold outranks the window, including at window end | Corner Case | Critical | High | AC-F5-4; F-5, F-3; DM-4; DEC-8, DEC-12 |
 | TC-PAUSE-050 | Zero-spend positive reading over present telemetry, scoped park timestamp through window end | Happy Path | Critical | Critical | AC-F6-5; F-6; DM-5; NFR-4; DEC-4; SC-M2-S17-04 |
 | TC-PAUSE-051 | Telemetry absence is classified, never reported as zero | Negative | Critical | Critical | AC-F6-5; F-6; DM-5; NFR-4; DEC-4 |
 | TC-PAUSE-052 | Only strictly pre-park calls are excluded; the boundary instants count and the zero is falsifiable | Corner Case | Important | High | AC-F6-5; F-6; DM-5; DEC-4 |
@@ -213,14 +213,14 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 | TC-PAUSE-064 | Exactly one stop, parked, resumed, and park-edge per episode with ledger-reconstructable payloads | Happy Path | Critical | Critical | AC-F7-6; F-7; EVT-1..EVT-4; NFR-6 |
 | TC-PAUSE-070 | Status digest carries the lane park fields for open episodes and clears them after | Happy Path | Critical | Critical | AC-F7-6; F-7; NFR-8; SC-M2-S17-07; AMB-P3 |
 | TC-PAUSE-071 | Brief projects the same park fields with zero added reads | Contract | Critical | High | AC-F7-6; F-7; NFR-8; SC-M2-S17-07; AMB-P3 |
-| TC-PAUSE-072 | Park-cause vocabulary: lanes `parked:<cause>` gains `peak-window`/`owner-hold`; delivered three unchanged; `queue release --park` accepts them | Regression | Critical | High | AC-F7-6; F-7; DM-4; DEC-2 |
+| TC-PAUSE-072 | Park-cause vocabulary: lanes `parked:<cause>` gains `peak-window`/`owner-hold`; delivered three unchanged; named park writers and the hold's classified absence | Regression | Critical | High | AC-F7-6, AC-F5-4; F-7, F-5; DM-4; DEC-2, DEC-12 |
 | TC-PAUSE-080 | Daemon-absent degradation: iteration-start gating with declared mode and `parkClaimed == false` | Happy Path | Critical | Critical | AC-F8-7; F-8; NFR-7; DEC-7; SC-M2-S17-05; AMB-P4 |
 | TC-PAUSE-081 | No surface claims a park that did not happen (daemon-absent) | Negative | Critical | Critical | AC-F8-7; F-8; NFR-7; DEC-7 |
 | TC-PAUSE-090 | UTC-only window evaluation on the injected clock, TZ-independent | Corner Case | Critical | Critical | AC-F3-2; F-2, F-3; NFR-3; DEC-1 |
 | TC-PAUSE-091 | Determinism: identical inputs produce identical park, resume, and event decisions | Corner Case | Important | High | AC-F5-4; F-3, F-5; NFR-9 |
 | TC-PAUSE-092 | Hermeticity of the delivering suite: zero live network, zero credential reads, zero sleeps | Negative | Critical | Critical | AC-F1-1..AC-F8-7; NFR-10 |
 | TC-PAUSE-093 | Event evidence bounds on the four kinds: ≤ 20 payload fields, ≤ 1024 bytes evidence | Corner Case | Important | High | AC-F7-6; F-7; NFR-6 |
-| TC-PAUSE-094 | Additive record discipline and the owner-hold park expiry | Regression | Critical | High | AC-F5-4; F-1, F-5; DM-4, DM-6; DEC-2; G-9 |
+| TC-PAUSE-094 | Additive record discipline and the owner-hold `until` classified absence | Regression | Critical | High | AC-F5-4; F-1, F-5; DM-4, DM-6; DEC-2, DEC-12; G-9 |
 
 ### 5.2 Scenario Details
 
@@ -816,29 +816,28 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 
 #### TC-PAUSE-044 - An active owner hold outranks the window, including at window end
 
-**Objective**: Prove DEC-8 and Flow 4: the delivered owner-hold precedence applies unchanged to peak-pause episodes — a lane inside a hold is governed by the hold, and a window-end resume never overrides an active hold.
+**Objective**: Prove DEC-8 and Flow 4 under the spec v1.3 semantics: the hold is a read-time gate with no expiry that parks nothing and writes no park record — the window watcher still parks the lane with reason `peak-window` and `until`, and the hold's precedence manifests at claim and window-end resume admission, which refuse with `queue.precondition.unmet`, reason `owner-hold`, while the hold is active, leaving the lane parked under its existing park record.
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F5-4, F-5, DM-4, DEC-8
+**Related IDs**: AC-F5-4, F-5, F-3, DM-4, DEC-8, DEC-12
 **Test Type(s)**: Corner Case, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/daemon-peak-window-resume.test.ts` (new); owner-hold fixtures in three orderings
+**Target Layer / Location**: `tests/behaviour/daemon-peak-window-resume.test.ts` (new); owner-hold fixtures in three orderings with park-record count snapshots
 **Harness entry**: `bun test tests/behaviour/daemon-peak-window-resume.test.ts --filter hold-precedence`
 **Tags**: @backend, @corner
 
 **Preconditions**:
-- Owner-hold gate available (delivered #280 semantics); profile-a window declared; a lane on profile-a.
-- Three orderings: (a) hold active before the window opens; (b) hold activates while the lane is already peak-parked; (c) hold activates mid-window and clears before the effective end.
+- Owner-hold gate fixture (delivered #280 semantics: env value or host-root marker with source and optional bounded reason; no expiry); profile-a window declared; a lane on profile-a; park-record count snapshots for the record-level assertions.
 
 **Steps**:
-1. Ordering (a): with the hold active, drive the window open: the lane is governed by the hold (park reads under the hold's reason; `owner-hold` park record carries the hold's expiry per DM-4) — no `peak-window` park decision overrides it.
-2. Ordering (b): the lane parks for peak (`TC-PAUSE-020` path), then the hold activates: at window end, drive the resume cycle — assert **no resume** (the hold outranks the window-end trigger); the lane reads as hold-governed on every surface.
-3. Ordering (c): the hold clears before the effective end; drive past the end: the lane resumes per its episode's classification path (preserved → session resume per `TC-PAUSE-040`'s method).
-4. Assert in every ordering that the delivered hold suites' semantics are unchanged (delivered hold suites pass as controls) — no second precedence rule was invented.
+1. Ordering (a) — hold active before the window opens: drive the window open: assert the window watcher still parks the lane with reason `peak-window` and `until` at the window end (the hold parks nothing, writes no park record, and changes no park record); assert no `owner-hold` park record exists for the lane (record count).
+2. Ordering (b) — hold activates while the lane is already peak-parked, then the window ends: drive the resume cycle: assert window-end resume admission refuses with `queue.precondition.unmet`, reason `owner-hold`; assert **no resume**; assert no park record was appended by the refusal and the lane's existing `peak-window` park record is byte-unchanged (record-level, not just outcome-level) — the lane stays parked under its existing park record, never re-tagged, never duplicated.
+3. Ordering (c) — hold activates mid-window and clears before the effective end: drive past the end: the lane resumes per its episode's classification path (preserved → session resume per `TC-PAUSE-040`'s method); the refusal was transient with the hold.
+4. Assert in every ordering that the delivered hold suites' semantics are unchanged (delivered hold suites pass as controls) — no second precedence rule, no hold-written park record, no synthesized expiry was invented.
 
 **Expected Outcome**:
-- Hold precedence exact in all three orderings; window-end resume is suppressed by an active hold and proceeds once the hold clears.
+- Hold precedence exact in all three orderings: the window park proceeds unchanged, window-end resume is refused by classification while the hold is active with zero park-record appends, and resume proceeds once the hold clears.
 
 #### TC-PAUSE-050 - Zero-spend positive reading over present telemetry, scoped park timestamp through window end
 
@@ -1105,13 +1104,13 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 **Expected Outcome**:
 - Same facts, same values, zero added reads; the surfaces cannot disagree.
 
-#### TC-PAUSE-072 - Park-cause vocabulary: lanes `parked:<cause>` gains `peak-window`/`owner-hold`; delivered three unchanged; `queue release --park` accepts them
+#### TC-PAUSE-072 - Park-cause vocabulary: lanes `parked:<cause>` gains `peak-window`/`owner-hold`; delivered three unchanged; named park writers and the hold's classified absence
 
-**Objective**: Prove DEC-2 and Appendix A: the park cause additions join the delivered vocabularies without a fourth set — no duplicate cause, no silent rename — and the CLI surfaces accept the new causes with the delivered requirements.
+**Objective**: Prove DEC-2, DEC-12, and Appendix A: the park cause additions join the delivered vocabularies without a fourth set — no duplicate cause, no silent rename — the CLI surfaces accept the new causes with the delivered requirements, the owner-hold park record is written only by the operator-invoked `queue release --park owner-hold` command with `until` a declared classified absence, and an active hold's precedence at window end is an admission refusal that appends no park record.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F7-6, F-7, DM-4, DEC-2
+**Related IDs**: AC-F7-6, AC-F5-4, F-7, F-5, DM-4, DEC-2, DEC-12
 **Test Type(s)**: Regression, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-park-causes-s17.test.ts` (new) + `tests/golden/lanes-list.test.ts` (deliberate golden extension)
@@ -1119,17 +1118,19 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 **Tags**: @backend, @regression, @cli
 
 **Preconditions**:
-- A store with parkable lanes; the delivered `queue release --park` surface; the lanes projection.
+- A store with parkable lanes; the delivered `queue release --park` surface; the lanes projection; an owner-hold gate fixture (env value or host-root marker per delivered #280); a peak-window-parked lane (from the `TC-PAUSE-020` path) with its window ending while the hold is active; park-record count snapshots for the record-level assertions.
 
 **Steps**:
 1. Park a lane with cause `peak-window` (with `--until` at the window end); assert the lanes projection renders `parked:peak-window` and the park record names the profile and carries the classification.
-2. Park a lane with cause `owner-hold`; assert `parked:owner-hold` renders and the park record carries the hold's expiry (DM-4 owner-hold half).
+2. Invoke `queue release --park owner-hold` on a lane: assert the invoked command itself writes the park record with reason `owner-hold` and `until` a declared classified absence (absent/null) — never synthesized, never borrowed from another record, never a zero instant — and `parked:owner-hold` renders on the lanes projection.
 3. Golden control: the delivered three causes (`provider-window`, `provider-quota`, `preempted-for-close-item`) render exactly as delivered — golden regeneration shows only the additive cause values.
-4. `queue release --park peak-window` without `--until` is refused with the delivered requirement (provider-window parks require an explicit `--until <iso>`); `--park owner-hold` carries the hold's expiry semantics.
+4. `queue release --park peak-window` without `--until` is refused with the delivered requirement (provider-window parks require an explicit `--until <iso>`); `--park owner-hold` requires no expiry and writes none — the record's `until` is the classified absence of step 2, not a defaulted timestamp.
 5. Closed-vocabulary equality: the park-cause set equals delivered-three + `peak-window` + `owner-hold` exactly — set equality in both directions (no rename, no removal, no extra member).
+6. Refusal/park equivalence at window end, record-level: with an owner hold active, drive the window-end resume cycle for the peak-window-parked lane: assert resume admission refuses with `queue.precondition.unmet`, reason `owner-hold`; assert NO park record was appended by the refusal (park-record count unchanged before/after); assert the lane's existing `peak-window` park record is byte-unchanged — no synthetic owner-hold park record exists anywhere in the store (the hold itself wrote none and the resume path wrote none).
+7. Hold clears: drive the resume cycle again and assert the lane resumes per its episode's classification path; the park-record count grows by no owner-hold record at any point in the episode.
 
 **Expected Outcome**:
-- Additive vocabulary exact on record, projection, and command surfaces; delivered renders unchanged.
+- Additive vocabulary exact on record, projection, and command surfaces; delivered renders unchanged; the owner-hold park's only writer is the invoked CLI command with `until` classified absent; window-end resume under an active hold refuses by classification and appends nothing — the equivalence is proven at the record level, not just the outcome level.
 
 #### TC-PAUSE-080 - Daemon-absent degradation: iteration-start gating with declared mode and `parkClaimed == false`
 
@@ -1280,13 +1281,13 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 **Expected Outcome**:
 - All bounds hold with printed measurements; no truncation, no envelope growth.
 
-#### TC-PAUSE-094 - Additive record discipline and the owner-hold park expiry
+#### TC-PAUSE-094 - Additive record discipline and the owner-hold `until` classified absence
 
-**Objective**: Prove DM-6, DM-4's owner-hold half, and G-9: every new/changed record follows the state layer's additive, schema-versioned, fenced-append conventions — no in-place mutation, no schema bump of delivered payloads, no migration — and `owner-hold` parks carry the hold's expiry.
+**Objective**: Prove DM-6, DM-4's owner-hold half, DEC-12, and G-9: every new/changed record follows the state layer's additive, schema-versioned, fenced-append conventions — no in-place mutation, no schema bump of delivered payloads, no migration — the `owner-hold` park's `until` is a declared classified absence (absent/null, matching the delivered no-expiry `provider-quota`/`preemption` park payloads, never synthesized or borrowed), and the park writers are named: only the operator-invoked `queue release --park owner-hold` command writes an owner-hold park record, the hold itself and the window-end resume path write none.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F5-4, F-1, F-5, DM-4, DM-6, DEC-2; G-9
+**Related IDs**: AC-F5-4, F-1, F-5, DM-4, DM-6, DEC-2, DEC-12; G-9
 **Test Type(s)**: Regression, Structure
 **Automation Level**: Automated
 **Target Layer / Location**: delivered state-contract suites under `tests/structure/` (extended) + `tests/behaviour/queue-park-causes-s17.test.ts`
@@ -1294,16 +1295,17 @@ TC IDs use the `PAUSE` feature prefix and follow the capability blocks of the sp
 **Tags**: @backend, @regression, @structure
 
 **Preconditions**:
-- A store containing pre-change records (attempt, lane, park) and post-change records from the episode fixtures.
+- A store containing pre-change records (attempt, lane, park) and post-change records from the episode fixtures, including an owner-hold park written through `queue release --park owner-hold` and a hold-active window-end resume refusal.
 
 **Steps**:
 1. Assert `STATE_SCHEMA_VERSION` is unchanged; no record kind, payload schema, key prefix, migration, backfill, or seed was added by the change (delivered additivity inventory pattern, extended to the new fields).
-2. Assert the new fields (`providerProfile` on attempt/lane; the preservation classification and profile/`until` on peak-window parks; the hold expiry on owner-hold parks) are additive on the delivered families — delivered payload shapes parse unchanged, pre-change records valid.
-3. Assert appends are fenced: each park/episode append lands under one fence (delivered fenced-append discipline), and no delivered record is mutated in place by any episode step (byte-level comparison of untouched records).
-4. Error-table control: no new `dispatch` error-table row was added by the admission refusal (TDR-0028 C-2/D2 — the refusal carries existing identities).
+2. Assert the new fields (`providerProfile` on attempt/lane; the preservation classification and profile/`until` on peak-window parks; the classified `until` absence — absent/null — on owner-hold parks) are additive on the delivered families — delivered payload shapes parse unchanged, pre-change records valid; the absence value set is closed and never renders as a defaulted, borrowed, or zero instant.
+3. Assert the named writers: the only store write producing an `owner-hold` park record is the invoked `queue release --park owner-hold` command; the hold gate's activation writes nothing; a hold-active window-end resume refusal appends nothing (record-count assertions across each path).
+4. Assert appends are fenced: each park/episode append lands under one fence (delivered fenced-append discipline), and no delivered record is mutated in place by any episode step (byte-level comparison of untouched records).
+5. Error-table control: no new `dispatch` error-table row was added by the admission refusal (TDR-0028 C-2/D2 — the refusal carries existing identities).
 
 **Expected Outcome**:
-- Additivity clean in both directions; the vocabulary and record families extended, never edited.
+- Additivity clean in both directions; the vocabulary and record families extended, never edited; the owner-hold absence is closed-valued and the park writers are exactly the named ones.
 
 ## 6. Environments and Test Data
 
@@ -1345,7 +1347,7 @@ Every case is automated under `bun test`. All new suites are **To Implement** in
 | TC-PAUSE-041 | `tests/behaviour/daemon-peak-window-resume.test.ts` | `bun test … --filter not-preserved-recovery` | Preservation-failure episode; restart-budget headroom fixture | To Implement |
 | TC-PAUSE-042 | `tests/behaviour/daemon-peak-window-resume.test.ts` | `bun test … --filter exhaustion` | Exhausted-budget fixture; blockers read; answer-channel control | To Implement |
 | TC-PAUSE-043 | `tests/behaviour/daemon-peak-window-resume.test.ts` | `bun test … --filter state-fidelity` | Pre/post snapshots (branch, artifact digest, queue identity); single-flight predicate | To Implement |
-| TC-PAUSE-044 | `tests/behaviour/daemon-peak-window-resume.test.ts` | `bun test … --filter hold-precedence` | Owner-hold gate; three orderings; delivered hold suites as controls | To Implement |
+| TC-PAUSE-044 | `tests/behaviour/daemon-peak-window-resume.test.ts` | `bun test … --filter hold-precedence` | Owner-hold gate fixture (read-time, no expiry); three orderings with `queue.precondition.unmet` refusal + record-count assertions; delivered hold suites as controls | To Implement |
 | TC-PAUSE-050 | `tests/behaviour/spend-zero-window.test.ts` | `bun test … --filter zero-present` | Seeded telemetry step records (five dimensions); boundary-call seeds | To Implement |
 | TC-PAUSE-051 | `tests/behaviour/spend-zero-window.test.ts` | `bun test … --filter absence-classified` | Absent-sink + absent-dimension fixtures; output scan | To Implement |
 | TC-PAUSE-052 | `tests/behaviour/spend-zero-window.test.ts` | `bun test … --filter boundary-scoping` | Position matrix (strictly-before exclusion; park-timestamp and window-end instants included; strictly-after outside; combined-boundary == 2); breach fixture | To Implement |
@@ -1356,14 +1358,14 @@ Every case is automated under `bun test`. All new suites are **To Implement** in
 | TC-PAUSE-064 | `tests/behaviour/pause-episode-events.test.ts` | `bun test tests/behaviour/pause-episode-events.test.ts` | Full-episode emitters (both variants); subscription probes; tick-dedupe driver | To Implement |
 | TC-PAUSE-070 | `tests/behaviour/status-brief-park-fields.test.ts` | `bun test … --filter status` | Open + closed episode store; text/`--json` reads; isolation witness store | To Implement |
 | TC-PAUSE-071 | `tests/behaviour/status-brief-park-fields.test.ts` | `bun test … --filter brief` | Read-counting store wrapper; record-field mutant control | To Implement |
-| TC-PAUSE-072 | `tests/behaviour/queue-park-causes-s17.test.ts` + `tests/golden/lanes-list.test.ts` | `bun test tests/behaviour/queue-park-causes-s17.test.ts tests/golden/lanes-list.test.ts` | Park fixtures per cause; `--until` refusal fixture; deliberate golden extension | To Implement + Existing – Update (golden) |
+| TC-PAUSE-072 | `tests/behaviour/queue-park-causes-s17.test.ts` + `tests/golden/lanes-list.test.ts` | `bun test tests/behaviour/queue-park-causes-s17.test.ts tests/golden/lanes-list.test.ts` | Park fixtures per cause; owner-hold `until`-absence fixture; `--until` refusal fixture; hold-active window-end refusal with park-record count snapshots (no synthetic record); deliberate golden extension | To Implement + Existing – Update (golden) |
 | TC-PAUSE-080 | `tests/behaviour/daemon-absent-degradation.test.ts` | `bun test … --filter mode-declared` | Daemon-absent composition; machine read probe (AMB-P4 seam) | To Implement |
 | TC-PAUSE-081 | `tests/behaviour/daemon-absent-degradation.test.ts` | `bun test … --filter no-false-claims` | Daemon-absent store with window open; full surface scan; ledger count | To Implement |
 | TC-PAUSE-090 | `tests/behaviour/peak-window-utc-clock.test.ts` | `bun test tests/behaviour/peak-window-utc-clock.test.ts` | Boundary matrix; TZ-variation harness; injected clock only | To Implement |
 | TC-PAUSE-091 | `tests/behaviour/peak-pause-determinism.test.ts` | `bun test tests/behaviour/peak-pause-determinism.test.ts` | Paired identical runs; decision-record comparison | To Implement |
 | TC-PAUSE-092 | `tests/checks/peak-pause-hermetic.test.ts` | `bun test tests/checks/peak-pause-hermetic.test.ts` | Network/credential/sleep counters + canary; temp-dir assertion | To Implement |
 | TC-PAUSE-093 | `tests/behaviour/pause-episode-events.test.ts` | `bun test … --filter bounds` | Worst-case identifier fixture; measurement printing | To Implement |
-| TC-PAUSE-094 | delivered state-contract suites + `tests/behaviour/queue-park-causes-s17.test.ts` | `bun test tests/structure/state-contract.test.ts tests/behaviour/queue-park-causes-s17.test.ts --filter additivity` | Pre/post-change store; byte-compare of untouched records; error-table control | Existing – Update + To Implement |
+| TC-PAUSE-094 | delivered state-contract suites + `tests/behaviour/queue-park-causes-s17.test.ts` | `bun test tests/structure/state-contract.test.ts tests/behaviour/queue-park-causes-s17.test.ts --filter additivity` | Pre/post-change store (incl. owner-hold park with `until` absent + hold-active refusal); byte-compare of untouched records; error-table control | Existing – Update + To Implement |
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1404,6 +1406,7 @@ Every case is automated under `bun test`. All new suites are **To Implement** in
 |---------|------|--------|---------|
 | 1.0 | 2026-11-13 | @test-plan-writer | Initial test plan against spec v1.1: 7 ACs bound to 41 cases in ten blocks (nomination 001–006, peak rules 010–012, window watch/parking 020–026, isolation 030–031, window-end resume 040–044, zero-spend 050–052, taxonomy v2 060–064, surfaces/vocabulary 070–072, daemon-absent 080–081, cross-cutting invariants 090–094); all F-1..F-8, NFR-1..NFR-10, EVT-1..EVT-4, DM-1..DM-6, and DEC-1..DEC-11 mapped; six substitute assertions registered (§3.5); six open questions logged from the spec/decision gaps (§8.3); no TODO rows, no orphans. |
 | 1.1 | 2026-11-13 | @test-plan-writer | TC-PAUSE-052 zero-spend interval corrected to spec DEC-4 inclusive semantics per DoR iter-1. |
+| 1.2 | 2026-11-13 | @test-plan-writer | TC-PAUSE-072/044/094 aligned to spec v1.3 owner-hold classified-absence and named park writers; §2 source updated (DoR iter-2 findings B+C). |
 
 ## 10. Test Execution Log
 
