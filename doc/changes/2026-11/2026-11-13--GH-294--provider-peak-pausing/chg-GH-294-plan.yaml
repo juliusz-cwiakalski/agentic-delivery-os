@@ -199,9 +199,11 @@
 #   additivity); Phase 10 is planning-doc maintenance, the changeset, and
 #   the release obligations; Phase 11 (post-DoR amendment) lands the
 #   canonical peak-pausing spec page that lifecycle phase 7 authored
-#   outside any declared scope — a landing commit only, no content edits.
-#   The final gate runs `plan validate GH-294` and the full TMPDIR-qualified
-#   battery.
+#   outside any declared scope — a landing commit only, no content edits;
+#   Phase 12 (review_fix amendment) remediates code-review iteration 1
+#   findings F-1..F-10 — wiring the delivered capabilities into the
+#   production compositions with composed-path proof. The final gate runs
+#   `plan validate GH-294` and the full TMPDIR-qualified battery.
 #
 # TC -> PHASE MAP (41 ids = TC-PAUSE-001..094; every id is owned by exactly
 #   one phase — the phase which first makes its complete suite set green.
@@ -226,6 +228,12 @@
 #   Phase 11 spec-page landing (0): none (single-file landing commit; the
 #            page is proven by the doc guards, its content is owned by
 #            lifecycle phase 7)
+#   Phase 12 review remediation (0): none (remediation owns no new TC ids;
+#            it re-proves existing ones through the COMPOSED path — F-1
+#            re-proves TC-PAUSE-001..006 via the real composition, F-3
+#            re-proves TC-PAUSE-070..072 at the edge, F-5 re-proves
+#            TC-PAUSE-080/081's degradation read, F-4 pins TC-PAUSE-064's
+#            operator-shaped projection half)
 #
 # COMPOSITION NOTE (R-TP-1 / RSK-8, binding on Phases 4, 5, and 8): peak
 #   pausing is daemon-supervision behavior. The behaviour suites compose the
@@ -293,6 +301,12 @@
 #   page, TC-PAUSE-060's page half, not a current-truth spec page), and
 #   Phase 11's landing commit for the phase-7-authored canonical page — a
 #   staging operation, not content authorship.
+#   DOC-SYNC HANDOFF (Phase 12 / F-5): aligning the `peakEnforcement.mode`
+#   wording across `feature-peak-pausing.md` §8/§9 (and its lanes surface
+#   bullet) and `feature-resident-daemon.md` into one composed-truth
+#   statement is @doc-syncer scope; Phase 12 fixes the code (mode reflects
+#   whether the composition actually supplies the watch) and declares no
+#   `doc/spec/**` file.
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
@@ -310,7 +324,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-294
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   escalationTriggers:
     - "A delivered vocabulary member is renamed, removed, or re-semanted (queue park causes, taxonomy v1 kinds or payloads, provider resolve identities), or a fourth park-cause vocabulary appears beside the delivered three plus the two S17 additions (DEC-2, G-9)"
     - "Taxonomy v1 is edited in place, v1 is served concurrently beside v2, or a second taxonomy version constant exists beside the one declaration (TDR-0029 C-1/C-4/C-6)"
@@ -1008,3 +1022,147 @@ phases:
         - doc/spec/features/feature-peak-pausing.md
       folders:
         - doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing
+
+  # ---------------------------------------------------------------------------
+  # Phase 12 — Code Review Remediation (Iteration 1) — findings F-1..F-10
+  # per code-review/review-iter-1.md (verdict FAIL, next step CALL_CODER).
+  #
+  # Goal: close the composition gap the review found — three headline
+  # capabilities (nomination, the release grammar, the lane-park surfaces)
+  # are wired into core and the injected-port suites but into NO production
+  # composition, so they silently do nothing in the shipped CLI (the same
+  # scope-gap class the plan's own Phase 11 remediated). Every finding's fix
+  # lands with a COMPOSED-PATH test proving it (review requirement):
+  # injected-fake green does not close a finding.
+  #
+  # Tasks (severities and locations per review-iter-1.md):
+  #   F-1 [critical] Wire nomination into production: add the nomination
+  #     channel to `DispatchComposition` and pass
+  #     `nominate: () => nominateProviderProfile({...})` into `runDispatch`
+  #     in `createDispatchRuntime` (edge.ts); supply it from
+  #     `dispatchComposition` (production.ts) over the resolved provider
+  #     configuration, probe port, and clock; wire the same predicate as the
+  #     supervision `nominate` port in daemon-compose.ts, before the claim
+  #     (OQ-TP-4). Real-edge tests: an admitted dispatch records
+  #     `providerProfile` on the attempt and lane records, and each
+  #     no-nomination shape refuses pre-session at its delivered exit
+  #     through the composed CLI (re-proves TC-PAUSE-001..006 at the
+  #     composition layer).
+  #   F-2 [high] Un-stale the edge release guards (edge.ts ~4827-4842) so
+  #     `--park peak-window` pairs with `--until <iso>` exactly like
+  #     `provider-window` (required and accepted) while `--park owner-hold`
+  #     refuses `--until`, matching the delivered vocabulary; add the
+  #     real-edge happy-path test landing a peak-window park and asserting
+  #     the record (cause, conditionType `provider-window`, expiry).
+  #   F-4 [medium] (landed with F-2 so the fixed happy path cannot emit
+  #     false frames) Gate the projection's `stop`/`parked` episode
+  #     emission on the DM-4 episode fields, or stamp minimal episode
+  #     identity in the release writer: an operator-shaped `peak-window`
+  #     park must project a TRUE `stop` frame (non-empty graceDeadline),
+  #     `preservation` from the closed set, and a non-empty `episodeId`;
+  #     pin with the operator-shaped-record projection test.
+  #   F-3 [high] Implement the `QueueParkRecord -> StatusLanePark` producer
+  #     (one bounded park read inside the collector pass; causes
+  #     `peak-window`/`owner-hold` with `recoveryState: "parked"`; read-time
+  #     expiry; `STATUS_MAX_LANE_PARKS`; values verbatim) and wire
+  #     `readLaneParks` into `createStatusCommandRuntime` via the status
+  #     composition; add the edge-level status/brief test over a seeded
+  #     park record.
+  #   F-5 [medium] Make `peakEnforcement.mode` reflect the composed truth:
+  #     mode derives from whether the composition actually supplies the
+  #     watch (a composition fact), not from daemon reachability;
+  #     `parkClaimed` stays record-derived. The spec-page wording alignment
+  #     across feature-peak-pausing.md §8/§9 and feature-resident-daemon.md
+  #     is the DOC-SYNC HANDOFF (see DOC BOUNDARY) — this phase edits no
+  #     `doc/spec/**` file; `status.md`'s overclaiming lines are corrected
+  #     here (planning corpus, Phase 10 convention).
+  #   F-6 [low] Resolve the domain->provider tier import per the stated
+  #     rules contract: move the two shared boundary helpers
+  #     (`peakWindowOpenSeconds`/`peakWindowEndSeconds`) to a
+  #     contracts-visible location both tiers read, or add the edge to the
+  #     enforced dependency matrix with a failing negative fixture in this
+  #     same change; align the import style on `#contracts`.
+  #   F-7 [low] Remove the `sessionRef: ""` fallback on the session-resume
+  #     route: when no session reference resolves, skip the episode for this
+  #     pass (stay parked, re-observe next cycle) or refuse with a
+  #     classified identity; pin with a test.
+  #   F-8 [low] Fix the window-evidence exclusion reasons: foreign-lane and
+  #     unreadable-instant exclusions are never mislabeled `pre-park` —
+  #     extend `SpendWindowExclusion["reason"]` additively (e.g.
+  #     `other-lane`, `unreadable-instant`) or omit non-boundary exclusions
+  #     from the disclosure; adjust the spend-zero-window assertions.
+  #   F-9 [low] Repair the orphaned/stale comments in contracts/queue.ts:
+  #     reattach the `QueueLanesData` doc comment and reword the pairing
+  #     comment header to the DEC-2 many-to-one cause -> condition mapping.
+  #   F-10 [info] Optional cleanup: cache `{rules, window}` together in
+  #     `decidePeakStops` so the loop drops the second `rulesFor` lookup.
+  #
+  # Conditional rows (declared so the likely edit is always staged; an
+  # untouched declared file is only a `plan diff` observation):
+  # app/queue.ts is F-4's writer-stamping alternative;
+  # app/daemon-supervision.ts carries F-1's supervision ports and F-5's
+  # composition fact; contracts/provider-profile.ts, .dependency-cruiser.cjs,
+  # and boundary-ci-parity are F-6's move-or-matrix decision halves.
+  #
+  # AC/TC coverage: owns no new TC ids (the 41-id map is unchanged);
+  #   re-proves TC-PAUSE-001..006 (nomination through the composed CLI),
+  #   TC-PAUSE-070..072 (status/brief/vocabulary at the edge),
+  #   TC-PAUSE-080/081 (the degradation read under the truthful mode), and
+  #   pins TC-PAUSE-064's operator-shaped projection half — closing AC-F1-1
+  #   and AC-F7-6 in the production compositions where the review found
+  #   them unmet.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/peak-pause-composed-edge.test.ts
+  #   bun test tests/behaviour/provider-nomination-admission.test.ts
+  #   bun test tests/behaviour/{queue-park-causes-s17,status-brief-park-fields}.test.ts
+  #   bun test tests/behaviour/{pause-episode-events,spend-zero-window}.test.ts
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-294
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os lint GH-294
+  #
+  # Exit: F-1..F-10 remediated, each with composed-path proof; the
+  #   production dispatch records nominations (100% of admitted dispatches),
+  #   the release grammar's happy path lands parks via the CLI, status and
+  #   brief render lane park fields from a real producer, the mode label is
+  #   truthful, and no degraded episode frame is emittable; the pm-notes
+  #   carry the phase-12 completion evidence and the F-5 doc-sync handoff is
+  #   recorded for @doc-syncer; ready for re-review.
+  # ---------------------------------------------------------------------------
+  - id: 12
+    title: "Code Review Remediation (Iteration 1): production wiring for nomination, release grammar, park-field surfaces, and truthful mode"
+    kind: delivery
+    summary: "fix(pause): wire review F-1..F-10 into production compositions"
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/daemon-compose.ts
+        - packages/core/src/domain/event-projection.ts
+        - packages/core/src/domain/daemon-peak-pause.ts
+        - packages/core/src/domain/spend.ts
+        - packages/core/src/contracts/spend.ts
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/contracts/provider-profile.ts
+        - .dependency-cruiser.cjs
+        - tests/checks/boundary-ci-parity.test.ts
+        - tests/behaviour/peak-pause-composed-edge.test.ts
+        - tests/behaviour/provider-nomination-admission.test.ts
+        - tests/behaviour/queue-park-causes-s17.test.ts
+        - tests/behaviour/status-brief-park-fields.test.ts
+        - tests/behaviour/pause-episode-events.test.ts
+        - tests/behaviour/spend-zero-window.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - doc/planning/oss-tooling/status.md
+      folders:
+        - doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing
+        - tests/fixtures/daemon
+        - tests/fixtures/queue
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/spend.ts
+        role: producer
