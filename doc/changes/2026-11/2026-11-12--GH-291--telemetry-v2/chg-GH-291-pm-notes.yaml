@@ -192,3 +192,27 @@ notes:
       renamed locals, keeping each mutant's prohibited observable intact.
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 3 commit: fa825bfb (extended read-side fold)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 4 complete: the reconciliation disclosure proven against the
+      full matrix. `tests/behaviour/spend-reconciliation.test.ts` covers R-01..R-08
+      with hand-summed fixtures: the pinned SC-M2-S14-01 within case through the
+      CLI envelope (`verdict == "within"`, `tolerance == 0.02` stated), the 1%
+      within case, the 5% declared outside verdict at exit 0 with both figures,
+      the summed multi-session baseline with exactly one verdict and the declared
+      six-field block (no per-session verdict fork) plus a shuffled-append
+      byte-identity control, the excluded baseline session with its named count
+      and the closed `baseline-session-excluded` warning (never a fabricated
+      zero), the classified unavailability when no baseline contribution exists
+      (never `within`, tolerance still stated), the OQ-T4 combination arithmetic
+      asserted through `TELEMETRY_SESSION_COMBINATION_RULE` with same-session
+      double counting contributing once and genuine inflation surfacing the
+      outside verdict, and cost sparsity disclosed with no cost invented. The
+      folded behavior needed no refinement beyond phase 3: `contracts/spend.ts`
+      and `domain/spend.ts` are declared-and-untouched this phase. Narrow gate:
+      `pnpm typecheck` green; spend-reconciliation, spend-v2-fold-basis,
+      spend-v2-v1-compat, and golden spend 31 pass / 0 fail.
+    type: "info"
+    date: "2026-11-13"
