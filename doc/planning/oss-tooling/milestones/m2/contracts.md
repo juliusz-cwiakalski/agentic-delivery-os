@@ -261,7 +261,7 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
 
 ## telemetry.v1
 
-The attribution contract, owned by M2-S14 and consumed by M2-S6 and M2-S10.
+The attribution contract, delivered by M2-S14 (GH-291) and consumed by M2-S6 and M2-S10.
 
 - **Attribution fields.** Each telemetry record carries `ticket`,
   `repository`, `lane`, `agentRole`, `model`, and `phaseTiming` (phase timing:
@@ -306,7 +306,7 @@ Owned by M2-S15.
 
 ## spend v2
 
-Owned by M2-S6 on M2-S14 telemetry.
+Delivered by M2-S14 (GH-291); the alarm and metric layers consuming it are owned by M2-S6.
 
 - **Breakdown fields.** Cost and tokens split by ticket, repository, lane,
   agent role, and model, plus timing summaries per phase.

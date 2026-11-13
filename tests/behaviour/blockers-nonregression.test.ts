@@ -81,7 +81,7 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     expect(STATUS_SECTION_TITLES["typed-questions"]).toBe("Typed questions");
   });
 
-  test("the brief golden keeps nine surfaces, two placeholders, and three anchors", () => {
+  test("the brief golden keeps ten surfaces, two placeholders, and three anchors", () => {
     const golden = JSON.parse(
       readFileSync(join(ROOT, "tests/fixtures/brief/golden/envelope.json"), "utf8"),
     ) as {
@@ -91,7 +91,7 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
         anchors: { group: string }[];
       };
     };
-    expect(golden.data.surfaces).toHaveLength(9);
+    expect(golden.data.surfaces).toHaveLength(10);
     expect(golden.data.placeholders).toHaveLength(2);
     expect(golden.data.anchors).toHaveLength(3);
   });

@@ -55,10 +55,12 @@ describe("TC-BRIEF-009 closed placeholder catalog", () => {
     expect(lanePlaceholder?.state).toBe(laneSection?.state);
   });
 
-  test("no spend placeholder or cost surface exists (DEC-5)", () => {
-    const text = JSON.stringify(projectBrief(capSizedFacts()));
-    expect(text.includes("spend")).toBe(false);
-    expect(text.includes("cost")).toBe(false);
+  test("spend is a real render surface, not a placeholder or an anchor (DEC-5)", () => {
+    const brief = projectBrief(capSizedFacts());
+    expect(brief.surfaces.filter((surface) => surface.id === "spend")).toHaveLength(1);
+    expect(brief.placeholders.some((entry) => entry.capability === "spend")).toBe(false);
+    const identities = brief.anchors.flatMap((anchor) => anchor.items.map((item) => item.identity));
+    expect(identities).not.toContain("spend");
   });
 
   test("placeholders are not counted as actions", () => {

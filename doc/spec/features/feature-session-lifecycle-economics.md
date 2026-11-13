@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SESSION-LIFECYCLE-ECONOMICS
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-09
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
 summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch; the dispatch engine composes the restart gate and resume admission for one-shot lanes with the pinned failure tokens."
 links:
-  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239", "GH-241"]
+  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239", "GH-241", "GH-291"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -188,6 +188,12 @@ An absent `lane` branch resolves to both shipped defaults with `defaults` origin
 - A terminal exhaustion record is idempotent per delivery; a second refusal does not fork it.
 - A failed terminal exhaustion append surfaces `terminalAppendError` on the budget refusal while the refusal identity, exit, and corpus stay unchanged.
 
+### 3.10 Telemetry attribution link (GH-291)
+
+The durable session identity this surface records is also one of the two attribution substrates harness telemetry v2 consumes. The economics records under `economics/<workItemRef>` answer the `runId` and `sessionId` join for a captured step, and the command-audit ledger's claimed identity answers the `lane` and `agentRole` dimensions for the joined run; the step frame supplies `model`, and the delivery supplies the ticket and checkout repository. Telemetry consults both substrates read-only and exactly once per step. A dimension neither substrate can derive is stored as absent with the closed `unattributable-step` warning naming it, never guessed and never borrowed from another session.
+
+This page owns the records and identity; the ingest, the five-dimension join, and the storage families are specified in [Harness Telemetry v2](feature-telemetry-v2.md), and the read-side breakdowns that consume the attributed records are specified in [Spend Read Side](feature-spend.md). No economics payload, record kind, or schema version changes for the telemetry link.
+
 ## 4. Technical Architecture & Codebase Map
 
 ### 4.1 Contract home
@@ -322,9 +328,9 @@ Worktree-activity sourcing remains the declared opencode gap, and Claude Code's 
 | Attach-and-continue | A resume that continues the existing session without re-paying prefill and without consuming a restart ordinal. |
 | Uneconomical resume | A re-entry that would re-pay more prefill than the observed unique progress justifies; refused with `dispatch.resume-uneconomical`. |
 
-See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Harness Adapters](feature-harness-adapters.md), [Dispatch Engine](feature-dispatch-engine.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Harness Adapters](feature-harness-adapters.md), [Harness Telemetry v2](feature-telemetry-v2.md), [Dispatch Engine](feature-dispatch-engine.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/`.
+**Change record:** `doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/` (the economics surface) and `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/` (the telemetry attribution link).
 
 ## Scheduling engine reconciliation (GH-237)
 

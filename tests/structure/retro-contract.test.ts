@@ -164,6 +164,7 @@ describe("TC-RETRO-001 contract vocabulary and data-only shapes", () => {
       "findings",
       "followThrough",
       "evidenceRefs",
+      "spend",
     ]);
     expect(fieldNames(source, "RetroExportBundle")).toEqual(
       expect.arrayContaining(["schemaId", "limit", "truncated", "chain", "records"]),

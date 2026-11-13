@@ -287,3 +287,106 @@ notes:
       (the catalog assertion is ten ids with the one declared surface).
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 6 commit: 76231769 (consumer citation)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 7 complete: the cross-cutting honesty battery, resumed from the
+      uncommitted work left by the interrupted lane and executed for the first
+      time here. Owning TCs: TC-TELEMETRY-031..039. `telemetry-disclosure`
+      states the telemetry state and the stated tolerance across command
+      (human + `--json`), digest projection, brief citation, and retro citation
+      for present, absent, and unavailable-baseline stores, with no claim
+      rendered without `0.02` (031). `telemetry-determinism` proves
+      byte-identical repeat renders, shuffled-append permutation invariance, and
+      zero network opens through a throwing fetch seam (032). TC-033's bounds
+      obligations were completed in `spend-bounds` with an over-cap v2 fixture:
+      the declared machine bound holds, the breakdown tail drop is declared in
+      the truncation metadata, retained role rows are the head of the declared
+      ordering, and the totals plus the reconciliation verdict/tolerance/
+      harness total survive truncation. `spend-performance` re-asserts the
+      bounded-work oracle at 1,000 and 10,000 records with the read count
+      constant and no adapter/composer calls (034). `telemetry-privacy` proves
+      prompt-like frame content never reaches a stored record or any render and
+      pins the aggregate-only record key set (035). `telemetry-hermetic` scans
+      every new suite for sockets, spawned processes, credential resolution, and
+      `$HOME` reads and pins the temp-root discipline (036).
+      `telemetry-audit-compose` proves one audit record per spend invocation
+      (present, absent) and that an audit-write failure changes neither the
+      report nor the exit (037). `telemetry-mutants` runs the ten declared
+      disabling mutants against temp copies with the real module as the paired
+      control (038). `telemetry-contract` gains the conformance half — brand
+      neutrality over the five new modules, record-kind/schema patterns, and the
+      live exit-code and forbidden-literal scans — plus the error-table family
+      check (039). Narrow gate: `pnpm typecheck` green; the 13-suite phase gate
+      115 pass / 0 fail; error-table-sync OK (127/127); exit-code-literals 348
+      files clean; forbidden-literals 5/5 scope classes clean. Plan-scope note
+      flagged for `plan diff`: `tests/structure/telemetry-contract.test.ts` is
+      TC-039's declared home and is named in this phase's gate but was omitted
+      from the phase-7 `scope.files` list — a plan defect, not a scope
+      extension; the commit primitive staged it under the plan-union scope.
+      The uncommitted `packages/cli/src/commands/retro.ts` rename was cosmetic
+      drift outside phase-7 scope and was reverted before the commit.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 7 commit: 3fdf9172 (cross-cutting honesty battery)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 8 complete (final plan phase): documentation reconciliation,
+      planning maintenance, the changeset, and the release obligations. New spec
+      page `doc/spec/features/feature-telemetry-v2.md` (internal distribution)
+      states the ingest rules, the five-dimension attribution, the
+      `delivery.telemetry.storage.v1` step and baseline families with re-read
+      migration and classified damage, the three reading bases with the declared
+      session-dedup combination rule, and the privacy and boundary posture.
+      Reconciled spec pages: spend (the five additive v2 keys under the kept
+      `delivery.spend.v1` identity, `--breakdown`, breakdown-aware truncation,
+      telemetry state, the DEC-5 reconciliation block, and the changed component
+      map), brief (ten surfaces, the spend citation, DEC-5 restated so spend is a
+      render surface and not an anchor), blockers (ten-surface brief
+      integration), closeout (two telemetry planes with one counted session),
+      harness-adapters (the per-step ingest sink and session-close baseline
+      beside the unchanged closeout capture), retro-pipeline (the seventh
+      `spend-telemetry` source, its payload schema, and the five-key report
+      data), session-lifecycle-economics (the attribution link), and
+      status-digest (the additive section fields and the reconciliation suffix).
+      `doc/00-index.md` registers the new page, and the planning pages mark
+      M2-S14 delivered: the backlog progress line, the status snapshot, the M2
+      README rows, and the contract ownership lines. The changeset
+      `.changeset/gh-291-telemetry-v2-minor.md` declares one minor for the five
+      publishables. Verdicts: `plan validate` valid (tier full,
+      readyForDevelopment true); `plan phase 8` scope executed; the targeted
+      brief/blockers suites 38 pass / 0 fail; `test-doc-distribution` no drift
+      over 83 in-scope docs; `changesets-group` exactly one fixed group of five
+      with testkit excluded; `git diff --check` clean; `lint-commit-range --base
+      main-tools` PASS over 12 commits, 0 offending; `pnpm check` exit 0 — lint,
+      format, typecheck, build, boundaries, prompt conformance, help-guide
+      coverage, and exports parity green, 7829 pass / 4 skip / 0 fail across 987
+      files (7833 assertions). The first full battery exposed 14 failures the
+      narrow phase gates could not see; all are completed here as ripple and
+      infrastructure obligations of this change rather than new scope: the
+      brief envelope and placeholder suites still asserted nine surfaces and the
+      retired DEC-5 axis (now ten surfaces, with spend asserted as a render
+      surface that is neither placeholder nor anchor); `retro-contract` carried
+      the four-key report data (now five keys with `spend`), and the retro page
+      documents the fifth key; the v1 contract inventory lacked the four new
+      exports (`BriefSpendCitation`, `BriefSpendReconciliation`,
+      `BriefSpendTiming`, `RetroSpendEvidence`) in `brief.ts`, `retro.ts`, and
+      `index.ts`; the new page required registration in the forbidden-literals
+      registry's baseline-anchored docs scope, which also clears the rename-drill,
+      telemetry-contract, and legacy-confinement scans; and `telemetry-mutants`
+      collided with the delivered `spend-mutants` suite on the shared
+      `.mutant-<id>.ts` temp filename in `packages/core/src/domain`, so the new
+      suite writes `.mutant-telemetry-<id>.ts`. Stray classification:
+      `packages/cli/src/commands/retro.ts` keeps the cosmetic
+      `spend`→`spendCitation` local rename from the phase-6 citation work (no
+      behavior, payload, or exit change; kept rather than reverted, and its
+      capture-time drift is disclosed as plan-union scope drift). The ten-surface
+      ripple edits in `blockers-brief`, `blockers-nonregression`,
+      `brief-performance`, the brief mutant catalog, the harness stream README,
+      and the contract-inventory formatting are required by the delivered
+      contract and retained. Queue commands and tests and
+      `doc/decisions/00-index.md` were left untouched (GH-292 lane).
+    type: "info"
+    date: "2026-11-13"

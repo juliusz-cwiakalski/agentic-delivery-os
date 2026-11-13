@@ -1,7 +1,8 @@
 /**
- * TC-BLK-032 — the brief keeps nine surfaces, mirrors the digest
- * `typed-questions` section by id, retires the placeholder (catalog 3 -> 2),
- * makes `blocker-questions` a real ranked anchor, and keeps decision-first order.
+ * TC-BLK-032 — the brief keeps the closed surface set (ten surfaces after the
+ * GH-291 spend surface), mirrors the digest `typed-questions` section by id,
+ * retires the placeholder (catalog 3 -> 2), makes `blocker-questions` a real
+ * ranked anchor, and keeps decision-first order.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -54,7 +55,7 @@ const facts = () =>
 
 const audit = (payload: BriefPayload): string[] => {
   const failures: string[] = [];
-  if (payload.surfaces.length !== 9) failures.push("surfaces: expected 9");
+  if (payload.surfaces.length !== 10) failures.push("surfaces: expected 10");
   const typed = payload.surfaces.filter((surface) => surface.id === "typed-questions");
   if (typed.length !== 1) failures.push("surfaces: expected exactly one typed-questions");
   if (payload.placeholders.length !== 2) failures.push("placeholders: expected 2");
@@ -71,11 +72,11 @@ const audit = (payload: BriefPayload): string[] => {
 };
 
 describe("TC-BLK-032 brief integration", () => {
-  test("nine surfaces with exactly one typed-questions mirror", () => {
+  test("ten surfaces with exactly one typed-questions mirror", () => {
     const payload = projectBrief(facts());
     expect(audit(payload)).toEqual([]);
-    expect(BRIEF_SURFACE_ORDER).toHaveLength(9);
-    expect(new Set(BRIEF_SURFACE_ORDER).size).toBe(9);
+    expect(BRIEF_SURFACE_ORDER).toHaveLength(10);
+    expect(new Set(BRIEF_SURFACE_ORDER).size).toBe(10);
     const digest = aggregateStatus(facts());
     const section = digest.sections.find((entry) => entry.id === "typed-questions");
     const surface = payload.surfaces.find((entry) => entry.id === "typed-questions");

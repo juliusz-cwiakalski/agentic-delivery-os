@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-08
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic twelve-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the change-capsule validation and promotion ceremony, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
 links:
-  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242"]
+  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291"]
   related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
@@ -308,11 +308,14 @@ directory, appended through the state `harness.telemetry` writers for the
 session-group records and the run-scoped capture outcome. An injected
 `CloseoutComposition.telemetry` runtime overrides the constructed capture for
 tests. Apply runs extraction after the terminal steps and before the applied
-payload; plan performs no extraction and no append. The state-layer
-`harness.telemetry` records remain the only source
-`spend` reads, and the capsule stream carries no statistics. The extraction and
+payload; plan performs no extraction and no append. The closeout-captured
+`harness.telemetry` records remain one telemetry plane: `spend` also reads the
+v2 per-step and session-baseline families written by stream ingest, and the
+fold selects each session's step figures once under the declared session-dedup
+rule while the closeout sums corroborate the baseline, so a session is never
+counted twice. The capsule stream carries no statistics. The extraction and
 record contract is specified in
-[Harness Adapters](feature-harness-adapters.md) and [State Layer](feature-state-layer.md).
+[Harness Adapters](feature-harness-adapters.md), [Harness Telemetry v2](feature-telemetry-v2.md), and [State Layer](feature-state-layer.md).
 
 #### Failure identities and exit projection
 

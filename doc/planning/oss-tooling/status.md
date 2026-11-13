@@ -279,3 +279,28 @@ removes a queue entry. M2-S15 owns entry removal, M2-S16 and M2-S4 consume the
 declared taxonomy, and M2-S17's stop, parked, resumed, and park-edge shapes
 arrive as a future taxonomy version. M2 has not exited: the remaining M2 stories
 stay planned.
+
+## M2 delivery snapshot (2026-11-13)
+
+M2-S14 (harness telemetry v2) was delivered by GH-291. The opencode adapter now
+ingests the v2.x.y JSONL stream per step, counting the five token classes,
+calls, and per-model cost in harness-reported units and distinguishing a
+present-zero from an omitted field; each step is attributed across ticket,
+repository, lane, agent role, and model by joining the delivered session
+economics identity and the command-audit claimed identity, with an absent
+dimension stored as `null` and disclosed rather than defaulted. Stream close
+captures one bounded read-only per-session totals query as a
+`harness.telemetry.baseline` record, and both new families are additive beside
+the delivered closeout capture under the schema-versioned
+`delivery.telemetry.storage.v1` identity with re-read migration. Spend keeps the
+`delivery.spend.v1` identity and the six v1 keys and adds five v2 keys:
+five-dimension breakdowns, cost totals, per-phase timing summaries with
+stall/restart intervals, telemetry state, and the DEC-5 reconciliation block
+against summed harness session totals at the declared `0.02` tolerance, with one
+verdict, excluded sessions disclosed, and no baseline classified as unavailable
+rather than `within`. The retro evidence pass and the brief cite the same
+figures through the delivered append seam; telemetry absence stays a classified
+outcome and never a zero report. The delivery runs from commit `eb739f19`
+through the phase-8 documentation commit on `feat/GH-291/telemetry-v2`; M2 has
+not exited, and the remaining M2 stories (S2–S10, S15–S19) are unaffected by
+this delivery and stay planned.

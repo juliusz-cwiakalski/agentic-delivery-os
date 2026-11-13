@@ -40,7 +40,7 @@ describe("TC-BRIEF-011 collector unavailability is digest data", () => {
     const data = payloadOf(envelope);
     expect(data.schemaVersion).toBe("delivery.brief.v1");
     expect(Array.isArray(data.surfaces)).toBe(true);
-    expect((data.surfaces as unknown[]).length).toBe(9);
+    expect((data.surfaces as unknown[]).length).toBe(10);
     expect(data.placeholders).toEqual([
       { capability: "gate-sla-states", owningStory: "M1-S5", state: "not-delivered" },
       { capability: "lane-queue-engine", owningStory: "M1-S17", state: "not-delivered" },

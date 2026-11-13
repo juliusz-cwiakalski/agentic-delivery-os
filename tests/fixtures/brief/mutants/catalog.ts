@@ -121,14 +121,14 @@ export const briefSourceMutations: readonly BriefSourceMutation[] = [
     caseName: "brief-mutant-fabricated-surface-state",
     ac: "AC-F1-1",
     intendedSuite: "tests/behaviour/brief-shared-truth.test.ts (TC-BRIEF-004)",
-    prohibited: "a tenth surface appears beside the closed nine-surface set",
+    prohibited: "an extra surface appears beside the closed ten-surface set",
     mutate: (source) =>
       replaceOnce(
         source,
         "const surfaces = buildSurfaces(digest);",
-        'const surfaces = [...buildSurfaces(digest), { id: "tenth-surface", title: "Extra", state: "observed", counts: { observed: 1, unknown: 0, total: 1, omitted: 0 }, truncated: false }];',
+        'const surfaces = [...buildSurfaces(digest), { id: "extra-surface", title: "Extra", state: "observed", counts: { observed: 1, unknown: 0, total: 1, omitted: 0 }, truncated: false }];',
       ),
-    fires: (module) => module.projectBrief(baseFacts()).surfaces.length !== 9,
+    fires: (module) => module.projectBrief(baseFacts()).surfaces.length !== 10,
   },
   {
     id: "brief-only-fact",

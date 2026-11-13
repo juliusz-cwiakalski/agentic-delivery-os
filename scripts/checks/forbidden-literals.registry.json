@@ -201,6 +201,7 @@
     "doc/spec/features/feature-spend.md",
     "doc/spec/features/feature-state-layer.md",
     "doc/spec/features/feature-status-digest.md",
+    "doc/spec/features/feature-telemetry-v2.md",
     "doc/spec/features/feature-verify-change-and-exit-taxonomy.md",
     "doc/spec/features/feature-verify-gates.md",
     "doc/spec/features/feature-watchdog-lane-contracts.md",

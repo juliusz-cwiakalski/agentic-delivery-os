@@ -30,7 +30,7 @@ const withMutant = async (
     if (!source.includes(from)) throw new Error(`${id}: mutant anchor missing: ${from}`);
     source = source.replace(from, to);
   }
-  const temp = join(dirname(absolute), `.mutant-${id}.ts`);
+  const temp = join(dirname(absolute), `.mutant-telemetry-${id}.ts`);
   writeFileSync(temp, source);
   try {
     const module = (await import(`${pathToFileURL(temp).href}`)) as Record<string, unknown>;

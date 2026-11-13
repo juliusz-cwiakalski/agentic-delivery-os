@@ -126,6 +126,9 @@
       "BriefPlaceholderId",
       "BriefPlaceholderSurfaceId",
       "BriefPullRequestEvidence",
+      "BriefSpendCitation",
+      "BriefSpendReconciliation",
+      "BriefSpendTiming",
       "BriefSurface",
       "BriefSurfaceId",
       "BriefSurfaceState",
@@ -1219,6 +1222,9 @@
       "BriefPlaceholderId",
       "BriefPlaceholderSurfaceId",
       "BriefPullRequestEvidence",
+      "BriefSpendCitation",
+      "BriefSpendReconciliation",
+      "BriefSpendTiming",
       "BriefSurface",
       "BriefSurfaceId",
       "BriefSurfaceState",
@@ -2838,6 +2844,7 @@
       "RetroSidecarIo",
       "RetroSidecarPort",
       "RetroSidecarRead",
+      "RetroSpendEvidence",
       "RetroStateFamilies",
       "RetroStateFamiliesRead",
       "RetroTargetSelection",
@@ -3953,6 +3960,7 @@
       "RetroSidecarIo",
       "RetroSidecarPort",
       "RetroSidecarRead",
+      "RetroSpendEvidence",
       "RetroStateFamilies",
       "RetroStateFamiliesRead",
       "RetroTargetSelection",
@@ -4404,9 +4412,7 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": [
-    "CredentialPort"
-  ],
+  "credentialPort": ["CredentialPort"],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",

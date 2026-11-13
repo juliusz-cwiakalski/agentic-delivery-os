@@ -79,22 +79,24 @@ const reportHuman = (data: RetroReportData): string => {
   for (const entry of data.followThrough) {
     lines.push(`- ${entry.action}: ${entry.verdict}`);
   }
-  const spend = data.spend;
-  if (spend !== undefined) {
-    if (spend.state === "absent") {
+  const spendCitation = data.spend;
+  if (spendCitation !== undefined) {
+    if (spendCitation.state === "absent") {
       lines.push("spend: absent (spend.telemetry-absent; no captured telemetry)");
     } else {
       const total =
-        spend.tokensByClass.input +
-        spend.tokensByClass.output +
-        spend.tokensByClass.reasoning +
-        spend.tokensByClass.cacheRead +
-        spend.tokensByClass.cacheWrite;
-      const roles = spend.roles.map((entry) => `${entry.role}:${String(entry.tokens)}`).join(", ");
-      const models = spend.models
+        spendCitation.tokensByClass.input +
+        spendCitation.tokensByClass.output +
+        spendCitation.tokensByClass.reasoning +
+        spendCitation.tokensByClass.cacheRead +
+        spendCitation.tokensByClass.cacheWrite;
+      const roles = spendCitation.roles
+        .map((entry) => `${entry.role}:${String(entry.tokens)}`)
+        .join(", ");
+      const models = spendCitation.models
         .map((entry) => `${entry.model}:${String(entry.tokens)}`)
         .join(", ");
-      const timing = spend.timing
+      const timing = spendCitation.timing
         .map(
           (entry) =>
             `${entry.phase}:${entry.durationMs === null ? "open" : `${String(entry.durationMs)}ms`}`,
@@ -105,9 +107,9 @@ const reportHuman = (data: RetroReportData): string => {
       lines.push(`- models ${models || "none"}`);
       lines.push(`- timing ${timing || "none"}`);
       lines.push(
-        spend.reconciliation === undefined
+        spendCitation.reconciliation === undefined
           ? "- reconcile unavailable"
-          : `- reconcile ${spend.reconciliation.verdict} (tolerance ${String(spend.reconciliation.tolerance)}, basis ${spend.reconciliation.basis})`,
+          : `- reconcile ${spendCitation.reconciliation.verdict} (tolerance ${String(spendCitation.reconciliation.tolerance)}, basis ${spendCitation.reconciliation.basis})`,
       );
     }
   }

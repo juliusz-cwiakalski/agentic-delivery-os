@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RETRO-PIPELINE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and four retro error identities."
+summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the seven delivered collector sources including the spend-telemetry citation, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and four retro error identities."
 links:
-  related_changes: ["GH-232", "GH-240"]
+  related_changes: ["GH-232", "GH-240", "GH-291"]
   related_decisions: ["TDR-0009", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/retro.ts"
@@ -79,6 +79,7 @@ One collection invocation covers one level and one target scope. The collectors 
 | `closeout-outcomes` | The target change's closeout outcome history | One record per outcome |
 | `commit-telemetry` | The target change's commit telemetry history | One record per telemetry event |
 | `pm-notes` | The target change's typed `retro` notes | One record per note |
+| `spend-telemetry` | The target change's verified spend read-side fold, injected through the read-only spend seam | One record per present citation carrying the five token classes, one per role row, one per model row, one per phase timing summary, and one carrying the reconciliation verdict, tolerance, and basis; an absent store appends one record carrying the classified `spend.telemetry-absent` state and code |
 | `memory-audit` | Recorded through the separate memory-audit seam, not the default collect fold | One record per recorded outcome reference |
 
 For every source, an empty fold appends an explicit `delivery.retro.verified-empty.v1` record naming the check that produced the verdict, so verified-empty is evidence rather than silence. The audit-ledger fold additionally carries skipped-ordinal findings and the chain verdict verbatim; neither is dropped. A consumed audit-read failure classifies through the delivered failure taxonomy: an input failure becomes `input.value.rejected`, a state failure keeps its delivered state code, and a state code outside the delivered state failure vocabulary classifies as `state.store.unknown` with `not_landed` rather than passing through unvalidated.
@@ -98,7 +99,7 @@ The sidecar is the artifact family `retro-evidence.<workspace>.jsonl` in the sta
 | `schemaId` | string | Constant `delivery.retro.evidence.v1`. |
 | `traceId` | string | Collector-assigned, `ev-` prefixed, unique per sidecar. |
 | `level` | string | One of the six declared level names. |
-| `source` | string | One of the six declared evidence sources. |
+| `source` | string | One of the seven declared evidence sources. |
 | `windowStart`, `windowEnd` | number | Explicit collection-window bounds; `windowStart <= windowEnd`. |
 | `collectedAt` | number | Injected-clock epoch-millisecond collection timestamp. |
 | `collectorIdentity` | object | Optional `{ kind: "claimed", value: string }`. |
@@ -106,7 +107,7 @@ The sidecar is the artifact family `retro-evidence.<workspace>.jsonl` in the sta
 | `payloadSchemaId` | string | A declared evidence payload schema id. |
 | `chainValue` | string | The keyed chain link, exactly 64 lowercase hex characters. |
 
-The declared payload schemas are `delivery.retro.evidence.v1`, `delivery.audit.invocation.v1`, and the retro source schemas `delivery.retro.phase-transition.v1`, `delivery.retro.closeout-outcome.v1`, `delivery.retro.commit-telemetry.v1`, `delivery.retro.retro-note.v1`, `delivery.retro.finding.v1`, `delivery.retro.verified-empty.v1`, `delivery.retro.audit-orphan.v1`, `delivery.retro.audit-chain.v1`, `delivery.retro.follow-through.v1`, and `delivery.retro.memory-audit.v1`.
+The declared payload schemas are `delivery.retro.evidence.v1`, `delivery.audit.invocation.v1`, and the retro source schemas `delivery.retro.phase-transition.v1`, `delivery.retro.closeout-outcome.v1`, `delivery.retro.commit-telemetry.v1`, `delivery.retro.retro-note.v1`, `delivery.retro.spend-telemetry.v1`, `delivery.retro.finding.v1`, `delivery.retro.verified-empty.v1`, `delivery.retro.audit-orphan.v1`, `delivery.retro.audit-chain.v1`, `delivery.retro.follow-through.v1`, and `delivery.retro.memory-audit.v1`.
 
 Appends are serialized by one collector fence file, `retro-evidence.<workspace>.lock`. A single-record append acquires the fence, performs a verified read of the current sidecar, refuses a malformed entry or a broken chain, refuses a duplicate trace id, ensures the chaining key exists, computes the link, appends one LF-terminated JSON line, applies `0600`, and releases the fence. `appendBatch` applies the same admission once for a run's drafts: one fence acquisition, one verified read, duplicate checks across both stored and batch trace ids, all link computations in memory, and one append that writes every record line. Collection uses the batch path; single-record append remains for other callers. A busy fence is `state.lock.busy`; a write failure is `state.write.failed`; a permission violation is `state.permission.denied`. Retention is forever.
 
@@ -144,7 +145,7 @@ The same guards apply to retro-registry reads: a malformed registry entry is cla
 
 `retro report` performs a verified sidecar read, then a verified registry read, filters run records to the requested level, and folds the most recent run (append order). With no run record for the level, it returns an explicit empty report with exit 0.
 
-The successful `data` is exactly four keys:
+The successful `data` carries the four delivered keys plus the optional `spend` citation:
 
 | Key | Contract |
 |---|---|
@@ -152,6 +153,7 @@ The successful `data` is exactly four keys:
 | `findings[]` | Mechanically folded findings, each `{ kind, text, evidenceRefs[] }`; sorted by kind then text. |
 | `followThrough[]` | Recorded follow-through entries, each `{ action, verdict, artifactRef? }`; sorted by action. |
 | `evidenceRefs[]` | The trace ids of the sidecar records selected for the run, in record order. |
+| `spend?` | The cited spend evidence: `{ state: "present", tokensByClass, roles[], models[], timing[], reconciliation? }` carrying the same collector-truth figures and the tolerance disclosure the fold produced, or `{ state: "absent" }` as the classified absence. Omitted only when the injected spend seam produced no evidence at all; an absent store is never rendered as zeros. |
 
 The report shape's schema identity `delivery.retro.report.v1` is a declared contract constant, not an in-data field.
 
@@ -409,6 +411,7 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 - [Doctor](feature-doctor.md) — the state check's `retro-registry` store verdict.
 - [Closeout Transaction](feature-closeout.md) — the read-only `retro-coverage-move` consumer and a collector source; [Change Capsule](feature-capsule.md) — the capsule event that records coverage.
 - [Commit Primitive](feature-commit-primitive.md) — a collector source.
+- [Spend Read Side](feature-spend.md) — the verified spend fold the `spend-telemetry` source collects and cites; [Harness Telemetry v2](feature-telemetry-v2.md) — the step and baseline records behind it.
 - [Glossary](../../overview/glossary.md) — repository-wide terms.
 - [TDR-0009](../../decisions/TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md), [TDR-0005](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md).
-- Change records: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.
+- Change records: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/`.
