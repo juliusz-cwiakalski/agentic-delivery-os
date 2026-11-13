@@ -23,7 +23,7 @@ import {
   type QueueParkPreservation,
   type QueueParkRecord,
   type QueueParkRecoveryState,
-} from "../contracts/queue.js";
+} from "#contracts";
 import type { QueueParkEvaluation } from "./queue-readiness.js";
 
 /** Resolve the paired condition type for one cause (never interchangeable). */

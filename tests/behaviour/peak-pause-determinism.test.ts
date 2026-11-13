@@ -32,7 +32,12 @@ const lanes = [
 
 const episodeFactory = () => {
   let ordinal = 0;
-  return { next: () => `episode-${(ordinal += 1)}` };
+  return {
+    next: () => {
+      ordinal += 1;
+      return `episode-${ordinal}`;
+    },
+  };
 };
 
 describe("TC-PAUSE-091 identical inputs produce identical decisions", () => {

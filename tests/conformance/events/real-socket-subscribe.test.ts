@@ -61,7 +61,7 @@ describe("TC-EVT-021 real unix-socket subscription", () => {
         await waitFor(client, (received) => eventFrames(received).length >= 1);
         let frames = eventFrames(client.drain());
         expect(frames).toHaveLength(1);
-        expect(frames[0]).toMatchObject({ kind: "entry", sequence: 1, taxonomyVersion: "v1" });
+        expect(frames[0]).toMatchObject({ kind: "entry", sequence: 1, taxonomyVersion: "v2" });
 
         appendRaw(harness, "queue.deps:GH-999:socket", {
           schema: "delivery.queue.dependency.v1",

@@ -876,10 +876,7 @@ export type QueueLane = {
 
 /** The `lanes list | show <ref>` payload (Appendix C). */
 /** The closed peak-enforcement mode set (GH-294 F-8, DEC-7; OQ-TP-6). */
-export const QUEUE_PEAK_ENFORCEMENT_MODES = [
-  "window-watch",
-  "iteration-start-gating",
-] as const;
+export const QUEUE_PEAK_ENFORCEMENT_MODES = ["window-watch", "iteration-start-gating"] as const;
 export type QueuePeakEnforcementMode = (typeof QUEUE_PEAK_ENFORCEMENT_MODES)[number];
 
 /**

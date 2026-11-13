@@ -32,6 +32,7 @@ import {
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
   STATUS_MAX_PROVIDER_ENTRIES,
+  STATUS_MAX_LANE_PARKS,
   STATUS_MAX_PROVIDER_PARKS,
   STATUS_MAX_READY_ITEMS,
   STATUS_MAX_REASONS,
@@ -80,7 +81,6 @@ import {
   type StatusWorkItemRead,
   type WorkItem,
 } from "#contracts";
-import { STATUS_MAX_LANE_PARKS } from "../contracts/status.js";
 import { rankBlockerQuestions } from "./blockers.js";
 import { classifyPipelineRuns } from "./ci-result.js";
 import {

@@ -4144,17 +4144,16 @@ export const createSpendCommandRuntime = (
     // The profile names the episode's recorded nomination, read from the
     // latest peak-window park record — never re-derived from a model string.
     const parks = readQueueParks(options.store);
-    const profile =
-      parks.ok
-        ? [...parks.records]
-            .reverse()
-            .find(
-              (record) =>
-                record.ref === request.ref &&
-                record.cause === "peak-window" &&
-                record.providerProfile !== undefined,
-            )?.providerProfile
-        : undefined;
+    const profile = parks.ok
+      ? [...parks.records]
+          .reverse()
+          .find(
+            (record) =>
+              record.ref === request.ref &&
+              record.cause === "peak-window" &&
+              record.providerProfile !== undefined,
+          )?.providerProfile
+      : undefined;
     return {
       ok: true,
       data: windowSpendEvidence({

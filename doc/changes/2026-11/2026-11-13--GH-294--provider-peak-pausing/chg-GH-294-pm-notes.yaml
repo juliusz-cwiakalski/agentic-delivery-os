@@ -300,8 +300,7 @@ notes:
       44/44 PASS; content-inventory 6/6 PASS."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 9 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): the cross-cutting battery —
+  - text: "Plan phase 9 complete (commit 341b073ed): the cross-cutting battery —
       peak-window-utc-clock (TC-PAUSE-090: the boundary matrix flips exactly at
       start-minus-buffer open and effective-end close; the DST-zone matrix
       equals the UTC baseline; the injected clock's sleep counter is the only
@@ -321,5 +320,30 @@ notes:
       Test result at boundary: pnpm typecheck green; the battery 38/38 PASS
       (three new suites + state-contract + event-state-additivity +
       queue-park-causes-s17)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 10 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): planning-doc maintenance (backlog
+      M2-S17 delivered marker following the M2-S13/S14 precedent; status.md
+      delivery snapshot addendum), one lockstep minor changeset over the five
+      publishables (.changeset/gh-294-provider-peak-pausing-minor.md), and the
+      change-folder residue. Full-battery remediation in this phase (all
+      mechanical or spec-mandated, each per the reserved escalation):
+      dispatch-attempts-contract 16→17 projection fields (DM-1 additive
+      providerProfile), queue-scheduling-contract + closed-sets.json fixture
+      gained the two causes and the DEC-2 superseded injective pairing
+      (provider-window and preemption carry two causes each; spec §16 declares
+      the supersession), events envelope/snapshot/queue-graph/conformance
+      stamp literals v1→v2 (TDR-0029 D4), port-contract-inventory fixture rows
+      for the new contract exports, peak-pause-determinism lint fix
+      (assignment-in-expression), tier-discipline import corrections
+      (peak-rules/queue-park/daemon-peak-pause/spend/status now import the new
+      symbols via #contracts; barrels carry the re-exports), and the catalog
+      fix: peakWindows declared optional (absence = no enforcement) — the
+      required flag had made the schema reject every delivered profile without
+      declared rules. Gate results: plan validate verdict=valid; full
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — lint, format, typecheck,
+      tests 8108 pass / 4 skip / 0 fail, boundaries, prompt-conformance,
+      help-guide-coverage, exports-parity all green."
     type: "info"
     date: "2026-11-13"

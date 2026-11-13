@@ -175,7 +175,6 @@ const PROVIDER_PROFILE_PEAK_WINDOW = {
  */
 const PROVIDER_PROFILE_PEAK_WINDOWS = {
   type: "object",
-  required: true,
   fields: {
     graceSeconds: { type: "number", required: true },
     windows: { type: "array", items: PROVIDER_PROFILE_PEAK_WINDOW, required: true },

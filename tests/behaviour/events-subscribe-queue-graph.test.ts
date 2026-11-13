@@ -40,7 +40,7 @@ describe("TC-EVT-020 queue.graph end to end", () => {
         lane: "GH-999",
         ref: "GH-999",
         sequence: 1,
-        taxonomyVersion: "v1",
+        taxonomyVersion: "v2",
       });
       expect(entry).not.toHaveProperty("cursor");
       const entryRecord = readQueueEntries(harness.store);

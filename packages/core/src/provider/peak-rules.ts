@@ -20,11 +20,11 @@
  *   - a `graceSeconds` default above the derived maximum is a validation
  *     error, never silently clamped (NFR-1, DEC-6).
  */
-import { PROVIDER_PEAK_TIMEZONES } from "../contracts/provider.js";
-import type {
-  ProviderProfilePeakRules,
-  ProviderProfilePeakWindow,
-} from "../contracts/provider-profile.js";
+import {
+  PROVIDER_PEAK_TIMEZONES,
+  type ProviderProfilePeakRules,
+  type ProviderProfilePeakWindow,
+} from "#contracts";
 
 /** The classified configuration identity the rule validation reuses. */
 export const PEAK_RULES_ERROR_CODE = "provider.profile.invalid" as const;

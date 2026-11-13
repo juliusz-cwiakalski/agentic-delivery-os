@@ -59,12 +59,10 @@ import {
   type TelemetryReconciliationVerdict,
   type TelemetryStepRecord,
   type TelemetryStepTokens,
-} from "#contracts";
-import {
   SPEND_WINDOW_BASIS,
   type SpendWindowEvidence,
   type SpendWindowExclusion,
-} from "../contracts/spend.js";
+} from "#contracts";
 
 /** The classified absence: the selection holds no captured telemetry. */
 export type SpendAbsence = {
