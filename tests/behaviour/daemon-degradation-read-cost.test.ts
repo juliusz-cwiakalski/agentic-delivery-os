@@ -123,7 +123,10 @@ describe("TC-DAEMON-120 degradation read cost", () => {
       const beforeLanes = counters.reads;
       const lanesRead = lanes.readLanes();
       expect(lanesRead.ok).toBe(true);
-      expect(counters.reads - beforeLanes - lanesBaselineCost).toBeLessThanOrEqual(2);
+      // GH-294 OQ-TP-6: the lanes projection additionally reads the park
+      // records once for the declared `parkClaimed` value, so the lanes bound
+      // moves from two to three; the schedule bound above is unchanged.
+      expect(counters.reads - beforeLanes - lanesBaselineCost).toBeLessThanOrEqual(3);
       expect(resolver.calls()).toBe(2);
 
       // A watch iteration resolves once per projection and is awaited: the

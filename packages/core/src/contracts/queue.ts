@@ -875,6 +875,25 @@ export type QueueLane = {
 };
 
 /** The `lanes list | show <ref>` payload (Appendix C). */
+/** The closed peak-enforcement mode set (GH-294 F-8, DEC-7; OQ-TP-6). */
+export const QUEUE_PEAK_ENFORCEMENT_MODES = [
+  "window-watch",
+  "iteration-start-gating",
+] as const;
+export type QueuePeakEnforcementMode = (typeof QUEUE_PEAK_ENFORCEMENT_MODES)[number];
+
+/**
+ * The declared peak-enforcement state in the machine read (GH-294 F-8, DEC-7;
+ * NFR-7): which enforcement is active and whether any park was claimed. With
+ * no resident daemon there is no window watcher and no mid-flight park — the
+ * mode is `iteration-start-gating` and `parkClaimed` is false; no surface may
+ * claim a park that did not happen.
+ */
+export type QueuePeakEnforcement = {
+  readonly mode: QueuePeakEnforcementMode;
+  readonly parkClaimed: boolean;
+};
+
 export type QueueLanesData = {
   readonly schemaVersion: typeof QUEUE_LANES_SCHEMA_VERSION;
   readonly lanes: readonly QueueLane[];
@@ -890,6 +909,8 @@ export type QueueLanesData = {
     readonly parked: number;
     readonly failed: number;
   };
+  /** The declared peak-enforcement state (GH-294 F-8, OQ-TP-6). */
+  readonly peakEnforcement: QueuePeakEnforcement;
 };
 
 /** The record payload type union (one JSON value per declared kind). */

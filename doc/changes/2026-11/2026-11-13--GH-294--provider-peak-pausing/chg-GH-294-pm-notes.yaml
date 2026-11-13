@@ -253,8 +253,7 @@ notes:
       PASS."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 7 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): park vocabulary + status/brief
+  - text: "Plan phase 7 complete (commit 7f5f5741e): park vocabulary + status/brief
       surfaces + exactly-once episode evidence — queue release grammar accepts
       peak-window (requires the delivered explicit --until) and owner-hold
       (--until refused: the classified absence; the invoked command is the ONE
@@ -277,5 +276,28 @@ notes:
       battery 93/93 PASS (three new suites + status-owner-hold +
       status-parked-conditions + status-providers-parked + queue-cli + golden
       lanes-list + golden brief)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 8 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): the declared daemon-absent
+      degradation — foldLanes gains peakEnforcement
+      (QUEUE_PEAK_ENFORCEMENT_MODES closed set; default
+      iteration-start-gating + parkClaimed false; resident daemon composes
+      window-watch), the lanes --json machine read carries it over the real
+      edge (the degraded reuse — no second reachability resolution; one
+      bounded park read for parkClaimed), zero-claims scan across status
+      (no laneParks), brief (none), lanes (parkClaimed false, zero parked),
+      events reference (declaration is data, not a claim), and zero
+      park-family records / no synthesized zero-spend reading daemon-absent.
+      Scope disclosures (mechanical): contracts/index.ts barrel rows for the
+      new queue symbols, lanes-list/lanes-show goldens gained the additive
+      peakEnforcement block only (BYTE-P1, hand-applied to preserve formatting),
+      daemon-degradation-read-cost lanes bound moved 2→3 for the one bounded
+      park read (the schedule bound unchanged; the resolver reuse keeps the
+      delivered resolution count). Test result at boundary: pnpm typecheck
+      green; daemon-absent-degradation 6/6 PASS; delivered controls
+      daemon-degradation + projection + read-cost + dispatch-daemonless +
+      provider-peak-window + lanes + lanes-watch + golden lanes-list/show
+      44/44 PASS; content-inventory 6/6 PASS."
     type: "info"
     date: "2026-11-13"

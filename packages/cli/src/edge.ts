@@ -4979,13 +4979,32 @@ export const createLanesCommandRuntime = (
     }
     const schedule = computeQueueSchedule(built.facts, { next: 20 });
     const daemon = readDaemonLanes(composition.store);
+    // The declared peak-enforcement state (GH-294 F-8, OQ-TP-6): the mode
+    // names what enforcement is active — a resident daemon watches windows,
+    // otherwise the delivered iteration-start gating is the whole story — and
+    // `parkClaimed` is read from the durable park records, never claimed
+    // without one. The already-resolved degradation is reused: no second
+    // reachability resolution.
+    const degraded = resolveDegraded(composition.degraded);
+    const daemonUnreachable = degraded.includes("daemon-unreachable");
+    const parksRead = readQueueParks(composition.store);
+    const parkClaimed =
+      !daemonUnreachable &&
+      parksRead.ok &&
+      parksRead.records.some(
+        (record) => record.cause === "peak-window" && record.recoveryState === "parked",
+      );
     return {
       ok: true as const,
       data: foldLanes({
         schedule,
         economics: composition.economics ?? {},
-        degraded: resolveDegraded(composition.degraded),
+        degraded,
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
+        peakEnforcement: {
+          mode: daemonUnreachable ? "iteration-start-gating" : "window-watch",
+          parkClaimed,
+        },
       }),
     };
   };

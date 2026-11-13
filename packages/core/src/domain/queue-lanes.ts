@@ -9,6 +9,7 @@
  */
 
 import {
+  type DaemonLaneRecord,
   QUEUE_LANES_SCHEMA_VERSION,
   QUEUE_MAX_FINDINGS,
   QUEUE_MAX_HUMAN_BYTES,
@@ -21,8 +22,8 @@ import {
   type QueueLanesData,
   type QueueParkedReason,
   type QueueWeightClass,
-  type DaemonLaneRecord,
 } from "#contracts";
+import type { QueuePeakEnforcement } from "../contracts/queue.js";
 import type { QueueSchedule } from "./queue-precedence.js";
 
 /** The delivered economics fold inputs a lane carries. */
@@ -40,6 +41,12 @@ export type QueueLaneFoldInput = {
   readonly degraded: readonly QueueDegradationReason[];
   /** Daemon execution evidence folded beside the queue truth (F-9, DM-13). */
   readonly daemonLanes?: readonly DaemonLaneRecord[];
+  /**
+   * The declared peak-enforcement state (GH-294 F-8, OQ-TP-6). Absent means
+   * the delivered daemon-absent default: `iteration-start-gating` with
+   * `parkClaimed: false` — the fold never claims a park that did not happen.
+   */
+  readonly peakEnforcement?: QueuePeakEnforcement;
 };
 
 const UNDERIVABLE_WARNING = "economics-underivable" as const;
@@ -154,6 +161,10 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
       idle: lanes.filter((lane) => lane.state === "idle-with-reason").length,
       parked: lanes.filter((lane) => lane.state === "parked").length,
       failed: lanes.filter((lane) => lane.state === "failed").length,
+    },
+    peakEnforcement: input.peakEnforcement ?? {
+      mode: "iteration-start-gating",
+      parkClaimed: false,
     },
   };
 };
