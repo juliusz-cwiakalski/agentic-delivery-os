@@ -155,8 +155,7 @@ notes:
       20/20 PASS."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 3 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): taxonomy v2 declared as the single
+  - text: "Plan phase 3 complete (commit bcb474fd7): taxonomy v2 declared as the single
       spoken version (TAXONOMY_VERSION v2; stop/parked/resumed join
       dispatch.attempt, park-edge joins queue.graph with pinned payload lists —
       episodeId as the episode identity; every v1 kind and payload
@@ -178,5 +177,30 @@ notes:
       single-source, additive, conformance, v2-compat, events list/describe,
       golden reference page, emitted-kinds, overflow-parity, sequence, burst,
       subscribe, dependency-delta, frame-bound)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 4 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): the daemon's profile-window watch and
+      in-flight lane parking — new pure module domain/daemon-peak-pause.ts
+      (decidePeakStops over the recorded nomination and that profile's window
+      state only; runPeakWatch appending exactly one park record per episode
+      under one fence; buffer-inclusive open via the shared peak.ts boundary
+      helpers; zero rules = zero decisions), supervision cycle runs the watch
+      once per cycle before action handling (peakPause ports; absent keeps
+      delivered behavior), queue park-cause set gains peak-window (mapped onto
+      the provider-window condition type) and owner-hold (preemption type) per
+      DEC-2, park record family gains the additive DM-4 fields
+      (providerProfile/until/graceDeadline/windowEnd/stoppedAt/preservation/
+      episodeId plus sessionRef/branch at recovery), closed preservation set
+      preserved|session-state-not-preserved; preservation failure never refuses
+      the park nor extends the grace (TDR-0030 D1/D5); no kill path (source
+      scan). Scope disclosures: cli/edge.ts one-line recheck lookup switched to
+      conditionTypeForCause (mechanical type consequence of the widened cause
+      set), tests/types/queue-scheduling.type-test.ts ParkCauseUnion gained the
+      two members (same). Test result at boundary: pnpm typecheck green;
+      daemon-peak-window-park 9/9 PASS; delivered controls daemon-lane-
+      supervision + daemon-preemption + provider-peak-window + queue-park +
+      daemon-single-flight 41/41 PASS; content-inventory 6/6 PASS; ambient-
+      globals OK (186 files); exports-parity OK."
     type: "info"
     date: "2026-11-13"

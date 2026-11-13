@@ -15,9 +15,11 @@ import type {
   LaneExecutorPort,
   LaneHandle,
   LaneObservation,
+  QueueParkRecord,
   StateStorePort,
 } from "#contracts";
 import { classifyLaneProgress, nextSpawnOrdinal, shapeDaemonLane } from "../domain/daemon-lane.js";
+import { type PeakRulesLookup, runPeakWatch } from "../domain/daemon-peak-pause.js";
 import { appendDaemonLane, readDaemonLanes } from "./daemon.js";
 import type { DispatchNomination, DispatchNominationRefusal } from "./dispatch.js";
 
@@ -37,6 +39,27 @@ export type SupervisionPorts = {
    * one-shot path's refusal identities. Absent keeps the delivered behavior.
    */
   readonly nominate?: (action: SupervisionAction) => DispatchNomination;
+  /**
+   * The profile-window watch ports (GH-294 F-3): the parked-peak read, the
+   * parsed rule lookup, the cooperative stop seam, and the park append. The
+   * watch runs once per supervision cycle over every in-flight lane, before
+   * the action handling. Absent keeps the delivered behavior (no watch).
+   */
+  readonly peakPause?: {
+    /** Refs holding an active `peak-window` park (read-time expiry already applied by the caller). */
+    readonly parkedRefs: () => readonly string[];
+    readonly rulesFor: PeakRulesLookup;
+    readonly nowMs: () => number;
+    readonly nowIso: () => string;
+    readonly stop: (input: {
+      readonly ref: string;
+      readonly sessionId?: string;
+      readonly graceDeadline: string;
+    }) => Promise<"preserved" | "session-state-not-preserved">;
+    readonly appendPark: (record: QueueParkRecord) => boolean;
+    readonly newEpisodeId: () => string;
+    readonly repository?: string;
+  };
   readonly claim: (
     action: SupervisionAction,
   ) =>
@@ -123,6 +146,39 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
     return pending === undefined
       ? { mode: "supervise-only" }
       : { mode: "supervise-only", action: pending };
+  }
+  // Profile-window watch (GH-294 F-3): every cycle observes the declared
+  // windows over the in-flight lanes' recorded nominations, before the action
+  // handling, so a lane is stopped and parked within the observation cycle
+  // (NFR-2). Absent ports keep the delivered behavior.
+  if (input.ports.peakPause !== undefined) {
+    const lanes = readDaemonLanes(input.store);
+    if (lanes.ok) {
+      const latest = new Map<string, DaemonLaneRecord>();
+      for (const record of lanes.records) latest.set(record.ref, record);
+      const inFlight = [...latest.values()]
+        .filter((record) => record.state === "delivering")
+        .map((record) => ({
+          ref: record.ref,
+          ...(record.providerProfile === undefined
+            ? {}
+            : { providerProfile: record.providerProfile }),
+          ...(record.sessionId === undefined ? {} : { sessionId: record.sessionId }),
+        }));
+      await runPeakWatch({
+        lanes: inFlight,
+        rulesFor: input.ports.peakPause.rulesFor,
+        nowMs: input.ports.peakPause.nowMs(),
+        parkedRefs: input.ports.peakPause.parkedRefs(),
+        newEpisodeId: input.ports.peakPause.newEpisodeId,
+        stop: input.ports.peakPause.stop,
+        appendPark: input.ports.peakPause.appendPark,
+        nowIso: input.ports.peakPause.nowIso,
+        ...(input.ports.peakPause.repository === undefined
+          ? {}
+          : { repository: input.ports.peakPause.repository }),
+      });
+    }
   }
   const action = input.ports.nextAction();
   if (action === undefined) return { mode: "idle" };

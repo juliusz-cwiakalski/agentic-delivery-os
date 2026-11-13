@@ -48,7 +48,10 @@ type LeaseOperationUnion = Expect<
   Equal<QueueLeaseOperation, "acquired" | "renewed" | "released" | "taken-over">
 >;
 type ParkCauseUnion = Expect<
-  Equal<QueueParkCause, "provider-window" | "provider-quota" | "preempted-for-close-item">
+  Equal<
+    QueueParkCause,
+    "provider-window" | "provider-quota" | "preempted-for-close-item" | "peak-window" | "owner-hold"
+  >
 >;
 type ParkConditionUnion = Expect<
   Equal<QueueParkConditionType, "provider-window" | "provider-quota" | "preemption">

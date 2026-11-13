@@ -20,9 +20,10 @@ import {
   type QueueParkCause,
   type QueueParkCondition,
   type QueueParkConditionType,
+  type QueueParkPreservation,
   type QueueParkRecord,
   type QueueParkRecoveryState,
-} from "#contracts";
+} from "../contracts/queue.js";
 import type { QueueParkEvaluation } from "./queue-readiness.js";
 
 /** Resolve the paired condition type for one cause (never interchangeable). */
@@ -190,6 +191,14 @@ export const createParkRecord = (input: {
   readonly recheckMs: number;
   readonly evaluatedAt: string;
   readonly recordedAt: string;
+  /** GH-294 DM-4: the peak-window episode fields, additive on the delivered family. */
+  readonly providerProfile?: string;
+  readonly until?: string;
+  readonly graceDeadline?: string;
+  readonly windowEnd?: string;
+  readonly stoppedAt?: string;
+  readonly preservation?: QueueParkPreservation;
+  readonly episodeId?: string;
 }): QueueParkRecord => ({
   schema: "delivery.queue.park.v1",
   ref: input.ref,
@@ -201,6 +210,13 @@ export const createParkRecord = (input: {
   evaluatedAt: input.evaluatedAt,
   recoveryState: "parked",
   recordedAt: input.recordedAt,
+  ...(input.providerProfile === undefined ? {} : { providerProfile: input.providerProfile }),
+  ...(input.until === undefined ? {} : { until: input.until }),
+  ...(input.graceDeadline === undefined ? {} : { graceDeadline: input.graceDeadline }),
+  ...(input.windowEnd === undefined ? {} : { windowEnd: input.windowEnd }),
+  ...(input.stoppedAt === undefined ? {} : { stoppedAt: input.stoppedAt }),
+  ...(input.preservation === undefined ? {} : { preservation: input.preservation }),
+  ...(input.episodeId === undefined ? {} : { episodeId: input.episodeId }),
 });
 
 const transition = (

@@ -41,6 +41,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/watch-stream.ts": ["boundWatchLine", "createWatchProjection"],
   "core/src/app/daemon-preemption.ts": ["applyPreemption", "reevaluatePendingPreemptions"],
   "core/src/domain/daemon-preemption.ts": ["PREEMPTION_WRITABLE_STATES", "decidePreemption"],
+  "core/src/domain/daemon-peak-pause.ts": [
+    "PeakEpisodeIdFactory",
+    "PeakRulesLookup",
+    "PeakStopDecision",
+    "PeakStopPort",
+    "PeakWatchLane",
+    "decidePeakStops",
+    "peakWindowOpenAt",
+    "runPeakWatch",
+  ],
   "core/src/app/effects.ts": [
     "appendCommandReceipt",
     "appendOutboxEffect",
@@ -1312,6 +1322,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/queue.ts": [
     "QUEUE_BLOCKING_REASONS",
+    "QUEUE_PARK_PRESERVATIONS",
     "QUEUE_CLAIM_RESULTS",
     "QUEUE_CONFIG_BRANCH",
     "QUEUE_CONFIG_KEY_LEASE_TTL",

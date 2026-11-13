@@ -100,6 +100,7 @@ import {
   computeQueueSchedule,
   computeSpendReport,
   computeStagingPlan,
+  conditionTypeForCause,
   createSourcedWatchdogSignalSource,
   type DispatchAdmission,
   type DispatchLeaseClaim,
@@ -4806,12 +4807,8 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
                 ...(input.parkUntil === undefined ? {} : { expiresAt: input.parkUntil }),
               }),
               recheckMs:
-                composition.settings?.parkRecheckMs[
-                  input.parkCause === "preempted-for-close-item" ? "preemption" : input.parkCause
-                ] ??
-                defaultParkRecheckMs(
-                  input.parkCause === "preempted-for-close-item" ? "preemption" : input.parkCause,
-                ),
+                composition.settings?.parkRecheckMs[conditionTypeForCause(input.parkCause)] ??
+                defaultParkRecheckMs(conditionTypeForCause(input.parkCause)),
             };
       const released = releaseQueueLease(composition.store, {
         ref: input.ref,

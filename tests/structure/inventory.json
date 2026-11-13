@@ -106,6 +106,7 @@
     "src/domain/daemon-lane.ts",
     "src/domain/daemon-lock.ts",
     "src/domain/daemon-preemption.ts",
+    "src/domain/daemon-peak-pause.ts",
     "src/domain/daemon-reconcile.ts",
     "src/domain/daemon-status.ts",
     "src/domain/daemon-supervisor.ts",

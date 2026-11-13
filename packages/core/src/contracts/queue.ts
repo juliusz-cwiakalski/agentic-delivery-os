@@ -14,8 +14,8 @@
  */
 
 import type { OwnerHoldSource } from "./owner-hold.js";
-import type { CallerPrincipal } from "./principal.js";
 import type { DeliveryStateAlias } from "./ports.js";
+import type { CallerPrincipal } from "./principal.js";
 import type { QueueReadyCondition, QueueReadyConditionId } from "./queue-ready.js";
 import type { StateJsonValue } from "./state.js";
 
@@ -123,14 +123,24 @@ export const QUEUE_PARK_CAUSES = [
   "provider-window",
   "provider-quota",
   "preempted-for-close-item",
+  "peak-window",
+  "owner-hold",
 ] as const;
 export type QueueParkCause = (typeof QUEUE_PARK_CAUSES)[number];
 
-/** The declared one-to-one cause <-> condition-type pairing (DM-5). */
+/** The declared one-to-one cause <-> condition-type pairing (DM-5; GH-294 DEC-2).
+ *
+ * `peak-window` rides the existing `provider-window` condition type (no
+ * duplicate cause, no silent rename); `owner-hold` joins beside the delivered
+ * causes on the read-time `preemption` condition type — the hold is a gate
+ * with no expiry, never an expiry-carrying window.
+ */
 export const QUEUE_PARK_CAUSE_CONDITION_PAIRS = [
   { cause: "provider-window", conditionType: "provider-window" },
   { cause: "provider-quota", conditionType: "provider-quota" },
   { cause: "preempted-for-close-item", conditionType: "preemption" },
+  { cause: "peak-window", conditionType: "provider-window" },
+  { cause: "owner-hold", conditionType: "preemption" },
 ] as const satisfies readonly {
   readonly cause: QueueParkCause;
   readonly conditionType: QueueParkConditionType;
@@ -181,7 +191,29 @@ export type QueueParkRecord = {
   readonly observationGapMs?: number;
   readonly recoveryState: QueueParkRecoveryState;
   readonly recordedAt: string;
+  /** The nominated profile the peak-window episode parked (GH-294 DM-4). */
+  readonly providerProfile?: string;
+  /** The window end the episode resumes at; classified absence on an owner-hold park (GH-294 DM-4, DEC-12). */
+  readonly until?: string;
+  /** The bounded-grace deadline the stop recorded (GH-294 NFR-1). */
+  readonly graceDeadline?: string;
+  /** The effective window end the watch observed (GH-294 DM-4). */
+  readonly windowEnd?: string;
+  /** The recorded stop instant (GH-294 DM-4). */
+  readonly stoppedAt?: string;
+  /** The closed-value preservation classification (GH-294 DM-4, TDR-0030 D2). */
+  readonly preservation?: QueueParkPreservation;
+  /** The episode identity joining the park record, its events, and the resume (GH-294 DM-4). */
+  readonly episodeId?: string;
+  /** The preserved session-state reference, recorded at recovery (GH-294 DM-4). */
+  readonly sessionRef?: string;
+  /** The lane's branch, recorded at recovery; unchanged by the episode (GH-294 DM-4). */
+  readonly branch?: string;
 };
+
+/** The closed preservation classification set (GH-294 DM-4, TDR-0030; LIT-P1). */
+export const QUEUE_PARK_PRESERVATIONS = ["preserved", "session-state-not-preserved"] as const;
+export type QueueParkPreservation = (typeof QUEUE_PARK_PRESERVATIONS)[number];
 
 /* ------------------------------- incidents ------------------------------- */
 
