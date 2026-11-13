@@ -44,7 +44,7 @@ Provider writes are delivered for GitHub and Jira. GitLab remains a read slice w
 
 ### 2.3 Non-Goals
 
-- Telemetry capture outside closeout (phase boundaries, session end) and backfill of historical sessions; capture is a closeout-time operation only.
+- Backfill of historical sessions; closeout performs only its own closeout-time capture. Per-step stream ingest and session-close baseline capture are owned by the harness adapter layer, not by the closeout transaction.
 - Remote branch or worktree deletion, remote ref cleanup, force push, or history rewrite.
 - GitLab write operations; GitLab writes and the work-item read remain declared gaps.
 - The full GitHub adapter, full issue lifecycle, releases, and operations beyond closeout (M3-S3).

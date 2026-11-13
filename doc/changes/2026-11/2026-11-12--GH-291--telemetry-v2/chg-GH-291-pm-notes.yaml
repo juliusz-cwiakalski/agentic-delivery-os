@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-12T20:28:30.525Z }
   dor_check: { started: null, completed: 2026-11-12T20:35:53.961Z }
   delivery: { started: null, completed: 2026-11-13T10:28:07.902Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-13T10:49:49.164Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -392,5 +392,23 @@ notes:
       and the contract-inventory formatting are required by the delivered
       contract and retained. Queue commands and tests and
       `doc/decisions/00-index.md` were left untouched (GH-292 lane).
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      system_spec_update (@doc-syncer): verification pass over the in-phase
+      reconciliation found and fixed 21+ contradictions across 12 files —
+      cross-cutting surfaces the delivery-phase reconciliation had not covered
+      (doc/overview/architecture-overview.md, doc/overview/glossary.md,
+      doc/spec/nonfunctional.md,
+      doc/quality/test-specs/test-spec-state-layer.md, plus corrections in
+      feature-spend.md, feature-telemetry-v2.md, feature-closeout.md,
+      feature-state-layer.md, feature-brief.md, feature-harness-adapters.md,
+      feature-status-digest.md, doc/00-index.md). Payload documented as eleven
+      keys (six v1 + five v2). Validation: test-doc-distribution OK (83 docs, no
+      drift); doc-conformance 11 pass / 0 fail; git diff --check clean; GH-291
+      in related_changes on every traceable edited page. Residual gaps: NONE.
+      The four cross-cutting files are outside plan phase-8 declared scope and
+      stage as scope drift under the plan-union rule — attributed to this
+      documentation phase.
     type: "info"
     date: "2026-11-13"

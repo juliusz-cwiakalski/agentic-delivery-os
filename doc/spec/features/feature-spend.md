@@ -40,10 +40,12 @@ Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, 
 
 - Report a per-ticket and per-phase breakdown from the event log alone, with zero harness-store reads.
 - Attribute records to delivery phases from the timestamped transition history already in the ledger.
-- Count delivery-run restarts over the union of run identities in both telemetry families.
+- Report cost totals in harness-reported units, five-dimension breakdowns (ticket, repository, lane, agent role, model), and per-phase timing summaries with stall and restart intervals joined from the delivered economics records.
+- Count delivery-run restarts over the union of run identities in the selected records of both telemetry planes and the capture-outcome records.
 - Report the resume-amplification metric — tokens paid versus unique progress, approximately 1 for a healthy delivery — and flag amplification events by name.
+- Reconcile observed totals against summed harness-reported session totals at the stated tolerance, disclosing the verdict, the basis, and excluded sessions.
 - Classify telemetry-absent explicitly and reuse delivered state identities for store damage.
-- Report spend evidence in the status digest's section 8 from the same fold.
+- Report spend evidence in the status digest's section 8 from the same fold, and cite the same figures from the brief and the retro evidence pass.
 
 ## User Experience & Functionality
 
@@ -53,7 +55,7 @@ The handler owns the value grammar before any read and performs no stream write 
 
 | Invocation | Behavior |
 |---|---|
-| `spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` | Reports the selection's spend. |
+| `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]` | Reports the selection's spend. |
 | `--ref` omitted | Resolves the active change ref from the local delivery context without touching the state store. |
 | `--ref` with an unresolvable active context | Refuses `input.value.rejected` (exit 1) before any read. |
 | `--ref <ref>` | Matches the canonical uppercase ref grammar (`^[A-Z][A-Z0-9]*-[0-9]+$`), case-sensitive with no folding. A malformed shape refuses `input.value.rejected` before any read. |
@@ -107,11 +109,11 @@ A restart loop reports a ratio above 1 and one `restart-loop prefill re-pay` eve
 
 ### Spend breakdown
 
-`tokensByClass` carries exactly the five delivered token classes — `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite` — as non-negative integers summed across the selected captured session-group records. A token class absent at capture is excluded from every sum and never fabricated to zero. Calls are reported in the human digest total and in every `perAgent[]`, `perPhase[]`, and breakdown entry; the machine payload carries no separate top-level calls key.
+`tokensByClass` carries exactly the five delivered token classes — `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite` — as non-negative integers summed across the selected captured records: a session present in the v2 step plane contributes its step sums, otherwise its closeout session-group records contribute. A token class absent at capture is excluded from every sum and never fabricated to zero. Calls are reported in the human digest total and in every `perAgent[]`, `perPhase[]`, and breakdown entry; the machine payload carries no separate top-level calls key.
 
 `perAgent[]` groups records by (agent, model) with `calls` and `tokens`. It orders by tokens descending, then agent ascending, then model ascending.
 
-`degradation` discloses records with any null-when-missing token class, any closed-vocabulary warning, or a capture-outcome warning. It carries `records` (the count of affected records and outcomes) and `byReason` over the closed harness warning vocabulary: `optional-field-absent`, `non-numeric-value`, `cost-missing`, `version-drift`, `malformed-line`, `truncated`, `session-capture-failed`, `unattributable-session`, and `invalid-session-identity`. A capture-outcome warning is never dropped.
+`degradation` discloses records with any null-when-missing token class, any closed-vocabulary warning, or a capture-outcome warning. It carries `records` (the count of affected records and outcomes) and `byReason` over the closed harness warning vocabulary: `optional-field-absent`, `non-numeric-value`, `cost-missing`, `version-drift`, `malformed-line`, `truncated`, `session-capture-failed`, `unattributable-session`, and `invalid-session-identity`. A capture-outcome warning is never dropped. The two v2-only reasons are disclosed on their own channels: `unattributable-step` rides the step record and its `value: null` breakdown row, and `baseline-session-excluded` rides the report's warning channel with the named excluded count.
 
 Cost is reported only in v2: `costTotals` aggregates the harness-reported per-record cost in harness-reported units, never converted or re-priced, and discloses sparsity (`sparse: true`) when any contributing record's cost is null. A null cost contributes nothing; it is never zero-filled or estimated.
 
@@ -121,15 +123,15 @@ Cost is reported only in v2: `costTotals` aggregates the harness-reported per-re
 
 ### Phase timing summaries
 
-`phaseTiming` carries one entry per transitioned phase: `phase`, `startedAt`, `endedAt`, and `durationMs`. Values derive from the ordered `phase.transition` history; stall and restart intervals join the delivered economics records rather than being re-estimated. An open phase (no completing transition) reports `durationMs: null`. The fold never synthesizes a duration.
+`phaseTiming` carries one entry per transitioned phase: `phase`, `start`, `end`, `durationMs`, `stalls`, and `restarts`. Values derive from the ordered `phase.transition` history; a phase window is start-inclusive and end-exclusive, and stall and restart intervals join the delivered economics records rather than being re-estimated. An open phase (no completing transition) reports `end: null` and `durationMs: null`. The fold never synthesizes a duration.
 
 ### Telemetry state and fold basis
 
-`telemetryState` is the DM-4 disclosure: `present` when any telemetry record of either capture plane exists for the selection. `reconciliation.basis` is the declared reading basis — `stream-ingest` when per-step v2 records feed the figures, `closeout-capture` when the delivered v1 session-group records do, and `combined` when the OQ-T4 session-dedup rule selects each session's step figures while its closeout sums corroborate the baseline. Absence keys off telemetry records of either plane: a baseline-only store is still `spend.telemetry-absent`, never a zero report.
+`telemetryState` is the DM-4 disclosure: `present` when any telemetry record of either capture plane exists for the selection. `reconciliation.basis` is the declared reading basis — `stream-ingest` when only per-step v2 records feed the selection's figures, `closeout-capture` when only the delivered v1 session-group records do, and `combined` when records of both planes exist and the OQ-T4 session-dedup rule selects each session's step figures while its closeout sums corroborate the baseline. Absence keys off telemetry records of either plane: a baseline-only store is still `spend.telemetry-absent`, never a zero report.
 
 ### Reconciliation disclosure
 
-`reconciliation` is present on every report: `{ basis, harnessTotals, observedTotals, tolerance, verdict, excludedBaselineSessions }`. `harnessTotals` is the summed harness-reported per-session baseline (captured baseline records first, else the session's delivered v1 group sums); `observedTotals` is the fold's selected figures; `tolerance` is the declared contract constant `0.02`, stated — never silent; `verdict` is exactly one of `within`, `outside`, or `unavailable`. A deviation beyond tolerance renders `outside` at exit 0 with both figures. A session with no harness-reported total is excluded from the sum with the closed `baseline-session-excluded` warning and the named `excludedBaselineSessions` count, never counted as zero. When no baseline contribution exists at all, the verdict is the classified `unavailable` — never `within` — while the tolerance is still stated. One verdict is computed per report; there is no per-session verdict fork.
+`reconciliation` is present on every report: `{ basis, harnessTotals, observedTotals, tolerance, verdict, excludedBaselineSessions }`. `harnessTotals` is the summed harness-reported per-session baseline (captured baseline records first, else the session's delivered v1 group sums); `observedTotals` is the fold's selected figures; `tolerance` is the declared contract constant `0.02`, stated — never silent; `verdict` is exactly one of `within`, `outside`, or `unavailable`. The deviation is the largest per-class relative difference between the observed and harness figures; an all-zero baseline is compared on summed totals. A deviation beyond tolerance renders `outside` at exit 0 with both figures. A session with no harness-reported total is excluded from the sum with the closed `baseline-session-excluded` warning and the named `excludedBaselineSessions` count, never counted as zero. When no baseline contribution exists at all, the verdict is the classified `unavailable` — never `within` — while the tolerance is still stated. One verdict is computed per report; there is no per-session verdict fork.
 
 ### Per-phase attribution
 
@@ -145,7 +147,7 @@ Telemetry records carry no phase field; attribution is derived. The fold orders 
 
 ### Restarts
 
-`restarts` is `max(0, N − 1)` where `N` is the size of the union of run identities across captured session-group records and capture-outcome records for the selection. Both families contribute identity, so a capture-outcome-only run is counted. The count is over runs that reached closeout capture; runs aborted before capture are invisible, and that evidence basis is disclosed in the report's own terms.
+`restarts` is `max(0, N − 1)` where `N` is the size of the union of run identities across the selected records of both telemetry planes and the capture-outcome records for the selection. Both planes contribute identity, so a run captured only as v2 steps and a capture-outcome-only run are both counted. The count is over runs that reached capture; runs aborted before any capture are invisible, and that evidence basis is disclosed in the report's own terms.
 
 ### Resume amplification
 
@@ -321,7 +323,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 
 ## Dependencies & Risks
 
-- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point, and on the telemetry v2 capture and storage contract ([feature-telemetry-v2.md](feature-telemetry-v2.md)) for the per-step and baseline families, attribution dimensions, storage version, and the OQ-T2 baseline sourcing. The production closeout composition constructs the capture from resolved harness settings and appends `harness.telemetry` to the state log, so a real closeout is no longer telemetry-absent; a store without capture for the selected ref remains the classified telemetry-absent outcome.
+- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point, and on the telemetry v2 capture and storage contract ([feature-telemetry-v2.md](feature-telemetry-v2.md)) for the per-step and baseline families, attribution dimensions, storage version, and the OQ-T2 baseline sourcing. The production closeout composition constructs the capture from resolved harness settings and appends `harness.telemetry` to the state log, so a real closeout is telemetry-present; a store without any capture for the selected ref remains the classified telemetry-absent outcome.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, presence tolerance, and classified `state.*` failures.
 - **Depends on** the delivery registry ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for timestamped `phase.transition` history.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, error table, exact-code classification, exit projection, and redaction chokepoint.
@@ -335,7 +337,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 
 | Term | Definition |
 |---|---|
-| Spend read side | The read-only fold over closeout-captured telemetry that produces the spend report; never a harness re-query. |
+| Spend read side | The read-only fold over the delivered closeout capture and the v2 per-step and session-baseline telemetry families that produces the spend report; never a harness re-query. |
 | Token class | One of the five delivered classes: `input`, `output`, `reasoning`, `cacheRead`, `cacheWrite`. |
 | Phase window | An interval derived from `phase.transition` timestamps within which a record's captured-at stamp selects its phase attribution. |
 | Capture-time attribution | The v0 basis assigning each record to the phase selected at its captured-at stamp. |

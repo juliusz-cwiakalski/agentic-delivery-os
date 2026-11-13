@@ -9,7 +9,7 @@ service: delivery-os
 summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, and aggregates-only privacy."
 links:
   related_changes: ["GH-291"]
-  related_decisions: ["ADR-0003", "TDR-0004"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016"]
   contracts:
     - "packages/core/src/contracts/telemetry.ts"
     - "packages/core/src/contracts/harness-telemetry.ts"
@@ -23,9 +23,9 @@ links:
 
 ## 1. Overview
 
-Telemetry v2 makes delivery spend an observation instead of an estimate. While the opencode adapter drains a v2.x.y JSONL stream, a per-frame decode counts the five token classes, calls, and per-model cost in harness-reported units (never converted or re-priced) and stores one attributed `harness.telemetry.step` record per completed step. When the drained stream resolves with an acquired session handle, the adapter performs exactly one bounded read-only per-session totals query through the delivered store-opener seam and appends one `harness.telemetry.baseline` record for that session. The two families are additive beside the delivered closeout-captured `harness.telemetry` records; they carry their own storage identity and change no delivered payload, key prefix, or state-layer schema version.
+Telemetry v2 makes delivery spend an observation instead of an estimate. While the opencode adapter drains a v2.x.y JSONL stream, a per-frame decode counts the five token classes, calls, and per-model cost in harness-reported units (never converted or re-priced) and stores one attributed `harness.telemetry.step` record per completed step. When the drain settles with an observed session id, the adapter performs exactly one bounded read-only per-session totals query through the delivered store-opener seam and appends one `harness.telemetry.baseline` record for that session. The two families are additive beside the delivered closeout-captured `harness.telemetry` records; they carry their own storage identity and change no delivered payload, key prefix, or state-layer schema version.
 
-The capture path is non-gating: a decode or append failure is a classified count, never a delivery failure, and the delivered drain, handle acquisition, and terminal completion behavior are unchanged. An absent sink keeps the delivered stream behavior exactly.
+The capture path is non-gating: a decode failure is counted and an append failure is classified by the state tier, and neither changes the delivery outcome. The delivered drain, handle acquisition, and terminal completion behaviour are unchanged. An absent sink keeps the delivered stream behavior exactly.
 
 ## 2. Attribution
 
@@ -47,10 +47,11 @@ An absent dimension is stored as `null` and the record carries the closed `unatt
 | Non-numeric token value | Stored as `null` with `non-numeric-value`, excluded from sums. |
 | Missing calls or cost | Stored as `null`; excluded from roll-ups and totals. Never estimated. |
 | Missing cost | `cost-missing`; the report discloses sparsity. |
-| Unrecognised frame shape or version drift | Degrades with `version-drift` or `malformed-line`; ingest continues. |
+| Unrecognised frame type or unexpected part shape | Degrades with the closed `version-drift` warning; ingest continues. |
+| Non-object frame | Counted as a failed frame; ingest continues. |
 | Session-total read unavailable | No baseline record lands; the session appears as an excluded baseline session. No figure is fabricated. |
 
-The sink discloses `captured`, `degraded`, and `failed` counts. Ingest failure never changes the delivery outcome, report, or exit.
+The sink maintains `captured`, `degraded`, and `failed` counts plus per-reason counts. Ingest failure never changes the delivery outcome, report, or exit.
 
 ## 4. Storage
 
@@ -61,7 +62,7 @@ The storage identity is the brand-neutral `delivery.telemetry.storage.v1`; a ver
 | `harness.telemetry.step` | `delivery.harness.telemetry.step.v1` | `harness.telemetry.step:` |
 | `harness.telemetry.baseline` | `delivery.harness.telemetry.baseline.v1` | `harness.telemetry.baseline:` |
 
-Appends run through the delivered fenced append path and read back before success. Strict payload validation classifies a torn or shape-invalid record as the delivered `state.store.torn`; an unsupported version is `state.schema.mismatch`; an unknown store condition is `state.store.unknown`. Growth is linear in records: one bounded append per captured step and one per session close, no compaction, no backfill, no derived document.
+Appends run through the delivered fenced append path. A step append is one framed, checksummed, fsynced record with no per-step whole-ledger re-read, so ingest stays bounded and constant-memory on a long session; a baseline append is idempotent by (run, session) and reads back before success. Strict payload validation classifies a torn or shape-invalid record as the delivered `state.store.torn`; an unsupported version is `state.schema.mismatch`; an unknown store condition is `state.store.unknown`. Growth is linear in records: one bounded append per captured step and one per session close, no compaction, no backfill, no derived document.
 
 Telemetry records are state-ledger records and never enter the memory change capsule.
 
@@ -73,7 +74,7 @@ The fold discloses which plane produced its figures:
 |---|---|
 | `stream-ingest` | Per-step v2 records feed the figures. |
 | `closeout-capture` | The delivered v1 session-group records feed the figures; missing lane or per-step detail is classified degradation, never a false absence. |
-| `combined` | Both planes hold records for a session and the declared session-dedup rule selects each session's step sums while its closeout sums corroborate the baseline. |
+| `combined` | Records of both planes exist in the selection; the declared session-dedup rule selects each session's step sums while its closeout sums corroborate the baseline. |
 
 The combination rule deduplicates by `sessionId`: a session present in both planes contributes its v2 step sums to the observed figures and its closeout group sums as baseline input. Summing both planes for one session inflates observed beyond the summed baseline and must surface as the declared `outside` verdict. The rule is a declared contract constant, not an implementation detail.
 
