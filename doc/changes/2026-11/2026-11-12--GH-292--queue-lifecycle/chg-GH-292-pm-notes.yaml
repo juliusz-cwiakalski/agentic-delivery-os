@@ -16,7 +16,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-13T05:09:23.648Z }
   quality_gates: { started: null, completed: 2026-11-13T07:18:31.416Z }
   dod_check: { started: null, completed: 2026-11-13T07:22:59.422Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-13T07:31:28.948Z }
 decisions:
   - text: >-
       Scope authority for this change is the M2 planning pack (ticket M2-S15,
@@ -735,5 +735,18 @@ notes:
       budget with its rationale comment (the repo's declared-budget pattern).
       The quality-gates battery also covered the phase-10 remediation code and
       the phase-7 doc reconciliation on the final tree.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/314 (base
+      `main-tools`, head `feat/GH-292/queue-lifecycle` pushed at e942d2ba
+      lineage, 37 commits, state OPEN, MERGEABLE, 148 files +17000/-553, title
+      `feat(GH-292): queue lifecycle completion (M2-S15)`, body uses `Refs #292`
+      so issue closure stays in the closeout flow). Issue #292 labels advanced
+      to `change, spec-ready, review`. Merge authority remains with the
+      CEO/human via batch-deliver; the PR is left open. Owner acceptance items
+      flagged in the body: TDR-0026/TDR-0027 (Proposed) and the disclosed
+      same-holder lease-renewal narrowing.
     type: "info"
     date: "2026-11-13"
