@@ -581,3 +581,39 @@ notes:
       OPEN — no `phase complete` from this phase.
     type: "info"
     date: "2026-11-12"
+  - text: >-
+      Plan phase 9 complete (commit 741b0d2a): release. One lockstep minor
+      changeset (`.changeset/gh-292-queue-lifecycle-minor.md`, five publishables,
+      testkit excluded) naming the five delivered behaviours, the emitted
+      `remove` kind, the two new queue error identities, and the disclosed
+      same-holder different-ref renewal narrowing; TDR-0026 restored to
+      `doc/decisions/` byte-identical to the held copy and its index row landed
+      exactly between TDR-0025 and TDR-0027 in the same commit as the record;
+      format-only biome fixes across the delivered queue suites (import
+      collapse/argument reflow, no semantic edits) so `format:check` passes.
+      Battery results: `TMPDIR=$PWD/tmp/tmpdir pnpm check` end-to-end PASS with
+      7,830 pass / 4 skip / 0 fail across 1,009 files (two independent green
+      runs logged at `.ai/local/logs/gh292-phase9-pnpm-check-fix3.log` and
+      `gh292-phase9-pnpm-check-fix2.log` with `PNPM_CHECK_EXIT=0`), lint clean
+      (83 warnings / 0 errors), format:check clean, typecheck 12/12,
+      depcruise 389 modules clean, ambient-globals/workspace-entrypoints/
+      secret-read-boundary clean, prompt-conformance 5/5, help-guide-coverage
+      all covered, exports-parity 5/5; `./scripts/lint-commit-range.sh --base
+      main-tools` PASS over the branch range; `bash
+      scripts/.tests/test-doc-distribution.sh` OK (83 in-scope docs);
+      `error-table-sync` OK (129 entries); `plan validate GH-292`
+      verdict=valid. Battery-caught fixes this phase (all two-sided, none
+      weakened): TC-EVT-006 single-source scan admits the delivered
+      `queue.graph/remove` producer naming in `commands/queue.ts`;
+      TC-PORT-001 ports-contract inventory regenerated two-sided for the
+      injected tracker-read seam; the ten closeout-facts/command failures were
+      resolved as fixture/harness truths (expected-count moves to the
+      delivered composition facts, worktree-harness robustness, and a
+      load-sensitive TC-WIRE-002 timeout ceiling) with the production mapping
+      unchanged. Disclosed environment noise, not code failures: three
+      transport/host interruptions and one `bun: not found` (PATH lost across
+      a host restart) required battery re-runs. All 9/9 plan phases are now
+      delivered and committed; lifecycle `delivery` remains OPEN for the PM's
+      `phase complete`.
+    type: "info"
+    date: "2026-11-13"
