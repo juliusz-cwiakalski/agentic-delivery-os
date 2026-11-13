@@ -13,7 +13,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-12T12:12:44.802Z }
   delivery: { started: null, completed: 2026-11-13T04:02:02.092Z }
   system_spec_update: { started: null, completed: 2026-11-13T04:18:38.279Z }
-  review_fix: { started: null, completed: 2026-11-13T05:09:28.492Z }
+  review_fix: { started: null, completed: 2026-11-13T05:09:23.648Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -712,5 +712,28 @@ notes:
       `review-iter-1.yaml` after a concurrent duplicate review overwrote/
       mis-nested it; the duplicate PASS and concurrent-run outputs are preserved
       as `review-iter-1-pre-remediation.*` and `review-iter-2-concurrent-run.*`.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Quality gates: PASS on the final tree. Range lint gate `./scripts/
+      lint-commit-range.sh --base main-tools`: VERDICT PASS — merge-base
+      aa64a226, head e5b2b30c, 34 commits in range, 0 offending commits, mode
+      none (no mode line on a pass), commitlint binary
+      `node_modules/.bin/commitlint` (origin: repository-local), ref
+      `refs/remotes/origin/main-tools`. Full aggregate
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` on the uncontended host: 7,837 pass /
+      0 fail across 1,009 files (716s), lint clean, format:check clean,
+      typecheck green, depcruise 389 modules clean, ambient-globals /
+      workspace-entrypoints / secret-read-boundary clean, prompt-conformance
+      5/5, help-guide-coverage covered, exports-parity 5/5
+      (`.ai/local/logs/gh292-final-pnpm-check-3.log`). Load-contention
+      disclosure: two earlier battery attempts ran concurrently with the
+      GH-291 lane's battery and produced only 5-second wall-clock timeouts on
+      rotation (TC-ATTEMPT-028; docs-scope lifetime; closeout branch ops;
+      watchdog teardown) — every affected test passes standalone and the final
+      uncontended run is fully green; TC-ATTEMPT-028 gained a declared 60_000
+      ms budget with its rationale comment (the repo's declared-budget
+      pattern). The quality-gates battery also covered the phase-10
+      remediation code and the phase-7 doc reconciliation on the final tree.
     type: "info"
     date: "2026-11-13"
