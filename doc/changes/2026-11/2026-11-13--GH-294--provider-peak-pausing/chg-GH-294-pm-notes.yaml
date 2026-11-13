@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: 2026-11-13T15:40:00.000Z, completed: 2026-11-13T15:01:08.894Z }
   specification: { started: null, completed: 2026-11-13T16:31:45.994Z }
   test_planning: { started: null, completed: 2026-11-13T16:36:25.588Z }
-  delivery_planning: { started: null, completed: 2026-11-13T16:40:12.991Z }
+  delivery_planning: { started: null, completed: 2026-11-13T21:25:51.221Z }
   dor_check: { started: null, completed: 2026-11-13T16:45:40.106Z }
   delivery: { started: null, completed: 2026-11-13T20:31:08.380Z }
   system_spec_update: { started: null, completed: 2026-11-13T21:20:05.593Z }
@@ -344,4 +344,27 @@ notes:
       8108 pass / 4 skip / 0 fail, boundaries, prompt-conformance,
       help-guide-coverage, exports-parity all green."
     type: "info"
+    date: "2026-11-13"
+  - text: "DoR iteration 3 verdict READY (review at
+      readiness-review/readiness-iter-3.md): 10/10 facets PASS; iter-2 findings
+      A/B/C all CLOSED with end-to-end owner-hold semantics chain verified
+      across spec v1.3 / test plan v1.2 / plan; gate passed on iteration 3 of 3.
+      Note: this entry was re-added because concurrent pm-notes evidence appends
+      during delivery dropped the original copy from the mirror (the committed
+      copy lives in 61a44f6d and the registry ledger; the mirror is not the
+      truth)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Retro: plan DOC BOUNDARY carried the possible new canonical page
+      (feature-peak-pausing.md) as prose only, never in machine scope.files -
+      the system_spec_update phase commit landed the 13 reconciled pages
+      (tracked, drift-staged) but excluded the untracked new page
+      (untrackedNotStaged), leaving committed pages cross-referencing a file
+      absent from the repo. Lesson: when a plan says 'possible new page', the
+      concrete path must be declared in a phase scope.files (or explicitly
+      handed to doc-syncer with a landing mechanism) before phase 7 runs;
+      untracked files outside declared scope are never staged by the commit
+      primitive. Remediation: reopening delivery_planning to declare Phase 11
+      landing the page; coder executes it before the review phase."
+    type: "retro"
     date: "2026-11-13"

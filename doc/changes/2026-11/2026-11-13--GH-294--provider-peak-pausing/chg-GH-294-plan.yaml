@@ -197,8 +197,11 @@
 #   real episodes; Phase 8 lands the daemon-absent degradation; Phase 9 is
 #   the cross-cutting battery (UTC matrix, determinism, hermeticity,
 #   additivity); Phase 10 is planning-doc maintenance, the changeset, and
-#   the release obligations. The final gate runs `plan validate GH-294` and
-#   the full TMPDIR-qualified battery.
+#   the release obligations; Phase 11 (post-DoR amendment) lands the
+#   canonical peak-pausing spec page that lifecycle phase 7 authored
+#   outside any declared scope — a landing commit only, no content edits.
+#   The final gate runs `plan validate GH-294` and the full TMPDIR-qualified
+#   battery.
 #
 # TC -> PHASE MAP (41 ids = TC-PAUSE-001..094; every id is owned by exactly
 #   one phase — the phase which first makes its complete suite set green.
@@ -220,6 +223,9 @@
 #   Phase 9 cross-cutting invariants (4): TC-PAUSE-090, 091, 092, 094
 #   Phase 10 docs/release (0): none (planning corpus, changeset; proven by
 #            the doc, coverage, distribution, and changeset guards)
+#   Phase 11 spec-page landing (0): none (single-file landing commit; the
+#            page is proven by the doc guards, its content is owned by
+#            lifecycle phase 7)
 #
 # COMPOSITION NOTE (R-TP-1 / RSK-8, binding on Phases 4, 5, and 8): peak
 #   pausing is daemon-supervision behavior. The behaviour suites compose the
@@ -260,9 +266,13 @@
 #
 # DOC BOUNDARY (PM instruction, binding on every phase): reconciliation of
 #   `doc/spec/**` current-truth pages is lifecycle phase 7
-#   (`system_spec_update`, @doc-syncer) — it is NOT plan scope and no phase
-#   below declares `doc/spec/**`; the enumeration below declares only the
-#   affected pages so the phase-7 obligation is complete (spec §16, v1.2):
+#   (`system_spec_update`, @doc-syncer) — the CONTENT of every current-truth
+#   page is authored there, never in a plan phase; no phase declares
+#   `doc/spec/**` except Phase 11, the post-DoR amendment that LANDS the one
+#   page phase 7 authored outside any declared scope (staging only,
+#   byte-identical, no content edits — see the Phase 11 block); the
+#   enumeration below declares the affected pages so the phase-7 obligation
+#   is complete (spec §16, v1.3):
 #   - provider-profiles, resident-daemon, dispatch-engine, telemetry-v2,
 #     event-taxonomy, status-digest, brief, and any new canonical
 #     peak-pausing page;
@@ -277,11 +287,12 @@
 #   - feature-spend.md — home of DM-5's zero-spend evidence semantics; Phase
 #     6 (zero-spend assertion) edits its code areas (domain/spend.ts,
 #     contracts/spend.ts, state/spend-reads.ts, cli/commands/spend.ts).
-#   The only documentation this plan delivers itself is Phase 10's
-#   planning-corpus maintenance (backlog M2-S17 marker, status snapshot)
-#   plus the M2 events reference page in Phase 3, which is a
-#   conformance-guarded taxonomy page (TC-PAUSE-060's page half), not a
-#   current-truth spec page.
+#   The documentation this plan delivers itself is Phase 10's
+#   planning-corpus maintenance (backlog M2-S17 marker, status snapshot),
+#   the M2 events reference page in Phase 3 (a conformance-guarded taxonomy
+#   page, TC-PAUSE-060's page half, not a current-truth spec page), and
+#   Phase 11's landing commit for the phase-7-authored canonical page — a
+#   staging operation, not content authorship.
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
@@ -299,7 +310,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-294
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
     - "A delivered vocabulary member is renamed, removed, or re-semanted (queue park causes, taxonomy v1 kinds or payloads, provider resolve identities), or a fourth park-cause vocabulary appears beside the delivered three plus the two S17 additions (DEC-2, G-9)"
     - "Taxonomy v1 is edited in place, v1 is served concurrently beside v2, or a second taxonomy version constant exists beside the one declaration (TDR-0029 C-1/C-4/C-6)"
@@ -954,3 +965,46 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-294/provider-peak-pausing targeting main-tools"
       pipelineId: "CI pipeline for the GH-294 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 11 — Land the canonical peak-pausing spec page (post-DoR
+  # amendment; remediation of a plan-scope gap found at system_spec_update).
+  #
+  # Goal: land `doc/spec/features/feature-peak-pausing.md` exactly as it
+  # exists on disk. The page's CONTENT was authored by @doc-syncer during
+  # lifecycle phase 7 (`system_spec_update`); it remained untracked because
+  # the plan's DOC BOUNDARY named the "possible new canonical page" in prose
+  # without declaring it in any phase's machine `scope.files`, so the commit
+  # primitive could not stage it — the gap this phase remediates. This phase
+  # performs the LANDING COMMIT ONLY: no content edits, no other production
+  # files; the page lands byte-identical to the phase-7 artifact. The page
+  # is cross-linked from the ten reconciled spec pages committed in 3c1c7a2c
+  # (the nine affected feature pages plus the `doc/00-index.md` row), so the
+  # committed spec tree references a page only this phase can land — the
+  # dangling cross-reference is what this phase closes. The change-folder
+  # row mirrors Phase 10's convention so the landing commit also stages the
+  # phase-11 pm-notes evidence. No TC is owned here: the page is proven by
+  # the doc guards below, and its content was attested at lifecycle phases
+  # 7 and 8.
+  #
+  # Gate:
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os lint GH-294
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-294
+  #   bun test tests/checks/doc-conformance.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #
+  # Exit: the canonical page is tracked and byte-identical to the
+  # phase-7-authored content; every cross-reference from the 3c1c7a2c spec
+  # tree resolves; the pm-notes carry the phase-11 completion evidence; no
+  # TC mapping, phase scope, or goal of Phases 1-10 is altered by this
+  # amendment.
+  # ---------------------------------------------------------------------------
+  - id: 11
+    title: "Land the doc-syncer-authored canonical peak-pausing spec page"
+    kind: delivery
+    summary: "docs(spec): land feature-peak-pausing.md authored at system_spec_update"
+    scope:
+      files:
+        - doc/spec/features/feature-peak-pausing.md
+      folders:
+        - doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing
