@@ -1,0 +1,207 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-292
+branch: feat/GH-292/queue-lifecycle
+status: FAIL
+summary: >-
+  The GH-292 delivery is unusually faithful to spec v1.2: the append-only
+  `queue.removal` kind, the sequence-based presence rule (DM-2), park
+  withdrawal, non-cascading removal, the F-4 path-specific single-flight
+  precedence (verified row by row against the spec table, including the
+  narrowed renewal and the envelope-root `detail.holder`), the fail-open
+  closeout `queueRemoval` block, the read-pass-before-removal fail-closed
+  reconcile with the exact 100-entry cap, the emitted `remove` producer with
+  exactly its declared payload keys, and the seven-row queue error kind are all
+  implemented and pinned by two-sided exact assertions; every declared §7.1 pin
+  moved as an equality (none relaxed to inequality/subset/`toContain`), all 9/9
+  plan phases carry pm-notes completion evidence (commit + gates), the phase-7
+  doc reconciliation matches delivered truth, and repo rules hold (`.ados-claude/`
+  and `.opencode/` untouched, no headers added, `plan validate` valid, clean
+  tree). One blocker-grade spec deviation survives the green battery: every
+  removal path refuses `lease-held` on a STALE lease (heartbeat age over its
+  TTL), which spec §5.1 F-1 defines as not live and RSK-2 bounds by the TTL —
+  empirically confirmed (TTL 90s, age 200s, refusal `queue.precondition.unmet`
+  `lease-held`), untested, and undisclosed. Secondarily, NFR-3's read-budget
+  claim ("at most 1 queue fold ... at most 1 read when no entry") is neither
+  held nor tested: `readQueueFold` performs three whole-store reads including a
+  duplicate removals scan, and the delivered TC-QLC-082 pins appends only.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 2
+  info: 3
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/queue.ts:1306
+    message: >-
+      [B | owner: plan Phase 1 seam, surfaced on Phases 3/5/6 surfaces] A
+      removal refuses `queue.precondition.unmet`/`lease-held` for a STALE lease
+      (heartbeat age at or over its TTL), on all three removal paths — the
+      explicit verb (`removeQueueEntryWithinFence` line 1306), the closeout hook
+      (`queueRemovalForCloseout` line 1423, skip `lease-held`), and reconcile
+      (same F-1 seam). Spec §5.1 F-1 defines the blocking lease as "live
+      (heartbeat age below the lease TTL)"; RSK-2's residual risk states the
+      crash delay is bounded by the TTL; and §5.1 F-4's one-liveness-definition
+      principle ("every path reads the same liveness predicate") is contradicted
+      by the removal path using the stricter any-unreleased-lease predicate.
+      Empirically verified via the delivered harness (TTL 90s, clock advanced
+      200s: exit 1, `reason=lease-held; holder:crashed-holder`). No test covers
+      a stale-lease removal and no pm-note discloses the deviation. The
+      operator workaround (`queue release` first) exists, so impact is bounded,
+      but a crashed session's stale lease blocks explicit removal, closeout
+      auto-removal, and reconcile removal indefinitely.
+    suggestion: >-
+      Apply the shared `isLeaseStale(held.heartbeatAgeMs, held.ttlMs)` predicate
+      in both lease checks so a stale lease does not refuse (the delivered
+      takeover/release remedies keep the ledger honest), and add the missing
+      stale-lease removal cells for the explicit verb, closeout apply, and
+      reconcile. If the owner prefers the stricter refusal, amend spec F-1/AC
+      F-1-5/RSK-2 wording and the reconciled feature pages instead — one of the
+      two, never both silent.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: performance
+    location: packages/core/src/app/queue.ts:679
+    message: >-
+      [M | owner: plan Phase 3] NFR-3's read budget ("At most 1 queue fold and 2
+      appends per closeout apply, and at most 1 read when no entry exists") is
+      not literally held and not tested. `readQueueFold` performs three
+      whole-store reads (entries snapshot, dependencies, removals), and the
+      removals ledger is classified twice per fold — `readQueueEntries` already
+      classifies it from the shared snapshot to apply presence, then line 689
+      re-reads it via `readQueueRemovals`. An accepted removal runs the fold
+      three times (closeout hook + seam `pre` + `inside`) plus the final fold,
+      lease, parks, and verification reads; the no-entry closeout path costs 3
+      reads, not 1. The delivered TC-QLC-082 (`closeout-queue-removal-cost`)
+      pins appends and outcome identity only; the test plan's step-2
+      counting-store observable (fold/read counts) was not delivered. The cost
+      is observable: ~2s per verified removal over a ~100-entry store (the
+      disclosed minutes-scale cap proofs).
+    suggestion: >-
+      Thread the snapshot-classified removals through `readQueueFold` (or pass
+      the verified snapshot) to remove the duplicate scan, and either meet the
+      ≤1-read no-entry observable or reconcile NFR-3/TC-QLC-082 wording to the
+      delivered observable and add the counting-store assertion so the budget
+      is pinned two-sided.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/edge.ts:4698
+    message: >-
+      [L | owner: plan Phase 6] When the composition does not wire
+      `readTrackerDeliveryState`, reconcile refuses with
+      `queue.precondition.unmet` (`reason=tracker-read-unavailable`). Spec F-5
+      reserves provider-side identities for unreadable tracker truth and says
+      "there is no `queue.*` identity for this case", while A-2 calls a missing
+      read surface an "unavailable observation". The unwired composition is a
+      distinct case (and unreachable in production, which always wires the
+      port), but the identity choice is unpinned by any AC or test and
+      undocumented in the spec.
+    suggestion: >-
+      Either surface the unwired port as the provider's own identity (matching
+      A-2's "unavailable" vocabulary) or document the composition-precondition
+      refusal (identity + closed reason) in the spec's F-5 text and pin it with
+      a test cell.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:1244
+    message: >-
+      [L | owner: plan Phase 3] `nowMs` was added as a REQUIRED member of
+      `CloseoutCompositionOptions`, forcing edits to two delivered test
+      fixtures (`closeout-composition-facts.test.ts`, `closeout-integration.test.ts`)
+      that are outside every declared phase scope; the edits are mechanical
+      (+`nowMs` line each) and only umbrella-disclosed in the phase-9 notes
+      ("fixture/harness truths"). An optional member defaulting to
+      `() => Date.parse(nowIso())` would have kept the additive boundary and
+      left the delivered fixtures untouched.
+    suggestion: >-
+      Make `nowMs` optional with a derived default and revert the two
+      delivered-fixture edits, or record the required-member choice as accepted
+      drift in pm-notes so the boundary exception is explicit rather than
+      implied.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:495
+    message: >-
+      [I | owner: plan Phase 5] Flag-ownership is asymmetric: `--ref` is refused
+      globally on every non-reconcile verb, but `--reason` is refused only on
+      `release` and silently ignored elsewhere (e.g. `queue add GH-1 --reason
+      abandoned` is accepted with the flag ignored). This matches the delivered
+      irrelevant-flag convention and TC-QLC-074 exactly as written; no action
+      required for this change.
+    suggestion: >-
+      Consider a follow-up decision unifying new-flag ownership (refuse both
+      new flags on verbs that do not declare them) so the grammar is uniform.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/help.ts:690
+    message: >-
+      [I | owner: plan Phase 5] The `helpEntryFor` longest-prefix fallback is
+      path-generic, not dep-scoped: any unknown deeper path (e.g.
+      `queue bogus --help`) now renders its family entry where it previously
+      resolved to no entry. The pm-note discloses the mechanism only for the
+      `dep add`/`dep remove` spellings. Benign for coverage guards (all green).
+    suggestion: >-
+      No action required; if tightened later, scope the fallback to the
+      documented dep spellings.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: tests/behaviour/queue-remove.test.ts:70
+    message: >-
+      [I | owner: plan Phase 5, spec §5.1 F-1 wording] The spec sentence
+      "`queue list`, `queue plan`, `queue ready`, and `lanes` derive from the
+      folded graph with the entry absent" over-claims the `queue ready`
+      mechanism: the delivered `ready` reads status facts, not the queue fold,
+      and post-removal truthfully reports `work-item-unobserved` (disclosed in
+      the phase-5 pm-notes; NG-9 forbids changing the delivered read surface).
+      Effective behavior matches the spec's intent.
+    suggestion: >-
+      On the next spec revision, reword the F-1 sentence to say `ready` never
+      reports a removed entry as ready (fact-source truth) instead of claiming
+      fold derivation.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-13T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: NONE
+test_coverage_gaps: >-
+  No stale-lease removal cell exists for any of the three removal paths
+  (explicit verb, closeout apply skip, reconcile) — the gap that let F-1 ship
+  through a green battery. TC-QLC-082's declared step-2 read-count observable
+  (counting store) was not delivered (F-2).

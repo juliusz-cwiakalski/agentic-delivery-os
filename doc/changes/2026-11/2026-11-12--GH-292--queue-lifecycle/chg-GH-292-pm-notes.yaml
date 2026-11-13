@@ -13,7 +13,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-12T12:12:44.802Z }
   delivery: { started: null, completed: 2026-11-13T04:02:02.092Z }
   system_spec_update: { started: null, completed: 2026-11-13T04:18:38.279Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-13T05:09:28.492Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -613,15 +613,15 @@ notes:
   - text: >-
       Review-fix iteration 1: FAIL with 1 high / 1 medium / 2 low / 3 info
       (`code-review/review-iter-1.yaml`; plan_compliance PASS, spec_compliance
-      FAIL; the reviewer appended remediation Phase 10 to the plan and
-      `plan validate` remains verdict=valid). F-1 (high): every removal path
-      refuses `lease-held` on a STALE lease, contradicting spec F-1's
+      FAIL; the reviewer appended remediation Phase 10 to the plan and `plan
+      validate` remains verdict=valid). F-1 (high): every removal path refuses
+      `lease-held` on a STALE lease, contradicting spec F-1's
       live-equals-below-TTL definition and the one-liveness principle —
-      remediation adopts the spec behaviour (apply the delivered
-      `isLeaseStale` predicate so a stale lease does not refuse) plus the three
-      missing stale-lease cells, never a silent spec amendment. F-2 (medium):
-      NFR-3's read budget is neither held nor pinned — `readQueueFold` scans
-      the removals ledger twice; remediation deduplicates the scan and pins the
+      remediation adopts the spec behaviour (apply the delivered `isLeaseStale`
+      predicate so a stale lease does not refuse) plus the three missing
+      stale-lease cells, never a silent spec amendment. F-2 (medium): NFR-3's
+      read budget is neither held nor pinned — `readQueueFold` scans the
+      removals ledger twice; remediation deduplicates the scan and pins the
       delivered read observable with a counting-store assertion, reconciling
       NFR-3/TC-QLC-082 wording via the spec owner. F-3 (low): document the
       unwired-tracker-port composition refusal in spec F-5; F-4 (low): make
@@ -632,21 +632,22 @@ notes:
     type: "retro"
     date: "2026-11-13"
   - text: >-
-      Remediation phase 10 complete (commit 7bc93867fed4f017aa039483d0f2503c280e33a4):
-      code-review iteration 1 remediation delivered on
-      feat/GH-292/queue-lifecycle, executing the PM-decided behavior-fix path —
-      the spec governs, so no spec wording was amended for F-1. F-1 (high):
-      every removal lease check now applies the delivered liveness predicate
-      `isLeaseStale(held.heartbeatAgeMs, held.ttlMs)` — in
-      `removeQueueEntryWithinFence` (reconcile inherits through the ordinary
-      F-1 seam) and in the closeout hook `queueRemovalForCloseout` pre-check —
-      so a lease at or over its TTL no longer refuses `queue remove`, no longer
-      reports closeout skip `lease-held`, and no longer retains a reconcile
-      entry; a genuinely live lease refuses exactly as delivered, and the
-      delivered takeover/release/renewal controls and the F-4 precedence table
-      are untouched (no assertion change). Three new two-sided cells: explicit
-      verb (live at TTL−1 ms refuses with zero appends, at the inclusive TTL
-      bound removes, the lease is not released) in
+      Remediation phase 10 complete (commit
+      7bc93867fed4f017aa039483d0f2503c280e33a4): code-review iteration 1
+      remediation delivered on feat/GH-292/queue-lifecycle, executing the
+      PM-decided behavior-fix path — the spec governs, so no spec wording was
+      amended for F-1. F-1 (high): every removal lease check now applies the
+      delivered liveness predicate `isLeaseStale(held.heartbeatAgeMs,
+      held.ttlMs)` — in `removeQueueEntryWithinFence` (reconcile inherits
+      through the ordinary F-1 seam) and in the closeout hook
+      `queueRemovalForCloseout` pre-check — so a lease at or over its TTL no
+      longer refuses `queue remove`, no longer reports closeout skip
+      `lease-held`, and no longer retains a reconcile entry; a genuinely live
+      lease refuses exactly as delivered, and the delivered
+      takeover/release/renewal controls and the F-4 precedence table are
+      untouched (no assertion change). Three new two-sided cells: explicit verb
+      (live at TTL−1 ms refuses with zero appends, at the inclusive TTL bound
+      removes, the lease is not released) in
       tests/behaviour/queue-remove-lease.test.ts; closeout apply removes over a
       stale lease with the removal record verified (no `lease-held` skip) in
       tests/behaviour/closeout-queue-removal-skips.test.ts; reconcile removes
@@ -659,24 +660,23 @@ notes:
       fold = 2 whole-store reads, no-entry closeout = 2, plan-with-entry = 3
       (fold 2 + lease read 1), closeout apply-with-removal = 13 (hook fold 2 +
       hook lease 1 + removal body 10); direct measurements with the same
-      counting wrapper over the real composition: explicit `removeQueueEntry`
-      = 10, reconcile over one stale ref = 12 (fold 2 + removal 10). NFR-3's
-      spec row now states this delivered, pinned observable (≤1 fold / ≤2
-      appends kept; exactly 2 whole-store reads per fold; exactly 2 reads on
-      the no-entry path, pinned by TC-QLC-082), document history row v1.3
-      added; no acceptance criterion or other spec section changed.
-      F-3 (low): spec §5.1 F-5 documents the unwired-tracker-port composition
-      refusal (`queue.precondition.unmet`, blocking reason
-      `tracker-read-unavailable`) as a composition precondition distinct from
-      provider-side identities. F-4 (low): `CloseoutCompositionOptions.nowMs`
-      is optional with the derived default `() => Date.parse(nowIso())`, and
-      the two delivered-fixture `nowMs` additions from 741b0d2a are reverted so
-      the delivered fixtures are untouched again; both suites green. Feature
-      pages state the same stale-lease rule
-      (doc/spec/features/feature-scheduling-engine.md removal refusal set;
-      doc/spec/features/feature-closeout.md when-it-runs and fail-open
-      bullets). Gates: `pnpm typecheck` OK (6 packages + tests tsconfig);
-      `bun run scripts/checks/error-table-sync.ts` OK (entries=129
+      counting wrapper over the real composition: explicit `removeQueueEntry` =
+      10, reconcile over one stale ref = 12 (fold 2 + removal 10). NFR-3's spec
+      row now states this delivered, pinned observable (≤1 fold / ≤2 appends
+      kept; exactly 2 whole-store reads per fold; exactly 2 reads on the
+      no-entry path, pinned by TC-QLC-082), document history row v1.3 added; no
+      acceptance criterion or other spec section changed. F-3 (low): spec §5.1
+      F-5 documents the unwired-tracker-port composition refusal
+      (`queue.precondition.unmet`, blocking reason `tracker-read-unavailable`)
+      as a composition precondition distinct from provider-side identities. F-4
+      (low): `CloseoutCompositionOptions.nowMs` is optional with the derived
+      default `() => Date.parse(nowIso())`, and the two delivered-fixture
+      `nowMs` additions from 741b0d2a are reverted so the delivered fixtures are
+      untouched again; both suites green. Feature pages state the same
+      stale-lease rule (doc/spec/features/feature-scheduling-engine.md removal
+      refusal set; doc/spec/features/feature-closeout.md when-it-runs and
+      fail-open bullets). Gates: `pnpm typecheck` OK (6 packages + tests
+      tsconfig); `bun run scripts/checks/error-table-sync.ts` OK (entries=129
       documented=129 — the five delivered queue error rows byte-identical,
       precedence table unchanged); targeted suites 105 pass / 0 fail / 0 skip
       across 25 files (queue-remove + closeout-removal batch 9 files 32 pass;
@@ -684,12 +684,33 @@ notes:
       batch 6 files 25 pass); doc-conformance 11 pass / 0 fail; log at
       .ai/local/logs/gh292-phase10-gate-batch1.log. Deviations: F-4 touches
       packages/cli/src/edge.ts and reverts the two fixture test files — outside
-      plan phase-10 scope.files, extended by explicit PM instruction (the
-      commit primitive's scope-drift disclosure lists them); the
+      plan phase-10 scope.files, extended by explicit PM instruction (the commit
+      primitive's scope-drift disclosure lists them); the
       code-review/review-iter-1 files at the referenced path hold the earlier
       lifecycle PASS verdict, so this phase's governing finding record is the
       pm-notes retro plus plan phase 10; the full `pnpm check` battery was not
-      run in this phase per PM instruction — quality_gates owns it on the
-      final tree.
+      run in this phase per PM instruction — quality_gates owns it on the final
+      tree.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review-fix iteration 2: PASS (`code-review/review-iter-2.yaml`). F-1
+      closed — all three removal paths gate on the delivered `isLeaseStale`
+      predicate (live lease still refuses `lease-held` naming the holder; stale
+      proceeds), three new two-sided stale-lease cells delivered, delivered
+      lease controls green with zero assertion change. F-2 closed — the
+      duplicate removals scan is gone (`readQueueEntriesAndRemovals` classifies
+      both ledgers from one shared snapshot) and NFR-3 is pinned two-sided to
+      the measured observable (fold=2, no-entry closeout=2, apply=13, explicit
+      remove=10, reconcile stale ref=12) with spec v1.3 wording matching the
+      pins. F-3/F-4 closed (F-5 composition-refusal sentence; `nowMs` optional
+      with derived default, fixture reverts applied). No new issues; four
+      informational residuals recorded (test-plan's two stale "≤1 read" quotes
+      ride the PR; tracker-read-unavailable cell optional; phase-10 scope
+      extension disclosed; F-7 wording rides the next revision). Artifact
+      repair: the governing iteration-1 FAIL record was restored verbatim as
+      `review-iter-1.yaml` after a concurrent duplicate review overwrote/
+      mis-nested it; the duplicate PASS and concurrent-run outputs are preserved
+      as `review-iter-1-pre-remediation.*` and `review-iter-2-concurrent-run.*`.
     type: "info"
     date: "2026-11-13"
