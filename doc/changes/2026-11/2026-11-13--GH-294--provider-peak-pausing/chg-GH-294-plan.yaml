@@ -4,14 +4,18 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-294-spec.md (v1.1, 7 ACs — AC-F1-1, AC-F3-2, AC-F4-3,
+#   - Spec:     ./chg-GH-294-spec.md (v1.2, 7 ACs — AC-F1-1, AC-F3-2, AC-F4-3,
 #               AC-F5-4, AC-F6-5, AC-F7-6, AC-F8-7; F-1..F-8; DM-1..DM-6;
 #               NFR-1..NFR-10; EVT-1..EVT-4; DEC-1..DEC-11; OQ-1..OQ-3 all
 #               resolved by TDR-0028/0029/0030; §5.1 capability details;
 #               §6 flows 1-4; §7 scope; §8.5 compatibility; §16 affected
-#               components; Appendix A vocabulary mapping; Appendix B anchors).
-#   - Tests:    ./chg-GH-294-test-plan.md (v1.0, 41 TCs TC-PAUSE-001..094 in
-#               ten blocks; 7/7 AC coverage; §3.5 substitute assertions
+#               components — v1.2 adds scheduling-engine and spend to the
+#               affected-pages enumeration, mirrored in DOC BOUNDARY below;
+#               Appendix A vocabulary mapping; Appendix B anchors).
+#   - Tests:    ./chg-GH-294-test-plan.md (v1.1, 41 TCs TC-PAUSE-001..094 in
+#               ten blocks; 7/7 AC coverage; v1.1 pins TC-PAUSE-052's scoping
+#               interval as inclusive — park timestamp through window end;
+#               §3.5 substitute assertions
 #               AMB-P1..P4, BYTE-P1, LIT-P1; §4 layers; §7 automation map with
 #               planned suite locations; §8.3 OQ-TP-1..6 — the delivery-time
 #               pins this plan places below; R-TP-1..R-TP-6). No TC id, oracle,
@@ -106,13 +110,17 @@
 #     is untouched.
 #
 #   OQ-TP-5 (exact payload field lists for the four kinds) — pinned in
-#     PHASE 3. The v2 declaration declares the per-kind lists from the M2
-#     contracts content and spec §8.2: `stop` — grace deadline (bounded),
-#     profile, window end, recorded stop instant; `parked` — reason
-#     `peak-window`, profile, `until`, preservation classification
-#     (`preserved | session-state-not-preserved`); `resumed` — session-state
-#     reference, branch, no-re-dispatch fact; `park-edge` — the park lifecycle
-#     edge fields (ref, cause, until, episode identity). TC-PAUSE-060 pins the
+#     PHASE 3. The lists derive from the spec §8 payload enumerations (the
+#     EVT-1..EVT-4 payload semantics plus the M2 contracts' S17 additions) —
+#     not a derivation from existing contracts alone: `stop` is a SUPERSET
+#     of the EVT-1/M2 dispatch-attempt contract fields, adding the
+#     peak-pause fields (grace deadline (bounded), profile, window end,
+#     recorded stop instant); `parked` — reason `peak-window`, profile,
+#     `until`, preservation classification (`preserved` or
+#     `session-state-not-preserved`); `resumed` — session-state reference,
+#     branch, no-re-dispatch fact; `park-edge` — the park lifecycle edge
+#     fields (ref, cause, until, episode identity); no delivered v1 kind's
+#     list changes (TDR-0029 D2 byte-identity). TC-PAUSE-060 pins the
 #     declared lists against the declaration; the drift suite guards them
 #     (rename/drop/add mutants fail by name); every list stays within NFR-6
 #     (<=20 payload fields, <=1024 bytes evidence, asserted by TC-PAUSE-093).
@@ -129,6 +137,19 @@
 #     both values on that machine read and fails naming the missing surface if
 #     delivery exposes none (AMB-P4); TC-PAUSE-081 scans every other surface
 #     for false claims.
+#
+#   OWNER-HOLD PARK `--until` PIN (TC-PAUSE-072 step 4; binding on PHASE 7 —
+#     the CLI/vocabulary half; the record-field half is asserted earlier by
+#     TC-PAUSE-044 ordering (a) in PHASE 5): `queue release --park
+#     owner-hold` mirrors the peak-window rule's shape — `--until` carries
+#     the hold's recorded expiry instant as an absolute UTC timestamp (DM-4:
+#     an `owner-hold` park carries the hold's expiry), consistent with the
+#     delivered owner-hold semantics (#280) and the existing park-record
+#     payload. When the active hold records no expiry, the park carries
+#     `until` absent/null with the reason still `owner-hold` — a declared
+#     classified absence: never a synthesized or borrowed timestamp, never a
+#     zero instant, and never a refusal. TC-PAUSE-072 step 4 asserts both
+#     halves on the command and projection surfaces.
 #
 # SUBSTITUTE ASSERTIONS (§3.5) — honored, never smoothed over:
 #   AMB-P1 (wake-cycle bound, not wall clock) -> Phase 4 gate (TC-PAUSE-023);
@@ -223,13 +244,24 @@
 #   deltas only (BYTE-P1).
 #
 # DOC BOUNDARY (PM instruction, binding on every phase): reconciliation of
-#   `doc/spec/**` current-truth pages (provider-profiles, resident-daemon,
-#   dispatch-engine, telemetry-v2, event-taxonomy, status-digest, brief, and
-#   any new canonical peak-pausing page) is lifecycle phase 7
+#   `doc/spec/**` current-truth pages is lifecycle phase 7
 #   (`system_spec_update`, @doc-syncer) — it is NOT plan scope and no phase
-#   below declares `doc/spec/**`. The only documentation this plan delivers
-#   is Phase 10's planning-corpus maintenance (backlog M2-S17 marker, status
-#   snapshot) plus the M2 events reference page in Phase 3, which is a
+#   below declares `doc/spec/**`; the enumeration below declares only the
+#   affected pages so the phase-7 obligation is complete (spec §16, v1.2):
+#   - provider-profiles, resident-daemon, dispatch-engine, telemetry-v2,
+#     event-taxonomy, status-digest, brief, and any new canonical
+#     peak-pausing page;
+#   - feature-scheduling-engine.md — canonical home of the park-cause
+#     vocabulary: DEC-2's `peak-window` -> `provider-window` mapping
+#     supersedes its delivered paired one-to-one cause/condition statements,
+#     and `owner-hold` joining as a park cause supersedes its "the hold adds
+#     no park cause" statement (TDR-0030 names the page);
+#   - feature-spend.md — home of DM-5's zero-spend evidence semantics; Phase
+#     6 (zero-spend assertion) edits its code areas (domain/spend.ts,
+#     contracts/spend.ts, state/spend-reads.ts, cli/commands/spend.ts).
+#   The only documentation this plan delivers itself is Phase 10's
+#   planning-corpus maintenance (backlog M2-S17 marker, status snapshot)
+#   plus the M2 events reference page in Phase 3, which is a
 #   conformance-guarded taxonomy page (TC-PAUSE-060's page half), not a
 #   current-truth spec page.
 #
@@ -666,7 +698,8 @@ phases:
   # unchanged (closed-set equality both directions; deliberate golden
   # extension showing only additive values); `queue release --park` accepts
   # the new causes with the delivered `--until <iso>` requirement, and
-  # `owner-hold` parks carry the hold's expiry (DM-4). Status digest and
+  # `owner-hold` parks carry the hold's expiry per the header's OWNER-HOLD
+  # PARK `--until` PIN (DM-4). Status digest and
   # brief carry the lane park fields for open episodes — parked count,
   # reason, `until`, and the preservation classification rendered truthfully
   # with value agreement to the park record (AMB-P3: placement
