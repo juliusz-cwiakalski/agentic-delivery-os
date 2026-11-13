@@ -4,18 +4,24 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-294-spec.md (v1.2, 7 ACs — AC-F1-1, AC-F3-2, AC-F4-3,
+#   - Spec:     ./chg-GH-294-spec.md (v1.3, 7 ACs — AC-F1-1, AC-F3-2, AC-F4-3,
 #               AC-F5-4, AC-F6-5, AC-F7-6, AC-F8-7; F-1..F-8; DM-1..DM-6;
-#               NFR-1..NFR-10; EVT-1..EVT-4; DEC-1..DEC-11; OQ-1..OQ-3 all
+#               NFR-1..NFR-10; EVT-1..EVT-4; DEC-1..DEC-12; OQ-1..OQ-3 all
 #               resolved by TDR-0028/0029/0030; §5.1 capability details;
 #               §6 flows 1-4; §7 scope; §8.5 compatibility; §16 affected
 #               components — v1.2 adds scheduling-engine and spend to the
-#               affected-pages enumeration, mirrored in DOC BOUNDARY below;
-#               Appendix A vocabulary mapping; Appendix B anchors).
-#   - Tests:    ./chg-GH-294-test-plan.md (v1.1, 41 TCs TC-PAUSE-001..094 in
-#               ten blocks; 7/7 AC coverage; v1.1 pins TC-PAUSE-052's scoping
-#               interval as inclusive — park timestamp through window end;
-#               §3.5 substitute assertions
+#               affected-pages enumeration (mirrored in DOC BOUNDARY below),
+#               and v1.3 corrects DM-4's owner-hold `until` to a declared
+#               classified absence with named park writers, recording the
+#               M2-pack expiry deviation as DEC-12; Appendix A vocabulary
+#               mapping; Appendix B anchors).
+#   - Tests:    ./chg-GH-294-test-plan.md (v1.2, 41 TCs TC-PAUSE-001..094 in
+#               ten blocks; 7/7 AC coverage; decision coverage DEC-1..DEC-12
+#               (12/12); v1.1 pins TC-PAUSE-052's scoping interval as
+#               inclusive — park timestamp through window end; v1.2 rewrites
+#               TC-PAUSE-044/072/094 to the read-time-gate owner-hold
+#               semantics (classified-absence `until`, named writers,
+#               record-level no-append); §3.5 substitute assertions
 #               AMB-P1..P4, BYTE-P1, LIT-P1; §4 layers; §7 automation map with
 #               planned suite locations; §8.3 OQ-TP-1..6 — the delivery-time
 #               pins this plan places below; R-TP-1..R-TP-6). No TC id, oracle,
@@ -138,18 +144,27 @@
 #     delivery exposes none (AMB-P4); TC-PAUSE-081 scans every other surface
 #     for false claims.
 #
-#   OWNER-HOLD PARK `--until` PIN (TC-PAUSE-072 step 4; binding on PHASE 7 —
-#     the CLI/vocabulary half; the record-field half is asserted earlier by
-#     TC-PAUSE-044 ordering (a) in PHASE 5): `queue release --park
-#     owner-hold` mirrors the peak-window rule's shape — `--until` carries
-#     the hold's recorded expiry instant as an absolute UTC timestamp (DM-4:
-#     an `owner-hold` park carries the hold's expiry), consistent with the
-#     delivered owner-hold semantics (#280) and the existing park-record
-#     payload. When the active hold records no expiry, the park carries
-#     `until` absent/null with the reason still `owner-hold` — a declared
-#     classified absence: never a synthesized or borrowed timestamp, never a
-#     zero instant, and never a refusal. TC-PAUSE-072 step 4 asserts both
-#     halves on the command and projection surfaces.
+#   OWNER-HOLD PARK `--until` PIN (spec v1.3 DM-4/DEC-12; binding on PHASE 7
+#     — the CLI/vocabulary half — with the record halves asserted by
+#     TC-PAUSE-044 in PHASE 5 and TC-PAUSE-094 in PHASE 9): an `owner-hold`
+#     park's `until` is a DECLARED CLASSIFIED ABSENCE (absent/null) — the
+#     delivered owner hold (#280) is a read-time gate with NO expiry, so
+#     there is no expiry instant to record (DEC-12 records the deviation
+#     from the M2 pack's expiry-presuming language); the absence matches the
+#     delivered no-expiry park payloads (`provider-quota` and `preemption`
+#     carry no expiry) and is never a synthesized or borrowed timestamp,
+#     never a zero instant. The park writers are NAMED: only the
+#     operator-invoked `queue release --park owner-hold` command writes an
+#     `owner-hold` park record; the hold itself never writes one; the
+#     window-end resume path writes none — while the hold is active, resume
+#     admission refuses `queue.precondition.unmet`, reason `owner-hold`,
+#     appending nothing (the existing `peak-window` park record stays
+#     byte-unchanged); resume proceeds once the hold clears. Asserted by
+#     TC-PAUSE-072 (both halves: CLI writer + classified-absence `until`;
+#     hold-active resume refusal with record-level no-append), TC-PAUSE-044
+#     (watcher still parks `peak-window` + `until` under an active hold;
+#     record-level no-append), and TC-PAUSE-094 step 3 (writer enumeration
+#     per path).
 #
 # SUBSTITUTE ASSERTIONS (§3.5) — honored, never smoothed over:
 #   AMB-P1 (wake-cycle bound, not wall clock) -> Phase 4 gate (TC-PAUSE-023);
@@ -252,10 +267,13 @@
 #     event-taxonomy, status-digest, brief, and any new canonical
 #     peak-pausing page;
 #   - feature-scheduling-engine.md — canonical home of the park-cause
-#     vocabulary: DEC-2's `peak-window` -> `provider-window` mapping
+#     vocabulary and the delivered owner-hold truth (a read-time gate with
+#     no expiry): DEC-2's `peak-window` -> `provider-window` mapping
 #     supersedes its delivered paired one-to-one cause/condition statements,
-#     and `owner-hold` joining as a park cause supersedes its "the hold adds
-#     no park cause" statement (TDR-0030 names the page);
+#     `owner-hold` joining as a park cause supersedes its "the hold adds no
+#     park cause" statement, and its owner-hold section carries DEC-12's
+#     classified-absence `until` and the named park writers (spec §16 v1.3;
+#     TDR-0030 names the page);
 #   - feature-spend.md — home of DM-5's zero-spend evidence semantics; Phase
 #     6 (zero-spend assertion) edits its code areas (domain/spend.ts,
 #     contracts/spend.ts, state/spend-reads.ts, cli/commands/spend.ts).
@@ -595,10 +613,17 @@ phases:
   # park decision reads only the recorded nomination and that profile's
   # window state (set equality across the four-fixture matrix, incl. the
   # model-string borrow bait). The delivered owner-hold precedence applies
-  # unchanged in all three orderings, including at window end (DEC-8).
+  # in all three orderings under the spec v1.3 semantics (DEC-8, DEC-12):
+  # the hold is a read-time gate with no expiry that parks nothing and
+  # writes no park record — the watcher still parks `peak-window` with
+  # `until` under an active hold — and while the hold is active the
+  # window-end resume admission refuses `queue.precondition.unmet`, reason
+  # `owner-hold`, appending nothing (the existing park record stays
+  # byte-unchanged); resume proceeds once the hold clears.
   #
   # AC/TC coverage: AC-F5-4 complete (TC-PAUSE-040..044); AC-F4-3 complete
-  # (TC-PAUSE-030, 031); NFR-5; DEC-5, DEC-8, DEC-11's resume half.
+  # (TC-PAUSE-030, 031); NFR-5; DEC-5, DEC-8, DEC-11's resume half, and
+  # DEC-12's watcher-parks + record-level no-append halves (TC-PAUSE-044).
   #
   # Gate:
   #   pnpm typecheck
@@ -696,10 +721,15 @@ phases:
   # Goal: make the episode visible and auditable. The lanes `parked:<cause>`
   # projection gains `peak-window` and `owner-hold` with the delivered three
   # unchanged (closed-set equality both directions; deliberate golden
-  # extension showing only additive values); `queue release --park` accepts
-  # the new causes with the delivered `--until <iso>` requirement, and
-  # `owner-hold` parks carry the hold's expiry per the header's OWNER-HOLD
-  # PARK `--until` PIN (DM-4). Status digest and
+  # extension showing only additive values). `queue release --park
+  # peak-window` requires the delivered explicit `--until <iso>`, while
+  # `queue release --park owner-hold` is the ONE writer of an `owner-hold`
+  # park record and its `until` is the declared classified absence per the
+  # header's OWNER-HOLD PARK `--until` PIN (DM-4, DEC-12): the hold never
+  # writes a record, and a hold-active window-end resume refuses
+  # `queue.precondition.unmet`/`owner-hold` appending nothing (the existing
+  # park record byte-unchanged), proceeding once the hold clears. Status
+  # digest and
   # brief carry the lane park fields for open episodes — parked count,
   # reason, `until`, and the preservation classification rendered truthfully
   # with value agreement to the park record (AMB-P3: placement
@@ -716,7 +746,8 @@ phases:
   # shared core fold).
   #
   # AC/TC coverage: AC-F7-6 complete (TC-PAUSE-064, 070, 071, 072) + NFR-6
-  # (TC-PAUSE-093); NFR-8; DEC-2.
+  # (TC-PAUSE-093); NFR-8; DEC-2; DEC-12's writer and classified-absence
+  # halves plus DEC-8's hold-active refusal (TC-PAUSE-072 steps 2, 4, 6-7).
   #
   # Gate:
   #   pnpm typecheck
@@ -726,7 +757,9 @@ phases:
   #   bun test tests/behaviour/{status-parked-conditions,status-owner-hold}.test.ts
   #
   # Suites left green: status-brief-park-fields (status half + brief
-  #   zero-added-reads), queue-park-causes-s17 (vocabulary + `--until`),
+  #   zero-added-reads), queue-park-causes-s17 (vocabulary, the `--until`
+  #   rule, the owner-hold writer + classified absence, hold-active resume
+  #   no-append),
   #   pause-episode-events (exactly-once, reconstruction, bounds),
   #   golden lanes-list + brief (deliberate additive regeneration),
   #   status-parked-conditions + status-owner-hold (delivered controls).
@@ -829,12 +862,16 @@ phases:
   # STATE_SCHEMA_VERSION unchanged; every new field is additive on the
   # delivered families; pre-change records stay valid; appends fenced; no
   # delivered record mutated in place; no new `dispatch` error-table row
-  # (TDR-0028 C-2). Tests and fixtures only — production rows are
+  # (TDR-0028 C-2); the `owner-hold` park's `until` classified absence is
+  # closed-valued (never a defaulted, borrowed, or zero instant) and the
+  # park writers are exactly the named ones (TC-PAUSE-094 step 3's writer
+  # enumeration per path). Tests and fixtures only — production rows are
   # conditional (a UTC or determinism failure escalates rather than being
   # patched silently).
   #
   # AC/TC coverage: NFR-3 (TC-PAUSE-090), NFR-9 (TC-PAUSE-091), NFR-10
-  # (TC-PAUSE-092), DM-4 owner-hold half + DM-6/G-9 (TC-PAUSE-094).
+  # (TC-PAUSE-092), DM-4's owner-hold classified-absence half + DM-6/G-9 +
+  # DEC-12's writer enumeration (TC-PAUSE-094).
   #
   # Gate:
   #   pnpm typecheck
