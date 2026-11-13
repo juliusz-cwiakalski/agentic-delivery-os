@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-13T10:49:49.164Z }
   review_fix: { started: null, completed: 2026-11-13T13:53:47.273Z }
   quality_gates: { started: null, completed: 2026-11-13T14:12:52.219Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-13T14:14:47.728Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Spend read-side extension (v2 breakdowns + reconciliation) is delivered
@@ -589,5 +589,14 @@ notes:
       prepended landed atomically — runners must use
       PATH="$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH" for lifecycle commands
       on this host.
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 8 commit: 90e5c75c (documentation reconciliation, planning
+      maintenance, changeset, release obligations). Gates recorded in the
+      phase-8 completion entry above: plan validate valid, targeted brief/
+      blockers suites 38 pass / 0 fail, test-doc-distribution no drift,
+      changesets-group one fixed group of five, lint-commit-range PASS, pnpm
+      check 7829 pass / 4 skip / 0 fail. Pointer added at dod_check so every
+      declared plan phase (1-8) carries id + commit hash + test result."
     type: "info"
     date: "2026-11-13"
