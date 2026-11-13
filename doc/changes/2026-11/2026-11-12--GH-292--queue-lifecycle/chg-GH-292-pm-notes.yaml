@@ -11,7 +11,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-12T12:03:18.161Z }
   delivery_planning: { started: null, completed: 2026-11-12T12:03:30.273Z }
   dor_check: { started: null, completed: 2026-11-12T12:12:44.802Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-13T04:02:02.092Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -127,19 +127,19 @@ notes:
       `queue-remove-atomicity.test.ts` (TC-QLC-080: one fence, verified appends,
       replace-last at the core seams for removal and dep removal; closeout
       fence-sharing with zero second acquisition; reconcile removals one
-      fence+one append each; a dropped append caught by post-append
-      verification with zero replaces and a byte-identical ledger; an armed
-      append-before-flush failure leaves `state.write.failed` with the ledger
-      at its pre-run digest and the fold intact; the CLI classifies the state
+      fence+one append each; a dropped append caught by post-append verification
+      with zero replaces and a byte-identical ledger; an armed
+      append-before-flush failure leaves `state.write.failed` with the ledger at
+      its pre-run digest and the fold intact; the CLI classifies the state
       failure at exit 2 with no data and no event disclosure),
       `queue-lifecycle-convergence.test.ts` (TC-QLC-086: all three retirement
       paths converge — closeout repeat `satisfied` with zero appends, repeated
-      absent-edge `dep remove` noop with zero appends/events, repeated
-      reconcile `checked` 1 with empty `removed[]` and no already-removed ref
-      re-reported, first-run records and the derived document byte-identical),
-      `queue-lifecycle-privacy.test.ts` (TC-QLC-084: removal payload keys
-      exact and the projected event exactly `ref,reason,recordedAt`; reconcile
-      lists bounded and identifier/count/timestamp only with the declared port
+      absent-edge `dep remove` noop with zero appends/events, repeated reconcile
+      `checked` 1 with empty `removed[]` and no already-removed ref re-reported,
+      first-run records and the derived document byte-identical),
+      `queue-lifecycle-privacy.test.ts` (TC-QLC-084: removal payload keys exact
+      and the projected event exactly `ref,reason,recordedAt`; reconcile lists
+      bounded and identifier/count/timestamp only with the declared port
       receiving refs only and no ambient-echo; `detail.holder` a single
       <=128-char identifier at the envelope root while the error keeps exactly
       its six fields and `error.detail` absent; command-line tokens refused as
@@ -147,40 +147,38 @@ notes:
       repository content — bounded-pattern scan per GAP-T5),
       `queue-additivity.test.ts` (TC-QLC-085: zero packages/globs/adapters/dep
       changes, `STATE_SCHEMA_VERSION` unchanged, record kinds 5 -> 6 and error
-      rows 5 -> 7 exact and two-sided against the record-kinds, references,
-      and state-additivity-baseline fixtures with all 19 queue constants at
-      live values, and the queue command export surface exact). The fixture
-      corpus closed its one open gap: `biome.json` (outside declared
-      scope.files; disclosed scope drift, same remedy pattern as Phase 6)
-      gained the formatter-disabled override for
-      `tests/fixtures/queue/removal/golden/*` so the byte-exact golden stays
-      runtime-identical and `remove-success.json` no longer fails the format
-      scan. Gates: typecheck exit 0 (all packages + tests config Done);
-      the four new suites 23 pass / 0 fail; plan gate pairs — atomicity +
-      convergence 10 pass, privacy + exit-code-literals + queue-bounds 28
-      pass, queue-additivity + event-additivity-inventory 14 pass; boundaries
-      149 pass; error-table structure + sync suites 188 pass;
-      `error-table-sync` check OK at 129/129 both directions;
-      forbidden-literals exit 0; ambient-globals OK (181 files);
-      content-inventory 6 pass (no inventory change — no new modules);
-      golden controls (queue-remove, queue-reconcile) 7 pass; delivered
-      harness-owner controls (remove, dep-remove, reconcile, closeout) 12
-      pass. Disclosed deviations: (1) `biome format .` still reports 13
-      DELIVERED files (committed in phases 1/5/6 — e.g. queue-remove.test.ts,
-      queue-dep-grammar.test.ts, v1-contract-inventory.json) as not
-      formatter-stable; verified pre-existing on their HEAD blobs, outside
-      this phase's declared scope, and left for the quality_gates phase whose
-      full `pnpm check` battery owns the format verdict (reformatting them
-      here would be un-declared drift); (2) CLI-level fence-count deltas
-      include the delivered park-recovery pass (one fence even with no stale
-      park, zero appends) — asserted exactly, not treated as a mutation; (3)
-      the closeout convergence repeat drives the `queueRemovalForCloseout`
-      hook under one fence over the same store rather than a second full
-      `runCloseout` transaction — the full-apply outcome identity is Phase 3's
-      proven control and the repeat proves the hook's zero-append
-      convergence; (4) AC-NFR-4's minutes-scale cap proof ran in Phase 6
-      (declared 600s budget) and re-runs in the Phase 9 full battery; this
-      phase re-proves one-ref-only-read observation through the port call
+      rows 5 -> 7 exact and two-sided against the record-kinds, references, and
+      state-additivity-baseline fixtures with all 19 queue constants at live
+      values, and the queue command export surface exact). The fixture corpus
+      closed its one open gap: `biome.json` (outside declared scope.files;
+      disclosed scope drift, same remedy pattern as Phase 6) gained the
+      formatter-disabled override for `tests/fixtures/queue/removal/golden/*` so
+      the byte-exact golden stays runtime-identical and `remove-success.json` no
+      longer fails the format scan. Gates: typecheck exit 0 (all packages +
+      tests config Done); the four new suites 23 pass / 0 fail; plan gate pairs
+      — atomicity + convergence 10 pass, privacy + exit-code-literals +
+      queue-bounds 28 pass, queue-additivity + event-additivity-inventory 14
+      pass; boundaries 149 pass; error-table structure + sync suites 188 pass;
+      `error-table-sync` check OK at 129/129 both directions; forbidden-literals
+      exit 0; ambient-globals OK (181 files); content-inventory 6 pass (no
+      inventory change — no new modules); golden controls (queue-remove,
+      queue-reconcile) 7 pass; delivered harness-owner controls (remove,
+      dep-remove, reconcile, closeout) 12 pass. Disclosed deviations: (1) `biome
+      format .` still reports 13 DELIVERED files (committed in phases 1/5/6 —
+      e.g. queue-remove.test.ts, queue-dep-grammar.test.ts,
+      v1-contract-inventory.json) as not formatter-stable; verified pre-existing
+      on their HEAD blobs, outside this phase's declared scope, and left for the
+      quality_gates phase whose full `pnpm check` battery owns the format
+      verdict (reformatting them here would be un-declared drift); (2) CLI-level
+      fence-count deltas include the delivered park-recovery pass (one fence
+      even with no stale park, zero appends) — asserted exactly, not treated as
+      a mutation; (3) the closeout convergence repeat drives the
+      `queueRemovalForCloseout` hook under one fence over the same store rather
+      than a second full `runCloseout` transaction — the full-apply outcome
+      identity is Phase 3's proven control and the repeat proves the hook's
+      zero-append convergence; (4) AC-NFR-4's minutes-scale cap proof ran in
+      Phase 6 (declared 600s budget) and re-runs in the Phase 9 full battery;
+      this phase re-proves one-ref-only-read observation through the port call
       log.
     type: "info"
     date: "2026-11-12"
@@ -192,8 +190,8 @@ notes:
       removal, removes only `done`/`canceled` with reason `reconciled` through
       the ordinary F-1 seam (park withdrawal, one append, one
       `queue.graph/remove` per ref), retains every open state with its observed
-      alias, retains a not-found item as `unobserved`, converges truthfully on
-      a repeat run (`checked` counts only still-existing entries; zero
+      alias, retains a not-found item as `unobserved`, converges truthfully on a
+      repeat run (`checked` counts only still-existing entries; zero
       appends/events), fails closed on the provider's own identity
       (`provider.outage`/`provider.quota.exceeded` at exit 2,
       `provider.auth.rejected` at exit 1, no `queue.*` synonym, zero appends),
@@ -206,28 +204,28 @@ notes:
       AC-F7-1 four-spellings proof; TC-QLC-058's golden layer landed
       (`tests/golden/queue-reconcile.test.ts`, three committed goldens,
       committed `regenerate.ts` writer). Gates: typecheck 12/12 Done; the seven
-      reconcile behaviour suites 14 pass / 0 fail; the TC-QLC-056 cap proof
-      (105 entries, declared 600s budget) 1 pass in ~212s; the read-cost suite
-      incl. the TC-QLC-083 cap proof (declared 600s budget) 9 pass / 0 fail in
-      ~189s; reconcile goldens 3 pass; help lifecycle + hermetic 17 pass;
-      structure cli-edge-seam + content-inventory 34 pass; delivered
-      remove/lease controls 47 pass; error-table-sync OK (129 entries);
-      forbidden-literals, secret-read-boundary (357 files), ambient-globals
-      (181 files) all clean. Disclosed deviations: (1) the core sweep was
-      reworked to read-first — the interrupted session's remove-as-you-go loop
-      could append removals before a mid-sweep unreadable read, violating F-5's
-      no-partial-success rule (AC-F5-4); the mid-sweep unreadable proof now
-      asserts zero removals, a byte-identical ledger, and the stale entry
-      still present; (2) the reconcile harness `seedLease` checked `.ok` on a
-      Promise and always threw; it is now the delivered synchronous claim, and
-      the reconcile path gained the missing live-lease refusal proof
+      reconcile behaviour suites 14 pass / 0 fail; the TC-QLC-056 cap proof (105
+      entries, declared 600s budget) 1 pass in ~212s; the read-cost suite incl.
+      the TC-QLC-083 cap proof (declared 600s budget) 9 pass / 0 fail in ~189s;
+      reconcile goldens 3 pass; help lifecycle + hermetic 17 pass; structure
+      cli-edge-seam + content-inventory 34 pass; delivered remove/lease controls
+      47 pass; error-table-sync OK (129 entries); forbidden-literals,
+      secret-read-boundary (357 files), ambient-globals (181 files) all clean.
+      Disclosed deviations: (1) the core sweep was reworked to read-first — the
+      interrupted session's remove-as-you-go loop could append removals before a
+      mid-sweep unreadable read, violating F-5's no-partial-success rule
+      (AC-F5-4); the mid-sweep unreadable proof now asserts zero removals, a
+      byte-identical ledger, and the stale entry still present; (2) the
+      reconcile harness `seedLease` checked `.ok` on a Promise and always threw;
+      it is now the delivered synchronous claim, and the reconcile path gained
+      the missing live-lease refusal proof
       (`queue.precondition.unmet`/`lease-held` with the holder named, zero
       appends, `queue release` clears it); (3) the two production-bridge test
       fixture issue bodies gained the `title` field `normalizeGithubIssue`
       requires (titleless bodies decoded `invalid` and truthfully surfaced
-      `provider.outage`); the production mapping itself is unchanged;
-      (4) the two minutes-scale cap proofs declare 600_000 ms per-test budgets
-      because 100 verified F-1 removals over the real store are inherently
+      `provider.outage`); the production mapping itself is unchanged; (4) the
+      two minutes-scale cap proofs declare 600_000 ms per-test budgets because
+      100 verified F-1 removals over the real store are inherently
       minutes-scale; (5) `biome.json` sits outside the declared scope (flagged
       scope-drift by the commit primitive): the byte-exact reconcile golden
       fixtures carry the delivered formatter-disabled override pattern (seven
@@ -241,31 +239,31 @@ notes:
   - text: >-
       Plan phase 5 complete (commit ce2b1da8): CLI surface — `queue remove` with
       `--reason`, the explicit `dep add`/`dep remove` grammar over the delivered
-      two-positional add, and the corrected queue help family. The runtime gained
-      `remove`/`depRemove` over the Phase-1 core seams (recovery pass first, one
-      fence, verified appends), the payloads are exactly the declared key sets
-      (`ref,result,reason,readySet,event,degraded`; mutation keys plus
-      `readySet`/`event`), the human renderer gained the readySet branches inside
-      the delivered caps, and help gained the family `remove` entry, the
+      two-positional add, and the corrected queue help family. The runtime
+      gained `remove`/`depRemove` over the Phase-1 core seams (recovery pass
+      first, one fence, verified appends), the payloads are exactly the declared
+      key sets (`ref,result,reason,readySet,event,degraded`; mutation keys plus
+      `readySet`/`event`), the human renderer gained the readySet branches
+      inside the delivered caps, and help gained the family `remove` entry, the
       `queue remove` verb entry, and the rewritten `queue dep` entry (two-
       positional synopsis, three spellings, no `--on`/`--dep` options). The
       cli-edge-seam export pin moved two-sided (two new structural re-exports).
       Gates: typecheck 7/7; removal suites 17 pass; dep suites 11 pass; help
       lifecycle + entrypoint-help + golden 14 pass; delivered golden controls
       (list/plan/ready/envelope/graph/cli/depend) 67 pass; hermetic+bounds 14
-      pass; prompt-conformance 5 clean. Disclosed deviations: (1) the `queue
-      dep add` result for an existing entry is the delivered `updated`
-      (mutateIntent's existed-entry semantics), not the test-plan §5.2's
-      `added` — AC-F3-1's spelling-equality is the pinned truth and both
-      spellings assert the same value; (2) `helpEntryFor` gained a longest-
-      prefix fallback so `queue dep add|remove --help` renders the one `queue
-      dep` entry at exit 0 (spec F-7 mounts no separate dep-spelling help path;
+      pass; prompt-conformance 5 clean. Disclosed deviations: (1) the `queue dep
+      add` result for an existing entry is the delivered `updated`
+      (mutateIntent's existed-entry semantics), not the test-plan §5.2's `added`
+      — AC-F3-1's spelling-equality is the pinned truth and both spellings
+      assert the same value; (2) `helpEntryFor` gained a longest- prefix
+      fallback so `queue dep add|remove --help` renders the one `queue dep`
+      entry at exit 0 (spec F-7 mounts no separate dep-spelling help path;
       TC-QLC-070 step 2); (3) TC-QLC-011's pre-fence fence-count assertion is
       proven at the handler-grammar refusal (zero fences) and the seam refusal
       appends zero records with the delivered park-recovery pass as the only
       fence movement (the recovery pass precedes every runtime mutation by
-      delivered design); (4) `queue ready` reads the delivered status facts,
-      not the queue fold, so its TC-QLC-001 cell asserts the fact-source truth
+      delivered design); (4) `queue ready` reads the delivered status facts, not
+      the queue fold, so its TC-QLC-001 cell asserts the fact-source truth
       instead of fold absence.
     type: "info"
     date: "2026-11-12"
@@ -274,24 +272,23 @@ notes:
       exactly the declared payload. Taxonomy `emitted: true` (non-emitted set
       []), the projection's removal source family (one record -> one event, per
       lane), all six pin sites moved two-sided (declaration, additive 12->13
-      with the once-observed inversion, conformance page pin, describe
-      unemitted [] + golden line `remove  emitted`, emitted-kinds runtime set
-      with the projection source-scan positive form, describe json pin), the
-      case fixture gained the durable removal record, and TC-QLC-065's
-      exactly-once behaviour is proven at the harness. Gates: typecheck 6/6;
-      event family 70 pass / 0 fail; exports-parity OK. Disclosed: the
-      describe golden fixture line moved as the plan pins (delivered-document
-      goldens are untouched).
+      with the once-observed inversion, conformance page pin, describe unemitted
+      [] + golden line `remove  emitted`, emitted-kinds runtime set with the
+      projection source-scan positive form, describe json pin), the case fixture
+      gained the durable removal record, and TC-QLC-065's exactly-once behaviour
+      is proven at the harness. Gates: typecheck 6/6; event family 70 pass / 0
+      fail; exports-parity OK. Disclosed: the describe golden fixture line moved
+      as the plan pins (delivered-document goldens are untouched).
     type: "info"
     date: "2026-11-12"
   - text: >-
       Plan phase 3 complete (commit 35922bc2): closeout automatic landed
-      removal. `queueRemovalForCloseout` + `removeQueueEntryWithinFence` in
-      core (fence-sharing, no second acquisition), the additive non-step
+      removal. `queueRemovalForCloseout` + `removeQueueEntryWithinFence` in core
+      (fence-sharing, no second acquisition), the additive non-step
       `queueRemoval` block on `CloseoutData` with the closed outcome/skip
       vocabularies, plan-mode `would-remove`, fail-open skips, satisfied
-      convergence. Gates: typecheck 6/6 Done; six new behaviour suites
-      12 pass; delivered closeout controls (capsule-plan 12 steps, goldens,
+      convergence. Gates: typecheck 6/6 Done; six new behaviour suites 12 pass;
+      delivered closeout controls (capsule-plan 12 steps, goldens,
       attention-exit) green; full closeout family 26 pass / 0 fail. Disclosed:
       the no-merge-truth and ref-not-canonical cells are proven at the wired
       seam because the delivered apply closeout refuses without a merge before
@@ -328,15 +325,14 @@ notes:
       reason vocabulary), `QUEUE_RECORD_DECLARATIONS` 5 -> 6, the DM-2
       append-position presence rule in `foldQueueGraph` and every read,
       `removeQueueEntry`/`removeQueueDependency` seams, two error rows
-      (`queue.reason-missing`, `queue.single-flight`), `QUEUE_ERROR_CODES`
-      5 -> 7, and the two guard-read spec pages reconciled. Gates: typecheck 6/6
+      (`queue.reason-missing`, `queue.single-flight`), `QUEUE_ERROR_CODES` 5 ->
+      7, and the two guard-read spec pages reconciled. Gates: typecheck 6/6
       packages Done; structure suites 125 pass / 0 fail; error-table-sync suite
       96 pass / 0 fail; `error-table-sync` check OK at 129/129;
       event-state-additivity 4 pass; exports-parity OK; ambient-globals OK;
-      inventories 17 pass / 0 fail; full `bun test` 7672 pass / 3
-      environmental fails (TMPDIR cross-device, all green under
-      `TMPDIR=$PWD/tmp/tmpdir`). Deviation: `pnpm check` full battery deferred
-      to phase 9 per plan.
+      inventories 17 pass / 0 fail; full `bun test` 7672 pass / 3 environmental
+      fails (TMPDIR cross-device, all green under `TMPDIR=$PWD/tmp/tmpdir`).
+      Deviation: `pnpm check` full battery deferred to phase 9 per plan.
     type: "info"
     date: "2026-11-12"
   - text: >-
@@ -521,99 +517,96 @@ notes:
       Plan phase 8 complete (commit fe663c55): documentation reconciliation and
       the planning corpus. All eight declared pages edited, no production
       behaviour touched, and the two declared guard suites created:
-      `tests/checks/queue-reference-page.test.ts` (TC-QLC-071: the M1 page
-      root resolves through the coverage inventory and reports zero
-      queue-family failures; all ten verbs plus the three dependency forms in
-      the synopsis; the closed reason vocabulary; the refusal identities with
-      the exit matrix and the {0,1,2} bound; `detail.holder` at the envelope
-      root with the 128-character bound and `error.detail` rejected; the
-      per-ref single-flight precedence table with the per-pass distinction,
-      stale takeover, and refusal purity; the reconcile contract bounded at
-      100 with fail-closed provider identities; the closeout `queueRemoval`
-      outcome/skip vocabularies; release never described as removal) and
+      `tests/checks/queue-reference-page.test.ts` (TC-QLC-071: the M1 page root
+      resolves through the coverage inventory and reports zero queue-family
+      failures; all ten verbs plus the three dependency forms in the synopsis;
+      the closed reason vocabulary; the refusal identities with the exit matrix
+      and the {0,1,2} bound; `detail.holder` at the envelope root with the
+      128-character bound and `error.detail` rejected; the per-ref single-flight
+      precedence table with the per-pass distinction, stale takeover, and
+      refusal purity; the reconcile contract bounded at 100 with fail-closed
+      provider identities; the closeout `queueRemoval` outcome/skip
+      vocabularies; release never described as removal) and
       `tests/checks/m2-queue-page-reconciliation.test.ts` (TC-QLC-072: nine
-      sections resolve to non-empty spans; the three delivered identities
-      named; `queue.entry-unknown`/`queue.state-unavailable` absent anywhere;
-      every example envelope parses as `delivery.result.v1` with only
-      {schemaVersion, runId, exitCode, timing, data|error, detail} top-level
-      keys and no `ok`/`command` key at any depth; the single-flight example
-      carries root `detail.holder` and no `data`; `queue.graph/remove`
-      spelled, `queue.graph/removed` absent; reconcile keys and the 100-entry
-      cap; the closeout outcome/skip vocabularies; the dep grammar over the
-      preserved two-positional add). Page content: the M1 page gains the
-      GH-292 shipped contract (verbs, vocabulary, presence rule, closeout
-      block, reconcile contract, the nine-row precedence table, envelope-root
-      holder, exit matrix), per-verb lifecycle payloads, and the two new
-      identities in ERRORS; the M2 commands page is reconciled to delivered
-      identities, per-verb `data` payloads, and delivered-shape examples; the
-      M2 contracts page states `remove` as emitted with exactly `ref`,
-      `reason`, `recordedAt` and the append-position presence rule with the
-      path-specific single-flight policy; the M2 architecture page replaces
-      the generic refusal prose with the F-4 precedence (a refusal appends
-      nothing and publishes no `dispatch.attempt` event; the started event
-      stays on the admitted path) and places the `landed` removal after the
-      closeout writes inside the held fence naming the hook and the emitted
-      `queue.graph/remove`; the registry `queue` row names the three new
-      semantic additions (Delivery M1-S17 / Extended GH-292); status.md gains
-      a dated M2-S15 snapshot superseding the `emitted: false` attribution;
-      backlog M2-S15 gains its `Ticket`/`Progress` record in the M2-S13
-      shape; the glossary adds removal record, presence rule, per-ref
-      single-flight, reconcile, and holder lane, and the delivered
-      Single-flight entry now names the distinction. Gates: the two new
-      suites 23 pass / 0 fail (180 assertions); coverage + parity +
-      entrypoint-help controls 11 pass; doc-conformance 11 pass;
-      `help-guide-coverage` check OK (exit 0); `forbidden-literals` exit 0;
-      doc-distribution guard OK (83 in-scope docs, no drift, no new
-      frontmatter needed — all edited pages keep their existing markers);
-      `pnpm typecheck` exit 0 (6 packages + tests config, builds clean);
-      biome check exit 0 on both new files. Deviations: (1) the evidence note
-      lands in a follow-up pm-notes commit because it names the work commit's
-      sha (the phases 1-7 pattern); (2) both suites normalize whitespace
-      before containment so a prose token never fails on a line wrap —
-      presence/absence semantics unchanged; (3) the M2 example parser
-      extracts the JSON portion after the `$` command line, matching the
-      page's existing example shape; (4) the M2 page keeps its S17/S18
-      planned markers (`--park` S17 additions, `--project` S18) with the
-      planned wording made explicit; (5) the old dated M2-S13 status
-      paragraph stays as a historical record with the new snapshot explicitly
-      superseding it. Ceremony: TDR-0026 verified absent from the tree before
-      committing (sole copy `./tmp/tmpdir/held/`); lifecycle `delivery` stays
-      OPEN — no `phase complete` from this phase.
+      sections resolve to non-empty spans; the three delivered identities named;
+      `queue.entry-unknown`/`queue.state-unavailable` absent anywhere; every
+      example envelope parses as `delivery.result.v1` with only {schemaVersion,
+      runId, exitCode, timing, data|error, detail} top-level keys and no
+      `ok`/`command` key at any depth; the single-flight example carries root
+      `detail.holder` and no `data`; `queue.graph/remove` spelled,
+      `queue.graph/removed` absent; reconcile keys and the 100-entry cap; the
+      closeout outcome/skip vocabularies; the dep grammar over the preserved
+      two-positional add). Page content: the M1 page gains the GH-292 shipped
+      contract (verbs, vocabulary, presence rule, closeout block, reconcile
+      contract, the nine-row precedence table, envelope-root holder, exit
+      matrix), per-verb lifecycle payloads, and the two new identities in
+      ERRORS; the M2 commands page is reconciled to delivered identities,
+      per-verb `data` payloads, and delivered-shape examples; the M2 contracts
+      page states `remove` as emitted with exactly `ref`, `reason`, `recordedAt`
+      and the append-position presence rule with the path-specific single-flight
+      policy; the M2 architecture page replaces the generic refusal prose with
+      the F-4 precedence (a refusal appends nothing and publishes no
+      `dispatch.attempt` event; the started event stays on the admitted path)
+      and places the `landed` removal after the closeout writes inside the held
+      fence naming the hook and the emitted `queue.graph/remove`; the registry
+      `queue` row names the three new semantic additions (Delivery M1-S17 /
+      Extended GH-292); status.md gains a dated M2-S15 snapshot superseding the
+      `emitted: false` attribution; backlog M2-S15 gains its `Ticket`/`Progress`
+      record in the M2-S13 shape; the glossary adds removal record, presence
+      rule, per-ref single-flight, reconcile, and holder lane, and the delivered
+      Single-flight entry now names the distinction. Gates: the two new suites
+      23 pass / 0 fail (180 assertions); coverage + parity + entrypoint-help
+      controls 11 pass; doc-conformance 11 pass; `help-guide-coverage` check OK
+      (exit 0); `forbidden-literals` exit 0; doc-distribution guard OK (83
+      in-scope docs, no drift, no new frontmatter needed — all edited pages keep
+      their existing markers); `pnpm typecheck` exit 0 (6 packages + tests
+      config, builds clean); biome check exit 0 on both new files. Deviations:
+      (1) the evidence note lands in a follow-up pm-notes commit because it
+      names the work commit's sha (the phases 1-7 pattern); (2) both suites
+      normalize whitespace before containment so a prose token never fails on a
+      line wrap — presence/absence semantics unchanged; (3) the M2 example
+      parser extracts the JSON portion after the `$` command line, matching the
+      page's existing example shape; (4) the M2 page keeps its S17/S18 planned
+      markers (`--park` S17 additions, `--project` S18) with the planned wording
+      made explicit; (5) the old dated M2-S13 status paragraph stays as a
+      historical record with the new snapshot explicitly superseding it.
+      Ceremony: TDR-0026 verified absent from the tree before committing (sole
+      copy `./tmp/tmpdir/held/`); lifecycle `delivery` stays OPEN — no `phase
+      complete` from this phase.
     type: "info"
     date: "2026-11-12"
   - text: >-
       Plan phase 9 complete (commit 741b0d2a): release. One lockstep minor
-      changeset (`.changeset/gh-292-queue-lifecycle-minor.md`, five publishables,
-      testkit excluded) naming the five delivered behaviours, the emitted
-      `remove` kind, the two new queue error identities, and the disclosed
-      same-holder different-ref renewal narrowing; TDR-0026 restored to
-      `doc/decisions/` byte-identical to the held copy and its index row landed
-      exactly between TDR-0025 and TDR-0027 in the same commit as the record;
-      format-only biome fixes across the delivered queue suites (import
+      changeset (`.changeset/gh-292-queue-lifecycle-minor.md`, five
+      publishables, testkit excluded) naming the five delivered behaviours, the
+      emitted `remove` kind, the two new queue error identities, and the
+      disclosed same-holder different-ref renewal narrowing; TDR-0026 restored
+      to `doc/decisions/` byte-identical to the held copy and its index row
+      landed exactly between TDR-0025 and TDR-0027 in the same commit as the
+      record; format-only biome fixes across the delivered queue suites (import
       collapse/argument reflow, no semantic edits) so `format:check` passes.
       Battery results: `TMPDIR=$PWD/tmp/tmpdir pnpm check` end-to-end PASS with
       7,830 pass / 4 skip / 0 fail across 1,009 files (two independent green
       runs logged at `.ai/local/logs/gh292-phase9-pnpm-check-fix3.log` and
       `gh292-phase9-pnpm-check-fix2.log` with `PNPM_CHECK_EXIT=0`), lint clean
-      (83 warnings / 0 errors), format:check clean, typecheck 12/12,
-      depcruise 389 modules clean, ambient-globals/workspace-entrypoints/
+      (83 warnings / 0 errors), format:check clean, typecheck 12/12, depcruise
+      389 modules clean, ambient-globals/workspace-entrypoints/
       secret-read-boundary clean, prompt-conformance 5/5, help-guide-coverage
       all covered, exports-parity 5/5; `./scripts/lint-commit-range.sh --base
       main-tools` PASS over the branch range; `bash
       scripts/.tests/test-doc-distribution.sh` OK (83 in-scope docs);
-      `error-table-sync` OK (129 entries); `plan validate GH-292`
-      verdict=valid. Battery-caught fixes this phase (all two-sided, none
-      weakened): TC-EVT-006 single-source scan admits the delivered
-      `queue.graph/remove` producer naming in `commands/queue.ts`;
-      TC-PORT-001 ports-contract inventory regenerated two-sided for the
-      injected tracker-read seam; the ten closeout-facts/command failures were
-      resolved as fixture/harness truths (expected-count moves to the
-      delivered composition facts, worktree-harness robustness, and a
-      load-sensitive TC-WIRE-002 timeout ceiling) with the production mapping
-      unchanged. Disclosed environment noise, not code failures: three
-      transport/host interruptions and one `bun: not found` (PATH lost across
-      a host restart) required battery re-runs. All 9/9 plan phases are now
-      delivered and committed; lifecycle `delivery` remains OPEN for the PM's
-      `phase complete`.
+      `error-table-sync` OK (129 entries); `plan validate GH-292` verdict=valid.
+      Battery-caught fixes this phase (all two-sided, none weakened): TC-EVT-006
+      single-source scan admits the delivered `queue.graph/remove` producer
+      naming in `commands/queue.ts`; TC-PORT-001 ports-contract inventory
+      regenerated two-sided for the injected tracker-read seam; the ten
+      closeout-facts/command failures were resolved as fixture/harness truths
+      (expected-count moves to the delivered composition facts, worktree-harness
+      robustness, and a load-sensitive TC-WIRE-002 timeout ceiling) with the
+      production mapping unchanged. Disclosed environment noise, not code
+      failures: three transport/host interruptions and one `bun: not found`
+      (PATH lost across a host restart) required battery re-runs. All 9/9 plan
+      phases are now delivered and committed; lifecycle `delivery` remains OPEN
+      for the PM's `phase complete`.
     type: "info"
     date: "2026-11-13"
