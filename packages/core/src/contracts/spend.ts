@@ -281,6 +281,16 @@ export type SpendDigestSection =
       readonly tokensByClass: SpendTokenTotals;
       readonly restarts: number;
       readonly ratio: number | null;
+      /** The DM-4 telemetry-state disclosure (v2, always present here). */
+      readonly telemetryState?: TelemetryState;
+      /** The DM-3 reconciliation disclosure, stated with the same fold. */
+      readonly reconciliation?: TelemetryReconciliation;
+      /** Per-role token figures cited by the digest and the brief (§7.1). */
+      readonly byRole?: readonly SpendBreakdownEntry[];
+      /** Per-model token figures cited by the digest and the brief (§7.1). */
+      readonly byModel?: readonly SpendBreakdownEntry[];
+      /** The per-phase timing summaries cited beside the figures (DM-2). */
+      readonly phaseTiming?: readonly SpendPhaseTiming[];
     }
   | { readonly state: "observed"; readonly captured: false }
   | {

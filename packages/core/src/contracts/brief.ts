@@ -9,6 +9,7 @@
  */
 
 import type { DeliveryRequestReviewState } from "./ports.js";
+import type { SpendBreakdownEntry, SpendTokenTotals } from "./spend.js";
 import type * as statusVocabulary from "./status.js";
 import type {
   StatusCounts,
@@ -41,7 +42,10 @@ export const BRIEF_PLACEHOLDER_SURFACE_IDS = ["gate-sla-states", "lane-queue-eng
 /** One placeholder surface id. */
 export type BriefPlaceholderSurfaceId = (typeof BRIEF_PLACEHOLDER_SURFACE_IDS)[number];
 
-/** The closed nine-id render-surface set (DM-5): seven digest surfaces plus two placeholders. */
+/**
+ * The closed ten-id render-surface set (DM-5; GH-291 adds the declared spend
+ * surface): eight digest surfaces plus the two placeholders.
+ */
 export const BRIEF_SURFACE_ORDER = [
   "tracker",
   "changes-and-prs",
@@ -50,6 +54,7 @@ export const BRIEF_SURFACE_ORDER = [
   "providers",
   "parked-work",
   "typed-questions",
+  "spend",
   "gate-sla-states",
   "lane-queue-engine",
 ] as const;
@@ -138,6 +143,36 @@ export type BriefTruncation = {
   readonly omitted: number;
 };
 
+/** One cited timing summary in the spend surface (GAP-6 obligations). */
+export type BriefSpendTiming = {
+  readonly phase: string;
+  readonly durationMs: number | null;
+};
+
+/** The reconciliation citation: verdict, stated tolerance, and basis (DM-3). */
+export type BriefSpendReconciliation = {
+  readonly verdict: string;
+  readonly tolerance: number;
+  readonly basis: string;
+};
+
+/**
+ * The spend citation the brief renders (GH-291 AC-F8-2).
+ *
+ * `present` cites the figures and the reconciliation disclosure; `absent`
+ * renders the classified absence — never zeros and never silence.
+ */
+export type BriefSpendCitation =
+  | {
+      readonly state: "present";
+      readonly tokensByClass: SpendTokenTotals;
+      readonly roles: readonly SpendBreakdownEntry[];
+      readonly models: readonly SpendBreakdownEntry[];
+      readonly timing: readonly BriefSpendTiming[];
+      readonly reconciliation?: BriefSpendReconciliation;
+    }
+  | { readonly state: "absent"; readonly code: "spend.telemetry-absent" };
+
 /** The complete bounded `delivery.brief.v1` payload (DM-1). */
 export type BriefPayload = {
   readonly schemaVersion: typeof BRIEF_SCHEMA_VERSION;
@@ -147,4 +182,6 @@ export type BriefPayload = {
   readonly anchors: readonly BriefAnchorGroup[];
   readonly placeholders: readonly BriefPlaceholderEntry[];
   readonly truncation: readonly BriefTruncation[];
+  /** The declared spend citation surface (GH-291 F-8). */
+  readonly spend?: BriefSpendCitation;
 };

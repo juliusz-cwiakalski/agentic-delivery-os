@@ -256,3 +256,34 @@ notes:
       prefixes grew by the five new lines), and the contract inventory fixtures.
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 5 commit: 20170ced (CLI surface and reference pages)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 6 complete: consumer citation. The status digest's spend section
+      now carries the v2 disclosure from the same fold (`telemetryState`,
+      `reconciliation`, `byRole`, `byModel`, `phaseTiming` on the additive
+      section fields), and the digest human line states the verdict, tolerance,
+      and basis beside the totals. The brief's closed surface catalog grows by
+      exactly the declared `spend` surface (now ten ids: eight digest surfaces
+      plus the two delivered placeholders) and the payload gains the declared
+      `spend` citation: present renders the total, per-role and per-model
+      figures, timing, and the reconciliation line; absent renders
+      `spend.telemetry-absent`, never zeros and never silence. The retro
+      evidence source set grows additively with `spend-telemetry`; the collector
+      drafts the figures, role/model numbers, timing summaries, and the
+      verdict/tolerance/basis as collector-truth evidence through the delivered
+      append seam, and the report reconstructs and cites them (absent is the
+      classified absence). The edge composes the retro `readSpend` seam from the
+      same verified read and fold the command consumes; an unreadable store
+      yields no evidence instead of a false absence. Owning TCs:
+      TC-TELEMETRY-027..030. Brief goldens regenerated with
+      `bun run tests/fixtures/brief/golden/regenerate.ts`; status-digest goldens
+      unchanged. Narrow gate: `pnpm typecheck` green; retro-telemetry-evidence,
+      brief-spend-citation, status-spend-section/parity/degraded, golden brief,
+      golden status-digest, and retro-malformed 65 pass / 0 fail. Flagged drift:
+      `packages/cli/src/commands/retro.ts` (report human citation lines),
+      `tests/structure/brief-contract.test.ts` and `tests/golden/brief.test.ts`
+      (the catalog assertion is ten ids with the one declared surface).
+    type: "info"
+    date: "2026-11-13"

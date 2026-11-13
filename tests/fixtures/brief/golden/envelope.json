@@ -108,6 +108,19 @@
         "reason": "observed-empty"
       },
       {
+        "id": "spend",
+        "title": "Spend",
+        "state": "observed",
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "observed-empty"
+      },
+      {
         "id": "gate-sla-states",
         "title": "Gate SLA states",
         "state": "not-delivered",
@@ -209,6 +222,10 @@
         "target": "tracker",
         "omitted": 16
       }
-    ]
+    ],
+    "spend": {
+      "state": "absent",
+      "code": "spend.telemetry-absent"
+    }
   }
 }

@@ -259,6 +259,7 @@ import {
   type QueueDegradationReason,
   type QuotaTransport,
   type Result,
+  type RetroSpendEvidence,
   type SpendDigestSection,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -3744,6 +3745,45 @@ const retroNotesFrom = (
   return { ok: true, value: { retroNotes } };
 };
 
+/**
+ * The additive spend telemetry evidence for one change (GH-291 AC-F8-1).
+ *
+ * The figures come from the same verified read and fold the spend command and
+ * the digest consume. A selection with no telemetry is the classified absence;
+ * an unreadable store yields no evidence rather than a false absence.
+ */
+const retroSpendFrom = (
+  store: StateStorePort,
+  changeRef: string,
+): RetroSpendEvidence | undefined => {
+  const read = readSpendLedger(store, changeRef);
+  if (!read.ok) return undefined;
+  const folded = computeSpendReport(read.value, { workItemRef: changeRef });
+  if (!folded.ok) return { state: "absent" };
+  const report = folded.data;
+  return {
+    state: "present",
+    tokensByClass: report.tokensByClass,
+    roles: report.breakdowns.role.map((entry) => ({
+      role: entry.value ?? "(unattributed)",
+      tokens: entry.tokens,
+    })),
+    models: report.breakdowns.model.map((entry) => ({
+      model: entry.value ?? "(unattributed)",
+      tokens: entry.tokens,
+    })),
+    timing: report.phaseTiming.map((entry) => ({
+      phase: entry.phase,
+      durationMs: entry.durationMs,
+    })),
+    reconciliation: {
+      verdict: report.reconciliation.verdict,
+      tolerance: report.reconciliation.tolerance,
+      basis: report.reconciliation.basis,
+    },
+  };
+};
+
 const retroStateFamiliesFrom = (
   store: StateStorePort,
   changeRef: string,
@@ -3787,6 +3827,7 @@ export const createRetroCommandRuntime = (
       readAuditLedger: (query) => readAuditLedger(options.store, query),
       readStateFamilies: (changeRef) => retroStateFamiliesFrom(options.store, changeRef),
       readNotes: (changeRef) => retroNotesFrom(options, changeRef),
+      readSpend: (changeRef) => retroSpendFrom(options.store, changeRef),
     };
   return {
     collect: (input) =>

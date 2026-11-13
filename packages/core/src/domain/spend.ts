@@ -871,5 +871,10 @@ export const spendDigestSection = (read: SpendLedgerRead): SpendDigestSection =>
     tokensByClass: folded.data.tokensByClass,
     restarts: folded.data.restarts,
     ratio: folded.data.amplification.ratio,
+    telemetryState: folded.data.telemetryState,
+    reconciliation: folded.data.reconciliation,
+    byRole: folded.data.breakdowns.role,
+    byModel: folded.data.breakdowns.model,
+    phaseTiming: folded.data.phaseTiming,
   };
 };

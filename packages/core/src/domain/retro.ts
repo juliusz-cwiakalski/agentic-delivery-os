@@ -46,6 +46,7 @@ import {
   type RetroRunCounts,
   type RetroRunRecord,
   type RetroSidecarPort,
+  type RetroSpendEvidence,
   type RetroTargetSelection,
   type RetroTruthCheckId,
   type RetroTruthCheckOutcome,
@@ -363,6 +364,7 @@ const collectorRecords = (
     readonly telemetry: readonly unknown[];
   },
   notes: readonly string[],
+  spend: RetroSpendEvidence | undefined,
   runId: string,
   level: RetroLevelName,
   window: { readonly start: number; readonly end: number },
@@ -593,6 +595,109 @@ const collectorRecords = (
     );
   }
 
+  // GH-291: the spend telemetry figures are collected evidence, cited in the
+  // report. Absence is recorded as the classified absence, never as zeros.
+  if (spend !== undefined) {
+    if (spend.state === "absent") {
+      drafts.push(
+        draftFor(
+          runId,
+          level,
+          "spend-telemetry",
+          RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+          ["spend:state:absent", "spend:code:spend.telemetry-absent"],
+          window,
+          collectedAt,
+          identity,
+        ),
+      );
+    } else {
+      const tokens = spend.tokensByClass;
+      drafts.push(
+        draftFor(
+          runId,
+          level,
+          "spend-telemetry",
+          RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+          [
+            "spend:state:present",
+            `spend:input:${String(tokens.input)}`,
+            `spend:output:${String(tokens.output)}`,
+            `spend:reasoning:${String(tokens.reasoning)}`,
+            `spend:cacheRead:${String(tokens.cacheRead)}`,
+            `spend:cacheWrite:${String(tokens.cacheWrite)}`,
+          ],
+          window,
+          collectedAt,
+          identity,
+        ),
+      );
+      for (const entry of spend.roles) {
+        drafts.push(
+          draftFor(
+            runId,
+            level,
+            "spend-telemetry",
+            RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+            [`spend:role:${entry.role}:${String(entry.tokens)}`],
+            window,
+            collectedAt,
+            identity,
+          ),
+        );
+      }
+      for (const entry of spend.models) {
+        drafts.push(
+          draftFor(
+            runId,
+            level,
+            "spend-telemetry",
+            RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+            [`spend:model:${entry.model}:${String(entry.tokens)}`],
+            window,
+            collectedAt,
+            identity,
+          ),
+        );
+      }
+      for (const entry of spend.timing) {
+        drafts.push(
+          draftFor(
+            runId,
+            level,
+            "spend-telemetry",
+            RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+            [
+              `spend:timing:${entry.phase}:${entry.durationMs === null ? "open" : String(entry.durationMs)}`,
+            ],
+            window,
+            collectedAt,
+            identity,
+          ),
+        );
+      }
+      if (spend.reconciliation !== undefined) {
+        drafts.push(
+          draftFor(
+            runId,
+            level,
+            "spend-telemetry",
+            RETRO_PAYLOAD_SCHEMAS.spendTelemetry,
+            [
+              `spend:verdict:${spend.reconciliation.verdict}`,
+              `spend:tolerance:${String(spend.reconciliation.tolerance)}`,
+              `spend:basis:${spend.reconciliation.basis}`,
+            ],
+            window,
+            collectedAt,
+            identity,
+          ),
+        );
+      }
+    }
+    consumed.push({ source: "spend-telemetry", verified: true, records: 1, truncated: false });
+  }
+
   return { drafts, consumed };
 };
 
@@ -718,6 +823,7 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     "closeout-outcomes",
     "commit-telemetry",
     "pm-notes",
+    "spend-telemetry",
   ];
   const runId = deps.newRunId();
   const collectedAt = nowMs;
@@ -747,6 +853,10 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     : { ok: true as const, value: { retroNotes: [] } };
   if (!notesRead.ok) return { ok: false, error: notesRead.error };
   const notes = notesRead.value;
+  const spend =
+    deps.collectors.readSpend === undefined || !sources.includes("spend-telemetry")
+      ? undefined
+      : deps.collectors.readSpend(target.changeRef);
 
   const baseDrafts = collectorRecords(
     audit ??
@@ -766,6 +876,7 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
       } satisfies AuditReadOutcome),
     families,
     notes.retroNotes,
+    spend,
     runId,
     deps.level,
     window,
@@ -964,6 +1075,62 @@ const followThroughOf = (
   return entries;
 };
 
+/** Reconstruct the cited spend evidence from the collected payload refs. */
+const spendCitationOf = (
+  records: readonly RetroEvidenceRecord[],
+): RetroSpendEvidence | undefined => {
+  const refs = records
+    .filter((record) => record.payloadSchemaId === RETRO_PAYLOAD_SCHEMAS.spendTelemetry)
+    .flatMap((record) => record.payloadRefs);
+  if (refs.length === 0) return undefined;
+  if (refs.includes("spend:state:absent")) return { state: "absent" };
+  const numeric = (prefix: string): number => {
+    const value = payloadRefValue(refs, prefix);
+    const parsed = value === undefined ? Number.NaN : Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const tokensByClass = {
+    input: numeric("spend:input:"),
+    output: numeric("spend:output:"),
+    reasoning: numeric("spend:reasoning:"),
+    cacheRead: numeric("spend:cacheRead:"),
+    cacheWrite: numeric("spend:cacheWrite:"),
+  };
+  const roles = refs.flatMap((ref) => {
+    if (!ref.startsWith("spend:role:")) return [];
+    const [, , role, tokens] = ref.split(":");
+    if (role === undefined || tokens === undefined) return [];
+    return [{ role, tokens: Number(tokens) }];
+  });
+  const models = refs.flatMap((ref) => {
+    if (!ref.startsWith("spend:model:")) return [];
+    const [, , model, tokens] = ref.split(":");
+    if (model === undefined || tokens === undefined) return [];
+    return [{ model, tokens: Number(tokens) }];
+  });
+  const timing = refs.flatMap((ref) => {
+    if (!ref.startsWith("spend:timing:")) return [];
+    const [, , phase, duration] = ref.split(":");
+    if (phase === undefined || duration === undefined) return [];
+    return [{ phase, durationMs: duration === "open" ? null : Number(duration) }];
+  });
+  const verdict = payloadRefValue(refs, "spend:verdict:");
+  const tolerance = payloadRefValue(refs, "spend:tolerance:");
+  const basis = payloadRefValue(refs, "spend:basis:");
+  const reconciliation =
+    verdict === undefined || tolerance === undefined || basis === undefined
+      ? undefined
+      : { verdict, tolerance: Number(tolerance), basis };
+  return {
+    state: "present",
+    tokensByClass,
+    roles,
+    models,
+    timing,
+    ...(reconciliation === undefined ? {} : { reconciliation }),
+  };
+};
+
 const emptyReport = (level: RetroLevelName): RetroReportData => ({
   level,
   findings: [],
@@ -1070,11 +1237,13 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
     left.action < right.action ? -1 : left.action > right.action ? 1 : 0,
   );
   const evidenceRefs = selected.map((record) => record.traceId);
+  const spend = spendCitationOf(selected);
   const data: RetroReportData = {
     level: deps.level,
     findings: sortedFindings,
     followThrough,
     evidenceRefs,
+    ...(spend === undefined ? {} : { spend }),
   };
   return { ok: true, data };
 };
