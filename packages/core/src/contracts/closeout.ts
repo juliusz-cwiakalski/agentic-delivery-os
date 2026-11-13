@@ -431,6 +431,34 @@ export type CloseoutData = {
   readonly residue?: readonly CloseoutResidueItem[];
   /** Additive applied capsule outcome; absent in plan mode (F-3, DM-5). */
   readonly capsule?: CloseoutCapsuleData;
+  /** Additive non-step queue-removal disclosure (GH-292 F-2, DM-6). */
+  readonly queueRemoval?: CloseoutQueueRemovalData;
+};
+
+/** The closed closeout queue-removal outcome set (GH-292 DM-6). */
+export const CLOSEOUT_QUEUE_REMOVAL_OUTCOMES = [
+  "removed",
+  "would-remove",
+  "satisfied",
+  "skipped",
+] as const;
+export type CloseoutQueueRemovalOutcome = (typeof CLOSEOUT_QUEUE_REMOVAL_OUTCOMES)[number];
+
+/** The closed skip-reason set (GH-292 DM-6); present only when skipped. */
+export const CLOSEOUT_QUEUE_REMOVAL_SKIP_REASONS = [
+  "no-merge-truth",
+  "lease-held",
+  "state-unavailable",
+  "ref-not-canonical",
+] as const;
+export type CloseoutQueueRemovalSkipReason = (typeof CLOSEOUT_QUEUE_REMOVAL_SKIP_REASONS)[number];
+
+/** One additive non-step `queueRemoval` block (GH-292 DM-6). */
+export type CloseoutQueueRemovalData = {
+  readonly outcome: CloseoutQueueRemovalOutcome;
+  readonly ref?: string;
+  readonly reason?: string;
+  readonly skipReason?: CloseoutQueueRemovalSkipReason;
 };
 
 /** The read-only capsule pre-flight facts the pure planner consumes (F-3). */

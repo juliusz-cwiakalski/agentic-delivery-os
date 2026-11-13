@@ -92,6 +92,7 @@ import {
   capsulePhaseEventKey,
   catalogPaths,
   claimQueueLease,
+  claimSingleFlightRefusal,
   classifyPruneCandidate,
   collectRetro,
   computeDbCutoffMs,
@@ -129,6 +130,7 @@ import {
   prioritizeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
+  type QueueDependencyRemovalResult,
   type QueueDeployExpectation,
   type QueueDeployFacts,
   type QueueGraphFold,
@@ -139,8 +141,10 @@ import {
   type QueueLeaseFailure,
   type QueuePlanFact,
   type QueueProviderFact,
+  type QueueRemovalMutationResult,
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
+  queueRemovalForCloseout,
   readActiveLeases,
   readCommandReceipts,
   readDaemonLanes,
@@ -148,8 +152,11 @@ import {
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
+  reconcileQueueEntries,
   recoverQueueParks,
   releaseQueueLease,
+  removeQueueDependency,
+  removeQueueEntry,
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
@@ -199,6 +206,7 @@ import {
   type CloseoutGitRuntime,
   type CloseoutPromotionRuntime,
   type CloseoutProviderRuntime,
+  type CloseoutQueueRemovalData,
   type CloseoutReadObservation,
   type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
@@ -251,11 +259,13 @@ import {
   type ProviderParkRecord,
   type ProviderSleep,
   type QueueDegradationReason,
+  type QueueTrackerRead,
   type QuotaTransport,
   type Result,
   type SpendDigestSection,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type StateFenceHandle,
   type StateStorePort,
   type StatusBlockersRead,
   type StatusLocalContextRead,
@@ -385,8 +395,10 @@ import {
   createQueueReadyCommandDefinition,
   type QueueCommandRuntime,
   type QueueReadyCommandRuntime,
+  type QueueRuntimeDependencyRemoval,
   type QueueRuntimeFailure,
   type QueueRuntimeMutation,
+  type QueueRuntimeRemoval,
   type QueueRuntimeSchedule,
   toQueueReadData,
 } from "./commands/queue.js";
@@ -1518,6 +1530,16 @@ export type CloseoutComposition = {
   readonly state: CloseoutStateRuntime;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /**
+   * The additive non-step queue-removal hook (GH-292 F-2, DM-6); the
+   * composition wires it over the same store the state runtime fences.
+   */
+  readonly queueRemoval?: (input: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly handle?: StateFenceHandle;
+  }) => CloseoutQueueRemovalData | undefined;
   /** The append-only capsule runtime (GH-240 F-3); absent leaves the step a gap. */
   readonly capsule?: CapsuleFileRuntime;
   /** The expected capsule events derived from durable state (GH-240 F-3). */
@@ -1576,6 +1598,11 @@ export type CloseoutCompositionOptions = {
   readonly git: GitBranchSeam | GitBranchSeamOptions;
   readonly store: StateStorePort;
   readonly nowIso: () => string;
+  /**
+   * The integer-millisecond clock. Optional: it defaults to `nowIso()` parsed,
+   * so a caller that supplies only the ISO clock keeps one time source.
+   */
+  readonly nowMs?: () => number;
   readonly newFenceToken: () => string;
   readonly dependentsLimit?: number;
   readonly mergedRequestLimit?: number;
@@ -1958,6 +1985,7 @@ export const createCloseoutComposition = (
       },
     );
   const git = gitSeamFor(options.git);
+  const closeoutNowMs = options.nowMs ?? (() => Date.parse(options.nowIso()));
   const extractor =
     options.harness === undefined
       ? undefined
@@ -2240,11 +2268,28 @@ export const createCloseoutComposition = (
   };
 
   const telemetry = buildTelemetry();
+  // GH-292 F-2: the closeout's landed-removal hook shares the transaction's
+  // fence; the merged delivery request is the merge truth it discloses on.
+  const queueRemoval = (hook: {
+    readonly mode: "plan" | "apply";
+    readonly workItemRef: string;
+    readonly mergedObserved: boolean;
+    readonly handle?: StateFenceHandle;
+  }) =>
+    queueRemovalForCloseout(options.store, {
+      mode: hook.mode,
+      workItemRef: hook.workItemRef,
+      mergedObserved: hook.mergedObserved,
+      recordedAt: options.nowIso(),
+      nowMs: closeoutNowMs(),
+      ...(hook.handle === undefined ? {} : { handle: hook.handle }),
+    });
   return {
     planFacts,
     provider,
     git,
     state: createCloseoutStateRuntime(options.store),
+    queueRemoval,
     nowIso: options.nowIso,
     newFenceToken: options.newFenceToken,
     ...(options.capsule === undefined || options.memoryRoot === undefined
@@ -2295,6 +2340,7 @@ export const createCloseoutCommandRuntime = (
         return sessions === undefined ? {} : { sessions };
       })(),
       ...(composition.telemetry === undefined ? {} : { telemetry: composition.telemetry }),
+      ...(composition.queueRemoval === undefined ? {} : { queueRemoval: composition.queueRemoval }),
     });
   };
   return {
@@ -3948,6 +3994,12 @@ export type QueueComposition = {
   readonly readyRuntime?: QueueReadyCommandRuntime;
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
+  /**
+   * The per-item tracker delivery-state read for `queue reconcile` (GH-292
+   * F-5): the verified closeout/verify read bridge wired by the composition.
+   * Absent means the tracker surface is not wired and reconcile refuses.
+   */
+  readonly readTrackerDeliveryState?: (ref: string) => Promise<QueueTrackerRead>;
   /** The additive live-watch seam (GH-238 F-13); absent degrades to polling. */
   readonly watch?: {
     readonly transport?: ControlTransport;
@@ -4220,6 +4272,71 @@ const claimLeaseProjection = (lease: {
   ...(lease.takeover === undefined ? {} : { takeoverOf: lease.takeover.leaseId }),
 });
 
+/** The recomputed ready set (ready refs in schedule order) after a mutation. */
+const readySetAfterMutation = (composition: QueueComposition): readonly string[] => {
+  const built = buildQueueFacts(composition, parkContextFor(composition));
+  if (!built.ok) return [];
+  const schedule = computeQueueSchedule(built.facts, { next: 20 });
+  return schedule.entries.filter((entry) => entry.state === "ready").map((entry) => entry.ref);
+};
+
+/** The removal outcome projected onto the command runtime (GH-292 F-1). */
+const removalOutcome = (
+  result: Extract<QueueRemovalMutationResult, { ok: true }>,
+  degraded: readonly QueueDegradationReason[],
+  composition: QueueComposition,
+): QueueRuntimeRemoval => ({
+  ok: true,
+  ref: result.value.ref,
+  reason: result.value.reason,
+  readySet: readySetAfterMutation(composition),
+  degraded,
+});
+
+/** The dependency-removal outcome projected onto the command runtime (GH-292 F-3). */
+const dependencyRemovalOutcome = (
+  result: Extract<QueueDependencyRemovalResult, { ok: true }>,
+  degraded: readonly QueueDegradationReason[],
+  composition: QueueComposition,
+): QueueRuntimeDependencyRemoval => {
+  const value = result.value;
+  const fallbackEntry = value.fold.entries.find((entry) => entry.ref === value.ref) ?? {
+    ref: value.ref,
+    ...(value.entry.repository === undefined ? {} : { repository: value.entry.repository }),
+    priority: value.entry.priority,
+    edges: value.edges,
+    weightClass: "standard" as const,
+    rankClass: "new-start" as const,
+    recordedAt: value.entry.recordedAt,
+  };
+  const weight = resolveQueueWeight(composition.facts.plans[value.ref]);
+  const built = buildQueueFacts(composition, parkContextFor(composition));
+  const projected = built.ok
+    ? computeQueueSchedule(built.facts, { next: 20 }).entries.find(
+        (entry) => entry.ref === value.ref,
+      )
+    : undefined;
+  return {
+    ok: true,
+    ref: value.ref,
+    entry: projected
+      ? { ...fallbackEntry, rankClass: projected.rankClass, weightClass: projected.weightClass }
+      : fallbackEntry,
+    entryState: projected?.state ?? "not-ready",
+    blocking: projected?.blocking ?? [
+      fallbackEntry.repository === undefined
+        ? { reason: "not-ready" as const, detail: "repository-binding-unresolved" }
+        : { reason: "not-ready" as const, detail: "state-unreadable" },
+    ],
+    weightClass: projected?.weightClass ?? weight.weightClass,
+    weightClassSource: projected?.weightClassSource ?? weight.source,
+    edges: value.edges,
+    result: value.result,
+    readySet: readySetAfterMutation(composition),
+    degraded,
+  };
+};
+
 const mutationOutcome = (
   result: QueueIntentOutcome,
   degraded: readonly QueueDegradationReason[],
@@ -4420,6 +4537,24 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         ...(outranking === undefined ? {} : { outrankedBy: outranking.ref }),
         ...(heavyLease === undefined ? {} : { weightHeldBy: heavyLease.ref }),
       });
+      // GH-292 F-4 (TDR-0026 DC-2/DC-3): the claim path's holder-aware
+      // admission refuses another holder's live same-ref lease before the
+      // fence; the own-holder renewal, the other-ref conflict, and the stale
+      // takeover stay the delivered claim-primitive behaviour.
+      const singleFlight = claimSingleFlightRefusal(composition.store, {
+        ref: selected,
+        holder: input.holder,
+        nowMs: composition.nowMs(),
+      });
+      if (singleFlight !== undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: singleFlight.code,
+          ...(singleFlight.summary === undefined ? {} : { summary: singleFlight.summary }),
+          ...(singleFlight.holder === undefined ? {} : { holder: singleFlight.holder }),
+        };
+      }
       const claimed = claimQueueLease(composition.store, {
         ref: selected,
         holder: input.holder,
@@ -4521,6 +4656,73 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
                 ...(parkRecord.clearedAt === undefined ? {} : { clearedAt: parkRecord.clearedAt }),
               },
             }),
+        degraded: resolveDegraded(composition.degraded),
+      };
+    },
+    remove: (input) => {
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      // GH-292 F-1: the removal seam owns the pre-append refusal set. A
+      // missing reason arrives as the queue identity; an out-of-vocabulary
+      // value is refused by the command grammar before this seam runs.
+      const removed = removeQueueEntry(composition.store, {
+        ref: input.ref,
+        ...(input.reason === undefined ? {} : { reason: input.reason }),
+        recordedAt: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken(),
+      });
+      if (!removed.ok) return mapQueueFailure(removed);
+      return removalOutcome(removed, resolveDegraded(composition.degraded), composition);
+    },
+    depRemove: (input) => {
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      // GH-292 F-3: an absent edge is a noop at exit 0 with zero appends and
+      // zero events; a present edge appends one dependency record and runs no
+      // cycle check (removal cannot close a cycle).
+      const removed = removeQueueDependency(composition.store, {
+        ref: input.ref,
+        onRef: input.onRef,
+        recordedAt: composition.nowIso(),
+        fenceToken: composition.newFenceToken(),
+      });
+      if (!removed.ok) return mapQueueFailure(removed);
+      return dependencyRemovalOutcome(removed, resolveDegraded(composition.degraded), composition);
+    },
+    reconcile: async (input) => {
+      // GH-292 F-5: the tracker read rides the composition's verified read
+      // bridge. Without it the tracker surface is not wired and reconcile
+      // refuses truthfully instead of manufacturing an observation.
+      const port = composition.readTrackerDeliveryState;
+      if (port === undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.precondition.unmet",
+          summary: "reason=tracker-read-unavailable",
+        };
+      }
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      const swept = await reconcileQueueEntries(composition.store, {
+        ...(input.ref === undefined ? {} : { ref: input.ref }),
+        readTracker: port,
+        recordedAt: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken,
+      });
+      if (!swept.ok) {
+        // The provider identity surfaces as-is: no queue synonym (AC-F5-4).
+        if (swept.kind === "provider") {
+          return { ok: false, kind: "provider", code: swept.code };
+        }
+        return mapQueueFailure(swept);
+      }
+      return {
+        ok: true,
+        value: swept.value,
+        readySet: readySetAfterMutation(composition),
         degraded: resolveDegraded(composition.degraded),
       };
     },

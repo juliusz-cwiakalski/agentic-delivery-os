@@ -4,8 +4,8 @@
  *
  * Runtime-neutral by construction: types and `as const` data only. The closed
  * lease, weight, rank, park, incident, lane, and precedence vocabularies are
- * declared once here together with the five additive record kinds, one derived
- * document, the five `queue` error identities, and the envelope data shapes.
+ * declared once here together with the additive record kinds, one derived
+ * document, the `queue` error identities, and the envelope data shapes.
  * The delivered `delivery.queue-ready.v1` condition ids, tri-state, and reason
  * vocabulary are imported from `./queue-ready.js` rather than redefined.
  *
@@ -13,8 +13,9 @@
  * exists in this module.
  */
 
-import type { CallerPrincipal } from "./principal.js";
 import type { OwnerHoldSource } from "./owner-hold.js";
+import type { CallerPrincipal } from "./principal.js";
+import type { DeliveryStateAlias } from "./ports.js";
 import type { QueueReadyCondition, QueueReadyConditionId } from "./queue-ready.js";
 import type { StateJsonValue } from "./state.js";
 
@@ -289,26 +290,30 @@ export type QueueConditionId = QueueReadyConditionId;
 
 /* -------------------------------- records -------------------------------- */
 
-/** The five additive record kinds (Appendix D, DM-5, EVT-1..EVT-5). */
+/** The additive record kinds (Appendix D, DM-5, EVT-1..EVT-5; GH-292 DM-1). */
 export const QUEUE_ENTRY_RECORD_KIND = "queue.entry" as const;
 export const QUEUE_DEPENDENCY_RECORD_KIND = "queue.dependency" as const;
 export const QUEUE_LEASE_RECORD_KIND = "queue.lease" as const;
 export const QUEUE_PARK_RECORD_KIND = "queue.park" as const;
 export const QUEUE_INCIDENT_RECORD_KIND = "queue.incident" as const;
+/** The sixth additive record kind: the reason-bearing removal tombstone (DM-1). */
+export const QUEUE_REMOVAL_RECORD_KIND = "queue.removal" as const;
 
-/** The five payload schema identifiers, verbatim from Appendix D. */
+/** The payload schema identifiers, verbatim from Appendix D (and GH-292 DM-1). */
 export const QUEUE_ENTRY_SCHEMA = "delivery.queue.entry.v1" as const;
 export const QUEUE_DEPENDENCY_SCHEMA = "delivery.queue.dependency.v1" as const;
 export const QUEUE_LEASE_SCHEMA = "delivery.queue.lease.v1" as const;
 export const QUEUE_PARK_SCHEMA = "delivery.queue.park.v1" as const;
 export const QUEUE_INCIDENT_SCHEMA = "delivery.queue.incident.v1" as const;
+export const QUEUE_REMOVAL_SCHEMA = "delivery.queue.removal.v1" as const;
 
-/** The five store-scoped key prefixes, verbatim from Appendix D. */
+/** The store-scoped key prefixes, verbatim from Appendix D (and GH-292 DM-1). */
 export const QUEUE_ENTRY_KEY_PREFIX = "queue.entries:" as const;
 export const QUEUE_DEPENDENCY_KEY_PREFIX = "queue.deps:" as const;
 export const QUEUE_LEASE_KEY_PREFIX = "queue.leases:" as const;
 export const QUEUE_PARK_KEY_PREFIX = "queue.parks:" as const;
 export const QUEUE_INCIDENT_KEY_PREFIX = "queue.incidents:" as const;
+export const QUEUE_REMOVAL_KEY_PREFIX = "queue.removals:" as const;
 
 /** The rebuildable derived graph document (DM-13, Appendix D). */
 export const QUEUE_GRAPH_SCHEMA = "delivery.queue.graph.v1" as const;
@@ -341,6 +346,20 @@ export type QueueDependencyRecord = {
   readonly callerPrincipal?: CallerPrincipal;
 };
 
+/** The closed removal-reason vocabulary (GH-292 DM-1, TDR-0026 C-3). */
+export const QUEUE_REMOVAL_REASONS = ["landed", "abandoned", "superseded", "reconciled"] as const;
+export type QueueRemovalReason = (typeof QUEUE_REMOVAL_REASONS)[number];
+
+/** The removal record shape (payload `delivery.queue.removal.v1`, GH-292 DM-1). */
+export type QueueRemovalRecord = {
+  readonly schema: typeof QUEUE_REMOVAL_SCHEMA;
+  readonly ref: string;
+  readonly reason: QueueRemovalReason;
+  readonly recordedAt: string;
+  /** Additive optional caller principal (C-2); historical records omit it. */
+  readonly callerPrincipal?: CallerPrincipal;
+};
+
 /** The rebuilt graph entry projection (the derived document folds no root). */
 export type QueueGraphEntry = {
   readonly ref: string;
@@ -368,7 +387,7 @@ export type QueueRecordDeclaration = {
   readonly vocabularies?: Readonly<Record<string, readonly string[]>>;
 };
 
-/** The five new kinds plus their identity fields and closed vocabularies. */
+/** The declared kinds plus their identity fields and closed vocabularies. */
 export const QUEUE_RECORD_DECLARATIONS = [
   {
     kind: QUEUE_ENTRY_RECORD_KIND,
@@ -454,17 +473,27 @@ export const QUEUE_RECORD_DECLARATIONS = [
     fields: ["schema", "type", "ref", "repository", "evidence", "recordedAt"],
     vocabularies: { type: QUEUE_INCIDENT_TYPES },
   },
+  {
+    kind: QUEUE_REMOVAL_RECORD_KIND,
+    payloadSchema: QUEUE_REMOVAL_SCHEMA,
+    keyPrefix: QUEUE_REMOVAL_KEY_PREFIX,
+    identityField: "ref",
+    fields: ["schema", "ref", "reason", "recordedAt", "callerPrincipal"],
+    vocabularies: { reason: QUEUE_REMOVAL_REASONS },
+  },
 ] as const satisfies readonly QueueRecordDeclaration[];
 
 /* -------------------------------- errors --------------------------------- */
 
-/** The five declared `queue` error identities (Appendix F, NFR-11). */
+/** The declared `queue` error identities (Appendix F, NFR-11; GH-292 adds two). */
 export const QUEUE_ERROR_CODES = [
   "queue.dependency-cycle",
   "queue.lease-conflict",
   "queue.park-condition-stuck",
   "queue.entry.unobserved",
   "queue.precondition.unmet",
+  "queue.reason-missing",
+  "queue.single-flight",
 ] as const;
 export type QueueErrorCode = (typeof QUEUE_ERROR_CODES)[number];
 
@@ -667,6 +696,89 @@ export type QueuePlanData = QueueReadData & {
 export const QUEUE_MUTATION_RESULTS = ["added", "updated", "noop"] as const;
 export type QueueMutationResult = (typeof QUEUE_MUTATION_RESULTS)[number];
 
+/** The removal result vocabulary (GH-292 Appendix C: an accepted removal). */
+export const QUEUE_REMOVAL_RESULTS = ["removed"] as const;
+export type QueueRemovalResult = (typeof QUEUE_REMOVAL_RESULTS)[number];
+
+/** The dependency-mutation result extension (GH-292: `dep remove` adds `removed`). */
+export const QUEUE_DEPENDENCY_MUTATION_RESULTS = ["added", "updated", "removed", "noop"] as const;
+export type QueueDependencyMutationResult = (typeof QUEUE_DEPENDENCY_MUTATION_RESULTS)[number];
+
+/** The reconcile result vocabulary (GH-292 F-5). */
+export const QUEUE_RECONCILE_RESULTS = ["removed", "noop"] as const;
+export type QueueReconcileResult = (typeof QUEUE_RECONCILE_RESULTS)[number];
+
+/** The hard sweep cap (GH-292 F-5, NFR-4): at most 100 examined entries. */
+export const QUEUE_RECONCILE_MAX_ENTRIES = 100 as const;
+
+/** The closed stale-state set: the only delivery states a reconcile removes. */
+export const QUEUE_RECONCILE_STALE_STATES = ["done", "canceled"] as const;
+
+/** One tracker delivery-state read observation for reconcile (GH-292 F-5). */
+export type QueueTrackerRead =
+  | { readonly ok: true; readonly kind: "state"; readonly deliveryState: DeliveryStateAlias }
+  | { readonly ok: true; readonly kind: "not-found" }
+  | { readonly ok: false; readonly failureCode: string };
+
+/** One removed entry in the reconcile payload (exactly `ref` and `reason`). */
+export type QueueReconcileRemoved = {
+  readonly ref: string;
+  readonly reason: QueueRemovalReason;
+};
+
+/** One retained entry in the reconcile payload (exactly `ref` and `deliveryState`). */
+export type QueueReconcileRetained = {
+  readonly ref: string;
+  readonly deliveryState: DeliveryStateAlias;
+};
+
+/** The `queue reconcile` payload (GH-292 Appendix C). */
+export type QueueReconcileData = {
+  readonly result: QueueReconcileResult;
+  readonly checked: number;
+  readonly removed: readonly QueueReconcileRemoved[];
+  readonly retained: readonly QueueReconcileRetained[];
+  readonly unobserved: readonly string[];
+  readonly readySet: readonly string[];
+  readonly truncated: boolean;
+  readonly remainder: number;
+  readonly degraded: readonly QueueDegradationReason[];
+};
+
+/**
+ * The event disclosure on a mutation payload: topic and kind, never a sequence.
+ * The kind is the declared taxonomy identity named as a type; the runtime kind
+ * set stays owned by the taxonomy declaration (single source, TC-EVT-006).
+ */
+export type QueueMutationEventKind = "remove" | "dependency-edge";
+
+/** The event disclosure on a mutation payload: topic and kind, never a sequence. */
+export type QueueMutationEvent = {
+  readonly topic: "queue.graph";
+  readonly kind: QueueMutationEventKind;
+};
+
+/** The `queue remove` payload (GH-292 Appendix C). */
+export type QueueRemoveData = {
+  readonly ref: string;
+  readonly result: QueueRemovalResult;
+  readonly reason: QueueRemovalReason;
+  readonly readySet: readonly string[];
+  readonly event: QueueMutationEvent;
+  readonly degraded: readonly QueueDegradationReason[];
+};
+
+/** The `queue dep remove` payload (GH-292 Appendix C: mutation keys plus two). */
+export type QueueDependencyRemovalData = {
+  readonly ref: string;
+  readonly entry: QueueEntryProjection;
+  readonly edges: readonly string[];
+  readonly result: QueueDependencyMutationResult;
+  readonly readySet: readonly string[];
+  readonly event: QueueMutationEvent;
+  readonly degraded: readonly QueueDegradationReason[];
+};
+
 /** The `queue add | prioritize | dep` payload (Appendix C). */
 export type QueueMutationData = {
   readonly ref: string;
@@ -754,7 +866,8 @@ export type QueueRecordPayload =
   | QueueDependencyRecord
   | QueueLeaseRecord
   | QueueParkRecord
-  | QueueIncidentRecord;
+  | QueueIncidentRecord
+  | QueueRemovalRecord;
 
 /** A JSON-safe projection used when an append payload is built. */
 export type QueueJsonPayload = StateJsonValue;

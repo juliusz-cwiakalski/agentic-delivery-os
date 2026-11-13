@@ -32,7 +32,7 @@ const appendRaw = (
 };
 
 describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
-  test("a full-delivery fixture emits exactly the declared emitted kinds and never remove", async () => {
+  test("a full-delivery fixture emits exactly the declared emitted kinds, remove exactly once", async () => {
     const harness = await createEventHarness({ label: "emitted-kinds" });
     try {
       const client = await harness.connect();
@@ -49,6 +49,8 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
       await Promise.resolve();
       await harness.step();
       const seen = new Set<string>();
+      let removeFrames = 0;
+      let removeObserved = false;
 
       harness.appendEntry({
         schema: "delivery.queue.entry.v1" as never,
@@ -61,6 +63,12 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
         ref: "GH-700",
         edges: ["GH-701"],
         recordedAt: "2026-11-12T10:00:02.000Z",
+      });
+      appendRaw(harness, "queue.removal", "queue.removals:GH-700", {
+        schema: "delivery.queue.removal.v1",
+        ref: "GH-700",
+        reason: "landed",
+        recordedAt: "2026-11-12T10:00:04.000Z",
       });
       appendRaw(harness, "queue.lease", "queue.leases:L-1", {
         schema: "delivery.queue.lease.v1",
@@ -84,21 +92,19 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
       harness.appendPhase({ phaseId: "delivery", operation: "reopen", reason: "review-feedback" });
       harness.appendQuestion(questionRecord("Q-1", "GH-290"));
       harness.appendAnswer(answerRecord("Q-1"));
-      await harness.step();
-      for (const data of eventFrames(client.drain())) {
-        if (data.topic !== "queue" && data.topic !== "lanes") {
-          seen.add(`${String(data.topic)}/${String(data.kind)}`);
-        }
-        expect(data).not.toHaveProperty("kind", "remove");
-      }
       harness.clearQuestion(lane, "Q-1", "boundary-note");
       await harness.step();
       for (const data of eventFrames(client.drain())) {
         if (data.topic !== "queue" && data.topic !== "lanes") {
           seen.add(`${String(data.topic)}/${String(data.kind)}`);
         }
-        expect(data.kind).not.toBe("remove");
+        if (data.kind === "remove") {
+          removeFrames += 1;
+          removeObserved = true;
+        }
       }
+      // The fixture's removal is observed exactly once.
+      expect(removeFrames).toBe(1);
 
       const expected = new Set<string>();
       for (const topic of TAXONOMY.topics) {
@@ -108,7 +114,8 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
         }
       }
       expect([...seen].sort()).toEqual([...expected].sort());
-      expect(seen.has("queue.graph/remove")).toBe(false);
+      expect(seen.has("queue.graph/remove")).toBe(true);
+      expect(removeObserved).toBe(true);
 
       // The snapshot topics carry no kind at all.
       const snapshotFrames = eventFrames(client.drain()).filter(
@@ -121,9 +128,16 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
     }
   });
 
-  test("no production module outside the declaration produces a remove event", () => {
+  test("the projection is the one production producer of the remove kind", () => {
+    // GH-292 F-6: the projection emits `remove`; the other scanned modules
+    // stay literal-free. The exact positive form: the projection names the
+    // kind literal once, per removal record.
+    const producer = readFileSync(
+      join(process.cwd(), "packages/core/src/domain/event-projection.ts"),
+      "utf8",
+    );
+    expect(producer).toContain('kind: "remove"');
     const files = [
-      "packages/core/src/domain/event-projection.ts",
       "packages/cli/src/daemon-compose.ts",
       "packages/core/src/app/control-server.ts",
       "packages/core/src/domain/control-session.ts",

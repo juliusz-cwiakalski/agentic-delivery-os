@@ -3,17 +3,19 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-11
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, the dispatch family's per-ref single-flight admission predicate that refuses any live same-ref lease with `queue.single-flight` and names the holder at the envelope root, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
     - "packages/core/src/contracts/error-table.ts"
+    - "packages/core/src/contracts/queue.ts"
+    - "packages/core/src/contracts/result.ts"
     - "packages/core/src/app/dispatch.ts"
     - "packages/core/src/app/dispatch-gate.ts"
     - "packages/core/src/app/daemon-dispatch-result.ts"
@@ -30,7 +32,7 @@ links:
 
 ## Overview
 
-The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, validates its input, runs the admission preflight, claims the repository's queue lease, spawns or resumes the lifecycle session through the delivered harness session port, watches it with progress-based liveness, classifies the terminal outcome through the shared harness classifier, and derives the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Every dispatch that reaches classification appends one durable attempt record, so the engine accrues dual-run evidence beside the bash stack.
+The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, validates its input, runs the admission preflight, applies the per-ref single-flight admission predicate, claims the repository's queue lease, spawns or resumes the lifecycle session through the delivered harness session port, watches it with progress-based liveness, classifies the terminal outcome through the shared harness classifier, and derives the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Every dispatch that reaches classification appends one durable attempt record, so the engine accrues dual-run evidence beside the bash stack.
 
 A repository is either `dual-run` (bash authoritative, dispatch evidence only) or `authoritative` (dispatch primary, bash fallback). Authority changes only through a recorded, reversible handover that evaluates the four-condition evidence gate. The derived per-repository authority view is a plain file the bash entry points read without invoking the typed CLI, so the fallback keeps working when the typed stack is unavailable.
 
@@ -50,13 +52,13 @@ The shipped production composition wires the one-shot run path with its admissio
 
 A work-item reference matches `[A-Z]+-\d+`. The harness resolves from `--harness` when supplied and from the typed harness configuration otherwise; an unknown harness name is an input refusal. Grammar runs before any runtime call, and the handler returns data or a classified failure rather than choosing an exit digit.
 
-Five kinds of refusal happen before any session attempt exists: an unknown harness, rejected input, an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), an active owner hold, and a conflicting lease. Each emits the classified top-level error envelope with its mapped identity and exit and appends no attempt record; the admission preflight is the only one whose exit can be `2`. Every failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
+Six kinds of refusal happen before any session attempt exists: an unknown harness, rejected input, an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), an active owner hold, a conflicting lease on another ref, and a live lease that already records the requested ref (the per-ref single-flight refusal). Each emits the classified top-level error envelope with its mapped identity and exit and appends no attempt record; the admission preflight is the only one whose exit can be `2`, and the per-ref refusal names the live holder in the envelope-root `detail`. Every failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
 
 ## One-shot dispatch
 
 1. **Resolve the harness.** The flag wins over configuration; the selected adapter supplies spawn, resume, observe, collect, and liveness capabilities and its declared gaps.
 2. **Run the admission preflight.** After the harness resolves and input validates, the preflight resolves the declared truth-read credential and performs one bounded work-item read. A refusal here is pre-session: no lease, spawn, resume, or record.
-3. **Claim the lease.** The scheduling engine claims the repository-exclusive lease for the reference. An active owner hold refuses `queue.precondition.unmet` with reason `owner-hold` before the claim and opens no lease, spawn, resume, or record. A live conflicting lease refuses at exit `1` without spawning.
+3. **Admit and claim the lease.** Before any claim, the dispatch family's per-ref admission predicate reads live lease truth for the requested ref. A live lease that records the requested ref — whichever holder — is refused with `queue.single-flight` at exit `1` and the holder at the envelope root; a live lease on another ref refuses `queue.lease-conflict`; a stale lease is taken over with its incident evidence; no live lease claims. An active owner hold refuses `queue.precondition.unmet` with reason `owner-hold` before the claim. Every refusal here is pre-session and opens no lease, spawn, resume, attempt, lane, or queue record and publishes no event. Otherwise the scheduling engine claims the repository-exclusive lease for the reference.
 4. **Spawn or resume.** A fresh run spawns through the harness session port. An opencode spawn returns its handle as soon as the first identified stream line arrives, before the session completes, and a resume acquires the same way while preserving the existing session identity; a Claude Code spawn returns its handle when the bounded one-shot invocation completes. `--resume-prompt` resolves the existing lane, records the resume mode (`attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection), and continues from the phase-ledger position. Completed phases are skipped idempotently.
 5. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
 6. **Admit restarts and resumes.** Restart admission delegates to the delivered restart-budget gate with the bound from `lane.restart-budget` and the persisted restart count. At or above the bound, an attempt whose session has not completed refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, one attempt record, the delivered terminal exhaustion record, and a typed escalation; a completed harness session keeps its own classification and is never re-keyed to a restart refusal by an already-reached bound. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with token `failed`, outcome `failed`, exit `1`, and one attempt record, and unreadable token or cost facts refuse rather than admit. A stall that is still current when evidence collection resolves is routed through the same restart-admission gate: at or above the bound the attempt is the restart-budget refusal with no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent second session.
@@ -79,6 +81,45 @@ The preflight resolves the declared truth-read reference (`github-read` over the
 | Status 404 | `input.value.rejected` | `input` | user-validation | 1 |
 
 The 404 summary states that the provider reported the work item absent for this credential and names the reference; it does not assert that the reference is wrong, because an item the credential cannot see answers 404 exactly like an absent one. The engine result error-kind union admits the existing `provider` and `config` kinds additively; `DOMAIN_KINDS`, the error-table row count, the tokens, the projections, and the exits are unchanged. The credential refusal carries a narrow trusted-refusal marker that the CLI classifier honours only for `config.credential.missing`, so the bounded identifier-only summary reaches both machine and human output without reopening the untrusted-config suppression. The preflight applies to a fresh dispatch and to a resume alike; daemon-driven lane launches do not run it. The supported operator provisioning path is documented in [Tracker Credential Provisioning](../../guides/tracker-credential-provisioning.md).
+
+## Per-ref single-flight admission
+
+The dispatch family's admission predicate is the per-ref guard over live lease
+truth, evaluated before `claimLease`, spawn, resume, and any record. It is one
+predicate shared by `dispatch <ref>` and a composed daemon supervision claim,
+because both claim with a fixed holder and never renew mid-flight:
+
+| Live lease state for the requested ref's repository | Outcome | Session |
+|---|---|---|
+| records the requested ref, any holder | `queue.single-flight`, exit `1`, envelope-root `detail.holder` | none |
+| records another ref | `queue.lease-conflict`, exit `1` | none |
+| no live lease | claimed | the dispatch proceeds |
+| stale lease (heartbeat age at or beyond `queue.lease-ttl`) | taken over with incident evidence | the dispatch proceeds |
+
+A same-ref lease is by definition a dispatch that is already running, so the
+second dispatch is refused even when the live holder identity matches the
+requester's; the dispatch path never renews a lease whose recorded ref would have
+to change. A lease at or over its TTL is not active: the delivered stale-takeover
+path applies on every path, so a crashed session blocks a ref for no longer than
+the TTL. A refusal appends no lease, attempt, lane, or queue record, starts no
+session, and publishes no event.
+
+The refusal names the holder at the failure-envelope root: an additive optional,
+command-declared `detail` object whose only member is `holder`, single line,
+bounded to 128 characters, identifiers only, with no credential, session id, or
+provider payload. `CommandResultError` keeps exactly its six delivered fields and
+`error.detail` is not a placement; the success-shaped `data.error.detail` slot
+described above is a separate, attempt-stage field (TDR-0027). The exit stays the
+row's projection class (`user-validation` → `1`), and the row is retryable once
+the holding lane ends.
+
+The sibling `queue claim` path keeps its holder-aware outcomes, because it claims
+with the caller's own holder: a live same-ref lease under the caller's holder
+returns `renewed` and starts no session, another holder's same-ref lease refuses
+`queue.single-flight`, and a lease on any other ref refuses the delivered
+`queue.lease-conflict`. The scheduling engine's per-pass single-flight (one action
+per repository per pass) and its `repo-free` readiness condition are unchanged and
+are different controls.
 
 ## Result derivation and exit projection
 
@@ -121,10 +162,10 @@ Every dispatch failure identity pins one result token, one engine outcome, one e
 | `dispatch.resume-uneconomical` | exactly one | `failed` | `failed` | 1 | not applicable, token null, reason `comparison-source-unavailable` |
 | Post-spawn `harness.collect` failure (a session existed but its evidence could not be read) | exactly one | `state-unverified` | `failed` | 2 | not applicable, token null, reason `comparison-source-unavailable` |
 | Harness spawn refusal (no error identity) | exactly one | `noop-lane-permission` | `refused` | 1 | not applicable, token null, reason `dispatch-session-family` |
-| Unknown harness, rejected input, an active owner hold, or a conflicting lease before a spawn | none | none (an owner hold carries `queue.precondition.unmet` with blocking reason `owner-hold`) | none | 1 | none |
+| Unknown harness, rejected input, an active owner hold, a live same-ref lease, or a lease conflict on another ref before a spawn | none | none (an owner hold carries `queue.precondition.unmet` with blocking reason `owner-hold`; a live same-ref lease carries `queue.single-flight` with the holder at the envelope root; another ref carries `queue.lease-conflict`) | none | 1 | none |
 | Credential or admission-read refusal before a spawn | none | none (the top-level error carries the mapped identity) | none | 1 or 2 per the admission table | none |
 
-All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the five pre-session refusal kinds.
+All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the six pre-session refusal kinds.
 
 ### Text and machine output
 
@@ -141,7 +182,7 @@ The bash-internal `closeout_unverified=` key is not part of this contract; dispa
 
 Without `--verbose`, human text is exactly those four keys. With `--verbose`, the dispatch human-text selection renders the same four keys and, when the result carries the pre-session failure detail, appends one bounded `detail:` prose line naming the underlying harness failure `kind` and `code`, and the field when the failure carries one. The appended line is not a `key=value` line, so the non-verbose four-key contract is unchanged.
 
-Machine mode renders the standard command envelope. Dispatch `data` carries `result`, `prUrl`, `phaseLedger` (`completed`, `total`, `variant`), `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`, and `lastMessage`, plus a bounded `truncation` marker when a field is cut. An attempt-stage classified failure that carries an error identity is a data-bearing success envelope: the top-level envelope carries no `error`, while `data.error` carries the full error-table fields (`code`, `category`, `retryable`, `consequence`, `remediationHint`, and `summary`) beside `data.result` and `data.outcome`; consumers read `data.result` and `data.error` together. A recorded harness spawn refusal is a data-bearing success envelope with `data.result` and `data.outcome` and no error identity to nest. A pre-session refusal uses the standard top-level error envelope instead.
+Machine mode renders the standard command envelope. Dispatch `data` carries `result`, `prUrl`, `phaseLedger` (`completed`, `total`, `variant`), `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`, and `lastMessage`, plus a bounded `truncation` marker when a field is cut. An attempt-stage classified failure that carries an error identity is a data-bearing success envelope: the top-level envelope carries no `error`, while `data.error` carries the full error-table fields (`code`, `category`, `retryable`, `consequence`, `remediationHint`, and `summary`) beside `data.result` and `data.outcome`; consumers read `data.result` and `data.error` together. A recorded harness spawn refusal is a data-bearing success envelope with `data.result` and `data.outcome` and no error identity to nest. A pre-session refusal uses the standard top-level error envelope instead. When that refusal is `queue.single-flight`, the top-level envelope also carries the additive optional `detail` object with the live `holder`; no other dispatch refusal populates it.
 
 A pre-session spawn failure types `data.error` as `DispatchEnvelopeError`: the delivered `CommandResultError` fields plus an additive `detail` carrying the underlying harness failure `kind` and `code`, with `field` present only when the failure carries one. The detail is always present on that path because the underlying `HarnessFailure` is always available there; it is identifiers only, single-line, bounded by `DISPATCH_MAX_ERROR_DETAIL_CHARS` (256), and never carries an environment value or secret. The `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, result token, outcome, exit projection, and last message are unchanged, and the detail adds no new error code, delivery-result token, classifier row, or error-table row. It reaches machine JSON through the shared whole-envelope serializer and reaches verbose human output through the dispatch human-text selection.
 
@@ -339,6 +380,7 @@ The admission refusals and resolve failures add no `dispatch` row. An admission 
 | Human output | 40 lines, 8,192 bytes |
 | `last_message` | 512 characters, single line, redacted |
 | `data.error.detail` | 256 characters, identifiers only, single line |
+| Envelope-root `detail.holder` | 128 characters, identifiers only, single line |
 | Evidence references per record | 16 |
 | Divergence resolution note | 240 characters |
 | Unresolved divergence ids in a summary | 20 |
@@ -358,8 +400,8 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md) — the prompt-required composition that includes `dispatch`.
 - [Result Contract and Error Table](feature-result-contract.md) — the envelope, the four dispatch rows, and the exit projection.
 - [Harness Adapters](feature-harness-adapters.md) — the session port, both delivery adapters, and the shared classifier.
-- [Resident Dispatch Daemon](feature-resident-daemon.md) — lane supervision and the daemon-side attempt-record producer.
-- [Scheduling Engine](feature-scheduling-engine.md) — the repository lease dispatch claims and releases.
+- [Resident Dispatch Daemon](feature-resident-daemon.md) — lane supervision and the daemon-side attempt-record producer; a composed supervision claim belongs to this admission family.
+- [Scheduling Engine](feature-scheduling-engine.md) — the repository lease dispatch claims and releases, the per-ref admission predicate's outcome table, and the holder-naming refusal.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the restart-budget gate and resume-economics admission.
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) — the delivery-result vocabulary and the verify-change comparison baseline.
 - [Dispatch reference page](../../planning/oss-tooling/milestones/m1/commands/dispatch.md)
@@ -372,5 +414,7 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [TDR-0010 — Dispatch session classification token projection](../../decisions/TDR-0010-dispatch-session-classification-token-projection.md)
 - [ADR-0008 — Harness adapter contract](../../decisions/ADR-0008-harness-adapter-contract.md)
 - [TDR-0016 — Additive harness streaming spawn seam](../../decisions/TDR-0016-harness-streaming-spawn-seam.md)
+- [TDR-0026 — Queue lifecycle removal and single-flight](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md)
+- [TDR-0027 — Command failure envelope detail slot](../../decisions/TDR-0027-command-failure-envelope-detail-slot.md)
 
-**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), and `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result).
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail).

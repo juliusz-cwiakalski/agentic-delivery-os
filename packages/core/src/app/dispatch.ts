@@ -74,7 +74,13 @@ type DispatchToken = DeliveryResultToken;
 /** One lease claim outcome through the scheduling engine. */
 export type DispatchLeaseClaim =
   | { readonly ok: true; readonly leaseId: string }
-  | { readonly ok: false; readonly code: string; readonly summary?: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly summary?: string;
+      /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
+      readonly holder?: string;
+    };
 
 /** One cancellable cadence wait; the composition owns the timer. */
 export type DispatchCadenceWait = {
@@ -209,6 +215,8 @@ export type DispatchRunResult =
         readonly kind: "input" | "queue" | "state" | "harness" | "dispatch" | "provider" | "config";
         readonly code: string;
         readonly summary?: string;
+        /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
+        readonly holder?: string;
         /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
         readonly trustedRefusal?: true;
       };
@@ -489,6 +497,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         kind: "queue",
         code: claimed.code,
         ...(claimed.summary === undefined ? {} : { summary: claimed.summary }),
+        ...(claimed.holder === undefined ? {} : { holder: claimed.holder }),
       },
     };
   }

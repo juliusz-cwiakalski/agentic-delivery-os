@@ -34,16 +34,16 @@ describe("TC-EVT-012 describe queue.graph text", () => {
     expect(run.stdout).toContain("parent=queue");
   });
 
-  test("renders each kind with its emitted state; remove alone is not emitted", async () => {
+  test("renders each kind with its emitted state; no kind is unemitted", async () => {
     const run = await probe.run(["events", "describe", "queue.graph"]);
     for (const kind of ["entry", "dependency-edge", "release", "remove"]) {
       expect(run.stdout).toContain(kind);
+      expect(run.stdout).toContain(`${kind}  emitted`);
     }
     const notEmitted = run.stdout
       .split("\n")
       .filter((line) => line.includes("not emitted (declared; no v1 producer)"));
-    expect(notEmitted).toHaveLength(1);
-    expect(notEmitted[0]).toContain("remove");
+    expect(notEmitted).toEqual([]);
   });
 
   test("renders every per-kind payload list verbatim, with no park or truncation field", async () => {
@@ -123,7 +123,7 @@ describe("TC-EVT-013 describe --json adds nothing to the machine shape", () => {
 });
 
 describe("TC-EVT-016 queue.graph per-kind payload detail", () => {
-  test("every kind carries its declared non-empty payload list and only remove is unemitted", async () => {
+  test("every kind carries its declared non-empty payload list and none is unemitted", async () => {
     const run = await probe.run(["events", "describe", "queue.graph", "--json"]);
     const record = run.data?.topics[0];
     expect(record?.kinds).toHaveLength(4);
@@ -131,7 +131,7 @@ describe("TC-EVT-016 queue.graph per-kind payload detail", () => {
     const unemitted = (record?.kinds ?? [])
       .filter((kind) => !kind.emitted)
       .map((kind) => kind.name);
-    expect(unemitted).toEqual(["remove"]);
+    expect(unemitted).toEqual([]);
   });
 
   test("the topic union is the first-seen union of the four lists", async () => {
@@ -163,10 +163,10 @@ describe("TC-EVT-016 queue.graph per-kind payload detail", () => {
     }
   });
 
-  test("remove's reason vocabulary is the S15 set and no v1 path emits it", async () => {
+  test("remove's declared payload is exactly ref, reason, recordedAt and it is emitted", async () => {
     const run = await probe.run(["events", "describe", "queue.graph", "--json"]);
     const remove = run.data?.topics[0]?.kinds.find((kind) => kind.name === "remove");
-    expect(remove?.emitted).toBe(false);
+    expect(remove?.emitted).toBe(true);
     expect(remove?.payloadFields).toEqual(["ref", "reason", "recordedAt"]);
   });
 });

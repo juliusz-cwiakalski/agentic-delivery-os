@@ -77,6 +77,7 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
+  dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   foldDispatchHandover,
   type HandoverEvidence,
@@ -110,9 +111,9 @@ import {
   resolveOwnerHoldFact,
   resolveProjectScope,
   selectDaemonReachability,
-  stateScopeEnvironmentName,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  stateScopeEnvironmentName,
   stateScopeRoots,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
@@ -121,7 +122,6 @@ import {
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
   type ConfigValue,
-  type QueueDegradationReason,
   type CoordinatorProgressState,
   type CredentialPort,
   type CredentialReference,
@@ -150,6 +150,8 @@ import {
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
   type ProjectsListEntry,
+  type QueueDegradationReason,
+  type QueueTrackerRead,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type SupervisorPort,
@@ -930,6 +932,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       degraded: daemonReachability,
       readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
       readOwnerHold,
+      // GH-292 F-5: the per-item tracker delivery-state read for `queue
+      // reconcile`, riding the same verified GitHub client the closeout
+      // composition reads with. No ambient credential read: the client uses
+      // the already-injected declared credential port. `provider.not-found`
+      // is a truthful observation (the item is retained and reported
+      // unobserved); an unavailable read surfaces its provider identity and
+      // the sweep stops.
+      readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
+        const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
+        if (issueNumber === undefined) {
+          return { ok: false, failureCode: "provider.payload.invalid" };
+        }
+        const observation = await client.readWorkItemObservation(issueNumber);
+        if (observation.observation === "observed") {
+          return { ok: true, kind: "state", deliveryState: observation.value.status.deliveryState };
+        }
+        if (observation.observation === "not-found") {
+          return { ok: true, kind: "not-found" };
+        }
+        return {
+          ok: false,
+          failureCode:
+            observation.observation === "invalid" && observation.code !== undefined
+              ? observation.code
+              : "provider.outage",
+        };
+      },
     };
 
     const gates = createVerifyGatesCommandRuntime({
@@ -960,6 +989,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       git: gitBranches,
       store,
       nowIso,
+      nowMs,
       newFenceToken,
     });
 
@@ -1562,6 +1592,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               hold.reason === undefined
                 ? `reason=owner-hold; owner hold active (${hold.source})`
                 : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`,
+          };
+        }
+        // GH-292 F-4: the dispatch family's ONE admission predicate, before the
+        // claim, spawn, resume, attempt, or record. The dispatch path claims
+        // with the fixed holder `dispatch` and never renews, so any live
+        // same-ref lease is a running dispatch.
+        const refused = dispatchAdmissionRefusal(store, { ref, nowMs: nowMs() });
+        if (refused !== undefined) {
+          return {
+            ok: false,
+            code: refused.code,
+            ...(refused.summary === undefined ? {} : { summary: refused.summary }),
+            ...(refused.holder === undefined ? {} : { holder: refused.holder }),
           };
         }
         const claimed = claimQueueLease(store, {

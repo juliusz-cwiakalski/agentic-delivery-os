@@ -148,6 +148,14 @@ export type ProductionQueueHarnessOptions = {
   readonly originUrl?: string;
   /** Re-open an existing home/state root (replay and ledger reads). */
   readonly home?: string;
+  /**
+   * Programmable `/issues/<id>` answer for the reconcile read bridge (GH-292
+   * TC-QLC-083). Absent keeps the delivered default: one 200 open issue.
+   */
+  readonly issueAnswer?: (issueNumber: string) => {
+    readonly status: number;
+    readonly body: Record<string, unknown>;
+  };
 };
 
 const resolvingCredentials: CredentialPort = {
@@ -213,12 +221,18 @@ export const createProductionQueueHarness = (
       send: async (request) => {
         transportCalls.push({ url: request.url, method: request.method });
         // The admission preflight performs one bounded work-item read; the queue
-        // add path itself never reaches the provider.
+        // add path itself never reaches the provider. The reconcile read bridge
+        // (GH-292) reads the same per-issue endpoint through the same client.
         if (request.url.includes("/issues/")) {
-          return {
-            status: 200,
-            body: { number: 1, title: "Queue fixture", state: "open", labels: [] },
-          };
+          if (options.issueAnswer === undefined) {
+            return {
+              status: 200,
+              body: { number: 1, title: "Queue fixture", state: "open", labels: [] },
+            };
+          }
+          const asked = /\/issues\/([^/?]+)(\/|$)/.exec(request.url)?.[1];
+          const answer = options.issueAnswer(asked === undefined ? "" : decodeURIComponent(asked));
+          return { status: answer.status, body: answer.body };
         }
         throw new Error("the queue path must not call the provider transport");
       },

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "result": "removed",
+    "checked": 4,
+    "removed": [
+      {
+        "ref": "GH-241",
+        "reason": "reconciled"
+      },
+      {
+        "ref": "GH-245",
+        "reason": "reconciled"
+      }
+    ],
+    "retained": [
+      {
+        "ref": "GH-243",
+        "deliveryState": "ready"
+      }
+    ],
+    "unobserved": [
+      "GH-244"
+    ],
+    "readySet": [],
+    "truncated": false,
+    "remainder": 0,
+    "degraded": [
+      "daemon-unreachable"
+    ]
+  }
+}

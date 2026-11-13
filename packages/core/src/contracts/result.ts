@@ -42,6 +42,24 @@ export type CommandResultError = {
   readonly summary?: string;
 };
 
+/**
+ * The single-line bound for a failure-envelope `detail` member (TDR-0027,
+ * NFR-6): identifiers only, never truncated — a value that cannot fit is a
+ * contract failure, not a silent clip.
+ */
+export const COMMAND_FAILURE_DETAIL_MAX_CHARS = 128 as const;
+
+/**
+ * The closed failure-envelope `detail` contract (TDR-0027 ALT-3): one
+ * command-declared, optional member at the failure-envelope root. `holder`
+ * names the live lease's holder identity on a `queue.single-flight` refusal.
+ * A future member is a declared addition with its own bound and test; this
+ * never becomes an open key-value map.
+ */
+export type CommandResultDetail = {
+  readonly holder?: string;
+};
+
 /** An explicit empty success payload for void successes (D7). */
 export type VoidSuccessPayload = Record<string, never>;
 
@@ -54,13 +72,18 @@ export type CommandResultSuccess<TData = unknown> = {
   readonly data: TData;
 };
 
-/** Failure envelope: `error` is present and `data` is absent by construction. */
+/**
+ * Failure envelope: `error` is present and `data` is absent by construction.
+ * `detail` is the additive optional, command-declared evidence member
+ * (TDR-0027); a command that does not opt in carries no `detail` key.
+ */
 export type CommandResultFailure = {
   readonly schemaVersion: typeof RESULT_SCHEMA_VERSION;
   readonly runId: string;
   readonly exitCode: number;
   readonly timing: RunTiming;
   readonly error: CommandResultError;
+  readonly detail?: CommandResultDetail;
 };
 
 /**

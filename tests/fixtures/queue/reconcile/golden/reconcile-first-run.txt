@@ -1,0 +1,1 @@
+result=removed; checked=4; removed=2; retained=1; ready=0; degraded=daemon-unreachable

@@ -4,7 +4,9 @@
     "queue.lease-conflict",
     "queue.park-condition-stuck",
     "queue.entry.unobserved",
-    "queue.precondition.unmet"
+    "queue.precondition.unmet",
+    "queue.reason-missing",
+    "queue.single-flight"
   ],
   "collectorIds": ["tracker", "lanes"],
   "collectorFamily": {

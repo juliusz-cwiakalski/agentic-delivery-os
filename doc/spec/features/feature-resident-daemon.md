@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v1 (two snapshot topics, four event topics, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold guarantee, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v1 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292"]
   related_decisions: ["TDR-0025"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -183,8 +183,9 @@ detects and answers with a repoll. The `cursor` appears on no event frame.
 The declared kind sets are `queue.graph` = `entry`, `dependency-edge`, `release`,
 `remove`; `dispatch.attempt` = `started`, `refused`, `completed`; `phase.state` =
 `began`, `completed`, `reopened`; `blockers.state` = `published`, `updated`,
-`cleared`. `queue.graph.remove` is declared and not emitted in v1
-(`emitted: false`): no delivered path removes a queue entry. `phase.state.began`
+`cleared`. Every declared kind has a producer: `queue.graph.remove` is emitted
+from the `queue.removal` ledger, one event per applied removal with exactly
+`ref`, `reason`, and `recordedAt`. `phase.state.began`
 is derived from a phase's first completion, because no begin record exists. A
 `dependency-edge` publishes only when its folded edge set differs, and its
 payload carries `added`/`removed`. Subscribing to an event topic produces no
@@ -266,9 +267,13 @@ producer, not a production daemon that launches lanes.
 A supervision cycle that derives its next-action seam from a held scheduling
 pass receives no action, and a claim port that supplies the resolved owner-hold
 fact refuses `queue.precondition.unmet` with reason `owner-hold` before the
-fence. The guarantee is conditional on that composition: the production daemon
-composition supplies no lane composition and resolves no owner-hold fact, so the
-resident-daemon residual is unchanged.
+fence. A composed supervision claim that belongs to the dispatch family also
+inherits that family's per-ref admission predicate: a live lease that already
+records the action's ref refuses `queue.single-flight` with the live holder on
+the cycle result, no session starts, and no lease, lane, attempt, or queue record
+is appended. The guarantee is conditional on that composition: the production
+daemon composition supplies no lane composition and resolves no owner-hold fact,
+so the resident-daemon residual is unchanged.
 
 The daemon path hands the same observation and collection evidence to
 `recordDaemonDispatchResult`, which derives the outcome and token through the

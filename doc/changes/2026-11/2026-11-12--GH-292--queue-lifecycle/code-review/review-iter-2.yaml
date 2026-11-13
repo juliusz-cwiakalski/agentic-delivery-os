@@ -1,0 +1,135 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-292
+branch: feat/GH-292/queue-lifecycle
+status: PASS
+summary: >-
+  Iteration-2 re-review after plan Phase 10 remediation (commits 7bc93867 +
+  498c1e24): iteration-1 F-1 (high) and F-2 (medium) are closed with code,
+  test, and spec evidence; F-3/F-4 are closed; no assertion was weakened, the
+  F-4 precedence table and seven-row queue error kind are intact
+  (error-table-sync 129/129 OK), append-only discipline holds, and spec v1.3
+  changed only the NFR-3 row, the F-5 composition-precondition sentence, and
+  the history row, with both owning feature pages matching. Empirical gates
+  run in this review: 78 tests pass / 0 fail across 15 files (the six
+  commissioned suites incl. the three new stale-lease cells and the untouched
+  lease-conflict/takeover/single-flight controls; the closeout suites incl.
+  the reverted fixtures and the counting-store pins; the live-skip and
+  removal-invariant suites) plus error-table-sync OK. One low finding (stale
+  "≤1 read" wording in the test plan's NFR-3 row and TC-QLC-082 step 2) and
+  three informational findings remain; none blocks. Before the review began,
+  the artifact tree was repaired per PM instruction: the mis-nested
+  concurrent-PASS duplicate was moved to review-iter-1-pre-remediation.yaml
+  (.md alongside), the governing iteration-1 FAIL record was restored verbatim
+  as review-iter-1.yaml, and a SECOND concurrent-duplicate write that landed
+  mid-review (its own review-iter-2.* at 06:04–06:06 local) was preserved
+  undeleted at review-iter-2-concurrent-run.* — see IT2-F-4.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: IT2-F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-test-plan.md:164
+    message: >-
+      [L | owner: PM or @spec-writer, rides the PR] The test plan still states
+      the superseded NFR-3 read observable in two places: the §3.3 NFR matrix
+      row ("≤1 read when no entry", line 164) and §5.2 TC-QLC-082 step 2 ("the
+      no-entry case adds at most one read", line 1689). Spec v1.3 and the
+      delivered counting-store pin now state exactly 2 whole-store reads for
+      the no-entry closeout path, so the change-folder traceability record
+      quotes a budget the delivered battery disproves. No code or spec impact;
+      the spec governs and the pin is two-sided.
+    suggestion: >-
+      Update the two test-plan lines to the v1.3 observable (exactly 2
+      whole-store reads on the no-entry path, as pinned by TC-QLC-082), or
+      record the wording as superseded by spec v1.3 in one pm-notes sentence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: IT2-F-2
+    severity: info
+    confidence: high
+    category: testing
+    location: packages/cli/src/edge.ts:4703
+    message: >-
+      [I | owner: plan Phase 10, optional] The unwired-tracker-port composition
+      refusal is now documented in spec §5.1 F-5 (queue.precondition.unmet,
+      blocking reason tracker-read-unavailable, distinct from provider-side
+      identities), closing iteration-1 F-3 via the documentation path. The
+      identity remains unpinned by any test cell; unreachable in production
+      compositions, which always wire the port.
+    suggestion: >-
+      Optional: add one cell refusing reconcile over a composition built
+      without readTrackerDeliveryState so the documented identity is pinned
+      like its siblings.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: IT2-F-3
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-plan.yaml:1456
+    message: >-
+      [I | owner: PM, record exists] Phase-10 scope.files lists the two
+      queue.ts-family files, the four test files, and the three doc files, but
+      not packages/cli/src/edge.ts nor the two reverted fixtures
+      (closeout-composition-facts.test.ts, closeout-integration.test.ts) that
+      the optional F-4 cleanup touched. The deviation is disclosed in the
+      phase-10 pm-notes entry as extended by explicit PM instruction, and the
+      plan goal text names the F-4 cleanup, so the escalation record the plan's
+      own contract demands exists. Net boundary effect is positive: the
+      fixture reverts restore the delivered fixtures to untouched.
+    suggestion: >-
+      No action required; the disclosure is the remediation. On a future
+      remediation phase, include optional-cleanup files in scope.files when
+      the goal names them.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: IT2-F-4
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/code-review/review-iter-2-concurrent-run.yaml:1
+    message: >-
+      [I | owner: PM] The concurrent duplicate review session that produced
+      the iteration-1 PASS duplicate struck again during this iteration,
+      writing its own review-iter-2.yaml/.md at 06:04–06:06 local while this
+      commissioned review was running. Its content was preserved undeleted at
+      review-iter-2-concurrent-run.yaml/.md (same verdict family: PASS); this
+      commissioned record occupies the canonical review-iter-2.yaml slot.
+      Related: the phase-10 pm-notes sentence saying the code-review files
+      "hold the earlier lifecycle PASS verdict" is now historical — after this
+      iteration's repair, review-iter-1.yaml is the governing FAIL record and
+      the PASS duplicates live at review-iter-1-pre-remediation.*.
+    suggestion: >-
+      Terminate or absorb the duplicate reviewer session before the next
+      lifecycle command so it cannot overwrite a governing record again, and
+      optionally add one pm-notes sentence at closeout noting the artifact
+      repair (pre-remediation duplicates archived; FAIL iter-1 restored;
+      concurrent iter-2 preserved).
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-13T05:06:48Z
+next_step: PROCEED
+plan_gaps: NONE
+test_coverage_gaps: >-
+  None blocking. The three previously missing stale-lease removal cells are
+  delivered and two-sided (explicit verb: live at TTL−1ms refuses with zero
+  appends, at the inclusive TTL removes, lease not released; closeout apply:
+  removes over a heartbeat-aged lease with the removal record verified;
+  reconcile: removes over a stale lease with folded absence proven). The
+  delivered lease-conflict/takeover/single-flight controls ran green with zero
+  assertion change. Residual optional cell: the tracker-read-unavailable
+  composition refusal remains unpinned (IT2-F-2).

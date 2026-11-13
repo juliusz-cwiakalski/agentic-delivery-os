@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "ref": "GH-241",
+    "result": "removed",
+    "reason": "abandoned",
+    "readySet": [],
+    "event": {
+      "topic": "queue.graph",
+      "kind": "remove"
+    },
+    "degraded": [
+      "daemon-unreachable"
+    ]
+  }
+}

@@ -1,0 +1,752 @@
+change_id: GH-292
+title: "feat(queue): queue lifecycle completion — reason-bearing removal,
+  auto-release after closeout, dependency edges, per-ref single-flight, and
+  stale reconciliation (M2-S15)"
+delivery_mode: autonomous
+milestone: "M2"
+story_code: "M2-S15"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-12T10:04:37.756Z }
+  specification: { started: null, completed: 2026-11-12T12:03:05.675Z }
+  test_planning: { started: null, completed: 2026-11-12T12:03:18.161Z }
+  delivery_planning: { started: null, completed: 2026-11-12T12:03:30.273Z }
+  dor_check: { started: null, completed: 2026-11-12T12:12:44.802Z }
+  delivery: { started: null, completed: 2026-11-13T04:02:02.092Z }
+  system_spec_update: { started: null, completed: 2026-11-13T04:18:38.279Z }
+  review_fix: { started: null, completed: 2026-11-13T05:09:23.648Z }
+  quality_gates: { started: null, completed: 2026-11-13T07:18:31.416Z }
+  dod_check: { started: null, completed: 2026-11-13T07:22:59.422Z }
+  pr_creation: { started: null, completed: 2026-11-13T07:31:28.948Z }
+decisions:
+  - text: >-
+      Scope authority for this change is the M2 planning pack (ticket M2-S15,
+      `doc/planning/oss-tooling/backlog.md` §M2-S15,
+      `milestones/m2/contracts.md` §Queue lifecycle mutations,
+      `milestones/m2/commands/queue.md`, `milestones/m2/architecture.md` §Queue
+      auto-release / §Single-flight / §Persistence and concurrency deltas,
+      `milestones/m2/test-scenarios.md` SC-M2-S15-01..04). The change delivers
+      five behaviours: reason-bearing `queue remove`; automatic `landed` removal
+      from `closeout --apply`; `queue dep add` / `dep remove` with the delivered
+      two-positional add preserved; per-ref single-flight across dispatch paths
+      with `queue.single-flight` naming the holder; and `queue reconcile`
+      against tracker truth with reason `reconciled`. `queue release` keeps its
+      delivered lease-release meaning and never removes an entry. No scope is
+      added beyond these five behaviours.
+    date: "2026-11-12"
+  - text: >-
+      Error identities are unique rows, so the change adds exactly two
+      identities — `queue.reason-missing` (removal without a reason, exit 1) and
+      `queue.single-flight` (second dispatch/claim against a ref with an active
+      lane, naming the holder, exit 1) — and reuses the delivered
+      `queue.entry.unobserved` for an unknown ref instead of adding the M2
+      queue(1) page's `queue.entry-unknown` synonym. Delivered `state.*`
+      identities cover unreadable state; the page's `queue.state-unavailable` is
+      not added. The M2 `commands/queue.md` page is reconciled to the delivered
+      identity names during the change rather than carrying a duplicate
+      identity.
+    date: "2026-11-12"
+  - text: >-
+      Single-flight is enforced at dispatch admission, not by widening the lease
+      scope: the delivered lease stays repository-exclusive (one lane per
+      repository, per the scheduling-engine spec) and the refusal is a separate
+      per-ref guard that reads active lane/lease truth and names the holder.
+      This matches the M2 evidence (a dual-run observed a second concurrent
+      session on one ref) without rewriting the delivered lease contract.
+    date: "2026-11-12"
+  - text: >-
+      Entry removal is append-only state truth: a removal record (with the
+      reason and `landed`/`abandoned`/`superseded`/`reconciled` vocabulary)
+      lands in the queue ledger and the fold drops the entry; no state file is
+      edited or deleted by hand, and the derived graph document is replaced
+      atomically only when intent truth changes. Automatic removal runs inside
+      `closeout --apply` after the closeout writes succeed, because the merge
+      itself is outside this tool's write surface.
+    date: "2026-11-12"
+  - text: >-
+      Spec OQ-1 decided (adopts spec DEC-9): `queue remove` refuses while the
+      ref's lane lease is live, naming the holder, and removes nothing; the
+      operator runs the delivered `queue release` first. Removal never releases
+      a lease, so it cannot retire an entry whose session is still writing.
+      "Abandoned mid-run" is handled by release-then-remove, two explicit acts.
+    date: "2026-11-12"
+  - text: >-
+      Spec OQ-2 decided (adopts spec DEC-10): removal is allowed while another
+      entry still depends on the removed ref; the dependent is held with the
+      delivered `dependency-unobserved` blocking reason and `dep remove` is the
+      supported remedy. No cascade, no edge rewrite, no new refusal identity.
+    date: "2026-11-12"
+  - text: >-
+      Spec DEC-13 accepted into scope: same-holder lease renewal is narrowed to
+      the same (repository, ref, holder); a same-holder claim for another ref
+      refuses the delivered `queue.lease-conflict`. The delivered renewal
+      rewrites the lease's ref, which breaks repository exclusivity and makes
+      the per-ref guard bypassable, so the narrowing is required for AC-F4 and
+      is a defect fix, not new scope.
+    date: "2026-11-12"
+  - text: >-
+      DoR R-01 policy decided (single-flight vs renewal): the guard is
+      path-specific and holder-aware. Dispatch admission refuses on any live
+      lease whose recorded ref is the requested ref — same or different holder —
+      because the dispatch path claims with the fixed holder `dispatch` and
+      never renews mid-flight, so a live same-ref lease is a second dispatch (a
+      stale lease still takes over). `queue claim` keeps the delivered renewal:
+      a live same-ref lease under the caller's own holder renews, a live
+      same-ref lease under another holder refuses `queue.single-flight` naming
+      the holder, and a live lease on another ref refuses `queue.lease-conflict`
+      (repository exclusivity with renewal narrowed to `(repository, ref,
+      holder)`). This is the only reading that satisfies AC-F4-1, AC-F4-2,
+      AC-F4-5 and keeps the delivered `queue-lease` controls green.
+    date: "2026-11-12"
+  - text: >-
+      DoR R-03 path decided: the additive optional failure `detail` object sits
+      at the envelope root (`detail.holder`), not inside the six-field
+      `CommandResultError` (`error.detail`). Root placement keeps the shared
+      error object's exact key set and the delivered type probe intact; the
+      spec's DM-7/AC-F4-1/AC-F4-2/glossary and the M2 page are reconciled to
+      `detail.holder`. TDR-0027 records the decision; its index row is withheld
+      until the phase that stages the record.
+    date: "2026-11-12"
+  - text: >-
+      DoR R-05 decided: the five delivered queue error rows stay byte-identical.
+      No `queue.precondition.unmet` prose is generalized; the removal-specific
+      `lease-held` reason stays in the bounded summary/detail text of the
+      refusal. TDR-0026's DC-6 prose-rewrite permission is withdrawn and its
+      unresolved questions are closed as resolved.
+    date: "2026-11-12"
+open_questions: []
+blockers: []
+notes:
+  - text: >-
+      Plan phase 7 complete (commit 4d6e6dc1): cross-cutting conformance and NFR
+      battery plus the fixture corpus. Audit first: phases 1-6 already proved
+      the fenced mutation truth (P1 seams), refusal purity + guard read cost
+      (P2), closeout outcome identity + <=1 fold/2 appends (P3), bounded
+      reconcile output + read budget + goldens (P6), and TC-QLC-075's suite set
+      (error-table-sync both ways since P1; exit-code-literals is a delivered
+      control), so this phase delivered only the four missing declared suites:
+      `queue-remove-atomicity.test.ts` (TC-QLC-080: one fence, verified appends,
+      replace-last at the core seams for removal and dep removal; closeout
+      fence-sharing with zero second acquisition; reconcile removals one
+      fence+one append each; a dropped append caught by post-append verification
+      with zero replaces and a byte-identical ledger; an armed
+      append-before-flush failure leaves `state.write.failed` with the ledger at
+      its pre-run digest and the fold intact; the CLI classifies the state
+      failure at exit 2 with no data and no event disclosure),
+      `queue-lifecycle-convergence.test.ts` (TC-QLC-086: all three retirement
+      paths converge — closeout repeat `satisfied` with zero appends, repeated
+      absent-edge `dep remove` noop with zero appends/events, repeated reconcile
+      `checked` 1 with empty `removed[]` and no already-removed ref re-reported,
+      first-run records and the derived document byte-identical),
+      `queue-lifecycle-privacy.test.ts` (TC-QLC-084: removal payload keys exact
+      and the projected event exactly `ref,reason,recordedAt`; reconcile lists
+      bounded and identifier/count/timestamp only with the declared port
+      receiving refs only and no ambient-echo; `detail.holder` a single
+      <=128-char identifier at the envelope root while the error keeps exactly
+      its six fields and `error.detail` absent; command-line tokens refused as
+      grammar and never echoed; records and the derived document carry no
+      repository content — bounded-pattern scan per GAP-T5),
+      `queue-additivity.test.ts` (TC-QLC-085: zero packages/globs/adapters/dep
+      changes, `STATE_SCHEMA_VERSION` unchanged, record kinds 5 -> 6 and error
+      rows 5 -> 7 exact and two-sided against the record-kinds, references, and
+      state-additivity-baseline fixtures with all 19 queue constants at live
+      values, and the queue command export surface exact). The fixture corpus
+      closed its one open gap: `biome.json` (outside declared scope.files;
+      disclosed scope drift, same remedy pattern as Phase 6) gained the
+      formatter-disabled override for `tests/fixtures/queue/removal/golden/*` so
+      the byte-exact golden stays runtime-identical and `remove-success.json` no
+      longer fails the format scan. Gates: typecheck exit 0 (all packages +
+      tests config Done); the four new suites 23 pass / 0 fail; plan gate pairs
+      — atomicity + convergence 10 pass, privacy + exit-code-literals +
+      queue-bounds 28 pass, queue-additivity + event-additivity-inventory 14
+      pass; boundaries 149 pass; error-table structure + sync suites 188 pass;
+      `error-table-sync` check OK at 129/129 both directions; forbidden-literals
+      exit 0; ambient-globals OK (181 files); content-inventory 6 pass (no
+      inventory change — no new modules); golden controls (queue-remove,
+      queue-reconcile) 7 pass; delivered harness-owner controls (remove,
+      dep-remove, reconcile, closeout) 12 pass. Disclosed deviations: (1) `biome
+      format .` still reports 13 DELIVERED files (committed in phases 1/5/6 —
+      e.g. queue-remove.test.ts, queue-dep-grammar.test.ts,
+      v1-contract-inventory.json) as not formatter-stable; verified pre-existing
+      on their HEAD blobs, outside this phase's declared scope, and left for the
+      quality_gates phase whose full `pnpm check` battery owns the format
+      verdict (reformatting them here would be un-declared drift); (2) CLI-level
+      fence-count deltas include the delivered park-recovery pass (one fence
+      even with no stale park, zero appends) — asserted exactly, not treated as
+      a mutation; (3) the closeout convergence repeat drives the
+      `queueRemovalForCloseout` hook under one fence over the same store rather
+      than a second full `runCloseout` transaction — the full-apply outcome
+      identity is Phase 3's proven control and the repeat proves the hook's
+      zero-append convergence; (4) AC-NFR-4's minutes-scale cap proof ran in
+      Phase 6 (declared 600s budget) and re-runs in the Phase 9 full battery;
+      this phase re-proves one-ref-only-read observation through the port call
+      log.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 6 complete (commit 0bd61db0): CLI surface — `queue reconcile
+      [--ref <ref>]` mounted against tracker delivery state. The core sweep
+      reads every examined entry (exactly one bounded tracker read each,
+      sequential, no retry, none past the 100-entry cap) before the first
+      removal, removes only `done`/`canceled` with reason `reconciled` through
+      the ordinary F-1 seam (park withdrawal, one append, one
+      `queue.graph/remove` per ref), retains every open state with its observed
+      alias, retains a not-found item as `unobserved`, converges truthfully on a
+      repeat run (`checked` counts only still-existing entries; zero
+      appends/events), fails closed on the provider's own identity
+      (`provider.outage`/`provider.quota.exceeded` at exit 2,
+      `provider.auth.rejected` at exit 1, no `queue.*` synonym, zero appends),
+      and the payload is exactly the nine declared keys with bounded,
+      identifier-only values. The read rides the existing verified read bridge
+      in `edge.ts` (`readTrackerDeliveryState`) wired by `production.ts` over
+      the closeout client's per-issue observation (no new adapter operation, no
+      ambient credential read, no `status` list read); help gained the family
+      synopsis `reconcile` entry, the verb help path with `--ref`, and the
+      AC-F7-1 four-spellings proof; TC-QLC-058's golden layer landed
+      (`tests/golden/queue-reconcile.test.ts`, three committed goldens,
+      committed `regenerate.ts` writer). Gates: typecheck 12/12 Done; the seven
+      reconcile behaviour suites 14 pass / 0 fail; the TC-QLC-056 cap proof (105
+      entries, declared 600s budget) 1 pass in ~212s; the read-cost suite incl.
+      the TC-QLC-083 cap proof (declared 600s budget) 9 pass / 0 fail in ~189s;
+      reconcile goldens 3 pass; help lifecycle + hermetic 17 pass; structure
+      cli-edge-seam + content-inventory 34 pass; delivered remove/lease controls
+      47 pass; error-table-sync OK (129 entries); forbidden-literals,
+      secret-read-boundary (357 files), ambient-globals (181 files) all clean.
+      Disclosed deviations: (1) the core sweep was reworked to read-first — the
+      interrupted session's remove-as-you-go loop could append removals before a
+      mid-sweep unreadable read, violating F-5's no-partial-success rule
+      (AC-F5-4); the mid-sweep unreadable proof now asserts zero removals, a
+      byte-identical ledger, and the stale entry still present; (2) the
+      reconcile harness `seedLease` checked `.ok` on a Promise and always threw;
+      it is now the delivered synchronous claim, and the reconcile path gained
+      the missing live-lease refusal proof
+      (`queue.precondition.unmet`/`lease-held` with the holder named, zero
+      appends, `queue release` clears it); (3) the two production-bridge test
+      fixture issue bodies gained the `title` field `normalizeGithubIssue`
+      requires (titleless bodies decoded `invalid` and truthfully surfaced
+      `provider.outage`); the production mapping itself is unchanged; (4) the
+      two minutes-scale cap proofs declare 600_000 ms per-test budgets because
+      100 verified F-1 removals over the real store are inherently
+      minutes-scale; (5) `biome.json` sits outside the declared scope (flagged
+      scope-drift by the commit primitive): the byte-exact reconcile golden
+      fixtures carry the delivered formatter-disabled override pattern (seven
+      existing golden dirs) so committed bytes stay runtime-identical; and the
+      same scan exposed a pre-existing latent gap, committed in an earlier
+      phase: `tests/fixtures/queue/removal/golden/remove-success.json` is not
+      biome-stable under `biome format .` — left for the quality_gates phase
+      with the same one-line override as the remedy.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 5 complete (commit ce2b1da8): CLI surface — `queue remove` with
+      `--reason`, the explicit `dep add`/`dep remove` grammar over the delivered
+      two-positional add, and the corrected queue help family. The runtime
+      gained `remove`/`depRemove` over the Phase-1 core seams (recovery pass
+      first, one fence, verified appends), the payloads are exactly the declared
+      key sets (`ref,result,reason,readySet,event,degraded`; mutation keys plus
+      `readySet`/`event`), the human renderer gained the readySet branches
+      inside the delivered caps, and help gained the family `remove` entry, the
+      `queue remove` verb entry, and the rewritten `queue dep` entry (two-
+      positional synopsis, three spellings, no `--on`/`--dep` options). The
+      cli-edge-seam export pin moved two-sided (two new structural re-exports).
+      Gates: typecheck 7/7; removal suites 17 pass; dep suites 11 pass; help
+      lifecycle + entrypoint-help + golden 14 pass; delivered golden controls
+      (list/plan/ready/envelope/graph/cli/depend) 67 pass; hermetic+bounds 14
+      pass; prompt-conformance 5 clean. Disclosed deviations: (1) the `queue dep
+      add` result for an existing entry is the delivered `updated`
+      (mutateIntent's existed-entry semantics), not the test-plan §5.2's `added`
+      — AC-F3-1's spelling-equality is the pinned truth and both spellings
+      assert the same value; (2) `helpEntryFor` gained a longest- prefix
+      fallback so `queue dep add|remove --help` renders the one `queue dep`
+      entry at exit 0 (spec F-7 mounts no separate dep-spelling help path;
+      TC-QLC-070 step 2); (3) TC-QLC-011's pre-fence fence-count assertion is
+      proven at the handler-grammar refusal (zero fences) and the seam refusal
+      appends zero records with the delivered park-recovery pass as the only
+      fence movement (the recovery pass precedes every runtime mutation by
+      delivered design); (4) `queue ready` reads the delivered status facts, not
+      the queue fold, so its TC-QLC-001 cell asserts the fact-source truth
+      instead of fold absence.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 4 complete (commit 4f32d16a): queue.graph/remove emitted with
+      exactly the declared payload. Taxonomy `emitted: true` (non-emitted set
+      []), the projection's removal source family (one record -> one event, per
+      lane), all six pin sites moved two-sided (declaration, additive 12->13
+      with the once-observed inversion, conformance page pin, describe unemitted
+      [] + golden line `remove  emitted`, emitted-kinds runtime set with the
+      projection source-scan positive form, describe json pin), the case fixture
+      gained the durable removal record, and TC-QLC-065's exactly-once behaviour
+      is proven at the harness. Gates: typecheck 6/6; event family 70 pass / 0
+      fail; exports-parity OK. Disclosed: the describe golden fixture line moved
+      as the plan pins (delivered-document goldens are untouched).
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 3 complete (commit 35922bc2): closeout automatic landed
+      removal. `queueRemovalForCloseout` + `removeQueueEntryWithinFence` in core
+      (fence-sharing, no second acquisition), the additive non-step
+      `queueRemoval` block on `CloseoutData` with the closed outcome/skip
+      vocabularies, plan-mode `would-remove`, fail-open skips, satisfied
+      convergence. Gates: typecheck 6/6 Done; six new behaviour suites 12 pass;
+      delivered closeout controls (capsule-plan 12 steps, goldens,
+      attention-exit) green; full closeout family 26 pass / 0 fail. Disclosed:
+      the no-merge-truth and ref-not-canonical cells are proven at the wired
+      seam because the delivered apply closeout refuses without a merge before
+      any hook runs; the harness composes the hook exactly as production does.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 2 complete (commit 86b0429e): per-ref single-flight at
+      admission, the holder-naming refusal, and the narrowed same-holder
+      renewal. TDR-0027 staged with its 00-index row in the one commit; the
+      envelope-root `detail.holder` slot delivered through the CLI edge;
+      `dispatchAdmissionRefusal` (dispatch family, one whole-store read) and
+      `claimSingleFlightRefusal` (claim path) in core; renewal narrowed to
+      `(repository, ref, holder)`; the daemon claim port carries the holder.
+      Gates: typecheck 6/6 Done; envelope-detail pins 24 pass; single-flight
+      suites 21 pass; delivered controls (queue-lease, concurrency,
+      hold-dispatch) 27 pass with no assertion change; ambient-globals OK;
+      workspace-entrypoints OK; inventories 17 pass; full suite 7696 pass with
+      TC-RELEASE-001 failing as expected mid-delivery (packages/ committed, the
+      changeset lands in phase 9; PR-time gate). Disclosed deviations: the two
+      delivered CLI-level pins that asserted the old same-ref lease-conflict
+      truth (`queue-cli.test.ts` claim case; `golden/queue-lease-conflict`
+      scenario) moved two-sided to the F-4 table's single-flight truth — the
+      golden scenario now claims an other-ref lease and its committed bytes are
+      unchanged; `daemon-compose.ts` needed no edit (the production composition
+      stays supervise-only); `result-contract.test.ts` gained only the fixture
+      key-set type annotation.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 1 complete (commit 1a1d2254): contracts, fold, error rows,
+      record kinds, and the mutation truth. `queue.removal` declared
+      (`delivery.queue.removal.v1`, `queue.removals:<REF>`, closed four-value
+      reason vocabulary), `QUEUE_RECORD_DECLARATIONS` 5 -> 6, the DM-2
+      append-position presence rule in `foldQueueGraph` and every read,
+      `removeQueueEntry`/`removeQueueDependency` seams, two error rows
+      (`queue.reason-missing`, `queue.single-flight`), `QUEUE_ERROR_CODES` 5 ->
+      7, and the two guard-read spec pages reconciled. Gates: typecheck 6/6
+      packages Done; structure suites 125 pass / 0 fail; error-table-sync suite
+      96 pass / 0 fail; `error-table-sync` check OK at 129/129;
+      event-state-additivity 4 pass; exports-parity OK; ambient-globals OK;
+      inventories 17 pass / 0 fail; full `bun test` 7672 pass / 3 environmental
+      fails (TMPDIR cross-device, all green under `TMPDIR=$PWD/tmp/tmpdir`).
+      Deviation: `pnpm check` full battery deferred to phase 9 per plan.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Commit-ceremony deviation (disclosed): the delivered commit primitive's
+      CLI grammar rejects numeric plan-phase ids (`input.value.rejected`), and
+      `commit --phase delivery` would atomically complete the lifecycle
+      `delivery` phase, which this run reserves to the PM. Each plan phase is
+      therefore committed with one standalone `commit GH-292` invocation (one
+      commit per phase, no lifecycle write), and the two untracked decision
+      records are held in `./tmp/tmpdir/held/` out of the working tree during
+      every commit that must not land them — the same ceremony the pm-notes
+      retro records from the planning phases — so the plan-union scope can never
+      sweep a record into an out-of-order commit. TDR-0027 is restored (with its
+      index row) only for phase 2's commit; TDR-0026 only for phase 9's.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      Clarify-scope review covered the ticket (M2-S15, planned by #284), the M2
+      planning pack (backlog story, contracts.md §Queue lifecycle mutations,
+      commands/queue.md, architecture.md auto-release/single-flight/persistence
+      deltas, test-scenarios SC-M2-S15-01..04), and the delivered system
+      behaviour: `packages/cli/src/commands/queue.ts` (ready/list/plan/add/
+      prioritize/dep/claim/release, no remove/reconcile, `dep` add-only),
+      `packages/core/src/app/queue.ts` (append-only entry/dependency/lease/park/
+      incident ledgers, repo-exclusive lease claim/release),
+      `packages/core/src/app/dispatch.ts` + `dispatch-gate.ts` (dispatch
+      admission), `packages/cli/src/commands/closeout.ts` (no queue hook), the
+      event taxonomy (`queue.graph.remove` declared `emitted: false`), and the
+      error table's five delivered `queue.*` rows.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      No ticket-level ambiguity required a human stop: the M2 planning pack
+      disambiguates the ticket's "entry removal/release with reasons" wording by
+      keeping `release` as lease release and adding `remove` with a reason. The
+      one planning-page inconsistency found (the queue(1) page's
+      `queue.entry-unknown` / `queue.state-unavailable` names against the
+      delivered identity set) is resolved in `decisions` and reconciled as a
+      documentation edit, not a new duplicate identity.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Specification scoped and validated: 7 functional capabilities (removal,
+      automatic landed removal, dependency edges, per-ref single-flight,
+      reconcile, event publication, mount/help), 46 ACs (40 capability + 6 NFR)
+      after the AC-F5-9 revision, decision log DEC-1..DEC-15, two provisional
+      OQs resolved by PM, and the delivered-vs-new contract surface traced to
+      ticket AC and SC-M2-S15-01..04. Contract-shaping decisions (removal record
+      kind, single-flight guard, renewal narrowing, reconcile truth) are routed
+      to a TDR authored before delivery planning.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Decision record authored ahead of delivery planning:
+      `doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md` (status
+      Proposed, DC-1..DC-6 capturing the removal record kind, per-ref
+      single-flight at admission, narrowed same-holder renewal, non-cascading
+      removal with the live-lease refusal, tracker-delivery-state staleness, and
+      the two-new-identity rule). It is deliberately untracked for now: the
+      commit primitive stages untracked files only inside declared plan scope,
+      so the plan must declare the record and its `doc/decisions/00-index.md`
+      row in one phase and land them together. The index row was reverted from
+      the working tree to prevent a plan-absent commit from landing an index
+      entry that links to an absent record; the reviewer-facing row text is: "|
+      [TDR-0026](TDR-0026-queue-lifecycle-removal-single-flight.md) | TDR |
+      Queue Lifecycle Completion — Append-Only Removal Kind with Latest-Record
+      Presence, Admission-Time Per-Ref Single-Flight over Repository-Exclusive
+      Lease Truth, Narrowed Same-Holder Renewal, Non-Cascading Removal, and
+      Tracker-Delivery-State Staleness | Proposed | 2026-11-12 | Juliusz
+      Ćwiąkalski |".
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Test plan authored: 59 TCs (TC-QLC-001..086 block-structured), 46/46 AC
+      covered (after the AC-F5-9 revision) with no orphan TC and no untestable
+      AC. Two gaps raised instead of skipped: OQ-T1 (spec NFR-10 requires
+      repeated-reconcile convergence but no AC states it — AC-F5-9 added on spec
+      revision) and OQ-T5 (AC-F7-3 classes `queue.single-flight` as
+      user-validation while §5.1 F-7 prose called it transient; the prose was
+      corrected on spec revision). Both closed without a human stop.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Repository state at intake: `feat/GH-292/queue-lifecycle` existed at
+      main-tools tip aa64a226 with zero commits ahead, worktree clean, no remote
+      branch, no PR in any state, issue open with label `change`. This run
+      therefore starts the full 11-phase lifecycle from phase 1. The workspace
+      had no build output; `pnpm build` was run before the first lifecycle
+      command so the CLI entry could resolve workspace package subpaths.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Delivery plan authored and validated (`plan validate GH-292`
+      verdict=valid, readyForDevelopment=true): 9 phases, 139 declared file
+      entries, 46/46 ACs and 59/59 TCs each mapped exactly once. Phase 2 lands
+      the TDR-0027 command-failure-envelope-detail decision record and its index
+      row; phase 9 lands the untracked TDR-0026 plus the restored index row;
+      both are staged in one phase-mode commit each so no index row ever links
+      an absent record. The plan surfaced one contract decision the spec's DM-7
+      assumes but the delivered envelope type does not carry:
+      `error.detail.holder`. PM decided the additive optional command-declared
+      `detail` object sits at the envelope root (`detail.holder`), with the
+      shared six `CommandResultError` fields unchanged, bound to 128 single-line
+      identifier characters; the decision record TDR-0027 is authored before
+      delivery starts. Two extra two-sided pins the spec/test plan did not name
+      are declared: the dispatch-attempts taxonomy registry counts and the two
+      events baseline fixtures.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Test planning surfaced two upstream gaps, so `specification` and then
+      `test_planning` are reopened rather than carried to DoR: OQ-T1 (NFR-10
+      repeated-reconcile convergence has no AC — add AC-F5-9) and OQ-T5 (AC-F7-3
+      classes `queue.single-flight` as user-validation while the F-7 prose calls
+      it transient — prose is corrected to the AC; the identity is
+      user-validation, exit 1, and retryability after the lane ends does not
+      change the projection class).
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 1: NOT_READY with 10 blocking findings and 7 advisories
+      (`readiness-review/readiness-iter-1.md`). R-01 same-holder/same-ref
+      single-flight vs renewal contradiction; R-02 presence-rule comparator
+      undefined; R-03 `error.detail` decision unrecorded; R-04 incomplete pin
+      set (`events-emitted-kinds` source scan); R-05 TDR-0026 authorized
+      rewording a pinned row; R-06 falsified current-truth docs omitted
+      (`feature-state-layer` record kinds, M2 contracts/architecture,
+      result-contract line); R-07 closeout fixture undeclared; R-08 Phase-6 help
+      test undeclared; R-09 TDR-0027 index-row staging could land one-sided;
+      R-10 spec §10 contradicted DM-1. Advisories R-11..R-17. Reopened
+      `specification`, `test_planning`, and `delivery_planning` (never
+      `delivery`) and routed each finding to its owning author. The three policy
+      calls are recorded in `decisions`: path-specific single-flight (R-01),
+      envelope-root `detail.holder` (R-03), and the five delivered queue error
+      rows stay byte-identical (R-05).
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 1 remediation completed: spec v1.2 (path-specific
+      precedence, append-position presence rule, envelope-root `detail.holder`,
+      byte-identical delivered rows, doc-set completeness, §10 fix, DM-1
+      callerPrincipal, help shape, new §17.9 DoD, canonical pin-table citations
+      to test plan §7.1), test plan v1.2 (TC-QLC-041/044 aligned to the
+      precedence table, equal-`recordedAt` cells in TC-QLC-007/009, canonical
+      pin table: six remove-emission pins, three registry/baseline pins, two
+      count pins, one CLI export pin, golden rule), plan revised (Phase 2 DoD
+      precedence + settled TDR-0027 decision with the four envelope pins in
+      scope, Phase 3 closeout fixture, Phase 6 production seam + help test,
+      Phase 8 M2 contract/architecture pages, Phase 1 feature-state-layer in
+      plan, index-row discipline), TDR-0026 DC-1/DC-2/DC-3/DC-6 corrected with
+      zero unresolved questions, TDR-0027 settled note. `plan validate` and
+      `lint plan` both verdict=valid. The interrupted test-plan session's work
+      was verified complete against every requested edit before proceeding. The
+      two decision records were held out of the tree (`tmp/tmpdir/held/`) during
+      the specification/test_planning/delivery_planning completions so no phase
+      commit landed a record outside its declared phase, then restored
+      untracked.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Session-resume note: the first autonomous run died on a provider balance
+      error mid test-plan revision (after DoR iteration 1 NOT_READY); on resume
+      the worktree was inspected, the test-plan v1.2 edits were found complete
+      and verified finding-by-finding, and delivery continued on the same branch
+      without rework. Retro lesson: long-context author sessions are
+      balance-fragile; verifying artifact state after an interrupt beats
+      re-delegating from scratch.
+    type: "retro"
+    date: "2026-11-12"
+  - text: >-
+      DoR iteration 2: READY, all 10 facets pass, zero residual blocking
+      findings (`readiness-review/readiness-iter-2.md`). R-01..R-10 all closed
+      with independently verified evidence; `plan validate` re-run valid. Three
+      non-blocking advisories ride with their owners or the PR review: the
+      "caller principal every queue record carries" clause in TDR-0026 DC-1 and
+      spec §20 (spec-writer/decision-advisor), a stale plan-header pin
+      parenthetical (plan-writer), and test-plan §2 "(forthcoming)" plus
+      spec-history row ordering nits.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 8 complete (commit fe663c55): documentation reconciliation and
+      the planning corpus. All eight declared pages edited, no production
+      behaviour touched, and the two declared guard suites created:
+      `tests/checks/queue-reference-page.test.ts` (TC-QLC-071: the M1 page root
+      resolves through the coverage inventory and reports zero queue-family
+      failures; all ten verbs plus the three dependency forms in the synopsis;
+      the closed reason vocabulary; the refusal identities with the exit matrix
+      and the {0,1,2} bound; `detail.holder` at the envelope root with the
+      128-character bound and `error.detail` rejected; the per-ref single-flight
+      precedence table with the per-pass distinction, stale takeover, and
+      refusal purity; the reconcile contract bounded at 100 with fail-closed
+      provider identities; the closeout `queueRemoval` outcome/skip
+      vocabularies; release never described as removal) and
+      `tests/checks/m2-queue-page-reconciliation.test.ts` (TC-QLC-072: nine
+      sections resolve to non-empty spans; the three delivered identities named;
+      `queue.entry-unknown`/`queue.state-unavailable` absent anywhere; every
+      example envelope parses as `delivery.result.v1` with only {schemaVersion,
+      runId, exitCode, timing, data|error, detail} top-level keys and no
+      `ok`/`command` key at any depth; the single-flight example carries root
+      `detail.holder` and no `data`; `queue.graph/remove` spelled,
+      `queue.graph/removed` absent; reconcile keys and the 100-entry cap; the
+      closeout outcome/skip vocabularies; the dep grammar over the preserved
+      two-positional add). Page content: the M1 page gains the GH-292 shipped
+      contract (verbs, vocabulary, presence rule, closeout block, reconcile
+      contract, the nine-row precedence table, envelope-root holder, exit
+      matrix), per-verb lifecycle payloads, and the two new identities in
+      ERRORS; the M2 commands page is reconciled to delivered identities,
+      per-verb `data` payloads, and delivered-shape examples; the M2 contracts
+      page states `remove` as emitted with exactly `ref`, `reason`, `recordedAt`
+      and the append-position presence rule with the path-specific single-flight
+      policy; the M2 architecture page replaces the generic refusal prose with
+      the F-4 precedence (a refusal appends nothing and publishes no
+      `dispatch.attempt` event; the started event stays on the admitted path)
+      and places the `landed` removal after the closeout writes inside the held
+      fence naming the hook and the emitted `queue.graph/remove`; the registry
+      `queue` row names the three new semantic additions (Delivery M1-S17 /
+      Extended GH-292); status.md gains a dated M2-S15 snapshot superseding the
+      `emitted: false` attribution; backlog M2-S15 gains its `Ticket`/`Progress`
+      record in the M2-S13 shape; the glossary adds removal record, presence
+      rule, per-ref single-flight, reconcile, and holder lane, and the delivered
+      Single-flight entry now names the distinction. Gates: the two new suites
+      23 pass / 0 fail (180 assertions); coverage + parity + entrypoint-help
+      controls 11 pass; doc-conformance 11 pass; `help-guide-coverage` check OK
+      (exit 0); `forbidden-literals` exit 0; doc-distribution guard OK (83
+      in-scope docs, no drift, no new frontmatter needed — all edited pages keep
+      their existing markers); `pnpm typecheck` exit 0 (6 packages + tests
+      config, builds clean); biome check exit 0 on both new files. Deviations:
+      (1) the evidence note lands in a follow-up pm-notes commit because it
+      names the work commit's sha (the phases 1-7 pattern); (2) both suites
+      normalize whitespace before containment so a prose token never fails on a
+      line wrap — presence/absence semantics unchanged; (3) the M2 example
+      parser extracts the JSON portion after the `$` command line, matching the
+      page's existing example shape; (4) the M2 page keeps its S17/S18 planned
+      markers (`--park` S17 additions, `--project` S18) with the planned wording
+      made explicit; (5) the old dated M2-S13 status paragraph stays as a
+      historical record with the new snapshot explicitly superseding it.
+      Ceremony: TDR-0026 verified absent from the tree before committing (sole
+      copy `./tmp/tmpdir/held/`); lifecycle `delivery` stays OPEN — no `phase
+      complete` from this phase.
+    type: "info"
+    date: "2026-11-12"
+  - text: >-
+      Plan phase 9 complete (commit 741b0d2a): release. One lockstep minor
+      changeset (`.changeset/gh-292-queue-lifecycle-minor.md`, five
+      publishables, testkit excluded) naming the five delivered behaviours, the
+      emitted `remove` kind, the two new queue error identities, and the
+      disclosed same-holder different-ref renewal narrowing; TDR-0026 restored
+      to `doc/decisions/` byte-identical to the held copy and its index row
+      landed exactly between TDR-0025 and TDR-0027 in the same commit as the
+      record; format-only biome fixes across the delivered queue suites (import
+      collapse/argument reflow, no semantic edits) so `format:check` passes.
+      Battery results: `TMPDIR=$PWD/tmp/tmpdir pnpm check` end-to-end PASS with
+      7,830 pass / 4 skip / 0 fail across 1,009 files (two independent green
+      runs logged at `.ai/local/logs/gh292-phase9-pnpm-check-fix3.log` and
+      `gh292-phase9-pnpm-check-fix2.log` with `PNPM_CHECK_EXIT=0`), lint clean
+      (83 warnings / 0 errors), format:check clean, typecheck 12/12, depcruise
+      389 modules clean, ambient-globals/workspace-entrypoints/
+      secret-read-boundary clean, prompt-conformance 5/5, help-guide-coverage
+      all covered, exports-parity 5/5; `./scripts/lint-commit-range.sh --base
+      main-tools` PASS over the branch range; `bash
+      scripts/.tests/test-doc-distribution.sh` OK (83 in-scope docs);
+      `error-table-sync` OK (129 entries); `plan validate GH-292` verdict=valid.
+      Battery-caught fixes this phase (all two-sided, none weakened): TC-EVT-006
+      single-source scan admits the delivered `queue.graph/remove` producer
+      naming in `commands/queue.ts`; TC-PORT-001 ports-contract inventory
+      regenerated two-sided for the injected tracker-read seam; the ten
+      closeout-facts/command failures were resolved as fixture/harness truths
+      (expected-count moves to the delivered composition facts, worktree-harness
+      robustness, and a load-sensitive TC-WIRE-002 timeout ceiling) with the
+      production mapping unchanged. Disclosed environment noise, not code
+      failures: three transport/host interruptions and one `bun: not found`
+      (PATH lost across a host restart) required battery re-runs. All 9/9 plan
+      phases are now delivered and committed; lifecycle `delivery` remains OPEN
+      for the PM's `phase complete`.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review-fix iteration 1: FAIL with 1 high / 1 medium / 2 low / 3 info
+      (`code-review/review-iter-1.yaml`; plan_compliance PASS, spec_compliance
+      FAIL; the reviewer appended remediation Phase 10 to the plan and `plan
+      validate` remains verdict=valid). F-1 (high): every removal path refuses
+      `lease-held` on a STALE lease, contradicting spec F-1's
+      live-equals-below-TTL definition and the one-liveness principle —
+      remediation adopts the spec behaviour (apply the delivered `isLeaseStale`
+      predicate so a stale lease does not refuse) plus the three missing
+      stale-lease cells, never a silent spec amendment. F-2 (medium): NFR-3's
+      read budget is neither held nor pinned — `readQueueFold` scans the
+      removals ledger twice; remediation deduplicates the scan and pins the
+      delivered read observable with a counting-store assertion, reconciling
+      NFR-3/TC-QLC-082 wording via the spec owner. F-3 (low): document the
+      unwired-tracker-port composition refusal in spec F-5; F-4 (low): make
+      `nowMs` optional-with-default on `CloseoutCompositionOptions` and revert
+      the two delivered-fixture edits. F-5..F-7 are informational (flag
+      asymmetry, help prefix fallback, `queue ready` fact-source wording) — no
+      code; the F-7 wording rides the next spec revision.
+    type: "retro"
+    date: "2026-11-13"
+  - text: >-
+      Remediation phase 10 complete (commit
+      7bc93867fed4f017aa039483d0f2503c280e33a4): code-review iteration 1
+      remediation delivered on feat/GH-292/queue-lifecycle, executing the
+      PM-decided behavior-fix path — the spec governs, so no spec wording was
+      amended for F-1. F-1 (high): every removal lease check now applies the
+      delivered liveness predicate `isLeaseStale(held.heartbeatAgeMs,
+      held.ttlMs)` — in `removeQueueEntryWithinFence` (reconcile inherits
+      through the ordinary F-1 seam) and in the closeout hook
+      `queueRemovalForCloseout` pre-check — so a lease at or over its TTL no
+      longer refuses `queue remove`, no longer reports closeout skip
+      `lease-held`, and no longer retains a reconcile entry; a genuinely live
+      lease refuses exactly as delivered, and the delivered
+      takeover/release/renewal controls and the F-4 precedence table are
+      untouched (no assertion change). Three new two-sided cells: explicit verb
+      (live at TTL−1 ms refuses with zero appends, at the inclusive TTL bound
+      removes, the lease is not released) in
+      tests/behaviour/queue-remove-lease.test.ts; closeout apply removes over a
+      stale lease with the removal record verified (no `lease-held` skip) in
+      tests/behaviour/closeout-queue-removal-skips.test.ts; reconcile removes
+      over a stale lease in tests/behaviour/queue-reconcile-invariants.test.ts.
+      F-2 (medium): `readQueueFold` no longer rescans the removals ledger —
+      `readQueueEntriesAndRemovals` classifies the entry and removal ledgers
+      from one shared verified snapshot and the fold reuses the classified
+      removals; `readQueueEntries` keeps its exported signature. Counting-store
+      pins added in tests/behaviour/closeout-queue-removal-cost.test.ts: one
+      fold = 2 whole-store reads, no-entry closeout = 2, plan-with-entry = 3
+      (fold 2 + lease read 1), closeout apply-with-removal = 13 (hook fold 2 +
+      hook lease 1 + removal body 10); direct measurements with the same
+      counting wrapper over the real composition: explicit `removeQueueEntry` =
+      10, reconcile over one stale ref = 12 (fold 2 + removal 10). NFR-3's spec
+      row now states this delivered, pinned observable (≤1 fold / ≤2 appends
+      kept; exactly 2 whole-store reads per fold; exactly 2 reads on the
+      no-entry path, pinned by TC-QLC-082), document history row v1.3 added; no
+      acceptance criterion or other spec section changed. F-3 (low): spec §5.1
+      F-5 documents the unwired-tracker-port composition refusal
+      (`queue.precondition.unmet`, blocking reason `tracker-read-unavailable`)
+      as a composition precondition distinct from provider-side identities. F-4
+      (low): `CloseoutCompositionOptions.nowMs` is optional with the derived
+      default `() => Date.parse(nowIso())`, and the two delivered-fixture
+      `nowMs` additions from 741b0d2a are reverted so the delivered fixtures are
+      untouched again; both suites green. Feature pages state the same
+      stale-lease rule (doc/spec/features/feature-scheduling-engine.md removal
+      refusal set; doc/spec/features/feature-closeout.md when-it-runs and
+      fail-open bullets). Gates: `pnpm typecheck` OK (6 packages + tests
+      tsconfig); `bun run scripts/checks/error-table-sync.ts` OK (entries=129
+      documented=129 — the five delivered queue error rows byte-identical,
+      precedence table unchanged); targeted suites 105 pass / 0 fail / 0 skip
+      across 25 files (queue-remove + closeout-removal batch 9 files 32 pass;
+      lease + single-flight batch 10 files 48 pass; closeout-capsule + goldens
+      batch 6 files 25 pass); doc-conformance 11 pass / 0 fail; log at
+      .ai/local/logs/gh292-phase10-gate-batch1.log. Deviations: F-4 touches
+      packages/cli/src/edge.ts and reverts the two fixture test files — outside
+      plan phase-10 scope.files, extended by explicit PM instruction (the commit
+      primitive's scope-drift disclosure lists them); the
+      code-review/review-iter-1 files at the referenced path hold the earlier
+      lifecycle PASS verdict, so this phase's governing finding record is the
+      pm-notes retro plus plan phase 10; the full `pnpm check` battery was not
+      run in this phase per PM instruction — quality_gates owns it on the final
+      tree.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Review-fix iteration 2: PASS (`code-review/review-iter-2.yaml`). F-1
+      closed — all three removal paths gate on the delivered `isLeaseStale`
+      predicate (live lease still refuses `lease-held` naming the holder; stale
+      proceeds), three new two-sided stale-lease cells delivered, delivered
+      lease controls green with zero assertion change. F-2 closed — the
+      duplicate removals scan is gone (`readQueueEntriesAndRemovals` classifies
+      both ledgers from one shared snapshot) and NFR-3 is pinned two-sided to
+      the measured observable (fold=2, no-entry closeout=2, apply=13, explicit
+      remove=10, reconcile stale ref=12) with spec v1.3 wording matching the
+      pins. F-3/F-4 closed (F-5 composition-refusal sentence; `nowMs` optional
+      with derived default, fixture reverts applied). No new issues; four
+      informational residuals recorded (test-plan's two stale "≤1 read" quotes
+      ride the PR; tracker-read-unavailable cell optional; phase-10 scope
+      extension disclosed; F-7 wording rides the next revision). Artifact
+      repair: the governing iteration-1 FAIL record was restored verbatim as
+      `review-iter-1.yaml` after a concurrent duplicate review overwrote/
+      mis-nested it; the duplicate PASS and concurrent-run outputs are preserved
+      as `review-iter-1-pre-remediation.*` and `review-iter-2-concurrent-run.*`.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Quality gates: PASS on the final tree. Range lint gate `./scripts/
+      lint-commit-range.sh --base main-tools`: VERDICT PASS — merge-base
+      aa64a226, head e5b2b30c, 34 commits in range, 0 offending commits, mode
+      none (no mode line on a pass), commitlint binary
+      `node_modules/.bin/commitlint` (origin: repository-local), ref
+      `refs/remotes/origin/main-tools`. Full aggregate `TMPDIR=$PWD/tmp/tmpdir
+      pnpm check` on the uncontended host: 7,837 pass / 0 fail across 1,009
+      files (716s), lint clean, format:check clean, typecheck green, depcruise
+      389 modules clean, ambient-globals / workspace-entrypoints /
+      secret-read-boundary clean, prompt-conformance 5/5, help-guide-coverage
+      covered, exports-parity 5/5
+      (`.ai/local/logs/gh292-final-pnpm-check-3.log`). Load-contention
+      disclosure: two earlier battery attempts ran concurrently with the GH-291
+      lane's battery and produced only 5-second wall-clock timeouts on rotation
+      (TC-ATTEMPT-028; docs-scope lifetime; closeout branch ops; watchdog
+      teardown) — every affected test passes standalone and the final
+      uncontended run is fully green; TC-ATTEMPT-028 gained a declared 60_000 ms
+      budget with its rationale comment (the repo's declared-budget pattern).
+      The quality-gates battery also covered the phase-10 remediation code and
+      the phase-7 doc reconciliation on the final tree.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/314 (base
+      `main-tools`, head `feat/GH-292/queue-lifecycle` pushed at e942d2ba
+      lineage, 37 commits, state OPEN, MERGEABLE, 148 files +17000/-553, title
+      `feat(GH-292): queue lifecycle completion (M2-S15)`, body uses `Refs #292`
+      so issue closure stays in the closeout flow). Issue #292 labels advanced
+      to `change, spec-ready, review`. Merge authority remains with the
+      CEO/human via batch-deliver; the PR is left open. Owner acceptance items
+      flagged in the body: TDR-0026/TDR-0027 (Proposed) and the disclosed
+      same-holder lease-renewal narrowing.
+    type: "info"
+    date: "2026-11-13"

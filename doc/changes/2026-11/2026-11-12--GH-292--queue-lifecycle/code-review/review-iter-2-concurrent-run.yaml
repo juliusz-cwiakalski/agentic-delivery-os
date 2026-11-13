@@ -1,0 +1,146 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-292
+branch: feat/GH-292/queue-lifecycle
+status: PASS
+summary: >-
+  Iteration-2 re-review after the Phase-10 remediation (commit 7bc93867 +
+  evidence commit 498c1e24). Iteration-1 F-1 (high) is closed with evidence:
+  all three removal paths — removeQueueEntryWithinFence (queue.ts:1333), the
+  closeout hook queueRemovalForCloseout pre-check (queue.ts:1452, apply mode
+  delegating to the same F-1 seam), and reconcile (which routes every removal
+  through the full removeQueueEntry verb at queue.ts:1739) — now apply the
+  delivered, unchanged isLeaseStale predicate, so a lease at/over TTL does not
+  refuse, does not skip, and does not retain; a live lease still refuses with
+  the delivered identities. The three new two-sided stale-lease cells exist in
+  the phase-10-declared files and the delivered lease-conflict/takeover/
+  single-flight controls are untouched in the whole branch diff and green.
+  F-2 (medium) is closed with evidence: readQueueFold no longer rescans the
+  removals ledger (readQueueEntriesAndRemovals classifies both ledgers from
+  one shared verified snapshot; readQueueEntries keeps its exported
+  signature); the read budget is pinned by counting-store assertions
+  (fold=2, no-entry=2, plan-with-entry=3, apply-with-removal=13 decomposed
+  2+1+10) and the pm-notes-recorded direct measurements reproduce exactly in
+  this review (explicit removeQueueEntry=10, reconcile over one done ref=12);
+  spec v1.3 NFR-3 states the pinned observable two-sided. F-3 and F-4 are
+  closed (spec F-5 unwired-tracker-port composition-precondition sentence;
+  nowMs optional with derived default and the two fixture additions from
+  741b0d2a reverted exactly). F-5..F-7: no regression introduced (the
+  remediation touches no flag, help, or ready-verb surface); F-7 rides the
+  next spec revision as accepted. No assertion was weakened, the F-4
+  precedence table and seven-row queue error kind are untouched
+  (error-table-sync 129/129 OK), the delivered five rows stay byte-identical,
+  append-only discipline holds, and spec v1.3 changed only NFR-3 + the F-5
+  sentence + the history row. Four findings remain, all informational,
+  none blocking: a transient artifact-anomaly that was resolved during this
+  review itself (the iteration-1 FAIL record was absent from the canonical
+  path when this review started — an earlier lifecycle PASS occupied it — and
+  was archived properly mid-review, with the FAIL record now at
+  code-review/review-iter-1.yaml and the earlier PASS at
+  review-iter-1-pre-remediation.*), a disclosed gate deferral, a pre-existing
+  tree-wide capsule-events absence, and the accepted F-7 deferral. Plan
+  compliance PASS (Phase 10 executed per declared goal/DoD; the edge.ts +
+  fixture-revert scope extensions are disclosed and PM-sanctioned); repo
+  rules clean.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/code-review/review-iter-1.yaml:1
+    message: >-
+      Transient artifact anomaly, resolved during this review: at review start
+      the iteration-1 FAIL record (1 high / 1 medium / 2 low / 3 info) was
+      absent from the canonical path — the paired review-iter-1.md and a
+      misplaced nested code-review/code-review/review-iter-1.yaml held an
+      earlier lifecycle PASS review, leaving the pm-notes retro plus the plan
+      Phase-10 header as the only FAIL record (as the pm-notes remediation
+      entry discloses). Mid-review the artifacts were reorganized: the FAIL
+      record now sits at the canonical code-review/review-iter-1.yaml (its
+      finding set matches the governing record exactly), the earlier PASS is
+      archived as review-iter-1-pre-remediation.*, and the nested directory
+      is gone.
+    suggestion: >-
+      No further action required; the audit chain is intact. Optionally pair
+      the FAIL yaml with a review-iter-1.md for symmetry with the other
+      iterations. Owner: PM (already effected).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-plan.yaml:1490
+    message: >-
+      Phase 10's declared fourth gate (TMPDIR=... pnpm check) was not run
+      inside the phase; the pm-notes remediation entry discloses the deferral
+      per PM instruction with quality_gates owning the final-tree battery, and
+      a supplementary full-battery run was executing on this tree during this
+      review. All other declared gates ran green (typecheck, targeted suites
+      105 pass, error-table-sync 129/129).
+    suggestion: >-
+      No action in this change beyond the quality_gates phase recording the
+      final battery verdict (and the range-lint verdict) as pm-notes evidence
+      before pr_creation. Owner: quality_gates.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: repo-rules
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/events.jsonl
+    message: >-
+      The change folder carries no events.jsonl capsule and no candidates/
+      directory for any of phases 1-10, although feature-capsule.md (GH-240,
+      landed before the branch point) specifies them. This is pre-existing
+      tree-wide state, not a remediation regression: no command surface in
+      this tree writes capsule events (only packages/core capsule domain code
+      and the feature spec reference events.jsonl; .opencode/ commands do
+      not), and the identical state was present during the iteration-1
+      reviews.
+    suggestion: >-
+      Record as a known gap for the capsule integration change that wires the
+      owning commands; no action inside GH-292. Owner: future capsule
+      tooling change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/chg-GH-292-spec.md:162
+    message: >-
+      Iteration-1 F-7 (spec F-1 prose listing `queue ready` among
+      fold-derived surfaces while the delivered ready verb evaluates status
+      facts) is accepted to ride the next spec revision, as recorded in the
+      pm-notes retro and the plan Phase-10 header. Verified during this
+      iteration that chasing F-5..F-7 introduced no regression: the
+      remediation diff touches no flag, help, or ready-verb surface.
+    suggestion: >-
+      No action in this change; the wording correction rides the next spec
+      revision. Owner: spec owner (@spec-writer) at the next revision.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-13T05:03:45Z
+next_step: PROCEED

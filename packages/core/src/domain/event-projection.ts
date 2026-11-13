@@ -322,6 +322,31 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
           continue;
         }
 
+        if (record.kind === "queue.removal") {
+          const lane = bounded(str(payload.ref), QUEUE_MAX_REF_CHARS);
+          if (lane.length === 0) continue;
+          const family = address("queue.graph", "queue.removal", lane);
+          entering.push({
+            order: record.sequence,
+            sub: 3,
+            topic: "queue.graph",
+            family: "queue.removal",
+            lane,
+            key: record.key,
+            position: record.sequence,
+            kind: "remove",
+            ref: lane,
+            occurredAt: str(payload.recordedAt),
+            payload: {
+              ref: lane,
+              reason: str(payload.reason),
+              recordedAt: str(payload.recordedAt),
+            },
+            commit: () => remember(family, record.key, record.sequence),
+          });
+          continue;
+        }
+
         if (record.kind === "daemon.lane") {
           const lane = bounded(str(payload.ref), QUEUE_MAX_REF_CHARS);
           if (payload.state === "delivering" && lane.length > 0) {
