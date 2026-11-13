@@ -128,12 +128,12 @@ export const QUEUE_PARK_CAUSES = [
 ] as const;
 export type QueueParkCause = (typeof QUEUE_PARK_CAUSES)[number];
 
-/** The declared one-to-one cause <-> condition-type pairing (DM-5; GH-294 DEC-2).
- *
- * `peak-window` rides the existing `provider-window` condition type (no
- * duplicate cause, no silent rename); `owner-hold` joins beside the delivered
- * causes on the read-time `preemption` condition type — the hold is a gate
- * with no expiry, never an expiry-carrying window.
+/**
+ * The declared cause -> condition-type mapping (DM-5; GH-294 DEC-2) —
+ * many-to-one by design: `peak-window` rides the existing `provider-window`
+ * condition type (no duplicate cause, no silent rename), and `owner-hold`
+ * joins beside the delivered causes on the read-time `preemption` condition
+ * type — the hold is a gate with no expiry, never an expiry-carrying window.
  */
 export const QUEUE_PARK_CAUSE_CONDITION_PAIRS = [
   { cause: "provider-window", conditionType: "provider-window" },
@@ -874,7 +874,6 @@ export type QueueLane = {
   readonly weightClass: QueueWeightClass;
 };
 
-/** The `lanes list | show <ref>` payload (Appendix C). */
 /** The closed peak-enforcement mode set (GH-294 F-8, DEC-7; OQ-TP-6). */
 export const QUEUE_PEAK_ENFORCEMENT_MODES = ["window-watch", "iteration-start-gating"] as const;
 export type QueuePeakEnforcementMode = (typeof QUEUE_PEAK_ENFORCEMENT_MODES)[number];
@@ -891,6 +890,7 @@ export type QueuePeakEnforcement = {
   readonly parkClaimed: boolean;
 };
 
+/** The `lanes list | show <ref>` payload (Appendix C). */
 export type QueueLanesData = {
   readonly schemaVersion: typeof QUEUE_LANES_SCHEMA_VERSION;
   readonly lanes: readonly QueueLane[];

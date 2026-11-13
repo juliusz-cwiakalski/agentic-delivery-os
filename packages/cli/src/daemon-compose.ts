@@ -188,6 +188,13 @@ export type DaemonComposition = {
     readonly nextAction: Parameters<typeof runSupervisionCycle>[0]["ports"]["nextAction"];
     readonly claim: Parameters<typeof runSupervisionCycle>[0]["ports"]["claim"];
     readonly release: Parameters<typeof runSupervisionCycle>[0]["ports"]["release"];
+    /**
+     * The nomination gate (GH-294 F-1, TDR-0028 D3, OQ-TP-4): the claim
+     * path's first admission predicate, the same resolve identities as the
+     * one-shot path. The composition supplies it over the shared
+     * nomination predicate; absent keeps the delivered behavior.
+     */
+    readonly nominate?: Parameters<typeof runSupervisionCycle>[0]["ports"]["nominate"];
   };
   /** The daemon's effect-detection duty (one bounded query per unresolved effect). */
   readonly detectEffects?: () => Promise<unknown>;
@@ -582,6 +589,12 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
                 composition.supervision?.claim ??
                 (() => ({ ok: false as const, code: "queue.precondition.unmet" })),
               release: composition.supervision?.release ?? (() => false),
+              // GH-294 F-1: the claim path's first admission predicate —
+              // before the claim (OQ-TP-4), with the one-shot path's
+              // refusal identities and recordless discipline.
+              ...(composition.supervision?.nominate === undefined
+                ? {}
+                : { nominate: composition.supervision.nominate }),
               nowIso,
               ...(composition.lane === undefined
                 ? {}

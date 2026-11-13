@@ -42,9 +42,13 @@ export const utcSecondsOfDay = secondsOfDay;
 
 /**
  * The buffer-inclusive open bound of a declared window, in seconds of day
- * (GH-294 F-3). One boundary truth shared by the profile-level F-6 gate and
- * the lane-level watcher: the window is observed open at or after this
- * second, never before it.
+ * (GH-294 F-3). One boundary truth shared by the profile-level gate and the
+ * lane-level watcher: the window is observed open at or after this second,
+ * never before it. The domain tier reads it through the one declared
+ * domain->provider edge (the `tier-domain-not-provider` rule's `pathNot`
+ * exception in `.dependency-cruiser.cjs` — GH-294 F-6's move-or-matrix
+ * decision: the contracts tier is data-only, so the shared boundary
+ * arithmetic stays here and the edge is enforced by name).
  */
 export const peakWindowOpenSeconds = (window: {
   readonly startSecondsOfDay: number;

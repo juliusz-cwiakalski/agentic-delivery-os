@@ -411,3 +411,78 @@ notes:
       the real composition (not injected fakes) for headline capabilities."
     type: "retro"
     date: "2026-11-13"
+  - text: "Plan phase 12 (code-review remediation iteration 1) complete. What
+      shipped per finding: F-1 DispatchComposition gains the nominate channel
+      (edge.ts), production dispatchComposition supplies nominationPredicate
+      (nominateProviderProfile over the parsed provider configuration, the
+      extracted createResolvedProviderProbe, and the clock; the profiles branch
+      ships empty by default so fresh installs fail closed at
+      provider.profile.absent per the branch's own DEC-9 contract),
+      daemon-compose forwards the supervision nominate port before the claim;
+      composed proofs in tests/behaviour/peak-pause-composed-edge.test.ts
+      (attempt+history+lane records carry providerProfile; all four no-nomination
+      shapes refuse at their delivered exits through the composed CLI;
+      supervision claim parity). F-2 edge release guards treat peak-window
+      exactly like provider-window (until required and accepted; owner-hold
+      refuses until); composed happy path lands the park via the CLI harness.
+      F-4 projection stop/parked emission gated on the DM-4 episode fields
+      (episodeFrameComplete) + the release writer stamps minimal episode
+      identity (peak-<ref>-<nowIso>) and the operator-declared until - the
+      operator-shaped record projects the park-edge alone through the real
+      projector; reader-side PARK_KEYS/isParkRecord extended for the additive
+      DM-4 fields (the delivered validator rejected every episode-shaped park
+      record as torn - latent defect the composed happy path exposed). F-3
+      laneParkViews producer (one bounded read, latest-per-ref, read-time
+      expiry, STATUS_MAX_LANE_PARKS) wired into createStatusCommandRuntime;
+      composed status/brief render + clear parks from real records. F-5
+      peakEnforcement.mode derives from QueueComposition.peakWatchComposed (a
+      composition fact); parkClaimed purely record-derived; status.md corrected
+      (spec-page wording is the DOC-SYNC HANDOFF to @doc-syncer). F-6 matrix
+      half: tier-domain-not-provider rule in .dependency-cruiser.cjs with the
+      peak.js pathNot exception + firing negative fixture
+      (tier-domain-provider) and clean control (peak-boundary) registered in
+      tests/boundaries - the move half was non-compliant because
+      TC-PROFILE-055/039 pin contracts/provider-profile.ts data-only (verified
+      by execution); #contracts import style aligned for the queue contracts.
+      F-7 session-resume skips when no session reference resolves (stay parked,
+      re-observe). F-8 SpendWindowExclusion reason set extended additively
+      (other-lane, unreadable-instant); boundary gate split from lane scope.
+      F-9 queue.ts comments repaired (QueueLanesData comment reattached, DEC-2
+      many-to-one pairing header). F-10 decidePeakStops caches {rules, window}.
+      Gate results: pnpm typecheck green; the six GH-294 suites + composed-edge
+      suite 43 pass / 0 fail (plus the daemon/window/taxonomy suites re-run
+      green); TMPDIR=$PWD/tmp/tmpdir pnpm check full battery 8121 pass / 1 fail
+      / 4 skip - the one failure is ci-baseline-parity, whose clone sees only
+      COMMITTED state: the unregistered-spec-page failure it reports is exactly
+      the registry addition this commit stages, and the repaired scan it runs
+      (forbidden-literals over the committed tree) passes with the staged
+      registry, verified by executing the scan's own logic over the committed
+      content; the test goes green at this commit. lint, format, typecheck,
+      boundaries, prompt-conformance, help-guide-coverage, exports-parity all
+      green in the same run, after the mechanical fixture/registry updates
+      named below. Post-commit boundary re-verification (parity test +
+      delivery-os lint GH-294) to be recorded in the coder report; the
+      commit-pending disclosure stands. Commit-pending
+      disclosure: this note precedes the phase-12 commit; the parity test's
+      post-commit pass and delivery-os lint GH-294 are recorded here as the
+      observed boundary results. Mechanical consequences outside declared
+      scope.files (disclosed): packages/core/src/contracts/index.ts (barrel
+      re-export of the two new spend names), packages/core/src/provider/index.ts
+      (barrel export of nominateProviderProfile), the delivered fixtures/tests
+      the always-on nomination gate and the status read bound moved:
+      tests/fixtures/dispatch/admission.ts,
+      tests/fixtures/queue/production/harness.ts (writeProviderProfilesConfig -
+      the shipped-empty profiles branch fails closed, so delivered fixtures
+      declare the minimal branch to keep exercising their credential/preflight/
+      truth intents), tests/structure/dispatch-composition.test.ts,
+      tests/behaviour/status-performance.test.ts (records budget 3->4 with the
+      bounded lane-park read named), tests/behaviour/projects-state-placement.
+      test.ts, tests/behaviour/projects-scope-isolation.test.ts,
+      tests/structure/verify-imports.test.ts (pinned depcruise rule list),
+      tests/structure/content-inventory.test.ts (allowances for the two new
+      executable exports), tests/fixtures/ports/v1-contract-inventory.json (the
+      two new spend exports), scripts/checks/forbidden-literals.registry.json
+      (feature-peak-pausing.md registered as a new user-facing doc - the page
+      had landed unregistered in phase 11)."
+    type: "info"
+    date: "2026-11-14"

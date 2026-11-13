@@ -596,7 +596,22 @@ export const createEventProjector = (options: EventProjectorOptions = {}): Event
           const until = optionalStr(payload.until);
           const recordedAt = str(payload.recordedAt);
           const recoveredAt = optionalStr(payload.recoveredAt);
-          if (cause === "peak-window" && recoveredAt === undefined) {
+          // GH-294 F-4: the `stop`/`parked` frames are the DM-4 episode
+          // frames. They emit only over a record that carries the episode
+          // facts the watcher writes — a non-empty identity and grace
+          // deadline, and the closed-value preservation classification. An
+          // operator-shaped park (the release grammar's writer stamps the
+          // minimal episode identity only) projects the park-edge alone: a
+          // bounded-grace stop that never happened is never emittable, and
+          // `preservation` is never rendered outside the closed set.
+          const preservation = str(payload.preservation);
+          const episodeFrameComplete =
+            episodeId.length > 0 &&
+            (preservation === "preserved" || preservation === "session-state-not-preserved") &&
+            str(payload.graceDeadline).length > 0 &&
+            str(payload.windowEnd).length > 0 &&
+            str(payload.stoppedAt).length > 0;
+          if (cause === "peak-window" && recoveredAt === undefined && episodeFrameComplete) {
             entering.push({
               order: record.sequence,
               sub: 9,

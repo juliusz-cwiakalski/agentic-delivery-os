@@ -129,6 +129,17 @@ module.exports = {
       to: { path: "^packages/core/src/(app|config|branding|state)/" },
     },
     {
+      name: "tier-domain-not-provider",
+      severity: "error",
+      comment:
+        "ADR-0003 DEC-2 (GH-294 F-6): the domain tier reads no provider module. The one declared exception is the shared UTC peak-window boundary arithmetic in provider/peak.js (peakWindowOpenSeconds/peakWindowEndSeconds/utcSecondsOfDay) — the contracts tier is data-only, so the move-or-matrix decision landed the matrix half; a firing negative fixture registers the edge (TC-SCAFFOLD-011).",
+      from: { path: "^packages/core/src/domain/" },
+      to: {
+        path: "^packages/core/src/provider/",
+        pathNot: "^packages/core/src/provider/peak\\.(ts|js)$",
+      },
+    },
+    {
       name: "tier-config-only-contracts",
       severity: "error",
       comment: "ADR-0003 DEC-2: config may import ./contracts only.",

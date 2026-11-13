@@ -102,6 +102,13 @@
       "path": "packages/opencode/src/probe.ts"
     }
   ],
+  "tier-domain-not-provider": [
+    {
+      "id": "tier-domain-provider",
+      "tc": "TC-SCAFFOLD-011",
+      "path": "packages/core/src/domain/probe.ts"
+    }
+  ],
   "tier-domain-only-contracts": [
     {
       "id": "tier-domain-app",

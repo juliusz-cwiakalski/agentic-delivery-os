@@ -368,8 +368,11 @@ evidence (`--window-evidence`): a falsifiable billable-call count from the park
 timestamp through the window end over the telemetry v2 storage identity, with
 telemetry absence always a classified outcome and never a zero. Status and
 brief carry the open episodes' park fields from the same collector pass. The
-lanes machine read declares peak enforcement (`window-watch` with a resident
-daemon, `iteration-start-gating` with `parkClaimed: false` without one), and
-the delivered iteration-start admission gating is unchanged. The delivery runs
-on `feat/GH-294/provider-peak-pausing`; M2 has not exited, and the remaining M2
-stories are unaffected by this delivery and stay planned.
+lanes machine read declares peak enforcement truthfully: the mode derives from
+whether the running composition actually supplies the peak-pause watch ports
+(a composition fact, not daemon reachability — the shipped compositions supply
+none, so the machine read reports `iteration-start-gating`), and
+`parkClaimed` reads from the durable park records, whatever writer claimed
+them; the delivered iteration-start admission gating is unchanged. The
+delivery runs on `feat/GH-294/provider-peak-pausing`; M2 has not exited, and
+the remaining M2 stories are unaffected by this delivery and stay planned.

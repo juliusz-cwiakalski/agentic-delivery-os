@@ -607,6 +607,7 @@ const DEPCRUISE_RULES = [
   "tier-app-allowed-set",
   "tier-branding-only-contracts",
   "tier-config-only-contracts",
+  "tier-domain-not-provider",
   "tier-domain-only-contracts",
   "tier-state-allowed-set",
   "workspace-import-must-resolve",

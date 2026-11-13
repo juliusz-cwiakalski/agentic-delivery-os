@@ -20,12 +20,16 @@
  * path (NG-6).
  */
 
-import type { ProviderProfilePeakRules } from "../contracts/provider-profile.js";
 import {
+  type ProviderProfilePeakRules,
   QUEUE_PARK_RECHECK_DEFAULTS,
   type QueueParkPreservation,
   type QueueParkRecord,
-} from "../contracts/queue.js";
+} from "#contracts";
+// The one declared domain->provider edge (GH-294 F-6): the shared UTC
+// peak-window boundary helpers, enforced by name in the dependency matrix
+// (`tier-domain-not-provider`'s pathNot exception) with a firing negative
+// fixture (tests/boundaries).
 import { peakWindowEndSeconds, peakWindowOpenSeconds, utcSecondsOfDay } from "../provider/peak.js";
 import {
   admitDispatchRestart,
@@ -114,30 +118,40 @@ export const decidePeakStops = (input: {
 }): readonly PeakStopDecision[] => {
   const parked = new Set(input.parkedRefs);
   const decisions: PeakStopDecision[] = [];
-  const seenWindows = new Map<string, { readonly open: boolean; readonly windowEnd: string }>();
+  // One {rules, window} entry per profile (GH-294 F-10): the loop reads the
+  // parsed rules once per profile and carries them with the window state, so
+  // the grace deadline derives from the SAME lookup the window decision used.
+  const seen = new Map<
+    string,
+    {
+      readonly rules: ProviderProfilePeakRules | undefined;
+      readonly open: boolean;
+      readonly windowEnd: string;
+    }
+  >();
   for (const lane of input.lanes) {
     if (parked.has(lane.ref)) continue;
     const profile = lane.providerProfile;
     if (profile === undefined || profile.length === 0) continue;
-    let window = seenWindows.get(profile);
-    if (window === undefined) {
+    let state = seen.get(profile);
+    if (state === undefined) {
       const rules = input.rulesFor(profile);
-      window =
-        rules === undefined
-          ? { open: false, windowEnd: "" }
-          : (peakWindowOpenAt(rules, input.nowMs) ?? { open: false, windowEnd: "" });
-      seenWindows.set(profile, window);
+      const window = rules === undefined ? undefined : peakWindowOpenAt(rules, input.nowMs);
+      state = {
+        rules,
+        open: window?.open ?? false,
+        windowEnd: window?.windowEnd ?? "",
+      };
+      seen.set(profile, state);
     }
-    if (!window.open) continue;
-    const rules = input.rulesFor(profile);
-    if (rules === undefined) continue;
+    if (state.rules === undefined || !state.open) continue;
     decisions.push({
       ref: lane.ref,
       ...(lane.sessionId === undefined ? {} : { sessionId: lane.sessionId }),
       providerProfile: profile,
-      graceDeadline: isoOf(input.nowMs, rules.graceSecondsDefault),
-      graceSeconds: rules.graceSecondsDefault,
-      windowEnd: window.windowEnd,
+      graceDeadline: isoOf(input.nowMs, state.rules.graceSecondsDefault),
+      graceSeconds: state.rules.graceSecondsDefault,
+      windowEnd: state.windowEnd,
       episodeId: input.newEpisodeId(),
     });
   }
@@ -407,7 +421,12 @@ export const runPeakResume = async (input: {
       .at(-1);
     if (latest === undefined) continue;
     if (decision.route === "session-resume") {
-      const sessionRef = decision.sessionRef ?? input.sessionRefOf(decision.ref) ?? "";
+      // GH-294 F-7: when no session reference resolves — neither the record's
+      // nor the injected lookup's — the episode skips this pass: it stays
+      // parked and is re-observed next cycle. A fabricated empty-string
+      // identity is never resumed and never recorded.
+      const sessionRef = decision.sessionRef ?? input.sessionRefOf(decision.ref);
+      if (sessionRef === undefined || sessionRef.length === 0) continue;
       const branch = input.branchOf();
       const resumedOk = await input.resumeSession({
         ref: decision.ref,

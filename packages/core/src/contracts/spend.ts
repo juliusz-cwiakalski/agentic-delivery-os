@@ -393,17 +393,32 @@ export type SpendWindowEvidence = {
   readonly basis?: typeof SPEND_WINDOW_BASIS;
   /** The steps the scope matched, by their storage positions (boundary visibility). */
   readonly matchedPositions?: readonly number[];
-  /** The steps the scope excluded, with the boundary reason (pre-park / post-window). */
+  /** The steps the scope excluded, with the named exclusion reason (boundary or attribution scope). */
   readonly excluded?: readonly SpendWindowExclusion[];
 };
 
 /** The one declared attribution-read basis naming the telemetry storage identity. */
 export const SPEND_WINDOW_BASIS = "delivery.telemetry.storage.v1" as const;
 
-/** One excluded step in the scope disclosure, with the boundary reason. */
+/** The closed exclusion-reason set (GH-294 F-8): why one step is outside the reading. */
+export const SPEND_WINDOW_EXCLUSION_REASONS = [
+  "pre-park",
+  "post-window",
+  "other-lane",
+  "unreadable-instant",
+] as const;
+export type SpendWindowExclusionReason = (typeof SPEND_WINDOW_EXCLUSION_REASONS)[number];
+
+/**
+ * One excluded step in the scope disclosure, with its reason (GH-294 F-8):
+ * `pre-park`/`post-window` are the boundary exclusions; `other-lane` is an
+ * in-window step outside the parked lane's attribution scope;
+ * `unreadable-instant` is a step whose instant fails to parse. Non-boundary
+ * exclusions are never mislabeled as boundary ones.
+ */
 export type SpendWindowExclusion = {
   readonly position: number;
-  readonly reason: "pre-park" | "post-window";
+  readonly reason: SpendWindowExclusionReason;
 };
 
 /** The window-evidence request the injected spend runtime answers. */

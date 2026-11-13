@@ -31,6 +31,7 @@ import {
   SPEND_MAX_MACHINE_BYTES,
   SPEND_PHASE_UNKNOWN,
   SPEND_TRUNCATION_MARKER,
+  SPEND_WINDOW_BASIS,
   type SpendAgentEntry,
   type SpendAmplification,
   type SpendAmplificationEvent,
@@ -48,6 +49,8 @@ import {
   type SpendReport,
   type SpendSelection,
   type SpendTruncation,
+  type SpendWindowEvidence,
+  type SpendWindowExclusion,
   TELEMETRY_RECONCILIATION_TOLERANCE,
   TELEMETRY_STATE_PRESENT,
   TELEMETRY_VERDICT_OUTSIDE,
@@ -59,9 +62,6 @@ import {
   type TelemetryReconciliationVerdict,
   type TelemetryStepRecord,
   type TelemetryStepTokens,
-  SPEND_WINDOW_BASIS,
-  type SpendWindowEvidence,
-  type SpendWindowExclusion,
 } from "#contracts";
 
 /** The classified absence: the selection holds no captured telemetry. */
@@ -901,7 +901,9 @@ export const spendDigestSection = (read: SpendLedgerRead): SpendDigestSection =>
  * scope is inclusive at both boundary instants: a call at the park timestamp
  * and a call at the window end both count; only calls strictly before the
  * park timestamp and strictly after the window end are excluded, and every
- * exclusion names its boundary reason in the scope disclosure. Zero over
+ * exclusion names its reason in the scope disclosure — boundary exclusions
+ * (`pre-park`/`post-window`) and attribution-scope or unreadable-instant
+ * exclusions each carry their own declared value (GH-294 F-8). Zero over
  * present telemetry is a positive reading backed by the named attribution
  * read (`delivery.telemetry.storage.v1`); an empty record set is the
  * classified absence and never renders zero — the count is absent with it.
@@ -932,7 +934,13 @@ export const windowSpendEvidence = (input: {
   let billableCalls = 0;
   for (const [position, step] of input.steps.entries()) {
     const at = Date.parse(stepInstant(step));
-    if (!Number.isFinite(at) || at < fromMs) {
+    // The boundary gate first: an unreadable instant is its own disclosure
+    // reason (GH-294 F-8) — never a boundary exclusion.
+    if (!Number.isFinite(at)) {
+      excluded.push({ position, reason: "unreadable-instant" });
+      continue;
+    }
+    if (at < fromMs) {
       excluded.push({ position, reason: "pre-park" });
       continue;
     }
@@ -943,9 +951,10 @@ export const windowSpendEvidence = (input: {
     // The attribution join's lane dimension: only the parked lane's own steps
     // count, and only billable ones (a null or zero call count is not a
     // billable model call). A foreign-lane step inside the window is disclosed
-    // as out of the parked lane's attribution scope.
+    // as out of the parked lane's attribution scope — its own reason, never a
+    // boundary label (GH-294 F-8).
     if (step.lane !== input.ref) {
-      excluded.push({ position, reason: "pre-park" });
+      excluded.push({ position, reason: "other-lane" });
       continue;
     }
     matchedPositions.push(position);

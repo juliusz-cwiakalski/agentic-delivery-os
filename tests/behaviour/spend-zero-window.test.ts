@@ -12,7 +12,10 @@
 import { describe, expect, test } from "bun:test";
 import { createSpendCommandDefinition } from "../../packages/cli/src/commands/spend";
 import type { TelemetryStepRecord } from "../../packages/core/src/contracts/index";
-import { SPEND_WINDOW_BASIS } from "../../packages/core/src/contracts/spend";
+import {
+  SPEND_WINDOW_BASIS,
+  SPEND_WINDOW_EXCLUSION_REASONS,
+} from "../../packages/core/src/contracts/spend";
 import { windowSpendEvidence } from "../../packages/core/src/domain/spend";
 
 const PARK = "2026-11-13T16:55:00.000Z";
@@ -65,6 +68,9 @@ describe("TC-PAUSE-050 the present-zero reading is positive and named", () => {
     expect(evidence.basis).toBe(SPEND_WINDOW_BASIS);
     expect(evidence.basis).toBe("delivery.telemetry.storage.v1");
     expect(evidence.matchedPositions).toEqual([]);
+    // GH-294 F-8: the foreign-lane exclusion carries its own reason — the
+    // attribution-scope disclosure, never a mislabeled boundary exclusion.
+    expect(evidence.excluded).toEqual([{ position: 0, reason: "other-lane" }]);
   });
 
   test("the present-zero control and the absence reading are mutually exclusive in the same run", () => {
@@ -206,6 +212,41 @@ describe("TC-PAUSE-052 boundary scoping excludes only strictly pre-park calls; t
     expect(reasons).toEqual(["pre-park", "post-window"]);
     // The matched positions are visible: exactly the three in-scope steps.
     expect(evidence.matchedPositions).toEqual([1, 2, 3]);
+  });
+
+  // GH-294 F-8: non-boundary exclusions carry their own declared reasons —
+  // a foreign-lane step inside the window is `other-lane` (attribution
+  // scope), and an unreadable instant is `unreadable-instant`. Neither is
+  // ever mislabeled `pre-park`.
+  test("foreign-lane and unreadable-instant exclusions are disclosed with their own reasons", () => {
+    const evidence = windowSpendEvidence({
+      steps: [
+        step({ instant: "2026-11-13T17:00:00.000Z", lane: "GH-901", calls: 2 }), // other lane: excluded
+        step({ instant: "not-a-timestamp", calls: 2 }), // unreadable instant: excluded
+        step({ instant: PARK, lane: "GH-901", calls: 1 }), // park instant, other lane: in-boundary, lane scope
+        step({ instant: "2026-11-13T17:30:00.000Z", calls: 1 }), // mid-window: included
+      ],
+      ref: "GH-900",
+      providerProfile: "profile-a",
+      from: PARK,
+      through: WINDOW_END,
+    });
+    expect(evidence.telemetryState).toBe("present");
+    expect(evidence.billableCalls).toBe(1);
+    expect(evidence.matchedPositions).toEqual([3]);
+    expect(evidence.excluded).toEqual([
+      { position: 0, reason: "other-lane" },
+      { position: 1, reason: "unreadable-instant" },
+      { position: 2, reason: "other-lane" },
+    ]);
+    // The closed reason set: the boundary pair plus the two declared
+    // non-boundary values.
+    expect([...SPEND_WINDOW_EXCLUSION_REASONS]).toEqual([
+      "pre-park",
+      "post-window",
+      "other-lane",
+      "unreadable-instant",
+    ]);
   });
 
   test("a seeded mid-window call reads non-zero: the assertion can fail", () => {

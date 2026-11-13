@@ -19,6 +19,7 @@ import {
 } from "../fixtures/projects/production";
 import { createHostFixture } from "../fixtures/projects/state-scope";
 import { createRepository, removeDirectory } from "../fixtures/projects/temp-repos";
+import { writeProviderProfilesConfig } from "../fixtures/queue/production/harness";
 
 const REF = "GH-241";
 const WORKSPACE = "default";
@@ -98,6 +99,11 @@ describe("TC-PROJ-001 two checkouts, one ref: disjoint phase and queue state", (
     try {
       const checkoutA = createRepository(base, "checkout-a");
       const checkoutB = createRepository(base, "checkout-b");
+      // GH-294 phase 12 (F-1): dispatch admission reads the provider profiles
+      // (fail-closed on the shipped empty default); both checkouts declare the
+      // minimal branch before any dispatch runs.
+      writeProviderProfilesConfig(checkoutA);
+      writeProviderProfilesConfig(checkoutB);
       seedPmNotes(checkoutA);
       seedPmNotes(checkoutB);
       const a = createProductionProjectsHarness({
@@ -196,6 +202,11 @@ describe("TC-PROJ-002 no read surface observes the other checkout", () => {
     try {
       const checkoutA = createRepository(base, "reads-a");
       const checkoutB = createRepository(base, "reads-b");
+      // GH-294 phase 12 (F-1): dispatch admission reads the provider profiles
+      // (fail-closed on the shipped empty default); both checkouts declare the
+      // minimal branch before any dispatch runs.
+      writeProviderProfilesConfig(checkoutA);
+      writeProviderProfilesConfig(checkoutB);
       seedPmNotes(checkoutA);
       seedPmNotes(checkoutB);
       const a = createProductionProjectsHarness({

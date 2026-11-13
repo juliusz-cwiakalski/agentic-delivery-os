@@ -22,6 +22,7 @@ export {
   createProfileProbePort,
   createProviderEngine,
   createProviderFactsProbe,
+  nominateProviderProfile,
   type ProviderEngine,
   type ProviderEngineDependencies,
   type ProviderQuotaInput,

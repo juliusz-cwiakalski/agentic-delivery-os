@@ -122,7 +122,6 @@ import {
   handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
-  windowSpendEvidence,
   joinAttributionSubstrates,
   type MergeTransactionPorts,
   newestWaiverByGate,
@@ -197,6 +196,7 @@ import {
   type VerifyGatesWorkItem,
   type WatchRead,
   watchLines,
+  windowSpendEvidence,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -268,6 +268,7 @@ import {
   type PlanDiffPort,
   type ProviderAnnouncementRecord,
   type ProviderClock,
+  type ProviderConfiguration,
   type ProviderParkRecord,
   type ProviderSleep,
   type QueueDegradationReason,
@@ -276,11 +277,13 @@ import {
   type Result,
   type RetroSpendEvidence,
   type SpendDigestSection,
+  STATUS_MAX_LANE_PARKS,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateFenceHandle,
   type StateStorePort,
   type StatusBlockersRead,
+  type StatusLanePark,
   type StatusLocalContextRead,
   type StatusParkRead,
   type StatusProviderConfigRead,
@@ -2408,6 +2411,73 @@ const providerFailure = (failure: { readonly code: string }): StatusReadFailure 
     ? { ok: false, reason: "credential-unavailable", failureCode: "config.credential.missing" }
     : { ok: false, reason: "read-failed", failureClass: failure.code };
 
+/**
+ * The delivered profile probe over a parsed provider configuration's entries
+ * (GH-294 F-1): the availability verdict per provider the profile selection
+ * and the nomination predicate both read — undeclared and disabled providers
+ * are unavailable, a declared peak window parks, and a clear entry is
+ * available. Module-level so the provider command path and the production
+ * nomination composition read one probe truth.
+ */
+export const createResolvedProviderProbe = (
+  entries: ProviderConfiguration["entries"],
+  nowMs: number,
+): ReturnType<typeof createProfileProbePort> =>
+  createProfileProbePort((providerName) => {
+    const descriptor = entries[providerName];
+    if (descriptor === undefined) {
+      return {
+        available: false,
+        condition: "provider-outage",
+        blockers: [
+          {
+            kind: "condition",
+            value: "provider-outage",
+            detail: `provider ${providerName} is not declared`,
+          },
+        ],
+        source: `provider ${providerName}: undeclared`,
+      };
+    }
+    if (!descriptor.enabled) {
+      return {
+        available: false,
+        condition: "disabled",
+        blockers: [
+          {
+            kind: "condition",
+            value: "disabled",
+            detail: `provider ${providerName} is disabled`,
+          },
+        ],
+        source: `provider ${providerName}: disabled`,
+      };
+    }
+    if (descriptor.peak !== undefined) {
+      const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+      if (peak.status === "parked") {
+        return {
+          available: false,
+          condition: "peak-window",
+          blockers: [
+            {
+              kind: "condition",
+              value: "peak-window",
+              detail: `provider ${providerName}: peak window active`,
+            },
+          ],
+          source: `provider ${providerName}: peak window`,
+        };
+      }
+    }
+    return {
+      available: true,
+      condition: "clear",
+      blockers: [],
+      source: `provider ${providerName}: clear`,
+    };
+  });
+
 /** Compose the status runtime, enforcing the credential-reference guard first. */
 export const createStatusCommandRuntime = (
   options: StatusComposition,
@@ -2522,6 +2592,10 @@ export const createStatusCommandRuntime = (
       }
       return { ok: true, parks: parks.value };
     },
+    // The lane park fields ride the same collector pass (GH-294 F-3, NFR-8):
+    // the producer performs its one bounded park read inside the collection,
+    // never as a second pass of its own.
+    readLaneParks: (nowMs): readonly StatusLanePark[] => laneParkViews(options.store, nowMs),
     readLocalContext: (): StatusLocalContextRead =>
       readLocalPmContext({ path: options.localContext.path, fs: options.localContext.fs }),
     readBlockers: (): StatusBlockersRead => {
@@ -2539,13 +2613,49 @@ export const createStatusCommandRuntime = (
 };
 
 /**
+ * The `QueueParkRecord -> StatusLanePark` producer (GH-294 F-3, NFR-8, DM-4;
+ * AMB-P3): ONE bounded park read per collector pass, folded to the latest
+ * record per ref, filtered to the open episodes — causes `peak-window` /
+ * `owner-hold` in the `parked` recovery state — with read-time expiry applied
+ * (an expired peak-window park is no longer an open episode) and the values
+ * carried verbatim. An `owner-hold` park's `until` is the declared classified
+ * absence and stays absent. The digest fold bounds the rendered set by
+ * `STATUS_MAX_LANE_PARKS`; the producer bounds its own array to the same cap.
+ * An unreadable store reads as no open episodes — digest data, never a
+ * command failure.
+ */
+const laneParkViews = (store: StateStorePort, nowMs: number): readonly StatusLanePark[] => {
+  const read = readQueueParks(store);
+  if (!read.ok) return [];
+  const latest = new Map<string, (typeof read.records)[number]>();
+  for (const record of read.records) latest.set(record.ref, record);
+  const parks: StatusLanePark[] = [];
+  for (const record of latest.values()) {
+    if (record.cause !== "peak-window" && record.cause !== "owner-hold") continue;
+    if (record.recoveryState !== "parked") continue;
+    if (record.cause === "peak-window") {
+      const until = record.until === undefined ? undefined : Date.parse(record.until);
+      if (until === undefined || !Number.isFinite(until) || nowMs >= until) continue;
+    }
+    parks.push({
+      ref: record.ref,
+      reason: record.cause,
+      ...(record.until === undefined ? {} : { until: record.until }),
+      ...(record.preservation === undefined ? {} : { preservation: record.preservation }),
+      ...(record.providerProfile === undefined ? {} : { providerProfile: record.providerProfile }),
+    });
+    if (parks.length >= STATUS_MAX_LANE_PARKS) break;
+  }
+  return parks;
+};
+
+/**
  * The digest's spend projection over the already-composed store seam (DM-6).
  *
  * The active change ref comes from the same local PM context the digest already
  * reads; a missing context is digest data, never a command failure. The section
  * derives from the SAME `readSpendLedger` + fold the command consumes.
- */
-const spendDigestFor = (options: {
+ */ const spendDigestFor = (options: {
   readonly store: StateStorePort;
   readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
 }): SpendDigestSection => {
@@ -3403,60 +3513,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           };
         }
         const nowMs = provider.clock.nowMs();
-        const probe = createProfileProbePort((providerName) => {
-          const descriptor = providerParsed.config.entries[providerName];
-          if (descriptor === undefined) {
-            return {
-              available: false,
-              condition: "provider-outage",
-              blockers: [
-                {
-                  kind: "condition",
-                  value: "provider-outage",
-                  detail: `provider ${providerName} is not declared`,
-                },
-              ],
-              source: `provider ${providerName}: undeclared`,
-            };
-          }
-          if (!descriptor.enabled) {
-            return {
-              available: false,
-              condition: "disabled",
-              blockers: [
-                {
-                  kind: "condition",
-                  value: "disabled",
-                  detail: `provider ${providerName} is disabled`,
-                },
-              ],
-              source: `provider ${providerName}: disabled`,
-            };
-          }
-          if (descriptor.peak !== undefined) {
-            const peak = evaluatePeakWindow(descriptor.peak, nowMs);
-            if (peak.status === "parked") {
-              return {
-                available: false,
-                condition: "peak-window",
-                blockers: [
-                  {
-                    kind: "condition",
-                    value: "peak-window",
-                    detail: `provider ${providerName}: peak window active`,
-                  },
-                ],
-                source: `provider ${providerName}: peak window`,
-              };
-            }
-          }
-          return {
-            available: true,
-            condition: "clear",
-            blockers: [],
-            source: `provider ${providerName}: clear`,
-          };
-        });
+        const probe = createResolvedProviderProbe(providerParsed.config.entries, nowMs);
         const selection = selectProfile({
           profiles: profileParsed.config,
           probe,
@@ -4243,6 +4300,15 @@ export type QueueComposition = {
     readonly intervalMs?: number;
     readonly maxIterations?: number;
   };
+  /**
+   * The peak-pause composition fact (GH-294 F-5): whether THIS composition
+   * actually supplies the profile-window watcher ports. The lanes machine
+   * read's `peakEnforcement.mode` derives from this fact — never from daemon
+   * reachability, which says nothing about whether a window watcher exists.
+   * Absent means no watch is composed and the delivered iteration-start
+   * gating is the whole story.
+   */
+  readonly peakWatchComposed?: boolean;
 };
 
 type QueueBuilt =
@@ -4824,20 +4890,28 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
       };
     },
     release: (input) => {
-      if (input.parkCause === "provider-window" && input.parkUntil === undefined) {
+      // GH-294 F-2: both expiry-carrying window causes pair with `--until`
+      // exactly alike at the edge runtime — required and accepted (the
+      // command-layer grammar already enforces the same rule; this is the
+      // defense-in-depth twin). Every other cause (owner-hold included)
+      // refuses `--until`: an owner-hold park's `until` is a declared
+      // classified absence (DEC-12), never a synthesized timestamp.
+      const windowCause =
+        input.parkCause === "provider-window" || input.parkCause === "peak-window";
+      if (windowCause && input.parkUntil === undefined) {
         return {
           ok: false,
           kind: "input",
           code: "input.value.rejected",
-          summary: "provider-window park requires --until <iso>",
+          summary: `${input.parkCause} park requires --until <iso>`,
         };
       }
-      if (input.parkCause !== "provider-window" && input.parkUntil !== undefined) {
+      if (!windowCause && input.parkUntil !== undefined) {
         return {
           ok: false,
           kind: "input",
           code: "input.value.rejected",
-          summary: "--until is accepted only with --park provider-window",
+          summary: "--until is accepted only with --park provider-window or --park peak-window",
         };
       }
       const park =
@@ -4978,17 +5052,18 @@ export const createLanesCommandRuntime = (
     }
     const schedule = computeQueueSchedule(built.facts, { next: 20 });
     const daemon = readDaemonLanes(composition.store);
-    // The declared peak-enforcement state (GH-294 F-8, OQ-TP-6): the mode
-    // names what enforcement is active — a resident daemon watches windows,
-    // otherwise the delivered iteration-start gating is the whole story — and
-    // `parkClaimed` is read from the durable park records, never claimed
-    // without one. The already-resolved degradation is reused: no second
+    // The declared peak-enforcement state (GH-294 F-8, OQ-TP-6; F-5): the
+    // mode names what enforcement is active and derives from the composition
+    // fact — whether this composition actually supplies the profile-window
+    // watcher. Daemon reachability says nothing about a watcher and never
+    // claims one. `parkClaimed` is record-derived: the durable park records
+    // are the only truth about whether a park was claimed, by whatever
+    // writer. The already-resolved degradation is reused: no second
     // reachability resolution.
     const degraded = resolveDegraded(composition.degraded);
-    const daemonUnreachable = degraded.includes("daemon-unreachable");
+    const watchComposed = composition.peakWatchComposed === true;
     const parksRead = readQueueParks(composition.store);
     const parkClaimed =
-      !daemonUnreachable &&
       parksRead.ok &&
       parksRead.records.some(
         (record) => record.cause === "peak-window" && record.recoveryState === "parked",
@@ -5001,7 +5076,7 @@ export const createLanesCommandRuntime = (
         degraded,
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
         peakEnforcement: {
-          mode: daemonUnreachable ? "iteration-start-gating" : "window-watch",
+          mode: watchComposed ? "window-watch" : "iteration-start-gating",
           parkClaimed,
         },
       }),
@@ -5036,6 +5111,17 @@ export type DispatchComposition = {
   readonly descriptor: HarnessExecutionEnvironmentDescriptor;
   readonly prompt: (ref: string) => string;
   readonly evidenceClass?: DispatchEvidenceClass;
+  /**
+   * The nomination gate (GH-294 F-1, TDR-0028 D1): the admission's first
+   * predicate, passed through to `runDispatch` before the preflight, the
+   * owner-hold gate, and the lease claim. Production builds it over
+   * `nominateProviderProfile` from the resolved provider configuration, the
+   * delivered probe, and the clock, and supplies it whenever the resolved
+   * configuration declares the `provider.profiles` branch; a composition that
+   * omits it keeps the delivered no-nomination behavior (a project with no
+   * profiles branch has no enforcement key to record).
+   */
+  readonly nominate?: DispatchPorts["nominate"];
   readonly repository: (ref: string) => string;
   readonly readTruth: (ref: string) => Promise<DispatchTruthReads>;
   /**
@@ -5275,6 +5361,7 @@ export const createDispatchCommandRuntime = (
         repository,
         handoverState: handover,
         nowIso: composition.nowIso,
+        ...(composition.nominate === undefined ? {} : { nominate: composition.nominate }),
         newAttemptId: () => composition.newAttemptId(input.ref),
         newDivergenceId: () => composition.newDivergenceId(input.ref),
         readTruth: () => composition.readTruth(input.ref),

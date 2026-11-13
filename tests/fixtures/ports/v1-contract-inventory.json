@@ -2920,6 +2920,7 @@
       "SPEND_V2_DATA_KEYS",
       "SPEND_V2_TRUNCATION_TARGETS",
       "SPEND_WINDOW_BASIS",
+      "SPEND_WINDOW_EXCLUSION_REASONS",
       "SPEND_WINDOW_EVIDENCE_FLAG",
       "SPEND_WINDOW_FROM_FLAG",
       "SPEND_WINDOW_THROUGH_FLAG",
@@ -3027,6 +3028,7 @@
       "SpendWindowEvidenceOutcome",
       "SpendWindowEvidenceRequest",
       "SpendWindowExclusion",
+      "SpendWindowExclusionReason",
       "StateAppendOutcome",
       "StateAppendRequest",
       "StateArtifactBoundaryDeclaration",
@@ -4128,6 +4130,7 @@
       "SPEND_TRUNCATION_TARGETS",
       "SPEND_V2_TRUNCATION_TARGETS",
       "SPEND_WINDOW_BASIS",
+      "SPEND_WINDOW_EXCLUSION_REASONS",
       "SPEND_WINDOW_EVIDENCE_FLAG",
       "SPEND_WINDOW_FROM_FLAG",
       "SPEND_WINDOW_THROUGH_FLAG",
@@ -4158,7 +4161,8 @@
       "SpendWindowEvidence",
       "SpendWindowEvidenceOutcome",
       "SpendWindowEvidenceRequest",
-      "SpendWindowExclusion"
+      "SpendWindowExclusion",
+      "SpendWindowExclusionReason"
     ],
     "state.ts": [
       "STATE_ARTIFACT_FIELD_TYPES",

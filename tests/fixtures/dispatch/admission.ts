@@ -32,6 +32,7 @@ import {
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
+import { writeProviderProfilesConfig } from "../queue/production/harness";
 import { streamStarterFromRunner } from "../harness/harness-io";
 import { projectScopeFor } from "../projects/state-scope";
 
@@ -116,6 +117,10 @@ const createCheckout = (parent: string, name: string, originUrl: string): string
   const directory = join(parent, name);
   mkdirSync(join(directory, ".git"), { recursive: true });
   writeFileSync(join(directory, ".git", "config"), `[remote "origin"]\n\turl = ${originUrl}\n`);
+  // GH-294 phase 12 (F-1): the admission reads the provider profiles at
+  // dispatch admission, so the fixture declares the minimal branch (the
+  // shipped default fails closed at `provider.profile.absent`).
+  writeProviderProfilesConfig(directory);
   return directory;
 };
 

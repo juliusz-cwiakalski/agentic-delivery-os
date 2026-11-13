@@ -132,9 +132,12 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       // One logical park fold plus one transition-history probe for the spend
       // section (GH-236); still one bounded read per logical source.
       expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(2);
+      // GH-294 phase 12 (F-3, NFR-8): the lane-park fields ride the same
+      // collector pass through ONE bounded park-records read — the bound
+      // moves 3 -> 4 with that read named, still one read per logical source.
       expect(
         harness.recorder.calls.filter((call) => call === "readRecords").length,
-      ).toBeLessThanOrEqual(3);
+      ).toBeLessThanOrEqual(4);
       expect(
         harness.recorder.calls.filter((call) => call === "readRecords").length,
       ).toBeGreaterThan(0);
@@ -144,7 +147,7 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
     }
   });
 
-  test("a findings-heavy fixture keeps the same three-read budget", async () => {
+  test("a findings-heavy fixture keeps the same read budget", async () => {
     const issues = Array.from({ length: 8 }, (_, index) => ({
       number: 610 + index,
       title: `Mapped ${index}`,
@@ -184,9 +187,11 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       // One logical park fold plus one transition-history probe for the spend
       // section (GH-236); still one bounded read per logical source.
       expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(2);
+      // GH-294 phase 12 (F-3, NFR-8): the named bounded lane-park read moves
+      // the records budget 3 -> 4.
       expect(
         harness.recorder.calls.filter((call) => call === "readRecords").length,
-      ).toBeLessThanOrEqual(3);
+      ).toBeLessThanOrEqual(4);
       expect(
         harness.recorder.calls.filter((call) => call === "readRecords").length,
       ).toBeGreaterThan(0);

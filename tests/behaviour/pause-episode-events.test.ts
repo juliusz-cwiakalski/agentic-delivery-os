@@ -193,6 +193,75 @@ describe("TC-PAUSE-064 exactly-once episode evidence over real episodes", () => 
       harness.close();
     }
   });
+
+  // GH-294 phase 12 (review F-4): the operator-shaped record the release
+  // grammar writes — stamped minimal episode identity and the declared
+  // `until`, but none of the watcher-written DM-4 episode facts — must
+  // project only the park-edge. A bounded-grace stop that never happened is
+  // never emittable, and `preservation` never renders outside the closed set.
+  test("an operator-shaped peak-window park projects the park-edge alone, never degraded episode frames", async () => {
+    const harness = await createEventHarness({ label: "episode-operator-shaped" });
+    try {
+      const client = await harness.connect();
+      client.subscribe("dispatch.attempt");
+      client.subscribe("queue.graph");
+      await Promise.resolve();
+      await harness.step();
+      client.drain();
+
+      // The post-fix writer shape (app/queue.ts release writer): the stamped
+      // episode identity and the operator's declared window end, without the
+      // watcher's graceDeadline/stoppedAt/preservation/profile.
+      appendRaw(harness, "queue.parks:GH-870:peak", {
+        schema: "delivery.queue.park.v1",
+        ref: "GH-870",
+        repository: "github.com/example/repo",
+        cause: "peak-window",
+        conditionType: "provider-window",
+        condition: { type: "provider-window", expiresAt: "2026-11-12T11:00:00.000Z" },
+        recheckMs: 60_000,
+        evaluatedAt: NOW,
+        recoveryState: "parked",
+        until: "2026-11-12T11:00:00.000Z",
+        episodeId: "peak-GH-870-2026-11-12T10:00:00.000Z",
+        recordedAt: NOW,
+      });
+      await harness.step();
+      const afterOperator = eventFrames(client.drain());
+      const operatorKinds = afterOperator.map((frame) => `${frame.topic}/${frame.kind}`);
+      expect(operatorKinds).toEqual(["queue.graph/park-edge"]);
+      const edge = afterOperator[0];
+      expect(edge?.payload).toMatchObject({
+        ref: "GH-870",
+        cause: "peak-window",
+        until: "2026-11-12T11:00:00.000Z",
+        episodeId: "peak-GH-870-2026-11-12T10:00:00.000Z",
+      });
+
+      // The belt: even a record with NO episode fields at all (the pre-change
+      // shape) emits no degraded frames — the gate holds on field presence.
+      appendRaw(harness, "queue.parks:GH-871:peak", {
+        schema: "delivery.queue.park.v1",
+        ref: "GH-871",
+        repository: "github.com/example/repo",
+        cause: "peak-window",
+        conditionType: "provider-window",
+        condition: { type: "provider-window", expiresAt: "2026-11-12T11:00:00.000Z" },
+        recheckMs: 60_000,
+        evaluatedAt: NOW,
+        recoveryState: "parked",
+        recordedAt: NOW,
+      });
+      await harness.step();
+      const afterBare = eventFrames(client.drain());
+      expect(afterBare.map((frame) => `${frame.topic}/${frame.kind}`)).toEqual([
+        "queue.graph/park-edge",
+      ]);
+    } finally {
+      await harness.stop();
+      harness.close();
+    }
+  });
 });
 
 describe("TC-PAUSE-093 event evidence bounds on the four kinds", () => {
