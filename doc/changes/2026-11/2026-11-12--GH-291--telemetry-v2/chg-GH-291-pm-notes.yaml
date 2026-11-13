@@ -216,3 +216,43 @@ notes:
       spend-v2-v1-compat, and golden spend 31 pass / 0 fail.
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 4 commit: c19ab504 (reconciliation disclosure)."
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Plan phase 5 complete: the CLI surface and both reference pages.
+      `SPEND_FLAGS` grew exactly one entry — `--breakdown` — declared as
+      `SPEND_BREAKDOWN_FLAG`; the handler validates the value against the five
+      declared dimensions before any read and refuses anything else with
+      `input.value.rejected` (typo, case-variant, and missing-value probes leave
+      the recording seam with zero reads), while the missing-value and
+      undeclared-flag paths keep their delivered classifications. The human
+      digest gained the telemetry-state line, the cost line in harness-reported
+      units with sparsity disclosed, the reconciliation line (verdict, stated
+      tolerance, basis, observed/harness figures, excluded count), the breakdown
+      sections (role+model by default, the selected dimension led when
+      `--breakdown` is passed), per-phase timing lines, and breakdown-aware
+      tail-ordered truncation implemented as a binary-search fit so the 600-row
+      and 10k-row suites stay fast; totals, telemetry state, and the
+      reconciliation line are never dropped. The command runtime forwards the
+      fold's declared truncation to the render. Both reference pages reconciled:
+      the M1 page gains the v2 addendum and the one-flag grammar delta, and the
+      M2 page is rewritten to the delivered contract — Delivered (M2-S14,
+      GH-291), the real 11-key `delivery.spend.v1` payload, the real help and
+      envelope examples (the nonstandard `ok`/`command` example and the invented
+      `spend.breakdown-unknown` / `spend.ledger-unavailable` identities are
+      gone), the delivered error identities, and the ownership line pointing at
+      backlog M2-S14 with M2-S6 owning alarms/metrics. `help.ts` documents the
+      flag. Owning TC: TC-TELEMETRY-016 plus the CLI halves of 015 and 017.
+      Goldens regenerated with `bun run tmp/tmpdir/regen-spend-goldens.ts`.
+      Narrow gate: `pnpm typecheck` green; spend-v2-refusals, spend-v2-breakdown,
+      spend-v2-v1-compat, spend-grammar, golden spend, spend-contract,
+      spend-imports, content-inventory, help-guide-coverage,
+      reference-page-parity 72 pass / 0 fail; help-guide-coverage check OK.
+      Flagged drift: `packages/cli/src/help.ts`, `tests/behaviour/spend-grammar.test.ts`
+      (flag set assertion now pins the v1 prefix plus the one declared flag),
+      `tests/behaviour/spend-bounds.test.ts` (agent-row count includes the v2
+      role rows), `tests/behaviour/spend-privacy.test.ts` (declared prose-line
+      prefixes grew by the five new lines), and the contract inventory fixtures.
+    type: "info"
+    date: "2026-11-13"

@@ -3964,9 +3964,12 @@ export const createSpendCommandRuntime = (
     if (!folded.ok) {
       return { ok: false, error: { kind: "spend", code: folded.absence.code } };
     }
-    return folded.warnings.length === 0
-      ? { ok: true, data: folded.data }
-      : { ok: true, data: folded.data, warnings: folded.warnings };
+    return {
+      ok: true,
+      data: folded.data,
+      ...(folded.warnings.length === 0 ? {} : { warnings: folded.warnings }),
+      ...(folded.truncation === undefined ? {} : { truncation: folded.truncation }),
+    };
   },
 });
 

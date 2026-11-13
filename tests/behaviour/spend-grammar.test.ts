@@ -45,14 +45,15 @@ const seeded = (label: string) => {
 };
 
 describe("TC-SPEND-025 locked grammar", () => {
-  test("the declared flag set is exactly --ref, --phase and --amplification", () => {
-    expect([...SPEND_FLAGS]).toEqual(["--ref", "--phase", "--amplification"]);
+  test("the declared flag set keeps the v1 grammar and adds only --breakdown", () => {
+    // The delivered v1 grammar is a prefix; GH-291 adds exactly one flag (F-5).
+    expect([...SPEND_FLAGS]).toEqual(["--ref", "--phase", "--amplification", "--breakdown"]);
     const root = makeTempRoot("gh236-grammar-def");
     try {
       const definition = createSpendCommandDefinition(
         spendRuntimeOver(openStore(makeIdentity(root)).store),
       );
-      expect(definition.flags).toEqual(["--ref", "--phase", "--amplification"]);
+      expect(definition.flags).toEqual(["--ref", "--phase", "--amplification", "--breakdown"]);
       expect(definition.flags).not.toContain("--help");
       expect(definition.positionals).toEqual({ max: 8 });
       expect(definition.requiresValue).toBeUndefined();

@@ -67,8 +67,9 @@ describe("TC-SPEND-021 bounded output and declared truncation", () => {
     );
     expect(utf8(human)).toBeLessThanOrEqual(SPEND_MAX_HUMAN_BYTES);
     expect(human).not.toContain("truncated");
-    // Every agent line survives under the cap.
-    expect(human.split("- agent-").length - 1).toBe(5);
+    // Every agent line survives under the cap: five `perAgent[]` rows plus the
+    // five role-breakdown rows that name the same agents (v2, DM-6).
+    expect(human.split("- agent-").length - 1).toBe(10);
   });
 
   test("an over-cap report stays bounded, declares the drop and keeps the totals", () => {

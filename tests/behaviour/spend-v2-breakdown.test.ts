@@ -13,6 +13,7 @@ import {
   SPEND_V2_DATA_KEYS,
   type HarnessTokenClass,
 } from "../../packages/core/src/contracts/index";
+import { runSpendCli, spendRuntimeOver } from "../fixtures/spend/harness";
 import {
   AGENT_ROLE,
   LANE,
@@ -203,5 +204,64 @@ describe("TC-TELEMETRY-015 the five-dimension breakdown selection", () => {
     // Ordered by tokens descending: the null-value group carries 10 tokens.
     expect(lanes.map((entry) => entry.value)).toEqual([null, "lane-beta"]);
     expect(lanes.reduce((sum, entry) => sum + entry.tokens, 0)).toBe(15);
+  });
+});
+
+describe("TC-TELEMETRY-015 breakdown selection through the CLI", () => {
+  test("each declared dimension renders its hand-summed groups in the human digest", async () => {
+    const seededCase = foldTelemetryStore(
+      {
+        steps: [
+          makeStepRecord({
+            sessionId: SESSION_A,
+            runId: RUN_A,
+            agentRole: AGENT_ROLE,
+            model: MODEL_A,
+            lane: LANE,
+            tokens: tokens({ input: 10 }),
+            finishedAt: T1,
+          }),
+          makeStepRecord({
+            sessionId: SESSION_B,
+            runId: RUN_B,
+            agentRole: "planner",
+            model: MODEL_B,
+            lane: "lane-beta",
+            tokens: tokens({ input: 20 }),
+            finishedAt: T2,
+          }),
+        ],
+      },
+      "v2-breakdown-cli",
+    );
+    roots.push(seededCase.root);
+    for (const field of SPEND_BREAKDOWN_FIELDS) {
+      const run = await runSpendCli(
+        ["spend", "--ref", TELEMETRY_REF, "--breakdown", field],
+        spendRuntimeOver(seededCase.store),
+      );
+      expect(run.exitCode, field).toBe(0);
+      expect(run.stdout).toContain(`breakdown  ${field}`);
+      expect(run.stdout).toContain("reconcile");
+    }
+  });
+
+  test("the machine report carries all five dimensions for every selection", async () => {
+    const seededCase = foldTelemetryStore(
+      { steps: [makeStepRecord({ tokens: tokens({ input: 3 }) })] },
+      "v2-breakdown-machine",
+    );
+    roots.push(seededCase.root);
+    const run = await runSpendCli(
+      ["--json", "spend", "--ref", TELEMETRY_REF, "--breakdown", "role"],
+      spendRuntimeOver(seededCase.store),
+    );
+    expect(run.exitCode).toBe(0);
+    const data = (
+      JSON.parse(run.stdout) as {
+        readonly data?: { readonly breakdowns?: Record<string, unknown> };
+      }
+    ).data;
+    expect(Object.keys(data?.breakdowns ?? {}).sort()).toEqual([...SPEND_BREAKDOWN_FIELDS].sort());
   });
 });

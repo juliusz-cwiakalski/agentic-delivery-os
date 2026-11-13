@@ -255,10 +255,16 @@ export type SpendLedgerRead = {
   }[];
 };
 
-/** The resolved selection one fold consumes (PIN-6). */
+/** The resolved selection one fold consumes (PIN-6, F-5). */
 export type SpendSelection = {
   readonly workItemRef: string;
   readonly phase?: SpendPhaseId;
+  /**
+   * The human-emphasis breakdown dimension (F-5). The machine payload always
+   * carries all five dimensions; the selection names which section the human
+   * render leads with.
+   */
+  readonly breakdown?: SpendBreakdownField;
 };
 
 /**
@@ -303,6 +309,8 @@ export type SpendCommandOutcome =
       readonly ok: true;
       readonly data: SpendReport;
       readonly warnings?: readonly string[];
+      /** The declared machine truncation the human render must state (NFR-2). */
+      readonly truncation?: SpendTruncation;
     }
   | { readonly ok: false; readonly error: SpendCommandFailure };
 
@@ -321,5 +329,13 @@ export type SpendCommandRuntime = {
 /** The declared `--amplification` human-emphasis flag name. */
 export const SPEND_HUMAN_AMPLIFICATION_FLAG = "--amplification" as const;
 
-/** The declared spend flag set, in the locked grammar order (PIN-11). */
-export const SPEND_FLAGS = ["--ref", "--phase", SPEND_HUMAN_AMPLIFICATION_FLAG] as const;
+/** The declared breakdown selection flag (GH-291 F-5, AC-F5-3). */
+export const SPEND_BREAKDOWN_FLAG = "--breakdown" as const;
+
+/** The declared spend flag set, in the locked grammar order (PIN-11, F-5). */
+export const SPEND_FLAGS = [
+  "--ref",
+  "--phase",
+  SPEND_HUMAN_AMPLIFICATION_FLAG,
+  SPEND_BREAKDOWN_FLAG,
+] as const;

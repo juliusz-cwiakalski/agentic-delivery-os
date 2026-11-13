@@ -477,13 +477,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   entry(
     ["spend"],
     "Report captured spend and amplification",
-    ["<binary> spend [--ref <ref>] [--phase <phase>] [--amplification]"],
+    ["<binary> spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification]"],
     [
       ["--ref <ref>", "Work item ref"],
       ["--phase <phase>", "Lifecycle phase"],
+      ["--breakdown <field>", "Lead with one breakdown: ticket, repository, lane, role, model"],
       ["--amplification", "Render the amplification view"],
     ],
-    ["<binary> spend --ref GH-242", "<binary> spend --amplification --json"],
+    [
+      "<binary> spend --ref GH-242",
+      "<binary> spend --ref GH-242 --breakdown model --amplification --json",
+    ],
     "spend",
   ),
   entry(
