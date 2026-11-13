@@ -220,6 +220,7 @@ describe("TC-SAFETY-010 safety runs before anything is staged", () => {
 
 describe("the real deterministic scanner names classes and never material", () => {
   test("content and filename findings carry no secret bytes", async () => {
+    mkdirSync(join(process.cwd(), "tmp", "tmpdir"), { recursive: true });
     const root = mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "scanner-"));
     try {
       mkdirSync(join(root, "src"), { recursive: true });

@@ -609,3 +609,28 @@ notes:
       Lifecycle complete: 11 of 11 phases.
     type: "info"
     date: "2026-11-13"
+  - text: >-
+      CI post-PR remediation (run 131941479229, job "TS exports, publint,
+      attw"): the job failed inside `bun test tests/structure` before the
+      publint/attw steps ran — 1164 pass / 2 fail, both ENOENT from
+      `mkdtempSync` probes under the gitignored `tmp/tmpdir/` parent
+      (projects-state-scope-policy.test.ts:309/322, the GH-288 negative
+      controls). `mkdtempSync` creates only the last path component and a
+      fresh checkout has no `tmp/` at all; local gate runs masked the gap
+      because they populate the directory. Fixed with the repo's recursive
+      mkdir-ensure idiom immediately before each repo-relative probe, plus
+      the same-class sweep: dispatch-bash-authority.test.ts (2 sites — it
+      passed in CI only because session-admin-imports' ensure happened to
+      run first), projects-help.test.ts (3 sites), commit-safety.test.ts
+      (1), state-fence.test.ts (1, + mkdirSync import),
+      daemon-watch-state-changes.test.ts (1, + import),
+      daemon-supervisor-install.test.ts (1, + import), and
+      fixtures/events/mount-mutants.ts strippedInventory (1). All remaining
+      repo-relative probes already ensure the parent and os.tmpdir() probes
+      are unaffected. Verified with tmp/tmpdir quarantined: the fixed file
+      12 pass / 0 fail, dispatch-bash-authority 7/0, full tests/structure
+      1166 pass / 0 fail, pnpm typecheck green, biome clean on the eight
+      edited files. publint/attw verdicts were never reached and remain to
+      be observed on the CI re-run.
+    type: "retro"
+    date: "2026-11-13"

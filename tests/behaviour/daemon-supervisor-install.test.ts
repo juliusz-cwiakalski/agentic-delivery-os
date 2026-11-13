@@ -3,7 +3,7 @@
  * rollback, ownership-scoped uninstall, unsupported platforms, and residency.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   absentSupervisorDescriptor,
@@ -41,7 +41,10 @@ const clock = (): DaemonClockPort => ({
   sleep: async () => undefined,
 });
 
-const temp = (): string => mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "gh238-supervisor-"));
+const temp = (): string => {
+  mkdirSync(join(process.cwd(), "tmp", "tmpdir"), { recursive: true });
+  return mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "gh238-supervisor-"));
+};
 
 const adapter = (
   root: string,

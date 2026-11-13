@@ -306,6 +306,7 @@ describe("TC-PROJ-023 the settings resolution has one call site, taking the proj
   });
 
   it("the scan detects and names an injected inline composition", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const probe = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-policy-probe-"));
     try {
       const file = join(probe, "rogue.ts");
@@ -319,6 +320,7 @@ describe("TC-PROJ-023 the settings resolution has one call site, taking the proj
   });
 
   it("the scan detects a duplicated override read", () => {
+    mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true });
     const probe = mkdtempSync(join(ROOT, "tmp", "tmpdir", "gh288-override-probe-"));
     try {
       const file = join(probe, "dup.ts");

@@ -4,7 +4,7 @@
  * recovery is explicit and reported (AC-F7-1..3, NFR-4).
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 
@@ -32,6 +32,7 @@ const relativeImport = (fromDirectory: string, target: string): string => {
 const makeCompileRoot = (): string => {
   // The probe lives under the repo's pre-approved scratch tree so relative
   // source imports resolve to the real workspace modules.
+  mkdirSync(join(process.cwd(), "tmp", "tmpdir"), { recursive: true });
   return mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "fence-compile-"));
 };
 
