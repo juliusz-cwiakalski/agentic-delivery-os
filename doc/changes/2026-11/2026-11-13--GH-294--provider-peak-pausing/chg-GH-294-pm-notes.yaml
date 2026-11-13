@@ -228,8 +228,7 @@ notes:
       suites still green after the projection guard."
     type: "info"
     date: "2026-11-13"
-  - text: "Plan phase 6 complete (commit: pending, replaced with the landed hash
-      immediately after the commit lands): the window-scoped zero-spend
+  - text: "Plan phase 6 complete (commit 2efe5c6f3): the window-scoped zero-spend
       assertion — windowSpendEvidence over the telemetry v2 storage records
       (inclusive both boundary instants; only strictly pre-park excluded, every
       exclusion named with its boundary reason; lane-dimension join; zero is a
@@ -252,5 +251,31 @@ notes:
       delivered controls spend-grammar + spend-absent + spend-v2-breakdown +
       telemetry-attribution + golden spend 49/49 PASS; content-inventory 6/6
       PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 7 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): park vocabulary + status/brief
+      surfaces + exactly-once episode evidence — queue release grammar accepts
+      peak-window (requires the delivered explicit --until) and owner-hold
+      (--until refused: the classified absence; the invoked command is the ONE
+      owner-hold park writer; the hold itself writes none; the resume modules
+      append no owner-hold park — writer enumeration asserted), lanes
+      parked:<cause> template gains both with the delivered three unchanged
+      (closed-set equality both directions; condition-type set unchanged),
+      status digest providers section gains laneParks (StatusLanePark: ref,
+      reason, until, preservation, profile — bounded like the delivered parks,
+      values carried verbatim from the park records, cleared after the episode
+      closes), collector reads them in the same pass (readLaneParks runtime
+      seam), brief surface + human render project the identical values with
+      zero added reads (pass-through + lane-park lines; owner-hold until
+      renders absent), exactly-once episode evidence suite over the real
+      daemon publish path (one stop/parked/park-edge/resumed per episode across
+      many ticks; ledger-only reconstruction via the shared episodeId; no
+      resumed for not-preserved), NFR-6 bounds measured (≤20 fields, ≤1024
+      bytes). Goldens unchanged (fixtures carry no lane parks; lanes render
+      unchanged). Test result at boundary: pnpm typecheck green; the Phase 7
+      battery 93/93 PASS (three new suites + status-owner-hold +
+      status-parked-conditions + status-providers-parked + queue-cli + golden
+      lanes-list + golden brief)."
     type: "info"
     date: "2026-11-13"

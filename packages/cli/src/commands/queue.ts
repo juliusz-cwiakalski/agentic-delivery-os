@@ -666,13 +666,25 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
       }
       const until = parseUntil(untilFlag);
       if (untilFlag !== undefined && until === undefined) return invocationRefusal("until");
-      if (parkFlag === "provider-window" && until === undefined) {
+      if ((parkFlag === "provider-window" || parkFlag === "peak-window") && until === undefined) {
+        // Both expiry-carrying window causes require the explicit --until
+        // (the delivered provider-window rule; GH-294 DEC-2: peak-window rides
+        // the same condition type).
         return invocationRefusal("until-required");
       }
       if (parkFlag === undefined && until !== undefined) {
         return invocationRefusal("until-without-park");
       }
-      if (parkFlag !== undefined && parkFlag !== "provider-window" && until !== undefined) {
+      if (
+        parkFlag !== undefined &&
+        parkFlag !== "provider-window" &&
+        parkFlag !== "peak-window" &&
+        until !== undefined
+      ) {
+        // An owner-hold park's `until` is a declared classified absence
+        // (GH-294 DM-4, DEC-12): the hold has no expiry, so a combined
+        // --park owner-hold --until invocation is refused and never
+        // synthesizes a timestamp.
         return invocationRefusal("until-unsupported");
       }
       const release = runtime.release({

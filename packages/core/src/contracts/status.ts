@@ -611,6 +611,8 @@ export type StatusFacts = {
   readonly changes: StatusDeliveryRequestRead;
   readonly ci: StatusPipelineRunRead;
   readonly providers: StatusProviderFacts;
+  /** The open lane park episodes, read in the same collector pass (GH-294 NFR-8). */
+  readonly laneParks?: readonly StatusLanePark[];
   readonly localContext: StatusLocalContextRead;
   readonly blockers: StatusBlockersRead;
   /** The spend read projection fed by the same fold the command consumes. */
@@ -722,6 +724,27 @@ export type StatusProviderPark = {
   readonly expiresAt: string;
 };
 
+/** The closed lane park-reason vocabulary the park fields carry (GH-294 DEC-2). */
+export const STATUS_LANE_PARK_REASONS = ["peak-window", "owner-hold"] as const;
+export type StatusLaneParkReason = (typeof STATUS_LANE_PARK_REASONS)[number];
+
+/** The park-fields bound for one digest (GH-294 NFR-8; mirrors the parks bound). */
+export const STATUS_MAX_LANE_PARKS = 8 as const;
+
+/**
+ * One open lane park episode's park fields (GH-294 F-7, DM-4; AMB-P3): the
+ * parked count, reason, `until`, and the preservation classification, carried
+ * with the same value the park record holds. An `owner-hold` park's `until` is
+ * a declared classified absence (absent/null — the hold has no expiry).
+ */
+export type StatusLanePark = {
+  readonly ref: string;
+  readonly reason: StatusLaneParkReason;
+  readonly until?: string;
+  readonly preservation?: "preserved" | "session-state-not-preserved";
+  readonly providerProfile?: string;
+};
+
 /** The parked-work source marker (DM-10). */
 type StatusParkedWorkSource = {
   readonly kind: "local-pm-context";
@@ -782,6 +805,8 @@ export type StatusSection = {
   readonly questions?: readonly StatusTypedQuestionItem[];
   /** The spend section's observed or unknown projection (GH-236 DM-6). */
   readonly spend?: SpendDigestSection;
+  /** The open lane park episodes' park fields (GH-294 F-7, DM-4; AMB-P3), beside the delivered parks. */
+  readonly laneParks?: readonly StatusLanePark[];
 };
 
 /** The digest summary counts (DM-1, DM-12). */

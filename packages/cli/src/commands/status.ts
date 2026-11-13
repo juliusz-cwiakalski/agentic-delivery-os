@@ -8,6 +8,7 @@
 import { aggregateStatus, renderStatusHuman } from "@delivery-os/core";
 import {
   type BrandIdentity,
+  type OwnerHoldFact,
   type SpendDigestSection,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
@@ -15,6 +16,7 @@ import {
   type StatusDeliveryRequestRead,
   type StatusDigest,
   type StatusFacts,
+  type StatusLanePark,
   type StatusLocalContextRead,
   type StatusParkRead,
   type StatusPipelineRunRead,
@@ -22,7 +24,6 @@ import {
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
   type StatusWorkItemRead,
-  type OwnerHoldFact,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
@@ -40,6 +41,8 @@ export type StatusCommandRuntime = {
   readonly readPipelineRuns: (sha: string, limit?: number) => Promise<StatusPipelineRunRead>;
   readonly readProviderConfig: () => StatusProviderConfigRead;
   readonly readProviderParks: (nowMs: number) => StatusParkRead;
+  /** The open lane park episodes' park fields, read in the same pass (GH-294 NFR-8); absent stays truthful. */
+  readonly readLaneParks?: (nowMs: number) => readonly StatusLanePark[];
   readonly readLocalContext: () => StatusLocalContextRead;
   readonly readBlockers: () => StatusBlockersRead;
   readonly readSpend?: () => SpendDigestSection;
@@ -102,6 +105,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
       parks: runtime.readProviderParks(nowMs),
       ...(ownerHold === undefined ? {} : { ownerHold }),
     },
+    ...(runtime.readLaneParks === undefined ? {} : { laneParks: runtime.readLaneParks(nowMs) }),
     localContext: runtime.readLocalContext(),
     blockers: runtime.readBlockers(),
     spend: runtime.readSpend?.() ?? { state: "observed", captured: false },

@@ -5,6 +5,7 @@
  * (including `nowMs`/`nowIso`) arrives through `StatusFacts`. The two exported
  * functions are the only executable surface; all helpers stay internal.
  */
+
 import {
   type BrandIdentity,
   type DeliveryRequest,
@@ -79,6 +80,7 @@ import {
   type StatusWorkItemRead,
   type WorkItem,
 } from "#contracts";
+import { STATUS_MAX_LANE_PARKS } from "../contracts/status.js";
 import { rankBlockerQuestions } from "./blockers.js";
 import { classifyPipelineRuns } from "./ci-result.js";
 import {
@@ -1412,6 +1414,10 @@ const providersSection = (facts: StatusFacts): StatusSection => {
     reasons.push(total === 0 ? "observed-empty" : "observed");
   }
   if (state === "degraded") reasons.push("partial-evidence");
+  // The open lane park episodes' park fields (GH-294 F-7, DM-4; AMB-P3):
+  // projected from the same collector pass, bounded like the delivered parks,
+  // and carrying the park record's own values — never a re-derivation.
+  const laneParks = (facts.laneParks ?? []).slice(0, STATUS_MAX_LANE_PARKS);
   return {
     ...sectionBase({
       id: "providers",
@@ -1424,6 +1430,7 @@ const providersSection = (facts: StatusFacts): StatusSection => {
     chain,
     entries: renderedEntries,
     parks: renderedParks,
+    ...(laneParks.length === 0 ? {} : { laneParks }),
   };
 };
 
