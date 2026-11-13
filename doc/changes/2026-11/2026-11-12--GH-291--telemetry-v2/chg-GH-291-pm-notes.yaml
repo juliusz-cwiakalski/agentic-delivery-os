@@ -412,3 +412,36 @@ notes:
       documentation phase.
     type: "info"
     date: "2026-11-13"
+  - text: >-
+      Review iteration 1: FAIL (review/review-iter-1.md). 8 findings — 0
+      critical / 1 high / 2 medium / 4 low / 1 info. F-1 (HIGH): the
+      production ingest composition never wires the attribution substrates —
+      every real delivery would record lane/agentRole as null with
+      unattributable-step warnings and a random runId that never joins the
+      command-audit ledger; the five-dimension attribution passed only on
+      injected fixtures. F-2 (MED): the ingest tally is never surfaced —
+      drift/failure frames leave no durable trace and an append failure is
+      tallied captured. F-3 (MED): zero-base token classes are skipped in the
+      tolerance arithmetic, so schema drift can render verdict within.
+      F-4/F-5/F-6 low (stamp range guard, baseline idempotency outside the
+      fence, orphaned doc block); F-7 info design note (phase-scoped
+      reconciliation basis), no action; F-8 plan-scope omission,
+      self-disclosed. Pinned scenarios SC-M2-S14-01/02 VERIFIED; DEC-4 and
+      DEC-6 HOLD; DEC-5 holds with the F-3 exception. Remediation delegated
+      to @coder (F-1, F-2, F-3 mandatory; F-4..F-6 included), then
+      doc-syncer re-run (code changes touch documented behavior) and
+      re-review at iteration 2.
+    type: "info"
+    date: "2026-11-13"
+  - text: >-
+      Retro: the review gate caught a real integration gap the per-phase
+      narrow gates structurally could not — every phase-level suite passed
+      because F-1's missing wiring lives only in the production composition
+      (packages/cli/src/production.ts), which no plan phase's declared tests
+      exercised with real substrates. Lesson: when a capability depends on
+      composition-level wiring (ports joined at the edge), at least one
+      delivered test must construct the production composition or the
+      review's integration heuristics become the only net. Cost: one
+      remediation + re-review iteration.
+    type: retro
+    date: "2026-11-13"
