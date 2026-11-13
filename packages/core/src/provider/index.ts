@@ -27,56 +27,6 @@ export {
   type ProviderQuotaInput,
   type ProviderResolveInput,
 } from "./engine.js";
-export {
-  createProfileEvent,
-  familyDiversityAllowed,
-  profileEventIdentity,
-  projectProfileEvidence,
-  resolveProfileForSpawn,
-  runProfileSpawn,
-  scoreProfileTask,
-  selectProfile,
-  targetSeatName,
-  type ProfileEventInput,
-  type ProfileHeuristicPolicy,
-  type ProfileSelectionInput,
-  type ProfileSelectionOptions,
-  type ProfileSpawnInput,
-  type ProfileSpawnOutcome,
-  type ProfileSpawnPort,
-  type ProfileSpawnRunInput,
-  type ProfileTaskFacts,
-} from "./profile.js";
-export {
-  buildProfileEnvRecord,
-  envRecordNameForSeat,
-  resolveEnvRecordPolicy,
-  serializeEnvRecord,
-  validateEnvRecord,
-  type EnvRecordErrorCode,
-  type EnvRecordValidation,
-  type EnvRecordValidationError,
-  type ProfileEnvRecordInput,
-  type ResolvedEnvRecordPolicy,
-} from "./profile-env-record.js";
-export {
-  activeRung,
-  evaluatePacing,
-  rungState,
-  type PacingEvaluation,
-  type PacingEvaluationInput,
-} from "./profile-pacing.js";
-export {
-  createProfileTargetRecord,
-  evaluateProfileLifecycle,
-  persistProfileTarget,
-  readProfileTarget,
-  type PersistProfileTargetInput,
-  type PersistProfileTargetOutcome,
-  type ProfileLifecycleInput,
-  type ProfileLifecycleOutcome,
-  type ProfileTargetRecordInput,
-} from "./profile-lifecycle.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
   type AnnouncementInput,
@@ -101,7 +51,70 @@ export {
   readProviderLedger,
   readProviderParkViews,
 } from "./parks.js";
-export { evaluatePeakWindow, utcSecondsOfDay } from "./peak.js";
+export {
+  evaluatePeakWindow,
+  peakWindowEndSeconds,
+  peakWindowOpenSeconds,
+  utcSecondsOfDay,
+} from "./peak.js";
+export {
+  deriveGraceSecondsMax,
+  PEAK_RULES_ERROR_CODE,
+  type PeakRulesFailure,
+  type PeakRulesResult,
+  parseProfilePeakWindow,
+  parseProfilePeakWindows,
+} from "./peak-rules.js";
+export {
+  createProfileEvent,
+  familyDiversityAllowed,
+  type ProfileEventInput,
+  type ProfileHeuristicPolicy,
+  type ProfileSelectionInput,
+  type ProfileSelectionOptions,
+  type ProfileSpawnInput,
+  type ProfileSpawnOutcome,
+  type ProfileSpawnPort,
+  type ProfileSpawnRunInput,
+  type ProfileTaskFacts,
+  profileEventIdentity,
+  projectProfileEvidence,
+  resolveProfileForSpawn,
+  runProfileSpawn,
+  scoreProfileTask,
+  selectProfile,
+  targetSeatName,
+} from "./profile.js";
+export {
+  buildProfileEnvRecord,
+  type EnvRecordErrorCode,
+  type EnvRecordValidation,
+  type EnvRecordValidationError,
+  envRecordNameForSeat,
+  type ProfileEnvRecordInput,
+  type ResolvedEnvRecordPolicy,
+  resolveEnvRecordPolicy,
+  serializeEnvRecord,
+  validateEnvRecord,
+} from "./profile-env-record.js";
+export {
+  createProfileTargetRecord,
+  evaluateProfileLifecycle,
+  type PersistProfileTargetInput,
+  type PersistProfileTargetOutcome,
+  type ProfileLifecycleInput,
+  type ProfileLifecycleOutcome,
+  type ProfileTargetRecordInput,
+  persistProfileTarget,
+  readProfileTarget,
+} from "./profile-lifecycle.js";
+export {
+  activeRung,
+  evaluatePacing,
+  type PacingEvaluation,
+  type PacingEvaluationInput,
+  rungState,
+} from "./profile-pacing.js";
 export {
   classifyQuotaTransport,
   createProviderWatchStatus,
@@ -116,17 +129,17 @@ export {
 } from "./quota.js";
 export {
   emptyProfileConfiguration,
-  parseAndValidateProfileConfiguration,
-  parseProfileConfiguration,
-  parseAndValidateProviderConfiguration,
-  parseProviderConfiguration,
-  selectProviderChain,
-  validateProfileConfiguration,
-  validateProviderConfiguration,
   type ProfileConfigResult,
   type ProfileValidationError,
   type ProfileValidationErrorCode,
   type ProviderChainSelection,
   type ProviderConfigResult,
   type ProviderValidationError,
+  parseAndValidateProfileConfiguration,
+  parseAndValidateProviderConfiguration,
+  parseProfileConfiguration,
+  parseProviderConfiguration,
+  selectProviderChain,
+  validateProfileConfiguration,
+  validateProviderConfiguration,
 } from "./validate.js";

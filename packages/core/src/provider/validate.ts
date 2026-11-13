@@ -9,12 +9,12 @@ import {
   type ConfigValue,
   PACING_CLASSES,
   PACING_GOAL_PRIORITIES,
+  type PacingClass,
+  type PacingGoalPriority,
   PROFILE_CAPABILITIES,
   PROVIDER_COST_CLASSES,
   PROVIDER_QUOTA_DEFAULTS,
   PROVIDER_WATCH_MAPPING_KINDS,
-  type PacingClass,
-  type PacingGoalPriority,
   type ProfileCapability,
   type ProviderChain,
   type ProviderConfiguration,
@@ -34,6 +34,7 @@ import {
   type ProviderWatchMappingKind,
   type ProviderWatchTarget,
 } from "#contracts";
+import { parseProfilePeakWindows } from "./peak-rules.js";
 
 export type ProviderValidationError = {
   readonly code: Extract<ProviderErrorCode, "provider.chain.invalid" | "provider.chain.empty">;
@@ -535,7 +536,7 @@ const parseProfile = (name: string, value: unknown): ProviderProfile | ProfileCo
   if (!isRecord(value)) return profileInvalid(`profiles.${name} must be an object`, name);
   const extra = exactKeys(
     value,
-    ["tier", "providers", "seats", "agentOverrides"],
+    ["tier", "providers", "seats", "agentOverrides", "peakWindows"],
     `profiles.${name}`,
   );
   if (extra !== undefined) return extra;
@@ -585,7 +586,23 @@ const parseProfile = (name: string, value: unknown): ProviderProfile | ProfileCo
       agentOverrides[agent] = seatName;
     }
   }
-  return { name, tier, providers, seats, agentOverrides };
+  // GH-294 F-2/DM-3: declared peak-window rules parse and validate fail-closed
+  // here, so an invalid rule set can never reach the window watcher; a profile
+  // without the branch keeps the delivered shape (no peak enforcement).
+  const peakWindows =
+    value.peakWindows === undefined ? undefined : parseProfilePeakWindows(value.peakWindows);
+  if (peakWindows !== undefined && !peakWindows.ok) {
+    return profileInvalid(peakWindows.failure.detail, peakWindows.failure.field);
+  }
+  const rules = peakWindows?.ok === true ? peakWindows.rules : undefined;
+  return {
+    name,
+    tier,
+    providers,
+    seats,
+    agentOverrides,
+    ...(rules === undefined ? {} : { peakWindows: rules }),
+  };
 };
 
 const parsePreferenceChain = (value: unknown): ProviderPreferenceChain | ProfileConfigResult => {

@@ -118,3 +118,20 @@ notes:
       iteration 3 of 3."
     type: "info"
     date: "2026-11-13"
+  - text: "Plan phase 1 complete (commit: pending, replaced with the landed hash
+      immediately after the commit lands): decision records TDR-0028/0029/0030
+      landed with the peak-window rule schema as versioned per-profile data
+      (provider.profiles.<profile>.peakWindows: window list, multiplier,
+      bufferBefore/After, required graceSeconds default, derived
+      graceSecondsMax = smallest declared buffer exposed on the parsed value;
+      UTC-only designation validates, exact-duplicate windows refuse, distinct
+      overlaps validate without arbitration per OQ-TP-1/2 pins; buffer-inclusive
+      open/effective-end boundary helpers added to provider/peak.ts, one
+      boundary truth, two consumers; delivered evaluatePeakWindow behavior
+      preserved). Test result at boundary: pnpm typecheck green;
+      provider-peak-rules-schema 18/18 PASS; provider-profile-contract +
+      content-inventory 16/16 PASS; ambient-globals OK (185 files clean);
+      exports-parity OK (5 publishables); delivered provider-peak-window
+      control 5/5 PASS."
+    type: "info"
+    date: "2026-11-13"

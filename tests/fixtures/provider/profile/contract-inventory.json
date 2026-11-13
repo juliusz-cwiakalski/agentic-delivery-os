@@ -49,6 +49,8 @@
     "ProviderPreferenceChain",
     "ProviderProfile",
     "ProviderProfileConfiguration",
+    "ProviderProfilePeakRules",
+    "ProviderProfilePeakWindow",
     "ProviderProfileSeat",
     "ProviderProfileTier",
     "ProviderWatchConditionView",

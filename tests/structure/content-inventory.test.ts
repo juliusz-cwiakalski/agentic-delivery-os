@@ -2062,7 +2062,20 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readProviderLedger",
     "readProviderParkViews",
   ],
-  "core/src/provider/peak.ts": ["evaluatePeakWindow", "utcSecondsOfDay"],
+  "core/src/provider/peak.ts": [
+    "evaluatePeakWindow",
+    "peakWindowEndSeconds",
+    "peakWindowOpenSeconds",
+    "utcSecondsOfDay",
+  ],
+  "core/src/provider/peak-rules.ts": [
+    "PEAK_RULES_ERROR_CODE",
+    "PeakRulesFailure",
+    "PeakRulesResult",
+    "deriveGraceSecondsMax",
+    "parseProfilePeakWindow",
+    "parseProfilePeakWindows",
+  ],
   "core/src/provider/profile.ts": [
     "createProfileEvent",
     "familyDiversityAllowed",

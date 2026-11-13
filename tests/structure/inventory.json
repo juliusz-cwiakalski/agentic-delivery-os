@@ -177,6 +177,7 @@
     "src/provider/index.ts",
     "src/provider/loop.ts",
     "src/provider/parks.ts",
+    "src/provider/peak-rules.ts",
     "src/provider/peak.ts",
     "src/provider/profile-env-record.ts",
     "src/provider/profile-lifecycle.ts",
