@@ -47,7 +47,7 @@ The motivating regressions are: an enforcement surface that quietly enters the d
 - **Current-truth specification reconciliation is phase 7** (`doc/spec/**` and one guide, Appendix B rows 25–31) and is explicitly not tested here; the delivery diff must not contain pre-flipped behavioural current truth (TC-SCOPE-001).
 - **The new check surfaces and the workflow are pinned by the delivery plan.** `scripts/checks/milestone-attachment.ts` (pure core), `scripts/checks/milestone-attachment-runner.ts` (port-injected orchestration), `scripts/checks/milestone-attachment-github.ts` (the sole network-capable adapter, used by the workflow and the local sweep), and `.github/workflows/ticket-milestone-check.yml`. Appendix B row 34's "`scripts/**` UNCHANGED" is read as "no distributable/install-set script changed" and is reconciled by the plan's TP-Q1 pin; the new modules are repository-internal, outside `ADOS_DELIVERY_SCRIPTS`, and outside the aggregate chain.
 - **The existing invariant scanners stay unchanged by design.** `ci-supply-chain.ts`/`ci-bindingness.ts` read only `.github/workflows/ci.yml` and enforce only `ts-` jobs (spec Appendix C "Workflow audit scope"). The new workflow's permissions, pins, secret absence, and bypass-construct absence are owned by the dedicated static suite plus its mutation proof (TC-WF-002/TC-WF-003), not by editing the scanners.
-- **Contract v1 alignment is in flight in parallel artifacts.** This revision implements the canonical check contract v1 (ordered rules 1, 2, 3, 4a–4f; closed write vocabulary `addFlag | removeFlag | postMarkerComment | writeJobSummary`) as the decision-table oracle. The spec's Appendix C table still shows the earlier eight-row form and is being aligned to the same contract; if it lands differently, a revision of this plan is required before the DoR gate (never silent drift).
+- **Contract v1 is the shared artifact contract.** This revision implements the canonical check contract v1 (ordered rules 1, 2, 3, 4a–4f; closed write vocabulary `addFlag | removeFlag | postMarkerComment | writeJobSummary`) as the decision-table oracle. Spec Appendix C carries the same ordered contract (14 rows); a divergence in any artifact requires a revision before the DoR gate (never silent drift).
 - **No MCP surface, no CLI surface, no product telemetry** (NG-4, §10): none is asserted because none is claimed.
 - **DoD-19 is the roll-up condition**, satisfied by the all-Covered matrix in §3 plus execution evidence in §10 and phase pm-notes; it has no TC of its own.
 
@@ -599,7 +599,7 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 1. Assert the input shape: exactly the seven fields above, with `action` from the closed set `opened | edited | labeled | unlabeled | milestoned | demilestoned | reopened`, and no field carrying issue title/body/author text.
 2. Assert the ordered, first-match rules against the table below, row by row. "Tracker writes" excludes the job summary; **every row also emits exactly one `writeJobSummary`**, recorded in the last column.
-3. Assert precedence with deliberately conflicting inputs, proving first-match-wins rather than conjunction: a closed exempt issue → `out-of-scope` (rule 1 before 2); an open exempt issue **with** a milestone and a flag → `exempt` with zero writes (rule 2 before 3/4, so the flag is not removed and no comment is posted); an open compliant issue with the flag present → `compliant` with exactly one `removeFlag` (rule 3 before 4); an open issue with no milestone, no exemption, flag present, and any non-`opened` action → `flagged` with zero writes (rule 4d).
+3. Assert precedence with deliberately conflicting inputs, proving first-match-wins rather than conjunction: a closed exempt issue → `out-of-scope` (rule 1 before 2); an open exempt issue **with** a milestone and a flag → `exempt` with zero writes (rule 2 before 3/4, so the flag is not removed and no comment is posted); an open compliant issue with the flag present → `compliant` with exactly one `removeFlag` (rule 3 before 4); an open issue with no milestone, no exemption, flag present, and an `edited`, `labeled`, `unlabeled`, or `reopened` action → `flagged` with zero writes (rule 4d); and the same issue on `demilestoned` **with** the marker → `restored` with zero writes (rule 4c, not 4d).
 4. Assert the verdict is exactly one member of the closed verdict set for every row of the full product (exhaustive over booleans and the seven actions), never undefined/empty.
 5. Assert the write vocabulary is closed: no produced write is outside `{ addFlag, removeFlag, postMarkerComment, writeJobSummary }`; no state transition, assignee change, milestone write, or other-label write exists in the type or in any output; every run contains exactly one `writeJobSummary` naming the issue number, the verdict, and the tracker writes (or "none").
 6. Assert determinism: evaluating the same input twice yields deep-equal results; evaluation order across the table does not matter.
@@ -630,13 +630,21 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 | 19 | yes | open | no | absent | absent | absent | unlabeled | `out-of-scope` | none (4f) | 1 |
 | 20 | yes | open | no | absent | absent | absent | reopened | `out-of-scope` | none (4f) | 1 |
 
+**Representative rows beyond the canonical 20 (marker and flag interactions):**
+
+| # | `change` | state | exemption | milestone | flag | marker | action | verdict | tracker writes | job summary |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 21 | yes | open | no | absent | present | absent | `demilestoned` | `out-of-scope` | none (4f; no marker, not restored) | 1 |
+| 22 | yes | open | no | absent | present | absent | `unlabeled` | `flagged` | none (4d) | 1 |
+| 23 | yes | open | no | absent | present | present | `reopened` | `flagged` | none (4d) | 1 |
+
 **Expected Outcome**:
 
 - The decision logic is fully pinned offline to contract v1: every ordered rule and every write verb has at least one case; exemption outranks milestone and flag; a pre-existing unattached issue and a human-removed flag are never written on edit/label/reopen; each run emits exactly one job summary. AC-F3-6's "full decision table ... without network access" is demonstrated by construction.
 
 **Notes / Clarifications**:
 
-- Contract v1 supersedes the earlier eight-row decision table still shown in spec Appendix C; the spec, PDR, and plan are being aligned to v1 in parallel (§1.2). The suite is the oracle, so a divergence in any artifact fails this TC rather than silently redefining the check.
+- Contract v1 is the ordered contract carried by spec Appendix C, PDR-0005, and the plan (§1.2). The suite is the oracle, so a divergence in any artifact fails this TC rather than silently redefining the check.
 - The "tracker writes" column is the tracker-side action set. `writeJobSummary` is not a tracker write; it is the one run-legibility write required by §10 and is asserted in column 10 and by TC-WF-001.
 
 #### TC-CHK-002 - Opened flag path: one flag, one marker comment only when none exists, no other mutation

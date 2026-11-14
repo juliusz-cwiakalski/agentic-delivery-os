@@ -1,6 +1,6 @@
 # M2 test scenarios: the seed each story's test plan inherits (planned)
 
-Planned scenario seeds for stories M2-S2 through M2-S19, at least two per
+Planned scenario seeds for stories M2-S2 through M2-S20, at least two per
 story. Each scenario names an invocation and an observable result so the
 owning story's test plan starts from a concrete draft instead of a blank page.
 Scope and acceptance stay in [../../backlog.md](../../backlog.md); the
@@ -470,6 +470,56 @@ second step until the first member's pull request lands, and the evidence
 lists every pull request in landing order.
 
 Assert: `plan.data.members[1].dependsOn[]` names the first member's `repoKey` and the evidence lists the pull requests in landing order.
+
+## M2-S20 Milestone-first planning and delivery
+
+### SC-M2-S20-01 A change issue created without a milestone is flagged once and its state is unchanged
+
+Given an open `change` issue with no milestone, no capture exemption, no
+`needs-milestone` flag, and no marker comment, when the milestone-attachment
+check evaluates its `opened` event, then it applies the `needs-milestone` label
+and posts exactly one marked comment, and the issue's state, assignee,
+milestone, and other labels are unchanged.
+
+Assert: verdict is `flagged`, tracker writes are exactly `addFlag` and `postMarkerComment`, and the issue state is byte-identical to the seed state.
+
+### SC-M2-S20-02 The same issue edited and relabeled is not flagged a second time and gains no second comment
+
+Given the issue from SC-M2-S20-01 carrying the flag and the one marked comment,
+when further `opened`, `edited`, `labeled`, `unlabeled`, or `reopened` events
+arrive, then each evaluation reports the flag as already present, writes
+nothing, and leaves the comment count at one.
+
+Assert: every repeat verdict is `flagged` with zero tracker writes; the comment count is `<= 1`.
+
+### SC-M2-S20-03 A change issue carrying the capture exemption is not flagged, and the check reports it as exempt
+
+Given an open `change` issue carrying `backlog-capture` with or without a
+milestone and with or without a stale flag, when the check evaluates any
+contract action, then the exemption outranks the milestone and the flag, the
+verdict is `exempt`, and zero tracker writes occur.
+
+Assert: verdict is `exempt`, tracker writes are empty, and an existing stale flag remains visible.
+
+### SC-M2-S20-04 Attaching a milestone clears the flag label; detaching restores it with no new comment
+
+Given a flagged issue with the marker comment, when a milestone is attached,
+then verdict is `compliant` and the flag is removed; when the milestone is
+detached again with the marker still present, then verdict is `restored` and the
+flag is re-applied, with no second comment; a manual removal is never re-applied
+by an edit, label, unlabel, or reopen.
+
+Assert: attach writes exactly `removeFlag`; detach writes exactly `addFlag`; the comment count stays `1`.
+
+### SC-M2-S20-05 The sweep reports the unattached population with zero tracker writes, one local summary artifact, and exit 0
+
+Given a paged population of open `change` issues including unattached, exempt,
+milestoned, closed, and non-`change` tickets, when the advisory sweep runs, then
+it reports the unattached open `change` count and issue numbers, writes exactly
+one local artifact, performs zero tracker writes, and exits `0` whatever the
+finding count.
+
+Assert: tracker write calls are empty, the artifact file count is `1`, and the run's exit code is `0`.
 
 ## Cross-story scenarios
 
