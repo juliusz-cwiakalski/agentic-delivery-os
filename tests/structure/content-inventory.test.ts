@@ -1253,7 +1253,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validatePlanValue",
   ],
   "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
-  "core/src/domain/project-groups.ts": ["projectGroupDeclared", "validateProjectGroupsDocument"],
+  "core/src/domain/project-groups.ts": [
+    "projectGroupDeclared",
+    "projectGroupMemberSelectors",
+    "selectProjectGroups",
+    "validateProjectGroupsDocument",
+  ],
   "core/src/domain/verify-change.ts": [
     "classifyVerifyChange",
     "classifyVerifyDocument",
@@ -2301,6 +2306,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "projectHandoverState",
     "projectListEntry",
     "projectMemberHealth",
+    "resolveProjectGroupMember",
     "selectDaemonReachability",
   ],
   "cli/src/commands/projects.ts": ["createProjectsCommandDefinition"],
@@ -2350,6 +2356,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "nodeProjectConfigFileSystem",
     "projectGroupsConfigPath",
     "readProjectGroupsConfig",
+  ],
+  "adapters/src/file/workspace-scan.ts": [
+    "nodeWorkspaceScanFileSystem",
+    "scanDeclaredWorkspaceMembers",
   ],
   "core/src/config/catalog.ts": [
     "BOOTSTRAP_DESCRIPTOR",

@@ -175,3 +175,38 @@ notes:
       before completing the phase, never assume partial work is coherent."
     type: retro
     date: "2026-11-14"
+  - text: "Plan phase 2 'Project configuration document (delivery.projects.groups.v1)
+      with classified load-time validation' complete: commit 20ff468b
+      (primitive-owned template subject; one commit, safety.findings empty,
+      dry-run archived). Obligations 2.1-2.7 verified: contract types + pure
+      OQ-1 validator + yaml-seam reader; the `projects list --project
+      <groupKey>` scoped read as the validation seam (the default form still
+      returns the delivered flat projects.v1 payload — intermediate-state rule
+      held); the three identities projects.config-invalid (exit 1),
+      projects.unknown-group (exit 1), projects.scope-unavailable (exit 2) with
+      their feature-result-contract.md registry rows in the same commit (C-6
+      sync carrier: table rows + identity counts only, no behavioural claim);
+      tests/behaviour/projects-config.test.ts TC-GRPDOC-001..005 green (load per
+      schema; all six config-invalid variants; scope-unavailable at exit 2 for
+      an unreadable document and an unreadable invoking scope; unknown-group at
+      exit 1; absent/empty configuration -> valid empty listing at exit 0; zero
+      silent-empty outcomes; TC-GRPDOC-004's queue/status refusal steps are
+      correctly deferred to phase 4); inventory rows and executable-export
+      declarations for the two new source files. packages/core/src/index.ts was
+      restored to HEAD and extended with additions only (zero removed exports;
+      createLaneLaunchPlanner and the seven watchdog names intact). Test result:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check GREEN — 8146 pass, 4 skip, 0 fail across
+      1048 files, then boundaries, prompt-conformance, help-guide-coverage, and
+      exports-parity all OK. A PATH-local bun wrapper raised only Bun's per-test
+      timeout/concurrency for that run because the shared host was under heavy
+      unrelated load (two 5s/30s perf tests flaked at their defaults and pass in
+      isolation); package.json and bunfig.toml were never modified and no
+      wrapper artifact is committed. Scope-drift (mandatory mechanical sync the
+      plan's phase-2 file list omitted): scripts/checks/error-table-sync.ts, the
+      events error-table and state-additivity baselines, the ports
+      v1-contract-inventory fixture, the dispatch-attempts taxonomy count pin,
+      and the projects-help error-row pin (three -> six; its payload and mount
+      assertions are unchanged). No MCP/opencode surface touched; no pre-emptive
+      rename code."
+    type: info
+    date: "2026-11-14"

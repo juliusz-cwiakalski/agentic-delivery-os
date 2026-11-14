@@ -821,5 +821,7 @@ export {
  */
 export {
   projectGroupDeclared,
+  projectGroupMemberSelectors,
+  selectProjectGroups,
   validateProjectGroupsDocument,
 } from "./project-groups.js";

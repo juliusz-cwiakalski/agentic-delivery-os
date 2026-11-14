@@ -172,12 +172,15 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  type ProjectGroupMemberResolution,
   projectGroupEntry,
   projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
   projectMemberHealth,
+  resolveProjectGroupMember,
   selectDaemonReachability,
+  type WorkspaceLocatedMember,
 } from "./projects.js";
 /**
  * The queue/scheduling use-case orchestration (GH-237 F-1..F-12): the intent,

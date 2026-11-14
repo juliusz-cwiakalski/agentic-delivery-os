@@ -182,3 +182,34 @@ export const validateProjectGroupsDocument = (
 /** Whether the validated configuration declares the requested group key. */
 export const projectGroupDeclared = (config: ProjectGroupsConfig, groupKey: string): boolean =>
   config.state === "loaded" && config.groups.some((group) => group.groupKey === groupKey);
+
+/**
+ * Enumerate the validated groups in declared order (GH-309 F-4, NFR-3). With no
+ * requested key every configured group is returned; with a key exactly the one
+ * declared group is returned. An absent or empty configuration enumerates zero
+ * groups, which is the valid opt-in empty listing, never a silent-empty group.
+ */
+export const selectProjectGroups = (
+  config: ProjectGroupsConfig,
+  groupKey?: string,
+): readonly ProjectGroupValidated[] => {
+  if (config.state === "empty") return [];
+  if (groupKey === undefined) return config.groups;
+  const group = config.groups.find((candidate) => candidate.groupKey === groupKey);
+  return group === undefined ? [] : [group];
+};
+
+/**
+ * The declared member selectors one group carries, in declared order (GH-309
+ * F-3, NFR-4). The workspace scan consumes exactly these facts, so a scan can
+ * never widen membership beyond what the configuration declares.
+ */
+export const projectGroupMemberSelectors = (
+  group: ProjectGroupValidated,
+): {
+  readonly roots: readonly string[];
+  readonly repoKeys: readonly string[];
+} => ({
+  roots: group.members.flatMap((member) => (member.kind === "root" ? [member.root] : [])),
+  repoKeys: group.members.flatMap((member) => (member.kind === "repoKey" ? [member.repoKey] : [])),
+});

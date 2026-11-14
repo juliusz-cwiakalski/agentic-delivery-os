@@ -114,6 +114,14 @@ export {
   readStateRootArtifacts,
 } from "./state-root-inventory.js";
 export {
+  nodeWorkspaceScanFileSystem,
+  scanDeclaredWorkspaceMembers,
+  type WorkspaceLocatedClone,
+  type WorkspaceScanEntry,
+  type WorkspaceScanFileSystem,
+  type WorkspaceScanMember,
+} from "./workspace-scan.js";
+export {
   type ParsedConfig,
   parseConfigYaml,
   parserHostSwitchBlocked,

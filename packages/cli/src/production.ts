@@ -38,6 +38,7 @@ import {
   replaceDispatchIdentityMarkerText,
   replaceHostIndexFile,
   runtimePlatform,
+  scanDeclaredWorkspaceMembers,
 } from "@delivery-os/adapters/file";
 import {
   createGitBranchSeam,
@@ -100,6 +101,7 @@ import {
   projectGroupDeclared,
   projectGroupEntry,
   projectGroupMemberEntry,
+  projectGroupMemberSelectors,
   projectHandoverState,
   projectListEntry,
   projectMemberHealth,
@@ -116,8 +118,10 @@ import {
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
+  resolveProjectGroupMember,
   resolveProjectScope,
   selectDaemonReachability,
+  selectProjectGroups,
   serializeHostIndexDocument,
   serializeIdentityMarker,
   stateScopeEnvironmentName,
@@ -127,6 +131,7 @@ import {
   type TelemetrySessionTotalsReader,
   type VerifyDocumentClassification,
   validateProjectGroupsDocument,
+  type WorkspaceLocatedMember,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
@@ -163,8 +168,10 @@ import {
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
   type ProjectConfigInvalidReason,
+  type ProjectGroupEntry,
   type ProjectGroupMemberEntry,
   type ProjectGroupMemberSelected,
+  type ProjectGroupValidated,
   type ProjectsListEntry,
   type QueueDegradationReason,
   type QueueTrackerRead,
@@ -2483,63 +2490,58 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     /**
      * Resolve and observe one declared member against the delivered per-checkout
-     * machinery (GH-309 F-1, F-4; OQ-3). Resolution is configuration-driven: a
-     * member selected by `repoKey` resolves through the host index, and a member
-     * selected by `root` resolves through the index or its readable identity
-     * marker. An unimplemented tracker kind is classified `not-yet-supported`
-     * and never observed; an unresolvable member stays classified `unregistered`
-     * rather than silently vanishing from `members[]`.
+     * machinery (GH-309 F-1, F-3, F-4; OQ-3). Resolution is configuration-driven:
+     * the host index and the declared-only workspace scan locate the selector the
+     * configuration names. An unimplemented tracker kind is classified
+     * `not-yet-supported` before any observation and never rejected; an
+     * unresolvable member stays classified `unregistered` rather than silently
+     * vanishing from `members[]`.
      */
     const readGroupMember = async (
       member: ProjectGroupMemberSelected,
       index: readonly HostIndexEntry[],
+      workspace: readonly WorkspaceLocatedMember[],
     ): Promise<ProjectGroupMemberEntry> => {
-      const declaredRoot = member.kind === "root" ? member.root : undefined;
-      const declaredKey = member.kind === "repoKey" ? member.repoKey : undefined;
-      const byKey =
-        declaredKey === undefined
-          ? undefined
-          : index.find((entry) => entry.projectKey === declaredKey);
-      const byRoot =
-        declaredRoot === undefined
-          ? undefined
-          : index.find(
-              (entry) =>
-                trimTrailingSeparators(entry.root) === trimTrailingSeparators(declaredRoot),
-            );
-      const repoKey =
-        byKey?.projectKey ??
-        byRoot?.projectKey ??
-        declaredKey ??
-        identityProjectKeyFor(declaredRoot);
-      const root = byKey?.root ?? byRoot?.root ?? declaredRoot ?? "";
-      const unimplemented = !(IMPLEMENTED_TRACKER_KINDS as readonly string[]).includes(
-        member.trackerKind,
-      );
+      const markerRepoKey = member.kind === "root" ? identityProjectKeyFor(member.root) : undefined;
+      const resolution = resolveProjectGroupMember({
+        member,
+        index,
+        workspace,
+        ...(markerRepoKey === undefined ? {} : { markerRepoKey }),
+      });
+      const displayKey =
+        resolution.state === "located"
+          ? resolution.repoKey
+          : (resolution.repoKey ?? (member.kind === "root" ? member.root : member.repoKey));
       const unobserved = (health: ProjectGroupMemberEntry["health"]): ProjectGroupMemberEntry =>
         projectGroupMemberEntry({
-          repoKey: repoKey ?? declaredKey ?? declaredRoot ?? "",
-          root,
+          repoKey: displayKey,
+          root: resolution.root,
           trackerKind: member.trackerKind,
           state: "shell",
           health,
           daemonReachable: selectDaemonReachability({ mount: { mounted: false } }),
         });
-      if (repoKey === undefined || root.length === 0) return unobserved("unregistered");
+      const unimplemented = !(IMPLEMENTED_TRACKER_KINDS as readonly string[]).includes(
+        member.trackerKind,
+      );
+      // `not-yet-supported` is mandatory for an unimplemented kind, even when the
+      // checkout is also unlocatable: the classification names the adapter gap.
       if (unimplemented) return unobserved("not-yet-supported");
-      const stateLocation = projectStateRoot(hostRoot, repoKey);
+      if (resolution.state === "unlocated") return unobserved("unregistered");
+      const stateLocation = projectStateRoot(hostRoot, resolution.repoKey);
       const classification = classifyStateLocationOnDisk(stateLocation);
       if (classification === "state-unavailable") return unobserved("state-unavailable");
       const handover =
         classification === "first-use"
           ? ({ ok: true, state: "shell" } as const)
-          : readProjectHandover(stateLocation, repoKey);
+          : readProjectHandover(stateLocation, resolution.repoKey);
       if (!handover.ok) return unobserved("state-unavailable");
       const daemon = await readDaemonReachability(stateLocation, classification === "ready");
       if (!daemon.ok) return unobserved("state-unavailable");
       return projectGroupMemberEntry({
-        repoKey,
-        root,
+        repoKey: resolution.repoKey,
+        root: resolution.root,
         trackerKind: member.trackerKind,
         state: handover.state,
         health: projectMemberHealth({ outcome: "observed", daemonReachable: daemon.value }),
@@ -2548,14 +2550,38 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
-     * The `projects list --project <groupKey>` scoped read (GH-309 F-1, F-2): the
-     * validation seam for the configuration document. The delivered default form
-     * is untouched here — this branch exists only when `--project` is supplied.
-     * An absent or empty configuration is the valid empty listing at exit 0;
-     * a readable-but-invalid document is `projects.config-invalid`; a document
-     * or invoking scope that cannot be read is `projects.scope-unavailable`.
+     * Scan one group's registered workspace root for its declared members only
+     * (GH-309 F-3, NFR-4). No scan runs without a configured `workspaceRoot`, and
+     * the scan is handed exactly the declared selectors, so an undeclared clone is
+     * never admitted at any depth.
      */
-    const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> => {
+    const scanGroupWorkspace = (
+      group: ProjectGroupValidated,
+    ): readonly WorkspaceLocatedMember[] => {
+      if (group.workspaceRoot === undefined) return [];
+      const selectors = projectGroupMemberSelectors(group);
+      return scanDeclaredWorkspaceMembers({
+        workspaceRoot: group.workspaceRoot,
+        declared: [
+          ...selectors.roots.map((root) => ({ root })),
+          ...selectors.repoKeys.map((repoKey) => ({ repoKey })),
+        ],
+        repoKeyOf: (root) => identityProjectKeyFor(root),
+      });
+    };
+
+    /**
+     * The group read behind `projects list --project <groupKey>` (GH-309 F-1,
+     * F-2, F-4): the configuration document is the sole membership source, and
+     * the enumeration is over every configured group in declared order, filtered
+     * to the requested key only when one is supplied. The delivered default form
+     * is untouched here — the group enumeration reaches the CLI only through the
+     * scoped grammar until the rename phase. An absent or empty configuration is
+     * the valid empty listing at exit 0; a readable-but-invalid document is
+     * `projects.config-invalid`; a document or invoking scope that cannot be read
+     * is `projects.scope-unavailable`.
+     */
+    const readProjectGroups = async (groupKey?: string): Promise<ProjectGroupRuntimeRead> => {
       const gitRoot = gitRootForConfig();
       if (gitRoot === undefined) {
         return {
@@ -2601,21 +2627,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (groupsConfig.state === "empty") {
         return { ok: true, data: { groups: [] } };
       }
-      if (!projectGroupDeclared(groupsConfig, groupKey)) {
+      if (groupKey !== undefined && !projectGroupDeclared(groupsConfig, groupKey)) {
         return {
           ok: false,
           code: "projects.unknown-group",
           summary: `project group "${groupKey}" is not declared by the configuration document`,
         };
       }
-      const group = groupsConfig.groups.find((candidate) => candidate.groupKey === groupKey);
-      if (group === undefined) {
-        return {
-          ok: false,
-          code: "projects.unknown-group",
-          summary: `project group "${groupKey}" is not declared by the configuration document`,
-        };
-      }
+      const groups = selectProjectGroups(groupsConfig, groupKey);
       hostIndexAccess.countList();
       const indexRead = readHostIndexFile(hostRoot);
       const indexPath = hostIndexDocumentPath(hostRoot);
@@ -2635,24 +2654,29 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
-      const members: ProjectGroupMemberEntry[] = [];
-      for (const member of group.members) {
-        members.push(await readGroupMember(member, document?.projects ?? []));
+      const index = document?.projects ?? [];
+      const entries: ProjectGroupEntry[] = [];
+      for (const group of groups) {
+        const workspace = scanGroupWorkspace(group);
+        const members: ProjectGroupMemberEntry[] = [];
+        for (const member of group.members) {
+          members.push(await readGroupMember(member, index, workspace));
+        }
+        entries.push(
+          projectGroupEntry({
+            groupKey: group.groupKey,
+            name: group.name,
+            ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
+            members,
+          }),
+        );
       }
-      return {
-        ok: true,
-        data: {
-          groups: [
-            projectGroupEntry({
-              groupKey: group.groupKey,
-              name: group.name,
-              ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
-              members,
-            }),
-          ],
-        },
-      };
+      return { ok: true, data: { groups: entries } };
     };
+
+    /** The scoped read the command surface exposes until the rename phase. */
+    const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> =>
+      readProjectGroups(groupKey);
 
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,

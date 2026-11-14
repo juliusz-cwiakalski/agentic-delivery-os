@@ -17,8 +17,10 @@ import {
   type DaemonReachability,
   type DaemonReachabilityReason,
   type HandoverState,
+  type HostIndexEntry,
   type ProjectGroupEntry,
   type ProjectGroupMemberEntry,
+  type ProjectGroupMemberSelected,
   type ProjectMemberHealth,
   type ProjectMemberOutcome,
   type ProjectsListEntry,
@@ -211,3 +213,78 @@ export const projectGroupEntry = (input: {
   ...(input.workspaceRoot === undefined ? {} : { workspaceRoot: input.workspaceRoot }),
   members: input.members,
 });
+
+/** One clone the workspace scan located for a declared member selector. */
+export type WorkspaceLocatedMember = {
+  readonly root: string;
+  readonly repoKey?: string;
+};
+
+/**
+ * One declared member's resolution: a located checkout with its durable key and
+ * root, or an unlocated declaration that stays classified rather than vanishing
+ * (GH-309 F-4, DM-2, OQ-3). A root-selected member contributes its declared root
+ * even when no key can be read; a key-selected member has no root until a clone
+ * or index entry locates it.
+ */
+export type ProjectGroupMemberResolution =
+  | {
+      readonly state: "located";
+      readonly repoKey: string;
+      readonly root: string;
+    }
+  | {
+      readonly state: "unlocated";
+      readonly repoKey?: string;
+      readonly root: string;
+    };
+
+const normalizeMemberRoot = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+/**
+ * Resolve one declared member from configuration only (GH-309 F-3, F-4, NFR-4).
+ *
+ * Resolution never invents a member: the host index and the declared-only
+ * workspace scan are consulted for the selector the configuration names. The
+ * same rule applies with and without a workspace root, so member resolution is
+ * 1:1 across the two cases; the workspace is a convenience that can locate a
+ * declared key-selected clone, never a source of membership.
+ */
+export const resolveProjectGroupMember = (input: {
+  readonly member: ProjectGroupMemberSelected;
+  readonly index: readonly HostIndexEntry[];
+  readonly workspace: readonly WorkspaceLocatedMember[];
+  readonly markerRepoKey?: string;
+}): ProjectGroupMemberResolution => {
+  if (input.member.kind === "root") {
+    const declaredRoot = input.member.root;
+    const indexEntry = input.index.find(
+      (entry) => normalizeMemberRoot(entry.root) === normalizeMemberRoot(declaredRoot),
+    );
+    if (indexEntry !== undefined) {
+      return { state: "located", repoKey: indexEntry.projectKey, root: indexEntry.root };
+    }
+    const located = input.workspace.find(
+      (candidate) =>
+        candidate.repoKey !== undefined &&
+        normalizeMemberRoot(candidate.root) === normalizeMemberRoot(declaredRoot),
+    );
+    if (located?.repoKey !== undefined) {
+      return { state: "located", repoKey: located.repoKey, root: located.root };
+    }
+    if (input.markerRepoKey !== undefined) {
+      return { state: "located", repoKey: input.markerRepoKey, root: declaredRoot };
+    }
+    return { state: "unlocated", root: declaredRoot };
+  }
+  const declaredKey = input.member.repoKey;
+  const indexEntry = input.index.find((entry) => entry.projectKey === declaredKey);
+  if (indexEntry !== undefined) {
+    return { state: "located", repoKey: declaredKey, root: indexEntry.root };
+  }
+  const located = input.workspace.find((candidate) => candidate.repoKey === declaredKey);
+  if (located !== undefined) {
+    return { state: "located", repoKey: declaredKey, root: located.root };
+  }
+  return { state: "unlocated", repoKey: declaredKey, root: "" };
+};

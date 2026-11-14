@@ -547,6 +547,10 @@ phases:
   #      group-envelope conformance cases (the full-set extension lands in
   #      phase 5).
   #
+  #  GATE ARTIFACT: .changeset/gh-309-project-groups-minor.md is declared in
+  #  this phase's scope because the branch-diff release gate requires exactly
+  #  one five-package minor changeset once the first publishable sources land.
+  #
   # Bound: AC-F1-1, AC-F3-1, AC-F3-2, AC-F4-1, AC-F4-2, DoD-3, DoD-4, DoD-5,
   # F-3, F-4, NFR-3, NFR-4.
   # Test obligations: TC-GRPWORK-001..003, TC-GRPSURF-001..003.
@@ -582,6 +586,7 @@ phases:
         - tests/structure/projects-groups-envelope.test.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+        - .changeset/gh-309-project-groups-minor.md
       folders:
         - tests/fixtures/projects
     interactions:

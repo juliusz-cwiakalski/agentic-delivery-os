@@ -237,12 +237,15 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  type ProjectGroupMemberResolution,
   projectGroupEntry,
   projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
   projectMemberHealth,
+  resolveProjectGroupMember,
   selectDaemonReachability,
+  type WorkspaceLocatedMember,
 } from "./app/projects.js";
 /**
  * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
@@ -745,6 +748,7 @@ export {
   projectEntry,
   projectEscalationState,
   projectGroupDeclared,
+  projectGroupMemberSelectors,
   projectReservedSlotQuestions,
   QUEUE_DEPLOY_READ_BUDGET,
   QUEUE_NEXT_DEFAULT,
@@ -826,6 +830,7 @@ export {
   selectCommitTransport,
   selectLane,
   selectMatchingBranch,
+  selectProjectGroups,
   selectPruneCandidates,
   serializeCapsuleEvent,
   sha256Hex,

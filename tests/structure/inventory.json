@@ -242,6 +242,7 @@
     "src/file/projects-config.ts",
     "src/file/secret-scan.ts",
     "src/file/state-root-inventory.ts",
+    "src/file/workspace-scan.ts",
     "src/file/yaml-parser.ts",
     "src/git/commit.ts",
     "src/git/index.ts",
