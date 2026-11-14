@@ -7,7 +7,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-14T05:51:58.807Z }
   delivery_planning: { started: null, completed: 2026-11-14T05:56:13.668Z }
   dor_check: { started: null, completed: 2026-11-14T05:59:46.918Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-14T16:35:35.260Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -122,20 +122,20 @@ notes:
   - text: "Plan phase 1 commit-step anomaly recorded: the direct commit path was
       refused three times with commit.commitlint-failed 'invented tracker
       references are not allowed: ODR-0004' (two --dry-run, one real; nothing
-      staged, tree untouched each time). Cause: with no model transport wired
-      in production, the commit primitive's deterministic template derives the
+      staged, tree untouched each time). Cause: with no model transport wired in
+      production, the commit primitive's deterministic template derives the
       subject from the staged set's top path — here
       doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md — and
       validateCommitMessage rejects the ODR-0004 token as a fabricated tracker
-      ref; the model path sanitizes via stripInventedRefs but the template
-      path does not. Typed blocker
-      q-caee1573-be8c-47d2-aab8-781932c92a21 (decision-needed, owner, lane
-      gh-309-delivery) records the template-sanitization defect for a proper
-      fix. Phase 1 lands through the commit primitive with this evidence note
-      riding the same staging set (top path = this pm-notes file, whose only
-      tracker-shaped token is GH-309), so the record lands unchanged in
-      substance in exactly one primitive commit; the plan-declared subject
-      docs(GH-309) is superseded by the primitive-owned template subject."
+      ref; the model path sanitizes via stripInventedRefs but the template path
+      does not. Typed blocker q-caee1573-be8c-47d2-aab8-781932c92a21
+      (decision-needed, owner, lane gh-309-delivery) records the
+      template-sanitization defect for a proper fix. Phase 1 lands through the
+      commit primitive with this evidence note riding the same staging set (top
+      path = this pm-notes file, whose only tracker-shaped token is GH-309), so
+      the record lands unchanged in substance in exactly one primitive commit;
+      the plan-declared subject docs(GH-309) is superseded by the
+      primitive-owned template subject."
     type: risk
     date: "2026-11-14"
   - text: "Plan phase 1 'Land the untracked ODR-0004 superseding decision record
@@ -143,27 +143,29 @@ notes:
       chore(GH-309), staged exactly the record + this evidence note);
       obligations 1.1/1.2/1.3 verified — file unchanged in substance, file and
       00-index row agree (id, title, status Proposed, date, owner), register
-      inspection holds, commit-order evidence now recordable (23b1a12f
-      precedes every later commit on the branch). Tests: docs-only phase, no
-      automated suite obligations; targeted suites N/A (per PM ruling the
-      full battery is the phase-6 gate)."
+      inspection holds, commit-order evidence now recordable (23b1a12f precedes
+      every later commit on the branch). Tests: docs-only phase, no automated
+      suite obligations; targeted suites N/A (per PM ruling the full battery is
+      the phase-6 gate)."
     type: info
     date: "2026-11-14"
   - text: "Delivery resumed after the prior harness died mid delivery phase. On-disk
       truth re-established: phase 1 committed at 23b1a12f (ODR-0004 tracked,
       record before any rename code); the phase-1 evidence note above was
       written but never committed (it rides the next phase commit); plan phase 2
-      was PARTIAL and uncommitted (contracts/projects.ts, contracts/error-table.ts,
-      domain/index.ts, domain/project-groups.ts, adapters/file/projects-config.ts,
-      scripts/checks/error-table-sync.ts). Not started for phase 2: contracts/index.ts
-      re-export block, core/src/index.ts exports, app/projects.ts + cli/commands/projects.ts
-      + cli/production.ts scoped read, feature-result-contract.md registry rows,
-      tests/behaviour/projects-config.test.ts, tests/structure/error-table.test.ts,
-      tests/checks/error-table-sync.test.ts count, inventory rows."
+      was PARTIAL and uncommitted (contracts/projects.ts,
+      contracts/error-table.ts, domain/index.ts, domain/project-groups.ts,
+      adapters/file/projects-config.ts, scripts/checks/error-table-sync.ts). Not
+      started for phase 2: contracts/index.ts re-export block, core/src/index.ts
+      exports, app/projects.ts + cli/commands/projects.ts + cli/production.ts
+      scoped read, feature-result-contract.md registry rows,
+      tests/behaviour/projects-config.test.ts,
+      tests/structure/error-table.test.ts, tests/checks/error-table-sync.test.ts
+      count, inventory rows."
     type: info
     date: "2026-11-14"
-  - text: "RETRO: the interrupted run left packages/core/src/index.ts CORRUPTED —
-      an aborted edit deleted seven legitimate exports (WatchdogPlannedAction,
+  - text: "RETRO: the interrupted run left packages/core/src/index.ts CORRUPTED — an
+      aborted edit deleted seven legitimate exports (WatchdogPlannedAction,
       WatchdogPreflightBuildInput, WatchdogPreflightEvaluation,
       WatchdogRestorationPlan, wakeKeyFor, watchdogPreservedRefName,
       weightLoads), dropped createLaneLaunchPlanner entirely, and retargeted the
@@ -175,17 +177,18 @@ notes:
       before completing the phase, never assume partial work is coherent."
     type: retro
     date: "2026-11-14"
-  - text: "Plan phase 2 'Project configuration document (delivery.projects.groups.v1)
-      with classified load-time validation' complete: commit 20ff468b
-      (primitive-owned template subject; one commit, safety.findings empty,
-      dry-run archived). Obligations 2.1-2.7 verified: contract types + pure
-      OQ-1 validator + yaml-seam reader; the `projects list --project
-      <groupKey>` scoped read as the validation seam (the default form still
-      returns the delivered flat projects.v1 payload — intermediate-state rule
-      held); the three identities projects.config-invalid (exit 1),
-      projects.unknown-group (exit 1), projects.scope-unavailable (exit 2) with
-      their feature-result-contract.md registry rows in the same commit (C-6
-      sync carrier: table rows + identity counts only, no behavioural claim);
+  - text: "Plan phase 2 'Project configuration document
+      (delivery.projects.groups.v1) with classified load-time validation'
+      complete: commit 20ff468b (primitive-owned template subject; one commit,
+      safety.findings empty, dry-run archived). Obligations 2.1-2.7 verified:
+      contract types + pure OQ-1 validator + yaml-seam reader; the `projects
+      list --project <groupKey>` scoped read as the validation seam (the default
+      form still returns the delivered flat projects.v1 payload —
+      intermediate-state rule held); the three identities
+      projects.config-invalid (exit 1), projects.unknown-group (exit 1),
+      projects.scope-unavailable (exit 2) with their feature-result-contract.md
+      registry rows in the same commit (C-6 sync carrier: table rows + identity
+      counts only, no behavioural claim);
       tests/behaviour/projects-config.test.ts TC-GRPDOC-001..005 green (load per
       schema; all six config-invalid variants; scope-unavailable at exit 2 for
       an unreadable document and an unreadable invoking scope; unknown-group at
@@ -243,19 +246,19 @@ notes:
       `TMPDIR=$PWD/tmp/tmpdir pnpm check` is unusable in this checkout.
       tests/fixtures/projects/state-scope.ts nonCheckoutDirectory() requires a
       temp parent that is outside EVERY git work tree (the GH-273 rule) and
-      walks tmpdir(), dirname(cwd), then APPROVED_BASE (= cwd/tmp/tmpdir).
-      With TMPDIR inside the work tree all three candidates resolve inside it,
-      so it throws and three suites fail (TC-PROJ-013, TC-PROJ-041,
-      TC-GRPDOC-003) — an environment failure, not a code defect; all 31 tests
-      pass with TMPDIR outside the work tree. All gates from here run with
+      walks tmpdir(), dirname(cwd), then APPROVED_BASE (= cwd/tmp/tmpdir). With
+      TMPDIR inside the work tree all three candidates resolve inside it, so it
+      throws and three suites fail (TC-PROJ-013, TC-PROJ-041, TC-GRPDOC-003) —
+      an environment failure, not a code defect; all 31 tests pass with TMPDIR
+      outside the work tree. All gates from here run with
       TMPDIR=/tmp/opencode/tmpdir. This is a permanent-fixture versus
       plan-command mismatch worth fixing outside this ticket."
     type: risk
     date: "2026-11-14"
-  - text: "Plan phase 4 'Project-scoped aggregation clause with group-scoped
-      queue list and status reads' complete: commit d525f852 (primitive
-      template subject, which named the change folder because that path sorted
-      first). Obligations 4.1-4.4 verified: the one aggregation clause in
+  - text: "Plan phase 4 'Project-scoped aggregation clause with group-scoped queue
+      list and status reads' complete: commit d525f852 (primitive template
+      subject, which named the change folder because that path sorted first).
+      Obligations 4.1-4.4 verified: the one aggregation clause in
       packages/core/src/domain/project-groups.ts (declared order over
       per-checkout state, never a group-scoped store; every member resolves to
       exactly one closed outcome; one state-unavailable member yields
@@ -266,25 +269,25 @@ notes:
       <groupKey>` grammar with the unscoped forms unchanged; the one refusal
       rule (`projects.unknown-group`, exit 1) on projects, queue, and status;
       `board --project` untouched; TC-GRPSREAD-001..002 and the TC-GRPDOC-004
-      queue/status refusal steps in tests/behaviour/queue-status-project-scope.test.ts,
-      and TC-GRPAGG-001/002 in the extended
-      tests/behaviour/projects-groups-list.test.ts and
-      tests/structure/projects-groups-envelope.test.ts. Test result: 63 pass /
-      0 fail / 553 expect() calls across the nine boundary suites (18.58s);
-      the non-behaviour full-suite chunk `bun test tests/structure tests/checks
+      queue/status refusal steps in
+      tests/behaviour/queue-status-project-scope.test.ts, and TC-GRPAGG-001/002
+      in the extended tests/behaviour/projects-groups-list.test.ts and
+      tests/structure/projects-groups-envelope.test.ts. Test result: 63 pass / 0
+      fail / 553 expect() calls across the nine boundary suites (18.58s); the
+      non-behaviour full-suite chunk `bun test tests/structure tests/checks
       tests/types tests/golden tests/conformance packages` reported 2416 pass /
       0 fail / 2416 tests across 307 files (24030 expect() calls, 194.74s).
       Gate-environment finding: TMPDIR must be outside EVERY git work tree AND
       on the same filesystem as the repo; the workspace parent is itself an
       umbrella git repo, so a sibling of the checkout still fails, and the OS
-      temp root is a different device; the correct value is an approved
-      external temp directory on the repo's filesystem (correcting the earlier
-      risk note's /tmp value). Three gate defects fixed at this
-      boundary: the single queue repository-binding derivation in
-      packages/cli/src/production.ts; the ProjectScopedMemberWork /
-      ProjectScopedWorkData rows in tests/fixtures/ports/v1-contract-inventory.json;
-      and the TC-STATUS-001 pin updated to the delivered [\"--project\"] surface
-      in tests/behaviour/status-command.test.ts.
+      temp root is a different device; the correct value is an approved external
+      temp directory on the repo's filesystem (correcting the earlier risk
+      note's /tmp value). Three gate defects fixed at this boundary: the single
+      queue repository-binding derivation in packages/cli/src/production.ts; the
+      ProjectScopedMemberWork / ProjectScopedWorkData rows in
+      tests/fixtures/ports/v1-contract-inventory.json; and the TC-STATUS-001 pin
+      updated to the delivered [\"--project\"] surface in
+      tests/behaviour/status-command.test.ts.
       tests/structure/queue-binding-derivation.test.ts was NOT edited."
     type: info
     date: "2026-11-14"
@@ -299,48 +302,48 @@ notes:
       data.repos[] carries exactly repoKey/root/stateLocation/daemonReachable/
       handoverState plus hostIndexRevision, the text table is sorted by repo
       key, and unbound scope stays one bounded warning at exit 0 with no row.
-      5.2: default projects list returns project-groups.v1; `--flat` returns
-      the delivered projects.v1 payload unchanged (golden byte-compat with
-      absence negatives: no groupKey/repoKey/data.groups/data.repos); `--flat`
-      + `--project` is refused at exit 1 under input.value.rejected (not a new
+      5.2: default projects list returns project-groups.v1; `--flat` returns the
+      delivered projects.v1 payload unchanged (golden byte-compat with absence
+      negatives: no groupKey/repoKey/data.groups/data.repos); `--flat` +
+      `--project` is refused at exit 1 under input.value.rejected (not a new
       projects.* identity); alias failures classify under repos.*. 5.3:
       repos.identity-unreadable (exit 1), repos.registry-corrupt (exit 2) and
       repos.state-unavailable (exit 2) are error-table rows with their
       feature-result-contract.md registry rows; the old projects.* flat
-      identities no longer fire on the flat surface; group identities
-      untouched. 5.4: repos is in prompt-required-commands (20), root/family/
-      verb help entries, the m2/commands/repos.md page with Delivered (M2-S18),
+      identities no longer fire on the flat surface; group identities untouched.
+      5.4: repos is in prompt-required-commands (20), root/family/ verb help
+      entries, the m2/commands/repos.md page with Delivered (M2-S18),
       coverage.json rows, pageFor mappings in both the check and its parity
       test, and the EXPECTED composition list. 5.5: repos-list-contract
-      (TC-GRPREN-001..002), projects-flat-alias (TC-GRPREN-003..006),
-      repos-help (TC-GRPREG-001), projects-read-only-audit (TC-GRPRO-001),
-      the projects-groups-list default-flip case (TC-GRPREN-004) and the
-      full envelope set (TC-GRPENV-001) are green. 5.6: inventory.json and
+      (TC-GRPREN-001..002), projects-flat-alias (TC-GRPREN-003..006), repos-help
+      (TC-GRPREG-001), projects-read-only-audit (TC-GRPRO-001), the
+      projects-groups-list default-flip case (TC-GRPREN-004) and the full
+      envelope set (TC-GRPENV-001) are green. 5.6: inventory.json and
       content-inventory allowances cover both new source files. C-1 holds
-      (five-field delivery.result.v1, new keys under data, zero ok/command);
-      no MCP/opencode file changed and projects-scope-mcp stayed untouched and
+      (five-field delivery.result.v1, new keys under data, zero ok/command); no
+      MCP/opencode file changed and projects-scope-mcp stayed untouched and
       green. Sanity: no deleted files; the only removed export block was a
       relocation of aggregateProjectMemberOutcomes/projectMemberOutcomeOfHealth
-      within core/src/index.ts. Gates (TMPDIR=an approved external temp base
-      on the repository filesystem, outside every work tree):
-      typecheck green; 13-suite boundary gate 248 pass / 0 fail / 5555 expect
-      across 13 files (23.77s); non-behaviour chunk 2419 pass / 2 fail of 2421
-      across 307 files (298s) where both failures were 5s git-init/commit
-      timeouts in privacy-registry.test.ts and forbidden-literals.test.ts under
-      load, and both re-ran green in isolation (12 pass / 0 fail; 27 pass /
-      0 fail); the nine modified behaviour suites not in the prescribed list
-      37 pass / 0 fail / 612 expect; help-guide-coverage all covered;
-      prompt-conformance 5 prompts clean; exports-parity 5 publishables pass
-      attw; lint exit 0 (84 warnings, 33 infos); format:check exit 0 (2300
-      files); check:boundaries exit 0 (401 modules, 1217 deps; ambient 187;
-      secret 369); forbidden-literals and privacy-literals 0 violations. The
-      alias golden tests/golden/fixtures/projects-flat-alias.json was newly
-      created (no existing golden regenerated). Scope drift (committed
-      intentionally): pm-notes itself (carries the phase-4 evidence that had
-      landed after its commit), scripts/checks/error-table-sync.ts (required by
-      the two-way sync gate; omitted from the declared file list), and 19
-      test/fixture files carrying the identity-rename, prompt-set count and
-      inventory fallout. No new unsatisfied item; phase 6 not started."
+      within core/src/index.ts. Gates (TMPDIR=an approved external temp base on
+      the repository filesystem, outside every work tree): typecheck green;
+      13-suite boundary gate 248 pass / 0 fail / 5555 expect across 13 files
+      (23.77s); non-behaviour chunk 2419 pass / 2 fail of 2421 across 307 files
+      (298s) where both failures were 5s git-init/commit timeouts in
+      privacy-registry.test.ts and forbidden-literals.test.ts under load, and
+      both re-ran green in isolation (12 pass / 0 fail; 27 pass / 0 fail); the
+      nine modified behaviour suites not in the prescribed list 37 pass / 0 fail
+      / 612 expect; help-guide-coverage all covered; prompt-conformance 5
+      prompts clean; exports-parity 5 publishables pass attw; lint exit 0 (84
+      warnings, 33 infos); format:check exit 0 (2300 files); check:boundaries
+      exit 0 (401 modules, 1217 deps; ambient 187; secret 369);
+      forbidden-literals and privacy-literals 0 violations. The alias golden
+      tests/golden/fixtures/projects-flat-alias.json was newly created (no
+      existing golden regenerated). Scope drift (committed intentionally):
+      pm-notes itself (carries the phase-4 evidence that had landed after its
+      commit), scripts/checks/error-table-sync.ts (required by the two-way sync
+      gate; omitted from the declared file list), and 19 test/fixture files
+      carrying the identity-rename, prompt-set count and inventory fallout. No
+      new unsatisfied item; phase 6 not started."
     type: info
     date: "2026-11-14"
   - text: "Plan phase 6 'Naming boundary anchors, migration guide, registry and M2
@@ -358,36 +361,36 @@ notes:
       boundary, and no surface states the pre-rename meaning as current;
       TC-GRPBOUND-002 the permanent repository vocabulary is unchanged — the
       identity marker/schema, the `<host root>/projects/<key>` container, the
-      host-index `projects[]`/`projectKey`, and `--project-root`; TC-GRPSREAD-003
-      the board is never group-scoped; TC-GRPREG-002 the guide speaks the
-      delivered vocabulary and keeps migration one-step operator-run). 6.3:
-      the cli-command-registry `repos` row moved to Delivery (M2-S18, shipped
-      in GH-309) and the `projects` row now documents the delivered group
-      surface with the `--flat` alias. 6.4: backlog M2-S18 gained its Ticket
-      GH-309 and Progress lines; status.md gained the dated M2 delivery
-      addendum; m2/commands/projects.md is Delivered (M2-S18) with its example
-      envelope updated to delivery.result.v1; m2/entrypoint-delta.md carries
-      the dated 2026-11-14 `repos` mount observation; m2/contracts.md's
+      host-index `projects[]`/`projectKey`, and `--project-root`;
+      TC-GRPSREAD-003 the board is never group-scoped; TC-GRPREG-002 the guide
+      speaks the delivered vocabulary and keeps migration one-step
+      operator-run). 6.3: the cli-command-registry `repos` row moved to Delivery
+      (M2-S18, shipped in GH-309) and the `projects` row now documents the
+      delivered group surface with the `--flat` alias. 6.4: backlog M2-S18
+      gained its Ticket GH-309 and Progress lines; status.md gained the dated M2
+      delivery addendum; m2/commands/projects.md is Delivered (M2-S18) with its
+      example envelope updated to delivery.result.v1; m2/entrypoint-delta.md
+      carries the dated 2026-11-14 `repos` mount observation; m2/contracts.md's
       queue-and-lane ownership line is corrected to M2-S19. 6.5: the full gate
       battery is green with the phase-6 boundary defects fixed — the `projects`
       root help tuple lacked the verb's `--flat`/`--project` options (so the
       documented examples were rejected as fallback.invocation) and the
-      entrypoint coverage inventory's expected list lacked `repos`. Gate
-      results (TMPDIR on the repository filesystem outside every work tree):
-      non-behaviour chunk 2434 pass / 0 fail across 308 files
-      (tests/structure tests/checks tests/types tests/golden tests/conformance
-      packages); behaviour suites (all prefixes) 5482 pass / 4 skip / 0 fail;
-      typecheck, lint, format:check, help-guide-coverage, prompt-conformance,
+      entrypoint coverage inventory's expected list lacked `repos`. Gate results
+      (TMPDIR on the repository filesystem outside every work tree):
+      non-behaviour chunk 2434 pass / 0 fail across 308 files (tests/structure
+      tests/checks tests/types tests/golden tests/conformance packages);
+      behaviour suites (all prefixes) 5482 pass / 4 skip / 0 fail; typecheck,
+      lint, format:check, help-guide-coverage, prompt-conformance,
       exports-parity all PASS; doc-distribution guard PASS (92 in-scope docs, no
       drift). Environment findings: (1) TMPDIR must be outside EVERY git work
       tree AND on the repository's filesystem — the workspace parent is itself
       an umbrella git repo and the OS temp root is a different device; (2) the
-      host sets `commit.gpgsign=true` globally, so every test that shells out
-      to `git commit` blocks on pinentry and times out; gates must run with
+      host sets `commit.gpgsign=true` globally, so every test that shells out to
+      `git commit` blocks on pinentry and times out; gates must run with
       GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
       GIT_CONFIG_VALUE_0=false (CI does not sign). Scope note: the uncommitted
       phase-5 evidence note above rides this same staging set (it was written
-      after 3229a2e4); no deleted files, no removed exports, no new
-      unsatisfied item, all six plan phases now evidenced."
+      after 3229a2e4); no deleted files, no removed exports, no new unsatisfied
+      item, all six plan phases now evidenced."
     type: info
     date: "2026-11-14"
