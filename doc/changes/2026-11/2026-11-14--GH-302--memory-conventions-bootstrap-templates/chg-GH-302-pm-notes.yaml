@@ -245,3 +245,33 @@ notes:
       owner ratification remains scheduled at the open-PR gate per DEC-6."
     type: info
     date: "2026-11-14"
+  - text: "PLAN PHASE 1 COMPLETE (commit ed7f76b0): nine memory bootstrap templates
+      authored under doc/templates/ (index, per-agent entry point parameterized
+      by role, area README parameterized by lessons/tacit, AGENTS.md kernel
+      section with all twelve content classes and zero record-schema fields,
+      coordinator capture/promotion wiring, companion per-role expectations
+      referencing the kernel, retro-note conventions, manual doctor checklist
+      with six audit areas + manual-until-GH-301 status + cadence, adoption
+      checklist) + index rows in doc/templates/README.md. Markers: each template
+      carries ados_distribution: redistributable inside its frontmatter;
+      marker-only, zero license headers added, header script untouched (C-3).
+      Budgets: entry-point 30 lines, index 34, kernel 42 (all far under caps;
+      TC-MEMBUDGET-001 anchors green). TESTS: bash scripts/.tests/test-doc-
+      distribution.sh green (92 in-scope docs, zero drift); bash scripts/.tests/
+      test-inception-doc-consistency.sh green; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green (8123 pass / 0 fail / 4 skip). FORCED SCOPE DEVIATION (evidence:
+      gate log tmp/run-logs-runner/2026-11-14/032654-*.log, first run failed 4
+      suites with 'unregistered user-facing doc absent at corpusBaseline'): the
+      repo's forbidden-literals invariant (scripts/checks/forbidden-literals.ts
+      + tests/checks/forbidden-literals.test.ts) requires every NEW user-facing
+      doc under doc/** to be registered in scripts/checks/forbidden-literals
+      .registry.json — a data-only JSON registration (9 sorted paths appended to
+      the existing 'registered' array; scan logic untouched; same class as the
+      plan-considered tests/structure/inventory.json rule). Without it the
+      phase-1 done-when 'pnpm check green' is unexecutable. Registered docs are
+      scanned for the DEC-8 seed literals; the one 'ADOS' prose mention in the
+      adoption checklist was reworded to 'the upstream repository' to keep the
+      scan green (public URL unchanged, still DEC-6-compliant optional further
+      reading)."
+    type: info
+    date: "2026-11-14"
