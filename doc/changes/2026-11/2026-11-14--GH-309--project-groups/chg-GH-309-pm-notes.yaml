@@ -1,0 +1,59 @@
+change_id: GH-309
+title: "M2-S18: Project groups (M2)"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: null, completed: 2026-11-14T04:59:42.655Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Superseding decision record for the `repos` name (required by ODR-0003
+      DC-4 rename rule, ticket derived task f) is authored via @decision-advisor
+      during artifact phases, BEFORE the delivery phase; the
+      cli-command-registry `repos` row moves to Delivery only together with the
+      code change."
+    date: "2026-11-14"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: explicit user directive to deliver GH-309 (M2-S18 Project
+      groups). Prior active GH-302 delivered 2026-11-14 (PR #317 open, awaiting
+      owner merge) moved to parked_changes; merge confirmation pending."
+    type: info
+    date: "2026-11-14"
+  - text: "Dependency M2-S11 satisfied: GH-288 closed 2026-11-11 on tracker; backlog
+      records 'Progress: delivered by GH-288'."
+    type: info
+    date: "2026-11-14"
+  - text: "Scope cross-check against current truth
+      (doc/spec/features/feature-projects.md): the delivered `projects list`
+      flat surface is pre-rename behavior by design; the rename rule
+      (contracts.md naming boundary) explicitly makes the rename S18 code work,
+      NOT current truth. Phases 2-5 must treat the rename as this change's scope
+      (to-be); current-truth docs flip only in phase 7 (system_spec_update)."
+    type: info
+    date: "2026-11-14"
+  - text: "Documentation impacts for phase 7 (doc-syncer): feature-projects.md
+      reconciliation (group surface + rename; possible new repos/groups feature
+      spec); doc/guides/migrating-to-per-repository-state.md (derived task d);
+      doc/planning/oss-tooling/ maintenance per convention (backlog.md progress
+      markers, status.md snapshot, cli-command-registry.md repos row to Delivery
+      + projects row update, milestones/m2 pack page status headers);
+      doc/spec/features/feature-cli-entrypoint.md (repos registration at root
+      listing); superseding decision record in doc/decisions/."
+    type: risk
+    date: "2026-11-14"
+  - text: "Board scope note: contracts.md rename rule renames the board repository
+      list field projects[] -> repositories[]. Board (M2-S4) is not yet
+      delivered (remaining M2 stories per status.md snapshot 2026-11-13);
+      spec-writer must verify whether the rename constrains S18 code or only
+      M2-S4's future delivery, from pack status, before declaring it in-scope."
+    type: question
+    date: "2026-11-14"
