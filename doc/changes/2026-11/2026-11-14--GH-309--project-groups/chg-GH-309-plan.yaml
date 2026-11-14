@@ -899,6 +899,12 @@ phases:
         - doc/planning/oss-tooling/milestones/m2/commands/projects.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
         - doc/planning/oss-tooling/milestones/m2/contracts.md
+        # LIFECYCLE PHASE 7 DOC-SYNC ARTIFACT: declared in this phase's scope
+        # only so the commit primitive can stage the new current-truth page at
+        # the system_spec_update boundary. The page is authored by @doc-syncer
+        # in lifecycle phase 7, not by this plan phase; declaring it here does
+        # not move any obligation, and no delivery-phase work touches it.
+        - doc/spec/features/feature-project-groups.md
     interactions:
       - kind: contract-file
         target: doc/guides/migrating-to-per-repository-state.md
