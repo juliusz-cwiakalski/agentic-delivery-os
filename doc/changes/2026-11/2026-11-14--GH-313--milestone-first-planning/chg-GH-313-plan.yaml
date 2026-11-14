@@ -1,5 +1,5 @@
 # GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-14; DoR iteration 1 remediation). Authored against the remediated
+# (2026-11-14; DoR iteration 2 remediation). Authored against the remediated
 # spec and test plan v1.1 on branch feat/GH-313/milestone-first-planning.
 #
 # One ticket, one PR against main-tools, six plan phases: five @coder delivery
@@ -23,30 +23,33 @@
 #   - PDR: doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md
 #     (authored, Proposed, currently untracked; its register row is committed).
 #
-# TEST-PLAN RECONCILIATION PINS (test plan v1.1 §8.3; every TP-Q item is
-# resolved — TP-Q1/Q2/Q5 by this plan, TP-Q3/Q4 by the remediated spec, and
-# TP-Q6 in the test plan):
+# TEST-PLAN RECONCILIATION PINS (canonical contract: test plan v1.1 §8.3 and
+# the spec §17 ACs it references; every TP-Q item is resolved — TP-Q1/Q2/Q5 by
+# this plan, TP-Q3/Q4 by the remediated spec, and TP-Q6 in the test plan):
 #   TP-Q1 — the evaluation core lives at scripts/checks/milestone-attachment.ts
 #     with the port-injected orchestration at
 #     scripts/checks/milestone-attachment-runner.ts and
 #     scripts/checks/milestone-attachment-github.ts. Appendix B row 34
 #     "scripts/** UNCHANGED" is read as "no distributable/install-set script
-#     changed": the new modules are repository-internal check surfaces, not in
-#     ADOS_DELIVERY_SCRIPTS and not in the aggregate chain.
-#   TP-Q2 — the existing invariant scanners stay unchanged. The new workflow's
-#     permissions, SHA pins, secret absence, and bypass-construct absence are
-#     owned by the dedicated static workflow suite
+#     changed" (spec Appendix B rows 11 and 34): the new modules are
+#     repository-internal check surfaces, not in ADOS_DELIVERY_SCRIPTS and not
+#     in the aggregate chain.
+#   TP-Q2 — the existing invariant scanners stay unchanged (spec AC-F3-7,
+#     NFR-3). The new workflow's permissions, SHA pins, secret absence, and
+#     bypass-construct absence are owned by the dedicated static workflow suite
 #     tests/checks/milestone-workflow.test.ts plus its mutation proof; the
 #     scanner files ci-supply-chain.ts, ci-bindingness.ts, and ci-topology.ts
 #     are untouched.
 #   TP-Q5 — the evidence record lives in the change folder at
 #     chg-GH-313-milestone-evidence.md and is mirrored as a pm-notes
-#     notes: entry of type evidence.
-#   TP-Q3/TP-Q4 — resolved by the remediated spec: the guide carries only the
-#     script-generated header on the single file path, and duplicate-label
-#     claims are asserted at the action layer (zero add-label calls on repeat).
-#   TP-Q6 — resolved in the test plan as semi-automated (heading/keyword
-#     anchors plus a recorded content review).
+#     notes: entry of type evidence (spec DoD-14, test plan TC-EVID-001/002).
+#   TP-Q3/TP-Q4 — resolved by the remediated spec (AC-F1-1, NFR-4 for the
+#     header; AC-NFR1-1 for the action-layer idempotency claim): the guide
+#     carries only the script-generated header on the single file path, and
+#     duplicate-label claims are asserted at the action layer (zero add-label
+#     calls on repeat).
+#   TP-Q6 — resolved in the test plan as semi-automated (TC-GUIDE-002:
+#     heading/keyword anchors plus a recorded content review).
 #   Suite homes adopt test plan §7 verbatim. The plan declares those suites in
 #     the phases that land the content they assert, so every phase commit
 #     carries its own tests.
@@ -208,6 +211,12 @@ phases:
   #  3.6 Keep prompts current-state only (no history narration). Land
   #      tests/checks/milestone-prompts.test.ts (TC-PROMPT-001..004,
   #      TC-PLUGIN-001) and run prompt/help conformance.
+  #  3.7 Reconcile the "Backlog Source of Truth" section of
+  #      .ai/agent/pm-instructions.md: the tracker is the canonical ticket
+  #      backlog; doc/planning/oss-tooling/backlog.md is the committed
+  #      planning mirror for this repository's OSS tooling roadmap; a separate
+  #      local backlog file outside that mirror stays forbidden. Keep the
+  #      existing prohibitions intact.
   #
   # Bound: F-2, AC-F2-1, AC-F2-2, AC-F2-3, DM-2, DM-3, DoD-5..DoD-7, NFR-4,
   # C-3, C-7, C-8, DEC-3, DEC-11, RSK-2, RSK-3.
@@ -215,7 +224,7 @@ phases:
   - id: 3
     title: "Milestone creation and intake rules in prompts, tracker instructions, and regenerated plugin"
     kind: delivery
-    summary: "Require a milestone at ticket creation and verify it at intake across the pm prompt, tracker instructions, spec-writer and bootstrapper prompts, and their regenerated Claude plugin output, preserving existing prohibitions."
+    summary: "Require a milestone at ticket creation and verify it at intake across the pm prompt, tracker instructions, spec-writer and bootstrapper prompts, and their regenerated Claude plugin output, preserving existing prohibitions and reconciling the backlog source-of-truth section."
     scope:
       files:
         - .opencode/agent/pm.md
@@ -243,19 +252,25 @@ phases:
   #
   # Obligations:
   #  4.1 scripts/checks/milestone-attachment.ts — pure, offline evaluation
-  #      core: normalized input {labels, state, milestone, event} to exactly
-  #      one verdict (compliant | exempt | flagged | restored | out-of-scope)
-  #      and a closed action list (add-label, remove-label, create-comment).
-  #      Static comment body constant and run-summary projection; zero
-  #      issue-authored interpolation. No network import, no clock, no I/O.
+  #      core over contract v1 input {action, issue state, `change` label,
+  #      exemption label, milestone, flag label, markerCommentPresent (a
+  #      stable marker comment already present)} to exactly one verdict
+  #      (compliant | exempt | flagged | restored | out-of-scope) and the closed
+  #      write vocabulary addFlag, removeFlag, postMarkerComment,
+  #      writeJobSummary. Ordered precedence: exemption > milestone >
+  #      flag/event. The flag is reachable only on `opened` or
+  #      `demilestoned`-with-marker; repeated edited/labeled evaluations on an
+  #      unflagged issue open no tracker write path. Static comment body
+  #      constant and run-summary projection; zero issue-authored
+  #      interpolation. No network import, no clock, no I/O.
   #  4.2 scripts/checks/milestone-attachment-runner.ts — port-injected
-  #      orchestration (readIssue, listComments, listMilestones, listIssues,
-  #      addLabel, removeLabel, createComment) for event handling and the
-  #      sweep; sweep reads paged at 100 with <= ceil(N/100)+3 tracker reads,
-  #      exactly 0 tracker writes, exactly one local summary artifact at the
-  #      pinned path tmp/milestone-attachment-sweep.json (gitignored via the
-  #      repository's tmp/ rule), exit 0 regardless of findings, and fail-loud
-  #      on API error.
+  #      orchestration with the tracker ports (readIssue, listComments,
+  #      listMilestones, listIssues, addLabel, removeLabel, createComment)
+  #      plus a job-summary sink writeJobSummary; sweep still performs zero
+  #      tracker writes and writes only the pinned local artifact
+  #      tmp/milestone-attachment-sweep.json (gitignored via the repository's
+  #      tmp/ rule), reads paged at 100 with <= ceil(N/100)+3 tracker reads,
+  #      exits 0 regardless of findings, and fails loud on API error.
   #  4.3 scripts/checks/milestone-attachment-github.ts — the sole
   #      network-capable GitHub adapter module: issue reads plus label and
   #      comment writes, read-only in sweep mode, used by the workflow and by
@@ -263,10 +278,13 @@ phases:
   #      `pnpm check`, and it MUST NOT be added to the install set or
   #      ADOS_DELIVERY_SCRIPTS.
   #  4.4 .github/workflows/ticket-milestone-check.yml — issue events opened,
-  #      edited, labeled, milestoned, demilestoned plus workflow_dispatch
-  #      sweep; job permissions exactly contents: read and issues: write;
-  #      every action pinned to a 40-hex SHA; no pull_request_target, no
-  #      secret, no bypass construct; one verdict per evaluation; no schedule.
+  #      edited, labeled, unlabeled, milestoned, demilestoned, reopened plus
+  #      workflow_dispatch sweep; job permissions exactly contents: read and
+  #      issues: write; every action pinned to a 40-hex SHA; no
+  #      pull_request_target, no secret, no bypass construct; one verdict per
+  #      evaluation; no schedule.
+  #      Every evaluated run writes one job summary to $GITHUB_STEP_SUMMARY
+  #      naming the issue number, the verdict, and the writes performed.
   #  4.5 tests/checks/milestone-attachment.test.ts (TC-CHK-001, TC-CHK-006),
   #      milestone-attachment-integration.test.ts (TC-CHK-002..005),
   #      milestone-sweep.test.ts (TC-SWEEP-001..002),
@@ -279,8 +297,10 @@ phases:
   #      suite. Follow .ai/rules/typescript.md and the house style of existing
   #      checks and their tests.
   #  4.7 Run the sweep once locally in read-only mode with a read-only
-  #      credential, record its output in phase 6's evidence file
-  #      (chg-GH-313-milestone-evidence.md), and confirm zero tracker writes.
+  #      credential; report the tmp/milestone-attachment-sweep.json path and
+  #      its summary in the phase report, and make zero tracker writes. Phase 6
+  #      (PM lane) writes chg-GH-313-milestone-evidence.md, consuming that
+  #      output.
   #
   # Bound: F-3, AC-F3-1..AC-F3-7, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1,
   # AC-NFR6-1, AC-NFR7-1, DoD-8..DoD-11, DoD-18, NFR-1..NFR-3, NFR-6,
@@ -290,7 +310,7 @@ phases:
   - id: 4
     title: "Milestone-attachment evaluation core, GitHub adapter, issue-event workflow, and offline suites"
     kind: delivery
-    summary: "Deliver the pure milestone-attachment evaluation core, port-injected runner, and sole network-capable GitHub adapter with the offline decision-table, integration, sweep, workflow, and gate suites plus the least-privilege SHA-pinned issue-event workflow and its non-writing advisory sweep."
+    summary: "Deliver the pure milestone-attachment evaluation core, port-injected runner, and sole network-capable GitHub adapter with the offline decision-table, integration, sweep, workflow, and gate suites plus the least-privilege SHA-pinned issue-event workflow with its per-run job summary and non-writing advisory sweep."
     scope:
       files:
         - scripts/checks/milestone-attachment.ts
@@ -383,8 +403,9 @@ phases:
   #  6.3 Report the deliberately unattached open change backlog count by
   #      number, never reconcile it; record GH-313's own attachment to M2.
   #  6.4 Write the evidence to
-  #      chg-GH-313-milestone-evidence.md in this change folder and mirror it
-  #      as a pm-notes notes: entry of type evidence. ZERO tracker writes; any
+  #      chg-GH-313-milestone-evidence.md in this change folder, consuming
+  #      phase 4's tmp/milestone-attachment-sweep.json output, and mirror it as
+  #      a pm-notes notes: entry of type evidence. ZERO tracker writes; any
   #      attachment write is a separate human-confirmed PM action, not this
   #      phase.
   #

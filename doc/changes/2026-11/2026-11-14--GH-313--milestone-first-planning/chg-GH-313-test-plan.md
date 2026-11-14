@@ -7,7 +7,7 @@ owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, governance, planning, agents, enforcement]
 version_impact: minor
-summary: "Verification strategy for M2-S20 milestone-first planning and delivery: the redistributable milestone-management guide and its nine topics, the pack-conventions pointer, PDR-0005, the required change.milestone artifact field and its single-template scope, the creation/intake rules in the tracker instructions and three prompts with regenerated plugin output, the offline decision-table evaluation core and its thin issue-event workflow (flag, idempotency, exemption, reversal, static comment, least privilege, SHA pins), the zero-write advisory sweep with its read-count bound, the unchanged offline aggregate gate, the planning-truth repair of backlog/ranking/pack/status, and the read-only M0/M1/M2 tracker evidence."
+summary: "Verification strategy for M2-S20 milestone-first planning and delivery: the redistributable milestone-management guide and its nine topics, the pack-conventions pointer, PDR-0005, the required change.milestone artifact field and its single-template scope, the creation/intake rules in the tracker instructions and three prompts with regenerated plugin output, the offline contract-v1 decision-table evaluation core and its thin issue-event workflow (ordered first-match rules, manual-removal respect, exemption precedence, reversal, fixed comment, job summary, least privilege, SHA pins), the zero-write advisory sweep with its read-count bound, the unchanged offline aggregate gate, the planning-truth repair of backlog/ranking/pack/status, and the read-only M0/M1/M2 tracker evidence."
 links:
   change_spec: ./chg-GH-313-spec.md
   implementation_plan: ./chg-GH-313-plan.yaml
@@ -20,18 +20,18 @@ links:
 
 This change is a **governance-and-automation change with almost no product code**: one new redistributable guide plus a pointer in the milestone pack conventions; three prompt edits, one project tracker-instruction file, and one regenerated Claude Code plugin; one new required front-matter field on exactly one template; one pure, offline-tested evaluation core behind a thin GitHub issue-event workflow; and a repair of the planning corpus so the milestone's own record mirrors the tracker.
 
-The behaviours that must be protected, in descending risk order, are: **the offline determinism of `pnpm check`** (spec C-1/NFR-2/DEC-2 — any tracker call, bypass construct, or added step inside the gate is a release-blocking regression); **flag precision and idempotency** (NFR-1 — ≤1 comment ever per issue, 0 add-label actions on repeat evaluation, 0 flags on compliant or exempt issues); **the closed write surface** (PDR C-2 and spec C-4 — a flag label and at most one comment, never a state, assignee, milestone, or other-label write, and the flag is always reversible); **comment safety by construction** (NFR-7 — a static body with zero issue-authored interpolation); **workflow least privilege and supply-chain hygiene** (NFR-3 — `issues: write` + `contents: read`, 40-hex SHA pins, no `pull_request_target`, no secret, no bypass construct); **historical-debt non-mutation** (spec C-2 and PDR C-3 — the sweep performs exactly 0 tracker writes and historical issues are never edited); and **planning-corpus truth** (F-5/F-6 — the corpus is a mirror, and "every planned ticket was attached" is a recorded fact, not an assumption).
+The behaviours that must be protected, in descending risk order, are: **the offline determinism of `pnpm check`** (spec C-1/NFR-2/DEC-2 — any tracker call, bypass construct, or added step inside the gate is a release-blocking regression); **flag precision and idempotency** (NFR-1 — ≤1 comment ever per issue, 0 `addFlag` writes when the flag is already present, 0 flags on compliant or exempt issues, and a manual flag removal is never silently reversed); **the closed write surface** (PDR C-2 and spec C-4 — the vocabulary is exactly `addFlag | removeFlag | postMarkerComment | writeJobSummary`, never a state, assignee, milestone, or other-label write, and the flag is always reversible); **comment safety by construction** (NFR-7 — a static body with zero issue-authored interpolation); **workflow least privilege and supply-chain hygiene** (NFR-3 — `issues: write` + `contents: read`, 40-hex SHA pins, no `pull_request_target`, no secret, no bypass construct); **historical-debt non-mutation** (spec C-2 and PDR C-3 — the sweep performs exactly 0 tracker writes and historical issues are never edited); and **planning-corpus truth** (F-5/F-6 — the corpus is a mirror, and "every planned ticket was attached" is a recorded fact, not an assumption).
 
 Constraint citations in this plan are namespaced: **spec C-n** refers to the spec's Appendix E register (C-1…C-12) and **PDR C-n** to PDR-0005's hard constraints (C-1…C-6). They are different registers and are cited explicitly wherever a test asserts one.
 
-The motivating regressions are: an enforcement surface that quietly enters the deterministic gate; a flag that comments twice (or on exempt tickets) and destroys its own credibility; a check whose write surface grows past a label and one comment; a pipeline that interpolates an issue title into a comment or a log and turns a governance check into an injection surface; a bootstrapped or edited prompt path that forgets the milestone rule while the guide claims it; and a guide/backlog/ranking that drift from the tracker again immediately after being repaired.
+The motivating regressions are: an enforcement surface that quietly enters the deterministic gate; a flag that comments twice (or on exempt tickets) and destroys its own credibility; a check whose write surface grows past the closed four-verb vocabulary; a check that reads an edit as a licence to re-apply a flag a human removed; a pipeline that interpolates an issue title into a comment or a log and turns a governance check into an injection surface; a bootstrapped or edited prompt path that forgets the milestone rule while the guide claims it; and a guide/backlog/ranking that drift from the tracker again immediately after being repaired.
 
 ### 1.1 In Scope
 
 - **Guide and register (F-1, AC-F1-1…4):** guide existence, `ados_distribution: redistributable`, index link, exactly one script-generated header byte-identical to `scripts/add-header-location.sh` output, derived-install-set membership and the distribution drift guard; the nine lifecycle topics documented once; the pack-conventions pointer with no restated procedure; PDR-0005 in the decision register and referenced from guide and change.
 - **Artifact field (F-4, AC-F4-1…2):** the required `change.milestone` field and its resolution rule in the change-specification template and the `@spec-writer` front-matter rules; this change's own spec/pm-notes value equality; exactly one template carrying the field with the five other templates unchanged.
 - **Creation and intake (F-2, AC-F2-1…3):** the milestone argument, attach-from-existing resolution rule, and no-autonomous-creation rule in `.ai/agent/pm-instructions.md` and `.opencode/agent/pm.md`; preserved existing prohibitions; intake verification with a pm-notes record and a human question on an unattached ticket; the milestone section in the `@bootstrapper` guidance that generates project tracker instructions; regenerated plugin output and freshness.
-- **Enforcement core and workflow (F-3, AC-F3-1…7, AC-NFR1-1, AC-NFR3-1, AC-NFR7-1):** the complete offline decision table; flag, idempotency, exemption, reversal on attach/detach, and closed-write-surface assertions driven through a fake tracker port; adversarial comment safety; the sweep's advisory reporting, zero tracker writes, single local artifact, exit-code discipline and read bound; the workflow's event set, job-scoped permissions, SHA pins, secret absence, and bypass-construct absence — plus a mutation proof that each static assertion actually fires.
+- **Enforcement core and workflow (F-3, AC-F3-1…7, AC-NFR1-1, AC-NFR3-1, AC-NFR7-1):** the canonical contract-v1 decision table with ordered, first-match rules (exemption outranks milestone and flag; a manual flag removal is respected on every action except `opened` and `demilestoned`-with-marker); flag, idempotency, exemption, reversal on attach/detach, and closed-write-surface assertions driven through a fake tracker port; adversarial comment safety; the sweep's advisory reporting, zero tracker writes, single local artifact, exit-code discipline and read bound; the workflow's event set, job summary, job-scoped permissions, SHA pins, secret absence, and bypass-construct absence — plus a mutation proof that each static assertion actually fires.
 - **Aggregate gate (AC-NFR2-1, AC-NFR5-1):** the `check` chain unchanged and in order, no milestone step, no network-capable path in the chain, green at the delivered HEAD, and conventional commit history within the ≤100-character rule via the range gate.
 - **Planning truth (F-5, AC-F5-1…5):** the M2-S20 block in story shape, 19/19 ticket lines, story-code set equality and contiguous ranking, the pack row with resolvable seeds, and the status delivery addendum.
 - **Tracker evidence (F-6, AC-F6-1…2):** read-only, paged, per-milestone declared-versus-attached evidence recorded in `chg-GH-313-milestone-evidence.md` and mirrored to pm-notes; a separately reported (never failing) attached-but-undeclared list; GH-313's own attachment.
@@ -47,6 +47,7 @@ The motivating regressions are: an enforcement surface that quietly enters the d
 - **Current-truth specification reconciliation is phase 7** (`doc/spec/**` and one guide, Appendix B rows 25–31) and is explicitly not tested here; the delivery diff must not contain pre-flipped behavioural current truth (TC-SCOPE-001).
 - **The new check surfaces and the workflow are pinned by the delivery plan.** `scripts/checks/milestone-attachment.ts` (pure core), `scripts/checks/milestone-attachment-runner.ts` (port-injected orchestration), `scripts/checks/milestone-attachment-github.ts` (the sole network-capable adapter, used by the workflow and the local sweep), and `.github/workflows/ticket-milestone-check.yml`. Appendix B row 34's "`scripts/**` UNCHANGED" is read as "no distributable/install-set script changed" and is reconciled by the plan's TP-Q1 pin; the new modules are repository-internal, outside `ADOS_DELIVERY_SCRIPTS`, and outside the aggregate chain.
 - **The existing invariant scanners stay unchanged by design.** `ci-supply-chain.ts`/`ci-bindingness.ts` read only `.github/workflows/ci.yml` and enforce only `ts-` jobs (spec Appendix C "Workflow audit scope"). The new workflow's permissions, pins, secret absence, and bypass-construct absence are owned by the dedicated static suite plus its mutation proof (TC-WF-002/TC-WF-003), not by editing the scanners.
+- **Contract v1 alignment is in flight in parallel artifacts.** This revision implements the canonical check contract v1 (ordered rules 1, 2, 3, 4a–4f; closed write vocabulary `addFlag | removeFlag | postMarkerComment | writeJobSummary`) as the decision-table oracle. The spec's Appendix C table still shows the earlier eight-row form and is being aligned to the same contract; if it lands differently, a revision of this plan is required before the DoR gate (never silent drift).
 - **No MCP surface, no CLI surface, no product telemetry** (NG-4, §10): none is asserted because none is claimed.
 - **DoD-19 is the roll-up condition**, satisfied by the all-Covered matrix in §3 plus execution evidence in §10 and phase pm-notes; it has no TC of its own.
 
@@ -57,6 +58,7 @@ The motivating regressions are: an enforcement surface that quietly enters the d
 - Repository testing strategy: `.ai/rules/testing-strategy.md` — module→test mapping (`.github/workflows/ci.yml` → `ci-topology`/`ci-bindingness`/`ci-supply-chain`; `scripts/<script>.sh` → `scripts/.tests/test-<script>.sh`; `scripts/checks/<check>.ts` → `tests/checks/**`), `bun:test` authoring, permanent-suite rules (assert the tree, never a moving-base diff; assert meaning, not a growing count).
 - TypeScript test authoring: `.ai/rules/typescript.md` §9 — bun:test under `tests/**/*.test.ts`, injected fakes over `mock.module`, deterministic (no clock, network, `$HOME`, sleeps), fixtures never named `*.test.ts`, goldens regenerated by an explicit command.
 - Decision record: `doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md` (registered in `doc/decisions/00-index.md`; `Proposed`, `decision_date: null` until the owner decides at the PR gate) — the operating rule, enforcement and exemption the guide and tests must mirror. Its hard constraints are the **PDR C-1…C-6** register (not the spec's Appendix E C-1…C-12); both are cited with their namespace.
+- Canonical check contract **v1** (the decision-table oracle for this revision): inputs `action` (opened | edited | labeled | unlabeled | milestoned | demilestoned | reopened), issue state, `change` label, `backlog-capture` exemption, milestone, `needs-milestone` flag, and `markerCommentPresent`; ordered first-match rules 1 → 2 → 3 → 4a–4f; verdicts `out-of-scope | exempt | compliant | flagged | restored`; write vocabulary `addFlag | removeFlag | postMarkerComment | writeJobSummary`, with exactly one job summary per run written to `$GITHUB_STEP_SUMMARY`. The spec, PDR, and plan are being aligned to the same contract in parallel (§1.2).
 - PM notes: `./chg-GH-313-pm-notes.yaml` — `milestone: "M2: Ceremonies, measurement, and memory"`, `story_code: M2-S20`, `delivery_mode: autonomous`, recorded prompt/plugin and backlog-drift risks.
 - Scenario seeds (inherited **by name**, per spec Appendix C): `SC-M2-S20-01` flag-once/no-state-change → TC-CHK-002/CHK-003; `SC-M2-S20-02` no second flag/comment → TC-CHK-003; `SC-M2-S20-03` exemption suppresses → TC-CHK-004; `SC-M2-S20-04` attach clears / detach restores → TC-CHK-005; `SC-M2-S20-05` sweep zero writes / one artifact / exit 0 → TC-SWEEP-001.
 - Delivered machinery this plan consumes unchanged: `scripts/.tests/test-doc-distribution.sh` + `test-doc-distribution-modes.sh` (marker-derived install set, five failure modes), `scripts/add-header-location.sh` (header ownership; its output is the byte reference for TC-GUIDE-001), `scripts/build-claude-plugin.sh` + the CI `verify-claude-build` job (plugin freshness), `scripts/checks/script-surface.ts` (`NAMED_CHECKS` = lint → format:check → typecheck → test → check:boundaries), `scripts/checks/ci-supply-chain.ts`/`ci-bindingness.ts`/`ci-topology.ts` (unchanged; they scope to `ci.yml`/`ts-` jobs), `tests/checks/prompt-conformance.test.ts` + `tests/fixtures/prompt-inventory/{lifecycle,retained-retired}.json`, `scripts/run-bash-suites.sh` (bash suite discovery), `scripts/lint-commit-range.sh`.
@@ -78,10 +80,10 @@ All 30 §17 acceptance criteria are covered; none is left as TODO. DoD-19 is sat
 | AC-F2-1 | Creation requires a milestone resolved from the existing set in both surfaces; no autonomous creation; existing prohibitions present and unweakened | TC-PROMPT-001, TC-PROMPT-002 | Covered |
 | AC-F2-2 | Intake verifies attachment and records the milestone in pm-notes before artifacts; unattached (incl. exempt) ticket produces a question and blocks artifacts | TC-PROMPT-003 | Covered |
 | AC-F2-3 | Bootstrapper generates a milestone section; regenerated plugin committed and fresh; prompt conformance green | TC-PROMPT-004, TC-PLUGIN-001 | Covered |
-| AC-F3-1 | Open `change` issue, no milestone, no exemption → flag label + exactly one marked comment; state/assignee/other labels unchanged | TC-CHK-002 | Covered |
-| AC-F3-2 | Repeated triggers → no second comment, flag applied at most once, observable state identical after any number of runs | TC-CHK-003 | Covered |
-| AC-F3-3 | Exemption suppresses flag and comment; exemption purpose and removability documented in guide and tracker instructions | TC-CHK-004 (docs: TC-GUIDE-002, TC-PROMPT-001) | Covered |
-| AC-F3-4 | Attach removes the flag with no comment; detach restores the flag with no new comment | TC-CHK-005 | Covered |
+| AC-F3-1 | Open `change` issue, no milestone, no exemption, `opened` → flag label + one marked comment (comment only when no marker exists); state/assignee/other labels unchanged | TC-CHK-002 | Covered |
+| AC-F3-2 | Repeated triggers → no second comment, no add-flag while the flag is present, manual flag removal respected, observable state identical after any number of runs | TC-CHK-003 | Covered |
+| AC-F3-3 | Exemption suppresses flag and comment and outranks milestone and flag; purpose and removability documented in guide and tracker instructions | TC-CHK-004 (docs: TC-GUIDE-002, TC-PROMPT-001) | Covered |
+| AC-F3-4 | Attach removes the flag only when present, with no comment; detach restores the flag only when the marker exists, with no comment | TC-CHK-005 | Covered |
 | AC-F3-5 | Sweep reports the unattached open `change` population as advisory + one machine-readable local artifact, 0 tracker writes, 1 artifact write, exits successfully | TC-SWEEP-001 | Covered |
 | AC-F3-6 | Full decision table covered offline (change/non-change, open/closed, milestone ±, exemption ±, removal event); gate contains no milestone step and no tracker call | TC-CHK-001, TC-GATE-001 | Covered |
 | AC-F3-7 | Workflow declares `issues: write` + `contents: read` only, SHA-pinned actions, no `pull_request_target`/bypass, no secret; invariant checks green | TC-WF-001, TC-WF-002, TC-WF-003 | Covered |
@@ -92,7 +94,7 @@ All 30 §17 acceptance criteria are covered; none is left as TODO. DoD-19 is sat
 | AC-F5-3 | Story-code set equality backlog↔ranking, one contiguous unique sequence, M2 in backlog order | TC-PLAN-003 | Covered |
 | AC-F5-4 | M2 pack carries the M2-S20 row; cited seeds exist; seed heading range covers M2-S20 | TC-PLAN-004 | Covered |
 | AC-F5-5 | Status snapshot carries the delivery addendum naming M2-S20 + GH-313 and stating M2 has not exited | TC-PLAN-005 | Covered |
-| AC-F6-1 | Per-milestone (M0/M1/M2) declared-vs-attached evidence, closed tickets included, title-prefix match, empty gap list, unattached backlog count reported (not reconciled) | TC-EVID-001 | Covered |
+| AC-F6-1 | Per-milestone (M0/M1/M2) declared-and-attached count plus total attached (declared-and-attached + attached-but-undeclared), closed tickets included, title-prefix match, declared-minus-attached gap list empty when green, unattached backlog count reported (not reconciled) | TC-EVID-001 | Covered |
 | AC-F6-2 | GH-313 attached to M2; the M2-S20 block names it | TC-EVID-002, TC-PLAN-001 | Covered |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
@@ -115,7 +117,7 @@ The change authors no HTTP endpoint (`API-#` is absent by design, §8.1). The §
 
 | NFR ID | Requirement | TC ID(s) | Status |
 |--------|-------------|----------|--------|
-| NFR-1 | Flag precision/idempotency: 0 flags on milestone/exempt; ≤1 comment ever; 0 add-label actions on repeat evaluation | TC-CHK-003, TC-CHK-002, TC-CHK-004, TC-CHK-005 | Covered |
+| NFR-1 | Flag precision/idempotency: 0 flags on exempt issues; 0 `addFlag` when the flag is present; ≤1 comment ever; a manual removal is not reversed except by `opened` / `demilestoned`-with-marker | TC-CHK-003, TC-CHK-002, TC-CHK-004, TC-CHK-005 | Covered |
 | NFR-2 | Gate determinism: 0 tracker calls, five named checks in order, no milestone step, green | TC-GATE-001, TC-QG-001 | Covered |
 | NFR-3 | Workflow privilege/supply chain: `issues: write` + `contents: read`, 40-hex pins, no `pull_request_target`, no secret | TC-WF-002, TC-WF-003 | Covered |
 | NFR-4 | Documentation distribution: marker, derived install set, drift guard, exactly one script-generated header (byte-identical to the script), no hand-edited plugin | TC-GUIDE-001, TC-GUIDE-005, TC-PLUGIN-001, TC-SCOPE-001 | Covered |
@@ -127,7 +129,7 @@ The change authors no HTTP endpoint (`API-#` is absent by design, §8.1). The §
 
 | AC ID | Description (abbreviated) | TC ID(s) | Status |
 |-------|---------------------------|----------|--------|
-| AC-NFR1-1 | On each repeat evaluation the check issues 0 add-label actions and posts ≤1 comment in total; observable tracker state identical after any number of runs; 0 flags on milestone/exempt issues | TC-CHK-003, TC-CHK-002, TC-CHK-004, TC-CHK-005 | Covered |
+| AC-NFR1-1 | On each repeat evaluation the check issues 0 `addFlag` writes while the flag is present and posts ≤1 comment in total; observable tracker state identical after any number of runs; 0 flags on exempt issues; a human's flag removal is not reversed by edit/label/reopen | TC-CHK-003, TC-CHK-002, TC-CHK-004, TC-CHK-005 | Covered |
 | AC-NFR2-1 | At the delivered HEAD the chain is unchanged and ordered, performs 0 tracker calls, has no milestone step, and `TMPDIR=$PWD/tmp/tmpdir pnpm check` is green | TC-GATE-001, TC-QG-001 | Covered |
 | AC-NFR3-1 | Permissions limited to `issues: write` + `contents: read`, every action a 40-hex SHA pin, no `pull_request_target`, no bypass construct, no secret | TC-WF-002, TC-WF-003 | Covered |
 | AC-NFR4-1 | Guide in the derived install set, drift guard passes, no hand-edited plugin file, exactly one license header generated by `scripts/add-header-location.sh` and byte-identical to that script's output | TC-GUIDE-001, TC-GUIDE-005, TC-PLUGIN-001, TC-SCOPE-001 | Covered |
@@ -139,9 +141,9 @@ The change authors no HTTP endpoint (`API-#` is absent by design, §8.1). The §
 
 Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + repository-automation**, not a TypeScript workspace feature: the primary layers are **static/contract suites over files-as-data**, **a pure unit layer over the evaluation core**, **an offline integration layer over a fake tracker port**, and a small **read-only evidence layer**. No layer calls the network.
 
-- **Unit (pure decisions, no I/O).** `bun test tests/checks/milestone-attachment.test.ts`. The core (`scripts/checks/milestone-attachment.ts`) is a pure function over an input value (labels, state, milestone, event) returning one verdict and a closed action list. No clock, no environment, no port. The decision table from spec Appendix C is the oracle.
+- **Unit (pure decisions, no I/O).** `bun test tests/checks/milestone-attachment.test.ts`. The core (`scripts/checks/milestone-attachment.ts`) is a pure function over the contract-v1 input `{ action, state, changeLabel, exemption, milestone, flag, markerCommentPresent }` returning `{ verdict, writes }` where `writes ⊆ { addFlag, removeFlag, postMarkerComment, writeJobSummary }`. No clock, no environment, no port. The canonical contract-v1 ordered table (§5.2 TC-CHK-001) is the oracle.
 - **Contract / static (files as data).** `bun test tests/checks/milestone-guide.test.ts tests/checks/milestone-artifacts.test.ts tests/checks/milestone-prompts.test.ts tests/checks/milestone-workflow.test.ts tests/checks/milestone-gate.test.ts tests/checks/planning-truth.test.ts`. Every assertion parses the delivered tree (guide front matter, template front matter, prompt text, workflow YAML, `package.json` scripts, planning markdown tables and headings). YAML is parsed with the `yaml` package (already a dev dependency), never by substring where structure matters. Each static assertion must be paired with a negative fixture proving it fires (TC-WF-003; same pattern as `tests/checks/ci-checks.test.ts`).
-- **Integration (event → actions, offline).** `bun test tests/checks/milestone-attachment-integration.test.ts tests/checks/milestone-sweep.test.ts`. Fixture event payloads plus an injected in-memory tracker port (`readIssue`, `listComments`, `listMilestones`, `listIssues`, `addLabel`, `removeLabel`, `createComment`) record every call. The assertions are on the resulting tracker state **and** on the recorded call list — the call list is what proves "no duplicate application", "no other mutation", and "0 tracker writes". No `mock.module`; the fake is injected (`.ai/rules/typescript.md` §9). The sweep's pinned production artifact path is `tmp/milestone-attachment-sweep.json`; the suites substitute an isolated temp path.
+- **Integration (event → actions, offline).** `bun test tests/checks/milestone-attachment-integration.test.ts tests/checks/milestone-sweep.test.ts`. Fixture event payloads plus an injected in-memory tracker port (`readIssue`, `listComments`, `listMilestones`, `listIssues`, `addLabel`, `removeLabel`, `createComment`) that carries the seeded `needs-milestone` flag and the marker-comment presence, and records every call. The assertions are on the resulting tracker state **and** on the recorded call list — the call list is what proves "no duplicate application", "no re-application after manual removal", "no other mutation", and "0 tracker writes". The job summary is written to an injected `$GITHUB_STEP_SUMMARY` sink and asserted for issue number, verdict, and writes; it is never interpolated into a tracker write. No `mock.module`; the fake is injected (`.ai/rules/typescript.md` §9). The sweep's pinned production artifact path is `tmp/milestone-attachment-sweep.json`; the suites substitute an isolated temp path.
 - **Aggregate gate (no new code in the chain).** `TMPDIR=$PWD/tmp/tmpdir pnpm check` — lint → format:check → typecheck → test → check:boundaries → `prompt-conformance.ts` → `help-guide-coverage.ts` → `exports-parity.ts`. The new suites ride the existing `test` step; the workflow and the GitHub adapter do not enter the chain (spec C-1/DEC-2).
 - **Evidence runs (read-only, recorded, outside the gate).** Distribution guard `bash scripts/.tests/test-doc-distribution.sh` + `bash scripts/.tests/test-doc-distribution-modes.sh`; plugin freshness `./scripts/build-claude-plugin.sh` followed by `git status --porcelain .ados-claude/`; commit range `./scripts/lint-commit-range.sh --base main-tools`; and the accepted live sweep evidence: a recorded local read-only run through `scripts/checks/milestone-attachment-github.ts` with a read-only credential (writes only `tmp/milestone-attachment-sweep.json`, performs zero tracker writes) **or** the first post-merge workflow sweep run cited once it occurs. Each result is recorded in §10 and mirrored into pm-notes `notes:`. None of these runs inside `bun test` or `pnpm check`.
 
@@ -165,25 +167,25 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 | TC-PROMPT-003 | Intake verifies attachment, records pm-notes, asks on absence, treats exempt as unattached | Happy Path | Contract | Critical | AC-F2-2, DM-3, spec C-3 |
 | TC-PROMPT-004 | `@bootstrapper` guidance generates a milestone section in project tracker instructions | Happy Path | Contract | High | AC-F2-3 |
 | TC-PLUGIN-001 | Generated plugin mirrors the three changed prompts and is fresh; prompt conformance green | Regression | Contract + Evidence | Critical | AC-F2-3, AC-NFR4-1 |
-| TC-CHK-001 | Complete offline decision table; one verdict and a closed action set per evaluation | Contract | Unit | Critical | AC-F3-6, EVT-4 |
-| TC-CHK-002 | Flag path: one flag label, exactly one marked comment, no other mutation | Happy Path | Integration | Critical | AC-F3-1, EVT-1, DM-2 |
-| TC-CHK-003 | Idempotency: repeats add no comment and no duplicate label; state identical | Regression | Integration | Critical | AC-F3-2, AC-NFR1-1, NFR-1 |
-| TC-CHK-004 | Exemption suppresses flag and comment and is reported as exempt | Negative | Integration | Critical | AC-F3-3, DM-2 |
-| TC-CHK-005 | Attach clears the flag; detach restores it; neither comments; compliant/closed no-op | Corner Case | Integration | Critical | AC-F3-4, EVT-2 |
-| TC-CHK-006 | Adversarial issue content: byte-identical static comment, no interpolation, no log leakage | Negative | Unit | Critical | AC-NFR7-1, NFR-7 |
+| TC-CHK-001 | Canonical contract-v1 decision table: verdict, tracker writes, and job summary per evaluation | Contract | Unit | Critical | AC-F3-6, EVT-4, NFR-1 |
+| TC-CHK-002 | Opened flag path: one flag, one marker comment only when none exists, no other mutation | Happy Path | Integration | Critical | AC-F3-1, EVT-1, DM-2 |
+| TC-CHK-003 | Idempotency and manual removal: no second comment, no re-add except `opened`/`demilestoned`-with-marker, state identical | Regression | Integration | Critical | AC-F3-2, AC-NFR1-1, NFR-1 |
+| TC-CHK-004 | Exemption outranks milestone and flag; no writes; removable | Negative | Integration | Critical | AC-F3-3, DM-2 |
+| TC-CHK-005 | Attach removes only a present flag; detach restores only with the marker; neither comments | Corner Case | Integration | Critical | AC-F3-4, EVT-2 |
+| TC-CHK-006 | Fixed marker comment: byte-identical under adversarial content, no interpolation, no log leakage | Negative | Unit | Critical | AC-NFR7-1, NFR-7 |
 | TC-SWEEP-001 | Sweep: advisory summary + one local artifact, 0 tracker writes, exit 0, fail-loud on API error | Happy Path | Integration | Critical | AC-F3-5, EVT-3, spec C-2 |
 | TC-SWEEP-002 | Sweep bounds: page size 100, ≤⌈N/100⌉+3 reads, exit 0 for N=250/500, elapsed recorded | Corner Case | Integration | High | AC-NFR6-1, NFR-6 |
-| TC-WF-001 | Workflow declares the six evaluation event classes and the manual sweep dispatch | Contract | Contract | High | AC-F3-7, AC-F3-6 |
+| TC-WF-001 | Workflow declares the seven action events, the manual sweep dispatch, and the job summary | Contract | Contract | High | AC-F3-7, AC-F3-6 |
 | TC-WF-002 | Least privilege, 40-hex pins, no `pull_request_target`, no secret, no bypass construct | Negative | Contract | Critical | AC-F3-7, AC-NFR3-1, NFR-3 |
 | TC-WF-003 | Each static workflow assertion is proven non-vacuous by a mutation fixture | Negative | Contract | Critical | AC-F3-7, AC-NFR3-1 |
 | TC-GATE-001 | Aggregate chain unchanged and in order, no milestone step, no network-capable path | Regression | Contract | Critical | AC-NFR2-1, AC-F3-6, NFR-2, spec C-1 |
 | TC-QG-001 | Gate green at delivered HEAD; conventional subjects; ≤100-char body/footer lines | Regression | Evidence | Critical | AC-NFR5-1, NFR-5, spec C-11 |
-| TC-PLAN-001 | M2-S20 block exists in story shape with its ticket line | Happy Path | Contract | Critical | AC-F5-1, DM-4 |
+| TC-PLAN-001 | M2-S20 block exists in story shape and the M2 baseline set changes by exactly one addition | Happy Path | Contract | Critical | AC-F5-1, DM-4 |
 | TC-PLAN-002 | Every M2 block carries exactly one valid ticket line; no other section leaks in | Negative | Contract | Critical | AC-F5-2, DM-4 |
 | TC-PLAN-003 | Ranking: story-code set equality, contiguous unique numbering, M2 in backlog order | Regression | Contract | Critical | AC-F5-3 |
-| TC-PLAN-004 | M2 pack carries the M2-S20 row, every cited seed heading exists, range covers S20 | Happy Path | Contract | High | AC-F5-4 |
+| TC-PLAN-004 | M2 pack carries the M2-S20 row citing all five seeds, every seed resolves, range covers S20 | Happy Path | Contract | High | AC-F5-4 |
 | TC-PLAN-005 | Status snapshot carries the delivery addendum in the established form | Happy Path | Contract | High | AC-F5-5 |
-| TC-EVID-001 | Read-only per-milestone declared-vs-attached evidence, undeclared report, and reported debt count | Happy Path | Evidence | Critical | AC-F6-1, F-6 |
+| TC-EVID-001 | Read-only per-milestone declared-and-attached evidence, total attached, undeclared dispositions, and debt count | Happy Path | Evidence | Critical | AC-F6-1, F-6 |
 | TC-EVID-002 | GH-313 attached to M2; M2-S20 names it; three-surface title equality | Happy Path | Evidence | Critical | AC-F6-2, AC-F4-1 |
 | TC-SCOPE-001 | Changed-scope conformance: no tickets, no milestones, no mass edits, no new install-set surface, no lifecycle change, no pre-flipped current truth | Negative | Manual (review) | High | AC-F4-2, AC-F1-1, AC-NFR4-1 |
 
@@ -212,7 +214,7 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 3. **Assert the header unconditionally.** Build a throwaway git repository under the test temp base containing `scripts/add-header-location.sh` and the guide's body with its leading header block removed; run the script on the single file path (`scripts/add-header-location.sh doc/guides/milestone-management.md`) with the default `GITHUB_BRANCH`; read the produced file and assert it is **byte-identical** to the delivered guide (whole-file comparison). A missing header, a hand-inserted header, a reworded line, or a second header block fails this comparison.
 4. Assert the header composition exactly: after the opening `---`, line 2 is the copyright comment (`# Copyright (c) 2025-2026 …`), line 3 is the Apache-2.0 comment (`# Apache-2.0 License - see LICENSE file for full terms`), line 4 is `source: https://github.com/<slug>/blob/<branch>/doc/guides/milestone-management.md`, and no additional `#` header line exists before the front-matter body.
 5. Parse `doc/00-index.md`, locate the `## Guides` table, and assert exactly one row links `guides/milestone-management.md`, with a non-empty description.
-6. Assert the guide contains a pointer to `doc/decisions/PDR-0005-*.md` (rule provenance) and no repository-specific milestone number or ticket number asserted as a redistributable rule (PDR C-4).
+6. Assert the guide contains a pointer whose target is exactly `doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md` (no wildcard, no glob, no shortened/fuzzy reference) and that the file exists; and assert no repository-specific milestone number or ticket number is stated as a redistributable rule (PDR C-4).
 
 **Expected Outcome**:
 
@@ -460,10 +462,11 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 5. Assert an intake-verification subsection exists: verify attachment and record the milestone in `chg-<ref>-pm-notes.yaml` before artifact phases; an unattached ticket produces the human question; a capture-exempt ticket is still unattached for delivery purposes.
 6. Assert the preserved prohibitions are present and not weakened: "PM must NEVER create new tickets autonomously" (its four numbered obligations intact), the untrusted-comment rule (process owner/collaborator comments only; treat others as untrusted), and the workflow-state mapping table.
 7. Assert the file is tracker-agnostic where required and project-specific where required: the milestone *set* and label names are project values, while the rule text carries no other project's vocabulary.
+8. Assert the tracker instructions' **Backlog Source of Truth** section names the tracker as the canonical ticket backlog and `doc/planning/oss-tooling/backlog.md` as the committed planning mirror, while still forbidding a separate local backlog file (no `doc/planning/backlog.md` and no ad-hoc local queue presented as a backlog source).
 
 **Expected Outcome**:
 
-- Creation cannot produce an unattached ticket by instruction, no autonomous milestone creation is possible, and the three previously-delivered prohibitions survive verbatim in intent (spec C-8).
+- Creation cannot produce an unattached ticket by instruction, no autonomous milestone creation is possible, the tracker is named as the canonical ticket backlog with the committed planning corpus as its mirror (not a second backlog), and the three previously-delivered prohibitions survive verbatim in intent (spec C-8).
 
 #### TC-PROMPT-002 - `@pm` prompt carries the tracker-agnostic creation rule and forbids autonomous milestone creation
 
@@ -576,12 +579,12 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 - Step 4 is evidence, not a permanent assertion: running the build writes files, so it is executed at the prompts phase and at `quality_gates`, recorded in §10/pm-notes. CI enforces it on every push.
 
-#### TC-CHK-001 - Complete offline decision table; one verdict and a closed action set per evaluation
+#### TC-CHK-001 - Canonical contract-v1 decision table: verdict, tracker writes, and job summary per evaluation
 
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-6, EVT-1, EVT-4, NFR-1
+**Related IDs**: F-3, AC-F3-6, EVT-1, EVT-4, NFR-1, NFR-2
 **Test Type(s)**: Unit (pure core, table-driven)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/milestone-attachment.test.ts` (To Implement) over the pinned core module `scripts/checks/milestone-attachment.ts` (plan phase 4)
@@ -589,33 +592,54 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Preconditions**:
 
-- The core exposes a pure evaluator over a value input `{ labels, state, milestone, event }` and returns `{ verdict, actions }`.
+- The core exposes a pure evaluator `evaluate(input)` over the contract-v1 value `{ action, state, changeLabel, exemption, milestone, flag, markerCommentPresent }` (no raw webhook payload, no environment, no clock, no port).
+- It returns `{ verdict, writes }` with `verdict ∈ { compliant, exempt, flagged, restored, out-of-scope }` and `writes ⊆ { addFlag, removeFlag, postMarkerComment, writeJobSummary }`.
 
 **Steps**:
 
-1. Assert every row of the spec Appendix C decision table, at minimum:
-   - `change` + open + no milestone + no exemption + opened/edited/labeled → `flagged`;
-   - `change` + open + milestone + no exemption + any event → `compliant` (no actions);
-   - `change` + open + no milestone + exemption + any event → `exempt` (no actions);
-   - `change` + open + milestone + exemption + any event → `compliant` (no actions);
-   - `change` + open + milestone + `milestoned` → `compliant` with a flag-removal action;
-   - `change` + open + no milestone + `demilestoned` → `restored` with a flag-add action;
-   - `change` + closed + no milestone + no exemption + any event → `out-of-scope` (no actions);
-   - non-`change` + any state/milestone/exemption/event → `out-of-scope` (no actions).
-2. Assert the verdict value is exactly one member of the closed set `compliant | exempt | flagged | restored | out-of-scope` for every input combination (exhaustive product over boolean dimensions and event classes), and never undefined/empty.
-3. Assert the action list is a closed union: every action produced by the exhaustive matrix is `add-label` (flag), `remove-label` (flag), or `create-comment` — no state, assignee, milestone, or other-label action exists in the type or in the output.
-4. Assert determinism: evaluating the same input twice yields deep-equal results; evaluation order across the table does not matter.
-5. Assert the case table used by the suite covers every row of the spec table (the suite asserts the row count and each row's expected verdict, so a row removed from the core fails the suite rather than silently shrinking coverage).
+1. Assert the input shape: exactly the seven fields above, with `action` from the closed set `opened | edited | labeled | unlabeled | milestoned | demilestoned | reopened`, and no field carrying issue title/body/author text.
+2. Assert the ordered, first-match rules against the table below, row by row. "Tracker writes" excludes the job summary; **every row also emits exactly one `writeJobSummary`**, recorded in the last column.
+3. Assert precedence with deliberately conflicting inputs, proving first-match-wins rather than conjunction: a closed exempt issue → `out-of-scope` (rule 1 before 2); an open exempt issue **with** a milestone and a flag → `exempt` with zero writes (rule 2 before 3/4, so the flag is not removed and no comment is posted); an open compliant issue with the flag present → `compliant` with exactly one `removeFlag` (rule 3 before 4); an open issue with no milestone, no exemption, flag present, and any non-`opened` action → `flagged` with zero writes (rule 4d).
+4. Assert the verdict is exactly one member of the closed verdict set for every row of the full product (exhaustive over booleans and the seven actions), never undefined/empty.
+5. Assert the write vocabulary is closed: no produced write is outside `{ addFlag, removeFlag, postMarkerComment, writeJobSummary }`; no state transition, assignee change, milestone write, or other-label write exists in the type or in any output; every run contains exactly one `writeJobSummary` naming the issue number, the verdict, and the tracker writes (or "none").
+6. Assert determinism: evaluating the same input twice yields deep-equal results; evaluation order across the table does not matter.
+7. Assert branch/verb completeness as a meta-assertion: the suite's case table covers rules 1, 2, 3, 4a, 4b, 4c, 4d, 4e, 4f and every write verb at least once; a missing branch or verb fails naming it (this converts AC-F3-6's "full decision table" claim into a testable property).
+
+**Canonical table (contract v1; `any` = both values; the first matching rule decides):**
+
+| # | `change` | state | exemption | milestone | flag | marker | action | verdict | tracker writes | job summary |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | no | open | any | any | any | any | any | `out-of-scope` | none (rule 1) | 1 |
+| 2 | yes | closed | any | any | any | any | any | `out-of-scope` | none (rule 1) | 1 |
+| 3 | yes | open | yes | absent | absent | absent | opened | `exempt` | none (rule 2) | 1 |
+| 4 | yes | open | yes | present | present | present | edited | `exempt` | none (rule 2 outranks 3/4) | 1 |
+| 5 | yes | open | yes | present | absent | absent | milestoned | `exempt` | none (rule 2 outranks 3) | 1 |
+| 6 | yes | open | no | present | present | present | any | `compliant` | `removeFlag` (rule 3) | 1 |
+| 7 | yes | open | no | present | absent | present | milestoned | `compliant` | none (rule 3; nothing to remove) | 1 |
+| 8 | yes | open | no | absent | absent | absent | opened | `flagged` | `addFlag` + `postMarkerComment` (4a) | 1 |
+| 9 | yes | open | no | absent | absent | present | opened | `flagged` | `addFlag` only (4a; no second comment) | 1 |
+| 10 | yes | open | no | absent | present | present | opened | `flagged` | none (4b) | 1 |
+| 11 | yes | open | no | absent | absent | present | demilestoned | `restored` | `addFlag` (4c) | 1 |
+| 12 | yes | open | no | absent | present | present | demilestoned | `restored` | none (4c; flag already present) | 1 |
+| 13 | yes | open | no | absent | absent | absent | demilestoned | `out-of-scope` | none (4f; no marker, not restored) | 1 |
+| 14 | yes | open | no | absent | present | present | edited | `flagged` | none (4d) | 1 |
+| 15 | yes | open | no | absent | present | absent | labeled | `flagged` | none (4d; manually flagged, no marker) | 1 |
+| 16 | yes | open | no | absent | absent | present | edited | `out-of-scope` | none (4e; human removed the flag) | 1 |
+| 17 | yes | open | no | absent | absent | absent | edited | `out-of-scope` | none (4f; pre-existing unattached issue) | 1 |
+| 18 | yes | open | no | absent | absent | absent | labeled | `out-of-scope` | none (4f) | 1 |
+| 19 | yes | open | no | absent | absent | absent | unlabeled | `out-of-scope` | none (4f) | 1 |
+| 20 | yes | open | no | absent | absent | absent | reopened | `out-of-scope` | none (4f) | 1 |
 
 **Expected Outcome**:
 
-- The decision logic is fully pinned offline, with a closed verdict vocabulary and a closed write surface; AC-F3-6's "full decision table ... without network access" is demonstrated by construction.
+- The decision logic is fully pinned offline to contract v1: every ordered rule and every write verb has at least one case; exemption outranks milestone and flag; a pre-existing unattached issue and a human-removed flag are never written on edit/label/reopen; each run emits exactly one job summary. AC-F3-6's "full decision table ... without network access" is demonstrated by construction.
 
 **Notes / Clarifications**:
 
-- AC-F3-6 also makes a coverage claim about its own test suite. Step 5 converts that into a testable property: the suite's row table must be complete against the pinned table, and a missing row is a failure.
+- Contract v1 supersedes the earlier eight-row decision table still shown in spec Appendix C; the spec, PDR, and plan are being aligned to v1 in parallel (§1.2). The suite is the oracle, so a divergence in any artifact fails this TC rather than silently redefining the check.
+- The "tracker writes" column is the tracker-side action set. `writeJobSummary` is not a tracker write; it is the one run-legibility write required by §10 and is asserted in column 10 and by TC-WF-001.
 
-#### TC-CHK-002 - Flag path: one flag label, exactly one marked comment, no other mutation
+#### TC-CHK-002 - Opened flag path: one flag, one marker comment only when none exists, no other mutation
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -628,25 +652,26 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Preconditions**:
 
-- In-memory tracker port with call recording: `readIssue`, `listComments`, `listMilestones`, `listIssues`, `addLabel`, `removeLabel`, `createComment`.
-- Fixture `events/issue-opened--change--no-milestone.json` (open issue, labels `["change"]`, `milestone: null`, `author_association` irrelevant to the rule).
+- In-memory tracker port with call recording and seeded flag/marker state: `readIssue`, `listComments`, `listMilestones`, `listIssues`, `addLabel`, `removeLabel`, `createComment`; plus an injected `$GITHUB_STEP_SUMMARY` sink.
+- Fixtures: `events/issue-opened--change--no-milestone.json` (open, `change`, no milestone, no exemption, flag absent, no marker), its `--marker-present` variant, `issue-opened--change--with-milestone.json`, and `issue-opened--change--exempt.json`.
 
 **Steps**:
 
-1. Seed the port with the fixture issue, no comments, and milestones M0/M1/M2.
-2. Run the port-injected runner for the event; capture the resulting tracker state and the recorded call list.
+1. Seed the port with the no-marker fixture issue, no comments, and milestones M0/M1/M2.
+2. Run the port-injected runner for `opened`; capture the resulting tracker state, the recorded call list, and the job-summary text.
 3. Assert the verdict is `flagged`.
-4. Assert the flag label `needs-milestone` was applied exactly once, and the issue now carries `change` + `needs-milestone` (no other label added or removed).
-5. Assert exactly one comment was created; its body contains the stable marker, the guide path `doc/guides/milestone-management.md`, the exemption label `backlog-capture`, and a statement that the flag does not block work.
-6. Assert the recorded call list contains **only** allowed write calls (`addLabel`, `createComment`) plus reads; zero state transitions, zero assignee updates, zero milestone writes, zero other-label writes.
-7. Assert the issue `state` and `assignee` in the resulting tracker state are byte-equal to the seed.
-8. Repeat the whole case with `events/issue-opened--change--with-milestone.json` and `--exempt.json`; assert zero write calls in both (contrast cases for precision).
+4. Assert the writes are exactly `addFlag` + `postMarkerComment` + one `writeJobSummary`: the flag label `needs-milestone` is applied once, and exactly one comment is created.
+5. Assert the comment body is the fixed marker text: it contains the stable marker, the guide path `doc/guides/milestone-management.md`, the exemption label `backlog-capture`, and a statement that the flag does not block work.
+6. Run the `--marker-present` variant (flag absent, marker present) from a fresh seed; assert verdict `flagged`, writes exactly `addFlag` + one `writeJobSummary`, **zero** `postMarkerComment`, and the comment count unchanged at 1 (no second comment).
+7. Run the with-milestone and exempt fixtures; assert zero tracker writes in both (summary only) — `compliant` and `exempt` respectively.
+8. Assert the recorded call list contains only allowed writes plus reads: zero state transitions, zero assignee updates, zero milestone writes, zero other-label writes; and the issue `state`/`assignee` remain byte-equal to the seed.
+9. Assert the job summary names the issue number, the verdict (`flagged`), and the writes performed (or "none" for steps 7); it must contain no issue title/body/author text.
 
 **Expected Outcome**:
 
-- One label and one legible comment on a genuine orphan; nothing else changes; the §8.1 interaction contract is the only surface exercised.
+- The `opened` path writes one flag and one comment only when no marker exists; when the marker exists it writes the flag only. Nothing else changes; the job summary is legible without echoing issue content.
 
-#### TC-CHK-003 - Idempotency: repeats add no comment and no duplicate label; state identical
+#### TC-CHK-003 - Idempotency and manual removal: no second comment, no re-add except `opened`/`demilestoned`-with-marker, state identical
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -659,48 +684,55 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Preconditions**:
 
-- TC-CHK-002's flag case completed on a fresh port (so the issue is flagged with one comment).
+- TC-CHK-002's `opened` case completed on a fresh port: the issue carries the flag and exactly one marker comment.
 
 **Steps**:
 
-1. Replay the same `issue-opened` event 3 times; assert no new comment and zero `addLabel` calls on repeats (the flag is already present), and assert the full tracker state is deep-equal after run 2 and run 3 to the state after run 1.
-2. Replay `issue-edited` and `issue-labeled` events carrying the marker comment in `listComments`; assert verdict `flagged` with **zero** write calls.
-3. Run a variant where the marker comment exists but the flag label is absent; assert the label is re-applied once and no comment is created (the marker, not the label, governs the comment).
-4. Run a variant where the flag label exists but no marker comment exists (manual label application); assert no comment is created and no duplicate label call is issued.
-5. Assert the invariant across the sequence: comment count ≤ 1 and flag-label application count ≤ 1 across all runs, and the observable state after N runs equals the state after the first.
+1. Replay the same `opened` event 3 times; assert each verdict is `flagged`, each run issues **zero tracker writes** (rule 4b), the full tracker state is deep-equal after runs 2 and 3 to the state after run 1, and the comment count stays 1.
+2. Replay `edited` and `labeled` with the flag present and the marker present; assert verdict `flagged` with **zero** tracker writes (rule 4d).
+3. **Manual flag removal is respected.** Simulate a human removing `needs-milestone` while the marker remains; for each of `edited`, `labeled`, `unlabeled`, and `reopened` (milestone absent, exemption absent), assert verdict `out-of-scope` with **zero** tracker writes and specifically zero `addFlag` (rule 4e — the human's removal is never reversed).
+4. Assert the only two paths that may re-add after a removal: `opened` with flag absent + marker present → `flagged` with exactly one `addFlag` and no comment (4a); `demilestoned` with the marker present + flag absent → `restored` with exactly one `addFlag` and no comment (4c). Repeating either yields zero writes.
+5. Assert the "no re-add while present" invariant: for any evaluation whose input has the flag present, the write list contains zero `addFlag`; across the whole sequence, total `addFlag` actions equal the number of transitions from flag-absent into a rule that adds (never more).
+6. Assert duplicate-comment and identical-state invariants: comment count ≤ 1 across all runs; for every no-write path the state after N runs equals the state after the first; the only state changes in the whole sequence are the single initial flag add and the deliberate re-add cases in step 4.
 
 **Expected Outcome**:
 
-- Any number of triggers leaves the tracker in the same state, with at most one comment ever; the spec's action-layer claim (NFR-1: 0 add-label actions on repeat evaluation) is proven by the recorded call list, not by a server-side idempotency assumption.
+- Repeats and edits never comment twice and never re-apply a flag a human removed; the two legitimate re-add paths are the only exceptions, each issuing at most one `addFlag`. The spec's action-layer claim (NFR-1: 0 `addFlag` while present) is proven by the recorded call list.
 
-#### TC-CHK-004 - Exemption suppresses flag and comment and is reported as exempt
+**Notes / Clarifications**:
+
+- This replaces the revision-1.1 expectation that a manual removal would be re-applied. Under contract v1, rule 4e makes the human action authoritative; the test now asserts the opposite and pins it.
+
+#### TC-CHK-004 - Exemption outranks milestone and flag; no writes; removability
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-3, AC-F3-3, AC-F1-2, DM-2, DEC-11, SC-M2-S20-03
-**Test Type(s)**: Integration (suppression probe)
+**Test Type(s)**: Integration (suppression + precedence probe)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/milestone-attachment-integration.test.ts` (To Implement)
 **Tags**: @bun, @integration, @milestone, @negative
 
 **Preconditions**:
 
-- Fixture `events/issue-opened--change--exempt.json` (open `change` issue, no milestone, labels include `backlog-capture`).
+- Fixtures: `events/issue-opened--change--exempt.json` (open, `change`, `backlog-capture`, no milestone, no flag); an exempt + milestone + flag variant; an exempt + flag variant.
 
 **Steps**:
 
-1. Seed the port with the exempt issue; run each event class (opened, edited, labeled, demilestoned).
-2. Assert the verdict is `exempt` for every event.
-3. Assert zero write calls: no flag label, no comment, no label removal.
-4. Assert the exemption is removable at any time with the flag returning on the next evaluation: seed the same issue without `backlog-capture`, run `issue-edited`, assert verdict `flagged` and the flag action set (label + comment) appears.
-5. Assert the run summary for the exempt case names the issue number and the verdict `exempt` and reports "no writes" (legibility, §10) without copying the issue title/body.
+1. Seed the port with the exempt issue; run each action class (opened, edited, labeled, unlabeled, milestoned, demilestoned, reopened).
+2. Assert the verdict is `exempt` for every action and every run issues **zero tracker writes** (rule 2): no flag, no comment, no label removal.
+3. **Exemption outranks milestone**: run the exempt + milestone + flag variant; assert `exempt` with zero writes — the existing flag is *not* removed even though a milestone is present (rule 2 before rule 3).
+4. **Exemption outranks the flag**: run the exempt + flag variant; assert `exempt` with zero writes and the flag left in place.
+5. Assert removability: seed the same issue without `backlog-capture`, flag absent, marker absent; run `opened`; assert verdict `flagged` with `addFlag` + `postMarkerComment`.
+6. Assert the interaction with manual removal: with the exemption removed, the marker present from an earlier flag, and the flag absent, run `edited`; assert `out-of-scope` with zero writes (rule 4e) — removing the exemption does not resurrect the flag on an edit.
+7. Assert the run summary names the issue number, verdict `exempt`, and "no writes" without copying the issue title/body.
 
 **Expected Outcome**:
 
-- The only escape is honest and reversible; the exempt ticket is visibly not yet planned, never silently treated as compliant.
+- The exemption is the highest-precedence suppression after scope: it wins over a milestone and over a present flag, writes nothing, and is removable with predictable consequences. The ticket is visibly not yet planned, never silently treated as compliant.
 
-#### TC-CHK-005 - Attach clears the flag; detach restores it; neither comments; compliant/closed no-op
+#### TC-CHK-005 - Attach removes only a present flag; detach restores only with the marker; no comment
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
@@ -713,48 +745,50 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Preconditions**:
 
-- A port state representing a flagged issue (label present, marker comment present) — produced by TC-CHK-002, not hand-seeded, so the fixture cannot encode a state the check cannot reach.
+- A port state representing a flagged issue (flag present, marker present) — produced by TC-CHK-002, not hand-seeded, so the fixture cannot encode a state the check cannot reach.
 
 **Steps**:
 
-1. Run `events/issue-milestoned--change.json`; assert verdict `compliant`, exactly one `removeLabel` call for `needs-milestone`, zero `createComment`, zero other writes; assert the existing marker comment is untouched.
-2. Run `events/issue-demilestoned--change.json` on the resulting state; assert verdict `restored`, exactly one `addLabel` call, zero `createComment`; assert the comment count is still 1.
-3. Run the demilestoned event again; assert zero write calls (idempotent restoration).
-4. Run a `milestoned` event on an issue that never carried the flag; assert zero `removeLabel` calls (no spurious removal) and verdict `compliant`.
-5. Run `events/issue-demilestoned--change--closed.json`; assert verdict `out-of-scope` and zero writes (closed issues never re-flag).
-6. Assert the full sequence leaves exactly one comment and only label writes, and that the final state equals the state after step 2 (reversal is a pure label toggle).
+1. Run `events/issue-milestoned--change.json` on the flagged state; assert verdict `compliant`, exactly one `removeFlag` for `needs-milestone`, zero `postMarkerComment`, zero other tracker writes; the existing marker comment is untouched.
+2. Run `milestoned` on an issue with a milestone and **no** flag; assert verdict `compliant` with zero tracker writes (nothing to remove — no spurious removal).
+3. Run `events/issue-demilestoned--change.json` on the state from step 1 (milestone absent, flag absent, marker present); assert verdict `restored`, exactly one `addFlag`, zero `postMarkerComment`; the comment count stays 1.
+4. Run `demilestoned` again with the flag already present; assert verdict `restored` with zero tracker writes (idempotent restoration, no duplicate `addFlag`).
+5. Run `demilestoned` with the flag absent and **no marker** (a never-flagged pre-existing issue); assert verdict `out-of-scope` with zero tracker writes (rule 4f) — the restore path requires the marker.
+6. Run `milestoned` and `demilestoned` on a closed issue; assert `out-of-scope` with zero writes (rule 1).
+7. Assert the whole sequence leaves exactly one comment, only `addFlag`/`removeFlag` tracker writes, and one `writeJobSummary` per run; the final state equals the state after step 3.
 
 **Expected Outcome**:
 
-- Attachment reverses the flag without destroying history; detachment restores it without a second explanation; closed and compliant states never produce writes.
+- Attachment reverses the flag only when it is present; detachment restores it only when the marker proves it was previously flagged; neither posts a comment; closed and unmarked issues never produce writes.
 
-#### TC-CHK-006 - Adversarial issue content: byte-identical static comment, no interpolation, no log leakage
+#### TC-CHK-006 - Fixed marker comment: byte-identical under adversarial content, no interpolation
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: NFR-7, AC-NFR7-1, F-3, spec C-5
-**Test Type(s)**: Unit (pure comment builder + summary projection)
+**Test Type(s)**: Unit (fixed comment constant + summary projection)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/milestone-attachment.test.ts` (To Implement), fixtures under `tests/fixtures/milestone-attachment/adversarial/`
 **Tags**: @bun, @unit, @security, @milestone
 
 **Preconditions**:
 
-- The comment body and the run-summary projection are pure functions in the core module.
+- The comment body is the fixed marker text exposed as a constant by the core module; the run-summary projection is a separate pure function.
 
 **Steps**:
 
-1. Build the comment body for each adversarial fixture: `issue-text-injection.json` (title/body/author containing `${{ secrets.TOKEN }}`, `<!-- marker -->`, backticks, a line starting `## `, `</script>`, ANSI escape sequences) and `issue-log-forging.json` (newlines, `\r`, zero-width characters, a right-to-left override, a 10 000-character body).
-2. Assert the body is byte-identical across **every** case, and identical to the body produced for a benign fixture (one string, always).
-3. Assert the body contains none of the adversarial tokens and no substring of any fixture title, body, or author login (assert against a token list extracted from each fixture, so the check is non-vacuous).
-4. Assert the body is a static constant: the builder accepts no issue-derived argument (call it with the adversarial issue and with a benign issue and compare; additionally assert the module-level constant is referenced by the builder).
-5. Render the run-summary projection for each adversarial fixture; assert it contains the issue number, the verdict, and the writes ("none" or the action list) and zero issue-authored text (title/body/author) and zero control characters.
-6. Assert no untrusted text reaches a log-shaped projection: any diagnostic string produced by the runner for these fixtures contains only the issue number, the event name, and the verdict.
+1. Assert the comment body equals the fixed marker text exactly — one constant, with the stable marker token, the guide path, the exemption label, and the non-blocking statement; there is no parameter that can alter it.
+2. Build the body for each adversarial fixture: `issue-text-injection.json` (title/body/author containing `${{ secrets.TOKEN }}`, `<!-- marker -->`, backticks, a line starting `## `, `</script>`, ANSI escapes) and `issue-log-forging.json` (newlines, `\r`, zero-width characters, a bidi override, a 10 000-character body).
+3. Assert the body is byte-identical across **every** adversarial case and to the benign case (same bytes as step 1).
+4. Assert the body contains none of the adversarial tokens and no substring of any fixture title, body, or author login (assert against a token list extracted from each fixture, so the check is non-vacuous).
+5. Assert the producer is a zero-argument constant (no issue-derived parameter); calling it with the adversarial issue object is impossible by type, and the module-level constant is the value used on the write path.
+6. Render the job-summary projection for each adversarial fixture; assert it contains the issue **number**, the verdict, and the writes ("none" or the action list) and zero issue-authored text (title/body/author) and zero control characters.
+7. Assert no untrusted text reaches a log-shaped projection: any diagnostic string produced by the runner for these fixtures contains only the issue number, the action name, and the verdict.
 
 **Expected Outcome**:
 
-- The primary injection surface is closed by construction, not by escaping; the flag is legible without echoing the issue's content.
+- The primary injection surface is closed by construction: the comment is one fixed string, the summary carries only the issue number and the verdict, and no issue-authored text is echoed anywhere.
 
 #### TC-SWEEP-001 - Sweep: advisory summary + one local artifact, 0 tracker writes, exit 0, fail-loud on API error
 
@@ -817,13 +851,13 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 - The sweep is bounded by pages, not by findings; the structural bound is asserted, the wall-clock claim is recorded.
 
-#### TC-WF-001 - Workflow declares the six evaluation event classes and the manual sweep dispatch
+#### TC-WF-001 - Workflow declares the seven action events, the manual sweep dispatch, and the job summary
 
 **Scenario Type**: Contract
 **Impact Level**: Important
 **Priority**: High
 **Related IDs**: F-3, AC-F3-7, AC-F3-6, EVT-1, EVT-2, EVT-3
-**Test Type(s)**: Contract (workflow YAML parse)
+**Test Type(s)**: Contract (workflow YAML parse + summary-write assertion)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/milestone-workflow.test.ts` (To Implement)
 **Tags**: @bun, @workflow, @contract
@@ -834,15 +868,16 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Steps**:
 
-1. Parse the workflow with the `yaml` package; assert the `on:` block declares `issues` with types covering opened, edited, labeled, milestoned, demilestoned (the six evaluation classes include the manual sweep).
+1. Parse the workflow with the `yaml` package; assert the `on:` block declares `issues` with types covering **all seven contract actions**: opened, edited, labeled, unlabeled, milestoned, demilestoned, reopened, plus the manual sweep.
 2. Assert a `workflow_dispatch` trigger exists with an input selecting sweep mode (a named boolean/choice input), and that the sweep path is reachable only through dispatch (no schedule).
-3. Assert every declared event reaches the same evaluation entry point (the job's run step invokes the runner with the event payload path), so one verdict per evaluation is acted on (EVT-4).
+3. Assert every declared event reaches the same evaluation entry point (the job's run step invokes the runner with the event payload path and the issue number), so one verdict per evaluation is acted on (EVT-4).
 4. Assert the sweep step's exit semantics are the runner's, not a shell swallow: the dispatch step does not wrap the command in `|| true`/`exit 0` (the sweep itself returns 0 on findings).
 5. Assert no `permissions: write-all` and no repository-wide permission block that widens the job's grant.
+6. **Assert the job summary.** Assert a step writes to `$GITHUB_STEP_SUMMARY` (e.g. the run appends with `>> "$GITHUB_STEP_SUMMARY"`), that the write is unconditional on the evaluation path (not inside an `if:` that only runs on failure), and that it is not wrapped in a bypass construct. Assert the summary line shape names the issue number, the verdict, and the writes performed (or "none"): the static assertion pins the target and the invocation; the field-level content is asserted behaviorally in TC-CHK-001 step 5 and TC-CHK-002 step 9.
 
 **Expected Outcome**:
 
-- The declared events match the contract, the sweep is manual-only, and the single-verdict rule is wired through one entry point.
+- The declared events cover the contract's full action set, the sweep is manual-only, the single-verdict rule is wired through one entry point, and every run emits exactly one job summary naming the issue, verdict, and writes.
 
 #### TC-WF-002 - Least privilege, 40-hex pins, no `pull_request_target`, no secret, no bypass construct
 
@@ -978,8 +1013,8 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 1. Parse the M2 section; assert a block with heading `### M2-S20 <title>` exists exactly once and is the last M2 block (append-only repair).
 2. Assert the block carries the repository's story shape: a Goal statement, a Tasks list, an AC list with machine-checkable criteria, a `Depends on:` line (including the literal `none` when there is no dependency), and exactly one `- Ticket: GH-313 (milestone M2)` line directly under the heading block.
 3. Assert the block names the milestone `M2` in the ticket line and its story code root (`M2-`) matches.
-4. Assert the M2 story-code set is unchanged except for the added `M2-S20` (set comparison against the delivered baseline set, derived by parsing the same file for headings; the assertion is "no code removed, exactly one added"), and that heading order outside the append is not asserted here — reordering is a diff property (TC-SCOPE-001).
-5. Assert no other section's heading count changed: M0/M1/M3/M4 heading sets are parsed and compared to a committed expectation fixture (`tests/fixtures/milestone-attachment/planning/section-headings.json`) that is regenerated deliberately when a story is added.
+4. Load the committed fixture `tests/fixtures/milestone-attachment/planning/section-headings.json`, which carries the **M2 baseline story-code set** (the 18 codes present before this change) plus the M0/M1/M3/M4 sets. Compare the delivered M2 set to the baseline: assert **exactly one addition (`M2-S20`) and zero removals**, failing and naming any other added or removed code. Heading order outside the append is not asserted here — reordering is a diff property (TC-SCOPE-001).
+5. Compare the delivered M0/M1/M3/M4 story-code sets to the fixture's sets exactly (unchanged), so an edit in another section cannot ride along.
 
 **Expected Outcome**:
 
@@ -987,7 +1022,7 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 **Notes / Clarifications**:
 
-- Step 4/5's expectation fixture is the tree-invariant way to assert "nothing was reordered/renumbered" without asserting a base-branch diff (testing strategy). The fixture is updated deliberately when a new story is authored.
+- Step 4/5's baseline fixture is the tree-invariant way to assert "exactly one story added, none removed" without asserting a base-branch diff (testing strategy). It is regenerated deliberately only when a new story is authored after this change; the M2 baseline itself stays at the pre-change set so the one-addition assertion remains meaningful.
 
 #### TC-PLAN-002 - Every M2 block carries exactly one valid ticket line; no other section leaks in
 
@@ -1067,11 +1102,11 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 **Steps**:
 
 1. Parse the pack's story-to-artifact table; assert exactly one row whose first cell story code is `M2-S20`.
-2. Assert the row's scenario-seed cell cites at least two `SC-M2-S20-<nn>` identifiers (pack convention: at least two seeds per story).
-3. Resolve **every** seed cited by **every** row against `test-scenarios.md` `### SC-...` headings; assert every cited seed exists and every defined seed is cited (no dangling citation, no orphan seed). This generalizes beyond S20 so a future row cannot cite a non-existent seed.
+2. Assert the row's scenario-seed cell cites **all five** seeds `SC-M2-S20-01`, `-02`, `-03`, `-04`, `-05` — exactly these five, none missing and no invented sixth.
+3. Resolve **every** seed cited by **every** row against `test-scenarios.md` `### SC-...` headings; assert every cited seed resolves to an existing heading, and every defined seed heading is cited by some row (no dangling citation, no orphan seed). This generalizes beyond S20 so a future row cannot cite a non-existent seed and a defined seed cannot be unreferenced.
 4. Assert `test-scenarios.md` has a `## M2-S20 <title>` section containing the seeds cited, and that the file's introductory range statement covers S2 through S20 (parse the stated range and assert it includes S20 — a range that still says "S2 through S19" fails).
 5. Assert the pack index's pack-contents line describing the seed file covers S20 as well (the range mention appears in `m2/README.md`'s pack-contents table).
-6. Assert the M2-S20 seeds are behaviourally the five inherited seeds (`SC-M2-S20-01…05`) or a superset, and that each seed names an observable assertion.
+6. Assert the five M2-S20 seeds are behaviourally the inherited set — flag-once, no second comment / manual removal respected, exemption precedence, attach/detach reversal, and the zero-write sweep — and that each names an observable assertion.
 
 **Expected Outcome**:
 
@@ -1125,21 +1160,21 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 
 1. Derive the **declared** set locally: parse `backlog.md` M0, M1, and M2 sections and collect every `- Ticket: GH-<n> (milestone M<n>)` line per milestone. Record each milestone's declared count.
 2. Read the **actual** attachment per declared issue with read-only, paged calls, e.g. `gh api --paginate "repos/<owner>/<repo>/milestones/<number>/issues?state=all&per_page=100"` (state `all`, so closed tickets are included) and/or `gh api repos/<owner>/<repo>/issues/<n> --jq '.milestone.title'` per issue. Record the exact commands in the evidence record so a reviewer can confirm only GET requests were issued.
-3. Compute the **gap list** as the set difference "declared minus attached", per milestone. Every declared ticket must be attached to the milestone its block names; the attached count must equal the declared count; a gap list is empty when green and blocks DoD-14 when not (never waived).
+3. Define and compute the metric per milestone: **declared-and-attached count = |declared ∩ attached|**; **gap list = declared − attached** (every declared ticket must be attached to the milestone its block names; the gap list is empty when green and blocks DoD-14 when not, never waived); and **total attached = declared-and-attached + attached-but-undeclared** (the second term comes from step 5). Record all three numbers for every milestone.
 4. Assert the title-prefix match: the milestone title begins `M<n>:` and every attached ticket's originating story code begins `M<n>-` (report any mismatch as a named row).
-5. Separately compute the **attached-but-undeclared** set: tickets attached to M0/M1/M2 that no backlog block declares. Reconcile the known current members by name — M1 `#219`; M2 `#268`, `#284`, `#286`, `#303` — and record a `disposition` field for every row: `declared-exception` (the milestone pack records it as a deliberate exception), `backlog-gap` (genuinely undeclared work, backlog action required), or `unknown` (PM follow-up). **This list is reported, never failing**: it never makes the evidence run non-green, never blocks DoD-14, and never implies a tracker write; it exists so undeclared attachment is visible instead of invisible.
+5. Compute the **attached-but-undeclared** set (the second term of total attached): tickets attached to M0/M1/M2 that no backlog block declares. Reconcile the known current members by name — M1 `#219`; M2 `#268`, `#284`, `#286`, `#303` — and record a `disposition` field for every row: `declared-exception` (the milestone pack records it as a deliberate exception), `backlog-gap` (genuinely undeclared work, backlog action required), or `unknown` (PM follow-up). **This list is reported, never failing**: it never makes the evidence run non-green, never blocks DoD-14, and never implies a tracker write; it exists so undeclared attachment is visible instead of invisible and so `total attached` is an honest count.
 6. Report the deliberately unattached population **by count, never reconciled**: open `change` issues with no milestone (minus exempted), recorded as a number with the query used (e.g. `gh issue list --state open --label change --search "no:milestone"`), alongside the planning-time baseline of 94 total / 53 open for context.
 7. Attach the recorded live sweep evidence: the local read-only adapter run through `scripts/checks/milestone-attachment-github.ts` (its `tmp/milestone-attachment-sweep.json` artifact plus the summary numbers), **or** the first post-merge workflow sweep run cited once it occurs. Both forms are zero-write; the artifact is the only write.
-8. Write the evidence record to `chg-GH-313-milestone-evidence.md`: per milestone, declared count, attached count, prefix-match verdict, gap list (empty or named); the attached-but-undeclared list with dispositions; the unattached count; and the exact read commands. Mirror it as a pm-notes `notes:` entry of type `evidence` and into §10.
+8. Write the evidence record to `chg-GH-313-milestone-evidence.md`: per milestone, declared count, declared-and-attached count, total attached (declared-and-attached + attached-but-undeclared), prefix-match verdict, gap list (empty or named); the attached-but-undeclared list with dispositions; the unattached count; and the exact read commands. Mirror it as a pm-notes `notes:` entry of type `evidence` and into §10.
 9. Assert zero tracker writes occurred: the command list contains no `POST`/`PATCH`/`PUT`/`DELETE`, no `-X`, no `--method` write verb, and no label/milestone/issue mutation command; the only write is the local sweep artifact. Any attachment needed to reach zero is a separate, human-confirmed PM action, not part of this test.
 
 **Expected Outcome**:
 
-- "Every ticket declared by M0/M1/M2 is attached, closed included" is a recorded, reproducible fact with an empty-or-reported gap list; the attached-but-undeclared population is a reported list with dispositions that never fails the run; the historical debt is reported as a count and left untouched.
+- "Every ticket declared by M0/M1/M2 is attached, closed included" is a recorded, reproducible fact: declared-and-attached equals the declared count, the declared-minus-attached gap list is empty, and total attached is reconciled as declared-and-attached plus the reported attached-but-undeclared list with dispositions that never fails the run; the historical debt is reported as a count and left untouched.
 
 **Notes / Clarifications**:
 
-- The evidence claim is modelled on **declared-versus-attached only**, exactly as AC-F6-1 states. The attached-but-undeclared list is an added visibility surface: it does not change the acceptance claim and cannot make the run fail. Its known members are reconciled by name so a reviewer can see M1's planning umbrella and M2's four undeclared tickets are understood, not silently ignored.
+- The acceptance claim is **declared-and-attached** (the intersection), exactly as AC-F6-1 states. The attached-but-undeclared list is the separate second term of `total attached`; it is a reported visibility surface that cannot make the run fail. Its known members are reconciled by name so a reviewer can see M1's planning umbrella and M2's four undeclared tickets are understood, not silently ignored.
 - This is verification evidence, not a permanent suite: the tracker is live data and cannot enter an offline deterministic test. Re-running the same procedure at M2 exit reproduces the claim (§22). A non-empty **declared-minus-attached** gap list blocks the DoD row rather than being waived (RSK-10, §17.1).
 - No new automation is added for the evidence (NG-4/NG-9): the reads are operator-run GET commands plus the already-delivered adapter's read-only sweep.
 
@@ -1196,7 +1231,8 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
    - the workflow (row 10), the three check modules (row 11), and the check suites/fixtures (rows 12–16, including the guide, artifacts, prompts, and planning-truth suites);
    - **all seven plan-phase-5 files**: `backlog.md`, `backlog-ranking.md`, `milestones/m2/README.md` (including the pack-contents range line), `milestones/m2/test-scenarios.md`, `status.md`, `tests/checks/planning-truth.test.ts`, and `tests/fixtures/milestone-attachment/planning/section-headings.json`;
    - the milestone pack index (row 19, plan phase 1);
-   - `chg-GH-313-milestone-evidence.md` and the change-folder artifacts (spec, plan, test plan, pm-notes).
+   - `chg-GH-313-milestone-evidence.md` and the change-folder artifacts (spec, plan, test plan, pm-notes);
+   - `<change_folder>/readiness-review/**` — the Definition-of-Readiness review evidence under `doc/changes/2026-11/2026-11-14--GH-313--milestone-first-planning/readiness-review/**`.
    Any other path requires a recorded reason in the plan.
 3. Assert the forbidden areas are untouched: no `packages/**` change; no `.opencode/command/**` change; no install-set or shell-script change (`scripts/install.sh`, `scripts/uninstall.sh`, `ADOS_DELIVERY_SCRIPTS`); no existing check or delivery script modified outside the three new modules; no phase-set or lifecycle-gate change; no `gh`/`glab` write automation added; no roadmap `MS-<NNNN>` identifiers or allocation matrix (spec C-10).
 4. Assert no other template gained or lost a field (AC-F4-2, spec C-6), and that the five excluded templates are byte-unchanged in their front matter: `implementation-plan-template.md`, `test-plan-template.md`, `feature-spec-template.md`, `roadmap-engineering-template.md`, `decision-record-template.md`.
@@ -1218,23 +1254,33 @@ Per `.ai/rules/testing-strategy.md`, this change is **documentation + prompt + r
 ## 6. Environments and Test Data
 
 - **Environment:** local development only (`pnpm` + Bun workspace, Bun 1.4.4 per `.bun-version`); no staging, no live tracker, no network. The gate convention is `TMPDIR=$PWD/tmp/tmpdir pnpm check`; suites isolate any temp output under that base or `mkdtemp` and never read `$HOME`. The pinned sweep artifact is `tmp/milestone-attachment-sweep.json` (gitignored by the repository's `tmp/` rule); suites substitute an isolated temp path and never write the repository copy during tests. TC-GUIDE-001 builds a throwaway git repository under the temp base and runs only local `git`/`bash` commands against it.
-- **Test data — issue-event payloads** (committed fixtures, never named `*.test.ts`), pinned home `tests/fixtures/milestone-attachment/events/` (plan phase 4):
+- **Test data — contract-v1 input drivers** (committed fixtures, never named `*.test.ts`), pinned home `tests/fixtures/milestone-attachment/events/` (plan phase 4). Each fixture supplies the event payload; the runner normalizes it together with the seeded tracker reads into the seven contract inputs (`action`, state, `change`, exemption, milestone, flag, `markerCommentPresent`):
 
-  | Fixture | Shape | Purpose |
+  | Fixture | Action / state / labels / milestone | Contract case |
   |---|---|---|
-  | `issue-opened--change--no-milestone.json` | `action: opened`, issue `state: open`, `labels: ["change"]`, `milestone: null` | TC-CHK-002/003 happy flag path |
-  | `issue-opened--change--with-milestone.json` | same + `milestone: { number: 3, title: "M2: …" }` | compliant contrast (zero writes) |
-  | `issue-opened--change--exempt.json` | same + `labels: ["change","backlog-capture"]` | TC-CHK-004 suppression |
-  | `issue-opened--non-change.json` | `labels: ["bug"]`, `milestone: null` | out-of-scope contrast |
-  | `issue-opened--change--closed.json` | `state: closed`, `labels: ["change"]`, `milestone: null` | closed-issue exclusion |
-  | `issue-edited--change--no-milestone.json` | `action: edited`, no milestone, no exemption | EVT-1 repeat trigger |
-  | `issue-labeled--change--no-milestone.json` | `action: labeled`, `label: change` | EVT-1 repeat trigger |
-  | `issue-milestoned--change.json` | `action: milestoned`, milestone present | EVT-2 reversal |
-  | `issue-demilestoned--change.json` | `action: demilestoned`, `milestone: null`, was flagged | EVT-2 restoration |
-  | `issue-demilestoned--change--closed.json` | as above + `state: closed` | closed never re-flags |
+  | `issue-opened--change--no-milestone.json` | opened, open, `change`, no milestone, no flag, no marker | rule 4a (flag + comment) |
+  | `issue-opened--change--no-milestone--marker-present.json` | opened, flag absent, marker present | rule 4a (flag only, no second comment) |
+  | `issue-opened--change--no-milestone--flag-present.json` | opened, flag present, marker present | rule 4b (zero writes) |
+  | `issue-opened--change--with-milestone.json` | opened, milestone present, no flag | rule 3 (compliant, nothing to remove) |
+  | `issue-opened--change--exempt.json` | opened, `backlog-capture`, no milestone | rule 2 (exempt) |
+  | `issue-opened--change--exempt--milestone-flag.json` | opened, exempt + milestone + flag | rule 2 precedence over 3/4 |
+  | `issue-edited--change--no-milestone.json` | edited, no flag, no marker (pre-existing unattached) | rule 4f (zero writes) |
+  | `issue-edited--change--no-milestone--flag-present.json` | edited, flag present, marker present | rule 4d (zero writes) |
+  | `issue-edited--change--no-milestone--flag-removed.json` | edited, flag absent, marker present (human removed flag) | rule 4e (zero writes; never re-applied) |
+  | `issue-labeled--change--no-milestone.json` | labeled, no flag, no marker | rule 4f |
+  | `issue-labeled--change--no-milestone--flag-present.json` | labeled, flag present, no marker | rule 4d |
+  | `issue-unlabeled--change--no-milestone.json` | unlabeled, no flag, no marker | rule 4f |
+  | `issue-reopened--change--no-milestone.json` | reopened, no flag, no marker | rule 4f |
+  | `issue-milestoned--change.json` | milestoned, milestone present, flag present | rule 3 (remove flag) |
+  | `issue-milestoned--change--no-flag.json` | milestoned, milestone present, flag absent | rule 3 (no spurious removal) |
+  | `issue-demilestoned--change.json` | demilestoned, no milestone, flag absent, marker present | rule 4c (restored) |
+  | `issue-demilestoned--change--flag-present.json` | demilestoned, flag already present, marker present | rule 4c (zero writes) |
+  | `issue-demilestoned--change--no-marker.json` | demilestoned, flag absent, no marker | rule 4f (not restored) |
+  | `issue-opened--change--closed.json` | closed, `change`, no milestone | rule 1 (out-of-scope) |
+  | `issue-opened--non-change.json` | open, `bug`, no milestone | rule 1 (out-of-scope) |
   | `workflow-dispatch--sweep.json` | dispatch payload with `inputs.mode: sweep` | sweep entry |
 
-- **Test data — tracker seeds and comments** (`tests/fixtures/milestone-attachment/tracker/`): `milestones-m0-m1-m2.json` (numbers, titles, states), `comments--with-marker.json` (prior check comment), `comments--without-marker.json`, `comments--unrelated.json` (a human comment that must never be treated as the marker).
+- **Test data — tracker seeds and comments** (`tests/fixtures/milestone-attachment/tracker/`): `milestones-m0-m1-m2.json` (numbers, titles, states); `comments--with-marker.json` (prior check comment, so `markerCommentPresent` is true), `comments--without-marker.json`, `comments--unrelated.json` (a human comment that must never be treated as the marker). Flag presence is seeded through the issue labels in the event fixtures, so the port can construct every `flag × marker` pair without a separate flag fixture.
 - **Test data — sweep populations** (`tests/fixtures/milestone-attachment/sweep/`): `issues-n250-page-{1,2,3}.json` (100/100/50) and `issues-n500-page-{1..5}.json` (100×5), each page a mixed population (unattached open `change`, exempt, milestoned, closed, non-`change`); `expected-summary-shape.json` (field names/types only — never values, so the fixture cannot rot into a tautology). The production artifact path `tmp/milestone-attachment-sweep.json` is asserted as the declared output, with tests writing to a substitution path.
 - **Test data — adversarial inputs for NFR-7** (`tests/fixtures/milestone-attachment/adversarial/`): `issue-text-injection.json` (title/body/author login containing `${{ secrets.TOKEN }}`, `<!-- needs-milestone -->`, backticks, a body line starting `## `, `</script>`, ANSI escapes) and `issue-log-forging.json` (embedded newlines and `\r`, zero-width joiners, a bidi override, a 10 000-character body). The suite extracts a token list from each fixture and asserts none appears in the comment body or the run-summary projection (non-vacuous).
 - **Test data — planning expectations** (`tests/fixtures/milestone-attachment/planning/section-headings.json`): the committed heading inventory per backlog section, regenerated deliberately when a story is authored; it is the tree-invariant substitute for asserting "no other story was reordered".
@@ -1255,7 +1301,7 @@ Homes below are the plan-pinned paths (phases 1–6). The assertion contracts bi
 | TC-GUIDE-005 | Guard scripts, repository root | `bash scripts/.tests/test-doc-distribution.sh && bash scripts/.tests/test-doc-distribution-modes.sh` | None; sandbox install run inside the guard | Existing — run, no new code |
 | TC-TPL-001, TC-TPL-003, TC-TPL-004 | `tests/checks/milestone-artifacts.test.ts` | `bun test tests/checks/milestone-artifacts.test.ts` | `yaml` parse of template/spec/pm-notes front matter | To Implement (plan phase 2) |
 | TC-PROMPT-001, TC-PROMPT-002, TC-PROMPT-003, TC-PROMPT-004, TC-TPL-002, TC-PLUGIN-001 | `tests/checks/milestone-prompts.test.ts` + `scripts/build-claude-plugin.sh` | `bun test tests/checks/milestone-prompts.test.ts`; `./scripts/build-claude-plugin.sh && git status --porcelain .ados-claude/`; `bun run scripts/checks/prompt-conformance.ts` | None; generated files read as data | To Implement + evidence run (plan phase 3) |
-| TC-CHK-001, TC-CHK-006 | `tests/checks/milestone-attachment.test.ts` | `bun test tests/checks/milestone-attachment.test.ts` | Pure core; adversarial fixtures; no port | To Implement |
+| TC-CHK-001, TC-CHK-006 | `tests/checks/milestone-attachment.test.ts` | `bun test tests/checks/milestone-attachment.test.ts` | Pure core; contract-v1 case table; adversarial fixtures; no port | To Implement |
 | TC-CHK-002, TC-CHK-003, TC-CHK-004, TC-CHK-005 | `tests/checks/milestone-attachment-integration.test.ts` | `bun test tests/checks/milestone-attachment-integration.test.ts` | Injected in-memory tracker port; event fixtures | To Implement |
 | TC-SWEEP-001, TC-SWEEP-002 | `tests/checks/milestone-sweep.test.ts` | `bun test tests/checks/milestone-sweep.test.ts` | Paged fixtures; temp output directory substituting `tmp/milestone-attachment-sweep.json`; call-count recorder | To Implement |
 | TC-WF-001, TC-WF-002, TC-WF-003 | `tests/checks/milestone-workflow.test.ts` | `bun test tests/checks/milestone-workflow.test.ts` | `yaml` parse + mutated temp copies (pattern: `tests/checks/ci-checks.test.ts`) | To Implement |
@@ -1269,7 +1315,7 @@ Homes below are the plan-pinned paths (phases 1–6). The assertion contracts bi
 
 | Level | Command | Expected evidence |
 |---|---|---|
-| Unit | `bun test tests/checks/milestone-attachment.test.ts` | Green; decision table rows and adversarial cases enumerated in the test output |
+| Unit | `bun test tests/checks/milestone-attachment.test.ts` | Green; contract-v1 ordered rules 1, 2, 3, 4a–4f and all four write verbs (`addFlag`, `removeFlag`, `postMarkerComment`, `writeJobSummary`) enumerated in the test output |
 | Contract/static | `bun test tests/checks/milestone-guide.test.ts tests/checks/milestone-artifacts.test.ts tests/checks/milestone-prompts.test.ts tests/checks/milestone-workflow.test.ts tests/checks/milestone-gate.test.ts tests/checks/planning-truth.test.ts` | Green; each negative case fails on a mutated temporary copy (TC-WF-003 pattern) |
 | Integration | `bun test tests/checks/milestone-attachment-integration.test.ts tests/checks/milestone-sweep.test.ts` | Green; recorded call lists prove zero unexpected writes and the read bound |
 | Distribution | `bash scripts/.tests/test-doc-distribution.sh` + `…-modes.sh` | Exit 0 both; install set includes the guide; five failure modes still fire |
@@ -1277,7 +1323,7 @@ Homes below are the plan-pinned paths (phases 1–6). The assertion contracts bi
 | Prompt/help conformance | `bun run scripts/checks/prompt-conformance.ts`; `bun run scripts/checks/help-guide-coverage.ts` | Exit 0 both |
 | Commit history | `./scripts/lint-commit-range.sh --base main-tools` | `PASS` |
 | Aggregate | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | Exit 0; the eight chained steps named |
-| Read-only tracker evidence | Paged GET reads per TC-EVID-001/002; local read-only sweep run through `scripts/checks/milestone-attachment-github.ts`, **or** the first post-merge workflow sweep run cited once it occurs | `chg-GH-313-milestone-evidence.md` with per-milestone declared/attached counts, empty-or-reported gap list, attached-but-undeclared list with dispositions, unattached count, and a GET-only command list |
+| Read-only tracker evidence | Paged GET reads per TC-EVID-001/002; local read-only sweep run through `scripts/checks/milestone-attachment-github.ts`, **or** the first post-merge workflow sweep run cited once it occurs | `chg-GH-313-milestone-evidence.md` with per-milestone declared-and-attached counts, total attached (declared-and-attached + attached-but-undeclared), empty-or-reported gap list, attached-but-undeclared dispositions, unattached count, and a GET-only command list |
 
 ### 7.3 How the plan's phases consume this test plan
 
@@ -1296,7 +1342,8 @@ Homes below are the plan-pinned paths (phases 1–6). The assertion contracts bi
 
 ### 8.1 Risks
 
-- **Fixture drift masquerading as coverage (RSK-4).** GitHub event payloads change shape; a hand-written fixture can encode a shape the workflow never receives. Mitigation: fixtures are copied from real event payloads at authoring, the core takes a normalized input (not the raw payload), and the adapter normalizes — so a payload-shape change fails loudly at the adapter, not silently in the core.
+- **Fixture drift masquerading as coverage (RSK-4).** GitHub event payloads change shape; a hand-written fixture can encode a shape the workflow never receives. Mitigation: fixtures are copied from real event payloads at authoring, the core takes the normalized seven-field contract input (not the raw payload), and the adapter normalizes — so a payload-shape change fails loudly at the adapter, not silently in the core.
+- **Contract drift across artifacts (RSK-4).** The canonical contract v1 is being written into the spec, PDR, plan, core, and this plan in parallel; a one-line divergence (an extra rule branch, a different precedence, a fifth write verb) would silently redefine the check. Mitigation: TC-CHK-001 pins the ordered table as the oracle and fails on any divergence, TC-WF-001 pins the action set and the summary write, and §1.2 requires a revision before the DoR gate if an artifact lands differently.
 - **Tautological data assertions.** Deriving the expected ticket-line count from the same file it asserts would prove nothing. Mitigation: assertions compare two independent surfaces (blocks vs lines, backlog vs ranking, pack citations vs seed headings) and never hardcode the growing counts (19/77 are evidence metrics, not assertions).
 - **Golden over-pinning of the comment body.** A committed golden could be "refreshed" into legitimizing an interpolated body. Mitigation: the primary assertion is cross-case byte equality plus a token-leakage list; the golden is optional and regenerated only with a reviewed diff.
 - **Workflow security assertions live outside the scanners (TP-Q2, resolved).** `ci-supply-chain.ts`/`ci-bindingness.ts` read only `ci.yml`/`ts-` jobs and stay unchanged by plan pin. Mitigation: the dedicated suite owns the new file's permissions, pins, secret absence, and bypass absence; TC-WF-003's mutation matrix proves each assertion fires, and a meta-assertion pins the scanned-file set so a rename cannot drop coverage.
@@ -1310,6 +1357,8 @@ Homes below are the plan-pinned paths (phases 1–6). The assertion contracts bi
 
 - The delivered machinery named in §2 is stable through this change: the marker-derived install set, the header script's output shape, the plugin build script, the `NAMED_CHECKS` order, and the `tests/checks` + `bun test` discovery pattern.
 - GitHub Issues supplies `issues` events including `milestoned`/`demilestoned`, and an `issues: write` token can add/remove a label and create a comment without broader scopes.
+- The canonical contract v1 (§2) is the decision-table oracle for this revision. The spec's Appendix C table, the PDR's enforcement wording, and the plan's phase-4 obligations are being aligned to the same contract in parallel; TC-CHK-001 fails if any artifact diverges.
+- The runner writes exactly one job summary per run to the inherited `$GITHUB_STEP_SUMMARY`; tests inject a summary sink and assert its content without touching the real file.
 - The three pinned modules (`scripts/checks/milestone-attachment.ts`, `-runner.ts`, `-github.ts`) are implemented where `tests/checks/**` can import them directly, exactly as existing `scripts/checks/*.ts` are consumed today; no build step is needed for the core or runner.
 - "Zero tracker calls inside the gate" is established by construction (no network-capable import on any chain-reachable path) plus the manifest and import assertions — the plan does not add packet-level interception, and the test states that limit honestly.
 - The planning corpus is repaired before the data assertions run (phase order: planning truth before the final gate), so the assertions are green at the delivered HEAD and remain true afterwards.
@@ -1336,6 +1385,7 @@ All six questions raised in revision 1.0 are resolved. The resolutions below are
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | test-plan-writer (DeepSeek V4.1 Flash) | Initial test plan: 35 TCs in 12 families covering all 30 §17 ACs (AC-F1-1…AC-NFR7-1), DoD-1…DoD-21 (DoD-19 roll-up, DoD-21 lifecycle evidence), EVT-1…4, DM-1…5, NFR-1…7, the five inherited seeds `SC-M2-S20-01…05` by name, Appendix E constraints C-1…C-12, a fixtures catalog (11 event payloads, tracker seeds, 250/500-issue sweep populations, two adversarial NFR-7 inputs, planning heading expectations), data assertions over backlog/ranking/pack/status, and the read-only M0/M1/M2 evidence procedure. Six test-plan questions raised (TP-Q1 core location vs the then-current scripts row; TP-Q2 workflow coverage by the invariant battery; TP-Q3 header wording; TP-Q4 duplicate-label observability; TP-Q5 evidence home; TP-Q6 "exactly once" decidability — the last resolved here) |
 | 1.1 | 2026-11-14 | test-plan-writer (DeepSeek V4.1 Flash) | **DoR remediation; spec, plan, and PDR-0005 reconciliation.** (1) All six TP-Q items closed in §8.3 (TP-Q1/Q2/Q5 by plan pins; TP-Q3/Q4 by the remediated spec wording); §2 plan bullet rewritten with the phase-by-phase pins and the pending-plan placeholder removed; §9 row added. (2) **TC-EVID-001** remodelled on declared-vs-attached only: the gap list is declared-minus-attached; a separate attached-but-undeclared list with a `disposition` field (`declared-exception` / `backlog-gap` / `unknown`) reconciles the known members (M1 #219; M2 #268, #284, #286, #303) and never fails the run. (3) **TC-GUIDE-001** asserts the script-generated header unconditionally and byte-for-byte against `scripts/add-header-location.sh` output on the single file, with the corrected two-`#`-line + `source:` composition; a missing header fails. (4) Stale paths corrected: pack-index link `../../../guides/milestone-management.md`; engineering template `roadmap-engineering-template.md`. (5) **TC-TPL-002** moved from the artifacts suite to the prompts suite; §7.1/§7.3 phase mapping updated (phase 2 = TPL-001/003/004; phase 3 = prompts + TPL-002 + PLUGIN-001). (6) **TC-SCOPE-001** allowed set expanded (PDR + register, the seven phase-5 files, the new guide); the existing-guide assertion scoped to phase-7 rows 25–31; the "not a required check" assertion moved from TC-WF-002 into manual repository-setting evidence; constraint citations namespaced (`spec C-n` vs `PDR C-n`) with the C-4/C-6 mismatches corrected. (7) Every Appendix B reference updated to rows 1–34 / 25–31 / 34. (8) Live-evidence text updated to the accepted model (recorded local read-only adapter run with zero tracker writes, or the first post-merge workflow run). Also propagated: TC-CHK-001/GATE-001 pinned module paths; TC-SWEEP-001/002 pinned artifact `tmp/milestone-attachment-sweep.json`; TC-WF-003 scanner-unchanged pin; TC-QG-001/TC-PLAN-* citation and boundary fixes. Coverage unchanged at 30/30 ACs, 35 TCs, no orphans |
+| 1.2 | 2026-11-14 | test-plan-writer (DeepSeek V4.1 Flash) | Canonical contract v1 implemented: ordered first-match table in TC-CHK-001 (rules 1/2/3/4a–4f, 20 rows, every write verb incl. `writeJobSummary`), manual-removal respect and marker-gated comment in TC-CHK-002/003, exemption precedence and marker-gated restore in TC-CHK-004/005, fixed marker text in TC-CHK-006, job-summary assertion in TC-WF-001, declared-and-attached metric in TC-EVID-001, baseline-set comparison in TC-PLAN-001, all-five-seed resolution in TC-PLAN-004, readiness-review allowance in TC-SCOPE-001, exact PDR link in TC-GUIDE-001, and backlog-source wording in TC-PROMPT-001; §4/§6/§7/§8 propagated. Coverage unchanged at 30/30 ACs, 35 TCs, no orphans |
 
 **Reconciliation rule:** see §8.3.
 
