@@ -26,9 +26,9 @@ The motivating regressions are concrete: a two-repository change that reads `gre
 
 - The plan declaration `members[]` (≤8 entries; `repoKey`, `slice`, `branch`, `pullRequest`, `dependsOn[]` ≤8, `gates` 1..16 identifiers each a non-empty string of at most 64 characters): valid echo through `plan validate`, negative classification through `plan validate` and `lint plan`, an invalid verdict carrying no `members` key, and every declared bound including the derived member-ref length (AC-F1-1..AC-F1-6; DM-1; DEC-1, DEC-9, DEC-10, DEC-15).
 - The member queue representation: two entries keyed `<ref>@<repoKey>`, one lane each, per-member dependency edges, `dependency-open` readiness, per-member lease release and removal, the additive `queue add` `data.members[]` `{ref, repoKey, lane}`, and the extended member-ref canonicalization (AC-F2-1..AC-F2-5; DM-6; DEC-2, DEC-7, DEC-21).
-- The shared definition of done: `data.definitionOfDone` (`status`, `members[]` with `gates.ci`/`verdict`, ordered `evidence[]`), `data.blockingMembers[]`, the per-(member, gate) `gates[]` projection with its additive `member` discriminator and matching `summary` counts (DM-9), the `overall` projection `green`→`pass` / `blocked`→`fail` / `incomplete`→`fail` with `overall: unknown` never emitted, data-bearing negative reports carrying `verify.gates.failed`, and `MemberLandingObservation` as the landing/merge carrier; per-member CI on each member's own pushed head; `unavailable`/`absent` never green (AC-F3-1..AC-F3-8; DM-2, DM-3, DM-4, DM-9, DM-10; DEC-3, DEC-4, DEC-6, DEC-11, DEC-18, DEC-19).
+- The shared definition of done: `data.definitionOfDone` (`status`, `members[]` with `gates.ci`/`verdict`, ordered `evidence[]`), `data.blockingMembers[]`, the per-(member, gate) `gates[]` projection with its required `member` discriminator and matching `summary` counts (DM-9), the member verdict rule over both records and `gates.ci` (`pass` only when every record and `gates.ci` are `pass`; `fail` on any record or `gates.ci` `fail`; otherwise `unknown`), the change aggregation (`blocked` on any `fail`, any `gates.ci: unavailable`, or any synthetic unresolvable record; `incomplete` otherwise with a member `unknown`; `blocked` wins), the `overall` projection `green`→`pass` / `blocked`→`fail` / `incomplete`→`fail` with `overall: unknown` never emitted, data-bearing negative reports carrying `verify.gates.failed` through `overall: fail` only, the distinct `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` types discriminated by `definitionOfDone`, and `MemberLandingObservation` as the landing/merge carrier; per-member CI on each member's own pushed head; `unavailable`/`absent` never green (AC-F3-1..AC-F3-8; DM-2, DM-3, DM-4, DM-9, DM-10, DM-11; DEC-3, DEC-4, DEC-6, DEC-11, DEC-18, DEC-19).
 - Member dependency ordering: `dependency-open` readiness, `queue.precondition.unmet` start refusal naming member and prerequisite, admission after the prerequisite lands, and `queue.dependency-cycle` for member-ref edge cycles (AC-F4-1, AC-F4-2; DEC-7).
-- The closeout member report `data.members[]` with `repoKey`, `branch`, `cleanup`, `pullRequest`, `issueClosure`, `landed`; per-member cleanup/issue-closure precedence with an unchanged aggregate step outcome; partial landing visibility; per-member landing removal; unsafe squash-safety refusal in plan (`would-refuse`) and apply (`refused`) modes (AC-F5-1..AC-F5-4; DM-5, DM-8; DEC-12, DEC-20, OQ-5, OQ-6).
+- The closeout member report `data.members[]` with `repoKey`, `branch`, `cleanup`, `pullRequest`, `issueClosure`, `landed`; the exact mode-scoped mapping columns (plan cleanup `would-apply`/`satisfied`/`would-refuse`/`skipped-gap`; plan issue closure `would-apply`/`satisfied`/`skipped-noop`/`skipped-gap`; apply cleanup `applied`/`satisfied`/`refused`/`skipped-gap`; apply issue closure `applied`/`satisfied`/`skipped-noop`/`skipped-gap`), one value per field, never derived by parsing step `detail`; partial landing visibility; per-member landing removal; unsafe squash-safety refusal in plan (`would-refuse`) and apply (`refused`) modes (AC-F5-1..AC-F5-4; DM-5, DM-8; DEC-12, DEC-20, OQ-5, OQ-6).
 - One review flow over the declared member set: stable `runId` digested over `repoKey` plus pull-request-or-empty marker, one verdict per member, `complete` semantics, duplicated-observation degradation, PR-less member-set change detection, and `unreviewed` for an unobserved member (AC-F6-1..AC-F6-4; DM-7; DEC-8, DEC-17; OQ-3 pin).
 - Single-repository parity for plan validate/lint/diff/overlap, verify gates (including the literal `overall: "pass"`, the failure envelope, exits 1/2, and `gates[]` without `member`), closeout (plan and apply), and queue/lanes including the member-less `queue add` payload, asserted against the pre-change goldens (AC-F1-3, AC-F5-4, AC-F7-1; NFR-8; C-1; DEC-18, DEC-21).
 - Contract continuity: envelope shape, data-only keys, zero new error rows and domain kinds, read-only posture, bounded per-member reads with no extra read for landing/merge truth, deterministic repeated runs, and the eight-member blocker-non-truncation bound (AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR4-1, AC-NFR6-1, AC-NFR7-1; NFR-6, NFR-7; DEC-10, DEC-19).
@@ -49,8 +49,8 @@ The motivating regressions are concrete: a two-repository change that reads `gre
 
 ## 2. References
 
-- Change specification: `./chg-GH-310-spec.md` — 37 acceptance criteria AC-F1-1…AC-NFR7-1 (§17, spec v1.3); DoD-1…DoD-15 (§17.1); capabilities F-1…F-7 (§5); interfaces DM-1…DM-10 (§8.3); NFR-1…NFR-9 (§9); risks RSK-1…RSK-11 (§11); decisions DEC-1…DEC-21 (§15); open questions OQ-1…OQ-6 (§14, OQ-3 and OQ-6 resolved-with-deferral); pinned literals (Appendix A, items 1–24); constraint register C-1…C-9 (Appendix C); ticket AC mapping (Appendix B).
-- Implementation plan: `./chg-GH-310-plan.yaml` — **revision 1.1 exists** (authored against spec v1.2 / test plan v1.2, five delivery phases). It honours the constraints this plan set: suite homes and owning phases are declared, the fixture-root and gate environment are carried, parity goldens are pre-change, and it names the `ReviewObservation`/`CrossRepositoryCloseoutObservation` seams and the `evidence[]` shape. Spec v1.3 changes the report shape (`gates[]`/`summary`, `overall` pass/fail, `MemberLandingObservation`) and adds the declared-set `runId`; the plan must be reconciled in delivery_planning before delivery (phase scope for DM-9/DM-10 and the DEC-18 supersession). That reconciliation is a plan change, not a test-plan change; this test plan already asserts the v1.3 contracts.
+- Change specification: `./chg-GH-310-spec.md` — 37 acceptance criteria AC-F1-1…AC-NFR7-1 (§17, spec v1.4); DoD-1…DoD-15 (§17.1); capabilities F-1…F-7 (§5); interfaces DM-1…DM-11 (§8.3); NFR-1…NFR-9 (§9); risks RSK-1…RSK-11 (§11); decisions DEC-1…DEC-21 (§15); open questions OQ-1…OQ-6 (§14, OQ-3 and OQ-6 resolved-with-deferral); pinned literals (Appendix A, items 1–26); constraint register C-1…C-9 (Appendix C); ticket AC mapping (Appendix B).
+- Implementation plan: `./chg-GH-310-plan.yaml` — **revision 1.2 exists and is reconciled** with the preceding test-plan/spec revision (authored against v1.3, five delivery phases). It declares every §7 suite home in an owning phase scope, names the `queue-add-memberless.json` golden in phase 1 scope/obligation 1.0, and carries the DM-8/DM-9/DM-10 and DEC-18 scopes. Spec v1.4 is an additive pin set on the same contract surfaces (member-verdict aggregation, synthetic citation, report-type discrimination, mode-scoped closeout mapping); it adds no suite file and no phase, so it does not re-open plan scope. The only plan-side residuals are the iteration-2 non-blocking items N2 (phase-3 determinism-suite scope), N7 (phase-5 commit type), and N8 (suite-home count wording), owned by delivery_planning.
 - Repository testing strategy: `.ai/rules/testing-strategy.md` (bun:test under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; invariant suites assert the current tree, never a moving-base diff; goldens regenerated only by explicit command with review-visible diffs; aggregate `pnpm check`).
 - TypeScript test authoring rules: `.ai/rules/typescript.md` §9 (injected fakes over `mock.module`, deterministic tests, committed normalized goldens, assert the current tree).
 - PM notes: `./chg-GH-310-pm-notes.yaml` — fixture decision (two local temporary repositories, injected observations, no live network), gate environment (measured `TMPDIR=/home/juliusz/tmp` and `commit.gpgsign=false`), delivery conventions (DEC-14), and the `PATH=$PWD/node_modules/.bin` lifecycle workaround.
@@ -80,19 +80,19 @@ Every one of the 37 §17 acceptance criteria is covered; no AC is left TODO and 
 | AC-F2-3 | A lands → exactly one removal for A's member ref reason `landed`, B retained, B readiness recomputed | TC-XQUEUE-003, TC-XQUEUE-005 | Covered |
 | AC-F2-4 | Member ref canonicalizes and is accepted everywhere; delivered form unchanged; `ref-not-canonical` never applies to a member ref | TC-XQUEUE-004 | Covered |
 | AC-F2-5 | Both members hold leases and A's lease is held by another holder → `queue release <ref>@<B>` releases exactly B's lease (`released`), both entries remain, A's lease/entry unchanged, A never blocks B's release | TC-XQUEUE-006, TC-XQUEUE-005 | Covered |
-| AC-F3-1 | Both members' gates/CI pass → `green`, `overall: pass`, `gates[]` one record per (member, gate) with `member` and all `pass`, `summary` equals record counts, `members[]` one entry each in order, empty blockers, both PRs in evidence, exit 0 (SC-M2-S19-03; DM-9, DEC-18) | TC-XDOD-001 | Covered |
-| AC-F3-2 | Member B fails a declared gate → `blocked`, `overall: fail`, B's failing `gates[]` record has `member: B.repoKey`, `summary.failed` counts it and `summary.gates` equals the pair count, `blockingMembers[]=[B]`, B `fail`, A `pass`, data present, exit 1 (SC-M2-S19-02; DM-9, DEC-18) | TC-XDOD-002 | Covered |
-| AC-F3-3 | CI unavailable → `gates.ci: unavailable`, `verdict: unknown` (never `pass`), blocker named, not `green`, exit 1 (SC-M2-S19-04) | TC-XDOD-003 | Covered |
-| AC-F3-4 | CI truth cannot be established (no pushed head, no declared pull request, or no run) while no member is negative/unavailable → `incomplete`, `overall: fail` (never `unknown`), `gates.ci: absent`, `gates[]` and `summary` present, blocker named, exit 1 (DEC-4, DEC-18) | TC-XDOD-004 | Covered |
-| AC-F3-5 | One member passes, the other unavailable → the unavailable member's `gates.ci` is never `pass`, verdict `unknown` (no cross-member reuse) | TC-XDOD-005 | Covered |
+| AC-F3-1 | Both members' gates/CI pass → `green`, `overall: pass`, `gates[]` one record per (member, gate) with required `member` and all `pass`, `summary` equals record counts, each member `pass` because both its records and `gates.ci` are `pass`, empty blockers, both PRs in evidence, exit 0 (SC-M2-S19-03; DM-9, DM-11, DEC-18) | TC-XDOD-001 | Covered |
+| AC-F3-2 | Member B fails a declared gate → `blocked`, `overall: fail` (the sole carrier of `verify.gates.failed`, no separate field, no error envelope), B's failing `gates[]` record has `member: B.repoKey`, `summary.failed` counts it, `blockingMembers[]=[B]`, B `fail`, A `pass`, data present, exit 1; records all `pass` but `gates.ci: fail` ⇒ B `fail`/blocked (SC-M2-S19-02; DM-9, DEC-18) | TC-XDOD-002 | Covered |
+| AC-F3-3 | CI unavailable → `gates.ci: unavailable`, `verdict: unknown` (never `pass`, even when every declared record passes), `blockingMembers[]` names it, `blocked`, `overall: fail`, `summary.failed` stays 0 for its records, exit 1 (SC-M2-S19-04; DM-3, NFR-5, DEC-18) | TC-XDOD-003 | Covered |
+| AC-F3-4 | CI truth cannot be established (no pushed head, no declared pull request, or no run) while no member is `fail` or `unavailable` and no synthetic unresolvable-identifier record exists → `incomplete`, `overall: fail` (never `unknown`), `gates.ci: absent`, `verdict: unknown`, `gates[]`/`summary` present, blocker named, exit 1 (DEC-4, DEC-18) | TC-XDOD-004 | Covered |
+| AC-F3-5 | One member passes, the other's CI is unavailable even though its records pass → unavailable member `verdict: unknown`, `gates.ci` never `pass`, readable member `pass`, `blocked`, `overall: fail` (no cross-member reuse) | TC-XDOD-005 | Covered |
 | AC-F3-6 | Partly landed: evidence landed first by ascending landing position, then unlanded in declared order, stable on repeat (SC-M2-S19-05) | TC-XDOD-007, TC-XBOUND-001 | Covered |
-| AC-F3-7 | Unresolvable declared gate identifier → member `verdict: unknown`, `gates[]` exactly one record with `id` = declared id, `member` = repoKey, `verdict: unknown`, delivered `read-failed` reason; `summary.unknown` counts it once and `summary.passed` does not; blocker named, `blocked`, `overall: fail`, exit 1, no record attributes `pass` | TC-XDOD-008, TC-XDOD-006 | Covered |
+| AC-F3-7 | Unresolvable declared gate identifier → member `verdict: unknown`, exactly one synthetic `gates[]` record (`id` = declared id, required `member` = repoKey, `verdict: unknown`, delivered `read-failed` reason, `citation: identity:{changeRef}` only with `sources:[]`, `counts:[]`, `names:[]`, `reasons:["read-failed"]`, no provider source/name/branch/SHA), `summary.unknown` counts it once, blocker named, `blocked`, `overall: fail`, exit 1 | TC-XDOD-008, TC-XDOD-006 | Covered |
 | AC-F3-8 | Member with no declared `pullRequest` stays in `members[]` with `gates.ci: absent` and is omitted from `evidence[]`; every member with a PR appears with `repoKey`, `pullRequest`, `landed` (DEC-16) | TC-XDOD-009, TC-XDOD-007 | Covered |
 | AC-F4-1 | Start on B while A unlanded → `queue.precondition.unmet` naming B and A, exit 1; admitted after A lands | TC-XDEP-001 | Covered |
 | AC-F4-2 | Member-ref edge cycle → `queue.dependency-cycle`, exit 1; plan cycle → `plan.schema.invalid` before any queue write | TC-XDEP-002, TC-XPLAN-002, TC-XCTR-003 | Covered |
-| AC-F5-1 | Both merged, one `CrossRepositoryCloseoutObservation` per member → two ordered `data.members[]` entries with `cleanup`/`issueClosure` each exactly one delivered outcome value per the stated precedence, `landed: true`, aggregate step outcomes unchanged, each landing removes only its entry (SC-M2-S19-01; DEC-12, DEC-20) | TC-XCLOSE-001, TC-XCLOSE-004 | Covered |
+| AC-F5-1 | Both merged, one `CrossRepositoryCloseoutObservation` per member → two ordered `data.members[]` entries; apply `cleanup` from `applied`/`satisfied`/`refused`/`skipped-gap` and apply `issueClosure` from `applied`/`satisfied`/`skipped-noop`/`skipped-gap`, exactly one value per field, derived from the member observation + own operations (never step `detail`), aggregate outcomes unchanged, `landed: true`, per-member removal (SC-M2-S19-01; DEC-12, DEC-20) | TC-XCLOSE-001, TC-XCLOSE-004 | Covered |
 | AC-F5-2 | Only A merged, expressed through `CrossRepositoryCloseoutObservation` values → A `landed: true`, B `landed: false`; A removed, B retained or disclosed with a delivered skip reason; nothing claims B landed (DEC-20) | TC-XCLOSE-002 | Covered |
-| AC-F5-3 | Unsafe squash predicate while the other member cleans normally → failing member `cleanup` is `would-refuse` (plan) / `refused` (apply), the other member's is its own applied/satisfied value, branch not deleted, aggregate `branch-cleanup` outcome not rewritten, `landed` stays merge truth (DEC-12) | TC-XCLOSE-003 | Covered |
+| AC-F5-3 | Unsafe squash predicate while the other member cleans normally → plan: unsafe `would-refuse`, other `would-apply`; apply: unsafe `refused`, other `applied`; branch kept, aggregate `branch-cleanup` outcome not rewritten, `landed` merge truth (DEC-12) | TC-XCLOSE-003 | Covered |
 | AC-F5-4 | Member-less closeout (plan and apply) → no `members` key; steps/outcomes/ledger/human output byte-identical | TC-XPAR-002 | Covered |
 | AC-F6-1 | Two members, one observation each → one verdict per declared member in order, `complete: true`; second run identical `runId`, no added verdict | TC-XREV-001, TC-XREV-004, TC-XREV-005 | Covered |
 | AC-F6-2 | Duplicated review observation → member `fail`, `complete: false`, still one entry | TC-XREV-002 | Covered |
@@ -114,15 +114,16 @@ No HTTP endpoint and no new event kind exists (spec §8.1/§8.2: N/A). Member qu
 | ID | Element | TC ID(s) | Status |
 |----|---------|----------|--------|
 | DM-1 | Plan member declaration `members[]` (DEC-15 grammar: required `repoKey`/`slice`/`branch`/`gates`, optional `pullRequest`/`dependsOn`, ≤8, `dependsOn` ≤8, `gates` 1..16 identifiers each non-empty and ≤64 chars) and the `plan validate` echo; an invalid verdict carries no `members` key | TC-XPLAN-001, TC-XPLAN-002, TC-XPLAN-003, TC-XPLAN-004, TC-XPLAN-005, TC-XPLAN-006, TC-XPLAN-007 | Covered |
-| DM-2 | `data.definitionOfDone` (`status`, `members[]` with `repoKey`/`gates.ci`/`verdict`, `evidence[]`) plus `data.blockingMembers[]`; required `gates[]` (per-(member, gate) records, DM-9) and `summary` (record counts) present on all statuses; report-level `overall` is `pass` for `green`, `fail` for `blocked` and `incomplete`; `overall: unknown` is never emitted (DEC-18) | TC-XDOD-001…TC-XDOD-009, TC-XCTR-005 | Covered |
-| DM-3 | Closed vocabularies: `gates.ci` (`pass`/`fail`/`unavailable`/`absent` per DEC-4), member `verdict` (`pass`/`fail`/`unknown`, aggregated from that member's own records), `status` (`green`/`blocked`/`incomplete`, `blocked` wins over `incomplete`), report `overall` (`pass`/`fail` only per DEC-18) | TC-XDOD-001, TC-XDOD-002, TC-XDOD-003, TC-XDOD-004, TC-XDOD-005, TC-XDOD-006, TC-XDOD-008, TC-XDOD-009, TC-XCTR-005 | Covered |
+| DM-2 | `data.definitionOfDone` (`status`, `members[]` with `repoKey`/`gates.ci`/`verdict`, `evidence[]`) plus `data.blockingMembers[]` (every member not `pass`, declared order); required `gates[]` (per-(member, gate) records, DM-9) and `summary` (record counts) present on all statuses; `status` is `blocked` on any member `fail`, any `gates.ci: unavailable`, or any synthetic unresolvable record, `incomplete` otherwise when ≥1 member is `unknown`, `green` iff all are `pass`; report-level `overall` is `pass` for `green`, `fail` for `blocked`/`incomplete`; `overall: unknown` is never emitted (DEC-18) | TC-XDOD-001…TC-XDOD-009, TC-XCTR-005, TC-XCTR-007 | Covered |
+| DM-3 | Closed vocabularies and the mechanical member rule: `gates.ci` (`pass`/`fail`/`unavailable`/`absent` per DEC-4); member `verdict` `pass` iff every declared record `pass` **and** `gates.ci: pass`, `fail` on any record `fail` or `gates.ci: fail`, otherwise `unknown`; `status` `green`/`blocked`/`incomplete` with `blocked` winning; report `overall` `pass`/`fail` only (DEC-18) | TC-XDOD-001, TC-XDOD-002, TC-XDOD-003, TC-XDOD-004, TC-XDOD-005, TC-XDOD-006, TC-XDOD-008, TC-XDOD-009, TC-XCTR-005 | Covered |
 | DM-4 | `evidence[]` entries `{repoKey, pullRequest, landed, landingPosition?}` (DEC-16), landing order and ties; `landed`/`landingPosition`/merge truth come from injected `MemberLandingObservation` entries (DM-10, DEC-19); pull-request-less members omitted from `evidence[]` while remaining in `members[]` | TC-XDOD-007, TC-XDOD-009, TC-XBOUND-004 | Covered |
-| DM-5 | `closeout.data.members[]` six fields with exactly one delivered outcome value per member derived by the stated precedence (refuse ⇒ refuse value; gap ⇒ gap value; satisfied/applied ⇒ that value; no member detail ⇒ step outcome), aggregate step outcome never rewritten, merge-truth `landed`; facts arrive as `CrossRepositoryCloseoutObservation` (DEC-12, DEC-20) | TC-XCLOSE-001, TC-XCLOSE-002, TC-XCLOSE-003, TC-XCLOSE-004, TC-XPAR-002 | Covered |
+| DM-5 | `closeout.data.members[]` six fields with exactly one mode-scoped value per field — plan `cleanup` `would-apply`/`satisfied`/`would-refuse`/`skipped-gap`; plan `issueClosure` `would-apply`/`satisfied`/`skipped-noop`/`skipped-gap`; apply `cleanup` `applied`/`satisfied`/`refused`/`skipped-gap`; apply `issueClosure` `applied`/`satisfied`/`skipped-noop`/`skipped-gap` — derived from the member's `CrossRepositoryCloseoutObservation` plus its own operations, never from parsing step `detail`; aggregate step outcome never rewritten; merge-truth `landed` (DEC-12, DEC-20) | TC-XCLOSE-001, TC-XCLOSE-002, TC-XCLOSE-003, TC-XCLOSE-004, TC-XPAR-002 | Covered |
 | DM-6 | Member ref `<canonicalChangeRef>@<repoKey>` ≤64; one entry/lease/lane/edge-set/removal per member; per-member release; `queue add` returns the delivered payload plus additive `data.members[]` `{ref, repoKey, lane}` in declared order (DEC-21); plain ref when no members | TC-XQUEUE-001…TC-XQUEUE-006, TC-XPLAN-003, TC-XPAR-003 | Covered |
 | DM-7 | `data.reviewFlow` (`runId`, `complete`, `verdicts[]` with `pass`/`fail`/`unreviewed`); `runId` digests the sorted declared member set (`repoKey` + `pullRequest` or explicit empty marker), so adding/removing a PR-less member changes it (DEC-8); inputs are injected `ReviewObservation` values (DEC-17) | TC-XREV-001…TC-XREV-006, TC-XPAR-003 | Covered |
 | DM-8 | `CrossRepositoryCloseoutObservation` `{repoKey, pullRequest, merged, headSha?, branch, issueClosure?}`, one per declared member through the closeout composition; no new port, provider operation, or store (DEC-20, OQ-6) | TC-XCLOSE-001, TC-XCLOSE-002, TC-XCLOSE-004 | Covered |
-| DM-9 | Cross-repository `gates[]` one record per declared (member, gate) in member-declared then gate order, delivered `VerifyGateRecord` fields plus additive optional `member` = repoKey; `summary` counts records; unresolvable identifier = exactly one `unknown` record (`read-failed`) and never a `pass`; member-less `gates[]` carries no `member` field (DEC-18) | TC-XDOD-001, TC-XDOD-002, TC-XDOD-008, TC-XBOUND-004, TC-XPAR-003 | Covered |
+| DM-9 | `CrossRepositoryVerifyGateRecord` extends the delivered `VerifyGateRecord` with a **required** `member`; cross-repository `gates[]` one record per declared (member, gate) in member-declared then gate order, `summary` counts records; unresolvable identifier = exactly one `unknown` record with `reason: read-failed` and `citation` = `identity:{changeRef}` only, `sources:[]`, `counts:[]`, `names:[]`, `reasons:["read-failed"]` — no provider source/count/name/branch/SHA invented; member-less `gates[]` is the delivered `VerifyGateRecord[]` with no `member` (DM-11, DEC-18) | TC-XDOD-001, TC-XDOD-002, TC-XDOD-008, TC-XBOUND-004, TC-XPAR-003, TC-XCTR-007 | Covered |
 | DM-10 | `MemberLandingObservation` `{repoKey, merged, headSha?, landingPosition?}`, one per declared member through the verification composition; `landingPosition` is a 1-based integer present only when `merged` is true; supplies `landed`/merge truth with no provider read, port, operation, or store (DEC-19) | TC-XDOD-007, TC-XDOD-009, TC-XCTR-006, TC-XHERM-001 | Covered |
+| DM-11 | Distinct report types and the emitted union: delivered `VerifyGatesReport` is unchanged (`overall` literal `"pass"`, `gates[]: VerifyGateRecord[]` with no `member`, delivered envelope/exits); new `CrossRepositoryVerifyGatesReport` carries the same required delivered report fields plus `overall: "pass" \| "fail"`, `definitionOfDone`, `blockingMembers[]`, `reviewFlow`, and `gates[]: CrossRepositoryVerifyGateRecord[]`; the union is discriminated by the **presence of `definitionOfDone`** (DEC-18) | TC-XDOD-001, TC-XPAR-003, TC-XCTR-007 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -152,7 +153,7 @@ No HTTP endpoint and no new event kind exists (spec §8.1/§8.2: N/A). Member qu
 | Orphan TCs (no AC citation) | 0 | Each TC's Related IDs include at least one AC |
 | TC IDs per family | XPLAN 7 · XQUEUE 6 · XDOD 9 · XDEP 2 · XCLOSE 4 · XREV 6 · XPAR 3 · XCTR 7 · XHERM 2 · XBOUND 4 · XGATE 1 | Sum 51 |
 
-Spec v1.1 closed every prior gap: AC-F1-5/AC-F1-6 now own the missing-field and `repoKey`-grammar cases, AC-F2-5 owns per-member release, AC-F3-7 owns the unresolvable gate identifier, AC-F3-8 owns the evidence element and PR-less omission, AC-F6-4 owns the `ReviewObservation` seam, and AC-NFR6-1/AC-NFR7-1 own bounded reads and identity reuse. Spec v1.2 added no ACs: DEC-18..DEC-21 pin literals inside existing criteria, asserted additively in TC-XDOD-001/002/004 (`overall`), TC-XDOD-007/TC-XCTR-006 (injected landing/merge truth, no extra read), TC-XCLOSE-001/002 (`CrossRepositoryCloseoutObservation`), and TC-XQUEUE-001/TC-XPAR-003 (`queue add` member payload). Spec v1.3 also adds no ACs: it pins the per-(member, gate) `gates[]`/`summary` projection (DM-9, now asserted in TC-XDOD-001/002/008/TC-XPAR-003), corrects the `overall` projection to `pass`/`fail` with `unknown` never emitted (TC-XDOD-001/002/004/TC-XPAR-003), names the `MemberLandingObservation` carrier (DM-10, TC-XDOD-007/TC-XCTR-006), and extends the `runId` digest to the declared set including PR-less members (TC-XREV-003). Every TC therefore cites a §17 criterion; no TC relies on a "nearest AC" exception.
+Spec v1.1 closed every prior gap: AC-F1-5/AC-F1-6 now own the missing-field and `repoKey`-grammar cases, AC-F2-5 owns per-member release, AC-F3-7 owns the unresolvable gate identifier, AC-F3-8 owns the evidence element and PR-less omission, AC-F6-4 owns the `ReviewObservation` seam, and AC-NFR6-1/AC-NFR7-1 own bounded reads and identity reuse. Spec v1.2 added no ACs: DEC-18..DEC-21 pin literals inside existing criteria, asserted additively in TC-XDOD-001/002/004 (`overall`), TC-XDOD-007/TC-XCTR-006 (injected landing/merge truth, no extra read), TC-XCLOSE-001/002 (`CrossRepositoryCloseoutObservation`), and TC-XQUEUE-001/TC-XPAR-003 (`queue add` member payload). Spec v1.3 also adds no ACs: it pins the per-(member, gate) `gates[]`/`summary` projection (DM-9, now asserted in TC-XDOD-001/002/008/TC-XPAR-003), corrects the `overall` projection to `pass`/`fail` with `unknown` never emitted (TC-XDOD-001/002/004/TC-XPAR-003), names the `MemberLandingObservation` carrier (DM-10, TC-XDOD-007/TC-XCTR-006), and extends the `runId` digest to the declared set including PR-less members (TC-XREV-003). Spec v1.4 (DoR iteration-2) likewise adds no ACs: it pins the member-verdict rule over records **and** `gates.ci` plus the change aggregation (TC-XDOD-001/002/003/004/005), the synthetic unresolvable-record citation (TC-XDOD-008), the distinct `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` types discriminated by `definitionOfDone` (TC-XCTR-007/TC-XPAR-003), the mode-scoped closeout mapping (TC-XCLOSE-001/003), and the `overall: "fail"` classification carrier (TC-XDOD-002). Every TC therefore cites a §17 criterion; no TC relies on a "nearest AC" exception.
 
 ## 4. Test Types and Layers
 
@@ -186,20 +187,20 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 | TC-XQUEUE-004 | Member-ref canonicalization extended; delivered `<PREFIX>-<digits>` form unchanged | Contract | Automated | Critical | AC-F2-4 |
 | TC-XQUEUE-005 | Per-member lease release keeps entries; no cross-repository lane | Edge Case | Automated | High | AC-F2-1, AC-F2-3, AC-F2-5 |
 | TC-XQUEUE-006 | Per-member release: release B while A's lease is held elsewhere; exactly B released, both entries retained, A unchanged (AC-F2-5) | Happy Path | Automated | Critical | AC-F2-5 |
-| TC-XDOD-001 | Both members pass: `green`, `overall: pass`, `gates[]` per (member, gate) with `member`, matching `summary`, empty blockers, both PRs in evidence, exit 0 (SC-M2-S19-03; DM-9, DEC-18) | Happy Path | Automated | Critical | AC-F3-1 |
-| TC-XDOD-002 | Member gate failure: `blocked`, `overall: fail`, failing `gates[]` record carries `member`, `summary.failed` counts it, `verify.gates.failed` on data, exit 1; blocked wins over incomplete (SC-M2-S19-02; DM-9, DEC-18) | Negative | Automated | Critical | AC-F3-2 |
-| TC-XDOD-003 | Unavailable CI: `unavailable`/`unknown`, blocker named, never green, exit 1 (SC-M2-S19-04) | Negative | Automated | Critical | AC-F3-3 |
-| TC-XDOD-004 | Absent evidence (no pushed head, no `pullRequest`, or no run): `incomplete`, `overall: fail` (never `unknown`, never exit 2), `absent`, blocker named, data present, exit 1 (DEC-18) | Edge Case | Automated | Critical | AC-F3-4 |
-| TC-XDOD-005 | No cross-member CI reuse; per-member reads are bounded and recorded | Negative | Automated | Critical | AC-F3-5, AC-NFR6-1 |
+| TC-XDOD-001 | Both members pass: `green`, `overall: pass`, `gates[]` per (member, gate) with required `member`, matching `summary`, member `pass` only when records **and** `gates.ci` pass, empty blockers, both PRs in evidence, exit 0 (SC-M2-S19-03; DM-2, DM-3, DM-9, DM-11, DEC-18) | Happy Path | Automated | Critical | AC-F3-1 |
+| TC-XDOD-002 | Member gate failure (record fail, or all records pass with `gates.ci: fail`): `blocked`, `overall: fail` is the sole `verify.gates.failed` carrier (no separate field, no error envelope), failing `gates[]` record carries `member`, exit 1; blocked wins over incomplete (SC-M2-S19-02; DM-3, DM-9, DEC-18) | Negative | Automated | Critical | AC-F3-2 |
+| TC-XDOD-003 | Unavailable CI even when every record passes: `gates.ci: unavailable` ⇒ `unknown` (never `pass`), blocker named, `blocked`, `overall: fail`, `summary.failed` 0, exit 1 (SC-M2-S19-04; DEC-18) | Negative | Automated | Critical | AC-F3-3 |
+| TC-XDOD-004 | Absent evidence (no pushed head, no `pullRequest`, or no run): `incomplete` only when no member is `fail`/`unavailable`/unresolvable, `overall: fail` (never `unknown`, never exit 2), `unknown`, blocker named, data present, exit 1 (DEC-18) | Edge Case | Automated | Critical | AC-F3-4 |
+| TC-XDOD-005 | No cross-member CI reuse: unavailable member `unknown` even with all records passing, readable member `pass`, `blocked`/`overall: fail`; per-member reads bounded and recorded | Negative | Automated | Critical | AC-F3-5, AC-NFR6-1 |
 | TC-XDOD-006 | Unresolvable declared gate identifier → member `unknown`, status `blocked` | Negative | Automated | High | AC-F3-7 |
 | TC-XDOD-007 | Evidence ordering from `MemberLandingObservation` (1-based `landingPosition` only when merged), no extra read, stable on repeat (SC-M2-S19-05; DM-10, DEC-19) | Edge Case | Automated | Critical | AC-F3-6, AC-F3-8, AC-NFR2-1, AC-NFR6-1 |
-| TC-XDOD-008 | One `gates[]` `unknown` record (`member`, declared id, `read-failed`) and `summary.unknown` counts it once; no record attributes `pass` (AC-F3-7; DM-9) | Negative | Automated | Critical | AC-F3-7 |
+| TC-XDOD-008 | One synthetic `gates[]` `unknown` record (`member`, declared id, `read-failed`, pinned empty citation) counted once; no provider citation and no `pass` (AC-F3-7; DM-9) | Negative | Automated | Critical | AC-F3-7 |
 | TC-XDOD-009 | Evidence element shape `{repoKey, pullRequest, landed, landingPosition?}` and PR-less omission (AC-F3-8) | Contract | Automated | Critical | AC-F3-8 |
 | TC-XDEP-001 | Start on B is refused `queue.precondition.unmet` naming B and A; admitted after A lands | Negative | Automated | Critical | AC-F4-1 |
 | TC-XDEP-002 | Member-ref cycle: queue mutation `queue.dependency-cycle`; plan cycle caught at validation | Negative | Automated | Critical | AC-F4-2 |
-| TC-XCLOSE-001 | Both merged via `CrossRepositoryCloseoutObservation`: ordered entries with per-member cleanup/issue-closure precedence, unchanged aggregate outcomes, `landed: true`, per-member removal (SC-M2-S19-01; DEC-12, DEC-20) | Happy Path | Automated | Critical | AC-F5-1 |
+| TC-XCLOSE-001 | Both merged via `CrossRepositoryCloseoutObservation`: apply-column `cleanup`/`issueClosure` values exactly from their closed sets, one per field, never from step `detail`; aggregate unchanged, `landed: true`, per-member removal (SC-M2-S19-01; DEC-12, DEC-20) | Happy Path | Automated | Critical | AC-F5-1 |
 | TC-XCLOSE-002 | Partial landing via `CrossRepositoryCloseoutObservation`: A landed/B not, B retained or disclosed with a skip reason, nothing claims B landed (DEC-20) | Edge Case | Automated | Critical | AC-F5-2 |
-| TC-XCLOSE-003 | Unsafe squash predicate: `would-refuse`/`refused` per mode, other member's own value, aggregate outcome unchanged, branch kept, `landed` merge truth (DEC-12) | Negative | Automated | Critical | AC-F5-3 |
+| TC-XCLOSE-003 | Unsafe squash predicate: plan unsafe `would-refuse`/other `would-apply`; apply unsafe `refused`/other `applied`; aggregate unchanged, branch kept, `landed` merge truth (DEC-12) | Negative | Automated | Critical | AC-F5-3 |
 | TC-XCLOSE-004 | Closeout plan mode writes nothing; member report observed as a supplement to AC-F5-1 | Happy Path | Automated | High | AC-NFR4-1, AC-F5-1 (supplement) |
 | TC-XREV-001 | One review run: one verdict per member in order, `complete: true`, stable `runId` (SC-M2-S19-01) | Happy Path | Automated | Critical | AC-F6-1 |
 | TC-XREV-002 | Duplicated review observation: `fail`, `complete: false`, one entry only | Negative | Automated | Critical | AC-F6-2 |
@@ -209,14 +210,14 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 | TC-XREV-006 | `ReviewObservation` mapping: each verdict derives from that member's own observation; no `pass` without a matching observation (AC-F6-4) | Contract | Automated | Critical | AC-F6-4 |
 | TC-XPAR-001 | Plan surfaces parity: member-less validate/lint/diff/overlap byte-identical, no `members` key | Regression | Automated | Critical | AC-F1-3 |
 | TC-XPAR-002 | Closeout parity: member-less plan and apply byte-identical, no `members` key | Regression | Automated | Critical | AC-F5-4 |
-| TC-XPAR-003 | Gates, `queue add`, and queue projection parity: literal `overall: pass`, no `member` in `gates[]`, failure envelope/exits 1-2 unchanged, member-less add byte-identical (DEC-18, DEC-21) | Regression | Automated | Critical | AC-F7-1 |
+| TC-XPAR-003 | Member-less parity: delivered `VerifyGatesReport` keeps literal `overall: "pass"` and no `member` (static + runtime), failure envelope/exits 1-2 unchanged, member-less `queue add` byte-identical (DM-11, DEC-18, DEC-21) | Regression | Automated | Critical | AC-F7-1 |
 | TC-XCTR-001 | Envelope continuity on every touched surface: five fields, keys under `data`, zero `ok`/`command` | Contract | Automated | Critical | AC-NFR1-1 |
 | TC-XCTR-002 | Read-only posture: 0 plan writes, 1 gate-verification append, 0 closeout plan-mode writes | Negative | Automated | Critical | AC-NFR4-1 |
 | TC-XCTR-003 | Identity reuse: 0 new error rows, 0 new domain kinds, delivered refusal identities only | Contract | Automated | Critical | AC-F1-2, AC-F4-2, AC-NFR7-1 |
 | TC-XCTR-004 | Consumer tolerance: additive fields tolerated; members resolved by `repoKey`, steps by `stepId` | Contract | Automated | High | AC-F5-1, AC-NFR1-1 |
 | TC-XCTR-005 | Closed vocabularies and pinned literals exported exactly once | Contract | Automated | High | AC-F1-1, AC-F3-3, AC-NFR1-1 |
 | TC-XCTR-006 | Read budget per declared member: ≤1 page/detail/check-run each, 0 retries/pagination/out-of-set calls; `MemberLandingObservation` adds no read (AC-NFR6-1; DM-10, DEC-19) | Contract | Automated | Critical | AC-NFR6-1 |
-| TC-XCTR-007 | Error-table row count and domain-kind membership unchanged; no new identity string; every refusal resolves (AC-NFR7-1) | Contract | Automated | Critical | AC-NFR7-1 |
+| TC-XCTR-007 | Distinct report types discriminated by `definitionOfDone` (cross-repository required `member`/`overall: pass\|fail`; delivered literal `"pass"`, no `member`) plus error-table/domain-kind identity unchanged (DM-9, DM-11, AC-NFR7-1) | Contract | Automated | Critical | AC-NFR7-1, AC-F3-1 |
 | TC-XHERM-001 | Default suite: two real temp member repos, injected facts, 0 network/second remote/credentials | Contract | Automated | Critical | AC-NFR3-1 |
 | TC-XHERM-002 | Fixture isolation: no ambient `$HOME`, no daemon, not composed from this checkout, deterministic | Contract | Automated | Critical | AC-NFR3-1 |
 | TC-XBOUND-001 | Gate report repeated-run byte-identical (incl. evidence order and `reviewFlow`) | Regression | Automated | Critical | AC-NFR2-1, AC-F3-6 |
@@ -623,37 +624,38 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-2, DM-3, DM-9, DoD-4, DEC-11, DEC-18, SC-M2-S19-03
-**Test Type(s)**: Integration (CLI) + Contract (report shape)
+**Related IDs**: F-3, AC-F3-1, DM-2, DM-3, DM-9, DM-11, DoD-4, DEC-11, DEC-18, SC-M2-S19-03
+**Test Type(s)**: Integration (CLI) + Contract (report shape + type discrimination)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members.test.ts`; golden in `tests/golden/cross-repository-members.test.ts`; facts in `tests/fixtures/cross-repository/facts.ts`
 **Tags**: @bun, @behaviour, @gates, @member, @golden
 
 **Preconditions**:
 
-- A two-member plan (`api` with 3 declared gates, `web` with 2 => 5 declared pairs); each member has a pushed head and a declared `pullRequest`; the injected facts make every declared gate pass on `api`'s head and on `web`'s head.
+- A two-member plan (`api` with 3 declared gates, `web` with 2 => 5 declared pairs); each member has a pushed head and a declared `pullRequest`; the injected facts make every declared gate pass on `api`'s head and on `web`'s head, and every `gates.ci` is `pass`.
 
 **Steps**:
 
 1. Run `verify gates <ref> --json`.
-2. Assert `data.definitionOfDone.status: green`; the report-level `overall` is `pass` (DEC-18); `members[]` has exactly two entries in declared order, each `{repoKey, gates.ci: "pass", verdict: "pass"}`; `data.blockingMembers[]` is empty.
-3. Assert `data.gates[]` has exactly one record per declared (member, gate) pair (`api`'s 3 then `web`'s 2), in member-declared then gate order, every record `pass`, and every record carries `member` equal to its member `repoKey` (DM-9) — no record lacks a `member`.
-4. Assert `data.summary` equals the record counts: `gates: 5`, `passed: 5`, `failed: 0`, `unknown: 0` (DM-9).
-5. Assert `data.evidence[]` carries both member pull requests and their `repoKey`s.
-6. Assert exit `0` and that the report data is present (a success envelope, not an error envelope).
-7. Assert the report never emits `overall: unknown` on any of the three cross-repository statuses (this case proves `pass`; TC-XDOD-002/004 prove `fail`; no case may produce `unknown`), and that `definitionOfDone.status` remains the authoritative three-way member verdict.
-8. Assert the committed member-form golden equals the serialized `data` (normalized only for envelope `runId`/`timing`), pinning `gates[]` and `summary` as the de facto report shape.
+2. Assert the report is the `CrossRepositoryVerifyGatesReport` shape, selected by the presence of `data.definitionOfDone` (DM-11): `definitionOfDone`, `blockingMembers[]`, `reviewFlow`, and the delivered required report fields are present; the report is not the delivered `VerifyGatesReport`.
+3. Assert `data.definitionOfDone.status: green`; the report-level `overall` is `pass` (DEC-18); `members[]` has exactly two entries in declared order, each `{repoKey, gates.ci: "pass", verdict: "pass"}` — the verdict is `pass` only because **both** every record for that member and its `gates.ci` are `pass` (N1 rule); `data.blockingMembers[]` is empty.
+4. Assert `data.gates[]` has exactly one record per declared (member, gate) pair (`api`'s 3 then `web`'s 2), in member-declared then gate order, every record `pass`, and every record carries the **required** `member` equal to its member `repoKey` (DM-9, `CrossRepositoryVerifyGateRecord`) — no record lacks a `member` and no record is a delivered `VerifyGateRecord` without one.
+5. Assert `data.summary` equals the record counts: `gates: 5`, `passed: 5`, `failed: 0`, `unknown: 0` (DM-9).
+6. Assert `data.evidence[]` carries both member pull requests and their `repoKey`s.
+7. Assert exit `0` and that the report data is present (a success envelope, not an error envelope).
+8. Assert the report never emits `overall: unknown` on any of the three cross-repository statuses (this case proves `pass`; TC-XDOD-002/004 prove `fail`; no case may produce `unknown`), and that `definitionOfDone.status` remains the authoritative three-way member verdict.
+9. Assert the committed member-form golden equals the serialized `data` (normalized only for envelope `runId`/`timing`), pinning `gates[]` and `summary` as the report shape.
 
 **Expected Outcome**:
 
-- `green` means every declared member passed on its own head; `gates[]` is the attributable per-(member, gate) projection with matching `summary`; `overall` is `pass`; both pull requests are visible in landing order; exit 0. The single-repository equivalent (literal `overall: "pass"`, no `member` field) is asserted in TC-XPAR-003.
+- `green` means every declared member is `pass` on both its records and its CI reading; `gates[]` is the attributable per-(member, gate) projection with required `member` and matching `summary`; `overall` is `pass`; both pull requests are visible in landing order; exit 0. The single-repository equivalent (delivered `VerifyGatesReport`, literal `overall: "pass"`, no `member` field, static type preserved) is asserted in TC-XPAR-003 and TC-XCTR-007.
 
 #### TC-XDOD-002 - Member gate failure: `blocked`, blocker equals the failing member, exit 1
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-2, DM-2, DM-3, DM-9, DEC-3, DEC-11, DEC-18, SC-M2-S19-02
+**Related IDs**: F-3, AC-F3-2, DM-2, DM-3, DM-9, DM-11, DEC-3, DEC-11, DEC-18, SC-M2-S19-02
 **Test Type(s)**: Integration (CLI) + Contract (report shape)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members.test.ts`
@@ -661,49 +663,52 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 **Preconditions**:
 
-- `api` passes every declared gate; `web` fails exactly one declared gate; no unavailable reading; a second variant adds `docs` with absent CI so a blocked and an incomplete member coexist.
+- Variant A: `api` passes every declared gate and `gates.ci`; `web` fails exactly one declared gate record.
+- Variant B: `web`'s records all pass but its `gates.ci` is `fail` (the CI conjunct of the member rule).
+- Variant C: as A plus `docs` with absent CI, so a blocked and an incomplete member coexist.
 
 **Steps**:
 
-1. Run `verify gates <ref> --json`.
-2. Assert `status: blocked` and the report-level `overall` is `fail` (DEC-18), `blockingMembers[]` equals exactly `[webKey]` (declared order preserved for multiple blockers).
-3. Assert `web`'s member entry is `verdict: fail` and `api`'s is `verdict: pass`.
-4. Assert `data.gates[]` carries `web`'s failing record with `member: webKey` and its delivered reason; `data.summary` counts it (`failed` ≥ 1) while `summary.gates` still equals the total declared (member, gate) pair count (DM-9).
-5. Assert the report data is present (not a failure envelope), the data carries the delivered `verify.gates.failed` classification, and the exit is `1` (DEC-18).
-6. Assert the report never emits `overall: unknown` and the exit is never `2` for this cross-repository report.
-7. Assert the failing gate is attributed to `web` only (no cross-member propagation).
-8. In the blocked+incomplete variant, assert `status: blocked` (blocked wins over incomplete), `overall: fail`, `blockingMembers[]` contains `webKey` and `docsKey`, the `docs` records are `unknown`/`absent`-derived, and the exit is `1`.
+1. For each variant, run `verify gates <ref> --json`.
+2. Assert `status: blocked` and the report-level `overall` is `fail` (DEC-18), `blockingMembers[]` equals `[webKey]` in variant A and contains `webKey` in variants B/C (declared order preserved for multiple blockers).
+3. Assert `web`'s member entry is `verdict: fail` and `api`'s is `verdict: pass`; in variant B assert the `fail` comes from `gates.ci: fail` even though every `web` record is `pass` (N1 rule: `fail` on any record `fail` **or** `gates.ci: fail`).
+4. Assert `data.gates[]` carries `web`'s failing record with `member: webKey` in variant A (and all-`pass` records in variant B); `data.summary` counts the failing record (`failed` ≥ 1) while `summary.gates` still equals the total declared (member, gate) pair count (DM-9).
+5. Assert the report data is present (not a failure envelope) and the delivered `verify.gates.failed` classification is carried **solely by `overall: "fail"`** — there is no separate classification field and no error envelope (N9, DEC-18).
+6. Assert the exit is `1`, the report never emits `overall: unknown`, and the exit is never `2` for this cross-repository report.
+7. Assert the failing gate (or CI reading) is attributed to `web` only (no cross-member propagation).
+8. In variant C, assert `status: blocked` (blocked wins over incomplete), `overall: fail`, `blockingMembers[]` contains `webKey` and `docsKey`, the `docs` records are `unknown`/`absent`-derived, and the exit is `1`.
 
 **Expected Outcome**:
 
-- A failing member blocks the shared definition of done, `overall` is `fail` with data present and exit 1 (never `unknown`, never exit 2), the failing member is named and its record is attributable; `blocked` wins when an incomplete member coexists.
+- A failing member (record fail or `gates.ci: fail`) blocks the shared definition of done; `overall: fail` is the sole classification carrier with data present and exit 1 (never `unknown`, never exit 2); the failing member is named and its record is attributable; `blocked` wins when an incomplete member coexists.
 
 #### TC-XDOD-003 - Unavailable CI: `unavailable`/`unknown`, blocker named, never green, exit 1
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-3, DM-3, NFR-5, DEC-3, DEC-4, DEC-11, SC-M2-S19-04
-**Test Type(s)**: Integration (CLI)
+**Related IDs**: F-3, AC-F3-3, DM-2, DM-3, NFR-5, DEC-3, DEC-4, DEC-11, DEC-18, SC-M2-S19-04
+**Test Type(s)**: Integration (CLI) + Contract (member-verdict rule)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members.test.ts`
 **Tags**: @bun, @behaviour, @gates, @member, @fail-closed
 
 **Preconditions**:
 
-- Both members have pushed heads and declared pull requests; `api` passes; `web`'s check-run read fails with the classified provider failure (injected), i.e. a reading failure, not a failed run.
+- Both members have pushed heads and declared pull requests; `api` passes its records and `gates.ci`; **every declared gate record for `web` passes**, but `web`'s check-run read fails with the classified provider failure (injected), i.e. a reading failure, not a failed run. `web`'s declared `gates` deliberately does not include a CI gate, proving the verdict rule uses `gates.ci` independently of the record list.
 
 **Steps**:
 
 1. Run `verify gates <ref> --json`.
-2. Assert `web`'s `gates.ci: unavailable` and `verdict: unknown`; assert it is never `pass`.
-3. Assert `blockingMembers[]` contains `webKey`; assert `status` is not `green` (must be `blocked`).
-4. Assert report data present and exit `1`.
-5. Repeat the run with the same unavailable fact; assert identical bytes (unavailability is deterministic).
+2. Assert `web`'s `gates.ci: unavailable` and `verdict: unknown`; assert it is never `pass` even though every one of its declared records is `pass` — the CI conjunct of the N1 rule is what forces `unknown`.
+3. Assert `web`'s `gates[]` records are all `pass` and `summary.failed` remains `0` for them; `summary.unknown` does not count a record (the unknown comes from `gates.ci`, not a gate record).
+4. Assert `blockingMembers[]` contains `webKey`; assert `status: blocked`, `overall: fail`, report data present, and exit `1` (not `2`).
+5. Assert the aggregation is mechanical: `blocked` because `gates.ci: unavailable`, independent of whether any record is `fail`.
+6. Repeat the run with the same unavailable fact; assert identical bytes (unavailability is deterministic).
 
 **Expected Outcome**:
 
-- An unreadable CI reading blocks as a classified outcome; absence of evidence never counts as a pass.
+- An unreadable CI reading makes its member `unknown` even when every declared record passes, and blocks the change (`blocked`, `overall: fail`, exit 1); absence of evidence never counts as a pass.
 
 #### TC-XDOD-004 - Absent evidence: `incomplete`, `absent`, blocker named, exit 1
 
@@ -711,27 +716,27 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-3, AC-F3-4, DM-2, DM-3, NFR-5, DEC-3, DEC-4, DEC-5, DEC-11, DEC-18
-**Test Type(s)**: Integration (CLI) + Contract (exit projection)
+**Test Type(s)**: Integration (CLI) + Contract (exit projection + aggregation)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members-evidence.test.ts`
 **Tags**: @bun, @behaviour, @gates, @member, @boundary
 
 **Preconditions**:
 
-- Two members; neither is negative and neither reading is unavailable. Variant A: `web` has no pushed head. Variant B: `web` declares no `pullRequest` (missing at authoring). Variant C: `web` has a pushed head but no run for that head.
+- Two members; no member is `fail`, no `gates.ci` is `unavailable`, and no member carries a synthetic unresolvable-identifier record. Variant A: `web` has no pushed head. Variant B: `web` declares no `pullRequest` (missing at authoring). Variant C: `web` has a pushed head but no run for that head.
 
 **Steps**:
 
 1. For each variant, run `verify gates <ref> --json`.
-2. Assert `web`'s `gates.ci: absent`; assert its `verdict` is not `pass` (`unknown`).
-3. Assert `data.definitionOfDone.status: incomplete`, the report-level `overall` is **`fail`** (not `unknown`; DEC-18), `blockingMembers[]` contains `webKey`, the report data (including `gates[]` and `summary`) is present, and the exit is `1`.
+2. Assert `web`'s `gates.ci: absent` and its `verdict: unknown` (the record conjunct may be all `pass`; the absent CI forces `unknown`).
+3. Assert `data.definitionOfDone.status: incomplete` **because** no member is `fail`, no `gates.ci` is `unavailable`, no synthetic unresolvable record exists, and `≥1` member is `unknown`; the report-level `overall` is **`fail`** (not `unknown`; DEC-18); `blockingMembers[]` contains `webKey`; the report data (including `gates[]` and `summary`) is present; the exit is `1`.
 4. Assert the exit is **not `2`** and no `verify.gates.unavailable` error envelope is produced for this cross-repository report; the delivered unknown/exit-2 projection is reserved for the non-cross-repository path (asserted in TC-XPAR-003).
-5. Assert `api`'s entry is unaffected and remains `pass`; the incomplete member's `gates[]` records are `unknown` (not `pass`) and `summary.unknown` counts them.
-6. Assert the difference from TC-XDOD-003 is observable in data (`incomplete` + `overall: fail` + `absent` vs `blocked` + `overall: fail` + `unavailable`), with the three-way distinction living in `definitionOfDone.status`.
+5. Assert `api`'s entry is unaffected and remains `pass`; `web`'s resolvable records remain `pass` (they are not rewritten to `unknown`), `summary.failed` is `0`, and `summary.unknown` counts only synthetic unresolvable records (none in these variants).
+6. Assert the difference from TC-XDOD-003 is observable in data (`incomplete` + `overall: fail` + `absent` vs `blocked` + `overall: fail` + `unavailable`), with the three-way distinction living in `definitionOfDone.status` and `blocked` winning whenever a `fail`/`unavailable`/synthetic record is also present (TC-XDOD-002 variant C).
 
 **Expected Outcome**:
 
-- Missing evidence is a first-class non-green state, distinct from a negative or unreadable one; `overall` is `fail` with data present at exit 1, never `unknown` and never exit 2; the blocker is still named.
+- Missing evidence is a first-class non-green state, distinct from a negative or unreadable one: `incomplete` only when no blocking condition holds and at least one member is `unknown`; `overall` is `fail` with data present at exit 1, never `unknown` and never exit 2; the blocker is still named.
 
 **Notes / Clarifications**:
 
@@ -742,27 +747,28 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-5, AC-F3-1 (read shape), AC-NFR6-1, NFR-5, DEC-4, DEC-10
-**Test Type(s)**: Integration (CLI) + Contract (read budget)
+**Related IDs**: F-3, AC-F3-5, AC-F3-1 (read shape), AC-NFR6-1, DM-2, DM-3, NFR-5, DEC-4, DEC-10, DEC-18
+**Test Type(s)**: Integration (CLI) + Contract (read budget + aggregation)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members.test.ts`; read budget extends `tests/behaviour/verify-gates-read-budget.test.ts`; guards from `tests/fixtures/verify-gates/cases/{network-guard,harness}.ts` and `tests/fixtures/result/no-spawn-guard.ts`
 **Tags**: @bun, @behaviour, @gates, @member, @read-budget
 
 **Preconditions**:
 
-- A recording runtime wrapping every read seam with distinct heads per member; `api` passes, `web`'s reading is unavailable; each member has a distinct head SHA.
+- A recording runtime wrapping every read seam with distinct heads per member; `api` passes its records **and** `gates.ci`; `web`'s records all pass but its reading is unavailable; each member has a distinct head SHA.
 
 **Steps**:
 
 1. Run `verify gates <ref> --json` through the recording runtime.
 2. Assert `readOpenPullRequests` and `readDeliveryRequestDetail` are called at most once per member (≤2 each total), with each member's own pull-request identity; `readCheckRuns` is called at most once per member's own head SHA and never with another member's head.
-3. Assert `web`'s `gates.ci` is never `pass` and its `verdict` is `unknown`; `api` remains `pass` (no cross-member reuse of a verdict).
-4. Assert zero retries (no repeated call for the same source+identity) and no pagination beyond the delivered page limit (100).
-5. Assert the no-network and no-spawn guards record zero calls.
+3. Assert `web`'s `gates.ci` is never `pass` and its `verdict` is `unknown` even though every one of its records is `pass`; `api` remains `pass` (no cross-member reuse of a verdict or of a CI reading).
+4. Assert the change aggregation is mechanical: `status: blocked` because a member's `gates.ci` is `unavailable`, `overall: fail`, `blockingMembers[]` names `webKey` only, report data present, exit `1`.
+5. Assert zero retries (no repeated call for the same source+identity) and no pagination beyond the delivered page limit (100).
+6. Assert the no-network and no-spawn guards record zero calls.
 
 **Expected Outcome**:
 
-- Each member's CI verdict comes only from that member's head; the per-member read extension is bounded, retry-free, and pagination-free.
+- Each member's CI verdict comes only from that member's head; an unavailable reading forces that member to `unknown` and the change to `blocked`/`overall: fail`; the per-member read extension is bounded, retry-free, and pagination-free.
 
 **Notes / Clarifications**:
 
@@ -839,7 +845,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-7, DM-2, DM-3, DM-9, DEC-4, DEC-9, DEC-18
+**Related IDs**: F-3, AC-F3-7, DM-2, DM-3, DM-9, DM-11, DEC-4, DEC-9, DEC-18
 **Test Type(s)**: Integration (CLI) + Contract (gate-record audit)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/verify-gates-members.test.ts`
@@ -852,17 +858,18 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Steps**:
 
 1. Run `verify gates <ref> --json`.
-2. Assert `data.gates[]` carries exactly one record for the unresolved identifier: `id` equals the declared identifier, `member: webKey`, `verdict: unknown`, and the delivered `read-failed` reason (DM-9).
-3. Assert `data.summary.unknown` counts that record exactly once and `data.summary.passed` does not count it; assert `summary.gates` equals the total declared (member, gate) pair count and the per-verdict counts sum to `summary.gates`.
-4. Enumerate every gate record in the report and assert no record carries a `pass` verdict for the unresolved identifier and no record lacks its `member` discriminator.
-5. Assert the resolved gate's record is still reported normally for `web`, so the unresolved identifier does not erase readable evidence.
-6. Assert `web`'s `verdict: unknown`, `status: blocked`, `overall: fail`, `blockingMembers[]` contains `webKey`, and exit `1`.
-7. Assert no gate record invents a gate id, a reason, or a citation for the unresolved identifier (absence is represented by exactly the one `read-failed` record, never a fabricated pass).
-8. Repeat the run; assert identical bytes (no nondeterministic gate ordering).
+2. Assert `data.gates[]` carries exactly one synthetic record for the unresolved identifier: `id` equals the declared identifier, `member: webKey`, `verdict: unknown`, and the delivered `read-failed` reason (DM-9).
+3. Assert the synthetic record's required `citation` is exactly the pinned empty-read shape: `identity: { changeRef }` only; `sources: []`; `counts: []`; `names: []`; `reasons: ["read-failed"]` — and assert no provider source, name list, branch, or SHA is attributed to the unresolved identifier (N3, DM-9).
+4. Assert `data.summary.unknown` counts that record exactly once and `data.summary.passed` does not count it; assert `summary.gates` equals the total declared (member, gate) pair count and the per-verdict counts sum to `summary.gates`.
+5. Enumerate every gate record in the report and assert no record carries a `pass` verdict for the unresolved identifier and no record lacks its required `member` discriminator.
+6. Assert the resolved gate's record is still reported normally for `web`, so the unresolved identifier does not erase readable evidence.
+7. Assert `web`'s `verdict: unknown`, `status: blocked`, `overall: fail`, `blockingMembers[]` contains `webKey`, and exit `1`.
+8. Assert no gate record fabricates a provider citation or name list for the unresolved identifier: the only record for it is the pinned `read-failed` synthetic record above, never a fabricated pass or a real provider read.
+9. Repeat the run; assert identical bytes (no nondeterministic gate ordering).
 
 **Expected Outcome**:
 
-- An unresolved declared gate identifier yields exactly one attributable `unknown` record (`member` + declared id + `read-failed`), is counted once in `summary.unknown`, and never acquires a pass verdict anywhere in the report.
+- An unresolved declared gate identifier yields exactly one attributable `unknown` record (`member` + declared id + `read-failed` + the pinned empty citation), is counted once in `summary.unknown`, attributes no provider source/branch/SHA, and never acquires a pass verdict anywhere in the report.
 
 #### TC-XDOD-009 - Evidence element shape and pull-request-less omission (AC-F3-8)
 
@@ -951,7 +958,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, AC-F5-1, DM-5, DM-8, DoD-8, DEC-12, DEC-20, OQ-6, SC-M2-S19-01
-**Test Type(s)**: Integration (CLI) + Contract (report shape)
+**Test Type(s)**: Integration (CLI) + Contract (report shape + mapping table)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/closeout-members.test.ts`; golden in `tests/golden/cross-repository-members.test.ts`; fixtures extend `tests/fixtures/closeout/{request,branch,queue-removal}.ts` and `tests/fixtures/cross-repository/closeout.ts`
 **Tags**: @bun, @behaviour, @closeout, @member, @golden
@@ -959,20 +966,23 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Preconditions**:
 
 - Two members, each with a branch and a merged pull request; one injected `CrossRepositoryCloseoutObservation` per member `{repoKey, pullRequest, merged: true, headSha, branch, issueClosure?}` is supplied through the closeout composition (DEC-20); the delivered twelve-step plan is in apply mode with a fixed clock.
+- Variants exercise each apply-column condition: branch deleted (normal), branch already absent, issue open, issue already closed, no tracked issue, and a provider/git gap.
 
 **Steps**:
 
 1. With only the `CrossRepositoryCloseoutObservation` entries supplied (no live provider read, no second merge source), run `closeout <ref> --apply --json`.
 2. Assert the observation shape consumed is exactly `{repoKey, pullRequest, merged, headSha?, branch, issueClosure?}`, one entry per declared member, and that no new port, provider operation, or durable store is required for the report (DEC-20).
 3. Assert `data.members[]` has exactly two entries in declared order; each has exactly `repoKey`, `branch`, `cleanup`, `pullRequest`, `issueClosure`, `landed`.
-4. Assert `cleanup` and `issueClosure` each carry exactly one delivered outcome value derived by the pinned per-member precedence (refuse ⇒ refuse value; gap ⇒ gap value; satisfied/applied ⇒ that value; no member detail ⇒ the step's own outcome), using the member's delivered `CloseoutStep` outcome plus its bounded `detail` (DEC-12).
-5. Assert the aggregate `branch-cleanup` and `ticket-to-done` step outcomes are unchanged by the member values (the member values never rewrite the aggregate), and `landed: true` for both.
-6. Assert the twelve step ids are unchanged and no new step id appears; per-member work rides `branch-cleanup`, `ticket-to-done`, `comment-resolution`.
-7. Assert each member's landing produced exactly one removal for its own member ref with reason `landed`, and no removal for the bare change ref.
+4. Assert each `cleanup` is exactly one value from the **apply** column `applied|satisfied|refused|skipped-gap` and each `issueClosure` is exactly one value from the **apply** column `applied|satisfied|skipped-noop|skipped-gap` — one value per field, from the correct closed set only (N5, DM-5).
+5. Assert the observed condition implies the exact value: branch deleted ⇒ `cleanup: applied`; branch already absent ⇒ `cleanup: satisfied`; predicate unsafe ⇒ `refused` (TC-XCLOSE-003); gap ⇒ `skipped-gap`; issue open ⇒ `issueClosure: applied`; already closed ⇒ `satisfied`; no tracked issue ⇒ `skipped-noop`; tracker gap ⇒ `skipped-gap`.
+6. Assert the values are derived from that member's `CrossRepositoryCloseoutObservation` plus its own closeout operations, **never by parsing step `detail`**: inject a misleading step `detail` entry whose text would imply a different value and assert the member value is unchanged (N5, DEC-12).
+7. Assert the aggregate `branch-cleanup` and `ticket-to-done` step outcomes are unchanged by the member values (the member values never rewrite the aggregate), and `landed: true` for both.
+8. Assert the twelve step ids are unchanged and no new step id appears; per-member work rides `branch-cleanup`, `ticket-to-done`, `comment-resolution`.
+9. Assert each member's landing produced exactly one removal for its own member ref with reason `landed`, and no removal for the bare change ref.
 
 **Expected Outcome**:
 
-- Both member pull requests are enumerated in landing order with per-member cleanup and issue closure derived by the stated precedence, the aggregate outcomes are unchanged, merge truth comes only from the injected observation, and the production carrier is not required (OQ-6 deferred, non-blocking).
+- Both member pull requests are enumerated in landing order; each `cleanup`/`issueClosure` is exactly one value from its apply-mode closed set, derived from the member observation plus its own operations (never step `detail`); aggregate outcomes are unchanged; merge truth comes only from the injected observation; the production carrier is not required (OQ-6 deferred, non-blocking).
 
 #### TC-XCLOSE-002 - Partial landing: A landed/B not, B retained or disclosed with a skip reason, nothing claims B landed
 
@@ -1008,26 +1018,28 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, AC-F5-3, DM-5, DM-8, DoD-8, DEC-12, DEC-20
-**Test Type(s)**: Integration (CLI)
+**Test Type(s)**: Integration (CLI) + Contract (mapping table)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/closeout-members.test.ts`; extends `tests/fixtures/closeout/branch.ts`
 **Tags**: @bun, @behaviour, @closeout, @member, @safety
 
 **Preconditions**:
 
-- Two members both observed merged via `CrossRepositoryCloseoutObservation`; `web`'s branch fails the delivered squash-safety predicate (e.g., unmerged commits not represented by the squash / diverged head), while `api` cleans normally.
+- Two members both observed merged via `CrossRepositoryCloseoutObservation`; `web`'s branch fails the delivered squash-safety predicate (e.g., unmerged commits not represented by the squash / diverged head), while `api`'s branch is safe and present.
 
 **Steps**:
 
-1. Run closeout in plan mode; assert `web.cleanup` is the delivered plan-mode refuse value (`would-refuse`) and `api.cleanup` is its own applied/satisfied value.
-2. Run closeout in apply mode; assert `web.cleanup` is the delivered apply-mode refuse value (`refused`) and `api.cleanup` is its own applied/satisfied value (DEC-12).
-3. Assert `web`'s branch still exists after apply; assert no destructive branch operation was attempted (spawn/recorded operations), while `api`'s branch cleanup proceeds.
-4. Assert the aggregate `branch-cleanup` step outcome is not rewritten by either member value.
-5. Assert `web.landed` remains `true` because merge truth is observed — safety refusal does not rewrite landing.
+1. Run closeout in plan mode; assert `web.cleanup` is exactly `would-refuse` and `api.cleanup` is exactly `would-apply` (not `applied`, not `satisfied`), each from the plan `cleanup` column `would-apply|satisfied|would-refuse|skipped-gap`; assert plan `issueClosure` values come only from `would-apply|satisfied|skipped-noop|skipped-gap`.
+2. Run closeout in apply mode; assert `web.cleanup` is exactly `refused` and `api.cleanup` is exactly `applied`, each from the apply `cleanup` column `applied|satisfied|refused|skipped-gap`; assert apply `issueClosure` values come only from `applied|satisfied|skipped-noop|skipped-gap` (DEC-12, N5).
+3. Assert exactly one value per field per member and that no member value falls outside its mode's closed column.
+4. Inject a misleading step `detail` entry for `web` that would imply `satisfied`/`applied`; assert `web.cleanup` remains the refuse value and is not derived from parsing step `detail`.
+5. Assert `web`'s branch still exists after apply; assert no destructive branch operation was attempted (spawn/recorded operations), while `api`'s branch cleanup proceeds.
+6. Assert the aggregate `branch-cleanup` step outcome is not rewritten by either member value.
+7. Assert `web.landed` remains `true` because merge truth is observed — safety refusal does not rewrite landing.
 
 **Expected Outcome**:
 
-- An unsafe cleanup refuses with the mode-specific value, does not delete the branch, leaves the other member's cleanup and the aggregate step outcome intact, and does not distort merge truth.
+- An unsafe cleanup refuses with the exact mode-specific value, does not delete the branch, leaves the other member's mode-correct value and the aggregate step outcome intact, never derives a value from step `detail`, and does not distort merge truth.
 
 #### TC-XCLOSE-004 - Closeout plan mode writes nothing (member report observed as an AC-F5-1 supplement)
 
@@ -1283,11 +1295,11 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-7, AC-F7-1, AC-F2-1, NFR-8, C-1, DoD-10, DEC-18, DEC-21
-**Test Type(s)**: Golden / parity
+**Related IDs**: F-7, AC-F7-1, AC-F2-1, NFR-8, C-1, DoD-10, DM-11, DEC-18, DEC-21
+**Test Type(s)**: Golden / parity + static type probe
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/cross-repository-parity.test.ts`; existing goldens read unchanged: `tests/fixtures/verify-gates/golden/{success-data.json,human-success.txt,failure-summary.txt}`, `tests/golden/verify-gates.test.ts`, `tests/fixtures/queue/golden/{queue-list,queue-plan,lanes-list}.json`, `tests/golden/{queue-list,queue-plan,lanes-list,lanes-show}.test.ts`; new pre-change golden `tests/fixtures/queue/golden/queue-add-memberless.json`
-**Tags**: @bun, @golden, @parity, @gates, @queue
+**Target Layer / Location**: `tests/behaviour/cross-repository-parity.test.ts`; static probe `tests/types/cross-repository-report.type-test.ts`; existing goldens read unchanged: `tests/fixtures/verify-gates/golden/{success-data.json,human-success.txt,failure-summary.txt}`, `tests/golden/verify-gates.test.ts`, `tests/fixtures/queue/golden/{queue-list,queue-plan,lanes-list}.json`, `tests/golden/{queue-list,queue-plan,lanes-list,lanes-show}.test.ts`; new pre-change golden `tests/fixtures/queue/golden/queue-add-memberless.json`
+**Tags**: @bun, @golden, @parity, @gates, @queue, @types
 
 **Preconditions**:
 
@@ -1296,17 +1308,18 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 **Steps**:
 
-1. Run `verify gates` on the member-less pass fixture; assert `data` has no `definitionOfDone`, no `blockingMembers`, and no `reviewFlow`; assert `overall` is the delivered literal `"pass"` (the widened `fail` value is never emitted here); assert `gates[]` carries **no `member` field** and matches the delivered shape byte-identically; assert `data` matches `success-data.json` and human output matches `human-success.txt`; assert exit `0`.
+1. Run `verify gates` on the member-less pass fixture; assert `data` has no `definitionOfDone`, no `blockingMembers`, and no `reviewFlow`; assert the report is the delivered `VerifyGatesReport` selected by the **absence** of `definitionOfDone` (DM-11); assert `overall` is the delivered literal `"pass"` at the type and value level (the widened `fail` value is never emitted here and the static literal type is not widened); assert `gates[]` is the delivered `VerifyGateRecord[]` with **no `member` field** and matches the delivered shape byte-identically; assert `data` matches `success-data.json` and human output matches `human-success.txt`; assert exit `0`.
 2. Run the member-less failure fixture; assert the delivered failure envelope is unchanged (no `data`), the failure summary matches `failure-summary.txt`, and the exit is the delivered `verify.gates.failed` exit `1` — the cross-repository data-bearing `overall: fail` path is **not** used.
 3. Run the member-less classified-unknown fixture; assert the delivered `verify.gates.unavailable` classification and exit `2` are unchanged, and that no `overall: "unknown"` widening or cross-repository report shape leaks into the member-less path.
 4. Run `queue add` on the member-less fixture; assert the payload is byte-identical to `tests/fixtures/queue/golden/queue-add-memberless.json`: the delivered fields unchanged, **no `members` array**, no extra `edges[]` entry, and the same exit (DEC-21; AC-F2-1).
 5. Run `queue list`, `queue plan`, `lanes list`; assert each `data` matches its pre-change golden and the exit is identical.
 6. Assert the queue keeps exactly one entry keyed by the bare canonical ref, one lane, the delivered removal and skip semantics, and no member ref appears.
 7. Assert no `members`/`definitionOfDone`/`blockingMembers`/`reviewFlow` key appears anywhere in the payloads, and that `member` appears in no gate record.
+8. Static assertion in `tests/types/cross-repository-report.type-test.ts`: a value typed as the delivered `VerifyGatesReport` has `overall` assignable to the literal `"pass"` (and not to `"fail"`), while a value typed as `CrossRepositoryVerifyGatesReport` has `overall` `"pass" | "fail"`, a required `member` on every `gates[]` record, and `definitionOfDone` present; a member-less report value is not assignable to `CrossRepositoryVerifyGatesReport` and a cross-repository report is discriminated by `definitionOfDone` (N4, DM-11).
 
 **Expected Outcome**:
 
-- The gate report (literal `overall: "pass"`, no `member` field, failure envelope, exits 1/2), `queue add` payload, and queue projections are unchanged for member-less changes; the cross-repository `gates[]`/`overall`/`data.members[]` shapes never appear on the member-less path.
+- The member-less gate report keeps the delivered `VerifyGatesReport` type and value — literal `overall: "pass"` (static and runtime), no `member` field, failure envelope, exits 1/2 — while the cross-repository type is the distinct `CrossRepositoryVerifyGatesReport` with required `member` and `overall: pass|fail`; the two are discriminated by `definitionOfDone`, and the member-less `queue add`/queue projections stay byte-identical.
 
 #### TC-XCTR-001 - Envelope continuity on every touched surface
 
@@ -1471,32 +1484,35 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 - The per-member read extension is strictly bounded, retry-free, pagination-free, scoped to declared members only, and never widened by `MemberLandingObservation` landing/merge truth.
 
-#### TC-XCTR-007 - Error-table row count and domain-kind membership identical to pre-change (AC-NFR7-1)
+#### TC-XCTR-007 - Distinct report types and unchanged error/domain-kind identity (DM-9, DM-11, AC-NFR7-1)
 
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: NFR-7, AC-NFR7-1, DEC-13, DoD-11 (per §17.1 v1.1 coverage note)
-**Test Type(s)**: Contract / invariant
+**Related IDs**: NFR-7, AC-NFR7-1, AC-F3-1 (report type), DM-9, DM-11, DEC-13, DEC-18, DoD-11 (per §17.1 coverage note)
+**Test Type(s)**: Contract / invariant + static type probe
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/cross-repository-contract.test.ts`; extends `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/event-state-additivity.test.ts`
-**Tags**: @bun, @structure, @contract, @identity
+**Target Layer / Location**: `tests/structure/cross-repository-contract.test.ts`; static probe `tests/types/cross-repository-report.type-test.ts`; extends `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/event-state-additivity.test.ts`
+**Tags**: @bun, @structure, @contract, @identity, @types
 
 **Preconditions**:
 
 - A committed pre-change snapshot of the error-table rows and the domain-kind membership (the existing error-table fixture and `tests/fixtures/events/state-additivity-baseline.json`).
+- Captured member-form and member-less reports from the behaviour runs.
 
 **Steps**:
 
-1. Compute the current error-table row identities and count; assert they equal the pre-change snapshot exactly (count and membership, not just a subset).
-2. Assert no new identity string exists anywhere in the change's contracts (no `review.*`, `member.*`, `gates.member.*`, or similar invented code).
-3. Assert the domain-kind membership is identical to the baseline: no new record kind, payload schema, key prefix, state schema version, event kind, or topic.
-4. Exercise every refusal produced by the member-form negative cases (plan defects, unmet precondition, edge cycle, unavailable/absent readings, closeout skips) and assert each resolves to a delivered identity present in the snapshot.
-5. Assert the bidirectional error-table sync check still passes in both directions.
+1. Assert the distinct report types and the union discriminator (N4, DM-11): a report **without** `definitionOfDone` is the delivered `VerifyGatesReport` — `overall` is the literal `"pass"`, `gates[]` is `VerifyGateRecord[]` and carries no `member`; a report **with** `definitionOfDone` is `CrossRepositoryVerifyGatesReport` — `overall` is `"pass" | "fail"`, `gates[]` is `CrossRepositoryVerifyGateRecord[]` with a **required** `member`, and `blockingMembers[]`/`reviewFlow` are present. Assert `definitionOfDone` presence alone selects the type.
+2. Static assertion in `tests/types/cross-repository-report.type-test.ts`: the delivered `VerifyGatesReport["overall"]` is assignable to `"pass"` and not to `"fail"`; `CrossRepositoryVerifyGatesReport["overall"]` is `"pass" | "fail"`; `CrossRepositoryVerifyGateRecord["member"]` is a required string; a `VerifyGatesReport` is not assignable to `CrossRepositoryVerifyGatesReport` and vice versa.
+3. Compute the current error-table row identities and count; assert they equal the pre-change snapshot exactly (count and membership, not just a subset).
+4. Assert no new identity string exists anywhere in the change's contracts (no `review.*`, `member.*`, `gates.member.*`, or similar invented code).
+5. Assert the domain-kind membership is identical to the baseline: no new record kind, payload schema, key prefix, state schema version, event kind, or topic.
+6. Exercise every refusal produced by the member-form negative cases (plan defects, unmet precondition, edge cycle, unavailable/absent readings, closeout skips) and assert each resolves to a delivered identity present in the snapshot.
+7. Assert the bidirectional error-table sync check still passes in both directions.
 
 **Expected Outcome**:
 
-- The change adds capability with an identical classification surface: same row count, same membership, zero new identity strings.
+- The report union is statically and at runtime discriminated by `definitionOfDone`, with the delivered type's literal `"pass"` and no-`member` guarantees preserved, while the change adds no error-table row or domain kind and every refusal resolves to a delivered identity.
 
 #### TC-XHERM-001 - Default suite: two real temp member repos, injected facts, 0 network/second remote/credentials
 
@@ -1750,20 +1766,20 @@ Proposed homes; the implementation plan pins exact names (the assertion contract
 | TC-XQUEUE-004 | `tests/behaviour/queue-member-ref.test.ts` | `bun test tests/behaviour/queue-member-ref.test.ts` | Pure exports + fixture queue harness | To Implement |
 | TC-XQUEUE-005 | `tests/behaviour/queue-members.test.ts` | `bun test tests/behaviour/queue-members.test.ts` | Lease harness; no live daemon | To Implement |
 | TC-XQUEUE-006 | `tests/behaviour/queue-members.test.ts` + `tests/behaviour/queue-lease.test.ts` (extend) | `bun test tests/behaviour/queue-members.test.ts tests/behaviour/queue-lease.test.ts` | Two-lease fixture; distinct holder identity; ledger digest | To Implement |
-| TC-XDOD-001 | `tests/behaviour/verify-gates-members.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts tests/golden/cross-repository-members.test.ts` | `gatesRuntime` overrides from `tests/fixtures/cross-repository/facts.ts`; `gates[]`/`summary` and `overall: pass` golden (DM-9, DEC-18) | To Implement |
-| TC-XDOD-002 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Gate-failure + blocked/incomplete bundles; `gates[]`/`summary`, `verify.gates.failed` on data, `overall: fail`, exit 1 (DM-9, DEC-18) | To Implement |
-| TC-XDOD-003 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Classified provider-failure fact | To Implement |
-| TC-XDOD-004 | `tests/behaviour/verify-gates-members-evidence.test.ts` | `bun test tests/behaviour/verify-gates-members-evidence.test.ts` | Absent-head / no-run / missing-`pullRequest` bundles; `overall: fail`, data present, exit 1, never `unknown`/exit 2 (DEC-18) | To Implement |
-| TC-XDOD-005 | `tests/behaviour/verify-gates-members.test.ts` + `tests/behaviour/verify-gates-read-budget.test.ts` (extend) | `bun test tests/behaviour/verify-gates-members.test.ts tests/behaviour/verify-gates-read-budget.test.ts` | Recording runtime, network/no-spawn guards | To Implement |
+| TC-XDOD-001 | `tests/behaviour/verify-gates-members.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts tests/golden/cross-repository-members.test.ts` | `gatesRuntime` overrides; `gates[]`/`summary`, required `member`, `overall: pass`, type discriminated by `definitionOfDone` (DM-9, DM-11, DEC-18) | To Implement |
+| TC-XDOD-002 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Record-fail + `gates.ci: fail` + blocked/incomplete bundles; `overall: fail` is the sole classification carrier (no field/envelope), exit 1 (DM-9, DEC-18) | To Implement |
+| TC-XDOD-003 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | All-records-pass + unavailable-CI fact; member `unknown`, `blocked`, `overall: fail`, `summary.failed` 0 (N1, DEC-18) | To Implement |
+| TC-XDOD-004 | `tests/behaviour/verify-gates-members-evidence.test.ts` | `bun test tests/behaviour/verify-gates-members-evidence.test.ts` | Absent-head / no-run / missing-`pullRequest` bundles; `incomplete` only with no blocking condition and ≥1 `unknown`; `overall: fail`, exit 1 (N1, DEC-18) | To Implement |
+| TC-XDOD-005 | `tests/behaviour/verify-gates-members.test.ts` + `tests/behaviour/verify-gates-read-budget.test.ts` (extend) | `bun test tests/behaviour/verify-gates-members.test.ts tests/behaviour/verify-gates-read-budget.test.ts` | Recording runtime, guards; unavailable member `unknown` with all records passing ⇒ `blocked`/`overall: fail` (N1) | To Implement |
 | TC-XDOD-006 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Gate-set override excluding one identifier | To Implement |
 | TC-XDOD-007 | `tests/behaviour/verify-gates-members-evidence.test.ts` | `bun test tests/behaviour/verify-gates-members-evidence.test.ts` | `MemberLandingObservation` bundle (1-based only when merged); counting transport asserts zero extra read (DM-10, DEC-19) | To Implement |
-| TC-XDOD-008 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Mixed resolvable/unresolvable gate-set override; one `gates[]` `unknown` record with `member`/`read-failed`, `summary.unknown` once (DM-9) | To Implement |
+| TC-XDOD-008 | `tests/behaviour/verify-gates-members.test.ts` | `bun test tests/behaviour/verify-gates-members.test.ts` | Mixed resolvable/unresolvable override; synthetic record with `member`/`read-failed` and the pinned empty citation (`identity:{changeRef}`, empty sources/counts/names, `reasons:["read-failed"]`), `summary.unknown` once (N3, DM-9) | To Implement |
 | TC-XDOD-009 | `tests/behaviour/verify-gates-members-evidence.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/verify-gates-members-evidence.test.ts tests/golden/cross-repository-members.test.ts` | PR-less member bundle; committed golden | To Implement |
 | TC-XDEP-001 | `tests/behaviour/queue-members-dependency.test.ts` | `bun test tests/behaviour/queue-members-dependency.test.ts` | Landing observation injection | To Implement |
 | TC-XDEP-002 | `tests/behaviour/queue-members-dependency.test.ts` + `tests/behaviour/queue-dep-cycle.test.ts` (extend) | `bun test tests/behaviour/queue-members-dependency.test.ts tests/behaviour/queue-dep-cycle.test.ts` | Ledger digest; cycle fixture | To Implement |
-| TC-XCLOSE-001 | `tests/behaviour/closeout-members.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/closeout-members.test.ts tests/golden/cross-repository-members.test.ts` | Fixed clock; two `CrossRepositoryCloseoutObservation` entries; per-member outcome precedence, aggregate unchanged, no carrier required (DEC-12, DEC-20) | To Implement |
+| TC-XCLOSE-001 | `tests/behaviour/closeout-members.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/closeout-members.test.ts tests/golden/cross-repository-members.test.ts` | Fixed clock; two observations; exact apply-column sets (`applied\|satisfied\|refused\|skipped-gap` / `applied\|satisfied\|skipped-noop\|skipped-gap`), no step-`detail` parsing, aggregate unchanged (N5, DEC-12) | To Implement |
 | TC-XCLOSE-002 | `tests/behaviour/closeout-members.test.ts` + `tests/behaviour/closeout-queue-removal-skips.test.ts` (extend) | `bun test tests/behaviour/closeout-members.test.ts tests/behaviour/closeout-queue-removal-skips.test.ts` | Partial-merge `CrossRepositoryCloseoutObservation` entries; held lease; no carrier required (DEC-20) | To Implement |
-| TC-XCLOSE-003 | `tests/behaviour/closeout-members.test.ts` | `bun test tests/behaviour/closeout-members.test.ts` | Squash-safety override; plan `would-refuse` / apply `refused`, other member value, aggregate unchanged, branch probe (DEC-12) | To Implement |
+| TC-XCLOSE-003 | `tests/behaviour/closeout-members.test.ts` | `bun test tests/behaviour/closeout-members.test.ts` | Squash-safety override; exact plan/apply columns (`would-refuse`/`would-apply` vs `refused`/`applied`), misleading step-`detail` injection, aggregate unchanged (N5, DEC-12) | To Implement |
 | TC-XCLOSE-004 | `tests/behaviour/closeout-members.test.ts` + `tests/behaviour/closeout-plan.test.ts` (extend) | `bun test tests/behaviour/closeout-members.test.ts tests/behaviour/closeout-plan.test.ts` | Tree snapshot; fixed clock; AC-NFR4-1 primary, AC-F5-1 member shape as supplement | To Implement |
 | TC-XREV-001 | `tests/behaviour/verify-gates-review-flow.test.ts` + `tests/golden/cross-repository-members.test.ts` | `bun test tests/behaviour/verify-gates-review-flow.test.ts tests/golden/cross-repository-members.test.ts` | Injected review observation set | To Implement |
 | TC-XREV-002 | `tests/behaviour/verify-gates-review-flow.test.ts` | `bun test tests/behaviour/verify-gates-review-flow.test.ts` | Duplicated observation bundle | To Implement |
@@ -1773,14 +1789,14 @@ Proposed homes; the implementation plan pins exact names (the assertion contract
 | TC-XREV-006 | `tests/behaviour/verify-gates-review-flow.test.ts` | `bun test tests/behaviour/verify-gates-review-flow.test.ts` | `ReviewObservation` fixture builder `tests/fixtures/cross-repository/review.ts` | To Implement |
 | TC-XPAR-001 | `tests/behaviour/cross-repository-parity.test.ts` + `tests/golden/plan-text.test.ts` (unchanged) | `bun test tests/behaviour/cross-repository-parity.test.ts tests/golden/plan-text.test.ts` | Committed pre-change goldens; normalizer asserted keys-only | To Implement + Existing – No Change |
 | TC-XPAR-002 | `tests/behaviour/cross-repository-parity.test.ts` + `tests/golden/closeout-envelope.test.ts`, `tests/golden/closeout-human.test.ts` (unchanged) | `bun test tests/behaviour/cross-repository-parity.test.ts tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts` | Fixed clock for apply mode; committed goldens | To Implement + Existing – No Change |
-| TC-XPAR-003 | `tests/behaviour/cross-repository-parity.test.ts` + `tests/golden/verify-gates.test.ts`, `tests/golden/queue-list.test.ts`, `tests/golden/queue-plan.test.ts`, `tests/golden/lanes-list.test.ts` (unchanged) + new `tests/fixtures/queue/golden/queue-add-memberless.json` | `bun test tests/behaviour/cross-repository-parity.test.ts tests/golden/verify-gates.test.ts tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/lanes-list.test.ts` | Literal `overall: "pass"`, no `member` field, failure envelope/exits 1-2, member-less add golden from `404e9bf8` (DEC-18, DEC-21) | To Implement + Existing – No Change |
+| TC-XPAR-003 | `tests/behaviour/cross-repository-parity.test.ts` + `tests/types/cross-repository-report.type-test.ts` (new) + `tests/golden/verify-gates.test.ts`, `tests/golden/queue-list.test.ts`, `tests/golden/queue-plan.test.ts`, `tests/golden/lanes-list.test.ts` (unchanged) + `tests/fixtures/queue/golden/queue-add-memberless.json` (new) | `bun test tests/behaviour/cross-repository-parity.test.ts tests/golden/verify-gates.test.ts tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/lanes-list.test.ts` + `pnpm exec tsc -p tests/types/tsconfig.json` | Delivered literal `overall: "pass"` (static+runtime), no `member`, failure envelope/exits 1-2, member-less add golden from `404e9bf8` (N4, DM-11, DEC-18, DEC-21) | To Implement + Existing – No Change |
 | TC-XCTR-001 | `tests/structure/cross-repository-contract.test.ts` + `tests/structure/envelope-contract.test.ts` (extend) | `bun test tests/structure/cross-repository-contract.test.ts tests/structure/envelope-contract.test.ts` | Captured envelopes from behaviour runs | To Implement + Existing – Update |
 | TC-XCTR-002 | `tests/behaviour/cross-repository-readonly.test.ts` | `bun test tests/behaviour/cross-repository-readonly.test.ts` | Guarded store recorder; tree/ledger snapshots | To Implement |
 | TC-XCTR-003 | `tests/structure/cross-repository-contract.test.ts` + `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/event-state-additivity.test.ts` (extend) | `bun test tests/structure/cross-repository-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/structure/event-state-additivity.test.ts` | Baseline fixtures unchanged | To Implement + Existing – Update |
 | TC-XCTR-004 | `tests/structure/cross-repository-contract.test.ts` + `tests/fixtures/closeout/legacy-consumer.ts` (extend fixture) | `bun test tests/structure/cross-repository-contract.test.ts` | Unknown-field injected payloads | To Implement |
 | TC-XCTR-005 | `tests/structure/cross-repository-contract.test.ts` | `bun test tests/structure/cross-repository-contract.test.ts` | Pure exports | To Implement |
 | TC-XCTR-006 | `tests/behaviour/verify-gates-read-budget.test.ts` (extend) | `bun test tests/behaviour/verify-gates-read-budget.test.ts` | Counting transport; network/no-spawn guards; eight-member fixture; `MemberLandingObservation` adds zero reads (DM-10, DEC-19) | To Implement + Existing – Update |
-| TC-XCTR-007 | `tests/structure/cross-repository-contract.test.ts` + `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/event-state-additivity.test.ts` (extend) | `bun test tests/structure/cross-repository-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/structure/event-state-additivity.test.ts` | Committed pre-change error-table/domain-kind snapshot | To Implement + Existing – Update |
+| TC-XCTR-007 | `tests/structure/cross-repository-contract.test.ts` + `tests/types/cross-repository-report.type-test.ts` (new) + `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/event-state-additivity.test.ts` (extend) | `bun test tests/structure/cross-repository-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/structure/event-state-additivity.test.ts` + `pnpm exec tsc -p tests/types/tsconfig.json` | Report-type discrimination (N4) + committed pre-change identity snapshot | To Implement + Existing – Update |
 | TC-XHERM-001 | `tests/checks/cross-repository-hermetic.test.ts` | `bun test tests/checks/cross-repository-hermetic.test.ts` | Network/no-spawn guards; sanitized env | To Implement |
 | TC-XHERM-002 | `tests/checks/cross-repository-hermetic.test.ts` + `tests/checks/fixture-sanitization.test.ts` (extend) | `bun test tests/checks/cross-repository-hermetic.test.ts tests/checks/fixture-sanitization.test.ts` | Host fixture; `realStateFingerprint`; import audit | To Implement + Existing – Update |
 | TC-XBOUND-001 | `tests/behaviour/cross-repository-determinism.test.ts` | `bun test tests/behaviour/cross-repository-determinism.test.ts` | Fixed injected clock/runId; replay | To Implement |
@@ -1816,15 +1832,16 @@ Proposed homes; the implementation plan pins exact names (the assertion contract
 - `absent` has one definition (DEC-4) covering no pushed head, no declared pull request, and no run for the head; AC-F3-4 and TC-XDOD-004 follow it.
 - The `ReviewObservation` seam `{ repoKey, pullRequest, verdicts[] }` is injected through the existing verification composition (DEC-17); the durable production carrier beyond it is deferred and non-blocking (OQ-3 resolved-with-deferral), so no AC depends on a production writer.
 - The `evidence[]` element is `{ repoKey, pullRequest, landed, landingPosition? }` with `landingPosition` 1-based and present only when `merged` is true (DEC-16, DM-10); `landed`, `landingPosition`, and per-member merge truth come from `MemberLandingObservation` `{ repoKey, merged, headSha?, landingPosition? }` and add no provider read (DEC-19).
-- The cross-repository report keeps the delivered required fields: `gates[]` is one record per declared (member, gate) in member-declared then gate order with the additive optional `member` = repoKey, `summary` counts those records, and an unresolvable identifier contributes exactly one `unknown` record with the delivered `read-failed` reason (DM-9). A single-repository report keeps the delivered `gates[]` with no `member` field.
-- The cross-repository `overall` is `pass` for `green` (exit 0) and `fail` for `blocked` and `incomplete` (exit 1); `overall: unknown` is never emitted and the delivered unknown/exit-2 projection is untouched; a negative report is data-bearing and carries the delivered `verify.gates.failed` classification (DEC-18, scoped supersession). `definitionOfDone.status` remains the authoritative three-way member verdict, and `blocked` wins over `incomplete`.
+- The cross-repository report is the distinct `CrossRepositoryVerifyGatesReport` selected by the presence of `definitionOfDone` (DM-11); it keeps the delivered required fields and adds `overall: pass|fail`, `definitionOfDone`, `blockingMembers[]`, and `reviewFlow`. `gates[]` is `CrossRepositoryVerifyGateRecord[]` — one record per declared (member, gate) in member-declared then gate order with a **required** `member` = repoKey — and `summary` counts those records. An unresolvable identifier contributes exactly one `unknown` record with `read-failed` and the pinned empty citation (`identity:{changeRef}`, empty sources/counts/names, `reasons:["read-failed"]`), attributing no provider source/branch/SHA (DM-9, N3). A single-repository report is the delivered `VerifyGatesReport`: literal `overall: "pass"`, `VerifyGateRecord[]` with no `member` field, and the delivered static type preserved.
+- The member verdict is mechanical over **both** its records and its CI reading: `pass` iff every declared record is `pass` **and** `gates.ci` is `pass`; `fail` if any record is `fail` **or** `gates.ci` is `fail`; otherwise `unknown` (so all-pass records with `unavailable`/`absent` CI are `unknown`, never `pass`) (N1, DM-3). The change aggregates: `blocked` iff any member is `fail`, any `gates.ci` is `unavailable`, or any synthetic unresolvable record exists; `incomplete` iff no such condition holds and at least one member is `unknown` (`absent` CI and an unestablished resolvable reading are its named instances); `green` iff every member is `pass`; `blocked` wins over `incomplete`, and `blockingMembers[]` names every member that is not `pass` (DM-2, DEC-3).
+- The cross-repository `overall` is `pass` for `green` (exit 0) and `fail` for `blocked`/`incomplete` (exit 1); `overall: unknown` is never emitted, so the delivered classified-unknown/`verify.gates.unavailable` exit-2 path is untouched. The scoped supersession is exactly four behaviours and nothing else: (a) the distinct cross-repository report type with `overall: pass|fail`; (b) a data-bearing negative report whose delivered `verify.gates.failed` classification is carried by `overall: "fail"` itself — no separate classification field and no error envelope (N9); (c) `gates[]` records of the cross-repository type with a required `member`; (d) `overall: "unknown"` never emitted by that type, while command-level failures that prevent a report keep their delivered identities/exits (N10, DEC-18). The delivered `VerifyGatesReport` type/value/static literal/failure envelope/exits are unchanged for every report without `definitionOfDone`. `definitionOfDone.status` remains the authoritative three-way member verdict.
 - The `CrossRepositoryCloseoutObservation` seam `{ repoKey, pullRequest, merged, headSha?, branch, issueClosure? }` supplies per-member merge/branch/issue-closure facts through the closeout composition (DEC-20); `cleanup`/`issueClosure` follow the pinned per-member precedence and never rewrite the aggregate step outcome (DEC-12); no new port, provider operation, or store is added, and the durable production carrier is deferred and non-blocking (OQ-6).
 - `queue add` on a member plan returns the delivered payload unchanged plus the additive ordered `data.members[]` `{ref, repoKey, lane}`, with auto-declared edges in the delivered `edges[]`; a member-less plan returns the delivered payload byte-identically (DEC-21), proven against `tests/fixtures/queue/golden/queue-add-memberless.json` captured from `404e9bf8` before any member code lands.
 - The review `runId` digests the sorted declared member set as `repoKey` + pull-request-or-empty marker, so adding/removing a PR-less member changes the identity (DEC-8, DM-7).
 
-### 8.3 Spec Addition Closure (SG-1..SG-7 by v1.1; DEC-18..DEC-21 by v1.2; DoR-1 fixes by v1.3)
+### 8.3 Spec Addition Closure (SG-1..SG-7 by v1.1; DEC-18..DEC-21 by v1.2; DoR-1 by v1.3; DoR-2 by v1.4)
 
-All seven gaps reported against spec v1.0 were closed additively in spec v1.1; spec v1.2 pinned four literals; spec v1.3 closed the DoR iteration-1 blocking findings B1, B2, B5, B6 and the non-blocking test-plan observations. No gap remains open, no AC is uncovered, and the TC count is unchanged. This section is the closure record: gap/finding/literal → criterion/decision → test cases.
+All seven gaps reported against spec v1.0 were closed additively in spec v1.1; spec v1.2 pinned four literals; spec v1.3 closed the DoR iteration-1 blocking findings B1, B2, B5, B6 and the non-blocking test-plan observations; spec v1.4 closed the DoR iteration-2 findings N1, N3, N4, N5, N9, N10 and the N6 wording. No gap remains open, no AC is uncovered, and the TC count is unchanged. This section is the closure record: gap/finding/literal → criterion/decision → test cases.
 
 | ID | Original gap (spec v1.0) | Closed by (spec v1.1) | TC coverage | Status |
 |----|--------------------------|-----------------------|-------------|--------|
@@ -1849,17 +1866,31 @@ All seven gaps reported against spec v1.0 were closed additively in spec v1.1; s
 
 | Finding | Resolution in spec v1.3 | Asserted in | Status |
 |---------|-------------------------|-------------|--------|
-| B1 report contents | `gates[]` = one record per declared (member, gate) in member-declared then gate order, additive `member` = repoKey, `summary` counts records, unresolvable identifier = exactly one `unknown` record (`read-failed`) (DM-9); member-less `gates[]` has no `member` | TC-XDOD-001, TC-XDOD-002, TC-XDOD-008, TC-XPAR-003 | **Closed** |
-| B2 projections | DEC-18 replaced with an enumerated scoped supersession: `overall` `pass` for `green`, `fail` for `blocked` and `incomplete`, `unknown` never emitted, data-bearing negative report carrying `verify.gates.failed`, delivered unknown/exit-2 and member-less failure envelope untouched; `blocked` wins over `incomplete` | TC-XDOD-001, TC-XDOD-002, TC-XDOD-004, TC-XPAR-003 | **Closed** |
+| B1 report contents | `gates[]` = one record per declared (member, gate) in member-declared then gate order, required `member` = repoKey, `summary` counts records, unresolvable identifier = exactly one `unknown` record (`read-failed` + pinned empty citation) (DM-9); member-less `gates[]` has no `member` | TC-XDOD-001, TC-XDOD-002, TC-XDOD-008, TC-XPAR-003 | **Closed** (N3 completed in v1.4) |
+| B2 projections | DEC-18 is a distinct `CrossRepositoryVerifyGatesReport` with `overall` `pass` for `green`, `fail` for `blocked`/`incomplete`; `unknown` never emitted; negative report data-bearing with `verify.gates.failed` carried solely by `overall: "fail"`; delivered type/value/static literal/failure envelope/exits untouched; `blocked` wins over `incomplete` | TC-XDOD-001, TC-XDOD-002, TC-XDOD-004, TC-XPAR-003, TC-XCTR-007 | **Closed** (N4/N9/N10 completed in v1.4) |
 | B5 carrier | `MemberLandingObservation` `{repoKey, merged, headSha?, landingPosition?}` (DM-10), `landingPosition` 1-based only when `merged`; no added read | TC-XDOD-007, TC-XCTR-006 | **Closed** |
 | B6 runId | `runId` digests the sorted declared set as `repoKey` + pull-request-or-empty marker, so a PR-less member changes it (DEC-8, DM-7) | TC-XREV-003 | **Closed** |
 | B7 invalid echo | Invalid verdict carries no `members` key at all (AC-F1-2) | TC-XPLAN-002 | **Closed** |
-| B8 plan wording | §2 references plan revision 1.1 and the v1.3 reconciliation need, not "pending" | §2 | **Closed** |
+| B8 plan wording | §2 now references spec v1.4, plan revision 1.2 as reconciled (not pending), and the plan-side residual N2/N7/N8 accurately | §2 | **Closed** |
 | B9 AC linkage | TC-XCLOSE-004 cites AC-NFR4-1 as primary with the member shape as an explicit AC-F5-1 supplement; TC-XPLAN-005 cites AC-F1-1/AC-F1-5/AC-F3-7 and marks the no-config assertion a supplement | TC-XCLOSE-004, TC-XPLAN-005 | **Closed** |
-| B11 cleanup precedence | Per-member `cleanup`/`issueClosure` precedence pinned; aggregate step outcome never rewritten (DEC-12, AC-F5-1/AC-F5-3) | TC-XCLOSE-001, TC-XCLOSE-003 | **Closed** |
+| B11 cleanup precedence | Mode-scoped per-member `cleanup`/`issueClosure` columns pinned, one value per field, derived from the observation + own operations, never step `detail` (DEC-12, AC-F5-1/AC-F5-3) | TC-XCLOSE-001, TC-XCLOSE-003 | **Closed** (N5 completed in v1.4) |
 | B12 gate-id shape | Gate identifiers are non-empty strings of at most 64 characters (F-1/AC-F1-5) | TC-XPLAN-005 | **Closed** |
-| B4 golden provenance | The member-less `queue add` golden is named as `tests/fixtures/queue/golden/queue-add-memberless.json`, captured from `404e9bf8` before member code lands, envelope `runId`/`timing` normalized | TC-XPAR-003, §6.4 | **Named here**; plan must declare it in its owning phase |
-| B3/B10 plan scope & commit type | Delivery-planning items (phase-scope paths, phase-5 commit type); no test-plan assertion owns them | Not a TC (plan change) | **Deferred to delivery_planning** |
+| B4 golden provenance | `tests/fixtures/queue/golden/queue-add-memberless.json` is declared in plan revision 1.2 phase 1 `scope.files`/obligation 1.0; §6.4 and TC-XPAR-003 name it, captured from `404e9bf8` before member code, envelope `runId`/`timing` normalized | TC-XPAR-003, §6.4 | **Closed** (plan reconciliation confirmed) |
+| B3 plan scope | All §7 suite homes are declared in at least one phase scope (plan revision 1.2); the residual ownership mismatch is N2 (TC-XBOUND-001's determinism suite not in phase 3 scope) | Not a TC (plan change) | **Closed for suite-home presence**; N2 remains a plan item |
+| B10 commit type | Phase-5 commit subject remains `docs(GH-310)` while the phase ships test suites/changeset (N7) | Not a TC (plan change) | **Open** — delivery_planning |
+
+**Spec v1.4 DoR iteration-2 closure (no new ACs, no new TCs).** The six findings are resolved inside existing cases; N2/N7/N8 remain plan-side items:
+
+| Finding | Resolution in spec v1.4 | Asserted in | Status |
+|---------|-------------------------|-------------|--------|
+| N1 member verdict aggregation | `pass` iff every declared record `pass` **and** `gates.ci: pass`; `fail` on any record `fail` or `gates.ci: fail`; otherwise `unknown`; change `blocked` on any `fail`/`gates.ci: unavailable`/synthetic record, `incomplete` otherwise with ≥1 `unknown` (`absent` is the named case), `blocked` wins; `blockingMembers[]` = every member not `pass` | TC-XDOD-001, TC-XDOD-002, TC-XDOD-003, TC-XDOD-004, TC-XDOD-005 | **Closed** |
+| N3 synthetic citation | The unresolvable-identifier record's required `citation` is `identity:{changeRef}` only, `sources: []`, `counts: []`, `names: []`, `reasons: ["read-failed"]`; no provider source/name/branch/SHA | TC-XDOD-008 | **Closed** |
+| N4 report types | Distinct `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` (required `member`, `overall: pass\|fail`) and unchanged delivered `VerifyGatesReport` (literal `"pass"`, no `member`), discriminated by `definitionOfDone`, with a static type probe | TC-XDOD-001, TC-XPAR-003, TC-XCTR-007 | **Closed** |
+| N5 closeout mapping | Exact mode-scoped columns pinned (plan cleanup `would-apply`/`satisfied`/`would-refuse`/`skipped-gap`; plan issue closure `would-apply`/`satisfied`/`skipped-noop`/`skipped-gap`; apply cleanup `applied`/`satisfied`/`refused`/`skipped-gap`; apply issue closure `applied`/`satisfied`/`skipped-noop`/`skipped-gap`), one value per field, never step `detail` | TC-XCLOSE-001, TC-XCLOSE-003 | **Closed** |
+| N6 stale §2/§8.3 | §2 references spec v1.4 and plan revision 1.2 as reconciled; the B3/B4/B8 rows state the actual closure and remaining plan items | §2, §8.3 | **Closed** |
+| N9 classification carrier | A cross-repository negative report carries `verify.gates.failed` solely through `overall: "fail"` — no separate classification field, no error envelope | TC-XDOD-002 | **Closed** |
+| N10 enumerated supersession | §8.5's additive-only claim is qualified by the four enumerated scoped behaviours: distinct report type/`overall: pass\|fail`; data-bearing negative report; required `member` on records; `overall: unknown` never emitted (delivered type/envelope/exits untouched) | §8.2 (this plan's restatement), TC-XPAR-003, TC-XCTR-007 | **Closed** |
+| N2/N7/N8 | Plan-side residuals: TC-XBOUND-001 determinism-suite scope in phase 3 (N2), phase-5 commit type (N7), suite-home count wording (N8). No test-plan assertion owns them | Not TCs (plan changes) | **Deferred to delivery_planning** |
 
 **Residual (non-blocking) information.** OQ-3 (durable review-verdict carrier) and OQ-6 (durable per-member closeout merge-truth carrier) remain residual beyond their injected composition seams. No acceptance criterion depends on either; if a later change introduces a carrier, it must supply the same `ReviewObservation`/`CrossRepositoryCloseoutObservation` input, and TC-XREV-005/006 and TC-XCLOSE-001/002 narrow rather than disappear.
 
@@ -1884,6 +1915,7 @@ These items are **excluded** from the 50 automated TCs and from the 36 automated
 | 1.1 | 2026-11-14 | test-plan-writer (deepseek-flash) | Additive update for spec v1.1 (29 → 37 ACs, DEC-15/16/17, DEC-4 single `absent`, OQ-3 resolved-with-deferral). Added 8 TCs with no renumbering: TC-XPLAN-006 (AC-F1-5), TC-XPLAN-007 (AC-F1-6), TC-XQUEUE-006 (AC-F2-5), TC-XDOD-008 (AC-F3-7), TC-XDOD-009 (AC-F3-8, DEC-16 element shape), TC-XREV-006 (AC-F6-4, DEC-17 `ReviewObservation`), TC-XCTR-006 (AC-NFR6-1), TC-XCTR-007 (AC-NFR7-1). Re-bound existing TCs to the new criteria (XPLAN-004, XQUEUE-005, XDOD-004/005/006/007, XREV-005, XCTR-003) without changing their assertions or IDs; updated §3 matrices/counts (37/37, 51 TCs), §5.1/§5.2, §6.3, §7, §8.1-§8.4, and recorded SG-1..SG-7 as closed. |
 | 1.2 | 2026-11-14 | test-plan-writer (deepseek-flash) | Additive update for spec v1.2 (DEC-18..DEC-21, DM-8, OQ-6; AC set unchanged at 37). No TC added, removed, or renumbered. Amended existing cases only: TC-XDOD-001/002/004 now assert `overall` `pass`/`fail`/`unknown` with the data-bearing report and exit codes (DEC-18); TC-XDOD-007 and TC-XCTR-006 now assert landing/merge truth is injected and adds no provider read (DEC-19); TC-XCLOSE-001/002 now name `CrossRepositoryCloseoutObservation` and assert no production carrier is required (DEC-20); TC-XQUEUE-001 and TC-XPAR-003 now assert the additive `queue add` `data.members[]` `{ref, repoKey, lane}` and the member-less byte-identical payload (DEC-21). Updated §2, §3.1-§3.3 descriptions/mappings (DM-8 added), §5.1 index titles, §6.3, §7 notes, §8.2-§8.3 pins, and this log. Counts unchanged: 37/37 ACs, 51 TCs (50 automated + 1 gate-only), 0 orphans. |
 | 1.3 | 2026-11-14 | test-plan-writer (deepseek-flash) | Additive update for spec v1.3 DoR iteration-1 remediation (B1, B2, B5, B6 + non-blocking; AC set unchanged at 37, DEC count 21, DM-1..DM-10, RSK-1..RSK-11). No TC added, removed, or renumbered. Amended existing cases only: TC-XDOD-001/002/008 now assert the per-(member, gate) `gates[]` projection with the additive `member` discriminator and matching `summary` counts (DM-9), and TC-XPAR-003 asserts the member-less `gates[]` has no `member` field; TC-XDOD-001/002/004 assert the corrected `overall` projection (`green`→`pass`, `blocked`/`incomplete`→`fail`, `unknown` never emitted, data-bearing `verify.gates.failed`, exit 1, never exit 2) and the blocked-wins case, while TC-XPAR-003 pins the member-less literal `"pass"`, failure envelope, and exits 1/2; TC-XCLOSE-001/002 name the `MemberLandingObservation`/`CrossRepositoryCloseoutObservation` seams — TC-XDOD-007/TC-XCTR-006 name `MemberLandingObservation` with the 1-based-only-when-merged rule (DM-10); TC-XREV-003 covers PR-less member-set changes in the `runId` digest and the `unreviewed` entry (DEC-8); TC-XPLAN-002 pins the invalid verdict's absent `members` key; TC-XPLAN-005 pins the ≤64-char gate-id shape and re-cites AC-F1-1/AC-F1-5/AC-F3-7; TC-XCLOSE-001/003 pin the per-member cleanup/issue-closure precedence and the mode-specific refuse values; TC-XCLOSE-004 re-cites AC-NFR4-1 with the AC-F5-1 supplement. §6.4 names the member-less `queue add` golden `tests/fixtures/queue/golden/queue-add-memberless.json` captured from `404e9bf8` before member code, envelope `runId`/`timing` normalized. §2 now references plan revision 1.1 (no longer "pending") and §1.1 reflects the full 37-AC set; §3.1-§3.3, §5.1 index, §7 notes, §8.1-§8.3 updated. Counts unchanged: 37/37 ACs, 51 TCs (50 automated + 1 gate-only), 0 orphans. |
+| 1.4 | 2026-11-14 | test-plan-writer (deepseek-flash) | Additive update for spec v1.4 DoR iteration-2 remediation (N1, N3, N4, N5, N9, N10 + N6; AC set unchanged at 37, DEC count 21, DM-1..DM-11). No TC added, removed, or renumbered. Amended existing cases only: TC-XDOD-003 now proves the N1 rule by making every declared `web` record `pass` while `gates.ci: unavailable` forces `unknown`, `blocked`, `overall: fail`, `summary.failed` 0, exit 1 (and does so without a CI gate in `gates`, so the fixture cannot mask the bug); TC-XDOD-001 states `pass` requires records **and** `gates.ci`, requires `member` on every record, and selects `CrossRepositoryVerifyGatesReport` by `definitionOfDone`; TC-XDOD-002 adds the all-records-pass/`gates.ci: fail` variant, the blocked-wins variant, and pins `overall: "fail"` as the sole `verify.gates.failed` carrier (N9); TC-XDOD-004 pins `incomplete` only when no `fail`/`unavailable`/synthetic record exists and ≥1 member is `unknown`, keeping resolvable records `pass`; TC-XDOD-005 pins the aggregation (`blocked` on unavailable CI, readable member `pass`, `blockingMembers[]` = `webKey`); TC-XDOD-008 pins the synthetic citation exactly (`identity:{changeRef}` only, empty sources/counts/names, `reasons:["read-failed"]`, no provider source/branch/SHA) (N3); TC-XCLOSE-001/003 assert the exact mode-scoped mapping columns (plan/apply `cleanup` and `issueClosure`), one value per field, and that no value is derived from parsing step `detail` (N5); TC-XPAR-003 and TC-XCTR-007 assert the distinct report types discriminated by `definitionOfDone` (delivered literal `"pass"`/no `member`; cross-repository required `member`/`overall: pass\|fail`) plus a static probe in `tests/types/cross-repository-report.type-test.ts` (N4). §2 now references spec v1.4 and plan revision 1.2 as reconciled; §8.2 restates the four-behaviour scoped supersession (N10); §8.3 B3/B4/B8 rows reflect the actual state and a v1.4 closure table records N1/N3/N4/N5/N6/N9/N10, with N2/N7/N8 left as plan-side items. §3.1/§3.2, §5.1 index, §7 notes, §9 updated. Counts unchanged: 37/37 ACs, 51 TCs (50 automated + 1 gate-only), 0 orphans. |
 
 ## 10. Test Execution Log
 
