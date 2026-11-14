@@ -3,9 +3,9 @@ title: "M2-S9: Memory conventions in bootstrap templates (M2)"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-14T01:52:00Z", completed: 2026-11-14T00:56:11.607Z }
-  specification: { started: null, completed: 2026-11-14T01:28:14.133Z }
-  test_planning: { started: null, completed: 2026-11-14T01:30:24.015Z }
-  delivery_planning: { started: null, completed: 2026-11-14T01:40:26.576Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -158,4 +158,52 @@ notes:
       carrier); TC-MEMALIGN pinned-red rule forbids premature fixes to
       spec/plan/index before phase 3."
     type: info
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 1 = NOT_READY (record: readiness-review/
+      readiness-iter-1.md in the change folder). 7 facets PASS / 3 FAIL.
+      Blocking findings: (1) CRITICAL dod_defined — spec has no Definition of
+      Done section (all 10 prior November specs carry one; phase 10 reads it);
+      (2) MAJOR spec_completeness — F-2/DM-2/AC-F2-1 'ten content classes' omit
+      verified AGENTS.md kernel content: Unique ids, Conflict reality,
+      advisory/untrusted preamble, growth/split rule (breaks the mirror-exactly
+      contract and TC-MEMKERN-003 fidelity review); (3) MAJOR
+      cross_artifact_consistency — the DEC-6/PDR-0004 self-containment invariant
+      (no doc/planning/concepts refs in installed carriers) is owned by NO test
+      case and absent from plan phase 4's guard spec; (4) MAJOR
+      system_spec_consistency — plan C-3 demands license headers on new
+      doc/templates files, but doc/templates is NOT in
+      scripts/add-header-location.sh scope, agents are forbidden from adding
+      headers, and C-2 forbids script edits — phase 1 unexecutable compliantly
+      as written. Non-blocking: AC-F7-1 allowlist flattening not pinned
+      (delivery_planning); kernel-template ~200-line budget unasserted + dry-run
+      flow coverage unstated (test_planning). VERIFIED AS DECISIONS OF RECORD
+      (not gaps): DEC-1 open-dependency authorization, PDR-0004 disposition +
+      DEFER landing + PR-gate ratification, TC-MEMALIGN-003 pinned-red, spec
+      v1.1 reopen correction."
+    type: risk
+    date: "2026-11-14"
+  - text: "DOR REMEDIATION (iteration 1 → 2): reopening specification (findings 1-2
+      → @spec-writer: add DoD section consolidating 11 ACs + manual evidence +
+      gate battery + PDR landing + backlog marker; extend the kernel content
+      class set with Unique ids, Conflict reality, advisory/untrusted preamble,
+      growth/split rule), test_planning (finding 3 + nits → @test-plan-writer:
+      new TC owning the self-containment invariant, wired into plan phase 4
+      guard spec; assert ~200-line kernel template budget; state dry-run flow
+      coverage), delivery_planning (findings 4-5 → @plan-writer: C-3 header
+      requirement corrected to ados_distribution marker-only; pin the allowlist
+      flattening representation for AC-F7-1). Then re-run the gate (iteration 2
+      of max 3)."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: three of four DoR findings trace to upstream-authoring gaps the
+      cheaper clarify step could have caught — (a) no DoD section because the
+      spec-writer prompt didn't demand one (PM should always point authors at
+      sibling artifacts: 'match the November spec set's section inventory'); (b)
+      C-3 header requirement came from MY pm-notes doc-impacts note ('license
+      header required for doc/planning/concepts') over-generalized to
+      doc/templates by the plan author — PM notes are advisory inputs, authors
+      must verify against scripts/add-header-location.sh before encoding
+      constraints. (a) is a process tweak for future intakes; (b) is already
+      encoded as the AGENTS.md header-scope rule."
+    type: retro
     date: "2026-11-14"
