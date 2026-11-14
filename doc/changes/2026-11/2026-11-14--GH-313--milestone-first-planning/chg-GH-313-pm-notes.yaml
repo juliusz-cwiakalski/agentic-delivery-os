@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-14T19:49:08.822Z }
   delivery: { started: null, completed: 2026-11-14T22:18:34.740Z }
   system_spec_update: { started: null, completed: 2026-11-14T22:24:41.075Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-14T23:44:41.425Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -226,28 +226,55 @@ notes:
       repository-local node_modules/.bin. Recorded for quality_gates."
     type: info
     date: "2026-11-14"
-  - text: "Review iteration 1: FAIL on process grounds, with no functional, security,
-      or acceptance-criterion defect. F1 HIGH: a five-line comment added to
-      .github/workflows/ci.yml was outside phase 4's declared scope and partly
-      inaccurate. F2 MEDIUM: the phase-boundary commits carry the primitive's
-      template subjects (path-truncated), not the plan's declared subjects, so the
-      history is not self-describing. F3 LOW: the plan stayed at revision 1.1 after
-      the post-DoR phase-1 amendment and still called PDR-0005 untracked. F4 LOW:
-      the test plan execution log was stale. F5 LOW: <M<n>> notation in five docs.
-      F1 and F3-F5 remediated; F2 accepted as a recorded deviation because rewriting
-      history would invalidate the commit SHAs the phase-transition registry records
-      as durable evidence, while the commit-message authority (range gate) passes."
+  - text: "Review iteration 1: FAIL on process grounds, with no functional,
+      security, or acceptance-criterion defect. F1 HIGH: a five-line comment
+      added to .github/workflows/ci.yml was outside phase 4's declared scope and
+      partly inaccurate. F2 MEDIUM: the phase-boundary commits carry the
+      primitive's template subjects (path-truncated), not the plan's declared
+      subjects, so the history is not self-describing. F3 LOW: the plan stayed
+      at revision 1.1 after the post-DoR phase-1 amendment and still called
+      PDR-0005 untracked. F4 LOW: the test plan execution log was stale. F5 LOW:
+      <M<n>> notation in five docs. F1 and F3-F5 remediated; F2 accepted as a
+      recorded deviation because rewriting history would invalidate the commit
+      SHAs the phase-transition registry records as durable evidence, while the
+      commit-message authority (range gate) passes."
     type: retro
     date: "2026-11-14"
-  - text: "Review iteration 2: FAIL, one blocking finding. Reverting the ci.yml comment
-      exposed a real repository invariant: scripts/checks/ci-topology.ts requires every
-      scripts/checks/*.ts basename to be wired in ci.yml or package.json, and it also
-      governs a workflow-invoked module. The earlier TP-Q2 premise was therefore wrong.
-      Fixed by extending the wiring set to every .github/workflows/*.yml, naming the
-      imported modules truthfully in the milestone workflow, adding non-vacuity tests,
-      and declaring the scanner change in plan revision 1.3 and the spec file impact.
-      Also fixed: the sweep counted pull requests returned by /issues (now skipped with
-      a fixture and test), the PDR notation, and the spec notation. Coder commit
-      454e0238 plus scope amendment 6dbbb92f. F2 disposition accepted by the reviewer."
+  - text: "Review iteration 2: FAIL, one blocking finding. Reverting the ci.yml
+      comment exposed a real repository invariant: scripts/checks/ci-topology.ts
+      requires every scripts/checks/*.ts basename to be wired in ci.yml or
+      package.json, and it also governs a workflow-invoked module. The earlier
+      TP-Q2 premise was therefore wrong. Fixed by extending the wiring set to
+      every .github/workflows/*.yml, naming the imported modules truthfully in
+      the milestone workflow, adding non-vacuity tests, and declaring the
+      scanner change in plan revision 1.3 and the spec file impact. Also fixed:
+      the sweep counted pull requests returned by /issues (now skipped with a
+      fixture and test), the PDR notation, and the spec notation. Coder commit
+      454e0238 plus scope amendment 6dbbb92f. F2 disposition accepted by the
+      reviewer."
     type: retro
     date: "2026-11-14"
+  - text: "Review iteration 3: PASS. Zero blocking findings. The reviewer verified
+      the ci-topology wiring extension and its non-vacuity tests, the workflow
+      comment accuracy, the PR-entry filtering, the notation fixes, the commit
+      range gate (27 commits, PASS), the touched suites, doc-distribution,
+      forbidden-literals, plugin freshness, and the plan/spec declarations.
+      Three INFO items remain non-blocking: phase-4 evidence is split across two
+      notes, the ci-topology wiring match is substring-based (pre-existing), and
+      the live-tree snapshot tests are sensitive to concurrent writes."
+    type: info
+    date: "2026-11-15"
+  - text: "Quality gate evidence at HEAD 2d355feb: lint, format:check, typecheck,
+      and check:boundaries green; prompt-conformance, help-guide-coverage,
+      forbidden-literals (5/5 classes, 0 violations), doc-distribution, and
+      exports-parity green; commit-range gate PASS over 27 commits with a
+      repository-local commitlint. The clean aggregate run finished 8305 pass /
+      4 skip / 1 fail. The single failure is TC-EXIT-002 (live-tree clean) in
+      exit-code-literals: another suite in the same parallel run checks out
+      branches and regenerates .ados-claude, so the tree is transiently dirty.
+      It passes in isolation (15/15) as does the privacy-literals live-tree test
+      (39/39). This is a pre-existing suite-wide race between live-tree snapshot
+      tests and tests that mutate the worktree, not a defect introduced by
+      GH-313; recorded rather than waived."
+    type: risk
+    date: "2026-11-15"
