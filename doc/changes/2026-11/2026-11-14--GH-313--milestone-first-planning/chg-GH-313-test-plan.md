@@ -1403,4 +1403,9 @@ Populated during delivery (phases 6/9/10). Evidence runs and review-time items a
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | No executions yet; plan authored at phase 3 (`test_planning`) and revised to 1.2 at the DoR gate (`dor_check`). All 35 TCs are To Implement or evidence/manual by design. |
+| Full suite (all 35 TCs) | 2026-11-14 | PASS | `bun test`: 8299 pass / 4 skip / 0 fail. |
+| MILESTONE / PLANNING suites | 2026-11-14 | PASS | Nine suites — `milestone-guide`, `milestone-prompts`, `milestone-artifacts`, `milestone-workflow`, `milestone-gate`, `milestone-attachment`, `milestone-attachment-integration`, `milestone-sweep`, `planning-truth`: 99 pass / 0 fail. |
+| TC-QG-001 (forbidden literals) | 2026-11-14 | PASS | `bun run scripts/checks/forbidden-literals.ts`: 5/5 scope classes checked, 0 violations. |
+| TC-GUIDE-005 (distribution guard) | 2026-11-14 | PASS | `bash scripts/.tests/test-doc-distribution.sh`: green. |
+| TC-PROMPT-001…004 (prompt/help conformance) | 2026-11-14 | PASS | `prompt-conformance` and `help-guide-coverage` checks green. |
+| TC-QG-001 (commit history) | 2026-11-14 | PASS | `./scripts/lint-commit-range.sh --base main-tools`: PASS. |

@@ -1,6 +1,9 @@
-# GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-14; DoR iteration 2 remediation). Authored against the remediated
-# spec and test plan revision 1.2 on branch feat/GH-313/milestone-first-planning.
+# GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-14; DoR iteration 2 remediation; revision 1.2 amendment: phase 1
+# scope gains scripts/checks/forbidden-literals.registry.json plus obligation
+# 1.7, because a new user-facing doc must be registered for the
+# forbidden-literal scan). Authored against the remediated spec and test plan
+# revision 1.2 on branch feat/GH-313/milestone-first-planning.
 #
 # One ticket, one PR against main-tools, six plan phases: five @coder delivery
 # phases plus one PM-lane evidence phase. Every phase is an
@@ -21,7 +24,7 @@
 #     "M2: Ceremonies, measurement, and memory", story M2-S20,
 #     delivery_mode autonomous, PATH quirk.
 #   - PDR: doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md
-#     (authored, Proposed, currently untracked; its register row is committed).
+#     (authored and Proposed; landed in phase 1 with its register row).
 #
 # TEST-PLAN RECONCILIATION PINS (canonical contract: test plan revision 1.2 §8.3 and
 # the spec §17 ACs it references; every TP-Q item is resolved — TP-Q1/Q2/Q5 by
@@ -107,8 +110,8 @@ phases:
   #      procedure (AC-F1-3, DoD-3); this makes the phase-1 guide suite green
   #      at its own boundary.
   #  1.3 Add the guide row to the doc/00-index.md Guides table.
-  #  1.4 Land the already-authored, currently-untracked PDR-0005 file beside
-  #      its committed doc/decisions/00-index.md row (DoD-4: the record exists
+  #  1.4 Land the already-authored PDR-0005 file beside its committed
+  #      doc/decisions/00-index.md row (DoD-4: the record exists
   #      before delivery begins; GH-302 precedent). Status stays Proposed with
   #      decision_date null; owner ratification is external at the PR gate.
   #  1.5 Add the license header ONLY by running

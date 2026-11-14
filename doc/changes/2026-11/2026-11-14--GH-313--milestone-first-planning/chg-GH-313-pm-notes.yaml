@@ -226,3 +226,16 @@ notes:
       repository-local node_modules/.bin. Recorded for quality_gates."
     type: info
     date: "2026-11-14"
+  - text: "Review iteration 1: FAIL on process grounds, with no functional, security,
+      or acceptance-criterion defect. F1 HIGH: a five-line comment added to
+      .github/workflows/ci.yml was outside phase 4's declared scope and partly
+      inaccurate. F2 MEDIUM: the phase-boundary commits carry the primitive's
+      template subjects (path-truncated), not the plan's declared subjects, so the
+      history is not self-describing. F3 LOW: the plan stayed at revision 1.1 after
+      the post-DoR phase-1 amendment and still called PDR-0005 untracked. F4 LOW:
+      the test plan execution log was stale. F5 LOW: <M<n>> notation in five docs.
+      F1 and F3-F5 remediated; F2 accepted as a recorded deviation because rewriting
+      history would invalidate the commit SHAs the phase-transition registry records
+      as durable evidence, while the commit-message authority (range gate) passes."
+    type: retro
+    date: "2026-11-14"

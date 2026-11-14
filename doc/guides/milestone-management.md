@@ -27,7 +27,7 @@ point here rather than restating it.
 
 ## Naming
 
-A milestone title is `<M<n>>: <human-readable outcome phrase>`. The `<n>`
+A milestone title is `M<n>: <human-readable outcome phrase>`. The `<n>`
 prefix is the durable human identifier: it matches the story-code root of the
 tickets planned under the milestone (`M<n>-S<m>`), while the tracker's milestone
 number is only an API handle. The tracker record — number, title, state, and attached issues — is the

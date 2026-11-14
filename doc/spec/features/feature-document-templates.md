@@ -52,7 +52,7 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 
 ### Required change.milestone field
 
-The change-specification template carries `change.milestone` as a required front-matter field. Its value is the tracker milestone title verbatim (`<M<n>>: <outcome phrase>`), equal to the `milestone` value in `chg-<workItemRef>-pm-notes.yaml`, so the spec, the pm-notes record, and the tracker can be compared without translation. The literal `none` is permitted only where the project's tracker instructions declare that the project's tracker has no milestone construct; it is never a per-change convenience.
+The change-specification template carries `change.milestone` as a required front-matter field. Its value is the tracker milestone title verbatim (`M<n>: <outcome phrase>`), equal to the `milestone` value in `chg-<workItemRef>-pm-notes.yaml`, so the spec, the pm-notes record, and the tracker can be compared without translation. The literal `none` is permitted only where the project's tracker instructions declare that the project's tracker has no milestone construct; it is never a per-change convenience.
 
 Only the change-specification template carries the field. Plan and test-plan templates inherit the change's identity through `links.change_spec`; a feature specification spans milestones; the engineering roadmap is itself the milestone register, so a milestone field on it would be circular; and a decision record is not milestone-scoped. The operating rule behind the field is documented in [Milestone Governance](feature-milestone-governance.md).
 

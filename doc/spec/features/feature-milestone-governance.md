@@ -44,7 +44,7 @@ The rule serves one operating mode: an unattended delivery run that spans days t
 
 ### Capabilities
 
-- **Milestone identity and naming (F-1):** A milestone title is `<M<n>>: <human-readable outcome phrase>`. The `<n>` prefix is the durable human identifier and matches the story-code root of the tickets planned under the milestone (`M<n>-S<m>`); the tracker's milestone number is only an API handle. The tracker record — number, title, state, and attached issues — is the source of truth for identity, attachment, and state.
+- **Milestone identity and naming (F-1):** A milestone title is `M<n>: <human-readable outcome phrase>`. The `<n>` prefix is the durable human identifier and matches the story-code root of the tickets planned under the milestone (`M<n>-S<m>`); the tracker's milestone number is only an API handle. The tracker record — number, title, state, and attached issues — is the source of truth for identity, attachment, and state.
 - **Creation and attachment at creation (F-2):** Milestones are created by the human owner from a plan (outcome phrase, one-line goal, planned ticket list). An agent never creates a milestone autonomously; a missing milestone is proposed to the human exactly as a ticket would be proposed. Every `change` ticket is attached to exactly one milestone at creation, resolved from the project's existing milestone set, using the tracker's native milestone field rather than an umbrella issue, a label, or a body checklist.
 - **Intake verification (F-3):** Intake confirms the ticket's attachment and records the milestone title in `chg-<workItemRef>-pm-notes.yaml` under `milestone` before artifact phases begin. An unattached ticket produces a question naming the milestone the PM proposes; artifact phases start only after the attachment exists. A ticket carrying the capture exemption is still unattached for delivery purposes and produces the same question and stop.
 - **Milestone lifecycle (F-4):** Entry review requires an open milestone with a conventional title, every planned ticket attached, and every attached ticket traceable to a backlog story block or a recorded exception. Planned scope is the attached-ticket set. Exit review requires every attached ticket closed or explicitly removed with a recorded reason and every outcome claim evidenced. A milestone closes only after exit review and is then an immutable record. Scope discovered mid-milestone either extends the open milestone or reopens the closed one with a recorded reason and a repeated entry review; work is never silently attached to a closed milestone.
@@ -215,7 +215,7 @@ The enforcement is deliberately outside `pnpm check`. The aggregate gate stays d
 
 | Term | Definition |
 |------|-----------|
-| Milestone | The tracker record that owns a planned scope: a title with an `<M<n>>` prefix, a description, and an attached ticket set; the source of truth for what a plan contains |
+| Milestone | The tracker record that owns a planned scope: a title with an `M<n>` prefix, a description, and an attached ticket set; the source of truth for what a plan contains |
 | Planned scope | The attached-ticket set, where each ticket traces to a backlog story block or a recorded exception and the milestone is deliverable without a new scope decision |
 | Entry review | The pre-work check that the milestone is open, conventionally named, and fully attached |
 | Exit review | The pre-closure check that every attached ticket is closed or explicitly removed with a reason, and outcome claims are evidenced |
@@ -223,7 +223,7 @@ The enforcement is deliberately outside `pnpm check`. The aggregate gate stays d
 | Flag | The `needs-milestone` label applied to an orphan; never a state change and never a block |
 | Capture exemption | The `backlog-capture` label marking a ticket as captured but not yet planned |
 | Advisory sweep | The manual, write-free report of the existing orphan population |
-| Story code | The durable `<M<n>>-S<m>` identifier of a backlog story; its prefix matches the milestone title prefix |
+| Story code | The durable `M<n>-S<m>` identifier of a backlog story; its prefix matches the milestone title prefix |
 
 ## Related Documentation
 

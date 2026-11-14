@@ -148,7 +148,7 @@ Phase 5 wires the project into ADOS. It produces:
 
 Resume semantics for the memory scaffold: create-if-absent — a resumed Phase 5 completes a partial memory scaffold without duplicating entry points and never silently overwrites human-approved files.
 
-The generated tracker instructions carry the project's milestone rule: titles follow `<M<n>>: <outcome phrase>`; every `change` ticket is created with an existing milestone from the project's set; an agent proposes a missing milestone to the human and never creates one; intake verifies the attachment and records the milestone before artifact phases; and a pure backlog capture may carry the project's capture-exemption label, removable when the ticket is scheduled. The operating rule is specified in [Milestone Governance](feature-milestone-governance.md).
+The generated tracker instructions carry the project's milestone rule: titles follow `M<n>: <outcome phrase>`; every `change` ticket is created with an existing milestone from the project's set; an agent proposes a missing milestone to the human and never creates one; intake verifies the attachment and records the milestone before artifact phases; and a pure backlog capture may carry the project's capture-exemption label, removable when the ticket is scheduled. The operating rule is specified in [Milestone Governance](feature-milestone-governance.md).
 
 ## Write allowlist
 
