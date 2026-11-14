@@ -1,5 +1,5 @@
-# GH-302 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-14). Authored against spec v1.1 and test plan v1.2 (both
+# GH-302 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-14). Authored against spec v1.2 and test plan v1.2 (both
 # repo-truth-corrected: this repository's .ai/memory tree exists and is populated
 # by GH-204; NG-4 guards it; GH-301 owns its evolution).
 #
@@ -28,6 +28,18 @@
 #      phase 4: the BUN INVARIANT SUITE (same read-only scan mechanics as its
 #      other content assertions), not the bash guard.
 #
+# REVISION NOTE (revision 1.2, after DoR iteration-2 finding: spec v1.2 sync).
+# Mechanical sync only — no phase structure, scope paths, commit subjects,
+# constraints, or escalation-trigger changes; the only parsed-data delta is
+# the phase-1 summary's twelve-class wording.
+#   SYNC (spec v1.2) the kernel-section contract is the TWELVE-class list:
+#      canonical and ephemeral locations; advisory/untrusted preamble;
+#      read policy; capture bar; write ownership; evidence over recency;
+#      unique ids; reviewer independence; caps and growth; promotion handoff;
+#      capsule completion; conflict reality. Obligation 1.4 and the phase-1
+#      summary now carry the twelve-class contract; the SOURCES citation is
+#      bumped to spec v1.2.
+#
 # One ticket, one PR against main-tools, five delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary, and every
 # phase is ONE delivery commit through the commit primitive (conventional
@@ -41,8 +53,9 @@
 # `notes:` entry, never a plan field, and there is no `tasks` key.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-302-spec.md (v1.1; F-1..F-7, AC-F1-1..AC-NFR4-1 — 11
-#                criteria; DM-1..DM-3; NFR-1..NFR-6; NG-1..NG-6; DEC-1..DEC-6;
+#   - Spec:      ./chg-GH-302-spec.md (v1.2; F-1..F-7, AC-F1-1..AC-NFR4-1 — 11
+#                criteria; DM-1..DM-3 with the twelve-class kernel contract;
+#                NFR-1..NFR-6; NG-1..NG-6; DEC-1..DEC-6;
 #                OQ-1/OQ-2 resolved; Appendix A source mapping; Appendix C
 #                constraint register C-1..C-6)
 #   - Test plan: ./chg-GH-302-test-plan.md (v1.2; 28 TCs TC-MEMSCAF-001..
@@ -263,10 +276,11 @@ phases:
   #      area: purpose, promotion-handoff target, append discipline; seeding is
   #      structural (empty; conventions, not records — DM-1).
   #  1.4 memory-kernel-section-template.md — the AGENTS.md memory kernel
-  #      section carrying ALL TEN content classes (DM-2): canonical + ephemeral
-  #      locations; read policy; capture bar; write ownership; evidence bar;
-  #      supersede-never-rewrite; reviewer independence; budget caps; promotion
-  #      handoff routing; change-capsule completion (referenced only). It routes
+  #      section carrying ALL TWELVE content classes (DM-2, spec v1.2):
+  #      canonical and ephemeral locations; advisory/untrusted preamble; read
+  #      policy; capture bar; write ownership; evidence over recency; unique
+  #      ids; reviewer independence; caps and growth; promotion handoff;
+  #      capsule completion (referenced only); conflict reality. It routes
   #      to the installed conventions rather than duplicating them and contains
   #      ZERO record-schema fields (TC-MEMKERN-001/002).
   #  1.5 memory-coordinator-wiring-template.md — the coordinator (PM-facing)
@@ -317,7 +331,7 @@ phases:
     summary: >-
       Author the nine memory bootstrap templates under doc/templates/ — index
       entry point, per-agent entry point (parameterized by role), lessons/tacit
-      area README, AGENTS.md kernel section with all ten content classes and
+      area README, AGENTS.md kernel section with all twelve content classes and
       zero record-schema fields, coordinator capture/promotion wiring, companion
       per-role expectations that reference the kernel, retro-note conventions,
       manual doctor checklist, and adoption checklist — each carrying its

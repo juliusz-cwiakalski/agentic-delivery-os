@@ -379,18 +379,24 @@ Low impact. The memory conventions carried into bootstrapped projects prohibit s
 
 ## 24. APPENDICES
 
-### Appendix A — Source mapping (content classes → scaffold elements)
+### Appendix A — Source mapping (twelve content classes → scaffold elements)
 
-| Current-truth kernel content class | Scaffold element receiving it |
-|------------------------------------|-------------------------------|
-| Tree locations + read policy | Memory tree scaffold (F-1) + kernel section (F-2) |
-| Capture bar | Kernel section (F-2), per-agent entry-point READMEs (F-1), coordinator instructions (F-3) |
-| Write ownership + consolidation ownership | Kernel section (F-2), coordinator instructions (F-3) |
-| Promotion handoff routing | Coordinator instructions (F-3), referenced by retro conventions (F-4) |
-| Budget caps (~150 / ≤200) | Scaffold entry points (F-1), manual doctor checklist (F-5), NFR-2 |
-| Supersede-never-rewrite + evidence bar | Kernel section (F-2), retro-note conventions (F-4) |
-| Reviewer independence | Kernel section (F-2) |
-| Change-capsule completion | Kernel section (F-2) — referenced only; capsules themselves out of scope |
+All twelve classes are the canonical set defined by F-2/DM-2/AC-F2-1 (v1.2), verified against this repository's AGENTS.md "Agent memory" section.
+
+| Content class | Source in AGENTS.md "Agent memory" | Scaffold element receiving it |
+|---------------|-------------------------------------|-------------------------------|
+| (1) Canonical and ephemeral locations | Intro paragraph | Memory tree scaffold (F-1) + kernel section (F-2) |
+| (2) Advisory/untrusted preamble | Intro paragraph | Kernel section (F-2) — echoed by the security posture (§21) |
+| (3) Read policy | "Read policy." bullet | Kernel section (F-2), per-agent entry-point READMEs (F-1) |
+| (4) Capture bar | "Capture bar." bullet | Kernel section (F-2), per-agent entry-point READMEs (F-1), coordinator instructions (F-3) |
+| (5) Write ownership | "Write ownership." bullet | Kernel section (F-2), coordinator instructions (F-3) |
+| (6) Evidence over recency (supersede, never rewrite) | "Evidence over recency." bullet | Kernel section (F-2), retro-note conventions (F-4) |
+| (7) Unique ids | "Unique ids." bullet | Kernel section (F-2) |
+| (8) Reviewer independence | "Reviewer independence." bullet | Kernel section (F-2) |
+| (9) Caps and growth | "Caps and growth." bullet | Kernel section (F-2, incl. the topic-file split rule), scaffold entry points (F-1), manual doctor checklist (F-5), NFR-2 |
+| (10) Promotion handoff | "Promotion handoff." bullet | Coordinator instructions (F-3), referenced by retro conventions (F-4) |
+| (11) Capsule completion | "Capsule completion." bullet | Kernel section (F-2) — referenced only; capsules themselves out of scope |
+| (12) Conflict reality | "Conflict reality." bullet | Kernel section (F-2) |
 
 ### Appendix B — Planning-truth pointers
 
@@ -415,6 +421,7 @@ Low impact. The memory conventions carried into bootstrapped projects prohibit s
 | 1.0 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | Initial specification from ticket #302, backlog M2-S9, pm-notes decisions, and repo-truth verification |
 | 1.1 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | Correction (specification phase reopened): `.ai/memory` existence claims fixed — the tree exists and is populated (GH-204, 2026-11-07); NG-4 and the matching out-of-scope item now guard the populated tree; living-reference assumption added to Assumptions; affected-components row corrected. Constraint force unchanged; no AC, capability, DEC, or OQ changes |
 | 1.2 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | DoR iteration-1 remediation (NOT_READY; specification reopened). Finding dod_defined: added §17.1 "Definition of Done (change-specific)" — seventeen conditions (DoD-1..DoD-17) binding all eleven ACs, the manual-evidence items (bootstrap dry-run fidelity review, TC-MEMKERN-003 side-by-side fidelity review, review-time changed-file checks per plan phase), the full gate battery (`TMPDIR=$PWD/tmp/tmpdir pnpm check`, doc-distribution, inception-doc-consistency, plugin regen guard), PDR-0004 landing beside its index row, the M2-S9 backlog Ticket+Progress markers, and the PR posture — with the NG-4 populated-tree boundary and the DEC-1/DEC-3 pre-tooling posture as framing rules and a fail-closed closing rule. Finding spec_completeness: the kernel content-class enumeration in F-2, DM-2, and AC-F2-1 extended from ten to **twelve** classes verified against the source AGENTS.md "Agent memory" section — adding the advisory/untrusted preamble, unique ids (monotonic per prefix/year, never reused including after supersession or pruning), conflict reality, and the growth/split rule (caps and growth: topic-file split past ~50 lines); the former evidence-bar/supersede pair merged to match the source's single "Evidence over recency" class; F-2 records that all twelve classes fit the ~200-line kernel guidance, so AC-NFR2-1 (which measures entry points and index) is unaffected. Validation checklist gains the DoD line per sibling convention. No other AC, capability, DEC, or OQ touched; test plan and plan unmodified |
+| 1.3 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | DoR iteration-2 remediation (spec-internal drift). Appendix A synced to the twelve-class contract of F-2/DM-2/AC-F2-1 (v1.2): the eight bundled rows replaced by twelve single-class rows in the canonical order, each with an explicit source mapping into the AGENTS.md "Agent memory" section (intro paragraph for locations and the advisory/untrusted preamble; the named bullet for the ten bulleted classes) and accurate carried-by mappings; carried-by chains preserved from the previous rows where they were accurate. No AC, F-/DM-, or other section touched |
 
 ---
 
