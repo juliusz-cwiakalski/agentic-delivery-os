@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-14T04:10:06.712Z }
   review_fix: { started: null, completed: 2026-11-14T04:18:13.488Z }
   quality_gates: { started: null, completed: 2026-11-14T04:31:11.136Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-14T04:33:06.262Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Proceed with GH-302 although declared dependency M2-S8 (GH-301) is still
@@ -406,4 +406,32 @@ notes:
       consistency GREEN (incl. Check 7). Plugin guard GREEN (16/16, fresh-build
       parity). Memory bootstrap suite GREEN (18/18, 373 expects)."
     type: info
+    date: "2026-11-14"
+  - text: "DOD CHECK (phase 10) verification: (1) pm-notes exists, all 9 prior
+      lifecycle phases completed in the registry (evidence class verified); (2)
+      plan completion — 5/5 declared plan phases carry pm-notes entries naming
+      plan phase id + commit hash + test result (ed7f76b0, a190bdd4, 0af97735,
+      b449042a, a1ed5f4f); (3) AC satisfaction — review iteration 1 PASS with
+      independent per-AC verification (all 11 ACs; allowlist identity
+      re-extracted; twelve-class fidelity side-by-side; 18/18 suite re-run); (4)
+      current-truth documentation — doc-syncer report zero residual gaps, both
+      owning specs reconciled, distribution guard 92 docs zero drift. MANUAL
+      EVIDENCE STATUS (honest accounting per spec §17.1 DoD): TC-MEMKERN-003
+      substance executed independently by the reviewer (F-7 record);
+      TC-MEMSCAF-004 / TC-MEMWIRE-004 changed-file checks executed by the
+      reviewer; TC-MEMRESUME-002 LIVE per-flow bootstrap dry-runs (project.flow
+      new + legacy) NOT executed in-session — an E2E inception requires the
+      8-phase human-gated flow, so the live run is OWNER-OWED EVIDENCE at the
+      open-PR gate and MUST be surfaced in the PR body. dod_check passes with
+      that debt explicitly carried, not silently dropped."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: manual-evidence debt is inherent to docs/prompt-surface changes —
+      the only unexecuted DoD item is a live human-gated inception, which no
+      autonomous session can honestly produce. The pipeline handled it correctly
+      (test plan declared it manual; reviewer carried it as decision of record
+      F-7; dod_check surfaced it as owner-owed). Process tweak: PR body for
+      docs-surface changes should carry a 'manual evidence owed' checklist
+      section so the debt is impossible to miss at review."
+    type: retro
     date: "2026-11-14"
