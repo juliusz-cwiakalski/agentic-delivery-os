@@ -1,6 +1,6 @@
 # GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
 # (2026-11-14; DoR iteration 2 remediation). Authored against the remediated
-# spec and test plan v1.1 on branch feat/GH-313/milestone-first-planning.
+# spec and test plan revision 1.2 on branch feat/GH-313/milestone-first-planning.
 #
 # One ticket, one PR against main-tools, six plan phases: five @coder delivery
 # phases plus one PM-lane evidence phase. Every phase is an
@@ -14,7 +14,7 @@
 #     DEC-1..DEC-12, AC-F1-1..AC-NFR7-1 (30 ACs), DoD-1..DoD-21, Appendix B
 #     file-impact rows 1-34, Appendix C decision table and seeds
 #     SC-M2-S20-01..05, Appendix E constraints C-1..C-12.
-#   - Test plan: ./chg-GH-313-test-plan.md (v1.1) — 35 TCs in 12 families,
+#   - Test plan: ./chg-GH-313-test-plan.md (revision 1.2) — 35 TCs in 12 families,
 #     all 30 ACs Covered, §7 suite homes and execution commands, §8.3
 #     resolved pins TP-Q1..TP-Q6, §9 reconciliation rule.
 #   - PM notes: ./chg-GH-313-pm-notes.yaml — decisions, milestone
@@ -23,7 +23,7 @@
 #   - PDR: doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md
 #     (authored, Proposed, currently untracked; its register row is committed).
 #
-# TEST-PLAN RECONCILIATION PINS (canonical contract: test plan v1.1 §8.3 and
+# TEST-PLAN RECONCILIATION PINS (canonical contract: test plan revision 1.2 §8.3 and
 # the spec §17 ACs it references; every TP-Q item is resolved — TP-Q1/Q2/Q5 by
 # this plan, TP-Q3/Q4 by the remediated spec, and TP-Q6 in the test plan):
 #   TP-Q1 — the evaluation core lives at scripts/checks/milestone-attachment.ts
@@ -218,8 +218,10 @@ phases:
   #      local backlog file outside that mirror stays forbidden. Keep the
   #      existing prohibitions intact.
   #
-  # Bound: F-2, AC-F2-1, AC-F2-2, AC-F2-3, DM-2, DM-3, DoD-5..DoD-7, NFR-4,
-  # C-3, C-7, C-8, DEC-3, DEC-11, RSK-2, RSK-3.
+  # Bound: F-2, F-4, AC-F2-1, AC-F2-2, AC-F2-3, AC-F4-1, DM-2, DM-3,
+  # DoD-5..DoD-7, DoD-12, NFR-4, C-3, C-7, C-8, DEC-3, DEC-11, RSK-2, RSK-3;
+  # TC-TPL-002 lands in this phase's prompts suite (TC-PROMPT-001..004,
+  # TC-PLUGIN-001), not in the phase-2 artifacts suite.
   # ---------------------------------------------------------------------------
   - id: 3
     title: "Milestone creation and intake rules in prompts, tracker instructions, and regenerated plugin"

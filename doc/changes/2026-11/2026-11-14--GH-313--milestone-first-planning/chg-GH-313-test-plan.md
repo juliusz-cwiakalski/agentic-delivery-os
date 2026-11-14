@@ -1395,4 +1395,4 @@ Populated during delivery (phases 6/9/10). Evidence runs and review-time items a
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | No executions yet; plan authored at phase 3 (`test_planning`) and revised to 1.1 at the DoR gate (`dor_check`). All 35 TCs are To Implement or evidence/manual by design. |
+| — | — | — | No executions yet; plan authored at phase 3 (`test_planning`) and revised to 1.2 at the DoR gate (`dor_check`). All 35 TCs are To Implement or evidence/manual by design. |

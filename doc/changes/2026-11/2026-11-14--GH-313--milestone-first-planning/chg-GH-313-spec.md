@@ -678,6 +678,7 @@ The ticket's stated tasks map as: guide authoring → F-1; the ticket-creation r
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | spec-writer (DeepSeek V4.1 Flash) | Initial specification from GitHub issue #313 (M2-S20), the pm-notes decisions, the milestone corpus (backlog, ranking, pack indices, status snapshot), the `@pm`, `@spec-writer`, and `@bootstrapper` prompts, the change-specification template, the delivered pm-notes milestone key, and the repository's CI invariant contracts |
+| 1.1 | 2026-11-14 | spec-writer (DeepSeek V4.1 Flash) | DoR remediation revision: the canonical ordered contract v1 in Appendix C (14 rows, exemption > milestone > flag/event, the two marker-gated flag-write paths, closed write vocabulary), the corrected header clause, action-layer idempotency wording, Appendix B row 11/34 reconciliation, and DEC-10 seed alignment |
 
 ---
 
