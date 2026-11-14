@@ -7,7 +7,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-14T02:14:10.362Z }
   delivery_planning: { started: null, completed: 2026-11-14T02:14:21.866Z }
   dor_check: { started: null, completed: 2026-11-14T02:18:27.936Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-14T03:52:31.783Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -286,15 +286,15 @@ notes:
       `doc/decisions/README.md, doc/decisions/00-index.md` and
       `doc/planning/{backlog.md, epics/**, archive/**}`) was REPLACED by the
       prompt's 22-entry list form verbatim (AC-F7-1 like-for-like). Phase 5
-      block: memory wiring bullet (tree scaffold exactly index + per-agent
-      entry points + lessons + tacit, seeded empty; kernel render; coordinator
-      + companion wiring; retro conventions + doctor checklist), create-if-
-      absent resume semantics, single-gate statement, artifact keys gained
+      block: memory wiring bullet (tree scaffold exactly index + per-agent entry
+      points + lessons + tacit, seeded empty; kernel render; coordinator +
+      companion wiring; retro conventions + doctor checklist), create-if- absent
+      resume semantics, single-gate statement, artifact keys gained
       memory-scaffold/memory-kernel-section/memory-instructions-wiring/
       memory-retro-conventions/memory-doctor-checklist. Phase 6 block:
-      memory-artifact enumeration + fail-and-reopen (reopen range 1–4 → 1–5
-      in prompt Gates line, phase_6, guide, and feature spec — memory
-      artifacts are produced in Phase 5 so readiness must reopen it).
+      memory-artifact enumeration + fail-and-reopen (reopen range 1–4 → 1–5 in
+      prompt Gates line, phase_6, guide, and feature spec — memory artifacts are
+      produced in Phase 5 so readiness must reopen it).
       .opencode/command/bootstrap.md untouched (thin wrapper needed no
       consistency change). Regenerated .ados-claude/agents/bootstrapper.md via
       scripts/build-claude-plugin.sh in the same commit; generated files never
@@ -306,53 +306,76 @@ notes:
       check green (8123 pass / 0 fail / 4 skip)."
     type: info
     date: "2026-11-14"
-  - text: "PLAN PHASE 3 COMPLETE (commit 0af97735): PDR-0004 landing verified
-      (the file was already tracked early at 5e74180b per the pm/caller
-      contract — verified file↔index↔spec consistency instead of re-landing:
-      frontmatter id PDR-0004 + status Proposed; 00-index.md row 27 links the
-      exact filename with matching title/status/date; spec references PDR-0004
-      in OQ-2, DEC-6, and frontmatter links.decisions; the record states the
-      repo-internal disposition and self-contained installed conventions) —
-      the spec, test plan, and index were NOT 'fixed' ahead of the phase
-      (pinned-red rule honored). F-6 concept alignment in the same commit:
+  - text: "PLAN PHASE 3 COMPLETE (commit 0af97735): PDR-0004 landing verified (the
+      file was already tracked early at 5e74180b per the pm/caller contract —
+      verified file↔index↔spec consistency instead of re-landing: frontmatter id
+      PDR-0004 + status Proposed; 00-index.md row 27 links the exact filename
+      with matching title/status/date; spec references PDR-0004 in OQ-2, DEC-6,
+      and frontmatter links.decisions; the record states the repo-internal
+      disposition and self-contained installed conventions) — the spec, test
+      plan, and index were NOT 'fixed' ahead of the phase (pinned-red rule
+      honored). F-6 concept alignment in the same commit:
       doc/planning/concepts/memory-practices.md status advanced from Draft
       (2026-10-26) to Active (2026-11-14, aligned and finalized by GH-302 per
-      PDR-0004); adoption checklist corrected to exactly index + per-agent
-      entry points + lessons + tacit, 'No additional areas are provisioned',
+      PDR-0004); adoption checklist corrected to exactly index + per-agent entry
+      points + lessons + tacit, 'No additional areas are provisioned',
       preferences/retro-archive removed as provisioning targets (DEC-2);
       AGENTS.md kernel template section realigned to the shipped kernel
       template's twelve content classes with ~150/~200 budget guidance and no
       record-schema fields (TC-MEMALIGN-002 anchors). License header verified
-      present (doc/planning/concepts is in header-script scope; not hand-added
-      — C-5). TESTS: bash scripts/.tests/test-add-header-location.sh green
-      (24/24); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8123 pass / 0 fail /
-      4 skip)."
+      present (doc/planning/concepts is in header-script scope; not hand-added —
+      C-5). TESTS: bash scripts/.tests/test-add-header-location.sh green
+      (24/24); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8123 pass / 0 fail / 4
+      skip)."
     type: info
     date: "2026-11-14"
   - text: "PLAN PHASE 4 COMPLETE (commit b449042a): verification suites landed —
-      tests/structure/memory-bootstrap-templates.test.ts (new bun:test, 18
-      cases incl. the TC-MEMALIGN-004 self-containment scan; read-only tree
+      tests/structure/memory-bootstrap-templates.test.ts (new bun:test, 18 cases
+      incl. the TC-MEMALIGN-004 self-containment scan; read-only tree
       assertions, no fixtures, anchors pinned to the plan's nine filenames;
       covers TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002 with the schema-shaped-
       construct anchor, TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002 with the
       GH-301 expiry comment naming it owner of the deliberate update,
       TC-MEMALIGN-001/002/003 following the tests/checks/decision-record.test.ts
-      pattern, TC-MEMBUDGET-001 line counts, TC-MEMRESUME-001, the TC-MEMFLOW-001
-      prompt part, and the TC-MEMCONT-003 Phase 6 readiness enumeration) and
-      scripts/.tests/test-inception-doc-consistency.sh Check 7 (backticked-entry
-      extraction normalized across the three carrier formats; allowlist identity
-      vs the golden 23-token set [22 bullets, golden set lives only here and
-      updates deliberately in review]; byte-identical confirmation sentence;
-      Phase 6 readiness enumeration + fail-and-reopen in prompt and guide) plus
-      the nine memory templates in Check 4's index loop. Non-vacuity probed:
-      each carrier extracts exactly 23 tokens identical to the golden set, and
-      a perturbed-golden probe confirms the diff fires. TC-MEMALIGN-003 is GREEN
-      at this boundary (phase 3 landed the PDR file). TESTS: bun test tests/
-      structure/memory-bootstrap-templates.test.ts green (18/18); bash
-      scripts/.tests/test-inception-doc-consistency.sh green (exit 0);
-      TMPDIR=$PWD/tmp/tmpdir pnpm check green (8141 pass / 0 fail / 4 skip —
+      pattern, TC-MEMBUDGET-001 line counts, TC-MEMRESUME-001, the
+      TC-MEMFLOW-001 prompt part, and the TC-MEMCONT-003 Phase 6 readiness
+      enumeration) and scripts/.tests/test-inception-doc-consistency.sh Check 7
+      (backticked-entry extraction normalized across the three carrier formats;
+      allowlist identity vs the golden 23-token set [22 bullets, golden set
+      lives only here and updates deliberately in review]; byte-identical
+      confirmation sentence; Phase 6 readiness enumeration + fail-and-reopen in
+      prompt and guide) plus the nine memory templates in Check 4's index loop.
+      Non-vacuity probed: each carrier extracts exactly 23 tokens identical to
+      the golden set, and a perturbed-golden probe confirms the diff fires.
+      TC-MEMALIGN-003 is GREEN at this boundary (phase 3 landed the PDR file).
+      TESTS: bun test tests/ structure/memory-bootstrap-templates.test.ts green
+      (18/18); bash scripts/.tests/test-inception-doc-consistency.sh green (exit
+      0); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8141 pass / 0 fail / 4 skip —
       the new suite joined the bun tier). Authoring-rule compliance: biome
       format applied to the new suite; no inventory row needed (inventory.json
       tracks modules only)."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 5 COMPLETE (commit a1ed5f4f) — RELEASE PHASE, full gate
+      battery green: backlog M2-S9 entry gained the Ticket marker (`- Ticket:
+      GH-302 (milestone M2)`) and the Progress marker per the M2-S11/GH-288
+      milestone delivery convention, summarizing the delivered capability set
+      (memory tree scaffold, kernel section, coordinator/companion wiring, retro
+      conventions, manual doctor checklist, adoption checklist, .ai/memory/**
+      allowlist extension, Phase 6 fail-and-reopen, PDR-0004 repo-internal
+      disposition). Battery verdicts recorded (TC-MEMCONF-001/ 002 green): mkdir
+      -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check GREEN (8141 pass / 0
+      fail / 4 skip; lint/format/typecheck/boundaries/ prompt-conformance 5
+      clean/help-coverage/exports-parity all green); bash
+      scripts/.tests/test-doc-distribution.sh GREEN (92 in-scope docs, zero
+      drift); bash scripts/.tests/test-inception-doc-consistency.sh GREEN (incl.
+      Check 7); bash scripts/.tests/test-build-claude-plugin.sh GREEN (16/16);
+      bash scripts/.tests/test-doc-distribution-modes.sh GREEN (5/5 failure
+      modes fire). Commit-range gate deferred to lifecycle phase 9 per plan.
+      Spec-reconciliation obligations remain with @doc-syncer (lifecycle phase
+      7) per the plan header; this phase did not edit doc/spec beyond the
+      phase-2 implementation-carrier rows. All five plan phases complete with
+      per-phase pm-notes evidence; TC-MEMCONF-003 green (plugin output
+      regenerated with source in a190bdd4)."
     type: info
     date: "2026-11-14"
