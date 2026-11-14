@@ -1,5 +1,4 @@
 {
-  "hostIndexRevision": 7,
   "projects": [
     {
       "projectKey": "alpha-repo-1a2b3c4d",
@@ -15,5 +14,6 @@
       "daemonReachable": { "reachable": false, "reason": "daemon-not-mounted" },
       "handoverState": "shell"
     }
-  ]
+  ],
+  "hostIndexRevision": 7
 }

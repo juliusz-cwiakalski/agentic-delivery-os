@@ -981,6 +981,7 @@ phases:
         - tests/behaviour/projects-groups-list.test.ts
         - tests/structure/projects-groups-envelope.test.ts
         - tests/golden/fixtures/projects-flat-alias.json
+        - doc/changes/2026-11/2026-11-14--GH-309--project-groups/code-review/review-iter-1.yaml
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/project-groups.ts

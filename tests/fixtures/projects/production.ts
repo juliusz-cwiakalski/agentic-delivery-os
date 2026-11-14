@@ -170,8 +170,9 @@ export const createProductionProjectsHarness = (
   const hostIndexAccess = createHostIndexAccess();
   // One composition per invocation, exactly like the delivered entrypoint: the
   // harness never reuses a composed program, so per-invocation work (index
-  // maintenance, counters) is observable.
-  const composeProgram = (command?: string) => {
+  // maintenance, counters) is observable. The group-scope fact mirrors the
+  // entrypoint's argv resolution (GH-309 F-3).
+  const composeProgram = (command?: string, groupScoped = false) => {
     const composer = createProductionComposer({
       environment: {
         HOME: host.home,
@@ -207,7 +208,7 @@ export const createProductionProjectsHarness = (
       hostIndexAccess,
       ...(options.daemon === undefined ? {} : { daemon: options.daemon }),
     });
-    return command === undefined ? composer(brand) : composer(brand, { command });
+    return command === undefined ? composer(brand) : composer(brand, { command, groupScoped });
   };
   // A checkout whose identity cannot be read still composes: every command then
   // answers through the classified refusal program, which the suite asserts.
@@ -243,12 +244,14 @@ export const createProductionProjectsHarness = (
       stderr: { write: (chunk: string) => err.push(chunk) },
     };
     runOrdinal += 1;
+    const first = argv.find((token) => token.length > 0 && !token.startsWith("-"));
+    const groupScoped = (first === "queue" || first === "status") && argv.includes("--project");
     const exitCode = await runCli(argv, streams, {
       brand,
       clock: { now: () => Date.parse("2026-11-11T10:00:00.000Z") },
       newRunId: () => `run-gh288-${String(runOrdinal)}`,
       secrets: [],
-      program: composeProgram(argv.find((token) => token.length > 0 && !token.startsWith("-"))),
+      program: composeProgram(first, groupScoped),
     });
     const stdout = out.join("");
     const stderr = err.join("");

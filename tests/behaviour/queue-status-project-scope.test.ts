@@ -21,6 +21,7 @@ import {
 } from "../../packages/core/src/app/queue";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
+import { PROJECT_GROUPS_CONFIG_SCHEMA } from "../../packages/core/src/contracts/projects";
 import {
   createNodeStateEdge,
   createStateStore,
@@ -335,6 +336,43 @@ describe("TC-GRPDOC-004 the one refusal rule holds on every group-scoped surface
         expect(errorCodeOf(run)).toBe("projects.unknown-group");
         expect(Object.hasOwn(envelopeOf(run) ?? {}, "data")).toBe(false);
       }
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("an absent or zero-group configuration refuses the key on queue and status too", async () => {
+    const fixture = createGroupFixture("grpsread-refusal-empty");
+    try {
+      // No configuration document: an explicit key is not declared, so it is
+      // never rendered as a group with no work (F-1/F-2, AC-F2-1, NFR-5).
+      for (const run of [
+        await scopedQueue(fixture.harness, "platform"),
+        await scopedStatus(fixture.harness, "platform"),
+      ]) {
+        expect(run.exitCode).toBe(1);
+        expect(errorCodeOf(run)).toBe("projects.unknown-group");
+        expect(Object.hasOwn(envelopeOf(run) ?? {}, "data")).toBe(false);
+      }
+
+      // A declared zero-group document is the same refusal for an explicit key.
+      writeProjectGroupsConfig(
+        fixture.harness,
+        `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}\ngroups: []\n`,
+      );
+      for (const run of [
+        await scopedQueue(fixture.harness, "platform"),
+        await scopedStatus(fixture.harness, "platform"),
+      ]) {
+        expect(run.exitCode).toBe(1);
+        expect(errorCodeOf(run)).toBe("projects.unknown-group");
+      }
+
+      // The unscoped forms keep their delivered payloads and stay at exit 0.
+      const unscopedQueue = await fixture.harness.run(["queue", "list", "--json"]);
+      expect(unscopedQueue.exitCode, unscopedQueue.stderr).toBe(0);
+      const unscopedStatus = await fixture.harness.run(["status", "--json"]);
+      expect(unscopedStatus.exitCode, unscopedStatus.stderr).toBe(0);
     } finally {
       fixture.dispose();
     }

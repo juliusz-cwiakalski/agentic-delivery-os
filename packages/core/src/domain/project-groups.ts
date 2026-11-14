@@ -50,9 +50,18 @@ const selectorShapeOf = (member: ProjectGroupMemberDeclaration): MemberSelectorS
   return { kind: "neither" };
 };
 
-/** The selector key one validated member resolves under, for the duplicate probe. */
+/** Trailing separators are insignificant when comparing root selectors (F-6). */
+const normalizeSelectorRoot = (root: string): string => root.replace(/[\\/]+$/u, "");
+
+/**
+ * The selector key one validated member resolves under, for the duplicate probe.
+ * Root selectors normalize trailing separators exactly as member resolution
+ * does, so `/x` and `/x/` are recognized as the same checkout (GH-309 F-6).
+ */
 const selectorKeyOf = (member: ProjectGroupMemberSelected): string =>
-  member.kind === "root" ? `root:${member.root}` : `repoKey:${member.repoKey}`;
+  member.kind === "root"
+    ? `root:${normalizeSelectorRoot(member.root)}`
+    : `repoKey:${member.repoKey}`;
 
 /**
  * Validate one declared group's members against the pinned OQ-1 rules: at
@@ -117,13 +126,22 @@ const validateGroup = (
   }
   const validated = validateMembers(groupKey, members);
   if (!validated.ok) return validated;
-  const workspaceRoot = declaration.workspaceRoot;
+  const declaredWorkspaceRoot = declaration.workspaceRoot;
+  // A withheld optional field is valid; a present-but-malformed declared field
+  // is a schema failure, never silently dropped (GH-309 F-5, NFR-5).
+  let workspaceRoot: string | undefined;
+  if (declaredWorkspaceRoot !== undefined) {
+    if (!nonEmptyString(declaredWorkspaceRoot)) {
+      return schemaFailure(`group ${groupKey} workspaceRoot is not a non-empty string`);
+    }
+    workspaceRoot = declaredWorkspaceRoot;
+  }
   return {
     ok: true,
     group: {
       groupKey,
       name: declaration.name,
-      ...(nonEmptyString(workspaceRoot) ? { workspaceRoot } : {}),
+      ...(workspaceRoot === undefined ? {} : { workspaceRoot }),
       members: validated.members,
     },
   };

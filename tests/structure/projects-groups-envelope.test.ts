@@ -482,7 +482,11 @@ describe("TC-GRPENV-001 and the OQ-3 health cases over the delivered group envel
       expect(
         members.map((member) => projectMemberOutcomeOfHealth(member.health as ProjectMemberHealth)),
       ).toEqual(["state-unavailable", "not-yet-supported", "unregistered", "observed", "observed"]);
-      expect(members[2]?.repoKey).toBe(missingUnregistered);
+      // An unlocated root-selected member carries its declaration in `root` and
+      // an empty `repoKey`, mirroring the repoKey-selected member's empty root
+      // (GH-309 F-7): `repoKey` never carries a filesystem path.
+      expect(members[2]?.repoKey).toBe("");
+      expect(members[2]?.root).toBe(missingUnregistered);
       expect(dataOf(run).partial).toBe(true);
       expect(dataOf(run).degradedMembers).toEqual([
         { repoKey: unavailable.repoKey, outcome: "state-unavailable" },

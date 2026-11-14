@@ -233,6 +233,32 @@ describe("TC-GRPDOC-002 a contradictory configuration is config-invalid, never s
             "",
           ].join("\n"),
         ],
+        [
+          "present but non-string workspaceRoot",
+          [
+            `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}`,
+            "groups:",
+            "  - groupKey: core-team",
+            "    name: Core Team",
+            "    workspaceRoot: 42",
+            "    members:",
+            member(`repoKey: ${yamlString(fixture.a.projectKey)}`),
+            "",
+          ].join("\n"),
+        ],
+        [
+          "duplicate root selector differing only by trailing separators",
+          [
+            `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}`,
+            "groups:",
+            "  - groupKey: core-team",
+            "    name: Core Team",
+            "    members:",
+            member(`root: ${yamlString(fixture.alpha)}`),
+            member(`root: ${yamlString(`${fixture.alpha}/`)}`),
+            "",
+          ].join("\n"),
+        ],
         ["structurally broken YAML", `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}\ngroups: [\n`],
       ];
 
@@ -291,7 +317,7 @@ describe("TC-GRPDOC-003 an unreadable document or scope is scope-unavailable at 
   });
 });
 
-describe("TC-GRPDOC-004 an unknown group key is refused at exit 1", () => {
+describe("TC-GRPDOC-004 the one refusal rule holds on every group-scoped surface", () => {
   test("projects list --project refuses an undeclared key with projects.unknown-group", async () => {
     const fixture = await twoMemberFixture("grpdoc-004");
     try {
@@ -310,29 +336,62 @@ describe("TC-GRPDOC-004 an unknown group key is refused at exit 1", () => {
       fixture.dispose();
     }
   });
+
+  test("queue and status refuse an undeclared key on an absent configuration too", async () => {
+    const fixture = await twoMemberFixture("grpdoc-004-empty");
+    try {
+      // No configuration document at all: the explicit key is still refused on
+      // every scoped surface — "not configured" is never "no work" (F-1/F-2).
+      const runs = [
+        await fixture.a.run(["projects", "list", "--project", "anything", "--json"]),
+        await fixture.a.run(["queue", "list", "--project", "anything", "--json"]),
+        await fixture.a.run(["status", "--project", "anything", "--json"]),
+      ];
+      for (const run of runs) {
+        expect(run.exitCode).toBe(1);
+        expect(errorCodeOf(run)).toBe("projects.unknown-group");
+        expect(envelopeOf(run)?.data).toBeUndefined();
+      }
+
+      // A declared zero-group document is the same refusal for an explicit key.
+      writeConfig(fixture.a, `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}\ngroups: []\n`);
+      for (const run of [
+        await fixture.a.run(["projects", "list", "--project", "anything", "--json"]),
+        await fixture.a.run(["queue", "list", "--project", "anything", "--json"]),
+        await fixture.a.run(["status", "--project", "anything", "--json"]),
+      ]) {
+        expect(run.exitCode).toBe(1);
+        expect(errorCodeOf(run)).toBe("projects.unknown-group");
+      }
+    } finally {
+      fixture.dispose();
+    }
+  });
 });
 
-describe("TC-GRPDOC-005 absent or empty configuration is a valid empty listing at exit 0", () => {
-  test("an absent document, an empty groups[] document, the flipped default, and the alias", async () => {
+describe("TC-GRPDOC-005 an explicit --project on an absent/empty document is refused", () => {
+  test("the scoped form refuses while the unscoped default keeps the empty listing", async () => {
     const fixture = await twoMemberFixture("grpdoc-005");
     try {
-      // Absent document: no config file at all.
+      // Absent document: an explicit key is not declared, so it is refused.
       const absent = await fixture.a.run(["projects", "list", "--project", "anything", "--json"]);
-      expect(absent.exitCode, absent.stderr).toBe(0);
-      expect(groupsOf(absent)).toEqual([]);
+      expect(absent.exitCode).toBe(1);
+      expect(errorCodeOf(absent)).toBe("projects.unknown-group");
+      expect(envelopeOf(absent)?.data).toBeUndefined();
 
-      // Empty groups[] document: legitimate zero-group truth.
+      // The unscoped default form is the valid opt-in empty listing at exit 0.
+      const absentDefault = await fixture.a.run(["projects", "list", "--json"]);
+      expect(absentDefault.exitCode, absentDefault.stderr).toBe(0);
+      expect(groupsOf(absentDefault)).toEqual([]);
+
+      // Empty groups[] document: legitimate zero-group truth, same two rules.
       writeConfig(fixture.a, `schema: ${PROJECT_GROUPS_CONFIG_SCHEMA}\ngroups: []\n`);
       const empty = await fixture.a.run(["projects", "list", "--project", "anything", "--json"]);
-      expect(empty.exitCode, empty.stderr).toBe(0);
-      expect(groupsOf(empty)).toEqual([]);
-
-      // After the rename the default form is the group envelope.
-      const groups = await fixture.a.run(["projects", "list", "--json"]);
-      expect(groups.exitCode, groups.stderr).toBe(0);
-      const groupsData = dataOf(groups);
-      expect(Array.isArray(groupsData.groups)).toBe(true);
-      expect(groupsData.projects).toBeUndefined();
+      expect(empty.exitCode).toBe(1);
+      expect(errorCodeOf(empty)).toBe("projects.unknown-group");
+      const emptyDefault = await fixture.a.run(["projects", "list", "--json"]);
+      expect(emptyDefault.exitCode, emptyDefault.stderr).toBe(0);
+      expect(groupsOf(emptyDefault)).toEqual([]);
 
       // The alias alone keeps the delivered flat payload reachable (C-2).
       const flat = await fixture.a.run(["projects", "list", "--flat", "--json"]);

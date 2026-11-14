@@ -166,7 +166,7 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
       homeDirectory: home,
       workingName: "delivery-os",
     });
-    const program = composer(SYNTHETIC_BRAND, { command: "status" });
+    const program = composer(SYNTHETIC_BRAND, { command: "status", groupScoped: false });
     rmSync(checkout, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
     expect(program.commands.projects).toBeDefined();

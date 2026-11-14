@@ -111,6 +111,10 @@ describe("TC-GRPRO-001 group and flat reads write nothing beyond the permitted s
         ["projects", "list", "--project", "platform", "--json"],
         ["projects", "list", "--flat", "--json"],
         ["repos", "list", "--json"],
+        // Group-scoped queue/status read per-checkout state only: no host-index
+        // maintenance on the group surface (GH-309 F-3, NFR-2).
+        ["queue", "list", "--project", "platform", "--json"],
+        ["status", "--project", "platform", "--json"],
       ] as const) {
         const run = await fixture.controller.run([...argv]);
         expect(run.exitCode, run.stderr).toBe(0);
@@ -175,9 +179,17 @@ describe("TC-GRPRO-001 group and flat reads write nothing beyond the permitted s
         projectGroupsConfigPathFor(fixture.controller),
         "schema: delivery.projects.groups.v1\ngroups: [\n",
       );
-      const invalid = await fixture.controller.run(["projects", "list", "--json"]);
-      expect(invalid.exitCode).toBe(1);
-      expect(snapshotDifferences(before, snapshotTree(fixture.host.hostRoot))).toEqual([]);
+      for (const argv of [
+        ["projects", "list", "--json"],
+        ["queue", "list", "--project", "platform", "--json"],
+        ["status", "--project", "platform", "--json"],
+      ] as const) {
+        const invalid = await fixture.controller.run([...argv]);
+        expect(invalid.exitCode, invalid.stderr).toBe(1);
+        expect(snapshotDifferences(before, snapshotTree(fixture.host.hostRoot))).toEqual([]);
+        // A classified failure writes no host index either (GH-309 F-3).
+        expect(hostIndexTextOf(fixture.host.hostRoot)).toBe(indexBefore);
+      }
 
       // Unavailable scope: an invocation outside every work tree.
       const outsideHarness = createProductionProjectsHarness({

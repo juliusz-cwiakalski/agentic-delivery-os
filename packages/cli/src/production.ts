@@ -745,11 +745,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? { state: "uncertain" }
         : { state: "resolved", projectIdentifier: marker.projectIdentifier };
     };
-    // The two read-only enumerations never maintain the index: both the group
-    // surface and the flat record set are list reads (GH-288 F-2, GH-309 F-7).
+    // The read-only surfaces never maintain the index: the group surface and
+    // the flat record set are list reads (GH-288 F-2, GH-309 F-7), and the
+    // group-scoped `queue`/`status` forms read per-checkout state only
+    // (GH-309 F-3, NFR-2, AC-NFR2-1). This holds on classified-failure paths
+    // too: the maintenance block runs before the handler, so it is gated here.
     const maintainsIndex =
       invocation?.command !== PROJECTS_COMMAND_FAMILY &&
-      invocation?.command !== REPOS_COMMAND_FAMILY;
+      invocation?.command !== REPOS_COMMAND_FAMILY &&
+      invocation?.groupScoped !== true;
     // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
     // reported once per state-opening invocation, moves nothing, deletes
     // nothing, and never changes the exit code. A migrated host emits nothing.
@@ -2611,10 +2615,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         workspace,
         ...(markerRepoKey === undefined ? {} : { markerRepoKey }),
       });
+      // An unlocated root-selected member carries the declaration in `root` and
+      // an empty `repoKey` — mirroring the unlocated repoKey-selected member's
+      // empty `root` — so the field named `repoKey` never carries a filesystem
+      // path (GH-309 F-7).
       const displayKey =
-        resolution.state === "located"
-          ? resolution.repoKey
-          : (resolution.repoKey ?? (member.kind === "root" ? member.root : member.repoKey));
+        resolution.state === "located" ? resolution.repoKey : (resolution.repoKey ?? "");
       const unobserved = (health: ProjectGroupMemberEntry["health"]): ProjectGroupMemberEntry =>
         projectGroupMemberEntry({
           repoKey: displayKey,
@@ -2723,30 +2729,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { ok: true, config: validated.config };
     };
 
-    /** The one host-index read every group-scoped read shares (no maintenance). */
-    const readProjectGroupsHostIndex = ():
-      | { readonly ok: true; readonly index: readonly HostIndexEntry[] }
-      | { readonly ok: false; readonly code: string; readonly summary: string } => {
+    /**
+     * The one host-index read every group-scoped read shares (no maintenance).
+     *
+     * The index is a resolution AID, never a membership source (GH-309 F-3,
+     * F-4): an unreadable or unparsable index is treated as empty, so a member
+     * that needs it classifies `unregistered` at exit 0 while root-selected or
+     * workspace-located members still resolve. Exit 2 stays reserved for an
+     * unreadable configuration document or invoking scope; no fourth identity
+     * exists on the group surface (spec F-5, PROJECT_GROUP_ERROR_CODES).
+     */
+    const readProjectGroupsHostIndex = (): readonly HostIndexEntry[] => {
       hostIndexAccess.countList();
       const indexRead = readHostIndexFile(hostRoot);
-      const indexPath = hostIndexDocumentPath(hostRoot);
-      if (indexRead.state === "unreadable") {
-        return {
-          ok: false,
-          code: "projects.registry-corrupt",
-          summary: `the host index at ${indexPath} is present but unreadable`,
-        };
-      }
-      const document =
-        indexRead.state === "present" ? parseHostIndexDocument(indexRead.text) : undefined;
-      if (indexRead.state === "present" && document === undefined) {
-        return {
-          ok: false,
-          code: "projects.registry-corrupt",
-          summary: `the host index at ${indexPath} is present but cannot be parsed`,
-        };
-      }
-      return { ok: true, index: document?.projects ?? [] };
+      if (indexRead.state !== "present") return [];
+      const document = parseHostIndexDocument(indexRead.text);
+      return document?.projects ?? [];
     };
 
     /** Observe one validated group's declared members in declared order. */
@@ -2849,9 +2847,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const configRead = readProjectGroupsConfiguration();
       if (!configRead.ok) return configRead;
       const groupsConfig = configRead.config;
-      if (groupsConfig.state === "empty") {
-        return { ok: true, data: { groups: [] } };
-      }
+      // An explicit --project is refused when the key is not declared, even
+      // when the document is absent or declares zero groups (GH-309 F-1/F-2,
+      // AC-F2-1, NFR-5): "not configured" is never rendered as "no work".
       if (groupKey !== undefined && !projectGroupDeclared(groupsConfig, groupKey)) {
         return {
           ok: false,
@@ -2859,12 +2857,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           summary: `project group "${groupKey}" is not declared by the configuration document`,
         };
       }
-      const indexRead = readProjectGroupsHostIndex();
-      if (!indexRead.ok) return indexRead;
+      // The unscoped default form keeps the empty listing for opt-in adoption.
+      if (groupsConfig.state === "empty") {
+        return { ok: true, data: { groups: [] } };
+      }
+      const index = readProjectGroupsHostIndex();
       const groups = selectProjectGroups(groupsConfig, groupKey);
       const entries: ProjectGroupEntry[] = [];
       for (const group of groups) {
-        entries.push(await observeProjectGroup(group, indexRead.index));
+        entries.push(await observeProjectGroup(group, index));
       }
       const aggregation = aggregateProjectMemberOutcomes(
         entries.flatMap((group) =>
@@ -2898,20 +2899,25 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const configRead = readProjectGroupsConfiguration();
       if (!configRead.ok) return configRead;
       const config = configRead.config;
-      if (config.state === "empty") {
-        return { ok: true, data: { groupKey, members: [] } };
-      }
-      const group = selectProjectGroups(config, groupKey)[0];
-      if (group === undefined || !projectGroupDeclared(config, groupKey)) {
+      // The scoped form always names a key, so an absent/zero-group document is
+      // the same refusal as any other undeclared key (GH-309 F-2, AC-F2-1).
+      if (!projectGroupDeclared(config, groupKey)) {
         return {
           ok: false,
           code: "projects.unknown-group",
           summary: `project group "${groupKey}" is not declared by the configuration document`,
         };
       }
-      const indexRead = readProjectGroupsHostIndex();
-      if (!indexRead.ok) return indexRead;
-      const observed = await observeProjectGroup(group, indexRead.index);
+      const group = selectProjectGroups(config, groupKey)[0];
+      if (group === undefined) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const index = readProjectGroupsHostIndex();
+      const observed = await observeProjectGroup(group, index);
       const members: ProjectScopedMemberWork[] = [];
       for (const memberEntry of observed.members) {
         const outcome = projectMemberOutcomeOfHealth(memberEntry.health);

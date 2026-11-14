@@ -134,7 +134,7 @@ describe("TC-GRPREG-001 repos is reachable from the root listing", () => {
       homeDirectory: home,
       workingName: "delivery-os",
     });
-    const program = composer(SYNTHETIC_BRAND, { command: "status" });
+    const program = composer(SYNTHETIC_BRAND, { command: "status", groupScoped: false });
     rmSync(checkout, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
     expect(program.commands.repos).toBeDefined();

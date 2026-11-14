@@ -155,7 +155,10 @@ describe("TC-GRPREN-003 the alias returns the delivered projects.v1 payload unch
         string,
         unknown
       >;
-      expect(normalized).toEqual(golden);
+      // C-2 is a byte claim, so compare the SERIALIZED payload in emitted key
+      // order (runId/timing live on the envelope and are excluded here). A
+      // structural toEqual would pass on key-order drift (GH-309 F-9).
+      expect(JSON.stringify(normalized)).toBe(JSON.stringify(golden));
 
       // Absence negatives: the alias is the flat payload, not a group record set.
       const serialized = JSON.stringify(data);

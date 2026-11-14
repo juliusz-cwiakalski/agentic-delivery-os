@@ -17,6 +17,7 @@ import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { join } from "node:path";
 import { probeDaemonSocket } from "../../packages/adapters/src/daemon/unix";
+import { hostIndexDocumentPath } from "../../packages/adapters/src/file/host-index-store";
 import type { DaemonComposition } from "../../packages/core/src/app/projects";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import { resolveDaemonSettings } from "../../packages/core/src/config/index";
@@ -456,6 +457,51 @@ describe("TC-GRPSURF-003 mixed tracker kinds classify not-yet-supported", () => 
       expect(byKey.get(fixture.b.repoKey)?.trackerKind).toBe("jira");
       expect(byKey.get(fixture.b.repoKey)?.health).toBe("not-yet-supported");
       expect(Object.hasOwn(dataOf(run), "partial")).toBe(false);
+    } finally {
+      fixture.dispose();
+    }
+  });
+});
+
+describe("F-4 a corrupt host index is an empty resolution aid on the group surface", () => {
+  test("index-dependent members classify unregistered at exit 0; others still resolve", async () => {
+    const fixture = createWorkspaceFixture("grp-corrupt-index");
+    try {
+      // No workspaceRoot: the repoKey-selected member can only be located by the
+      // index, while the root-selected member resolves from its identity marker.
+      writeProjectGroupsConfig(
+        fixture.harness,
+        projectGroupsDocument({
+          groupKey: "platform",
+          members: [
+            { selector: "repoKey", value: fixture.a.repoKey },
+            { selector: "root", value: fixture.b.root },
+          ],
+        }),
+      );
+      mkdirSync(projectStateRoot(fixture.host.hostRoot, fixture.b.repoKey), {
+        recursive: true,
+        mode: 0o700,
+      });
+      mkdirSync(fixture.host.hostRoot, { recursive: true });
+      writeFileSync(hostIndexDocumentPath(fixture.host.hostRoot), "{ not json\n");
+
+      // The group surface, the scoped read, and both group-scoped work reads all
+      // treat the corrupt index as empty and stay at exit 0 (GH-309 F-4).
+      for (const run of [
+        await fixture.harness.run(["projects", "list", "--json"]),
+        await scopedList(fixture.harness, "platform"),
+        await fixture.harness.run(["queue", "list", "--project", "platform", "--json"]),
+        await fixture.harness.run(["status", "--project", "platform", "--json"]),
+      ]) {
+        expect(run.exitCode, run.stderr).toBe(0);
+        expect(errorCodeOf(run)).toBeUndefined();
+      }
+
+      const members = membersOf(await scopedList(fixture.harness, "platform"));
+      const byKey = new Map(members.map((member) => [member.repoKey, member]));
+      expect(byKey.get(fixture.a.repoKey)?.health).toBe("unregistered");
+      expect(byKey.get(fixture.b.repoKey)?.health).not.toBe("unregistered");
     } finally {
       fixture.dispose();
     }

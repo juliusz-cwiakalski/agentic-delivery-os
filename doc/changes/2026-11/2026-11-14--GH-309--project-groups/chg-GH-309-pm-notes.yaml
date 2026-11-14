@@ -461,3 +461,47 @@ notes:
       the read-only audit must enumerate every surface that gained a flag."
     type: retro
     date: "2026-11-14"
+  - text: "Plan phase 7 'Close review-iteration-1 findings: scoped-refusal
+      semantics, group-read write budget, corrupt-index posture, validation and
+      envelope edges' complete: the primitive commit carrying this note
+      (messageSource=template, transport=none; hash assigned at commit time,
+      `git show --stat HEAD` on feat/GH-309/project-groups is the record).
+      F-1/F-2: an explicit --project that is not declared is refused with
+      projects.unknown-group at exit 1 on projects, queue, and status, including
+      on an absent document and a declared zero-group document; the unscoped
+      default forms keep the empty listing at exit 0. TC-GRPDOC-005 rewritten to
+      the refusal; the TC-GRPDOC-004 empty-configuration cell added for queue
+      and status in tests/behaviour/queue-status-project-scope.test.ts (and the
+      three-surface absent/zero-group cell in projects-config.test.ts). F-3: the
+      entrypoint invocation fact gains groupScoped (queue/status + --project);
+      production.ts gates composition-level host-index maintenance off for it,
+      so success and classified-failure paths write exactly the two permitted
+      side effects. TC-GRPRO-001 extended with queue/status --project success
+      and invalid-config failure cases; the index is byte-unchanged. F-4: an
+      unreadable/unparsable host index is an empty resolution aid; members that
+      need it classify unregistered at exit 0, with no projects.registry-corrupt
+      path on the group surface and exit 2 reserved for configuration/scope. A
+      group-surface test pins it (default, scoped, and queue/status forms).
+      F-5: a present-but-non-string workspaceRoot is projects.config-invalid
+      (TC-GRPDOC-002 variant). F-6: the duplicate-selector probe normalizes root
+      trailing separators exactly as resolution does (TC-GRPDOC-002 variant).
+      F-7: an unlocated root-selected member carries repoKey \"\" with the
+      declaration in root; the envelope test pins it. F-9: option (a) chosen —
+      the alias test compares the serialized normalized data against the
+      committed golden in emitted key order (the golden's two top-level keys
+      were reordered to the emitted order with the field set unchanged; C-2 spec
+      text was NOT edited). F-10 stays an accepted risk (no scan cap). Gates
+      (TMPDIR outside every work tree, on the repository filesystem):
+      typecheck green; the mandated 12-suite boundary gate 63 pass / 0 fail /
+      727 expect across 12 files; the non-behaviour chunk 2433 pass / 1 fail of
+      2434 across 308 files, where the single failure was an ENOENT on a
+      concurrently packed packages/core tarball in privacy-literals (the three
+      affected files re-ran 71 pass / 0 fail in isolation); lint exit 0 (84
+      warnings, 33 infos); format:check green (2301 files); delivery-os lint
+      GH-309 conforms. Scope note: the declared phase-7 file list understates
+      the seam — packages/cli/src/entrypoint.ts (the invocation fact),
+      tests/fixtures/projects/production.ts (mirror), and the two help suites'
+      composer calls are mechanically required; pm-notes rides this commit.
+      F-8 and the F-4 doc claims remain with @doc-syncer after the code agrees."
+    type: info
+    date: "2026-11-14"

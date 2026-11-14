@@ -46,14 +46,14 @@ export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRON
 export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
 
 /**
- * The invocation fact the entrypoint hands the composer (GH-288 F-3, DEC-5).
+ * The invocation fact the entrypoint hands the composer (GH-288 F-3, DEC-5;
+ * GH-309 F-3).
  *
- * The composition root needs the command token for exactly one decision: the
- * read-only `projects list` surface must not run store-opening maintenance. No
- * other behaviour may branch on it.
- */
-/**
- * The invoking command's facts, resolved before the composition runs.
+ * The composition root needs the command token and the group-scope fact for
+ * exactly one decision: a read-only surface must not run store-opening
+ * maintenance. The group surface (`projects list`) and the flat record set
+ * (`repos list`) are list reads, and the group-scoped `queue`/`status` forms
+ * (`--project`) are likewise read-only. No other behaviour may branch on it.
  *
  * `runId` is the invocation's one run identity: the composer wires it into
  * capture paths that must join the command-audit ledger, and `runCli` records
@@ -62,6 +62,8 @@ export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
 export type EntrypointInvocationFact = {
   readonly command: string;
   readonly runId?: string;
+  /** True when the invocation selects a group (`queue`/`status --project`). */
+  readonly groupScoped: boolean;
 };
 
 /** Composes the prompt-required program; help/version never calls it. */
@@ -138,6 +140,14 @@ const isGlobalFlag = (token: string): boolean =>
 
 const nonGlobalTokens = (argv: readonly string[]): readonly string[] =>
   argv.filter((token) => !isGlobalFlag(token));
+
+/**
+ * Whether the invocation is a group-scoped read (GH-309 F-3): the additive
+ * `queue list --project` and `status --project` forms read per-checkout state
+ * and must not maintain the host index.
+ */
+const isGroupScopedInvocation = (command: string, argv: readonly string[]): boolean =>
+  (command === "queue" || command === "status") && argv.includes("--project");
 
 /** Build the entrypoint surface without composing any command runtime. */
 export const createEntrypoint = (options: EntrypointOptions): Entrypoint => ({
@@ -287,7 +297,11 @@ export const runEntrypoint = async (
   const composed = (() => {
     try {
       return selectPromptRequiredProgram(
-        entrypoint.composeProgram(entrypoint.brand, { command, runId }),
+        entrypoint.composeProgram(entrypoint.brand, {
+          command,
+          runId,
+          groupScoped: isGroupScopedInvocation(command, argv),
+        }),
       );
     } catch {
       // A composition gap is reported as the containment identity, never as a
