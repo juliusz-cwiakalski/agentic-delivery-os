@@ -394,3 +394,70 @@ notes:
       item, all six plan phases now evidenced."
     type: info
     date: "2026-11-14"
+  - text: "Review iteration 1 verdict: FAIL — spec_compliance FAIL, plan_compliance
+      PASS; 0 critical, 3 high, 1 medium, 5 low, 1 info. Record:
+      code-review/review-iter-1.yaml. High findings: (F-1) a scoped `projects
+      list --project <key>` on an absent/empty document returns the empty
+      listing at exit 0 instead of refusing `projects.unknown-group` at exit 1;
+      (F-2) `queue list --project` / `status --project` do the same and echo the
+      requested groupKey with `members: []`, so 'no work' and 'no such group'
+      are indistinguishable; (F-3) group-scoped queue/status still run
+      composition-level host-index maintenance, including on classified-failure
+      paths, contradicting NFR-2/AC-NFR2-1/DoD-13. Medium: (F-4)
+      `projects.registry-corrupt` is reachable on the group surface although
+      the spec closes the identity set at three and restricts exit 2 to
+      configuration/scope. Low: non-string workspaceRoot silently dropped;
+      trailing-separator duplicate selectors pass; a path lands in `repoKey` for
+      an unlocated root member; the result-contract prose omits `repos` from the
+      exact-code kinds; the alias golden asserts structural equality rather than
+      bytes. Info: unbounded workspace scan."
+    type: risk
+    date: "2026-11-14"
+  - text: "DECISION (review F-1/F-2, supersedes the phase-2 pinned empty-config
+      semantics): an explicit `--project <key>` that is not declared is refused
+      with `projects.unknown-group` at exit 1 on EVERY scoped surface (projects,
+      queue, status), INCLUDING when the configuration document is absent or
+      declares zero groups. Rationale: NFR-5 forbids silent-empty outcomes and
+      the earlier pin manufactured exactly one — a caller could not distinguish
+      an unconfigured group from a group with no work. The unscoped default form
+      keeps its empty listing at exit 0 (opt-in adoption stays a valid state).
+      Test plan impact: TC-GRPDOC-005 is rewritten to assert the refusal, and
+      TC-GRPDOC-004 gains the empty-configuration cell for queue and status."
+    type: decision
+    date: "2026-11-14"
+  - text: "DECISION (review F-4): a corrupt or unreadable host index is treated as
+      an EMPTY resolution aid on the group surface, never as a fourth identity.
+      Members that need the index classify `unregistered` at exit 0; exit 2
+      stays reserved for an unreadable configuration document or invoking scope.
+      Rationale: the spec closes the group identity set at three and F-5
+      restricts exit 2; the aggregation vocabulary already has an honest
+      `unregistered` outcome, so no new identity is invented and the group walk
+      does not write the index it failed to read."
+    type: decision
+    date: "2026-11-14"
+  - text: "DECISION (review F-10, accepted risk): the workspace scan stays
+      unbounded in depth and entry count. Membership remains containment-safe
+      (configuration-only, no undeclared clone admitted), the scan runs only
+      inside an operator-declared `workspaceRoot`, and the spec declares no scan
+      bound. Recorded as an accepted local-configuration exposure rather than
+      remediated in this change."
+    type: decision
+    date: "2026-11-14"
+  - text: "REMEDIATION PLAN (review iteration 1): plan phase 7 added — the review
+      remediation phase — carrying F-1..F-9 (F-10 accepted above). Reopen
+      nothing upstream: the spec's AC-F2-1/F-2 are the authority and the code is
+      what diverged. F-8 (result-contract prose) and the F-4 doc claims stay
+      with @doc-syncer after the code changes, because current-truth
+      doc/spec/** must not be pre-edited before the code agrees."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: the green phase-6 battery passed while three contract-level
+      deviations were live. Cause: the plan's TC ownership assigned the empty-
+      configuration and read-only-audit cells to phases that shipped before the
+      scoping semantics were settled, so TC-GRPDOC-005 was written to bless the
+      then-pinned behaviour and TC-GRPRO-001 audited only the two list
+      commands. Improvement: when a change pins an error/refusal rule, the
+      test plan must carry one cell per scoped SURFACE (not per feature), and
+      the read-only audit must enumerate every surface that gained a flag."
+    type: retro
+    date: "2026-11-14"

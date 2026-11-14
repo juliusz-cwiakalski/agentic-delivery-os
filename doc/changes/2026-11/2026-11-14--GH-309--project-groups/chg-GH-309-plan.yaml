@@ -340,7 +340,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-309
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6]
+  phases: [1, 2, 3, 4, 5, 6, 7]
   escalationTriggers:
     - rename-code-committed-before-odr-0004-record-is-tracked
     - registry-repos-row-moved-to-delivery-before-the-rename-code
@@ -911,3 +911,77 @@ phases:
         role: producer
     doneArtifacts:
       trackerTransition: "GH-309 delivery complete: all six plan phases done, full gate battery green, naming boundary and M2-S18 bookkeeping recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Review remediation (added 2026-11-14 after review iteration 1)
+  # Commit: subject owned by the commit primitive (no hand-written subject).
+  #
+  # Goal: close the review-iteration-1 findings without disturbing the
+  # delivered contracts. F-10 is an accepted risk (pm-notes decision) and is
+  # explicitly NOT in scope.
+  #
+  # Obligations:
+  #  7.1 F-1/F-2 — an explicit `--project <key>` that is not declared is
+  #      refused with projects.unknown-group at exit 1 on every scoped surface
+  #      (projects list, queue list, status --project), including when the
+  #      configuration document is absent or declares zero groups. The unscoped
+  #      default form keeps its empty listing at exit 0.
+  #  7.2 F-3 — group-scoped queue/status invocations perform no composition-level
+  #      host-index maintenance, on success and on classified-failure paths;
+  #      exactly the two delivered permitted side effects remain.
+  #  7.3 F-4 — a corrupt/unreadable host index is an empty resolution aid on the
+  #      group surface (members that need it classify unregistered at exit 0);
+  #      no fourth identity, exit 2 stays configuration/scope only.
+  #  7.4 F-5 non-string workspaceRoot is projects.config-invalid; F-6 the
+  #      duplicate-selector probe normalizes trailing separators; F-7 an
+  #      unlocated root-selected member carries a key representation that is not
+  #      a filesystem path.
+  #  7.5 F-9 — the alias golden asserts the serialized payload, or C-2's claim is
+  #      reworded to field-for-field; whichever is chosen must be consistent
+  #      between the test and the spec.
+  #  7.6 Tests: TC-GRPDOC-005 rewritten to the refusal; TC-GRPDOC-004 gains the
+  #      empty-configuration cell for queue and status; TC-GRPRO-001 audited for
+  #      queue/status `--project` success and classified-failure; group-surface
+  #      test for the corrupt-index path; TC-GRPDOC-002 variants for a non-string
+  #      workspaceRoot and trailing-separator duplicates; envelope test pinned to
+  #      the F-7 contract.
+  #  7.7 No behavioural edit to doc/spec/** — F-8 and the F-4 doc claims land
+  #      through @doc-syncer after the code agrees.
+  #
+  # Bound: AC-F2-1, AC-F6-1, AC-NFR2-1, F-2, F-5, F-6, F-7, NFR-2, NFR-5,
+  # C-2, C-4, DoD-13.
+  # Done when: the full gate battery is green with the new cells, and review
+  # iteration 2 can re-verify every closed finding.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Close review-iteration-1 findings: scoped-refusal semantics, group-read write budget, corrupt-index posture, validation and envelope edges"
+    kind: delivery
+    summary: >-
+      Refuse an undeclared --project key with projects.unknown-group at exit 1
+      on every scoped surface, stop host-index maintenance for group-scoped
+      queue/status invocations, treat a corrupt host index as an empty
+      resolution aid on the group surface, harden the configuration validator
+      against a non-string workspaceRoot and trailing-separator duplicate
+      selectors, give an unlocated root-selected member a non-path key, tighten
+      the alias golden to the serialized payload, and extend the tests to cover
+      each closed finding.
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/domain/project-groups.ts
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/projects-config.test.ts
+        - tests/behaviour/queue-status-project-scope.test.ts
+        - tests/behaviour/projects-read-only-audit.test.ts
+        - tests/behaviour/projects-flat-alias.test.ts
+        - tests/behaviour/projects-groups-list.test.ts
+        - tests/structure/projects-groups-envelope.test.ts
+        - tests/golden/fixtures/projects-flat-alias.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/project-groups.ts
+        role: producer
