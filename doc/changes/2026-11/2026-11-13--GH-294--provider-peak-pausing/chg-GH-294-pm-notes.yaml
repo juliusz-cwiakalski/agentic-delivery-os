@@ -12,7 +12,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-14T00:02:00.571Z }
   quality_gates: { started: null, completed: 2026-11-14T00:15:25.897Z }
   dod_check: { started: null, completed: 2026-11-14T00:16:57.539Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-14T00:24:22.411Z }
 decisions:
   - text: "OQ-1 resolved by TDR-0028 (Proposed): no-nomination at admission is a
       classified pre-session refusal reusing
@@ -555,5 +555,15 @@ notes:
       reconciled with zero residual gaps (doc-syncer both runs; 9-page
       post-remediation alignment landed in 99c07362); non-gating observations
       N-1..N-4 disclosed for owner review at the PR."
+    type: "info"
+    date: "2026-11-14"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/316
+      (feat(GH-294): provider-aware peak pausing (M2-S17), head
+      feat/GH-294/provider-peak-pausing -> base main-tools, 30 commits, open,
+      NOT merged - merge authority CEO/human). TDR-0028/0029/0030 flagged
+      Proposed for owner acceptance at this review; non-gating observations
+      N-1..N-4 disclosed in the body. Issue labeled review and assigned to the
+      owner with a PR-link comment."
     type: "info"
     date: "2026-11-14"
