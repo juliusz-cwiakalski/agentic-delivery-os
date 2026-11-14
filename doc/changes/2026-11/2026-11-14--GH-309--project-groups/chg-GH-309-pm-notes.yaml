@@ -10,7 +10,7 @@ phases:
   delivery: { started: null, completed: 2026-11-14T16:35:35.260Z }
   system_spec_update: { started: null, completed: 2026-11-14T16:42:01.060Z }
   review_fix: { started: null, completed: 2026-11-14T17:42:58.639Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-14T17:56:49.456Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -543,5 +543,39 @@ notes:
       pass / 4 skip / 0 fail. Residual (see the RESIDUAL risk entry above):
       `projects.registry-corrupt` is a retained, currently unemitted contract
       identity."
+    type: info
+    date: "2026-11-14"
+  - text: "Review iteration 2 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS, 0 critical / 0 high / 0 medium / 3 low / 1 info. Record:
+      code-review/review-iter-2.yaml (committed in 8458aa40). F-1..F-9 closed in
+      dc8e6851 plus the c4dce585 doc corrections; F-10 accepted risk. Remaining
+      low residuals carried for follow-up, not blocking: `queue --project
+      --watch` still returns the unscoped stream; the change test plan still
+      describes the superseded TC-GRPDOC-005 empty-listing semantics; the
+      projects.registry-corrupt narrative above. Review phase completed."
+    type: resolved
+    date: "2026-11-14"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts. Commit-range gate:
+      ./scripts/lint-commit-range.sh --base main-tools → VERDICT PASS, base
+      main-tools, merge-base 13431e13, head 8458aa40, 24 commits in range, 0
+      offending commits, 0 distinct rules hit, commitlint resolved from the
+      repository-local configuration (not a vacuous skip). Aggregate battery:
+      lint exit 0 (84 pre-existing warnings / 33 infos, no errors); format:check
+      exit 0 (2301 files); typecheck exit 0 (six packages plus the tests/types
+      project); check:boundaries exit 0 (401 modules, 1217 dependencies,
+      ambient-globals clean, workspace-entrypoints clean, secret-read-boundary
+      clean); prompt-conformance 5 prompts clean; help-guide-coverage all
+      prompt-required commands covered; exports-parity 5 publishables pass attw.
+      Test stage: behaviour suites 5482 pass / 4 skip / 0 fail across all 732
+      files (run in letter-range chunks a-c, d-o, p-w); non-behaviour chunk 2434
+      pass / 0 fail across 308 files. A single aggregate `pnpm check` invocation
+      reported failures that were all environmental and were each disproved:
+      tests/checks/privacy-literals.test.ts failed a whole-tree snapshot
+      comparison because a concurrent writer changed the tree mid-run, and both
+      it (39 pass / 0 fail) and tests/checks/license-policy.test.ts (12 pass / 0
+      fail, one 5 s timeout on a 6.6 s scan) pass in isolation; three behaviour
+      files that timed out under multiplexed load pass in isolation (50 pass / 0
+      fail). No test was skipped or weakened and no gate configuration was
+      modified."
     type: info
     date: "2026-11-14"
