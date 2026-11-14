@@ -1,0 +1,202 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-309
+branch: feat/GH-309/project-groups
+status: PASS
+summary: >-
+  Re-review of HEAD c4dce585 after remediation commits dc8e6851 (code + tests)
+  and c4dce585 (doc/spec). Findings F-1, F-2, F-3, F-4, F-5, F-6, F-7, F-8 and
+  F-9 are closed: every scoped surface now refuses an undeclared --project with
+  projects.unknown-group at exit 1 on an absent/zero-group document while the
+  unscoped default keeps the empty listing (D1); group-scoped queue/status are
+  marked read-only at the entrypoint and no longer run composition-level
+  host-index maintenance on success or classified failure (D1/F-3); a corrupt
+  index is an empty resolution aid with no fourth identity and exit 2 reserved
+  for configuration/scope (D2); the validator rejects a present non-string
+  workspaceRoot and normalizes trailing separators exactly as resolution does;
+  an unlocated root-selected member now carries repoKey "" with the declaration
+  in root; and the alias golden asserts serialized key order in the true
+  GH-288 emitted order (projects, hostIndexRevision). The unbounded workspace
+  scan is accepted per D3. Three low residuals and one info item remain: the
+  queue --watch + --project combination still silently drops group scope
+  (untriaged), projects.registry-corrupt is a retained contract identity whose
+  current-truth narrative still claims a live refusal, and the change test plan
+  still describes the superseded TC-GRPDOC-005 empty-listing semantics. No
+  critical/high/medium finding remains. Note: the working tree carried one
+  pre-existing uncommitted pm-notes modification (the residual disclosure) at
+  review time, not authored by this review; the reviewed target is c4dce585.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-10
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:533
+    message: >-
+      `queue list --project <groupKey> --watch` still returns the unscoped live
+      watch stream: the handler branches on `--watch` (line 533) before parsing
+      the verb and flags, so the documented scoped grammar is accepted and
+      silently ignored. The remediation marks the invocation group-scoped at the
+      entrypoint (index maintenance skipped) but does not deliver group scoping.
+      No test pins the combination, and the pm-notes "F-10 accepted risk"
+      decision describes the unbounded workspace scan (iteration-1 F-11), so
+      this finding remains untriaged rather than accepted.
+    suggestion: >-
+      Refuse `--watch` together with `--project` (fallback.invocation at exit 1)
+      or apply the group scope to the watch stream, and add a grammar test. At
+      minimum, record an explicit PM decision accepting the unscoped watch so the
+      gap is a declared contract choice rather than an implicit one.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-result-contract.md:61
+    message: >-
+      `projects.registry-corrupt` is now an orphan identity: after D2 no group
+      surface emits it (readProjectGroupsHostIndex treats an unreadable or
+      unparsable index as empty) and the flat surface emits
+      `repos.registry-corrupt`, yet ERROR_TABLE, PROJECTS_ERROR_CODES, the
+      error-table row (line 268) and the projects-kind narrative still assert it
+      "refuses a present but unparsable host index at exit 2". The error-table
+      sync check stays green because it does not require a runtime emitter.
+    suggestion: >-
+      Retention is acceptable and preferable for now: PROJECTS_ERROR_CODES is an
+      exported closed three-tuple and state-scope.ts indexes [0] and [2], so
+      removing the middle member reshapes an exported contract and needs its own
+      ODR. Keep the row, but correct the current-truth narrative to mark it a
+      retained/reserved identity with no current emitter, point the live
+      flat-surface corrupt-index refusal at `repos.registry-corrupt`, and state
+      the group surface's empty-aid posture (D2). Retire it only through an
+      explicit contract change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-309--project-groups/chg-GH-309-test-plan.md:276
+    message: >-
+      The change test plan still defines TC-GRPDOC-005 as "Absent or empty
+      configuration → valid empty group listing at exit 0" (matrix line 133,
+      scenario line 276, adoption note line 299), while D1 and the rewritten
+      tests/behaviour/projects-config.test.ts require an explicit `--project` on
+      an absent/zero-group document to be refused with `projects.unknown-group`
+      at exit 1 and reserve the empty listing for the unscoped default form. The
+      implemented test was renamed; the plan artifact was not reconciled, so the
+      change's own test plan now contradicts its tests and its PM decision.
+    suggestion: >-
+      Update the TC-GRPDOC-005 title, steps and expected outcome (plus the line
+      27 and line 299 adoption wording) to the D1 two-rule semantics: unscoped
+      default = empty listing at exit 0; explicit `--project` on absent/zero-group
+      = `projects.unknown-group` at exit 1. Keep the AC-F2-1 "Covered" claim
+      honest against the rewritten cell.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-309--project-groups/chg-GH-309-plan.yaml:955
+    message: >-
+      Phase 7's structured block declares a scope.files list that omits files
+      actually changed (packages/cli/src/entrypoint.ts,
+      tests/fixtures/projects/production.ts, tests/behaviour/projects-help.test.ts,
+      tests/behaviour/repos-help.test.ts) and names files that were not touched
+      (commands/projects.ts, commands/queue.ts, commands/status.ts, edge.ts,
+      contracts/projects.ts, core index.ts); it also omits the
+      doneArtifacts/verification blocks that phases 1-6 carry. The pm-notes
+      phase-completion note discloses the seam, so completion evidence is sound;
+      `plan validate GH-309` returns valid.
+    suggestion: >-
+      On the next plan revision, align phase 7 scope with the delivered file set
+      and add the structured doneArtifacts/verification block so `plan diff`
+      reports clean phase-scope conformance. No remediation required now.
+    suppressed: false
+    published_url: null
+    published_at: null
+verification:
+  F-1: >-
+    CLOSED. readProjectGroups checks an explicit --project with
+    projectGroupDeclared before the empty-config short-circuit
+    (packages/cli/src/production.ts:2853); the unscoped default keeps
+    `{groups: []}` at exit 0. Pinned by TC-GRPDOC-005 (rewritten) and
+    TC-GRPDOC-004 (empty/zero-group cell, all three surfaces).
+  F-2: >-
+    CLOSED. readProjectGroupWorkFor refuses any undeclared key before selecting
+    the group (production.ts:2904), so absent/zero-group config yields
+    projects.unknown-group at exit 1 instead of an echoed groupKey with no work.
+  F-3: >-
+    CLOSED. EntrypointInvocationFact gains groupScoped, set from
+    queue/status + --project (entrypoint.ts:150,303); maintainsIndex also
+    requires `groupScoped !== true` (production.ts:756), and the legacy warning
+    is gated by the same fact. TC-GRPRO-001 now audits queue/status --project
+    success and invalid-config failure with a byte-unchanged index.
+  F-4: >-
+    CLOSED per D2. readProjectGroupsHostIndex returns [] for absent/unreadable/
+    unparsable index; members that need it classify unregistered at exit 0 and
+    exit 2 stays configuration/scope only. New group-surface test pins default,
+    scoped, queue and status forms against a corrupt index.
+  F-5: >-
+    CLOSED. validateGroup returns schemaFailure when workspaceRoot is present and
+    not a non-empty string (packages/core/src/domain/project-groups.ts); a
+    TC-GRPDOC-002 variant covers `workspaceRoot: 42`.
+  F-6: >-
+    CLOSED. selectorKeyOf normalizes root trailing separators with the exact
+    rule resolveProjectGroupMember uses (normalizeMemberRoot), so `/x` and `/x/`
+    collide; a TC-GRPDOC-002 variant covers it.
+  F-7: >-
+    CLOSED. An unlocated root-selected member carries repoKey "" and the
+    declaration in root (production.ts displayKey = resolution.repoKey ?? "");
+    the envelope test asserts repoKey "" plus root = declared path.
+  F-8: >-
+    CLOSED. feature-result-contract.md now lists `repos` in the exact-code
+    kinds and the containment list (commit c4dce585).
+  F-9: >-
+    CLOSED. The alias test compares JSON.stringify(normalized) to the golden in
+    emitted key order; the golden's top-level order was corrected to
+    {projects, hostIndexRevision}, which matches the GH-288 main-tools emitted
+    order, so no C-2 drift is blessed.
+  F-10: >-
+    OPEN. queue --watch drops group scope (see F-10 above); the pm-notes
+    "F-10 accepted risk" decision covers the workspace scan, not this finding.
+  F-11: >-
+    CLOSED AS ACCEPTED RISK. The unbounded workspace scan is D3; recorded as an
+    accepted local-configuration exposure in pm-notes.
+  F-12: >-
+    CLOSED/BOOKKEEPING. Phase 7 was added and carries a pm-notes completion
+    entry; the remaining phase-7 scope declaration imprecision is tracked as
+    F-15 (info).
+gates:
+  - "typecheck: green (pnpm typecheck, all six packages + tests/types)"
+  - "affected behaviour/structure suites: 35 pass / 0 fail (6 files), 19 pass / 0 fail (help/entrypoint, 5 files), 8 pass / 0 fail (host-index/performance, 2 files)"
+  - "error-table-sync: OK (entries=135, documented=135)"
+  - "plan validate GH-309: valid; readyForDevelopment=true"
+  - "biome lint + format: clean on all changed source/test files"
+  - "plan diff GH-309 --against main-tools: input.value.rejected (repository diff unreadable in this environment); not a finding"
+reviewed_at: 2026-11-14T17:42:08Z
+next_step: >-
+  PROCEED. No critical/high/medium finding remains and the delivered contracts
+  match D1/D2/D3. Before merge, triage the two low items that are not yet a
+  recorded decision — either fix or explicitly accept F-10 (queue --watch +
+  --project), and reconcile F-13's retained-identity narrative and F-14's test
+  plan wording. F-15 is informational only.
