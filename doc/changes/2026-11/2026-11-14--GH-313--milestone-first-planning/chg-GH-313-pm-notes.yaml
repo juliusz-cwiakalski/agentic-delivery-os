@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-14T23:44:41.425Z }
   quality_gates: { started: null, completed: 2026-11-14T23:45:01.248Z }
   dod_check: { started: null, completed: 2026-11-14T23:46:03.613Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-14T23:49:59.710Z }
 decisions:
   - text: "Milestone-first enforcement is event-driven: the check evaluates newly
       created/edited `change` issues without a milestone and flags them; a
@@ -277,4 +277,11 @@ notes:
       tests and tests that mutate the worktree, not a defect introduced by
       GH-313; recorded rather than waived."
     type: risk
+    date: "2026-11-15"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/319 — base
+      main-tools, head feat/GH-313/milestone-first-planning, created by
+      @pr-manager at reviewed head c406fbce. Left open for review; merge
+      authority is the CEO (Mode A) or the human via batch-deliver.sh (Mode B)."
+    type: info
     date: "2026-11-15"
