@@ -597,7 +597,7 @@ Low impact, and the surface is public by design. The check posts a static commen
 | 32 | pm-notes and distribution-marker specs | `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`, `doc/spec/features/feature-doc-distribution-marker.md` | UNCHANGED | The `milestone` key and the marker rule already cover the new surfaces |
 | 33 | Product code and command surface | `packages/**`, `.opencode/command/**` | UNCHANGED | No feature code, no command-surface change, no phase change |
 | 34 | Repository automation outside the new modules and the wiring rule | `scripts/**` (all other scripts) | UNCHANGED | No existing check or delivery script other than the ci-topology wiring-set extension of row 35 is modified or added to the aggregate chain, and no entry is added to `ADOS_DELIVERY_SCRIPTS` (the new modules of rows 11–12 are repository-internal, not distributable) |
-| 35 | CI topology module wiring | `scripts/checks/ci-topology.ts` | CHANGED | The scripts/checks wiring set is extended to read every `.github/workflows/*.yml` file (sorted names, fail-closed on an unreadable directory or file), so a module invoked by a named workflow job counts as wired; the existing `ci.yml` job, trigger, scan-job, and additions-only diff invariants are preserved unchanged |
+| 35 | CI topology module wiring | `scripts/checks/ci-topology.ts`, `tests/checks/ci-checks.test.ts` | CHANGED | The scripts/checks wiring set is extended to read every `.github/workflows/*.yml` file (sorted names, fail-closed on an unreadable directory or file), so a module invoked by a named workflow job counts as wired; the existing `ci.yml` job, trigger, scan-job, and additions-only diff invariants are preserved unchanged, and the wiring rule's non-vacuity coverage lives in the existing CI checks suite |
 
 ### Appendix C — Testability notes (for the test-plan writer)
 
@@ -680,7 +680,7 @@ The ticket's stated tasks map as: guide authoring → F-1; the ticket-creation r
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | spec-writer (DeepSeek V4.1 Flash) | Initial specification from GitHub issue #313 (M2-S20), the pm-notes decisions, the milestone corpus (backlog, ranking, pack indices, status snapshot), the `@pm`, `@spec-writer`, and `@bootstrapper` prompts, the change-specification template, the delivered pm-notes milestone key, and the repository's CI invariant contracts |
 | 1.1 | 2026-11-14 | spec-writer (DeepSeek V4.1 Flash) | DoR remediation revision: the canonical ordered contract v1 in Appendix C (14 rows, exemption > milestone > flag/event, the two marker-gated flag-write paths, closed write vocabulary), the corrected header clause, action-layer idempotency wording, Appendix B row 11/34 reconciliation, and DEC-10 seed alignment |
-| 1.2 | 2026-11-14 | coder (DeepSeek V4.1 Flash) | Delivery review iteration 2 remediation: Appendix B gains row 35 for the `ci-topology.ts` wiring-set extension and row 34 is reconciled to it; the milestone-title notation in F-1 is corrected |
+| 1.2 | 2026-11-14 | coder (DeepSeek V4.1 Flash) | Delivery review iteration 2 remediation: Appendix B gains row 35 for the `ci-topology.ts` wiring-set extension and its non-vacuity coverage, row 34 is reconciled to it, and the milestone-title notation in F-1 is corrected |
 
 ---
 

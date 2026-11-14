@@ -5,7 +5,8 @@
 # a new user-facing doc must be registered for the forbidden-literal scan;
 # revision 1.3 amendment: TP-Q2's premise was corrected during review — the
 # ci-topology wiring set now covers every workflow file, so phase 4 gains
-# scripts/checks/ci-topology.ts and obligation 4.6 is narrowed to preserve the
+# scripts/checks/ci-topology.ts plus its non-vacuity coverage in
+# tests/checks/ci-checks.test.ts and obligation 4.6 is narrowed to preserve the
 # existing ci.yml invariants). Authored against the remediated spec and test
 # plan revision 1.2 on branch feat/GH-313/milestone-first-planning.
 #
@@ -321,8 +322,10 @@ phases:
   #      the required bash and TS jobs, the forbidden-literal scan job, the
   #      pull_request target main-tools, the delivery push trigger, and the
   #      additions-only diff rule — are preserved unchanged. The workflow audit
-  #      is owned by the dedicated static suite. Follow .ai/rules/typescript.md
-  #      and the house style of existing checks and their tests.
+  #      is owned by the dedicated static suite; the wiring-set non-vacuity
+  #      coverage lives in tests/checks/ci-checks.test.ts. Follow
+  #      .ai/rules/typescript.md and the house style of existing checks and
+  #      their tests.
   #  4.7 Run the sweep once locally in read-only mode with a read-only
   #      credential; report the tmp/milestone-attachment-sweep.json path and
   #      its summary in the phase report, and make zero tracker writes. Phase 6
@@ -345,6 +348,7 @@ phases:
         - scripts/checks/milestone-attachment-github.ts
         - scripts/checks/ci-topology.ts
         - .github/workflows/ticket-milestone-check.yml
+        - tests/checks/ci-checks.test.ts
         - tests/checks/milestone-attachment.test.ts
         - tests/checks/milestone-attachment-integration.test.ts
         - tests/checks/milestone-sweep.test.ts
