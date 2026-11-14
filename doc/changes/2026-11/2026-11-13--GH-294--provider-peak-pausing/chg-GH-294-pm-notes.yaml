@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-13T21:20:05.593Z }
   review_fix: { started: null, completed: 2026-11-14T00:02:00.571Z }
   quality_gates: { started: null, completed: 2026-11-14T00:15:25.897Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-14T00:16:57.539Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "OQ-1 resolved by TDR-0028 (Proposed): no-nomination at admission is a
@@ -514,6 +514,24 @@ notes:
       as non-gating."
     type: "info"
     date: "2026-11-14"
+  - text: "DoD evidence addendum - plan phase 11 landing commit:
+      e5d4d4a115b89c952586b5b48f462a14c69c274d (docs(GH-294), staged exactly
+      feature-peak-pausing.md + pm-notes, all exclusion groups empty;
+      post-commit tree clean). Gate results as in the phase-11 note: lint GH-294
+      conforms; doc-conformance 11 pass / 0 fail; content-inventory 6 pass / 0
+      fail."
+    type: "info"
+    date: "2026-11-14"
+  - text: "DoD evidence addendum - plan phase 12 remediation commit:
+      c768d798eb63ccb318a5bf3edde91bfe32a2501b (docs(GH-294) template subject,
+      30 files +1618/-133, clean tree post-commit; ci-baseline-parity verified
+      green at this HEAD; delivery-os lint GH-294 conforms). Gate results as in
+      the phase-12 note: typecheck green; six GH-294 suites + composed-edge
+      suite 43 pass / 0 fail; full battery TMPDIR=$PWD/tmp/tmpdir pnpm check
+      8121 pass / 1 pre-commit transient (parity, green at commit) / 4 skip;
+      final phase-9 battery 8123 pass / 0 fail at HEAD 99c07362."
+    type: "info"
+    date: "2026-11-14"
   - text: "Quality gates green (phase 9): full battery TMPDIR=$PWD/tmp/tmpdir pnpm
       check exit 0 - 8123 pass / 4 skip / 0 fail across 1046 files, 69678
       expect() calls; boundaries clean (396 modules/1193 deps), ambient-globals
@@ -523,5 +541,19 @@ notes:
       6af61a40, head 99c07362), 0 offending, 0 rules hit, mode none; commitlint
       binary node_modules/.bin/commitlint, origin repository-local
       (refs/remotes/origin/main-tools)."
+    type: "info"
+    date: "2026-11-14"
+  - text: "DoD check (phase 10) PASS: all 9 prior lifecycle phases completed in the
+      registry; all 12 declared plan phases carry pm-notes evidence notes with
+      plan-phase id, commit hash (1-10 in-phase, 11-12 via addenda
+      e5d4d4a1/c768d798) and boundary gate results; all 7 spec ACs demonstrated
+      (review iteration 2 PASS - F-1..F-10 closed, composed-path proofs per AC:
+      AC-F1-1 nomination records+refusals, AC-F3-2 bounded-grace park, AC-F4-3
+      isolation matrix, AC-F5-4 classification-routed resume, AC-F6-5
+      falsifiable zero-spend, AC-F7-6 ledger events + status/brief surfaces,
+      AC-F8-7 declared degradation with parkClaimed=false); current-truth docs
+      reconciled with zero residual gaps (doc-syncer both runs; 9-page
+      post-remediation alignment landed in 99c07362); non-gating observations
+      N-1..N-4 disclosed for owner review at the PR."
     type: "info"
     date: "2026-11-14"
