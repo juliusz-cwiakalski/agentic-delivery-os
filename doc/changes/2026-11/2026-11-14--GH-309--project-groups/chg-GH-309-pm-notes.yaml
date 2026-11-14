@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-14T16:42:01.060Z }
   review_fix: { started: null, completed: 2026-11-14T17:42:58.639Z }
   quality_gates: { started: null, completed: 2026-11-14T17:56:49.456Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-14T17:57:55.374Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Superseding decision record for the `repos` name (required by ODR-0003
