@@ -6,15 +6,15 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-BOOTSTRAPPER
 status: Current
 created: 2026-03-10
-last_updated: 2026-06-27
+last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72"]
+  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-302"]
   guides:
     - "doc/guides/project-inception.md"
     - "doc/guides/onboarding-existing-project.md"
-summary: "Stateful @bootstrapper agent and /bootstrap command that run ADOS project inception end-to-end through a single multi-session, human-gated 8-phase workflow (phases 0–7) covering new and legacy projects alike."
+summary: "Stateful @bootstrapper agent and /bootstrap command that run ADOS project inception end-to-end through a single multi-session, human-gated 8-phase workflow (phases 0–7) covering new and legacy projects alike, wiring the agent-memory learning loop into the project at Phase 5."
 ---
 
 # Feature: Bootstrapper (`@bootstrapper` agent + `/bootstrap` command)
@@ -28,6 +28,8 @@ Inception produces the project's **knowledge base** — overview, spec, rules, a
 > **Superseded history.** GH-32 shipped a 6-phase "existing-project onboarding" flow that kept git-ignored state at `.ai/local/bootstrapper-context.yaml`. GH-71 redesigned the bootstrapper into the unified 8-phase inception model described here. The legacy 6-phase flow and `.ai/local/bootstrapper-context.yaml` are **gone**: no backward-compatibility, no migration.
 
 > **Changelog.** GH-72 added the **PRODUCE** step to legacy Phase 0 (tribal-knowledge extraction from repo docs + `git log`), completing the PRODUCE → CONSUME → GRADUATE loop wired by GH-71. Consume (Phase 0) and graduate (Phase 2) are unchanged.
+
+> **Changelog.** GH-302 wired the agent-memory learning loop into bootstrap Phase 5 — the memory tree scaffold (seeded empty), the `AGENTS.md` memory kernel section, coordinator and per-role instruction wiring, retro-note conventions, and the manual doctor checklist — extended the write allowlist by exactly `.ai/memory/**`, and made Phase 6 readiness fail and reopen Phase 5 on incomplete memory artifacts.
 
 ## Business Context
 
@@ -212,6 +214,7 @@ Safety rules: never store secrets; never modify existing source code; never over
 - **Inception guide (authority):** [doc/guides/project-inception.md](../../guides/project-inception.md)
 - **Onboarding guide (manual fallback):** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md)
 - **State template:** [doc/templates/inception-state-template.yaml](../../templates/inception-state-template.yaml)
+- **Memory bootstrap templates (Phase 5 learning loop):** the Memory Bootstrap Templates section of [doc/templates/README.md](../../templates/README.md)
 - **Tribal-knowledge template (PRODUCE output shape):** [doc/templates/tribal-knowledge-template.md](../../templates/tribal-knowledge-template.md)
 - **Design authority (tribal-knowledge taxonomy & graduation mapping):** [doc/decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md](../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md)
 - **Agent prompt:** `.opencode/agent/bootstrapper.md`
