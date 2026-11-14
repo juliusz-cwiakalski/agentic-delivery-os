@@ -20,6 +20,7 @@ import {
   type ArtifactWriter,
   type JobSummarySink,
   type MilestoneTrackerPort,
+  runEvaluation,
   runSweep,
   SWEEP_PAGE_SIZE,
   type TrackerComment,
@@ -28,6 +29,43 @@ import {
 } from "../../scripts/checks/milestone-attachment-runner";
 
 const ROOT = process.cwd();
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+
+/** The GitHub issues endpoint mixes pull requests into the issue list. */
+const loadPullRequestEntry = (): TrackerIssue => {
+  const parsed: unknown = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "tests/fixtures/milestone-attachment/tracker/issues--pull-request-no-milestone.json",
+      ),
+      "utf8",
+    ),
+  );
+  const first = Array.isArray(parsed) ? parsed[0] : undefined;
+  const entry = asRecord(first);
+  if (
+    entry === undefined ||
+    typeof entry.number !== "number" ||
+    (entry.state !== "open" && entry.state !== "closed")
+  ) {
+    throw new Error("invalid pull-request fixture");
+  }
+  const labels = Array.isArray(entry.labels)
+    ? entry.labels
+        .map((label) => asRecord(label)?.name)
+        .filter((name): name is string => typeof name === "string")
+    : [];
+  return {
+    number: entry.number,
+    state: entry.state,
+    labels,
+    milestone: null,
+    ...(Object.hasOwn(entry, "pull_request") ? { pullRequest: true } : {}),
+  };
+};
 
 const loadPage = (prefix: string, page: number): readonly TrackerIssue[] => {
   const parsed: unknown = JSON.parse(
@@ -278,5 +316,65 @@ describe("TC-SWEEP-002 sweep bounds", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe("pull-request entries are excluded", () => {
+  test("a pull request returned by the issues endpoint is not a sweep candidate", async () => {
+    const pullRequest = loadPullRequestEntry();
+    expect(pullRequest.pullRequest).toBe(true);
+    expect(pullRequest.milestone).toBeNull();
+    const normal: TrackerIssue = {
+      number: 5001,
+      state: "open",
+      labels: ["change"],
+      milestone: null,
+    };
+    const tracker = new PagedFakeTracker([[pullRequest, normal]]);
+    const directory = tempOutputDir();
+    try {
+      const result = await runSweep({
+        tracker,
+        summary: summarySink(),
+        writer: fileWriter(),
+        artifactPath: join(directory, "artifact.json"),
+      });
+      expect(result.artifact.totalInspected).toBe(1);
+      expect(result.artifact.openChangeCount).toBe(1);
+      expect(result.artifact.unattachedCount).toBe(1);
+      expect(result.artifact.unattachedIssueNumbers).toEqual([5001]);
+      expect(tracker.writeCalls).toEqual([]);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("a pull-request entry is out of scope for evaluation and writes nothing", async () => {
+    const pullRequest = loadPullRequestEntry();
+    const writes: string[] = [];
+    const tracker: MilestoneTrackerPort = {
+      readIssue: async () => pullRequest,
+      listComments: async () => [],
+      listMilestones: async () => [],
+      listIssues: async () => [],
+      addLabel: async (issueNumber, label) => {
+        writes.push(`addLabel:${issueNumber}:${label}`);
+      },
+      removeLabel: async (issueNumber, label) => {
+        writes.push(`removeLabel:${issueNumber}:${label}`);
+      },
+      createComment: async (issueNumber) => {
+        writes.push(`createComment:${issueNumber}`);
+      },
+    };
+    const result = await runEvaluation({
+      action: "opened",
+      issueNumber: pullRequest.number,
+      tracker,
+      summary: summarySink(),
+    });
+    expect(result.verdict).toBe("out-of-scope");
+    expect(result.writes).toEqual([]);
+    expect(writes).toEqual([]);
   });
 });

@@ -40,6 +40,9 @@ jobs:
         with:
           bun-version: "1.4.4"
 
+      # The adapter below imports the orchestration runner
+      # scripts/checks/milestone-attachment-runner.ts and the pure evaluation
+      # core scripts/checks/milestone-attachment.ts.
       - name: Evaluate the issue event
         if: github.event_name == 'issues'
         env:

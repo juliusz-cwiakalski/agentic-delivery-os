@@ -43,6 +43,16 @@ const parseMilestoneTitle = (value: unknown): string | null => {
   return asString(asObject(value)?.title) ?? null;
 };
 
+/**
+ * The repository issues endpoint returns pull requests too; every such entry
+ * carries a `pull_request` key. A pull request is never a change issue, so it
+ * is dropped before it can enter the parse or the sweep population.
+ */
+const isPullRequestEntry = (value: unknown): boolean => {
+  const entry = asObject(value);
+  return entry !== undefined && Object.hasOwn(entry, "pull_request");
+};
+
 const parseIssue = (value: unknown): TrackerIssue => {
   const issue = asObject(value);
   const number = asNumber(issue?.number);
@@ -55,6 +65,7 @@ const parseIssue = (value: unknown): TrackerIssue => {
     state,
     labels: parseLabelNames(issue?.labels),
     milestone: parseMilestoneTitle(issue?.milestone),
+    ...(isPullRequestEntry(value) ? { pullRequest: true } : {}),
     ...(asString(issue?.title) === undefined ? {} : { title: asString(issue?.title) }),
     ...(asString(issue?.body) === undefined ? {} : { body: asString(issue?.body) }),
     ...(asString(asObject(issue?.user)?.login) === undefined
@@ -144,7 +155,9 @@ export const createGithubTracker = (options: GithubAdapterOptions): MilestoneTra
         "GET",
         `/repos/${options.repository}/issues?state=all&labels=change&sort=created&direction=asc&per_page=${perPage}&page=${page}`,
       );
-      return asArray(raw).map(parseIssue);
+      return asArray(raw)
+        .filter((entry) => !isPullRequestEntry(entry))
+        .map(parseIssue);
     },
     addLabel: async (issueNumber, label) => {
       await request("POST", `${issuePath(issueNumber)}/labels`, { labels: [label] });

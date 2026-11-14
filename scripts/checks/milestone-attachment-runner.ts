@@ -23,6 +23,8 @@ export type TrackerIssue = {
   readonly state: "open" | "closed";
   readonly labels: readonly string[];
   readonly milestone: string | null;
+  /** Set by the adapter when the issues endpoint returned a pull request. */
+  readonly pullRequest?: boolean;
   readonly title?: string;
   readonly body?: string;
   readonly author?: string;
@@ -83,7 +85,7 @@ const normalise = (
 ): EvaluationInput => ({
   action,
   state: issue.state,
-  changeLabel: issue.labels.includes("change"),
+  changeLabel: issue.pullRequest !== true && issue.labels.includes("change"),
   exemption: issue.labels.includes(EXEMPTION_LABEL),
   milestone: issue.milestone !== null && issue.milestone.length > 0,
   flag: issue.labels.includes(FLAG_LABEL),
@@ -144,7 +146,7 @@ export type SweepRun = {
 };
 
 const isOpenChange = (issue: TrackerIssue): boolean =>
-  issue.state === "open" && issue.labels.includes("change");
+  issue.pullRequest !== true && issue.state === "open" && issue.labels.includes("change");
 
 const hasMilestone = (issue: TrackerIssue): boolean =>
   issue.milestone !== null && issue.milestone.length > 0;
@@ -156,7 +158,9 @@ export const runSweep = async (options: SweepOptions): Promise<SweepRun> => {
   const issues: TrackerIssue[] = [];
   for (let page = 1; ; page += 1) {
     const batch = await options.tracker.listIssues(page, SWEEP_PAGE_SIZE);
-    issues.push(...batch);
+    // The issues endpoint also returns pull requests; they are not change
+    // issues and never enter the inspected population.
+    issues.push(...batch.filter((issue) => issue.pullRequest !== true));
     if (batch.length < SWEEP_PAGE_SIZE) break;
   }
 

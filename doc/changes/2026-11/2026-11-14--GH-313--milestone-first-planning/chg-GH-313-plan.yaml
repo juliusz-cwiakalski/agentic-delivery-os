@@ -1,9 +1,13 @@
-# GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
-# (2026-11-14; DoR iteration 2 remediation; revision 1.2 amendment: phase 1
-# scope gains scripts/checks/forbidden-literals.registry.json plus obligation
-# 1.7, because a new user-facing doc must be registered for the
-# forbidden-literal scan). Authored against the remediated spec and test plan
-# revision 1.2 on branch feat/GH-313/milestone-first-planning.
+# GH-313 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# (2026-11-14; DoR iteration 2 remediation plus delivery review iteration 2;
+# revision 1.2 amendment: phase 1 scope gains
+# scripts/checks/forbidden-literals.registry.json plus obligation 1.7, because
+# a new user-facing doc must be registered for the forbidden-literal scan;
+# revision 1.3 amendment: TP-Q2's premise was corrected during review — the
+# ci-topology wiring set now covers every workflow file, so phase 4 gains
+# scripts/checks/ci-topology.ts and obligation 4.6 is narrowed to preserve the
+# existing ci.yml invariants). Authored against the remediated spec and test
+# plan revision 1.2 on branch feat/GH-313/milestone-first-planning.
 #
 # One ticket, one PR against main-tools, six plan phases: five @coder delivery
 # phases plus one PM-lane evidence phase. Every phase is an
@@ -37,12 +41,16 @@
 #     changed" (spec Appendix B rows 11 and 34): the new modules are
 #     repository-internal check surfaces, not in ADOS_DELIVERY_SCRIPTS and not
 #     in the aggregate chain.
-#   TP-Q2 — the existing invariant scanners stay unchanged (spec AC-F3-7,
-#     NFR-3). The new workflow's permissions, SHA pins, secret absence, and
-#     bypass-construct absence are owned by the dedicated static workflow suite
-#     tests/checks/milestone-workflow.test.ts plus its mutation proof; the
-#     scanner files ci-supply-chain.ts, ci-bindingness.ts, and ci-topology.ts
-#     are untouched.
+#   TP-Q2 — TP-Q2's original premise was corrected during delivery review:
+#     the existing invariant scanners keep their ci.yml invariants (spec
+#     AC-F3-7, NFR-3), but ci-topology's per-module wiring rule originally read
+#     only ci.yml and package.json. The new workflow invokes the three modules,
+#     so the wiring set is extended to every .github/workflows/*.yml file
+#     (sorted names, fail-closed) while ci-supply-chain.ts, ci-bindingness.ts,
+#     and ci-topology.ts's existing ci.yml job and trigger checks stay
+#     unchanged. The new workflow's permissions, SHA pins, secret absence, and
+#     bypass-construct absence remain owned by the dedicated static workflow
+#     suite tests/checks/milestone-workflow.test.ts plus its mutation proof.
 #   TP-Q5 — the evidence record lives in the change folder at
 #     chg-GH-313-milestone-evidence.md and is mirrored as a pm-notes
 #     notes: entry of type evidence (spec DoD-14, test plan TC-EVID-001/002).
@@ -60,8 +68,9 @@
 # SCOPE DISCIPLINE: no file outside the declared scopes may change, and the
 # branch's only other changes are the change-folder artifacts. No ticket and
 # no milestone is created by this change (NG-3). The aggregate gate is not
-# edited (C-1, NFR-2): package.json's check chain, scripts/install.sh, and the
-# existing invariant scanners stay untouched.
+# edited (C-1, NFR-2): package.json's check chain, scripts/install.sh,
+# ci-supply-chain.ts, and ci-bindingness.ts stay untouched; ci-topology.ts
+# changes only its scripts/checks wiring set to include every workflow file.
 #
 # LIFECYCLE PHASE 7 HANDOFF (system_spec_update, @doc-syncer; NOT plan scope):
 # Appendix B rows 25-31 — feature-milestone-governance.md (new),
@@ -304,10 +313,16 @@ phases:
   #      proof), and milestone-gate.test.ts (TC-GATE-001). Fixtures under
   #      tests/fixtures/milestone-attachment/{events,tracker,sweep,adversarial}.
   #  4.6 Do NOT edit package.json's check chain, scripts/install.sh,
-  #      ADOS_DELIVERY_SCRIPTS, ci-supply-chain.ts, ci-bindingness.ts, or
-  #      ci-topology.ts. The workflow audit is owned by the dedicated static
-  #      suite. Follow .ai/rules/typescript.md and the house style of existing
-  #      checks and their tests.
+  #      ADOS_DELIVERY_SCRIPTS, ci-supply-chain.ts, or ci-bindingness.ts.
+  #      ci-topology.ts changes in exactly one way: its scripts/checks wiring set
+  #      is extended to read every .github/workflows/*.yml file (sorted names,
+  #      fail-closed on an unreadable directory or file), so a module invoked by
+  #      a named workflow job counts as wired. Its existing ci.yml invariants —
+  #      the required bash and TS jobs, the forbidden-literal scan job, the
+  #      pull_request target main-tools, the delivery push trigger, and the
+  #      additions-only diff rule — are preserved unchanged. The workflow audit
+  #      is owned by the dedicated static suite. Follow .ai/rules/typescript.md
+  #      and the house style of existing checks and their tests.
   #  4.7 Run the sweep once locally in read-only mode with a read-only
   #      credential; report the tmp/milestone-attachment-sweep.json path and
   #      its summary in the phase report, and make zero tracker writes. Phase 6
@@ -328,6 +343,7 @@ phases:
         - scripts/checks/milestone-attachment.ts
         - scripts/checks/milestone-attachment-runner.ts
         - scripts/checks/milestone-attachment-github.ts
+        - scripts/checks/ci-topology.ts
         - .github/workflows/ticket-milestone-check.yml
         - tests/checks/milestone-attachment.test.ts
         - tests/checks/milestone-attachment-integration.test.ts

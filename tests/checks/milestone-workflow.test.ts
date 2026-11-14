@@ -316,4 +316,10 @@ describe("TC-WF-003 mutation proof and scanner boundary", () => {
     expect(read("scripts/checks/ci-bindingness.ts")).toContain("ts-");
     expect(read("scripts/checks/ci-topology.ts")).toContain("ts-");
   });
+
+  test("the issues listing drops pull-request entries before parsing", () => {
+    const source = read("scripts/checks/milestone-attachment-github.ts");
+    expect(source).toContain('Object.hasOwn(entry, "pull_request")');
+    expect(source).toContain(".filter((entry) => !isPullRequestEntry(entry))");
+  });
 });
