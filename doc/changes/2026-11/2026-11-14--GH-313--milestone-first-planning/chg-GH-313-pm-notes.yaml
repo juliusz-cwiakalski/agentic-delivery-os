@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-14T22:24:41.075Z }
   review_fix: { started: null, completed: 2026-11-14T23:44:41.425Z }
   quality_gates: { started: null, completed: 2026-11-14T23:45:01.248Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-14T23:46:03.613Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Milestone-first enforcement is event-driven: the check evaluates newly

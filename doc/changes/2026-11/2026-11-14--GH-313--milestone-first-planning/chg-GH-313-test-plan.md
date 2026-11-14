@@ -1403,9 +1403,9 @@ Populated during delivery (phases 6/9/10). Evidence runs and review-time items a
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| Full suite (all 35 TCs) | 2026-11-14 | PASS | `bun test`: 8299 pass / 4 skip / 0 fail. |
-| MILESTONE / PLANNING suites | 2026-11-14 | PASS | Nine suites — `milestone-guide`, `milestone-prompts`, `milestone-artifacts`, `milestone-workflow`, `milestone-gate`, `milestone-attachment`, `milestone-attachment-integration`, `milestone-sweep`, `planning-truth`: 99 pass / 0 fail. |
-| TC-QG-001 (forbidden literals) | 2026-11-14 | PASS | `bun run scripts/checks/forbidden-literals.ts`: 5/5 scope classes checked, 0 violations. |
-| TC-GUIDE-005 (distribution guard) | 2026-11-14 | PASS | `bash scripts/.tests/test-doc-distribution.sh`: green. |
-| TC-PROMPT-001…004 (prompt/help conformance) | 2026-11-14 | PASS | `prompt-conformance` and `help-guide-coverage` checks green. |
-| TC-QG-001 (commit history) | 2026-11-14 | PASS | `./scripts/lint-commit-range.sh --base main-tools`: PASS. |
+| Full suite (all 35 TCs) | 2026-11-15 | PASS (with one recorded environment race) | `bun test`: 8305 pass / 4 skip / 1 fail. The single failure is TC-EXIT-002 (`exit-code-literals`, live-tree clean) and TC-PRIVACY-020 in an earlier run of the same class: another suite in the same parallel run checks out branches and regenerates `.ados-claude`, so the worktree is transiently dirty. Both pass in isolation (`exit-code-literals` 15/15, `privacy-literals` 39/39). Pre-existing suite-wide race, not a GH-313 defect. |
+| MILESTONE / PLANNING suites | 2026-11-15 | PASS | Ten suites — `milestone-guide`, `milestone-prompts`, `milestone-artifacts`, `milestone-workflow`, `milestone-gate`, `milestone-attachment`, `milestone-attachment-integration`, `milestone-sweep`, `planning-truth`, `ci-checks`: green at HEAD. |
+| TC-QG-001 (forbidden literals) | 2026-11-15 | PASS | `bun run scripts/checks/forbidden-literals.ts`: 5/5 scope classes checked, 0 violations. |
+| TC-GUIDE-005 (distribution guard) | 2026-11-15 | PASS | `bash scripts/.tests/test-doc-distribution.sh`: green. |
+| TC-PROMPT-001…004 (prompt/help conformance) | 2026-11-15 | PASS | `prompt-conformance` and `help-guide-coverage` checks green. |
+| TC-QG-001 (commit history) | 2026-11-15 | PASS | `./scripts/lint-commit-range.sh --base main-tools`: PASS. |
