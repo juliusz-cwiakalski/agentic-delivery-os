@@ -1166,6 +1166,20 @@ the project family separately.
 - Depends on: M1-S12.
 
 ### M2-S9 Memory conventions in bootstrap templates
+- Ticket: GH-302 (milestone M2)
+- Progress: delivered by GH-302 — the memory tree scaffold (index, one
+  entry-point README per resident agent role, lessons, tacit — seeded empty),
+  the AGENTS.md memory kernel section with all twelve content classes and no
+  record-schema fields, the coordinator capture/promotion wiring and the
+  companion per-role expectations in the installed instruction files, the
+  retro-note conventions (append-only notes with a generated index), the
+  manual doctor checklist (documentation only until memory lint lands), the
+  manual adoption checklist for previously bootstrapped projects, the
+  `.ai/memory/**` write-allowlist extension stated identically across the
+  bootstrapper prompt, the inception guide, and SPEC-BOOTSTRAPPER, Phase 6
+  readiness fail-and-reopen for incomplete memory artifacts, and PDR-0004
+  keeping the meta-learning reference repo-internal with self-contained
+  installed conventions.
 - Goal: Memory conventions wired into bootstrap templates so new projects start with the learning loop in place.
 - Tasks: adoption checklist into the bootstrap flow and templates:
   memory tree scaffold, AGENTS.md kernel section, per-agent entry

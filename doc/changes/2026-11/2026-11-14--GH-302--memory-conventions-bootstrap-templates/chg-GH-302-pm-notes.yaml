@@ -329,3 +329,30 @@ notes:
       4 skip)."
     type: info
     date: "2026-11-14"
+  - text: "PLAN PHASE 4 COMPLETE (commit b449042a): verification suites landed —
+      tests/structure/memory-bootstrap-templates.test.ts (new bun:test, 18
+      cases incl. the TC-MEMALIGN-004 self-containment scan; read-only tree
+      assertions, no fixtures, anchors pinned to the plan's nine filenames;
+      covers TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002 with the schema-shaped-
+      construct anchor, TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002 with the
+      GH-301 expiry comment naming it owner of the deliberate update,
+      TC-MEMALIGN-001/002/003 following the tests/checks/decision-record.test.ts
+      pattern, TC-MEMBUDGET-001 line counts, TC-MEMRESUME-001, the TC-MEMFLOW-001
+      prompt part, and the TC-MEMCONT-003 Phase 6 readiness enumeration) and
+      scripts/.tests/test-inception-doc-consistency.sh Check 7 (backticked-entry
+      extraction normalized across the three carrier formats; allowlist identity
+      vs the golden 23-token set [22 bullets, golden set lives only here and
+      updates deliberately in review]; byte-identical confirmation sentence;
+      Phase 6 readiness enumeration + fail-and-reopen in prompt and guide) plus
+      the nine memory templates in Check 4's index loop. Non-vacuity probed:
+      each carrier extracts exactly 23 tokens identical to the golden set, and
+      a perturbed-golden probe confirms the diff fires. TC-MEMALIGN-003 is GREEN
+      at this boundary (phase 3 landed the PDR file). TESTS: bun test tests/
+      structure/memory-bootstrap-templates.test.ts green (18/18); bash
+      scripts/.tests/test-inception-doc-consistency.sh green (exit 0);
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green (8141 pass / 0 fail / 4 skip —
+      the new suite joined the bun tier). Authoring-rule compliance: biome
+      format applied to the new suite; no inventory row needed (inventory.json
+      tracks modules only)."
+    type: info
+    date: "2026-11-14"
