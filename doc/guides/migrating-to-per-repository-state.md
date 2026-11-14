@@ -9,7 +9,7 @@ created: 2026-11-11
 owners: ["engineering"]
 summary: "One-step, reversible move of an existing single delivery store into a per-repository project state root."
 links:
-  related_changes: ["GH-288"]
+  related_changes: ["GH-288", "GH-309"]
 ---
 
 # Migrating to Per-Repository Delivery State
@@ -41,6 +41,27 @@ An existing installation has one populated store directly at the host root.
 Migration is **one directory move**, performed by an operator. Nothing migrates
 automatically, no command performs the move, and no state file is rewritten.
 
+## Names you will use
+
+Three command names cover the tree above, and each means exactly one thing:
+
+- `repos list` is the **flat record set**: one row per managed checkout on the
+  host, with the repo key, the checkout root, and the state location under
+  `<host root>/projects/<key>`.
+- `projects list` is the **group surface**: the configured groups with their
+  member repositories, their health, and their state.
+- `projects list --flat` is the **transition alias**: it returns the delivered
+  `projects.v1` payload (`data.projects[]`, `projectKey`, `hostIndexRevision`)
+  unchanged, so a script written against the earlier flat payload keeps
+  working while consumers move to `repos list`. The alias retires at the M3
+  boundary.
+
+Migration itself is unchanged and stays one-step and operator-run: one
+directory move, once per host. The superseding decision record
+[ODR-0004](../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md)
+pins the rename, and the alias is the transition path — nothing has to change
+on the day you migrate.
+
 ## Choose the primary checkout
 
 Designate exactly **one** checkout as the primary project and run any state-opening
@@ -55,7 +76,7 @@ inference presented as evidence. The primary project keeps the history it had.
 
 1. Stop the foreground coordinator (and any resident daemon) so nothing writes
    while the files move.
-2. Resolve the primary project's state root with `projects list --json` — its
+2. Resolve the primary checkout's state root with `repos list --json` — its
    `stateLocation` is `<host root>/projects/<project key>`.
 3. Move every artifact named above from the host root into that directory,
    keeping its name and its mode. The artifact set moves as one unit: the ledger,
@@ -67,7 +88,7 @@ inference presented as evidence. The primary project keeps the history it had.
 
 ## Verify
 
-- `projects list` shows the primary project and its state location.
+- `repos list` shows the primary checkout and its state location.
 - A read command inside the primary checkout serves the moved history: the
   audit chain still verifies, `retro` still reads its sidecar, and the phase
   position is unchanged.
@@ -132,12 +153,13 @@ marker is authoritative: deleting it mints a new key, and the moved state would
 no longer be found. Keep it, and keep it out of version control only if your
 tooling already ignores the git directory.
 
-## What `projects list` writes
+## What `repos list` writes
 
-`projects list` is read-only with respect to delivery state: it never writes the
+`repos list` is read-only with respect to delivery state: it never writes the
 host index, never prunes, never replaces a corrupt index, never creates a project
 state root, and never changes a phase document, a queue record, or any other
-store content. Two side effects are permitted and bounded: on a checkout without
+store content. The `projects list --flat` alias is the same read and carries the
+same bounds. Two side effects are permitted and bounded: on a checkout without
 an identity marker, scope resolution mints that marker inside the checkout's git
 common directory (the same create-once file every command needs), and reading a
 project's handover evidence opens its store read-only, which lets the store
@@ -148,7 +170,7 @@ remove a leftover `*.tmp` sibling. Neither can create or change state.
 - **A migration warning keeps appearing.** The host root still holds at least one
   store artifact. Re-check the artifact list above; the host index and the owner
   hold never trigger it.
-- **A project disappeared from `projects list`.** Its recorded checkout root no
+- **A project disappeared from `repos list`.** Its recorded checkout root no
   longer exists, so the row is not reported; the index entry stays until the next
   state-opening invocation prunes it. The state root it referenced is never
   deleted by pruning.

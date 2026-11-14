@@ -1382,6 +1382,23 @@ the project family separately.
 - Depends on: M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, and the owner-hold semantics (#280).
 
 ### M2-S18 Project groups
+- Ticket: GH-309 (milestone M2)
+- Progress: delivered by GH-309 — the project configuration document declaring
+  member repositories (mixed tracker kinds accepted, `not-yet-supported`
+  mandatory for an unimplemented kind) with classified load-time validation
+  (`projects.config-invalid`, `projects.unknown-group`,
+  `projects.scope-unavailable`); configuration-only membership with an optional
+  `workspaceRoot` that only locates declared members and never admits an
+  undeclared clone; the `project-groups.v1` group surface (`projects list`)
+  with member health and state; group-scoped `queue list --project <groupKey>`
+  and `status --project <groupKey>` reads over per-checkout state with one
+  classified partial result and no group-scoped store; the flat record set
+  moved to `repos list` under `repos.v1` with the three `repos.*` identities;
+  the `projects list --flat` byte-compat alias returning the delivered
+  `projects.v1` payload until the M3 boundary; the `repos` root listing mount
+  with its help entry and reference page; and the naming boundary stated across
+  help, reference pages, and the migration guide, lawful under the superseding
+  decision record ODR-0004.
 - Goal: A project is a configured group of repositories that belong together,
   so the tooling can enumerate groups with their members and scope delivery
   views per project, with a workspace directory usable as an optional
@@ -1406,7 +1423,7 @@ the project family separately.
   admits an undeclared clone, plus the scoped-read grammar
   `queue list --project <groupKey>` and `status --project <groupKey>`;
   (f) the superseding decision record for the `repos` name before the registry
-  row moves to Delivery. This rename is S18 code work and not current truth.
+  row moves to Delivery. This rename is S18 code work, delivered by GH-309.
 - AC:
   1. A project with two member repositories in one workspace directory is discoverable by registering that directory.
   2. The same project configured with repositories in unrelated directories behaves identically, because a workspace is optional.

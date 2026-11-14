@@ -288,3 +288,106 @@ notes:
       tests/structure/queue-binding-derivation.test.ts was NOT edited."
     type: info
     date: "2026-11-14"
+  - text: "Plan phase 5 'Rename the flat record set to repos list with the --flat
+      alias, repos.* identities, and the root registration mount' complete:
+      commit 3229a2e42d90c35944ec6f80592e3b0937bbc4c7 (53 files, +1819/-240;
+      primitive template subject named the pm-notes path because it sorted
+      first; messageSource=template, transport=none, safety.findings empty,
+      telemetry emitted). Obligations 5.1-5.6 verified. 5.1: new
+      packages/cli/src/commands/repos.ts and output/repos-text.ts, wired in
+      commands/index.ts, edge.ts, production.ts and output/index.ts; repos.v1
+      data.repos[] carries exactly repoKey/root/stateLocation/daemonReachable/
+      handoverState plus hostIndexRevision, the text table is sorted by repo
+      key, and unbound scope stays one bounded warning at exit 0 with no row.
+      5.2: default projects list returns project-groups.v1; `--flat` returns
+      the delivered projects.v1 payload unchanged (golden byte-compat with
+      absence negatives: no groupKey/repoKey/data.groups/data.repos); `--flat`
+      + `--project` is refused at exit 1 under input.value.rejected (not a new
+      projects.* identity); alias failures classify under repos.*. 5.3:
+      repos.identity-unreadable (exit 1), repos.registry-corrupt (exit 2) and
+      repos.state-unavailable (exit 2) are error-table rows with their
+      feature-result-contract.md registry rows; the old projects.* flat
+      identities no longer fire on the flat surface; group identities
+      untouched. 5.4: repos is in prompt-required-commands (20), root/family/
+      verb help entries, the m2/commands/repos.md page with Delivered (M2-S18),
+      coverage.json rows, pageFor mappings in both the check and its parity
+      test, and the EXPECTED composition list. 5.5: repos-list-contract
+      (TC-GRPREN-001..002), projects-flat-alias (TC-GRPREN-003..006),
+      repos-help (TC-GRPREG-001), projects-read-only-audit (TC-GRPRO-001),
+      the projects-groups-list default-flip case (TC-GRPREN-004) and the
+      full envelope set (TC-GRPENV-001) are green. 5.6: inventory.json and
+      content-inventory allowances cover both new source files. C-1 holds
+      (five-field delivery.result.v1, new keys under data, zero ok/command);
+      no MCP/opencode file changed and projects-scope-mcp stayed untouched and
+      green. Sanity: no deleted files; the only removed export block was a
+      relocation of aggregateProjectMemberOutcomes/projectMemberOutcomeOfHealth
+      within core/src/index.ts. Gates (TMPDIR=an approved external temp base
+      on the repository filesystem, outside every work tree):
+      typecheck green; 13-suite boundary gate 248 pass / 0 fail / 5555 expect
+      across 13 files (23.77s); non-behaviour chunk 2419 pass / 2 fail of 2421
+      across 307 files (298s) where both failures were 5s git-init/commit
+      timeouts in privacy-registry.test.ts and forbidden-literals.test.ts under
+      load, and both re-ran green in isolation (12 pass / 0 fail; 27 pass /
+      0 fail); the nine modified behaviour suites not in the prescribed list
+      37 pass / 0 fail / 612 expect; help-guide-coverage all covered;
+      prompt-conformance 5 prompts clean; exports-parity 5 publishables pass
+      attw; lint exit 0 (84 warnings, 33 infos); format:check exit 0 (2300
+      files); check:boundaries exit 0 (401 modules, 1217 deps; ambient 187;
+      secret 369); forbidden-literals and privacy-literals 0 violations. The
+      alias golden tests/golden/fixtures/projects-flat-alias.json was newly
+      created (no existing golden regenerated). Scope drift (committed
+      intentionally): pm-notes itself (carries the phase-4 evidence that had
+      landed after its commit), scripts/checks/error-table-sync.ts (required by
+      the two-way sync gate; omitted from the declared file list), and 19
+      test/fixture files carrying the identity-rename, prompt-set count and
+      inventory fallout. No new unsatisfied item; phase 6 not started."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 6 'Naming boundary anchors, migration guide, registry and M2
+      bookkeeping, full gate battery (release)' complete: the primitive commit
+      carrying this note (messageSource=template, transport=none; hash assigned
+      at commit time, `git show --stat HEAD` on feat/GH-309/project-groups is
+      the record). Obligations 6.1-6.5 verified. 6.1: the migration guide now
+      names all three surfaces with the delivered meaning — `repos list` is the
+      flat record set, `projects list` is the group surface, `projects list
+      --flat` is the transition alias retiring at the M3 boundary — replaces
+      every pre-rename instruction as current procedure, and keeps its
+      `ados_distribution: redistributable` marker. 6.2: the new
+      tests/structure/naming-boundary.test.ts pins the four anchors
+      (TC-GRPBOUND-001 root help + both M2 reference pages + the guide speak one
+      boundary, and no surface states the pre-rename meaning as current;
+      TC-GRPBOUND-002 the permanent repository vocabulary is unchanged — the
+      identity marker/schema, the `<host root>/projects/<key>` container, the
+      host-index `projects[]`/`projectKey`, and `--project-root`; TC-GRPSREAD-003
+      the board is never group-scoped; TC-GRPREG-002 the guide speaks the
+      delivered vocabulary and keeps migration one-step operator-run). 6.3:
+      the cli-command-registry `repos` row moved to Delivery (M2-S18, shipped
+      in GH-309) and the `projects` row now documents the delivered group
+      surface with the `--flat` alias. 6.4: backlog M2-S18 gained its Ticket
+      GH-309 and Progress lines; status.md gained the dated M2 delivery
+      addendum; m2/commands/projects.md is Delivered (M2-S18) with its example
+      envelope updated to delivery.result.v1; m2/entrypoint-delta.md carries
+      the dated 2026-11-14 `repos` mount observation; m2/contracts.md's
+      queue-and-lane ownership line is corrected to M2-S19. 6.5: the full gate
+      battery is green with the phase-6 boundary defects fixed — the `projects`
+      root help tuple lacked the verb's `--flat`/`--project` options (so the
+      documented examples were rejected as fallback.invocation) and the
+      entrypoint coverage inventory's expected list lacked `repos`. Gate
+      results (TMPDIR on the repository filesystem outside every work tree):
+      non-behaviour chunk 2434 pass / 0 fail across 308 files
+      (tests/structure tests/checks tests/types tests/golden tests/conformance
+      packages); behaviour suites (all prefixes) 5482 pass / 4 skip / 0 fail;
+      typecheck, lint, format:check, help-guide-coverage, prompt-conformance,
+      exports-parity all PASS; doc-distribution guard PASS (92 in-scope docs, no
+      drift). Environment findings: (1) TMPDIR must be outside EVERY git work
+      tree AND on the repository's filesystem — the workspace parent is itself
+      an umbrella git repo and the OS temp root is a different device; (2) the
+      host sets `commit.gpgsign=true` globally, so every test that shells out
+      to `git commit` blocks on pinentry and times out; gates must run with
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false (CI does not sign). Scope note: the uncommitted
+      phase-5 evidence note above rides this same staging set (it was written
+      after 3229a2e4); no deleted files, no removed exports, no new
+      unsatisfied item, all six plan phases now evidenced."
+    type: info
+    date: "2026-11-14"

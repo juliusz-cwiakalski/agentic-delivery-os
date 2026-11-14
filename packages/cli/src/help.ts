@@ -651,7 +651,11 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     path: ["projects"],
     summary: "Project groups: the declared repositories and their aggregate health",
     usage: ["<binary> projects <list> [options]"],
-    options: [...GLOBAL_OPTIONS],
+    options: [
+      ["--flat", "Return the delivered flat projects.v1 payload (deprecation alias)"],
+      ["--project <groupKey>", "Scope the read to one configured project group"],
+      ...GLOBAL_OPTIONS,
+    ],
     examples: ["<binary> projects list", "<binary> projects list --json"],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
   },

@@ -135,11 +135,11 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
     expect(coverage.referencePages).toContain(M2_PAGE);
     expect([...coverage.commands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
 
-    // 4. The reference page documents both flags and keeps its proposed status.
+    // 4. The reference page documents both flags and carries its delivered status.
     const page = readFileSync(join(ROOT, M2_PAGE), "utf8");
     expect(page).toContain("--help");
     expect(page).toContain("--version");
-    expect(page).toContain("Status: Proposed (M2)");
+    expect(page).toContain("Delivered (M2-S18)");
 
     // 5. The projects kind: the three delivered host-overview rows plus the
     //    three group-surface identities GH-309 adds (mechanical registry pin).

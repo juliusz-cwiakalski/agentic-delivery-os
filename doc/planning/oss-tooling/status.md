@@ -376,3 +376,27 @@ none, so the machine read reports `iteration-start-gating`), and
 them; the delivered iteration-start admission gating is unchanged. The
 delivery runs on `feat/GH-294/provider-peak-pausing`; M2 has not exited, and
 the remaining M2 stories are unaffected by this delivery and stay planned.
+
+## M2 delivery snapshot addendum (2026-11-14): M2-S18 delivered by GH-309
+
+M2-S18 (project groups) was delivered by GH-309 on
+`feat/GH-309/project-groups`. `projects list` now renders the configured groups
+under `project-groups.v1` — each group with its declared member repositories,
+their state, and their health, with `not-yet-supported` mandatory for a member
+whose tracker kind has no implemented adapter — while configuration-only
+membership never admits an undeclared clone and an optional `workspaceRoot` is
+never required. `queue list --project <groupKey>` and `status --project
+<groupKey>` scope the delivered reads to one group over per-checkout state, and
+one unreadable member yields a classified partial result at exit `0` rather than
+a group-scoped store. The flat record set moved to `repos list` under
+`repos.v1` (`data.repos[]` with `repoKey`, root, state location, daemon
+reachability, and handover state); `projects list --flat` remains the
+byte-compatible alias returning the delivered `projects.v1` payload until the
+M3 boundary, which is lawful under the superseding ODR-0004 and the rename
+rule. The permanent repository vocabulary — the identity marker, the
+`<host root>/projects/<key>` container, the host index's `projects[]` and
+`projectKey`, and `--project-root` — is unchanged, and no state was migrated.
+`board --project` stays a repository key with no group-scoped board claim. The
+delivery runs on `feat/GH-309/project-groups`; M2 has not exited, and the
+remaining M2 stories (S2–S10, S16, S19) are unaffected by this delivery and stay
+planned.
