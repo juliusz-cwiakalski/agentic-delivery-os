@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-14T18:25:44.095Z }
   specification: { started: null, completed: 2026-11-14T19:08:53.131Z }
   test_planning: { started: null, completed: 2026-11-14T19:09:10.843Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-14T19:14:18.603Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -91,6 +91,33 @@ notes:
       command in this change: prefix PATH with $PWD/node_modules/.bin (or invoke
       through `pnpm exec delivery-os`). No state was written by the failed
       runs."
+    type: retro
+    date: "2026-11-14"
+  - text: "REOPEN 1 (specification, test_planning): the test-plan author found seven
+      spec gaps (missing-field defects, per-member lease release, unresolvable
+      gate id, absent NFR ACs, unnamed review-observation seam, unpinned
+      evidence[] shape, absent-vs-missing-CI contradiction). Closed additively
+      as spec v1.1: 8 new ACs (37 total), DEC-15/16/17, OQ-3
+      resolved-with-deferral, no renumbering. Test plan extended 43 -> 51 TCs,
+      37/37 ACs covered."
+    type: info
+    date: "2026-11-14"
+  - text: "REOPEN 2 (specification, test_planning): the plan author found four
+      unpinned literals (verify-gates `overall` projection for a data-bearing
+      negative report, landing-position read budget, cross-member closeout
+      observation carrier, `queue add` multi-member payload). Closed additively
+      as spec v1.2: DEC-18..DEC-21, DM-8, OQ-6; the AC set stayed at 37 and the
+      nine affected TCs were amended in place (51 TCs unchanged). Plan revised
+      to 1.1 and validates."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: both reopens were caught by the sequential-authoring rule before
+      the DoR gate — the spec pinned member shapes but left four
+      projection/carrier literals implicit, and the downstream authors correctly
+      refused to invent them. Cost: two spec/test-plan revision cycles (~25
+      min). Improvement: when a spec pins a new data-bearing report, pin the
+      exit/projection field and the observation carrier in the same pass; what
+      the consumer reads is part of the shape, not a later detail."
     type: retro
     date: "2026-11-14"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
