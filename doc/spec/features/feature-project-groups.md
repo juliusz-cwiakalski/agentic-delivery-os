@@ -70,10 +70,13 @@ kind has an implemented adapter, and an unimplemented kind is classified per
 member at read time rather than rejected.
 
 An absent document and a document declaring zero groups are both the ordinary
-**empty listing**: `projects list` returns `data.groups: []` at exit `0`.
-Membership adoption is opt-in, so a host that never writes the document keeps
-working. A configuration path whose parent exists but is not a directory is a
-scope failure, not an empty listing.
+**empty listing** for the unscoped default form: `projects list` returns
+`data.groups: []` at exit `0`. Membership adoption is opt-in, so a host that
+never writes the document keeps working. An explicit `--project <groupKey>` is
+never an empty listing: a key the document does not declare is refused with
+`projects.unknown-group` at exit `1`, including when the document is absent or
+declares zero groups. A configuration path whose parent exists but is not a
+directory is a scope failure, not an empty listing.
 
 ### Validation and the classified identities
 
@@ -90,17 +93,14 @@ group. The validation rules are closed:
 | No two member declarations inside one group resolve to the same selector | `projects.config-invalid` |
 | Every group declares at least one member | `projects.config-invalid` |
 | The document parses and matches the declared schema | `projects.config-invalid` |
-| A requested group key is missing from a non-empty document | `projects.unknown-group` |
-| The invoking scope is absent, or the configuration document cannot be read | `projects.scope-unavailable` |
-| The host index cannot be read | `projects.registry-corrupt` |
+| A requested group key is not declared by the configuration document, including an absent or zero-group document | `projects.unknown-group` |
+| The invoking scope is absent, or the configuration document is present but unreadable | `projects.scope-unavailable` |
 
 `projects.config-invalid` and `projects.unknown-group` project as
-`user-validation` (exit `1`); `projects.scope-unavailable` and
-`projects.registry-corrupt` project as `platform-provider` (exit `2`). Group
-keys carry no public pattern: they are non-empty strings, unique per document,
-and no regex constrains them. The three group identities and the reused
-host-overview `projects.registry-corrupt` row are declared in the
-[Result Contract](feature-result-contract.md).
+`user-validation` (exit `1`); `projects.scope-unavailable` projects as
+`platform-provider` (exit `2`). Group keys carry no public pattern: they are
+non-empty strings, unique per document, and no regex constrains them. The three
+group identities are declared in the [Result Contract](feature-result-contract.md).
 
 A group-scoped read outside any git work tree has no scope to resolve the
 document from and is refused with `projects.scope-unavailable` at exit `2`; the
@@ -134,6 +134,12 @@ configuration-first:
   workspace scan, then the checkout's own readable identity marker.
 - A `repoKey` selector resolves through the host index, then the declared-only
   workspace scan.
+
+A corrupt or unreadable host index is an **empty resolution aid** on the group
+surface: the index is never a membership source, so a member that depends on it
+classifies `unregistered` at exit `0` while root-selected or workspace-located
+members still resolve. A group read never replaces, repairs, or rewrites the
+index.
 
 A member that cannot be located is still listed: a `root`-selected member keeps
 its declared root, a `repoKey`-selected member reports its declared key with an
@@ -175,7 +181,8 @@ same-named health value:
   only when a member degraded (see the aggregation clause).
 
 The default form enumerates every configured group; `--project <groupKey>`
-scopes it to one. `--flat` and `--project` are mutually exclusive and the
+scopes it to one and refuses a key the document does not declare with
+`projects.unknown-group` at exit `1`. `--flat` and `--project` are mutually exclusive and the
 combination is refused at exit `1` through the shared `input.value.rejected`
 grammar classification — the alias takes no group scoping and is never silently
 coerced to either synopsis form. Any verb other than `list` is refused through
@@ -205,9 +212,9 @@ member by `repoKey` and outcome, while the readable members are still returned.
 Only `state-unavailable` degrades a read: an unregistered or not-yet-supported
 member stays classified and leaves `data.partial` absent.
 
-Exit `2` is reserved for a configuration document or invoking scope that cannot
-be read, and for an unreadable host index. Every other group-scoped outcome
-answers at exit `0` or is refused at exit `1`.
+Exit `2` is reserved for an unreadable configuration document or invoking
+scope. Every other group-scoped outcome answers at exit `0` or is refused at
+exit `1`.
 
 ## Group-scoped queue and status reads
 
@@ -228,7 +235,8 @@ member that contributes nothing renders one row with bucket `none` and its
 health in the `state` column.
 
 An unknown group key is refused with `projects.unknown-group` at exit `1` on
-every group-scoped surface — one refusal rule. Within the queue family,
+every group-scoped surface — one refusal rule, including when the configuration
+document is absent or declares zero groups. Within the queue family,
 `--project` is accepted on `queue list` only, and no other surface gains group
 scoping: `board --project` remains a repository key, and spend, brief, and the
 remaining reads stay repository-scoped. The unscoped `queue list` and `status`
@@ -249,9 +257,8 @@ nothing. A classified failure writes nothing at all.
 | Identity | Kind | Exit | Condition |
 |---|---|---|---|
 | `projects.config-invalid` | `projects` | `1` | The configuration document contradicts itself or fails schema validation |
-| `projects.unknown-group` | `projects` | `1` | The requested group key is not declared by a non-empty configuration document |
-| `projects.scope-unavailable` | `projects` | `2` | The invoking scope or the configuration document cannot be read |
-| `projects.registry-corrupt` | `projects` | `2` | The host index is present but cannot be read or parsed |
+| `projects.unknown-group` | `projects` | `1` | The requested group key is not declared by the configuration document, including an absent or zero-group document |
+| `projects.scope-unavailable` | `projects` | `2` | The invoking scope is absent, or the configuration document is present but unreadable |
 | `input.value.rejected` | `input` | `1` | `--flat` combined with `--project` on `projects list` |
 
 No group-scoped failure is silent and no unclassified outcome exists: a
