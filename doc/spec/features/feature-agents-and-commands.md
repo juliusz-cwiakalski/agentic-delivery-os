@@ -6,7 +6,7 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-12
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."

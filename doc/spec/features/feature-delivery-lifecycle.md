@@ -6,7 +6,7 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-08
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
