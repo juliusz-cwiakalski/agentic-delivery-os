@@ -518,3 +518,30 @@ notes:
       and the F-4 doc claims remain with @doc-syncer after the code agrees."
     type: info
     date: "2026-11-14"
+  - text: "Plan phase 7 (review remediation) verified complete: code and tests
+      shipped in dc8e6851, the doc-syncer follow-up in c4dce585, the plan scope
+      line and iteration-2 review record in 8458aa40, and this evidence note
+      rides a trailing phase-7 commit. F-1/F-2: every scoped surface refuses an
+      undeclared --project with projects.unknown-group at exit 1, including an
+      absent or zero-group document, while the unscoped default keeps the empty
+      listing. F-3: group-scoped queue and status perform no composition-level
+      host-index maintenance on success or on a classified failure, driven by a
+      `groupScoped` invocation fact threaded from the entrypoint. F-4: a corrupt
+      host index is an empty resolution aid with no fourth identity and exit 2
+      reserved for configuration/scope. F-5: a present but non-string
+      workspaceRoot is projects.config-invalid. F-6: duplicate selectors that
+      differ only by a root trailing separator collide as the resolver does.
+      F-7: an unlocated root-selected member carries an empty repoKey with the
+      declaration in root. F-9: the alias golden asserts the serialized payload
+      in emitted key order. F-10 remains an accepted risk (no scan bound). F-8
+      and the corrupt-index doc claims are corrected in c4dce585. Gates at final
+      verification, superseding the preceding phase-7 entry's numbers (wider
+      gate scope): typecheck 0; 14-suite boundary gate 265 pass / 0 fail;
+      non-behaviour chunk 2434 pass / 0 fail across 308 files; behaviour a-c
+      1495 pass / 0 fail; behaviour d-o 1555 pass with 4 load timeouts whose 4
+      files re-ran green in isolation (50 pass / 0 fail); behaviour p-w 2431
+      pass / 4 skip / 0 fail. Residual (see the RESIDUAL risk entry above):
+      `projects.registry-corrupt` is a retained, currently unemitted contract
+      identity."
+    type: info
+    date: "2026-11-14"
