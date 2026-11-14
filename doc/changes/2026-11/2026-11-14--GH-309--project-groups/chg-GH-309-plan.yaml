@@ -1,8 +1,37 @@
-# GH-309 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
+# GH-309 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
 # (2026-11-14). Authored against spec v1.0 and test plan v1.0, on branch
 # feat/GH-309/project-groups (from main-tools tip 13431e13; artifact commits
 # 77fffac7 clarify_scope, eefb2d3b specification, db85ac35 test_planning +
 # the ODR-0004 index-row drift).
+#
+# REVISION NOTE (revision 1.1, after DoR iteration-1 minors 3 and 5, synced
+# to spec v1.1 and test plan v1.5). Mechanical remediation only: no phase
+# count, phase id, ordering, or parsed-key changes beyond the two declared
+# scope additions (phase 5 gains the tests/fixtures/projects folder for the
+# reused failure fixtures; phase 6 gains m2/contracts.md).
+#   Minor 3 (phase-1 done-when cited tests/checks/decision-record.test.ts,
+#      which is TDR-0013-specific and outside phase-1 scope): replaced with
+#      the phase-1 verifiables — decision-register inspection (the ODR-0004
+#      file present in the register index beside its 00-index.md row, already
+#      landed in db85ac35) and commit-order evidence (the record's commit
+#      precedes every rename-code commit on the branch, verified at the
+#      delivery gate per TC-GRPDR-001, because permanent suites never assert
+#      branch diffs per testing-strategy rules).
+#   Minor 5 (m2/contracts.md's "Queue and lane representation" section opens
+#      "Owned by M2-S18 for cross-repository changes", which goes stale the
+#      moment GH-309 delivers WITHOUT that scope per DEC-4/NG-2 — it is
+#      M2-S19-consumed groundwork): phase 6's scope and obligations gain the
+#      one-line correction attributing ownership/consumption to M2-S19 (the
+#      milestone pack is Proposed-status planning truth, not current-truth
+#      spec, so the correction is delivery-phase work, not phase 7).
+#   SYNC (spec v1.1): the alias FAILURE envelope carries the moved repos.*
+#      identity (DoD-8 now requires an alias failure probe); C-6 declares the
+#      feature-result-contract.md sync-carrier exception this plan already
+#      carried. SYNC (test plan v1.5): 31 TCs — new TC-GRPREN-006 (alias
+#      failure probe, home tests/behaviour/projects-flat-alias.test.ts) joins
+#      phase 5 with the failure fixtures it reuses; TC-GRPREN-005 asserts
+#      input.value.rejected as pinned; TC-GRPBOUND-003 carries the C-6
+#      exception.
 #
 # One ticket, one PR against main-tools, six delivery phases. Every phase is
 # an independently committable slice that is green at its own boundary, and
@@ -19,12 +48,12 @@
 # and test result; there is no `tasks` key and no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-309-spec.md (v1.0; F-1..F-10; DM-1..DM-5; NFR-1..NFR-7;
+#   - Spec:      ./chg-GH-309-spec.md (v1.1; F-1..F-10; DM-1..DM-5; NFR-1..NFR-7;
 #                NG-1..NG-8; DEC-1..DEC-7; RSK-1..RSK-7; 16 ACs AC-F1-1..
 #                AC-NFR6-1 (§17); DoD-1..DoD-17 (§17.1) with per-condition
 #                plan-phase ownership; OQ-1..OQ-3 proposed resolutions (§14);
 #                Appendix C constraint register C-1..C-7)
-#   - Test plan: ./chg-GH-309-test-plan.md (v1.0; 30 TCs in 12 families
+#   - Test plan: ./chg-GH-309-test-plan.md (v1.5; 31 TCs in 12 families
 #                TC-GRPDOC-001..TC-GRPGATE-001; §3 coverage matrix all Covered;
 #                §7 suite homes; §8.3 OQ expectations + TP-Q1/TP-Q2; §9
 #                reconciliation rule)
@@ -108,13 +137,13 @@
 #   concretizes the spec's proposed resolution (closed vocabulary, mandatory
 #   not-yet-supported), it does not diverge from it.
 #
-# TEST-PLAN RECONCILIATION (§9, recorded here; a revision-log row in the test
-# plan is owed before DoR): OQ-1 and OQ-2 pins equal the asserted proposals —
-# no TC changes. OQ-3's concrete five-value set and the TP-Q2 identity pin
-# (`input.value.rejected`) go beyond what the test plan text named (it asserted
-# "the pinned one from the plan"); TC-GRPAGG-002 and TC-GRPREN-005 assert
-# these pins as written. The reconciliation is a revision-log entry, not a TC
-# rewrite. Suite file names adopt the test plan §7 proposals VERBATIM; the two
+# TEST-PLAN RECONCILIATION (§9; the pins recorded at v1.0 are reconciled
+# upstream in test plan v1.5): OQ-1 and OQ-2 pins equal the asserted
+# proposals. OQ-3's concrete five-value set and the TP-Q2 identity pin
+# (`input.value.rejected`) went beyond what the v1.0 text named; v1.5 records
+# them — TC-GRPAGG-002 and TC-GRPREN-005 assert these pins as written, and
+# TC-GRPBOUND-003 carries the C-6 sync-carrier exception. Suite file names
+# adopt the test plan §7 proposals VERBATIM; the two
 # splits §7 left to the plan are pinned in phase 5 (TC-GRPREG-001 → new
 # tests/behaviour/repos-help.test.ts + the existing composition/coverage/parity
 # pins updated in place).
@@ -140,7 +169,7 @@
 #   tests/behaviour/queue-status-project-scope.test.ts TC-GRPSREAD-001..002
 #                                                       (+ TC-GRPDOC-004 steps)
 #   tests/behaviour/repos-list-contract.test.ts        TC-GRPREN-001..002
-#   tests/behaviour/projects-flat-alias.test.ts        TC-GRPREN-003..005
+#   tests/behaviour/projects-flat-alias.test.ts        TC-GRPREN-003..006
 #   tests/behaviour/projects-read-only-audit.test.ts   TC-GRPRO-001
 #   tests/structure/naming-boundary.test.ts            TC-GRPBOUND-001..002,
 #                                                       TC-GRPSREAD-003 (scan),
@@ -220,7 +249,7 @@
 #   phase's gate (review-time); DoD-15 → 6 (roll-up); DoD-16 → 6;
 #   DoD-17 → lifecycle phase 11 (pr_creation), not a plan phase.
 #
-# TC OWNERSHIP (30/30 accounted for; ownership = the phase that lands the
+# TC OWNERSHIP (31/31 accounted for; ownership = the phase that lands the
 # asserted content and where the TC's verdict is first fully green):
 #   phase 1  (content only — TC-GRPDR-001's register half becomes inspectable)
 #   phase 2  TC-GRPDOC-001..005 (GRPDOC-004's queue/status steps complete at
@@ -229,7 +258,8 @@
 #            group forms; the default-form case of TC-GRPSURF-001 completes at
 #            phase 5)
 #   phase 4  TC-GRPAGG-001, TC-GRPAGG-002, TC-GRPSREAD-001..002
-#   phase 5  TC-GRPREN-001..005, TC-GRPENV-001, TC-GRPRO-001, TC-GRPREG-001
+#   phase 5  TC-GRPREN-001..006 (TC-GRPREN-006 alias failure probe, test plan
+#            v1.5), TC-GRPENV-001, TC-GRPRO-001, TC-GRPREG-001
 #   phase 6  TC-GRPBOUND-001..002, TC-GRPSREAD-003 (scan half),
 #            TC-GRPREG-002, TC-GRPGATE-001
 #   manual/review (lifecycle evidence, not plan scope): TC-GRPBOUND-003
@@ -273,7 +303,8 @@
 #     new error-table row to be documented there in the same boundary, and the
 #     test plan §8.2 assumes "code table + registry updated together" (GH-288
 #     phase-3 precedent). Only the registry table rows and the identity count
-#     change there; no behavioral current-truth statement does.
+#     change there; no behavioral current-truth statement does. Spec C-6
+#     (v1.1) declares this exception; the plan and the spec agree.
 #   - C-7 gates and hygiene: TMPDIR=$PWD/tmp/tmpdir pnpm check green at every
 #     phase boundary and before the PR; conventional subjects via the commit
 #     primitive; every body/footer line <= 100 chars; PR targets main-tools and
@@ -354,9 +385,13 @@ phases:
   # Test obligations: none automated (TC-GRPDR-001 is review-time register +
   # commit-order inspection; its factual subject lands here).
   #
-  # Done when: git tracks the ODR-0004 record; the index row and file agree;
-  # `bun test tests/checks/decision-record.test.ts` (record-consistency
-  # precedent) and TMPDIR=$PWD/tmp/tmpdir pnpm check are green.
+  # Done when: git tracks the ODR-0004 record; the decision-register
+  # inspection holds (the ODR-0004 file present in the register index beside
+  # its 00-index.md row, already landed in db85ac35, file and row agreeing);
+  # the commit-order evidence is recordable — the record's commit precedes
+  # every rename-code commit on the branch, verified at the delivery gate per
+  # TC-GRPDR-001 (no automated suite asserts branch diffs per
+  # testing-strategy rules); TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
   # ---------------------------------------------------------------------------
   - id: 1
     title: "Land the untracked ODR-0004 superseding decision record beside its index row"
@@ -651,7 +686,10 @@ phases:
   #      C-2 byte-compat against the committed golden
   #      tests/golden/fixtures/projects-flat-alias.json, normalized per the
   #      golden rules); the OQ-2 pin: --flat + --project refused as mutually
-  #      exclusive at exit 1 under input.value.rejected.
+  #      exclusive at exit 1 under input.value.rejected; and the alias's
+  #      FAILURE envelope carries the moved repos.* identities (spec v1.1:
+  #      the flat surface's failures classify under repos.* on every form,
+  #      the alias included — DoD-8's alias failure probe).
   #  5.3 The identity move: repos.identity-unreadable (exit 1),
   #      repos.registry-corrupt (exit 2), repos.state-unavailable (exit 2)
   #      added to the error table WITH their feature-result-contract.md
@@ -671,8 +709,12 @@ phases:
   #  5.5 Suites: tests/behaviour/repos-list-contract.test.ts (NEW;
   #      TC-GRPREN-001..002 — exact renamed fields, sorted table, unbound
   #      rule, repos.* refusals); tests/behaviour/projects-flat-alias.test.ts
-  #      (NEW; TC-GRPREN-003..005 — golden byte-compat with absence negatives,
-  #      delivered text-table shape, and the OQ-2 refusal);
+  #      (NEW; TC-GRPREN-003..006 — golden byte-compat with absence negatives,
+  #      delivered text-table shape, the OQ-2 refusal asserting
+  #      input.value.rejected, and the alias failure probe (test plan v1.5):
+  #      a failing flat read through --flat classifies under the moved
+  #      repos.* identity with unchanged exit meaning, reusing the
+  #      marker/registry/state failure fixtures from tests/fixtures/projects/);
   #      tests/behaviour/repos-help.test.ts (NEW; TC-GRPREG-001 repos half —
   #      root --help shows repos beside projects, family/verb help, coverage
   #      row); tests/behaviour/projects-read-only-audit.test.ts (NEW;
@@ -690,15 +732,17 @@ phases:
   #
   # Bound: AC-F7-1, AC-F7-2, AC-NFR1-1, AC-NFR2-1, DoD-8, DoD-10 (registration
   # half), DoD-12 (full set), DoD-13, F-7, DM-3, DM-4, C-1, C-2.
-  # Test obligations: TC-GRPREN-001..005, TC-GRPENV-001, TC-GRPRO-001,
-  # TC-GRPREG-001.
+  # Test obligations: TC-GRPREN-001..006 (TC-GRPREN-006 alias failure probe,
+  # v1.5), TC-GRPENV-001, TC-GRPRO-001, TC-GRPREG-001.
   #
   # Done when: SC-M2-S18-08 green; the alias golden matches with absence
   # negatives (no groupKey, no data.groups[], no data.repos[], no repoKey in
-  # the alias payload); repos appears at root --help with its page (check:help
-  # gates green); the read-only audit shows exactly the two permitted side
-  # effects; TMPDIR=$PWD/tmp/tmpdir pnpm check green. The rename commit is
-  # verifiably AFTER the phase-1 record commit (TC-GRPDR-001).
+  # the alias payload); the alias failure probe classifies under the moved
+  # repos.* identity (DoD-8, spec v1.1); repos appears at root --help with
+  # its page (check:help gates green); the read-only audit shows exactly the
+  # two permitted side effects; TMPDIR=$PWD/tmp/tmpdir pnpm check green. The
+  # rename commit is verifiably AFTER the phase-1 record commit
+  # (TC-GRPDR-001).
   # ---------------------------------------------------------------------------
   - id: 5
     title: "Rename the flat record set to repos list with the --flat alias, repos.* identities, and the root registration mount"
@@ -744,6 +788,8 @@ phases:
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
         - tests/golden/fixtures/projects-flat-alias.json
+      folders:
+        - tests/fixtures/projects
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/projects.ts
@@ -791,8 +837,14 @@ phases:
   #      delivered by GH-309 — ...`; status.md delivery-snapshot addendum;
   #      m2/commands/projects.md refined to the delivered group-surface truth
   #      with its Delivered (M2-S18) header; m2/entrypoint-delta.md dated
-  #      observation that repos is mounted. The pack README's status-semantics
-  #      section is generic and needs no edit.
+  #      observation that repos is mounted. m2/contracts.md: the "Queue and
+  #      lane representation" section's opening ownership line drops its
+  #      stale "Owned by M2-S18 for cross-repository changes" — ownership/
+  #      consumption is attributed to M2-S19 per DEC-4/NG-2 (one-line
+  #      correction; the line goes stale the moment GH-309 delivers without
+  #      that scope, and the pack is Proposed-status planning truth, not
+  #      current-truth spec, so it lands here, not in phase 7). The pack
+  #      README's status-semantics section is generic and needs no edit.
   #  6.4 Run and record green (pm-notes `notes:` per DoD-16 convention):
   #        mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check
   #        bash scripts/.tests/test-doc-distribution.sh
@@ -814,7 +866,8 @@ phases:
   #
   # Done when: the naming-boundary suite and guide anchors are green; the
   # corpus states delivery truth (registry row moved with the code, backlog
-  # marker, status snapshot, pack headers); the full battery is green and
+  # marker, status snapshot, pack headers, the m2/contracts.md queue-and-lane
+  # ownership line corrected to M2-S19); the full battery is green and
   # recorded; all six plan phases are complete with per-phase pm-notes
   # evidence (dod_check reads that evidence, not this file). PR creation
   # against main-tools (stop open) is lifecycle phase 11 (DoD-17).
@@ -825,8 +878,9 @@ phases:
     summary: >-
       Update the migration guide to the delivered vocabulary, land the
       naming-boundary structure suite over help, pages, guide, and permanent
-      vocabulary, move the cli-command-registry repos row to Delivery and
-      record the M2-S18 backlog, status, and pack-page markers, and run the
+      vocabulary, move the cli-command-registry repos row to Delivery, record
+      the M2-S18 backlog, status, and pack-page markers with the m2 pack's
+      stale queue-and-lane ownership line corrected to M2-S19, and run the
       full gate battery green with the verdicts recorded as pm-notes evidence.
     scope:
       files:
@@ -839,6 +893,7 @@ phases:
         - doc/planning/oss-tooling/status.md
         - doc/planning/oss-tooling/milestones/m2/commands/projects.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
     interactions:
       - kind: contract-file
         target: doc/guides/migrating-to-per-repository-state.md
