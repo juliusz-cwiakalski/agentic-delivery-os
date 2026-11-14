@@ -66,6 +66,7 @@ import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 import { readFail } from "../fixtures/dispatch/truth";
 import { streamStarterFromRunner } from "../fixtures/harness/harness-io";
 import { projectScopeFor } from "../fixtures/projects/state-scope";
+import { writeProviderProfilesConfig } from "../fixtures/queue/production/harness";
 
 const ROOT = process.cwd();
 
@@ -88,6 +89,10 @@ const createCheckout = (
   if (originUrl !== undefined) {
     writeFileSync(join(commonDir, "config"), `[remote "origin"]\n\turl = ${originUrl}\n`);
   }
+  // GH-294 phase 12 (F-1): dispatch admission reads the provider profiles, so
+  // the fixture declares the minimal branch (the shipped default fails
+  // closed at `provider.profile.absent`).
+  writeProviderProfilesConfig(directory);
   return { directory, commonDir };
 };
 

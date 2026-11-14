@@ -166,6 +166,11 @@ import {
   VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
+  nominateProviderProfile,
+  parseAndValidateProfileConfiguration,
+  parseAndValidateProviderConfiguration,
+} from "@delivery-os/core/provider";
+import {
   createDaemonLockPort,
   createNodeStateEdge,
   createStateStore,
@@ -192,6 +197,7 @@ import {
   createPhaseCommitExtension,
   createPlanCommandRuntime,
   createProductionCommitRuntimeOptions,
+  createResolvedProviderProbe,
   createStatusCommandRuntime,
   createTelemetryIngestSink,
   createVerifyCommandRuntime,
@@ -1677,6 +1683,79 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { promise, cancel };
     };
 
+    /**
+     * The production nomination gate (GH-294 F-1, TDR-0028 D1/D3): the
+     * delivered selection seam run once over the resolved provider
+     * configuration, the delivered probe, and the production clock. Every
+     * production dispatch nominates at admission — the first predicate,
+     * before the preflight, the owner-hold gate, and the lease claim — and
+     * every no-nomination shape refuses with the seam's resolve identity,
+     * fail-closed: the profiles branch ships empty by default, so a fresh
+     * installation declares nothing and refuses `provider.profile.absent`
+     * until it declares its profiles (the branch's own fail-closed contract).
+     */
+    const nominationPredicate = (): ReturnType<typeof nominateProviderProfile> => {
+      const closedSet = [
+        "provider.profile.absent",
+        "provider.profile.invalid",
+        "provider.profile.capability-denied",
+        "provider.profile.unavailable",
+      ];
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: localFs,
+      });
+      if (!acquired.ok) {
+        return {
+          ok: false,
+          refusal: {
+            code: "provider.profile.invalid",
+            summary: `provider configuration rejected (${acquired.error.code})`,
+          },
+        };
+      }
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) {
+        return {
+          ok: false,
+          refusal: {
+            code: "provider.profile.invalid",
+            summary: `provider configuration rejected (${resolved.error.code})`,
+          },
+        };
+      }
+      const providerParsed = parseAndValidateProviderConfiguration(resolved.value.values);
+      if (!providerParsed.ok) {
+        return {
+          ok: false,
+          refusal: { code: "provider.profile.invalid", summary: providerParsed.error.detail },
+        };
+      }
+      const profileParsed = parseAndValidateProfileConfiguration(
+        resolved.value.values,
+        providerParsed.config,
+      );
+      if (!profileParsed.ok) {
+        const code = (closedSet as readonly string[]).includes(profileParsed.error.code)
+          ? (profileParsed.error.code as "provider.profile.absent" | "provider.profile.invalid")
+          : "provider.profile.invalid";
+        return { ok: false, refusal: { code, summary: profileParsed.error.detail } };
+      }
+      return nominateProviderProfile({
+        profiles: profileParsed.config,
+        probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs()),
+        nowMs: nowMs(),
+      });
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -1700,6 +1779,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       repository: () => repository,
       readTruth: dispatchTruth,
       preflight: dispatchPreflight,
+      // GH-294 F-1: every production dispatch nominates at admission — the
+      // first predicate, before the preflight, the owner-hold gate, and the
+      // lease claim (TDR-0028 D1, OQ-TP-4). The profiles branch ships empty
+      // by default, so a fresh installation refuses `provider.profile.absent`
+      // until it declares its profiles (the branch's fail-closed contract).
+      nominate: nominationPredicate,
       claimLease: (ref) => {
         const hold = readOwnerHold();
         if (hold.active) {

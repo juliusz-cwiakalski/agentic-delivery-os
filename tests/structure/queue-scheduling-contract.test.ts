@@ -214,9 +214,16 @@ describe("TC-VOCAB-005 / TC-HOLDQUEUE-011 / TC-HOLDNEG-002 closed sets are exact
       );
     }
     for (const conditionType of QUEUE_PARK_CONDITION_TYPES) {
-      expect(
-        QUEUE_PARK_CAUSE_CONDITION_PAIRS.filter((pair) => pair.conditionType === conditionType),
-      ).toHaveLength(1);
+      const causes = QUEUE_PARK_CAUSE_CONDITION_PAIRS.filter(
+        (pair) => pair.conditionType === conditionType,
+      ).length;
+      // GH-294 DEC-2 supersedes the delivered injective pairing: `peak-window`
+      // rides the existing `provider-window` condition type and `owner-hold`
+      // joins on the read-time `preemption` type (no duplicate cause, no
+      // silent rename), so those two condition types now carry two causes
+      // each while `provider-quota` keeps exactly one.
+      if (conditionType === "provider-quota") expect(causes).toBe(1);
+      else expect(causes).toBe(2);
     }
     expect([...QUEUE_PARK_RECOVERY_STATES]).toEqual(closedSets.recoveryStates);
     expect([...QUEUE_INCIDENT_TYPES]).toEqual(closedSets.incidentTypes);

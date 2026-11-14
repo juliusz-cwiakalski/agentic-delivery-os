@@ -154,6 +154,39 @@ export type DispatchPreflightResult =
 /** The optional admission precondition; production always supplies it. */
 export type DispatchPreflightPort = () => Promise<DispatchPreflightResult>;
 
+/**
+ * The classified no-nomination refusal (GH-294 F-1, DEC-9; TDR-0028 D2).
+ *
+ * The refusal carries the resolve identity the provider-profile seam already
+ * produced for the exact shape — never a new `dispatch.*` identity — and keeps
+ * that identity's delivered exit projection. `unavailable` carries the
+ * eligibility list the envelope renders in its refusal detail.
+ */
+export type DispatchNominationRefusal = {
+  readonly code:
+    | "provider.profile.absent"
+    | "provider.profile.invalid"
+    | "provider.profile.capability-denied"
+    | "provider.profile.unavailable";
+  readonly summary?: string;
+  readonly eligibility?: readonly string[];
+};
+
+/** The nomination outcome: the admitted profile, or the classified refusal. */
+export type DispatchNomination =
+  | { readonly ok: true; readonly profile: string }
+  | { readonly ok: false; readonly refusal: DispatchNominationRefusal };
+
+/**
+ * The nomination gate (TDR-0028 D1/D3): runs immediately after input
+ * validation and before the credential preflight, the owner-hold gate, and the
+ * lease/single-flight predicates. A refusal is a recordless, eventless,
+ * spawnless pre-session refusal; an admission carries the profile that is
+ * recorded on the attempt record. Resumes never re-nominate: the port is
+ * consulted once per admission, never on the resume path of a recorded lane.
+ */
+export type DispatchNominatePort = () => DispatchNomination;
+
 /** Everything the one-shot run consumes; every field is injected. */
 export type DispatchPorts = {
   readonly store: StateStorePort;
@@ -167,6 +200,11 @@ export type DispatchPorts = {
   readonly repository: string;
   readonly handoverState: DispatchHandoverState;
   readonly nowIso: () => string;
+  /**
+   * The nomination gate (GH-294 F-1, TDR-0028): the first admission predicate.
+   * Absent keeps the delivered no-nomination behavior for pre-change suites.
+   */
+  readonly nominate?: DispatchNominatePort;
   readonly newAttemptId: () => string;
   readonly newDivergenceId: () => string;
   readonly readTruth: () => Promise<DispatchTruthReads>;
@@ -217,6 +255,8 @@ export type DispatchRunResult =
         readonly summary?: string;
         /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
         readonly holder?: string;
+        /** The eligibility list on a `provider.profile.unavailable` nomination refusal (GH-294, TDR-0027 detail). */
+        readonly eligibility?: readonly string[];
         /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
         readonly trustedRefusal?: true;
       };
@@ -482,6 +522,31 @@ const livenessReadings = (
  * they append exactly one attempt record and return a classified envelope.
  */
 export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResult> => {
+  // Nomination gate (GH-294 F-1, TDR-0028 D1): the first admission predicate —
+  // before the credential preflight, the owner-hold gate, and the lease claim.
+  // A refusal here is pre-session: no lease, attempt, lane, or queue record, no
+  // event, no spawn.
+  let nomination: { readonly profile: string } | undefined;
+  if (ports.nominate !== undefined) {
+    const nominated = ports.nominate();
+    if (!nominated.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "provider",
+          code: nominated.refusal.code,
+          ...(nominated.refusal.summary === undefined
+            ? {}
+            : { summary: nominated.refusal.summary }),
+          ...(nominated.refusal.eligibility === undefined
+            ? {}
+            : { eligibility: nominated.refusal.eligibility }),
+        },
+      };
+    }
+    nomination = { profile: nominated.profile };
+  }
+
   // Admission precondition: a refusal here is pre-session. It runs before the
   // lease claim and before any spawn, resume, attempt, or divergence record.
   if (ports.preflight !== undefined) {
@@ -545,6 +610,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         corroboration: input.corroboration,
         ...(resumeMode === undefined ? {} : { resumeMode }),
         ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
+        ...(nomination === undefined ? {} : { providerProfile: nomination.profile }),
         evidenceRefs: input.evidenceRefs,
         recordedAt: now,
       };

@@ -25,6 +25,7 @@ import type {
   ProviderParkEvidence,
   ProviderParkRecord,
   ProviderParkView,
+  ProviderProfileConfiguration,
   ProviderQuotaView,
   ProviderResolveResult,
   ProviderSleep,
@@ -43,6 +44,7 @@ import {
   readProviderParkViews,
 } from "./parks.js";
 import { evaluatePeakWindow } from "./peak.js";
+import { selectProfile } from "./profile.js";
 import { evaluateQuotaResponse } from "./quota.js";
 import { selectProviderChain, validateProviderConfiguration } from "./validate.js";
 
@@ -85,6 +87,83 @@ export const createProviderFactsProbe = (
         source: `provider ${providerName}: no fact`,
       },
   );
+
+/** The input of the shared nomination predicate (GH-294 F-1, TDR-0028). */
+export type ProviderNominationInput = {
+  readonly profiles: ProviderProfileConfiguration;
+  readonly probe: ProfileProbePort;
+  readonly nowMs: number;
+  readonly agent?: string;
+  /** The delivered hard capability gate, when the admitting composition requires it. */
+  readonly requireVision?: boolean;
+};
+
+/** The closed refusal identities the nomination carries (TDR-0028 D2). */
+const NOMINATION_REFUSAL_CODES = [
+  "provider.profile.absent",
+  "provider.profile.invalid",
+  "provider.profile.capability-denied",
+  "provider.profile.unavailable",
+] as const;
+
+/**
+ * The nomination decision shared by both admission paths (TDR-0028 D3): the
+ * delivered profile-selection seam run once; the selected profile is the
+ * nomination, and every refusal carries the resolve identity the seam already
+ * produced for the shape — `absent`/`invalid`/`capability-denied` at exit 1,
+ * `unavailable` at exit 2 with the eligibility list. No dispatch-default
+ * nomination concept exists (D5), and the returned shape is structurally the
+ * dispatch/daemon nomination so both admission families bind one predicate.
+ */
+export const nominateProviderProfile = (
+  input: ProviderNominationInput,
+):
+  | {
+      readonly ok: true;
+      readonly profile: string;
+    }
+  | {
+      readonly ok: false;
+      readonly refusal: {
+        readonly code:
+          | "provider.profile.absent"
+          | "provider.profile.invalid"
+          | "provider.profile.capability-denied"
+          | "provider.profile.unavailable";
+        readonly summary?: string;
+        readonly eligibility?: readonly string[];
+      };
+    } => {
+  const selection = selectProfile({
+    profiles: input.profiles,
+    probe: input.probe,
+    nowMs: input.nowMs,
+    ...(input.agent === undefined ? {} : { agent: input.agent }),
+    ...(input.requireVision === undefined ? {} : { requireVision: input.requireVision }),
+  });
+  if (selection.ok) return { ok: true, profile: selection.decision.profile };
+  if (!(NOMINATION_REFUSAL_CODES as readonly string[]).includes(selection.code)) {
+    // The selection seam's refusal vocabulary is closed; reaching here means a
+    // new selection identity was added without a nomination mapping — fail
+    // closed rather than misclassify.
+    throw new Error(`nomination refusal identity is not in the closed set: ${selection.code}`);
+  }
+  return {
+    ok: false,
+    refusal: {
+      code: selection.code as (typeof NOMINATION_REFUSAL_CODES)[number],
+      ...(selection.summary === undefined ? {} : { summary: selection.summary }),
+      ...(selection.eligibility.length === 0
+        ? {}
+        : {
+            eligibility: selection.eligibility.map(
+              (entry) =>
+                `${entry.profile}:${entry.verdict}${entry.blockers.length > 0 ? `:${entry.blockers.map((blocker) => blocker.kind).join("+")}` : ""}`,
+            ),
+          }),
+    },
+  };
+};
 
 export type ProviderEngine = {
   readonly resolve: (input: ProviderResolveInput) => Promise<ProviderResolveResult>;

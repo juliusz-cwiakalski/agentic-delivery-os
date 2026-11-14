@@ -40,6 +40,61 @@ import { projectScopeFor } from "../../projects/state-scope";
 const WORKING_NAME = "delivery-os";
 const BASE = join(process.cwd(), "tmp", "tmpdir");
 
+/**
+ * The declared provider-profiles configuration the production fixtures install
+ * into their checkouts (GH-294 phase 12, F-1): the nomination gate reads the
+ * resolved provider configuration at admission, and the profiles branch ships
+ * empty by default, so a fixture without a declared branch fails closed at
+ * `provider.profile.absent` before the behavior it exercises runs. This
+ * minimal branch nominates `base` over the one clear provider, letting each
+ * suite reach the credential, preflight, and truth paths it actually pins.
+ */
+export const PROVIDER_PROFILES_CONFIG_FILE = "config.yaml";
+
+export const PROVIDER_PROFILES_CONFIG = `provider:
+  defaultChain: default
+  credentials:
+    provider-a:
+      sourceKey:
+        style: literal
+        name: PROVIDER_A_KEY
+  entries:
+    provider-a:
+      class: subscription
+  chains:
+    default:
+      entries:
+        - provider-a
+      allowPaidFallback: false
+  profiles:
+    tiers:
+      build: {}
+    profiles:
+      base:
+        tier: build
+        providers:
+          - provider-a
+        seats:
+          pm:
+            model: provider-a-model
+            pacingClass: judgment
+            capability: text-only
+    preferenceChain:
+      base: base
+      fallbacks: []
+`;
+
+/** Install the declared profiles configuration into a checkout (idempotent). */
+export const writeProviderProfilesConfig = (checkoutDirectory: string): string => {
+  const brand = resolveBrandIdentity({ workingName: WORKING_NAME });
+  if (!brand.ok) throw new Error("brand resolution failed");
+  const directory = join(checkoutDirectory, brand.value.configDirectoryName);
+  mkdirSync(directory, { recursive: true });
+  const file = join(directory, PROVIDER_PROFILES_CONFIG_FILE);
+  writeFileSync(file, PROVIDER_PROFILES_CONFIG);
+  return file;
+};
+
 /** One `.git` metadata helper: a directory, or a linked-worktree `.git` file. */
 export type Checkout = {
   readonly directory: string;
@@ -59,6 +114,7 @@ export const makeCheckout = (
   if (originUrl !== undefined) {
     writeFileSync(join(commonDir, "config"), `[remote "origin"]\n\turl = ${originUrl}\n`);
   }
+  writeProviderProfilesConfig(directory);
   return { directory, commonDir };
 };
 

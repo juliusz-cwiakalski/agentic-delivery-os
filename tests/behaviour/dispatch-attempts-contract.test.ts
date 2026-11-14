@@ -3,7 +3,7 @@
  * the ordering half of TC-ATTEMPT-004), asserted over the domain helper before
  * the command surface exists.
  *
- * The sixteen-field exact set, the singular `divergenceRef` (present and
+ * The seventeen-field exact set, the singular `divergenceRef` (present and
  * explicitly `null`), the `endedAt` mapping, the comparison projection with its
  * `not-applicable` null token, the total order, and the `matched`/`hasMore`
  * relation are the phase-1 obligations; their command-level cells complete with
@@ -44,11 +44,12 @@ const DECLARED_FIELDS = [
   "falseSuccess",
   "comparison",
   "resumeMode",
+  "providerProfile",
   "evidenceRefs",
   "recordedAt",
 ] as const;
 
-describe("TC-ATTEMPT-006 sixteen-field projection", () => {
+describe("TC-ATTEMPT-006 seventeen-field projection", () => {
   test("a projected attempt carries exactly the declared fields and nothing wider", () => {
     const view = projectAttempt(
       makeAttempt({
@@ -201,7 +202,7 @@ describe("TC-ATTEMPT-005 matched and hasMore", () => {
 });
 
 describe("TC-ATTEMPT-006..008 command-level projection", () => {
-  test("every returned row carries exactly the sixteen declared fields", async () => {
+  test("every returned row carries exactly the seventeen declared fields", async () => {
     const harness = createAttemptsHarness({ label: "contract-command", records: ledgerOf(3) });
     try {
       const result = await harness.invoke([

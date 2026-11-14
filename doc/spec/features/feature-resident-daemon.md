@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v1 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v2 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove` and the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the supervision-supplied profile-window watch with bounded-grace in-flight peak parking, classification-routed window-end resume, and the composition-fact peak-enforcement read, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292"]
-  related_decisions: ["TDR-0025"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294"]
+  related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -160,7 +160,7 @@ Control actions are at-most-once by (connection identity, frame id, lock token);
 a cross-connection id collision is a distinct request. The lock token appears
 only in the three control payloads and durable lock/instance records.
 
-### Event taxonomy v1
+### Event taxonomy v2
 
 The subscribe surface publishes a versioned taxonomy over six topics. `queue` and
 `lanes` are snapshot topics: their frames stay exactly
@@ -181,11 +181,21 @@ process-scoped: a daemon restart is a declared discontinuity that a client
 detects and answers with a repoll. The `cursor` appears on no event frame.
 
 The declared kind sets are `queue.graph` = `entry`, `dependency-edge`, `release`,
-`remove`; `dispatch.attempt` = `started`, `refused`, `completed`; `phase.state` =
-`began`, `completed`, `reopened`; `blockers.state` = `published`, `updated`,
-`cleared`. Every declared kind has a producer: `queue.graph.remove` is emitted
+`remove`, `park-edge`; `dispatch.attempt` = `started`, `refused`, `completed`,
+`stop`, `parked`, `resumed`; `phase.state` = `began`, `completed`, `reopened`;
+`blockers.state` = `published`, `updated`, `cleared`. The version stamp is
+`v2` — one declaration constant renders it on event frames, degraded frames, and
+the reference surface — and every delivered v1 kind and payload is
+byte-identical under it: taxonomy v2 is the single spoken version, v1 is retired
+rather than served concurrently, and a v1-pinned consumer keeps working by
+construction (new kinds are ignored-and-continued without repolling, and a
+foreign stamp is a version-drift signal answered by re-reading the reference
+surface, never an error or a disconnect). Every declared kind has a producer:
+`queue.graph.remove` is emitted
 from the `queue.removal` ledger, one event per applied removal with exactly
-`ref`, `reason`, and `recordedAt`. `phase.state.began`
+`ref`, `reason`, and `recordedAt`; the peak-pause kinds project the durable
+`queue.park` episode records (see [Peak-window watch, park, and resume](#peak-window-watch-park-and-resume)).
+`phase.state.began`
 is derived from a phase's first completion, because no begin record exists. A
 `dependency-edge` publishes only when its folded edge set differs, and its
 payload carries `added`/`removed`. Subscribing to an event topic produces no
@@ -193,7 +203,7 @@ synthetic baseline: the first frame is the next observed change, and `since`
 carries no event-topic semantics.
 
 A degraded frame keeps the delivered marker and drop behaviour and additively
-carries `overflow: "repoll"` and `taxonomyVersion: "v1"` for all six topics. A
+carries `overflow: "repoll"` and `taxonomyVersion: "v2"` for all six topics. A
 `subscribe` for a topic outside the six is refused with `events.topic-unknown`
 before any ledger read; the delivered handler accepted such a topic and served the
 `lanes` snapshot under the requested name, so this is an acceptance becoming a
@@ -208,7 +218,7 @@ fold and the durable heartbeat append/verify chain — are outside that count an
 unchanged. The per-`(topic, lane, source family)` emission watermark keeps an
 unemitted delta pending rather than dropped, and the per-topic per-tick cap is
 64. The taxonomy, its emission model, and the reference surface are described in
-[Event Taxonomy v1 and the Events Reference Surface](feature-event-taxonomy.md).
+[Event Taxonomy v2 and the Events Reference Surface](feature-event-taxonomy.md).
 
 The reference surface is `<binary> events list|describe`, generated from the same
 declaration; the public contract page is
@@ -334,6 +344,46 @@ applied preemption naming the close item. No active session releases and parks
 immediately. Pending state survives restart and is re-evaluated; the close item
 is not scheduled in the same pass. `withdrawn` is a declared read-only state.
 
+## Peak-window watch, park, and resume
+
+The supervision cycle runs the profile-window watch once per cycle, before
+action handling, when the composition supplies the peak-pause ports; a
+composition without them keeps the delivered cycle unchanged. The watch reads
+each in-flight lane's recorded provider profile nomination and only that
+profile's declared `peakWindows` rules ([Provider Peak Pausing](feature-peak-pausing.md)):
+when a profile's window is open on the UTC basis (buffer included), every
+in-flight lane nominated to it receives a bounded-grace stop — the deadline is
+recorded and can never outlast the window buffer — and the lane lands parked
+with cause `peak-window`, the profile named, and `until` at the effective
+window end, as one `queue.park` record appended under one fence, exactly once
+per episode. The park carries the closed preservation classification
+`preserved | session-state-not-preserved`; a preservation failure never
+refuses the park and never extends the grace. Lanes on other providers are
+untouched: the decision reads the nomination and that profile's window state
+only.
+
+At the effective window end (buffer included), observed by read-time expiry,
+the resume half routes every lane parked for that window by its
+classification. A `preserved` lane resumes through the delivered session
+resume path — attach-and-continue on the same branch, no restart ordinal. A
+`session-state-not-preserved` lane routes to the delivered interrupted-lane
+recovery: resume from the ledger position on the same branch, exactly one
+restart ordinal under the restart budget and resume economics, with budget
+exhaustion appending the delivered terminal record and raising a typed
+question. Resume is automatic — no operator command and no dispatch
+invocation — and never re-dispatches from scratch; the episode events
+(`stop`, `parked`, `resumed`, `park-edge`) are the taxonomy v2 kinds above,
+exactly one of each per episode.
+
+The delivered owner-hold precedence applies unchanged: the hold is a read-time
+gate that parks nothing and writes no park record, so the watcher still parks
+`peak-window` with `until` under an active hold, and a hold-active window-end
+resume refuses `queue.precondition.unmet` with reason `owner-hold` before any
+append — the existing park record stays byte-unchanged and resume proceeds
+once the hold clears.
+
+The `lanes` machine read's `peakEnforcement.mode` reflects the composition fact: it is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists; `parkClaimed` is read from the durable park records (the same rule [Provider Peak Pausing](feature-peak-pausing.md) states). A composition without the watch declares `peakEnforcement: { mode: "iteration-start-gating", parkClaimed: false }`: there is no window watcher and no mid-flight park, behavior is the delivered iteration-start gating at dispatch admission, and no surface claims a park that did not happen.
+
 ## Watch and degradation
 
 `queue --watch` and `lanes --watch` subscribe to the closed topic and print a
@@ -417,6 +467,9 @@ session resume are delivered by the dispatch engine ([Dispatch Engine](feature-d
 The dispatch engine composes the lane seam and proves the daemon-path attempt
 producer; the production composition mounts the daemon family without a lane
 composition, so supplying it remains resident-daemon production scope (GH-238).
+Peak pausing is daemon-supervision behavior: it requires the lane composition
+the daemon family already proves at the seam, and the daemon-absent branch
+carries the declared degradation above.
 launchd and Windows supervisor adapters, remote/container transports,
 status-watch, lane-scoped authorization, and the OQ-5 full session-resume
 remainder are future work.

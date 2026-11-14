@@ -385,7 +385,7 @@ export const driftMutants = (
   ): readonly SurfaceRecord[] =>
     baseline.map((record) => (record.name === topic ? change(record) : record));
   return {
-    version: edit("queue.graph", (record) => ({ ...record, version: "v2" })),
+    version: edit("queue.graph", (record) => ({ ...record, version: "v1" })),
     kind: edit("phase.state", (record) => ({
       ...record,
       kinds: record.kinds.map((kind) =>

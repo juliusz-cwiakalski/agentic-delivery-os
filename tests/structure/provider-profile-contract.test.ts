@@ -22,13 +22,13 @@ import {
   PROFILE_BLOCKER_KINDS,
   PROFILE_CAPABILITIES,
   PROFILE_ELIGIBILITY_VERDICTS,
+  PROFILE_EVENT_CODES,
+  PROFILE_EVENT_SEVERITIES,
   PROFILE_EVIDENCE_FIELDS,
   PROFILE_EVIDENCE_MAX_BYTES,
   PROFILE_EVIDENCE_MAX_FIELDS,
-  PROFILE_EVENT_CODES,
-  PROFILE_EVENT_SEVERITIES,
-  PROFILE_TARGET_RECORD_KEY,
   PROFILE_TARGET_REASONS,
+  PROFILE_TARGET_RECORD_KEY,
   PROFILE_TARGET_SCHEMA_ID,
   PROVIDER_RECORD_KINDS,
   PROVIDER_WATCH_MAPPING_KINDS,
@@ -152,6 +152,35 @@ describe("TC-PROFILE-039 contract inventory", () => {
     for (const code of PROFILE_EVENT_CODES) {
       expect(ANNOUNCEMENT_CODES as readonly string[]).not.toContain(code);
     }
+  });
+
+  test("peak-window rules join as an optional additive profile field (GH-294 DM-3)", () => {
+    const source = ts.createSourceFile(
+      MODULE,
+      readFileSync(join(ROOT, MODULE), "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
+    );
+    const alias = source.statements.find(
+      (statement): statement is ts.TypeAliasDeclaration =>
+        ts.isTypeAliasDeclaration(statement) && statement.name.text === "ProviderProfile",
+    );
+    expect(alias).toBeDefined();
+    const members =
+      alias !== undefined && alias.type.kind === ts.SyntaxKind.TypeLiteral
+        ? alias.type.members
+        : [];
+    const peakWindows = members.find(
+      (member): member is ts.PropertySignature =>
+        ts.isPropertySignature(member) &&
+        ts.isIdentifier(member.name) &&
+        member.name.text === "peakWindows",
+    );
+    expect(peakWindows).toBeDefined();
+    // Additive and optional: a profile without declared rules keeps the
+    // delivered shape — absence means no peak enforcement, never a default.
+    expect(peakWindows?.questionToken).toBeDefined();
   });
 });
 

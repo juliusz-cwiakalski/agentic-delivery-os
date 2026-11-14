@@ -51,6 +51,8 @@ export type DispatchRuntimeFailure = {
   readonly summary?: string;
   /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
   readonly holder?: string;
+  /** The eligibility list on a `provider.profile.unavailable` nomination refusal (GH-294). */
+  readonly eligibility?: readonly string[];
   /** The narrow trusted-refusal marker; set only for `config.credential.missing`. */
   readonly trustedRefusal?: true;
 };
@@ -58,20 +60,34 @@ export type DispatchRuntimeFailure = {
 /**
  * Project a runtime failure to the returned failure shape. The single-flight
  * holder is a record-shaped envelope-root `detail` member (TDR-0027), not an
- * error-object field; every other failure is returned as classified.
+ * error-object field; the nomination refusal's eligibility list rides the same
+ * record-shaped detail (GH-294, exit 2 renders the list). Every other failure
+ * is returned as classified.
  */
 const runtimeFailureOf = (
   error: DispatchRuntimeFailure,
 ): { readonly error: DispatchRuntimeFailure | Record<string, unknown> } => {
-  if (error.holder === undefined) return { error };
-  return {
-    error: {
-      kind: error.kind,
-      code: error.code,
-      ...(error.summary === undefined ? {} : { summary: error.summary }),
-      detail: { holder: error.holder },
-    },
-  };
+  if (error.holder !== undefined) {
+    return {
+      error: {
+        kind: error.kind,
+        code: error.code,
+        ...(error.summary === undefined ? {} : { summary: error.summary }),
+        detail: { holder: error.holder },
+      },
+    };
+  }
+  if (error.eligibility !== undefined) {
+    return {
+      error: {
+        kind: error.kind,
+        code: error.code,
+        ...(error.summary === undefined ? {} : { summary: error.summary }),
+        detail: { eligibility: [...error.eligibility] },
+      },
+    };
+  }
+  return { error };
 };
 
 /** The summary surface; phase 6 composes it. */

@@ -82,6 +82,9 @@ const digestSurface = (section: StatusSection, id: BriefSurfaceId): BriefSurface
     counts: section.counts,
     truncated: section.truncated,
     ...(reason === undefined ? {} : { reason }),
+    // The park fields ride the digest section's own values: the brief adds
+    // zero reads of its own (GH-294 NFR-8), so the projection is a pass-through.
+    ...(section.laneParks === undefined ? {} : { laneParks: section.laneParks }),
   };
 };
 
@@ -405,6 +408,20 @@ const contextLine = (surface: BriefSurface): string => {
   return `${surface.id}  ${stateWord(surface.state, surface.reason)}  total ${surface.counts.total} (${surface.counts.unknown} unknown)${suffix}`;
 };
 
+/**
+ * The providers surface's lane park render (GH-294 F-7, AMB-P3): each open
+ * episode's park fields — reason, `until` where the cause carries one, and
+ * the preservation classification — rendered verbatim from the values the
+ * digest carries. An `owner-hold` park renders the classified absence as an
+ * absent `until`, never a synthesized instant.
+ */
+const laneParkLines = (surface: BriefSurface): readonly string[] =>
+  (surface.laneParks ?? []).map((park) => {
+    const until = park.until === undefined ? "until=absent" : `until=${park.until}`;
+    const preservation = park.preservation === undefined ? "" : `  ${park.preservation}`;
+    return `lane-park  ${park.ref}  ${park.reason}  ${until}${preservation}`;
+  });
+
 const bound = (lines: readonly string[]): string => {
   const kept = [...lines];
   let dropped = 0;
@@ -462,6 +479,7 @@ export const renderBriefHuman = (brief: BriefPayload, brand: BrandIdentity): str
       lines.push(spendLine(brief));
     } else {
       lines.push(contextLine(surface));
+      if (id === "providers") lines.push(...laneParkLines(surface));
     }
   }
 

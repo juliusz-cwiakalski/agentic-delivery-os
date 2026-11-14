@@ -17,6 +17,7 @@ import {
 } from "../fixtures/projects/production";
 import { createHostFixture } from "../fixtures/projects/state-scope";
 import { createRepository, removeDirectory } from "../fixtures/projects/temp-repos";
+import { writeProviderProfilesConfig } from "../fixtures/queue/production/harness";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const REF = "GH-241";
@@ -66,6 +67,10 @@ describe("TC-PROJ-021 write placement and override honouring", () => {
     const harnesses: ProductionProjectsHarness[] = [];
     try {
       const checkout = createRepository(base, "placement-repo");
+      // GH-294 phase 12 (F-1): dispatch admission reads the provider profiles
+      // (fail-closed on the shipped empty default), so the fixture declares
+      // the minimal branch before any dispatch runs.
+      writeProviderProfilesConfig(checkout);
       seedChange(checkout);
       const harness = createProductionProjectsHarness({
         label: "placement",

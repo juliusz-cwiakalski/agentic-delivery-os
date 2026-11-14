@@ -15,10 +15,13 @@ import type {
   LaneExecutorPort,
   LaneHandle,
   LaneObservation,
+  QueueParkRecord,
   StateStorePort,
 } from "#contracts";
 import { classifyLaneProgress, nextSpawnOrdinal, shapeDaemonLane } from "../domain/daemon-lane.js";
+import { type PeakRulesLookup, runPeakResume, runPeakWatch } from "../domain/daemon-peak-pause.js";
 import { appendDaemonLane, readDaemonLanes } from "./daemon.js";
+import type { DispatchNomination, DispatchNominationRefusal } from "./dispatch.js";
 
 export type SupervisionAction = {
   readonly ref: string;
@@ -30,6 +33,59 @@ export type SupervisionAction = {
 export type SupervisionPorts = {
   readonly executor: LaneExecutorPort;
   readonly nextAction: () => SupervisionAction | undefined;
+  /**
+   * The nomination gate (GH-294 F-1, TDR-0028 D3): the claim path's first
+   * admission predicate, running before the lease claim and identical to the
+   * one-shot path's refusal identities. Absent keeps the delivered behavior.
+   */
+  readonly nominate?: (action: SupervisionAction) => DispatchNomination;
+  /**
+   * The profile-window watch ports (GH-294 F-3): the parked-peak read, the
+   * parsed rule lookup, the cooperative stop seam, and the park append. The
+   * watch runs once per supervision cycle over every in-flight lane, before
+   * the action handling. Absent keeps the delivered behavior (no watch).
+   */
+  readonly peakPause?: {
+    /** Refs holding an active `peak-window` park (read-time expiry already applied by the caller). */
+    readonly parkedRefs: () => readonly string[];
+    readonly rulesFor: PeakRulesLookup;
+    readonly nowMs: () => number;
+    readonly nowIso: () => string;
+    readonly stop: (input: {
+      readonly ref: string;
+      readonly sessionId?: string;
+      readonly graceDeadline: string;
+    }) => Promise<"preserved" | "session-state-not-preserved">;
+    readonly appendPark: (record: QueueParkRecord) => boolean;
+    readonly newEpisodeId: () => string;
+    readonly repository?: string;
+    /**
+     * The window-end resume half (GH-294 F-5): the latest peak-window park
+     * records (read-time expiry already applied by the caller), the owner-hold
+     * gate, and the delivered resume seams. Absent keeps the park-only watch.
+     */
+    readonly expiredPeakParks?: () => readonly QueueParkRecord[];
+    readonly holdActive?: () => boolean;
+    readonly sessionRefOf?: (ref: string) => string | undefined;
+    readonly branchOf?: () => string;
+    readonly restartCountOf?: (ref: string) => number;
+    readonly restartBound?: () => number;
+    readonly economicsOf?: (ref: string) => {
+      readonly prefillCost: number | null;
+      readonly uniqueProgress: number | null;
+    };
+    readonly appendRecovery?: (record: QueueParkRecord) => boolean;
+    readonly resumeSession?: (input: {
+      readonly ref: string;
+      readonly sessionRef: string;
+      readonly branch: string;
+    }) => Promise<boolean>;
+    readonly reenterLane?: (input: {
+      readonly ref: string;
+      readonly ordinal: number;
+    }) => Promise<boolean>;
+    readonly escalateExhaustion?: (input: { readonly ref: string; readonly code: string }) => void;
+  };
   readonly claim: (
     action: SupervisionAction,
   ) =>
@@ -89,7 +145,13 @@ export type SupervisionResult =
       /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
       readonly holder?: string;
     }
-  | { readonly mode: "executor-refused"; readonly action: SupervisionAction };
+  | { readonly mode: "executor-refused"; readonly action: SupervisionAction }
+  | {
+      readonly mode: "nomination-refused";
+      /** The resolve identity carried for the no-nomination shape (TDR-0028 D2). */
+      readonly code: DispatchNominationRefusal["code"];
+      readonly summary?: string;
+    };
 
 export type SupervisionInput = {
   readonly store: StateStorePort;
@@ -111,8 +173,90 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
       ? { mode: "supervise-only" }
       : { mode: "supervise-only", action: pending };
   }
+  // Profile-window watch (GH-294 F-3): every cycle observes the declared
+  // windows over the in-flight lanes' recorded nominations, before the action
+  // handling, so a lane is stopped and parked within the observation cycle
+  // (NFR-2). Absent ports keep the delivered behavior.
+  if (input.ports.peakPause !== undefined) {
+    const lanes = readDaemonLanes(input.store);
+    if (lanes.ok) {
+      const latest = new Map<string, DaemonLaneRecord>();
+      for (const record of lanes.records) latest.set(record.ref, record);
+      const inFlight = [...latest.values()]
+        .filter((record) => record.state === "delivering")
+        .map((record) => ({
+          ref: record.ref,
+          ...(record.providerProfile === undefined
+            ? {}
+            : { providerProfile: record.providerProfile }),
+          ...(record.sessionId === undefined ? {} : { sessionId: record.sessionId }),
+        }));
+      await runPeakWatch({
+        lanes: inFlight,
+        rulesFor: input.ports.peakPause.rulesFor,
+        nowMs: input.ports.peakPause.nowMs(),
+        parkedRefs: input.ports.peakPause.parkedRefs(),
+        newEpisodeId: input.ports.peakPause.newEpisodeId,
+        stop: input.ports.peakPause.stop,
+        appendPark: input.ports.peakPause.appendPark,
+        nowIso: input.ports.peakPause.nowIso,
+        ...(input.ports.peakPause.repository === undefined
+          ? {}
+          : { repository: input.ports.peakPause.repository }),
+      });
+      // Window-end resume (GH-294 F-5): every expired peak-window episode
+      // resumes through its delivered route in the same observation, guarded
+      // by the owner-hold gate (DEC-8/DEC-12). Absent half-ports keep the
+      // park-only watch.
+      const peak = input.ports.peakPause;
+      if (
+        peak.expiredPeakParks !== undefined &&
+        peak.holdActive !== undefined &&
+        peak.appendRecovery !== undefined &&
+        peak.resumeSession !== undefined &&
+        peak.reenterLane !== undefined &&
+        peak.escalateExhaustion !== undefined &&
+        peak.sessionRefOf !== undefined &&
+        peak.branchOf !== undefined &&
+        peak.restartCountOf !== undefined &&
+        peak.restartBound !== undefined &&
+        peak.economicsOf !== undefined
+      ) {
+        await runPeakResume({
+          parks: peak.expiredPeakParks(),
+          nowMs: peak.nowMs(),
+          nowIso: peak.nowIso,
+          holdActive: peak.holdActive(),
+          sessionRefOf: peak.sessionRefOf,
+          branchOf: peak.branchOf,
+          restartCountOf: peak.restartCountOf,
+          restartBound: peak.restartBound,
+          economicsOf: peak.economicsOf,
+          appendRecovery: peak.appendRecovery,
+          resumeSession: peak.resumeSession,
+          reenterLane: peak.reenterLane,
+          escalateExhaustion: peak.escalateExhaustion,
+        });
+      }
+    }
+  }
   const action = input.ports.nextAction();
   if (action === undefined) return { mode: "idle" };
+  // Nomination gate (GH-294, TDR-0028 D3): before the lease claim, with the
+  // same resolve identities and recordless discipline as the one-shot path —
+  // no lease, lane, or attempt record, no event, no executor start.
+  let nominatedProfile: string | undefined;
+  if (input.ports.nominate !== undefined) {
+    const nominated = input.ports.nominate(action);
+    if (!nominated.ok) {
+      return {
+        mode: "nomination-refused",
+        code: nominated.refusal.code,
+        ...(nominated.refusal.summary === undefined ? {} : { summary: nominated.refusal.summary }),
+      };
+    }
+    nominatedProfile = nominated.profile;
+  }
   const claimed = input.ports.claim(action);
   if (!claimed.ok) {
     return {
@@ -142,6 +286,11 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
     ...(previous?.ledgerPosition === undefined ? {} : { ledgerPosition: previous.ledgerPosition }),
     spawnOrdinal: nextSpawnOrdinal(previous),
     ...(previous?.resumeIntent === undefined ? {} : { resumeIntent: previous.resumeIntent }),
+    ...(previous?.providerProfile !== undefined
+      ? { providerProfile: previous.providerProfile }
+      : nominatedProfile === undefined
+        ? {}
+        : { providerProfile: nominatedProfile }),
     recordedAt: nowIso,
   });
   const recorded = appendDaemonLane(input.store, input.fenceToken, delivering);

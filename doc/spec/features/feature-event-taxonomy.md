@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-EVENT-TAXONOMY
 status: Current
 created: 2026-11-12
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The published event taxonomy v1 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
+summary: "The published event taxonomy v2 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge` carried by taxonomy v2 as the single spoken version with every v1 kind and payload byte-identical and v1 retired, the watcher's episode frames emitted only over records whose episode frame is complete while operator-shaped parks project the `park-edge` alone, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
 links:
-  related_changes: ["GH-290", "GH-292"]
-  related_decisions: ["TDR-0025", "TDR-0005"]
+  related_changes: ["GH-290", "GH-292", "GH-294"]
+  related_decisions: ["TDR-0025", "TDR-0005", "TDR-0029"]
   contracts:
     - "packages/core/src/contracts/taxonomy.ts"
     - "packages/core/src/contracts/control.ts"
@@ -21,7 +21,7 @@ links:
     - "packages/cli/src/help/prompt-required-commands.ts"
 ---
 
-# Feature: Event Taxonomy v1 and the Events Reference Surface
+# Feature: Event Taxonomy v2 and the Events Reference Surface
 
 ## Overview
 
@@ -31,6 +31,9 @@ types and `as const` data in the contracts tier — authors the six closed topic
 each topic's shape, frame field list, lane rule, kind records with their payload
 fields and emission state, the ordering rule, and the overflow policy, and the
 `events` reference command generates its surface from that declaration. The
+declared version is **v2**: one `TAXONOMY_VERSION` declaration constant renders
+the stamp on event frames, degraded frames, and the reference surface, so the
+three consumers cannot diverge. The
 daemon's emission projection is hand-authored and pinned to the declaration:
 its kind-name set is compared bidirectionally against the declared emitted set,
 and every declared kind's emitted payload keys are compared field-for-field
@@ -46,8 +49,11 @@ fresh baseline".
 
 The daemon, its control protocol, and its two snapshot topics are described in
 [Resident Dispatch Daemon](feature-resident-daemon.md). The binding decision
-record is
-[TDR-0025](../../decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md);
+records are
+[TDR-0025](../../decisions/TDR-0025-public-event-taxonomy-v1-subscribe-surface.md)
+(the subscribe-surface contract and version discipline) and
+[TDR-0029](../../decisions/TDR-0029-event-taxonomy-v2-peak-pause-kinds.md)
+(the v2 peak-pause kinds);
 this page states the delivered behaviour.
 
 ## Topics and shapes
@@ -59,8 +65,8 @@ The topic set is closed at six. `status` is a control wire type, not a topic.
 |---|---|---|---|---|---|
 | `queue` | snapshot | — | none (`kinds: []`) | `snapshot-revision` | `repoll` |
 | `lanes` | snapshot | — | none (`kinds: []`) | `snapshot-revision` | `repoll` |
-| `queue.graph` | event | `queue` | `entry`, `dependency-edge`, `release`, `remove` | `sequence-per-lane` | `repoll` |
-| `dispatch.attempt` | event | — | `started`, `refused`, `completed` | `sequence-per-lane` | `repoll` |
+| `queue.graph` | event | `queue` | `entry`, `dependency-edge`, `release`, `remove`, `park-edge` | `sequence-per-lane` | `repoll` |
+| `dispatch.attempt` | event | — | `started`, `refused`, `completed`, `stop`, `parked`, `resumed` | `sequence-per-lane` | `repoll` |
 | `phase.state` | event | — | `began`, `completed`, `reopened` | `sequence-per-lane` | `repoll` |
 | `blockers.state` | event | — | `published`, `updated`, `cleared` | `sequence-per-lane` | `repoll` |
 
@@ -85,10 +91,10 @@ topic, kind, lane, ref, sequence, occurredAt, payload, taxonomyVersion
 ```
 
 The first seven are the change fields; `taxonomyVersion` is the version stamp
-(`v1`) and sits outside `payload`. An event frame carries no `cursor`.
+(`v2`) and sits outside `payload`. An event frame carries no `cursor`.
 
-`lane` is present and a non-empty string on all four event topics; v1 declares
-no nullable lane. `ref` is present and nullable only where its source record is
+`lane` is present and a non-empty string on all four event topics; the taxonomy
+declares no nullable lane. `ref` is present and nullable only where its source record is
 nullable:
 
 | Topic | `lane` | `ref` |
@@ -119,9 +125,13 @@ fails a named test.
 | `queue.graph` | `dependency-edge` | yes | `ref`, `edges[]`, `added[]`, `removed[]`, `recordedAt` | `queue.dependency`, folded against the previous record for the same ref |
 | `queue.graph` | `release` | yes | `leaseId`, `repository`, `ref`, `holder`, `runner`, `weightClass`, `operation`, `recordedAt` | `queue.lease` with `operation: released` |
 | `queue.graph` | `remove` | yes | `ref`, `reason`, `recordedAt` | `queue.removal` |
+| `queue.graph` | `park-edge` | yes | `ref`, `cause`, `until?`, `episodeId`, `recordedAt` | `queue.park` episode record |
 | `dispatch.attempt` | `started` | yes | `ref`, `spawnOrdinal`, `sessionId?`, `harnessKind?`, `recordedAt` | `daemon.lane` in state `delivering` |
 | `dispatch.attempt` | `refused` | yes | `attemptId`, `ref`, `repository`, `harness`, `evidenceClass`, `token`, `startedAt`, `finishedAt`, `evidenceRefs[]` | `dispatch.attempt` with `outcome: refused` |
 | `dispatch.attempt` | `completed` | yes | `attemptId`, `ref`, `token`, `outcome`, `handoverState`, `comparisonClass`, `falseSuccess`, `divergenceRef?`, `finishedAt` | `dispatch.attempt` with any other outcome |
+| `dispatch.attempt` | `stop` | yes | `ref`, `graceDeadline`, `providerProfile`, `windowEnd`, `stoppedAt`, `episodeId` | `queue.park` peak-window episode record |
+| `dispatch.attempt` | `parked` | yes | `ref`, `reason`, `providerProfile`, `until`, `preservation`, `recordedAt`, `episodeId` | `queue.park` peak-window episode record |
+| `dispatch.attempt` | `resumed` | yes | `ref`, `sessionRef`, `branch`, `reDispatched`, `resumedAt`, `episodeId` | recovered `queue.park` record of a preserved episode |
 | `phase.state` | `began` | yes | `changeRef`, `phaseId`, `timestamp` | `phase.transition` with `operation: complete`, first observation for that phase |
 | `phase.state` | `completed` | yes | `changeRef`, `phaseId`, `commitIntent?`, `commitIntentBasis?`, `commitSha?`, `timestamp` | `phase.transition` with `operation: complete`, after that phase's first observation |
 | `phase.state` | `reopened` | yes | `changeRef`, `phaseId`, `reason`, `timestamp` | `phase.transition` with `operation: reopen` |
@@ -137,19 +147,43 @@ Three emission facts are declared rather than inferred:
 - **`began` is derived.** No begin record is written. `began` is emitted in the
   same observation as a phase's first `completed`, with the lower `sequence` on
   the same lane.
-- **Every declared kind has a producer.** The four `queue.graph` kinds are all
+- **Every declared kind has a producer.** The five `queue.graph` kinds are all
   emitted; `remove` derives from the `queue.removal` ledger, one event per applied
   removal, with exactly its declared payload fields `ref`, `reason`, and
   `recordedAt`. The `reason` is a member of the closed four-value vocabulary
   `landed | abandoned | superseded | reconciled`, and the lane is the entry ref.
   There is no declared-only kind and no non-emitted set.
 
+Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](feature-peak-pausing.md)):
+
+- **Exactly once per episode.** A parked-state `queue.park` record whose
+  episode frame is complete emits exactly one `stop`, one `parked`, and one
+  `park-edge`; a recovered record of a preserved episode emits exactly one
+  `resumed`. The shared `episodeId` reconstructs the whole episode from the
+  ledger alone across many supervision ticks.
+- **`resumed` is the session-resume transition's event.** Its payload always
+  carries a real preserved session-state reference, the same branch, and the
+  `reDispatched: false` fact. A `session-state-not-preserved` lane's
+  interrupted-lane recovery is a restart admission, not a session resume, and
+  emits no `resumed` frame; its episode's ledger truth is exactly one `stop`
+  plus one `parked` carrying the failure classification.
+- **`park-edge` carries the park lifecycle edge.** An `owner-hold` park emits
+  `park-edge` with `until` as a declared classified absence; an operator-shaped
+  `peak-window` park — the release writer stamps only the minimal episode
+  identity and the operator-declared `until`, not the watcher's episode fields —
+  emits the `park-edge` alone, never a `stop` or `parked` frame; the delivered
+  park causes (`provider-window`, `provider-quota`, `preempted-for-close-item`)
+  emit nothing.
+
 A `dependency-edge` event is emitted only when the folded edge set differs from
 the previous record for the same ref; a rewritten identical record publishes
 nothing, and a `dep remove` of an absent edge publishes nothing. A `queue release
---park` writes a separate `queue.park` record that no v1 kind consumes: the
-`release` payload carries no park cause, and the park withdrawal a removal appends
-for the same reason publishes nothing.
+--park` writes a separate `queue.park` record: the `release` payload carries no
+park cause, and the park withdrawal a removal appends
+for the same reason publishes nothing. A peak-window or owner-hold park record is
+the durable source of its episode's `park-edge` and — for a watcher-written
+peak-window episode carrying the complete episode frame — its `stop` and
+`parked` frames, so the park lifecycle is observable without any new write path.
 
 ## Emission model
 
@@ -157,8 +191,11 @@ The publish tick takes one `readRecords()` view and folds it once for the
 snapshot projection and once for the event projection. The event projection
 performs no store read of its own. Its source families are `queue.entry`
 (`entry`), `queue.dependency` (`dependency-edge`), `queue.lease` with
-`operation: released` (`release`), `queue.removal` (`remove`), the `daemon.lane`
-and `dispatch.attempt` ledgers (`dispatch.attempt`), `phase.transition`
+`operation: released` (`release`), `queue.removal` (`remove`), the `queue.park`
+episode records (`park-edge` and, for peak-window episodes, the `dispatch.attempt`
+`stop`/`parked`/`resumed` frames), the `daemon.lane`
+and `dispatch.attempt` ledgers (`dispatch.attempt`),
+`phase.transition`
 (`phase.state`), and the blocker question and answer ledgers
 (`blockers.state`).
 
@@ -200,7 +237,7 @@ subscription's bounded buffer overflows, that subscription receives exactly one
 `degraded` event, only that subscription is dropped, and every other
 subscription keeps receiving. The degraded event's `data` carries
 `degraded: "subscriber-overflow"`, `overflow: "repoll"`, and
-`taxonomyVersion: "v1"`.
+`taxonomyVersion: "v2"`.
 
 The reference surface declares `overflow: "repoll"` on every topic, rendered
 from the same constant as the frame, so the declared remedy and the wire remedy
@@ -244,7 +281,7 @@ reference is exit `0` with `data`; `data` carries:
 | Key | Contract |
 |---|---|
 | `command` | `events list` or `events describe` |
-| `taxonomyVersion` | `v1` |
+| `taxonomyVersion` | `v2` |
 | `envelope[]` | The eight event-frame fields in declared order |
 | `topics[]` | One record per declared topic for `list`, exactly one for `describe` |
 
@@ -272,6 +309,24 @@ per verb; the reference page is the M2 page
 resolved through the per-command page-root mapping the help gates apply, and the
 coverage inventory carries the command row and the page row.
 
+## Versioning and v1 compatibility
+
+`TAXONOMY_VERSION` is one declaration constant whose value is `v2`; it renders
+the stamp on event frames, degraded frames, and the reference surface, so the
+wire, the degraded carriage, and the reference page cannot disagree. Taxonomy
+v2 carries all six topics together, additively: every v1 kind and payload is
+byte-identical, and the envelope, per-`(topic, lane)` sequence, ordering, and
+overflow semantics are unchanged. v1 is retired, not served concurrently — v2
+is the single spoken version.
+
+A v1-pinned consumer keeps working by construction. The four new
+`(topic, kind)` pairs are ignored-and-continued, never repolled: the
+per-`(topic, lane)` sequence stays contiguous across them, so a discontinuity
+still means exactly what it meant. A foreign stamp is a version-drift signal,
+answered by re-reading the reference surface — never an error and never a
+disconnect. Repoll remains reserved for sequence gaps and overflow exactly as
+declared (TDR-0029).
+
 ## Boundaries
 
 - The taxonomy observes; it never writes. The declaration adds no state record
@@ -280,8 +335,9 @@ coverage inventory carries the command row and the page row.
   changes a payload schema version, or introduces a migration, backfill, or seed.
 - No new control wire type, frame field outside `data`, codec rule, protocol
   version, subscription-buffer semantics, or at-most-once behaviour is added.
-- Provider-aware peak-pausing shapes (stop, parked, resumed, and park-edge) are
-  a future taxonomy version, never an in-place edit to v1.
+- The peak-pause kinds project the scheduling engine's durable `queue.park`
+  episode records; a peak park or resume episode adds no new record family and
+  the projection writes nothing ([Provider Peak Pausing](feature-peak-pausing.md)).
 - The `events` family adds no `--watch` topic to `queue` or `lanes`; the four
   event topics are consumed through the daemon's subscribe surface.
 
@@ -295,9 +351,11 @@ coverage inventory carries the command row and the page row.
   `delivery.result.v1` envelope, the `events` error kind, and the `{0, 1, 2}`
   exit projection.
 - [Scheduling Engine](feature-scheduling-engine.md) — the queue, lease,
-  dependency, and removal ledgers the `queue.graph` kinds project.
+  dependency, removal, and park ledgers the `queue.graph` kinds project.
 - [Dispatch Engine](feature-dispatch-engine.md) — the attempt ledger and lane
   records the `dispatch.attempt` topic projects.
+- [Provider Peak Pausing](feature-peak-pausing.md) — the episode behavior the
+  `stop`, `parked`, `resumed`, and `park-edge` kinds carry.
 - [Typed Blocker and Question Channel](feature-blockers.md) — the question and
   answer records and the lane `resumeIntent` the `blockers.state` topic projects.
 - [Test Specification: Resident Dispatch Daemon](../../quality/test-specs/test-spec-resident-daemon.md)

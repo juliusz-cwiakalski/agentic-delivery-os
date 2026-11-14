@@ -57,6 +57,10 @@
       "idle": 1,
       "parked": 1,
       "failed": 1
+    },
+    "peakEnforcement": {
+      "mode": "iteration-start-gating",
+      "parkClaimed": false
     }
   }
 }

@@ -113,7 +113,7 @@ describe("TC-EVT-013 describe --json adds nothing to the machine shape", () => {
       const run = await probe.run(["events", "describe", name, "--json"]);
       expect(run.exitCode).toBe(0);
       expect(run.data?.command).toBe("events describe");
-      expect(run.data?.taxonomyVersion).toBe("v1");
+      expect(run.data?.taxonomyVersion).toBe("v2");
       expect(run.data?.topics).toHaveLength(1);
       expect(run.data?.envelope).toEqual(list.data?.envelope);
       const element = list.data?.topics.find((topic) => topic.name === name);
@@ -126,7 +126,7 @@ describe("TC-EVT-016 queue.graph per-kind payload detail", () => {
   test("every kind carries its declared non-empty payload list and none is unemitted", async () => {
     const run = await probe.run(["events", "describe", "queue.graph", "--json"]);
     const record = run.data?.topics[0];
-    expect(record?.kinds).toHaveLength(4);
+    expect(record?.kinds).toHaveLength(5);
     for (const kind of record?.kinds ?? []) expect(kind.payloadFields.length).toBeGreaterThan(0);
     const unemitted = (record?.kinds ?? [])
       .filter((kind) => !kind.emitted)

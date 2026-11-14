@@ -8,7 +8,7 @@
  * clock, randomness, environment, filesystem, or network access is declared
  * here.
  */
-import type { QuotaLimit } from "./provider.js";
+import type { ProviderPeakTimezone, QuotaLimit } from "./provider.js";
 
 /** The closed pacing classes (F-7, DEC-1). */
 export const PACING_CLASSES = ["judgment", "execution"] as const;
@@ -132,6 +132,8 @@ export type ProviderProfile = {
   readonly seats: Readonly<Record<string, ProviderProfileSeat>>;
   readonly agentOverrides: Readonly<Record<string, string>>;
   readonly providers: readonly string[];
+  /** Declared peak-window rules (GH-294 DM-3); absent means no peak enforcement. */
+  readonly peakWindows?: ProviderProfilePeakRules;
 };
 
 /** The declared preference chain (DM-4). `order` is base-first, then fallbacks. */
@@ -153,6 +155,36 @@ export type ProviderPacingConfiguration = {
   readonly goalPriorities: readonly PacingGoalPriority[];
   readonly rungs: Readonly<Record<string, ProviderPacingRung>>;
   readonly tailThresholdPercent: number;
+};
+
+/**
+ * One declared peak-window rule window (GH-294 DM-3, DEC-1).
+ *
+ * Evaluated on the UTC basis only: the time-zone declaration admits the
+ * delivered `UTC` designation and nothing else (OQ-TP-1). The multiplier is
+ * declared rule data for cost accounting; it never prices or converts (NG-5).
+ */
+export type ProviderProfilePeakWindow = {
+  readonly timezone: ProviderPeakTimezone;
+  readonly startSecondsOfDay: number;
+  readonly endSecondsOfDay: number;
+  readonly multiplier: number;
+  readonly bufferBeforeSeconds: number;
+  readonly bufferAfterSeconds: number;
+};
+
+/**
+ * Parsed per-profile peak-window rules (GH-294 DM-3, DEC-6).
+ *
+ * `graceSecondsDefault` is the declared profile default; `graceSecondsMax` is
+ * derived at parse time as the smallest declared buffer across the profile's
+ * windows, so the applied grace can never outlast the window buffer. The
+ * bound is data on the parsed value, not an assertion made downstream only.
+ */
+export type ProviderProfilePeakRules = {
+  readonly windows: readonly ProviderProfilePeakWindow[];
+  readonly graceSecondsDefault: number;
+  readonly graceSecondsMax: number;
 };
 
 /** One declared watch target behind a provider entry (DM-9, F-5). */

@@ -122,7 +122,7 @@ describe("TC-EVT-050 snapshot topics are byte-stable", () => {
       degraded: "subscriber-overflow",
       topic: "queue",
       overflow: TAXONOMY_OVERFLOW,
-      taxonomyVersion: "v1",
+      taxonomyVersion: "v2",
     });
   });
 });

@@ -6,11 +6,34 @@
   "weightClassSources": ["declared", "absent", "plan-unreadable", "plan-absent"],
   "rankClasses": ["merge-ready", "in-review", "resume-parked", "new-start"],
   "parkConditionTypes": ["provider-window", "provider-quota", "preemption"],
-  "parkCauses": ["provider-window", "provider-quota", "preempted-for-close-item"],
+  "parkCauses": [
+    "provider-window",
+    "provider-quota",
+    "preempted-for-close-item",
+    "peak-window",
+    "owner-hold"
+  ],
   "parkPairing": [
-    { "cause": "provider-window", "conditionType": "provider-window" },
-    { "cause": "provider-quota", "conditionType": "provider-quota" },
-    { "cause": "preempted-for-close-item", "conditionType": "preemption" }
+    {
+      "cause": "provider-window",
+      "conditionType": "provider-window"
+    },
+    {
+      "cause": "provider-quota",
+      "conditionType": "provider-quota"
+    },
+    {
+      "cause": "preempted-for-close-item",
+      "conditionType": "preemption"
+    },
+    {
+      "cause": "peak-window",
+      "conditionType": "provider-window"
+    },
+    {
+      "cause": "owner-hold",
+      "conditionType": "preemption"
+    }
   ],
   "recoveryStates": ["parked", "clear-observed", "recovered", "released"],
   "incidentTypes": ["park-auto-recovery", "lease-stale-takeover"],

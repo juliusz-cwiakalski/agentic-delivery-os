@@ -31,6 +31,7 @@ import {
   SPEND_MAX_MACHINE_BYTES,
   SPEND_PHASE_UNKNOWN,
   SPEND_TRUNCATION_MARKER,
+  SPEND_WINDOW_BASIS,
   type SpendAgentEntry,
   type SpendAmplification,
   type SpendAmplificationEvent,
@@ -48,6 +49,8 @@ import {
   type SpendReport,
   type SpendSelection,
   type SpendTruncation,
+  type SpendWindowEvidence,
+  type SpendWindowExclusion,
   TELEMETRY_RECONCILIATION_TOLERANCE,
   TELEMETRY_STATE_PRESENT,
   TELEMETRY_VERDICT_OUTSIDE,
@@ -887,5 +890,85 @@ export const spendDigestSection = (read: SpendLedgerRead): SpendDigestSection =>
     byRole: folded.data.breakdowns.role,
     byModel: folded.data.breakdowns.model,
     phaseTiming: folded.data.phaseTiming,
+  };
+};
+
+/**
+ * The window-scoped zero-spend reading (GH-294 F-6, DM-5, DEC-4; NFR-4).
+ *
+ * One pure pass over the telemetry v2 storage records handed in — never a
+ * harness-store query of its own (the GH-291 capture-time-only rule). The
+ * scope is inclusive at both boundary instants: a call at the park timestamp
+ * and a call at the window end both count; only calls strictly before the
+ * park timestamp and strictly after the window end are excluded, and every
+ * exclusion names its reason in the scope disclosure — boundary exclusions
+ * (`pre-park`/`post-window`) and attribution-scope or unreadable-instant
+ * exclusions each carry their own declared value (GH-294 F-8). Zero over
+ * present telemetry is a positive reading backed by the named attribution
+ * read (`delivery.telemetry.storage.v1`); an empty record set is the
+ * classified absence and never renders zero — the count is absent with it.
+ * A seeded mid-window call reads non-zero, so the assertion can fail.
+ */
+export const windowSpendEvidence = (input: {
+  readonly steps: readonly TelemetryStepRecord[];
+  readonly ref: string;
+  readonly providerProfile: string;
+  readonly from: string;
+  readonly through: string;
+}): SpendWindowEvidence => {
+  if (input.steps.length === 0) {
+    return {
+      ref: input.ref,
+      providerProfile: input.providerProfile,
+      from: input.from,
+      through: input.through,
+      telemetryState: "absent",
+    };
+  }
+  const fromMs = Date.parse(input.from);
+  const throughMs = Date.parse(input.through);
+  const stepInstant = (step: TelemetryStepRecord): string =>
+    step.finishedAt ?? step.startedAt ?? step.capturedAt;
+  const matchedPositions: number[] = [];
+  const excluded: SpendWindowExclusion[] = [];
+  let billableCalls = 0;
+  for (const [position, step] of input.steps.entries()) {
+    const at = Date.parse(stepInstant(step));
+    // The boundary gate first: an unreadable instant is its own disclosure
+    // reason (GH-294 F-8) — never a boundary exclusion.
+    if (!Number.isFinite(at)) {
+      excluded.push({ position, reason: "unreadable-instant" });
+      continue;
+    }
+    if (at < fromMs) {
+      excluded.push({ position, reason: "pre-park" });
+      continue;
+    }
+    if (at > throughMs) {
+      excluded.push({ position, reason: "post-window" });
+      continue;
+    }
+    // The attribution join's lane dimension: only the parked lane's own steps
+    // count, and only billable ones (a null or zero call count is not a
+    // billable model call). A foreign-lane step inside the window is disclosed
+    // as out of the parked lane's attribution scope — its own reason, never a
+    // boundary label (GH-294 F-8).
+    if (step.lane !== input.ref) {
+      excluded.push({ position, reason: "other-lane" });
+      continue;
+    }
+    matchedPositions.push(position);
+    if (step.calls !== null && step.calls > 0) billableCalls += step.calls;
+  }
+  return {
+    ref: input.ref,
+    providerProfile: input.providerProfile,
+    from: input.from,
+    through: input.through,
+    telemetryState: "present",
+    billableCalls,
+    basis: SPEND_WINDOW_BASIS,
+    matchedPositions,
+    excluded,
   };
 };

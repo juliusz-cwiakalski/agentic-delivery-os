@@ -125,7 +125,7 @@ describe("TC-EVT-022 envelope conformance across a full-delivery stream", () => 
         expect((data.lane as string).length).toBeGreaterThan(0);
         expect(data.sequence).toBeGreaterThan(0);
         expect(Number.isInteger(data.sequence)).toBe(true);
-        expect(data.taxonomyVersion).toBe("v1");
+        expect(data.taxonomyVersion).toBe("v2");
         expect(String(data.occurredAt)).toMatch(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/u);
         const payload = data.payload as Record<string, unknown>;
         const declaredFields = (declared?.payloadFields ?? []).map(payloadKey);

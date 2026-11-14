@@ -1,0 +1,569 @@
+change_id: GH-294
+title: "M2-S17: Provider-aware peak pausing (M2)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: 2026-11-13T15:40:00.000Z, completed: 2026-11-13T15:01:08.894Z }
+  specification: { started: null, completed: 2026-11-13T16:31:45.994Z }
+  test_planning: { started: null, completed: 2026-11-13T16:36:25.588Z }
+  delivery_planning: { started: null, completed: 2026-11-13T21:53:10.992Z }
+  dor_check: { started: null, completed: 2026-11-13T16:45:40.106Z }
+  delivery: { started: null, completed: 2026-11-13T20:31:08.380Z }
+  system_spec_update: { started: null, completed: 2026-11-13T21:20:05.593Z }
+  review_fix: { started: null, completed: 2026-11-14T00:02:00.571Z }
+  quality_gates: { started: null, completed: 2026-11-14T00:15:25.897Z }
+  dod_check: { started: null, completed: 2026-11-14T00:16:57.539Z }
+  pr_creation: { started: null, completed: 2026-11-14T00:24:22.411Z }
+decisions:
+  - text: "OQ-1 resolved by TDR-0028 (Proposed): no-nomination at admission is a
+      classified pre-session refusal reusing
+      provider.profile.absent/invalid/capability-denied/unavailable identities;
+      no dispatch-default fallback (default fallback would nominate an in-window
+      profile and bypass peak pausing)"
+    date: "2026-11-13"
+  - text: "OQ-2 resolved by TDR-0029 (Proposed): peak-pause kinds join as declared
+      taxonomy v2, all six topics move together, v1 kinds byte-identical, v1
+      retired not concurrent; v1 consumers ignore-and-continue on new kinds,
+      foreign stamp is version-drift signal not error"
+    date: "2026-11-13"
+  - text: "OQ-3 resolved by TDR-0030 (Proposed): park never refused for preservation
+      failure; closed-value classification preserved|session-state-not-preserved
+      on park record + parked event + status/brief; not-resumable lanes route to
+      delivered interrupted-lane recovery, budget-governed, never auto
+      re-dispatch"
+    date: "2026-11-13"
+  - text: "Decision records authored outside change folder
+      (doc/decisions/TDR-0028..0030); direct commit via commit primitive refused
+      (commit.staging-blocked-untracked, scope not yet declared); the delivery
+      plan MUST declare the three TDR files in an early plan-phase scope so
+      coder lands them (index rows already committed in b15af174 and must not
+      dangle at PR time); flagged for owner acceptance at PR review"
+    date: "2026-11-13"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue open (label change, milestone M2), no open/merged
+      PR, branch feat/GH-294/provider-peak-pausing fresh from main-tools
+      6af61a40 (GH-291 merge). Fresh delivery."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Clarify-scope cross-check vs current truth: peak windows already exist as
+      dispatch-eligibility gating (provider-profiles spec F-6: profile-level
+      park with peak-window cause + absolute expiry); S17 adds lane-level
+      parking of in-flight lanes + auto-resume. Daemon lane supervision exists
+      (production compose is supervise-only per GH-238 residual). Telemetry v2
+      (GH-291 merged PR #315) supplies the zero-spend assertion source. Event
+      taxonomy v1 declares EXTENSION PATH (S17) kinds
+      stop/parked/resumed/park-edge. Owner-hold (#280) and single-flight (GH-292
+      merged PR #314) semantics present. No contradictions found; ticket
+      requirements complete (goal, tasks, 7 ACs, dependencies, conventions)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Doc risks for phase 7: provider-profiles spec (lane-level peak park),
+      resident-daemon spec (profile-window watching, park/resume),
+      dispatch-engine spec (provider nomination at admission), telemetry-v2 spec
+      (zero-spend assertion incl. telemetry-absent classification),
+      event-taxonomy spec (S17 kinds), status-digest and brief pages
+      (stop/park/resume surfaces), doc/planning/oss-tooling backlog+status
+      markers; possible new canonical spec page feature-peak-pausing."
+    type: "risk"
+    date: "2026-11-13"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commit primitive with conventional subjects,
+      body/footer lines <=100 chars; quality gate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check; PR targets main-tools; maintain doc/planning/oss-tooling backlog
+      markers + status."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Retro: fresh worktree needed pnpm build (dist missing -> CLI module
+      resolution failure), pm-notes started timestamp rejected as date-only
+      string (schema wants full ISO or null), and the commitlint probe could not
+      find the commitlint binary on PATH (fixed with PATH=$PWD/node_modules/.bin
+      prefix) - three runner round-trips before phase complete landed. For
+      future fresh-worktree sessions: build first, use full ISO timestamps in
+      pm-notes, prefix workspace bin on PATH for lifecycle commands."
+    type: "retro"
+    date: "2026-11-13"
+  - text: "DoR iteration 1 verdict NOT_READY (review at
+      readiness-review/readiness-iter-1.md): 8 PASS / 2 FAIL; 2 major
+      (TC-PAUSE-052 interval-boundary contradiction vs spec DEC-4 inclusive
+      window; doc-update enumeration omits feature-scheduling-engine.md and
+      feature-spend.md pages), 1 minor (owner-hold --until rule unpinned for
+      TC-PAUSE-072), 1 nit (OQ-TP-5 superset wording). TDR staging and
+      OQ-TP-1..6 pins verified acceptable. All four findings remediated;
+      specification re-completed c5d94f4f, test_planning fa99912c,
+      delivery_planning 6d2d5605."
+    type: "info"
+    date: "2026-11-13"
+  - text: "DoR iteration 2 verdict NOT_READY (review at
+      readiness-review/readiness-iter-2.md): iter-1 findings 1/2/4 CLOSED, but
+      new finding A (major): the owner-hold --until chain presumes the hold
+      records an expiry, while delivered #280 truth (feature-scheduling-engine)
+      has NO expiry on the hold (bounded reason line only) - realizable branch
+      is classified absence; park writer for owner-hold parks unnamed. Finding B
+      (minor): plan pin claims TC-PAUSE-072 step 4 asserts both halves - false
+      in test plan v1.1. Finding C (nit): test plan section-2 cites spec v1.1
+      stale after v1.2. Reopening specification + test_planning +
+      delivery_planning for remediation iteration 3; escalation if A persists
+      after iteration 3."
+    type: "info"
+    date: "2026-11-13"
+  - text: "DoR iteration 3 verdict READY (review at
+      readiness-review/readiness-iter-3.md): 10/10 facets PASS; iter-2 findings
+      A/B/C all CLOSED with end-to-end owner-hold semantics chain verified
+      across spec v1.3 / test plan v1.2 / plan (header pin + phases 5/7/9); plan
+      validate independently re-verified valid, tier full,
+      readyForDevelopment=true. One non-blocking nit recorded (--until + --park
+      owner-hold combined invocation not explicitly asserted; refusal follows
+      from delivered generalized rule; delivery may absorb). Gate passed on
+      iteration 3 of 3."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 1 complete (commit de9863253): decision records
+      TDR-0028/0029/0030 landed with the peak-window rule schema as versioned
+      per-profile data (provider.profiles.<profile>.peakWindows: window list,
+      multiplier, bufferBefore/After, required graceSeconds default, derived
+      graceSecondsMax = smallest declared buffer exposed on the parsed value;
+      UTC-only designation validates, exact-duplicate windows refuse, distinct
+      overlaps validate without arbitration per OQ-TP-1/2 pins; buffer-inclusive
+      open/effective-end boundary helpers added to provider/peak.ts, one
+      boundary truth, two consumers; delivered evaluatePeakWindow behavior
+      preserved). Test result at boundary: pnpm typecheck green;
+      provider-peak-rules-schema 18/18 PASS; provider-profile-contract +
+      content-inventory 16/16 PASS; ambient-globals OK (185 files clean);
+      exports-parity OK (5 publishables); delivered provider-peak-window control
+      5/5 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 2 complete (commit 088f6fb7d): provider profile nomination at
+      dispatch admission — providerProfile recorded at admission on the dispatch
+      attempt record family (delivery.dispatch.attempt.v1, additive field,
+      rendered as null classified absence on pre-change records by the
+      attempt-history read) and on the daemon lane record family via
+      shapeDaemonLane; nomination gate runs FIRST in runDispatch (before
+      credential preflight, owner-hold, lease/single-flight) and before the
+      claim in runSupervisionCycle (mode nomination-refused); shared predicate
+      nominateProviderProfile over the delivered selectProfile seam reuses the
+      resolve identities (absent/invalid/capability-denied exit 1, unavailable
+      exit 2 with the eligibility list in the refusal detail); no new dispatch.*
+      identity; resumes never re-nominate; no read defaults, guesses, or
+      borrows. Test result at boundary: pnpm typecheck green;
+      provider-nomination-admission 11/11 PASS; delivered controls
+      dispatch-attempts-refusals + dispatch-single-flight +
+      provider-profile-selection + provider-peak-window +
+      dispatch-attempts-taxonomy + content-inventory 42/42 PASS;
+      daemon-lane-supervision + dispatch-resume + dispatch-admission-preflight
+      20/20 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 3 complete (commit bcb474fd7): taxonomy v2 declared as the
+      single spoken version (TAXONOMY_VERSION v2; stop/parked/resumed join
+      dispatch.attempt, park-edge joins queue.graph with pinned payload lists —
+      episodeId as the episode identity; every v1 kind and payload
+      byte-identical; retired-version literal kept out of the contract surface),
+      emission projection extended to the four kinds over durable queue.park
+      episode records (parked-state record emits stop+parked+park-edge exactly
+      once, recovered record emits resumed with the no-re-dispatch fact,
+      owner-hold park emits park-edge with until as classified absence,
+      delivered causes emit nothing), reference surface + M2 events page
+      reconciled to v2 with the six-point compatibility statement (conformance
+      page half), goldens regenerated deliberately once with version-bearing +
+      additive deltas only (BYTE-P1), new event-taxonomy-v2-compat suite over
+      the in-memory pair plus the bounded unix-socket variant (TC-PAUSE-063).
+      Delivered-suite disclosures (mechanical, TDR-0029 D2/D4 whole-taxonomy
+      move, no semantic assertion change): events-emitted-kinds fixture gained
+      the episode records covering the new declared kinds;
+      events-overflow-parity stamp literals moved v1→v2. Test result at
+      boundary: pnpm typecheck green; the 18-suite taxonomy battery 98/98 PASS
+      (declaration, drift, integrity, single-source, additive, conformance,
+      v2-compat, events list/describe, golden reference page, emitted-kinds,
+      overflow-parity, sequence, burst, subscribe, dependency-delta,
+      frame-bound)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 4 complete (commit 8928a9f53): the daemon's profile-window
+      watch and in-flight lane parking — new pure module
+      domain/daemon-peak-pause.ts (decidePeakStops over the recorded nomination
+      and that profile's window state only; runPeakWatch appending exactly one
+      park record per episode under one fence; buffer-inclusive open via the
+      shared peak.ts boundary helpers; zero rules = zero decisions), supervision
+      cycle runs the watch once per cycle before action handling (peakPause
+      ports; absent keeps delivered behavior), queue park-cause set gains
+      peak-window (mapped onto the provider-window condition type) and
+      owner-hold (preemption type) per DEC-2, park record family gains the
+      additive DM-4 fields
+      (providerProfile/until/graceDeadline/windowEnd/stoppedAt/preservation/
+      episodeId plus sessionRef/branch at recovery), closed preservation set
+      preserved|session-state-not-preserved; preservation failure never refuses
+      the park nor extends the grace (TDR-0030 D1/D5); no kill path (source
+      scan). Scope disclosures: cli/edge.ts one-line recheck lookup switched to
+      conditionTypeForCause (mechanical type consequence of the widened cause
+      set), tests/types/queue-scheduling.type-test.ts ParkCauseUnion gained the
+      two members (same). Test result at boundary: pnpm typecheck green;
+      daemon-peak-window-park 9/9 PASS; delivered controls daemon-lane-
+      supervision + daemon-preemption + provider-peak-window + queue-park +
+      daemon-single-flight 41/41 PASS; content-inventory 6/6 PASS; ambient-
+      globals OK (186 files); exports-parity OK."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 5 complete (commit ecd457b4f): window-end resume (both
+      classification routes) with cross-profile isolation — decidePeakResumes
+      (read-time expiry at the effective end; preserved → session-resume,
+      not-preserved → interrupted-recovery; hold-active → refusal per episode),
+      recoverInterruptedLane (delivered planDispatchResume +
+      admitDispatchRestart + resume-economics gates; exactly one restart
+      ordinal; exhaustion escalates verbatim terminal, uneconomical leaves
+      parked for re-eval), runPeakResume (session path attach-and-continue same
+      branch no ordinal; recovery record appended once per episode; owner hold
+      refuses queue.precondition.unmet/owner-hold appending nothing, park record
+      byte-unchanged; resumes once the hold clears; watcher still parks under
+      hold), supervision peakPause ports gained the resume half. OQ-TP-3 pin
+      enforced in the projection: resumed fires only for preserved episodes.
+      Isolation: decidePeakStops set-equality matrix (unused-profile window,
+      independent windows, model-string bait, pre-change lane never borrows).
+      Scope disclosure: domain/event-projection.ts gained the preservation-guard
+      on the resumed emission (mechanical enforcement of the binding OQ-TP-3 pin
+      on this change's own Phase 3 code). Test result at boundary: pnpm
+      typecheck green; daemon-peak-window-isolation + daemon-peak-window-resume
+      14/14 PASS; delivered controls dispatch-resume + dispatch-restart-budget +
+      queue-hold-park-resume + queue-hold-dispatch + daemon-peak-window-park
+      23/23 PASS; content-inventory 6/6 PASS; taxonomy suites still green after
+      the projection guard."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 6 complete (commit 2efe5c6f3): the window-scoped zero-spend
+      assertion — windowSpendEvidence over the telemetry v2 storage records
+      (inclusive both boundary instants; only strictly pre-park excluded, every
+      exclusion named with its boundary reason; lane-dimension join; zero is a
+      positive reading over present telemetry with the named
+      delivery.telemetry.storage.v1 basis; an empty read is the classified
+      absence and the count is absent with it, never fabricated zero;
+      falsifiable by a seeded mid-window call), SpendWindowEvidence type +
+      telemetryState disclosure in contracts/spend.ts, the spend CLI surfaces it
+      via the additive --window-evidence --from/--through form with its own
+      human render (absence renders never-zero, present renders the count and
+      basis), edge composition wires the read (readTelemetrySteps + the profile
+      read from the latest peak-window park record — never re-derived from a
+      model string). Scope disclosures (mechanical): contracts/index.ts +
+      domain/index.ts + index.ts barrel lines for the new symbols (CLI imports
+      ride package subpaths), cli/edge.ts spend runtime composition (the
+      wiring), spend-grammar.test.ts locked flag-set pin gained the three
+      window-evidence flags (same category as the Phase 3 stamp moves — the
+      assertion's meaning, the declared flag vocabulary, extended). Test result
+      at boundary: pnpm typecheck green; spend-zero-window 6/6 PASS; delivered
+      controls spend-grammar + spend-absent + spend-v2-breakdown +
+      telemetry-attribution + golden spend 49/49 PASS; content-inventory 6/6
+      PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 7 complete (commit 7f5f5741e): park vocabulary + status/brief
+      surfaces + exactly-once episode evidence — queue release grammar accepts
+      peak-window (requires the delivered explicit --until) and owner-hold
+      (--until refused: the classified absence; the invoked command is the ONE
+      owner-hold park writer; the hold itself writes none; the resume modules
+      append no owner-hold park — writer enumeration asserted), lanes
+      parked:<cause> template gains both with the delivered three unchanged
+      (closed-set equality both directions; condition-type set unchanged),
+      status digest providers section gains laneParks (StatusLanePark: ref,
+      reason, until, preservation, profile — bounded like the delivered parks,
+      values carried verbatim from the park records, cleared after the episode
+      closes), collector reads them in the same pass (readLaneParks runtime
+      seam), brief surface + human render project the identical values with zero
+      added reads (pass-through + lane-park lines; owner-hold until renders
+      absent), exactly-once episode evidence suite over the real daemon publish
+      path (one stop/parked/park-edge/resumed per episode across many ticks;
+      ledger-only reconstruction via the shared episodeId; no resumed for
+      not-preserved), NFR-6 bounds measured (≤20 fields, ≤1024 bytes). Goldens
+      unchanged (fixtures carry no lane parks; lanes render unchanged). Test
+      result at boundary: pnpm typecheck green; the Phase 7 battery 93/93 PASS
+      (three new suites + status-owner-hold + status-parked-conditions +
+      status-providers-parked + queue-cli + golden lanes-list + golden brief)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 8 complete (commit 658ffad9e): the declared daemon-absent
+      degradation — foldLanes gains peakEnforcement
+      (QUEUE_PEAK_ENFORCEMENT_MODES closed set; default iteration-start-gating +
+      parkClaimed false; resident daemon composes window-watch), the lanes
+      --json machine read carries it over the real edge (the degraded reuse — no
+      second reachability resolution; one bounded park read for parkClaimed),
+      zero-claims scan across status (no laneParks), brief (none), lanes
+      (parkClaimed false, zero parked), events reference (declaration is data,
+      not a claim), and zero park-family records / no synthesized zero-spend
+      reading daemon-absent. Scope disclosures (mechanical): contracts/index.ts
+      barrel rows for the new queue symbols, lanes-list/lanes-show goldens
+      gained the additive peakEnforcement block only (BYTE-P1, hand-applied to
+      preserve formatting), daemon-degradation-read-cost lanes bound moved 2→3
+      for the one bounded park read (the schedule bound unchanged; the resolver
+      reuse keeps the delivered resolution count). Test result at boundary: pnpm
+      typecheck green; daemon-absent-degradation 6/6 PASS; delivered controls
+      daemon-degradation + projection + read-cost + dispatch-daemonless +
+      provider-peak-window + lanes + lanes-watch + golden lanes-list/show 44/44
+      PASS; content-inventory 6/6 PASS."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 9 complete (commit 341b073ed): the cross-cutting battery —
+      peak-window-utc-clock (TC-PAUSE-090: the boundary matrix flips exactly at
+      start-minus-buffer open and effective-end close; the DST-zone matrix
+      equals the UTC baseline; the injected clock's sleep counter is the only
+      wait; OQ-TP-1 evaluation half — every evaluated window carries only the
+      UTC designation), peak-pause-determinism (TC-PAUSE-091: paired park
+      decisions, park records, resume decisions, recovery admissions, and schema
+      parsings byte-for-value identical), peak-pause-hermetic (TC-PAUSE-092:
+      armed fetch guard observes zero calls over a full watch pass with a firing
+      canary; watched modules carry no credential, harness store, $HOME,
+      process.env, setTimeout, setInterval, Date.now, or Bun.sleep markers), and
+      the additivity half (TC-PAUSE-094: state-contract + event-state-additivity
+      controls green — STATE_SCHEMA_VERSION unchanged, no new suffixed record
+      constants, no migration modules — plus the queue-park-causes-s17 writer
+      enumeration: the hold writes none, the resume modules write no owner-hold
+      park, the invoked release command is the one writer, the owner-hold record
+      carries the classified absence). Test result at boundary: pnpm typecheck
+      green; the battery 38/38 PASS (three new suites + state-contract +
+      event-state-additivity + queue-park-causes-s17)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Plan phase 10 complete (commit 665f806f0): planning-doc maintenance
+      (backlog M2-S17 delivered marker following the M2-S13/S14 precedent;
+      status.md delivery snapshot addendum), one lockstep minor changeset over
+      the five publishables (.changeset/gh-294-provider-peak-pausing-minor.md),
+      and the change-folder residue. Full-battery remediation in this phase (all
+      mechanical or spec-mandated, each per the reserved escalation):
+      dispatch-attempts-contract 16→17 projection fields (DM-1 additive
+      providerProfile), queue-scheduling-contract + closed-sets.json fixture
+      gained the two causes and the DEC-2 superseded injective pairing
+      (provider-window and preemption carry two causes each; spec §16 declares
+      the supersession), events envelope/snapshot/queue-graph/conformance stamp
+      literals v1→v2 (TDR-0029 D4), port-contract-inventory fixture rows for the
+      new contract exports, peak-pause-determinism lint fix
+      (assignment-in-expression), tier-discipline import corrections
+      (peak-rules/queue-park/daemon-peak-pause/spend/status now import the new
+      symbols via #contracts; barrels carry the re-exports), and the catalog
+      fix: peakWindows declared optional (absence = no enforcement) — the
+      required flag had made the schema reject every delivered profile without
+      declared rules. Gate results: plan validate verdict=valid; full
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — lint, format, typecheck, tests
+      8108 pass / 4 skip / 0 fail, boundaries, prompt-conformance,
+      help-guide-coverage, exports-parity all green."
+    type: "info"
+    date: "2026-11-13"
+  - text: "DoR iteration 3 verdict READY (review at
+      readiness-review/readiness-iter-3.md): 10/10 facets PASS; iter-2 findings
+      A/B/C all CLOSED with end-to-end owner-hold semantics chain verified
+      across spec v1.3 / test plan v1.2 / plan; gate passed on iteration 3 of 3.
+      Note: this entry was re-added because concurrent pm-notes evidence appends
+      during delivery dropped the original copy from the mirror (the committed
+      copy lives in 61a44f6d and the registry ledger; the mirror is not the
+      truth)."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Retro: plan DOC BOUNDARY carried the possible new canonical page
+      (feature-peak-pausing.md) as prose only, never in machine scope.files -
+      the system_spec_update phase commit landed the 13 reconciled pages
+      (tracked, drift-staged) but excluded the untracked new page
+      (untrackedNotStaged), leaving committed pages cross-referencing a file
+      absent from the repo. Lesson: when a plan says 'possible new page', the
+      concrete path must be declared in a phase scope.files (or explicitly
+      handed to doc-syncer with a landing mechanism) before phase 7 runs;
+      untracked files outside declared scope are never staged by the commit
+      primitive. Remediation: reopening delivery_planning to declare Phase 11
+      landing the page; coder executes it before the review phase."
+    type: "retro"
+    date: "2026-11-13"
+  - text: "Plan phase 11 (post-DoR amendment landing) complete: the canonical
+      peak-pausing spec page doc/spec/features/feature-peak-pausing.md — content
+      authored by @doc-syncer at lifecycle phase 7 (system_spec_update) — landed
+      byte-identical through the commit primitive, remediating the scope gap
+      (the DOC BOUNDARY had named the possible new page in prose only, never in
+      machine scope.files, so the phase-7 commit staged the reconciled pages but
+      excluded the untracked page, leaving the committed spec tree
+      cross-referencing a file absent from the repo). No content edits, no other
+      production files; no TC owned here — the page is proven by the doc guards
+      and its content was attested at lifecycle phases 7-8. Gate results at
+      boundary: delivery-os lint GH-294 pm-notes variant full class=conforms;
+      plan validate GH-294 verdict=valid tier=full readyForDevelopment=true; bun
+      test tests/checks/doc-conformance.test.ts 11 pass / 0 fail; bun test
+      tests/structure/content-inventory.test.ts 6 pass / 0 fail."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Code review iteration 1 verdict FAIL (review at
+      code-review/review-iter-1.md): 10 findings - F-1 critical: nomination port
+      never wired in any production composition (edge.ts createDispatchRuntime,
+      DispatchComposition, production.ts, daemon-compose.ts) so zero production
+      dispatches record providerProfile; F-2 high: queue release --park
+      peak-window --until exits 1 at stale edge guards (accepts only
+      provider-window cause) - delivered grammar unusable via CLI; F-3 high:
+      readLaneParks wired nowhere, no StatusLanePark producer - status/brief
+      never render lane parks; F-4 medium: operator-shaped peak-window parks
+      project false stop frame, empty episodeId, preservation outside closed
+      set; F-5 medium: peakEnforcement mode claims window-watch though no
+      composition supplies the watch + two spec pages state it inconsistently;
+      F-6..F-10 low/info. Root cause class: plan never declared
+      edge.ts/production.ts/ daemon-compose.ts scope (same omission class Phase
+      11 remediated for docs). Remediation: reviewer-drafted Phase 12 to be
+      formalized in the plan; reopening delivery_planning."
+    type: "info"
+    date: "2026-11-13"
+  - text: "Retro: delivery plan phases 2/7/8 declared domain-layer and test scope
+      but omitted the composition/edge halves (edge.ts, production.ts,
+      daemon-compose.ts), so suites passed on injected ports while production
+      composition stayed unwired - review caught it, gates could not. Lesson for
+      plan authors: every delivered surface needs BOTH the domain scope and the
+      composed-edge scope declared, and at least one behaviour test must drive
+      the real composition (not injected fakes) for headline capabilities."
+    type: "retro"
+    date: "2026-11-13"
+  - text: "Plan phase 12 (code-review remediation iteration 1) complete. What
+      shipped per finding: F-1 DispatchComposition gains the nominate channel
+      (edge.ts), production dispatchComposition supplies nominationPredicate
+      (nominateProviderProfile over the parsed provider configuration, the
+      extracted createResolvedProviderProbe, and the clock; the profiles branch
+      ships empty by default so fresh installs fail closed at
+      provider.profile.absent per the branch's own DEC-9 contract),
+      daemon-compose forwards the supervision nominate port before the claim;
+      composed proofs in tests/behaviour/peak-pause-composed-edge.test.ts
+      (attempt+history+lane records carry providerProfile; all four
+      no-nomination shapes refuse at their delivered exits through the composed
+      CLI; supervision claim parity). F-2 edge release guards treat peak-window
+      exactly like provider-window (until required and accepted; owner-hold
+      refuses until); composed happy path lands the park via the CLI harness.
+      F-4 projection stop/parked emission gated on the DM-4 episode fields
+      (episodeFrameComplete) + the release writer stamps minimal episode
+      identity (peak-<ref>-<nowIso>) and the operator-declared until - the
+      operator-shaped record projects the park-edge alone through the real
+      projector; reader-side PARK_KEYS/isParkRecord extended for the additive
+      DM-4 fields (the delivered validator rejected every episode-shaped park
+      record as torn - latent defect the composed happy path exposed). F-3
+      laneParkViews producer (one bounded read, latest-per-ref, read-time
+      expiry, STATUS_MAX_LANE_PARKS) wired into createStatusCommandRuntime;
+      composed status/brief render + clear parks from real records. F-5
+      peakEnforcement.mode derives from QueueComposition.peakWatchComposed (a
+      composition fact); parkClaimed purely record-derived; status.md corrected
+      (spec-page wording is the DOC-SYNC HANDOFF to @doc-syncer). F-6 matrix
+      half: tier-domain-not-provider rule in .dependency-cruiser.cjs with the
+      peak.js pathNot exception + firing negative fixture (tier-domain-provider)
+      and clean control (peak-boundary) registered in tests/boundaries - the
+      move half was non-compliant because TC-PROFILE-055/039 pin
+      contracts/provider-profile.ts data-only (verified by execution);
+      #contracts import style aligned for the queue contracts. F-7
+      session-resume skips when no session reference resolves (stay parked,
+      re-observe). F-8 SpendWindowExclusion reason set extended additively
+      (other-lane, unreadable-instant); boundary gate split from lane scope. F-9
+      queue.ts comments repaired (QueueLanesData comment reattached, DEC-2
+      many-to-one pairing header). F-10 decidePeakStops caches {rules, window}.
+      Gate results: pnpm typecheck green; the six GH-294 suites + composed-edge
+      suite 43 pass / 0 fail (plus the daemon/window/taxonomy suites re-run
+      green); TMPDIR=$PWD/tmp/tmpdir pnpm check full battery 8121 pass / 1 fail
+      / 4 skip - the one failure is ci-baseline-parity, whose clone sees only
+      COMMITTED state: the unregistered-spec-page failure it reports is exactly
+      the registry addition this commit stages, and the repaired scan it runs
+      (forbidden-literals over the committed tree) passes with the staged
+      registry, verified by executing the scan's own logic over the committed
+      content; the test goes green at this commit. lint, format, typecheck,
+      boundaries, prompt-conformance, help-guide-coverage, exports-parity all
+      green in the same run, after the mechanical fixture/registry updates named
+      below. Post-commit boundary re-verification (parity test + delivery-os
+      lint GH-294) to be recorded in the coder report; the commit-pending
+      disclosure stands. Commit-pending disclosure: this note precedes the
+      phase-12 commit; the parity test's post-commit pass and delivery-os lint
+      GH-294 are recorded here as the observed boundary results. Mechanical
+      consequences outside declared scope.files (disclosed):
+      packages/core/src/contracts/index.ts (barrel re-export of the two new
+      spend names), packages/core/src/provider/index.ts (barrel export of
+      nominateProviderProfile), the delivered fixtures/tests the always-on
+      nomination gate and the status read bound moved:
+      tests/fixtures/dispatch/admission.ts,
+      tests/fixtures/queue/production/harness.ts (writeProviderProfilesConfig -
+      the shipped-empty profiles branch fails closed, so delivered fixtures
+      declare the minimal branch to keep exercising their credential/preflight/
+      truth intents), tests/structure/dispatch-composition.test.ts,
+      tests/behaviour/status-performance.test.ts (records budget 3->4 with the
+      bounded lane-park read named), tests/behaviour/projects-state-placement.
+      test.ts, tests/behaviour/projects-scope-isolation.test.ts,
+      tests/structure/verify-imports.test.ts (pinned depcruise rule list),
+      tests/structure/content-inventory.test.ts (allowances for the two new
+      executable exports), tests/fixtures/ports/v1-contract-inventory.json (the
+      two new spend exports), scripts/checks/forbidden-literals.registry.json
+      (feature-peak-pausing.md registered as a new user-facing doc - the page
+      had landed unregistered in phase 11)."
+    type: "info"
+    date: "2026-11-14"
+  - text: "Doc-syncer re-run after Phase 12 (review-loop re-run + F-5 DOC-SYNC
+      HANDOFF): 9 pages aligned - F-5 composition-fact mode rule stated
+      identically across feature-peak-pausing (sections 8/9), resident-daemon,
+      scheduling-engine, glossary, 00-index; F-4 emission gating into
+      event-taxonomy + peak-pausing section 6; F-2 writer-stamp into
+      peak-pausing section 8; F-3 read-budget truth (3 to 4 bounded reads) into
+      status-digest; F-8 closed exclusion-reason set into spend + peak-pausing
+      section 7; composed-edge suite row in the QA map; F-6 tier rule into the
+      monorepo-toolchain tier matrix. Guards green: doc-conformance 11/0,
+      content-inventory 6/0, doc-distribution no drift, prompt-conformance
+      clean, help-coverage all covered, composed-edge + status-performance 17/0.
+      Uncommitted for the review_fix phase commit. Residual gaps: none."
+    type: "info"
+    date: "2026-11-14"
+  - text: "Code review iteration 2 verdict PASS (review at
+      code-review/review-iter-2.md): F-1..F-10 all CLOSED, re-verified from
+      source and re-proven by execution with no carry-over credit (F-2 probe now
+      exit 0 parked; F-4 probe emits exactly one park-edge pre/post-fix shapes;
+      423 targeted tests green; ci-baseline-parity green at HEAD). Scope drift
+      verified as disclosed. 4 new NON-BLOCKING observations: N-1 low
+      (park-fixture readQueueParks-failure fallback masks reader regressions -
+      the pattern that hid the latent defect), N-2..N-4 info (comment slip,
+      untested daemon-compose forwarding, missing isParkRecord negative test).
+      Reviewer directs: land the 9-page docs reconciliation with the change.
+      Proceeding to quality_gates; N-1..N-4 recorded for the owner at PR review
+      as non-gating."
+    type: "info"
+    date: "2026-11-14"
+  - text: "DoD evidence addendum - plan phase 11 landing commit:
+      e5d4d4a115b89c952586b5b48f462a14c69c274d (docs(GH-294), staged exactly
+      feature-peak-pausing.md + pm-notes, all exclusion groups empty;
+      post-commit tree clean). Gate results as in the phase-11 note: lint GH-294
+      conforms; doc-conformance 11 pass / 0 fail; content-inventory 6 pass / 0
+      fail."
+    type: "info"
+    date: "2026-11-14"
+  - text: "DoD evidence addendum - plan phase 12 remediation commit:
+      c768d798eb63ccb318a5bf3edde91bfe32a2501b (docs(GH-294) template subject,
+      30 files +1618/-133, clean tree post-commit; ci-baseline-parity verified
+      green at this HEAD; delivery-os lint GH-294 conforms). Gate results as in
+      the phase-12 note: typecheck green; six GH-294 suites + composed-edge
+      suite 43 pass / 0 fail; full battery TMPDIR=$PWD/tmp/tmpdir pnpm check
+      8121 pass / 1 pre-commit transient (parity, green at commit) / 4 skip;
+      final phase-9 battery 8123 pass / 0 fail at HEAD 99c07362."
+    type: "info"
+    date: "2026-11-14"
+  - text: "Quality gates green (phase 9): full battery TMPDIR=$PWD/tmp/tmpdir pnpm
+      check exit 0 - 8123 pass / 4 skip / 0 fail across 1046 files, 69678
+      expect() calls; boundaries clean (396 modules/1193 deps), ambient-globals
+      OK, workspace-entrypoints OK, secret-read-boundary OK (364 files),
+      prompt-conformance 5 clean, help-guide-coverage covered, exports-parity 5
+      publishables OK. Range lint verdict PASS: 28 commits in range (merge-base
+      6af61a40, head 99c07362), 0 offending, 0 rules hit, mode none; commitlint
+      binary node_modules/.bin/commitlint, origin repository-local
+      (refs/remotes/origin/main-tools)."
+    type: "info"
+    date: "2026-11-14"
+  - text: "DoD check (phase 10) PASS: all 9 prior lifecycle phases completed in the
+      registry; all 12 declared plan phases carry pm-notes evidence notes with
+      plan-phase id, commit hash (1-10 in-phase, 11-12 via addenda
+      e5d4d4a1/c768d798) and boundary gate results; all 7 spec ACs demonstrated
+      (review iteration 2 PASS - F-1..F-10 closed, composed-path proofs per AC:
+      AC-F1-1 nomination records+refusals, AC-F3-2 bounded-grace park, AC-F4-3
+      isolation matrix, AC-F5-4 classification-routed resume, AC-F6-5
+      falsifiable zero-spend, AC-F7-6 ledger events + status/brief surfaces,
+      AC-F8-7 declared degradation with parkClaimed=false); current-truth docs
+      reconciled with zero residual gaps (doc-syncer both runs; 9-page
+      post-remediation alignment landed in 99c07362); non-gating observations
+      N-1..N-4 disclosed for owner review at the PR."
+    type: "info"
+    date: "2026-11-14"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/316
+      (feat(GH-294): provider-aware peak pausing (M2-S17), head
+      feat/GH-294/provider-peak-pausing -> base main-tools, 30 commits, open,
+      NOT merged - merge authority CEO/human). TDR-0028/0029/0030 flagged
+      Proposed for owner acceptance at this review; non-gating observations
+      N-1..N-4 disclosed in the body. Issue labeled review and assigned to the
+      owner with a PR-link comment."
+    type: "info"
+    date: "2026-11-14"

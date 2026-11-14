@@ -47,6 +47,8 @@ export type LaneShapingInput = {
   readonly detachedAt?: string;
   readonly classification?: DaemonLaneClassification;
   readonly resumeIntent?: DaemonResumeIntent;
+  /** The nominated provider profile (GH-294 DM-2); absent keeps the delivered shape. */
+  readonly providerProfile?: string;
   readonly recordedAt: string;
 };
 
@@ -70,6 +72,7 @@ export const shapeDaemonLane = (input: LaneShapingInput): DaemonLaneRecord => ({
   ...(input.detachedAt === undefined ? {} : { detachedAt: input.detachedAt }),
   ...(input.classification === undefined ? {} : { classification: input.classification }),
   ...(input.resumeIntent === undefined ? {} : { resumeIntent: input.resumeIntent }),
+  ...(input.providerProfile === undefined ? {} : { providerProfile: input.providerProfile }),
   recordedAt: input.recordedAt,
 });
 

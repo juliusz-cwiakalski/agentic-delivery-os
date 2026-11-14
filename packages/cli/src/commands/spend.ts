@@ -19,12 +19,16 @@ import {
   SPEND_BREAKDOWN_FLAG,
   SPEND_FLAGS,
   SPEND_HUMAN_AMPLIFICATION_FLAG,
+  SPEND_WINDOW_EVIDENCE_FLAG,
+  SPEND_WINDOW_FROM_FLAG,
+  SPEND_WINDOW_THROUGH_FLAG,
   SPEND_WORK_ITEM_REF_PATTERN,
   type SpendBreakdownField,
   type SpendCommandRuntime,
   type SpendReport,
   type SpendSelection,
   type SpendTruncation,
+  type SpendWindowEvidence,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
@@ -82,11 +86,44 @@ const renderFailure = (error: unknown, brand: BrandIdentity): string | undefined
   return undefined;
 };
 
+const isWindowEvidence = (data: unknown): data is SpendWindowEvidence =>
+  typeof data === "object" &&
+  data !== null &&
+  typeof (data as { readonly telemetryState?: unknown }).telemetryState === "string" &&
+  typeof (data as { readonly from?: unknown }).from === "string" &&
+  typeof (data as { readonly through?: unknown }).through === "string" &&
+  (data as { readonly tokensByClass?: unknown }).tokensByClass === undefined;
+
+/** The window-evidence human render: the reading, its state, and its scope disclosure. */
+const renderWindowEvidence = (data: SpendWindowEvidence, brand: BrandIdentity): string => {
+  const count =
+    data.telemetryState === "absent"
+      ? "count=absent (telemetry absence is never reported as zero)"
+      : `billableCalls=${String(data.billableCalls ?? 0)}`;
+  const matched = (data.matchedPositions ?? [])
+    .map((position: number) => String(position))
+    .join(",");
+  const excluded = (data.excluded ?? [])
+    .map(
+      (entry: { readonly position: number; readonly reason: string }) =>
+        `${entry.position}:${entry.reason}`,
+    )
+    .join(",");
+  return [
+    `${brand.binaryName} spend window evidence`,
+    `lane=${data.ref} profile=${data.providerProfile}`,
+    `scope: from ${data.from} through ${data.through} (both instants included)`,
+    `telemetry=${data.telemetryState} ${count}${data.basis === undefined ? "" : ` basis=${data.basis}`}`,
+    `matched=[${matched}] excluded=[${excluded}]`,
+  ].join("\n");
+};
+
 /** Build the spend command definition over the injected runtime. */
 export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): CommandDefinition => ({
   flags: [...SPEND_FLAGS],
   positionals: { max: 8 },
   humanText: (data: unknown, brand: BrandIdentity): string | undefined => {
+    if (isWindowEvidence(data)) return renderWindowEvidence(data, brand);
     const report = data as HumanAnnotatedReport;
     return renderSpendHuman(report, {
       brand,
@@ -103,6 +140,7 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
     let phase: PmNotesPhaseId | undefined;
     let breakdown: SpendBreakdownField | undefined;
     let amplification = false;
+    let windowEvidence: { readonly from: string; readonly through: string } | undefined;
     for (let index = 1; index < tokens.length; index += 1) {
       const token = tokens[index];
       if (token === undefined) continue;
@@ -110,7 +148,20 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
         amplification = true;
         continue;
       }
-      if (token !== "--ref" && token !== "--phase" && token !== SPEND_BREAKDOWN_FLAG) {
+      if (token === SPEND_WINDOW_EVIDENCE_FLAG) {
+        if (windowEvidence !== undefined) {
+          return reject("--window-evidence is declared once");
+        }
+        windowEvidence = { from: "", through: "" };
+        continue;
+      }
+      if (
+        token !== "--ref" &&
+        token !== "--phase" &&
+        token !== SPEND_BREAKDOWN_FLAG &&
+        token !== SPEND_WINDOW_FROM_FLAG &&
+        token !== SPEND_WINDOW_THROUGH_FLAG
+      ) {
         return reject(`unexpected positional "${token}"`);
       }
       const value = tokens[index + 1];
@@ -134,6 +185,19 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
         phase = value;
         continue;
       }
+      if (token === SPEND_WINDOW_FROM_FLAG || token === SPEND_WINDOW_THROUGH_FLAG) {
+        if (windowEvidence === undefined) {
+          return reject(`${token} requires --window-evidence`);
+        }
+        if (!Number.isFinite(Date.parse(value))) {
+          return reject(`invalid instant "${value}"; expected an ISO-8601 instant`);
+        }
+        windowEvidence =
+          token === SPEND_WINDOW_FROM_FLAG
+            ? { from: value, through: windowEvidence.through }
+            : { from: windowEvidence.from, through: value };
+        continue;
+      }
       // The breakdown value is validated here, before any record read (AC-F5-3).
       if (!isBreakdownField(value)) {
         return reject(
@@ -149,6 +213,24 @@ export const createSpendCommandDefinition = (runtime: SpendCommandRuntime): Comm
         return reject("no active change context; pass --ref <ref>");
       }
       resolvedRef = active.ref;
+    }
+    // The window-scoped zero-spend evidence form (GH-294 F-6, DM-5): a
+    // separate data shape over the telemetry v2 storage identity, never mixed
+    // into the six-key report.
+    if (windowEvidence !== undefined) {
+      if (runtime.windowEvidence === undefined) {
+        return reject("--window-evidence is not composed in this runtime");
+      }
+      if (windowEvidence.from === "" || windowEvidence.through === "") {
+        return reject("--window-evidence requires --from <iso> and --through <iso>");
+      }
+      const outcome = runtime.windowEvidence({
+        ref: resolvedRef,
+        from: windowEvidence.from,
+        through: windowEvidence.through,
+      });
+      if (!outcome.ok) return { error: outcome.error };
+      return { data: outcome.data };
     }
     const selection: SpendSelection = {
       workItemRef: resolvedRef,

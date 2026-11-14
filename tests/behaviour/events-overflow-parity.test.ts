@@ -54,7 +54,7 @@ const envelope = (topic: ControlTopic, sequence: number): ControlEnvelopeEventDa
   sequence,
   occurredAt: NOW,
   payload: {},
-  taxonomyVersion: "v1",
+  taxonomyVersion: "v2",
 });
 
 /** Publish one frame of the row's topic through the delivered session seam. */
@@ -118,7 +118,7 @@ describe("TC-EVT-040 overflow parity across the six topics", () => {
       degraded: "subscriber-overflow",
       topic: "queue.graph",
       overflow: TAXONOMY_OVERFLOW,
-      taxonomyVersion: "v1",
+      taxonomyVersion: "v2",
     });
     // Same connection, same topic: the dropping is per subscription.
     expect(session.subscriptions().map((entry) => entry.id)).toEqual([sibling.id]);
@@ -174,7 +174,7 @@ describe("TC-EVT-040 overflow parity across the six topics", () => {
         degraded: "subscriber-overflow",
         topic,
         overflow: TAXONOMY_OVERFLOW,
-        taxonomyVersion: "v1",
+        taxonomyVersion: "v2",
       });
       expect(slow.subscriptions().map((entry) => entry.topic)).not.toContain(topic);
       // The bystander's subscription is unaffected and still receives.
@@ -230,7 +230,7 @@ describe("TC-EVT-040 overflow parity across the six topics", () => {
         degraded: "subscriber-overflow",
         topic: "queue.graph",
         overflow: TAXONOMY_OVERFLOW,
-        taxonomyVersion: "v1",
+        taxonomyVersion: "v2",
       });
       expect(frames.filter((frame) => frame.type === "frame")).toHaveLength(0);
     } finally {

@@ -1,7 +1,7 @@
 /**
  * TC-EVT-002 (page half), TC-EVT-027 (surface half), and TC-EVT-032 (page half)
- * — the M2 reference page carries the v1 taxonomy and confines the extension
- * prose to one named section.
+ * — the M2 reference page carries the v2 taxonomy (GH-294 TDR-0029 D2/D6/D7)
+ * and confines the compatibility statement to one named section.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -12,7 +12,7 @@ import { S17_KIND_NAMES } from "../fixtures/events/taxonomy-cases";
 
 const ROOT = process.cwd();
 const PAGE = "doc/planning/oss-tooling/milestones/m2/commands/events.md";
-const V1_SECTIONS = [
+const V2_SECTIONS = [
   "DESCRIPTION",
   "OPTIONS",
   "OUTPUT",
@@ -21,7 +21,7 @@ const V1_SECTIONS = [
   "ERRORS",
   "SEE ALSO",
 ] as const;
-const EXTENSION = "EXTENSION PATH (S17 — not v1)";
+const COMPATIBILITY = "V1-CONSUMER COMPATIBILITY (v2)";
 
 const page = (): string => readFileSync(join(ROOT, PAGE), "utf8");
 
@@ -40,28 +40,28 @@ const sectionOf = (
   return rest.slice(0, end);
 };
 
-const v1Range = (text: string): string => {
-  const headings = [...V1_SECTIONS, EXTENSION];
+const v2Range = (text: string): string => {
+  const headings = [...V2_SECTIONS, COMPATIBILITY];
   const parts: string[] = [];
-  for (const name of V1_SECTIONS) {
+  for (const name of V2_SECTIONS) {
     const part = sectionOf(text, name, headings);
     if (part !== undefined) parts.push(part);
   }
   return parts.join("\n");
 };
 
-describe("TC-EVT-002 the page carries the v1 taxonomy", () => {
-  test("every v1 section resolves to a non-empty span", () => {
+describe("TC-EVT-002 the page carries the v2 taxonomy", () => {
+  test("every v2 section resolves to a non-empty span", () => {
     const text = page();
-    for (const name of V1_SECTIONS) {
-      const span = sectionOf(text, name, [...V1_SECTIONS, EXTENSION, "HELP"]);
+    for (const name of V2_SECTIONS) {
+      const span = sectionOf(text, name, [...V2_SECTIONS, COMPATIBILITY, "HELP"]);
       expect(span, name).toBeDefined();
       expect((span ?? "").trim().length, name).toBeGreaterThan(0);
     }
   });
 
   test("the DESCRIPTION kind table names exactly the declared kinds, per topic and in order", () => {
-    const description = sectionOf(page(), "DESCRIPTION", [...V1_SECTIONS, EXTENSION]) ?? "";
+    const description = sectionOf(page(), "DESCRIPTION", [...V2_SECTIONS, COMPATIBILITY]) ?? "";
     // The table rows: `| \`topic\` | shape | parent | kinds |`.
     const rows = description
       .split("\n")
@@ -94,36 +94,54 @@ describe("TC-EVT-002 the page carries the v1 taxonomy", () => {
       expect(row.shape, topic.name).toBe(topic.shape);
       expect(row.parent === "-" ? undefined : row.parent, topic.name).toBe(topic.parent);
       // The kind set and its declared order: a renamed kind with the same counts
-      // fails here, which the `0/0/4/3/3/3` counts string alone cannot catch.
+      // fails here, which the `0/0/5/6/3/3` counts string alone cannot catch.
       expect(row.kinds, topic.name).toEqual(topic.kinds.map((kind) => kind.name));
     }
   });
 
-  test("no S17 shape name appears in the v1 sections and the counts do", () => {
-    const v1 = v1Range(page());
-    for (const forbidden of S17_KIND_NAMES) {
-      const hits = [...v1.matchAll(new RegExp(`\\b${forbidden}\\b`, "gu"))];
-      expect(hits, `${forbidden} appears in a v1 section`).toHaveLength(0);
-    }
-    expect(v1).toContain("0/0/4/3/3/3");
+  test("the page names the served version v2 everywhere and the retired version only as history", () => {
+    const text = page();
+    expect(text).toContain('`taxonomyVersion: "v2"`');
+    expect(text).toContain("`version` | `v2`");
+    expect(text).toContain('"taxonomyVersion": "v2"');
+    // v1 appears only as the retired version's historical naming.
+    expect(text).toContain("v1 is\nretired, not served concurrently");
   });
 
-  test("the extension section is present, non-empty, placed after ERRORS and before SEE ALSO, and is the only place the names occur", () => {
+  test("the counts line carries the v2 enumeration 0/0/5/6/3/3", () => {
+    const v2 = v2Range(page());
+    expect(v2).toContain("0/0/5/6/3/3");
+  });
+
+  test("the compatibility section is present, non-empty, placed after ERRORS and before SEE ALSO, and carries the six-point statement and the four kind names", () => {
     const text = page();
-    const extensionIndex = text.indexOf(`## ${EXTENSION}`);
+    const compatibilityIndex = text.indexOf(`## ${COMPATIBILITY}`);
     const errorsIndex = text.indexOf("## ERRORS");
     const seeAlsoIndex = text.indexOf("## SEE ALSO");
-    expect(extensionIndex).toBeGreaterThan(errorsIndex);
-    expect(extensionIndex).toBeLessThan(seeAlsoIndex);
-    const extension = sectionOf(text, EXTENSION, ["HELP", "SEE ALSO"]);
-    expect((extension ?? "").trim().length).toBeGreaterThan(0);
-    for (const forbidden of S17_KIND_NAMES) expect(extension ?? "").toContain(forbidden);
-
-    const outside =
-      text.slice(0, extensionIndex) + text.slice(extensionIndex + (extension ?? "").length);
-    for (const forbidden of S17_KIND_NAMES) {
-      expect([...outside.matchAll(new RegExp(`\\b${forbidden}\\b`, "gu"))]).toHaveLength(0);
+    expect(compatibilityIndex).toBeGreaterThan(errorsIndex);
+    expect(compatibilityIndex).toBeLessThan(seeAlsoIndex);
+    const compatibility = sectionOf(text, COMPATIBILITY, ["HELP", "SEE ALSO"]);
+    expect((compatibility ?? "").trim().length).toBeGreaterThan(0);
+    for (const kind of S17_KIND_NAMES) expect(compatibility ?? "").toContain(kind);
+    // The six points, by their declared names.
+    for (const point of [
+      "Frames keep their shape",
+      "Nothing a v1 consumer listens for changed",
+      "decodable and ignorable",
+      "version-drift signal, not an error",
+      "Ordering and overflow semantics are untouched",
+      "remedies do not multiply",
+    ]) {
+      expect(compatibility ?? "").toContain(point);
     }
+  });
+
+  test("the peak-pause payload semantics render on the page: grace deadline, preservation, classified absence", () => {
+    const text = page();
+    expect(text).toContain("bounded-grace deadline");
+    expect(text).toContain("preserved | session-state-not-preserved");
+    expect(text).toContain("classified absence");
+    expect(text).toContain("reDispatched: false");
   });
 
   test("the page documents the restart discontinuity and the repoll remedy", () => {
@@ -135,7 +153,7 @@ describe("TC-EVT-002 the page carries the v1 taxonomy", () => {
 });
 
 describe("TC-EVT-027 the surface reports the declared emission gap", () => {
-  test("queue.graph.remove is emitted:false in both text and --json", async () => {
+  test("queue.graph.remove is emitted:true in both text and --json", async () => {
     const json = await createSurfaceHarness().run(["events", "describe", "queue.graph", "--json"]);
     const remove = json.data?.topics[0]?.kinds.find((kind) => kind.name === "remove");
     expect(remove).toEqual({

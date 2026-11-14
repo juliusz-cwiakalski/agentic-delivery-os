@@ -4,7 +4,7 @@
 example-product events describe queue.graph
 
 topic=queue.graph
-version=v1
+version=v2
 shape=event
 parent=queue
 lane=ref
@@ -17,8 +17,9 @@ kinds:
   dependency-edge  emitted  payload=ref,edges[],added[],removed[],recordedAt
   release  emitted  payload=leaseId,repository,ref,holder,runner,weightClass,operation,recordedAt
   remove  emitted  payload=ref,reason,recordedAt
+  park-edge  emitted  payload=ref,cause,until?,episodeId,recordedAt
 
-payloadFields=ref,repository?,priority,recordedAt,edges[],added[],removed[],leaseId,repository,holder,runner,weightClass,operation,reason
+payloadFields=ref,repository?,priority,recordedAt,edges[],added[],removed[],leaseId,repository,holder,runner,weightClass,operation,reason,cause,until?,episodeId
 
 ordering rule: events are ordered per lane by sequence-per-lane; a client's baseline is its first observed value, and a gap or any value at or below the last observed is a discontinuity that requires a repoll; the counter is process-scoped, so a daemon restart is a declared discontinuity.
 overflow policy: overflow=repoll -- repoll current state and continue from a fresh baseline.

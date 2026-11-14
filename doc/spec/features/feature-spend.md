@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SPEND
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
+summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the window-scoped zero-spend evidence for peak-pause episodes with its closed four-value exclusion-reason set and classified telemetry absence, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
-  related_changes: ["GH-236", "GH-240", "GH-291"]
+  related_changes: ["GH-236", "GH-240", "GH-291", "GH-294"]
   related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
@@ -22,7 +22,7 @@ links:
 
 ## Overview
 
-The spend read side is the Learn-family `spend` command. Its surface is exactly `<binary> spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--json]`: a deterministic, read-only fold over the event log. It reports per-ticket and per-phase tokens by class, calls, per-agent/model roll-ups, per-delivery restart counts, and the resume-amplification metric with amplification events flagged by name. Every figure derives from verified state-ledger reads of the telemetry record families for one work-item ref plus that ref's `phase.transition` history; the command never opens a harness store, reads a session database, queries a provider, or writes state.
+The spend read side is the Learn-family `spend` command. Its surface is exactly `<binary> spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]`: a deterministic, read-only fold over the event log. It reports per-ticket and per-phase tokens by class, calls, per-agent/model roll-ups, per-delivery restart counts, the resume-amplification metric with amplification events flagged by name, and the window-scoped zero-spend evidence for a parked lane. Every figure derives from verified state-ledger reads of the telemetry record families for one work-item ref plus that ref's `phase.transition` history; the command never opens a harness store, reads a session database, queries a provider, or writes state.
 
 The success payload is the standard `CommandResult` envelope whose `data` carries schema identity `delivery.spend.v1` with the delivered six keys — `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification`, and `degradation` — plus exactly five additive v2 keys: `costTotals`, `breakdowns`, `phaseTiming`, `telemetryState`, and `reconciliation`. The additions sit beside the six keys under the unchanged identity; no v1 key is renamed, removed, or re-semanted (DEC-6). The schema identity is a declared contract constant, not a `data` key. `--amplification` adds the amplification section to the human digest; the machine envelope always carries the full amplification block. `--breakdown <field>` selects the human-emphasis breakdown dimension and changes no machine figure. `--json` is the global machine-output switch.
 
@@ -66,6 +66,8 @@ The handler owns the value grammar before any read and performs no stream write 
 | `--breakdown` with no value | Refuses `input.value.rejected` (exit 1). |
 | `--phase` naming a canonical phase whose window holds no records | Returns the scoped `spend.telemetry-absent`, naming the phase. |
 | `--amplification` | Adds the amplification section to the human digest. The machine envelope always carries `amplification`. |
+| `--window-evidence` | Selects the window-scoped zero-spend reading instead of the report fold; requires `--from <iso>` and `--through <iso>`, is declared once, and refuses `input.value.rejected` when either bound is missing or the runtime composes no window-evidence read. |
+| `--from <iso>` / `--through <iso>` | The evidence scope's inclusive lower bound (the park timestamp) and upper bound (the window end); valid only with `--window-evidence`. |
 | Missing flag value or unexpected positional | Refuses `input.value.rejected` (exit 1). |
 | Undeclared flag | Refuses through the shared parser as `fallback.invocation` (exit 1). |
 | `--json` | Forces the standard envelope; the handler never inspects it. |
@@ -129,6 +131,12 @@ Cost is reported only in v2: `costTotals` aggregates the harness-reported per-re
 
 `telemetryState` is the DM-4 disclosure: `present` when any telemetry record of either capture plane exists for the selection. `reconciliation.basis` is the declared reading basis — `stream-ingest` when only per-step v2 records feed the selection's figures, `closeout-capture` when only the delivered v1 session-group records do, and `combined` when records of both planes exist and the OQ-T4 session-dedup rule selects each session's step figures while its closeout sums corroborate the baseline. Absence keys off telemetry records of either plane: a baseline-only store is still `spend.telemetry-absent`, never a zero report.
 
+### Window-scoped zero-spend evidence
+
+`--window-evidence --from <iso> --through <iso>` reads the peak-pause episode's proof instead of the report: the count of billable model calls attributable to the parked lane — the attribution join's lane dimension — from the park timestamp through the window end, **both boundary instants inclusive**, over the telemetry v2 storage identity ([Provider Peak Pausing](feature-peak-pausing.md)). The reading returns `ref`, `providerProfile` (the episode's recorded nomination, read from the latest `peak-window` park record by the edge composition — never re-derived from a model string), `from`, `through`, `telemetryState`, and, over present telemetry, `billableCalls` with the named basis `delivery.telemetry.storage.v1`.
+
+The scope disclosure makes boundary scoping visible: `matchedPositions[]` names the steps the interval matched, and `excluded[]` names each excluded step's position with its reason from the closed four-value set — the boundary reasons `pre-park | post-window`, the attribution-scope reason `other-lane` for an in-window step outside the parked lane's scope, and `unreadable-instant` for a step whose instant fails to parse — so a call before the park is never counted against the assertion and a non-boundary exclusion is never mislabeled as a boundary one. Zero is a positive reading backed by the named attribution read; telemetry absence is a classified outcome carried by `telemetryState`, the count is absent with it, and no zero is ever fabricated. The reading is falsifiable — a seeded mid-window call reads non-zero — and it performs no harness-store query of its own: the same state-ledger step records, one scoped read.
+
 ### Reconciliation disclosure
 
 `reconciliation` is present on every report: `{ basis, harnessTotals, observedTotals, tolerance, verdict, excludedBaselineSessions }`. `harnessTotals` is the summed harness-reported per-session baseline (captured baseline records first, else the session's delivered v1 group sums); `observedTotals` is the fold's selected figures; `tolerance` is the declared contract constant `0.02`, stated — never silent; `verdict` is exactly one of `within`, `outside`, or `unavailable`. The deviation is the largest per-class relative difference between the observed and harness figures; a class the harness baseline reports as zero while the observed figures carry it counts as an immediate full deviation, and an all-zero baseline is compared on summed totals. A deviation beyond tolerance renders `outside` at exit 0 with both figures. A session with no harness-reported total is excluded from the sum with the closed `baseline-session-excluded` warning and the named `excludedBaselineSessions` count, never counted as zero. When no baseline contribution exists at all, the verdict is the classified `unavailable` — never `within` — while the tolerance is still stated. One verdict is computed per report; there is no per-session verdict fork.
@@ -169,7 +177,7 @@ The report renders these honesty-limit declarations verbatim:
 
 ### Output contract and bounds
 
-The machine payload is the standard `CommandResult` envelope whose `data` is the eleven-key `delivery.spend.v1` report (six delivered plus five additive). The human digest is a deterministic, bounded rendering of the same data. `--amplification` controls only the human amplification section; the envelope always carries the full block.
+The machine payload is the standard `CommandResult` envelope whose `data` is the eleven-key `delivery.spend.v1` report (six delivered plus five additive); the `--window-evidence` form returns the window-scoped evidence reading of the section above as `data` instead, over the same envelope and exit taxonomy. The human digest is a deterministic, bounded rendering of the same data. `--amplification` controls only the human amplification section; the envelope always carries the full block.
 
 | Bound | Value |
 |---|---|
@@ -297,6 +305,7 @@ Behaviour suites live under `tests/behaviour/spend-*.test.ts` and `tests/behavio
 | Behaviour — surface and bounds | `spend-envelope`, `spend-bounds`, `spend-determinism`, `spend-privacy`, `spend-grammar`, `spend-ref-resolution`, `spend-readonly` | Envelope shape, mode emphasis, byte/line bounds, byte-identical replay, privacy canaries, locked grammar, default-ref resolution, and the read-only proof. |
 | Behaviour — digest flip | `status-spend-section`, `status-spend-degraded`, `status-spend-parity` | Section 8 observed/unknown projections, absence-of-capture line, `state-log` evidence, placeholder retirement, and command/digest parity. |
 | Behaviour — v2 read side | `spend-v2-breakdown`, `spend-v2-fold-basis`, `spend-v2-v1-compat`, `spend-v2-refusals`, `spend-reconciliation` | Five-dimension breakdowns summing to the totals, the reading-basis matrix (stream ingest, closeout capture, combined), the unchanged six v1 keys, the pre-read `--breakdown` refusal, and the R-01..R-08 reconciliation matrix with the stated tolerance and one verdict. |
+| Behaviour — window evidence | `spend-zero-window` | The present-zero reading with its named basis, the classified absence that never renders zero, the inclusive boundary scoping with named exclusions, and the seeded mid-window breach that proves the count falsifiable. |
 | Behaviour — consumer citation | `brief-spend-citation`, `retro-telemetry-evidence` | The declared brief spend surface and the declared `spend-telemetry` retro source, including the classified absence. |
 | Behaviour — cross-cutting honesty | `telemetry-disclosure`, `telemetry-determinism`, `telemetry-privacy`, `telemetry-audit-compose` | State and tolerance on every render path, byte-identical repeats with zero model calls, aggregate-only records and reports, and the invocation audit with a failing-write control. |
 | Checks — hermeticity, conformance, mutants | `tests/checks/telemetry-hermetic`, `telemetry-mutants`, `privacy-literals`; `tests/structure/telemetry-contract`, `telemetry-imports` | Offline posture across every new suite, the ten disabling honesty mutants, brand neutrality, record-kind and schema patterns, error-table sync, and the live exit-code and forbidden-literal scans. |
@@ -355,6 +364,8 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 - [State Layer](feature-state-layer.md) — verified reads, telemetry record families, and classified failures.
 - [Harness Adapters](feature-harness-adapters.md) — the neutral telemetry vocabulary and closeout capture point.
 - [Status Digest](feature-status-digest.md) — the section 8 projection fed by the same fold.
+- [Provider Peak Pausing](feature-peak-pausing.md) — the peak-pause episodes the window-scoped evidence proves and the park record that supplies the profile and scope.
+- [Harness Telemetry v2](feature-telemetry-v2.md) — the storage identity and step records the window evidence counts over.
 - [Closeout Transaction](feature-closeout.md) — the capture-side producer of the records read here.
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md) — the `phase.transition` history.
 - [Glossary](../../overview/glossary.md) — repository-wide terms.

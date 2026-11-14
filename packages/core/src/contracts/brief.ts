@@ -15,6 +15,7 @@ import type {
   StatusCounts,
   StatusEvidenceReason,
   StatusItemSignalState,
+  StatusLanePark,
   StatusRepositoryBinding,
 } from "./status.js";
 
@@ -86,6 +87,8 @@ export type BriefSurface = {
   readonly counts: StatusCounts;
   readonly truncated: boolean;
   readonly reason?: StatusEvidenceReason;
+  /** The providers surface's lane park fields, projected from the digest with zero added reads (GH-294 F-7, NFR-8). */
+  readonly laneParks?: readonly StatusLanePark[];
 };
 
 /** The citing digest evidence of a ready-to-merge action (DM-2, D10). */

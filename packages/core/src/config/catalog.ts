@@ -154,6 +154,33 @@ const PROVIDER_PROFILE_SEAT = {
   },
 } as const satisfies CatalogField;
 
+const PROVIDER_PROFILE_PEAK_WINDOW = {
+  type: "object",
+  required: true,
+  fields: {
+    timezone: { type: "string", default: "UTC" },
+    startSecondsOfDay: { type: "number", required: true },
+    endSecondsOfDay: { type: "number", required: true },
+    multiplier: { type: "number", required: true },
+    bufferBeforeSeconds: { type: "number", required: true },
+    bufferAfterSeconds: { type: "number", required: true },
+  },
+} as const satisfies CatalogField;
+
+/**
+ * GH-294 F-2/DM-3 — per-profile peak-window rules as versioned profile data.
+ * Validation semantics (UTC-only designation, duplicate refusal, grace bound)
+ * live in the provider rule parser; the catalog declares only the shapes so
+ * the resolver passes declared values through.
+ */
+const PROVIDER_PROFILE_PEAK_WINDOWS = {
+  type: "object",
+  fields: {
+    graceSeconds: { type: "number", required: true },
+    windows: { type: "array", items: PROVIDER_PROFILE_PEAK_WINDOW, required: true },
+  },
+} as const satisfies CatalogField;
+
 const PROVIDER_PROFILE_VALUE = {
   type: "object",
   required: true,
@@ -162,6 +189,7 @@ const PROVIDER_PROFILE_VALUE = {
     providers: { type: "array", items: { type: "string" }, required: true },
     seats: { type: "record", value: PROVIDER_PROFILE_SEAT, required: true },
     agentOverrides: { type: "record", value: { type: "string" } },
+    peakWindows: PROVIDER_PROFILE_PEAK_WINDOWS,
   },
 } as const satisfies CatalogField;
 

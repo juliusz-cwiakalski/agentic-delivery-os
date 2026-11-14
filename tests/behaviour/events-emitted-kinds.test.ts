@@ -93,6 +93,61 @@ describe("TC-EVT-027 emitted kind sets equal the declared emitted sets", () => {
       harness.appendQuestion(questionRecord("Q-1", "GH-290"));
       harness.appendAnswer(answerRecord("Q-1"));
       harness.clearQuestion(lane, "Q-1", "boundary-note");
+      // GH-294: the peak-pause episode records cover the four v2 kinds — the
+      // parked-state peak-window park (stop, parked, park-edge), its recovered
+      // record (resumed), and an owner-hold park (the classified-absence
+      // edge).
+      appendRaw(harness, "queue.park", "queue.parks:GH-700:peak", {
+        schema: "delivery.queue.park.v1",
+        ref: "GH-700",
+        repository: "github.com/example/repo",
+        cause: "peak-window",
+        conditionType: "provider-window",
+        condition: { kind: "peak-window", detail: "provider-a peak window active" },
+        recheckMs: 60_000,
+        evaluatedAt: "2026-11-12T10:00:05.000Z",
+        recoveryState: "parked",
+        providerProfile: "profile-a",
+        until: "2026-11-12T11:00:00.000Z",
+        graceDeadline: "2026-11-12T10:05:00.000Z",
+        windowEnd: "2026-11-12T11:00:00.000Z",
+        stoppedAt: "2026-11-12T10:00:05.000Z",
+        preservation: "preserved",
+        episodeId: "episode-700",
+        recordedAt: "2026-11-12T10:00:05.000Z",
+      });
+      appendRaw(harness, "queue.park", "queue.parks:GH-700:peak", {
+        schema: "delivery.queue.park.v1",
+        ref: "GH-700",
+        repository: "github.com/example/repo",
+        cause: "peak-window",
+        conditionType: "provider-window",
+        condition: { kind: "peak-window", detail: "provider-a peak window active" },
+        recheckMs: 60_000,
+        evaluatedAt: "2026-11-12T10:00:06.000Z",
+        recoveryState: "recovered",
+        recoveredAt: "2026-11-12T11:00:01.000Z",
+        providerProfile: "profile-a",
+        until: "2026-11-12T11:00:00.000Z",
+        preservation: "preserved",
+        sessionRef: "session-GH-700",
+        branch: "feat/GH-294/provider-peak-pausing",
+        episodeId: "episode-700",
+        recordedAt: "2026-11-12T10:00:06.000Z",
+      });
+      appendRaw(harness, "queue.park", "queue.parks:GH-701:hold", {
+        schema: "delivery.queue.park.v1",
+        ref: "GH-701",
+        repository: "github.com/example/repo",
+        cause: "owner-hold",
+        conditionType: "preemption",
+        condition: { kind: "owner-hold", detail: "owner hold active" },
+        recheckMs: 60_000,
+        evaluatedAt: "2026-11-12T10:00:07.000Z",
+        recoveryState: "parked",
+        episodeId: "episode-701",
+        recordedAt: "2026-11-12T10:00:07.000Z",
+      });
       await harness.step();
       for (const data of eventFrames(client.drain())) {
         if (data.topic !== "queue" && data.topic !== "lanes") {

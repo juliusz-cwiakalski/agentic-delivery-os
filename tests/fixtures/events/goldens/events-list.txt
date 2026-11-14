@@ -1,9 +1,9 @@
 # GH-290 events list reference table (TC-EVT-010/TC-EVT-012).
 # Generated, do not hand-edit: regenerate with `pnpm exec bun run the events renderer` (see tests/fixtures/events/goldens/README.md).
 --- output ---
-queue             v1  shape=snapshot   kinds=0  ordered by snapshot revision  overflow=repoll
-lanes             v1  shape=snapshot   kinds=0  ordered by snapshot revision  overflow=repoll
-queue.graph       v1  shape=event      kinds=4  parent=queue  ordered per lane  overflow=repoll
-dispatch.attempt  v1  shape=event      kinds=3  ordered per lane  overflow=repoll
-phase.state       v1  shape=event      kinds=3  ordered per lane  overflow=repoll
-blockers.state    v1  shape=event      kinds=3  ordered per lane  overflow=repoll
+queue             v2  shape=snapshot   kinds=0  ordered by snapshot revision  overflow=repoll
+lanes             v2  shape=snapshot   kinds=0  ordered by snapshot revision  overflow=repoll
+queue.graph       v2  shape=event      kinds=5  parent=queue  ordered per lane  overflow=repoll
+dispatch.attempt  v2  shape=event      kinds=6  ordered per lane  overflow=repoll
+phase.state       v2  shape=event      kinds=3  ordered per lane  overflow=repoll
+blockers.state    v2  shape=event      kinds=3  ordered per lane  overflow=repoll

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATUS-DIGEST
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
+summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold with the open lane park fields for peak-pause episodes read through their own bounded records read, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-291"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-291", "GH-294"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -104,6 +104,7 @@ Declared bounds:
 | `STATUS_MAX_REASONS` | 6 | Unique reason cap |
 | `STATUS_MAX_PROVIDER_ENTRIES` | 8 | Provider entry cap |
 | `STATUS_MAX_PROVIDER_PARKS` | 8 | Active park cap |
+| `STATUS_MAX_LANE_PARKS` | 8 | Open lane park-episode cap (providers section `laneParks`) |
 | `STATUS_MAX_PIPELINE_RUNS` | 8 | CI run cap |
 | `STATUS_MAX_OPEN_PULL_REQUESTS` | 8 | Pull-request cap |
 | `STATUS_MAX_PARKED_CHANGES` | 8 | Parked-work cap |
@@ -235,6 +236,8 @@ An entry with an active provider park has availability `parked`; the matching ac
 
 Entries rank `parked` before `unverified`, then enabled before disabled, then name, then class. Active parks rank by soonest expiry, parks without an expiry last, then chain before provider, then name. Both lists are capped at eight.
 
+An open lane park episode ([Provider Peak Pausing](feature-peak-pausing.md)) projects the section's additive optional `laneParks[]` array, capped by `STATUS_MAX_LANE_PARKS`. Each entry is one `StatusLanePark`: `ref`, `reason` from the closed set `peak-window | owner-hold`, optional `until` (the window end for a `peak-window` park; a declared classified absence — absent — for an `owner-hold` park, which has no expiry), optional `preservation` (`preserved | session-state-not-preserved`), and optional `providerProfile`. The values are carried verbatim from the durable park records, read in the same collector pass as the provider configuration and park fold through the lane-park producer's one bounded park-records read, and clear once the episode closes; no parked lane, stop, or resume is ever claimed that the records do not show. `laneParks` is section data beside `entries` and `parks`: it changes no section state, count, source, reason, or finding, and the human providers line is unchanged by it. The brief projects the same values with zero added reads ([Brief](feature-brief.md)).
+
 An active owner hold adds one optional **evidence-level** member,
 `providers.evidence.ownerHold`, a sibling of `sources[]` exactly like
 `credentialPrerequisite`: `{ source, reason? }`, present only while the hold is
@@ -346,7 +349,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 
 1. The CLI edge resolves the brand and the repository binding from `origin`.
 2. When the binding is observed, the edge reads one bounded issues page, one bounded pull-request page, and one bounded check-runs page for the checkout SHA. When it is not observed, it injects classified unavailable reads instead of inventing a target.
-3. The edge reads the resolved provider configuration and folds the verified provider park views, reads the local PM context, reads the verified blocker ledger once, and folds the spend read side once. When the credential reference is admitted, the edge supplies the declared reference name and resolved source key as the optional credential prerequisite; the pure aggregator attaches that field only to a section whose evidence carries the `credential-unavailable` reason.
+3. The edge reads the resolved provider configuration and folds the verified provider park views, reads the open lane park views through the producer's one bounded park-records read, reads the local PM context, reads the verified blocker ledger once, and folds the spend read side once. When the credential reference is admitted, the edge supplies the declared reference name and resolved source key as the optional credential prerequisite; the pure aggregator attaches that field only to a section whose evidence carries the `credential-unavailable` reason.
 4. The pure aggregator derives the nine section states, ranks and caps the item surfaces, groups findings, evaluates hygiene assertions and gate ages, assembles bounded evidence over the shared question ranking and the spend projection, and returns the digest.
 5. Machine mode wraps the digest in the existing envelope; human mode renders the deterministic digest from the same data.
 
@@ -386,7 +389,7 @@ The status contracts and domain import only the shared contracts and their own m
 | Output contract | `--json` produces exactly one valid envelope; human mode produces exactly nine section lines plus the attention rollup and optional header; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows or domain kinds; zero documented-table drift; the sync check stays green. |
 | Boundaries and branding | Zero new runtime-API locations or secret-read allowlist entries; zero product literals; structure, boundary, ambient, and literal gates stay green. |
-| Performance and read cost | Pure aggregation over cap-sized inputs completes within 50 ms on the reference environment; at most three network reads, one logical park-fold read, one configuration resolve, one verified blocker-ledger read, and one spend fold over the same state ledger per invocation; zero retries or loops. |
+| Performance and read cost | Pure aggregation over cap-sized inputs completes within 50 ms on the reference environment; at most three network reads, one logical park-fold read, one bounded lane-park records read, one configuration resolve, one verified blocker-ledger read, and one spend fold over the same state ledger per invocation; zero retries or loops. |
 | Privacy | Zero secrets or raw provider payloads in the digest, evidence, or human text; no ambient environment reads outside the allowlist. |
 | Real evidence | The default suite exercises every section and state edge from committed fixtures with zero live calls; the opt-in live smoke asserts structural invariants without pinning volatile counts. |
 

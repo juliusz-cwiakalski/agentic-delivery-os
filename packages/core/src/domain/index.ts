@@ -176,6 +176,27 @@ export {
   takeoverEvidence,
 } from "./daemon-lock.js";
 export {
+  decidePeakResumes,
+  decidePeakStops,
+  type InterruptedRecoveryAdmission,
+  type PeakEpisodeIdFactory,
+  type PeakExhaustionPort,
+  type PeakRecoveryAppendPort,
+  type PeakReentryPort,
+  type PeakResumeDecision,
+  type PeakResumeRefusal,
+  type PeakResumeRoute,
+  type PeakRulesLookup,
+  type PeakSessionResumePort,
+  type PeakStopDecision,
+  type PeakStopPort,
+  type PeakWatchLane,
+  peakWindowOpenAt,
+  recoverInterruptedLane,
+  runPeakResume,
+  runPeakWatch,
+} from "./daemon-peak-pause.js";
+export {
   decidePreemption,
   PREEMPTION_WRITABLE_STATES,
   type PreemptionDecision,
@@ -365,28 +386,6 @@ export {
   boundHarnessTelemetryCapture,
   renderHarnessTelemetryHuman,
 } from "./harness-telemetry.js";
-export {
-  attributeStep,
-  attributedValue,
-  joinAttributionSubstrates,
-  type TelemetryAttribution,
-  type TelemetryAttributionInput,
-  type TelemetryAttributionSubstrates,
-  type TelemetryClaimedIdentity,
-  type TelemetrySessionIdentity,
-} from "./telemetry-attribution.js";
-export {
-  decodeTelemetryStepFrame,
-  emptyIngestTally,
-  tallyFrame,
-  tallyIngestDegradation,
-  type TelemetryFrameContext,
-  type TelemetryFrameOutcome,
-  type TelemetryIngestTally,
-  TELEMETRY_IGNORED_FRAME_TYPES,
-  type TelemetrySessionTotals,
-  type TelemetrySessionTotalsReader,
-} from "./telemetry-ingest.js";
 export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,
@@ -658,9 +657,32 @@ export {
   type SpendFoldOutcome,
   spendDigestSection,
   spendTruncationWarning,
+  windowSpendEvidence,
 } from "./spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./spend-text.js";
 export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
+export {
+  attributedValue,
+  attributeStep,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+  tallyFrame,
+  tallyIngestDegradation,
+} from "./telemetry-ingest.js";
 export {
   classifyVerifyChange,
   classifyVerifyDocument,

@@ -33,9 +33,9 @@ describe("TC-EVT-010 events list text", () => {
     const lines = run.stdout.trimEnd().split("\n");
     expect(lines).toHaveLength(6);
     const snapshot =
-      /^\S+\s+v1\s+shape=snapshot\s+kinds=0\s+ordered by snapshot revision\s+overflow=repoll$/u;
+      /^\S+\s+v2\s+shape=snapshot\s+kinds=0\s+ordered by snapshot revision\s+overflow=repoll$/u;
     const event =
-      /^\S+\s+v1\s+shape=event\s+kinds=(4|3)\s+(parent=queue\s+)?ordered per lane\s+overflow=repoll$/u;
+      /^\S+\s+v2\s+shape=event\s+kinds=(5|6|3)\s+(parent=queue\s+)?ordered per lane\s+overflow=repoll$/u;
     for (const line of lines.slice(0, 2)) expect(line).toMatch(snapshot);
     for (const line of lines.slice(2)) expect(line).toMatch(event);
     expect(lines.filter((line) => line.includes("parent="))).toHaveLength(1);
@@ -94,7 +94,7 @@ describe("TC-EVT-011 events list --json", () => {
     expect(run.exitCode).toBe(0);
     const data = run.data;
     expect(data?.command).toBe("events list");
-    expect(data?.taxonomyVersion).toBe("v1");
+    expect(data?.taxonomyVersion).toBe("v2");
     expect(data?.envelope).toEqual([...EVENT_ENVELOPE_FIELDS]);
     expect(data?.topics).toHaveLength(6);
     expect(data?.topics).toEqual(TAXONOMY.topics.map(expectedRecord));

@@ -258,6 +258,24 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/domain/probe.ts",
     'import "#app/index";\n',
   ),
+  // GH-294 F-6: the declared domain->provider edge. The negative fixture
+  // proves every provider module EXCEPT the peak boundary helpers is refused;
+  // the clean control proves the peak.js exception itself fires no violation.
+  dep(
+    "tier-domain-provider",
+    "TC-SCAFFOLD-011",
+    "tier-domain-not-provider",
+    ["core"],
+    "packages/core/src/domain/probe.ts",
+    'import "../provider/index.js";\n',
+  ),
+  clean(
+    "tier-domain-provider-peak-boundary",
+    "TC-SCAFFOLD-011",
+    ["core"],
+    "packages/core/src/domain/probe.ts",
+    'import "../provider/peak.js";\nexport const consumed = peakWindowOpenSeconds;\n',
+  ),
   dep(
     "tier-domain-state",
     "TC-SCAFFOLD-011",

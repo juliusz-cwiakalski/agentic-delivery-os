@@ -336,3 +336,43 @@ outcome and never a zero report. The delivery runs from commit `eb739f19`
 through the phase-8 documentation commit on `feat/GH-291/telemetry-v2`; M2 has
 not exited, and the remaining M2 stories (S2–S10, S16–S19; S15 was delivered by
 GH-292 in the snapshot above) are unaffected by this delivery and stay planned.
+
+## M2 delivery snapshot addendum (2026-11-13): M2-S17 delivered by GH-294
+
+M2-S17 (provider-aware peak pausing) was delivered by GH-294. Every delivery now
+nominates its provider profile at dispatch admission — the nomination rides the
+lane and attempt records (additive fields), the attempt-history read returns it,
+and a delivery that cannot nominate is refused before any session with the
+resolve identity for its exact shape (`provider.profile.absent` /
+`invalid` / `capability-denied` at exit 1, `unavailable` at exit 2 with the
+eligibility list), identically on the one-shot path and the composed claim.
+Peak-window rules are versioned per-profile data (windows, multipliers, buffers,
+and a `graceSeconds` default whose maximum is derived from the smallest declared
+buffer), validated fail-closed with UTC-only designations, duplicate-window
+refusals, and overlap tolerance. The daemon's window watch parks every in-flight
+lane of an opening profile (buffer included) with a bounded-grace stop that
+never outlasts the window buffer, a `peak-window` park record naming the
+profile, the window end, and the `preserved |
+session-state-not-preserved` classification — a preservation failure never
+refuses a park and never extends a grace. At the effective window end lanes
+resume automatically: preserved lanes through the session resume path on the
+same branch, not-preserved lanes through the delivered interrupted-lane
+recovery (one restart ordinal, budget- and economics-governed, exhaustion
+escalating verbatim); an active owner hold outranks the window and the resume
+refuses `queue.precondition.unmet`/`owner-hold` appending nothing. The event
+taxonomy moved to the declared v2 — `stop`, `parked`, and `resumed` on
+`dispatch.attempt` and `park-edge` on `queue.graph` — with every v1 kind and
+payload byte-identical, one stamp constant, and the six-point v1-consumer
+compatibility statement. The spend read side gained the window-scoped zero-spend
+evidence (`--window-evidence`): a falsifiable billable-call count from the park
+timestamp through the window end over the telemetry v2 storage identity, with
+telemetry absence always a classified outcome and never a zero. Status and
+brief carry the open episodes' park fields from the same collector pass. The
+lanes machine read declares peak enforcement truthfully: the mode derives from
+whether the running composition actually supplies the peak-pause watch ports
+(a composition fact, not daemon reachability — the shipped compositions supply
+none, so the machine read reports `iteration-start-gating`), and
+`parkClaimed` reads from the durable park records, whatever writer claimed
+them; the delivered iteration-start admission gating is unchanged. The
+delivery runs on `feat/GH-294/provider-peak-pausing`; M2 has not exited, and
+the remaining M2 stories are unaffected by this delivery and stay planned.

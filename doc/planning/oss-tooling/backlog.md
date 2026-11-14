@@ -1328,6 +1328,21 @@ the project family separately.
 - Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
 
 ### M2-S17 Provider-aware peak pausing
+- Progress: delivered by GH-294 — every delivery nominates its provider profile
+  at dispatch admission (recorded on the lane and attempt records with the
+  classified no-nomination refusal reusing the resolve identities); peak-window
+  rules as versioned per-profile data (windows, multipliers, buffers,
+  graceSeconds with a bound derived from the smallest declared buffer); the
+  daemon's window watch parks every in-flight lane of the opening profile with
+  a bounded-grace stop, reason `peak-window`, `until` at the effective end, and
+  the `preserved | session-state-not-preserved` classification; automatic
+  window-end resume (session resume path for preserved lanes, delivered
+  interrupted-lane recovery for the rest, owner-hold precedence intact);
+  taxonomy v2 carrying stop/parked/resumed/park-edge with v1 byte-identical;
+  the window-scoped zero-spend reading over the telemetry v2 join with
+  classified absence; status and brief park fields; and the declared
+  daemon-absent degradation (`iteration-start-gating`, `parkClaimed: false`)
+  in the lanes machine read.
 - Goal: Peak-hour cost control is enforced per provider profile: in-flight
   sessions whose nominated provider enters a peak window are stopped and later
   resumed, while deliveries on other providers continue untouched.

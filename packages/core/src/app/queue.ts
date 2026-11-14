@@ -36,6 +36,7 @@ import {
   QUEUE_PARK_CAUSES,
   QUEUE_PARK_CONDITION_TYPES,
   QUEUE_PARK_KEY_PREFIX,
+  QUEUE_PARK_PRESERVATIONS,
   QUEUE_PARK_RECORD_KIND,
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
@@ -262,6 +263,18 @@ const PARK_KEYS = [
   "observationGapMs",
   "recoveryState",
   "recordedAt",
+  // The DM-4 peak-window episode fields (GH-294, additive): the watcher- and
+  // operator-written park records carry them, so the delivered reader must
+  // verify and admit them — a record without them stays valid (pre-change).
+  "providerProfile",
+  "until",
+  "graceDeadline",
+  "windowEnd",
+  "stoppedAt",
+  "preservation",
+  "episodeId",
+  "sessionRef",
+  "branch",
 ] as const;
 const INCIDENT_KEYS = ["schema", "type", "ref", "repository", "evidence", "recordedAt"] as const;
 const REMOVAL_KEYS = ["schema", "ref", "reason", "recordedAt", "callerPrincipal"] as const;
@@ -366,6 +379,27 @@ const isParkRecord = (value: unknown): value is QueueParkRecord => {
   if (
     typeof value.recoveryState !== "string" ||
     !(QUEUE_PARK_RECOVERY_STATES as readonly string[]).includes(value.recoveryState)
+  ) {
+    return false;
+  }
+  // The DM-4 episode fields: non-empty strings when present, and
+  // `preservation` only ever from the closed two-member set (GH-294 DM-4,
+  // LIT-P1) — a record outside it fails closed at the reader, never folds.
+  for (const key of [
+    "providerProfile",
+    "until",
+    "graceDeadline",
+    "windowEnd",
+    "stoppedAt",
+    "episodeId",
+    "sessionRef",
+    "branch",
+  ] as const) {
+    if (value[key] !== undefined && !isNonEmptyString(value[key])) return false;
+  }
+  if (
+    value.preservation !== undefined &&
+    !(QUEUE_PARK_PRESERVATIONS as readonly string[]).includes(value.preservation as string)
   ) {
     return false;
   }
@@ -2256,6 +2290,22 @@ export const releaseQueueLease = (
       recheckMs: request.park.recheckMs ?? defaultParkRecheckMs(expectedConditionType),
       evaluatedAt: request.nowIso,
       recordedAt: request.nowIso,
+      // GH-294 F-4: an operator `peak-window` park carries a minimal episode
+      // identity derived from the ref and the recorded instant, and the
+      // declared window end as `until` (DM-4's peak-window record shape; the
+      // value is the operator's own --until, carried verbatim). The DM-4
+      // episode facts the watcher writes (grace deadline, stoppedAt,
+      // preservation, profile) stay watcher-written — nothing is fabricated
+      // here, and the projection emits the episode frames only over records
+      // that carry them.
+      ...(request.park.cause === "peak-window"
+        ? {
+            episodeId: `peak-${ref}-${request.nowIso}`,
+            ...(request.park.condition.type === "provider-window"
+              ? { until: request.park.condition.expiresAt }
+              : {}),
+          }
+        : {}),
     });
     // Park first, then release. Both land or neither outcome lands: if the
     // lease-release append fails after the park landed, append a compensating

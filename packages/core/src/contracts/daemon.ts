@@ -7,8 +7,8 @@
  * environment, filesystem, network, or call expression exists in this module.
  */
 import type { EconomicsExhaustionRecord, EconomicsRestartRecord } from "./economics.js";
-import type { StateJsonValue } from "./state.js";
 import type { CallerPrincipal } from "./principal.js";
+import type { StateJsonValue } from "./state.js";
 
 /* ------------------------------- scope ----------------------------------- */
 
@@ -173,6 +173,8 @@ export type DaemonLaneRecord = {
   readonly detachedAt?: string;
   readonly classification?: DaemonLaneClassification;
   readonly resumeIntent?: DaemonResumeIntent;
+  /** The nominated provider profile recorded at admission (GH-294 DM-2); classified absence on pre-change records. */
+  readonly providerProfile?: string;
   readonly recordedAt: string;
 };
 
