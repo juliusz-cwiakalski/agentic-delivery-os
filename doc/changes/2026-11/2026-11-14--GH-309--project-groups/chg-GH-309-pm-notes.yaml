@@ -3,7 +3,7 @@ title: "M2-S18: Project groups (M2)"
 delivery_mode: interactive
 phases:
   clarify_scope: { started: null, completed: 2026-11-14T04:59:42.655Z }
-  specification: { started: null, completed: 2026-11-14T05:11:41.720Z }
+  specification: { started: null, completed: 2026-11-14T05:46:03.292Z }
   test_planning: { started: null, completed: 2026-11-14T05:37:26.838Z }
   delivery_planning: { started: null, completed: 2026-11-14T05:37:34.264Z }
   dor_check: { started: null, completed: null }
@@ -81,4 +81,31 @@ notes:
       scope stands and no MCP surface change ships in GH-309. Plan-writer may
       pin this as a non-goal."
     type: resolved
+    date: "2026-11-14"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (9/10 facets PASS; ac_quality
+      FAIL). Blocking MAJOR: alias failure-path error identity unpinned — spec
+      F-7/§8.5/C-2 promise byte-compat while the rename moves flat-surface error
+      identities to repos.*; two defensible readings on the top risk chain
+      (RSK-1/C-2); no TC probes the alias under a failure fixture. MINORS: (2)
+      C-6 sync-carrier exception (feature-result-contract.md) missing from spec
+      constraint register + TC-GRPBOUND-003 checklist; (3) plan phase-1
+      done-when cites decision-record.test.ts (TDR-0013- specific, out of
+      scope); (4) TC-GRPREN-005 body unsynced with §9 v1.2 input.value.rejected
+      pin; (5) contracts.md 'Owned by M2-S18' queue-and- lane line goes stale
+      post-DEC-4, no phase 6/7 obligation touches it. Remediation: reopen
+      specification (findings 1-2) -> test_planning (alias failure probe +
+      checklist + GRPREN-005 sync) -> delivery_planning (phase-1 done-when +
+      pack-line obligation); then re-run DoR iteration 2. Reviewer record:
+      readiness-review/readiness-iter-1.md."
+    type: risk
+    date: "2026-11-14"
+  - text: "RETRO: DoR iteration 1 caught a genuine chain-wide ambiguity the artifact
+      authors all missed — the spec pinned success-payload compat (C-2) but
+      never stated failure-envelope behavior for the alias after the
+      error-identity move; the test plan and plan then inherited the ambiguity
+      instead of flagging it. Improvement: when an artifact promises
+      compatibility across a rename that also moves error identities, the
+      compatibility claim must be split by outcome (success vs failure envelope)
+      at authoring time."
+    type: retro
     date: "2026-11-14"
