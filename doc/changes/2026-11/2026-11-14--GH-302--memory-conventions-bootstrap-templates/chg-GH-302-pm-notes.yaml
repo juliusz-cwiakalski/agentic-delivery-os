@@ -306,3 +306,26 @@ notes:
       check green (8123 pass / 0 fail / 4 skip)."
     type: info
     date: "2026-11-14"
+  - text: "PLAN PHASE 3 COMPLETE (commit 0af97735): PDR-0004 landing verified
+      (the file was already tracked early at 5e74180b per the pm/caller
+      contract — verified file↔index↔spec consistency instead of re-landing:
+      frontmatter id PDR-0004 + status Proposed; 00-index.md row 27 links the
+      exact filename with matching title/status/date; spec references PDR-0004
+      in OQ-2, DEC-6, and frontmatter links.decisions; the record states the
+      repo-internal disposition and self-contained installed conventions) —
+      the spec, test plan, and index were NOT 'fixed' ahead of the phase
+      (pinned-red rule honored). F-6 concept alignment in the same commit:
+      doc/planning/concepts/memory-practices.md status advanced from Draft
+      (2026-10-26) to Active (2026-11-14, aligned and finalized by GH-302 per
+      PDR-0004); adoption checklist corrected to exactly index + per-agent
+      entry points + lessons + tacit, 'No additional areas are provisioned',
+      preferences/retro-archive removed as provisioning targets (DEC-2);
+      AGENTS.md kernel template section realigned to the shipped kernel
+      template's twelve content classes with ~150/~200 budget guidance and no
+      record-schema fields (TC-MEMALIGN-002 anchors). License header verified
+      present (doc/planning/concepts is in header-script scope; not hand-added
+      — C-5). TESTS: bash scripts/.tests/test-add-header-location.sh green
+      (24/24); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8123 pass / 0 fail /
+      4 skip)."
+    type: info
+    date: "2026-11-14"
