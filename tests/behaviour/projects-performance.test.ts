@@ -76,15 +76,15 @@ describe("TC-PROJ-037 bounded work", () => {
       expect(hostIndexEntriesOf(host.hostRoot)).toHaveLength(25);
 
       // Warm-up, then ten samples of each projection.
-      expect(exitOf(await driver.run(["projects", "list", "--json"]))).toBe(0);
-      expect(exitOf(await driver.run(["projects", "list"]))).toBe(0);
+      expect(exitOf(await driver.run(["projects", "list", "--flat", "--json"]))).toBe(0);
+      expect(exitOf(await driver.run(["projects", "list", "--flat"]))).toBe(0);
       const text: number[] = [];
       const json: number[] = [];
       for (let sample = 0; sample < 10; sample += 1) {
-        const textRun = await time(() => driver.run(["projects", "list"]));
+        const textRun = await time(() => driver.run(["projects", "list", "--flat"]));
         expect(textRun.value.exitCode).toBe(0);
         text.push(textRun.elapsed);
-        const jsonRun = await time(() => driver.run(["projects", "list", "--json"]));
+        const jsonRun = await time(() => driver.run(["projects", "list", "--flat", "--json"]));
         expect(jsonRun.value.exitCode).toBe(0);
         expect(projectsOf(jsonRun.value)).toHaveLength(25);
         json.push(jsonRun.elapsed);
@@ -139,16 +139,16 @@ describe("TC-PROJ-037 bounded work", () => {
         `${JSON.stringify({ schema: HOST_INDEX_SCHEMA, revision: 5, projects: seeded }, null, 2)}\n`,
       );
 
-      expect(exitOf(await harness.run(["projects", "list", "--json"]))).toBe(0);
+      expect(exitOf(await harness.run(["projects", "list", "--flat", "--json"]))).toBe(0);
       const samples: number[] = [];
       for (let sample = 0; sample < 10; sample += 1) {
-        const run = await time(() => harness.run(["projects", "list", "--json"]));
+        const run = await time(() => harness.run(["projects", "list", "--flat", "--json"]));
         expect(run.value.exitCode).toBe(0);
         samples.push(run.elapsed);
       }
       expect(p95(samples)).toBeLessThanOrEqual(4_000);
 
-      const listed = await harness.run(["projects", "list", "--json"]);
+      const listed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       // The measurement is of the real read path: the seeded revision and length
       // are what the command reports.
@@ -213,7 +213,7 @@ describe("TC-PROJ-037 bounded work", () => {
       expect(harness.hostIndexAccess.writes - before.writes).toBeLessThanOrEqual(1);
       // ... and the list path performs no maintenance write at all.
       const beforeList = harness.hostIndexAccess.writes;
-      expect(exitOf(await harness.run(["projects", "list", "--json"]))).toBe(0);
+      expect(exitOf(await harness.run(["projects", "list", "--flat", "--json"]))).toBe(0);
       expect(harness.hostIndexAccess.writes).toBe(beforeList);
 
       // No crawl: the maintenance fold is filesystem-free by construction.

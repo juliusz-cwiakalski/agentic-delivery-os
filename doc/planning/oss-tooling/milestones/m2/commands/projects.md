@@ -1,6 +1,6 @@
 # projects(1)
 
-Status: Proposed (M2)
+Delivered (M2-S18)
 
 ## NAME
 
@@ -34,14 +34,12 @@ unrelated directories reads identically. Scan results never admit an
 undeclared clone.
 
 The naming boundary is fixed: `repos` is the flat record set, and `projects`
-groups it. The time-scoped disambiguation: before M2-S18 the shipped
-`projects list` was the delivered flat record set, and from M2-S18 the rename
-rule makes `projects list` the group surface while `repos list` takes the flat
-enumeration. The flat page is [./repos.md](./repos.md) and its contract lives
-in [../contracts.md](../contracts.md).
+groups it. The flat page is [./repos.md](./repos.md), and the rename rule that
+pins the transition and the `projects list --flat` alias is stated once in
+[../contracts.md](../contracts.md#naming-boundary-and-the-rename-rule).
 
-This surface is proposed for M2-S18 and is not yet registered at the root
-listing. The group contract is `project-groups.v1`, the configuration document
+This surface is registered at the root listing. The group contract is
+`project-groups.v1`, the configuration document
 is `<configDirectoryName>/projects.yaml` (schema
 `delivery.projects.groups.v1`), and the aggregation behaviour is declared in
 the project-scoped aggregation clause; all three are in
@@ -65,7 +63,7 @@ Text: a group block per group with one member line per repository and the
 columns `group`, `member`, `tracker`, `state`, `health`, `daemon`.
 
 Envelope `data.groups[]` carries exactly one entry per configured group, and
-`data.groups[]` carries a `groupKey` for each such group. Each entry holds:
+each entry carries a `groupKey`. Each entry holds:
 
 | Key | Contract |
 |---|---|
@@ -113,8 +111,10 @@ platform    delivery-b-5e6f7a8b       github   engine  degraded  unreachable
 ```
 $ <binary> projects list --project platform --json
 {
-  "ok": true,
-  "command": "projects list",
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-1",
+  "exitCode": 0,
+  "timing": { "totalMs": 4 },
   "data": { "groups": [ { "groupKey": "platform", "members": [ { "repoKey": "delivery-a-1a2b3c4d", "...": "..." } ] } ] }
 }
 ```

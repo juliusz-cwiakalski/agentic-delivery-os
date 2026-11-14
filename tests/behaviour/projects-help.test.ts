@@ -135,18 +135,22 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
     expect(coverage.referencePages).toContain(M2_PAGE);
     expect([...coverage.commands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
 
-    // 4. The reference page documents both flags and keeps its proposed status.
+    // 4. The reference page documents both flags and carries its delivered status.
     const page = readFileSync(join(ROOT, M2_PAGE), "utf8");
     expect(page).toContain("--help");
     expect(page).toContain("--version");
-    expect(page).toContain("Status: Proposed (M2)");
+    expect(page).toContain("Delivered (M2-S18)");
 
-    // 5. Exactly three error rows under the one new kind.
+    // 5. The projects kind: the three delivered host-overview rows plus the
+    //    three group-surface identities GH-309 adds (mechanical registry pin).
     const rows = ERROR_TABLE.filter((row) => row.domainKind === "projects");
     expect(rows.map((row) => row.code)).toEqual([
       "projects.identity-unreadable",
       "projects.registry-corrupt",
       "projects.state-unavailable",
+      "projects.config-invalid",
+      "projects.unknown-group",
+      "projects.scope-unavailable",
     ]);
 
     // 6. The composed program carries the definition and the restriction keeps it.
@@ -162,7 +166,7 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
       homeDirectory: home,
       workingName: "delivery-os",
     });
-    const program = composer(SYNTHETIC_BRAND, { command: "status" });
+    const program = composer(SYNTHETIC_BRAND, { command: "status", groupScoped: false });
     rmSync(checkout, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
     expect(program.commands.projects).toBeDefined();

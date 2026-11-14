@@ -215,8 +215,8 @@ export {
   readQueueRemovals,
   readRuntimeHeartbeat,
   readRuntimeInstance,
-  recoverQueueParks,
   reconcileQueueEntries,
+  recoverQueueParks,
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,
@@ -237,9 +237,18 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  orderRepoEntries,
+  type ProjectGroupMemberResolution,
+  projectGroupEntry,
+  projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
+  projectMemberHealth,
+  repoListEntry,
+  reposListDataOf,
+  resolveProjectGroupMember,
   selectDaemonReachability,
+  type WorkspaceLocatedMember,
 } from "./app/projects.js";
 /**
  * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the
@@ -741,6 +750,8 @@ export {
   projectDeployReport,
   projectEntry,
   projectEscalationState,
+  projectGroupDeclared,
+  projectGroupMemberSelectors,
   projectReservedSlotQuestions,
   QUEUE_DEPLOY_READ_BUDGET,
   QUEUE_NEXT_DEFAULT,
@@ -822,6 +833,7 @@ export {
   selectCommitTransport,
   selectLane,
   selectMatchingBranch,
+  selectProjectGroups,
   selectPruneCandidates,
   serializeCapsuleEvent,
   sha256Hex,
@@ -860,6 +872,7 @@ export {
   validateOwnerGateSlaPolicy,
   validatePlan,
   validatePlanValue,
+  validateProjectGroupsDocument,
   verifyGatesUnknownIdentity,
   type WatchdogLivenessEvaluation,
   type WatchdogPlannedAction,
@@ -881,6 +894,10 @@ export {
   resolveOwnerHoldFact,
   sanitizeOwnerHoldReason,
 } from "./domain/owner-hold.js";
+export {
+  aggregateProjectMemberOutcomes,
+  projectMemberOutcomeOfHealth,
+} from "./domain/project-groups.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
@@ -909,13 +926,13 @@ export {
   type SpendAbsence,
   type SpendFoldOutcome,
   spendDigestSection,
-  windowSpendEvidence,
   spendTruncationWarning,
+  windowSpendEvidence,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
 export {
-  attributeStep,
   attributedValue,
+  attributeStep,
   joinAttributionSubstrates,
   type TelemetryAttribution,
   type TelemetryAttributionInput,
@@ -926,14 +943,14 @@ export {
 export {
   decodeTelemetryStepFrame,
   emptyIngestTally,
-  tallyFrame,
-  tallyIngestDegradation,
+  TELEMETRY_IGNORED_FRAME_TYPES,
   type TelemetryFrameContext,
   type TelemetryFrameOutcome,
   type TelemetryIngestTally,
-  TELEMETRY_IGNORED_FRAME_TYPES,
   type TelemetrySessionTotals,
   type TelemetrySessionTotalsReader,
+  tallyFrame,
+  tallyIngestDegradation,
 } from "./domain/telemetry-ingest.js";
 export {
   boundWatchLine,

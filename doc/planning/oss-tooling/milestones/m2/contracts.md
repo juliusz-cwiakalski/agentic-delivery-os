@@ -144,7 +144,7 @@ Defined once for every group-scoped read, owned by M2-S18.
 
 ## Queue and lane representation
 
-Owned by M2-S18 for cross-repository changes, and read beside the delivered
+Owned by M2-S19 for cross-repository changes, and read beside the delivered
 queue lifecycle mutations below.
 
 - **One entry per member.** A cross-repository change holds one queue entry per member

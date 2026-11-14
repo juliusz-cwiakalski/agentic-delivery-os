@@ -1,6 +1,6 @@
 # repos(1)
 
-Status: Proposed (M2)
+Delivered (M2-S18)
 
 ## NAME
 
@@ -26,16 +26,15 @@ phase state, queue entries, or lane leases - even when both use the same ref.
 the state location, the daemon reachability, and the handover state. No manual
 registry is required; the host index is discovered from the checkouts.
 
-This is the flat record set contract, owned by M2-S18. The shipped
-`projects list` surface is that flat record set today; the rename rule moves
-the enumeration to `repos list`, and the deprecation alias is the different
-token `projects list --flat`, which keeps the delivered payload reachable
-until the M3 boundary. The group surface belongs to `projects` and has its own
-page at [./projects.md](./projects.md).
+This is the flat record set contract, delivered by M2-S18. The rename rule
+moves the enumeration to `repos list`, and the deprecation alias is the
+different token `projects list --flat`, which keeps the delivered payload
+reachable until the M3 boundary. The group surface belongs to `projects` and
+has its own page at [./projects.md](./projects.md).
 
-This surface is proposed for M2-S18 and is not yet registered at the root
-listing. See [../entrypoint-delta.md](../entrypoint-delta.md) for the root
-listing delta and [../contracts.md](../contracts.md) for `repos.v1`.
+`repos` is registered at the root listing. See
+[../entrypoint-delta.md](../entrypoint-delta.md) for the root listing delta
+and [../contracts.md](../contracts.md) for `repos.v1`.
 
 ## OPTIONS
 
@@ -115,8 +114,10 @@ delivery-b-5e6f7a8b        /work/delivery-b    <host root>/projects/delivery-b-5
 ```
 $ <binary> repos list --json
 {
-  "ok": true,
-  "command": "repos list",
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-1",
+  "exitCode": 0,
+  "timing": { "totalMs": 4 },
   "data": { "repos": [ { "repoKey": "delivery-a-1a2b3c4d", "...": "..." } ], "hostIndexRevision": 12 }
 }
 ```
@@ -125,11 +126,13 @@ $ <binary> repos list --json
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `projects.identity-unreadable` | The invoking checkout's git metadata is unusable, or its identity marker is unreadable or inconsistent | 1 |
-| `projects.registry-corrupt` | The host index cannot be read; run discovery again | 2 |
-| `projects.state-unavailable` | A per-repository state location is missing or unreadable | 2 |
+| `repos.identity-unreadable` | The invoking checkout's git metadata is unusable, or its identity marker is unreadable or inconsistent | 1 |
+| `repos.registry-corrupt` | The host index cannot be read; run discovery again | 2 |
+| `repos.state-unavailable` | A per-repository state location is missing or unreadable | 2 |
 
-The delivered `projects.*` error identities are current truth; a `repos.*` error-prefix change is M2-S18 code work and is not current truth.
+The flat surface's error identities follow the surface, not the token: every
+failure of `repos list` and of the `projects list --flat` alias classifies under
+the `repos.*` identities above (see [../contracts.md](../contracts.md)).
 
 ## SEE ALSO
 

@@ -3,16 +3,16 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-11
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The projects host overview: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `projects list [--json]` surface with its five-field envelope, deterministic table, exit projection, three contract error identities, handover and daemon projections, and the four state-location outcomes."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload."
 links:
-  related_changes: ["GH-288", "GH-289"]
-  related_decisions: ["TDR-0022"]
+  related_changes: ["GH-288", "GH-289", "GH-309"]
+  related_decisions: ["TDR-0022", "ODR-0004"]
 ---
 
-# Feature: Projects Host Overview
+# Feature: Repositories and the Host Overview
 
 ## Overview
 
@@ -24,14 +24,19 @@ marker. The host root keeps only host-wide documents: the derived host index
 `host-index.json` and the host-wide owner-hold marker; a pre-migration store left
 at the host root is detected there, never read from it.
 
-`projects list [--json]` is the host overview and the only verb of the family.
-It reads the host index, derives every state location from its key, and projects
-each project's handover state and daemon reachability. It writes no index or
+`repos list [--json]` is the flat record set of managed checkouts on the host:
+it reads the host index, derives every state location from its key, and projects
+each checkout's handover state and daemon reachability. It writes no index or
 store content; the two permitted side effects are named under Read-only below.
+The `projects` command family names project groups described in [Project
+Groups](feature-project-groups.md); the same flat payload is also served by the
+delivered `projects list --flat` alias.
 
 The durable architecture record is
 [TDR-0022](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md);
-this page states the delivered behaviour.
+this page states the delivered behaviour. The command rename that makes `repos`
+the flat record set is recorded in
+[ODR-0004](../../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md).
 
 ## Host root and project root
 
@@ -76,13 +81,16 @@ The identity outcome is a closed table:
 | State | Condition | Outcome |
 |---|---|---|
 | Not a work tree | No git root: no `.git`, or a `.git` file that is not a `gitdir:` pointer | The declared `unbound` scope, exit `0`, one warning, no registration |
-| Git metadata unusable | A git root resolves but its git directories do not (an empty `gitdir:` value) | `projects.identity-unreadable`, exit `1` |
+| Git metadata unusable | A git root resolves but its git directories do not (an empty `gitdir:` value) | `repos.identity-unreadable`, exit `1` |
 | Marker absent | A git root and common directory resolve, no marker exists | Mint once and use its key |
-| Marker unreadable or inconsistent | The marker cannot be read, is not JSON, misses a field, or its key disagrees with its recorded basename and identifier | `projects.identity-unreadable`, exit `1`, naming the key and identifier when readable |
-| Marker write fails | The marker cannot be created | `projects.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
+| Marker unreadable or inconsistent | The marker cannot be read, is not JSON, misses a field, or its key disagrees with its recorded basename and identifier | `repos.identity-unreadable`, exit `1`, naming the key and identifier when readable |
+| Marker write fails | The marker cannot be created | `repos.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
 
 The refusal is always about the **invoking** checkout and never names another
-project's root.
+project's root. The table gives the flat surface's identities: the composition's
+scope refusal classifies the same identity and state conditions under `repos.*`
+for `repos list` and the `projects list --flat` alias, and under `projects.*` for
+every other command, including the group surface.
 
 ## Host index
 
@@ -113,22 +121,24 @@ advances no revision; the colliding invocation warns once and reports
 `projects.state-unavailable` at exit `2` naming its own checkout root, its key,
 and the conflicting identifier. It never adopts that state root.
 
-## `projects list` contract
+## `repos list` contract
 
 - **Verb.** `list` only. Any other verb is refused through the shared invocation
   classification at exit `1` before the index is read.
-- **Envelope.** `data` carries exactly `projects` and `hostIndexRevision`; each
-  entry carries exactly `projectKey`, `root`, `stateLocation`, `daemonReachable`
+- **Envelope.** `data` carries exactly `repos` and `hostIndexRevision`; each entry
+  carries exactly `repoKey`, `root`, `stateLocation`, `daemonReachable`
   (`{ reachable }` or `{ reachable: false, reason }`), and `handoverState`.
-  Entries are ordered by `projectKey`. No new top-level envelope key exists.
+  Entries are ordered by `repoKey`. No new top-level envelope key exists. The
+  payload's `repoKey` is the checkout's project key: the host index keeps the
+  field name `projectKey`, and the record's contract name is `repoKey`.
 - **Text.** A deterministic table with the columns `key`, `root`, `state`,
-  `daemon`, `handover`, sorted by key. The `daemon` cell carries the reason token
-  when unreachable, never a bare negative. Two runs over unchanged state are
-  byte-identical.
+  `daemon`, `handover`, sorted by repo key. The `daemon` cell carries the reason
+  token when unreachable, never a bare negative. Two runs over unchanged state
+  are byte-identical.
 - **Exit projection.** `0` produced; `1` refused (unknown verb, an unusable
-  state-directory override, or the invoking checkout's identity cannot be read);
-  `2` the host index or a project state location prevents an honest answer. No
-  other code is produced by the family.
+  state-directory override, or the invoking checkout's identity cannot be
+  read); `2` the host index or a project state location prevents an honest
+  answer. No other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
   project-root creation, no migration, and no index or store-content write.
   Exactly two side effects are permitted: the create-once identity marker minted
@@ -146,6 +156,22 @@ maintenance write (zero when unchanged) and the create-once project checkout
 identity marker. The dispatch repository binding marker
 (`dispatch-identity.json` in the git common directory) is a different artefact
 and is never created, repaired, or re-persisted by a read.
+
+The four state-location outcomes and the handover and daemon projections below
+describe this read.
+
+### The `projects list --flat` alias
+
+`projects list --flat [--json]` serves the delivered `projects.v1` payload
+unchanged — `data.projects[]` with `projectKey`, `root`, `stateLocation`,
+`daemonReachable`, and `handoverState`, plus `hostIndexRevision` — so a consumer
+written against the earlier flat payload keeps working while it moves to
+`repos list`. The payload is byte-compatible, absence negatives included: it
+carries no `repoKey`, no `groupKey`, and no `data.groups[]` or `data.repos[]`.
+The alias is the flat surface under the `projects` token, so its failures
+classify under the `repos.*` identities on every form, and it takes no group
+scoping. The alias retires at the M3 boundary
+([ODR-0004](../../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md)).
 
 ## Handover projection
 
@@ -179,8 +205,8 @@ payload and no command.
 |---|---|---|
 | First use | Project root absent, no delivered store artifact at the host root | Ordinary (exit `0`, no warning, `handoverState` `shell`) |
 | Legacy warning | Project root absent while the host root still holds a delivered store artifact | One bounded warning naming the migration guide; nothing moved, no exit change |
-| Unreadable root | Project root present but unreadable or not a directory | `projects.state-unavailable`, exit `2`, naming the project key and its state location |
-| Uncreatable marker | The identity marker cannot be created | `projects.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
+| Unreadable root | Project root present but unreadable or not a directory | `repos.state-unavailable`, exit `2`, naming the project key and its state location |
+| Uncreatable marker | The identity marker cannot be created | `repos.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
 
 The legacy predicate is closed over the delivered store artifact names and
 excludes the host index (and its corrupt siblings), the owner-hold marker, the
@@ -204,9 +230,11 @@ No automatic migration, migration command, or re-attribution exists.
 
 ## Related
 
+- [Project Groups](feature-project-groups.md) — the `projects` family: the
+  configuration document, the group surface, and the group-scoped reads.
 - [State Layer](feature-state-layer.md) — the store contract this surface scopes.
 - [CLI Entrypoint](feature-cli-entrypoint.md) — the prompt-required set that
-  carries `projects list`.
+  carries `repos list` and `projects list`.
 - [Branding Seam](feature-branding-seam.md) — `stateDirectoryName` naming the host
   root.
 - [Audit Ledger](feature-audit-ledger.md) — the runtime-aware edge's audit store,

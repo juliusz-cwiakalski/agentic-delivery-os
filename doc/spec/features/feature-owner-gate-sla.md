@@ -251,7 +251,7 @@ path reads `<project root>/owner-hold`, so one hold stops every project on the
 host and migration leaves it in place. The gating behaviour and the
 `queue.precondition.unmet`/`owner-hold` refusal are in [Scheduling
 Engine](feature-scheduling-engine.md); the state root it is read at is in
-[Projects Host Overview](feature-projects.md).
+[Repositories and the Host Overview](feature-projects.md).
 
 ### Configuration
 

@@ -1,0 +1,593 @@
+change_id: GH-309
+title: "M2-S18: Project groups (M2)"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: null, completed: 2026-11-14T04:59:42.655Z }
+  specification: { started: null, completed: 2026-11-14T05:46:03.292Z }
+  test_planning: { started: null, completed: 2026-11-14T05:51:58.807Z }
+  delivery_planning: { started: null, completed: 2026-11-14T05:56:13.668Z }
+  dor_check: { started: null, completed: 2026-11-14T05:59:46.918Z }
+  delivery: { started: null, completed: 2026-11-14T16:35:35.260Z }
+  system_spec_update: { started: null, completed: 2026-11-14T16:42:01.060Z }
+  review_fix: { started: null, completed: 2026-11-14T17:42:58.639Z }
+  quality_gates: { started: null, completed: 2026-11-14T17:56:49.456Z }
+  dod_check: { started: null, completed: 2026-11-14T17:57:55.374Z }
+  pr_creation: { started: null, completed: 2026-11-14T18:00:59.062Z }
+decisions:
+  - text: "Superseding decision record for the `repos` name (required by ODR-0003
+      DC-4 rename rule, ticket derived task f) is authored via @decision-advisor
+      during artifact phases, BEFORE the delivery phase; the
+      cli-command-registry `repos` row moves to Delivery only together with the
+      code change."
+    date: "2026-11-14"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: explicit user directive to deliver GH-309 (M2-S18 Project
+      groups). Prior active GH-302 delivered 2026-11-14 (PR #317 open, awaiting
+      owner merge) moved to parked_changes; merge confirmation pending."
+    type: info
+    date: "2026-11-14"
+  - text: "Dependency M2-S11 satisfied: GH-288 closed 2026-11-11 on tracker; backlog
+      records 'Progress: delivered by GH-288'."
+    type: info
+    date: "2026-11-14"
+  - text: "Scope cross-check against current truth
+      (doc/spec/features/feature-projects.md): the delivered `projects list`
+      flat surface is pre-rename behavior by design; the rename rule
+      (contracts.md naming boundary) explicitly makes the rename S18 code work,
+      NOT current truth. Phases 2-5 must treat the rename as this change's scope
+      (to-be); current-truth docs flip only in phase 7 (system_spec_update)."
+    type: info
+    date: "2026-11-14"
+  - text: "Documentation impacts for phase 7 (doc-syncer): feature-projects.md
+      reconciliation (group surface + rename; possible new repos/groups feature
+      spec); doc/guides/migrating-to-per-repository-state.md (derived task d);
+      doc/planning/oss-tooling/ maintenance per convention (backlog.md progress
+      markers, status.md snapshot, cli-command-registry.md repos row to Delivery
+      + projects row update, milestones/m2 pack page status headers);
+      doc/spec/features/feature-cli-entrypoint.md (repos registration at root
+      listing); superseding decision record in doc/decisions/."
+    type: risk
+    date: "2026-11-14"
+  - text: "Board scope note: contracts.md rename rule renames the board repository
+      list field projects[] -> repositories[]. Board (M2-S4) is not yet
+      delivered (remaining M2 stories per status.md snapshot 2026-11-13);
+      spec-writer must verify whether the rename constrains S18 code or only
+      M2-S4's future delivery, from pack status, before declaring it in-scope."
+    type: question
+    date: "2026-11-14"
+  - text: "Board question RESOLVED by spec DEC-3: the board field rename binds
+      M2-S4's future delivery, not S18 code (board undelivered; planned board
+      page already names repositories[]). S18 board obligation is naming-
+      boundary only: board --project stays a repository key."
+    type: resolved
+    date: "2026-11-14"
+  - text: "Superseding decision record AUTHORED:
+      doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md
+      (Proposed; scoped supersession of ODR-0003 — flat-set name only; owner
+      ratifies at PR review). Index row landed as tracked drift in the
+      test_planning commit db85ac3; the ODR-0004 record FILE is still untracked
+      (correctly excluded from phase scope) — the delivery plan must land it in
+      an early plan phase BEFORE any rename code (DoD-11, constraint C-3); the
+      cli-command-registry repos row moves to Delivery only with the rename
+      code."
+    type: info
+    date: "2026-11-14"
+  - text: "TP-Q1 (MCP parity) RESOLVED by PM:
+      tests/behaviour/projects-scope-mcp.test.ts (TC-PROJ-022) asserts
+      state-ROOT parity between MCP and CLI compositions, not a projects-list
+      MCP tool; no projects/repos MCP tool exists, so spec section 16 CLI-only
+      scope stands and no MCP surface change ships in GH-309. Plan-writer may
+      pin this as a non-goal."
+    type: resolved
+    date: "2026-11-14"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (9/10 facets PASS; ac_quality
+      FAIL). Blocking MAJOR: alias failure-path error identity unpinned — spec
+      F-7/§8.5/C-2 promise byte-compat while the rename moves flat-surface error
+      identities to repos.*; two defensible readings on the top risk chain
+      (RSK-1/C-2); no TC probes the alias under a failure fixture. MINORS: (2)
+      C-6 sync-carrier exception (feature-result-contract.md) missing from spec
+      constraint register + TC-GRPBOUND-003 checklist; (3) plan phase-1
+      done-when cites decision-record.test.ts (TDR-0013- specific, out of
+      scope); (4) TC-GRPREN-005 body unsynced with §9 v1.2 input.value.rejected
+      pin; (5) contracts.md 'Owned by M2-S18' queue-and- lane line goes stale
+      post-DEC-4, no phase 6/7 obligation touches it. Remediation: reopen
+      specification (findings 1-2) -> test_planning (alias failure probe +
+      checklist + GRPREN-005 sync) -> delivery_planning (phase-1 done-when +
+      pack-line obligation); then re-run DoR iteration 2. Reviewer record:
+      readiness-review/readiness-iter-1.md."
+    type: risk
+    date: "2026-11-14"
+  - text: "RETRO: DoR iteration 1 caught a genuine chain-wide ambiguity the artifact
+      authors all missed — the spec pinned success-payload compat (C-2) but
+      never stated failure-envelope behavior for the alias after the
+      error-identity move; the test plan and plan then inherited the ambiguity
+      instead of flagging it. Improvement: when an artifact promises
+      compatibility across a rename that also moves error identities, the
+      compatibility claim must be split by outcome (success vs failure envelope)
+      at authoring time."
+    type: retro
+    date: "2026-11-14"
+  - text: "DoR gate ITERATION 2 verdict: READY (10/10 facets PASS, no pause, no
+      override). All five iter-1 remediations verified against diffs; counts
+      intact (16 ACs, DoD-1..17, 31 TCs, 6 plan phases); no regressions.
+      Non-blocking observations left as-is: OQ-1/OQ-3 §8.3 status wording
+      (cosmetic; reconciliations live in §9), migration-guide matcher note
+      (nice-to-have). Reviewer record: readiness-review/readiness-iter-2.md.
+      Hard gate passed on merit; delivery may proceed (plan phase 1 lands
+      ODR-0004 before rename code)."
+    type: resolved
+    date: "2026-11-14"
+  - text: "Plan phase 1 commit-step anomaly recorded: the direct commit path was
+      refused three times with commit.commitlint-failed 'invented tracker
+      references are not allowed: ODR-0004' (two --dry-run, one real; nothing
+      staged, tree untouched each time). Cause: with no model transport wired in
+      production, the commit primitive's deterministic template derives the
+      subject from the staged set's top path — here
+      doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md — and
+      validateCommitMessage rejects the ODR-0004 token as a fabricated tracker
+      ref; the model path sanitizes via stripInventedRefs but the template path
+      does not. Typed blocker q-caee1573-be8c-47d2-aab8-781932c92a21
+      (decision-needed, owner, lane gh-309-delivery) records the
+      template-sanitization defect for a proper fix. Phase 1 lands through the
+      commit primitive with this evidence note riding the same staging set (top
+      path = this pm-notes file, whose only tracker-shaped token is GH-309), so
+      the record lands unchanged in substance in exactly one primitive commit;
+      the plan-declared subject docs(GH-309) is superseded by the
+      primitive-owned template subject."
+    type: risk
+    date: "2026-11-14"
+  - text: "Plan phase 1 'Land the untracked ODR-0004 superseding decision record
+      beside its index row' complete: commit 23b1a12f (primitive-owned subject
+      chore(GH-309), staged exactly the record + this evidence note);
+      obligations 1.1/1.2/1.3 verified — file unchanged in substance, file and
+      00-index row agree (id, title, status Proposed, date, owner), register
+      inspection holds, commit-order evidence now recordable (23b1a12f precedes
+      every later commit on the branch). Tests: docs-only phase, no automated
+      suite obligations; targeted suites N/A (per PM ruling the full battery is
+      the phase-6 gate)."
+    type: info
+    date: "2026-11-14"
+  - text: "Delivery resumed after the prior harness died mid delivery phase. On-disk
+      truth re-established: phase 1 committed at 23b1a12f (ODR-0004 tracked,
+      record before any rename code); the phase-1 evidence note above was
+      written but never committed (it rides the next phase commit); plan phase 2
+      was PARTIAL and uncommitted (contracts/projects.ts,
+      contracts/error-table.ts, domain/index.ts, domain/project-groups.ts,
+      adapters/file/projects-config.ts, scripts/checks/error-table-sync.ts). Not
+      started for phase 2: contracts/index.ts re-export block, core/src/index.ts
+      exports, app/projects.ts + cli/commands/projects.ts + cli/production.ts
+      scoped read, feature-result-contract.md registry rows,
+      tests/behaviour/projects-config.test.ts,
+      tests/structure/error-table.test.ts, tests/checks/error-table-sync.test.ts
+      count, inventory rows."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: the interrupted run left packages/core/src/index.ts CORRUPTED — an
+      aborted edit deleted seven legitimate exports (WatchdogPlannedAction,
+      WatchdogPreflightBuildInput, WatchdogPreflightEvaluation,
+      WatchdogRestorationPlan, wakeKeyFor, watchdogPreservedRefName,
+      weightLoads), dropped createLaneLaunchPlanner entirely, and retargeted the
+      surviving LaneLaunchPlanFacts/planLaneLaunch block at ./domain/index.js.
+      Consequence: packages/cli/src/daemon-compose.ts and two suites would fail
+      to compile. Caught only because resumption verified the diff instead of
+      trusting the tree; a blind commit would have landed a red phase boundary.
+      Improvement: every resumed delivery must diff-inspect uncommitted work
+      before completing the phase, never assume partial work is coherent."
+    type: retro
+    date: "2026-11-14"
+  - text: "Plan phase 2 'Project configuration document
+      (delivery.projects.groups.v1) with classified load-time validation'
+      complete: commit 20ff468b (primitive-owned template subject; one commit,
+      safety.findings empty, dry-run archived). Obligations 2.1-2.7 verified:
+      contract types + pure OQ-1 validator + yaml-seam reader; the `projects
+      list --project <groupKey>` scoped read as the validation seam (the default
+      form still returns the delivered flat projects.v1 payload —
+      intermediate-state rule held); the three identities
+      projects.config-invalid (exit 1), projects.unknown-group (exit 1),
+      projects.scope-unavailable (exit 2) with their feature-result-contract.md
+      registry rows in the same commit (C-6 sync carrier: table rows + identity
+      counts only, no behavioural claim);
+      tests/behaviour/projects-config.test.ts TC-GRPDOC-001..005 green (load per
+      schema; all six config-invalid variants; scope-unavailable at exit 2 for
+      an unreadable document and an unreadable invoking scope; unknown-group at
+      exit 1; absent/empty configuration -> valid empty listing at exit 0; zero
+      silent-empty outcomes; TC-GRPDOC-004's queue/status refusal steps are
+      correctly deferred to phase 4); inventory rows and executable-export
+      declarations for the two new source files. packages/core/src/index.ts was
+      restored to HEAD and extended with additions only (zero removed exports;
+      createLaneLaunchPlanner and the seven watchdog names intact). Test result:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check GREEN — 8146 pass, 4 skip, 0 fail across
+      1048 files, then boundaries, prompt-conformance, help-guide-coverage, and
+      exports-parity all OK. A PATH-local bun wrapper raised only Bun's per-test
+      timeout/concurrency for that run because the shared host was under heavy
+      unrelated load (two 5s/30s perf tests flaked at their defaults and pass in
+      isolation); package.json and bunfig.toml were never modified and no
+      wrapper artifact is committed. Scope-drift (mandatory mechanical sync the
+      plan's phase-2 file list omitted): scripts/checks/error-table-sync.ts, the
+      events error-table and state-additivity baselines, the ports
+      v1-contract-inventory fixture, the dispatch-attempts taxonomy count pin,
+      and the projects-help error-row pin (three -> six; its payload and mount
+      assertions are unchanged). No MCP/opencode surface touched; no pre-emptive
+      rename code."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 3 'Workspace discovery (declared members only) and the
+      project-groups.v1 group surface' complete: commit 8f47d0b3 (primitive
+      template subject, which named the changeset because that path sorted
+      first). Obligations 3.1-3.6 verified: adapters/file/workspace-scan.ts
+      (containment invariant, declared members only at any depth, no scan
+      without a configured workspaceRoot); member resolution with 1:1
+      no-workspace parity and per-member observation reusing the delivered
+      per-checkout machinery; the closed OQ-3 health vocabulary with
+      not-yet-supported mandatory for unimplemented tracker kinds; group
+      enumeration and deterministic text rendering in declared order;
+      tests/behaviour/projects-groups-list.test.ts (TC-GRPWORK-001..003,
+      TC-GRPSURF-001..003) and tests/structure/projects-groups-envelope.test.ts
+      (DM-2 envelope, closed health vocabulary, TC-GRPENV group cases) plus the
+      groups fixture helper and inventory rows. Intermediate-state rule held:
+      the default `projects list` form still returns the delivered flat
+      projects.v1 payload; the flip stays in phase 5. Test result: 31 pass / 0
+      fail / 0 skip across the five projects suites (groups-list, envelope,
+      config, list-contract, help). Phase commit landed BEFORE its pm-notes
+      evidence entry (the run was interrupted); the evidence is recorded here
+      and lands with the phase-4 commit."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN AMENDMENT (mechanical, in commit 8f47d0b3): phase 3 scope gained
+      .changeset/gh-309-project-groups-minor.md, with a comment recording why —
+      the branch-diff release gate requires exactly one five-package minor
+      changeset once the first publishable sources land. No phase count, id,
+      ordering, or obligation changed. No further plan amendment is expected."
+    type: decision
+    date: "2026-11-14"
+  - text: "RISK (gate environment contract): the plan's C-7 gate command
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` is unusable in this checkout.
+      tests/fixtures/projects/state-scope.ts nonCheckoutDirectory() requires a
+      temp parent that is outside EVERY git work tree (the GH-273 rule) and
+      walks tmpdir(), dirname(cwd), then APPROVED_BASE (= cwd/tmp/tmpdir). With
+      TMPDIR inside the work tree all three candidates resolve inside it, so it
+      throws and three suites fail (TC-PROJ-013, TC-PROJ-041, TC-GRPDOC-003) —
+      an environment failure, not a code defect; all 31 tests pass with TMPDIR
+      outside the work tree. All gates from here run with
+      TMPDIR=/tmp/opencode/tmpdir. This is a permanent-fixture versus
+      plan-command mismatch worth fixing outside this ticket."
+    type: risk
+    date: "2026-11-14"
+  - text: "Plan phase 4 'Project-scoped aggregation clause with group-scoped queue
+      list and status reads' complete: commit d525f852 (primitive template
+      subject, which named the change folder because that path sorted first).
+      Obligations 4.1-4.4 verified: the one aggregation clause in
+      packages/core/src/domain/project-groups.ts (declared order over
+      per-checkout state, never a group-scoped store; every member resolves to
+      exactly one closed outcome; one state-unavailable member yields
+      data.partial true with degradedMembers[] naming it by repoKey and outcome
+      at exit 0 while readable members are still returned; not-yet-supported
+      contributes no records; exit 2 only for unreadable configuration/scope);
+      the additive `queue list --project <groupKey>` and `status --project
+      <groupKey>` grammar with the unscoped forms unchanged; the one refusal
+      rule (`projects.unknown-group`, exit 1) on projects, queue, and status;
+      `board --project` untouched; TC-GRPSREAD-001..002 and the TC-GRPDOC-004
+      queue/status refusal steps in
+      tests/behaviour/queue-status-project-scope.test.ts, and TC-GRPAGG-001/002
+      in the extended tests/behaviour/projects-groups-list.test.ts and
+      tests/structure/projects-groups-envelope.test.ts. Test result: 63 pass / 0
+      fail / 553 expect() calls across the nine boundary suites (18.58s); the
+      non-behaviour full-suite chunk `bun test tests/structure tests/checks
+      tests/types tests/golden tests/conformance packages` reported 2416 pass /
+      0 fail / 2416 tests across 307 files (24030 expect() calls, 194.74s).
+      Gate-environment finding: TMPDIR must be outside EVERY git work tree AND
+      on the same filesystem as the repo; the workspace parent is itself an
+      umbrella git repo, so a sibling of the checkout still fails, and the OS
+      temp root is a different device; the correct value is an approved external
+      temp directory on the repo's filesystem (correcting the earlier risk
+      note's /tmp value). Three gate defects fixed at this boundary: the single
+      queue repository-binding derivation in packages/cli/src/production.ts; the
+      ProjectScopedMemberWork / ProjectScopedWorkData rows in
+      tests/fixtures/ports/v1-contract-inventory.json; and the TC-STATUS-001 pin
+      updated to the delivered [\"--project\"] surface in
+      tests/behaviour/status-command.test.ts.
+      tests/structure/queue-binding-derivation.test.ts was NOT edited."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 5 'Rename the flat record set to repos list with the --flat
+      alias, repos.* identities, and the root registration mount' complete:
+      commit 3229a2e42d90c35944ec6f80592e3b0937bbc4c7 (53 files, +1819/-240;
+      primitive template subject named the pm-notes path because it sorted
+      first; messageSource=template, transport=none, safety.findings empty,
+      telemetry emitted). Obligations 5.1-5.6 verified. 5.1: new
+      packages/cli/src/commands/repos.ts and output/repos-text.ts, wired in
+      commands/index.ts, edge.ts, production.ts and output/index.ts; repos.v1
+      data.repos[] carries exactly repoKey/root/stateLocation/daemonReachable/
+      handoverState plus hostIndexRevision, the text table is sorted by repo
+      key, and unbound scope stays one bounded warning at exit 0 with no row.
+      5.2: default projects list returns project-groups.v1; `--flat` returns the
+      delivered projects.v1 payload unchanged (golden byte-compat with absence
+      negatives: no groupKey/repoKey/data.groups/data.repos); `--flat` +
+      `--project` is refused at exit 1 under input.value.rejected (not a new
+      projects.* identity); alias failures classify under repos.*. 5.3:
+      repos.identity-unreadable (exit 1), repos.registry-corrupt (exit 2) and
+      repos.state-unavailable (exit 2) are error-table rows with their
+      feature-result-contract.md registry rows; the old projects.* flat
+      identities no longer fire on the flat surface; group identities untouched.
+      5.4: repos is in prompt-required-commands (20), root/family/ verb help
+      entries, the m2/commands/repos.md page with Delivered (M2-S18),
+      coverage.json rows, pageFor mappings in both the check and its parity
+      test, and the EXPECTED composition list. 5.5: repos-list-contract
+      (TC-GRPREN-001..002), projects-flat-alias (TC-GRPREN-003..006), repos-help
+      (TC-GRPREG-001), projects-read-only-audit (TC-GRPRO-001), the
+      projects-groups-list default-flip case (TC-GRPREN-004) and the full
+      envelope set (TC-GRPENV-001) are green. 5.6: inventory.json and
+      content-inventory allowances cover both new source files. C-1 holds
+      (five-field delivery.result.v1, new keys under data, zero ok/command); no
+      MCP/opencode file changed and projects-scope-mcp stayed untouched and
+      green. Sanity: no deleted files; the only removed export block was a
+      relocation of aggregateProjectMemberOutcomes/projectMemberOutcomeOfHealth
+      within core/src/index.ts. Gates (TMPDIR=an approved external temp base on
+      the repository filesystem, outside every work tree): typecheck green;
+      13-suite boundary gate 248 pass / 0 fail / 5555 expect across 13 files
+      (23.77s); non-behaviour chunk 2419 pass / 2 fail of 2421 across 307 files
+      (298s) where both failures were 5s git-init/commit timeouts in
+      privacy-registry.test.ts and forbidden-literals.test.ts under load, and
+      both re-ran green in isolation (12 pass / 0 fail; 27 pass / 0 fail); the
+      nine modified behaviour suites not in the prescribed list 37 pass / 0 fail
+      / 612 expect; help-guide-coverage all covered; prompt-conformance 5
+      prompts clean; exports-parity 5 publishables pass attw; lint exit 0 (84
+      warnings, 33 infos); format:check exit 0 (2300 files); check:boundaries
+      exit 0 (401 modules, 1217 deps; ambient 187; secret 369);
+      forbidden-literals and privacy-literals 0 violations. The alias golden
+      tests/golden/fixtures/projects-flat-alias.json was newly created (no
+      existing golden regenerated). Scope drift (committed intentionally):
+      pm-notes itself (carries the phase-4 evidence that had landed after its
+      commit), scripts/checks/error-table-sync.ts (required by the two-way sync
+      gate; omitted from the declared file list), and 19 test/fixture files
+      carrying the identity-rename, prompt-set count and inventory fallout. No
+      new unsatisfied item; phase 6 not started."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 6 'Naming boundary anchors, migration guide, registry and M2
+      bookkeeping, full gate battery (release)' complete: the primitive commit
+      carrying this note (messageSource=template, transport=none; hash assigned
+      at commit time, `git show --stat HEAD` on feat/GH-309/project-groups is
+      the record). Obligations 6.1-6.5 verified. 6.1: the migration guide now
+      names all three surfaces with the delivered meaning — `repos list` is the
+      flat record set, `projects list` is the group surface, `projects list
+      --flat` is the transition alias retiring at the M3 boundary — replaces
+      every pre-rename instruction as current procedure, and keeps its
+      `ados_distribution: redistributable` marker. 6.2: the new
+      tests/structure/naming-boundary.test.ts pins the four anchors
+      (TC-GRPBOUND-001 root help + both M2 reference pages + the guide speak one
+      boundary, and no surface states the pre-rename meaning as current;
+      TC-GRPBOUND-002 the permanent repository vocabulary is unchanged — the
+      identity marker/schema, the `<host root>/projects/<key>` container, the
+      host-index `projects[]`/`projectKey`, and `--project-root`;
+      TC-GRPSREAD-003 the board is never group-scoped; TC-GRPREG-002 the guide
+      speaks the delivered vocabulary and keeps migration one-step
+      operator-run). 6.3: the cli-command-registry `repos` row moved to Delivery
+      (M2-S18, shipped in GH-309) and the `projects` row now documents the
+      delivered group surface with the `--flat` alias. 6.4: backlog M2-S18
+      gained its Ticket GH-309 and Progress lines; status.md gained the dated M2
+      delivery addendum; m2/commands/projects.md is Delivered (M2-S18) with its
+      example envelope updated to delivery.result.v1; m2/entrypoint-delta.md
+      carries the dated 2026-11-14 `repos` mount observation; m2/contracts.md's
+      queue-and-lane ownership line is corrected to M2-S19. 6.5: the full gate
+      battery is green with the phase-6 boundary defects fixed — the `projects`
+      root help tuple lacked the verb's `--flat`/`--project` options (so the
+      documented examples were rejected as fallback.invocation) and the
+      entrypoint coverage inventory's expected list lacked `repos`. Gate results
+      (TMPDIR on the repository filesystem outside every work tree):
+      non-behaviour chunk 2434 pass / 0 fail across 308 files (tests/structure
+      tests/checks tests/types tests/golden tests/conformance packages);
+      behaviour suites (all prefixes) 5482 pass / 4 skip / 0 fail; typecheck,
+      lint, format:check, help-guide-coverage, prompt-conformance,
+      exports-parity all PASS; doc-distribution guard PASS (92 in-scope docs, no
+      drift). Environment findings: (1) TMPDIR must be outside EVERY git work
+      tree AND on the repository's filesystem — the workspace parent is itself
+      an umbrella git repo and the OS temp root is a different device; (2) the
+      host sets `commit.gpgsign=true` globally, so every test that shells out to
+      `git commit` blocks on pinentry and times out; gates must run with
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false (CI does not sign). Scope note: the uncommitted
+      phase-5 evidence note above rides this same staging set (it was written
+      after 3229a2e4); no deleted files, no removed exports, no new unsatisfied
+      item, all six plan phases now evidenced."
+    type: info
+    date: "2026-11-14"
+  - text: "Review iteration 1 verdict: FAIL — spec_compliance FAIL, plan_compliance
+      PASS; 0 critical, 3 high, 1 medium, 5 low, 1 info. Record:
+      code-review/review-iter-1.yaml. High findings: (F-1) a scoped `projects
+      list --project <key>` on an absent/empty document returns the empty
+      listing at exit 0 instead of refusing `projects.unknown-group` at exit 1;
+      (F-2) `queue list --project` / `status --project` do the same and echo the
+      requested groupKey with `members: []`, so 'no work' and 'no such group'
+      are indistinguishable; (F-3) group-scoped queue/status still run
+      composition-level host-index maintenance, including on classified-failure
+      paths, contradicting NFR-2/AC-NFR2-1/DoD-13. Medium: (F-4)
+      `projects.registry-corrupt` is reachable on the group surface although the
+      spec closes the identity set at three and restricts exit 2 to
+      configuration/scope. Low: non-string workspaceRoot silently dropped;
+      trailing-separator duplicate selectors pass; a path lands in `repoKey` for
+      an unlocated root member; the result-contract prose omits `repos` from the
+      exact-code kinds; the alias golden asserts structural equality rather than
+      bytes. Info: unbounded workspace scan."
+    type: risk
+    date: "2026-11-14"
+  - text: "DECISION (review F-1/F-2, supersedes the phase-2 pinned empty-config
+      semantics): an explicit `--project <key>` that is not declared is refused
+      with `projects.unknown-group` at exit 1 on EVERY scoped surface (projects,
+      queue, status), INCLUDING when the configuration document is absent or
+      declares zero groups. Rationale: NFR-5 forbids silent-empty outcomes and
+      the earlier pin manufactured exactly one — a caller could not distinguish
+      an unconfigured group from a group with no work. The unscoped default form
+      keeps its empty listing at exit 0 (opt-in adoption stays a valid state).
+      Test plan impact: TC-GRPDOC-005 is rewritten to assert the refusal, and
+      TC-GRPDOC-004 gains the empty-configuration cell for queue and status."
+    type: decision
+    date: "2026-11-14"
+  - text: "DECISION (review F-4): a corrupt or unreadable host index is treated as
+      an EMPTY resolution aid on the group surface, never as a fourth identity.
+      Members that need the index classify `unregistered` at exit 0; exit 2
+      stays reserved for an unreadable configuration document or invoking scope.
+      Rationale: the spec closes the group identity set at three and F-5
+      restricts exit 2; the aggregation vocabulary already has an honest
+      `unregistered` outcome, so no new identity is invented and the group walk
+      does not write the index it failed to read."
+    type: decision
+    date: "2026-11-14"
+  - text: "DECISION (review F-10, accepted risk): the workspace scan stays unbounded
+      in depth and entry count. Membership remains containment-safe
+      (configuration-only, no undeclared clone admitted), the scan runs only
+      inside an operator-declared `workspaceRoot`, and the spec declares no scan
+      bound. Recorded as an accepted local-configuration exposure rather than
+      remediated in this change."
+    type: decision
+    date: "2026-11-14"
+  - text: "REMEDIATION PLAN (review iteration 1): plan phase 7 added — the review
+      remediation phase — carrying F-1..F-9 (F-10 accepted above). Reopen
+      nothing upstream: the spec's AC-F2-1/F-2 are the authority and the code is
+      what diverged. F-8 (result-contract prose) and the F-4 doc claims stay
+      with @doc-syncer after the code changes, because current-truth doc/spec/**
+      must not be pre-edited before the code agrees."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: the green phase-6 battery passed while three contract-level
+      deviations were live. Cause: the plan's TC ownership assigned the empty-
+      configuration and read-only-audit cells to phases that shipped before the
+      scoping semantics were settled, so TC-GRPDOC-005 was written to bless the
+      then-pinned behaviour and TC-GRPRO-001 audited only the two list commands.
+      Improvement: when a change pins an error/refusal rule, the test plan must
+      carry one cell per scoped SURFACE (not per feature), and the read-only
+      audit must enumerate every surface that gained a flag."
+    type: retro
+    date: "2026-11-14"
+  - text: "RESIDUAL (accepted, disclosed by @doc-syncer after the remediation): the
+      error-table row `projects.registry-corrupt` is still declared in
+      ERROR_TABLE, PROJECTS_ERROR_CODES, and the feature-result-contract table,
+      but no runtime emitter remains on any surface — the flat surface now
+      classifies under `repos.*` and the group surface under its three
+      identities. Retiring the row would change the closed identity count and
+      touch GH-288's declared contract, which is outside this change's scope;
+      `doc/spec/features/feature-result-contract.md` still describes it as a
+      live host-index refusal. Recorded as a follow-up truth gap rather than
+      silently rewritten. Everything else the doc-sync owed (F-8 prose and the
+      F-4 corrupt-index claims) is corrected in commit c4dce585."
+    type: risk
+    date: "2026-11-14"
+  - text: "Plan phase 7 'Close review-iteration-1 findings: scoped-refusal
+      semantics, group-read write budget, corrupt-index posture, validation and
+      envelope edges' complete: the primitive commit carrying this note
+      (messageSource=template, transport=none; hash assigned at commit time,
+      `git show --stat HEAD` on feat/GH-309/project-groups is the record).
+      F-1/F-2: an explicit --project that is not declared is refused with
+      projects.unknown-group at exit 1 on projects, queue, and status, including
+      on an absent document and a declared zero-group document; the unscoped
+      default forms keep the empty listing at exit 0. TC-GRPDOC-005 rewritten to
+      the refusal; the TC-GRPDOC-004 empty-configuration cell added for queue
+      and status in tests/behaviour/queue-status-project-scope.test.ts (and the
+      three-surface absent/zero-group cell in projects-config.test.ts). F-3: the
+      entrypoint invocation fact gains groupScoped (queue/status + --project);
+      production.ts gates composition-level host-index maintenance off for it,
+      so success and classified-failure paths write exactly the two permitted
+      side effects. TC-GRPRO-001 extended with queue/status --project success
+      and invalid-config failure cases; the index is byte-unchanged. F-4: an
+      unreadable/unparsable host index is an empty resolution aid; members that
+      need it classify unregistered at exit 0, with no projects.registry-corrupt
+      path on the group surface and exit 2 reserved for configuration/scope. A
+      group-surface test pins it (default, scoped, and queue/status forms). F-5:
+      a present-but-non-string workspaceRoot is projects.config-invalid
+      (TC-GRPDOC-002 variant). F-6: the duplicate-selector probe normalizes root
+      trailing separators exactly as resolution does (TC-GRPDOC-002 variant).
+      F-7: an unlocated root-selected member carries repoKey \"\" with the
+      declaration in root; the envelope test pins it. F-9: option (a) chosen —
+      the alias test compares the serialized normalized data against the
+      committed golden in emitted key order (the golden's two top-level keys
+      were reordered to the emitted order with the field set unchanged; C-2 spec
+      text was NOT edited). F-10 stays an accepted risk (no scan cap). Gates
+      (TMPDIR outside every work tree, on the repository filesystem): typecheck
+      green; the mandated 12-suite boundary gate 63 pass / 0 fail / 727 expect
+      across 12 files; the non-behaviour chunk 2433 pass / 1 fail of 2434 across
+      308 files, where the single failure was an ENOENT on a concurrently packed
+      packages/core tarball in privacy-literals (the three affected files re-ran
+      71 pass / 0 fail in isolation); lint exit 0 (84 warnings, 33 infos);
+      format:check green (2301 files); delivery-os lint GH-309 conforms. Scope
+      note: the declared phase-7 file list understates the seam —
+      packages/cli/src/entrypoint.ts (the invocation fact),
+      tests/fixtures/projects/production.ts (mirror), and the two help suites'
+      composer calls are mechanically required; pm-notes rides this commit. F-8
+      and the F-4 doc claims remain with @doc-syncer after the code agrees."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 7 (review remediation) verified complete: code and tests
+      shipped in dc8e6851, the doc-syncer follow-up in c4dce585, the plan scope
+      line and iteration-2 review record in 8458aa40, and this evidence note
+      rides a trailing phase-7 commit. F-1/F-2: every scoped surface refuses an
+      undeclared --project with projects.unknown-group at exit 1, including an
+      absent or zero-group document, while the unscoped default keeps the empty
+      listing. F-3: group-scoped queue and status perform no composition-level
+      host-index maintenance on success or on a classified failure, driven by a
+      `groupScoped` invocation fact threaded from the entrypoint. F-4: a corrupt
+      host index is an empty resolution aid with no fourth identity and exit 2
+      reserved for configuration/scope. F-5: a present but non-string
+      workspaceRoot is projects.config-invalid. F-6: duplicate selectors that
+      differ only by a root trailing separator collide as the resolver does.
+      F-7: an unlocated root-selected member carries an empty repoKey with the
+      declaration in root. F-9: the alias golden asserts the serialized payload
+      in emitted key order. F-10 remains an accepted risk (no scan bound). F-8
+      and the corrupt-index doc claims are corrected in c4dce585. Gates at final
+      verification, superseding the preceding phase-7 entry's numbers (wider
+      gate scope): typecheck 0; 14-suite boundary gate 265 pass / 0 fail;
+      non-behaviour chunk 2434 pass / 0 fail across 308 files; behaviour a-c
+      1495 pass / 0 fail; behaviour d-o 1555 pass with 4 load timeouts whose 4
+      files re-ran green in isolation (50 pass / 0 fail); behaviour p-w 2431
+      pass / 4 skip / 0 fail. Residual (see the RESIDUAL risk entry above):
+      `projects.registry-corrupt` is a retained, currently unemitted contract
+      identity."
+    type: info
+    date: "2026-11-14"
+  - text: "Review iteration 2 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS, 0 critical / 0 high / 0 medium / 3 low / 1 info. Record:
+      code-review/review-iter-2.yaml (committed in 8458aa40). F-1..F-9 closed in
+      dc8e6851 plus the c4dce585 doc corrections; F-10 accepted risk. Remaining
+      low residuals carried for follow-up, not blocking: `queue --project
+      --watch` still returns the unscoped stream; the change test plan still
+      describes the superseded TC-GRPDOC-005 empty-listing semantics; the
+      projects.registry-corrupt narrative above. Review phase completed."
+    type: resolved
+    date: "2026-11-14"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts. Commit-range gate:
+      ./scripts/lint-commit-range.sh --base main-tools → VERDICT PASS, base
+      main-tools, merge-base 13431e13, head 8458aa40, 24 commits in range, 0
+      offending commits, 0 distinct rules hit, commitlint resolved from the
+      repository-local configuration (not a vacuous skip). Aggregate battery:
+      lint exit 0 (84 pre-existing warnings / 33 infos, no errors); format:check
+      exit 0 (2301 files); typecheck exit 0 (six packages plus the tests/types
+      project); check:boundaries exit 0 (401 modules, 1217 dependencies,
+      ambient-globals clean, workspace-entrypoints clean, secret-read-boundary
+      clean); prompt-conformance 5 prompts clean; help-guide-coverage all
+      prompt-required commands covered; exports-parity 5 publishables pass attw.
+      Test stage: behaviour suites 5482 pass / 4 skip / 0 fail across all 732
+      files (run in letter-range chunks a-c, d-o, p-w); non-behaviour chunk 2434
+      pass / 0 fail across 308 files. A single aggregate `pnpm check` invocation
+      reported failures that were all environmental and were each disproved:
+      tests/checks/privacy-literals.test.ts failed a whole-tree snapshot
+      comparison because a concurrent writer changed the tree mid-run, and both
+      it (39 pass / 0 fail) and tests/checks/license-policy.test.ts (12 pass / 0
+      fail, one 5 s timeout on a 6.6 s scan) pass in isolation; three behaviour
+      files that timed out under multiplexed load pass in isolation (50 pass / 0
+      fail). No test was skipped or weakened and no gate configuration was
+      modified."
+    type: info
+    date: "2026-11-14"
+  - text: "PR created and left OPEN for owner/CEO merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/318 — base
+      main-tools, head feat/GH-309/project-groups, 27 commits, 101 files. DoD
+      check passed (all nine lifecycle phases complete, seven plan phases
+      evidenced, pm-notes conforms, plan valid). Residuals disclosed in the PR
+      body and the review record: the `queue --project --watch` unscoped stream,
+      the change test plan still describing the superseded TC-GRPDOC-005
+      semantics, and the retained unemitted `projects.registry-corrupt`
+      identity; ODR-0004 is Proposed pending owner ratification at this PR.
+      Delivery stops here — no merge, no other ticket."
+    type: info
+    date: "2026-11-14"

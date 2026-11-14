@@ -46,18 +46,37 @@ $ <binary> daemon --help
 exit 0
 ```
 
+## Observation (2026-11-14): `repos` mounted
+
+Observed from the built workspace on 2026-11-14, after the GH-309 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events
+```
+
+Twenty families are registered: the nineteen observed on 2026-11-12 plus
+`repos`, adjacent to `projects`. `repos` is in the prompt-required set, composed
+by the production entrypoint, advertised in root `--help`, and served by the M2
+`repos` page as its reference page. The `projects` family now serves the group
+surface, and the delivered flat enumeration stays reachable through the
+`projects list --flat` alias.
+
 ## M2-planned additions
 
 - `repos` becomes a root family: the flat record set of managed checkouts,
-  owned by M2-S18.
+  owned by M2-S18. **Mounted by GH-309 (M2-S18):** the family is in the
+  prompt-required set (twenty families), composed by the production entrypoint,
+  advertised in root `--help` beside `projects`, and served by the M2 `repos`
+  page as its reference page.
 - `projects` becomes a root family: the group surface with members, their
-  health, and their state, owned by M2-S18.
-- **Mounted by GH-288 (M2-S11):** the shipped `projects list` is the delivered
-  flat surface — in the prompt-required set, composed by the production
-  entrypoint, advertised in root `--help`, and served by the M2 command page
-  as its reference page. The rename of that shipped surface to `repos list`,
-  with the `projects list --flat` alias, is pending M2-S18 code work; the
-  other additions below stay planned.
+  health, and their state, owned by M2-S18. **Mounted by GH-288 (M2-S11):** the
+  shipped `projects list` was the delivered flat surface. **Mounted by GH-309
+  (M2-S18):** `projects list` serves the group surface, `repos list` carries the
+  flat record set, and the `projects list --flat` alias keeps the delivered
+  payload reachable.
 - `attempts` joins under `dispatch` as `dispatch attempts`, the evidence
   read side. **Mounted by GH-289 (M2-S12):** the subfamily is advertised in the
   dispatch family `--help` with its own fifth help entry and M2 reference page,

@@ -165,7 +165,7 @@ describe("TC-PROJ-014 and TC-PROJ-015 the eight-cell handover matrix", () => {
       writeView(reversal, "authoritative");
       appendTruth(reversal, "dual-run", "2026-11-11T09:00:00.000Z");
 
-      const listed = await a.run(["projects", "list", "--json"]);
+      const listed = await a.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode, listed.stdout + listed.stderr).toBe(0);
       const expected: readonly [ProductionProjectsHarness, string][] = [
         [a, "engine"],
@@ -184,13 +184,13 @@ describe("TC-PROJ-014 and TC-PROJ-015 the eight-cell handover matrix", () => {
 
       // The malformed sub-case: valid JSON with a wrong schema is malformed too.
       writeRawAuthority(g, "{ not json");
-      const reparsed = await a.run(["projects", "list", "--json"]);
+      const reparsed = await a.run(["projects", "list", "--flat", "--json"]);
       expect(reparsed.exitCode).toBe(0);
       expect(handoverOf(reparsed, g.projectKey)).toBe("in-transition");
 
       // Rewriting the view catches the shell up: the reversal cell becomes shell.
       writeView(reversal, "dual-run");
-      const caughtUp = await a.run(["projects", "list", "--json"]);
+      const caughtUp = await a.run(["projects", "list", "--flat", "--json"]);
       expect(handoverOf(caughtUp, reversal.projectKey)).toBe("shell");
 
       // No fourth value is ever produced across the matrix.
@@ -261,7 +261,7 @@ describe("TC-PROJ-016 no invented handover state; unreadable state location is a
       writeView(agree, "authoritative");
       appendTruth(disagreeAbsent, "authoritative", "2026-11-11T08:00:00.000Z");
 
-      const listed = await agree.run(["projects", "list", "--json"]);
+      const listed = await agree.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       expect(handoverOf(listed, agree.projectKey)).toBe("engine");
       expect(handoverOf(listed, disagreeAbsent.projectKey)).toBe("in-transition");
@@ -276,10 +276,10 @@ describe("TC-PROJ-016 no invented handover state; unreadable state location is a
         mtimeMs: statSync(blockedLocation).mtimeMs,
       };
 
-      const failed = await agree.run(["projects", "list", "--json"]);
+      const failed = await agree.run(["projects", "list", "--flat", "--json"]);
       expect(failed.exitCode).toBe(2);
       const envelope = failed.envelope as Envelope | undefined;
-      expect(envelope?.error?.code).toBe("projects.state-unavailable");
+      expect(envelope?.error?.code).toBe("repos.state-unavailable");
       expect(envelope?.data).toBeUndefined();
       expect(failed.stdout).not.toContain("handoverState");
       expect(readFileSync(blockedLocation, "utf8")).toBe(before.bytes);

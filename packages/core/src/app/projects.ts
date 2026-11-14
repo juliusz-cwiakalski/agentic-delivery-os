@@ -17,7 +17,16 @@ import {
   type DaemonReachability,
   type DaemonReachabilityReason,
   type HandoverState,
+  type HostIndexEntry,
+  type ProjectGroupEntry,
+  type ProjectGroupMemberEntry,
+  type ProjectGroupMemberSelected,
+  type ProjectMemberHealth,
+  type ProjectMemberOutcome,
+  type ProjectsListData,
   type ProjectsListEntry,
+  type ReposListData,
+  type ReposListEntry,
 } from "../contracts/projects.js";
 
 /** The folded latest handover evidence for the project, or none. */
@@ -149,6 +158,48 @@ export const orderProjectEntries = (
     left.projectKey < right.projectKey ? -1 : left.projectKey > right.projectKey ? 1 : 0,
   );
 
+/** Build one flat repo row with exactly the five renamed contract fields (F-7). */
+export const repoListEntry = (input: {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly stateLocation: string;
+  readonly daemonReachable: DaemonReachability;
+  readonly handoverState: HandoverState;
+}): ReposListEntry => ({
+  repoKey: input.repoKey,
+  root: input.root,
+  stateLocation: input.stateLocation,
+  daemonReachable: input.daemonReachable,
+  handoverState: input.handoverState,
+});
+
+/** Order flat rows by repo key ascending; the index's own order never leaks (F-7). */
+export const orderRepoEntries = (entries: readonly ReposListEntry[]): readonly ReposListEntry[] =>
+  [...entries].sort((left, right) =>
+    left.repoKey < right.repoKey ? -1 : left.repoKey > right.repoKey ? 1 : 0,
+  );
+
+/**
+ * Project the delivered flat `projects.v1` data onto the renamed `repos.v1`
+ * shape (F-7, DM-3). The mapping is field-for-field: every value is carried
+ * unchanged and only the key's name moves. The alias never passes through this
+ * projection, so the delivered payload stays byte-identical (C-2).
+ */
+export const reposListDataOf = (data: ProjectsListData): ReposListData => ({
+  repos: orderRepoEntries(
+    data.projects.map((entry) =>
+      repoListEntry({
+        repoKey: entry.projectKey,
+        root: entry.root,
+        stateLocation: entry.stateLocation,
+        daemonReachable: entry.daemonReachable,
+        handoverState: entry.handoverState,
+      }),
+    ),
+  ),
+  hostIndexRevision: data.hostIndexRevision,
+});
+
 /** The state-location classification the row read applies (DEC-8, AC-F3-5). */
 export const classifyProjectStateLocation = (input: {
   readonly exists: boolean;
@@ -158,4 +209,127 @@ export const classifyProjectStateLocation = (input: {
   if (!input.exists) return "first-use";
   if (!input.directory || !input.readable) return "state-unavailable";
   return "ready";
+};
+
+/**
+ * Derive one group member's health from its aggregation outcome (GH-309 OQ-3).
+ *
+ * The three non-`observed` outcomes map to the same-named health values; the
+ * `observed` outcome splits — `healthy` for a clean read, `degraded` when the
+ * read succeeded but reports a degradation (an unreachable daemon with a closed
+ * reason). Exactly one health is produced for every outcome.
+ */
+export const projectMemberHealth = (input: {
+  readonly outcome: ProjectMemberOutcome;
+  readonly daemonReachable: DaemonReachability;
+}): ProjectMemberHealth => {
+  if (input.outcome === "not-yet-supported") return "not-yet-supported";
+  if (input.outcome === "state-unavailable") return "state-unavailable";
+  if (input.outcome === "unregistered") return "unregistered";
+  return input.daemonReachable.reachable ? "healthy" : "degraded";
+};
+
+/** Build one group member entry with exactly the DM-2 fields (declared order preserved). */
+export const projectGroupMemberEntry = (input: {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly trackerKind: string;
+  readonly state: HandoverState;
+  readonly health: ProjectMemberHealth;
+  readonly daemonReachable: DaemonReachability;
+}): ProjectGroupMemberEntry => ({
+  repoKey: input.repoKey,
+  root: input.root,
+  trackerKind: input.trackerKind,
+  state: input.state,
+  health: input.health,
+  daemonReachable: input.daemonReachable,
+});
+
+/** Build one group entry with exactly the DM-2 fields; workspaceRoot is optional. */
+export const projectGroupEntry = (input: {
+  readonly groupKey: string;
+  readonly name: string;
+  readonly workspaceRoot?: string;
+  readonly members: readonly ProjectGroupMemberEntry[];
+}): ProjectGroupEntry => ({
+  groupKey: input.groupKey,
+  name: input.name,
+  ...(input.workspaceRoot === undefined ? {} : { workspaceRoot: input.workspaceRoot }),
+  members: input.members,
+});
+
+/** One clone the workspace scan located for a declared member selector. */
+export type WorkspaceLocatedMember = {
+  readonly root: string;
+  readonly repoKey?: string;
+};
+
+/**
+ * One declared member's resolution: a located checkout with its durable key and
+ * root, or an unlocated declaration that stays classified rather than vanishing
+ * (GH-309 F-4, DM-2, OQ-3). A root-selected member contributes its declared root
+ * even when no key can be read; a key-selected member has no root until a clone
+ * or index entry locates it.
+ */
+export type ProjectGroupMemberResolution =
+  | {
+      readonly state: "located";
+      readonly repoKey: string;
+      readonly root: string;
+    }
+  | {
+      readonly state: "unlocated";
+      readonly repoKey?: string;
+      readonly root: string;
+    };
+
+const normalizeMemberRoot = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+/**
+ * Resolve one declared member from configuration only (GH-309 F-3, F-4, NFR-4).
+ *
+ * Resolution never invents a member: the host index and the declared-only
+ * workspace scan are consulted for the selector the configuration names. The
+ * same rule applies with and without a workspace root, so member resolution is
+ * 1:1 across the two cases; the workspace is a convenience that can locate a
+ * declared key-selected clone, never a source of membership.
+ */
+export const resolveProjectGroupMember = (input: {
+  readonly member: ProjectGroupMemberSelected;
+  readonly index: readonly HostIndexEntry[];
+  readonly workspace: readonly WorkspaceLocatedMember[];
+  readonly markerRepoKey?: string;
+}): ProjectGroupMemberResolution => {
+  if (input.member.kind === "root") {
+    const declaredRoot = input.member.root;
+    const indexEntry = input.index.find(
+      (entry) => normalizeMemberRoot(entry.root) === normalizeMemberRoot(declaredRoot),
+    );
+    if (indexEntry !== undefined) {
+      return { state: "located", repoKey: indexEntry.projectKey, root: indexEntry.root };
+    }
+    const located = input.workspace.find(
+      (candidate) =>
+        candidate.repoKey !== undefined &&
+        normalizeMemberRoot(candidate.root) === normalizeMemberRoot(declaredRoot),
+    );
+    if (located?.repoKey !== undefined) {
+      return { state: "located", repoKey: located.repoKey, root: located.root };
+    }
+    if (input.markerRepoKey !== undefined) {
+      return { state: "located", repoKey: input.markerRepoKey, root: declaredRoot };
+    }
+    return { state: "unlocated", root: declaredRoot };
+  }
+  const declaredKey = input.member.repoKey;
+  const indexEntry = input.index.find((entry) => entry.projectKey === declaredKey);
+  if (indexEntry !== undefined) {
+    return { state: "located", repoKey: declaredKey, root: indexEntry.root };
+  }
+  const located = input.workspace.find((candidate) => candidate.repoKey === declaredKey);
+  if (located !== undefined) {
+    return { state: "located", repoKey: declaredKey, root: located.root };
+  }
+  return { state: "unlocated", repoKey: declaredKey, root: "" };
 };

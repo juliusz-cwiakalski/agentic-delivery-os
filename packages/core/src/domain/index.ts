@@ -815,3 +815,13 @@ export {
   type ProjectedEvent,
   type ProjectionWatermarkEntry,
 } from "./event-projection.js";
+/**
+ * The project group configuration validator (GH-309 F-1, F-2, OQ-1): the
+ * pinned load-time rules and the declared-member resolution helpers.
+ */
+export {
+  projectGroupDeclared,
+  projectGroupMemberSelectors,
+  selectProjectGroups,
+  validateProjectGroupsDocument,
+} from "./project-groups.js";

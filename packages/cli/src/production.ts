@@ -31,12 +31,14 @@ import {
   readLocalPmContext,
   readOwnerHoldMarker,
   readPmNotesText,
+  readProjectGroupsConfig,
   readProjectIdentityMarker,
   readStateRootArtifacts,
   relativeChangeFolder,
   replaceDispatchIdentityMarkerText,
   replaceHostIndexFile,
   runtimePlatform,
+  scanDeclaredWorkspaceMembers,
 } from "@delivery-os/adapters/file";
 import {
   createGitBranchSeam,
@@ -63,6 +65,7 @@ import {
 } from "@delivery-os/adapters/repo";
 import {
   type AuthorityEvidence,
+  aggregateProjectMemberOutcomes,
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
@@ -96,8 +99,14 @@ import {
   type ProjectsScopeFailure,
   parseHostIndexDocument,
   parseProjectIdentityMarker,
+  projectGroupDeclared,
+  projectGroupEntry,
+  projectGroupMemberEntry,
+  projectGroupMemberSelectors,
   projectHandoverState,
   projectListEntry,
+  projectMemberHealth,
+  projectMemberOutcomeOfHealth,
   projectStateRoot,
   readDaemonHeartbeat,
   readDaemonInstance,
@@ -105,14 +114,17 @@ import {
   readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
+  reposListDataOf,
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
+  resolveProjectGroupMember,
   resolveProjectScope,
   selectDaemonReachability,
+  selectProjectGroups,
   serializeHostIndexDocument,
   serializeIdentityMarker,
   stateScopeEnvironmentName,
@@ -121,6 +133,8 @@ import {
   type TelemetryClaimedIdentity,
   type TelemetrySessionTotalsReader,
   type VerifyDocumentClassification,
+  validateProjectGroupsDocument,
+  type WorkspaceLocatedMember,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
@@ -150,13 +164,25 @@ import {
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
   HOST_INDEX_INITIAL_REVISION,
+  type HostIndexEntry,
+  IMPLEMENTED_TRACKER_KINDS,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
+  type ProjectConfigInvalidReason,
+  type ProjectGroupEntry,
+  type ProjectGroupMemberEntry,
+  type ProjectGroupMemberSelected,
+  type ProjectGroupsConfig,
+  type ProjectGroupValidated,
+  type ProjectScopedMemberWork,
   type ProjectsListEntry,
+  QUEUE_DEFAULT_NEXT_ACTIONS,
   type QueueDegradationReason,
+  type QueueEntryProjection,
   type QueueTrackerRead,
+  REPOS_COMMAND_FAMILY,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
@@ -183,7 +209,12 @@ import {
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import type { DaemonCommandRuntime } from "./commands/daemon.js";
-import type { ProjectsRuntimeRead } from "./commands/projects.js";
+import type {
+  ProjectGroupRuntimeRead,
+  ProjectGroupWorkRead,
+  ProjectsRuntimeRead,
+} from "./commands/projects.js";
+import type { ReposRuntimeRead } from "./commands/repos.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -197,6 +228,7 @@ import {
   createPhaseCommitExtension,
   createPlanCommandRuntime,
   createProductionCommitRuntimeOptions,
+  createQueueCommandRuntime,
   createResolvedProviderProbe,
   createStatusCommandRuntime,
   createTelemetryIngestSink,
@@ -206,6 +238,7 @@ import {
   type DispatchCommandRuntime,
   type DispatchComposition,
   type DispatchLaneFacts,
+  type QueueComposition,
   resolveAgentIdentity,
 } from "./edge.js";
 import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
@@ -464,6 +497,32 @@ const withScopeWarnings = (
 };
 
 /**
+ * The pair-or-absent queue repository binding (F-1). The binding is present only
+ * when both the contention-domain repository key and the resolved checkout root
+ * exist; otherwise it is absent. It is never a one-sided pair, and this is the
+ * one place the pair literal is constructed.
+ */
+const repositoryBindingOf = (
+  repository: string | undefined,
+  repositoryRoot: string | undefined,
+): { readonly repository: string; readonly repositoryRoot: string } | undefined =>
+  repository === undefined || repositoryRoot === undefined
+    ? undefined
+    : { repository, repositoryRoot };
+
+/**
+ * Attach the derived binding to a queue composition. This is the one place a
+ * composition declares its `repositoryBinding` property, so every composition —
+ * the checkout-scoped one and each group member's per-checkout one — carries a
+ * binding produced by the same derivation.
+ */
+const withRepositoryBinding = (
+  composition: QueueComposition,
+  binding: QueueComposition["repositoryBinding"],
+): QueueComposition =>
+  binding === undefined ? composition : { ...composition, repositoryBinding: binding };
+
+/**
  * The classified scope-refusal program (GH-288 F-1, DEC-16, DEC-17).
  *
  * Every command maps the same identity/state state to the same classified
@@ -481,19 +540,39 @@ const scopeRefusalProgram = (
       ? `the state-directory scope is invalid (${failure.key})`
       : failure.summary;
   const kind = failure.kind === "config" ? "config" : "projects";
-  const definition: CommandDefinition = {
+  // The flat record set owns its failure identities after the rename (GH-309
+  // F-7): the `repos` command and the `projects list --flat` alias classify
+  // identity and state failures under `repos.*`, while every other command —
+  // and the group surface's default form — keeps the composition-level
+  // `projects.*` refusal (TC-PROJ-022 pins that parity with the MCP surface,
+  // which this change does not touch).
+  const flatCode = (): string =>
+    failure.kind === "identity"
+      ? "repos.identity-unreadable"
+      : failure.kind === "state"
+        ? "repos.state-unavailable"
+        : failure.code;
+  const flatKind = (): string => (failure.kind === "config" ? "config" : "repos");
+  const definitionFor = (name: string): CommandDefinition => ({
     // The refusal is the same for every command, so the grammar admits any flag
     // and positional shape and the classified scope failure answers instead of
     // the parser: the identity outcome must not depend on which command was asked.
     acceptsAnyFlag: true,
     positionals: { max: 3 },
-    handler: () => ({
-      error: { kind, code: failure.code, summary },
-      ...(warnings.length === 0 ? {} : { warnings }),
-    }),
-  };
+    handler: (invocation) => {
+      const flat =
+        name === REPOS_COMMAND_FAMILY ||
+        (name === PROJECTS_COMMAND_FAMILY && invocation.flags["--flat"] === true);
+      return {
+        error: flat
+          ? { kind: flatKind(), code: flatCode(), summary }
+          : { kind, code: failure.code, summary },
+        ...(warnings.length === 0 ? {} : { warnings }),
+      };
+    },
+  });
   const commands: Record<string, CommandDefinition> = {};
-  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definition;
+  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definitionFor(name);
   return { commands };
 };
 
@@ -666,7 +745,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? { state: "uncertain" }
         : { state: "resolved", projectIdentifier: marker.projectIdentifier };
     };
-    const maintainsIndex = invocation?.command !== PROJECTS_COMMAND_FAMILY;
+    // The read-only surfaces never maintain the index: the group surface and
+    // the flat record set are list reads (GH-288 F-2, GH-309 F-7), and the
+    // group-scoped `queue`/`status` forms read per-checkout state only
+    // (GH-309 F-3, NFR-2, AC-NFR2-1). This holds on classified-failure paths
+    // too: the maintenance block runs before the handler, so it is gated here.
+    const maintainsIndex =
+      invocation?.command !== PROJECTS_COMMAND_FAMILY &&
+      invocation?.command !== REPOS_COMMAND_FAMILY &&
+      invocation?.groupScoped !== true;
     // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
     // reported once per state-opening invocation, moves nothing, deletes
     // nothing, and never changes the exit code. A migrated host emits nothing.
@@ -914,10 +1001,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // One total derivation: the binding is present only when the GitHub target,
     // the contention-domain key, and the resolved checkout root all resolve. Any
     // failed condition yields no binding at all, never a one-sided pair (F-1).
-    const repositoryBinding =
-      target !== undefined && repositoryKey !== undefined && repositoryFacts.root !== undefined
-        ? { repository: repositoryKey, repositoryRoot: repositoryFacts.root }
-        : undefined;
+    const repositoryBinding = repositoryBindingOf(
+      target !== undefined ? repositoryKey : undefined,
+      repositoryFacts.root,
+    );
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const harnessSpawnStarter = facts.harnessSpawnStarter ?? createHostSpawnStarter();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
@@ -929,6 +1016,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
     const pmContextPath = `${cwd}/.ai/local/pm-context.yaml`;
 
+    /**
+     * The group-scoped work read (GH-309 F-5, F-6). The production closure is
+     * assigned below once the group read helpers exist; every composed runtime
+     * only invokes it after composition has completed.
+     */
+    let readProjectGroupWork: (groupKey: string) => Promise<ProjectGroupWorkRead> = async () => ({
+      ok: false,
+      code: "projects.scope-unavailable",
+      summary: "the project group scope is not composed",
+    });
+
     const statusComposition = () => ({
       store,
       credentials,
@@ -938,6 +1036,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       clock: { nowMs, nowIso },
       github: { instance },
       readOwnerHold,
+      readProjectGroup: (groupKey: string) => readProjectGroupWork(groupKey),
       ...(truthReadCredential === undefined ? {} : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
@@ -1025,44 +1124,51 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : ["daemon-unreachable"];
     };
 
-    const queueComposition = {
-      store,
-      facts: queueFacts,
-      ...(repositoryBinding === undefined ? {} : { repositoryBinding }),
-      nowIso,
-      nowMs,
-      newFenceToken,
-      degraded: daemonReachability,
-      readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
-      readOwnerHold,
-      // GH-292 F-5: the per-item tracker delivery-state read for `queue
-      // reconcile`, riding the same verified GitHub client the closeout
-      // composition reads with. No ambient credential read: the client uses
-      // the already-injected declared credential port. `provider.not-found`
-      // is a truthful observation (the item is retained and reported
-      // unobserved); an unavailable read surfaces its provider identity and
-      // the sweep stops.
-      readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
-        const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
-        if (issueNumber === undefined) {
-          return { ok: false, failureCode: "provider.payload.invalid" };
-        }
-        const observation = await client.readWorkItemObservation(issueNumber);
-        if (observation.observation === "observed") {
-          return { ok: true, kind: "state", deliveryState: observation.value.status.deliveryState };
-        }
-        if (observation.observation === "not-found") {
-          return { ok: true, kind: "not-found" };
-        }
-        return {
-          ok: false,
-          failureCode:
-            observation.observation === "invalid" && observation.code !== undefined
-              ? observation.code
-              : "provider.outage",
-        };
+    const queueComposition = withRepositoryBinding(
+      {
+        store,
+        facts: queueFacts,
+        nowIso,
+        nowMs,
+        newFenceToken,
+        degraded: daemonReachability,
+        readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
+        readOwnerHold,
+        readProjectGroup: (groupKey: string) => readProjectGroupWork(groupKey),
+        // GH-292 F-5: the per-item tracker delivery-state read for `queue
+        // reconcile`, riding the same verified GitHub client the closeout
+        // composition reads with. No ambient credential read: the client uses
+        // the already-injected declared credential port. `provider.not-found`
+        // is a truthful observation (the item is retained and reported
+        // unobserved); an unavailable read surfaces its provider identity and
+        // the sweep stops.
+        readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
+          const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
+          if (issueNumber === undefined) {
+            return { ok: false, failureCode: "provider.payload.invalid" };
+          }
+          const observation = await client.readWorkItemObservation(issueNumber);
+          if (observation.observation === "observed") {
+            return {
+              ok: true,
+              kind: "state",
+              deliveryState: observation.value.status.deliveryState,
+            };
+          }
+          if (observation.observation === "not-found") {
+            return { ok: true, kind: "not-found" };
+          }
+          return {
+            ok: false,
+            failureCode:
+              observation.observation === "invalid" && observation.code !== undefined
+                ? observation.code
+                : "provider.outage",
+          };
+        },
       },
-    };
+      repositoryBinding,
+    );
 
     const gates = createVerifyGatesCommandRuntime({
       store,
@@ -2327,7 +2433,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (read.state === "unreadable") {
         return {
           ok: false,
-          code: "projects.registry-corrupt",
+          code: "repos.registry-corrupt",
           summary: `the host index at ${indexPath} is present but unreadable`,
         };
       }
@@ -2335,7 +2441,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (document === undefined) {
         return {
           ok: false,
-          code: "projects.registry-corrupt",
+          code: "repos.registry-corrupt",
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
@@ -2354,7 +2460,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           stat = undefined;
         }
         // A bounded directory listing proves readability, so a present but
-        // unreadable root reaches `projects.state-unavailable` here rather than
+        // unreadable root reaches `repos.state-unavailable` here rather than
         // only failing later inside the store open.
         let readable = false;
         if (stat?.isDirectory() === true) {
@@ -2372,7 +2478,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         });
         if (classification === "first-use" && !legacyChecked) {
           // AC-F3-5 cell 2: an absent root beside a host-root store is a
-          // warning, never `projects.state-unavailable`, and the list stays
+          // warning, never `repos.state-unavailable`, and the list stays
           // write-free while reporting it once.
           legacyChecked = true;
           const legacy = legacyStoreWarning({
@@ -2384,7 +2490,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         if (classification === "state-unavailable") {
           return {
             ok: false,
-            code: "projects.state-unavailable",
+            code: "repos.state-unavailable",
             summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
           };
         }
@@ -2393,11 +2499,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             ? ({ ok: true, state: "shell" } as const)
             : readProjectHandover(stateLocation, entry.projectKey);
         if (!handover.ok) {
-          return { ok: false, code: "projects.state-unavailable", summary: handover.summary };
+          return { ok: false, code: "repos.state-unavailable", summary: handover.summary };
         }
         const daemon = await readDaemonReachability(stateLocation, classification === "ready");
         if (!daemon.ok) {
-          return { ok: false, code: "projects.state-unavailable", summary: daemon.summary };
+          return { ok: false, code: "repos.state-unavailable", summary: daemon.summary };
         }
         if (entry.stateLocation !== stateLocation) {
           warnings.push(
@@ -2422,6 +2528,441 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ...(warnings.length === 0 ? {} : { warnings }),
       };
     };
+
+    /**
+     * The `repos list` flat record set (GH-309 F-7, DM-3): one read over the
+     * same host index, projected onto the renamed `repos.v1` shape. The alias
+     * path never passes through this projection, so `projects list --flat`
+     * keeps the delivered payload byte-identical (C-2).
+     */
+    const readRepos = async (): Promise<ReposRuntimeRead> => {
+      const read = await readProjects();
+      if (!read.ok) return read;
+      return {
+        ok: true,
+        data: reposListDataOf(read.data),
+        ...(read.warnings === undefined || read.warnings.length === 0
+          ? {}
+          : { warnings: read.warnings }),
+      };
+    };
+
+    /** Describe one pinned configuration contradiction for the failure summary. */
+    const describeConfigInvalid = (reason: ProjectConfigInvalidReason): string => {
+      if (reason.case === "schema") return reason.detail;
+      if (reason.case === "duplicate-groupKey") return `duplicate groupKey "${reason.groupKey}"`;
+      if (reason.case === "empty-members") return `group "${reason.groupKey}" declares no members`;
+      return (
+        `group "${reason.groupKey}" member ${reason.index} violates the member selector rules ` +
+        `(${reason.case})`
+      );
+    };
+
+    /** The durable project key one declared root carries, when its marker is readable. */
+    const identityProjectKeyFor = (root: string | undefined): string | undefined => {
+      if (root === undefined || !existsSync(root)) return undefined;
+      const identity = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      if (identity.kind !== "resolved") return undefined;
+      const markerRead = readProjectIdentityMarker(identity.commonDir);
+      if (markerRead.state !== "present") return undefined;
+      return parseProjectIdentityMarker(markerRead.text)?.projectKey;
+    };
+
+    /** Classify one state location on disk exactly as the flat read does. */
+    const classifyStateLocationOnDisk = (
+      stateLocation: string,
+    ): "first-use" | "ready" | "state-unavailable" => {
+      let stat: ReturnType<typeof statSync> | undefined;
+      try {
+        stat = statSync(stateLocation);
+      } catch {
+        stat = undefined;
+      }
+      let readable = false;
+      if (stat?.isDirectory() === true) {
+        try {
+          readdirSync(stateLocation);
+          readable = true;
+        } catch {
+          readable = false;
+        }
+      }
+      return classifyProjectStateLocation({
+        exists: stat !== undefined,
+        directory: stat?.isDirectory() === true,
+        readable,
+      });
+    };
+
+    /**
+     * Resolve and observe one declared member against the delivered per-checkout
+     * machinery (GH-309 F-1, F-3, F-4; OQ-3). Resolution is configuration-driven:
+     * the host index and the declared-only workspace scan locate the selector the
+     * configuration names. An unimplemented tracker kind is classified
+     * `not-yet-supported` before any observation and never rejected; an
+     * unresolvable member stays classified `unregistered` rather than silently
+     * vanishing from `members[]`.
+     */
+    const readGroupMember = async (
+      member: ProjectGroupMemberSelected,
+      index: readonly HostIndexEntry[],
+      workspace: readonly WorkspaceLocatedMember[],
+    ): Promise<ProjectGroupMemberEntry> => {
+      const markerRepoKey = member.kind === "root" ? identityProjectKeyFor(member.root) : undefined;
+      const resolution = resolveProjectGroupMember({
+        member,
+        index,
+        workspace,
+        ...(markerRepoKey === undefined ? {} : { markerRepoKey }),
+      });
+      // An unlocated root-selected member carries the declaration in `root` and
+      // an empty `repoKey` — mirroring the unlocated repoKey-selected member's
+      // empty `root` — so the field named `repoKey` never carries a filesystem
+      // path (GH-309 F-7).
+      const displayKey =
+        resolution.state === "located" ? resolution.repoKey : (resolution.repoKey ?? "");
+      const unobserved = (health: ProjectGroupMemberEntry["health"]): ProjectGroupMemberEntry =>
+        projectGroupMemberEntry({
+          repoKey: displayKey,
+          root: resolution.root,
+          trackerKind: member.trackerKind,
+          state: "shell",
+          health,
+          daemonReachable: selectDaemonReachability({ mount: { mounted: false } }),
+        });
+      const unimplemented = !(IMPLEMENTED_TRACKER_KINDS as readonly string[]).includes(
+        member.trackerKind,
+      );
+      // `not-yet-supported` is mandatory for an unimplemented kind, even when the
+      // checkout is also unlocatable: the classification names the adapter gap.
+      if (unimplemented) return unobserved("not-yet-supported");
+      if (resolution.state === "unlocated") return unobserved("unregistered");
+      const stateLocation = projectStateRoot(hostRoot, resolution.repoKey);
+      const classification = classifyStateLocationOnDisk(stateLocation);
+      if (classification === "state-unavailable") return unobserved("state-unavailable");
+      const handover =
+        classification === "first-use"
+          ? ({ ok: true, state: "shell" } as const)
+          : readProjectHandover(stateLocation, resolution.repoKey);
+      if (!handover.ok) return unobserved("state-unavailable");
+      const daemon = await readDaemonReachability(stateLocation, classification === "ready");
+      if (!daemon.ok) return unobserved("state-unavailable");
+      return projectGroupMemberEntry({
+        repoKey: resolution.repoKey,
+        root: resolution.root,
+        trackerKind: member.trackerKind,
+        state: handover.state,
+        health: projectMemberHealth({ outcome: "observed", daemonReachable: daemon.value }),
+        daemonReachable: daemon.value,
+      });
+    };
+
+    /**
+     * Scan one group's registered workspace root for its declared members only
+     * (GH-309 F-3, NFR-4). No scan runs without a configured `workspaceRoot`, and
+     * the scan is handed exactly the declared selectors, so an undeclared clone is
+     * never admitted at any depth.
+     */
+    const scanGroupWorkspace = (
+      group: ProjectGroupValidated,
+    ): readonly WorkspaceLocatedMember[] => {
+      if (group.workspaceRoot === undefined) return [];
+      const selectors = projectGroupMemberSelectors(group);
+      return scanDeclaredWorkspaceMembers({
+        workspaceRoot: group.workspaceRoot,
+        declared: [
+          ...selectors.roots.map((root) => ({ root })),
+          ...selectors.repoKeys.map((repoKey) => ({ repoKey })),
+        ],
+        repoKeyOf: (root) => identityProjectKeyFor(root),
+      });
+    };
+
+    /**
+     * Load and validate the configuration document once for every
+     * group-scoped read (GH-309 F-1, F-2, F-5). An absent or empty
+     * configuration is the valid empty listing (opt-in adoption); a readable
+     * but invalid document is `projects.config-invalid`; a document or
+     * invoking scope that cannot be read is `projects.scope-unavailable`.
+     */
+    const readProjectGroupsConfiguration = ():
+      | { readonly ok: true; readonly config: ProjectGroupsConfig }
+      | { readonly ok: false; readonly code: string; readonly summary: string } => {
+      const gitRoot = gitRootForConfig();
+      if (gitRoot === undefined) {
+        return {
+          ok: false,
+          code: "projects.scope-unavailable",
+          summary: "the invoking scope cannot be read: no git work tree root was resolved",
+        };
+      }
+      const read = readProjectGroupsConfig({
+        gitRoot,
+        configurationDirectoryName: brand.configDirectoryName,
+      });
+      if (read.state === "unreadable") {
+        return {
+          ok: false,
+          code: "projects.scope-unavailable",
+          summary: `the project configuration document at ${read.path} cannot be read`,
+        };
+      }
+      if (read.state === "malformed") {
+        return {
+          ok: false,
+          code: "projects.config-invalid",
+          summary:
+            `the project configuration document at ${read.path} is invalid: ` +
+            "the document is not parsable YAML",
+        };
+      }
+      const validated = validateProjectGroupsDocument(read.value);
+      if (!validated.ok) {
+        return {
+          ok: false,
+          code: "projects.config-invalid",
+          summary:
+            `the project configuration document at ${read.path} is invalid: ` +
+            describeConfigInvalid(validated.reason),
+        };
+      }
+      return { ok: true, config: validated.config };
+    };
+
+    /**
+     * The one host-index read every group-scoped read shares (no maintenance).
+     *
+     * The index is a resolution AID, never a membership source (GH-309 F-3,
+     * F-4): an unreadable or unparsable index is treated as empty, so a member
+     * that needs it classifies `unregistered` at exit 0 while root-selected or
+     * workspace-located members still resolve. Exit 2 stays reserved for an
+     * unreadable configuration document or invoking scope; no fourth identity
+     * exists on the group surface (spec F-5, PROJECT_GROUP_ERROR_CODES).
+     */
+    const readProjectGroupsHostIndex = (): readonly HostIndexEntry[] => {
+      hostIndexAccess.countList();
+      const indexRead = readHostIndexFile(hostRoot);
+      if (indexRead.state !== "present") return [];
+      const document = parseHostIndexDocument(indexRead.text);
+      return document?.projects ?? [];
+    };
+
+    /** Observe one validated group's declared members in declared order. */
+    const observeProjectGroup = async (
+      group: ProjectGroupValidated,
+      index: readonly HostIndexEntry[],
+    ): Promise<ProjectGroupEntry> => {
+      const workspace = scanGroupWorkspace(group);
+      const members: ProjectGroupMemberEntry[] = [];
+      for (const member of group.members) {
+        members.push(await readGroupMember(member, index, workspace));
+      }
+      return projectGroupEntry({
+        groupKey: group.groupKey,
+        name: group.name,
+        ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
+        members,
+      });
+    };
+
+    /** The three queue-state buckets one observed member contributes (F-6). */
+    type MemberQueueWork =
+      | {
+          readonly ok: true;
+          readonly running: readonly QueueEntryProjection[];
+          readonly waiting: readonly QueueEntryProjection[];
+          readonly parked: readonly QueueEntryProjection[];
+        }
+      | { readonly ok: false };
+
+    /**
+     * Read one observed member's queue work over its own per-checkout state
+     * (GH-309 F-5, F-6): the state layer's scope stays per-checkout, never a
+     * group-scoped store. Each member opens its own state handle and computes
+     * the delivered schedule, and the entries are split by that read's own
+     * states: held entries run, ready/not-ready entries wait, parked/stuck
+     * entries are parked. A state read that fails classifies the member
+     * `state-unavailable` instead of failing the aggregate.
+     */
+    const readMemberQueueWork = (member: ProjectGroupMemberEntry): MemberQueueWork => {
+      const memberStore = createStateStore(
+        {
+          level: "local",
+          workspaceId,
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: projectStateRoot(hostRoot, member.repoKey),
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      );
+      const composition: QueueComposition = withRepositoryBinding(
+        {
+          store: memberStore,
+          facts: queueFacts,
+          nowIso,
+          nowMs,
+          newFenceToken,
+          degraded: daemonReachability,
+        },
+        repositoryBindingOf(member.repoKey, member.root),
+      );
+      const read = createQueueCommandRuntime(composition).readSchedule(QUEUE_DEFAULT_NEXT_ACTIONS);
+      if (!read.ok) return { ok: false };
+      const entries = read.schedule.entries;
+      // The scheduling read projects a lease per repository, so the running
+      // bucket is exactly the entries a live lease names. Parked entries are
+      // the ones the same read reports parked or stuck (or an active park
+      // projection names); every other contributed entry waits.
+      const runningRefs = new Set(read.schedule.leases.map((lease) => lease.ref));
+      const parkedRefs = new Set(
+        read.schedule.parks
+          .filter((park) => park.recoveryState === "parked")
+          .map((park) => park.ref),
+      );
+      const isParked = (ref: string, state: string): boolean =>
+        parkedRefs.has(ref) || state === "parked" || state === "stuck";
+      const isRunning = (ref: string): boolean => runningRefs.has(ref);
+      return {
+        ok: true,
+        running: entries.filter((entry) => isRunning(entry.ref)),
+        parked: entries.filter(
+          (entry) => !isRunning(entry.ref) && isParked(entry.ref, entry.state),
+        ),
+        waiting: entries.filter(
+          (entry) => !isRunning(entry.ref) && !isParked(entry.ref, entry.state),
+        ),
+      };
+    };
+
+    /**
+     * The group read behind `projects list` (GH-309 F-1, F-2, F-4): the
+     * configuration document is the sole membership source, and the enumeration
+     * is over every configured group in declared order, filtered to the
+     * requested key only when one is supplied. The default form enumerates every
+     * configured group; `--project <groupKey>` scopes it to one. An absent or
+     * empty configuration is the valid empty listing at exit 0. The aggregation
+     * keys are applied once over the selected groups' members (F-5).
+     */
+    const readProjectGroups = async (groupKey?: string): Promise<ProjectGroupRuntimeRead> => {
+      const configRead = readProjectGroupsConfiguration();
+      if (!configRead.ok) return configRead;
+      const groupsConfig = configRead.config;
+      // An explicit --project is refused when the key is not declared, even
+      // when the document is absent or declares zero groups (GH-309 F-1/F-2,
+      // AC-F2-1, NFR-5): "not configured" is never rendered as "no work".
+      if (groupKey !== undefined && !projectGroupDeclared(groupsConfig, groupKey)) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      // The unscoped default form keeps the empty listing for opt-in adoption.
+      if (groupsConfig.state === "empty") {
+        return { ok: true, data: { groups: [] } };
+      }
+      const index = readProjectGroupsHostIndex();
+      const groups = selectProjectGroups(groupsConfig, groupKey);
+      const entries: ProjectGroupEntry[] = [];
+      for (const group of groups) {
+        entries.push(await observeProjectGroup(group, index));
+      }
+      const aggregation = aggregateProjectMemberOutcomes(
+        entries.flatMap((group) =>
+          group.members.map((member) => ({
+            repoKey: member.repoKey,
+            outcome: projectMemberOutcomeOfHealth(member.health),
+          })),
+        ),
+      );
+      return { ok: true, data: { groups: entries, ...aggregation } };
+    };
+
+    /** The default group enumeration over every configured group (the flip). */
+    const readEveryProjectGroup = async (): Promise<ProjectGroupRuntimeRead> => readProjectGroups();
+
+    /** The scoped read behind `projects list --project <groupKey>`. */
+    const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> =>
+      readProjectGroups(groupKey);
+
+    /**
+     * The group-scoped work read behind `queue list --project <groupKey>` and
+     * `status --project <groupKey>` (GH-309 F-5, F-6): the same configuration
+     * load, the same refusal identities, and the same per-member resolution as
+     * the group surface, then one per-checkout queue read per observed member.
+     * Members are returned in declared order; a non-observed member contributes
+     * no records but stays classified, and one `state-unavailable` member
+     * yields `data.partial` true with `data.degradedMembers[]` while readable
+     * members are still returned.
+     */
+    const readProjectGroupWorkFor = async (groupKey: string): Promise<ProjectGroupWorkRead> => {
+      const configRead = readProjectGroupsConfiguration();
+      if (!configRead.ok) return configRead;
+      const config = configRead.config;
+      // The scoped form always names a key, so an absent/zero-group document is
+      // the same refusal as any other undeclared key (GH-309 F-2, AC-F2-1).
+      if (!projectGroupDeclared(config, groupKey)) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const group = selectProjectGroups(config, groupKey)[0];
+      if (group === undefined) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const index = readProjectGroupsHostIndex();
+      const observed = await observeProjectGroup(group, index);
+      const members: ProjectScopedMemberWork[] = [];
+      for (const memberEntry of observed.members) {
+        const outcome = projectMemberOutcomeOfHealth(memberEntry.health);
+        if (outcome !== "observed") {
+          members.push({
+            repoKey: memberEntry.repoKey,
+            root: memberEntry.root,
+            trackerKind: memberEntry.trackerKind,
+            outcome,
+            health: memberEntry.health,
+            running: [],
+            waiting: [],
+            parked: [],
+          });
+          continue;
+        }
+        const work = readMemberQueueWork(memberEntry);
+        if (!work.ok) {
+          members.push({
+            repoKey: memberEntry.repoKey,
+            root: memberEntry.root,
+            trackerKind: memberEntry.trackerKind,
+            outcome: "state-unavailable",
+            health: "state-unavailable",
+            running: [],
+            waiting: [],
+            parked: [],
+          });
+          continue;
+        }
+        members.push({
+          repoKey: memberEntry.repoKey,
+          root: memberEntry.root,
+          trackerKind: memberEntry.trackerKind,
+          outcome: "observed",
+          health: memberEntry.health,
+          running: work.running,
+          waiting: work.waiting,
+          parked: work.parked,
+        });
+      }
+      const aggregation = aggregateProjectMemberOutcomes(members);
+      return { ok: true, data: { groupKey, members, ...aggregation } };
+    };
+    readProjectGroupWork = readProjectGroupWorkFor;
 
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
@@ -2475,7 +3016,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newFenceToken,
       },
       coordinator: createProductionCoordinatorComposition(),
-      projects: { readProjects },
+      projects: {
+        readProjects,
+        readProjectGroups: readEveryProjectGroup,
+        readProjectGroup,
+      },
+      repos: { readRepos },
       // The taxonomy reference surface needs nothing: the runtime is the
       // compiled declaration, so the production composer supplies it
       // unconditionally (GH-290 F-2, DEC-F).

@@ -394,6 +394,6 @@ refusal, so the mounted family answers `config.value.invalid` instead of derivin
 a root-level path. The supervisor unit writes
 its `Environment=` binding under the same name, so the installed unit and the
 policy agree on the scope. See [Resident Dispatch
-Daemon](feature-resident-daemon.md) and [Projects Host
+Daemon](feature-resident-daemon.md) and [Repositories and the Host
 Overview](feature-projects.md). The owner-hold marker is resolved at the host
 root; its contract is in [Scheduling Engine](feature-scheduling-engine.md).

@@ -26,6 +26,11 @@ import {
   type StatusWorkItemRead,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
+import {
+  isProjectScopedWorkData,
+  type ProjectGroupWorkRead,
+  renderProjectScopedWorkText,
+} from "./projects.js";
 
 /** Everything the status handler reads, injected at the edge. */
 export type StatusCommandRuntime = {
@@ -55,6 +60,13 @@ export type StatusCommandRuntime = {
     | undefined;
   /** The injected owner hold; absent leaves the delivered digest unchanged. */
   readonly readOwnerHold?: () => OwnerHoldFact;
+  /**
+   * The group-scoped work read behind `status --project <groupKey>`
+   * (GH-309 F-5, F-6). Absent means group scoping is not composed.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
 };
@@ -117,9 +129,39 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
 export const createStatusCommandDefinition = (
   runtime: StatusCommandRuntime,
 ): CommandDefinition => ({
-  flags: [],
+  flags: ["--project"],
+  requiresValue: ["--project"],
   positionals: { max: 0 },
   humanText: (data: unknown, brand: BrandIdentity): string =>
-    renderStatusHuman(data as StatusDigest, brand),
-  handler: async () => ({ data: aggregateStatus(await collectStatusFacts(runtime)) }),
+    isProjectScopedWorkData(data)
+      ? renderProjectScopedWorkText(data)
+      : renderStatusHuman(data as StatusDigest, brand),
+  handler: async (invocation) => {
+    // The additive group form (GH-309 F-5, F-6): `status --project <groupKey>`
+    // applies the one aggregation clause; the unscoped digest is untouched.
+    const groupKey = invocation.flags["--project"];
+    if (groupKey !== undefined) {
+      if (typeof groupKey !== "string" || runtime.readProjectGroup === undefined) {
+        return {
+          error: {
+            kind: "fallback",
+            code: "fallback.invocation",
+            summary: "result=refused; reason=project-scope-unavailable",
+          },
+        };
+      }
+      const scoped = await runtime.readProjectGroup(groupKey);
+      if (!scoped.ok) {
+        return {
+          error: {
+            kind: "projects",
+            code: scoped.code,
+            ...(scoped.summary === undefined ? {} : { summary: scoped.summary }),
+          },
+        };
+      }
+      return { data: scoped.data };
+    }
+    return { data: aggregateStatus(await collectStatusFacts(runtime)) };
+  },
 });

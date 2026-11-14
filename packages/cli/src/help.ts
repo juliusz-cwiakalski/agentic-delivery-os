@@ -86,9 +86,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   entry(
     ["status"],
     "Collect the nine-section delivery digest",
-    ["<binary> status [--repo <path>]"],
-    [["--repo", "Target repository path (repeatable)"]],
-    ["<binary> status", "<binary> status --json", "<binary> status --repo . --json"],
+    ["<binary> status [--repo <path>]", "<binary> status --project <groupKey>"],
+    [
+      ["--repo", "Target repository path (repeatable)"],
+      ["--project <groupKey>", "Scope the read to one configured project group"],
+    ],
+    [
+      "<binary> status",
+      "<binary> status --json",
+      "<binary> status --repo . --json",
+      "<binary> status --project platform --json",
+    ],
     "status",
   ),
   entry(
@@ -105,6 +113,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     [
       "<binary> queue <list|plan|add|prioritize|dep|claim|release|remove|reconcile> [options]",
       "<binary> queue dep [add|remove] <ref> <on-ref>",
+      "<binary> queue list --project <groupKey>",
     ],
     [
       ["--next <n>", "Limit the planned next actions"],
@@ -115,6 +124,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--until <iso>", "Provider-window expiry for a park"],
       ["--reason <reason>", "Removal reason: landed | abandoned | superseded | reconciled"],
       ["--ref <ref>", "Reconcile a single entry"],
+      ["--project <groupKey>", "Scope `queue list` to one configured project group"],
       ["--watch", "Watch the queue (requires the resident daemon)"],
     ],
     [
@@ -132,9 +142,13 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   entry(
     ["queue", "list"],
     "List observed queue entries",
-    ["<binary> queue list"],
-    [],
-    ["<binary> queue list", "<binary> queue list --json"],
+    ["<binary> queue list", "<binary> queue list --project <groupKey>"],
+    [["--project <groupKey>", "Scope the read to one configured project group"]],
+    [
+      "<binary> queue list",
+      "<binary> queue list --json",
+      "<binary> queue list --project platform --json",
+    ],
     "queue",
   ),
   entry(
@@ -635,19 +649,48 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   {
     path: ["projects"],
-    summary: "One overview of every delivery-managed checkout on the host",
+    summary: "Project groups: the declared repositories and their aggregate health",
     usage: ["<binary> projects <list> [options]"],
-    options: [...GLOBAL_OPTIONS],
+    options: [
+      ["--flat", "Return the delivered flat projects.v1 payload (deprecation alias)"],
+      ["--project <groupKey>", "Scope the read to one configured project group"],
+      ...GLOBAL_OPTIONS,
+    ],
     examples: ["<binary> projects list", "<binary> projects list --json"],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
   },
   {
     path: ["projects", "list"],
-    summary: "List every discovered project with its state and health",
-    usage: ["<binary> projects list [options]"],
-    options: [...GLOBAL_OPTIONS],
-    examples: ["<binary> projects list", "<binary> projects list --json"],
+    summary: "List the configured project groups, or the delivered flat payload alias",
+    usage: ["<binary> projects list [--flat] [--project <groupKey>] [options]"],
+    options: [
+      ["--flat", "Return the delivered flat projects.v1 payload (deprecation alias)"],
+      ["--project <groupKey>", "Scope the read to one configured project group"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: [
+      "<binary> projects list",
+      "<binary> projects list --json",
+      "<binary> projects list --project platform",
+      "<binary> projects list --flat --json",
+    ],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "projects")],
+  },
+  {
+    path: ["repos"],
+    summary: "The flat record set of delivery-managed checkouts on the host",
+    usage: ["<binary> repos <list> [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> repos list", "<binary> repos list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "repos")],
+  },
+  {
+    path: ["repos", "list"],
+    summary: "List every managed checkout with its state and handover",
+    usage: ["<binary> repos list [options]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> repos list", "<binary> repos list --json"],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "repos")],
   },
   {
     path: ["events"],

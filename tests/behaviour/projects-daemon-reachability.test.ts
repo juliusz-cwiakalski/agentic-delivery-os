@@ -130,7 +130,7 @@ describe("TC-PROJ-017 the unmounted ship declares the reason and never probes", 
       await register(b);
       await a.run(["queue", "add", "GH-241", "--priority", "1", "--json"]);
 
-      const shipped = await a.run(["projects", "list", "--json"]);
+      const shipped = await a.run(["projects", "list", "--flat", "--json"]);
       expect(shipped.exitCode).toBe(0);
       for (const harness of [a, b]) {
         expect(daemonOf(shipped, harness.projectKey)).toEqual({
@@ -154,7 +154,7 @@ describe("TC-PROJ-017 the unmounted ship declares the reason and never probes", 
         },
       });
       harnesses.push(throwing);
-      const unprobed = await throwing.run(["projects", "list", "--json"]);
+      const unprobed = await throwing.run(["projects", "list", "--flat", "--json"]);
       expect(unprobed.exitCode).toBe(0);
       expect((unprobed.envelope as Envelope | undefined)?.error).toBeUndefined();
       expect(daemonOf(unprobed, throwing.projectKey)).toEqual({
@@ -194,7 +194,7 @@ describe("TC-PROJ-018 and TC-PROJ-019 the mounted probe", () => {
       // Step 1: bind the delivered socket path and list.
       const settings = socketSettings(harness.stateLocation);
       server = await bindSocket(settings.socketPath);
-      const reachable = await harness.run(["projects", "list", "--json"]);
+      const reachable = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(reachable.exitCode).toBe(0);
       expect(daemonOf(reachable, harness.projectKey)).toEqual({ reachable: true });
       expect(server.connections()).toBe(1);
@@ -203,7 +203,7 @@ describe("TC-PROJ-018 and TC-PROJ-019 the mounted probe", () => {
       // Step 2: close the server and remove the socket file.
       await server.close();
       rmSync(settings.socketPath, { force: true });
-      const absent = await harness.run(["projects", "list", "--json"]);
+      const absent = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(absent.exitCode).toBe(0);
       expect(daemonOf(absent, harness.projectKey)).toEqual({
         reachable: false,
@@ -213,7 +213,7 @@ describe("TC-PROJ-018 and TC-PROJ-019 the mounted probe", () => {
       // Step 3: remove the project's state root entirely; no probe is attempted.
       const probesBefore = probe.probes();
       removeDirectory(harness.stateLocation);
-      const stateAbsent = await harness.run(["projects", "list", "--json"]);
+      const stateAbsent = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(stateAbsent.exitCode).toBe(0);
       expect(daemonOf(stateAbsent, harness.projectKey)).toEqual({
         reachable: false,
@@ -255,7 +255,7 @@ describe("TC-PROJ-018 and TC-PROJ-019 the mounted probe", () => {
       writeFileSync(settings.socketPath, "");
 
       const startedAt = Date.now();
-      const run = await harness.run(["projects", "list", "--json"]);
+      const run = await harness.run(["projects", "list", "--flat", "--json"]);
       const elapsed = Date.now() - startedAt;
       expect(run.exitCode).toBe(0);
       expect(daemonOf(run, harness.projectKey)).toEqual({

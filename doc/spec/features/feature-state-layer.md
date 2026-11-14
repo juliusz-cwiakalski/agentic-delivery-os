@@ -24,7 +24,7 @@ A store is opened per repository. Two layers resolve its directory: the **host
 root** — an absolute `<PREFIX>_STATE_DIR` environment override when set,
 otherwise the injected home plus `brand.stateDirectoryName` — and the **project
 state root** `<host root>/projects/<project key>`, derived from the checkout's
-identity marker (see [Projects Host Overview](feature-projects.md)). Every
+identity marker (see [Repositories and the Host Overview](feature-projects.md)). Every
 delivery artifact lives under the project root; the host root keeps only the
 host-wide documents: the derived host index `host-index.json` (the only host-wide
 *index* document) and the host-wide owner-hold marker, plus the `projects/`

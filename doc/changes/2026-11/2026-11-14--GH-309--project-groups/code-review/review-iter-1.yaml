@@ -1,0 +1,351 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-309
+branch: feat/GH-309/project-groups
+status: FAIL
+summary: >-
+  Review target is committed HEAD d4433409 (the requested 85c7c69b plus the
+  docs-only d4433409 reconciliation commit; source is unchanged by it). This is
+  a strong, unusually faithful delivery: C-1 holds (every new envelope is the
+  five-field delivery.result.v1 shape, all new keys under data, zero
+  ok/command), the --flat alias reuses the delivered readProjects path and its
+  failure probe carries the moved repos.* identities with unchanged exit
+  meanings (C-2, spec v1.1), the OQ-2 --flat + --project refusal is
+  input.value.rejected at exit 1 with no invented identity, ODR-0004
+  (23b1a12f) precedes every rename-code commit (3229a2e4) and the registry row
+  move follows (C-3), workspace containment is configuration-only (C-4), the
+  repos mount/help/page and prompt-set 19->20 are complete, and no MCP/opencode
+  surface changed (TC-PROJ-022 untouched). However, three contract-level
+  deviations survive: scoped --project reads on an absent/empty configuration
+  silently succeed instead of refusing projects.unknown-group, and the
+  group-scoped queue/status forms still perform host-index maintenance -
+  including on their classified-failure paths - contradicting
+  NFR-2/AC-NFR2-1/DoD-13 and the current-truth page's write-free group-read
+  claims. A fourth identity/exit-2 path (projects.registry-corrupt) is also
+  reachable on the group surface although F-5 restricts exit 2 to
+  configuration/scope failures. Delivered suites (config, groups-list,
+  flat-alias, repos-list-contract, queue-status scope, envelope, naming
+  boundary, read-only audit, repos-help, error-table, reference-page parity)
+  were re-run green at this HEAD; the index-maintenance gap was confirmed with
+  a direct fixture probe. Note: while this review ran, uncommitted remediation
+  edits appeared in the working tree (entrypoint.ts, production.ts,
+  project-groups.ts, a fixture, plan.yaml) from another session; they are not
+  authored here and are not part of this verdict.
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 1
+  low: 6
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2852
+    message: >-
+      A scoped `projects list --project <key>` on an absent or empty
+      configuration document returns `{data:{groups:[]}}` at exit 0 instead of
+      refusing the unconfigured key with `projects.unknown-group` at exit 1.
+      readProjectGroups short-circuits `config.state === "empty"` (lines
+      2852-2854) before the projectGroupDeclared check. AC-F2-1 states "a
+      requested group key that is not configured ... is refused with
+      projects.unknown-group at exit 1" with no empty-document carve-out, F-2
+      repeats it, and TC-GRPDOC-004's expected outcome adds "no surface invents
+      a partial or empty success". The opposite behaviour is encoded in
+      TC-GRPDOC-005 (tests/behaviour/projects-config.test.ts:315-328), so the
+      coverage matrix's "Covered" claim for AC-F2-1 is not faithful at this
+      edge.
+    suggestion: >-
+      Either (a) run the unknown-key check before the empty-config
+      short-circuit so an explicit `--project` on an absent/empty document
+      refuses with projects.unknown-group exit 1 (keeping the unscoped default
+      form's empty listing at exit 0) and update TC-GRPDOC-005, or (b) if the
+      PM intends the carve-out, amend AC-F2-1/F-2 (spec v1.2) to say "missing
+      from a non-empty document" and reconcile the test plan and current-truth
+      doc. Never leave the AC and the code disagreeing. The same decision
+      governs F-2.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2901
+    message: >-
+      `queue list --project <key>` and `status --project <key>` on an
+      absent/empty configuration return a success envelope that echoes the
+      requested groupKey with `members: []` at exit 0 (readProjectGroupWorkFor
+      lines 2901-2903) instead of projects.unknown-group exit 1. This is worse
+      than F-1 because the payload names a group that is not configured, so a
+      caller cannot distinguish "the group has no work" from "the group does
+      not exist". It violates AC-F2-1, F-2, F-6 and the fail-closed intent of
+      NFR-5. TC-GRPDOC-004 covers only a populated document, so this path is
+      untested.
+    suggestion: >-
+      Same resolution as F-1: refuse an explicit --project for a key that is
+      not declared even when the document is absent/empty (unknown-group, exit
+      1), and add the empty-config cell to TC-GRPDOC-004 for queue and status.
+      If the spec is amended instead, make the "not configured" carve-out
+      explicit for all three scoped surfaces.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:750
+    message: >-
+      `maintainsIndex` is disabled only for the `projects` and `repos` command
+      tokens (lines 750-752), so the group-scoped forms of `queue` and
+      `status` still run the composition-level host-index maintenance block
+      (lines 764-806) before the handler - including when the handler later
+      fails classified. Verified with a fixture probe: `queue list --project`
+      on a fresh checkout creates and advances `<hostRoot>/host-index.json`
+      (absent before, written after), and a failed group-scoped read still
+      performs the maintenance. NFR-2 and AC-NFR2-1 require group reads to
+      write no index and to exhibit exactly the two delivered permitted side
+      effects (create-once marker + `*.tmp` removal); DoD-13 repeats it and C-4
+      calls the write budget absolute. Current-truth
+      doc/spec/features/feature-project-groups.md further claims group reads
+      perform no host-index maintenance and that a classified failure writes
+      nothing at all. The read-only audit
+      (tests/behaviour/projects-read-only-audit.test.ts) covers only the
+      `projects list` forms and `repos list`, not the queue/status group forms,
+      so the gap shipped green.
+    suggestion: >-
+      Gate index maintenance off for group-scoped queue/status invocations
+      (expose the group-scope fact on the entrypoint invocation fact and treat
+      queue/status plus --project as non-maintaining), and extend TC-GRPRO-001
+      with queue/status --project success and classified-failure cases.
+      Alternatively, if index maintenance is intended as a third permitted side
+      effect, amend NFR-2/AC-NFR2-1/DoD-13 and correct the two current-truth
+      claims. Impact is bounded to host-index housekeeping (not member state),
+      but the contract says "no index write".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: medium
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2733
+    message: >-
+      readProjectGroupsHostIndex returns `projects.registry-corrupt` (exit 2)
+      when the host index is unreadable or unparsable, and every group read
+      (default, --project, and the queue/status group forms) consumes it. The
+      spec's group-surface identity set is closed at three
+      (PROJECT_GROUP_ERROR_CODES: config-invalid, unknown-group,
+      scope-unavailable), F-5 restricts exit 2 to "the configuration document
+      or the invoking scope cannot be read", and section 10 lists only those
+      identities. A corrupt host index is neither, so this is an undeclared
+      fourth identity/exit-2 path. The current-truth feature-project-groups.md
+      does document it, so spec and docs now disagree. It also fails the whole
+      listing even when root-selected or workspace-located members could be
+      resolved without the index.
+    suggestion: >-
+      Make the spec-compliant choice: treat an unreadable/corrupt index as an
+      empty resolution aid (members that need it classify `unregistered`) and
+      keep exit 0; OR declare projects.registry-corrupt in F-2/F-5/section 10,
+      add it to PROJECT_GROUP_ERROR_CODES, and pin it with a group-surface
+      test. Do not leave the spec's three-identity/restricted-exit-2 statement
+      contradicted by code.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/project-groups.ts:120
+    message: >-
+      validateGroup silently drops a `workspaceRoot` that is present but not a
+      non-empty string
+      (`...(nonEmptyString(workspaceRoot) ? {workspaceRoot} : {})`). A declared
+      field with the wrong type is a schema/content validation failure, so the
+      document should be projects.config-invalid (F-1/DM-1, NFR-5 "100% ... 0
+      silent-empty"); instead the workspace is silently unregistered and the
+      group reads as if none was configured. Ignoring unknown extra fields is
+      intended; ignoring a malformed declared field is not the same case.
+    suggestion: >-
+      When workspaceRoot is present and not a non-empty string, return
+      schemaFailure, and add a TC-GRPDOC-002 variant for it.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/project-groups.ts:54
+    message: >-
+      The duplicate-selector probe compares raw selector strings
+      (`root:${root}` / `repoKey:${key}`), while member resolution normalizes
+      trailing separators (production.ts normalizes roots). Two declarations
+      selecting the same root as `/x` and `/x/` therefore pass validation even
+      though they resolve to one checkout. OQ-1 pins "a duplicate member
+      declaration inside one group (the same selector resolving twice)" as
+      projects.config-invalid; the test uses byte-identical selectors only.
+    suggestion: >-
+      Normalize the root side with the same trailing-separator rule used by
+      resolution (and trim surrounding whitespace) before the duplicate probe,
+      and add a TC-GRPDOC-002 variant with differing trailing separators.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/production.ts:2614
+    message: >-
+      For a declared-but-unlocated `root`-selected member, `repoKey` is filled
+      with the declared filesystem path (`displayKey = ... member.root`), so
+      the field named `repoKey` carries a path in both the group member entry
+      and the scoped work payload; the repoKey-selected unlocated case carries
+      `root: ""` (app/projects.ts lines 323-334). DM-2/F-4 and the glossary
+      define `repoKey` as the stable marker-derived repository key; the
+      current-truth page specifies the `root` field for this case but not the
+      `repoKey` value, and TC-GRPENV-001 blesses the path value. A consumer
+      reading `repoKey` as an identity gets a path.
+    suggestion: >-
+      Choose and document a non-path representation for an unlocated root
+      member (for example an empty `repoKey` with the declaration carried by
+      `root`, mirroring the repoKey-selected case's empty `root`), or
+      explicitly document that `repoKey` echoes the declared root when no key
+      can be read; update the envelope test to the chosen contract.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-result-contract.md:63
+    message: >-
+      The "Classification chain" bullet still enumerates the exact-code kinds
+      as "coordinator, projects, and events" and its missing/wrong-kind
+      containment list omits `repos`, although the same page's table bullet and
+      summary add the `repos` kind (three exact-code identities). The table and
+      sync gate are green; only the prose understates the delivered contract,
+      so current truth is internally inconsistent.
+    suggestion: >-
+      Add `repos` to the exact-code enumeration and the containment list (a
+      current-truth prose edit in phase 7/8, not a behavior change).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: tests/behaviour/projects-flat-alias.test.ts:143
+    message: >-
+      C-2's wording is "byte-compatible"/"unchanged"; the golden test compares
+      normalized data structures with `toEqual` (key order irrelevant) plus
+      absence negatives, not serialized bytes. A JSON key-order drift in the
+      alias payload would pass. Because the alias reuses the delivered
+      `readProjects` code path, real drift is unlikely, but the assertion is
+      weaker than the contract claim.
+    suggestion: >-
+      Either compare the serialized `data` JSON against a committed
+      byte-normalized golden (runId/timing excluded), or reword the test/C-2
+      claim from "byte-for-byte" to "field-for-field, key-order-insensitive".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:533
+    message: >-
+      The queue handler returns the live watch stream before parsing the verb
+      and flags, so `queue list --project <groupKey> --watch` silently drops
+      the group scope and streams the unscoped queue at exit 0. The change's
+      own principle for the alias is "never silently coerced"; here the
+      documented scoped grammar is accepted and ignored whenever --watch is
+      present, which can mislead an operator into believing the watch is
+      group-scoped.
+    suggestion: >-
+      Reject the combination before starting the watch (fallback.invocation at
+      exit 1), or apply the group scope to the watch stream; add a grammar test
+      pinning the chosen behaviour.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/adapters/src/file/workspace-scan.ts:89
+    message: >-
+      The workspace walk has no depth or entry cap; a large or misconfigured
+      `workspaceRoot` (for example an operator typo pointing at a home
+      directory) makes `projects list` recursively traverse an unbounded tree
+      while reading each checkout's identity marker. Membership stays contained
+      (no undeclared clone is admitted), so this is a robustness/performance
+      exposure rather than a containment breach; the spec declares no scan
+      bound.
+    suggestion: >-
+      Consider a declared depth/entry cap (documented in F-3), or record the
+      accepted unbounded read for a locally-authored configuration.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-309--project-groups/chg-GH-309-plan.yaml
+    message: >-
+      The declared per-phase `scope.files` understate the delivered
+      delivery-phase file set: non-doc files changed outside any phase's
+      declared scope (scripts/checks/error-table-sync.ts,
+      scripts/checks/forbidden-literals.registry.json, several
+      behaviour/check/structure updates, the events error-table/state-additivity
+      baselines and mount mutants, the ports v1-contract-inventory fixture, and
+      doc/overview glossary/ubiquitous-language updates). These are
+      mechanically required by the gate battery and are recorded as intentional
+      scope drift in the pm-notes phase notes, but the plan itself was not
+      amended (its revision note says "no further plan amendment is expected").
+      No phase obligation or evidence is missing; this is a scope-declaration
+      bookkeeping note only.
+    suggestion: >-
+      No remediation required for correctness; for the next plan revision,
+      declare the mechanical gate-sync file set in the owning phase scope (or
+      amend the plan when scope drift is committed) so `plan diff` reports a
+      clean phase-scope conformance check.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-14T16:59:15Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: >-
+  SCOPE_DEVIATION (informational): mechanically-required delivery-phase files
+  outside declared phase scope, documented in pm-notes; all six phases are
+  complete with per-phase pm-notes evidence (phase 6's note points at the
+  commit carrying it, `git show --stat HEAD`), so plan completion is PASS.
+test_coverage_gaps: >-
+  (1) TC-GRPDOC-005 (tests/behaviour/projects-config.test.ts:315-328) asserts
+  exit 0 for `projects list --project anything` on an absent/empty document,
+  which contradicts AC-F2-1 and masks F-1; no cell covers the empty-config
+  queue/status scoped forms (F-2). (2) TC-GRPRO-001 audits only the `projects
+  list` forms and `repos list`; the queue/status `--project` success and
+  classified-failure paths are unaudited, which is why the host-index write in
+  F-3 shipped green. (3) No test exercises projects.registry-corrupt on the
+  group surface (F-4). (4) No test covers a non-string workspaceRoot (F-5),
+  trailing-separator duplicate selectors (F-6), or `queue list --project
+  --watch` (F-10).

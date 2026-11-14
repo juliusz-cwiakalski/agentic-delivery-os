@@ -67,7 +67,11 @@ export type {
 export { createPhaseCommandDefinition } from "./phase.js";
 export type { PlanCommandRuntime } from "./plan.js";
 export { createPlanCommandDefinition } from "./plan.js";
-export type { ProjectsCommandRuntime, ProjectsRuntimeRead } from "./projects.js";
+export type {
+  ProjectGroupRuntimeRead,
+  ProjectsCommandRuntime,
+  ProjectsRuntimeRead,
+} from "./projects.js";
 export { createProjectsCommandDefinition } from "./projects.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
@@ -86,6 +90,8 @@ export {
   toQueuePlanData,
   toQueueReadData,
 } from "./queue.js";
+export type { ReposCommandRuntime, ReposRuntimeRead } from "./repos.js";
+export { createReposCommandDefinition } from "./repos.js";
 export type { RetroCommandRuntime } from "./retro.js";
 export { createRetroCommandDefinition } from "./retro.js";
 export type { SpendCommandRuntime } from "./spend.js";

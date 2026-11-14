@@ -1,0 +1,989 @@
+# GH-309 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# (2026-11-14). Authored against spec v1.0 and test plan v1.0, on branch
+# feat/GH-309/project-groups (from main-tools tip 13431e13; artifact commits
+# 77fffac7 clarify_scope, eefb2d3b specification, db85ac35 test_planning +
+# the ODR-0004 index-row drift).
+#
+# REVISION NOTE (revision 1.1, after DoR iteration-1 minors 3 and 5, synced
+# to spec v1.1 and test plan v1.5). Mechanical remediation only: no phase
+# count, phase id, ordering, or parsed-key changes beyond the two declared
+# scope additions (phase 5 gains the tests/fixtures/projects folder for the
+# reused failure fixtures; phase 6 gains m2/contracts.md).
+#   Minor 3 (phase-1 done-when cited tests/checks/decision-record.test.ts,
+#      which is TDR-0013-specific and outside phase-1 scope): replaced with
+#      the phase-1 verifiables — decision-register inspection (the ODR-0004
+#      file present in the register index beside its 00-index.md row, already
+#      landed in db85ac35) and commit-order evidence (the record's commit
+#      precedes every rename-code commit on the branch, verified at the
+#      delivery gate per TC-GRPDR-001, because permanent suites never assert
+#      branch diffs per testing-strategy rules).
+#   Minor 5 (m2/contracts.md's "Queue and lane representation" section opens
+#      "Owned by M2-S18 for cross-repository changes", which goes stale the
+#      moment GH-309 delivers WITHOUT that scope per DEC-4/NG-2 — it is
+#      M2-S19-consumed groundwork): phase 6's scope and obligations gain the
+#      one-line correction attributing ownership/consumption to M2-S19 (the
+#      milestone pack is Proposed-status planning truth, not current-truth
+#      spec, so the correction is delivery-phase work, not phase 7).
+#   SYNC (spec v1.1): the alias FAILURE envelope carries the moved repos.*
+#      identity (DoD-8 now requires an alias failure probe); C-6 declares the
+#      feature-result-contract.md sync-carrier exception this plan already
+#      carried. SYNC (test plan v1.5): 31 TCs — new TC-GRPREN-006 (alias
+#      failure probe, home tests/behaviour/projects-flat-alias.test.ts) joins
+#      phase 5 with the failure fixtures it reuses; TC-GRPREN-005 asserts
+#      input.value.rejected as pinned; TC-GRPBOUND-003 carries the C-6
+#      exception.
+#
+# One ticket, one PR against main-tools, six delivery phases. Every phase is
+# an independently committable slice that is green at its own boundary, and
+# every phase is ONE delivery commit through the commit primitive (conventional
+# subject, scope GH-309 per repo convention, every body/footer line <= 100
+# characters; the phase-9 range gate ./scripts/lint-commit-range.sh --base
+# main-tools lints every commit on this branch). Extra phase data (content
+# obligations, test obligations, done-when, gate commands) is carried in YAML
+# comments so the parsed document stays schema-strict: the only parsed keys are
+# schemaVersion, workItemRef, tier, defaultLeases, defaultWeightClass and
+# phases (id, title, kind, summary, scope, interactions, doneArtifacts,
+# leases, weightClass, leaseClass). The plan declares phases and scope only;
+# progress is a pm-notes `notes:` entry naming the plan phase id, commit hash,
+# and test result; there is no `tasks` key and no progress log.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-309-spec.md (v1.1; F-1..F-10; DM-1..DM-5; NFR-1..NFR-7;
+#                NG-1..NG-8; DEC-1..DEC-7; RSK-1..RSK-7; 16 ACs AC-F1-1..
+#                AC-NFR6-1 (§17); DoD-1..DoD-17 (§17.1) with per-condition
+#                plan-phase ownership; OQ-1..OQ-3 proposed resolutions (§14);
+#                Appendix C constraint register C-1..C-7)
+#   - Test plan: ./chg-GH-309-test-plan.md (v1.5; 31 TCs in 12 families
+#                TC-GRPDOC-001..TC-GRPGATE-001; §3 coverage matrix all Covered;
+#                §7 suite homes; §8.3 OQ expectations + TP-Q1/TP-Q2; §9
+#                reconciliation rule)
+#   - PM notes:  ./chg-GH-309-pm-notes.yaml (binding: the superseding record
+#                lands before delivery and the registry row moves only with the
+#                code; TP-Q1 MCP resolution; phase-7 documentation impacts;
+#                delivery conventions per spec DEC-7)
+#   - Ticket:    GH-309 (M2-S18). Backlog canonical entry with derived tasks
+#                a-f; scenario seeds SC-M2-S18-01..08 inherited by the test
+#                plan by name and not restated here.
+#   - Repo truth verified at plan time: doc/decisions/ODR-0004-flat-record-
+#                set-rename-projects-to-repos.md exists on disk UNTRACKED while
+#                its doc/decisions/00-index.md row (line 24) is already
+#                committed (db85ac35 drift) — phase 1 lands the file beside it.
+#                packages/cli/src/help/prompt-required-commands.ts carries 19
+#                prompt-required names; tests/behaviour/entrypoint-composition.
+#                test.ts pins the literal EXPECTED list; tests/fixtures/
+#                help-guide/coverage.json and tests/checks/reference-page-
+#                parity.test.ts (pageFor) are the two other command-set pins;
+#                scripts/checks/error-table-sync.ts enforces BIDIRECTIONAL sync
+#                between packages/core/src/contracts/error-table.ts and
+#                doc/spec/features/feature-result-contract.md (every table row
+#                documented; test plan §8.2 assumes "code table + registry
+#                updated together"); tests/structure/inventory.json +
+#                tests/structure/content-inventory.test.ts track the actual
+#                source file set and per-file executable exports; the flat
+#                surface's three projects.* identities live at error-table.ts
+#                lines 1456-1478; fixtures helpers live in tests/fixtures/
+#                projects/ (temp-repos, markers, host-root, host-index,
+#                state-scope, production); tests/golden/fixtures/ is the
+#                committed-golden home; registry rows: cli-command-registry.md
+#                line 189 (ados repos, Not delivered) and line 190 (ados
+#                projects, shipped in GH-288) plus the boundary note; backlog
+#                M2-S18 entry at line 1384; status.md delivery-snapshot
+#                addendum convention; m2/commands/events.md "Delivered (M2-S13)"
+#                is the delivered-page header precedent.
+#
+# ---------------------------------------------------------------------------
+# THE THREE OQ PINS (test plan §2 constraint (a); binding on every phase).
+# OQ-1 and OQ-2 pin EXACTLY the spec's proposed resolutions. OQ-3 pins the
+# concrete value set the spec left abstract. A differing pin forces a
+# test-plan revision (§9 revision log) before DoR — never silent drift.
+#
+# OQ-1 PIN — groupKey rules and contradictory declarations:
+#   groupKey is a non-empty string, unique across the configuration document
+#   (one document per host scope ⇒ host-unique). Duplicate groupKey
+#   declarations are projects.config-invalid. Self-contradictory member
+#   declarations are projects.config-invalid, pinned as exactly four cases:
+#   a member declaring both `root` and `repoKey`; a member declaring neither;
+#   a duplicate member declaration inside one group (the same selector
+#   resolving twice); and an empty `members[]` (a group declares at least one
+#   member). No new public key pattern is introduced — groupKey carries no
+#   regex constraint beyond non-empty; no PROJECT_KEY_PATTERN analog exists
+#   for group keys.
+#
+# OQ-2 PIN — `--flat` + `--project` combination (also resolves TP-Q2):
+#   `--flat` and `--project` are mutually exclusive. `projects list --flat
+#   --project <groupKey>` is refused at exit 1; the alias takes no group
+#   scoping and the combination is never silently coerced to either synopsis
+#   form. TP-Q2: the refusal classification is the SHARED user-validation
+#   identity `input.value.rejected` — the delivered broken-invocation-grammar
+#   classification — NOT a new projects.* identity; no identity is invented
+#   for a grammar refusal (RSK-3 schema-invention guard).
+#
+# OQ-3 PIN — member `health` value set (state explicitly):
+#   Member `health` on group entries is the CLOSED five-value vocabulary
+#     healthy | degraded | state-unavailable | not-yet-supported | unregistered
+#   declared with the group contract (project-groups.v1), pinnable by contract
+#   tests exactly like the delivered daemon-reason vocabulary. `not-yet-
+#   supported` is MANDATORY for a member whose trackerKind has no implemented
+#   adapter (NG-5). Reconciliation with the DM-5 aggregation outcomes: the
+#   outcomes `not-yet-supported`, `state-unavailable`, and `unregistered` map
+#   to health values of the same name; the `observed` outcome splits into
+#   `healthy` (clean read) or `degraded` (read succeeded but reports a
+#   degradation, e.g. daemon-unreachable with a closed reason). Every member
+#   carries exactly one health and resolves to exactly one outcome — no fourth
+#   outcome, no empty resolution (TC-GRPAGG-002). The fifth value
+#   (`unregistered`) extends the pack example rendering (healthy/degraded)
+#   because TC-GRPAGG-002 step 3 requires a declared-but-unlocated member to
+#   remain in `members[]` classified rather than silently vanish; this pin
+#   concretizes the spec's proposed resolution (closed vocabulary, mandatory
+#   not-yet-supported), it does not diverge from it.
+#
+# TEST-PLAN RECONCILIATION (§9; the pins recorded at v1.0 are reconciled
+# upstream in test plan v1.5): OQ-1 and OQ-2 pins equal the asserted
+# proposals. OQ-3's concrete five-value set and the TP-Q2 identity pin
+# (`input.value.rejected`) went beyond what the v1.0 text named; v1.5 records
+# them — TC-GRPAGG-002 and TC-GRPREN-005 assert these pins as written, and
+# TC-GRPBOUND-003 carries the C-6 sync-carrier exception. Suite file names
+# adopt the test plan §7 proposals VERBATIM; the two
+# splits §7 left to the plan are pinned in phase 5 (TC-GRPREG-001 → new
+# tests/behaviour/repos-help.test.ts + the existing composition/coverage/parity
+# pins updated in place).
+#
+# TP-Q1 PIN (MCP; PM-resolved, pinned as a non-goal): NO MCP surface change
+# ships in GH-309. Zero changes under packages/mcp/** and packages/opencode/**;
+# tests/behaviour/projects-scope-mcp.test.ts stays green UNTOUCHED (it asserts
+# state-root parity between MCP and CLI compositions, which is unaffected
+# because the two-layer state scope is reused unchanged per NG-8). The group
+# surface and `--project` scoping are CLI-only; no projects/repos MCP tool
+# exists or is added.
+#
+# SUITE-NAME PINS (test plan §2 constraint (b); any later rename is a
+# deliberate suite update per §8.1, never a silent one):
+#   tests/behaviour/projects-config.test.ts            TC-GRPDOC-001..005
+#   tests/behaviour/projects-groups-list.test.ts       TC-GRPWORK-001..003,
+#                                                       TC-GRPSURF-001..003,
+#                                                       TC-GRPAGG-001,
+#                                                       TC-GRPREN-004
+#   tests/structure/projects-groups-envelope.test.ts   TC-GRPSURF-001 (contract
+#                                                       half), TC-GRPAGG-002,
+#                                                       TC-GRPENV-001
+#   tests/behaviour/queue-status-project-scope.test.ts TC-GRPSREAD-001..002
+#                                                       (+ TC-GRPDOC-004 steps)
+#   tests/behaviour/repos-list-contract.test.ts        TC-GRPREN-001..002
+#   tests/behaviour/projects-flat-alias.test.ts        TC-GRPREN-003..006
+#   tests/behaviour/projects-read-only-audit.test.ts   TC-GRPRO-001
+#   tests/structure/naming-boundary.test.ts            TC-GRPBOUND-001..002,
+#                                                       TC-GRPSREAD-003 (scan),
+#                                                       TC-GRPREG-002
+#   tests/behaviour/repos-help.test.ts                 TC-GRPREG-001 (repos
+#                                                       half; the split §7 left
+#                                                       to this plan)
+#   tests/structure/error-table.test.ts                existing — update
+#                                                       (projects.* group rows
+#                                                       phase 2; repos.* rows
+#                                                       phase 5)
+#   tests/behaviour/entrypoint-composition.test.ts     existing — update
+#                                                       (EXPECTED gains repos)
+#   tests/golden/fixtures/projects-flat-alias.json     committed normalized
+#                                                       golden of the delivered
+#                                                       projects.v1 payload
+#   Fixture reuse: tests/fixtures/projects/ helpers only (GH-288 precedent);
+#   config documents are per-case fixture data, never *.test.ts files.
+#
+# ---------------------------------------------------------------------------
+# PHASE ORDER AND WHY (spec DoD-table phase vocabulary mapped onto this plan;
+# test plan §2 constraints (c)/(d) and the PM ordering honored):
+#   1 ODR-0004 landing FIRST — the rename is lawful only under ODR-0003 DC-4
+#     (superseding record plus code change); the record file is untracked on
+#     disk while its index row is already committed, so the very first
+#     delivery commit lands the file beside the row and every rename-code
+#     phase (5) is trivially after it (DoD-11, C-3, DEC-2)
+#   2 the configuration document + load-time validation — every group-scoped
+#     read consumes it; delivers the three projects.* identities and the
+#     `--project <groupKey>` scoped read as the validation seam (DoD-1/2 →
+#     spec "Configuration phase")
+#   3 workspace discovery + the group surface — the scan that locates declared
+#     members (containment invariant) and the group enumeration with member
+#     health/state (DoD-3/4/5 → spec "Discovery phase" + "Group-surface phase",
+#     merged: the discovery TCs are observable only through the surface)
+#   4 the aggregation clause + group-scoped queue/status reads — one shared
+#     definition over per-checkout state (DoD-6/7 → spec
+#     "Aggregation/scoped-read phase")
+#   5 the rename LAST among code phases — `repos list`, the `--flat`
+#     byte-compat alias, the field renames, the `repos.*` identities, and the
+#     full registration mount as ONE indivisible unit (GH-288 B3 lesson);
+#     keeping it late makes the decision-record gate trivially verifiable by
+#     commit order (DoD-8; C-2 alias byte-compat stays in this phase's scope —
+#     constraint (d))
+#   6 naming boundary + operator docs + planning corpus + the full gate
+#     battery — the release phase; the registry `repos` row moves to Delivery
+#     HERE, after the code exists (same change, later phase: DC-4's
+#     "never before" holds; constraint (c))
+#
+# INTERMEDIATE-STATE RULE (binding; prevents every red boundary): until phase
+# 5 lands, `projects list` without flags keeps returning the DELIVERED flat
+# `projects.v1` payload (current truth per DEC-1/NG-6). The group surface is
+# observable from phase 2 onward through the scoped read `projects list
+# --project <groupKey>` (and, from phase 3, over every configured group via
+# scoping). The default-form flip to `project-groups.v1`, the `--flat` alias,
+# and `repos list` land together in phase 5 — one atomic rename unit, no
+# intermediate tree breaks the delivered flat contract, and the alias keeps
+# the delivered payload reachable continuously (C-2).
+#
+# AC OWNERSHIP (all 16 ACs, exactly one owning phase each; an earlier phase
+# may produce partial verdicts, which is additive and never transfers
+# ownership):
+#   phase 1  AC-F10-1 (record-exists half; the registry-row half completes at
+#            phase 6 and the full verdict is proven at the delivery gate)
+#   phase 2  AC-F2-1
+#   phase 3  AC-F1-1, AC-F3-1, AC-F3-2, AC-F4-1, AC-F4-2
+#   phase 4  AC-F5-1, AC-F6-1
+#   phase 5  AC-F7-1, AC-F7-2, AC-NFR1-1 (full envelope set), AC-NFR2-1
+#   phase 6  AC-F8-1, AC-F9-1 (guide half; the registration half's verdict is
+#            produced at phase 5), AC-NFR6-1
+#
+# DoD MAPPING (§17.1 "Proven in plan" column → this plan's phases):
+#   DoD-1/2 → 2; DoD-3/4/5 → 3; DoD-6/7 → 4; DoD-8 → 5; DoD-9 → 6;
+#   DoD-10 → 5 (registration) + 6 (guide); DoD-11 → 1 (record) with the
+#   registry-row move at 6 and review-time verification (TC-GRPDR-001);
+#   DoD-12 → 3 (group envelopes) + 5 (full set); DoD-13 → 5; DoD-14 → every
+#   phase's gate (review-time); DoD-15 → 6 (roll-up); DoD-16 → 6;
+#   DoD-17 → lifecycle phase 11 (pr_creation), not a plan phase.
+#
+# TC OWNERSHIP (31/31 accounted for; ownership = the phase that lands the
+# asserted content and where the TC's verdict is first fully green):
+#   phase 1  (content only — TC-GRPDR-001's register half becomes inspectable)
+#   phase 2  TC-GRPDOC-001..005 (GRPDOC-004's queue/status steps complete at
+#            phase 4 in the same suite file)
+#   phase 3  TC-GRPWORK-001..003, TC-GRPSURF-001..003 (through the scoped and
+#            group forms; the default-form case of TC-GRPSURF-001 completes at
+#            phase 5)
+#   phase 4  TC-GRPAGG-001, TC-GRPAGG-002, TC-GRPSREAD-001..002
+#   phase 5  TC-GRPREN-001..006 (TC-GRPREN-006 alias failure probe, test plan
+#            v1.5), TC-GRPENV-001, TC-GRPRO-001, TC-GRPREG-001
+#   phase 6  TC-GRPBOUND-001..002, TC-GRPSREAD-003 (scan half),
+#            TC-GRPREG-002, TC-GRPGATE-001
+#   manual/review (lifecycle evidence, not plan scope): TC-GRPBOUND-003
+#   (changed-file check at every delivery gate), TC-GRPDR-001 (register +
+#   commit-order inspection at the delivery gate), the manual confirmations of
+#   TC-GRPSREAD-003 and TC-GRPBOUND-001
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; scope is the workItemRef per repo convention):
+#   phase 1  docs(GH-309): land ODR-0004 superseding record for the repos rename
+#   phase 2  feat(GH-309): project group configuration with classified validation
+#   phase 3  feat(GH-309): workspace discovery and the project group surface
+#   phase 4  feat(GH-309): group-scoped aggregation for queue and status reads
+#   phase 5  feat(GH-309): rename the flat record set to repos list with alias
+#   phase 6  docs(GH-309): naming boundary docs, registry rows, M2 bookkeeping
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - C-1 envelope continuity (DEC-5, NFR-1): the five-field
+#     delivery.result.v1 shape; every new key under `data`; zero `ok` or
+#     `command` fields anywhere — contracts win over pack example snippets.
+#   - C-2 alias byte-compat: `projects list --flat` returns the delivered
+#     `projects.v1` payload UNCHANGED; any field or shape drift fails review.
+#     The committed golden (tests/golden/fixtures/projects-flat-alias.json) is
+#     regenerated only by an explicit command with review-visible diffs; a
+#     regeneration that changes field sets is a C-2 violation.
+#   - C-3 decision-record gate: no rename code lands before ODR-0004 is
+#     tracked; the registry `repos` row moves to Delivery only with/after the
+#     code (DEC-2, DoD-11). Phase order enforces it mechanically.
+#   - C-4 configuration-only membership is absolute: a scan locates declared
+#     members only (0 undeclared clones admitted, any depth); group and flat
+#     reads write nothing beyond the two delivered permitted side effects
+#     (NFR-2/NFR-4).
+#   - C-5 scope exclusions (§7.2): no M2-S19 mechanics, no queue-and-lane
+#     representation, no board change (`board --project` stays a repository
+#     key; DEC-3), no alias retirement, no new tracker adapter (NG-1..NG-8).
+#   - C-6 current-truth boundary: doc/spec/features/** behavioral truth flips
+#     in lifecycle phase 7 (@doc-syncer), never in these delivery phases. THE
+#     ONE MECHANICAL EXCEPTION is doc/spec/features/feature-result-contract.md,
+#     scoped in phases 2 and 5 as the error-registry sync carrier ONLY: the
+#     bidirectional error-table-sync gate (inside pnpm check) requires every
+#     new error-table row to be documented there in the same boundary, and the
+#     test plan §8.2 assumes "code table + registry updated together" (GH-288
+#     phase-3 precedent). Only the registry table rows and the identity count
+#     change there; no behavioral current-truth statement does. Spec C-6
+#     (v1.1) declares this exception; the plan and the spec agree.
+#   - C-7 gates and hygiene: TMPDIR=$PWD/tmp/tmpdir pnpm check green at every
+#     phase boundary and before the PR; conventional subjects via the commit
+#     primitive; every body/footer line <= 100 chars; PR targets main-tools and
+#     stops open.
+#   - Exit codes keep their meaning (0 declared verdict / 1 refused or
+#     negative / 2 platform, state, or provider); the delivered two-layer
+#     state scope, host index mechanics, identity marker, store layout, and
+#     permanent repository vocabulary (marker, `<host root>/projects/<key>`
+#     container, host-index `projects[]`/`projectKey`, `--project-root`) are
+#     untouched — no data or state is renamed (NG-8, §19).
+#   - Suite isolation per testing-strategy/typescript §9: per-case host roots
+#     under the approved tmp base, injected fakes over mock.module,
+#     deterministic fixtures, no ambient $HOME, no live daemon (reachability
+#     states via socket/state presence manipulation), no composition with cwd
+#     inside this repository.
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (`system_spec_update`, @doc-syncer;
+# declared here so nothing is dropped after DoD — NOT plan scope):
+#   - doc/spec/features/feature-projects.md: reconcile to the delivered group
+#     surface + rename (or split a new groups/repos feature page) — the
+#     pre-rename flat contract stays the alias truth.
+#   - doc/spec/features/feature-cli-entrypoint.md: repos registration at the
+#     root listing (prompt-required set 19 → 20).
+#   - doc/spec/features/feature-result-contract.md: verify the registry rows
+#     landed by phases 2/5 state current truth beyond the sync-carrier edits.
+#   - doc/00-index.md: row for any new feature page.
+#   - doc/guides/migrating-to-per-repository-state.md and the planning corpus
+#     (registry, backlog, status, m2 pack pages, entrypoint delta): already
+#     delivered by phase 6 — verify, do not rewrite.
+#   - The alias-retirement obligation (M3 boundary) and the M2-S19/M2-S4
+#     dependencies are recorded in the spec §7.3; no phase-7 action here.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-309
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7]
+  escalationTriggers:
+    - rename-code-committed-before-odr-0004-record-is-tracked
+    - registry-repos-row-moved-to-delivery-before-the-rename-code
+    - projects-list-flat-payload-drifts-from-the-delivered-projects-v1
+    - undeclared-clone-admitted-by-any-workspace-scan
+    - invalid-configuration-rendering-as-a-silent-empty-group
+    - board-gaining-group-scoping-or-any-m2-s19-mechanics
+    - current-truth-feature-specs-pre-flipped-in-a-delivery-phase
+    - new-top-level-envelope-key-or-ok-command-field
+    - mcp-or-opencode-surface-touched-by-this-change
+    - pnpm-check-not-green-at-a-phase-boundary
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Land the superseding decision record ODR-0004
+  # Commit: docs(GH-309): land ODR-0004 superseding record for the repos rename
+  #
+  # Goal: make the rename lawful BEFORE any rename code exists (ODR-0003 DC-4;
+  # F-10, DEC-2, DoD-11, C-3). The record file
+  # doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md exists
+  # on disk (authored via @decision-advisor during the artifact phases;
+  # Proposed status with owner ratification pending at PR review — merge does
+  # not auto-accept) but is UNTRACKED, while its 00-index.md row (line 24)
+  # already landed as tracked drift in db85ac35. This phase commits the file
+  # beside its row.
+  #
+  # Obligations:
+  #  1.1 Commit the record file unchanged in substance (status stays
+  #      Proposed; ratification is external per its governance block).
+  #  1.2 Verify file ↔ 00-index row consistency (id, title fragment, status,
+  #      date); touch up the row only if inconsistent — the row is in scope
+  #      for exactly that.
+  #  1.3 Record the phase boundary (pm-notes `notes:`: plan phase 1, commit,
+  #      evidence) — the decision-register inspection (TC-GRPDR-001) later
+  #      proves this commit predates every rename-code commit on the branch.
+  #  NO rename code, NO registry-row move, NO doc/spec edit lands here. The
+  #  cli-command-registry.md `repos` row stays "Not delivered" until phase 6.
+  #
+  # Bound: AC-F10-1 (record half), DoD-11 (record half), F-10, C-3.
+  # Test obligations: none automated (TC-GRPDR-001 is review-time register +
+  # commit-order inspection; its factual subject lands here).
+  #
+  # Done when: git tracks the ODR-0004 record; the decision-register
+  # inspection holds (the ODR-0004 file present in the register index beside
+  # its 00-index.md row, already landed in db85ac35, file and row agreeing);
+  # the commit-order evidence is recordable — the record's commit precedes
+  # every rename-code commit on the branch, verified at the delivery gate per
+  # TC-GRPDR-001 (no automated suite asserts branch diffs per
+  # testing-strategy rules); TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Land the untracked ODR-0004 superseding decision record beside its index row"
+    kind: delivery
+    summary: >-
+      Commit doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md
+      (the ODR-0003 DC-4 superseding record for the repos rename, authored via
+      the decision advisor during the artifact phases) beside its
+      already-committed 00-index row, before any rename code lands, and verify
+      file and row consistency.
+    scope:
+      files:
+        - doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md
+        - doc/decisions/00-index.md
+    interactions:
+      - kind: contract-file
+        target: doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Project configuration document and load-time validation
+  # Commit: feat(GH-309): project group configuration with classified validation
+  #
+  # Goal: membership becomes declarable and fail-closed (GAP-1, F-1/F-2, DM-1):
+  # the configuration document `<configDirectoryName>/projects.yaml` (schema
+  # delivery.projects.groups.v1 — brand-derived directory per DEC-6, beside the
+  # delivered project-committed config file) with per-member selectors and
+  # tracker kinds, validated at load time so an unreadable or contradictory
+  # document is a classified error, never a silently empty group.
+  #
+  # Obligations:
+  #  2.1 packages/core/src/contracts/projects.ts — the configuration schema
+  #      types (groups[] with groupKey, name, optional workspaceRoot, members[]
+  #      with a root-or-repoKey selector plus trackerKind), the group envelope
+  #      project-groups.v1 types (DM-2, incl. the aggregation keys
+  #      data.partial / data.degradedMembers[]), the DM-5 outcome vocabulary,
+  #      and the OQ-3 health vocabulary — contracts-verbatim, no invented field
+  #      (RSK-3).
+  #  2.2 packages/core/src/domain/project-groups.ts (NEW) — pure load-time
+  #      validation and declared-member resolution: the OQ-1 rules exactly as
+  #      pinned above; mixed tracker kinds valid; an unimplemented kind never
+  #      rejected at validation (classified not-yet-supported at read time);
+  #      absent or empty configuration = valid empty group listing (opt-in
+  #      adoption).
+  #  2.3 packages/adapters/src/file/projects-config.ts (NEW) — the document
+  #      reader over the existing yaml-parser seam; unreadable document or
+  #      invoking scope → projects.scope-unavailable (exit 2 boundary).
+  #  2.4 packages/core/src/app/projects.ts + packages/cli/src/commands/projects.ts
+  #      + packages/cli/src/production.ts — the `--project <groupKey>` scoped
+  #      read lands as the validation seam (intermediate-state rule: the
+  #      default form keeps the delivered flat payload); member entries carry
+  #      repoKey/root/trackerKind with the delivered per-checkout observation
+  #      reused for state/daemonReachable; unknown group key refused with
+  #      projects.unknown-group at exit 1.
+  #  2.5 Error identities: add projects.config-invalid (exit 1),
+  #      projects.unknown-group (exit 1), projects.scope-unavailable (exit 2)
+  #      to packages/core/src/contracts/error-table.ts WITH their
+  #      feature-result-contract.md registry rows in the same commit (C-6 sync
+  #      carrier; the count assertion in tests/checks/error-table-sync.test.ts
+  #      updates with them).
+  #  2.6 tests/behaviour/projects-config.test.ts (NEW) — TC-GRPDOC-001..005
+  #      through the scoped read; config documents as per-case fixture data.
+  #  2.7 Inventory rows for every new source file (inventory.json +
+  #      content-inventory.test.ts executable-exports declarations).
+  #
+  # Bound: AC-F2-1, DoD-1, DoD-2, F-1, F-2, DM-1, NFR-5.
+  # Test obligations: TC-GRPDOC-001..005 (GRPDOC-004's queue/status steps
+  # complete in phase 4); error-table.test.ts gains the three projects.* rows.
+  #
+  # Done when: every GRPDOC case is green (load per schema; config-invalid
+  # across all OQ-1 variants; scope-unavailable at exit 2; unknown-group at
+  # exit 1; absent/empty → valid empty listing at exit 0; zero silent-empty
+  # outcomes); TMPDIR=$PWD/tmp/tmpdir pnpm check green.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Project configuration document (delivery.projects.groups.v1) with classified load-time validation"
+    kind: delivery
+    summary: >-
+      Deliver the configuration document contract, reader, and pure validator
+      with the pinned OQ-1 rules, the three classified identities
+      projects.config-invalid, projects.unknown-group, and
+      projects.scope-unavailable with their registry rows, and the projects
+      list --project scoped read as the validation seam, with the
+      projects-config behaviour suite green.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/project-groups.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/projects.ts
+        - packages/core/src/app/index.ts
+        - packages/adapters/src/file/projects-config.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/output/projects-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/production.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/projects-config.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/checks/error-table-sync.test.ts
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Workspace discovery and the group surface
+  # Commit: feat(GH-309): workspace discovery and the project group surface
+  #
+  # Goal: groups become enumerable with member health and state over an
+  # optional, containment-safe discovery root (GAP-2/GAP-5, F-3/F-4, DM-2).
+  # Spec's "Discovery phase" (DoD-3) and "Group-surface phase" (DoD-4/5) merge
+  # here: the discovery TCs (SC-M2-S18-01/02/06) are observable only through
+  # the group surface, so splitting them would leave a phase with no green
+  # observable.
+  #
+  # Obligations:
+  #  3.1 packages/adapters/src/file/workspace-scan.ts (NEW) — the read-only
+  #      scan inside a registered workspaceRoot that LOCATES declared member
+  #      clones (any depth) and never admits an undeclared clone; the
+  #      containment invariant (C-4, RSK-4) lives here and is asserted by
+  #      TC-GRPWORK-003 including the nested-subdirectory probe. No scan runs
+  #      without a configured workspaceRoot; nothing is inferred from
+  #      directories (configuration-only membership).
+  #  3.2 packages/core/src/domain/project-groups.ts + app/projects.ts — member
+  #      resolution (root/repoKey selectors), 1:1 workspace parity
+  #      (SC-M2-S18-02), per-member observation reusing the delivered per-
+  #      checkout machinery (state, daemonReachable with the closed reason
+  #      vocabulary and first-applicable ordering), and the OQ-3 health
+  #      classification with not-yet-supported mandatory for unimplemented
+  #      tracker kinds (SC-M2-S18-05).
+  #  3.3 packages/cli/src/commands/projects.ts + output/projects-text.ts —
+  #      group enumeration over every configured group via the scoped grammar
+  #      and the group text rendering: a group block per group, one member
+  #      line per repository, columns group/member/tracker/state/health/
+  #      daemon; member order = declared order, always; deterministic text.
+  #  3.4 tests/behaviour/projects-groups-list.test.ts (NEW) — TC-GRPWORK-001..
+  #      003, TC-GRPSURF-001..003 through the scoped/group forms (the
+  #      default-form case is added in phase 5); fixture repos/workspace via
+  #      tests/fixtures/projects/ helpers.
+  #  3.5 tests/structure/projects-groups-envelope.test.ts (NEW) — the DM-2
+  #      envelope contract (exact member fields, declared order, closed daemon
+  #      reasons), the OQ-3 closed health vocabulary cases, and the TC-GRPENV
+  #      group-envelope conformance cases (the full-set extension lands in
+  #      phase 5).
+  #
+  #  GATE ARTIFACT: .changeset/gh-309-project-groups-minor.md is declared in
+  #  this phase's scope because the branch-diff release gate requires exactly
+  #  one five-package minor changeset once the first publishable sources land.
+  #
+  # Bound: AC-F1-1, AC-F3-1, AC-F3-2, AC-F4-1, AC-F4-2, DoD-3, DoD-4, DoD-5,
+  # F-3, F-4, NFR-3, NFR-4.
+  # Test obligations: TC-GRPWORK-001..003, TC-GRPSURF-001..003.
+  #
+  # Done when: SC-M2-S18-01/02/03/05/06 coverage green (workspace locates both
+  # declared members; no-workspace 1:1 parity with only workspaceRoot absent;
+  # undeclared clone never admitted, any depth; health + closed daemon reasons
+  # on every member; mixed tracker kinds accepted with the unimplemented member
+  # classified not-yet-supported, contributing no records, read exit 0);
+  # byte-identical text over unchanged state; TMPDIR=$PWD/tmp/tmpdir pnpm
+  # check green.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Workspace discovery (declared members only) and the project-groups.v1 group surface"
+    kind: delivery
+    summary: >-
+      Deliver the containment-safe workspace scan that locates only declared
+      member clones, per-member resolution and observation with the pinned
+      closed health vocabulary, and the group enumeration and text rendering
+      in declared order, with the groups-list behaviour suite and the group
+      envelope contract suite green.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/domain/project-groups.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/projects.ts
+        - packages/adapters/src/file/workspace-scan.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/output/projects-text.ts
+        - tests/behaviour/projects-groups-list.test.ts
+        - tests/structure/projects-groups-envelope.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - .changeset/gh-309-project-groups-minor.md
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Project-scoped aggregation clause and group-scoped queue/status
+  # Commit: feat(GH-309): group-scoped aggregation for queue and status reads
+  #
+  # Goal: one shared aggregation definition governs every group-scoped read
+  # and queue/status answer project-level questions (GAP-3, F-5/F-6, DM-5).
+  #
+  # Obligations:
+  #  4.1 packages/core/src/domain/project-groups.ts — the aggregation clause,
+  #      defined ONCE: members in declared order over per-checkout state (never
+  #      a group-scoped store); each member resolves to exactly one outcome of
+  #      observed | not-yet-supported | state-unavailable | unregistered; one
+  #      state-unavailable member → exit 0 with data.partial true and
+  #      data.degradedMembers[] naming it by repoKey and outcome while readable
+  #      members are still returned; a not-yet-supported member contributes no
+  #      records and never fails the read; exit 2 only for unreadable
+  #      configuration/scope (RSK-7 guard).
+  #  4.2 packages/cli/src/commands/queue.ts + status.ts + production.ts — the
+  #      additive grammar `queue list --project <groupKey>` and
+  #      `status --project <groupKey>`; unscoped forms unchanged; unknown
+  #      group refused with projects.unknown-group at exit 1 on every
+  #      group-scoped surface (one refusal rule); `board --project` stays a
+  #      repository key and NO other surface gains group scoping (NG-3).
+  #  4.3 tests/behaviour/queue-status-project-scope.test.ts (NEW) —
+  #      TC-GRPSREAD-001..002 (group-only work at exit 0; no non-member
+  #      content; unscoped forms unchanged) and the TC-GRPDOC-004 queue/status
+  #      refusal steps completing the one-refusal-rule assertion.
+  #  4.4 Extend tests/behaviour/projects-groups-list.test.ts (TC-GRPAGG-001
+  #      group form: partial result at exit 0) and
+  #      tests/structure/projects-groups-envelope.test.ts (TC-GRPAGG-002: the
+  #      closed outcome set — every member resolves to exactly one outcome;
+  #      the closed health set per the OQ-3 pin; the unregistered member
+  #      classifies and never silently vanishes from members[]).
+  #
+  # Bound: AC-F5-1, AC-F6-1, DoD-6, DoD-7, F-5, F-6, DM-5.
+  # Test obligations: TC-GRPAGG-001..002, TC-GRPSREAD-001..002, TC-GRPDOC-004
+  # completion.
+  #
+  # Done when: SC-M2-S18-04 and SC-M2-S18-07 coverage green; the aggregation
+  # contract suite pins the closed outcome and health vocabularies;
+  # TMPDIR=$PWD/tmp/tmpdir pnpm check green.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Project-scoped aggregation clause with group-scoped queue list and status reads"
+    kind: delivery
+    summary: >-
+      Define the aggregation clause once (closed per-member outcomes,
+      classified partial results with data.partial and degradedMembers) and
+      apply it to the additive queue list --project and status --project
+      grammar, with the scoped-read and aggregation suites green.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/domain/project-groups.ts
+        - packages/core/src/app/projects.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/projects-config.test.ts
+        - tests/behaviour/projects-groups-list.test.ts
+        - tests/behaviour/queue-status-project-scope.test.ts
+        - tests/structure/projects-groups-envelope.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — The rename: repos list, the --flat alias, field renames,
+  # repos.* identities, and the registration mount (ONE indivisible unit)
+  # Commit: feat(GH-309): rename the flat record set to repos list with alias
+  #
+  # Goal: the naming boundary becomes delivered code (GAP-4, F-7, DM-3/DM-4)
+  # under the phase-1 record, with the flat surface reachable continuously
+  # (RSK-1) and `repos` mounted at the root listing (F-9 registration half).
+  # The rename code, its alias, its identities, and its mount are jointly
+  # satisfiable only as one commit (GH-288 B3 lesson): no intermediate tree
+  # exists where the prompt set names a page or rows that do not exist.
+  #
+  # Obligations:
+  #  5.1 packages/cli/src/commands/repos.ts (NEW) + output/repos-text.ts (NEW)
+  #      + composition (edge.ts commands map, production.ts runtime) —
+  #      `repos list [--json]` under repos.v1: data.repos[] carrying exactly
+  #      repoKey (renamed from projectKey), root, stateLocation,
+  #      daemonReachable (unchanged shape and closed reasons), handoverState,
+  #      plus hostIndexRevision; the deterministic text table sorted by repo
+  #      key; the unbound-scope rule preserved (one bounded warning, never an
+  #      error, never a listed row).
+  #  5.2 The default flip + the alias in packages/cli/src/commands/projects.ts:
+  #      `projects list --json` (no flags) returns project-groups.v1;
+  #      `projects list --flat [--json]` returns the delivered projects.v1
+  #      payload UNCHANGED (data.projects[], projectKey, hostIndexRevision;
+  #      C-2 byte-compat against the committed golden
+  #      tests/golden/fixtures/projects-flat-alias.json, normalized per the
+  #      golden rules); the OQ-2 pin: --flat + --project refused as mutually
+  #      exclusive at exit 1 under input.value.rejected; and the alias's
+  #      FAILURE envelope carries the moved repos.* identities (spec v1.1:
+  #      the flat surface's failures classify under repos.* on every form,
+  #      the alias included — DoD-8's alias failure probe).
+  #  5.3 The identity move: repos.identity-unreadable (exit 1),
+  #      repos.registry-corrupt (exit 2), repos.state-unavailable (exit 2)
+  #      added to the error table WITH their feature-result-contract.md
+  #      registry rows; the old projects.* flat identities no longer fire on
+  #      the flat surface; the group surface's own identities are untouched.
+  #  5.4 The mount unit (all members, one commit): `repos` in
+  #      packages/cli/src/help/prompt-required-commands.ts (19 → 20);
+  #      root/family/verb help entries in packages/cli/src/help.ts; the
+  #      reference page doc/planning/oss-tooling/milestones/m2/commands/repos.md
+  #      gains its mount-critical content (--help/--version per the parity
+  #      gate) and its Delivered (M2-S18) status header (events.md precedent);
+  #      tests/fixtures/help-guide/coverage.json (command + referencePage
+  #      rows); tests/checks/reference-page-parity.test.ts (pageFor mapping);
+  #      tests/behaviour/entrypoint-composition.test.ts (EXPECTED list);
+  #      scripts/checks/help-guide-coverage.ts and the mutants test updated as
+  #      the gates require.
+  #  5.5 Suites: tests/behaviour/repos-list-contract.test.ts (NEW;
+  #      TC-GRPREN-001..002 — exact renamed fields, sorted table, unbound
+  #      rule, repos.* refusals); tests/behaviour/projects-flat-alias.test.ts
+  #      (NEW; TC-GRPREN-003..006 — golden byte-compat with absence negatives,
+  #      delivered text-table shape, the OQ-2 refusal asserting
+  #      input.value.rejected, and the alias failure probe (test plan v1.5):
+  #      a failing flat read through --flat classifies under the moved
+  #      repos.* identity with unchanged exit meaning, reusing the
+  #      marker/registry/state failure fixtures from tests/fixtures/projects/);
+  #      tests/behaviour/repos-help.test.ts (NEW; TC-GRPREG-001 repos half —
+  #      root --help shows repos beside projects, family/verb help, coverage
+  #      row); tests/behaviour/projects-read-only-audit.test.ts (NEW;
+  #      TC-GRPRO-001 — snapshotTree/snapshotDifferences audit across group,
+  #      --flat, and repos forms plus the classified failure paths: exactly the
+  #      two delivered permitted side effects); extend
+  #      tests/behaviour/projects-groups-list.test.ts (TC-GRPREN-004 — the
+  #      default form now returns groups, three distinct synopsis forms) and
+  #      tests/structure/projects-groups-envelope.test.ts (TC-GRPENV-001 full
+  #      set — every delivered envelope of the change: five-field shape, keys
+  #      under data, zero ok/command); update tests/structure/error-table.test.ts
+  #      (repos.* rows) and tests/behaviour/projects-help.test.ts (mount
+  #      fallout).
+  #  5.6 Inventory rows for the new source files.
+  #
+  # Bound: AC-F7-1, AC-F7-2, AC-NFR1-1, AC-NFR2-1, DoD-8, DoD-10 (registration
+  # half), DoD-12 (full set), DoD-13, F-7, DM-3, DM-4, C-1, C-2.
+  # Test obligations: TC-GRPREN-001..006 (TC-GRPREN-006 alias failure probe,
+  # v1.5), TC-GRPENV-001, TC-GRPRO-001, TC-GRPREG-001.
+  #
+  # Done when: SC-M2-S18-08 green; the alias golden matches with absence
+  # negatives (no groupKey, no data.groups[], no data.repos[], no repoKey in
+  # the alias payload); the alias failure probe classifies under the moved
+  # repos.* identity (DoD-8, spec v1.1); repos appears at root --help with
+  # its page (check:help gates green); the read-only audit shows exactly the
+  # two permitted side effects; TMPDIR=$PWD/tmp/tmpdir pnpm check green. The
+  # rename commit is verifiably AFTER the phase-1 record commit
+  # (TC-GRPDR-001).
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Rename the flat record set to repos list with the --flat alias, repos.* identities, and the root registration mount"
+    kind: delivery
+    summary: >-
+      Land the rename as one unit — repos list under repos.v1 with the renamed
+      fields and sorted table, the projects list --flat byte-compat alias with
+      the pinned mutual-exclusion refusal, the default flip to
+      project-groups.v1, the repos.* error identities with registry rows, and
+      the full prompt-set/help/page/coverage mount — with the rename, alias,
+      envelope, audit, and repos-help suites green.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/app/projects.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/repos.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/output/repos-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        - doc/spec/features/feature-result-contract.md
+        - scripts/checks/help-guide-coverage.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/checks/reference-page-parity.test.ts
+        - tests/checks/help-guide-coverage-mutants.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/behaviour/repos-list-contract.test.ts
+        - tests/behaviour/projects-flat-alias.test.ts
+        - tests/behaviour/projects-read-only-audit.test.ts
+        - tests/behaviour/projects-groups-list.test.ts
+        - tests/behaviour/projects-help.test.ts
+        - tests/structure/projects-groups-envelope.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/golden/fixtures/projects-flat-alias.json
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: producer
+      - kind: contract-file
+        target: tests/golden/fixtures/projects-flat-alias.json
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Naming boundary, migration guide, planning corpus, full gate
+  # (release phase)
+  # Commit: docs(GH-309): naming boundary docs, registry rows, M2 bookkeeping
+  #
+  # Goal: the naming boundary is stated consistently across every delivered
+  # surface and doc, the operator transition doc speaks the delivered
+  # vocabulary, the planning corpus records delivery truth, and the full gate
+  # battery is green at the delivered HEAD (F-8, F-9 guide half, DoD-9/10/15/
+  # 16).
+  #
+  # Obligations:
+  #  6.1 doc/guides/migrating-to-per-repository-state.md (ticket derived task
+  #      d) — the delivered vocabulary: the flat enumeration by its delivered
+  #      name (repos list), the group surface (projects list), the alias
+  #      (projects list --flat); migration stays one-step and operator-run;
+  #      the superseding record and the alias referenced as the transition
+  #      path (RSK-1 visibility). The guide keeps its ados_distribution:
+  #      redistributable marker; run bash scripts/.tests/test-doc-
+  #      distribution.sh at this boundary.
+  #  6.2 tests/structure/naming-boundary.test.ts (NEW) — TC-GRPBOUND-001
+  #      (automated anchors: repos = flat record set and projects = groups
+  #      everywhere both appear — root help, both reference pages, the
+  #      migration guide; zero pre-rename meaning claims as current) +
+  #      TC-GRPBOUND-002 (permanent repository vocabulary unchanged: identity
+  #      marker semantics, <host root>/projects/<key> container, host-index
+  #      projects[]/projectKey, --project-root; the state-scope policy suite
+  #      stays green unchanged) + TC-GRPSREAD-003 scan half (no group-scoped
+  #      board claim anywhere; board --project documented as a repository key)
+  #      + TC-GRPREG-002 (guide anchors).
+  #  6.3 Planning corpus per milestone conventions (the registry `repos` row
+  #      moves to Delivery HERE — after the phase-5 code, satisfying
+  #      ODR-0004/DC-4 and DEC-2's never-before rule): cli-command-registry.md
+  #      (repos row to Delivery with the delivered capability summary; the
+  #      projects row reflects the group surface + alias ownership); backlog.md
+  #      M2-S18 entry gains `- Ticket: GH-309 (milestone M2)` and `- Progress:
+  #      delivered by GH-309 — ...`; status.md delivery-snapshot addendum;
+  #      m2/commands/projects.md refined to the delivered group-surface truth
+  #      with its Delivered (M2-S18) header; m2/entrypoint-delta.md dated
+  #      observation that repos is mounted. m2/contracts.md: the "Queue and
+  #      lane representation" section's opening ownership line drops its
+  #      stale "Owned by M2-S18 for cross-repository changes" — ownership/
+  #      consumption is attributed to M2-S19 per DEC-4/NG-2 (one-line
+  #      correction; the line goes stale the moment GH-309 delivers without
+  #      that scope, and the pack is Proposed-status planning truth, not
+  #      current-truth spec, so it lands here, not in phase 7). The pack
+  #      README's status-semantics section is generic and needs no edit.
+  #  6.4 Run and record green (pm-notes `notes:` per DoD-16 convention):
+  #        mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #        bash scripts/.tests/test-doc-distribution.sh
+  #      The commit-range gate scripts/lint-commit-range.sh --base main-tools
+  #      runs at lifecycle phase 9 per repo conventions, not here.
+  #  Manual/review evidence owed at the delivery gate (lifecycle, not plan
+  #  scope): TC-GRPBOUND-003 changed-file check (§7.2 exclusions hold; no
+  #  pre-flipped current-truth docs in the diff), TC-GRPDR-001 register +
+  #  commit-order inspection (record before rename code; row move after code),
+  #  the manual confirmations of TC-GRPSREAD-003 and TC-GRPBOUND-001.
+  #  DoD-15 roll-up: all sixteen ACs green via the §3 coverage matrix plus
+  #  phase pm-notes evidence.
+  #
+  # Bound: AC-F8-1, AC-F9-1 (guide half + the AC's full verdict), AC-F10-1
+  # (registry-row half), AC-NFR6-1, DoD-9, DoD-10, DoD-11 (row move), DoD-14,
+  # DoD-15, DoD-16, F-8, F-9.
+  # Test obligations: TC-GRPBOUND-001..002, TC-GRPSREAD-003 (scan half),
+  # TC-GRPREG-002, TC-GRPGATE-001.
+  #
+  # Done when: the naming-boundary suite and guide anchors are green; the
+  # corpus states delivery truth (registry row moved with the code, backlog
+  # marker, status snapshot, pack headers, the m2/contracts.md queue-and-lane
+  # ownership line corrected to M2-S19); the full battery is green and
+  # recorded; all six plan phases are complete with per-phase pm-notes
+  # evidence (dod_check reads that evidence, not this file). PR creation
+  # against main-tools (stop open) is lifecycle phase 11 (DoD-17).
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Naming boundary anchors, migration guide, registry and M2 bookkeeping, full gate battery (release)"
+    kind: delivery
+    summary: >-
+      Update the migration guide to the delivered vocabulary, land the
+      naming-boundary structure suite over help, pages, guide, and permanent
+      vocabulary, move the cli-command-registry repos row to Delivery, record
+      the M2-S18 backlog, status, and pack-page markers with the m2 pack's
+      stale queue-and-lane ownership line corrected to M2-S19, and run the
+      full gate battery green with the verdicts recorded as pm-notes evidence.
+    scope:
+      files:
+        - doc/guides/migrating-to-per-repository-state.md
+        - tests/structure/naming-boundary.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        # LIFECYCLE PHASE 7 DOC-SYNC ARTIFACT: declared in this phase's scope
+        # only so the commit primitive can stage the new current-truth page at
+        # the system_spec_update boundary. The page is authored by @doc-syncer
+        # in lifecycle phase 7, not by this plan phase; declaring it here does
+        # not move any obligation, and no delivery-phase work touches it.
+        - doc/spec/features/feature-project-groups.md
+    interactions:
+      - kind: contract-file
+        target: doc/guides/migrating-to-per-repository-state.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-309 delivery complete: all six plan phases done, full gate battery green, naming boundary and M2-S18 bookkeeping recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Review remediation (added 2026-11-14 after review iteration 1)
+  # Commit: subject owned by the commit primitive (no hand-written subject).
+  #
+  # Goal: close the review-iteration-1 findings without disturbing the
+  # delivered contracts. F-10 is an accepted risk (pm-notes decision) and is
+  # explicitly NOT in scope.
+  #
+  # Obligations:
+  #  7.1 F-1/F-2 — an explicit `--project <key>` that is not declared is
+  #      refused with projects.unknown-group at exit 1 on every scoped surface
+  #      (projects list, queue list, status --project), including when the
+  #      configuration document is absent or declares zero groups. The unscoped
+  #      default form keeps its empty listing at exit 0.
+  #  7.2 F-3 — group-scoped queue/status invocations perform no composition-level
+  #      host-index maintenance, on success and on classified-failure paths;
+  #      exactly the two delivered permitted side effects remain.
+  #  7.3 F-4 — a corrupt/unreadable host index is an empty resolution aid on the
+  #      group surface (members that need it classify unregistered at exit 0);
+  #      no fourth identity, exit 2 stays configuration/scope only.
+  #  7.4 F-5 non-string workspaceRoot is projects.config-invalid; F-6 the
+  #      duplicate-selector probe normalizes trailing separators; F-7 an
+  #      unlocated root-selected member carries a key representation that is not
+  #      a filesystem path.
+  #  7.5 F-9 — the alias golden asserts the serialized payload, or C-2's claim is
+  #      reworded to field-for-field; whichever is chosen must be consistent
+  #      between the test and the spec.
+  #  7.6 Tests: TC-GRPDOC-005 rewritten to the refusal; TC-GRPDOC-004 gains the
+  #      empty-configuration cell for queue and status; TC-GRPRO-001 audited for
+  #      queue/status `--project` success and classified-failure; group-surface
+  #      test for the corrupt-index path; TC-GRPDOC-002 variants for a non-string
+  #      workspaceRoot and trailing-separator duplicates; envelope test pinned to
+  #      the F-7 contract.
+  #  7.7 No behavioural edit to doc/spec/** — F-8 and the F-4 doc claims land
+  #      through @doc-syncer after the code agrees.
+  #
+  # Bound: AC-F2-1, AC-F6-1, AC-NFR2-1, F-2, F-5, F-6, F-7, NFR-2, NFR-5,
+  # C-2, C-4, DoD-13.
+  # Done when: the full gate battery is green with the new cells, and review
+  # iteration 2 can re-verify every closed finding.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Close review-iteration-1 findings: scoped-refusal semantics, group-read write budget, corrupt-index posture, validation and envelope edges"
+    kind: delivery
+    summary: >-
+      Refuse an undeclared --project key with projects.unknown-group at exit 1
+      on every scoped surface, stop host-index maintenance for group-scoped
+      queue/status invocations, treat a corrupt host index as an empty
+      resolution aid on the group surface, harden the configuration validator
+      against a non-string workspaceRoot and trailing-separator duplicate
+      selectors, give an unlocated root-selected member a non-path key, tighten
+      the alias golden to the serialized payload, and extend the tests to cover
+      each closed finding.
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/commands/projects.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/domain/project-groups.ts
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/projects-config.test.ts
+        - tests/behaviour/queue-status-project-scope.test.ts
+        - tests/behaviour/projects-read-only-audit.test.ts
+        - tests/behaviour/projects-flat-alias.test.ts
+        - tests/behaviour/projects-groups-list.test.ts
+        - tests/structure/projects-groups-envelope.test.ts
+        - tests/golden/fixtures/projects-flat-alias.json
+        - doc/changes/2026-11/2026-11-14--GH-309--project-groups/code-review/review-iter-1.yaml
+        - doc/changes/2026-11/2026-11-14--GH-309--project-groups/code-review/review-iter-2.yaml
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/project-groups.ts
+        role: producer

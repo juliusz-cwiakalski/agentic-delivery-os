@@ -408,6 +408,7 @@ import {
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProjectsCommandDefinition,
+  type ProjectGroupWorkRead,
   type ProjectsCommandRuntime,
 } from "./commands/projects.js";
 import {
@@ -426,6 +427,7 @@ import {
   type QueueRuntimeSchedule,
   toQueueReadData,
 } from "./commands/queue.js";
+import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -1541,6 +1543,13 @@ export type StatusComposition = {
   readonly credentialReference?: { readonly referenceName: string; readonly sourceKey: string };
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
+  /**
+   * The group-scoped work read behind `status --project <groupKey>`
+   * (GH-309 F-5, F-6); absent leaves the digest-only surface.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
 };
 
 /**
@@ -2607,6 +2616,9 @@ export const createStatusCommandRuntime = (
     readSpend: (): SpendDigestSection => spendDigestFor(options),
     readCredentialPrerequisite: () => (admitted ? options.credentialReference : undefined),
     ...(options.readOwnerHold === undefined ? {} : { readOwnerHold: options.readOwnerHold }),
+    ...(options.readProjectGroup === undefined
+      ? {}
+      : { readProjectGroup: options.readProjectGroup }),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };
@@ -3210,6 +3222,7 @@ export type ConfigProgramOptions = {
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
+  readonly repos?: ReposCommandRuntime;
   readonly events?: EventsCommandRuntime;
 };
 
@@ -3693,6 +3706,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   // throws for a prompt-required name the program lacks (GH-288 F-9, DEC-13).
   if (options.projects !== undefined) {
     commands.projects = createProjectsCommandDefinition(options.projects);
+  }
+  if (options.repos !== undefined) {
+    commands.repos = createReposCommandDefinition(options.repos);
   }
   // The taxonomy reference surface (GH-290 F-2, DEC-F): registered when the edge
   // is given the runtime, which is the declaration itself.
@@ -4287,6 +4303,13 @@ export type QueueComposition = {
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
   /**
+   * The group-scoped work read behind `queue list --project <groupKey>`
+   * (GH-309 F-5, F-6); absent leaves the repository-scoped read only.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
+  /**
    * The per-item tracker delivery-state read for `queue reconcile` (GH-292
    * F-5): the verified closeout/verify read bridge wired by the composition.
    * Absent means the tracker surface is not wired and reconcile refuses.
@@ -4750,6 +4773,9 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
   };
   return {
     readSchedule,
+    ...(composition.readProjectGroup === undefined
+      ? {}
+      : { readProjectGroup: composition.readProjectGroup }),
     watch: watchStreamFor(composition, "queue", () => {
       const read = readSchedule(20);
       return read.ok
