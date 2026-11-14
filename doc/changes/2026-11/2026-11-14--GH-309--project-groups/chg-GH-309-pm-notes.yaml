@@ -6,7 +6,7 @@ phases:
   specification: { started: null, completed: 2026-11-14T05:46:03.292Z }
   test_planning: { started: null, completed: 2026-11-14T05:51:58.807Z }
   delivery_planning: { started: null, completed: 2026-11-14T05:56:13.668Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-14T05:59:46.918Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -108,4 +108,14 @@ notes:
       compatibility claim must be split by outcome (success vs failure envelope)
       at authoring time."
     type: retro
+    date: "2026-11-14"
+  - text: "DoR gate ITERATION 2 verdict: READY (10/10 facets PASS, no pause, no
+      override). All five iter-1 remediations verified against diffs; counts
+      intact (16 ACs, DoD-1..17, 31 TCs, 6 plan phases); no regressions.
+      Non-blocking observations left as-is: OQ-1/OQ-3 §8.3 status wording
+      (cosmetic; reconciliations live in §9), migration-guide matcher note
+      (nice-to-have). Reviewer record: readiness-review/readiness-iter-2.md.
+      Hard gate passed on merit; delivery may proceed (plan phase 1 lands
+      ODR-0004 before rename code)."
+    type: resolved
     date: "2026-11-14"
