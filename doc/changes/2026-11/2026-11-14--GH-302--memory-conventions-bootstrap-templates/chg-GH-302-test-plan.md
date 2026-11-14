@@ -1,6 +1,6 @@
 ---
 id: chg-GH-302-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-14
 last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
@@ -899,7 +899,7 @@ New automated coverage totals: **1 new bun:test file** (~16 test cases across th
 
 | ID | Question | Blocking | Owner |
 |----|----------|----------|-------|
-| OQ-TP-1 | **Spec factual correction needed (reported to PM):** the spec states this repository's own `.ai/memory` tree "does not exist yet" (Context 2.1, NG-4 parenthetical, Assumptions), but repo truth is that `.ai/memory/**` exists, is tracked, and is present in the branch base 92b64753 (created by GH-204 on 2026-11-07; populated with per-agent entry points and lessons). No AC depends on the false premise; all ACs remain testable, and NG-4's constraint ("do not modify this repo's tree") stays valid and is enforced by TC-MEMSCAF-004. Disposition options: (a) reopen specification phase for a Context/NG-4 wording fix, or (b) record the correction in pm-notes and let the DoR gate accept with the note. | No (test plan proceeds; all ACs testable) | PM / owner |
+| OQ-TP-1 | **RESOLVED via specification reopen (2026-11-14, spec Document History 1.1):** this plan v1.0 reported that the spec's `.ai/memory` premise was false — the tree exists, is tracked, and is populated by GH-204 (present in branch base 92b64753) — while Context 2.1, the NG-4 parenthetical, and the Assumptions claimed it "does not exist yet". The reopened specification remediated exactly this: Context 2.1, NG-4, the [OUT] item, an added Assumption, and Affected Components now acknowledge the tree as existing, tracked, and populated; NG-4 guards the populated tree; GH-301 owns its evolution. No AC was affected, and no TC id, trace row, seed, or count changed — TC-MEMSCAF-004 is unchanged and still enforces NG-4 against the populated tree. | Closed (resolved; all ACs testable as before) | PM / owner |
 | OQ-TP-2 | Exact template filenames and the per-agent entry-point carrier pattern (one generic template parameterized by role vs one file per role) are fixed by the plan; the bun suite's anchors are pinned at implementation and any later rename is a deliberate suite update. | No (resolved during delivery phase 1) | plan-writer / coder |
 | OQ-TP-3 | Confirm the manual doctor checklist's carrier is a `doc/templates/**` template (not a guide page), per F-5 "installed set". If the plan places it in `doc/guides/**`, TC-MEMDOCT-001/TC-MEMBUDGET-002 anchors move accordingly and the distribution classification is re-evaluated. | No (resolved during delivery phase 1) | plan-writer |
 
@@ -908,6 +908,7 @@ New automated coverage totals: **1 new bun:test file** (~16 test cases across th
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | Initial test plan from `chg-GH-302-spec.md` v1.0: 27 TCs covering all 11 ACs; inherited and reconciled seeds SC-M2-S9-01/02; proposed `tests/structure/memory-bootstrap-templates.test.ts` (new) and Check 7 extension of `scripts/.tests/test-inception-doc-consistency.sh`; reported the `.ai/memory` repo-truth discrepancy (OQ-TP-1) without modifying the spec |
+| 1.1 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | Sync with specification reopen (spec v1.1): OQ-TP-1 marked RESOLVED — the spec's `.ai/memory` premise is corrected (tree acknowledged as existing, tracked, populated by GH-204; NG-4 guards the populated tree; GH-301 owns its evolution); no AC affected, no TC/coverage change |
 
 ## 10. Test Execution Log
 
