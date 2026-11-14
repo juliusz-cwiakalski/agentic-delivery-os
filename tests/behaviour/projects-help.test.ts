@@ -141,12 +141,16 @@ describe("TC-PROJ-030 the mount unit lands as one indivisible unit", () => {
     expect(page).toContain("--version");
     expect(page).toContain("Status: Proposed (M2)");
 
-    // 5. Exactly three error rows under the one new kind.
+    // 5. The projects kind: the three delivered host-overview rows plus the
+    //    three group-surface identities GH-309 adds (mechanical registry pin).
     const rows = ERROR_TABLE.filter((row) => row.domainKind === "projects");
     expect(rows.map((row) => row.code)).toEqual([
       "projects.identity-unreadable",
       "projects.registry-corrupt",
       "projects.state-unavailable",
+      "projects.config-invalid",
+      "projects.unknown-group",
+      "projects.scope-unavailable",
     ]);
 
     // 6. The composed program carries the definition and the restriction keeps it.

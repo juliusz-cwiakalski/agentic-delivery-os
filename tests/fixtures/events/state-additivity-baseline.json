@@ -88,6 +88,8 @@
     "owner-gate-sla.ts:OWNER_GATE_SLA_DECISION_PAYLOAD_SCHEMA": "delivery.owner-gate.decision.v1",
     "owner-gate-sla.ts:OWNER_GATE_SLA_DECISION_RECORD_KIND": "owner-gate.decision",
     "projects.ts:HOST_INDEX_SCHEMA": "delivery.projects.host-index.v1",
+    "projects.ts:PROJECT_GROUPS_CONFIG_SCHEMA": "delivery.projects.groups.v1",
+    "projects.ts:PROJECT_GROUPS_LIST_SCHEMA": "project-groups.v1",
     "projects.ts:PROJECT_IDENTITY_SCHEMA": "delivery.projects.identity.v1",
     "provider-profile.ts:PROFILE_TARGET_RECORD_KIND": "provider.profile-target",
     "provider-profile.ts:PROFILE_TARGET_SCHEMA_ID": "delivery.provider.profile-target.v1",

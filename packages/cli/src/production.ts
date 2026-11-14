@@ -31,6 +31,7 @@ import {
   readLocalPmContext,
   readOwnerHoldMarker,
   readPmNotesText,
+  readProjectGroupsConfig,
   readProjectIdentityMarker,
   readStateRootArtifacts,
   relativeChangeFolder,
@@ -96,8 +97,12 @@ import {
   type ProjectsScopeFailure,
   parseHostIndexDocument,
   parseProjectIdentityMarker,
+  projectGroupDeclared,
+  projectGroupEntry,
+  projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
+  projectMemberHealth,
   projectStateRoot,
   readDaemonHeartbeat,
   readDaemonInstance,
@@ -121,6 +126,7 @@ import {
   type TelemetryClaimedIdentity,
   type TelemetrySessionTotalsReader,
   type VerifyDocumentClassification,
+  validateProjectGroupsDocument,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
@@ -150,10 +156,15 @@ import {
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
   HOST_INDEX_INITIAL_REVISION,
+  type HostIndexEntry,
+  IMPLEMENTED_TRACKER_KINDS,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
+  type ProjectConfigInvalidReason,
+  type ProjectGroupMemberEntry,
+  type ProjectGroupMemberSelected,
   type ProjectsListEntry,
   type QueueDegradationReason,
   type QueueTrackerRead,
@@ -183,7 +194,7 @@ import {
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import type { DaemonCommandRuntime } from "./commands/daemon.js";
-import type { ProjectsRuntimeRead } from "./commands/projects.js";
+import type { ProjectGroupRuntimeRead, ProjectsRuntimeRead } from "./commands/projects.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -2423,6 +2434,226 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /** Describe one pinned configuration contradiction for the failure summary. */
+    const describeConfigInvalid = (reason: ProjectConfigInvalidReason): string => {
+      if (reason.case === "schema") return reason.detail;
+      if (reason.case === "duplicate-groupKey") return `duplicate groupKey "${reason.groupKey}"`;
+      if (reason.case === "empty-members") return `group "${reason.groupKey}" declares no members`;
+      return (
+        `group "${reason.groupKey}" member ${reason.index} violates the member selector rules ` +
+        `(${reason.case})`
+      );
+    };
+
+    /** The durable project key one declared root carries, when its marker is readable. */
+    const identityProjectKeyFor = (root: string | undefined): string | undefined => {
+      if (root === undefined || !existsSync(root)) return undefined;
+      const identity = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      if (identity.kind !== "resolved") return undefined;
+      const markerRead = readProjectIdentityMarker(identity.commonDir);
+      if (markerRead.state !== "present") return undefined;
+      return parseProjectIdentityMarker(markerRead.text)?.projectKey;
+    };
+
+    /** Classify one state location on disk exactly as the flat read does. */
+    const classifyStateLocationOnDisk = (
+      stateLocation: string,
+    ): "first-use" | "ready" | "state-unavailable" => {
+      let stat: ReturnType<typeof statSync> | undefined;
+      try {
+        stat = statSync(stateLocation);
+      } catch {
+        stat = undefined;
+      }
+      let readable = false;
+      if (stat?.isDirectory() === true) {
+        try {
+          readdirSync(stateLocation);
+          readable = true;
+        } catch {
+          readable = false;
+        }
+      }
+      return classifyProjectStateLocation({
+        exists: stat !== undefined,
+        directory: stat?.isDirectory() === true,
+        readable,
+      });
+    };
+
+    /**
+     * Resolve and observe one declared member against the delivered per-checkout
+     * machinery (GH-309 F-1, F-4; OQ-3). Resolution is configuration-driven: a
+     * member selected by `repoKey` resolves through the host index, and a member
+     * selected by `root` resolves through the index or its readable identity
+     * marker. An unimplemented tracker kind is classified `not-yet-supported`
+     * and never observed; an unresolvable member stays classified `unregistered`
+     * rather than silently vanishing from `members[]`.
+     */
+    const readGroupMember = async (
+      member: ProjectGroupMemberSelected,
+      index: readonly HostIndexEntry[],
+    ): Promise<ProjectGroupMemberEntry> => {
+      const declaredRoot = member.kind === "root" ? member.root : undefined;
+      const declaredKey = member.kind === "repoKey" ? member.repoKey : undefined;
+      const byKey =
+        declaredKey === undefined
+          ? undefined
+          : index.find((entry) => entry.projectKey === declaredKey);
+      const byRoot =
+        declaredRoot === undefined
+          ? undefined
+          : index.find(
+              (entry) =>
+                trimTrailingSeparators(entry.root) === trimTrailingSeparators(declaredRoot),
+            );
+      const repoKey =
+        byKey?.projectKey ??
+        byRoot?.projectKey ??
+        declaredKey ??
+        identityProjectKeyFor(declaredRoot);
+      const root = byKey?.root ?? byRoot?.root ?? declaredRoot ?? "";
+      const unimplemented = !(IMPLEMENTED_TRACKER_KINDS as readonly string[]).includes(
+        member.trackerKind,
+      );
+      const unobserved = (health: ProjectGroupMemberEntry["health"]): ProjectGroupMemberEntry =>
+        projectGroupMemberEntry({
+          repoKey: repoKey ?? declaredKey ?? declaredRoot ?? "",
+          root,
+          trackerKind: member.trackerKind,
+          state: "shell",
+          health,
+          daemonReachable: selectDaemonReachability({ mount: { mounted: false } }),
+        });
+      if (repoKey === undefined || root.length === 0) return unobserved("unregistered");
+      if (unimplemented) return unobserved("not-yet-supported");
+      const stateLocation = projectStateRoot(hostRoot, repoKey);
+      const classification = classifyStateLocationOnDisk(stateLocation);
+      if (classification === "state-unavailable") return unobserved("state-unavailable");
+      const handover =
+        classification === "first-use"
+          ? ({ ok: true, state: "shell" } as const)
+          : readProjectHandover(stateLocation, repoKey);
+      if (!handover.ok) return unobserved("state-unavailable");
+      const daemon = await readDaemonReachability(stateLocation, classification === "ready");
+      if (!daemon.ok) return unobserved("state-unavailable");
+      return projectGroupMemberEntry({
+        repoKey,
+        root,
+        trackerKind: member.trackerKind,
+        state: handover.state,
+        health: projectMemberHealth({ outcome: "observed", daemonReachable: daemon.value }),
+        daemonReachable: daemon.value,
+      });
+    };
+
+    /**
+     * The `projects list --project <groupKey>` scoped read (GH-309 F-1, F-2): the
+     * validation seam for the configuration document. The delivered default form
+     * is untouched here — this branch exists only when `--project` is supplied.
+     * An absent or empty configuration is the valid empty listing at exit 0;
+     * a readable-but-invalid document is `projects.config-invalid`; a document
+     * or invoking scope that cannot be read is `projects.scope-unavailable`.
+     */
+    const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> => {
+      const gitRoot = gitRootForConfig();
+      if (gitRoot === undefined) {
+        return {
+          ok: false,
+          code: "projects.scope-unavailable",
+          summary: "the invoking scope cannot be read: no git work tree root was resolved",
+        };
+      }
+      const read = readProjectGroupsConfig({
+        gitRoot,
+        configurationDirectoryName: brand.configDirectoryName,
+      });
+      if (read.state === "unreadable") {
+        return {
+          ok: false,
+          code: "projects.scope-unavailable",
+          summary: `the project configuration document at ${read.path} cannot be read`,
+        };
+      }
+      if (read.state === "malformed") {
+        return {
+          ok: false,
+          code: "projects.config-invalid",
+          summary:
+            `the project configuration document at ${read.path} is invalid: ` +
+            "the document is not parsable YAML",
+        };
+      }
+      const validated = validateProjectGroupsDocument(read.value);
+      if (!validated.ok) {
+        return {
+          ok: false,
+          code: "projects.config-invalid",
+          summary:
+            `the project configuration document at ${read.path} is invalid: ` +
+            describeConfigInvalid(validated.reason),
+        };
+      }
+      const groupsConfig = validated.config;
+      // Absent or empty configuration is the valid empty listing (opt-in
+      // adoption): zero configured groups is legitimate zero-group truth, never
+      // a silently empty group for a document that exists but cannot be read.
+      if (groupsConfig.state === "empty") {
+        return { ok: true, data: { groups: [] } };
+      }
+      if (!projectGroupDeclared(groupsConfig, groupKey)) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const group = groupsConfig.groups.find((candidate) => candidate.groupKey === groupKey);
+      if (group === undefined) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      hostIndexAccess.countList();
+      const indexRead = readHostIndexFile(hostRoot);
+      const indexPath = hostIndexDocumentPath(hostRoot);
+      if (indexRead.state === "unreadable") {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but unreadable`,
+        };
+      }
+      const document =
+        indexRead.state === "present" ? parseHostIndexDocument(indexRead.text) : undefined;
+      if (indexRead.state === "present" && document === undefined) {
+        return {
+          ok: false,
+          code: "projects.registry-corrupt",
+          summary: `the host index at ${indexPath} is present but cannot be parsed`,
+        };
+      }
+      const members: ProjectGroupMemberEntry[] = [];
+      for (const member of group.members) {
+        members.push(await readGroupMember(member, document?.projects ?? []));
+      }
+      return {
+        ok: true,
+        data: {
+          groups: [
+            projectGroupEntry({
+              groupKey: group.groupKey,
+              name: group.name,
+              ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
+              members,
+            }),
+          ],
+        },
+      };
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -2475,7 +2706,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newFenceToken,
       },
       coordinator: createProductionCoordinatorComposition(),
-      projects: { readProjects },
+      projects: { readProjects, readProjectGroup },
       // The taxonomy reference surface needs nothing: the runtime is the
       // compiled declaration, so the production composer supplies it
       // unconditionally (GH-290 F-2, DEC-F).

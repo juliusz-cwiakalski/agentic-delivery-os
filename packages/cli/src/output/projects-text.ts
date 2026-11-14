@@ -6,15 +6,28 @@
  * unreachable daemon renders its declared reason token rather than a bare
  * negative. No clock, locale, width, or map-iteration order participates.
  */
-import type { DaemonReachability, ProjectsListData } from "@delivery-os/core/contracts";
+import type {
+  DaemonReachability,
+  ProjectGroupsListData,
+  ProjectsListData,
+} from "@delivery-os/core/contracts";
 
 const SEPARATOR = "  ";
 
 const HEADER = ["KEY", "ROOT", "STATE", "DAEMON", "HANDOVER"] as const;
 
+const GROUP_HEADER = ["GROUP", "MEMBER", "TRACKER", "STATE", "HEALTH", "DAEMON"] as const;
+
 /** The daemon cell: the reason token when unreachable, never a bare negative. */
 export const daemonCell = (value: DaemonReachability): string =>
   value.reachable ? "reachable" : value.reason;
+
+/** Whether a payload is the `project-groups.v1` group listing (GH-309 DM-2). */
+export const isProjectGroupsListData = (data: unknown): data is ProjectGroupsListData =>
+  typeof data === "object" &&
+  data !== null &&
+  !Array.isArray(data) &&
+  Array.isArray((data as { readonly groups?: unknown }).groups);
 
 /** Render the deterministic project table (header always present). */
 export const renderProjectsText = (data: ProjectsListData): string => {
@@ -32,4 +45,28 @@ export const renderProjectsText = (data: ProjectsListData): string => {
       ].join(SEPARATOR),
     );
   return `${[HEADER.join(SEPARATOR), ...rows].join("\n")}\n`;
+};
+
+/**
+ * Render the deterministic group table (GH-309 F-4): one row per declared
+ * member, member order preserved exactly as configured, `group` repeated on
+ * every row. No clock, locale, width, or map-iteration order participates.
+ */
+export const renderProjectGroupsText = (data: ProjectGroupsListData): string => {
+  const rows: string[] = [];
+  for (const group of data.groups) {
+    for (const member of group.members) {
+      rows.push(
+        [
+          group.groupKey,
+          member.repoKey,
+          member.trackerKind,
+          member.state,
+          member.health,
+          daemonCell(member.daemonReachable),
+        ].join(SEPARATOR),
+      );
+    }
+  }
+  return `${[GROUP_HEADER.join(SEPARATOR), ...rows].join("\n")}\n`;
 };

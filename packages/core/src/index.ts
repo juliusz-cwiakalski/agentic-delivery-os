@@ -215,8 +215,8 @@ export {
   readQueueRemovals,
   readRuntimeHeartbeat,
   readRuntimeInstance,
-  recoverQueueParks,
   reconcileQueueEntries,
+  recoverQueueParks,
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,
@@ -237,8 +237,11 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  projectGroupEntry,
+  projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
+  projectMemberHealth,
   selectDaemonReachability,
 } from "./app/projects.js";
 /**
@@ -741,6 +744,7 @@ export {
   projectDeployReport,
   projectEntry,
   projectEscalationState,
+  projectGroupDeclared,
   projectReservedSlotQuestions,
   QUEUE_DEPLOY_READ_BUDGET,
   QUEUE_NEXT_DEFAULT,
@@ -860,6 +864,7 @@ export {
   validateOwnerGateSlaPolicy,
   validatePlan,
   validatePlanValue,
+  validateProjectGroupsDocument,
   verifyGatesUnknownIdentity,
   type WatchdogLivenessEvaluation,
   type WatchdogPlannedAction,
@@ -909,13 +914,13 @@ export {
   type SpendAbsence,
   type SpendFoldOutcome,
   spendDigestSection,
-  windowSpendEvidence,
   spendTruncationWarning,
+  windowSpendEvidence,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
 export {
-  attributeStep,
   attributedValue,
+  attributeStep,
   joinAttributionSubstrates,
   type TelemetryAttribution,
   type TelemetryAttributionInput,
@@ -926,14 +931,14 @@ export {
 export {
   decodeTelemetryStepFrame,
   emptyIngestTally,
-  tallyFrame,
-  tallyIngestDegradation,
+  TELEMETRY_IGNORED_FRAME_TYPES,
   type TelemetryFrameContext,
   type TelemetryFrameOutcome,
   type TelemetryIngestTally,
-  TELEMETRY_IGNORED_FRAME_TYPES,
   type TelemetrySessionTotals,
   type TelemetrySessionTotalsReader,
+  tallyFrame,
+  tallyIngestDegradation,
 } from "./domain/telemetry-ingest.js";
 export {
   boundWatchLine,

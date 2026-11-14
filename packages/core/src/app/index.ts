@@ -172,8 +172,11 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  projectGroupEntry,
+  projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
+  projectMemberHealth,
   selectDaemonReachability,
 } from "./projects.js";
 /**
@@ -231,8 +234,8 @@ export {
   readQueueParkPass,
   readQueueParks,
   readQueueRemovals,
-  recoverQueueParks,
   reconcileQueueEntries,
+  recoverQueueParks,
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,

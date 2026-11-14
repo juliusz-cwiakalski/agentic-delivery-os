@@ -49,10 +49,6 @@ export {
   replaceDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";
 export {
-  isStoreArtifactName,
-  readStateRootArtifacts,
-} from "./state-root-inventory.js";
-export {
   createHostIndexAccess,
   type HostIndexAccess,
   type HostIndexRead,
@@ -101,11 +97,22 @@ export {
   readProjectIdentityMarker,
 } from "./project-identity.js";
 export {
+  nodeProjectConfigFileSystem,
+  type ProjectConfigFileSystem,
+  type ProjectGroupsConfigRead,
+  projectGroupsConfigPath,
+  readProjectGroupsConfig,
+} from "./projects-config.js";
+export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,
   SECRET_FILENAME_PATTERNS,
   type SecretScannerOptions,
 } from "./secret-scan.js";
+export {
+  isStoreArtifactName,
+  readStateRootArtifacts,
+} from "./state-root-inventory.js";
 export {
   type ParsedConfig,
   parseConfigYaml,

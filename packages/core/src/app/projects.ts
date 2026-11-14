@@ -17,6 +17,10 @@ import {
   type DaemonReachability,
   type DaemonReachabilityReason,
   type HandoverState,
+  type ProjectGroupEntry,
+  type ProjectGroupMemberEntry,
+  type ProjectMemberHealth,
+  type ProjectMemberOutcome,
   type ProjectsListEntry,
 } from "../contracts/projects.js";
 
@@ -159,3 +163,51 @@ export const classifyProjectStateLocation = (input: {
   if (!input.directory || !input.readable) return "state-unavailable";
   return "ready";
 };
+
+/**
+ * Derive one group member's health from its aggregation outcome (GH-309 OQ-3).
+ *
+ * The three non-`observed` outcomes map to the same-named health values; the
+ * `observed` outcome splits — `healthy` for a clean read, `degraded` when the
+ * read succeeded but reports a degradation (an unreachable daemon with a closed
+ * reason). Exactly one health is produced for every outcome.
+ */
+export const projectMemberHealth = (input: {
+  readonly outcome: ProjectMemberOutcome;
+  readonly daemonReachable: DaemonReachability;
+}): ProjectMemberHealth => {
+  if (input.outcome === "not-yet-supported") return "not-yet-supported";
+  if (input.outcome === "state-unavailable") return "state-unavailable";
+  if (input.outcome === "unregistered") return "unregistered";
+  return input.daemonReachable.reachable ? "healthy" : "degraded";
+};
+
+/** Build one group member entry with exactly the DM-2 fields (declared order preserved). */
+export const projectGroupMemberEntry = (input: {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly trackerKind: string;
+  readonly state: HandoverState;
+  readonly health: ProjectMemberHealth;
+  readonly daemonReachable: DaemonReachability;
+}): ProjectGroupMemberEntry => ({
+  repoKey: input.repoKey,
+  root: input.root,
+  trackerKind: input.trackerKind,
+  state: input.state,
+  health: input.health,
+  daemonReachable: input.daemonReachable,
+});
+
+/** Build one group entry with exactly the DM-2 fields; workspaceRoot is optional. */
+export const projectGroupEntry = (input: {
+  readonly groupKey: string;
+  readonly name: string;
+  readonly workspaceRoot?: string;
+  readonly members: readonly ProjectGroupMemberEntry[];
+}): ProjectGroupEntry => ({
+  groupKey: input.groupKey,
+  name: input.name,
+  ...(input.workspaceRoot === undefined ? {} : { workspaceRoot: input.workspaceRoot }),
+  members: input.members,
+});

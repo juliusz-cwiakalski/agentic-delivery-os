@@ -205,6 +205,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "projects.identity-unreadable",
   "projects.registry-corrupt",
   "projects.state-unavailable",
+  // GH-309 pins the three group-surface identities exactly; they are
+  // kind-first two-segment codes, so they join the exact allowlist.
+  "projects.config-invalid",
+  "projects.unknown-group",
+  "projects.scope-unavailable",
   // GH-290 pins the three events-surface identities exactly; they are
   // kind-first two-segment codes, so they join the exact allowlist.
   "events.topic-unknown",

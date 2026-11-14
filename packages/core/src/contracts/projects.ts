@@ -239,3 +239,160 @@ export type ProjectIdentityMarkerRead =
   | { readonly state: "absent" }
   | { readonly state: "present"; readonly text: string }
   | { readonly state: "unreadable" };
+
+/**
+ * The project configuration document (GH-309 F-1, DM-1): the brand-derived
+ * configuration directory holds `projects.yaml` beside the delivered
+ * project-committed configuration file. Declared fields only — groups with a
+ * key, a display name, an optional workspace root, and members that each
+ * declare exactly one repository selector plus a tracker kind. No product or
+ * binary name appears here.
+ */
+export const PROJECT_GROUPS_CONFIG_SCHEMA = "delivery.projects.groups.v1" as const;
+
+/** The configuration document's artifact name inside the config directory. */
+export const PROJECT_GROUPS_CONFIG_ARTIFACT_NAME = "projects.yaml" as const;
+
+/**
+ * The tracker kinds with an implemented adapter (GH-309 NG-5): only GitHub is
+ * exercised initially. Any other non-empty declared kind stays valid
+ * configuration and classifies `not-yet-supported` at read time.
+ */
+export const IMPLEMENTED_TRACKER_KINDS = ["github"] as const;
+export type ImplementedTrackerKind = (typeof IMPLEMENTED_TRACKER_KINDS)[number];
+
+/** One declared member: exactly one of `root` or `repoKey`, plus a kind. */
+export type ProjectGroupMemberDeclaration = {
+  readonly root?: string;
+  readonly repoKey?: string;
+  readonly trackerKind: string;
+};
+
+/** One declared group in the configuration document (DM-1). */
+export type ProjectGroupDeclaration = {
+  readonly groupKey: string;
+  readonly name: string;
+  readonly workspaceRoot?: string;
+  readonly members: readonly ProjectGroupMemberDeclaration[];
+};
+
+/**
+ * One validated member: the selector is narrowed to exactly one side, the
+ * tracker kind is any non-empty declared string, and an unimplemented kind is
+ * never rejected here — it classifies at read time (OQ-1, NG-5).
+ */
+export type ProjectGroupMemberSelected =
+  | { readonly kind: "root"; readonly root: string; readonly trackerKind: string }
+  | { readonly kind: "repoKey"; readonly repoKey: string; readonly trackerKind: string };
+
+/** One validated group in declared order (OQ-1: non-empty unique key, non-empty members). */
+export type ProjectGroupValidated = {
+  readonly groupKey: string;
+  readonly name: string;
+  readonly workspaceRoot?: string;
+  readonly members: readonly ProjectGroupMemberSelected[];
+};
+
+/** The validated configuration: zero groups is the valid empty listing (opt-in adoption). */
+export type ProjectGroupsConfig =
+  | { readonly state: "empty" }
+  | { readonly state: "loaded"; readonly groups: readonly ProjectGroupValidated[] };
+
+/**
+ * Why a configuration document classified config-invalid: the pinned OQ-1
+ * self-contradiction cases (duplicate group key; a member declaring both,
+ * neither, or a twice-resolving selector; an empty member list) plus the
+ * generic declared-schema failures, which carry a detail string instead.
+ */
+export type ProjectConfigInvalidReason =
+  | { readonly case: "schema"; readonly detail: string }
+  | { readonly case: "duplicate-groupKey"; readonly groupKey: string }
+  | { readonly case: "member-both-selectors"; readonly groupKey: string; readonly index: number }
+  | { readonly case: "member-no-selector"; readonly groupKey: string; readonly index: number }
+  | {
+      readonly case: "member-duplicate-selector";
+      readonly groupKey: string;
+      readonly index: number;
+    }
+  | { readonly case: "empty-members"; readonly groupKey: string };
+
+/** The classified configuration-error identities of the group surface (GH-309 F-2). */
+export const PROJECT_GROUP_ERROR_CODES = [
+  "projects.config-invalid",
+  "projects.unknown-group",
+  "projects.scope-unavailable",
+] as const;
+export type ProjectGroupErrorCode = (typeof PROJECT_GROUP_ERROR_CODES)[number];
+
+/** The group envelope's schema identity (DM-2). */
+export const PROJECT_GROUPS_LIST_SCHEMA = "project-groups.v1" as const;
+
+/** The exact group entry field set, in output order; workspaceRoot is optional (DM-2). */
+export const PROJECT_GROUP_FIELDS = ["groupKey", "name", "workspaceRoot", "members"] as const;
+
+/** The exact member entry field set, in output order (DM-2). */
+export const PROJECT_GROUP_MEMBER_FIELDS = [
+  "repoKey",
+  "root",
+  "trackerKind",
+  "state",
+  "health",
+  "daemonReachable",
+] as const;
+
+/** The closed per-member aggregation outcome vocabulary (DM-5, F-5). */
+export const PROJECT_MEMBER_OUTCOMES = [
+  "observed",
+  "not-yet-supported",
+  "state-unavailable",
+  "unregistered",
+] as const;
+export type ProjectMemberOutcome = (typeof PROJECT_MEMBER_OUTCOMES)[number];
+
+/**
+ * The closed member health vocabulary (OQ-3 pin): the three non-`observed`
+ * outcomes map to same-named health values; `observed` splits into `healthy`
+ * (clean read) and `degraded` (read succeeded but reports a degradation).
+ */
+export const PROJECT_MEMBER_HEALTH_VALUES = [
+  "healthy",
+  "degraded",
+  "state-unavailable",
+  "not-yet-supported",
+  "unregistered",
+] as const;
+export type ProjectMemberHealth = (typeof PROJECT_MEMBER_HEALTH_VALUES)[number];
+
+/** One degraded-member entry: the member's key and its outcome (DM-2). */
+export type ProjectDegradedMember = {
+  readonly repoKey: string;
+  readonly outcome: ProjectMemberOutcome;
+};
+
+/** One member entry of the group envelope (DM-2): exactly the declared fields. */
+export type ProjectGroupMemberEntry = {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly trackerKind: string;
+  readonly state: HandoverState;
+  readonly health: ProjectMemberHealth;
+  readonly daemonReachable: DaemonReachability;
+};
+
+/** One group entry of the group envelope (DM-2); workspaceRoot is absent when unconfigured. */
+export type ProjectGroupEntry = {
+  readonly groupKey: string;
+  readonly name: string;
+  readonly workspaceRoot?: string;
+  readonly members: readonly ProjectGroupMemberEntry[];
+};
+
+/**
+ * The `project-groups.v1` machine payload (DM-2): the groups plus the
+ * aggregation keys, which appear only when a member degraded (F-5).
+ */
+export type ProjectGroupsListData = {
+  readonly groups: readonly ProjectGroupEntry[];
+  readonly partial?: boolean;
+  readonly degradedMembers?: readonly ProjectDegradedMember[];
+};

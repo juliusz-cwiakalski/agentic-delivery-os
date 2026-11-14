@@ -138,3 +138,40 @@ notes:
       docs(GH-309) is superseded by the primitive-owned template subject."
     type: risk
     date: "2026-11-14"
+  - text: "Plan phase 1 'Land the untracked ODR-0004 superseding decision record
+      beside its index row' complete: commit 23b1a12f (primitive-owned subject
+      chore(GH-309), staged exactly the record + this evidence note);
+      obligations 1.1/1.2/1.3 verified — file unchanged in substance, file and
+      00-index row agree (id, title, status Proposed, date, owner), register
+      inspection holds, commit-order evidence now recordable (23b1a12f
+      precedes every later commit on the branch). Tests: docs-only phase, no
+      automated suite obligations; targeted suites N/A (per PM ruling the
+      full battery is the phase-6 gate)."
+    type: info
+    date: "2026-11-14"
+  - text: "Delivery resumed after the prior harness died mid delivery phase. On-disk
+      truth re-established: phase 1 committed at 23b1a12f (ODR-0004 tracked,
+      record before any rename code); the phase-1 evidence note above was
+      written but never committed (it rides the next phase commit); plan phase 2
+      was PARTIAL and uncommitted (contracts/projects.ts, contracts/error-table.ts,
+      domain/index.ts, domain/project-groups.ts, adapters/file/projects-config.ts,
+      scripts/checks/error-table-sync.ts). Not started for phase 2: contracts/index.ts
+      re-export block, core/src/index.ts exports, app/projects.ts + cli/commands/projects.ts
+      + cli/production.ts scoped read, feature-result-contract.md registry rows,
+      tests/behaviour/projects-config.test.ts, tests/structure/error-table.test.ts,
+      tests/checks/error-table-sync.test.ts count, inventory rows."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: the interrupted run left packages/core/src/index.ts CORRUPTED —
+      an aborted edit deleted seven legitimate exports (WatchdogPlannedAction,
+      WatchdogPreflightBuildInput, WatchdogPreflightEvaluation,
+      WatchdogRestorationPlan, wakeKeyFor, watchdogPreservedRefName,
+      weightLoads), dropped createLaneLaunchPlanner entirely, and retargeted the
+      surviving LaneLaunchPlanFacts/planLaneLaunch block at ./domain/index.js.
+      Consequence: packages/cli/src/daemon-compose.ts and two suites would fail
+      to compile. Caught only because resumption verified the diff instead of
+      trusting the tree; a blind commit would have landed a red phase boundary.
+      Improvement: every resumed delivery must diff-inspect uncommitted work
+      before completing the phase, never assume partial work is coherent."
+    type: retro
+    date: "2026-11-14"
