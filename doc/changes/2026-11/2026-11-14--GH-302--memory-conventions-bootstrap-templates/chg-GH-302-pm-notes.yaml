@@ -275,3 +275,34 @@ notes:
       reading)."
     type: info
     date: "2026-11-14"
+  - text: "PLAN PHASE 2 COMPLETE (commit a190bdd4): indivisible three-surface
+      allowlist extension + Phase 5/6 memory wiring + regenerated plugin output
+      in ONE commit. Representation pin honored: canonical entry text is the
+      bootstrapper prompt's list form — `- `.ai/memory/**`` slotted after the
+      four instruction files (21 → 22 entries); the inception guide GAINED the
+      enumerated allowlist (#### Write allowlist under Phase 5, same 22
+      backticked entries, prompt entry text verbatim, confirmation sentence
+      byte-identical); the feature spec's compact brace/inline form (including
+      `doc/decisions/README.md, doc/decisions/00-index.md` and
+      `doc/planning/{backlog.md, epics/**, archive/**}`) was REPLACED by the
+      prompt's 22-entry list form verbatim (AC-F7-1 like-for-like). Phase 5
+      block: memory wiring bullet (tree scaffold exactly index + per-agent
+      entry points + lessons + tacit, seeded empty; kernel render; coordinator
+      + companion wiring; retro conventions + doctor checklist), create-if-
+      absent resume semantics, single-gate statement, artifact keys gained
+      memory-scaffold/memory-kernel-section/memory-instructions-wiring/
+      memory-retro-conventions/memory-doctor-checklist. Phase 6 block:
+      memory-artifact enumeration + fail-and-reopen (reopen range 1–4 → 1–5
+      in prompt Gates line, phase_6, guide, and feature spec — memory
+      artifacts are produced in Phase 5 so readiness must reopen it).
+      .opencode/command/bootstrap.md untouched (thin wrapper needed no
+      consistency change). Regenerated .ados-claude/agents/bootstrapper.md via
+      scripts/build-claude-plugin.sh in the same commit; generated files never
+      hand-edited; prompt edits current-state (no evolution-history wording).
+      TESTS: bun run scripts/checks/prompt-conformance.ts green (5 prompts
+      clean); bun run scripts/checks/help-guide-coverage.ts green; bun test
+      tests/checks/doc-conformance.test.ts green (11/11); bash scripts/.tests/
+      test-build-claude-plugin.sh green (16/16); TMPDIR=$PWD/tmp/tmpdir pnpm
+      check green (8123 pass / 0 fail / 4 skip)."
+    type: info
+    date: "2026-11-14"
