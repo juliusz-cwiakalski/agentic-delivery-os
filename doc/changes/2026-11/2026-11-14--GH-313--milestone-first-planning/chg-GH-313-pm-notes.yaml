@@ -239,3 +239,15 @@ notes:
       as durable evidence, while the commit-message authority (range gate) passes."
     type: retro
     date: "2026-11-14"
+  - text: "Review iteration 2: FAIL, one blocking finding. Reverting the ci.yml comment
+      exposed a real repository invariant: scripts/checks/ci-topology.ts requires every
+      scripts/checks/*.ts basename to be wired in ci.yml or package.json, and it also
+      governs a workflow-invoked module. The earlier TP-Q2 premise was therefore wrong.
+      Fixed by extending the wiring set to every .github/workflows/*.yml, naming the
+      imported modules truthfully in the milestone workflow, adding non-vacuity tests,
+      and declaring the scanner change in plan revision 1.3 and the spec file impact.
+      Also fixed: the sweep counted pull requests returned by /issues (now skipped with
+      a fixture and test), the PDR notation, and the spec notation. Coder commit
+      454e0238 plus scope amendment 6dbbb92f. F2 disposition accepted by the reviewer."
+    type: retro
+    date: "2026-11-14"
