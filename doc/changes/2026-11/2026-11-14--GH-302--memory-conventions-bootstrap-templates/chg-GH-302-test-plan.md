@@ -63,7 +63,7 @@ The core behavior to protect is **convention fidelity**: the scaffolded conventi
 | AC-F3-1 | Coordinator instructions state capture bar + promotion path; retro conventions reference, not duplicate (seed SC-M2-S9-02) | TC-MEMWIRE-001, TC-MEMWIRE-002, TC-MEMWIRE-003 | Covered |
 | AC-F4-1 | Retro handling prescribed by documentation alone — append-only notes + generated index, no ceremony/command/executable | TC-MEMWIRE-003, TC-MEMWIRE-004 | Covered |
 | AC-F5-1 | Doctor executes as documented manual checklist (six audit areas), no script/gate/package change | TC-MEMDOCT-001, TC-MEMDOCT-002 | Covered |
-| AC-F6-1 | Meta-learning reference agrees with scaffold on tree shape, caps, capture bar — zero contradictions | TC-MEMALIGN-001, TC-MEMALIGN-002, TC-MEMALIGN-003 | Covered |
+| AC-F6-1 | Meta-learning reference agrees with scaffold on tree shape, caps, capture bar — zero contradictions | TC-MEMALIGN-001, TC-MEMALIGN-002, TC-MEMALIGN-003, TC-MEMALIGN-004 | Covered |
 | AC-F7-1 | Allowlist extended by exactly `.ai/memory/**`; identical text across the three carriers; out-of-allowlist confirmation rule unchanged | TC-MEMCONT-001, TC-MEMCONT-002 | Covered |
 | AC-F7-2 | Phase 6 readiness fails and reopens when memory artifacts are incomplete | TC-MEMCONT-003, TC-MEMRESUME-002 | Covered |
 | AC-F1-2 | Interrupted Phase 5 resume completes scaffold without duplication/overwrite | TC-MEMRESUME-001, TC-MEMRESUME-002 | Covered |
@@ -79,7 +79,7 @@ No API/EVT interfaces exist in this change (spec §8.1/§8.2: N/A). Data-model s
 | ID | Element | TC ID(s) | Status |
 |----|---------|----------|--------|
 | DM-1 | Bootstrapped memory tree shape (index, `agents/<agent>/README.md` per resident role, `lessons/`, `tacit/`; ephemeral excluded) | TC-MEMSCAF-001, TC-MEMSCAF-002 | Covered |
-| DM-2 | Generated kernel section shape (10 content classes, no record-schema fields) | TC-MEMKERN-001, TC-MEMKERN-002 | Covered |
+| DM-2 | Generated kernel section shape (12 content classes, no record-schema fields) | TC-MEMKERN-001, TC-MEMKERN-002 | Covered |
 | DM-3 | Retro-note convention shape (append-only notes + generated index; referenced, not duplicated) | TC-MEMWIRE-003 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -114,7 +114,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 | TC-MEMSCAF-002 | Scaffold does not provision preferences/retro-archive areas | Negative | Automated | High | AC-F1-1 (DEC-2, OQ-1) |
 | TC-MEMSCAF-003 | Entry-point READMEs state the capture bar and read/write policy | Happy Path | Automated | High | AC-F1-1 (seed SC-M2-S9-01) |
 | TC-MEMSCAF-004 | Delivering change does not modify this repo's `.ai/memory/**` | Negative | Manual (review) | Medium | NG-4 |
-| TC-MEMKERN-001 | Kernel section template carries all ten content classes | Happy Path | Automated | High | AC-F2-1, DM-2 |
+| TC-MEMKERN-001 | Kernel section template carries all twelve content classes | Happy Path | Automated | High | AC-F2-1, DM-2 |
 | TC-MEMKERN-002 | Kernel section contains no record-schema fields | Negative | Automated | Critical | AC-F2-1 (NG-2, DEC-1) |
 | TC-MEMKERN-003 | Kernel fidelity review vs source kernel section | Regression | Manual | High | AC-F2-1, NFR-1 |
 | TC-MEMWIRE-001 | Coordinator instructions state capture bar and promotion path | Happy Path | Automated | High | AC-F3-1 (seed SC-M2-S9-02) |
@@ -126,12 +126,13 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 | TC-MEMALIGN-001 | Concept adoption checklist corrected to the scaffolded tree shape | Regression | Automated | High | AC-F6-1 (DEC-2) |
 | TC-MEMALIGN-002 | Concept kernel template section consistent with F-2 content classes | Regression | Automated | Medium | AC-F6-1, NFR-1 |
 | TC-MEMALIGN-003 | PDR-0004 file, index row, and spec references are consistent | Happy Path | Automated | High | AC-F6-1 (DEC-6, PDR-0004) |
+| TC-MEMALIGN-004 | Installed carriers contain no `doc/planning/concepts` references (PDR-0004 self-containment) | Negative | Automated | High | AC-F6-1 (DEC-6, PDR-0004) |
 | TC-MEMCONT-001 | Allowlist text identical across the three carriers; confirmation rule unchanged | Happy Path | Automated | Critical | AC-F7-1 |
 | TC-MEMCONT-002 | Golden allowlist entry-set: exactly the canonical set plus `.ai/memory/**` | Negative | Automated | Critical | AC-F7-1 (RSK-3) |
 | TC-MEMCONT-003 | Phase 6 readiness enumerates memory artifacts and fails on incompleteness | Happy Path | Semi-automated | High | AC-F7-2 |
 | TC-MEMRESUME-001 | Resume semantics for the memory scaffold stated in prompt and guide | Edge Case | Semi-automated | High | AC-F1-2, NFR-5 |
 | TC-MEMRESUME-002 | Live bootstrap dry-run: tree, kernel, readiness gate, resume, budgets | Happy Path | Manual | High | AC-F1-1, AC-F1-2, AC-F7-2, AC-NFR2-1 (seed SC-M2-S9-01 E2E) |
-| TC-MEMBUDGET-001 | Scaffold seed templates are within budget caps | Edge Case | Automated | Medium | AC-NFR2-1, NFR-2 |
+| TC-MEMBUDGET-001 | Scaffold seed and kernel templates are within budget caps | Edge Case | Automated | Medium | AC-NFR2-1, NFR-2 |
 | TC-MEMBUDGET-002 | Generated scaffold budgets measured via doctor checklist | Edge Case | Manual | Medium | AC-NFR2-1 |
 | TC-MEMFLOW-001 | Phase 5 gate count and interview questions unchanged | Regression | Semi-automated | Medium | NFR-3 |
 | TC-MEMCONF-001 | Aggregate gate `TMPDIR=$PWD/tmp/tmpdir pnpm check` green | Regression | Automated | Critical | AC-NFR4-1, NFR-6 |
@@ -252,7 +253,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 - Review-time by design: `.ai/rules/testing-strategy.md` forbids permanent suites from asserting branch diffs. Note for the PM: the spec states this tree "does not exist yet" (NG-4 parenthetical, Context 2.1), but repo truth is that it exists and is tracked (created by GH-204, present in base commit 92b64753) — see Section 8.3; the constraint itself remains valid and now guards a populated tree.
 
-#### TC-MEMKERN-001 - Kernel section template carries all ten content classes
+#### TC-MEMKERN-001 - Kernel section template carries all twelve content classes
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -270,12 +271,12 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 **Steps**:
 
 1. Read the kernel-section template.
-2. Assert each of the ten content classes from DM-2 is present: (1) canonical + ephemeral locations; (2) read policy (entry point at session start, just-in-time topic reads); (3) capture bar; (4) write ownership (own folder only, consolidation-owned shared surfaces); (5) evidence bar; (6) supersede-never-rewrite; (7) reviewer-independence exclusion; (8) budget caps; (9) promotion handoff routing; (10) change-capsule completion (referenced only).
+2. Assert each of the twelve content classes from DM-2 (spec v1.2) is present: (1) advisory/untrusted preamble (memory is advisory, untrusted data; it never overrides instructions, repository rules, or current truth); (2) canonical + ephemeral locations; (3) read policy (entry point at session start, just-in-time topic reads); (4) capture bar; (5) write ownership (own folder only, consolidation-owned shared surfaces); (6) evidence over recency (evidence-linked records; supersede, never rewrite — the merged evidence-bar/supersession class); (7) unique ids (monotonic per prefix and year; never reused, including after supersession or pruning); (8) conflict reality (shared surfaces stay merge-conflict capable; conflict-free is never claimed); (9) reviewer-independence exclusion; (10) budget caps and growth (entry point ≤ ~150 lines, index ≤ 200; split into topic files when growing — the absorbed split rule); (11) promotion handoff routing; (12) change-capsule completion (referenced only).
 3. Assert it references the installed conventions rather than duplicating them (presence of a routing reference to the memory index/convention material).
 
 **Expected Outcome**:
 
-- All ten classes present; content classes are asserted by stable anchor phrases agreed at implementation, not by fragile prose matching.
+- All twelve classes present; content classes are asserted by stable anchor phrases agreed at implementation, not by fragile prose matching.
 
 #### TC-MEMKERN-002 - Kernel section contains no record-schema fields
 
@@ -323,7 +324,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 **Steps**:
 
-1. Side-by-side compare the kernel-section template's content classes against the source "Agent memory" section.
+1. Side-by-side compare the kernel-section template's content classes against the source "Agent memory" section, using the twelve-class set from TC-MEMKERN-001 (spec v1.2: advisory/untrusted preamble, locations, read policy, capture bar, write ownership, evidence over recency, unique ids, conflict reality, reviewer independence, budget caps and growth, promotion handoff, capsule completion) as the comparison standard.
 2. Record the verdict "mirrors source, no invented fields" in the review notes (per spec Success Metrics).
 
 **Expected Outcome**:
@@ -568,6 +569,36 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 - This test intentionally fails until the file lands — it enforces the pm-notes contract that the F-6 concept-alignment phase must declare `doc/decisions/**` in its scope. Constraint C-5: the concept doc sits in the license-header placement scope (`doc/planning/concepts/`), verified by the existing header tooling (`scripts/add-header-location.sh`, `bash scripts/.tests/test-add-header-location.sh`).
 
+#### TC-MEMALIGN-004 - Installed carriers contain no `doc/planning/concepts` references (PDR-0004 self-containment)
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-6, AC-F6-1, DEC-6, PDR-0004
+**Test Type(s)**: Unit (negative content invariant)
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/structure/memory-bootstrap-templates.test.ts` scanning the installed memory carrier set
+**Tags**: @bun, @templates, @docs
+
+**Preconditions**:
+
+- The installed carrier set exists: the new memory templates under `doc/templates/**` (scaffold seeds, kernel-section template, coordinator capture/promotion template, retro-note conventions template, manual doctor checklist template, adoption checklist template) and the inception guide's Phase 5 memory content in `doc/guides/project-inception.md`.
+
+**Steps**:
+
+1. Scan every carrier file for references into `doc/planning/concepts/**` — relative-path mentions, markdown links, or inline-code paths that resolve inside the installed tree.
+2. Fail on any hit, naming the file and line.
+3. Permit only a fully-qualified public ADOS repository URL (`https://…`) as optional further reading (DEC-6): the scan distinguishes by URL scheme, so any `doc/planning/concepts` occurrence not preceded by `https://` is a violation.
+
+**Expected Outcome**:
+
+- Zero non-URL references into `doc/planning/concepts/**`; the installed convention material is self-contained per PDR-0004/DEC-6.
+
+**Notes / Clarifications**:
+
+- This TC owns the self-containment invariant that plan v1.0 declared in scope but left unowned (DoR iteration-1 finding 3, major).
+- **Plan-phase-4 guard candidate:** flagged for the plan owner to wire into the F-6/concept-alignment phase and into Check 7's spec. Enforcement home (this bun suite vs. the bash Check 7 extension) follows the plan owner's placement; the assertion contract above is binding either way. This test plan does not modify the implementation plan.
+
 #### TC-MEMCONT-001 - Allowlist text identical across the three carriers; confirmation rule unchanged
 
 **Scenario Type**: Happy Path
@@ -674,6 +705,10 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 - Resume-after-interruption behavior is specified in both carriers and exercised live in TC-MEMRESUME-002 (step 5).
 
+**Notes / Clarifications**:
+
+- **Dry-run coverage (explicit, DoR iteration-1 nit 2):** the interrupted-Phase-5 resume path of AC-F1-2/NFR-5 is exercised end-to-end **only** by the manual probe procedure in TC-MEMRESUME-002, in the scratch target project (Section 6): step 5 interrupts a Phase 5 run mid-scaffold and resumes, verifying completion without duplicated entry points and without overwriting the approved AGENTS.md, and step 4 probes the readiness failure/reopen path (AC-F7-2). There is no automation for this path; this TC's automated assertions cover only the stated resume contract in the prompt and guide carriers. AC-F1-2/NFR-5 runtime verification is complete only when TC-MEMRESUME-002 is executed and its results logged in Section 10.
+
 #### TC-MEMRESUME-002 - Live bootstrap dry-run: tree, kernel, readiness gate, resume, budgets
 
 **Scenario Type**: Happy Path
@@ -694,7 +729,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 1. Run inception through Phase 5 in the scratch project; approve the human gate (verify: gate count and interview questions unchanged — NFR-3 observation).
 2. List the project's committed tree: assert the memory scaffold exists with exactly the current-truth set, seeded empty (seed SC-M2-S9-01, end-to-end form).
-3. Read the generated AGENTS.md: kernel section present with the ten content classes; no record-schema fields.
+3. Read the generated AGENTS.md: kernel section present with the twelve content classes; no record-schema fields.
 4. Negative probe: delete one memory artifact, run Phase 6 readiness — assert readiness fails and reopens (AC-F7-2); restore the artifact.
 5. Resume probe: interrupt a Phase 5 run mid-scaffold, resume — assert completion without duplicated entry points and without overwriting the approved AGENTS.md (AC-F1-2, NFR-5).
 6. Budget measurement: line-count the generated entry points and index (feeds TC-MEMBUDGET-002).
@@ -704,33 +739,35 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 - The learning loop is present and gates behave as specified in a real project; automation gaps are closed by this checklist.
 
-#### TC-MEMBUDGET-001 - Scaffold seed templates are within budget caps
+#### TC-MEMBUDGET-001 - Scaffold seed and kernel templates are within budget caps
 
 **Scenario Type**: Edge Case
 **Impact Level**: Medium
 **Priority**: Medium
-**Related IDs**: NFR-2, AC-NFR2-1
+**Related IDs**: NFR-2, AC-NFR2-1, F-2
 **Test Type(s)**: Unit (metric assertion)
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/memory-bootstrap-templates.test.ts` (line counts of the scaffold templates)
+**Target Layer / Location**: `tests/structure/memory-bootstrap-templates.test.ts` (line counts of the scaffold templates and the kernel-section template)
 **Tags**: @bun, @templates
 
 **Preconditions**:
 
-- TC-MEMSCAF-001 identifies the entry-point and index templates.
+- TC-MEMSCAF-001 identifies the entry-point and index templates; TC-MEMKERN-001 identifies the kernel-section template.
 
 **Steps**:
 
 1. Count lines of each per-agent entry-point template: assert ≤ 150.
 2. Count lines of the memory index template: assert ≤ 200.
+3. Count lines of the kernel-section template: assert ≤ 200 (the executable cap for the spec's kernel ~200-line guidance).
+4. Assert the kernel-section template states its ~200-line budget guidance explicitly (NFR-2's "budget caps mirrored in scaffold and checklist" mirror requirement).
 
 **Expected Outcome**:
 
-- All seed templates within caps, so generated artifacts start within caps.
+- All seed templates and the kernel-section template within caps, so generated artifacts start within caps; the kernel budget guidance is stated, not implicit.
 
 **Notes / Clarifications**:
 
-- The spec's "~150 lines" is executed as ≤ 150 (the tilde is prose tolerance; the executable cap is the number). Generated-artifact measurement is TC-MEMBUDGET-002.
+- The spec's "~150 lines" is executed as ≤ 150 (the tilde is prose tolerance; the executable cap is the number); the kernel "~200-line guidance" is likewise executed as ≤ 200 on the template. Generated-artifact measurement is TC-MEMBUDGET-002.
 
 #### TC-MEMBUDGET-002 - Generated scaffold budgets measured via doctor checklist
 
@@ -865,7 +902,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 
 | TC ID(s) | Test file / command | Framework | Execution command | Status |
 |----------|--------------------|-----------|-------------------|--------|
-| TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002, TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002, TC-MEMALIGN-001/002/003, TC-MEMBUDGET-001, TC-MEMRESUME-001, TC-MEMFLOW-001 (part) | `tests/structure/memory-bootstrap-templates.test.ts` — **new file** (bun:test; read-only tree assertions; no fixtures needed) | bun:test | `bun test tests/structure/memory-bootstrap-templates.test.ts` | To Implement |
+| TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002, TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002, TC-MEMALIGN-001/002/003/004, TC-MEMBUDGET-001, TC-MEMRESUME-001, TC-MEMFLOW-001 (part) | `tests/structure/memory-bootstrap-templates.test.ts` — **new file** (bun:test; read-only tree assertions; no fixtures needed) | bun:test | `bun test tests/structure/memory-bootstrap-templates.test.ts` | To Implement |
 | TC-MEMCONT-001/002/003, TC-MEMFLOW-001 (guide part) | `scripts/.tests/test-inception-doc-consistency.sh` — **extend** with Check 7 (memory wiring: allowlist identity, golden entry-set, Phase 6 readiness enumeration) and add the new memory templates to Check 4's index list | bash (`test-*.sh` convention) | `bash scripts/.tests/test-inception-doc-consistency.sh` | Existing – Update |
 | TC-MEMCONF-001 | `pnpm check` aggregate (incl. `check:prompt`, `check:help`, doc-conformance suite) | pnpm/bun | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | Existing – No Change |
 | TC-MEMCONF-002 | `scripts/.tests/test-doc-distribution.sh` (+ `test-doc-distribution-modes.sh` companion) | bash | `bash scripts/.tests/test-doc-distribution.sh` | Existing – No Change |
@@ -874,7 +911,7 @@ Per `.ai/rules/testing-strategy.md`, this is a docs/templates change: the primar
 | TC-MEMKERN-003, TC-MEMSCAF-004, TC-MEMWIRE-004 | Review checklist (changed-file review, fidelity side-by-side) | manual | review of the PR vs `main-tools` | Manual Only |
 | TC-MEMRESUME-002, TC-MEMBUDGET-002, TC-MEMFLOW-001 (manual part), TC-MEMCONT-003 (manual part) | Live bootstrap dry-run checklist (Section 5.2, TC-MEMRESUME-002) | manual | scratch-project inception walkthrough | Manual Only |
 
-New automated coverage totals: **1 new bun:test file** (~16 test cases across the listed TCs) + **1 extended bash guard** (1 new check block + 1 index-list extension). No other suite changes; `pnpm check` and the distribution guard pick up the new content automatically.
+New automated coverage totals: **1 new bun:test file** (~17 test cases across the listed TCs) + **1 extended bash guard** (1 new check block + 1 index-list extension). No other suite changes; `pnpm check` and the distribution guard pick up the new content automatically.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -909,6 +946,7 @@ New automated coverage totals: **1 new bun:test file** (~16 test cases across th
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | Initial test plan from `chg-GH-302-spec.md` v1.0: 27 TCs covering all 11 ACs; inherited and reconciled seeds SC-M2-S9-01/02; proposed `tests/structure/memory-bootstrap-templates.test.ts` (new) and Check 7 extension of `scripts/.tests/test-inception-doc-consistency.sh`; reported the `.ai/memory` repo-truth discrepancy (OQ-TP-1) without modifying the spec |
 | 1.1 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | Sync with specification reopen (spec v1.1): OQ-TP-1 marked RESOLVED — the spec's `.ai/memory` premise is corrected (tree acknowledged as existing, tracked, populated by GH-204; NG-4 guards the populated tree; GH-301 owns its evolution); no AC affected, no TC/coverage change |
+| 1.2 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | DoR iteration-1 remediation: added TC-MEMALIGN-004 (PDR-0004 self-containment — no `doc/planning/concepts` references in installed carriers; plan-phase-4 guard candidate); synced kernel contract to spec v1.2's twelve content classes (TC-MEMKERN-001/003, DM-2 row, dry-run step); added kernel ~200-line cap assertion to TC-MEMBUDGET-001; made TC-MEMRESUME-001/002 dry-run coverage explicit |
 
 ## 10. Test Execution Log
 
