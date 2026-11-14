@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-14T19:40:14.868Z }
   delivery_planning: { started: null, completed: 2026-11-14T19:41:10.511Z }
   dor_check: { started: null, completed: 2026-11-14T19:49:08.822Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-14T22:18:34.740Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -157,11 +157,11 @@ notes:
       starts with plan phase 1."
     type: info
     date: "2026-11-14"
-  - text: "Plan phase 1 (docs-guide) delivered in 288b2673: milestone-management guide,
-      documentation-index row, PDR-0005 record, milestone-pack conventions pointer,
-      and the guide suite. The header was produced only by
-      scripts/add-header-location.sh on the single new file; the unrelated headerless
-      guide is byte-identical. Guide suite green."
+  - text: "Plan phase 1 (docs-guide) delivered in 288b2673: milestone-management
+      guide, documentation-index row, PDR-0005 record, milestone-pack
+      conventions pointer, and the guide suite. The header was produced only by
+      scripts/add-header-location.sh on the single new file; the unrelated
+      headerless guide is byte-identical. Guide suite green."
     type: info
     date: "2026-11-14"
   - text: "Plan phase 2 (template-field) delivered in b955aa68: the required
@@ -170,41 +170,59 @@ notes:
     type: info
     date: "2026-11-14"
   - text: "Plan phase 3 (prompts-and-plugin) delivered in eda4aef5: pm, spec-writer,
-      and bootstrapper prompts, the tracker instructions including the reconciled
-      Backlog Source of Truth section, and the regenerated Claude plugin committed
-      together. Prompt suite green; prompt-conformance reports 5 prompts clean;
-      help-guide-coverage reports all prompt-required commands covered."
+      and bootstrapper prompts, the tracker instructions including the
+      reconciled Backlog Source of Truth section, and the regenerated Claude
+      plugin committed together. Prompt suite green; prompt-conformance reports
+      5 prompts clean; help-guide-coverage reports all prompt-required commands
+      covered."
     type: info
     date: "2026-11-14"
-  - text: "Plan phase 4 (attachment-check) delivered in 7f5df63a: pure evaluation core,
-      port-injected runner, sole network-capable GitHub adapter, the issue-event
-      workflow, and five offline suites plus fixtures. 48 tests pass, 0 fail. The
-      aggregate gate chain is unchanged and the three CI invariant scanners are
-      untouched; the phase also added a five-line explanatory comment to the
-      ci.yml ts-test job, which plan phase 4 did not declare (flagged for review)."
+  - text: "Plan phase 4 (attachment-check) delivered in 7f5df63a: pure evaluation
+      core, port-injected runner, sole network-capable GitHub adapter, the
+      issue-event workflow, and five offline suites plus fixtures. 48 tests
+      pass, 0 fail. The aggregate gate chain is unchanged and the three CI
+      invariant scanners are untouched; the phase also added a five-line
+      explanatory comment to the ci.yml ts-test job, which plan phase 4 did not
+      declare (flagged for review)."
     type: info
     date: "2026-11-14"
-  - text: "Plan phase 5 (planning-truth) delivered in aca08238: M2-S20 backlog block,
-      twelve backfilled Ticket lines, M2-S11..S20 ranking rows with contiguous
-      renumbering, M2 pack row plus SC-M2-S20-01..05 seeds, pack-contents range, and
-      the status delivery addendum. Planning-truth suite green."
+  - text: "Plan phase 5 (planning-truth) delivered in aca08238: M2-S20 backlog
+      block, twelve backfilled Ticket lines, M2-S11..S20 ranking rows with
+      contiguous renumbering, M2 pack row plus SC-M2-S20-01..05 seeds,
+      pack-contents range, and the status delivery addendum. Planning-truth
+      suite green."
     type: info
     date: "2026-11-14"
   - text: "Plan phase 6 (tracker-evidence, PM lane) recorded in
       chg-GH-313-milestone-evidence.md: 62/62 declared tickets attached across
       M0/M1/M2 (gap list empty), five attached-but-undeclared planning issues
-      disclosed with disposition, 94 unattached change issues (42 open) reported as
-      a planning-time snapshot, GH-313 confirmed attached to M2. Zero tracker writes."
+      disclosed with disposition, 94 unattached change issues (42 open) reported
+      as a planning-time snapshot, GH-313 confirmed attached to M2. Zero tracker
+      writes."
     type: info
     date: "2026-11-14"
   - text: "Gate-environment defect found while verifying: the ticket's declared gate
       command TMPDIR=$PWD/tmp/tmpdir pnpm test makes
       tests/behaviour/queue-production-binding.test.ts and
-      tests/behaviour/projects-config.test.ts fail, because their fixtures require a
-      temp directory outside every git worktree; and a temp directory on another
-      filesystem makes tests/checks/ci-baseline-parity.test.ts fail on a
-      git-clone --local hardlink. The working invocation uses a same-device temp
-      directory outside the worktree. Recorded for a follow-up; not changed here
-      because the test harness is out of scope."
+      tests/behaviour/projects-config.test.ts fail, because their fixtures
+      require a temp directory outside every git worktree; and a temp directory
+      on another filesystem makes tests/checks/ci-baseline-parity.test.ts fail
+      on a git-clone --local hardlink. The working invocation uses a same-device
+      temp directory outside the worktree. Recorded for a follow-up; not changed
+      here because the test harness is out of scope."
     type: risk
+    date: "2026-11-14"
+  - text: "Delivery gate finding: the new user-facing guide was missing from
+      scripts/checks/forbidden-literals.registry.json, so the forbidden-literal
+      scan failed closed as an unregistered doc absent at the corpus baseline
+      and the ci-baseline-parity regression test failed on the committed HEAD.
+      Fixed by registering the guide (commit cd775745); the plan's phase 1 scope
+      and obligation 1.7 were amended to declare the registry path. Scan now
+      reports 5/5 scope classes, 0 violations, and the parity test passes."
+    type: info
+    date: "2026-11-14"
+  - text: "Commit-range gate: PASS. 19 commits between merge-base 404e9bf8 and HEAD
+      cd775745, 0 offending commits, 0 rule hits, commitlint resolved from the
+      repository-local node_modules/.bin. Recorded for quality_gates."
+    type: info
     date: "2026-11-14"
