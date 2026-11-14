@@ -12,7 +12,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-14T17:42:58.639Z }
   quality_gates: { started: null, completed: 2026-11-14T17:56:49.456Z }
   dod_check: { started: null, completed: 2026-11-14T17:57:55.374Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-14T18:00:59.062Z }
 decisions:
   - text: "Superseding decision record for the `repos` name (required by ODR-0003
       DC-4 rename rule, ticket derived task f) is authored via @decision-advisor
@@ -577,5 +577,17 @@ notes:
       files that timed out under multiplexed load pass in isolation (50 pass / 0
       fail). No test was skipped or weakened and no gate configuration was
       modified."
+    type: info
+    date: "2026-11-14"
+  - text: "PR created and left OPEN for owner/CEO merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/318 — base
+      main-tools, head feat/GH-309/project-groups, 27 commits, 101 files. DoD
+      check passed (all nine lifecycle phases complete, seven plan phases
+      evidenced, pm-notes conforms, plan valid). Residuals disclosed in the PR
+      body and the review record: the `queue --project --watch` unscoped stream,
+      the change test plan still describing the superseded TC-GRPDOC-005
+      semantics, and the retained unemitted `projects.registry-corrupt`
+      identity; ODR-0004 is Proposed pending owner ratification at this PR.
+      Delivery stops here — no merge, no other ticket."
     type: info
     date: "2026-11-14"
