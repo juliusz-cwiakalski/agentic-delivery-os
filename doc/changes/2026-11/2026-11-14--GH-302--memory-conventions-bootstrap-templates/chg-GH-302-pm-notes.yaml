@@ -9,7 +9,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-14T02:18:27.936Z }
   delivery: { started: null, completed: 2026-11-14T03:52:31.783Z }
   system_spec_update: { started: null, completed: 2026-11-14T04:10:06.712Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-14T04:18:13.488Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -377,5 +377,21 @@ notes:
       phase-2 implementation-carrier rows. All five plan phases complete with
       per-phase pm-notes evidence; TC-MEMCONF-003 green (plugin output
       regenerated with source in a190bdd4)."
+    type: info
+    date: "2026-11-14"
+  - text: "REVIEW (review_fix, iteration 1) = PASS. Record:
+      code-review/review-iter-1.yaml. 0 critical / 0 high / 0 medium / 3 low / 4
+      informational; plan status ALL_TASKS_DONE (5/5 with per-phase evidence);
+      both disclosed scope deviations judged COMPLIANT (forbidden-literals
+      registry data-only + gate-forced; PDR early-track at 5e74180b pinned-red
+      honored); all 11 ACs independently verified (allowlist 22 entries
+      byte-identical across three carriers; kernel twelve-class fidelity check
+      clean; 18/18 suite; Check 7 green; distribution 92 docs zero drift; plugin
+      output fresh). Advisory lows recorded as non-blocking follow-ups for the
+      owner/PR review: (F-1) TC-MEMKERN-002 comment claims a table-header schema
+      check not implemented; (F-2) unused templateDir helper in the suite; (F-3)
+      TC-MEMALIGN-004 https:// exemption looser than the pinned ADOS-URLs-only
+      wording. PM decision: no remediation cycle — advisory debt documented,
+      owner may direct polish at PR review."
     type: info
     date: "2026-11-14"
