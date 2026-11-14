@@ -311,6 +311,11 @@ jobs:
         run: git fetch --no-tags origin main-tools
       - name: Record the Node version used by the MCP smoke
         run: node --version
+      # This job's `pnpm test` discovers the milestone-attachment suites. They
+      # exercise scripts/checks/milestone-attachment.ts (pure core),
+      # scripts/checks/milestone-attachment-runner.ts (injected ports), and
+      # scripts/checks/milestone-attachment-github.ts (static workflow audit;
+      # the adapter itself is never imported on a gate-reachable path).
       - run: pnpm test
 
   ts-boundaries:

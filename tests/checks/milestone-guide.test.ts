@@ -9,7 +9,6 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -61,7 +60,9 @@ describe("TC-GUIDE-001 guide marker, header, index link", () => {
 
   test("the header is byte-identical to scripts/add-header-location.sh output", () => {
     const delivered = read(GUIDE);
-    const directory = mkdtempSync(join(tmpdir(), "milestone-guide-"));
+    const base = join(ROOT, "tmp/tmpdir");
+    mkdirSync(base, { recursive: true });
+    const directory = mkdtempSync(join(base, "milestone-guide-"));
     try {
       execFileSync("git", ["init", "-q"], { cwd: directory });
       mkdirSync(join(directory, "scripts"), { recursive: true });
