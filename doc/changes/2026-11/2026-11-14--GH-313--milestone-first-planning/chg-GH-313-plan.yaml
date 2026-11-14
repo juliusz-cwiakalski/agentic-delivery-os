@@ -123,6 +123,12 @@ phases:
   #      the distribution guard scripts (TC-GUIDE-005)
   #      bash scripts/.tests/test-doc-distribution.sh and
   #      bash scripts/.tests/test-doc-distribution-modes.sh.
+  #  1.7 Register the new user-facing guide in
+  #      scripts/checks/forbidden-literals.registry.json under `registered`
+  #      (alphabetical, after doc/guides/migrating-to-per-repository-state.md).
+  #      The forbidden-literal scan fails closed on any non-excluded doc file
+  #      that is neither registered nor present at the pinned corpus baseline,
+  #      so a new doc/guides/** page is incomplete until it is registered.
   #
   # Bound: F-1, AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-NFR4-1, DoD-1..DoD-4,
   # NFR-4, C-9.
@@ -130,13 +136,14 @@ phases:
   - id: 1
     title: "Milestone-management guide, pack-conventions pointer, documentation-index row, and PDR-0005 landing"
     kind: delivery
-    summary: "Land the redistributable milestone-management guide, its pack-conventions pointer, documentation-index row, and the already-authored PDR-0005 record, adding only the new guide header via scripts/add-header-location.sh on the single file path."
+    summary: "Land the redistributable milestone-management guide, its pack-conventions pointer, documentation-index row, the already-authored PDR-0005 record, and the guide's forbidden-literal registry entry, adding only the new guide header via scripts/add-header-location.sh on the single file path."
     scope:
       files:
         - doc/guides/milestone-management.md
         - doc/planning/oss-tooling/milestones/README.md
         - doc/00-index.md
         - doc/decisions/PDR-0005-milestone-first-planning-and-delivery.md
+        - scripts/checks/forbidden-literals.registry.json
         - doc/decisions/00-index.md
         - tests/checks/milestone-guide.test.ts
     interactions:
