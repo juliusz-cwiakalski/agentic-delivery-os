@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-07
+last_updated: 2026-11-14
 owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -59,6 +59,15 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   adapter boundary; resume/steer and liveness gaps are declared per adapter, and
   the dispatch engine selects the configured harness and drives sessions through
   the port. See the harness concept above.
+- **Repository / project group / workspace:** a repository is one checkout and
+  the delivery unit; a project group is a configured set of repositories whose
+  membership is declared in `<configDirectoryName>/projects.yaml`; a workspace is
+  an optional discovery root and is never required. A group owns no store, and a
+  scan locates declared members only. The flat record set enumerates checkouts
+  (`repos list`); the group surface enumerates groups (`projects list`); the
+  identifier `project key` keeps its repository meaning. See [Repositories and
+  the Host Overview](../spec/features/feature-projects.md) and [Project
+  Groups](../spec/features/feature-project-groups.md).
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles
   or newly frozen names. Model policy is planned. Current provider v1 evaluates

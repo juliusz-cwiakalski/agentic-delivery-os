@@ -27,7 +27,8 @@ workspace is an optional discovery root and is never required. Membership is
 document, and no directory scan, host index, or inference ever adds a member.
 
 `projects list [--json]` renders every configured group with its member
-repositories, their state, their health, and their daemon reachability.
+repositories, their state, their health, and their daemon reachability under the
+`project-groups.v1` payload.
 `--project <groupKey>` scopes the read to one group. `queue list --project
 <groupKey>` and `status --project <groupKey>` answer what one group has running,
 waiting, and parked, applying the one aggregation clause this page defines.
@@ -65,8 +66,8 @@ Every group declares a `groupKey`, a `name`, an optional `workspaceRoot`, and at
 least one member. Every member declares exactly one repository selector —
 `root` or `repoKey` — plus a `trackerKind`. Trackers may be mixed inside one
 group, and any non-empty tracker kind is valid configuration: only the GitHub
-kind has an implemented adapter today, and an unimplemented kind is classified
-per member at read time rather than rejected.
+kind has an implemented adapter, and an unimplemented kind is classified per
+member at read time rather than rejected.
 
 An absent document and a document declaring zero groups are both the ordinary
 **empty listing**: `projects list` returns `data.groups: []` at exit `0`.
@@ -163,7 +164,7 @@ same-named health value:
 
 ## Group surface
 
-`projects list [--json]` returns `project-groups.v1`:
+`projects list [--json]` returns the `project-groups.v1` payload:
 
 - **`data.groups[]`** — one entry per configured group in declared order, with
   exactly `groupKey`, `name`, the optional `workspaceRoot` (absent when none is
