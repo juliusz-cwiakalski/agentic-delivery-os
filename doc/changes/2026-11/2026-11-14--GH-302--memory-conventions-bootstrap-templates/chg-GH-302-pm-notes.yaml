@@ -6,7 +6,7 @@ phases:
   specification: { started: null, completed: 2026-11-14T02:13:57.242Z }
   test_planning: { started: null, completed: 2026-11-14T02:14:10.362Z }
   delivery_planning: { started: null, completed: 2026-11-14T02:14:21.866Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-14T02:18:27.936Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -206,4 +206,42 @@ notes:
       constraints. (a) is a process tweak for future intakes; (b) is already
       encoded as the AGENTS.md header-scope rule."
     type: retro
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 2 = NOT_READY (record: readiness-review/
+      readiness-iter-2.md). 9 facets PASS / 1 FAIL — clear convergence. All five
+      iteration-1 remediations adversarially verified as fixed. Residue: (1)
+      MAJOR — plan not synced to spec v1.2 (SOURCES cited spec v1.1; obligation
+      1.4 + parsed phase-1 summary said 'ALL TEN content classes'); (2) nit —
+      spec Appendix A still mapped the old eight-class set; (3) persistent nit —
+      test plan had zero new/legacy flow statements vs the spec's both-flows
+      metric. All three reopens landed; remediations applied same-cycle: spec
+      v1.3 (Appendix A twelve rows with source column + history 1.3), test plan
+      v1.3 (flow-coverage statement: automated TCs flow-invariant,
+      TC-MEMRESUME-002 mandatory per-flow runs new+legacy logged in Section 10 +
+      revision 1.3), plan v1.2 (SOURCES → spec v1.2 / test plan v1.2, obligation
+      1.4 + phase-1 summary now TWELVE classes, revision note; plan validate =
+      valid, readyForDevelopment=true; grep confirms zero stale 'ten'
+      references)."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO (iteration-2 lesson): the major residue was a version-skew class of
+      defect — when an upstream artifact bumps a contract (ten→twelve classes),
+      EVERY downstream artifact citing it must be re-grepped in the same
+      remediation pass; the plan-writer's finding-2 remediation scope correctly
+      excluded the plan file, but nothing then triggered a plan sync until the
+      gate caught it. Process tweak for future reopen cycles: version-skew sweep
+      (grep all change-folder artifacts for the old contract marker) is part of
+      closing ANY contract-changing remediation."
+    type: retro
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 3 = READY (record: readiness-review/
+      readiness-iter-3.md). 10/10 facets PASS, zero findings — all iteration-1/2
+      residues verified closed against commit diffs, not claims.
+      Reviewer-documented cosmetic non-blocking observation: plan SOURCES cites
+      spec/test-plan v1.2 while both are v1.3 — the v1.3 deltas are exactly the
+      two reviewer-ordered nit fixes, every cited section byte-identical across
+      the bump, executor cannot be misled. Gate result: delivery unblocked;
+      converged in 3 of max 3 iterations without human escalation; PDR-0004
+      owner ratification remains scheduled at the open-PR gate per DEC-6."
+    type: info
     date: "2026-11-14"
