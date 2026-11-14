@@ -104,6 +104,25 @@ Profile Contract section.)
 > the business-strategy `strategic-assumptions-template.md`, which holds
 > portfolio-level strategic assumptions across products.
 
+## Memory Bootstrap Templates
+
+Templates the bootstrap installs so a project starts with the agent-memory
+learning loop in place (see the [Project Inception guide](../guides/project-inception.md),
+Phase 5). The scaffold mirrors the memory conventions in `AGENTS.md`; the
+memory tree is seeded empty — structure and conventions, not records.
+
+| Template | Purpose |
+|----------|---------|
+| `memory-index-template.md` | Memory index entry point — instantiated as `.ai/memory/README.md`: tree map, read-when hints, coverage honesty (≤200 lines) |
+| `memory-agent-entrypoint-template.md` | Per-agent entry point — instantiated as `.ai/memory/agents/<agent>/README.md`, one generic template parameterized by role: capture bar + read/write policy (≤150 lines) |
+| `memory-area-template.md` | Shared-area README — instantiated as `.ai/memory/lessons/README.md` and `.ai/memory/tacit/README.md`, one template parameterized by area: purpose, promotion-handoff target, append discipline |
+| `memory-kernel-section-template.md` | `AGENTS.md` memory kernel section: all twelve content classes, zero record-schema fields, ~200-line budget guidance |
+| `memory-coordinator-wiring-template.md` | Coordinator memory wiring rendered into `.ai/agent/pm-instructions.md`: capture bar, promotion path, curation mandate |
+| `memory-instruction-expectations-template.md` | Companion per-role memory expectations rendered into the PR/MR, decision, and code-review instruction files: read own entry point, write own folder, no cross-agent memory edits |
+| `memory-retro-notes-template.md` | Retro-note conventions: append-only notes with a generated index; documentation only, no ceremony |
+| `memory-doctor-checklist-template.md` | Manual memory-health doctor checklist: six audit areas, manual until memory lint lands, prescribes a cadence and performs nothing |
+| `memory-adoption-checklist-template.md` | Manual adoption checklist for previously bootstrapped projects: adopt kernel section, instruction wiring, and tree scaffold by hand |
+
 ## Business/Product Strategy Templates (Optional Profile)
 
 Use these only when repository profile enables business docs.

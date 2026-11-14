@@ -1,0 +1,197 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-302
+branch: feat/GH-302/memory-conventions-bootstrap-templates
+status: PASS
+summary: >-
+  First review iteration of the GH-302 range (main-tools...HEAD, 31 files,
+  +3854/-62). All eleven acceptance criteria are verifiably satisfied: the nine
+  memory templates carry markers with all twelve kernel content classes and zero
+  record-schema fields; the write allowlist is byte-identical (22 entries) across
+  the bootstrapper prompt, the inception guide, and SPEC-BOOTSTRAPPER (verified
+  by independent extraction and diff, plus the regenerated .ados-claude output,
+  which is fresh); Phase 5/6 wiring, resume semantics, PDR-0004 + index, concept
+  alignment, backlog markers, and doc-syncer reconciliation are all in place and
+  accurate. The 18-case bun suite and inception-guard Check 7 were re-run green
+  by this review alongside prompt-conformance, help-guide-coverage,
+  doc-conformance, and doc-distribution (92 docs, zero drift). Standing
+  constraints hold: zero changes under .ai/memory/**, no memory tooling or
+  executable doctor, no typed-record schema, no ceremony artifacts, no license
+  headers added. The two disclosed delivery deviations (phase-1
+  forbidden-literals registry registration; PDR-0004 early tracking) are judged
+  compliant — data-only/outcome-equivalent, evidence-backed, and fully
+  disclosed in pm-notes. Three low-severity test-polish findings and four
+  informational notes remain; none block PROCEED.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: testing-gap
+    location: tests/structure/memory-bootstrap-templates.test.ts:167
+    message: >-
+      TC-MEMKERN-002's leading comment claims two schema-shaped-construct
+      anchors ("a bullet that declares one of the typed record fields ... or a
+      table header row presenting several of them as columns"), but only the
+      field-bullet regex (/^[-*]\s*`?(id|kind|...)/) is implemented; a markdown
+      table header presenting typed fields as columns would pass the guard. The
+      test plan (TC-MEMKERN-002 step 2) names "a schema table" as an assertable
+      shape. No current template contains such a table, so the gap is latent,
+      not live.
+    suggestion: >-
+      Either add a table-header check (fail a line that matches two or more of
+      the typed fields inside pipe columns, e.g. /\|(id|kind|scope|provenance|
+      trust|validity|status).*(\|(kind|scope|provenance|trust|validity|status))/
+      applied to the same four schemaFiles), or narrow the comment and the
+      recorded coverage claim to bullet-form detection only. One-line fix
+      inside the existing loop over text.split("\n").
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: tests/structure/memory-bootstrap-templates.test.ts:44
+    message: >-
+      The `templateDir` helper (line 44) is defined but never used — dead code
+      in the new suite; `templatePath` (line 43) has the identical body and is
+      used everywhere. Biome passes it, but it invites copy-paste confusion in
+      future edits of the suite.
+    suggestion: Delete the unused `templateDir` constant.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: testing-gap
+    location: tests/structure/memory-bootstrap-templates.test.ts:359
+    message: >-
+      TC-MEMALIGN-004 exempts any `doc/planning/concepts` occurrence preceded by
+      any `https://` on the same line (lastIndexOf check), but the pinned
+      contract (plan phase 4, test plan TC-MEMALIGN-004) permits only
+      "fully-qualified public ADOS URLs". A hypothetical template citing an
+      unrelated https URL plus a relative concepts reference on one line would
+      pass. No such line exists today; the looseness is latent.
+    suggestion: >-
+      Tighten the exemption: require the https URL nearest the hit to contain
+      the ADOS repository host/path (e.g. line.slice(scheme, hit) matching
+      /github\.com\/juliusz-cwiakalski\/agentic-delivery-os/), or extract the
+      URL token containing the hit and compare its host.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: scripts/checks/forbidden-literals.registry.json:209
+    message: >-
+      Documented phase-1 scope deviation, JUDGED COMPLIANT. The plan's C-2
+      forbids scripts/ changes outside the phase-4 test file, but the repo's
+      existing forbidden-literals invariant requires every new user-facing
+      doc/** file to be registered; the phase-1 done-when ("pnpm check green")
+      was unexecutable without the registration (first run failed 4 suites;
+      gate log cited in pm-notes). The change is data-only (9 sorted paths
+      appended to the "registered" array; scan logic untouched), fully
+      disclosed at delivery time with log evidence, and the same class of
+      mechanical registration the plan itself considered for inventory.json.
+    suggestion: >-
+      No action for this change. Process improvement (already implicit in the
+      pm-notes retro): plan-writer should grep existing check registries
+      (forbidden-literals.registry.json, inventory.json) for doc-registration
+      requirements when a phase adds doc/** files.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/decisions/PDR-0004-memory-practices-concept-repo-internal.md:1
+    message: >-
+      Sequencing deviation vs the pm-notes DEFER contract, JUDGED COMPLIANT.
+      The DEFER contract required the PDR-0004 file to land in the plan phase
+      whose scope covers doc/decisions/** (phase 3); it was actually tracked
+      early at commit 5e74180b alongside a pm-notes artifact commit, and phase
+      3 (0af97735) then verified file/index/spec consistency instead of
+      re-landing. The outcome the contract protects is fully preserved: the
+      pinned-red rule was honored (no premature spec/test-plan/index edits),
+      the file and its index row (c0b8471a) and the spec's OQ-2/DEC-6
+      references agree, and TC-MEMALIGN-003 is green. Disclosure is complete in
+      the phase-3 pm-notes entry.
+    suggestion: No action. Recorded for traceability of the deviation audit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-bootstrapper.md:153
+    message: >-
+      After the list-form replacement, the spec states the out-of-allowlist
+      confirmation sentence twice: the pre-existing inline parenthetical in the
+      intro line (153) and the new canonical trailing line (178) that matches
+      the other two carriers byte-for-byte. This satisfies AC-F7-1's identical
+      -text contract (the trailing line is what guard Check 7 greps); the
+      duplication is redundant prose only.
+    suggestion: >-
+      Optional future cleanup: shorten the intro line to drop the quoted
+      sentence, keeping only the canonical trailing line. Do not do it in this
+      change (the guard's byte-identity and the phase-2 indivisible unit are
+      already green and frozen).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-302--memory-conventions-bootstrap-templates/chg-GH-302-spec.md:322
+    message: >-
+      Manual DoD evidence status at review time (decision of record: owed at
+      dod_check, not a defect). Executed green BY THIS REVIEW: TC-MEMSCAF-004
+      (changed-file check: zero paths under .ai/memory/** or .ai/local/** in
+      main-tools...HEAD) and TC-MEMWIRE-004 (no ceremony command/automation in
+      the diff; retro handling is documentation-only). Performed by this review
+      with a PASS verdict: TC-MEMKERN-003 side-by-side fidelity — the kernel
+      template carries all twelve source classes with semantically faithful
+      generalizations (named adversarial roles -> "adversarial review roles";
+      "per prefix and year" -> "per area and year"; "unique across lessons/ and
+      tacit/" -> "unique across the tree") and zero invented fields. Still owed
+      at dod_check: TC-MEMRESUME-002 live per-flow dry-runs (new + legacy,
+      carrying TC-MEMBUDGET-002 measurement and the manual halves of
+      TC-MEMFLOW-001/TC-MEMCONT-003).
+    suggestion: >-
+      dod_check must confirm the TC-MEMRESUME-002 dry-run evidence (per-flow,
+      with recorded line counts) before PR creation per DoD-1/DoD-9/DoD-10;
+      this review does not waive it.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-14T00:00:00Z
+next_step: PROCEED

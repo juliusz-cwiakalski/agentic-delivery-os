@@ -6,15 +6,15 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-BOOTSTRAPPER
 status: Current
 created: 2026-03-10
-last_updated: 2026-06-27
+last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72"]
+  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-302"]
   guides:
     - "doc/guides/project-inception.md"
     - "doc/guides/onboarding-existing-project.md"
-summary: "Stateful @bootstrapper agent and /bootstrap command that run ADOS project inception end-to-end through a single multi-session, human-gated 8-phase workflow (phases 0–7) covering new and legacy projects alike."
+summary: "Stateful @bootstrapper agent and /bootstrap command that run ADOS project inception end-to-end through a single multi-session, human-gated 8-phase workflow (phases 0–7) covering new and legacy projects alike, wiring the agent-memory learning loop into the project at Phase 5."
 ---
 
 # Feature: Bootstrapper (`@bootstrapper` agent + `/bootstrap` command)
@@ -28,6 +28,8 @@ Inception produces the project's **knowledge base** — overview, spec, rules, a
 > **Superseded history.** GH-32 shipped a 6-phase "existing-project onboarding" flow that kept git-ignored state at `.ai/local/bootstrapper-context.yaml`. GH-71 redesigned the bootstrapper into the unified 8-phase inception model described here. The legacy 6-phase flow and `.ai/local/bootstrapper-context.yaml` are **gone**: no backward-compatibility, no migration.
 
 > **Changelog.** GH-72 added the **PRODUCE** step to legacy Phase 0 (tribal-knowledge extraction from repo docs + `git log`), completing the PRODUCE → CONSUME → GRADUATE loop wired by GH-71. Consume (Phase 0) and graduate (Phase 2) are unchanged.
+
+> **Changelog.** GH-302 wired the agent-memory learning loop into bootstrap Phase 5 — the memory tree scaffold (seeded empty), the `AGENTS.md` memory kernel section, coordinator and per-role instruction wiring, retro-note conventions, and the manual doctor checklist — extended the write allowlist by exactly `.ai/memory/**`, and made Phase 6 readiness fail and reopen Phase 5 on incomplete memory artifacts.
 
 ## Business Context
 
@@ -77,8 +79,8 @@ Every phase follows the same loop: fresh conversation → read state + prior art
 | 2 — Scope & roadmap | Current Milestone scope (MVP / next-milestone); roadmap; assumption + risk registers; legacy: tribal-knowledge graduation; conditional user journeys + screen inventory | Approve scope, roadmap, assumptions, risks, graduations | pre-mortem + four-risk check |
 | 3 — Tech stack & architecture | Tech stack; architecture overview; FSE audit; seed ADRs; conditional NFRs; legacy: reconstruct + flag uncertainty | Approve tech, architecture, ADRs, NFRs, uncertainty flags | alternative comparison + pre-mortem |
 | 4 — Domain, conventions & quality baseline | Glossary; conditional ubiquitous-language / UX guidance; code projects: testing-strategy, convention rules, CI baseline, dev setup, `.env.example`, security baseline; legacy: audit ACTUAL conventions | Approve glossary, conventions, quality baseline, gaps | unknown-unknowns |
-| 5 — ADOS framework integration | Generate `AGENTS.md` + all four `.ai/agent/*-instructions.md`; set documentation-profile; install handbook/templates/decisions-index/00-index | Approve all framework files | none |
-| 6 — Inception readiness check | Catalog completeness, cross-doc consistency, FSE verification, four-risk coverage, assumption review, ghost-reference check. **FAIL → reopen phase 1–4.** | Approve readiness report or send back | none |
+| 5 — ADOS framework integration | Generate `AGENTS.md` + all four `.ai/agent/*-instructions.md`; set documentation-profile; install handbook/templates/decisions-index/00-index; wire the memory learning loop (memory tree scaffold seeded empty — index, per-agent entry points, `lessons/`, `tacit/`; `AGENTS.md` memory section; coordinator memory wiring and per-role expectations in the instruction files; retro-note conventions; manual doctor checklist) | Approve all framework files (single approval covers the memory artifacts) | none |
+| 6 — Inception readiness check | Catalog completeness, memory-artifact presence, cross-doc consistency, FSE verification, four-risk coverage, assumption review, ghost-reference check. **FAIL → reopen phase 1–5** (an incomplete memory scaffold reopens Phase 5). | Approve readiness report or send back | none |
 | 7 — Inception summary & handoff | Inception summary; initial feature specs (new: from current-milestone scope; legacy: from code analysis reconciled with behavior) | Final sign-off — project incepted | none |
 
 Phase-by-phase detail, anti-sycophancy prompts, the conditional matrix, and the full artifact catalog live in [doc/guides/project-inception.md](../../guides/project-inception.md); this spec does not duplicate them.
@@ -108,7 +110,7 @@ Phase 0 detects four project characteristics and activates matching artifacts on
 
 ### Human gates & anti-sycophancy
 
-All eight phases end in a human gate — no auto-advance. Decision-dense phases (1, 2, 3, 4) run a structured adversarial prompt before the gate (devil's advocate → 1; pre-mortem → 2 & 3; alternative comparison → 3; unknown-unknowns → 4), all under the **four-risk** framework (`Value / Usability / Feasibility / Viability`) which tags assumptions with `risk_type` and `validation_status`. Phase 6 may FAIL and reopen an earlier phase (1–4).
+All eight phases end in a human gate — no auto-advance. Decision-dense phases (1, 2, 3, 4) run a structured adversarial prompt before the gate (devil's advocate → 1; pre-mortem → 2 & 3; alternative comparison → 3; unknown-unknowns → 4), all under the **four-risk** framework (`Value / Usability / Feasibility / Viability`) which tags assumptions with `risk_type` and `validation_status`. Phase 6 may FAIL and reopen an earlier phase (1–5).
 
 ### State model
 
@@ -134,20 +136,28 @@ Phase 5 wires the project into ADOS. It produces:
 
 | Output | Notes |
 |---|---|
-| `AGENTS.md` | Project-specific version |
-| `.ai/agent/pm-instructions.md` | Tracker config only — references `doc/guides/change-lifecycle.md` instead of repeating it; applies tracker-workflow discovery (Jira transitions via MCP, GitHub labels, local-backlog states) |
-| `.ai/agent/pr-instructions.md` | PR/MR platform config — auto-detected from `git remote`, confirmed at interview; CLI preferred over MCP when both available |
-| `.ai/agent/decision-instructions.md` | Decision-tracking conventions |
-| `.ai/agent/code-review-instructions.md` | Code-review configuration |
+| `AGENTS.md` | Project-specific version; carries the memory section rendered from `doc/templates/memory-kernel-section-template.md` |
+| `.ai/agent/pm-instructions.md` | Tracker config only — references `doc/guides/change-lifecycle.md` instead of repeating it; applies tracker-workflow discovery (Jira transitions via MCP, GitHub labels, local-backlog states); carries the coordinator memory wiring (capture bar, promotion path, curation mandate) from `doc/templates/memory-coordinator-wiring-template.md` |
+| `.ai/agent/pr-instructions.md` | PR/MR platform config — auto-detected from `git remote`, confirmed at interview; CLI preferred over MCP when both available; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
+| `.ai/agent/decision-instructions.md` | Decision-tracking conventions; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
+| `.ai/agent/code-review-instructions.md` | Code-review configuration; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
+| `.ai/memory/README.md`, `.ai/memory/agents/<agent>/README.md`, `.ai/memory/lessons/`, `.ai/memory/tacit/` | Memory tree scaffold — seeded empty (structure and conventions, not records), exactly this set: the memory index, one entry-point README per resident agent role, the lessons area, the tacit area |
+| Retro-note conventions, manual doctor checklist | Installed from `doc/templates/memory-retro-notes-template.md` and `doc/templates/memory-doctor-checklist-template.md` — documentation only; the doctor stays manual until memory lint lands in the gates |
 | `doc/documentation-profile.md` | engineering / business / mixed |
 | `doc/documentation-handbook.md`, `doc/templates/`, `doc/decisions/` (README + index), `doc/guides/`, `doc/00-index.md` | Installed/verified from ADOS source |
+
+Resume semantics for the memory scaffold: create-if-absent — a resumed Phase 5 completes a partial memory scaffold without duplicating entry points and never silently overwrites human-approved files.
 
 ## Write allowlist
 
 The bootstrapper may **only** write to the paths below; any other path requires explicit human confirmation ("This path is outside the standard ADOS write allowlist. Proceed? [y/N]"):
 
-- `AGENTS.md`
-- `.ai/agent/{pm,pr,decision,code-review}-instructions.md`
+- `AGENTS.md` (project root)
+- `.ai/agent/pm-instructions.md`
+- `.ai/agent/pr-instructions.md`
+- `.ai/agent/decision-instructions.md`
+- `.ai/agent/code-review-instructions.md`
+- `.ai/memory/**`
 - `.ai/rules/**`
 - `.github/workflows/**`
 - `.env.example`
@@ -159,9 +169,13 @@ The bootstrapper may **only** write to the paths below; any other path requires 
 - `doc/spec/features/**`
 - `doc/spec/nonfunctional.md`
 - `doc/templates/**`
-- `doc/decisions/README.md`, `doc/decisions/00-index.md`
+- `doc/decisions/**`
 - `doc/guides/**`
-- `doc/planning/{backlog.md, epics/**, archive/**}`
+- `doc/planning/backlog.md`
+- `doc/planning/epics/**`
+- `doc/planning/archive/**`
+
+Any write to a path NOT on this list requires explicit human confirmation with: "This path is outside the standard ADOS write allowlist. Proceed? [y/N]"
 
 ## Trust boundary & safety
 
@@ -200,6 +214,7 @@ Safety rules: never store secrets; never modify existing source code; never over
 - **Inception guide (authority):** [doc/guides/project-inception.md](../../guides/project-inception.md)
 - **Onboarding guide (manual fallback):** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md)
 - **State template:** [doc/templates/inception-state-template.yaml](../../templates/inception-state-template.yaml)
+- **Memory bootstrap templates (Phase 5 learning loop):** the Memory Bootstrap Templates section of [doc/templates/README.md](../../templates/README.md)
 - **Tribal-knowledge template (PRODUCE output shape):** [doc/templates/tribal-knowledge-template.md](../../templates/tribal-knowledge-template.md)
 - **Design authority (tribal-knowledge taxonomy & graduation mapping):** [doc/decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md](../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md)
 - **Agent prompt:** `.opencode/agent/bootstrapper.md`

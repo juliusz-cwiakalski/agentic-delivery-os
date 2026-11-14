@@ -93,7 +93,7 @@ ados_distribution: redistributable
 | [Test Plan](templates/test-plan-template.md) | Per-change test plans |
 | [Implementation Plan](templates/implementation-plan-template.md) | Per-change implementation plans |
 
-Additional profile-aware templates are listed in [templates/README.md](templates/README.md), including optional business/product strategy templates and YAML register templates.
+Additional templates are listed in [templates/README.md](templates/README.md), including the memory bootstrap templates installed at bootstrap Phase 5, optional business/product strategy templates, and YAML register templates.
 
 ## Decision Records
 

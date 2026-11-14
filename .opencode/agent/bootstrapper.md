@@ -40,7 +40,7 @@ Automate the 8-phase iterative inception workflow (0–7) from `doc/guides/proje
 
 **Four-risk framework.** Assess inception decisions across canonical `Value / Usability / Feasibility / Viability`; tag assumptions with `risk_type` and `validation_status`.
 
-**Gates.** Every phase 0–7 ends in a human gate; no auto-advance. At each gate, highlight low-confidence/TODO areas. Update state only after approval. Phase 6 may FAIL and reopen phase 1–4.
+**Gates.** Every phase 0–7 ends in a human gate; no auto-advance. At each gate, highlight low-confidence/TODO areas. Update state only after approval. Phase 6 may FAIL and reopen phase 1–5.
 
 **Conditional artifacts.** Phase 0 detects `ui_bearing`, `multi_user`, `complex_domain`, `code_project` and activates matching artifacts only. Record booleans in state.
 
@@ -141,18 +141,21 @@ Apply these across phases. The agent carries the operational spec; `doc/guides/p
 - Generate all four `.ai/agent/*-instructions.md`: `pm-instructions`, `pr-instructions`, `decision-instructions`, `code-review-instructions`.
 - For PM/PR files, apply `<pm_instructions_guidance>`, `<tracker_workflow_discovery>`, and `<pr_platform_discovery>`.
 - Set `doc/documentation-profile.md`; install/verify handbook, templates, decisions README/index, guides, and `doc/00-index.md`.
+- Wire the agent-memory learning loop. Scaffold the memory tree seeded empty (structure and conventions, not records) — exactly this set and nothing more: the index at `.ai/memory/README.md`, one entry-point README per resident agent role at `.ai/memory/agents/<agent>/README.md`, the empty `.ai/memory/lessons/` area, and the empty `.ai/memory/tacit/` area. Render the `AGENTS.md` memory section from `doc/templates/memory-kernel-section-template.md`. Render the coordinator memory wiring (capture bar, promotion path, curation mandate) from `doc/templates/memory-coordinator-wiring-template.md` into `.ai/agent/pm-instructions.md`, and the per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` into `.ai/agent/pr-instructions.md`, `.ai/agent/decision-instructions.md`, and `.ai/agent/code-review-instructions.md`. Install the retro-note conventions from `doc/templates/memory-retro-notes-template.md` and the manual doctor checklist from `doc/templates/memory-doctor-checklist-template.md`.
+- Memory resume semantics: create-if-absent. On a resumed Phase 5, complete a partial memory scaffold without duplicating entry points and never silently overwrite human-approved files (including an approved `AGENTS.md`).
 - <anti_sycophancy>none</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
 - **State update:** mark Phase 5 completed; record framework-artifact status/confidence.
-- **Human gate 5:** approve all ADOS framework files.
-- **Artifact keys:** `AGENTS`, `pm-instructions`, `pr-instructions`, `decision-instructions`, `code-review-instructions`, `documentation-profile`, `documentation-handbook`, `templates`, `decisions-index`, `guides`, `doc-index`.
+- **Human gate 5:** approve all ADOS framework files. The single Phase 5 approval covers the memory artifacts; no additional human gates or interview questions are introduced for them.
+- **Artifact keys:** `AGENTS`, `pm-instructions`, `pr-instructions`, `decision-instructions`, `code-review-instructions`, `memory-scaffold`, `memory-kernel-section`, `memory-instructions-wiring`, `memory-retro-conventions`, `memory-doctor-checklist`, `documentation-profile`, `documentation-handbook`, `templates`, `decisions-index`, `guides`, `doc-index`.
 - **Guide ref:** Phase 5 of `doc/guides/project-inception.md`.
 </phase_5>
 
 <phase_6>
 **Purpose:** inception readiness check. **Inputs:** full artifact set.
 - Verify artifact-catalog completeness, cross-document consistency, FSE verification, four-risk coverage, assumption review, and ghost-reference check.
-- FAIL → reopen the earlier phase (1–4) where the gap lives; no auto-advance to Phase 7.
+- Verify memory-artifact presence: the memory index at `.ai/memory/README.md`, one entry-point README per resident agent role, the `.ai/memory/lessons/` area, the `.ai/memory/tacit/` area, the rendered `AGENTS.md` memory section, and the coordinator/companion memory wiring. An incomplete memory scaffold FAILS readiness and reopens Phase 5 rather than signing off a project without the learning loop.
+- FAIL → reopen the earlier phase (1–5) where the gap lives; no auto-advance to Phase 7.
 - <anti_sycophancy>none</anti_sycophancy>
 - Before gate: write retrospectives + update open-questions (phase-exit meta).
 - **State update:** record readiness verdict; mark Phase 6 completed only on PASS.
@@ -283,6 +286,7 @@ The bootstrapper may ONLY write files to these paths:
 - `.ai/agent/pr-instructions.md`
 - `.ai/agent/decision-instructions.md`
 - `.ai/agent/code-review-instructions.md`
+- `.ai/memory/**`
 - `.ai/rules/**`
 - `.github/workflows/**`
 - `.env.example`

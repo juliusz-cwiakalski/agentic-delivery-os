@@ -626,6 +626,9 @@ Wire the project into the ADOS delivery system.
 4. Install `doc/documentation-handbook.md` and `doc/templates/` (from ADOS source).
 5. Set up `doc/decisions/` with its README and index.
 6. Verify `doc/00-index.md` links match the actual docs.
+7. Scaffold the memory tree seeded empty (structure and conventions, not records) — exactly this set and nothing more: the index at `.ai/memory/README.md`, one entry-point README per resident agent role at `.ai/memory/agents/<agent>/README.md`, the empty `.ai/memory/lessons/` area, and the empty `.ai/memory/tacit/` area (from `doc/templates/memory-index-template.md`, `doc/templates/memory-agent-entrypoint-template.md`, and `doc/templates/memory-area-template.md`).
+8. Render the `AGENTS.md` memory section from `doc/templates/memory-kernel-section-template.md`; wire the coordinator instructions (`.ai/agent/pm-instructions.md`) with the capture bar, promotion path, and curation mandate from `doc/templates/memory-coordinator-wiring-template.md`; add the per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` to `.ai/agent/pr-instructions.md`, `.ai/agent/decision-instructions.md`, and `.ai/agent/code-review-instructions.md`.
+9. Install the retro-note conventions from `doc/templates/memory-retro-notes-template.md` and the manual doctor checklist from `doc/templates/memory-doctor-checklist-template.md`. Memory resume semantics are create-if-absent: on a resumed Phase 5, complete a partial memory scaffold without duplicating entry points and never silently overwrite human-approved files.
 
 #### Anti-sycophancy technique
 
@@ -633,11 +636,41 @@ None (framework-integration phase).
 
 #### Human gate
 
-Review and approve all ADOS framework files.
+Review and approve all ADOS framework files. The single Phase 5 approval covers the memory artifacts; no additional human gates or interview questions are introduced for them.
+
+#### Write allowlist
+
+The bootstrapper may ONLY write files to these paths:
+
+- `AGENTS.md` (project root)
+- `.ai/agent/pm-instructions.md`
+- `.ai/agent/pr-instructions.md`
+- `.ai/agent/decision-instructions.md`
+- `.ai/agent/code-review-instructions.md`
+- `.ai/memory/**`
+- `.ai/rules/**`
+- `.github/workflows/**`
+- `.env.example`
+- `doc/inception/**` (including `doc/inception/abandoned-*.yaml`)
+- `doc/documentation-profile.md`
+- `doc/documentation-handbook.md`
+- `doc/00-index.md`
+- `doc/overview/**`
+- `doc/spec/features/**`
+- `doc/spec/nonfunctional.md`
+- `doc/templates/**`
+- `doc/decisions/**`
+- `doc/guides/**`
+- `doc/planning/backlog.md`
+- `doc/planning/epics/**`
+- `doc/planning/archive/**`
+
+Any write to a path NOT on this list requires explicit human confirmation with: "This path is outside the standard ADOS write allowlist. Proceed? [y/N]"
 
 #### Outputs
 
 - `AGENTS.md`, `.ai/agent/*-instructions.md`, `doc/documentation-profile.md`, `doc/documentation-handbook.md`, `doc/templates/`, and `doc/decisions/` — produced by @bootstrapper. The documentation profile may be authored from `doc/templates/documentation-profile-template.md`.
+- Memory artifacts: the memory scaffold (index, per-agent entry points, `lessons/`, `tacit/` — seeded empty), the rendered `AGENTS.md` memory section, the coordinator memory wiring and per-role expectations in the instruction files, the retro-note conventions, and the manual doctor checklist — produced from the `doc/templates/memory-*` templates.
 - Phase-exit: write retrospectives + update open-questions (see Cross-phase meta-practices).
 
 ### Phase 6 — Inception readiness check
@@ -647,12 +680,13 @@ Verify the knowledge base is complete and consistent before handoff.
 #### Activities
 
 1. **Artifact catalog completeness** — verify all applicable artifacts from the catalog exist.
-2. **Cross-document consistency** — overview ↔ spec ↔ rules ↔ decisions align.
-3. **Full-Stack Environment verification** — all 10 attributes are addressed.
-4. **Four-risk coverage** — Value, Usability, Feasibility, and Viability are all assessed for the current milestone.
-5. **Assumption review** — all key assumptions are identified and tagged.
-6. **Ghost reference check** — no references to non-existent files.
-7. Reopen the earlier phase where a gap lives (gate — mirrors the Definition-of-Ready pattern).
+2. **Memory wiring verification** — verify the memory artifacts are present: the memory index at `.ai/memory/README.md`, one entry-point README per resident agent role, the `.ai/memory/lessons/` area, the `.ai/memory/tacit/` area, the rendered `AGENTS.md` memory section, and the coordinator/companion memory wiring. Incomplete memory artifacts FAIL readiness and reopen Phase 5 rather than signing off a project without the learning loop.
+3. **Cross-document consistency** — overview ↔ spec ↔ rules ↔ decisions align.
+4. **Full-Stack Environment verification** — all 10 attributes are addressed.
+5. **Four-risk coverage** — Value, Usability, Feasibility, and Viability are all assessed for the current milestone.
+6. **Assumption review** — all key assumptions are identified and tagged.
+7. **Ghost reference check** — no references to non-existent files.
+8. Reopen the earlier phase where a gap lives (gate — mirrors the Definition-of-Ready pattern).
 
 #### Anti-sycophancy technique
 

@@ -6,22 +6,22 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-11-05
+last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226"]
+  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226", "GH-302"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
-summary: "Core ADOS templates plus optional profile-aware business/product strategy templates and YAML register templates in doc/templates/, all readable by agents at runtime with graceful fallback to embedded defaults."
+summary: "Core ADOS templates, memory bootstrap templates installed at bootstrap Phase 5, plus optional profile-aware business/product strategy templates and YAML register templates in doc/templates/, all readable by agents at runtime with graceful fallback to embedded defaults."
 ---
 
 # Feature: Document Templates
 
 ## Overview
 
-ADOS maintains templates in `doc/templates/` that serve as the structural source of truth for core delivery artifacts and optional profile-aware business/product strategy artifacts. Agents read templates at runtime to guide document structure; if a template is absent, agents fall back gracefully to embedded defaults. Humans use the same templates for manual authoring.
+ADOS maintains templates in `doc/templates/` that serve as the structural source of truth for core delivery artifacts, the memory bootstrap templates installed at bootstrap Phase 5, and optional profile-aware business/product strategy artifacts. Agents read templates at runtime to guide document structure; if a template is absent, agents fall back gracefully to embedded defaults. Humans use the same templates for manual authoring.
 
 ## Business Context
 
@@ -63,6 +63,22 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 | `documentation-profile-template.md` | Repository docs profile contract | Profile configuration |
 
 Repositories may use this template to make the documentation profile explicit whether business docs are enabled or disabled.
+
+### Memory Bootstrap Templates
+
+| Template | Purpose | Consumer |
+|----------|---------|----------|
+| `memory-index-template.md` | Memory index entry point — instantiated as `.ai/memory/README.md` (≤200 lines) | `@bootstrapper` |
+| `memory-agent-entrypoint-template.md` | Per-agent entry point — instantiated as `.ai/memory/agents/<agent>/README.md`, one generic template parameterized by role (≤150 lines) | `@bootstrapper` |
+| `memory-area-template.md` | Shared-area README — instantiated as `.ai/memory/lessons/README.md` and `.ai/memory/tacit/README.md`, one template parameterized by area | `@bootstrapper` |
+| `memory-kernel-section-template.md` | `AGENTS.md` memory kernel section: all twelve content classes, zero record-schema fields | `@bootstrapper` |
+| `memory-coordinator-wiring-template.md` | Coordinator memory wiring rendered into `.ai/agent/pm-instructions.md`: capture bar, promotion path, curation mandate | `@bootstrapper` |
+| `memory-instruction-expectations-template.md` | Companion per-role memory expectations rendered into the PR/MR, decision, and code-review instruction files | `@bootstrapper` |
+| `memory-retro-notes-template.md` | Retro-note conventions: append-only notes with a generated index; documentation only, no ceremony | `@bootstrapper` |
+| `memory-doctor-checklist-template.md` | Manual memory-health doctor checklist: six audit areas, manual until memory lint lands, prescribes a cadence and performs nothing | Project owner / coordinator |
+| `memory-adoption-checklist-template.md` | Manual adoption checklist for previously bootstrapped projects: adopt kernel section, instruction wiring, and tree scaffold by hand | Project owner |
+
+The bootstrap renders the scaffold, kernel-section, and wiring templates at Phase 5 ([Bootstrapper](feature-bootstrapper.md)); the memory tree is seeded empty — structure and conventions, not records — mirroring the memory conventions in `AGENTS.md`. The doctor and adoption checklists are consumed by humans on a manual cadence.
 
 ### Optional Business/Product Strategy Templates (enabled business docs only)
 
@@ -149,6 +165,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
 | `doc/templates/decision-record-template.md` | Decision record template | Single source of truth for the record body: type-selection helper, clean front matter (no top-level `decision_area`/`reversibility` for new records), tiered-default applicability tags per section, 18 body sections (Context → References, incl. Decision Rights, Evidence/Assumptions/Unknowns + Technical-Selection Evidence Pack, recommendation-vs-authorized-decision split, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective), and worked R1/R2/R3 examples in an authoring appendix |
 | `doc/templates/test-spec-template.md` | Test spec template | Enduring test specification structure |
+| `doc/templates/memory-*-template.md` | Memory bootstrap template set (nine templates) | Rendered at bootstrap Phase 5 into the bootstrapped project's memory tree, `AGENTS.md` kernel section, and instruction wiring; doctor and adoption checklists are human-consumed |
 
 ### Agent Integration
 

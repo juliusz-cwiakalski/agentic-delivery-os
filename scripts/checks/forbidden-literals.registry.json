@@ -206,6 +206,15 @@
     "doc/spec/features/feature-verify-change-and-exit-taxonomy.md",
     "doc/spec/features/feature-verify-gates.md",
     "doc/spec/features/feature-watchdog-lane-contracts.md",
-    "doc/spec/nonfunctional.md"
+    "doc/spec/nonfunctional.md",
+    "doc/templates/memory-adoption-checklist-template.md",
+    "doc/templates/memory-agent-entrypoint-template.md",
+    "doc/templates/memory-area-template.md",
+    "doc/templates/memory-coordinator-wiring-template.md",
+    "doc/templates/memory-doctor-checklist-template.md",
+    "doc/templates/memory-index-template.md",
+    "doc/templates/memory-instruction-expectations-template.md",
+    "doc/templates/memory-kernel-section-template.md",
+    "doc/templates/memory-retro-notes-template.md"
   ]
 }

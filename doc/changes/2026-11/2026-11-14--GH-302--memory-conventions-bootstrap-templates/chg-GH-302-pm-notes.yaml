@@ -1,0 +1,437 @@
+change_id: GH-302
+title: "M2-S9: Memory conventions in bootstrap templates (M2)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-14T01:52:00Z", completed: 2026-11-14T00:56:11.607Z }
+  specification: { started: null, completed: 2026-11-14T02:13:57.242Z }
+  test_planning: { started: null, completed: 2026-11-14T02:14:10.362Z }
+  delivery_planning: { started: null, completed: 2026-11-14T02:14:21.866Z }
+  dor_check: { started: null, completed: 2026-11-14T02:18:27.936Z }
+  delivery: { started: null, completed: 2026-11-14T03:52:31.783Z }
+  system_spec_update: { started: null, completed: 2026-11-14T04:10:06.712Z }
+  review_fix: { started: null, completed: 2026-11-14T04:18:13.488Z }
+  quality_gates: { started: null, completed: 2026-11-14T04:31:11.136Z }
+  dod_check: { started: null, completed: 2026-11-14T04:33:06.262Z }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Proceed with GH-302 although declared dependency M2-S8 (GH-301) is still
+      open. Drivers: explicit owner directive to deliver now; the AC anticipates
+      the pre-tooling state ('the doctor runs as a manual checklist until
+      tooling lands'); the memory conventions to be templated are already
+      current truth in this repo's AGENTS.md. Constraint passed to all
+      downstream agents: the scaffolded memory tree mirrors AGENTS.md
+      conventions exactly — no invented record schema — so reconcile cost when
+      GH-301 lands stays minimal; this change ships NO memory tooling/lint
+      (manual doctor checklist only)."
+    date: "2026-11-14"
+  - text: "delivery_mode set to autonomous: owner requested the full lifecycle in
+      one directive; delivery stops at an open PR against main-tools (merge
+      authority: CEO per ticket conventions)."
+    date: "2026-11-14"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: ticket #302 owner-authored and complete (goal, tasks, AC,
+      delivery conventions, planning-truth pointers to
+      doc/planning/oss-tooling/backlog.md M2-S9 and milestones/m2/). No
+      contradictions with doc/spec found that block planning; no user STOP
+      required."
+    type: info
+    date: "2026-11-14"
+  - text: "Clarify-scope edge case discovered: SPEC-BOOTSTRAPPER
+      (doc/spec/features/feature-bootstrapper.md) write allowlist does NOT
+      include .ai/memory/** — wiring the memory scaffold into bootstrap Phase 5
+      requires extending that allowlist. Must be reflected in spec +
+      implementation + spec reconciliation."
+    type: risk
+    date: "2026-11-14"
+  - text: "Known doc impacts for phase 7 (system_spec_update): (1)
+      doc/spec/features/feature-bootstrapper.md — Phase 5 outputs table + write
+      allowlist; (2) doc/guides/project-inception.md — Phase 5 authority detail
+      for memory wiring; (3) doc/templates/** — new memory templates MUST carry
+      ados_distribution frontmatter markers (redistributable set →
+      scripts/.tests/test-doc-distribution.sh must pass); (4)
+      doc/planning/concepts/memory-practices.md — new meta-learning concept
+      (license header required: doc/planning/concepts/ is in the header script's
+      scope); (5) doc/planning/oss-tooling/backlog.md — M2-S9 Progress marker
+      per milestone delivery conventions."
+    type: info
+    date: "2026-11-14"
+  - text: "Ticket delivery conventions (authoritative for phases 6-11): plan phases
+      declared in plan.yaml; commits through the commit primitive with
+      conventional subjects, every body/footer line <= 100 chars; quality gates
+      = TMPDIR=$PWD/tmp/tmpdir pnpm check green before PR; PR targets
+      main-tools; STOP with PR open (merge authority: CEO); maintain
+      doc/planning/oss-tooling/ backlog markers/status."
+    type: info
+    date: "2026-11-14"
+  - text: "Branch feat/GH-302/memory-conventions-bootstrap-templates created from
+      main-tools @ 92b64753; worktree clean at creation."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: `phase complete` failed twice before landing — environmental, not
+      artifact content. (1) bare `phase` is not on PATH in runner shells; the
+      harness entrypoint is the `delivery-os` binary with subcommands. (2) the
+      commit primitive's commitlint probe
+      (packages/adapters/src/file/commitlint.ts) invokes `commitlint` by bare
+      name over PATH; without node_modules/.bin on PATH the probe throws ENOENT
+      and reports invalid ('commitlint could not be executed'), failing the
+      template message with commit.commitlint-failed. Working invocation for all
+      lifecycle commands in this repo: PATH=\"$PWD/node_modules/.bin:$PATH\"
+      delivery-os <cmd>. Candidate upstream fix (NOT this change's scope):
+      resolve node_modules/.bin/commitlint explicitly like
+      scripts/checks/commitlint-authority.ts does."
+    type: retro
+    date: "2026-11-14"
+  - text: "Spec authored by @spec-writer (chg-GH-302-spec.md, status Proposed, feat,
+      medium risk): 11 ACs incl. allowlist extension (AC-F7-1), Phase 6
+      readiness failure mode (AC-F7-2), resume-without-duplication (AC-F1-2),
+      budget caps (AC-NFR2-1), prompt/doc-distribution conformance (AC-NFR4-1).
+      Repo-truth corrections: doc/planning/concepts/ memory-practices.md ALREADY
+      EXISTS (2026-10-26 Draft) → capability is align-and-finalize, not create;
+      no retro ceremony exists for bootstrapped projects → conventions-only
+      wiring (DEC-4); GH-301 confirmed to have no change artifacts (dependency
+      open, delivery authorized by DEC-1)."
+    type: info
+    date: "2026-11-14"
+  - text: "OQ-2 resolved via PDR-0004
+      (doc/decisions/PDR-0004-memory-practices-concept-repo-internal.md,
+      Proposed, index row added): meta-learning reference stays repo-internal —
+      aligned/finalized in this repo as upstream source, NOT installed into
+      bootstrapped projects; Phase 5 install surface unchanged. PM-adopted for
+      this run; R2 convention requires owner ratification (AI never
+      auto-Accepts) — owner ratifies/vetoes at the open-PR gate. Spec updated
+      (OQ-2 status, F-6 clause, links.decisions, DEC-6 row). COMMIT MECHANICS
+      CORRECTION: the PDR cannot be landed via a standalone commit primitive
+      call before a plan exists — with no plan, scope = change folder and the
+      untracked PDR (outside it) is classified as a stray and never staged;
+      doc/decisions/00-index.md shows as scopeDrift while outside scope. DEFER:
+      PDR-0004 + index row land during delivery in the plan phase whose declared
+      scope covers doc/decisions/** (the F-6 concept-alignment phase);
+      plan-writer must declare that scope explicitly."
+    type: decision
+    date: "2026-11-14"
+  - text: "Test plan authored by @test-plan-writer (chg-GH-302-test-plan.md,
+      Proposed v1.0): 27 TCs, all 11 ACs traced; seeds SC-M2-S9-01/02 reconciled
+      (retro 'ceremony' clause reconciled to conventions per NG-5/DEC-4); new
+      bun suite tests/structure/memory-bootstrap-templates.test.ts (~16 cases
+      incl. no-executable-doctor negative with GH-301 expiry note, PDR-0004
+      file+index consistency which intentionally fails until the F-6 delivery
+      phase lands the file); extended
+      scripts/.tests/test-inception-doc-consistency.sh (allowlist identity guard
+      Check 7 + memory templates in Check 4)."
+    type: info
+    date: "2026-11-14"
+  - text: "SPEC REOPEN (specification, iteration 1): test-plan-writer found a false
+      factual premise in the spec — this repo's .ai/memory tree EXISTS (tracked,
+      populated: index README, 4 per-agent entry points, 3 lessons, tacit/;
+      GH-204, 2026-11-07); spec Context 2.1 / NG-4 parenthetical / Assumptions
+      claimed it does not exist. No AC depended on the false premise; NG-4 stays
+      valid and now guards a populated tree (GH-301 owns its evolution).
+      Spec-writer applied 6 targeted edits (Context 2.1, NG-4, [OUT] item,
+      Assumption added, Affected Components, Document History 1.1); everything
+      else byte-identical. Spec corrected and re-completed."
+    type: retro
+    date: "2026-11-14"
+  - text: "RETRO root cause of the false premise: PM's discovery glob for
+      .ai/memory/** ran with hidden=false (the default), so dot-directory
+      content was invisible and 'does not exist' was inferred from absence of
+      evidence. LESSON: when probing dot-paths (.ai/**, .github/**,
+      .opencode/**) always pass hidden:true to the glob tool, and treat
+      glob-empty as inconclusive for tracked-file existence — verify with git
+      ls-files or a direct read before stating existence claims in specs."
+    type: retro
+    date: "2026-11-14"
+  - text: "Delivery plan authored by @plan-writer (chg-GH-302-plan.yaml, tier full,
+      5 phases; plan validate = valid, readyForDevelopment=true). Phase order:
+      (1) nine memory templates + README index rows; (2) indivisible
+      three-surface allowlist extension (bootstrapper prompt + inception guide +
+      feature spec, identical text per AC-F7-1) with Phase 5/6 wiring and
+      regenerated .ados-claude output; (3) PDR-0004 landing + F-6
+      memory-practices alignment — scope folder doc/decisions satisfies the
+      DEFER contract, turns TC-MEMALIGN-003 green; (4) bun invariant suite +
+      inception-guard Check 7; (5) backlog M2-S9 Ticket+Progress marker + full
+      gate battery green (TMPDIR=$PWD/tmp/tmpdir pnpm check + doc-distribution +
+      inception-consistency + plugin guards). Inconsistencies resolved via the
+      test plan's own OQ-TP-2 delegation (parameterized
+      memory-instruction-expectations-template.md as the single companion
+      carrier); TC-MEMALIGN pinned-red rule forbids premature fixes to
+      spec/plan/index before phase 3."
+    type: info
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 1 = NOT_READY (record: readiness-review/
+      readiness-iter-1.md in the change folder). 7 facets PASS / 3 FAIL.
+      Blocking findings: (1) CRITICAL dod_defined — spec has no Definition of
+      Done section (all 10 prior November specs carry one; phase 10 reads it);
+      (2) MAJOR spec_completeness — F-2/DM-2/AC-F2-1 'ten content classes' omit
+      verified AGENTS.md kernel content: Unique ids, Conflict reality,
+      advisory/untrusted preamble, growth/split rule (breaks the mirror-exactly
+      contract and TC-MEMKERN-003 fidelity review); (3) MAJOR
+      cross_artifact_consistency — the DEC-6/PDR-0004 self-containment invariant
+      (no doc/planning/concepts refs in installed carriers) is owned by NO test
+      case and absent from plan phase 4's guard spec; (4) MAJOR
+      system_spec_consistency — plan C-3 demands license headers on new
+      doc/templates files, but doc/templates is NOT in
+      scripts/add-header-location.sh scope, agents are forbidden from adding
+      headers, and C-2 forbids script edits — phase 1 unexecutable compliantly
+      as written. Non-blocking: AC-F7-1 allowlist flattening not pinned
+      (delivery_planning); kernel-template ~200-line budget unasserted + dry-run
+      flow coverage unstated (test_planning). VERIFIED AS DECISIONS OF RECORD
+      (not gaps): DEC-1 open-dependency authorization, PDR-0004 disposition +
+      DEFER landing + PR-gate ratification, TC-MEMALIGN-003 pinned-red, spec
+      v1.1 reopen correction."
+    type: risk
+    date: "2026-11-14"
+  - text: "DOR REMEDIATION (iteration 1 → 2): reopening specification (findings 1-2
+      → @spec-writer: add DoD section consolidating 11 ACs + manual evidence +
+      gate battery + PDR landing + backlog marker; extend the kernel content
+      class set with Unique ids, Conflict reality, advisory/untrusted preamble,
+      growth/split rule), test_planning (finding 3 + nits → @test-plan-writer:
+      new TC owning the self-containment invariant, wired into plan phase 4
+      guard spec; assert ~200-line kernel template budget; state dry-run flow
+      coverage), delivery_planning (findings 4-5 → @plan-writer: C-3 header
+      requirement corrected to ados_distribution marker-only; pin the allowlist
+      flattening representation for AC-F7-1). Then re-run the gate (iteration 2
+      of max 3)."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: three of four DoR findings trace to upstream-authoring gaps the
+      cheaper clarify step could have caught — (a) no DoD section because the
+      spec-writer prompt didn't demand one (PM should always point authors at
+      sibling artifacts: 'match the November spec set's section inventory'); (b)
+      C-3 header requirement came from MY pm-notes doc-impacts note ('license
+      header required for doc/planning/concepts') over-generalized to
+      doc/templates by the plan author — PM notes are advisory inputs, authors
+      must verify against scripts/add-header-location.sh before encoding
+      constraints. (a) is a process tweak for future intakes; (b) is already
+      encoded as the AGENTS.md header-scope rule."
+    type: retro
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 2 = NOT_READY (record: readiness-review/
+      readiness-iter-2.md). 9 facets PASS / 1 FAIL — clear convergence. All five
+      iteration-1 remediations adversarially verified as fixed. Residue: (1)
+      MAJOR — plan not synced to spec v1.2 (SOURCES cited spec v1.1; obligation
+      1.4 + parsed phase-1 summary said 'ALL TEN content classes'); (2) nit —
+      spec Appendix A still mapped the old eight-class set; (3) persistent nit —
+      test plan had zero new/legacy flow statements vs the spec's both-flows
+      metric. All three reopens landed; remediations applied same-cycle: spec
+      v1.3 (Appendix A twelve rows with source column + history 1.3), test plan
+      v1.3 (flow-coverage statement: automated TCs flow-invariant,
+      TC-MEMRESUME-002 mandatory per-flow runs new+legacy logged in Section 10 +
+      revision 1.3), plan v1.2 (SOURCES → spec v1.2 / test plan v1.2, obligation
+      1.4 + phase-1 summary now TWELVE classes, revision note; plan validate =
+      valid, readyForDevelopment=true; grep confirms zero stale 'ten'
+      references)."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO (iteration-2 lesson): the major residue was a version-skew class of
+      defect — when an upstream artifact bumps a contract (ten→twelve classes),
+      EVERY downstream artifact citing it must be re-grepped in the same
+      remediation pass; the plan-writer's finding-2 remediation scope correctly
+      excluded the plan file, but nothing then triggered a plan sync until the
+      gate caught it. Process tweak for future reopen cycles: version-skew sweep
+      (grep all change-folder artifacts for the old contract marker) is part of
+      closing ANY contract-changing remediation."
+    type: retro
+    date: "2026-11-14"
+  - text: "DOR CHECK iteration 3 = READY (record: readiness-review/
+      readiness-iter-3.md). 10/10 facets PASS, zero findings — all iteration-1/2
+      residues verified closed against commit diffs, not claims.
+      Reviewer-documented cosmetic non-blocking observation: plan SOURCES cites
+      spec/test-plan v1.2 while both are v1.3 — the v1.3 deltas are exactly the
+      two reviewer-ordered nit fixes, every cited section byte-identical across
+      the bump, executor cannot be misled. Gate result: delivery unblocked;
+      converged in 3 of max 3 iterations without human escalation; PDR-0004
+      owner ratification remains scheduled at the open-PR gate per DEC-6."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 1 COMPLETE (commit ed7f76b0): nine memory bootstrap templates
+      authored under doc/templates/ (index, per-agent entry point parameterized
+      by role, area README parameterized by lessons/tacit, AGENTS.md kernel
+      section with all twelve content classes and zero record-schema fields,
+      coordinator capture/promotion wiring, companion per-role expectations
+      referencing the kernel, retro-note conventions, manual doctor checklist
+      with six audit areas + manual-until-GH-301 status + cadence, adoption
+      checklist) + index rows in doc/templates/README.md. Markers: each template
+      carries ados_distribution: redistributable inside its frontmatter;
+      marker-only, zero license headers added, header script untouched (C-3).
+      Budgets: entry-point 30 lines, index 34, kernel 42 (all far under caps;
+      TC-MEMBUDGET-001 anchors green). TESTS: bash scripts/.tests/test-doc-
+      distribution.sh green (92 in-scope docs, zero drift); bash scripts/.tests/
+      test-inception-doc-consistency.sh green; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green (8123 pass / 0 fail / 4 skip). FORCED SCOPE DEVIATION (evidence:
+      gate log tmp/run-logs-runner/2026-11-14/032654-*.log, first run failed 4
+      suites with 'unregistered user-facing doc absent at corpusBaseline'): the
+      repo's forbidden-literals invariant (scripts/checks/forbidden-literals.ts
+      + tests/checks/forbidden-literals.test.ts) requires every NEW user-facing
+      doc under doc/** to be registered in scripts/checks/forbidden-literals
+      .registry.json — a data-only JSON registration (9 sorted paths appended to
+      the existing 'registered' array; scan logic untouched; same class as the
+      plan-considered tests/structure/inventory.json rule). Without it the
+      phase-1 done-when 'pnpm check green' is unexecutable. Registered docs are
+      scanned for the DEC-8 seed literals; the one 'ADOS' prose mention in the
+      adoption checklist was reworded to 'the upstream repository' to keep the
+      scan green (public URL unchanged, still DEC-6-compliant optional further
+      reading)."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 2 COMPLETE (commit a190bdd4): indivisible three-surface
+      allowlist extension + Phase 5/6 memory wiring + regenerated plugin output
+      in ONE commit. Representation pin honored: canonical entry text is the
+      bootstrapper prompt's list form — `- `.ai/memory/**`` slotted after the
+      four instruction files (21 → 22 entries); the inception guide GAINED the
+      enumerated allowlist (#### Write allowlist under Phase 5, same 22
+      backticked entries, prompt entry text verbatim, confirmation sentence
+      byte-identical); the feature spec's compact brace/inline form (including
+      `doc/decisions/README.md, doc/decisions/00-index.md` and
+      `doc/planning/{backlog.md, epics/**, archive/**}`) was REPLACED by the
+      prompt's 22-entry list form verbatim (AC-F7-1 like-for-like). Phase 5
+      block: memory wiring bullet (tree scaffold exactly index + per-agent entry
+      points + lessons + tacit, seeded empty; kernel render; coordinator +
+      companion wiring; retro conventions + doctor checklist), create-if- absent
+      resume semantics, single-gate statement, artifact keys gained
+      memory-scaffold/memory-kernel-section/memory-instructions-wiring/
+      memory-retro-conventions/memory-doctor-checklist. Phase 6 block:
+      memory-artifact enumeration + fail-and-reopen (reopen range 1–4 → 1–5 in
+      prompt Gates line, phase_6, guide, and feature spec — memory artifacts are
+      produced in Phase 5 so readiness must reopen it).
+      .opencode/command/bootstrap.md untouched (thin wrapper needed no
+      consistency change). Regenerated .ados-claude/agents/bootstrapper.md via
+      scripts/build-claude-plugin.sh in the same commit; generated files never
+      hand-edited; prompt edits current-state (no evolution-history wording).
+      TESTS: bun run scripts/checks/prompt-conformance.ts green (5 prompts
+      clean); bun run scripts/checks/help-guide-coverage.ts green; bun test
+      tests/checks/doc-conformance.test.ts green (11/11); bash scripts/.tests/
+      test-build-claude-plugin.sh green (16/16); TMPDIR=$PWD/tmp/tmpdir pnpm
+      check green (8123 pass / 0 fail / 4 skip)."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 3 COMPLETE (commit 0af97735): PDR-0004 landing verified (the
+      file was already tracked early at 5e74180b per the pm/caller contract —
+      verified file↔index↔spec consistency instead of re-landing: frontmatter id
+      PDR-0004 + status Proposed; 00-index.md row 27 links the exact filename
+      with matching title/status/date; spec references PDR-0004 in OQ-2, DEC-6,
+      and frontmatter links.decisions; the record states the repo-internal
+      disposition and self-contained installed conventions) — the spec, test
+      plan, and index were NOT 'fixed' ahead of the phase (pinned-red rule
+      honored). F-6 concept alignment in the same commit:
+      doc/planning/concepts/memory-practices.md status advanced from Draft
+      (2026-10-26) to Active (2026-11-14, aligned and finalized by GH-302 per
+      PDR-0004); adoption checklist corrected to exactly index + per-agent entry
+      points + lessons + tacit, 'No additional areas are provisioned',
+      preferences/retro-archive removed as provisioning targets (DEC-2);
+      AGENTS.md kernel template section realigned to the shipped kernel
+      template's twelve content classes with ~150/~200 budget guidance and no
+      record-schema fields (TC-MEMALIGN-002 anchors). License header verified
+      present (doc/planning/concepts is in header-script scope; not hand-added —
+      C-5). TESTS: bash scripts/.tests/test-add-header-location.sh green
+      (24/24); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8123 pass / 0 fail / 4
+      skip)."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 4 COMPLETE (commit b449042a): verification suites landed —
+      tests/structure/memory-bootstrap-templates.test.ts (new bun:test, 18 cases
+      incl. the TC-MEMALIGN-004 self-containment scan; read-only tree
+      assertions, no fixtures, anchors pinned to the plan's nine filenames;
+      covers TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002 with the schema-shaped-
+      construct anchor, TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002 with the
+      GH-301 expiry comment naming it owner of the deliberate update,
+      TC-MEMALIGN-001/002/003 following the tests/checks/decision-record.test.ts
+      pattern, TC-MEMBUDGET-001 line counts, TC-MEMRESUME-001, the
+      TC-MEMFLOW-001 prompt part, and the TC-MEMCONT-003 Phase 6 readiness
+      enumeration) and scripts/.tests/test-inception-doc-consistency.sh Check 7
+      (backticked-entry extraction normalized across the three carrier formats;
+      allowlist identity vs the golden 23-token set [22 bullets, golden set
+      lives only here and updates deliberately in review]; byte-identical
+      confirmation sentence; Phase 6 readiness enumeration + fail-and-reopen in
+      prompt and guide) plus the nine memory templates in Check 4's index loop.
+      Non-vacuity probed: each carrier extracts exactly 23 tokens identical to
+      the golden set, and a perturbed-golden probe confirms the diff fires.
+      TC-MEMALIGN-003 is GREEN at this boundary (phase 3 landed the PDR file).
+      TESTS: bun test tests/ structure/memory-bootstrap-templates.test.ts green
+      (18/18); bash scripts/.tests/test-inception-doc-consistency.sh green (exit
+      0); TMPDIR=$PWD/tmp/tmpdir pnpm check green (8141 pass / 0 fail / 4 skip —
+      the new suite joined the bun tier). Authoring-rule compliance: biome
+      format applied to the new suite; no inventory row needed (inventory.json
+      tracks modules only)."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN PHASE 5 COMPLETE (commit a1ed5f4f) — RELEASE PHASE, full gate
+      battery green: backlog M2-S9 entry gained the Ticket marker (`- Ticket:
+      GH-302 (milestone M2)`) and the Progress marker per the M2-S11/GH-288
+      milestone delivery convention, summarizing the delivered capability set
+      (memory tree scaffold, kernel section, coordinator/companion wiring, retro
+      conventions, manual doctor checklist, adoption checklist, .ai/memory/**
+      allowlist extension, Phase 6 fail-and-reopen, PDR-0004 repo-internal
+      disposition). Battery verdicts recorded (TC-MEMCONF-001/ 002 green): mkdir
+      -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check GREEN (8141 pass / 0
+      fail / 4 skip; lint/format/typecheck/boundaries/ prompt-conformance 5
+      clean/help-coverage/exports-parity all green); bash
+      scripts/.tests/test-doc-distribution.sh GREEN (92 in-scope docs, zero
+      drift); bash scripts/.tests/test-inception-doc-consistency.sh GREEN (incl.
+      Check 7); bash scripts/.tests/test-build-claude-plugin.sh GREEN (16/16);
+      bash scripts/.tests/test-doc-distribution-modes.sh GREEN (5/5 failure
+      modes fire). Commit-range gate deferred to lifecycle phase 9 per plan.
+      Spec-reconciliation obligations remain with @doc-syncer (lifecycle phase
+      7) per the plan header; this phase did not edit doc/spec beyond the
+      phase-2 implementation-carrier rows. All five plan phases complete with
+      per-phase pm-notes evidence; TC-MEMCONF-003 green (plugin output
+      regenerated with source in a190bdd4)."
+    type: info
+    date: "2026-11-14"
+  - text: "REVIEW (review_fix, iteration 1) = PASS. Record:
+      code-review/review-iter-1.yaml. 0 critical / 0 high / 0 medium / 3 low / 4
+      informational; plan status ALL_TASKS_DONE (5/5 with per-phase evidence);
+      both disclosed scope deviations judged COMPLIANT (forbidden-literals
+      registry data-only + gate-forced; PDR early-track at 5e74180b pinned-red
+      honored); all 11 ACs independently verified (allowlist 22 entries
+      byte-identical across three carriers; kernel twelve-class fidelity check
+      clean; 18/18 suite; Check 7 green; distribution 92 docs zero drift; plugin
+      output fresh). Advisory lows recorded as non-blocking follow-ups for the
+      owner/PR review: (F-1) TC-MEMKERN-002 comment claims a table-header schema
+      check not implemented; (F-2) unused templateDir helper in the suite; (F-3)
+      TC-MEMALIGN-004 https:// exemption looser than the pinned ADOS-URLs-only
+      wording. PM decision: no remediation cycle — advisory debt documented,
+      owner may direct polish at PR review."
+    type: info
+    date: "2026-11-14"
+  - text: "QUALITY GATES (phase 9) = 6/6 PASS. RANGE LINT: PASS — 22 commits in
+      range (merge-base 92b6475 → head 22b0b71 vs origin/main-tools), 0
+      offending commits, 0 distinct rules hit, mode: none; commitlint binary:
+      node_modules/.bin/commitlint (repository-local). Aggregate:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check GREEN (8141 pass / 0 fail / 4
+      pre-existing skips; lint warnings 84 pre-existing, exit 0; boundaries,
+      secret-read-boundary, prompt-conformance, help-coverage, exports-parity
+      all OK). Doc-distribution GREEN (92 in-scope docs, zero drift). Inception
+      consistency GREEN (incl. Check 7). Plugin guard GREEN (16/16, fresh-build
+      parity). Memory bootstrap suite GREEN (18/18, 373 expects)."
+    type: info
+    date: "2026-11-14"
+  - text: "DOD CHECK (phase 10) verification: (1) pm-notes exists, all 9 prior
+      lifecycle phases completed in the registry (evidence class verified); (2)
+      plan completion — 5/5 declared plan phases carry pm-notes entries naming
+      plan phase id + commit hash + test result (ed7f76b0, a190bdd4, 0af97735,
+      b449042a, a1ed5f4f); (3) AC satisfaction — review iteration 1 PASS with
+      independent per-AC verification (all 11 ACs; allowlist identity
+      re-extracted; twelve-class fidelity side-by-side; 18/18 suite re-run); (4)
+      current-truth documentation — doc-syncer report zero residual gaps, both
+      owning specs reconciled, distribution guard 92 docs zero drift. MANUAL
+      EVIDENCE STATUS (honest accounting per spec §17.1 DoD): TC-MEMKERN-003
+      substance executed independently by the reviewer (F-7 record);
+      TC-MEMSCAF-004 / TC-MEMWIRE-004 changed-file checks executed by the
+      reviewer; TC-MEMRESUME-002 LIVE per-flow bootstrap dry-runs (project.flow
+      new + legacy) NOT executed in-session — an E2E inception requires the
+      8-phase human-gated flow, so the live run is OWNER-OWED EVIDENCE at the
+      open-PR gate and MUST be surfaced in the PR body. dod_check passes with
+      that debt explicitly carried, not silently dropped."
+    type: info
+    date: "2026-11-14"
+  - text: "RETRO: manual-evidence debt is inherent to docs/prompt-surface changes —
+      the only unexecuted DoD item is a live human-gated inception, which no
+      autonomous session can honestly produce. The pipeline handled it correctly
+      (test plan declared it manual; reviewer carried it as decision of record
+      F-7; dod_check surfaced it as owner-owed). Process tweak: PR body for
+      docs-surface changes should carry a 'manual evidence owed' checklist
+      section so the debt is impossible to miss at review."
+    type: retro
+    date: "2026-11-14"

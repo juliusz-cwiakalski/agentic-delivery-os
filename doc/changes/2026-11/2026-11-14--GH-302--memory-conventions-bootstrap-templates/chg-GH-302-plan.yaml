@@ -1,0 +1,632 @@
+# GH-302 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-14). Authored against spec v1.2 and test plan v1.2 (both
+# repo-truth-corrected: this repository's .ai/memory tree exists and is populated
+# by GH-204; NG-4 guards it; GH-301 owns its evolution).
+#
+# REVISION NOTE (revision 1.1, after DoR iteration-1 findings 4 and 5 plus the
+# test-plan v1.2 downstream sync). Mechanical remediation only: no phase count,
+# no phase ids, no scope paths, no parsed-key changes beyond the phase-1
+# summary's marker-only echo.
+#   F4 (major) C-3 and every echo of it (phase-1 obligations, summary,
+#      done-when) are corrected to MARKER-ONLY: each new template carries its
+#      ados_distribution: redistributable frontmatter marker and NO license
+#      header is added by agents — doc/templates/ is not in
+#      scripts/add-header-location.sh scope, agents must never add license
+#      headers themselves (AGENTS.md), and the script is out of scope for this
+#      change (C-2). Boundary stated explicitly: no header edits, no script
+#      edits.
+#   F5 (minor) phase 2 pins the allowlist REPRESENTATION: the canonical entry
+#      text is the bootstrapper prompt's list-form allowlist entry; the guide
+#      and the feature spec adopt that same list-form entry verbatim, and the
+#      feature spec's compact brace form is replaced by the list form as part
+#      of phase 2 — so TC-MEMCONT-001 / guard Check 7 compares like-for-like
+#      text across the three carriers.
+#   SYNC (test plan v1.2) TC-MEMALIGN-004 (new, automated, critical): zero
+#      doc/planning/concepts/** references inside the installed carriers (the
+#      nine memory templates and the inception guide's Phase 5 memory content;
+#      fully-qualified public ADOS URLs permitted). Enforcement home pinned in
+#      phase 4: the BUN INVARIANT SUITE (same read-only scan mechanics as its
+#      other content assertions), not the bash guard.
+#
+# REVISION NOTE (revision 1.2, after DoR iteration-2 finding: spec v1.2 sync).
+# Mechanical sync only — no phase structure, scope paths, commit subjects,
+# constraints, or escalation-trigger changes; the only parsed-data delta is
+# the phase-1 summary's twelve-class wording.
+#   SYNC (spec v1.2) the kernel-section contract is the TWELVE-class list:
+#      canonical and ephemeral locations; advisory/untrusted preamble;
+#      read policy; capture bar; write ownership; evidence over recency;
+#      unique ids; reviewer independence; caps and growth; promotion handoff;
+#      capsule completion; conflict reality. Obligation 1.4 and the phase-1
+#      summary now carry the twelve-class contract; the SOURCES citation is
+#      bumped to spec v1.2.
+#
+# One ticket, one PR against main-tools, five delivery phases. Every phase is an
+# independently committable slice that is green at its own boundary, and every
+# phase is ONE delivery commit through the commit primitive (conventional
+# subject, scope GH-302 per repo convention `feat(GH-294): ...`, every
+# body/footer line <= 100 characters). Extra phase data (content obligations,
+# test obligations, done-when, gate commands) is carried in YAML comments so the
+# parsed document stays schema-strict: the only parsed keys are schemaVersion,
+# workItemRef, tier, defaultLeases, defaultWeightClass and phases (id, title,
+# kind, summary, scope, interactions, doneArtifacts, leases, weightClass,
+# leaseClass). The plan declares phases and scope only; progress is a pm-notes
+# `notes:` entry, never a plan field, and there is no `tasks` key.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-302-spec.md (v1.2; F-1..F-7, AC-F1-1..AC-NFR4-1 — 11
+#                criteria; DM-1..DM-3 with the twelve-class kernel contract;
+#                NFR-1..NFR-6; NG-1..NG-6; DEC-1..DEC-6;
+#                OQ-1/OQ-2 resolved; Appendix A source mapping; Appendix C
+#                constraint register C-1..C-6)
+#   - Test plan: ./chg-GH-302-test-plan.md (v1.2; 28 TCs TC-MEMSCAF-001..
+#                TC-MEMCONF-003 plus TC-MEMALIGN-004; §7 automation mapping:
+#                one new bun suite
+#                tests/structure/memory-bootstrap-templates.test.ts (~17 cases)
+#                + one extended bash guard scripts/.tests/test-inception-doc-
+#                consistency.sh (new Check 7 + Check 4 index-list extension);
+#                §8.2 assumptions; OQ-TP-2/OQ-TP-3 resolved by this plan below)
+#   - PM notes:  ./chg-GH-302-pm-notes.yaml (DEC-1/DEC-5 binding; gate
+#                convention TMPDIR=$PWD/tmp/tmpdir pnpm check; PDR-0004 DEFER
+#                contract: the file lands during delivery in the plan phase
+#                whose declared scope covers doc/decisions/** — phase 3 here;
+#                commit conventions; branch feat/GH-302/memory-conventions-
+#                bootstrap-templates from main-tools @ 92b64753)
+#   - Ticket:    GH-302 (M2-S9). Milestone pack scenario seeds SC-M2-S9-01/02
+#                are inherited by the test plan and are not restated here.
+#   - Repo truth verified at plan time: the write allowlist today has exactly 21
+#                entries across .opencode/agent/bootstrapper.md <write_allowlist>
+#                (lines 278-304), doc/guides/project-inception.md (no enumerated
+#                allowlist today — TC-MEMCONT-001 requires the guide to gain
+#                one), and doc/spec/features/feature-bootstrapper.md (§Write
+#                allowlist; zero memory mentions today). Generated plugin output
+#                lives at .ados-claude/agents/bootstrapper.md and
+#                .ados-claude/skills/bootstrap/SKILL.md (regenerated by
+#                scripts/build-claude-plugin.sh; never hand-edited).
+#                doc/decisions/PDR-0004-memory-practices-concept-repo-internal.md
+#                is untracked; its 00-index.md row (line 27) is committed at
+#                c0b8471a. tests/checks/decision-record.test.ts is the
+#                record-consistency precedent. tests/structure/inventory.json
+#                tracks modules only — the new test file needs no inventory row.
+#
+# TEMPLATE FILENAMES FIXED BY THIS PLAN (resolves test-plan OQ-TP-2 and OQ-TP-3;
+# the bun suite pins its anchors to these names and any later rename is a
+# deliberate suite update per test-plan §8.1, never a silent one):
+#   - memory-index-template.md               → renders .ai/memory/README.md
+#   - memory-agent-entrypoint-template.md    → renders .ai/memory/agents/<agent>/README.md
+#                                               (ONE generic template parameterized by agent
+#                                               role — resident roles vary per project)
+#   - memory-area-template.md                → renders .ai/memory/lessons/README.md and
+#                                               .ai/memory/tacit/README.md (ONE template
+#                                               parameterized by area; materializes the two
+#                                               empty areas in git and states their purpose)
+#   - memory-kernel-section-template.md      → the AGENTS.md memory kernel section
+#   - memory-coordinator-wiring-template.md  → capture bar + promotion path + curation
+#                                               mandate, rendered into the installed
+#                                               .ai/agent/pm-instructions.md
+#   - memory-instruction-expectations-template.md → per-role memory expectations (read own
+#                                               entry point, write own folder, no cross-agent
+#                                               edits; reference the kernel, never restate),
+#                                               rendered into pr-instructions,
+#                                               decision-instructions and code-review-
+#                                               instructions — TC-MEMWIRE-002 reads this
+#                                               carrier parameterized per companion role
+#   - memory-retro-notes-template.md         → retro-note conventions (append-only notes +
+#                                               generated index; references capture bar and
+#                                               promotion path, never duplicates)
+#   - memory-doctor-checklist-template.md    → manual doctor checklist (OQ-TP-3 resolved: a
+#                                               doc/templates/** template in the installed
+#                                               set, not a guide page)
+#   - memory-adoption-checklist-template.md  → manual adoption checklist for previously
+#                                               bootstrapped projects (NG-6)
+#
+# PHASE ORDER AND WHY (dependencies land first):
+#   1 the template set — every later surface renders from it; the distribution
+#     guard is green at this boundary already (markers + install set), and the
+#     inception guard's template-index check is containment, so new README rows
+#     land safely before the guard's list extension arrives in phase 4
+#   2 the three-surface allowlist extension + Phase 5/6 wiring + regenerated
+#     plugin output — ONE indivisible unit (the GH-288 B3 lesson): the prompt
+#     block, the guide's enumerated allowlist and Phase 6 readiness, and the
+#     feature spec's allowlist/outputs rows must move together or AC-F7-1's
+#     identical-text contract is unenforceable at every intermediate boundary;
+#     depends on phase 1 because the prompt names the templates it renders
+#   3 PDR-0004 landing + F-6 concept alignment — one commit keeps the decision
+#     and the practice it governs atomic (pm-notes DEFER contract); turns
+#     TC-MEMALIGN-003 green; depends on phase 1 because the corrected adoption
+#     checklist must match the scaffolded tree shape (DEC-2)
+#   4 the verification suites — they assert content from phases 1-3, so they
+#     land after all of it; at this boundary every automated TC is green
+#   5 milestone bookkeeping + the full gate battery — the M2-S9 Progress marker
+#     is true only when everything before it is green, and the battery re-run
+#     makes lifecycle phase 9 (quality_gates) a cheap re-verification
+#
+# AC OWNERSHIP (all 11 ACs, exactly one owning phase each; phase 4 owns no AC —
+# it is the assertion layer for ACs owned by phases 1-3; phase 5 owns the
+# aggregate conformance verdict):
+#   phase 1  AC-F1-1 (template side), AC-F2-1, AC-F3-1 (carrier side),
+#            AC-F4-1, AC-F5-1, AC-NFR2-1 (seed templates)
+#   phase 2  AC-F1-2 (resume semantics stated), AC-F7-1, AC-F7-2
+#   phase 3  AC-F6-1
+#   phase 5  AC-NFR4-1
+#
+# TC OWNERSHIP (28/28 accounted for — test plan v1.2; ownership = the phase
+# that lands the asserted content; every automated TC's verdict is first
+# PRODUCED at phase 4's boundary when the suites land, and re-run green by
+# phase 5):
+#   phase 1  TC-MEMSCAF-001, TC-MEMSCAF-002, TC-MEMSCAF-003, TC-MEMKERN-001,
+#            TC-MEMKERN-002, TC-MEMWIRE-001, TC-MEMWIRE-002, TC-MEMWIRE-003,
+#            TC-MEMDOCT-001, TC-MEMBUDGET-001, TC-MEMALIGN-004 (v1.2; the
+#            self-containment content spans the phase-1 templates and the
+#            phase-2 guide memory content)
+#   phase 2  TC-MEMCONT-001, TC-MEMCONT-002, TC-MEMCONT-003 (automated part),
+#            TC-MEMRESUME-001, TC-MEMFLOW-001 (automated part), TC-MEMCONF-003
+#   phase 3  TC-MEMALIGN-001, TC-MEMALIGN-002, TC-MEMALIGN-003
+#   phase 4  TC-MEMDOCT-002 (structural negative scan; green from suite
+#            creation — the asserted absence is upheld by every phase)
+#   phase 5  TC-MEMCONF-001, TC-MEMCONF-002 (verdicts recorded)
+#   manual   TC-MEMKERN-003, TC-MEMSCAF-004, TC-MEMWIRE-004 (review-time
+#            changed-file checks), TC-MEMRESUME-002, TC-MEMBUDGET-002 and the
+#            manual halves of TC-MEMFLOW-001/TC-MEMCONT-003 (live dry-run) —
+#            DoD/review evidence owned by the lifecycle, not plan scope
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; scope is the workItemRef per repo convention):
+#   phase 1  feat(GH-302): memory bootstrap template set with distribution markers
+#   phase 2  feat(GH-302): wire the memory scaffold into bootstrap phase 5 and 6
+#   phase 3  docs(GH-302): land PDR-0004 and align the memory-practices concept
+#   phase 4  test(GH-302): memory template invariants and allowlist identity guards
+#   phase 5  docs(GH-302): mark M2-S9 delivered with the full gate battery green
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - C-1 mirror constraint (DEC-1, NFR-1): the scaffolded conventions mirror
+#     the "Agent memory" section of this repository's AGENTS.md exactly. None of
+#     the typed-record fields id/kind/scope/provenance/trust/validity/status is
+#     ever presented as a required record field or schema table (NG-2); the only
+#     record properties stated are dated, evidence-linked,
+#     supersede-never-rewrite.
+#   - C-2 no tooling, no code, no doctor automation (DEC-3, NG-1, NG-3): zero
+#     changes under scripts/ (except the declared test file in phase 4), tools/,
+#     or packages/**; root package.json untouched; the doctor is documentation.
+#   - C-3 marker-only (DoR finding 4): each new template carries its
+#     ados_distribution: redistributable marker inside its existing
+#     frontmatter per the AGENTS.md doc-distribution marker rules (NFR-4,
+#     RSK-5); bash scripts/.tests/test-doc-distribution.sh must pass at every
+#     boundary that adds or edits a distributable doc. NO license header is
+#     added by agents: doc/templates/ is not in
+#     scripts/add-header-location.sh scope, agents must never add license
+#     headers themselves (AGENTS.md), and the script is not edited in this
+#     change (C-2). Boundary, explicitly: no header edits, no script edits.
+#   - C-4 prompt edits are current-state only (no evolution-history wording);
+#     scripts/build-claude-plugin.sh output (.ados-claude/agents/bootstrapper.md,
+#     .ados-claude/skills/bootstrap/SKILL.md) is regenerated and committed in
+#     the SAME commit as its .opencode/** source; generated files are never
+#     hand-edited (RSK-6).
+#   - NG-4: zero writes under this repository's .ai/memory/** or .ai/local/**
+#     (the populated tree is the living reference instance; GH-301 owns its
+#     evolution). Enforced at review time by TC-MEMSCAF-004.
+#   - NG-5: no retro ceremony, command, or automation ships — conventions only
+#     (DEC-4). TC-MEMWIRE-004 enforces at review time.
+#   - The allowlist extension is exactly `.ai/memory/**` and nothing broader
+#     (RSK-3): the golden post-change set is the current 21 entries plus the
+#     memory root (22), slotted after the four instruction files; the
+#     out-of-allowlist confirmation sentence stays byte-identical in all three
+#     carriers; the inception guide ENUMERATES the set (new — today it has no
+#     enumerated allowlist).
+#   - NFR-3: Phase 5 gains no human gates and zero interview questions; the
+#     single Phase 5 approval covers the memory artifacts.
+#   - TC-MEMALIGN-003 is intentionally red until phase 3 lands the PDR file —
+#     never "fix" it by touching the spec, the test plan, or the index ahead of
+#     the phase (pm-notes DEFER contract).
+#   - Gates run as `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`
+#     (pm-notes convention; tmp/ is workspace-local scratch, never committed).
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (`system_spec_update`, @doc-syncer;
+# declared here so nothing is dropped after DoD — NOT plan scope; doc/spec/
+# feature-bootstrapper.md is the one doc/spec file delivery touches, as an
+# implementation carrier of the allowlist and Phase 5/6 rows in phase 2; the
+# REST of that file is reconciled by @doc-syncer):
+#   - doc/spec/features/feature-bootstrapper.md: verify the delivered Phase 5
+#     outputs table, write-allowlist row set, and Phase 6 readiness rows state
+#     current truth beyond the implementation-carrier edits of phase 2.
+#   - doc/guides/project-inception.md: already current after phase 2 — verify,
+#     do not rewrite.
+#   - doc/templates/** install set: verified continuously by the distribution
+#     guard; no further reconciliation expected.
+#   - The kernel-section template stays in lockstep with this repository's
+#     AGENTS.md "Agent memory" section; GH-301 is the next expected reconciler.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-302
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - memory-tooling-lint-or-executable-doctor-introduced
+    - typed-record-schema-field-declared-in-any-memory-template
+    - this-repository-ai-memory-tree-modified
+    - allowlist-diverges-across-the-three-carriers-or-broadens-beyond-the-memory-root
+    - pdr-0004-landed-outside-a-phase-declaring-doc-decisions-scope
+    - concept-adoption-checklist-still-names-preferences-or-retro-archive
+    - generated-plugin-output-stale-after-a-prompt-edit
+    - retro-ceremony-command-or-automation-shipped
+    - phase-5-gate-count-or-interview-questions-changed
+    - new-template-missing-ados-distribution-marker
+    - agent-added-license-header-or-header-script-edited
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Memory bootstrap template set (nine templates + index rows)
+  # Commit: feat(GH-302): memory bootstrap template set with distribution markers
+  #
+  # Goal: every convention the learning loop needs exists as an installable
+  # template before any prompt, guide, or spec names it, so phase 2 renders from
+  # a settled surface (F-1, F-2, F-3 carriers, F-4, F-5, adoption checklist).
+  #
+  # Content obligations (each template mirrors the current-truth kernel — C-1):
+  #  1.1 memory-index-template.md — the memory index entry point: what exists,
+  #      read-when hints, coverage honesty; <= 200 lines (NFR-2).
+  #  1.2 memory-agent-entrypoint-template.md — per-agent entry point,
+  #      parameterized by agent role: states the capture bar (same mistake
+  #      twice, review catch, repeated correction, verified outcome, repeated
+  #      workflow) and the read/write policy (read own entry point at session
+  #      start; write own folder only; shared surfaces are consolidation-owned);
+  #      <= 150 lines (NFR-2, TC-MEMSCAF-003).
+  #  1.3 memory-area-template.md — lessons/tacit area README, parameterized by
+  #      area: purpose, promotion-handoff target, append discipline; seeding is
+  #      structural (empty; conventions, not records — DM-1).
+  #  1.4 memory-kernel-section-template.md — the AGENTS.md memory kernel
+  #      section carrying ALL TWELVE content classes (DM-2, spec v1.2):
+  #      canonical and ephemeral locations; advisory/untrusted preamble; read
+  #      policy; capture bar; write ownership; evidence over recency; unique
+  #      ids; reviewer independence; caps and growth; promotion handoff;
+  #      capsule completion (referenced only); conflict reality. It routes
+  #      to the installed conventions rather than duplicating them and contains
+  #      ZERO record-schema fields (TC-MEMKERN-001/002).
+  #  1.5 memory-coordinator-wiring-template.md — the coordinator (PM-facing)
+  #      memory wiring: capture bar + promotion path (candidates route to
+  #      exactly one home) + the curation/consolidation mandate (TC-MEMWIRE-001).
+  #  1.6 memory-instruction-expectations-template.md — companion per-role
+  #      memory expectations (read own entry point, write own folder, no
+  #      cross-agent memory edits) that REFERENCE the kernel, never restate it
+  #      (TC-MEMWIRE-002); rendered into pr/decision/code-review instructions.
+  #  1.7 memory-retro-notes-template.md — retro-note conventions: append-only
+  #      notes with a generated index, documentation alone; references the
+  #      capture bar and promotion path rather than duplicating them (DM-3,
+  #      TC-MEMWIRE-003); no ceremony content (NG-5).
+  #  1.8 memory-doctor-checklist-template.md — manual doctor checklist: the six
+  #      audit areas (index coverage; budget caps ~150/<=200; dangling
+  #      references; contradictions; derivable-content heuristics; secret-
+  #      pattern scan), explicit manual-until-memory-lint status (GH-301), a
+  #      prescribed cadence (per-retro or periodic audit), performing nothing
+  #      (AC-F5-1, TC-MEMDOCT-001).
+  #  1.9 memory-adoption-checklist-template.md — manual adoption checklist for
+  #      previously bootstrapped projects (spec §8.5, NG-6): adopt kernel
+  #      section, instruction wiring, and tree scaffold by hand.
+  #  1.10 doc/templates/README.md — index rows for all nine templates (the
+  #       inception guard's template-index check is containment, so it stays
+  #       green before phase 4 extends its list).
+  #  Every new file: ados_distribution: redistributable inside its frontmatter,
+  #  marker-only (C-3) — NO license header is added (doc/templates/ is outside
+  #  the header script's scope and agents never hand-add headers).
+  #  Self-containment (DEC-6 / PDR-0004): installed carriers cite the public
+  #  ADOS repository URL as optional further reading only — no
+  #  doc/planning/concepts/** references (enforced by TC-MEMALIGN-004 in
+  #  phase 4).
+  #
+  # Test obligations (content owned here; verdicts produced at phase 4):
+  #   TC-MEMSCAF-001/002/003, TC-MEMKERN-001/002, TC-MEMWIRE-001/002/003,
+  #   TC-MEMDOCT-001, TC-MEMBUDGET-001 (seed-template line counts).
+  #
+  # Done when: all nine templates + README rows exist with their distribution
+  # markers — marker-only, no agent-added license headers and no header-script
+  # edits (C-3);
+  # `bash scripts/.tests/test-doc-distribution.sh` green (every new template
+  # classified and installed); `bash scripts/.tests/test-inception-doc-
+  # consistency.sh` still green; `TMPDIR=$PWD/tmp/tmpdir pnpm check` green.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Memory bootstrap template set (nine templates plus template-index rows)"
+    kind: delivery
+    summary: >-
+      Author the nine memory bootstrap templates under doc/templates/ — index
+      entry point, per-agent entry point (parameterized by role), lessons/tacit
+      area README, AGENTS.md kernel section with all twelve content classes and
+      zero record-schema fields, coordinator capture/promotion wiring, companion
+      per-role expectations that reference the kernel, retro-note conventions,
+      manual doctor checklist, and adoption checklist — each carrying its
+      ados_distribution: redistributable frontmatter marker only (no license
+      header added by agents), within budget caps (entry point <= 150 lines,
+      index <= 200), and indexed in doc/templates/README.md.
+    scope:
+      files:
+        - doc/templates/memory-index-template.md
+        - doc/templates/memory-agent-entrypoint-template.md
+        - doc/templates/memory-area-template.md
+        - doc/templates/memory-kernel-section-template.md
+        - doc/templates/memory-coordinator-wiring-template.md
+        - doc/templates/memory-instruction-expectations-template.md
+        - doc/templates/memory-retro-notes-template.md
+        - doc/templates/memory-doctor-checklist-template.md
+        - doc/templates/memory-adoption-checklist-template.md
+        - doc/templates/README.md
+    interactions:
+      - kind: contract-file
+        target: doc/templates/memory-kernel-section-template.md
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Indivisible unit: three-surface allowlist extension + Phase 5/6
+  # memory wiring in prompt, command, guide, and feature spec + regenerated
+  # plugin output
+  # Commit: feat(GH-302): wire the memory scaffold into bootstrap phase 5 and 6
+  #
+  # Goal: make the scaffold legitimate (GAP-5) and specified (F-1/F-2/F-3/F-4
+  # rendering, AC-F7-1/F7-2, AC-F1-2) in one atomic move — no intermediate tree
+  # exists where one carrier states the extended allowlist and another does not.
+  #
+  # Representation pin (DoR finding 5): the CANONICAL allowlist entry text is
+  # the bootstrapper prompt's list-form entry (a bullet per backticked path).
+  # The inception guide and the feature spec adopt that same list-form entry
+  # VERBATIM; the feature spec's compact brace/inline form is REPLACED by the
+  # list form in its Phase-5/allowlist section as part of this phase, so
+  # TC-MEMCONT-001 / guard Check 7 compares like-for-like text.
+  #
+  # Content obligations:
+  #  2.1 .opencode/agent/bootstrapper.md — <write_allowlist> gains exactly
+  #      `.ai/memory/**` after the four instruction files (21 → 22 entries);
+  #      confirmation sentence unchanged. <phase_5> block gains the memory
+  #      wiring: scaffold the tree (index, per-agent entry points, lessons,
+  #      tacit — exactly the current-truth set, seeded empty; NO preferences or
+  #      retro-archive areas, DEC-2), render the kernel section into AGENTS.md
+  #      from the phase-1 template, render coordinator/companion wiring from
+  #      the phase-1 templates, install retro conventions and the doctor
+  #      checklist; artifact keys gain the memory artifacts; single human gate
+  #      covers them (NFR-3); resume semantics = create-if-absent, never
+  #      duplicate entry points, never silently overwrite human-approved files
+  #      (AC-F1-2, NFR-5). <phase_6> readiness enumerates the memory artifacts
+  #      and fails-and-reopens on incompleteness (AC-F7-2). Current-state
+  #      wording only (C-4).
+  #  2.2 .opencode/command/bootstrap.md — updated only as needed to stay
+  #      consistent with the agent prompt (thin wrapper role unchanged).
+  #  2.3 doc/guides/project-inception.md — Phase 5 authority detail gains the
+  #      memory activities/outputs AND the enumerated allowlist (same 22
+  #      backticked entries in list form, the prompt's entry text verbatim;
+  #      today the guide has none — TC-MEMCONT-001 requires enumeration for
+  #      enforceability); Phase 6 readiness gains the memory
+  #      artifact enumeration and the fail-and-reopen statement.
+  #  2.4 doc/spec/features/feature-bootstrapper.md — §Write allowlist and the
+  #      Phase 5 outputs table gain the memory rows; the allowlist itself
+  #      adopts the prompt's list-form entry verbatim, REPLACING the compact
+  #      brace/inline form (representation pin above), so all three carriers
+  #      carry identical list-form text (AC-F7-1); Phase 6 readiness rows gain
+  #      the memory artifacts. This is the one doc/spec file delivery touches,
+  #      as an implementation carrier; the rest of the file is reconciled by
+  #      @doc-syncer in lifecycle phase 7.
+  #  2.5 Run scripts/build-claude-plugin.sh; commit the regenerated
+  #      .ados-claude/agents/bootstrapper.md and .ados-claude/skills/bootstrap/
+  #      SKILL.md together with the source (C-4, TC-MEMCONF-003). Never
+  #      hand-edit generated files.
+  #
+  # Test obligations (content owned here; verdicts produced at phase 4):
+  #   TC-MEMCONT-001 (identical text across three carriers + confirmation
+  #   sentence unchanged), TC-MEMCONT-002 (golden 22-entry set), TC-MEMCONT-003
+  #   (Phase 6 enumeration + fail-and-reopen, automated part), TC-MEMRESUME-001
+  #   (resume semantics in prompt AND guide), TC-MEMFLOW-001 (no new gates or
+  #   interview questions; single-approval statement, automated part),
+  #   TC-MEMCONF-003 (plugin output regenerated with source).
+  #
+  # Done when: the three carriers state the byte-identical LIST-FORM allowlist
+  # entry — canonical is the bootstrapper prompt's list-form entry, the
+  # feature spec's compact brace form is gone — and the unchanged confirmation
+  # sentence; the guide enumerates the set in list form; Phase 6
+  # sections in prompt and guide enumerate the memory artifacts;
+  # `bun run scripts/checks/prompt-conformance.ts`,
+  # `bun run scripts/checks/help-guide-coverage.ts`,
+  # `bun test tests/checks/doc-conformance.test.ts`,
+  # `bash scripts/.tests/test-build-claude-plugin.sh`, and
+  # `TMPDIR=$PWD/tmp/tmpdir pnpm check` are green with the regenerated output
+  # committed.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Three-surface allowlist extension with Phase 5/6 memory wiring and regenerated plugin output"
+    kind: delivery
+    summary: >-
+      Extend the bootstrap write allowlist by exactly `.ai/memory/**` with
+      identical entry-set text across the bootstrapper prompt, the inception
+      guide (which gains the enumerated allowlist), and feature-bootstrapper.md;
+      wire the memory scaffold, kernel section, instruction wiring, retro
+      conventions, and doctor checklist into Phase 5 with resume-without-
+      duplication semantics and a single human gate, and Phase 6 readiness
+      enumeration that fails and reopens on incomplete memory artifacts; keep
+      the bootstrap command consistent; regenerate and commit the Claude plugin
+      output in the same commit.
+    scope:
+      files:
+        - .opencode/agent/bootstrapper.md
+        - .opencode/command/bootstrap.md
+        - doc/guides/project-inception.md
+        - doc/spec/features/feature-bootstrapper.md
+        - .ados-claude/agents/bootstrapper.md
+        - .ados-claude/skills/bootstrap/SKILL.md
+    interactions:
+      - kind: contract-file
+        target: doc/spec/features/feature-bootstrapper.md
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents/bootstrapper.md
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — PDR-0004 landing + F-6 concept alignment (one atomic commit)
+  # Commit: docs(GH-302): land PDR-0004 and align the memory-practices concept
+  #
+  # Goal: the decision and the practice it governs land together (pm-notes
+  # DEFER contract), turning TC-MEMALIGN-003 green and completing AC-F6-1.
+  #
+  # Content obligations:
+  #  3.1 Land the untracked doc/decisions/PDR-0004-memory-practices-concept-
+  #      repo-internal.md beside its already-committed 00-index.md row
+  #      (c0b8471a): id and status in front matter; the repo-internal
+  #      disposition (install surface unchanged; installed conventions self-
+  #      contained; public ADOS repo URL as optional further reading only);
+  #      verify file ↔ index row ↔ spec references agree (the spec already
+  #      references PDR-0004 in OQ-2 and DEC-6 — the spec is NOT edited).
+  #  3.2 doc/planning/concepts/memory-practices.md — align and finalize per
+  #      F-6: status advanced from Draft (2026-10-26); the "Bootstrapping a
+  #      project" adoption checklist corrected to the scaffolded tree shape —
+  #      exactly index, per-agent entry points, lessons, tacit; the deferred
+  #      areas (preferences, retro archive) removed as provisioning targets
+  #      (DEC-2, TC-MEMALIGN-001); the "AGENTS.md kernel rules" template
+  #      section stays consistent with the phase-1 kernel template's content
+  #      classes and budget guidance, with no record-schema fields
+  #      (TC-MEMALIGN-002); license header already present (doc/planning/
+  #      concepts is in the header script scope — verify, do not hand-add).
+  #
+  # Test obligations (content owned here; verdicts produced at phase 4):
+  #   TC-MEMALIGN-001 (adoption checklist matches the canonical set),
+  #   TC-MEMALIGN-002 (kernel template section consistent with F-2),
+  #   TC-MEMALIGN-003 (PDR file + index row + spec references consistent —
+  #   intentionally red until this phase lands).
+  #
+  # Done when: the PDR file is tracked and consistent with its index row and the
+  # spec's OQ-2/DEC-6 references; the concept's checklist and kernel section
+  # agree with the scaffold with zero contradictions (AC-F6-1);
+  # `bash scripts/.tests/test-add-header-location.sh` and
+  # `TMPDIR=$PWD/tmp/tmpdir pnpm check` are green.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Land PDR-0004 beside its index row and align the memory-practices concept (F-6)"
+    kind: delivery
+    summary: >-
+      Land the untracked PDR-0004 decision record under doc/decisions/ beside
+      its already-committed 00-index row and verify file, index, and spec
+      references are consistent (DEC-6), and in the same commit align and
+      finalize doc/planning/concepts/memory-practices.md — status advanced from
+      Draft, adoption checklist corrected to exactly the scaffolded tree set
+      (no preferences or retro-archive areas per DEC-2), kernel template
+      section consistent with the delivered kernel-section template, zero
+      contradictions with the scaffold.
+    scope:
+      folders:
+        - doc/decisions
+      files:
+        - doc/planning/concepts/memory-practices.md
+    interactions:
+      - kind: contract-file
+        target: doc/decisions/PDR-0004-memory-practices-concept-repo-internal.md
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Verification suites: the bun invariant suite and the inception
+  # guard extension
+  # Commit: test(GH-302): memory template invariants and allowlist identity guards
+  #
+  # Goal: freeze phases 1-3's content as permanent, read-only tree invariants —
+  # every automated TC of the test plan produces its verdict at this boundary.
+  #
+  # Content obligations:
+  #  4.1 tests/structure/memory-bootstrap-templates.test.ts (new bun:test,
+  #      ~17 cases, read-only against the working tree, no fixtures; anchors
+  #      pinned to the phase-1 filenames): TC-MEMSCAF-001/002/003,
+  #      TC-MEMKERN-001/002 (schema-shaped-construct anchor per test-plan
+  #      §8.1), TC-MEMWIRE-001/002/003, TC-MEMDOCT-001/002 (negative structural
+  #      scan of scripts/, tools/, packages/** and root package.json scripts,
+  #      with the GH-301 expiry comment naming it owner of the deliberate
+  #      update), TC-MEMALIGN-001/002/003 (tests/checks/decision-record.test.ts
+  #      pattern), TC-MEMBUDGET-001 (line counts), TC-MEMRESUME-001 and the
+  #      TC-MEMFLOW-001 prompt part, plus TC-MEMALIGN-004 (test plan v1.2,
+  #      critical). ENFORCEMENT HOME (pinned — the executor does not
+  #      improvise): TC-MEMALIGN-004 lives in THIS bun suite, not the bash
+  #      guard — it reuses the suite's read-only content-scan mechanics and
+  #      asserts zero doc/planning/concepts/** references across the installed
+  #      carriers (the nine memory templates and the inception guide's Phase 5
+  #      memory content), with fully-qualified public ADOS URLs permitted.
+  #  4.2 scripts/.tests/test-inception-doc-consistency.sh — new Check 7 (memory
+  #      wiring consistency): backticked-entry extraction normalized across the
+  #      three carriers' formats, allowlist identity + the golden 22-entry set
+  #      (current 21 + `.ai/memory/**`; golden set lives only here and updates
+  #      deliberately in review), the unchanged confirmation sentence, and the
+  #      Phase 6 readiness enumeration in prompt and guide; Check 4's
+  #      INCEPTION_TEMPLATES index list gains the new memory templates
+  #      (TC-MEMCONT-001/002/003, TC-MEMFLOW-001 guide part).
+  #  No inventory registration: tests/structure/inventory.json tracks modules
+  #  only. Permanent suites assert tree invariants, never branch diffs
+  #  (NG-4/NG-5 stay review-time checks — TC-MEMSCAF-004, TC-MEMWIRE-004).
+  #
+  # Done when: `bun test tests/structure/memory-bootstrap-templates.test.ts`
+  # and `bash scripts/.tests/test-inception-doc-consistency.sh` are green with
+  # every case passing (TC-MEMALIGN-003 green because phase 3 landed);
+  # `TMPDIR=$PWD/tmp/tmpdir pnpm check` green (the new suite joins the bun
+  # tier).
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Bun invariant suite and inception-guard Check 7 for the memory wiring"
+    kind: delivery
+    summary: >-
+      Create tests/structure/memory-bootstrap-templates.test.ts (read-only
+      bun:test invariants: template shape and content classes, negative
+      no-schema and no-executable-doctor guards, concept and PDR-0004 record
+      consistency, budget caps, prompt resume semantics, and the
+      TC-MEMALIGN-004 installed-carrier self-containment scan) and extend
+      scripts/.tests/test-inception-doc-consistency.sh with Check 7 (allowlist
+      identity and golden 22-entry set across the three carriers, unchanged
+      confirmation sentence, Phase 6 readiness enumeration) plus the memory
+      templates in its template-index list, with anchors pinned to the
+      phase-1 filenames.
+    scope:
+      files:
+        - tests/structure/memory-bootstrap-templates.test.ts
+        - scripts/.tests/test-inception-doc-consistency.sh
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Milestone bookkeeping and the full gate battery (release phase)
+  # Commit: docs(GH-302): mark M2-S9 delivered with the full gate battery green
+  #
+  # Goal: the release phase — milestone bookkeeping lands only when the
+  # delivered set is true, and the full battery re-run makes lifecycle phase 9
+  # (quality_gates) a cheap re-verification.
+  #
+  # Content obligations:
+  #  5.1 doc/planning/oss-tooling/backlog.md — M2-S9 entry gains the Ticket and
+  #      Progress marker per the milestone delivery convention, mirroring the
+  #      M2-S11/GH-288 pattern in the same file: `- Ticket: GH-302 (milestone
+  #      M2)` and `- Progress: delivered by GH-302 — ...` summarizing the
+  #      delivered capability set (memory tree scaffold, kernel section,
+  #      coordinator/companion wiring, retro conventions, manual doctor
+  #      checklist, allowlist extension, PDR-0004).
+  #  5.2 Run and record green (pm-notes `notes:` entries per repo conventions;
+  #      TC-MEMCONF-001/002 verdicts):
+  #        mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #        bash scripts/.tests/test-doc-distribution.sh
+  #        bash scripts/.tests/test-inception-doc-consistency.sh
+  #        bash scripts/.tests/test-build-claude-plugin.sh
+  #      The commit-range gate scripts/lint-commit-range.sh runs at lifecycle
+  #      phase 9 per repo conventions, not here.
+  #  5.3 Spec-reconciliation obligations are declared in this plan's header
+  #      (lifecycle phase 7, @doc-syncer) — this phase does not edit doc/spec.
+  #  Manual DoD evidence items owed at review/closeout (not plan scope):
+  #  TC-MEMRESUME-002 live dry-run (with TC-MEMBUDGET-002 measurement and the
+  #  manual halves of TC-MEMFLOW-001/TC-MEMCONT-003), TC-MEMKERN-003 fidelity
+  #  review, TC-MEMSCAF-004/TC-MEMWIRE-004 changed-file checks.
+  #
+  # Done when: the backlog marker states the delivered truth; the full battery
+  # and both guards are green and recorded; all five plan phases are complete
+  # with per-phase pm-notes evidence (dod_check reads that evidence, not this
+  # file).
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "M2-S9 milestone marker and full gate battery green (release)"
+    kind: delivery
+    summary: >-
+      Mark M2-S9 delivered in doc/planning/oss-tooling/backlog.md with the
+      Ticket and Progress marker per the milestone delivery convention, and run
+      the full gate battery green — TMPDIR=$PWD/tmp/tmpdir pnpm check plus
+      test-doc-distribution.sh, test-inception-doc-consistency.sh, and
+      test-build-claude-plugin.sh — recording the verdicts as pm-notes
+      evidence so quality_gates re-verification is cheap.
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+    doneArtifacts:
+      trackerTransition: "GH-302 delivery complete: all five plan phases done, full gate battery green, M2-S9 marked delivered; PR-ready against main-tools (PR creation is lifecycle phase 11)"

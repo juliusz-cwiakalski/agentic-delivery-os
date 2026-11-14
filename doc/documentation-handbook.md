@@ -6,7 +6,7 @@ ados_distribution: redistributable
 id: DOC-HANDBOOK
 status: Accepted
 created: 2025-09-22
-last_updated: 2026-06-26
+last_updated: 2026-11-14
 owners: ["engineering"]
 summary: "Repository documentation structure, conventions, and workflow."
 ---
@@ -727,6 +727,18 @@ If only validation wording is incorrect, update/revert the validation subsection
 ### Documentation profile contract template
 
 - `doc/templates/documentation-profile-template.md`
+
+### Memory bootstrap templates (installed by bootstrap Phase 5)
+
+- `doc/templates/memory-index-template.md`
+- `doc/templates/memory-agent-entrypoint-template.md`
+- `doc/templates/memory-area-template.md`
+- `doc/templates/memory-kernel-section-template.md`
+- `doc/templates/memory-coordinator-wiring-template.md`
+- `doc/templates/memory-instruction-expectations-template.md`
+- `doc/templates/memory-retro-notes-template.md`
+- `doc/templates/memory-doctor-checklist-template.md`
+- `doc/templates/memory-adoption-checklist-template.md`
 
 ### Profile-aware business/product strategy templates (optional; enabled business docs only)
 
