@@ -19,6 +19,11 @@ This repository uses **GitHub Issues** for all issue tracking, work planning, an
 
 **Issue Prefix**: `GH-` (for workItemRef)
 
+**Milestone Set**: the project's existing GitHub milestone records. Milestone
+titles use `M<n>: <outcome phrase>`; the prefix matches the story-code root
+(`M<n>-S<m>`). Resolve a milestone only from this existing set — never create
+one.
+
 ## Workflow States Mapping
 
 Map change lifecycle to GitHub issue states and labels:
@@ -46,6 +51,23 @@ Map change lifecycle to GitHub issue states and labels:
 
 This rule applies to all ticket creation — scope splits, follow-up work, discovered issues, etc. The PM proposes; the human decides.
 
+### Milestone Attachment Policy
+
+Every `change` ticket is created with a milestone. Resolve it from the project's
+existing milestone set (the tracker's milestone records; never create one):
+
+- If the ticket belongs to an existing milestone, pass that milestone when
+  creating the ticket.
+- If no existing milestone fits, propose the missing milestone to the human
+  exactly as you would propose a ticket, naming the proposed `M<n>: <outcome
+  phrase>` title. Do not create the milestone; wait for the human decision.
+- A deliberately captured backlog idea that has no plan yet may carry the
+  `backlog-capture` exemption label instead of a milestone. The exemption is a
+  capture marker, not a delivery licence: the ticket still needs a milestone
+  before its lifecycle starts, and the label is removed when it is scheduled.
+- The flag label is `needs-milestone`; the exemption label is `backlog-capture`.
+  Both are removable at any time.
+
 ### Delivery Mode & Phase-7 Spec-Coverage Resolution (always-resolve)
 
 `@pm` records `delivery_mode` (`interactive | autonomous`; an **absent** field ⇒ `interactive`, the default) in `chg-<workItemRef>-pm-notes.yaml` at intake. Manual `@pm` sets it explicitly (or leaves it absent ⇒ `interactive`); the autonomous session entry point (`scripts/opencode-session.sh`) instructs `@pm` to set `autonomous`.
@@ -64,8 +86,24 @@ This resolution produces a **doc artifact** scoped to the change and reviewed at
    - `title`: Descriptive change title
    - `body`: Initial description with context, problem statement, goals
    - `labels`: `['change']`
+   - `milestone`: the resolved existing milestone title (required; never create
+     a milestone — propose one to the human when none fits)
 
 3. Record the returned `issue_number` as `workItemRef` in format `GH-{number}`.
+
+### Intake Milestone Verification
+
+Intake verifies attachment before artifact phases begin. After resolving the
+ticket and before delegating any artifact work:
+
+1. Read the ticket's milestone.
+2. If attached, record that milestone title in `chg-<workItemRef>-pm-notes.yaml`
+   under the `milestone` key.
+3. If unattached, ask the human a question naming the milestone you propose and
+   stop. Artifact phases do not begin until the attachment exists.
+4. A ticket carrying `backlog-capture` is still unattached for delivery
+   purposes: it produces the same question and the same stop. Capture is not a
+   delivery plan.
 
 ### Reading Issue Comments
 
@@ -111,7 +149,12 @@ Never stage or commit anything under `.ai/local/`.
 
 ## Backlog Source of Truth
 
-The only backlog source is the tracker (GitHub Issues). Do not create or rely on any local backlog files.
+The tracker (GitHub Issues) is the canonical ticket backlog. The committed
+planning mirror for this repository's OSS tooling roadmap is
+`doc/planning/oss-tooling/backlog.md`; it mirrors tracker scope and attachment
+and is never a second backlog. Do not create or rely on a separate local
+backlog file outside that mirror, and do not present an ad-hoc local queue as a
+backlog source.
 
 ## Priority & Selection Rules
 
