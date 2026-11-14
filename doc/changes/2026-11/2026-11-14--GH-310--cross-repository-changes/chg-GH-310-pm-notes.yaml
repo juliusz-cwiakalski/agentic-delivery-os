@@ -4,9 +4,9 @@ delivery_mode: autonomous
 variant: full
 phases:
   clarify_scope: { started: null, completed: 2026-11-14T18:25:44.095Z }
-  specification: { started: null, completed: 2026-11-14T19:08:53.131Z }
-  test_planning: { started: null, completed: 2026-11-14T19:09:10.843Z }
-  delivery_planning: { started: null, completed: 2026-11-14T19:14:18.603Z }
+  specification: { started: null, completed: 2026-11-14T19:40:29.023Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -119,6 +119,42 @@ notes:
       exit/projection field and the observation carrier in the same pass; what
       the consumer reads is part of the shape, not a later detail."
     type: retro
+    date: "2026-11-14"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (6 blocking findings; 8 facets
+      FAIL: spec_completeness, test_traceability, cross_artifact_consistency,
+      system_spec_consistency, plan_code_area_coverage, scope discipline,
+      testability, decision pinning). Blocking: (B1) cross-repo report summary
+      and gates[] contents undefined with no member identity on
+      VerifyGateRecord; (B2) DEC-18's premise false — delivered overall is the
+      literal 'pass', failures emit no data, unknown exits 2, so the mapping
+      contradicted delivered behaviour and the additive-only claim; (B3) plan
+      scopes missed suite homes named by the test plan; (B4) no pre-change
+      member-less queue add golden path; (B5) MemberLandingObservation carrier
+      unnamed; (B6) review runId digest omitted PR-less members. Reviewer
+      record: readiness-review/readiness-iter-1.md."
+    type: risk
+    date: "2026-11-14"
+  - text: "RETRO: the DoR gate caught a false premise about delivered behaviour that
+      three artifact authors had accepted — the spec claimed to keep the
+      delivered overall field while remapping it, without anyone reading the
+      delivered report type and CLI projection. Improvement: any spec statement
+      of the form 'keeps the delivered X' must cite the type/line and the exact
+      current values, not the intended shape."
+    type: retro
+    date: "2026-11-14"
+  - text: "DoR iteration-1 remediation: reopens recorded for specification,
+      test_planning, delivery_planning. Spec v1.3 pins the cross-repo
+      gate-record projection (DM-9, additive `member` discriminator, summary
+      counts), replaces DEC-18 with an explicitly scoped supersession (overall
+      widened pass|fail for cross-repo reports only; data-bearing
+      blocked/incomplete at exit 1; unknown never emitted; single-repo
+      unchanged), names MemberLandingObservation (DM-10), and fixes the runId
+      digest to the declared member set including PR-less members. Test plan
+      v1.3 asserts all of it in place (51 TCs unchanged) and pins the pre-change
+      golden at tests/fixtures/queue/golden/queue-add-memberless.json captured
+      from 404e9bf8. Plan revision 1.2 declares every §7 suite home (41/41), the
+      golden capture as phase-1 obligation 1.0, and validates green."
+    type: info
     date: "2026-11-14"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
       phases declared in chg-GH-310-plan.yaml; one delivery commit per plan
