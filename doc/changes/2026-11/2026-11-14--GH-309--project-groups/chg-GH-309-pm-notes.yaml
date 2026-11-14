@@ -119,3 +119,22 @@ notes:
       ODR-0004 before rename code)."
     type: resolved
     date: "2026-11-14"
+  - text: "Plan phase 1 commit-step anomaly recorded: the direct commit path was
+      refused three times with commit.commitlint-failed 'invented tracker
+      references are not allowed: ODR-0004' (two --dry-run, one real; nothing
+      staged, tree untouched each time). Cause: with no model transport wired
+      in production, the commit primitive's deterministic template derives the
+      subject from the staged set's top path — here
+      doc/decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md — and
+      validateCommitMessage rejects the ODR-0004 token as a fabricated tracker
+      ref; the model path sanitizes via stripInventedRefs but the template
+      path does not. Typed blocker
+      q-caee1573-be8c-47d2-aab8-781932c92a21 (decision-needed, owner, lane
+      gh-309-delivery) records the template-sanitization defect for a proper
+      fix. Phase 1 lands through the commit primitive with this evidence note
+      riding the same staging set (top path = this pm-notes file, whose only
+      tracker-shaped token is GH-309), so the record lands unchanged in
+      substance in exactly one primitive commit; the plan-declared subject
+      docs(GH-309) is superseded by the primitive-owned template subject."
+    type: risk
+    date: "2026-11-14"
