@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed five-cause park vocabulary (`peak-window` and `owner-hold` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-309"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -431,6 +431,7 @@ placement (TDR-0027). The exit stays the row's projection class
 |---|---|---|
 | `queue ready <ref>...` | The delivered `delivery.queue-ready.v1` payload, unchanged | — |
 | `queue list` | `schemaVersion: delivery.queue.v1`, `entries[]`, `leases[]`, `weights[]`, `parks[]`, `findings[]`, `degraded[]`, `truncated`, `counts` | — |
+| `queue list --project <groupKey>` | The group-scoped work projection: `groupKey`, `members[]` (`repoKey`, `root`, `trackerKind`, `outcome`, `health`, `running[]`, `waiting[]`, `parked[]`), optional `partial` and `degradedMembers[]` | — |
 | `queue plan [--next <n>]` | The `queue list` collections plus `nextActions[]` | — |
 | `queue add <ref> [--priority <n>] [--dep <ref>]` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
 | `queue prioritize <ref> <n>` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
@@ -442,6 +443,12 @@ placement (TDR-0027). The exit stays the row's projection class
 | `queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]` | `result`, optional `lease`, optional `park`, `degraded[]` | `released`, `parked`, `noop` |
 | `lanes list` | `schemaVersion: delivery.lanes.v1`, `lanes[]`, `findings[]`, `degraded[]`, `truncated`, `counts` | — |
 | `lanes show <ref>` | The same payload narrowed to one lane | — |
+
+`--project <groupKey>` is accepted on `queue list` only. That form applies the
+project-group aggregation clause and returns one entry per declared member in
+declared order, each read from that member's own per-checkout state; the
+unscoped `queue list` collections above are unchanged, and no other queue verb
+gains group scoping. See [Project Groups](feature-project-groups.md).
 
 A removal payload and a dependency-removal payload also name the event the
 mutation publishes — `queue.graph` with the declared `remove` or
