@@ -15,6 +15,7 @@ ados_distribution: redistributable
 | [ADOS Processes Map](guides/ados-processes.md) | Canonical map of ADOS's six processes — start here for the big picture |
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
+| [Milestone Governance](spec/features/feature-milestone-governance.md) | The milestone-first operating rule: attachment at creation, intake verification, the ordered issue-event check and write-free sweep, and the planning-corpus mirror |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only nine-section attention-state delivery digest: closed finding-code registry, grouped ranked findings, evidence states, bounds, and declared gaps |
 | [Resident Dispatch Daemon](spec/features/feature-resident-daemon.md) | The mounted daemon lifecycle (prompt-required, composed unconditionally, signal-owned foreground lifetime, real instance pid, brand-derived install identity, durable-state degradation), lock/heartbeat, control protocol v1, reconciliation, the composed lane-supervision seam, external effects and commit crash safety, preemption, watch, polling, and supervisor install |
