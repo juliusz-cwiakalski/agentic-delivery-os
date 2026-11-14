@@ -39,7 +39,7 @@ The agent-memory learning loop exists today only as current truth inside ADOS's 
 - **Bootstrap Phase 5 (SPEC-BOOTSTRAPPER).** The bootstrapper runs an 8-phase inception workflow; Phase 5 (ADOS framework integration) generates AGENTS.md, the four installed agent-instruction files (coordinator/PM, PR/MR, decision, code-review), sets the documentation profile, and installs the handbook, templates, decisions index, guides, and `doc/00-index.md`. The human-executable authority for Phase 5 is the inception guide. Neither the feature spec's Phase 5 outputs table nor its write allowlist mentions memory.
 - **Bootstrap write allowlist.** The allowlist (mirrored across SPEC-BOOTSTRAPPER, the bootstrapper agent prompt, and the inception guide) does **not** include the memory tree root. Any memory scaffold written by Phase 5 today would fall outside containment and require per-write human confirmation.
 - **Retro conventions for bootstrapped projects.** No retro ceremony exists in what bootstrap installs. Retrospective conventions today are: (a) inception-phase retrospectives under `doc/inception/retrospective/` during the bootstrap flow itself, and (b) change-capsule retro capture owned by the change lifecycle. The ceremony runner (M2-S3) and retro action registry (M2-S10) are future tooling and do not exist yet.
-- **Tooling status.** GH-301 (M2-S8: memory records, layout, and lint — typed records, memory lint in the gates) has no change artifacts yet. No memory tooling, lint, or doctor automation exists. This repo's own `.ai/memory` tree does not exist yet either; GH-301 owns creating it.
+- **Tooling status.** GH-301 (M2-S8: memory records, layout, and lint — typed records, memory lint in the gates) has no change artifacts yet. No memory tooling, lint, or doctor automation exists. This repository's own `.ai/memory` tree **exists and is populated** (per-agent entry points plus lessons; created by GH-204, 2026-11-07) and serves as the living reference instance of the conventions — but it was grown by hand: nothing in the bootstrap flow wires any of it into a new project. GH-301 owns the tree's further evolution (typed records, lint); GH-302's gap is bootstrap wiring, not tree creation.
 
 ### 2.2 Pain Points / Gaps
 
@@ -76,7 +76,7 @@ Because bootstrap Phase 5 installs none of the agent-memory conventions that exi
 - **NG-1**: No memory lint or memory tooling of any kind — that is M2-S8's line (GH-301).
 - **NG-2**: No typed-record schema: no id/kind/scope/provenance/trust/validity/status fields, no record formats beyond what the current-truth kernel already states.
 - **NG-3**: No doctor automation: no scripts, no gates, no package or CLI code changes — the manual checklist is documentation.
-- **NG-4**: No changes to this repository's own `.ai/memory` tree — it does not exist yet and GH-301 owns creating it.
+- **NG-4**: No changes to this repository's own `.ai/memory` tree — the existing populated tree is the living reference instance of the conventions being templated, and GH-302 must not modify, extend, or restructure it; its evolution is owned by GH-301 (M2-S8).
 - **NG-5**: No retro ceremony is invented: no ceremony runner, no ceremony commands, no action registry — retro wiring is scoped to what templates, the kernel section, and the installed instructions can carry (ceremony tooling remains M2-S3 / M2-S10).
 - **NG-6**: No retrofit automation for previously bootstrapped projects — existing projects adopt manually via the installed adoption checklist (see 8.5).
 
@@ -145,7 +145,7 @@ Flow 3: Manual doctor cadence (project.owner + coordinator)
 - [OUT] Memory lint, memory tooling, schema validation, or any executable memory code (M2-S8 / GH-301).
 - [OUT] Typed-record fields (id/kind/scope/provenance/trust/validity/status) or any record schema beyond current-truth conventions.
 - [OUT] Doctor automation: scripts, quality-gate wiring, or CLI changes.
-- [OUT] Creating this repository's own `.ai/memory` tree (GH-301 owns it; it does not exist today).
+- [OUT] Modifying, extending, or restructuring this repository's own populated `.ai/memory` tree (its evolution is owned by GH-301 / M2-S8).
 - [OUT] A retro ceremony runner, ceremony commands, or a retro action registry (M2-S3 / M2-S10).
 - [OUT] Retrofit/automation to add the learning loop to previously bootstrapped projects (manual adoption only, see 8.5).
 - [OUT] Provisioning memory areas beyond the current-truth set (e.g., preferences/retro areas) — deferred pending OQ-1.
@@ -215,6 +215,7 @@ N/A — no telemetry ships in this change (no tooling allowed, NG-1/NG-3). The m
 ## 12. ASSUMPTIONS
 
 - The AGENTS.md "Agent memory" section remains the single current-truth source for memory conventions through delivery of this change.
+- The existing `.ai/memory` tree in this repository is the living reference instance of the conventions being templated; GH-302 templates its conventions and does not modify the tree itself.
 - GH-301 does not change the tree shape before this change lands; if it does, the DoR gate re-opens this spec for reconciliation.
 - The installed-set surface for a bootstrapped project is otherwise unchanged; this change only adds memory artifacts to it.
 - No retro ceremony exists for bootstrapped projects today; the templates, kernel section, and installed instructions are the only carriers available for retro conventions.
@@ -261,7 +262,7 @@ N/A — no telemetry ships in this change (no tooling allowed, NG-1/NG-3). The m
 | Bootstrap template set | Extended — new memory templates (scaffold seeds, kernel section reference, coordinator capture/promotion content, retro-note conventions, manual doctor checklist, adoption checklist), each with the required distribution marker |
 | Memory-practices concept (planning concepts) | Updated — status advanced from Draft, adoption checklist aligned to the scaffolded tree, kept consistent with F-2 |
 | OSS-tooling backlog (M2-S9 entry) | Updated — Progress marker per milestone delivery conventions |
-| This repository's own `.ai/memory` | **Unchanged** — does not exist; owned by GH-301 |
+| This repository's own `.ai/memory` | **Unchanged** — existing populated tree (GH-204) serves as the living reference instance; evolution owned by GH-301 |
 
 ## 17. ACCEPTANCE CRITERIA
 
@@ -383,6 +384,7 @@ Low impact. The memory conventions carried into bootstrapped projects prohibit s
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | Initial specification from ticket #302, backlog M2-S9, pm-notes decisions, and repo-truth verification |
+| 1.1 | 2026-11-14 | spec-writer (GLM-5.3-Flash) | Correction (specification phase reopened): `.ai/memory` existence claims fixed — the tree exists and is populated (GH-204, 2026-11-07); NG-4 and the matching out-of-scope item now guard the populated tree; living-reference assumption added to Assumptions; affected-components row corrected. Constraint force unchanged; no AC, capability, DEC, or OQ changes |
 
 ---
 
